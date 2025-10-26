@@ -1,0 +1,1167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Learn Greek Easy - Dashboard</title>
+    <style>
+        /* CSS Reset and Base Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f8f9fa;
+            color: #1a1a1a;
+            line-height: 1.6;
+            min-height: 100vh;
+            padding-bottom: 80px; /* Space for mobile bottom nav */
+        }
+
+        /* Container */
+        .container {
+            max-width: 1440px;
+            margin: 0 auto;
+            padding: 0 1rem;
+        }
+
+        /* Header Navigation */
+        header {
+            background-color: #ffffff;
+            border-bottom: 1px solid #e5e7eb;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 64px;
+        }
+
+        .logo {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #2563eb;
+            transition: opacity 0.2s ease;
+        }
+
+        .logo:hover {
+            opacity: 0.8;
+        }
+
+        .nav-links {
+            display: none;
+            gap: 2rem;
+        }
+
+        .nav-link {
+            text-decoration: none;
+            color: #6b7280;
+            font-size: 0.9rem;
+            transition: color 0.2s ease;
+            position: relative;
+            padding-bottom: 4px;
+        }
+
+        /* Navigation underline animation */
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background-color: #2563eb;
+            transition: width 0.3s ease;
+        }
+
+        .nav-link:hover {
+            color: #2563eb;
+        }
+
+        .nav-link:hover::after {
+            width: 100%;
+        }
+
+        .nav-link-active {
+            color: #2563eb;
+            font-weight: 500;
+        }
+
+        .nav-link-active::after {
+            width: 100%;
+        }
+
+        /* Focus states for keyboard navigation */
+        .nav-link:focus-visible {
+            outline: 2px solid #2563eb;
+            outline-offset: 4px;
+            border-radius: 4px;
+        }
+
+        .user-menu {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .avatar-circle {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 50%;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .avatar-circle:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
+        }
+
+        .avatar-circle:active {
+            transform: scale(0.98);
+        }
+
+        .avatar-circle:focus-visible {
+            outline: 3px solid #667eea;
+            outline-offset: 2px;
+        }
+
+        .mobile-menu-toggle {
+            display: block;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #6b7280;
+            padding: 0.5rem;
+            transition: color 0.2s ease, transform 0.2s ease;
+        }
+
+        .mobile-menu-toggle:hover {
+            color: #2563eb;
+            transform: scale(1.1);
+        }
+
+        .mobile-menu-toggle:active {
+            transform: scale(0.95);
+        }
+
+        /* Main Content */
+        main {
+            padding: 2rem 0;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Welcome Section */
+        .welcome-section {
+            margin-bottom: 2rem;
+        }
+
+        .welcome-section h2 {
+            font-size: 1.75rem;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 0.5rem;
+        }
+
+        .welcome-section p {
+            color: #6b7280;
+            font-size: 1rem;
+        }
+
+        /* Metrics Grid */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .metric-card {
+            background-color: #ffffff;
+            padding: 1.5rem;
+            border-radius: 12px;
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            animation: slideInUp 0.5s ease-out backwards;
+        }
+
+        /* Staggered animation for metric cards */
+        .metric-card:nth-child(1) { animation-delay: 0.1s; }
+        .metric-card:nth-child(2) { animation-delay: 0.15s; }
+        .metric-card:nth-child(3) { animation-delay: 0.2s; }
+        .metric-card:nth-child(4) { animation-delay: 0.25s; }
+        .metric-card:nth-child(5) { animation-delay: 0.3s; }
+
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .metric-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+            border-color: #2563eb;
+        }
+
+        .metric-card:active {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .metric-card:focus-visible {
+            outline: 2px solid #2563eb;
+            outline-offset: 2px;
+        }
+
+        .metric-label {
+            font-size: 0.875rem;
+            color: #6b7280;
+            margin-bottom: 0.5rem;
+        }
+
+        .metric-value {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+            transition: transform 0.2s ease;
+        }
+
+        .metric-card:hover .metric-value {
+            transform: scale(1.05);
+        }
+
+        .metric-sublabel {
+            font-size: 0.75rem;
+            color: #9ca3af;
+        }
+
+        .metric-value.primary { color: #2563eb; }
+        .metric-value.orange { color: #f97316; }
+        .metric-value.green { color: #10b981; }
+        .metric-value.blue { color: #3b82f6; }
+        .metric-value.muted { color: #6b7280; }
+
+        /* Greek text styling */
+        .greek-text {
+            font-weight: 500;
+        }
+
+        /* Two Column Layout */
+        .content-layout {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+        }
+
+        /* Deck Section */
+        .deck-section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+        }
+
+        .deck-section-header h3 {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: #1a1a1a;
+        }
+
+        .browse-link {
+            color: #2563eb;
+            text-decoration: none;
+            font-size: 0.875rem;
+            transition: all 0.2s ease;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+        }
+
+        .browse-link:hover {
+            background-color: #eff6ff;
+            transform: translateX(4px);
+        }
+
+        .browse-link:focus-visible {
+            outline: 2px solid #2563eb;
+            outline-offset: 2px;
+        }
+
+        .deck-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .deck-card {
+            background-color: #ffffff;
+            padding: 1.5rem;
+            border-radius: 12px;
+            border: 1px solid #e5e7eb;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            animation: slideInUp 0.5s ease-out backwards;
+        }
+
+        /* Staggered deck card animations */
+        .deck-card:nth-child(1) { animation-delay: 0.35s; }
+        .deck-card:nth-child(2) { animation-delay: 0.4s; }
+        .deck-card:nth-child(3) { animation-delay: 0.45s; }
+        .deck-card:nth-child(4) { animation-delay: 0.5s; }
+
+        .deck-card:hover {
+            border-color: #2563eb;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+            transform: translateY(-4px);
+        }
+
+        .deck-card:active {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .deck-card:focus-visible {
+            outline: 2px solid #2563eb;
+            outline-offset: 2px;
+        }
+
+        .deck-card.not-started {
+            opacity: 0.75;
+        }
+
+        .deck-card.not-started:hover {
+            opacity: 1;
+        }
+
+        .deck-header {
+            display: flex;
+            align-items: start;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+        }
+
+        .deck-info h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 0.25rem;
+        }
+
+        .deck-info p {
+            font-size: 0.875rem;
+            color: #6b7280;
+        }
+
+        .badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            white-space: nowrap;
+            transition: transform 0.2s ease;
+        }
+
+        .deck-card:hover .badge {
+            transform: scale(1.05);
+        }
+
+        .badge-blue {
+            background-color: #dbeafe;
+            color: #1e40af;
+        }
+
+        .badge-green {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+
+        .badge-gray {
+            background-color: #f3f4f6;
+            color: #6b7280;
+        }
+
+        /* Progress Bar */
+        .progress-container {
+            margin-bottom: 1rem;
+        }
+
+        .progress-info {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            color: #6b7280;
+            margin-bottom: 0.5rem;
+        }
+
+        .progress-bar-track {
+            height: 8px;
+            background-color: #e5e7eb;
+            border-radius: 9999px;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background-color: #2563eb;
+            border-radius: 9999px;
+            transition: width 0.6s ease-out;
+            animation: progressFill 1s ease-out;
+        }
+
+        @keyframes progressFill {
+            from {
+                width: 0;
+            }
+        }
+
+        .progress-bar-fill.green {
+            background-color: #10b981;
+        }
+
+        /* Quick Stats */
+        .quick-stats {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            font-size: 0.75rem;
+            color: #6b7280;
+        }
+
+        /* Quick Actions Panel */
+        .actions-panel {
+            background-color: #ffffff;
+            padding: 1.5rem;
+            border-radius: 12px;
+            border: 1px solid #e5e7eb;
+            margin-bottom: 1.5rem;
+            animation: slideInUp 0.5s ease-out backwards;
+            animation-delay: 0.55s;
+        }
+
+        .actions-panel h3 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: #1a1a1a;
+        }
+
+        .actions-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .btn {
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            border: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+            width: 100%;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Ripple effect for buttons */
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .btn:active::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #7c8ff0 0%, #8a5bb8 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+            background: linear-gradient(135deg, #5a6fce 0%, #6b3f8f 100%);
+        }
+
+        .btn-primary:focus-visible {
+            outline: 3px solid #667eea;
+            outline-offset: 2px;
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn-secondary {
+            background-color: #f3f4f6;
+            color: #374151;
+            padding: 0.625rem 1rem;
+        }
+
+        .btn-secondary:hover {
+            background-color: #e5e7eb;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .btn-secondary:active {
+            transform: translateY(0);
+            background-color: #d1d5db;
+        }
+
+        .btn-secondary:focus-visible {
+            outline: 2px solid #2563eb;
+            outline-offset: 2px;
+        }
+
+        .btn-secondary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Upcoming Reviews */
+        .upcoming-reviews {
+            background-color: #ffffff;
+            padding: 1.5rem;
+            border-radius: 12px;
+            border: 1px solid #e5e7eb;
+            margin-bottom: 1.5rem;
+            animation: slideInUp 0.5s ease-out backwards;
+            animation-delay: 0.6s;
+        }
+
+        .upcoming-reviews h3 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: #1a1a1a;
+        }
+
+        .review-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            font-size: 0.875rem;
+            transition: all 0.2s ease;
+            border-radius: 4px;
+            padding: 0.5rem;
+            margin: 0 -0.5rem;
+        }
+
+        .review-item:hover {
+            background-color: #f9fafb;
+            transform: translateX(4px);
+        }
+
+        .review-item span:first-child {
+            color: #6b7280;
+        }
+
+        .review-item span:last-child {
+            font-weight: 500;
+            color: #1a1a1a;
+        }
+
+        /* Learning Tip */
+        .learning-tip {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            padding: 1rem;
+            border-radius: 12px;
+            animation: slideInUp 0.5s ease-out backwards;
+            animation-delay: 0.65s;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .learning-tip:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(251, 191, 36, 0.2);
+        }
+
+        .learning-tip h4 {
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #92400e;
+        }
+
+        .learning-tip p {
+            font-size: 0.875rem;
+            color: #78350f;
+            line-height: 1.5;
+        }
+
+        /* Mobile Bottom Navigation */
+        .mobile-bottom-nav {
+            display: flex;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: #ffffff;
+            border-top: 1px solid #e5e7eb;
+            padding: 0.5rem 0;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+            z-index: 40;
+        }
+
+        .mobile-nav-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-decoration: none;
+            color: #6b7280;
+            font-size: 0.75rem;
+            padding: 0.5rem;
+            transition: all 0.2s ease;
+            border-radius: 8px;
+            margin: 0 0.25rem;
+        }
+
+        .mobile-nav-item:hover {
+            background-color: #f3f4f6;
+            color: #2563eb;
+        }
+
+        .mobile-nav-item:active {
+            transform: scale(0.95);
+        }
+
+        .mobile-nav-item.active {
+            color: #2563eb;
+        }
+
+        .mobile-nav-item:focus-visible {
+            outline: 2px solid #2563eb;
+            outline-offset: -2px;
+        }
+
+        .mobile-nav-item .icon {
+            font-size: 1.25rem;
+            margin-bottom: 0.25rem;
+            transition: transform 0.2s ease;
+        }
+
+        .mobile-nav-item:hover .icon {
+            transform: scale(1.1);
+        }
+
+        .mobile-nav-item.active .icon {
+            animation: bounce 0.5s ease;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-4px); }
+        }
+
+        /* Skeleton Loading States (can be toggled for demo) */
+        .skeleton {
+            background: linear-gradient(
+                90deg,
+                #f0f0f0 25%,
+                #e0e0e0 50%,
+                #f0f0f0 75%
+            );
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+            border-radius: 4px;
+        }
+
+        @keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        .skeleton-line {
+            height: 12px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            margin: 8px 0;
+        }
+
+        .skeleton-value {
+            width: 60px;
+            height: 32px;
+        }
+
+        /* Desktop Responsive Styles */
+        @media (min-width: 768px) {
+            body {
+                padding-bottom: 0;
+            }
+
+            .nav-links {
+                display: flex;
+            }
+
+            .mobile-menu-toggle {
+                display: none;
+            }
+
+            .mobile-bottom-nav {
+                display: none;
+            }
+
+            .metrics-grid {
+                grid-template-columns: repeat(5, 1fr);
+            }
+        }
+
+        @media (min-width: 1024px) {
+            main {
+                padding: 3rem 0;
+            }
+
+            .welcome-section h2 {
+                font-size: 2rem;
+            }
+
+            .content-layout {
+                grid-template-columns: 2fr 1fr;
+            }
+        }
+
+        /* Accessibility */
+        button:focus, a:focus {
+            outline: 2px solid #2563eb;
+            outline-offset: 2px;
+        }
+
+        /* Respect user motion preferences */
+        @media (prefers-reduced-motion: reduce) {
+            *,
+            *::before,
+            *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+        /* Empty state styles (commented out, can be toggled) */
+        /*
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: #6b7280;
+        }
+
+        .empty-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .empty-state h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 0.5rem;
+        }
+
+        .empty-state p {
+            margin-bottom: 1.5rem;
+        }
+        */
+    </style>
+</head>
+<body>
+
+    <!-- Main Navigation Header -->
+    <header>
+        <div class="container">
+            <nav>
+                <!-- Logo and Brand -->
+                <div class="logo">
+                    Learn Greek Easy
+                </div>
+
+                <!-- Desktop Navigation Links -->
+                <div class="nav-links">
+                    <a href="#dashboard" class="nav-link nav-link-active" tabindex="0">Dashboard</a>
+                    <a href="#decks" class="nav-link" tabindex="0">All Decks</a>
+                    <a href="#statistics" class="nav-link" tabindex="0">Statistics</a>
+                    <a href="#settings" class="nav-link" tabindex="0">Settings</a>
+                </div>
+
+                <!-- User Menu -->
+                <div class="user-menu">
+                    <div class="avatar-circle" role="button" tabindex="0" aria-label="User menu">ΑΠ</div>
+                </div>
+
+                <!-- Mobile Menu Toggle -->
+                <button class="mobile-menu-toggle" aria-label="Menu" tabindex="0">☰</button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="container">
+
+        <!-- Welcome Section - Warm and Encouraging -->
+        <section class="welcome-section">
+            <h2>Καλώς ήρθες πίσω, <span class="greek-text">Αλέξανδρε</span>! (Welcome back, Alexandros!)</h2>
+            <p>Συνέχισε την εξαιρετική δουλειά - κάθε λέξη σε φέρνει πιο κοντά στον στόχο σου. (Keep up the great work - every word brings you closer to your goal.)</p>
+        </section>
+
+        <!-- Key Metrics Dashboard - Primary Focus -->
+        <section class="metrics-grid">
+
+            <!-- Metric Card: Cards Due Today -->
+            <div class="metric-card" role="button" tabindex="0" aria-label="24 cards due for review today">
+                <div class="metric-label">Για Σήμερα (Due Today)</div>
+                <div class="metric-value primary" data-target="24">24</div>
+                <div class="metric-sublabel">κάρτες για επανάληψη</div>
+            </div>
+
+            <!-- Metric Card: Learning Streak -->
+            <div class="metric-card" role="button" tabindex="0" aria-label="12 day learning streak">
+                <div class="metric-label">Συνεχόμενες Μέρες (Streak)</div>
+                <div class="metric-value orange" data-target="12">12</div>
+                <div class="metric-sublabel">ημέρες συνεχόμενης μελέτης</div>
+            </div>
+
+            <!-- Metric Card: Overall Progress -->
+            <div class="metric-card" role="button" tabindex="0" aria-label="37% overall completion">
+                <div class="metric-label">Πρόοδος (Progress)</div>
+                <div class="metric-value green" data-target="37">37%</div>
+                <div class="metric-sublabel">συνολική ολοκλήρωση</div>
+            </div>
+
+            <!-- Metric Card: Mastered Words -->
+            <div class="metric-card" role="button" tabindex="0" aria-label="186 words mastered">
+                <div class="metric-label">Μαθημένες (Mastered)</div>
+                <div class="metric-value blue" data-target="186">186</div>
+                <div class="metric-sublabel">λέξεις που μάθατε</div>
+            </div>
+
+            <!-- Metric Card: Words to Master -->
+            <div class="metric-card" role="button" tabindex="0" aria-label="314 words remaining">
+                <div class="metric-label">Υπολοίπουν (Remaining)</div>
+                <div class="metric-value muted" data-target="314">314</div>
+                <div class="metric-sublabel">λέξεις που απομένουν</div>
+            </div>
+
+        </section>
+
+        <!-- Two Column Layout for Desktop -->
+        <div class="content-layout">
+
+            <!-- Left Column: Deck Selection (Secondary Purpose) -->
+            <section>
+
+                <!-- Section Header with Action -->
+                <div class="deck-section-header">
+                    <h3>Οι Τράπουλες Σας (Your Learning Decks)</h3>
+                    <a href="#all-decks" class="browse-link" tabindex="0">Δείτε Όλες (Browse All) →</a>
+                </div>
+
+                <!-- Deck List with Progress Bars -->
+                <div class="deck-list">
+
+                    <!-- Deck Card 1: Active/In Progress - A1 Level -->
+                    <div class="deck-card" role="button" tabindex="0" aria-label="A1 Essential Words deck, 68% complete">
+                        <div class="deck-header">
+                            <div class="deck-info">
+                                <h4><span class="greek-text">A1 Βασικές Λέξεις</span> (Essential Words)</h4>
+                                <p>Καθημερινό λεξιλόγιο για βασική επικοινωνία · Basic vocabulary for everyday communication</p>
+                            </div>
+                            <span class="badge badge-blue">Σε Εξέλιξη (In Progress)</span>
+                        </div>
+                        <!-- Progress Bar -->
+                        <div class="progress-container">
+                            <div class="progress-info">
+                                <span>68 από 100 λέξεις</span>
+                                <span>68%</span>
+                            </div>
+                            <div class="progress-bar-track">
+                                <div class="progress-bar-fill" style="width: 68%"></div>
+                            </div>
+                        </div>
+                        <!-- Quick Stats with Greek examples -->
+                        <div class="quick-stats">
+                            <span>📚 12 κάρτες σήμερα</span>
+                            <span>✅ 68 μαθημένες</span>
+                            <span>📝 32 μαθαίνουν (Γεια σου, Ευχαριστώ, Καλημέρα...)</span>
+                        </div>
+                    </div>
+
+                    <!-- Deck Card 2: Active/In Progress - Common Phrases -->
+                    <div class="deck-card" role="button" tabindex="0" aria-label="Common Phrases deck, 30% complete">
+                        <div class="deck-header">
+                            <div class="deck-info">
+                                <h4><span class="greek-text">Κοινές Φράσεις</span> (Common Phrases)</h4>
+                                <p>Χρήσιμες φράσεις για καθημερινές αλληλεπιδράσεις · Useful phrases for daily interactions</p>
+                            </div>
+                            <span class="badge badge-blue">Σε Εξέλιξη (In Progress)</span>
+                        </div>
+                        <!-- Progress Bar -->
+                        <div class="progress-container">
+                            <div class="progress-info">
+                                <span>45 από 150 φράσεις</span>
+                                <span>30%</span>
+                            </div>
+                            <div class="progress-bar-track">
+                                <div class="progress-bar-fill" style="width: 30%"></div>
+                            </div>
+                        </div>
+                        <!-- Quick Stats -->
+                        <div class="quick-stats">
+                            <span>📚 8 κάρτες σήμερα</span>
+                            <span>✅ 45 μαθημένες</span>
+                            <span>📝 105 μαθαίνουν (Πώς είσαι;, Με λένε..., Από πού είσαι;...)</span>
+                        </div>
+                    </div>
+
+                    <!-- Deck Card 3: Not Started - A2 Level -->
+                    <div class="deck-card not-started" role="button" tabindex="0" aria-label="A2 Intermediate Vocabulary deck, not started">
+                        <div class="deck-header">
+                            <div class="deck-info">
+                                <h4><span class="greek-text">A2 Μεσαίο Επίπεδο</span> (Intermediate Vocabulary)</h4>
+                                <p>Βελτιώστε τις βάσεις σας με πιο σύνθετες λέξεις · Build on your foundation with more complex words</p>
+                            </div>
+                            <span class="badge badge-gray">Δεν Ξεκίνησε (Not Started)</span>
+                        </div>
+                        <!-- Progress Bar (Empty) -->
+                        <div class="progress-container">
+                            <div class="progress-info">
+                                <span>0 από 200 λέξεις</span>
+                                <span>0%</span>
+                            </div>
+                            <div class="progress-bar-track">
+                                <div class="progress-bar-fill" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        <!-- Quick Stats -->
+                        <div class="quick-stats">
+                            <span>📚 0 κάρτες</span>
+                            <span>✅ 0 μαθημένες</span>
+                            <span>📝 200 για μάθηση</span>
+                        </div>
+                    </div>
+
+                    <!-- Deck Card 4: Completed - Greek Alphabet -->
+                    <div class="deck-card" role="button" tabindex="0" aria-label="Greek Alphabet deck, completed">
+                        <div class="deck-header">
+                            <div class="deck-info">
+                                <h4><span class="greek-text">Ελληνικό Αλφάβητο</span> (Greek Alphabet)</h4>
+                                <p>Μάθετε το ελληνικό αλφάβητο και την προφορά · Master the Greek alphabet and pronunciation</p>
+                            </div>
+                            <span class="badge badge-green">Ολοκληρώθηκε (Completed)</span>
+                        </div>
+                        <!-- Progress Bar (Full) -->
+                        <div class="progress-container">
+                            <div class="progress-info">
+                                <span>24 από 24 γράμματα (Α-Ω)</span>
+                                <span>100%</span>
+                            </div>
+                            <div class="progress-bar-track">
+                                <div class="progress-bar-fill green" style="width: 100%"></div>
+                            </div>
+                        </div>
+                        <!-- Quick Stats -->
+                        <div class="quick-stats">
+                            <span>📚 4 επανάληψη</span>
+                            <span>✅ 24 μαθημένα (Α, Β, Γ, Δ...)</span>
+                            <span>🎉 Συγχαρητήρια!</span>
+                        </div>
+                    </div>
+
+                </div>
+
+            </section>
+
+            <!-- Right Column: Quick Actions & Secondary Info -->
+            <aside>
+
+                <!-- Quick Actions Card -->
+                <div class="actions-panel">
+                    <h3>Γρήγορες Ενέργειες (Quick Actions)</h3>
+                    <div class="actions-list">
+                        <!-- Primary Action: Start Review -->
+                        <button class="btn btn-primary" tabindex="0">
+                            Ξεκινήστε τη Σημερινή Επανάληψη (24 κάρτες)
+                        </button>
+
+                        <!-- Secondary Actions -->
+                        <button class="btn btn-secondary" tabindex="0">
+                            Δείτε Όλες τις Τράπουλες (Browse All Decks)
+                        </button>
+                        <button class="btn btn-secondary" tabindex="0">
+                            Λεπτομερή Στατιστικά (View Statistics)
+                        </button>
+                        <button class="btn btn-secondary" tabindex="0">
+                            Εξάσκηση Αδύναμων Λέξεων (Practice Weak Words)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Upcoming Review Schedule -->
+                <div class="upcoming-reviews">
+                    <h3>Επερχόμενες Επαναλήψεις (Upcoming Reviews)</h3>
+                    <div class="review-item">
+                        <span>Σήμερα (Today)</span>
+                        <span>24 κάρτες</span>
+                    </div>
+                    <div class="review-item">
+                        <span>Αύριο (Tomorrow)</span>
+                        <span>18 κάρτες</span>
+                    </div>
+                    <div class="review-item">
+                        <span>Αυτή την Εβδομάδα (This Week)</span>
+                        <span>142 κάρτες</span>
+                    </div>
+                </div>
+
+                <!-- Learning Tips (Warm & Encouraging) -->
+                <div class="learning-tip">
+                    <h4>💡 Συμβουλή Μάθησης (Learning Tip)</h4>
+                    <p>
+                        Η συνέπεια ξεπερνά την ένταση! Ακόμα και 5 λεπτά την ημέρα είναι καλύτερα από μακρές συνεδρίες μία φορά την εβδομάδα.<br>
+                        <em>Consistency beats intensity! Even 5 minutes daily is better than long sessions once a week.</em>
+                    </p>
+                </div>
+
+            </aside>
+
+        </div>
+
+    </main>
+
+    <!-- Mobile Bottom Navigation (Visible only on mobile) -->
+    <nav class="mobile-bottom-nav">
+        <a href="#dashboard" class="mobile-nav-item active" tabindex="0" aria-label="Home">
+            <span class="icon">🏠</span>
+            <span class="label">Αρχική</span>
+        </a>
+        <a href="#review" class="mobile-nav-item" tabindex="0" aria-label="Review">
+            <span class="icon">📚</span>
+            <span class="label">Επανάληψη</span>
+        </a>
+        <a href="#decks" class="mobile-nav-item" tabindex="0" aria-label="Decks">
+            <span class="icon">📂</span>
+            <span class="label">Τράπουλες</span>
+        </a>
+        <a href="#statistics" class="mobile-nav-item" tabindex="0" aria-label="Statistics">
+            <span class="icon">📊</span>
+            <span class="label">Στατιστικά</span>
+        </a>
+        <a href="#profile" class="mobile-nav-item" tabindex="0" aria-label="Profile">
+            <span class="icon">👤</span>
+            <span class="label">Προφίλ</span>
+        </a>
+    </nav>
+
+    <script>
+        // Simple number counter animation on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            const metricValues = document.querySelectorAll('.metric-value[data-target]');
+
+            metricValues.forEach(element => {
+                const target = element.getAttribute('data-target');
+                const isPercentage = target.includes('%');
+                const targetNumber = parseInt(target);
+
+                if (isNaN(targetNumber)) return;
+
+                let current = 0;
+                const increment = targetNumber / 30; // 30 frames for animation
+                const duration = 800; // 800ms total
+                const stepTime = duration / 30;
+
+                const timer = setInterval(() => {
+                    current += increment;
+                    if (current >= targetNumber) {
+                        element.textContent = isPercentage ? targetNumber + '%' : targetNumber;
+                        clearInterval(timer);
+                    } else {
+                        element.textContent = isPercentage ? Math.floor(current) + '%' : Math.floor(current);
+                    }
+                }, stepTime);
+            });
+
+            // Add keyboard support for interactive elements
+            document.querySelectorAll('.deck-card, .metric-card').forEach(card => {
+                card.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        this.click();
+                    }
+                });
+            });
+
+            // Add click handlers for demonstration (in real app, these would navigate)
+            document.querySelectorAll('.deck-card').forEach(card => {
+                card.addEventListener('click', function() {
+                    console.log('Deck card clicked:', this.querySelector('h4').textContent);
+                });
+            });
+
+            document.querySelectorAll('.metric-card').forEach(card => {
+                card.addEventListener('click', function() {
+                    console.log('Metric card clicked:', this.querySelector('.metric-label').textContent);
+                });
+            });
+        });
+    </script>
+
+</body>
+</html>
