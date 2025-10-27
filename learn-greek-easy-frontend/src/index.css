@@ -1,0 +1,114 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom gradient utilities */
+@layer utilities {
+  .bg-gradient-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  }
+
+  .bg-gradient-accent {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  }
+
+  .text-gradient {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+}
+
+/* Custom animations that aren't in Tailwind by default */
+@layer utilities {
+  .animate-counter {
+    animation: counter 0.3s ease-out;
+  }
+
+  @keyframes counter {
+    from {
+      transform: scale(1.2);
+      opacity: 0.5;
+    }
+    to {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+}
+
+/* Smooth scrolling for the entire app */
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* Ensure full height layouts work properly */
+  html, body, #root {
+    height: 100%;
+  }
+
+  /* Better focus styles for accessibility */
+  *:focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+  }
+
+  /* Remove focus outline for mouse users */
+  *:focus:not(:focus-visible) {
+    outline: none;
+  }
+}
+
+/* Custom component styles */
+@layer components {
+  /* Card component base styles */
+  .card {
+    @apply bg-white rounded-lg border border-border-gray p-6 transition-all duration-200;
+  }
+
+  .card-hover {
+    @apply hover:border-primary hover:shadow-md hover:-translate-y-0.5;
+  }
+
+  /* Button base styles */
+  .btn {
+    @apply px-4 py-2 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2;
+  }
+
+  .btn-primary {
+    @apply bg-gradient-to-br from-gradient-from to-gradient-to text-white hover:shadow-button-primary hover:-translate-y-0.5;
+  }
+
+  .btn-secondary {
+    @apply bg-secondary text-secondary-foreground hover:bg-muted;
+  }
+
+  /* Metric card styles */
+  .metric-card {
+    @apply card hover:border-primary hover:shadow-card-hover cursor-pointer;
+  }
+
+  .metric-label {
+    @apply text-sm text-text-muted mb-2;
+  }
+
+  .metric-value {
+    @apply text-3xl font-bold mb-1;
+  }
+
+  .metric-sublabel {
+    @apply text-xs text-text-subtle;
+  }
+}
+
+/* Accessibility: Respect user's motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -54,9 +54,29 @@ This document tracks all frontend development tasks for the MVP.
 ---
 
 ### 2. Core Setup & Configuration
-**Status**: ⏸️ Not Started
-**File**: [02-core-setup.md](./02-core-setup.md)
+**Status**: 🚧 **In Progress** (2 of 8 subtasks - 25%)
+**File**: [02-core-frontend-setup.md](./02/02-core-frontend-setup.md)
+**Started**: 2025-10-27
 **Description**: Initialize React project with all dependencies and configurations
+
+**Completed Subtasks**:
+- ✅ **02.01**: Initialize React + Vite + TypeScript Project (Completed 2025-10-27)
+  - Project created at `/Users/samosipov/Downloads/learn-greek-easy/learn-greek-easy-frontend/`
+  - React 19.1.1 + TypeScript 5.9.3 + Vite 7.1.7 installed
+  - Clean project structure established
+  - Development environment verified
+
+- ✅ **02.02**: Configure Tailwind CSS with Custom Theme (Completed 2025-10-27)
+  - Tailwind CSS 3.4.18 + PostCSS + Autoprefixer installed
+  - Complete custom theme configured matching Style Guide
+  - All colors: primary, gradient, success, warning, danger, text, backgrounds
+  - Typography system: 7 font sizes with line heights (xs to 3xl)
+  - 4px grid spacing system implemented
+  - Responsive breakpoints: sm, md, lg, xl, 2xl (640px to 1440px)
+  - Custom shadows, border radius, animations
+  - Custom gradient utilities and component classes
+  - Test component created and verified in browser
+  - Mobile responsive design confirmed (375px to 1440px+)
 
 ---
 
@@ -107,16 +127,16 @@ This document tracks all frontend development tasks for the MVP.
 | Category | Total Tasks | Completed | In Progress | Not Started | Progress |
 |----------|-------------|-----------|-------------|-------------|----------|
 | Design | 1 | 1 ✅ | 0 | 0 | 100% |
-| Setup | 1 | 0 | 0 | 1 | 0% |
+| Setup | 1 | 0 | 1 🚧 | 0 | 25% |
 | Auth | 1 | 0 | 0 | 1 | 0% |
 | Decks | 1 | 0 | 0 | 1 | 0% |
 | Review | 1 | 0 | 0 | 1 | 0% |
 | Analytics | 1 | 0 | 0 | 1 | 0% |
 | Components | 1 | 0 | 0 | 1 | 0% |
 | Testing | 1 | 0 | 0 | 1 | 0% |
-| **TOTAL** | **8** | **1** | **0** | **7** | **12.5%** |
+| **TOTAL** | **8** | **1** | **1** | **6** | **18.75%** |
 
-### 🎯 Overall Frontend Progress: 1 of 8 tasks complete (12.5%)
+### 🎯 Overall Frontend Progress: ~22% (1 complete, 1 in-progress at 25%)
 
 **Celebration Note**: 🎉 We've successfully completed our first major frontend task! The Main Page Design is fully documented, approved, and ready for implementation. This solid foundation will guide all future development work.
 
@@ -150,16 +170,32 @@ This document tracks all frontend development tasks for the MVP.
 - React 18+ with TypeScript 5+ requirement
 - 30-35 hour implementation timeline for main page components
 
-### Recent Accomplishments (2025-10-26)
+### Recent Accomplishments
+**2025-10-26:**
 - ✅ **COMPLETED Task 01**: Main Page Design (100%)
 - ✅ All 6 subtasks finished and documented
 - ✅ 2,800+ word design decisions document created
 - ✅ User approval received for all deliverables
 - ✅ Ready to proceed with React implementation
 
+**2025-10-27:**
+- ✅ **STARTED Task 02**: Core Setup & Configuration
+- ✅ **COMPLETED Subtask 02.01**: Initialize React + Vite + TypeScript Project
+- ✅ Frontend project successfully created with latest versions
+- ✅ Development environment verified and working
+- ✅ **COMPLETED Subtask 02.02**: Configure Tailwind CSS with Custom Theme
+- ✅ Full design system implementation with all Style Guide specifications
+- ✅ Comprehensive test component created with visual verification
+- ✅ Mobile responsive design tested (375px to 1440px+)
+- ✅ All custom colors, typography, spacing, and animations working perfectly
+
 ### Blockers & Issues
-*None currently* - Clear path forward to Task 02: Core Setup & Configuration
+*None currently* - Ready to continue with Subtask 02.03: Install and Configure Shadcn/ui
+
+### Next Steps
+- **Immediate**: Task 02.03 - Install and Configure Shadcn/ui
+- **Then**: Continue with remaining subtasks in Task 02 (Core Setup)
 
 ---
 
-**Last Updated**: 2025-10-26
+**Last Updated**: 2025-10-27

@@ -12,7 +12,7 @@ This document tracks all tasks for the MVP development of the Greek Language Lea
 | Area | Total Tasks | Completed | In Progress | Not Started | Progress |
 |------|-------------|-----------|-------------|-------------|----------|
 | Frontend Design | 1 | 1 ✅ | 0 | 0 | 100% |
-| Frontend Development | 7 | 0 | 0 | 7 | 0% |
+| Frontend Development | 7 | 0 | 1 🚧 | 6 | ~3.5% |
 | Backend Development | ~15 | 0 | 0 | ~15 | 0% |
 | Infrastructure | 6 | 0 | 0 | 6 | 0% |
 | Testing | ~10 | 0 | 0 | ~10 | 0% |
@@ -111,9 +111,19 @@ See detailed frontend tasks in: [frontend/](./frontend/)
   **Key Achievement**: First major MVP task completed with comprehensive documentation!
 
 ### Core Setup
-- [ ] Initialize React + Vite + TypeScript project
-- [ ] Setup Tailwind CSS
-- [ ] Install and configure Shadcn/ui
+- [🚧] Initialize React + Vite + TypeScript project (Started 2025-10-27) - **25% Complete (2/8 subtasks)**
+  - [✅] **02.01**: React + Vite + TypeScript initialized (Completed 2025-10-27)
+  - [✅] **02.02**: Setup Tailwind CSS with custom theme (Completed 2025-10-27)
+    - Tailwind CSS v3.4.18 configured with complete Style Guide theme
+    - 15 color groups, typography system, 4px grid spacing
+    - Custom utilities and component classes added
+    - Mobile responsive design verified
+  - [ ] **02.03**: Install and configure Shadcn/ui (NEXT)
+  - [ ] **02.04**: Set up project file structure
+  - [ ] **02.05**: Configure ESLint and Prettier
+  - [ ] **02.06**: Set up development environment and scripts
+  - [ ] **02.07**: Create base layout components
+  - [ ] **02.08**: Verify setup with test component
 - [ ] Setup Zustand for client state
 - [ ] Setup TanStack Query for server state
 - [ ] Configure React Router
@@ -222,6 +232,15 @@ See detailed frontend tasks in: [frontend/](./frontend/)
   - Sets accessibility standards for all future development
 
   **Ready for Next Phase**: Task 02 - Core Setup & Configuration
+
+### 🚧 2025-10-27 - Frontend Development Started!
+- ✅ **STARTED Task 02: Core Frontend Setup**
+  - ✅ **COMPLETED Subtask 02.01**: Initialize React + Vite + TypeScript Project
+  - **Project Location**: `/Users/samosipov/Downloads/learn-greek-easy/learn-greek-easy-frontend/`
+  - **Tech Stack**: React 19.1.1 + TypeScript 5.9.3 + Vite 7.1.7 (latest versions)
+  - **Status**: Development environment verified and working
+  - **Next**: Subtask 02.02 - Configure Tailwind CSS with Custom Theme
+  - **Progress**: 1 of 8 subtasks complete (12.5% of Task 02)
 
 ### 2025-10-25 Updates:
 - ✅ Completed Task 01.03: UI Component Identification
