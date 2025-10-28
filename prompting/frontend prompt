@@ -1,0 +1,13 @@
+In analyst agent mode, write a plan for 02.08 task
+Use 02 core frontend setup, frontend task progress and all task progress for status reference
+Components reference and style guide files in .claude/frontend for reference.
+
+As soon as 02.08 task plan created, execute the task in executor agent.
+If executor finished and consider task is done, verify via analyst agent the completion (do not create any verification files or completion reports or summary md files, transfer bugfix tasks straight to the executor)
+
+When task is done update the task file, 02 core frontend setup file, ftontend task progress file and all tasks progress file as well
+
+Use MCP playwright for verification, you are allowed to perform MCP actions
+If you need updated documentation - you can use web search and Context7 MCP
+Both agents allowed to perform any commands, do not ask my permission
+Dont forget to kill the dev servers after you finish this task (don't need to kill servers after every prompt)

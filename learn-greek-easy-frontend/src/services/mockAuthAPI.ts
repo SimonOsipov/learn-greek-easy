@@ -1,0 +1,185 @@
+import type { User, RegisterData, AuthResponse, AuthError } from '@/types/auth';
+import { mockUsers } from './mockData';
+
+class MockAuthAPI {
+  private users = [...mockUsers];
+  private tokens = new Map<string, { userId: string; expiresAt: Date }>();
+
+  // Simulate network delay
+  private async delay(ms: number = 1000): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  // Generate mock JWT token
+  private generateToken(userId: string): string {
+    const timestamp = Date.now();
+    const random = Math.random().toString(36).substring(2);
+    return `mock.${btoa(userId)}.${timestamp}.${random}`;
+  }
+
+  // Generate refresh token
+  private generateRefreshToken(userId: string): string {
+    return `refresh.${this.generateToken(userId)}`;
+  }
+
+  // Login method
+  async login(email: string, password: string): Promise<AuthResponse> {
+    await this.delay(1000);
+
+    const user = this.users.find(
+      u => u.email.toLowerCase() === email.toLowerCase() && u.password === password
+    );
+
+    if (!user) {
+      throw {
+        code: 'INVALID_CREDENTIALS',
+        message: 'Invalid email or password',
+      } as AuthError;
+    }
+
+    const token = this.generateToken(user.id);
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
+
+    // Store token for validation
+    this.tokens.set(token, { userId: user.id, expiresAt });
+
+    // Return user without password
+    const { password: _, ...userWithoutPassword } = user;
+
+    return {
+      user: userWithoutPassword as User,
+      token,
+      refreshToken: this.generateRefreshToken(user.id),
+      expiresAt,
+    };
+  }
+
+  // Register method
+  async register(data: RegisterData): Promise<AuthResponse> {
+    await this.delay(1500);
+
+    // Check for duplicate email
+    if (this.users.some(u => u.email.toLowerCase() === data.email.toLowerCase())) {
+      throw {
+        code: 'EMAIL_EXISTS',
+        message: 'An account with this email already exists',
+        field: 'email',
+      } as AuthError;
+    }
+
+    // Create new user
+    const newUser: User & { password: string } = {
+      id: `user-${Date.now()}`,
+      email: data.email,
+      password: data.password,
+      name: data.name,
+      role: 'free',
+      avatar: undefined,
+      preferences: {
+        language: 'en',
+        dailyGoal: 10,
+        notifications: true,
+      },
+      stats: {
+        streak: 0,
+        wordsLearned: 0,
+        totalXP: 0,
+        joinedDate: new Date(),
+      },
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    this.users.push(newUser);
+
+    // Auto-login after registration
+    return this.login(data.email, data.password);
+  }
+
+  // Verify token
+  async verifyToken(token: string): Promise<User | null> {
+    await this.delay(500);
+
+    const tokenData = this.tokens.get(token);
+    if (!tokenData || tokenData.expiresAt < new Date()) {
+      return null;
+    }
+
+    const user = this.users.find(u => u.id === tokenData.userId);
+    if (!user) return null;
+
+    const { password: _, ...userWithoutPassword } = user;
+    return userWithoutPassword as User;
+  }
+
+  // Refresh token
+  async refreshToken(refreshToken: string): Promise<AuthResponse> {
+    await this.delay(800);
+
+    // Extract user ID from refresh token (mock implementation)
+    const parts = refreshToken.split('.');
+    if (parts.length < 3 || !parts[1]) {
+      throw {
+        code: 'INVALID_TOKEN',
+        message: 'Invalid refresh token',
+      } as AuthError;
+    }
+
+    const userId = atob(parts[1]);
+    const user = this.users.find(u => u.id === userId);
+
+    if (!user) {
+      throw {
+        code: 'USER_NOT_FOUND',
+        message: 'User not found',
+      } as AuthError;
+    }
+
+    const token = this.generateToken(user.id);
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
+
+    this.tokens.set(token, { userId: user.id, expiresAt });
+
+    const { password: _, ...userWithoutPassword } = user;
+
+    return {
+      user: userWithoutPassword as User,
+      token,
+      refreshToken: this.generateRefreshToken(user.id),
+      expiresAt,
+    };
+  }
+
+  // Logout (clear token)
+  async logout(token: string): Promise<void> {
+    await this.delay(200);
+    this.tokens.delete(token);
+  }
+
+  // Update user profile
+  async updateProfile(userId: string, updates: Partial<User>): Promise<User> {
+    await this.delay(1000);
+
+    const userIndex = this.users.findIndex(u => u.id === userId);
+    if (userIndex === -1) {
+      throw {
+        code: 'USER_NOT_FOUND',
+        message: 'User not found',
+      } as AuthError;
+    }
+
+    const user = this.users[userIndex];
+    const updatedUser = {
+      ...user,
+      ...updates,
+      updatedAt: new Date(),
+    };
+
+    this.users[userIndex] = updatedUser;
+
+    const { password: _, ...userWithoutPassword } = updatedUser;
+    return userWithoutPassword as User;
+  }
+}
+
+export const mockAuthAPI = new MockAuthAPI();

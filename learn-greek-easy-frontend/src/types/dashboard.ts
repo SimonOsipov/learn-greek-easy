@@ -86,8 +86,8 @@ export interface Deck {
   lastStudied?: Date;
 }
 
-// User types
-export interface User {
+// Dashboard user types (simplified for dashboard display)
+export interface DashboardUser {
   name: string;
   email: string;
   avatar?: string;
@@ -98,7 +98,7 @@ export interface User {
 
 // Dashboard data
 export interface DashboardData {
-  user: User;
+  user: DashboardUser;
   metrics: Metric[];
   decks: Deck[];
   upcomingReviews: {

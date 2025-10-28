@@ -12,7 +12,7 @@ This document tracks all tasks for the MVP development of the Greek Language Lea
 | Area | Total Tasks | Completed | In Progress | Not Started | Progress |
 |------|-------------|-----------|-------------|-------------|----------|
 | Frontend Design | 1 | 1 ✅ | 0 | 0 | 100% |
-| Frontend Development | 7 | 1 ✅ | 0 | 6 | ~14% |
+| Frontend Development | 7 | 1 ✅ | 1 🔄 | 5 | ~16% |
 | Backend Development | ~15 | 0 | 0 | ~15 | 0% |
 | Infrastructure | 6 | 0 | 0 | 6 | 0% |
 | Testing | ~10 | 0 | 0 | ~10 | 0% |
@@ -168,17 +168,67 @@ See detailed frontend tasks in: [frontend/](./frontend/)
     - Code quality verified (no 'any' types)
 
   **Key Achievement**: Frontend foundation is 100% production-ready!
-- [ ] Setup Zustand for client state
-- [ ] Setup TanStack Query for server state
-- [ ] Configure React Router
-- [ ] Setup API client with authentication
 
 ### Authentication & User Management
-- [ ] Create Login page
-- [ ] Create Registration page
-- [ ] Implement Google OAuth flow
-- [ ] Create authentication state management
-- [ ] Implement protected routes
+**Status**: 🔄 In Progress (25% - 2/8 subtasks)
+**File**: [03-authentication-user-management.md](./frontend/03/03-authentication-user-management.md)
+**Created**: 2025-10-28
+**Started**: 2025-10-28
+**Estimated Duration**: 8-9 hours
+**Dependencies**: Task 02 ✅ Completed
+
+Build complete authentication system with email/password login and user management:
+- [✅] **03.01**: Design Authentication Pages UI (45 min) - **COMPLETED 2025-10-28**
+  - Login page with password visibility toggle and Greek welcome text
+  - Registration page with password strength indicator
+  - ForgotPassword placeholder page
+  - Google OAuth placeholder button (disabled state)
+  - AuthLayout wrapper with gradient background
+  - Routes added to App.tsx
+- [✅] **03.02**: Implement Authentication State Management (60 min) - **COMPLETED 2025-10-28**
+  - Zustand store with persist middleware for session management
+  - Mock API service with 3 test users (demo, admin, free)
+  - Custom hooks (useAuth, useRequireAuth, useRedirectIfAuth, useRequireRole)
+  - Session manager with 30-minute timeout
+  - Login and Register pages connected to auth store
+  - Full TypeScript support with proper type imports
+  - localStorage persistence for "remember me"
+  - Working login flow verified with demo user
+- [ ] **03.03**: Create Login Page with Validation (75 min)
+  - Zustand auth store
+  - Auth types and interfaces
+  - Session persistence
+  - Mock API service for development
+- [ ] **03.03**: Create Login Page with Validation (75 min)
+  - Email/password form
+  - React Hook Form + Zod validation
+  - Error handling and loading states
+  - Remember me functionality
+- [ ] **03.04**: Create Registration Page with Validation (90 min)
+  - Registration form with all fields
+  - Password strength indicator
+  - Terms acceptance
+  - Form validation with helpful errors
+- [ ] **03.05**: Implement Protected Routes (60 min)
+  - ProtectedRoute component
+  - Redirect logic
+  - Auth checks
+  - Route guards
+- [ ] **03.06**: Create User Profile Page (75 min)
+  - Profile display
+  - Edit profile form
+  - Avatar placeholder
+  - Learning statistics
+- [ ] **03.07**: Add Logout Functionality and Session Management (45 min)
+  - Logout implementation
+  - Session timeout (30 min inactivity)
+  - Token refresh strategy
+  - Clear user data on logout
+- [ ] **03.08**: Testing and Verification (60 min)
+  - Test all auth flows
+  - Verify protected routes
+  - Check responsive design
+  - Quality checks (TypeScript, ESLint, build)
 
 ### Deck Management
 - [ ] Create Decks list page
