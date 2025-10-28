@@ -6,13 +6,13 @@ This document tracks all tasks for the MVP development of the Greek Language Lea
 - **Goal**: Launch MVP with Anki-style flashcard system for Greek language learning
 - **Target Users**: People preparing for Greek naturalization exams (A1, A2 levels)
 - **Timeline**: *[To be defined]*
-- **Progress**: 🎯 **1 major task completed** (Frontend Main Page Design)
+- **Progress**: 🎉 **2 major tasks completed** (Frontend Design + Core Setup - Foundation Ready!)
 
 ### 📊 MVP Progress Dashboard
 | Area | Total Tasks | Completed | In Progress | Not Started | Progress |
 |------|-------------|-----------|-------------|-------------|----------|
 | Frontend Design | 1 | 1 ✅ | 0 | 0 | 100% |
-| Frontend Development | 7 | 0 | 1 🚧 | 6 | ~3.5% |
+| Frontend Development | 7 | 1 ✅ | 0 | 6 | ~14% |
 | Backend Development | ~15 | 0 | 0 | ~15 | 0% |
 | Infrastructure | 6 | 0 | 0 | 6 | 0% |
 | Testing | ~10 | 0 | 0 | ~10 | 0% |
@@ -110,20 +110,64 @@ See detailed frontend tasks in: [frontend/](./frontend/)
 
   **Key Achievement**: First major MVP task completed with comprehensive documentation!
 
-### Core Setup
-- [🚧] Initialize React + Vite + TypeScript project (Started 2025-10-27) - **25% Complete (2/8 subtasks)**
+### 🎉 Core Setup
+- [✅] **COMPLETED** - Initialize React + Vite + TypeScript project (2025-10-27 to 2025-10-28) - **100% Complete (8/8 subtasks)**
+  - **Status**: ✅ Production-ready development environment established
+  - **Duration**: 2 days
+  - **Details**: [frontend/02/02-core-frontend-setup.md](./frontend/02/02-core-frontend-setup.md)
+
+  **Complete Subtasks**:
   - [✅] **02.01**: React + Vite + TypeScript initialized (Completed 2025-10-27)
   - [✅] **02.02**: Setup Tailwind CSS with custom theme (Completed 2025-10-27)
     - Tailwind CSS v3.4.18 configured with complete Style Guide theme
     - 15 color groups, typography system, 4px grid spacing
     - Custom utilities and component classes added
     - Mobile responsive design verified
-  - [ ] **02.03**: Install and configure Shadcn/ui (NEXT)
-  - [ ] **02.04**: Set up project file structure
-  - [ ] **02.05**: Configure ESLint and Prettier
-  - [ ] **02.06**: Set up development environment and scripts
-  - [ ] **02.07**: Create base layout components
-  - [ ] **02.08**: Verify setup with test component
+  - [✅] **02.03**: Install and configure Shadcn/ui (Completed 2025-10-27)
+    - All 14 required components installed successfully
+    - Path aliases configured (@/ working in vite and tsconfig)
+    - Components integrated with custom theme
+    - Comprehensive testing performed
+  - [✅] **02.04**: Set up project file structure (Completed 2025-10-27)
+    - Component organization folders (layout, navigation, display, interactive)
+    - TypeScript type definitions (user, deck, dashboard interfaces)
+    - Custom hooks and pages created with placeholders
+    - Lib utilities expanded (constants, helpers)
+    - Barrel exports configured for clean imports
+  - [✅] **02.05**: Configure ESLint and Prettier (Completed 2025-10-27)
+    - ESLint 9.38.0 with TypeScript, React, and import plugins
+    - Prettier 3.6.2 with Tailwind CSS plugin for class sorting
+    - VS Code integration with format-on-save
+    - NPM scripts for code quality (lint, format, type-check)
+  - [✅] **02.06**: Set up development environment and scripts (Completed 2025-10-27)
+    - .env.example and .env.local created with comprehensive documentation
+    - src/env.d.ts created with TypeScript types for environment variables
+    - Vite configuration enhanced with build optimizations
+    - 18 NPM scripts added for comprehensive workflow
+    - VS Code debugging configuration with launch.json
+    - DEVELOPMENT.md created (274 lines) with developer guide
+    - src/lib/config.ts and src/lib/env.ts utilities created
+  - [✅] **02.07**: Create base layout components (Completed 2025-10-28)
+    - LayoutContext with responsive state management
+    - AppLayout with React Router integration
+    - Header with desktop nav and user menu
+    - MobileNav with bottom navigation (Lucide icons)
+    - Mobile sidebar with Shadcn Sheet
+    - PageContainer and ContentLayout utilities
+    - React Router DOM installed (v6.20.0)
+    - Browser tested: desktop, tablet, mobile
+  - [✅] **02.08**: Verify setup with test component (Completed 2025-10-28)
+    - TypeScript interfaces (Metric, Deck, User, DashboardData)
+    - MetricCard component (5 color variants, tooltips, loading states)
+    - DeckCard component (progress tracking, status badges)
+    - WelcomeSection component (Greek greetings, dynamic messages)
+    - Enhanced Dashboard page with authentic Greek content
+    - Setup verification section (typography, colors, Greek text)
+    - Responsive grids (mobile, tablet, desktop)
+    - App.tsx updated with TooltipProvider
+    - Code quality verified (no 'any' types)
+
+  **Key Achievement**: Frontend foundation is 100% production-ready!
 - [ ] Setup Zustand for client state
 - [ ] Setup TanStack Query for server state
 - [ ] Configure React Router
@@ -233,14 +277,74 @@ See detailed frontend tasks in: [frontend/](./frontend/)
 
   **Ready for Next Phase**: Task 02 - Core Setup & Configuration
 
-### 🚧 2025-10-27 - Frontend Development Started!
-- ✅ **STARTED Task 02: Core Frontend Setup**
+### 🚧 2025-10-27 to 2025-10-28 - Frontend Development Progress!
+- 🚧 **Task 02: Core Frontend Setup** - **87.5% Complete (7/8 subtasks)**
   - ✅ **COMPLETED Subtask 02.01**: Initialize React + Vite + TypeScript Project
-  - **Project Location**: `/Users/samosipov/Downloads/learn-greek-easy/learn-greek-easy-frontend/`
-  - **Tech Stack**: React 19.1.1 + TypeScript 5.9.3 + Vite 7.1.7 (latest versions)
-  - **Status**: Development environment verified and working
-  - **Next**: Subtask 02.02 - Configure Tailwind CSS with Custom Theme
-  - **Progress**: 1 of 8 subtasks complete (12.5% of Task 02)
+    - **Project Location**: `/Users/samosipov/Downloads/learn-greek-easy/learn-greek-easy-frontend/`
+    - **Tech Stack**: React 19.1.1 + TypeScript 5.9.3 + Vite 7.1.7 (latest versions)
+  - ✅ **COMPLETED Subtask 02.02**: Configure Tailwind CSS with Custom Theme
+    - Tailwind CSS v3.4.18 with complete Style Guide implementation
+    - 15 color groups, typography system, 4px grid spacing
+    - Custom gradient utilities and component classes
+    - Mobile responsive design verified (375px to 1440px+)
+  - ✅ **COMPLETED Subtask 02.03**: Install and Configure Shadcn/ui
+    - All 14 required components installed: avatar, badge, button, card, dialog,
+      dropdown-menu, navigation-menu, progress, scroll-area, separator, sheet,
+      skeleton, toast/toaster, tooltip
+    - Path aliases configured (@/ working in vite.config.ts and tsconfig files)
+    - Components fully integrated with custom theme colors
+    - Comprehensive test component created and verified
+    - Greek language support confirmed
+    - Mobile responsiveness tested
+    - No console errors or warnings
+  - ✅ **COMPLETED Subtask 02.04**: Set Up Project File Structure
+    - Complete folder organization created matching Components Reference
+    - Component categories: layout, navigation, display, interactive
+    - TypeScript type definitions: user.ts, deck.ts, dashboard.ts, index.ts
+    - Custom hooks: useAuth, useDashboard, useDecks
+    - Page components: Dashboard, Decks, Statistics, Settings
+    - Lib utilities: constants.ts (routes, API endpoints), helpers.ts (formatting functions)
+    - Barrel exports (index.ts) in all component folders for clean imports
+    - Assets folder structure created (images/, icons/)
+    - Screenshots organized to .playwright-mcp/02/ folder
+    - Project compiles successfully with no TypeScript errors
+  - ✅ **COMPLETED Subtask 02.05**: Configure ESLint and Prettier
+    - ESLint 9.38.0 configured with comprehensive TypeScript/React rules
+    - All required plugins installed (TypeScript, React, React Hooks, Import, Prettier)
+    - Prettier 3.6.2 with prettier-plugin-tailwindcss for automatic class sorting
+    - Configuration files created: eslint.config.js, .prettierrc.json, .prettierignore
+    - VS Code integration: .vscode/settings.json (format on save), .vscode/extensions.json
+    - NPM scripts added: lint, lint:fix, format, format:check, type-check, check-all, fix-all
+    - All quality checks passing (TypeScript compilation, ESLint, Prettier)
+    - Code quality foundation established for team development
+  - ✅ **COMPLETED Subtask 02.06**: Set Up Development Environment and Scripts
+    - Environment configuration with .env.example and TypeScript types
+    - Vite configuration enhanced with build optimizations and API proxy
+    - 18 NPM scripts added (dev, build, lint, format, clean, etc.)
+    - VS Code debugging configuration with Chrome/Edge support
+    - DEVELOPMENT.md documentation (274 lines) created
+    - Config and env utilities with type-safe access
+    - All build and quality checks passing successfully
+  - ✅ **COMPLETED Subtask 02.07**: Create Base Layout Components (Completed 2025-10-28)
+    - LayoutContext with responsive state management (mobile/tablet/desktop detection)
+    - AppLayout with React Router Outlet integration
+    - Header with desktop navigation, user menu dropdown, notification bell
+    - MobileNav with fixed bottom navigation (5 items, Lucide React icons)
+    - Mobile sidebar using Shadcn Sheet component (hamburger menu)
+    - PageContainer and ContentLayout utility components
+    - React Router DOM installed and configured (v6.20.0)
+    - App.tsx updated with 5 page routes
+    - Comprehensive browser testing completed:
+      * ✅ Desktop navigation (>= 1024px)
+      * ✅ Mobile bottom navigation (< 768px)
+      * ✅ Active route highlighting
+      * ✅ Responsive breakpoint transitions
+      * ✅ User menu dropdown
+      * ✅ Hamburger menu sidebar toggle
+      * ✅ All routes navigate correctly
+    - Screenshots captured for verification
+  - **Next**: Subtask 02.08 - Verify setup with test component (Final subtask)
+  - **Progress**: 7 of 8 subtasks complete (87.5% of Task 02)
 
 ### 2025-10-25 Updates:
 - ✅ Completed Task 01.03: UI Component Identification

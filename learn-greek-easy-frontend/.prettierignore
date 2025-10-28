@@ -1,0 +1,50 @@
+# Dependencies
+node_modules/
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+
+# Environment files
+.env*
+!.env.example
+
+# Version control
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+
+# Testing
+coverage/
+.nyc_output/
+
+# Cache
+.cache/
+.turbo/
+tmp/
+
+# Generated files
+*.min.js
+*.min.css
+components.json
+
+# Documentation
+*.md
+LICENSE
+
+# Screenshots/Media
+.playwright-mcp/
+public/images/
+public/fonts/
+
+# Specific files
+tailwind.config.js
+postcss.config.js
