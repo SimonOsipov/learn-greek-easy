@@ -54,3 +54,9 @@ export interface AuthError {
   message: string;
   field?: string;
 }
+
+// Location state for route redirects
+export interface LocationState {
+  from?: string;
+  requiredRole?: UserRole;
+}

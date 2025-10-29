@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Eye, EyeOff } from 'lucide-react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Eye, EyeOff, Loader2 } from 'lucide-react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { AuthLayout } from '@/components/auth/AuthLayout';
 import { Button } from '@/components/ui/button';
 import {
@@ -16,32 +19,81 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useAuthStore } from '@/stores/authStore';
 
+/**
+ * Login form validation schema
+ * - Email: Required, valid email format
+ * - Password: Required, minimum 8 characters (basic check for login)
+ * - RememberMe: Optional boolean
+ */
+const loginSchema = z.object({
+  email: z
+    .string()
+    .min(1, 'Email is required')
+    .email('Please enter a valid email address'),
+  password: z
+    .string()
+    .min(1, 'Password is required')
+    .min(8, 'Password must be at least 8 characters'),
+  rememberMe: z.boolean().default(false),
+});
+
+type LoginFormData = z.infer<typeof loginSchema>;
+
 export const Login: React.FC = () => {
   const navigate = useNavigate();
-  const { login, isLoading, error } = useAuthStore();
+  const location = useLocation();
+  const { login, isLoading } = useAuthStore();
   const [showPassword, setShowPassword] = useState(false);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // Initialize React Hook Form with Zod validation
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+    watch,
+  } = useForm<LoginFormData>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: '',
+      password: '',
+      rememberMe: false,
+    },
+    mode: 'onSubmit', // Validate on submit, then revalidate on change
+    reValidateMode: 'onChange',
+  });
+
+  // Watch rememberMe value for checkbox
+  const rememberMeValue = watch('rememberMe');
+
+  /**
+   * Handle form submission with validation
+   * - Clears previous errors
+   * - Calls auth store login
+   * - Handles success (navigate to dashboard or return URL)
+   * - Handles errors (display at form level)
+   */
+  const onSubmit = async (data: LoginFormData) => {
     setFormError(null);
 
-    // Basic validation
-    if (!email || !password) {
-      setFormError('Please fill in all fields');
-      return;
-    }
-
     try {
-      await login(email, password, rememberMe);
-      navigate('/dashboard');
+      await login(data.email, data.password, data.rememberMe);
+
+      // Check if there's a saved location to return to
+      const from = location.state?.from || '/dashboard';
+      navigate(from, { replace: true });
     } catch (err) {
-      setFormError(error?.message || 'Login failed. Please try again.');
+      // Display API error at form level
+      const errorMessage =
+        err instanceof Error
+          ? err.message
+          : 'Login failed. Please check your credentials and try again.';
+      setFormError(errorMessage);
     }
   };
+
+  // Determine if form should be disabled
+  const isFormDisabled = isLoading || isSubmitting;
 
   return (
     <AuthLayout>
@@ -56,14 +108,19 @@ export const Login: React.FC = () => {
           </CardDescription>
         </CardHeader>
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit(onSubmit)}>
           <CardContent className="space-y-4">
+            {/* Form-level error display (API errors, network errors) */}
             {formError && (
-              <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">
+              <div
+                className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md"
+                role="alert"
+              >
                 {formError}
               </div>
             )}
 
+            {/* Email field with validation */}
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -71,13 +128,23 @@ export const Login: React.FC = () => {
                 type="email"
                 placeholder="your@email.com"
                 autoComplete="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                disabled={isLoading}
-                required
+                aria-invalid={errors.email ? 'true' : 'false'}
+                aria-describedby={errors.email ? 'email-error' : undefined}
+                disabled={isFormDisabled}
+                {...register('email')}
               />
+              {errors.email && (
+                <p
+                  id="email-error"
+                  className="text-sm text-red-600 mt-1"
+                  role="alert"
+                >
+                  {errors.email.message}
+                </p>
+              )}
             </div>
 
+            {/* Password field with validation and visibility toggle */}
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
               <div className="relative">
@@ -86,10 +153,10 @@ export const Login: React.FC = () => {
                   type={showPassword ? 'text' : 'password'}
                   placeholder="Enter your password"
                   autoComplete="current-password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  disabled={isLoading}
-                  required
+                  aria-invalid={errors.password ? 'true' : 'false'}
+                  aria-describedby={errors.password ? 'password-error' : undefined}
+                  disabled={isFormDisabled}
+                  {...register('password')}
                 />
                 <Button
                   type="button"
@@ -97,22 +164,37 @@ export const Login: React.FC = () => {
                   size="icon"
                   className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8"
                   onClick={() => setShowPassword(!showPassword)}
-                  disabled={isLoading}
+                  disabled={isFormDisabled}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
                 >
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </Button>
               </div>
+              {errors.password && (
+                <p
+                  id="password-error"
+                  className="text-sm text-red-600 mt-1"
+                  role="alert"
+                >
+                  {errors.password.message}
+                </p>
+              )}
             </div>
 
+            {/* Remember me checkbox and forgot password link */}
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <Checkbox
                   id="remember"
-                  checked={rememberMe}
-                  onCheckedChange={(checked) =>
-                    setRememberMe(checked === true)
-                  }
-                  disabled={isLoading}
+                  checked={rememberMeValue}
+                  onCheckedChange={(checked) => {
+                    // Manually update the form value
+                    register('rememberMe').onChange({
+                      target: { value: checked, name: 'rememberMe' },
+                    });
+                  }}
+                  disabled={isFormDisabled}
+                  {...register('rememberMe')}
                 />
                 <Label
                   htmlFor="remember"
@@ -135,9 +217,16 @@ export const Login: React.FC = () => {
               type="submit"
               className="w-full bg-gradient-to-br from-[#667eea] to-[#764ba2] hover:opacity-90 text-white"
               size="lg"
-              disabled={isLoading}
+              disabled={isFormDisabled}
             >
-              {isLoading ? 'Signing in...' : 'Sign In'}
+              {isFormDisabled ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Signing in...
+                </>
+              ) : (
+                'Sign In'
+              )}
             </Button>
 
             <div className="relative w-full">

@@ -6,17 +6,19 @@ This document tracks all tasks for the MVP development of the Greek Language Lea
 - **Goal**: Launch MVP with Anki-style flashcard system for Greek language learning
 - **Target Users**: People preparing for Greek naturalization exams (A1, A2 levels)
 - **Timeline**: *[To be defined]*
-- **Progress**: 🎉 **2 major tasks completed** (Frontend Design + Core Setup - Foundation Ready!)
+- **Progress**: 🎉 **2 major tasks completed** + **Authentication 62.5% complete** (Protected routes implemented!)
 
 ### 📊 MVP Progress Dashboard
 | Area | Total Tasks | Completed | In Progress | Not Started | Progress |
 |------|-------------|-----------|-------------|-------------|----------|
 | Frontend Design | 1 | 1 ✅ | 0 | 0 | 100% |
-| Frontend Development | 7 | 1 ✅ | 1 🔄 | 5 | ~16% |
+| Frontend Development | 7 | 1 ✅ | 1 🔄 | 5 | ~20% |
 | Backend Development | ~15 | 0 | 0 | ~15 | 0% |
 | Infrastructure | 6 | 0 | 0 | 6 | 0% |
 | Testing | ~10 | 0 | 0 | ~10 | 0% |
 | Deployment | 9 | 0 | 0 | 9 | 0% |
+
+**Latest Update (2025-10-29)**: Task 03.05 (Protected Routes) completed - Authentication system now at 62.5%!
 
 ---
 
@@ -170,7 +172,7 @@ See detailed frontend tasks in: [frontend/](./frontend/)
   **Key Achievement**: Frontend foundation is 100% production-ready!
 
 ### Authentication & User Management
-**Status**: 🔄 In Progress (25% - 2/8 subtasks)
+**Status**: 🔄 In Progress (62.5% - 5/8 subtasks)
 **File**: [03-authentication-user-management.md](./frontend/03/03-authentication-user-management.md)
 **Created**: 2025-10-28
 **Started**: 2025-10-28
@@ -194,40 +196,42 @@ Build complete authentication system with email/password login and user manageme
   - Full TypeScript support with proper type imports
   - localStorage persistence for "remember me"
   - Working login flow verified with demo user
-- [ ] **03.03**: Create Login Page with Validation (75 min)
-  - Zustand auth store
-  - Auth types and interfaces
-  - Session persistence
-  - Mock API service for development
-- [ ] **03.03**: Create Login Page with Validation (75 min)
-  - Email/password form
-  - React Hook Form + Zod validation
-  - Error handling and loading states
-  - Remember me functionality
-- [ ] **03.04**: Create Registration Page with Validation (90 min)
-  - Registration form with all fields
-  - Password strength indicator
-  - Terms acceptance
-  - Form validation with helpful errors
-- [ ] **03.05**: Implement Protected Routes (60 min)
-  - ProtectedRoute component
-  - Redirect logic
-  - Auth checks
-  - Route guards
+- [✅] **03.03**: Create Login Page with Validation (75 min) - **COMPLETED 2025-10-28**
+  - React Hook Form with Zod validation
+  - Email validation (required, valid format)
+  - Password validation (required, min 8 chars)
+  - Inline error messages with accessibility
+  - Enhanced loading states
+  - Form-level error handling
+- [✅] **03.04**: Create Registration Page with Validation (90 min) - **COMPLETED 2025-10-28**
+  - Zod validation: name (2-50 chars), email (valid format), password (8+ chars), confirmPassword (match), acceptedTerms (required)
+  - React Hook Form with same pattern as Login.tsx
+  - Password match validation with .refine()
+  - Password strength indicator preserved and functional
+  - Inline errors with ARIA attributes
+  - Enhanced loading states with Loader2 spinner
+- [✅] **03.05**: Implement Protected Routes (80 min) - **COMPLETED 2025-10-29**
+  - ProtectedRoute component with role-based access control
+  - PublicRoute component to redirect authenticated users
+  - RouteGuard for initial auth checking with loading state
+  - NotFound (404) and Unauthorized (403) pages with Greek theme
+  - Deep link preservation with location state
+  - Session management works as designed (remember me controls persistence)
+  - 8 screenshots captured in .playwright-mcp/03/
 - [ ] **03.06**: Create User Profile Page (75 min)
-  - Profile display
-  - Edit profile form
+  - Profile display and edit functionality
+  - User preferences and settings
+  - Learning statistics display
   - Avatar placeholder
-  - Learning statistics
 - [ ] **03.07**: Add Logout Functionality and Session Management (45 min)
-  - Logout implementation
-  - Session timeout (30 min inactivity)
+  - Logout dialog and confirmation
+  - Session cleanup and localStorage clearing
+  - Inactivity timeout implementation (30 min)
   - Token refresh strategy
-  - Clear user data on logout
 - [ ] **03.08**: Testing and Verification (60 min)
-  - Test all auth flows
-  - Verify protected routes
-  - Check responsive design
+  - Comprehensive manual testing
+  - Cross-browser verification
+  - Mobile responsiveness check
   - Quality checks (TypeScript, ESLint, build)
 
 ### Deck Management
