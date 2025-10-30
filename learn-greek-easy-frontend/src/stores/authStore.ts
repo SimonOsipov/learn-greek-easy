@@ -182,7 +182,7 @@ export const useAuthStore = create<AuthState>()(
 
       // Check auth on app load
       checkAuth: async () => {
-        const { token, rememberMe } = get();
+        const { token, rememberMe: _rememberMe } = get();
 
         // Check session storage if not remember me
         const sessionToken = sessionStorage.getItem('auth-token');

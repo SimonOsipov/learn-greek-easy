@@ -13,6 +13,9 @@ import { Register } from '@/pages/auth/Register';
 import { ForgotPassword } from '@/pages/auth/ForgotPassword';
 import { NotFound } from '@/pages/NotFound';
 import { Unauthorized } from '@/pages/Unauthorized';
+import { Profile } from '@/pages/Profile';
+import { useActivityMonitor } from '@/hooks/useActivityMonitor';
+import { SessionWarningDialog } from '@/components/auth/SessionWarningDialog';
 
 // Temporary placeholder pages - replace with actual pages
 
@@ -37,13 +40,6 @@ const SettingsPage = () => (
   </div>
 );
 
-const ProfilePage = () => (
-  <div>
-    <h1 className="mb-4 text-2xl font-semibold">Profile</h1>
-    <p>Profile will go here.</p>
-  </div>
-);
-
 // Admin placeholder page
 const AdminPanel = () => (
   <div>
@@ -52,47 +48,65 @@ const AdminPanel = () => (
   </div>
 );
 
+function AppContent() {
+  const { showWarning, remainingSeconds, extendSession } = useActivityMonitor();
+
+  return (
+    <>
+      <RouteGuard>
+        <Routes>
+          {/* Public Routes - redirect to dashboard if authenticated */}
+          <Route element={<PublicRoute />}>
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+          </Route>
+
+          {/* Protected Routes - require authentication */}
+          <Route element={<ProtectedRoute />}>
+            <Route path="/" element={<AppLayout />}>
+              <Route index element={<Dashboard />} />
+              <Route path="dashboard" element={<Navigate to="/" replace />} />
+              <Route path="decks" element={<DecksPage />} />
+              <Route path="statistics" element={<StatisticsPage />} />
+              <Route path="stats" element={<Navigate to="/statistics" replace />} />
+              <Route path="settings" element={<SettingsPage />} />
+              <Route path="profile" element={<Profile />} />
+              <Route path="review" element={<Dashboard />} /> {/* Temporary */}
+            </Route>
+          </Route>
+
+          {/* Admin Routes - require admin role */}
+          <Route element={<ProtectedRoute requiredRole="admin" />}>
+            <Route path="/admin" element={<AppLayout />}>
+              <Route index element={<AdminPanel />} />
+            </Route>
+          </Route>
+
+          {/* Error Pages */}
+          <Route path="/unauthorized" element={<Unauthorized />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </RouteGuard>
+
+      {/* Session warning dialog */}
+      <SessionWarningDialog
+        open={showWarning}
+        remainingSeconds={remainingSeconds}
+        onExtendSession={extendSession}
+      />
+
+      <Toaster />
+    </>
+  );
+}
+
 function App() {
   return (
     <BrowserRouter>
       <TooltipProvider>
         <LayoutProvider>
-          <RouteGuard>
-            <Routes>
-              {/* Public Routes - redirect to dashboard if authenticated */}
-              <Route element={<PublicRoute />}>
-                <Route path="/login" element={<Login />} />
-                <Route path="/register" element={<Register />} />
-                <Route path="/forgot-password" element={<ForgotPassword />} />
-              </Route>
-
-              {/* Protected Routes - require authentication */}
-              <Route element={<ProtectedRoute />}>
-                <Route path="/" element={<AppLayout />}>
-                  <Route index element={<Dashboard />} />
-                  <Route path="dashboard" element={<Navigate to="/" replace />} />
-                  <Route path="decks" element={<DecksPage />} />
-                  <Route path="statistics" element={<StatisticsPage />} />
-                  <Route path="stats" element={<Navigate to="/statistics" replace />} />
-                  <Route path="settings" element={<SettingsPage />} />
-                  <Route path="profile" element={<ProfilePage />} />
-                  <Route path="review" element={<Dashboard />} /> {/* Temporary */}
-                </Route>
-              </Route>
-
-              {/* Admin Routes - require admin role */}
-              <Route element={<ProtectedRoute requiredRole="admin" />}>
-                <Route path="/admin" element={<AppLayout />}>
-                  <Route index element={<AdminPanel />} />
-                </Route>
-              </Route>
-
-              {/* Error Pages */}
-              <Route path="/unauthorized" element={<Unauthorized />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </RouteGuard>
-          <Toaster />
+          <AppContent />
         </LayoutProvider>
       </TooltipProvider>
     </BrowserRouter>

@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useLayoutContext } from '@/contexts/LayoutContext';
 import { cn } from '@/lib/utils';
+import { LogoutDialog } from '@/components/auth/LogoutDialog';
 
 import { PageContainer } from './PageContainer';
 
@@ -122,8 +123,8 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
                 </DropdownMenuItem>
                 <DropdownMenuItem>Help & Support</DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem className="text-destructive focus:text-destructive">
-                  Log out
+                <DropdownMenuItem asChild onSelect={(e) => e.preventDefault()}>
+                  <LogoutDialog />
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

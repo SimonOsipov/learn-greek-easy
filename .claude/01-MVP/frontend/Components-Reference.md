@@ -6,18 +6,19 @@ Quick reference guide for all UI components in the Greek Language Learning appli
 
 ## Overview
 
-This guide provides practical reference for all **23 components** identified in the MVP dashboard. Components are categorized for easy navigation, with complete TypeScript interfaces, usage examples, and implementation guidelines.
+This guide provides practical reference for all **29 components** identified in the MVP dashboard. Components are categorized for easy navigation, with complete TypeScript interfaces, usage examples, and implementation guidelines.
 
 ### Component Distribution
 - **Shadcn/ui Components**: 14 pre-built components
-- **Custom Components**: 9 application-specific components
-- **Total UI Elements**: 47 instances across the dashboard
+- **Custom Components**: 15 application-specific components
+- **Total UI Elements**: 53 instances across the dashboard and profile pages
 
 ### Quick Navigation
 - [Installation](#installation)
 - [Component Categories](#component-categories)
 - [Shadcn/ui Components](#shadcnui-components)
 - [Custom Components](#custom-components)
+- [Profile Management Components](#profile-management-components)
 - [File Structure](#file-structure)
 - [Common Patterns](#common-patterns)
 
@@ -128,6 +129,18 @@ Components for text display and hierarchy
 | CardTitle | Custom | H4 headings |
 | Label | Custom | Form/metric labels |
 | Paragraph | Custom | Body text |
+
+### Profile Management Components (6)
+Components for user profile and settings management
+
+| Component | Type | Purpose |
+|-----------|------|---------|
+| [Profile](#profile) | Custom | Main profile page container |
+| [ProfileHeader](#profileheader-1) | Custom | User avatar and role display |
+| [PersonalInfoSection](#personalinfosection) | Custom | Edit personal information form |
+| [StatsSection](#statssection) | Custom | Learning statistics dashboard |
+| [PreferencesSection](#preferencessection) | Custom | Learning preferences settings |
+| [SecuritySection](#securitysection) | Custom | Password and security settings |
 
 ---
 
@@ -984,12 +997,304 @@ interface ContentLayoutProps {
 
 ---
 
+## Profile Management Components
+
+### Profile
+
+**Purpose**: Main container page for user profile settings and information
+
+**Location**: `src/pages/Profile.tsx`
+
+**Interface**:
+```typescript
+type ProfileSection = 'personal' | 'stats' | 'preferences' | 'security';
+
+interface NavigationItem {
+  id: ProfileSection;
+  label: string;
+  icon: typeof User;
+}
+```
+
+**Usage**:
+```tsx
+import { Profile } from '@/pages/Profile';
+
+// In your router
+<Route path="/profile" element={<Profile />} />
+```
+
+**Features**:
+- Section-based navigation (personal, stats, preferences, security)
+- Responsive sidebar with mobile hamburger menu
+- State management integration with auth store
+- Auto-save functionality for preferences
+- Form validation with zod schemas
+
+**Responsive Behavior**:
+- Desktop: 3-column grid (1 for sidebar, 2 for content)
+- Mobile: Collapsible sidebar with hamburger menu
+- Breakpoint: md (768px)
+
+---
+
+### ProfileHeader
+
+**Purpose**: Display user avatar, role badge, and account metadata in profile sidebar
+
+**Location**: `src/components/profile/ProfileHeader.tsx`
+
+**Interface**:
+```typescript
+interface ProfileHeaderProps {
+  user: User;
+  onAvatarClick?: () => void;
+}
+```
+
+**Usage**:
+```tsx
+import { ProfileHeader } from '@/components/profile/ProfileHeader';
+
+<ProfileHeader
+  user={currentUser}
+  onAvatarClick={() => handleAvatarUpload()}
+/>
+```
+
+**Features**:
+- Avatar with initials fallback
+- Role badges (Admin/Premium/Free) with icons
+- Member since date formatting
+- Last activity display
+- Hover effect on avatar for upload indication
+- Gradient background for initials
+
+**Role Badge Variants**:
+- Admin: Red badge with Shield icon
+- Premium: Purple badge with Crown icon
+- Free: Gray secondary badge
+
+---
+
+### PersonalInfoSection
+
+**Purpose**: Form for editing user personal information with validation
+
+**Location**: `src/components/profile/PersonalInfoSection.tsx`
+
+**Interface**:
+```typescript
+interface PersonalInfoSectionProps {
+  user: User;
+}
+
+// Form schema
+const profileSchema = z.object({
+  name: z.string()
+    .min(2, 'Name must be at least 2 characters')
+    .max(50, 'Name must be less than 50 characters')
+    .regex(/^[a-zA-Z\s'-]+$/, 'Name can only contain letters, spaces, hyphens and apostrophes'),
+});
+```
+
+**Usage**:
+```tsx
+import { PersonalInfoSection } from '@/components/profile/PersonalInfoSection';
+
+<PersonalInfoSection user={currentUser} />
+```
+
+**Features**:
+- React Hook Form integration
+- Zod schema validation
+- Avatar upload placeholder (coming soon)
+- Name editing with real-time validation
+- Read-only email and account ID display
+- Save/Cancel buttons with loading states
+- Success/error toast notifications
+
+**Form Fields**:
+- Profile Picture (placeholder with upload button)
+- Full Name (editable with validation)
+- Email Address (read-only)
+- Account ID (read-only)
+
+---
+
+### StatsSection
+
+**Purpose**: Display comprehensive learning statistics and achievements
+
+**Location**: `src/components/profile/StatsSection.tsx`
+
+**Interface**:
+```typescript
+interface StatsSectionProps {
+  stats: UserStats;
+}
+
+interface UserStats {
+  streak: number;
+  wordsLearned: number;
+  totalXP: number;
+  joinedDate: Date;
+  lastActivity?: Date;
+}
+```
+
+**Usage**:
+```tsx
+import { StatsSection } from '@/components/profile/StatsSection';
+
+<StatsSection stats={user.stats} />
+```
+
+**Features**:
+- Streak counter with motivational messages
+- Words learned with average per day calculation
+- XP and level progression system
+- Activity timeline (join date, last active)
+- Achievement badges grid
+- Dynamic progress bars
+- Color-coded stat cards
+
+**Stat Cards**:
+- Current Streak (Flame icon, orange)
+- Words Learned (BookOpen icon, blue)
+- Total XP (Trophy icon, yellow)
+
+**Level System**:
+- 1000 XP per level
+- Visual progress bar to next level
+- Current level badge display
+
+**Achievements**:
+- First Steps (Complete first deck)
+- Week Warrior (7-day streak)
+- Century Club (100 words learned)
+- Fire Keeper (30-day streak)
+
+---
+
+### PreferencesSection
+
+**Purpose**: Manage learning preferences with auto-save functionality
+
+**Location**: `src/components/profile/PreferencesSection.tsx`
+
+**Interface**:
+```typescript
+interface PreferencesSectionProps {
+  user: User;
+}
+
+interface UserPreferences {
+  language: 'en' | 'el';
+  dailyGoal: number; // minutes per day
+  notifications: boolean;
+  theme: 'light' | 'dark' | 'auto';
+}
+```
+
+**Usage**:
+```tsx
+import { PreferencesSection } from '@/components/profile/PreferencesSection';
+
+<PreferencesSection user={currentUser} />
+```
+
+**Features**:
+- Auto-save with 1-second debounce
+- Language selector with flags
+- Daily goal slider (5-120 minutes)
+- Notifications toggle switch
+- Theme selector (coming soon)
+- Real-time saving feedback
+- No explicit save button needed
+
+**Preference Cards**:
+- Interface Language (Globe icon, blue)
+- Daily Goal (Clock icon, green)
+- Notifications (Bell icon, purple)
+- Theme (Palette icon, gray - coming soon)
+
+**Auto-save Pattern**:
+```typescript
+const debouncedSaveRef = useRef(
+  debounce(async (newPreferences) => {
+    await updateProfile({ preferences: newPreferences });
+    toast({ title: 'Preferences saved' });
+  }, 1000)
+);
+```
+
+---
+
+### SecuritySection
+
+**Purpose**: Manage password, authentication settings, and account security
+
+**Location**: `src/components/profile/SecuritySection.tsx`
+
+**Interface**:
+```typescript
+// No props - uses global auth context
+
+const passwordSchema = z.object({
+  currentPassword: z.string().min(1, 'Current password is required'),
+  newPassword: z.string()
+    .min(8, 'Password must be at least 8 characters')
+    .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+    .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
+    .regex(/[0-9]/, 'Password must contain at least one number'),
+  confirmPassword: z.string(),
+}).refine((data) => data.newPassword === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ['confirmPassword'],
+});
+```
+
+**Usage**:
+```tsx
+import { SecuritySection } from '@/components/profile/SecuritySection';
+
+<SecuritySection />
+```
+
+**Features**:
+- Password change form with validation
+- Password strength requirements checklist
+- Two-factor authentication (coming soon)
+- Active sessions display
+- Account deletion with confirmation dialog
+- Form validation with zod
+- Loading states for async operations
+
+**Security Cards**:
+- Change Password (Key icon, blue)
+- Two-Factor Authentication (Smartphone icon, green - disabled)
+- Active Sessions (Lock icon, purple)
+- Danger Zone (AlertTriangle icon, red)
+
+**Delete Account Confirmation**:
+- Warning dialog with consequences list
+- Type "DELETE" to confirm
+- Multiple confirmation steps
+- Support contact redirect
+
+---
+
 ## File Structure
 
 ### Recommended Organization
 
 ```
 src/
+├── pages/
+│   ├── Dashboard.tsx
+│   └── Profile.tsx                 # Main profile page
+│
 ├── components/
 │   ├── layout/
 │   │   ├── PageContainer.tsx
@@ -1020,6 +1325,13 @@ src/
 │   │   ├── QuickActionsPanel.tsx
 │   │   ├── IconButton.tsx
 │   │   └── DeckCardInteractive.tsx
+│   │
+│   ├── profile/
+│   │   ├── ProfileHeader.tsx       # User avatar and role display
+│   │   ├── PersonalInfoSection.tsx # Personal info form
+│   │   ├── StatsSection.tsx        # Learning statistics
+│   │   ├── PreferencesSection.tsx  # Learning preferences
+│   │   └── SecuritySection.tsx     # Security settings
 │   │
 │   └── ui/
 │       ├── avatar.tsx              # Shadcn component
