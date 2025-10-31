@@ -1,63 +1,74 @@
-// Deck and Card type definitions
+// src/types/deck.ts
 
-export interface Deck {
-  id: string;
-  title: string;
-  description: string;
-  category: string;
-  difficulty: 'A1' | 'A2' | 'B1' | 'B2';
-  icon?: string;
-  cards: CardStats;
-  progress: number;
-  lastReviewed?: Date;
-  nextReview?: Date;
-  status: 'not-started' | 'in-progress' | 'completed';
-  createdAt: Date;
-  updatedAt: Date;
-}
+// Type Enums
+export type DeckLevel = 'A1' | 'A2' | 'B1' | 'B2';
+export type DeckCategory = 'vocabulary' | 'grammar' | 'phrases' | 'culture';
+export type DeckStatus = 'not-started' | 'in-progress' | 'completed';
+export type CardDifficulty = 'new' | 'learning' | 'review' | 'mastered';
 
-export interface CardStats {
-  total: number;
-  new: number;
-  learning: number;
-  young: number;
-  mature: number;
-  due: number;
-  mastered: number;
-}
-
+/**
+ * Individual flashcard within a deck
+ */
 export interface Card {
   id: string;
+  front: string;        // Greek word/phrase
+  back: string;         // English translation
+  pronunciation?: string; // Phonetic pronunciation guide
+  example?: string;     // Example sentence in Greek
+  exampleTranslation?: string; // English translation of example
+  difficulty: CardDifficulty;
+  nextReviewDate?: Date;
+  timesReviewed: number;
+  successRate: number;  // 0-100 percentage
+}
+
+/**
+ * User's progress tracking for a specific deck
+ */
+export interface DeckProgress {
   deckId: string;
-  front: string;
-  back: string;
-  example?: string;
-  pronunciation?: string;
-  audioUrl?: string;
-  imageUrl?: string;
-  difficulty: number;
-  interval: number;
-  easeFactor: number;
-  repetitions: number;
-  nextReview: Date;
-  lastReviewed?: Date;
-  status: 'new' | 'learning' | 'young' | 'mature';
+  status: DeckStatus;
+  cardsTotal: number;
+  cardsNew: number;       // Not yet studied
+  cardsLearning: number;  // Currently being learned
+  cardsReview: number;    // Ready for review
+  cardsMastered: number;  // Fully mastered (80%+ success, 3+ reviews)
+  dueToday: number;       // Cards scheduled for today
+  streak: number;         // Consecutive days studied
+  lastStudied?: Date;
+  totalTimeSpent: number; // Total minutes spent on deck
+  accuracy: number;       // Overall accuracy percentage (0-100)
 }
 
-export interface ReviewCard extends Card {
-  showAnswer: boolean;
-  startTime: Date;
-  responseTime?: number;
-}
-
-export interface ReviewSession {
+/**
+ * Vocabulary deck with Greek language content
+ */
+export interface Deck {
   id: string;
-  deckId: string;
-  cards: ReviewCard[];
-  currentIndex: number;
-  completed: number;
-  correct: number;
-  incorrect: number;
-  startedAt: Date;
-  completedAt?: Date;
+  title: string;          // English title
+  titleGreek: string;     // Greek translation of title
+  description: string;
+  level: DeckLevel;
+  category: DeckCategory;
+  tags: string[];
+  cardCount: number;
+  estimatedTime: number;  // Minutes to complete
+  isPremium: boolean;
+  thumbnail?: string;
+  createdBy: string;
+  createdAt: Date;
+  updatedAt: Date;
+  // User-specific data (injected from progress tracking)
+  progress?: DeckProgress;
+}
+
+/**
+ * Filter options for deck list
+ */
+export interface DeckFilters {
+  search: string;
+  levels: DeckLevel[];
+  categories: DeckCategory[];
+  status: DeckStatus[];
+  showPremiumOnly: boolean;
 }

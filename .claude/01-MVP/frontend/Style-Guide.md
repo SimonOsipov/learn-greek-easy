@@ -202,6 +202,43 @@ Based on a 4px base unit:
 ### Forms
 *To be defined when implementing authentication and input components*
 
+### Deck Components
+
+#### Level Badges
+- **A1 (Beginner)**: `#10b981` (green) background, white text, "Beginner" label
+- **A2 (Elementary)**: `#3b82f6` (blue) background, white text, "Elementary" label
+- **B1 (Intermediate)**: `#f97316` (orange) background, white text, "Intermediate" label
+- **B2 (Upper-Intermediate)**: `#764ba2` (purple) background, white text, "Upper-Intermediate" label
+- Font size: 0.75rem (12px), font-weight: 500, padding: 0.25rem 0.75rem, border-radius: 9999px
+
+#### Greek Typography Display
+- **Primary**: Greek title (titleGreek) - 1rem (16px), font-weight: 600, color: #1a1a1a
+- **Secondary**: English subtitle (title) - 0.875rem (14px), color: #6b7280
+- **Pattern**: Greek text always displayed first and prominently, Latin below for clarity
+- **Encoding**: UTF-8 for proper Greek character display
+
+#### Premium Deck Indicators
+- **Lock Icon**: Lucide `Lock` icon, 16px, color: #f59e0b (amber-500)
+- **Premium Badge**: Background `#fef3c7` (amber-100), text `#92400e` (amber-800), "Premium" label
+- **Card Border**: Gold accent `#fbbf24` (amber-400) on hover for premium decks
+- **Locked State**: 0.7 opacity on entire card for locked premium decks (free tier users)
+
+#### Segmented Progress Bars
+- **New Cards Segment**: `#e5e7eb` (gray-200) - cards not yet studied
+- **Learning Cards Segment**: `#3b82f6` (blue-500) - cards currently being learned
+- **Mastered Cards Segment**: `#10b981` (green-500) - cards fully mastered
+- **Display Pattern**: Horizontal stacked segments, each segment width represents percentage
+- **Height**: 8px default, 12px for large variant
+- **Border Radius**: 9999px (fully rounded ends)
+- **Legend**: Optional color-coded legend below showing count per segment
+
+#### Filter UI Patterns
+- **Search Input**: 300ms debounce delay before filter triggers
+- **Level Toggles**: Button group with active state showing level badge color
+- **Status Dropdown**: Standard shadcn dropdown with checkboxes
+- **Active Filters**: Badge display with X button to remove individual filters
+- **Clear All**: Secondary button to reset all filters
+
 ---
 
 ## Icons
