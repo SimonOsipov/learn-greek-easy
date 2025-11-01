@@ -14,17 +14,11 @@ import { ForgotPassword } from '@/pages/auth/ForgotPassword';
 import { NotFound } from '@/pages/NotFound';
 import { Unauthorized } from '@/pages/Unauthorized';
 import { Profile } from '@/pages/Profile';
+import { DecksPage } from '@/pages/DecksPage';
 import { useActivityMonitor } from '@/hooks/useActivityMonitor';
 import { SessionWarningDialog } from '@/components/auth/SessionWarningDialog';
 
 // Temporary placeholder pages - replace with actual pages
-
-const DecksPage = () => (
-  <div>
-    <h1 className="mb-4 text-2xl font-semibold">All Decks</h1>
-    <p>Decks list will go here.</p>
-  </div>
-);
 
 const StatisticsPage = () => (
   <div>

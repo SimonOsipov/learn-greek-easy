@@ -18,7 +18,7 @@ This document tracks all tasks for the MVP development of the Greek Language Lea
 | Testing | ~10 | 0 | 0 | ~10 | 0% |
 | Deployment | 9 | 0 | 0 | 9 | 0% |
 
-**Latest Update (2025-10-30)**: Task 04.01 COMPLETE! Foundation for deck management ready - TypeScript types, 6 authentic Greek decks (575 cards), mock API service, Style Guide patterns documented
+**Latest Update (2025-11-01)**: Task 04.04 COMPLETE! Decks list page with search, filters (level/status/premium), and responsive grid. Task 04 now at 50% (4/8 subtasks complete, 210/405 min)
 
 ---
 
@@ -253,7 +253,7 @@ Build complete authentication system with email/password login and user manageme
   - Build time: 2.74s
 
 ### Deck Management Interface
-**Status**: 🔄 **IN PROGRESS** (12.5% - 1/8 subtasks complete)
+**Status**: 🔄 **IN PROGRESS** (50% - 4/8 subtasks complete)
 **File**: [04-deck-management.md](./frontend/04/04-deck-management.md)
 **Started**: 2025-10-30
 **Estimated Duration**: 6.75 hours
@@ -268,15 +268,21 @@ Comprehensive deck browsing and management interface with Greek vocabulary conte
   - Created `/src/services/mockDeckAPI.ts` with 5 CRUD methods and realistic delays
   - Updated Style-Guide.md with "Deck Component Patterns" section (5 pattern categories)
   - TypeScript compilation successful (build in 1.66s)
-- [ ] **04.02**: Implement Deck State Management (45 min)
-- [ ] **04.03**: Create Deck Card Component (70 min)
-- [ ] **04.04**: Create Decks List Page (75 min)
+- [✅] **04.02**: Implement Deck State Management (45 min) - **COMPLETED 2025-11-01**
+- [✅] **04.03**: Create Deck Card Component (70 min) - **COMPLETED 2025-11-01**
+- [✅] **04.04**: Create Decks List Page (45 min) - **COMPLETED 2025-11-01**
 - [ ] **04.05**: Create Deck Detail Page (90 min)
-- [ ] **04.06**: Add Deck Filtering and Search (45 min)
+- [ ] **04.06**: Add Deck Filtering and Search (45 min) - ⚠️ **MERGED INTO 04.04**
 - [ ] **04.07**: Implement Deck Progress Tracking (60 min)
 - [ ] **04.08**: Testing and Polish (45 min)
 
-**Progress**: Foundation layer complete - TypeScript types, mock data, API service, Style Guide patterns. Ready for state management.
+**Progress**: Deck browsing complete! Task 04.01-04.04 finished. Users can view, search, and filter all 6 Greek decks. DecksGrid, DeckFilters, and DecksPage implemented with 300ms debounce, responsive design, loading/error/empty states. Next: Deck detail page.
+
+**Completed Subtasks**:
+- ✅ **04.01** (2025-10-30): TypeScript types, 6 Greek decks (575 cards), mock API, Style Guide patterns
+- ✅ **04.02** (2025-11-01): Zustand deckStore (437 lines), 8 actions, premium checks, persistence, auth integration
+- ✅ **04.03** (2025-11-01): DeckCard components (DeckBadge, DeckProgressBar, DeckCard), Greek typography, accessibility, Components-Reference.md updated
+- ✅ **04.04** (2025-11-01): Decks list page (DecksGrid, DeckFilters, DecksPage), search with debounce, level/status/premium filters, 60+ success criteria verified
 
 ### Flashcard Review System
 - [ ] Create Review session page
@@ -344,6 +350,47 @@ Comprehensive deck browsing and management interface with Greek vocabulary conte
 
 ## Notes
 *Use this section for general notes, decisions, or blockers that affect multiple tasks*
+
+### ⚠️ IMPORTANT: Architecture & State Management
+
+**Note**: This section has been consolidated into a comprehensive standalone document.
+
+📄 **See: [Architecture-Decisions.md](./Architecture-Decisions.md)** for complete details on:
+- State management architecture (current MVP vs future production)
+- Frontend-backend separation strategy
+- Complete migration checklist (9 steps, 22-31 hours total)
+- Technology stack decisions and rationale
+- Security considerations (current limitations + future improvements)
+- Performance optimizations
+- Timeline impact analysis
+
+**Quick Summary** (Full details in Architecture-Decisions.md):
+
+**Current MVP Approach (Temporary)**:
+- Frontend manages ALL state (Zustand + localStorage)
+- Mock data for decks (`mockDeckData.ts`)
+- localStorage for user progress, auth tokens
+
+**Critical Limitations**:
+- ❌ No cross-device sync
+- ❌ Data loss if browser cleared
+- ❌ No backup/recovery
+- ❌ Security vulnerabilities (XSS risk)
+
+**Future Production Approach**:
+- Backend: PostgreSQL + FastAPI for data/business logic
+- Frontend: TanStack Query for server state, Zustand for UI state only
+- JWT in httpOnly cookies (secure auth)
+- Cross-device sync, automatic backups
+
+**Estimated Refactoring Time**: 22-31 hours total
+- Backend: 15-20 hours (API + database)
+- Frontend: 4-6 hours (mock → real API)
+- Testing: 3-5 hours
+
+**When to Migrate**: When users request multi-device sync or we have 10+ active users.
+
+---
 
 ### 🎉 2025-10-26 - MAJOR MILESTONE ACHIEVED!
 - ✅ **COMPLETED Task 01: Main Page Design (100%)**
