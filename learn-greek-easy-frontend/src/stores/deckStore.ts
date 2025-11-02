@@ -123,6 +123,40 @@ interface DeckState {
   updateProgress: (deckId: string, progress: Partial<DeckProgress>) => void;
 
   /**
+   * Simulate reviewing a single card
+   * @param deckId - Deck containing the card
+   * @param cardId - Card being reviewed
+   * @param wasCorrect - Whether answer was correct
+   */
+  reviewCard: (deckId: string, cardId: string, wasCorrect: boolean) => Promise<void>;
+
+  /**
+   * Simulate a study session with multiple cards
+   * @param deckId - Deck being studied
+   * @param cardsReviewed - Number of cards reviewed
+   * @param correctCount - Number answered correctly
+   * @param sessionTimeMinutes - Time spent studying
+   */
+  reviewSession: (
+    deckId: string,
+    cardsReviewed: number,
+    correctCount: number,
+    sessionTimeMinutes: number
+  ) => Promise<void>;
+
+  /**
+   * Mark deck as completed
+   * @param deckId - Deck to complete
+   */
+  completeDeck: (deckId: string) => Promise<void>;
+
+  /**
+   * Reset deck progress to initial state
+   * @param deckId - Deck to reset
+   */
+  resetProgress: (deckId: string) => Promise<void>;
+
+  /**
    * Clear current error message
    */
   clearError: () => void;
@@ -408,6 +442,176 @@ export const useDeckStore = create<DeckState>()(
 
         // TODO: Backend Migration - When backend ready, add API call:
         // await deckAPI.updateProgress(deckId, progressUpdates);
+      },
+
+      /**
+       * Review a single card and update progress
+       */
+      reviewCard: async (deckId: string, cardId: string, wasCorrect: boolean) => {
+        set({ isLoading: true, error: null });
+
+        try {
+          // Call mock API
+          const updatedProgress = await mockDeckAPI.reviewCard(deckId, cardId, wasCorrect);
+
+          // Update store state
+          set((state) => ({
+            deckProgress: {
+              ...state.deckProgress,
+              [deckId]: updatedProgress,
+            },
+            isLoading: false,
+          }));
+
+          // Sync to selected deck and decks array
+          const { updateProgress } = get();
+          updateProgress(deckId, updatedProgress);
+
+          // Re-fetch decks to ensure full sync
+          await get().fetchDecks();
+
+        } catch (error) {
+          const errorMessage = error instanceof Error
+            ? error.message
+            : 'Failed to update card progress.';
+
+          set({
+            isLoading: false,
+            error: errorMessage,
+          });
+
+          throw error;
+        }
+      },
+
+      /**
+       * Review a study session and update progress
+       */
+      reviewSession: async (
+        deckId: string,
+        cardsReviewed: number,
+        correctCount: number,
+        sessionTimeMinutes: number
+      ) => {
+        set({ isLoading: true, error: null });
+
+        try {
+          // Call mock API
+          const updatedProgress = await mockDeckAPI.reviewSession(
+            deckId,
+            cardsReviewed,
+            correctCount,
+            sessionTimeMinutes
+          );
+
+          // Update store state
+          set((state) => ({
+            deckProgress: {
+              ...state.deckProgress,
+              [deckId]: updatedProgress,
+            },
+            isLoading: false,
+          }));
+
+          // Sync to selected deck and decks array
+          const { updateProgress } = get();
+          updateProgress(deckId, updatedProgress);
+
+          // Re-fetch decks to ensure full sync
+          await get().fetchDecks();
+
+        } catch (error) {
+          const errorMessage = error instanceof Error
+            ? error.message
+            : 'Failed to update session progress.';
+
+          set({
+            isLoading: false,
+            error: errorMessage,
+          });
+
+          throw error;
+        }
+      },
+
+      /**
+       * Complete a deck (all cards mastered)
+       */
+      completeDeck: async (deckId: string) => {
+        set({ isLoading: true, error: null });
+
+        try {
+          // Call mock API
+          const updatedProgress = await mockDeckAPI.completeDeck(deckId);
+
+          // Update store state
+          set((state) => ({
+            deckProgress: {
+              ...state.deckProgress,
+              [deckId]: updatedProgress,
+            },
+            isLoading: false,
+          }));
+
+          // Sync to selected deck and decks array
+          const { updateProgress } = get();
+          updateProgress(deckId, updatedProgress);
+
+          // Re-fetch decks
+          await get().fetchDecks();
+
+        } catch (error) {
+          const errorMessage = error instanceof Error
+            ? error.message
+            : 'Failed to complete deck.';
+
+          set({
+            isLoading: false,
+            error: errorMessage,
+          });
+
+          throw error;
+        }
+      },
+
+      /**
+       * Reset deck progress to initial state
+       */
+      resetProgress: async (deckId: string) => {
+        set({ isLoading: true, error: null });
+
+        try {
+          // Call mock API
+          const resetProgress = await mockDeckAPI.resetDeckProgress(deckId);
+
+          // Update store state
+          set((state) => ({
+            deckProgress: {
+              ...state.deckProgress,
+              [deckId]: resetProgress,
+            },
+            isLoading: false,
+          }));
+
+          // Sync to selected deck and decks array
+          const { updateProgress } = get();
+          updateProgress(deckId, resetProgress);
+
+          // Re-fetch decks
+          await get().fetchDecks();
+
+        } catch (error) {
+          const errorMessage = error instanceof Error
+            ? error.message
+            : 'Failed to reset deck progress.';
+
+          set({
+            isLoading: false,
+            error: errorMessage,
+          });
+
+          throw error;
+        }
       },
 
       // ========================================

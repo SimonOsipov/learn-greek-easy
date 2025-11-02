@@ -1,6 +1,7 @@
 // /src/pages/DecksPage.tsx
 
 import React, { useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useDeckStore } from '@/stores/deckStore';
 import { DecksGrid } from '@/components/decks/DecksGrid';
 import { DeckFilters } from '@/components/decks/DeckFilters';
@@ -20,11 +21,14 @@ export const DecksPage: React.FC = () => {
     clearFilters,
     clearError,
   } = useDeckStore();
+  const location = useLocation();
 
-  // Fetch decks on mount and when filters change
+  // Fetch decks on mount and when navigating back from detail page
   useEffect(() => {
-    fetchDecks();
-  }, [fetchDecks]);
+    fetchDecks().catch((err) => {
+      console.error('Failed to fetch decks:', err);
+    });
+  }, [fetchDecks, location.key]); // location.key changes on navigation
 
   // Calculate total decks (would come from API in real implementation)
   const totalDecks = 6; // Mock value - in production, fetch from API

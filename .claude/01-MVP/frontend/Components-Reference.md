@@ -1976,7 +1976,120 @@ const { filters, setFilters, clearFilters, decks } = useDeckStore();
 
 ---
 
-*Note: 3 additional Deck Management Components will be documented in future tasks: DeckHeader, DeckStats, DeckProgress*
+---
+
+### 6. DeckDetailPage
+
+**Purpose**: Main detail page for displaying comprehensive information about a single deck, including title, description, progress, statistics, and learning actions.
+
+**Location**: `src/pages/DeckDetailPage.tsx`
+
+**Route**: `/decks/:id`
+
+**Interface**:
+```typescript
+// No props - uses route params and store
+// URL Parameter: :id (deck ID)
+
+// Internal Sub-components:
+interface DeckHeaderSectionProps {
+  deck: Deck;
+  isPremiumLocked: boolean;
+}
+
+interface StatisticsSectionProps {
+  deck: Deck;
+}
+
+interface ActionButtonsSectionProps {
+  deck: Deck;
+  isPremiumLocked: boolean;
+  deckStatus: DeckStatus;
+  onStartLearning: () => void;
+  onContinue: () => void;
+  onUpgrade: () => void;
+}
+```
+
+**Usage**:
+```tsx
+// Accessed via React Router
+<Route path="decks/:id" element={<DeckDetailPage />} />
+
+// Navigation from DecksPage
+navigate(`/decks/${deckId}`);
+
+// Link from DeckCard
+<Link to={`/decks/${deck.id}`}>View Details</Link>
+```
+
+**Features**:
+- Greek typography hierarchy (titleGreek primary, title secondary)
+- Premium access validation with upgrade CTA for locked decks
+- Context-aware action buttons (Start Learning, Continue, Upgrade)
+- Deck status detection (not-started, in-progress, completed)
+- Detailed statistics grid (cards, time, mastery, accuracy)
+- Card distribution visualization (new/learning/mastered)
+- Segmented progress bar with legend
+- Breadcrumb navigation (Decks > Deck Name)
+- Loading skeleton matching final layout
+- Error state with retry functionality
+- 404 not found state
+- WCAG AA accessibility compliance
+- Mobile-first responsive design
+
+**Components Used**:
+- `DeckBadge` - Level badge and status badges
+- `DeckProgressBar` - Progress visualization
+- `Card`, `CardHeader`, `CardTitle`, `CardContent` - Layout
+- `Button` - Action buttons with gradients
+- `Skeleton` - Loading placeholders
+- `Alert` - Error messages
+- Lucide icons: `ChevronLeft`, `Lock`, `BookOpen`, `Clock`, `Target`, `TrendingUp`, `AlertCircle`
+
+**State Management**:
+- `useDeckStore().selectDeck(deckId)` - Fetch deck by ID
+- `useDeckStore().selectedDeck` - Current deck
+- `useDeckStore().isLoading` - Loading state
+- `useDeckStore().error` - Error message
+- `useDeckStore().startLearning(deckId)` - Initialize learning
+- `useAuthStore().user.role` - Premium access check
+
+**Action Buttons Logic**:
+| Deck State | User Type | Button Text | Color | Handler |
+|------------|-----------|-------------|-------|---------|
+| Premium deck | Free user | "Upgrade to Premium" | Amber gradient | Navigate to `/upgrade` |
+| Not started | Any | "Start Learning" | Blue-Purple gradient | Call `startLearning()`, navigate to `/learn/:id` |
+| In progress | Any | "Continue Learning" | Green gradient | Navigate to `/learn/:id` |
+| Completed | Any | "Review Deck" | Purple-Pink gradient | Navigate to `/learn/:id` |
+
+**Responsive Behavior**:
+- **Mobile (< 768px)**: Single column, stacked statistics (2-col grid)
+- **Tablet (768-1024px)**: Moderate spacing, 4-col stats grid
+- **Desktop (≥ 1024px)**: Max-width 896px (4xl), full spacing
+
+**Accessibility**:
+- Breadcrumb navigation with `aria-label="Breadcrumb"`
+- Heading hierarchy (h1 for title, h3 for section titles)
+- ARIA labels for icons (`aria-label="Premium locked"`)
+- Keyboard navigation support (focus states on buttons)
+- Screen reader announcements for loading/error states
+- Color contrast meeting WCAG AA (all text on backgrounds)
+
+**Error Handling**:
+- Loading skeleton during fetch
+- Error state with retry button
+- 404 not found for invalid deck IDs
+- Premium access blocking with upgrade CTA
+
+**Greek Typography Pattern**:
+- Primary: `titleGreek` - 2xl/3xl, font-semibold, gray-900
+- Secondary: `title` - base/lg, gray-600
+- Always Greek first, English subtitle below
+
+---
+
+*Note: 2 additional Deck Management Components will be documented in future tasks: DeckStats, DeckProgress*
 
 ---
 

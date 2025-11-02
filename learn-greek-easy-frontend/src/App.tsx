@@ -15,6 +15,7 @@ import { NotFound } from '@/pages/NotFound';
 import { Unauthorized } from '@/pages/Unauthorized';
 import { Profile } from '@/pages/Profile';
 import { DecksPage } from '@/pages/DecksPage';
+import { DeckDetailPage } from '@/pages/DeckDetailPage';
 import { useActivityMonitor } from '@/hooks/useActivityMonitor';
 import { SessionWarningDialog } from '@/components/auth/SessionWarningDialog';
 
@@ -62,6 +63,7 @@ function AppContent() {
               <Route index element={<Dashboard />} />
               <Route path="dashboard" element={<Navigate to="/" replace />} />
               <Route path="decks" element={<DecksPage />} />
+              <Route path="decks/:id" element={<DeckDetailPage />} />
               <Route path="statistics" element={<StatisticsPage />} />
               <Route path="stats" element={<Navigate to="/statistics" replace />} />
               <Route path="settings" element={<SettingsPage />} />
