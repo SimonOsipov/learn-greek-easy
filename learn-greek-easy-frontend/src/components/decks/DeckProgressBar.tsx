@@ -1,4 +1,5 @@
 import React from 'react';
+
 import type { DeckProgress } from '@/types/deck';
 
 export interface DeckProgressBarProps {
@@ -28,7 +29,7 @@ export const DeckProgressBar: React.FC<DeckProgressBarProps> = ({
     <div className={className}>
       {/* Progress Bar */}
       <div
-        className={`w-full ${height} bg-gray-200 rounded-full overflow-hidden flex`}
+        className={`w-full ${height} flex overflow-hidden rounded-full bg-gray-200`}
         role="progressbar"
         aria-label="Deck learning progress"
         aria-valuenow={cardsMastered}
@@ -65,17 +66,17 @@ export const DeckProgressBar: React.FC<DeckProgressBarProps> = ({
 
       {/* Optional Legend */}
       {showLegend && (
-        <div className="flex gap-4 mt-2 text-xs text-gray-600">
+        <div className="mt-2 flex gap-4 text-xs text-gray-600">
           <div className="flex items-center gap-1">
-            <div className="w-3 h-3 bg-gray-200 rounded-full" />
+            <div className="h-3 w-3 rounded-full bg-gray-200" />
             <span>{cardsNew} New</span>
           </div>
           <div className="flex items-center gap-1">
-            <div className="w-3 h-3 bg-blue-500 rounded-full" />
+            <div className="h-3 w-3 rounded-full bg-blue-500" />
             <span>{cardsLearning} Learning</span>
           </div>
           <div className="flex items-center gap-1">
-            <div className="w-3 h-3 bg-green-500 rounded-full" />
+            <div className="h-3 w-3 rounded-full bg-green-500" />
             <span>{cardsMastered} Mastered</span>
           </div>
         </div>

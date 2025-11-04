@@ -1,13 +1,7 @@
 // src/pages/DeckDetailPage.tsx
 
-import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
-import { useDeckStore } from '@/stores/deckStore';
-import { useAuthStore } from '@/stores/authStore';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import React, { useEffect, useState, useMemo } from 'react';
+
 import {
   ChevronLeft,
   Lock,
@@ -19,28 +13,32 @@ import {
   MoreVertical,
   RotateCcw,
 } from 'lucide-react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
+
+import { calculateDeckReviewStats, formatRelativeDate } from '@/lib/reviewStatsHelpers';
+
+import { DeckBadge } from '@/components/decks/DeckBadge';
+import { DeckProgressBar } from '@/components/decks/DeckProgressBar';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { DeckBadge } from '@/components/decks/DeckBadge';
-import { DeckProgressBar } from '@/components/decks/DeckProgressBar';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useAuthStore } from '@/stores/authStore';
+import { useDeckStore } from '@/stores/deckStore';
 import type { Deck, DeckStatus } from '@/types/deck';
 
 export const DeckDetailPage: React.FC = () => {
   const { id: deckId } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const {
-    selectedDeck,
-    isLoading,
-    error,
-    selectDeck,
-    clearSelection,
-    startLearning,
-  } = useDeckStore();
+  const { selectedDeck, isLoading, error, selectDeck, clearSelection, startLearning } =
+    useDeckStore();
 
   const { user } = useAuthStore();
 
@@ -85,20 +83,15 @@ export const DeckDetailPage: React.FC = () => {
   const deckStatus = selectedDeck.progress?.status || 'not-started';
 
   return (
-    <div className="container mx-auto px-4 py-6 md:py-8 max-w-4xl">
+    <div className="container mx-auto max-w-4xl px-4 py-6 md:py-8">
       {/* Breadcrumb Navigation */}
       <nav className="mb-4 flex items-center gap-2 text-sm text-gray-600" aria-label="Breadcrumb">
-        <Link
-          to="/decks"
-          className="hover:text-gray-900 transition-colors flex items-center gap-1"
-        >
-          <ChevronLeft className="w-4 h-4" />
+        <Link to="/decks" className="flex items-center gap-1 transition-colors hover:text-gray-900">
+          <ChevronLeft className="h-4 w-4" />
           Decks
         </Link>
         <span>/</span>
-        <span className="text-gray-900 font-medium truncate">
-          {selectedDeck.titleGreek}
-        </span>
+        <span className="truncate font-medium text-gray-900">{selectedDeck.titleGreek}</span>
       </nav>
 
       {/* Main Content */}
@@ -131,8 +124,8 @@ const handleStartLearning = async (
 ) => {
   try {
     await startLearning(deckId);
-    // TODO: Navigate to learning session when implemented
-    navigate(`/learn/${deckId}`);
+    // Navigate to review session
+    navigate(`/decks/${deckId}/review`);
   } catch (error) {
     console.error('Failed to start learning:', error);
     // Error is handled by store
@@ -140,8 +133,8 @@ const handleStartLearning = async (
 };
 
 const handleContinue = (deckId: string, navigate: any) => {
-  // TODO: Navigate to learning session when implemented
-  navigate(`/learn/${deckId}`);
+  // Navigate to review session
+  navigate(`/decks/${deckId}/review`);
 };
 
 const handleUpgrade = (navigate: any) => {
@@ -160,7 +153,11 @@ const DeckHeaderSection: React.FC<DeckHeaderSectionProps> = ({ deck, isPremiumLo
   const [isResetting, setIsResetting] = useState(false);
 
   const handleResetProgress = async () => {
-    if (!confirm('Are you sure you want to reset your progress for this deck? This action cannot be undone.')) {
+    if (
+      !confirm(
+        'Are you sure you want to reset your progress for this deck? This action cannot be undone.'
+      )
+    ) {
       return;
     }
 
@@ -179,26 +176,21 @@ const DeckHeaderSection: React.FC<DeckHeaderSectionProps> = ({ deck, isPremiumLo
     <Card>
       <CardHeader>
         {/* Title and Badges Row */}
-        <div className="flex items-start justify-between gap-4 flex-wrap">
-          <div className="flex-1 min-w-0">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0 flex-1">
             {/* Greek Title - Primary */}
-            <h1 className="text-2xl md:text-3xl font-semibold text-gray-900 mb-1">
+            <h1 className="mb-1 text-2xl font-semibold text-gray-900 md:text-3xl">
               {deck.titleGreek}
             </h1>
 
             {/* English Subtitle - Secondary */}
-            <p className="text-base md:text-lg text-gray-600">
-              {deck.title}
-            </p>
+            <p className="text-base text-gray-600 md:text-lg">{deck.title}</p>
           </div>
 
           {/* Level Badge, Lock Icon, and Actions */}
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex flex-shrink-0 items-center gap-2">
             {isPremiumLocked && (
-              <Lock
-                className="w-5 h-5 text-amber-500"
-                aria-label="Premium locked"
-              />
+              <Lock className="h-5 w-5 text-amber-500" aria-label="Premium locked" />
             )}
             <DeckBadge type="level" level={deck.level} />
 
@@ -207,7 +199,7 @@ const DeckHeaderSection: React.FC<DeckHeaderSectionProps> = ({ deck, isPremiumLo
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon">
-                    <MoreVertical className="w-4 h-4" />
+                    <MoreVertical className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
@@ -216,7 +208,7 @@ const DeckHeaderSection: React.FC<DeckHeaderSectionProps> = ({ deck, isPremiumLo
                     disabled={isResetting}
                     className="text-red-600"
                   >
-                    <RotateCcw className="w-4 h-4 mr-2" />
+                    <RotateCcw className="mr-2 h-4 w-4" />
                     {isResetting ? 'Resetting...' : 'Reset Progress'}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -228,7 +220,7 @@ const DeckHeaderSection: React.FC<DeckHeaderSectionProps> = ({ deck, isPremiumLo
         {/* Premium Badge */}
         {deck.isPremium && (
           <div className="mt-3">
-            <span className="inline-flex items-center px-3 py-1 text-sm font-medium bg-amber-100 text-amber-800 rounded-full">
+            <span className="inline-flex items-center rounded-full bg-amber-100 px-3 py-1 text-sm font-medium text-amber-800">
               Premium
             </span>
           </div>
@@ -246,19 +238,16 @@ const DeckHeaderSection: React.FC<DeckHeaderSectionProps> = ({ deck, isPremiumLo
 
       <CardContent>
         {/* Description */}
-        <p className="text-gray-700 leading-relaxed">
-          {deck.description}
-        </p>
+        <p className="leading-relaxed text-gray-700">{deck.description}</p>
 
         {/* Progress Bar (if in progress or completed) */}
         {deck.progress && deck.progress.status !== 'not-started' && (
           <div className="mt-6">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-gray-700">
-                Your Progress
-              </span>
+            <div className="mb-2 flex items-center justify-between">
+              <span className="text-sm font-medium text-gray-700">Your Progress</span>
               <span className="text-sm text-gray-600">
-                {Math.round((deck.progress.cardsMastered / deck.progress.cardsTotal) * 100)}% Complete
+                {Math.round((deck.progress.cardsMastered / deck.progress.cardsTotal) * 100)}%
+                Complete
               </span>
             </div>
             <DeckProgressBar progress={deck.progress} showLegend={true} size="large" />
@@ -286,16 +275,22 @@ interface StatisticsSectionProps {
 const StatisticsSection: React.FC<StatisticsSectionProps> = ({ deck }) => {
   const { progress } = deck;
 
+  // Calculate review statistics from localStorage
+  const reviewStats = useMemo(
+    () => calculateDeckReviewStats(deck.id),
+    [deck.id]
+  );
+
   return (
     <Card>
       <CardHeader>
         <CardTitle className="text-lg font-semibold">Deck Statistics</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
           {/* Total Cards */}
           <StatCard
-            icon={<BookOpen className="w-5 h-5 text-blue-500" />}
+            icon={<BookOpen className="h-5 w-5 text-blue-500" />}
             label="Total Cards"
             value={deck.cardCount}
             subtext="flashcards"
@@ -303,48 +298,55 @@ const StatisticsSection: React.FC<StatisticsSectionProps> = ({ deck }) => {
 
           {/* Estimated Time */}
           <StatCard
-            icon={<Clock className="w-5 h-5 text-purple-500" />}
+            icon={<Clock className="h-5 w-5 text-purple-500" />}
             label="Estimated Time"
             value={`${deck.estimatedTime}m`}
             subtext="to complete"
           />
 
-          {/* Mastery Rate (if started) */}
-          {progress && progress.status !== 'not-started' && (
+          {/* Due Today (ONLY if deck has actual progress) */}
+          {progress && (progress.cardsMastered > 0 || progress.cardsLearning > 0) && (
             <StatCard
-              icon={<Target className="w-5 h-5 text-green-500" />}
-              label="Mastery Rate"
-              value={`${Math.round((progress.cardsMastered / progress.cardsTotal) * 100)}%`}
-              subtext={`${progress.cardsMastered}/${progress.cardsTotal} mastered`}
+              icon={<Clock className="h-5 w-5 text-red-500" />}
+              label="Due Today"
+              value={reviewStats.dueToday}
+              subtext="cards to review"
             />
           )}
 
-          {/* Accuracy (if started) */}
+          {/* Mastery Rate (if started) */}
           {progress && progress.status !== 'not-started' && (
             <StatCard
-              icon={<TrendingUp className="w-5 h-5 text-orange-500" />}
-              label="Accuracy"
-              value={`${progress.accuracy}%`}
-              subtext="correct answers"
+              icon={<Target className="h-5 w-5 text-green-500" />}
+              label="Mastery Rate"
+              value={`${Math.round((progress.cardsMastered / progress.cardsTotal) * 100)}%`}
+              subtext={`${progress.cardsMastered}/${progress.cardsTotal} mastered`}
             />
           )}
         </div>
 
         {/* Card Distribution (if started) */}
         {progress && progress.status !== 'not-started' && (
-          <div className="mt-6 grid grid-cols-3 gap-4 pt-4 border-t">
+          <div className="mt-6 grid grid-cols-3 gap-4 border-t pt-4">
             <div className="text-center">
               <p className="text-2xl font-bold text-gray-400">{progress.cardsNew}</p>
-              <p className="text-xs text-gray-600 mt-1">New</p>
+              <p className="mt-1 text-xs text-gray-600">New</p>
             </div>
             <div className="text-center">
               <p className="text-2xl font-bold text-blue-500">{progress.cardsLearning}</p>
-              <p className="text-xs text-gray-600 mt-1">Learning</p>
+              <p className="mt-1 text-xs text-gray-600">Learning</p>
             </div>
             <div className="text-center">
               <p className="text-2xl font-bold text-green-500">{progress.cardsMastered}</p>
-              <p className="text-xs text-gray-600 mt-1">Mastered</p>
+              <p className="mt-1 text-xs text-gray-600">Mastered</p>
             </div>
+          </div>
+        )}
+
+        {/* Last Review Date (if reviewed) */}
+        {reviewStats.lastReviewed && (
+          <div className="mt-4 border-t pt-4 text-center text-sm text-gray-600">
+            Last reviewed: {formatRelativeDate(reviewStats.lastReviewed)}
           </div>
         )}
       </CardContent>
@@ -362,11 +364,11 @@ interface StatCardProps {
 
 const StatCard: React.FC<StatCardProps> = ({ icon, label, value, subtext }) => {
   return (
-    <div className="flex flex-col items-center text-center p-3 bg-gray-50 rounded-lg">
+    <div className="flex flex-col items-center rounded-lg bg-gray-50 p-3 text-center">
       <div className="mb-2">{icon}</div>
-      <p className="text-xs text-gray-600 mb-1">{label}</p>
+      <p className="mb-1 text-xs text-gray-600">{label}</p>
       <p className="text-xl font-bold text-gray-900">{value}</p>
-      <p className="text-xs text-gray-500 mt-1">{subtext}</p>
+      <p className="mt-1 text-xs text-gray-500">{subtext}</p>
     </div>
   );
 };
@@ -392,6 +394,12 @@ const ActionButtonsSection: React.FC<ActionButtonsSectionProps> = ({
   const { reviewSession } = useDeckStore();
   const [isSimulating, setIsSimulating] = useState(false);
 
+  // Calculate review statistics for button text
+  const reviewStats = useMemo(
+    () => calculateDeckReviewStats(deck.id),
+    [deck.id]
+  );
+
   // Handler for simulating a study session (demo/testing only)
   const handleSimulateSession = async () => {
     if (!deck.id) return;
@@ -415,19 +423,17 @@ const ActionButtonsSection: React.FC<ActionButtonsSectionProps> = ({
       <CardContent className="pt-6">
         {/* Premium Locked State */}
         {isPremiumLocked && (
-          <div className="text-center py-8">
-            <Lock className="w-12 h-12 text-amber-500 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              Premium Deck
-            </h3>
-            <p className="text-sm text-gray-600 mb-6 max-w-md mx-auto">
-              This deck is only available to premium members. Upgrade your account to access
-              all premium decks and advanced learning features.
+          <div className="py-8 text-center">
+            <Lock className="mx-auto mb-4 h-12 w-12 text-amber-500" />
+            <h3 className="mb-2 text-lg font-semibold text-gray-900">Premium Deck</h3>
+            <p className="mx-auto mb-6 max-w-md text-sm text-gray-600">
+              This deck is only available to premium members. Upgrade your account to access all
+              premium decks and advanced learning features.
             </p>
             <Button
               size="lg"
               onClick={onUpgrade}
-              className="bg-gradient-to-br from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white"
+              className="bg-gradient-to-br from-amber-500 to-orange-600 text-white hover:from-amber-600 hover:to-orange-700"
             >
               Upgrade to Premium
             </Button>
@@ -436,50 +442,43 @@ const ActionButtonsSection: React.FC<ActionButtonsSectionProps> = ({
 
         {/* Not Started State */}
         {!isPremiumLocked && deckStatus === 'not-started' && (
-          <div className="text-center py-8">
-            <BookOpen className="w-12 h-12 text-blue-500 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              Ready to Start Learning?
-            </h3>
-            <p className="text-sm text-gray-600 mb-6 max-w-md mx-auto">
-              This deck contains {deck.cardCount} flashcards. Estimated time to complete: {deck.estimatedTime} minutes.
+          <div className="py-8 text-center">
+            <BookOpen className="mx-auto mb-4 h-12 w-12 text-blue-500" />
+            <h3 className="mb-2 text-lg font-semibold text-gray-900">Ready to Start Learning?</h3>
+            <p className="mx-auto mb-6 max-w-md text-sm text-gray-600">
+              This deck contains {deck.cardCount} flashcards. Estimated time to complete:{' '}
+              {deck.estimatedTime} minutes.
             </p>
             <Button
               size="lg"
               onClick={onStartLearning}
-              className="bg-gradient-to-br from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+              className="bg-gradient-to-br from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700"
             >
-              Start Learning
+              Start Review
             </Button>
           </div>
         )}
 
         {/* In Progress State */}
         {!isPremiumLocked && deckStatus === 'in-progress' && (
-          <div className="text-center py-8">
-            <TrendingUp className="w-12 h-12 text-green-500 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              Continue Your Progress
-            </h3>
-            <p className="text-sm text-gray-600 mb-2 max-w-md mx-auto">
-              You have {deck.progress?.dueToday || 0} cards due for review today.
+          <div className="py-8 text-center">
+            <TrendingUp className="mx-auto mb-4 h-12 w-12 text-green-500" />
+            <h3 className="mb-2 text-lg font-semibold text-gray-900">Continue Your Progress</h3>
+            <p className="mx-auto mb-2 max-w-md text-sm text-gray-600">
+              You have {reviewStats.dueToday} cards due for review today.
             </p>
-            <p className="text-xs text-gray-500 mb-6">
-              Keep your streak going!
-            </p>
+            <p className="mb-6 text-xs text-gray-500">Keep your streak going!</p>
             <Button
               size="lg"
               onClick={onContinue}
-              className="bg-gradient-to-br from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white"
+              className="bg-gradient-to-br from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700"
             >
-              Continue Learning
+              Continue Review
             </Button>
 
             {/* Demo: Simulate Study Session Button */}
-            <div className="mt-4 pt-4 border-t">
-              <p className="text-xs text-gray-500 mb-2">
-                Demo: Test progress tracking
-              </p>
+            <div className="mt-4 border-t pt-4">
+              <p className="mb-2 text-xs text-gray-500">Demo: Test progress tracking</p>
               <Button
                 variant="outline"
                 size="sm"
@@ -494,18 +493,16 @@ const ActionButtonsSection: React.FC<ActionButtonsSectionProps> = ({
 
         {/* Completed State */}
         {!isPremiumLocked && deckStatus === 'completed' && (
-          <div className="text-center py-8">
-            <Target className="w-12 h-12 text-purple-500 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              Deck Completed!
-            </h3>
-            <p className="text-sm text-gray-600 mb-6 max-w-md mx-auto">
+          <div className="py-8 text-center">
+            <Target className="mx-auto mb-4 h-12 w-12 text-purple-500" />
+            <h3 className="mb-2 text-lg font-semibold text-gray-900">Deck Completed!</h3>
+            <p className="mx-auto mb-6 max-w-md text-sm text-gray-600">
               Great job! You've mastered this deck. Continue reviewing to maintain your knowledge.
             </p>
             <Button
               size="lg"
               onClick={onContinue}
-              className="bg-gradient-to-br from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
+              className="bg-gradient-to-br from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700"
             >
               Review Deck
             </Button>
@@ -519,7 +516,7 @@ const ActionButtonsSection: React.FC<ActionButtonsSectionProps> = ({
 // Loading Skeleton Component
 const LoadingSkeleton: React.FC = () => {
   return (
-    <div className="container mx-auto px-4 py-6 md:py-8 max-w-4xl">
+    <div className="container mx-auto max-w-4xl px-4 py-6 md:py-8">
       {/* Breadcrumb Skeleton */}
       <div className="mb-4 flex items-center gap-2">
         <Skeleton className="h-4 w-32" />
@@ -555,12 +552,12 @@ const LoadingSkeleton: React.FC = () => {
           <Skeleton className="h-6 w-40" />
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
             {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="p-3 bg-gray-50 rounded-lg">
-                <Skeleton className="h-5 w-5 mx-auto mb-2" />
-                <Skeleton className="h-4 w-16 mx-auto mb-1" />
-                <Skeleton className="h-6 w-12 mx-auto" />
+              <div key={i} className="rounded-lg bg-gray-50 p-3">
+                <Skeleton className="mx-auto mb-2 h-5 w-5" />
+                <Skeleton className="mx-auto mb-1 h-4 w-16" />
+                <Skeleton className="mx-auto h-6 w-12" />
               </div>
             ))}
           </div>
@@ -570,11 +567,11 @@ const LoadingSkeleton: React.FC = () => {
       {/* Action Skeleton */}
       <Card>
         <CardContent className="pt-6">
-          <div className="text-center py-8">
-            <Skeleton className="h-12 w-12 mx-auto mb-4 rounded-full" />
-            <Skeleton className="h-6 w-48 mx-auto mb-2" />
-            <Skeleton className="h-4 w-64 mx-auto mb-6" />
-            <Skeleton className="h-12 w-48 mx-auto rounded-lg" />
+          <div className="py-8 text-center">
+            <Skeleton className="mx-auto mb-4 h-12 w-12 rounded-full" />
+            <Skeleton className="mx-auto mb-2 h-6 w-48" />
+            <Skeleton className="mx-auto mb-6 h-4 w-64" />
+            <Skeleton className="mx-auto h-12 w-48 rounded-lg" />
           </div>
         </CardContent>
       </Card>
@@ -590,7 +587,7 @@ interface ErrorStateProps {
 
 const ErrorState: React.FC<ErrorStateProps> = ({ error, onRetry }) => {
   return (
-    <div className="container mx-auto px-4 py-6 md:py-8 max-w-4xl">
+    <div className="container mx-auto max-w-4xl px-4 py-6 md:py-8">
       <Alert variant="destructive" className="mb-4">
         <AlertCircle className="h-4 w-4" />
         <AlertTitle>Error Loading Deck</AlertTitle>
@@ -598,21 +595,17 @@ const ErrorState: React.FC<ErrorStateProps> = ({ error, onRetry }) => {
       </Alert>
 
       <Card>
-        <CardContent className="pt-6 text-center py-12">
-          <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">
-            Failed to Load Deck
-          </h2>
-          <p className="text-sm text-gray-600 mb-6 max-w-md mx-auto">
+        <CardContent className="py-12 pt-6 text-center">
+          <AlertCircle className="mx-auto mb-4 h-16 w-16 text-red-500" />
+          <h2 className="mb-2 text-xl font-semibold text-gray-900">Failed to Load Deck</h2>
+          <p className="mx-auto mb-6 max-w-md text-sm text-gray-600">
             We couldn't load the deck details. Please check your connection and try again.
           </p>
-          <div className="flex gap-3 justify-center">
+          <div className="flex justify-center gap-3">
             <Button variant="outline" onClick={() => window.history.back()}>
               Go Back
             </Button>
-            <Button onClick={onRetry}>
-              Try Again
-            </Button>
+            <Button onClick={onRetry}>Try Again</Button>
           </div>
         </CardContent>
       </Card>
@@ -625,19 +618,15 @@ const NotFoundState: React.FC = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="container mx-auto px-4 py-6 md:py-8 max-w-4xl">
+    <div className="container mx-auto max-w-4xl px-4 py-6 md:py-8">
       <Card>
-        <CardContent className="pt-6 text-center py-12">
-          <BookOpen className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">
-            Deck Not Found
-          </h2>
-          <p className="text-sm text-gray-600 mb-6 max-w-md mx-auto">
+        <CardContent className="py-12 pt-6 text-center">
+          <BookOpen className="mx-auto mb-4 h-16 w-16 text-gray-400" />
+          <h2 className="mb-2 text-xl font-semibold text-gray-900">Deck Not Found</h2>
+          <p className="mx-auto mb-6 max-w-md text-sm text-gray-600">
             The deck you're looking for doesn't exist or has been removed.
           </p>
-          <Button onClick={() => navigate('/decks')}>
-            Browse All Decks
-          </Button>
+          <Button onClick={() => navigate('/decks')}>Browse All Decks</Button>
         </CardContent>
       </Card>
     </div>

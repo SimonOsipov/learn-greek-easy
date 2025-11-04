@@ -1,16 +1,17 @@
 import React, { useState } from 'react';
-import { useAuth } from '@/hooks/useAuth';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+
 import { User, Settings, BarChart3, Shield, Menu, X } from 'lucide-react';
-import { cn } from '@/lib/utils';
 
 // Import section components
-import { ProfileHeader } from '@/components/profile/ProfileHeader';
 import { PersonalInfoSection } from '@/components/profile/PersonalInfoSection';
-import { StatsSection } from '@/components/profile/StatsSection';
 import { PreferencesSection } from '@/components/profile/PreferencesSection';
+import { ProfileHeader } from '@/components/profile/ProfileHeader';
 import { SecuritySection } from '@/components/profile/SecuritySection';
+import { StatsSection } from '@/components/profile/StatsSection';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { useAuth } from '@/hooks/useAuth';
+import { cn } from '@/lib/utils';
 
 type ProfileSection = 'personal' | 'stats' | 'preferences' | 'security';
 
@@ -54,15 +55,11 @@ export const Profile: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-4 py-6 max-w-7xl">
+      <div className="container mx-auto max-w-7xl px-4 py-6">
         {/* Mobile Header */}
         <div className="mb-6 flex items-center justify-between md:hidden">
           <h1 className="text-2xl font-bold text-gray-900">Profile</h1>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-          >
+          <Button variant="outline" size="icon" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
             {isSidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </Button>
         </div>
@@ -70,12 +67,7 @@ export const Profile: React.FC = () => {
         {/* Main Layout */}
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
           {/* Sidebar */}
-          <aside
-            className={cn(
-              'md:col-span-1',
-              isSidebarOpen ? 'block' : 'hidden md:block'
-            )}
-          >
+          <aside className={cn('md:col-span-1', isSidebarOpen ? 'block' : 'hidden md:block')}>
             <Card className="overflow-hidden">
               {/* Profile Header */}
               <ProfileHeader user={user} />

@@ -1,10 +1,12 @@
 import React, { useState, useRef } from 'react';
-import { useAuthStore } from '@/stores/authStore';
+
+import { Globe, Bell, Clock, Palette, Check } from 'lucide-react';
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
-import { Globe, Bell, Clock, Palette, Check } from 'lucide-react';
+import { useAuthStore } from '@/stores/authStore';
 import type { User } from '@/types/auth';
 
 interface PreferencesSectionProps {
@@ -77,9 +79,7 @@ export const PreferencesSection: React.FC<PreferencesSectionProps> = ({ user }) 
               <Globe className="h-5 w-5 text-blue-600" />
               Interface Language
             </CardTitle>
-            <CardDescription>
-              Choose your preferred language for the app interface
-            </CardDescription>
+            <CardDescription>Choose your preferred language for the app interface</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 gap-3">
@@ -95,9 +95,7 @@ export const PreferencesSection: React.FC<PreferencesSectionProps> = ({ user }) 
                   <span className="text-2xl">🇬🇧</span>
                   <span className="font-medium text-gray-900">English</span>
                 </div>
-                {preferences.language === 'en' && (
-                  <Check className="h-5 w-5 text-blue-600" />
-                )}
+                {preferences.language === 'en' && <Check className="h-5 w-5 text-blue-600" />}
               </button>
               <button
                 onClick={() => handlePreferenceChange('language', 'el')}
@@ -111,9 +109,7 @@ export const PreferencesSection: React.FC<PreferencesSectionProps> = ({ user }) 
                   <span className="text-2xl">🇬🇷</span>
                   <span className="font-medium text-gray-900">Ελληνικά</span>
                 </div>
-                {preferences.language === 'el' && (
-                  <Check className="h-5 w-5 text-blue-600" />
-                )}
+                {preferences.language === 'el' && <Check className="h-5 w-5 text-blue-600" />}
               </button>
             </div>
           </CardContent>
@@ -126,9 +122,7 @@ export const PreferencesSection: React.FC<PreferencesSectionProps> = ({ user }) 
               <Clock className="h-5 w-5 text-green-600" />
               Daily Learning Goal
             </CardTitle>
-            <CardDescription>
-              Set your target study time per day (5-120 minutes)
-            </CardDescription>
+            <CardDescription>Set your target study time per day (5-120 minutes)</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
@@ -137,12 +131,8 @@ export const PreferencesSection: React.FC<PreferencesSectionProps> = ({ user }) 
               </Label>
               <div className="flex items-center gap-2 text-sm text-gray-600">
                 {preferences.dailyGoal < 15 && <span>Light</span>}
-                {preferences.dailyGoal >= 15 && preferences.dailyGoal < 30 && (
-                  <span>Moderate</span>
-                )}
-                {preferences.dailyGoal >= 30 && preferences.dailyGoal < 60 && (
-                  <span>Regular</span>
-                )}
+                {preferences.dailyGoal >= 15 && preferences.dailyGoal < 30 && <span>Moderate</span>}
+                {preferences.dailyGoal >= 30 && preferences.dailyGoal < 60 && <span>Regular</span>}
                 {preferences.dailyGoal >= 60 && <span>Intensive</span>}
               </div>
             </div>
@@ -207,12 +197,10 @@ export const PreferencesSection: React.FC<PreferencesSectionProps> = ({ user }) 
             </div>
             {preferences.notifications && (
               <div className="mt-4 rounded-lg bg-purple-50 p-4">
-                <p className="text-sm font-medium text-purple-900">
-                  Notifications enabled! 🎉
-                </p>
+                <p className="text-sm font-medium text-purple-900">Notifications enabled! 🎉</p>
                 <p className="mt-1 text-sm text-purple-700">
-                  You'll receive daily reminders at your preferred time and alerts when you're
-                  about to lose your streak.
+                  You'll receive daily reminders at your preferred time and alerts when you're about
+                  to lose your streak.
                 </p>
               </div>
             )}

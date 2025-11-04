@@ -1,18 +1,11 @@
 import React from 'react';
+
+import { Flame, BookOpen, Trophy, Calendar, Clock, TrendingUp, Award, Star } from 'lucide-react';
+
+import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import {
-  Flame,
-  BookOpen,
-  Trophy,
-  Calendar,
-  Clock,
-  TrendingUp,
-  Award,
-  Star
-} from 'lucide-react';
 import type { UserStats } from '@/types/auth';
 
 interface StatsSectionProps {
@@ -29,10 +22,10 @@ export const StatsSection: React.FC<StatsSectionProps> = ({ stats }) => {
   // Motivational messages based on streak
   const getStreakMessage = (streak: number): string => {
     if (streak >= 30) return "Incredible! You're on fire! 🔥";
-    if (streak >= 14) return "Amazing streak! Keep it up! 💪";
-    if (streak >= 7) return "Great job! One week strong! 🌟";
-    if (streak >= 3) return "Nice start! Keep going! 👍";
-    return "Start your learning streak today! 🚀";
+    if (streak >= 14) return 'Amazing streak! Keep it up! 💪';
+    if (streak >= 7) return 'Great job! One week strong! 🌟';
+    if (streak >= 3) return 'Nice start! Keep going! 👍';
+    return 'Start your learning streak today! 🚀';
   };
 
   // Format date for display
@@ -50,17 +43,14 @@ export const StatsSection: React.FC<StatsSectionProps> = ({ stats }) => {
   );
 
   // Calculate average words per day
-  const avgWordsPerDay = daysSinceJoining > 0
-    ? Math.round(stats.wordsLearned / daysSinceJoining)
-    : 0;
+  const avgWordsPerDay =
+    daysSinceJoining > 0 ? Math.round(stats.wordsLearned / daysSinceJoining) : 0;
 
   return (
     <div className="p-6">
       <div className="mb-6">
         <h2 className="text-xl font-bold text-gray-900">Learning Statistics</h2>
-        <p className="text-sm text-gray-600">
-          Track your progress and celebrate your achievements
-        </p>
+        <p className="text-sm text-gray-600">Track your progress and celebrate your achievements</p>
       </div>
 
       <Separator className="mb-6" />
@@ -71,9 +61,7 @@ export const StatsSection: React.FC<StatsSectionProps> = ({ stats }) => {
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-medium text-gray-600">
-                Current Streak
-              </CardTitle>
+              <CardTitle className="text-sm font-medium text-gray-600">Current Streak</CardTitle>
               <Flame className="h-5 w-5 text-orange-500" />
             </div>
           </CardHeader>
@@ -92,9 +80,7 @@ export const StatsSection: React.FC<StatsSectionProps> = ({ stats }) => {
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-medium text-gray-600">
-                Words Learned
-              </CardTitle>
+              <CardTitle className="text-sm font-medium text-gray-600">Words Learned</CardTitle>
               <BookOpen className="h-5 w-5 text-blue-500" />
             </div>
           </CardHeader>
@@ -102,9 +88,7 @@ export const StatsSection: React.FC<StatsSectionProps> = ({ stats }) => {
             <div className="text-3xl font-bold text-gray-900">
               {stats.wordsLearned.toLocaleString()}
             </div>
-            <p className="mt-2 text-xs text-gray-500">
-              ~{avgWordsPerDay} words per day average
-            </p>
+            <p className="mt-2 text-xs text-gray-500">~{avgWordsPerDay} words per day average</p>
           </CardContent>
         </Card>
 
@@ -112,16 +96,12 @@ export const StatsSection: React.FC<StatsSectionProps> = ({ stats }) => {
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-medium text-gray-600">
-                Total XP
-              </CardTitle>
+              <CardTitle className="text-sm font-medium text-gray-600">Total XP</CardTitle>
               <Trophy className="h-5 w-5 text-yellow-500" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-gray-900">
-              {stats.totalXP.toLocaleString()}
-            </div>
+            <div className="text-3xl font-bold text-gray-900">{stats.totalXP.toLocaleString()}</div>
             <p className="mt-2 text-xs text-gray-500">
               Level {level} • {Math.round(progressPercent)}% to next level
             </p>

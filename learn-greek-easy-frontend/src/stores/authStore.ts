@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import type { User, RegisterData, AuthError } from '@/types/auth';
+
 import { mockAuthAPI } from '@/services/mockAuthAPI';
+import type { User, RegisterData, AuthError } from '@/types/auth';
 
 interface AuthState {
   // State

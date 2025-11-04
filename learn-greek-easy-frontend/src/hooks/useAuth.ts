@@ -1,6 +1,8 @@
-import { useAuthStore } from '@/stores/authStore';
-import { useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
+
+import { useNavigate } from 'react-router-dom';
+
+import { useAuthStore } from '@/stores/authStore';
 
 // Main auth hook
 export const useAuth = () => {
@@ -60,10 +62,7 @@ export const useRedirectIfAuth = (redirectTo = '/dashboard') => {
 };
 
 // Hook for role-based access
-export const useRequireRole = (
-  requiredRole: 'admin' | 'premium',
-  redirectTo = '/dashboard'
-) => {
+export const useRequireRole = (requiredRole: 'admin' | 'premium', redirectTo = '/dashboard') => {
   const { user, isAuthenticated } = useAuthStore();
   const navigate = useNavigate();
 
@@ -73,8 +72,7 @@ export const useRequireRole = (
       return;
     }
 
-    const hasAccess =
-      user?.role === requiredRole || user?.role === 'admin';
+    const hasAccess = user?.role === requiredRole || user?.role === 'admin';
 
     if (!hasAccess) {
       navigate(redirectTo, { replace: true });

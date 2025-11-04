@@ -600,13 +600,116 @@ transition: width 0.3s ease;
 - Muted text (#6b7280) on white: 4.95:1 ratio ✅
 - White text on primary gradient: >4.5:1 ratio ✅
 
-### Focus States
-```css
-button:focus, a:focus {
-    outline: 2px solid #2563eb;
-    outline-offset: 2px;
-}
+### Focus Management
+
+**Focus Indicators**:
+- All interactive elements must have visible focus indicators
+- Use 2px blue outline: `focus:outline-none focus:ring-2 focus:ring-blue-500`
+- Ensure contrast ratio of 3:1 minimum between focus indicator and background
+
+**Focus Order**:
+- Logical tab order following visual layout
+- Skip links for keyboard users (optional for MVP)
+- Auto-focus on primary action after state changes
+
+**Focus Trap**:
+- Modal dialogs must trap focus (use Radix UI Dialog)
+- Esc key closes dialog and returns focus
+
+**Example**:
+```tsx
+<button
+  className="px-4 py-2 bg-blue-500 text-white rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+>
+  Primary Action
+</button>
 ```
+
+### ARIA Live Regions
+
+**Usage**:
+- Use `aria-live="polite"` for non-critical announcements
+- Use `aria-live="assertive"` only for critical errors
+- Pair with `aria-atomic="true"` for complete message reading
+
+**Examples**:
+- Card flip: "Answer revealed"
+- Progress: "Card 5 of 24"
+- State changes: "Session paused"
+
+**Implementation**:
+```tsx
+<div
+  aria-live="polite"
+  aria-atomic="true"
+  className="sr-only"
+>
+  {announcement}
+</div>
+```
+
+### Keyboard Shortcuts
+
+**Best Practices**:
+- Single-key shortcuts for frequent actions (Space, 1-4)
+- Special keys for meta actions (?, Esc)
+- Display shortcuts in help dialog (Dialog component)
+- Show visual hints on hover (Tooltip component)
+
+**Standard Shortcuts**:
+- Space: Primary action (flip, submit, etc.)
+- Esc: Close/cancel/exit
+- ?: Show help
+- Numbers: Quick selections
+
+**Keyboard Shortcut Help Dialog**:
+```tsx
+import { KeyboardShortcutsHelp } from '@/components/review/KeyboardShortcutsHelp';
+
+// In component
+const { showHelp, setShowHelp } = useKeyboardShortcuts();
+
+// In JSX
+<KeyboardShortcutsHelp open={showHelp} onOpenChange={setShowHelp} />
+```
+
+### Screen Reader Support
+
+**ARIA Labels**:
+- All interactive elements need `aria-label` or visible text
+- Use `aria-describedby` for additional context
+- Use `aria-labelledby` for headings
+
+**Example**:
+```tsx
+<button
+  aria-label="Rate card as Good"
+  onClick={() => rateCard('good')}
+>
+  Good
+</button>
+```
+
+**Semantic HTML**:
+- Use proper heading hierarchy (h1 → h2 → h3)
+- Use `<button>` for actions, `<a>` for navigation
+- Use landmarks: `<main>`, `<nav>`, `<section>`
+
+**Hidden Content**:
+- Use `.sr-only` class for screen-reader-only content:
+  ```css
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+  }
+  ```
 
 ### Keyboard Navigation
 - All interactive elements are keyboard accessible

@@ -20,10 +20,7 @@ class SessionManager {
   /**
    * Start inactivity monitoring with warning and timeout callbacks
    */
-  startInactivityTimer(
-    onTimeout: () => void,
-    onWarning: (remainingSeconds: number) => void
-  ): void {
+  startInactivityTimer(onTimeout: () => void, onWarning: (remainingSeconds: number) => void): void {
     this.resetTimers();
 
     // Set warning timer (25 minutes)
@@ -77,10 +74,7 @@ class SessionManager {
   /**
    * Extend session (called when user clicks "Stay Logged In")
    */
-  extendSession(
-    onTimeout: () => void,
-    onWarning: (remainingSeconds: number) => void
-  ): void {
+  extendSession(onTimeout: () => void, onWarning: (remainingSeconds: number) => void): void {
     this.resetTimers();
     this.startInactivityTimer(onTimeout, onWarning);
   }

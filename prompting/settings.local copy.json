@@ -17,6 +17,11 @@
       "mcp__playwright__browser_type",
       "mcp__playwright__browser_wait_for",
       "mcp__playwright__browser_snapshot",
+      "mcp__playwright__browser_fill_form",
+      "mcp__playwright__browser_press_key",
+      "mcp__playwright__browser_handle_dialog",
+      "mcp__playwright__browser_tabs",
+      "mcp__playwright__browser_navigate_back",
       "Bash(find:*)",
       "Read(//Users/samosipov/.claude/**)",
       "Bash(awk:*)",
@@ -28,7 +33,15 @@
       "Bash(lsof:*)",
       "Bash(xargs:*)",
       "Bash(curl:*)",
-      "Bash(killall:*)"
+      "Bash(killall:*)",
+      "Bash(export PATH=\"/opt/homebrew/bin:/usr/bin:/bin:$PATH\")",
+      "Bash(claude:*)",
+      "Bash(mkdir:*)",
+      "Bash(cp:*)",
+      "Bash(echo:*)",
+      "Bash(open:*)",
+      "Bash(kill:*)",
+      "Bash(/dev/null)"
     ],
     "deny": [],
     "ask": []

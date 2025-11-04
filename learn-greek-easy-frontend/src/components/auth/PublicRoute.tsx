@@ -1,5 +1,7 @@
 import { useEffect } from 'react';
+
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
+
 import { useAuthStore } from '@/stores/authStore';
 
 interface PublicRouteProps {
@@ -19,10 +21,7 @@ interface PublicRouteProps {
  * - Preserves navigation state for "return to" functionality
  * - Uses useEffect to handle redirect to ensure state updates are respected
  */
-export const PublicRoute: React.FC<PublicRouteProps> = ({
-  redirectTo,
-  children,
-}) => {
+export const PublicRoute: React.FC<PublicRouteProps> = ({ redirectTo, children }) => {
   const { isAuthenticated } = useAuthStore();
   const location = useLocation();
   const navigate = useNavigate();

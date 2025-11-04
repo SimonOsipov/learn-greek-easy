@@ -23,20 +23,21 @@
 
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import type { Deck, DeckProgress, DeckFilters } from '@/types/deck';
+
 import { mockDeckAPI } from '@/services/mockDeckAPI';
 import { useAuthStore } from '@/stores/authStore';
+import type { Deck, DeckProgress, DeckFilters } from '@/types/deck';
 
 /**
  * Default filter state
  * Resets on each session to prevent stale filter preferences
  */
 const DEFAULT_FILTERS: DeckFilters = {
-  search: '',              // Empty search = show all
-  levels: [],              // Empty = show all levels (A1, A2, B1, B2)
-  categories: [],          // Empty = show all categories
-  status: [],              // Empty = show all statuses (not-started, in-progress, completed)
-  showPremiumOnly: false,  // Default to showing both free and premium decks
+  search: '', // Empty search = show all
+  levels: [], // Empty = show all levels (A1, A2, B1, B2)
+  categories: [], // Empty = show all categories
+  status: [], // Empty = show all statuses (not-started, in-progress, completed)
+  showPremiumOnly: false, // Default to showing both free and premium decks
 };
 
 /**
@@ -209,7 +210,7 @@ export const useDeckStore = create<DeckState>()(
           // Inject user's progress into decks
           // TODO: Backend Migration - Remove when backend returns joined data
           const { deckProgress } = get();
-          const decksWithProgress = decks.map(deck => ({
+          const decksWithProgress = decks.map((deck) => ({
             ...deck,
             progress: deckProgress[deck.id] || deck.progress,
           }));
@@ -220,9 +221,8 @@ export const useDeckStore = create<DeckState>()(
             error: null,
           });
         } catch (error) {
-          const errorMessage = error instanceof Error
-            ? error.message
-            : 'Failed to load decks. Please try again.';
+          const errorMessage =
+            error instanceof Error ? error.message : 'Failed to load decks. Please try again.';
 
           set({
             isLoading: false,
@@ -261,9 +261,10 @@ export const useDeckStore = create<DeckState>()(
             error: null,
           });
         } catch (error) {
-          const errorMessage = error instanceof Error
-            ? error.message
-            : 'Failed to load deck details. Please try again.';
+          const errorMessage =
+            error instanceof Error
+              ? error.message
+              : 'Failed to load deck details. Please try again.';
 
           set({
             isLoading: false,
@@ -377,11 +378,9 @@ export const useDeckStore = create<DeckState>()(
 
           // Re-fetch decks to update list with new progress
           await get().fetchDecks();
-
         } catch (error) {
-          const errorMessage = error instanceof Error
-            ? error.message
-            : 'Failed to start learning. Please try again.';
+          const errorMessage =
+            error instanceof Error ? error.message : 'Failed to start learning. Please try again.';
 
           set({
             isLoading: false,
@@ -427,10 +426,8 @@ export const useDeckStore = create<DeckState>()(
           }
 
           // Update decks array
-          const newDecks = state.decks.map(deck =>
-            deck.id === deckId
-              ? { ...deck, progress: updatedProgress }
-              : deck
+          const newDecks = state.decks.map((deck) =>
+            deck.id === deckId ? { ...deck, progress: updatedProgress } : deck
           );
 
           return {
@@ -469,11 +466,9 @@ export const useDeckStore = create<DeckState>()(
 
           // Re-fetch decks to ensure full sync
           await get().fetchDecks();
-
         } catch (error) {
-          const errorMessage = error instanceof Error
-            ? error.message
-            : 'Failed to update card progress.';
+          const errorMessage =
+            error instanceof Error ? error.message : 'Failed to update card progress.';
 
           set({
             isLoading: false,
@@ -519,11 +514,9 @@ export const useDeckStore = create<DeckState>()(
 
           // Re-fetch decks to ensure full sync
           await get().fetchDecks();
-
         } catch (error) {
-          const errorMessage = error instanceof Error
-            ? error.message
-            : 'Failed to update session progress.';
+          const errorMessage =
+            error instanceof Error ? error.message : 'Failed to update session progress.';
 
           set({
             isLoading: false,
@@ -559,11 +552,8 @@ export const useDeckStore = create<DeckState>()(
 
           // Re-fetch decks
           await get().fetchDecks();
-
         } catch (error) {
-          const errorMessage = error instanceof Error
-            ? error.message
-            : 'Failed to complete deck.';
+          const errorMessage = error instanceof Error ? error.message : 'Failed to complete deck.';
 
           set({
             isLoading: false,
@@ -599,11 +589,9 @@ export const useDeckStore = create<DeckState>()(
 
           // Re-fetch decks
           await get().fetchDecks();
-
         } catch (error) {
-          const errorMessage = error instanceof Error
-            ? error.message
-            : 'Failed to reset deck progress.';
+          const errorMessage =
+            error instanceof Error ? error.message : 'Failed to reset deck progress.';
 
           set({
             isLoading: false,

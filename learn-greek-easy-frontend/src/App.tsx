@@ -1,23 +1,25 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
+import { PublicRoute } from '@/components/auth/PublicRoute';
+import { RouteGuard } from '@/components/auth/RouteGuard';
+import { SessionWarningDialog } from '@/components/auth/SessionWarningDialog';
 import { AppLayout } from '@/components/layout';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { LayoutProvider } from '@/contexts/LayoutContext';
-import { RouteGuard } from '@/components/auth/RouteGuard';
-import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
-import { PublicRoute } from '@/components/auth/PublicRoute';
-import { Dashboard } from '@/pages/Dashboard';
+import { useActivityMonitor } from '@/hooks/useActivityMonitor';
+import { ForgotPassword } from '@/pages/auth/ForgotPassword';
 import { Login } from '@/pages/auth/Login';
 import { Register } from '@/pages/auth/Register';
-import { ForgotPassword } from '@/pages/auth/ForgotPassword';
-import { NotFound } from '@/pages/NotFound';
-import { Unauthorized } from '@/pages/Unauthorized';
-import { Profile } from '@/pages/Profile';
-import { DecksPage } from '@/pages/DecksPage';
+import { Dashboard } from '@/pages/Dashboard';
 import { DeckDetailPage } from '@/pages/DeckDetailPage';
-import { useActivityMonitor } from '@/hooks/useActivityMonitor';
-import { SessionWarningDialog } from '@/components/auth/SessionWarningDialog';
+import { DecksPage } from '@/pages/DecksPage';
+import { FlashcardReviewPage } from '@/pages/FlashcardReviewPage';
+import { SessionSummaryPage } from '@/pages/SessionSummaryPage';
+import { NotFound } from '@/pages/NotFound';
+import { Profile } from '@/pages/Profile';
+import { Unauthorized } from '@/pages/Unauthorized';
 
 // Temporary placeholder pages - replace with actual pages
 
@@ -68,8 +70,11 @@ function AppContent() {
               <Route path="stats" element={<Navigate to="/statistics" replace />} />
               <Route path="settings" element={<SettingsPage />} />
               <Route path="profile" element={<Profile />} />
-              <Route path="review" element={<Dashboard />} /> {/* Temporary */}
             </Route>
+            {/* Review page outside AppLayout for full-screen experience */}
+            <Route path="decks/:deckId/review" element={<FlashcardReviewPage />} />
+            {/* Session summary page outside AppLayout for full-screen experience */}
+            <Route path="decks/:deckId/summary" element={<SessionSummaryPage />} />
           </Route>
 
           {/* Admin Routes - require admin role */}

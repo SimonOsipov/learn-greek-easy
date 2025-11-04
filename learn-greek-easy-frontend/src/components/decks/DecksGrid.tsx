@@ -1,8 +1,11 @@
 // /src/components/decks/DecksGrid.tsx
 
 import React from 'react';
+
 import { useNavigate } from 'react-router-dom';
+
 import type { Deck } from '@/types/deck';
+
 import { DeckCard } from './DeckCard';
 
 export interface DecksGridProps {
@@ -10,10 +13,7 @@ export interface DecksGridProps {
   onDeckClick?: (deckId: string) => void;
 }
 
-export const DecksGrid: React.FC<DecksGridProps> = ({
-  decks,
-  onDeckClick
-}) => {
+export const DecksGrid: React.FC<DecksGridProps> = ({ decks, onDeckClick }) => {
   const navigate = useNavigate();
 
   const handleDeckClick = (deckId: string) => {

@@ -7,7 +7,8 @@ export const MOCK_DECKS: Deck[] = [
     id: 'deck-a1-basics',
     title: 'A1 Basic Vocabulary',
     titleGreek: 'Βασικές Λέξεις A1',
-    description: 'Essential everyday vocabulary for beginners. Greetings, numbers, basic nouns and verbs.',
+    description:
+      'Essential everyday vocabulary for beginners. Greetings, numbers, basic nouns and verbs.',
     level: 'A1',
     category: 'vocabulary',
     tags: ['beginner', 'essentials', 'everyday'],

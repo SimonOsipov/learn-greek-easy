@@ -1,8 +1,10 @@
 import React from 'react';
+
+import { Crown, Shield } from 'lucide-react';
+
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import type { User } from '@/types/auth';
-import { Crown, Shield } from 'lucide-react';
 
 interface ProfileHeaderProps {
   user: User;
@@ -13,7 +15,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({ user, onAvatarClic
   // Generate initials from user name
   const initials = user.name
     .split(' ')
-    .map(n => n[0])
+    .map((n) => n[0])
     .join('')
     .toUpperCase()
     .slice(0, 2);

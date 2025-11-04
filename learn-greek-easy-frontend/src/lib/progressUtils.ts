@@ -87,8 +87,7 @@ export function calculateSessionStats(
   accuracyChange: number;
 } {
   return {
-    cardsReviewed: (before.cardsNew - after.cardsNew) +
-                    (before.cardsLearning - after.cardsLearning),
+    cardsReviewed: before.cardsNew - after.cardsNew + (before.cardsLearning - after.cardsLearning),
     cardsLearned: after.cardsLearning - before.cardsLearning,
     cardsMastered: after.cardsMastered - before.cardsMastered,
     timeSpent: after.totalTimeSpent - before.totalTimeSpent,
@@ -117,15 +116,15 @@ export function getProgressMessage(progress: DeckProgress): string {
   if (completionPercent === 0) {
     return "Let's get started!";
   } else if (completionPercent < 25) {
-    return "Great start! Keep going!";
+    return 'Great start! Keep going!';
   } else if (completionPercent < 50) {
     return "You're making great progress!";
   } else if (completionPercent < 75) {
-    return "More than halfway there!";
+    return 'More than halfway there!';
   } else if (completionPercent < 100) {
-    return "Almost there! Finish strong!";
+    return 'Almost there! Finish strong!';
   } else {
-    return "Deck completed! Amazing work!";
+    return 'Deck completed! Amazing work!';
   }
 }
 
@@ -165,8 +164,8 @@ export function validateProgress(progress: DeckProgress): string[] {
   const errors: string[] = [];
 
   // Total cards should equal sum of states
-  const sum = progress.cardsNew + progress.cardsLearning +
-              progress.cardsReview + progress.cardsMastered;
+  const sum =
+    progress.cardsNew + progress.cardsLearning + progress.cardsReview + progress.cardsMastered;
   if (sum !== progress.cardsTotal) {
     errors.push(`Card count mismatch: ${sum} !== ${progress.cardsTotal}`);
   }

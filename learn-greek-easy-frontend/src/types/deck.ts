@@ -11,15 +11,15 @@ export type CardDifficulty = 'new' | 'learning' | 'review' | 'mastered';
  */
 export interface Card {
   id: string;
-  front: string;        // Greek word/phrase
-  back: string;         // English translation
+  front: string; // Greek word/phrase
+  back: string; // English translation
   pronunciation?: string; // Phonetic pronunciation guide
-  example?: string;     // Example sentence in Greek
+  example?: string; // Example sentence in Greek
   exampleTranslation?: string; // English translation of example
   difficulty: CardDifficulty;
   nextReviewDate?: Date;
   timesReviewed: number;
-  successRate: number;  // 0-100 percentage
+  successRate: number; // 0-100 percentage
 }
 
 /**
@@ -29,15 +29,15 @@ export interface DeckProgress {
   deckId: string;
   status: DeckStatus;
   cardsTotal: number;
-  cardsNew: number;       // Not yet studied
-  cardsLearning: number;  // Currently being learned
-  cardsReview: number;    // Ready for review
-  cardsMastered: number;  // Fully mastered (80%+ success, 3+ reviews)
-  dueToday: number;       // Cards scheduled for today
-  streak: number;         // Consecutive days studied
+  cardsNew: number; // Not yet studied
+  cardsLearning: number; // Currently being learned
+  cardsReview: number; // Ready for review
+  cardsMastered: number; // Fully mastered (80%+ success, 3+ reviews)
+  dueToday: number; // Cards scheduled for today
+  streak: number; // Consecutive days studied
   lastStudied?: Date;
   totalTimeSpent: number; // Total minutes spent on deck
-  accuracy: number;       // Overall accuracy percentage (0-100)
+  accuracy: number; // Overall accuracy percentage (0-100)
 }
 
 /**
@@ -45,14 +45,14 @@ export interface DeckProgress {
  */
 export interface Deck {
   id: string;
-  title: string;          // English title
-  titleGreek: string;     // Greek translation of title
+  title: string; // English title
+  titleGreek: string; // Greek translation of title
   description: string;
   level: DeckLevel;
   category: DeckCategory;
   tags: string[];
   cardCount: number;
-  estimatedTime: number;  // Minutes to complete
+  estimatedTime: number; // Minutes to complete
   isPremium: boolean;
   thumbnail?: string;
   createdBy: string;

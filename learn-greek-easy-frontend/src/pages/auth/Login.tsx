@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+
+import { zodResolver } from '@hookform/resolvers/zod';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { z } from 'zod';
+
 import { AuthLayout } from '@/components/auth/AuthLayout';
 import { Button } from '@/components/ui/button';
 import {
@@ -14,9 +16,9 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
 import { useAuthStore } from '@/stores/authStore';
 
 /**
@@ -26,10 +28,7 @@ import { useAuthStore } from '@/stores/authStore';
  * - RememberMe: Optional boolean
  */
 const loginSchema = z.object({
-  email: z
-    .string()
-    .min(1, 'Email is required')
-    .email('Please enter a valid email address'),
+  email: z.string().min(1, 'Email is required').email('Please enter a valid email address'),
   password: z
     .string()
     .min(1, 'Password is required')
@@ -103,9 +102,7 @@ export const Login: React.FC = () => {
             <span className="text-4xl">🏛️</span>
           </div>
           <CardTitle className="text-2xl font-bold">Καλώς ήρθατε!</CardTitle>
-          <CardDescription>
-            Welcome back! Sign in to continue learning Greek
-          </CardDescription>
+          <CardDescription>Welcome back! Sign in to continue learning Greek</CardDescription>
         </CardHeader>
 
         <form onSubmit={handleSubmit(onSubmit)}>
@@ -113,7 +110,7 @@ export const Login: React.FC = () => {
             {/* Form-level error display (API errors, network errors) */}
             {formError && (
               <div
-                className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md"
+                className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-600"
                 role="alert"
               >
                 {formError}
@@ -134,11 +131,7 @@ export const Login: React.FC = () => {
                 {...register('email')}
               />
               {errors.email && (
-                <p
-                  id="email-error"
-                  className="text-sm text-red-600 mt-1"
-                  role="alert"
-                >
+                <p id="email-error" className="mt-1 text-sm text-red-600" role="alert">
                   {errors.email.message}
                 </p>
               )}
@@ -162,7 +155,7 @@ export const Login: React.FC = () => {
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8"
+                  className="absolute right-2 top-1/2 h-8 w-8 -translate-y-1/2"
                   onClick={() => setShowPassword(!showPassword)}
                   disabled={isFormDisabled}
                   aria-label={showPassword ? 'Hide password' : 'Show password'}
@@ -171,11 +164,7 @@ export const Login: React.FC = () => {
                 </Button>
               </div>
               {errors.password && (
-                <p
-                  id="password-error"
-                  className="text-sm text-red-600 mt-1"
-                  role="alert"
-                >
+                <p id="password-error" className="mt-1 text-sm text-red-600" role="alert">
                   {errors.password.message}
                 </p>
               )}
@@ -196,17 +185,11 @@ export const Login: React.FC = () => {
                   disabled={isFormDisabled}
                   {...register('rememberMe')}
                 />
-                <Label
-                  htmlFor="remember"
-                  className="text-sm cursor-pointer font-normal"
-                >
+                <Label htmlFor="remember" className="cursor-pointer text-sm font-normal">
                   Remember me
                 </Label>
               </div>
-              <Link
-                to="/forgot-password"
-                className="text-sm text-primary hover:underline"
-              >
+              <Link to="/forgot-password" className="text-sm text-primary hover:underline">
                 Forgot password?
               </Link>
             </div>
@@ -215,7 +198,7 @@ export const Login: React.FC = () => {
           <CardFooter className="flex flex-col space-y-4">
             <Button
               type="submit"
-              className="w-full bg-gradient-to-br from-[#667eea] to-[#764ba2] hover:opacity-90 text-white"
+              className="w-full bg-gradient-to-br from-[#667eea] to-[#764ba2] text-white hover:opacity-90"
               size="lg"
               disabled={isFormDisabled}
             >
@@ -234,9 +217,7 @@ export const Login: React.FC = () => {
                 <span className="w-full border-t" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">
-                  Or continue with
-                </span>
+                <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
               </div>
             </div>
 
@@ -264,10 +245,7 @@ export const Login: React.FC = () => {
 
             <p className="text-center text-sm text-muted-foreground">
               Don't have an account?{' '}
-              <Link
-                to="/register"
-                className="text-primary hover:underline font-medium"
-              >
+              <Link to="/register" className="font-medium text-primary hover:underline">
                 Sign up for free
               </Link>
             </p>

@@ -1,11 +1,13 @@
 // /src/components/decks/DeckFilters.tsx
 
 import React, { useState, useCallback } from 'react';
+
 import { Search, X } from 'lucide-react';
-import { Input } from '@/components/ui/input';
+
 import { Button } from '@/components/ui/button';
-import type { DeckFilters as DeckFiltersType, DeckLevel, DeckStatus } from '@/types/deck';
+import { Input } from '@/components/ui/input';
 import { debounce } from '@/lib/utils';
+import type { DeckFilters as DeckFiltersType, DeckLevel, DeckStatus } from '@/types/deck';
 
 export interface DeckFiltersProps {
   filters: DeckFiltersType;
@@ -121,9 +123,7 @@ export const DeckFilters: React.FC<DeckFiltersProps> = ({
               size="sm"
               onClick={() => handleLevelToggle(value)}
               className={
-                filters.levels.includes(value)
-                  ? `${color} text-white hover:opacity-90`
-                  : ''
+                filters.levels.includes(value) ? `${color} text-white hover:opacity-90` : ''
               }
               aria-pressed={filters.levels.includes(value)}
             >
@@ -153,11 +153,7 @@ export const DeckFilters: React.FC<DeckFiltersProps> = ({
           variant={filters.showPremiumOnly ? 'default' : 'outline'}
           size="sm"
           onClick={handlePremiumToggle}
-          className={
-            filters.showPremiumOnly
-              ? 'bg-amber-500 text-white hover:bg-amber-600'
-              : ''
-          }
+          className={filters.showPremiumOnly ? 'bg-amber-500 text-white hover:bg-amber-600' : ''}
           aria-pressed={filters.showPremiumOnly}
         >
           Premium Only

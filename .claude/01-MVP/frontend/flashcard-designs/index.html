@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Premium vs Free Comparison - Learn Greek Easy</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      color: white;
+      margin-bottom: 50px;
+    }
+
+    h1 {
+      font-size: 48px;
+      font-weight: 800;
+      margin-bottom: 16px;
+      text-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+
+    .subtitle {
+      font-size: 20px;
+      opacity: 0.95;
+      margin-bottom: 12px;
+    }
+
+    .description {
+      font-size: 16px;
+      opacity: 0.85;
+      max-width: 800px;
+      margin: 0 auto;
+      line-height: 1.6;
+    }
+
+    .features-list {
+      background: rgba(255,255,255,0.15);
+      backdrop-filter: blur(10px);
+      border-radius: 16px;
+      padding: 24px;
+      margin-top: 24px;
+      max-width: 900px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .features-title {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      text-align: center;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      text-align: left;
+    }
+
+    @media (max-width: 768px) {
+      .features-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .feature-item {
+      display: flex;
+      align-items: start;
+      gap: 8px;
+      font-size: 14px;
+    }
+
+    .feature-icon {
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .designs-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+      gap: 30px;
+      margin-bottom: 40px;
+    }
+
+    .design-card {
+      background: white;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+      transition: all 0.3s ease;
+      cursor: pointer;
+      text-decoration: none;
+      color: inherit;
+      display: block;
+    }
+
+    .design-card:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+    }
+
+    .design-preview {
+      height: 300px;
+      background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 80px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .design-preview::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+    }
+
+    .design-info {
+      padding: 24px;
+    }
+
+    .design-number {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #667eea;
+      margin-bottom: 8px;
+    }
+
+    .design-title {
+      font-size: 22px;
+      font-weight: 700;
+      color: #212529;
+      margin-bottom: 12px;
+    }
+
+    .design-description {
+      font-size: 14px;
+      color: #6c757d;
+      line-height: 1.6;
+      margin-bottom: 16px;
+    }
+
+    .design-features {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .feature-tag {
+      font-size: 11px;
+      padding: 4px 10px;
+      background: #e7f5ff;
+      color: #1971c2;
+      border-radius: 12px;
+      font-weight: 600;
+    }
+
+    .feature-tag.premium {
+      background: #fff3bf;
+      color: #e67700;
+    }
+
+    .feature-tag.free {
+      background: #e7f5ff;
+      color: #1971c2;
+    }
+
+    .best-for {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid #e9ecef;
+      font-size: 13px;
+      color: #495057;
+    }
+
+    .best-for-label {
+      font-weight: 700;
+      color: #212529;
+      margin-bottom: 4px;
+    }
+
+    footer {
+      text-align: center;
+      color: white;
+      padding-top: 40px;
+      opacity: 0.9;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🇬🇷 Premium vs Free Comparison</h1>
+      <p class="subtitle">Flashcard Design Gallery for Learn Greek Easy</p>
+      <p class="description">
+        Compare premium and free tier flashcard experiences. Each design shows both noun and verb examples side by side,
+        demonstrating the features available to different user tiers. Premium users get full conjugation tables with all tenses,
+        CEFR level badges, and "Add to Dictionary" buttons. Free users see basic forms only.
+      </p>
+
+      <div class="features-list">
+        <div class="features-title">Key Differences:</div>
+        <div class="features-grid">
+          <div class="feature-item">
+            <span class="feature-icon">⭐</span>
+            <span><strong>Premium:</strong> 3 tenses (Present/Past/Future) with tabs</span>
+          </div>
+          <div class="feature-item">
+            <span class="feature-icon">✨</span>
+            <span><strong>Free:</strong> Present tense only, no tabs</span>
+          </div>
+          <div class="feature-item">
+            <span class="feature-icon">⭐</span>
+            <span><strong>Premium:</strong> Full declension with genitive cases</span>
+          </div>
+          <div class="feature-item">
+            <span class="feature-icon">✨</span>
+            <span><strong>Free:</strong> Basic singular/plural forms only</span>
+          </div>
+          <div class="feature-item">
+            <span class="feature-icon">⭐</span>
+            <span><strong>Premium:</strong> CEFR level badges (A1, A2, B1, B2)</span>
+          </div>
+          <div class="feature-item">
+            <span class="feature-icon">✨</span>
+            <span><strong>Free:</strong> No CEFR badges</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div class="designs-grid">
+      <!-- Premium Design -->
+      <a href="design-premium.html" class="design-card">
+        <div class="design-preview">⭐</div>
+        <div class="design-info">
+          <div class="design-number">Premium Tier</div>
+          <div class="design-title">Premium Features (Noun & Verb Side by Side)</div>
+          <div class="design-description">
+            Premium experience with noun and verb examples displayed side by side. Shows full conjugation tables with all three tenses
+            (Present/Past/Future), complete declension including genitive cases, CEFR level badges, and example sentences in context.
+            All tables are always visible.
+          </div>
+          <div class="design-features">
+            <span class="feature-tag premium">Premium Only</span>
+            <span class="feature-tag premium">3 Tenses</span>
+            <span class="feature-tag premium">Full Declension</span>
+            <span class="feature-tag premium">CEFR Badges</span>
+            <span class="feature-tag premium">Examples</span>
+          </div>
+          <div class="best-for">
+            <div class="best-for-label">Best for:</div>
+            Premium subscribers who want comprehensive learning with all grammatical forms, multiple tenses, and personalized dictionary features.
+          </div>
+        </div>
+      </a>
+
+      <!-- Free Design -->
+      <a href="design-free.html" class="design-card">
+        <div class="design-preview">✨</div>
+        <div class="design-info">
+          <div class="design-number">Free Tier</div>
+          <div class="design-title">Free Tier (Noun & Verb Side by Side)</div>
+          <div class="design-description">
+            Free tier experience with noun and verb examples displayed side by side. Shows basic forms only: singular and plural
+            for nouns (no genitive cases), and Present tense conjugation for verbs (no Past/Future tenses). No CEFR badges,
+            no "Add to Dictionary" buttons, no related words section. Simple and focused on essential vocabulary.
+          </div>
+          <div class="design-features">
+            <span class="feature-tag free">Free Tier</span>
+            <span class="feature-tag free">Present Tense Only</span>
+            <span class="feature-tag free">Basic Forms</span>
+            <span class="feature-tag free">No Premium Features</span>
+          </div>
+          <div class="best-for">
+            <div class="best-for-label">Best for:</div>
+            Free users learning basic vocabulary. Shows essential forms to get started - singular/plural for nouns and present tense for verbs.
+          </div>
+        </div>
+      </a>
+    </div>
+
+    <footer>
+      <p>Click any design to view the full interactive prototype</p>
+      <p style="margin-top: 8px; font-size: 14px; opacity: 0.8;">Both designs show noun and verb examples side by side with responsive layout (stacks on mobile)</p>
+    </footer>
+  </div>
+</body>
+</html>

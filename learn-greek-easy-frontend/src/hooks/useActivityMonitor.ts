@@ -1,8 +1,10 @@
 import { useEffect, useState, useCallback } from 'react';
+
 import { useNavigate } from 'react-router-dom';
+
+import { useToast } from '@/hooks/use-toast';
 import { useAuthStore } from '@/stores/authStore';
 import { sessionManager } from '@/utils/sessionManager';
-import { useToast } from '@/hooks/use-toast';
 
 interface UseActivityMonitorReturn {
   showWarning: boolean;
@@ -71,7 +73,7 @@ export const useActivityMonitor = (): UseActivityMonitorReturn => {
     };
 
     // Add event listeners for all activity types
-    activityEvents.forEach(event => {
+    activityEvents.forEach((event) => {
       document.addEventListener(event, resetTimer);
     });
 
@@ -80,7 +82,7 @@ export const useActivityMonitor = (): UseActivityMonitorReturn => {
 
     // Cleanup on unmount or logout
     return () => {
-      activityEvents.forEach(event => {
+      activityEvents.forEach((event) => {
         document.removeEventListener(event, resetTimer);
       });
       sessionManager.cleanup();

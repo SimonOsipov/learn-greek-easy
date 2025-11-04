@@ -27,6 +27,18 @@ export type {
   DashboardData,
 } from './dashboard';
 
+// Export review types explicitly
+export type {
+  ReviewRating,
+  CardReviewState,
+  SpacedRepetitionData,
+  CardReview,
+  ReviewSession,
+  SessionStats,
+  SessionSummary,
+  QueueConfig,
+} from './review';
+
 // Component prop types (to be expanded as components are built)
 export interface BaseComponentProps {
   className?: string;

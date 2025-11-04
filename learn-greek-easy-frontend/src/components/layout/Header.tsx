@@ -3,6 +3,7 @@ import React from 'react';
 import { Bell, Menu } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 
+import { LogoutDialog } from '@/components/auth/LogoutDialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
@@ -15,7 +16,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useLayoutContext } from '@/contexts/LayoutContext';
 import { cn } from '@/lib/utils';
-import { LogoutDialog } from '@/components/auth/LogoutDialog';
 
 import { PageContainer } from './PageContainer';
 

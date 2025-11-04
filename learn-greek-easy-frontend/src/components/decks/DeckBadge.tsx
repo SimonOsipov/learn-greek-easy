@@ -1,4 +1,5 @@
 import React from 'react';
+
 import { Badge } from '@/components/ui/badge';
 import type { DeckLevel, DeckStatus } from '@/types/deck';
 
@@ -50,17 +51,12 @@ const STATUS_CONFIG = {
   },
 } as const;
 
-export const DeckBadge: React.FC<DeckBadgeProps> = ({
-  type,
-  level,
-  status,
-  className = '',
-}) => {
+export const DeckBadge: React.FC<DeckBadgeProps> = ({ type, level, status, className = '' }) => {
   if (type === 'level' && level) {
     const config = LEVEL_CONFIG[level];
     return (
       <Badge
-        className={`${config.bgColor} ${config.textColor} text-xs font-semibold px-2 py-1 rounded ${className}`}
+        className={`${config.bgColor} ${config.textColor} rounded px-2 py-1 text-xs font-semibold ${className}`}
         aria-label={`Level ${config.label}`}
       >
         {level}
@@ -73,7 +69,7 @@ export const DeckBadge: React.FC<DeckBadgeProps> = ({
     return (
       <Badge
         variant="outline"
-        className={`${config.bgColor} ${config.textColor} text-xs px-2 py-1 rounded ${className}`}
+        className={`${config.bgColor} ${config.textColor} rounded px-2 py-1 text-xs ${className}`}
         aria-label={`Status: ${config.label}`}
       >
         {config.label}

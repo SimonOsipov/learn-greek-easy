@@ -1,4 +1,9 @@
 import React, { useMemo } from 'react';
+
+import { Clock, AlertTriangle } from 'lucide-react';
+
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -7,9 +12,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Clock, AlertTriangle } from 'lucide-react';
 
 interface SessionWarningDialogProps {
   open: boolean;
@@ -47,8 +49,8 @@ export const SessionWarningDialog: React.FC<SessionWarningDialogProps> = ({
             <DialogTitle>Session Expiring Soon</DialogTitle>
           </div>
           <DialogDescription>
-            Your session will expire due to inactivity. Click "Stay Logged In" to continue
-            your learning session.
+            Your session will expire due to inactivity. Click "Stay Logged In" to continue your
+            learning session.
           </DialogDescription>
         </DialogHeader>
 
@@ -56,7 +58,7 @@ export const SessionWarningDialog: React.FC<SessionWarningDialogProps> = ({
           <Clock className="h-4 w-4" />
           <AlertDescription className="ml-2">
             <span className="font-semibold">Time remaining:</span>
-            <span className={`ml-2 text-lg font-mono ${isUrgent ? 'text-red-600' : ''}`}>
+            <span className={`ml-2 font-mono text-lg ${isUrgent ? 'text-red-600' : ''}`}>
               {formattedTime}
             </span>
           </AlertDescription>

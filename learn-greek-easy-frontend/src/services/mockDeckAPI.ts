@@ -1,13 +1,14 @@
 // src/services/mockDeckAPI.ts
 
 import type { Deck, DeckProgress, DeckFilters } from '@/types/deck';
+
 import { MOCK_DECKS, MOCK_PROGRESS } from './mockDeckData';
 
 /**
  * Simulate network delay
  */
 const simulateDelay = (ms: number = 200): Promise<void> => {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 };
 
 /**
@@ -26,33 +27,34 @@ export const mockDeckAPI = {
     // Apply search filter
     if (filters?.search) {
       const search = filters.search.toLowerCase();
-      decks = decks.filter(deck =>
-        deck.title.toLowerCase().includes(search) ||
-        deck.titleGreek.toLowerCase().includes(search) ||
-        deck.description.toLowerCase().includes(search)
+      decks = decks.filter(
+        (deck) =>
+          deck.title.toLowerCase().includes(search) ||
+          deck.titleGreek.toLowerCase().includes(search) ||
+          deck.description.toLowerCase().includes(search)
       );
     }
 
     // Apply level filter
     if (filters?.levels && filters.levels.length > 0) {
-      decks = decks.filter(deck => filters.levels!.includes(deck.level));
+      decks = decks.filter((deck) => filters.levels!.includes(deck.level));
     }
 
     // Apply premium filter
     if (filters?.showPremiumOnly) {
-      decks = decks.filter(deck => deck.isPremium);
+      decks = decks.filter((deck) => deck.isPremium);
     }
 
     // Inject progress data
-    decks = decks.map(deck => ({
+    decks = decks.map((deck) => ({
       ...deck,
       progress: MOCK_PROGRESS[deck.id],
     }));
 
     // Apply status filter (after progress injection)
     if (filters?.status && filters.status.length > 0) {
-      decks = decks.filter(deck =>
-        deck.progress && filters.status!.includes(deck.progress.status)
+      decks = decks.filter(
+        (deck) => deck.progress && filters.status!.includes(deck.progress.status)
       );
     }
 
@@ -65,7 +67,7 @@ export const mockDeckAPI = {
   getDeckById: async (deckId: string): Promise<Deck> => {
     await simulateDelay(200);
 
-    const deck = MOCK_DECKS.find(d => d.id === deckId);
+    const deck = MOCK_DECKS.find((d) => d.id === deckId);
     if (!deck) {
       throw new Error(`Deck with ID "${deckId}" not found`);
     }
@@ -84,7 +86,7 @@ export const mockDeckAPI = {
     await simulateDelay(150);
 
     // Check if deck exists
-    const deck = MOCK_DECKS.find(d => d.id === deckId);
+    const deck = MOCK_DECKS.find((d) => d.id === deckId);
     if (!deck) {
       throw new Error(`Deck with ID "${deckId}" not found`);
     }
@@ -98,7 +100,7 @@ export const mockDeckAPI = {
   startDeck: async (deckId: string): Promise<DeckProgress> => {
     await simulateDelay(200);
 
-    const deck = MOCK_DECKS.find(d => d.id === deckId);
+    const deck = MOCK_DECKS.find((d) => d.id === deckId);
     if (!deck) {
       throw new Error(`Deck with ID "${deckId}" not found`);
     }
@@ -166,7 +168,7 @@ export const mockDeckAPI = {
    */
   reviewCard: async (
     deckId: string,
-    cardId: string,
+    _cardId: string, // Prefix with underscore to indicate intentionally unused
     wasCorrect: boolean
   ): Promise<DeckProgress> => {
     await simulateDelay(150);
@@ -198,9 +200,10 @@ export const mockDeckAPI = {
     }
 
     // Recalculate accuracy
-    const totalReviews = currentProgress.totalTimeSpent > 0
-      ? Math.floor(currentProgress.totalTimeSpent / 2) // Assume 2min per review
-      : 1;
+    const totalReviews =
+      currentProgress.totalTimeSpent > 0
+        ? Math.floor(currentProgress.totalTimeSpent / 2) // Assume 2min per review
+        : 1;
     const correctReviews = Math.floor(totalReviews * (currentProgress.accuracy / 100));
     const newCorrectReviews = wasCorrect ? correctReviews + 1 : correctReviews;
     const newTotalReviews = totalReviews + 1;
@@ -267,15 +270,17 @@ export const mockDeckAPI = {
     const currentAccuracyWeight = currentProgress.totalTimeSpent || 1;
     const sessionAccuracy = (correctCount / cardsReviewed) * 100;
     const newAccuracy = Math.round(
-      ((currentProgress.accuracy * currentAccuracyWeight) + (sessionAccuracy * sessionTimeMinutes)) /
-      (currentAccuracyWeight + sessionTimeMinutes)
+      (currentProgress.accuracy * currentAccuracyWeight + sessionAccuracy * sessionTimeMinutes) /
+        (currentAccuracyWeight + sessionTimeMinutes)
     );
 
     // Calculate new streak
-    const lastStudiedDate = currentProgress.lastStudied ? new Date(currentProgress.lastStudied) : null;
+    const lastStudiedDate = currentProgress.lastStudied
+      ? new Date(currentProgress.lastStudied)
+      : null;
     const today = new Date();
     const wasYesterday = lastStudiedDate
-      ? (today.getTime() - lastStudiedDate.getTime()) < (48 * 60 * 60 * 1000) // Within 48 hours
+      ? today.getTime() - lastStudiedDate.getTime() < 48 * 60 * 60 * 1000 // Within 48 hours
       : false;
     const newStreak = wasYesterday ? currentProgress.streak + 1 : 1;
 
@@ -338,7 +343,7 @@ export const mockDeckAPI = {
   resetDeckProgress: async (deckId: string): Promise<DeckProgress> => {
     await simulateDelay(150);
 
-    const deck = MOCK_DECKS.find(d => d.id === deckId);
+    const deck = MOCK_DECKS.find((d) => d.id === deckId);
     if (!deck) {
       throw new Error(`Deck with ID "${deckId}" not found`);
     }

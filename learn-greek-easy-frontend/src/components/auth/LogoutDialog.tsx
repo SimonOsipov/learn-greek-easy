@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
+
+import { LogOut } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useAuthStore } from '@/stores/authStore';
-import { useToast } from '@/hooks/use-toast';
+
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -11,8 +13,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { LogOut } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { useAuthStore } from '@/stores/authStore';
 
 interface LogoutDialogProps {
   trigger?: React.ReactNode;
@@ -54,23 +56,15 @@ export const LogoutDialog: React.FC<LogoutDialogProps> = ({ trigger }) => {
         <DialogHeader>
           <DialogTitle>Logout Confirmation</DialogTitle>
           <DialogDescription>
-            Are you sure you want to logout? You'll need to sign in again to access your
-            learning progress.
+            Are you sure you want to logout? You'll need to sign in again to access your learning
+            progress.
           </DialogDescription>
         </DialogHeader>
-        <DialogFooter className="sm:justify-start gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setOpen(false)}
-          >
+        <DialogFooter className="gap-2 sm:justify-start">
+          <Button type="button" variant="outline" onClick={() => setOpen(false)}>
             Cancel
           </Button>
-          <Button
-            type="button"
-            variant="destructive"
-            onClick={handleLogout}
-          >
+          <Button type="button" variant="destructive" onClick={handleLogout}>
             Yes, Logout
           </Button>
         </DialogFooter>

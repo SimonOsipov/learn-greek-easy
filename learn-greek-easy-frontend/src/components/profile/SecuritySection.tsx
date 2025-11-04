@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { useForm } from 'react-hook-form';
+
 import { zodResolver } from '@hookform/resolvers/zod';
+import { Shield, Lock, Key, Trash2, AlertTriangle, Smartphone, Loader2 } from 'lucide-react';
+import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -16,8 +16,10 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
-import { Shield, Lock, Key, Trash2, AlertTriangle, Smartphone, Loader2 } from 'lucide-react';
 
 // Password validation schema
 const passwordSchema = z
@@ -91,7 +93,8 @@ export const SecuritySection: React.FC = () => {
 
     toast({
       title: 'Coming Soon',
-      description: 'Please contact support to delete your account. We want to make sure you understand all the implications first.',
+      description:
+        'Please contact support to delete your account. We want to make sure you understand all the implications first.',
     });
     setIsDeleteDialogOpen(false);
     setDeleteConfirmation('');
@@ -116,9 +119,7 @@ export const SecuritySection: React.FC = () => {
               <Key className="h-5 w-5 text-blue-600" />
               Change Password
             </CardTitle>
-            <CardDescription>
-              Update your password to keep your account secure
-            </CardDescription>
+            <CardDescription>Update your password to keep your account secure</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit(onPasswordSubmit)} className="space-y-4">
@@ -218,9 +219,7 @@ export const SecuritySection: React.FC = () => {
                 Coming Soon
               </span>
             </CardTitle>
-            <CardDescription>
-              Add an extra layer of security to your account
-            </CardDescription>
+            <CardDescription>Add an extra layer of security to your account</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="rounded-lg border border-gray-200 p-4 opacity-50">
@@ -249,9 +248,7 @@ export const SecuritySection: React.FC = () => {
               <Lock className="h-5 w-5 text-purple-600" />
               Active Sessions
             </CardTitle>
-            <CardDescription>
-              View and manage where you're logged in
-            </CardDescription>
+            <CardDescription>View and manage where you're logged in</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
@@ -287,9 +284,7 @@ export const SecuritySection: React.FC = () => {
               <AlertTriangle className="h-5 w-5" />
               Danger Zone
             </CardTitle>
-            <CardDescription>
-              Irreversible actions that affect your account
-            </CardDescription>
+            <CardDescription>Irreversible actions that affect your account</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="rounded-lg border border-red-200 bg-red-50 p-4">
@@ -338,7 +333,10 @@ export const SecuritySection: React.FC = () => {
                       </li>
                     </ul>
                     <div className="mt-4">
-                      <Label htmlFor="deleteConfirmation" className="mb-2 block text-sm font-medium">
+                      <Label
+                        htmlFor="deleteConfirmation"
+                        className="mb-2 block text-sm font-medium"
+                      >
                         Type "DELETE" to confirm:
                       </Label>
                       <Input

@@ -1,4 +1,5 @@
 import type { User, RegisterData, AuthResponse, AuthError } from '@/types/auth';
+
 import { mockUsers } from './mockData';
 
 class MockAuthAPI {
@@ -7,7 +8,7 @@ class MockAuthAPI {
 
   // Simulate network delay
   private async delay(ms: number = 1000): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   // Generate mock JWT token
@@ -27,7 +28,7 @@ class MockAuthAPI {
     await this.delay(1000);
 
     const user = this.users.find(
-      u => u.email.toLowerCase() === email.toLowerCase() && u.password === password
+      (u) => u.email.toLowerCase() === email.toLowerCase() && u.password === password
     );
 
     if (!user) {
@@ -59,7 +60,7 @@ class MockAuthAPI {
     await this.delay(1500);
 
     // Check for duplicate email
-    if (this.users.some(u => u.email.toLowerCase() === data.email.toLowerCase())) {
+    if (this.users.some((u) => u.email.toLowerCase() === data.email.toLowerCase())) {
       throw {
         code: 'EMAIL_EXISTS',
         message: 'An account with this email already exists',
@@ -105,7 +106,7 @@ class MockAuthAPI {
       return null;
     }
 
-    const user = this.users.find(u => u.id === tokenData.userId);
+    const user = this.users.find((u) => u.id === tokenData.userId);
     if (!user) return null;
 
     const { password: _, ...userWithoutPassword } = user;
@@ -126,7 +127,7 @@ class MockAuthAPI {
     }
 
     const userId = atob(parts[1]);
-    const user = this.users.find(u => u.id === userId);
+    const user = this.users.find((u) => u.id === userId);
 
     if (!user) {
       throw {
@@ -160,7 +161,7 @@ class MockAuthAPI {
   async updateProfile(userId: string, updates: Partial<User>): Promise<User> {
     await this.delay(1000);
 
-    const userIndex = this.users.findIndex(u => u.id === userId);
+    const userIndex = this.users.findIndex((u) => u.id === userId);
     if (userIndex === -1) {
       throw {
         code: 'USER_NOT_FOUND',
