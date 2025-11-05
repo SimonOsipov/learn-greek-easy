@@ -33,6 +33,7 @@ import type {
 import { mockReviewAPI } from '@/services/mockReviewAPI';
 import { useAuthStore } from '@/stores/authStore';
 import { useDeckStore } from '@/stores/deckStore';
+import { useAnalyticsStore } from '@/stores/analyticsStore';
 
 /**
  * Default queue configuration for review sessions
@@ -515,6 +516,13 @@ export const useReviewStore = create<ReviewState>((set, get) => ({
       updateProgress(activeSession.deckId, {
         lastStudied: new Date(),
       });
+
+      // Update analytics snapshot
+      const { user } = useAuthStore.getState();
+      if (user) {
+        const { updateSnapshot } = useAnalyticsStore.getState();
+        await updateSnapshot(user.id, summary);
+      }
 
       // Clear session state and store summary
       set({

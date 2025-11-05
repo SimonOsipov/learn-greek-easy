@@ -39,6 +39,18 @@ export type {
   QueueConfig,
 } from './review';
 
+// Export analytics types explicitly
+export type {
+  AnalyticsSnapshot,
+  ProgressDataPoint,
+  DeckPerformanceStats,
+  WordStatusBreakdown,
+  RetentionRate,
+  StudyStreak,
+  AnalyticsActivityItem,
+  AnalyticsDashboardData,
+} from './analytics';
+
 // Component prop types (to be expanded as components are built)
 export interface BaseComponentProps {
   className?: string;

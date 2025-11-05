@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 
 import { mockAuthAPI } from '@/services/mockAuthAPI';
 import type { User, RegisterData, AuthError } from '@/types/auth';
+import { useAnalyticsStore } from './analyticsStore';
 
 interface AuthState {
   // State
@@ -120,6 +121,9 @@ export const useAuthStore = create<AuthState>()(
 
         // Clear session storage
         sessionStorage.removeItem('auth-token');
+
+        // Clear analytics state
+        useAnalyticsStore.getState().clearAnalytics();
 
         // Clear localStorage (handled by persist middleware)
       },

@@ -20,6 +20,8 @@ import { SessionSummaryPage } from '@/pages/SessionSummaryPage';
 import { NotFound } from '@/pages/NotFound';
 import { Profile } from '@/pages/Profile';
 import { Unauthorized } from '@/pages/Unauthorized';
+import ChartsTestPage from '@/pages/ChartsTestPage';
+import ActivityFeedTest from '@/pages/ActivityFeedTest';
 
 // Temporary placeholder pages - replace with actual pages
 
@@ -70,6 +72,8 @@ function AppContent() {
               <Route path="stats" element={<Navigate to="/statistics" replace />} />
               <Route path="settings" element={<SettingsPage />} />
               <Route path="profile" element={<Profile />} />
+              <Route path="charts-test" element={<ChartsTestPage />} />
+              <Route path="activity-feed-test" element={<ActivityFeedTest />} />
             </Route>
             {/* Review page outside AppLayout for full-screen experience */}
             <Route path="decks/:deckId/review" element={<FlashcardReviewPage />} />

@@ -6,12 +6,14 @@ Quick reference guide for all UI components in the Greek Language Learning appli
 
 ## Overview
 
-This guide provides practical reference for all **29 components** identified in the MVP dashboard. Components are categorized for easy navigation, with complete TypeScript interfaces, usage examples, and implementation guidelines.
+This guide provides practical reference for all **38 components** identified in the MVP dashboard. Components are categorized for easy navigation, with complete TypeScript interfaces, usage examples, and implementation guidelines.
 
 ### Component Distribution
 - **Shadcn/ui Components**: 14 pre-built components
-- **Custom Components**: 15 application-specific components
-- **Total UI Elements**: 53 instances across the dashboard and profile pages
+- **Custom Components**: 24 application-specific components (including 4 chart components and 5 analytics widgets)
+- **Chart Components**: 4 analytics visualization components
+- **Analytics Widget Components**: 5 metric display widgets
+- **Total UI Elements**: 62+ instances across the dashboard, profile, and analytics pages
 
 ### Quick Navigation
 - [Installation](#installation)
@@ -688,6 +690,298 @@ interface MetricCardProps {
 
 ---
 
+### ChartContainer
+
+**Location**: `src/components/charts/ChartContainer.tsx`
+**Purpose**: Responsive wrapper for Recharts charts with loading and empty states
+
+#### Props
+```typescript
+interface ChartContainerProps {
+  children: React.ReactNode;      // Chart content (usually ResponsiveContainer + Chart)
+  title?: string;                  // Optional card title
+  description?: string;            // Optional card description
+  loading?: boolean;               // Show skeleton loading state
+  noData?: boolean;                // Show empty state message
+  className?: string;              // Additional CSS classes
+  height?: number;                 // Fixed height (overrides responsive)
+  bordered?: boolean;              // Show card border (default: true)
+  background?: boolean;            // Show card background (default: true)
+}
+```
+
+#### Usage
+```tsx
+import { ChartContainer } from '@/components/charts';
+import { LineChart, Line } from 'recharts';
+
+<ChartContainer title="Progress Over Time" height={300}>
+  <LineChart data={data}>
+    <Line dataKey="value" />
+  </LineChart>
+</ChartContainer>
+```
+
+#### Features
+- **Auto-responsive height** based on viewport (mobile 250px, tablet 300px, desktop 350px)
+- **Skeleton loading state** integration from Shadcn/ui
+- **Empty state** with "No data available" message
+- **Optional Shadcn Card wrapper** with title/description
+- **Window resize listener** for responsive behavior
+- **Flexible height** via height prop or auto-responsive
+
+---
+
+### ChartTooltip
+
+**Location**: `src/components/charts/ChartTooltip.tsx`
+**Purpose**: Custom tooltip for Recharts with Shadcn styling
+
+#### Props
+```typescript
+interface ChartTooltipProps {
+  active?: boolean;                // Whether tooltip is active
+  payload?: Array;                 // Data for tooltip display
+  label?: string;                  // Tooltip label
+  className?: string;              // Additional CSS classes
+  formatter?: (value) => string;   // Custom value formatter
+  labelFormatter?: (label) => string; // Custom label formatter
+}
+```
+
+#### Usage
+```tsx
+import { ChartTooltip } from '@/components/charts';
+import { LineChart, Tooltip } from 'recharts';
+
+<LineChart data={data}>
+  <Tooltip content={<ChartTooltip formatter={(v) => `${v}%`} />} />
+</LineChart>
+```
+
+#### Features
+- **Matches Shadcn/ui theme** (border, background, shadow)
+- **Color indicators** for multi-series data
+- **Custom formatters** for values and labels
+- **Responsive min-width** (120px)
+- **Accessibility** with proper semantic HTML
+
+---
+
+### ChartLegend
+
+**Location**: `src/components/charts/ChartLegend.tsx`
+**Purpose**: Custom legend for Recharts with consistent styling
+
+#### Props
+```typescript
+interface ChartLegendProps {
+  payload?: Array;                 // Legend items
+  wrapperClassName?: string;       // Wrapper CSS classes
+  className?: string;              // List CSS classes
+  vertical?: boolean;              // Vertical layout (default: horizontal)
+  onClick?: (dataKey: string) => void; // Click handler for items
+}
+```
+
+#### Usage
+```tsx
+import { ChartLegend } from '@/components/charts';
+import { LineChart, Legend } from 'recharts';
+
+<LineChart data={data}>
+  <Legend content={<ChartLegend vertical={false} />} />
+</LineChart>
+```
+
+#### Features
+- **Horizontal or vertical layout** based on prop
+- **Color indicators** matching chart colors
+- **Optional click handler** for interactive legends
+- **Consistent text styling** with muted-foreground
+- **Flexible positioning** via wrapperClassName
+
+---
+
+### ProgressLineChart
+
+**Location**: `src/components/charts/ProgressLineChart.tsx`
+**Purpose**: Line chart showing word status progression over time (3 trends)
+
+#### Props
+```typescript
+interface ProgressLineChartProps {
+  height?: number;      // Chart height in pixels (default: responsive)
+  className?: string;   // Additional CSS classes
+}
+```
+
+#### Usage
+```tsx
+import { ProgressLineChart } from '@/components/charts';
+
+<ProgressLineChart height={350} />
+```
+
+#### Features
+- **3 trend lines**: New Cards (cyan), Learning Cards (blue), Mastered Cards (green)
+- **Data source**: `useProgressData()` hook (last 30 days)
+- **Responsive design**: Mobile (250px) → Tablet (300px) → Desktop (350px)
+- **Date formatting**: X-axis shows "MMM dd" format via date-fns
+- **Loading/error/empty states**: Full state management
+- **Custom tooltip**: Shows date + card counts for all 3 series
+- **Legend**: Bottom-aligned with circle icons
+
+#### Data Structure
+```typescript
+// Uses ProgressDataPoint[] from useProgressData()
+{
+  dateString: "2025-11-04",
+  cardsNew: 45,
+  cardsLearning: 120,
+  cardsMastered: 342,
+  accuracy: 87
+}
+```
+
+---
+
+### AccuracyAreaChart
+
+**Location**: `src/components/charts/AccuracyAreaChart.tsx`
+**Purpose**: Area chart with gradient showing accuracy percentage trend
+
+#### Props
+```typescript
+interface AccuracyAreaChartProps {
+  height?: number;      // Chart height in pixels (default: responsive)
+  className?: string;   // Additional CSS classes
+}
+```
+
+#### Usage
+```tsx
+import { AccuracyAreaChart } from '@/components/charts';
+
+<AccuracyAreaChart height={300} />
+```
+
+#### Features
+- **Gradient fill**: Blue gradient from opaque (top) to transparent (bottom)
+- **Data source**: `useProgressData()` hook (accuracy field)
+- **Y-axis range**: 0-100% with percentage formatting
+- **Date formatting**: X-axis shows "MMM dd" format
+- **Loading/error/empty states**: Full state management
+- **Custom tooltip**: Shows date + percentage value
+- **Responsive design**: Adjusts height, ticks, and fonts by viewport
+
+#### Data Structure
+```typescript
+// Uses ProgressDataPoint[] from useProgressData()
+{
+  dateString: "2025-11-04",
+  accuracy: 87.5  // Percentage (0-100)
+}
+```
+
+---
+
+### DeckPerformanceChart
+
+**Location**: `src/components/charts/DeckPerformanceChart.tsx`
+**Purpose**: Horizontal bar chart comparing mastery percentages across decks
+
+#### Props
+```typescript
+interface DeckPerformanceChartProps {
+  height?: number;      // Chart height in pixels (default: responsive)
+  maxDecks?: number;    // Maximum decks to display (default: 8)
+  className?: string;   // Additional CSS classes
+}
+```
+
+#### Usage
+```tsx
+import { DeckPerformanceChart } from '@/components/charts';
+
+<DeckPerformanceChart height={400} maxDecks={8} />
+```
+
+#### Features
+- **Horizontal bars**: Layout optimized for deck name readability
+- **Data source**: `useDeckPerformance()` hook
+- **Sorting**: Decks sorted by mastery descending (best first)
+- **8-color spectrum**: Each deck gets unique color from spectrum palette
+- **X-axis**: Shows 0-100% with percentage formatting
+- **Y-axis**: Shows deck names (responsive width: 100-140px)
+- **Custom tooltip**: Shows deck name, mastery %, cards mastered/total, accuracy
+- **Loading/error/empty states**: Full state management
+
+#### Data Structure
+```typescript
+// Uses DeckPerformanceStats[] from useDeckPerformance()
+{
+  deckId: "deck-1",
+  deckName: "A1 Basics",
+  mastery: 87.5,        // Percentage (cardsMastered / cardsInDeck × 100)
+  cardsMastered: 342,
+  cardsInDeck: 400,
+  accuracy: 88.2
+}
+```
+
+---
+
+### StageDistributionChart
+
+**Location**: `src/components/charts/StageDistributionChart.tsx`
+**Purpose**: Pie chart showing distribution of cards across learning stages
+
+#### Props
+```typescript
+interface StageDistributionChartProps {
+  height?: number;      // Chart height in pixels (default: responsive)
+  className?: string;   // Additional CSS classes
+}
+```
+
+#### Usage
+```tsx
+import { StageDistributionChart } from '@/components/charts';
+
+<StageDistributionChart height={350} />
+```
+
+#### Features
+- **5 learning stages**: New, Learning, Review, Mastered, Relearning
+- **Data source**: `useAnalytics()` hook (wordStatus field)
+- **Percentage labels**: Shows % on each pie slice
+- **Stage-specific colors**: Distinct colors from spectrum palette
+- **Legend**: Bottom-aligned with stage names and percentages
+- **Responsive sizing**: Outer radius adjusts 80-120px by viewport
+- **Loading/error/empty states**: Full state management
+- **Custom tooltip**: Shows stage name, card count, and percentage
+
+#### Data Structure
+```typescript
+// Uses WordStatusBreakdown from useAnalytics()
+{
+  new: 45,
+  learning: 120,
+  review: 90,
+  mastered: 342,
+  relearning: 24,
+  total: 621,
+  newPercent: 7.2,
+  learningPercent: 19.3,
+  reviewPercent: 14.5,
+  masteredPercent: 55.1,
+  relearningPercent: 3.9
+}
+```
+
+---
+
 ### DeckCard
 
 **Purpose**: Display deck with progress, stats, and status
@@ -1285,6 +1579,607 @@ import { SecuritySection } from '@/components/profile/SecuritySection';
 
 ---
 
+## Analytics Hooks
+
+**Purpose**: Custom React hooks for accessing analytics data from the analytics store with automatic loading, caching, and state management.
+
+**Location**: `/src/hooks/`
+
+**Dependencies**:
+- `@/stores/analyticsStore` - Zustand analytics store
+- `@/stores/authStore` - User authentication state
+- React hooks (useEffect, etc.)
+
+---
+
+### useAnalytics
+
+**Purpose**: Primary hook for analytics dashboard data with automatic loading, date range management, and refresh capability.
+
+**File**: `/src/hooks/useAnalytics.ts`
+
+**Interface**:
+```typescript
+interface UseAnalyticsReturn {
+  data: AnalyticsDashboardData | null;
+  loading: boolean;
+  error: string | null;
+  dateRange: 'last7' | 'last30' | 'alltime';
+  refresh: () => Promise<void>;
+  setDateRange: (range: 'last7' | 'last30' | 'alltime') => void;
+}
+
+function useAnalytics(autoLoad?: boolean): UseAnalyticsReturn
+```
+
+**Usage**:
+```tsx
+import { useAnalytics } from '@/hooks/useAnalytics';
+
+// Basic usage with auto-load
+const { data, loading, error, refresh, setDateRange } = useAnalytics(true);
+
+if (loading) return <Loading />;
+if (error) return <Error message={error} />;
+if (!data) return <Empty />;
+
+return (
+  <div>
+    <DateRangePicker
+      value={dateRange}
+      onChange={setDateRange}
+    />
+    <Button onClick={refresh}>Refresh</Button>
+    <Dashboard data={data} />
+  </div>
+);
+
+// Manual loading
+const AnalyticsPage = () => {
+  const { data, loading, refresh } = useAnalytics(false);
+
+  useEffect(() => {
+    // Load data when user is authenticated
+    if (user) {
+      useAnalyticsStore.getState().loadAnalytics(user.id);
+    }
+  }, [user]);
+
+  return <Dashboard data={data} />;
+};
+```
+
+**Features**:
+- Auto-load on mount (optional via autoLoad parameter)
+- Automatic user ID detection from auth store
+- Date range selection with automatic data refresh
+- Manual refresh capability
+- 5-minute cache from analyticsStore
+- Loading and error state management
+- Returns null for data until loaded
+
+**Parameters**:
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| autoLoad | boolean | false | Automatically load analytics data on mount if no data exists |
+
+**Return Value**:
+| Property | Type | Description |
+|----------|------|-------------|
+| data | AnalyticsDashboardData \| null | Complete dashboard data including summary, streak, progress, deck stats, word status, retention, and recent activity |
+| loading | boolean | Combined loading state (initial load or refreshing) |
+| error | string \| null | Error message if data fetch failed |
+| dateRange | 'last7' \| 'last30' \| 'alltime' | Current selected date range |
+| refresh | () => Promise<void> | Function to manually refresh analytics data (bypasses cache) |
+| setDateRange | (range) => void | Function to change date range filter (triggers automatic reload) |
+
+**Cache Behavior**:
+- Uses 5-minute cache from analyticsStore
+- Cache key includes userId and dateRange
+- `refresh()` bypasses cache and forces fresh data
+- `setDateRange()` triggers new fetch with new cache key
+- Cache persists in localStorage across sessions
+
+**Integration with Auth**:
+```tsx
+// Hook automatically uses current user from auth store
+const { data } = useAnalytics(true);
+
+// If user logs out, data is cleared
+// If user changes, new data is automatically loaded
+```
+
+**Date Range Behavior**:
+```tsx
+const { dateRange, setDateRange } = useAnalytics();
+
+// Change to last 30 days
+setDateRange('last30'); // Triggers automatic data reload
+
+// Change to all time
+setDateRange('alltime'); // Triggers automatic data reload
+
+// Each date range has its own cache
+```
+
+**Related Hooks**:
+- [useProgressData](#useprogressdata) - Specialized hook for progress chart data
+- [useDeckPerformance](#usedeckperformance) - Specialized hook for deck stats
+- [useStudyStreak](#usestudystreak) - Specialized hook for streak data
+
+---
+
+### useProgressData
+
+**Purpose**: Hook for progress chart data points with derived selector for optimized re-renders.
+
+**File**: `/src/hooks/useProgressData.ts`
+
+**Interface**:
+```typescript
+interface UseProgressDataReturn {
+  progressData: ProgressDataPoint[];
+  loading: boolean;
+  error: string | null;
+}
+
+function useProgressData(): UseProgressDataReturn
+```
+
+**Usage**:
+```tsx
+import { useProgressData } from '@/hooks/useProgressData';
+import { LineChart, Line } from 'recharts';
+
+const ProgressChart = () => {
+  const { progressData, loading, error } = useProgressData();
+
+  if (loading) return <Skeleton className="h-[300px]" />;
+  if (error) return <Alert variant="destructive">{error}</Alert>;
+
+  return (
+    <LineChart data={progressData}>
+      <Line dataKey="cardsMastered" stroke="#3b82f6" />
+      <Line dataKey="cardsReviewed" stroke="#10b981" />
+    </LineChart>
+  );
+};
+```
+
+**Features**:
+- Returns only progress data array (no full dashboard data)
+- Uses memoized selector for performance
+- Empty array if no data loaded
+- Shares loading/error state with main analytics store
+- No parameters required (uses current analytics store state)
+
+**Return Value**:
+| Property | Type | Description |
+|----------|------|-------------|
+| progressData | ProgressDataPoint[] | Array of data points with date, cardsMastered, cardsReviewed, accuracy, timeStudied, etc. |
+| loading | boolean | True if analytics data is currently loading |
+| error | string \| null | Error message if data fetch failed |
+
+**ProgressDataPoint Interface**:
+```typescript
+interface ProgressDataPoint {
+  date: Date;
+  dateString: string; // ISO format for charting
+  cardsMastered: number;
+  cardsReviewed: number;
+  accuracy: number; // 0-100
+  timeStudied: number; // seconds
+  streak: number;
+  cardsNew: number;
+  cardsLearning: number;
+  cardsReview: number;
+}
+```
+
+**Data Flow**:
+1. Analytics store loads dashboard data via `useAnalytics()`
+2. `useProgressData()` extracts progressData array via selector
+3. Component receives only relevant data (no full dashboard object)
+4. Re-renders only when progressData array changes
+
+**Performance Optimization**:
+- Uses `selectProgressData` selector for shallow comparison
+- Only re-renders when progressData reference changes
+- More efficient than using full dashboardData object
+
+**Integration Example**:
+```tsx
+// Parent loads all analytics data
+const DashboardPage = () => {
+  useAnalytics(true); // Loads all data
+
+  return (
+    <div>
+      <ProgressChart /> {/* Uses useProgressData */}
+      <DeckChart /> {/* Uses useDeckPerformance */}
+    </div>
+  );
+};
+
+// Child components use specialized hooks
+const ProgressChart = () => {
+  const { progressData } = useProgressData(); // Only subscribes to progressData
+  return <LineChart data={progressData} />;
+};
+```
+
+---
+
+### useDeckPerformance
+
+**Purpose**: Hook for deck performance statistics with derived selector for bar chart data.
+
+**File**: `/src/hooks/useDeckPerformance.ts`
+
+**Interface**:
+```typescript
+interface UseDeckPerformanceReturn {
+  deckStats: DeckPerformanceStats[];
+  loading: boolean;
+  error: string | null;
+}
+
+function useDeckPerformance(): UseDeckPerformanceReturn
+```
+
+**Usage**:
+```tsx
+import { useDeckPerformance } from '@/hooks/useDeckPerformance';
+import { BarChart, Bar } from 'recharts';
+
+const DeckPerformanceChart = () => {
+  const { deckStats, loading, error } = useDeckPerformance();
+
+  if (loading) return <Skeleton className="h-[300px]" />;
+  if (error) return <Alert variant="destructive">{error}</Alert>;
+
+  return (
+    <BarChart data={deckStats}>
+      <Bar dataKey="accuracy" fill="#3b82f6" />
+      <Bar dataKey="mastery" fill="#10b981" />
+    </BarChart>
+  );
+};
+```
+
+**Features**:
+- Returns only deck stats array (no full dashboard data)
+- Uses memoized selector for performance
+- Empty array if no data loaded
+- Shares loading/error state with main analytics store
+- No parameters required (uses current analytics store state)
+
+**Return Value**:
+| Property | Type | Description |
+|----------|------|-------------|
+| deckStats | DeckPerformanceStats[] | Array of deck performance objects with accuracy, mastery, card counts, time spent, etc. |
+| loading | boolean | True if analytics data is currently loading |
+| error | string \| null | Error message if data fetch failed |
+
+**DeckPerformanceStats Interface**:
+```typescript
+interface DeckPerformanceStats {
+  deckId: string;
+  deckName: string;
+  deckColor: string; // hex code for chart bars
+
+  // Card counts
+  cardsInDeck: number;
+  cardsNew: number;
+  cardsLearning: number;
+  cardsReview: number;
+  cardsMastered: number;
+
+  // Performance metrics
+  accuracy: number; // 0-100
+  successRate: number; // 0-100
+  averageEaseFactor: number; // 1.3-2.5
+
+  // Time investment
+  timeSpent: number; // seconds
+  sessionsCompleted: number;
+  averageTimePerCard: number; // seconds
+
+  // Progress rate
+  mastery: number; // percentage (cardsMastered / cardsInDeck) × 100
+  completionRate: number; // percentage started
+
+  // Recent performance (last 7 days)
+  recentAccuracy: number;
+  cardsGraduatedRecently: number;
+}
+```
+
+**Common Use Cases**:
+```tsx
+// Bar chart: Accuracy per deck
+<BarChart data={deckStats}>
+  <Bar dataKey="accuracy" fill="#3b82f6" />
+</BarChart>
+
+// Bar chart: Mastery per deck
+<BarChart data={deckStats}>
+  <Bar dataKey="mastery" fill="#10b981" />
+</BarChart>
+
+// Multi-series bar chart
+<BarChart data={deckStats}>
+  <Bar dataKey="cardsNew" fill="#e5e7eb" />
+  <Bar dataKey="cardsLearning" fill="#3b82f6" />
+  <Bar dataKey="cardsMastered" fill="#10b981" />
+</BarChart>
+
+// Deck comparison table
+<Table>
+  {deckStats.map(deck => (
+    <TableRow key={deck.deckId}>
+      <TableCell>{deck.deckName}</TableCell>
+      <TableCell>{deck.mastery}%</TableCell>
+      <TableCell>{deck.accuracy}%</TableCell>
+    </TableRow>
+  ))}
+</Table>
+```
+
+**Sorting and Filtering**:
+```tsx
+const { deckStats } = useDeckPerformance();
+
+// Sort by mastery (highest first)
+const sortedByMastery = [...deckStats].sort((a, b) => b.mastery - a.mastery);
+
+// Filter decks with low accuracy (< 70%)
+const lowAccuracyDecks = deckStats.filter(deck => deck.accuracy < 70);
+
+// Top 5 decks by time spent
+const topByTime = [...deckStats]
+  .sort((a, b) => b.timeSpent - a.timeSpent)
+  .slice(0, 5);
+```
+
+---
+
+### useStudyStreak
+
+**Purpose**: Hook for study streak information with current streak, longest streak, and activity history.
+
+**File**: `/src/hooks/useStudyStreak.ts`
+
+**Interface**:
+```typescript
+interface UseStudyStreakReturn {
+  streak: StudyStreak | undefined;
+  loading: boolean;
+  error: string | null;
+}
+
+function useStudyStreak(): UseStudyStreakReturn
+```
+
+**Usage**:
+```tsx
+import { useStudyStreak } from '@/hooks/useStudyStreak';
+import { Flame } from 'lucide-react';
+
+const StreakDisplay = () => {
+  const { streak, loading, error } = useStudyStreak();
+
+  if (loading) return <Skeleton className="h-20" />;
+  if (error || !streak) return null;
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center gap-2">
+          <Flame className="w-5 h-5 text-orange-500" />
+          <CardTitle>Study Streak</CardTitle>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="text-3xl font-bold">
+          {streak.currentStreak} days
+        </div>
+        <p className="text-sm text-gray-500">
+          Longest: {streak.longestStreak} days
+        </p>
+      </CardContent>
+    </Card>
+  );
+};
+```
+
+**Features**:
+- Returns streak object from dashboard data
+- Undefined if analytics not loaded
+- Shares loading/error state with main analytics store
+- No parameters required (uses current analytics store state)
+
+**Return Value**:
+| Property | Type | Description |
+|----------|------|-------------|
+| streak | StudyStreak \| undefined | Streak object with current/longest streaks and milestone info, or undefined if not loaded |
+| loading | boolean | True if analytics data is currently loading |
+| error | string \| null | Error message if data fetch failed |
+
+**StudyStreak Interface**:
+```typescript
+interface StudyStreak {
+  // Current streak
+  currentStreak: number; // consecutive days with reviews
+  startDate: Date; // when current streak started
+  lastActivityDate: Date; // last date with reviews
+
+  // Historical best
+  longestStreak: number; // best streak achieved
+  longestStreakStart: Date;
+  longestStreakEnd: Date;
+
+  // Milestones
+  milestoneReached: number; // highest milestone: 7, 30, 100, etc.
+  nextMilestone: number; // next milestone to reach
+  daysToNextMilestone: number; // days needed
+
+  // Additional context
+  streakBrokenToday: boolean; // activity missing yesterday
+  consecutiveBreaks: number; // days without reviews
+}
+```
+
+**Common Display Patterns**:
+```tsx
+// Basic streak display
+<div className="text-3xl font-bold">
+  {streak?.currentStreak || 0} days
+</div>
+
+// Active streak indicator
+const isActive = streak && streak.currentStreak > 0 &&
+  (new Date().getTime() - new Date(streak.lastActivityDate).getTime()) < 48 * 60 * 60 * 1000;
+
+<Flame className={isActive ? 'text-orange-500' : 'text-gray-400'} />
+
+// Motivational message
+const getMessage = (days: number) => {
+  if (days === 0) return "Start your learning journey today!";
+  if (days === 1) return "Great start! Keep it going!";
+  if (days < 7) return "You're building a habit!";
+  if (days < 30) return "Impressive consistency!";
+  return "Amazing dedication! 🎉";
+};
+
+<p>{getMessage(streak?.currentStreak || 0)}</p>
+
+// Milestone progress
+<Progress
+  value={(streak.currentStreak / streak.nextMilestone) * 100}
+/>
+<p className="text-xs text-gray-500">
+  {streak.daysToNextMilestone} days to {streak.nextMilestone}-day milestone
+</p>
+
+// Longest streak comparison
+<div>
+  <p>Current: {streak.currentStreak} days</p>
+  <p className="text-sm text-gray-500">
+    Personal best: {streak.longestStreak} days
+  </p>
+  {streak.currentStreak === streak.longestStreak && (
+    <Badge variant="success">New Record!</Badge>
+  )}
+</div>
+```
+
+**Streak Status Logic**:
+```tsx
+// Determine if streak is active (within 48 hours)
+const isStreakActive = (streak: StudyStreak): boolean => {
+  if (streak.currentStreak === 0) return false;
+
+  const hoursSinceActivity =
+    (new Date().getTime() - new Date(streak.lastActivityDate).getTime()) /
+    (1000 * 60 * 60);
+
+  return hoursSinceActivity < 48;
+};
+
+// Determine streak color
+const getStreakColor = (streak: StudyStreak) => {
+  if (!isStreakActive(streak)) return 'gray';
+  if (streak.currentStreak >= 30) return 'orange';
+  if (streak.currentStreak >= 7) return 'yellow';
+  return 'blue';
+};
+```
+
+---
+
+### Analytics Hooks - Common Patterns
+
+**Hook Hierarchy**:
+- `useAnalytics()` - Primary hook, loads all analytics data
+- `useProgressData()` - Derived hook, accesses progressData array
+- `useDeckPerformance()` - Derived hook, accesses deckStats array
+- `useStudyStreak()` - Derived hook, accesses streak object
+
+**Recommended Usage**:
+```tsx
+// In parent/page component: Load all data once
+const DashboardPage = () => {
+  const { loading, error } = useAnalytics(true);
+
+  if (loading) return <LoadingSpinner />;
+  if (error) return <ErrorMessage error={error} />;
+
+  return (
+    <div>
+      <ProgressChart />      {/* Uses useProgressData() */}
+      <DeckChart />          {/* Uses useDeckPerformance() */}
+      <StreakWidget />       {/* Uses useStudyStreak() */}
+    </div>
+  );
+};
+
+// In child components: Access specific data
+const ProgressChart = () => {
+  const { progressData } = useProgressData(); // Only subscribes to progressData
+  return <LineChart data={progressData} />;
+};
+```
+
+**Performance Benefits**:
+- Reduces prop drilling (no passing data through multiple components)
+- Optimized re-renders (components only re-render when their specific data changes)
+- Centralized data management (all components access same store)
+- Automatic cache handling (5-minute cache shared across all hooks)
+
+**Error Handling Pattern**:
+```tsx
+const AnalyticsComponent = () => {
+  const { data, loading, error } = useAnalytics(true);
+
+  // Handle loading state
+  if (loading) {
+    return <Skeleton className="h-[400px]" />;
+  }
+
+  // Handle error state
+  if (error) {
+    return (
+      <Alert variant="destructive">
+        <AlertTitle>Failed to load analytics</AlertTitle>
+        <AlertDescription>{error}</AlertDescription>
+      </Alert>
+    );
+  }
+
+  // Handle empty data
+  if (!data) {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <p className="text-gray-500">No analytics data available</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Render data
+  return <Dashboard data={data} />;
+};
+```
+
+**Related Components**:
+- [Analytics Widget Components](#analytics-widget-components-5) - Use these hooks for data
+- [Chart Components](#chart-components) - Use these hooks for chart data
+- [Analytics Store](#analytics-store) - Underlying state management
+
+---
+
 ## File Structure
 
 ### Recommended Organization
@@ -1636,6 +2531,1177 @@ export function DeckCard({ deck, onClick }: DeckCardProps) {
 | Data Objects | `deck: Deck` | Display components |
 | Booleans | `loading?: boolean` | Component states |
 | Class Merging | `className?: string` | Custom styling |
+
+---
+
+## Chart Components
+
+**Purpose**: Wrapper components for Recharts visualization library providing consistent theming, responsive behavior, and loading states across all analytics charts.
+
+**Location**: `/src/components/charts/`
+
+**Dependencies**:
+- `recharts` - Chart rendering library
+- `/src/lib/chartConfig.ts` - Shared chart configuration
+- `@/components/ui/skeleton` - Loading states
+- `@/components/ui/card` - Container components
+
+---
+
+### ChartContainer
+
+**Purpose**: Responsive container wrapper for all Recharts charts with automatic height adjustment, loading states, and optional Card wrapper.
+
+**File**: `/src/components/charts/ChartContainer.tsx`
+
+**Interface**:
+```typescript
+interface ChartContainerProps {
+  children: React.ReactNode;
+  title?: string;
+  description?: string;
+  loading?: boolean;
+  noData?: boolean;
+  className?: string;
+  height?: number;
+  bordered?: boolean;
+  background?: boolean;
+}
+```
+
+**Usage**:
+```tsx
+import { ChartContainer } from '@/components/charts/ChartContainer';
+import { LineChart, Line } from 'recharts';
+
+// Basic usage with auto-responsive height
+<ChartContainer title="Progress Over Time" description="Last 7 days">
+  <LineChart data={progressData}>
+    <Line dataKey="cardsMastered" stroke="#3b82f6" />
+  </LineChart>
+</ChartContainer>
+
+// With fixed height
+<ChartContainer height={300}>
+  <BarChart data={deckStats}>
+    <Bar dataKey="accuracy" fill="#10b981" />
+  </BarChart>
+</ChartContainer>
+
+// Loading state
+<ChartContainer title="Analytics" loading={true} />
+
+// No data state
+<ChartContainer title="Retention" noData={true} />
+
+// Without Card wrapper (borderless, transparent)
+<ChartContainer bordered={false} background={false}>
+  <AreaChart data={data} />
+</ChartContainer>
+```
+
+**Features**:
+- Automatic responsive height adjustment (250px mobile, 300px tablet, 350px desktop)
+- Window resize listener for dynamic height updates
+- Fixed height override via height prop
+- Skeleton loading state with matching dimensions
+- Empty state with "No data available" message
+- Optional Card wrapper with title and description
+- Borderless and transparent background variants
+- Forwards ref for direct DOM access
+- Clean unmount with event listener cleanup
+
+**Props**:
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| children | React.ReactNode | required | Recharts chart component to render |
+| title | string | undefined | Optional card title |
+| description | string | undefined | Optional card description |
+| loading | boolean | false | Show skeleton loading state |
+| noData | boolean | false | Show empty state message |
+| className | string | '' | Additional CSS classes for container |
+| height | number | undefined | Fixed height in pixels (overrides responsive behavior) |
+| bordered | boolean | true | Show card border (only if title/description provided) |
+| background | boolean | true | Show card background (only if title/description provided) |
+
+**Responsive Height Behavior**:
+- Mobile (< 768px): 250px
+- Tablet (768-1024px): 300px
+- Desktop (≥ 1024px): 350px
+- Uses `getResponsiveHeight()` from chartConfig.ts
+- Height updates automatically on window resize
+- Fixed height prop disables responsive behavior
+
+**Integration Pattern**:
+```tsx
+// With analytics hooks
+const { progressData, loading, error } = useProgressData();
+
+return (
+  <ChartContainer
+    title="Learning Progress"
+    loading={loading}
+    noData={!progressData || progressData.length === 0}
+  >
+    <ResponsiveContainer width="100%" height="100%">
+      <LineChart data={progressData}>
+        {/* Chart configuration */}
+      </LineChart>
+    </ResponsiveContainer>
+  </ChartContainer>
+);
+```
+
+---
+
+### ChartTooltip
+
+**Purpose**: Custom tooltip component for Recharts with Shadcn/ui theming and flexible formatting options.
+
+**File**: `/src/components/charts/ChartTooltip.tsx`
+
+**Interface**:
+```typescript
+interface ChartTooltipProps {
+  active?: boolean;
+  payload?: Array<{
+    name: string;
+    value: number | string;
+    color: string;
+    dataKey: string;
+  }>;
+  label?: string;
+  className?: string;
+  formatter?: (value: number | string) => string;
+  labelFormatter?: (label: string) => string;
+}
+```
+
+**Usage**:
+```tsx
+import { ChartTooltip } from '@/components/charts/ChartTooltip';
+import { LineChart, Tooltip } from 'recharts';
+import { format } from 'date-fns';
+
+// Basic usage
+<LineChart data={data}>
+  <Tooltip content={<ChartTooltip />} />
+  <Line dataKey="value" />
+</LineChart>
+
+// With custom formatters
+<LineChart data={data}>
+  <Tooltip
+    content={
+      <ChartTooltip
+        formatter={(value) => `${value}%`}
+        labelFormatter={(label) => format(new Date(label), 'MMM dd')}
+      />
+    }
+  />
+  <Line dataKey="accuracy" />
+</LineChart>
+
+// With custom styling
+<AreaChart data={data}>
+  <Tooltip
+    content={
+      <ChartTooltip className="border-2 border-blue-500" />
+    }
+  />
+</AreaChart>
+```
+
+**Features**:
+- Matches Shadcn/ui design system (border, background, shadow)
+- Displays multiple data series in single tooltip
+- Color indicator dots matching chart colors
+- Custom value and label formatters
+- Null/undefined handling (returns null when inactive)
+- Minimum width 120px for readability
+- Rounded corners with shadow-lg
+- Semi-transparent background with backdrop blur
+
+**Props**:
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| active | boolean | false | Whether tooltip is currently active (managed by Recharts) |
+| payload | Array | [] | Data series to display (managed by Recharts) |
+| label | string | undefined | X-axis label for tooltip |
+| className | string | '' | Additional CSS classes |
+| formatter | (value) => string | String(value) | Format individual values (e.g., add %, round numbers) |
+| labelFormatter | (label) => string | identity | Format the label (e.g., date formatting) |
+
+**Styling**:
+- Background: bg-background (theme-aware)
+- Border: border with theme color
+- Padding: p-3 (12px)
+- Shadow: shadow-lg
+- Min-width: 120px
+- Label: text-sm font-semibold text-foreground
+- Values: text-sm font-medium text-foreground
+- Series names: text-sm text-muted-foreground
+
+**Common Formatter Examples**:
+```typescript
+// Percentage
+formatter={(value) => `${value}%`}
+
+// Currency
+formatter={(value) => `$${value.toLocaleString()}`}
+
+// Time duration
+formatter={(value) => `${Math.floor(value / 60)}h ${value % 60}m`}
+
+// Date label
+labelFormatter={(label) => format(new Date(label), 'MMM dd, yyyy')}
+```
+
+---
+
+### ChartLegend
+
+**Purpose**: Custom legend component for Recharts with consistent styling and optional click interactions.
+
+**File**: `/src/components/charts/ChartLegend.tsx`
+
+**Interface**:
+```typescript
+interface LegendPayload {
+  value: string;
+  type?: string;
+  id?: string;
+  color?: string;
+}
+
+interface ChartLegendProps {
+  payload?: LegendPayload[];
+  wrapperClassName?: string;
+  className?: string;
+  vertical?: boolean;
+  onClick?: (dataKey: string) => void;
+}
+```
+
+**Usage**:
+```tsx
+import { ChartLegend } from '@/components/charts/ChartLegend';
+import { LineChart, Legend } from 'recharts';
+
+// Basic horizontal legend
+<LineChart data={data}>
+  <Legend content={<ChartLegend />} />
+  <Line dataKey="new" />
+  <Line dataKey="learning" />
+</LineChart>
+
+// Vertical legend
+<BarChart data={data}>
+  <Legend content={<ChartLegend vertical={true} />} />
+</BarChart>
+
+// With click handler for toggling series
+<AreaChart data={data}>
+  <Legend
+    content={
+      <ChartLegend
+        onClick={(dataKey) => toggleSeries(dataKey)}
+      />
+    }
+  />
+</AreaChart>
+
+// Custom styling
+<PieChart>
+  <Legend
+    content={
+      <ChartLegend
+        wrapperClassName="pt-6"
+        className="text-xs"
+      />
+    }
+  />
+</PieChart>
+```
+
+**Features**:
+- Horizontal (default) or vertical layout
+- Color-coded circular indicators (3x3 rounded-full)
+- Optional click handling for series toggling
+- Hover effects when clickable (opacity-80 transition)
+- Null/empty payload handling
+- Accessible with proper list semantics
+- Consistent spacing with flex/gap layout
+
+**Props**:
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| payload | LegendPayload[] | [] | Legend items (managed by Recharts) |
+| wrapperClassName | string | '' | Classes for outer wrapper div |
+| className | string | '' | Classes for legend list (ul element) |
+| vertical | boolean | false | Vertical layout instead of horizontal |
+| onClick | (dataKey: string) => void | undefined | Click handler for interactive legends |
+
+**Layout Patterns**:
+- Horizontal: `flex flex-wrap items-center justify-center gap-4`
+- Vertical: `flex flex-col gap-4`
+- Default padding top: pt-4 (16px)
+
+**Styling**:
+- List: flex with gap-4, text-sm
+- Items: flex items-center gap-2
+- Color indicator: h-3 w-3 rounded-full (12x12 circle)
+- Text: text-muted-foreground
+- Interactive: cursor-pointer hover:opacity-80 transition-opacity
+
+**Interactive Legend Example**:
+```tsx
+// Toggle series visibility on click
+const [hiddenSeries, setHiddenSeries] = useState<Set<string>>(new Set());
+
+const toggleSeries = (dataKey: string) => {
+  setHiddenSeries(prev => {
+    const newSet = new Set(prev);
+    if (newSet.has(dataKey)) {
+      newSet.delete(dataKey);
+    } else {
+      newSet.add(dataKey);
+    }
+    return newSet;
+  });
+};
+
+<LineChart data={data}>
+  <Legend content={<ChartLegend onClick={toggleSeries} />} />
+  {!hiddenSeries.has('new') && <Line dataKey="new" />}
+  {!hiddenSeries.has('learning') && <Line dataKey="learning" />}
+</LineChart>
+```
+
+---
+
+### Chart Components - Integration Guide
+
+**Complete Chart Example**:
+```tsx
+import { ChartContainer } from '@/components/charts/ChartContainer';
+import { ChartTooltip } from '@/components/charts/ChartTooltip';
+import { ChartLegend } from '@/components/charts/ChartLegend';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { chartColors, chartConfig } from '@/lib/chartConfig';
+import { format } from 'date-fns';
+
+const ProgressChart = () => {
+  const { progressData, loading, error } = useProgressData();
+
+  return (
+    <ChartContainer
+      title="Learning Progress"
+      description="Cards mastered over time"
+      loading={loading}
+      noData={!progressData || progressData.length === 0}
+    >
+      <ResponsiveContainer width="100%" height="100%">
+        <LineChart
+          data={progressData}
+          margin={chartConfig.margin}
+        >
+          <CartesianGrid
+            strokeDasharray={chartConfig.grid.strokeDasharray}
+            stroke={chartConfig.grid.stroke}
+          />
+          <XAxis
+            dataKey="dateString"
+            tickFormatter={(date) => format(new Date(date), 'MMM dd')}
+            stroke={chartConfig.axis.stroke}
+            tick={{ fill: chartConfig.axis.tick.fill }}
+          />
+          <YAxis
+            stroke={chartConfig.axis.stroke}
+            tick={{ fill: chartConfig.axis.tick.fill }}
+          />
+          <Tooltip
+            content={
+              <ChartTooltip
+                labelFormatter={(label) => format(new Date(label), 'MMM dd, yyyy')}
+                formatter={(value) => `${value} cards`}
+              />
+            }
+          />
+          <Legend content={<ChartLegend />} />
+          <Line
+            type="monotone"
+            dataKey="cardsMastered"
+            stroke={chartColors.chart1}
+            strokeWidth={2}
+            dot={{ r: 4 }}
+            activeDot={{ r: 6 }}
+          />
+          <Line
+            type="monotone"
+            dataKey="cardsReviewed"
+            stroke={chartColors.chart2}
+            strokeWidth={2}
+            dot={{ r: 4 }}
+          />
+        </LineChart>
+      </ResponsiveContainer>
+    </ChartContainer>
+  );
+};
+```
+
+**Related Components**:
+- [Analytics Dashboard Page](#analytics-dashboard-page) - Uses chart components
+- [useProgressData](#useprogressdata) - Provides chart data
+- [chartConfig](#chart-configuration) - Shared chart settings
+
+---
+
+## Analytics Data Layer
+
+**Purpose**: TypeScript interfaces, mock data services, and state management for analytics and progress tracking features.
+
+**Location**:
+- Types: `/src/types/analytics.ts`
+- Mock API: `/src/services/mockAnalyticsAPI.ts`
+- Mock Data: `/src/services/mockAnalyticsData.ts`
+- Store: `/src/stores/analyticsStore.ts`
+
+---
+
+### TypeScript Interfaces (8)
+
+**Complete type definitions from Task 06.01**:
+
+1. **AnalyticsSnapshot**: Daily analytics snapshot representing complete learning state at end of a specific date
+2. **ProgressDataPoint**: Single point on progress chart timeline with multiple metric values
+3. **DeckPerformanceStats**: Analytics for a single deck used in bar charts
+4. **WordStatusBreakdown**: Distribution of cards across learning states for pie charts
+5. **RetentionRate**: Retention rate at specific interval tracking long-term memory
+6. **StudyStreak**: Study streak information with current and historical best streaks
+7. **AnalyticsActivityItem**: Single activity feed item representing review session or achievement
+8. **AnalyticsDashboardData**: Complete analytics data for dashboard (single query returns all needed data)
+
+**Key Interface Example**:
+```typescript
+// From /src/types/analytics.ts
+interface AnalyticsDashboardData {
+  userId: string;
+  dateRange: {
+    startDate: Date;
+    endDate: Date;
+    label: string; // "Last 7 days", "Last 30 days", "All time"
+  };
+  fetchedAt: Date;
+
+  summary: {
+    totalCardsReviewed: number;
+    totalTimeStudied: number; // seconds
+    averageAccuracy: number; // 0-100
+    cardsNewlyMastered: number;
+  };
+
+  streak: StudyStreak;
+  progressData: ProgressDataPoint[];
+  deckStats: DeckPerformanceStats[];
+  wordStatus: WordStatusBreakdown;
+  retention: RetentionRate[];
+  recentActivity: AnalyticsActivityItem[];
+}
+```
+
+**See**: `/src/types/analytics.ts` for complete interface definitions with detailed JSDoc comments
+
+---
+
+### Mock Analytics API
+
+**File**: `/src/services/mockAnalyticsAPI.ts`
+
+**Purpose**: Simulates backend API for analytics data with localStorage persistence and 5-minute cache.
+
+**Key Methods**:
+```typescript
+// Fetch complete dashboard data
+export const fetchAnalyticsDashboard = async (
+  userId: string,
+  dateRange: 'last7' | 'last30' | 'alltime'
+): Promise<AnalyticsDashboardData>
+
+// Fetch progress data points for charts
+export const fetchProgressData = async (
+  userId: string,
+  dateRange: string
+): Promise<ProgressDataPoint[]>
+
+// Fetch deck performance stats
+export const fetchDeckPerformance = async (
+  userId: string
+): Promise<DeckPerformanceStats[]>
+
+// Fetch study streak information
+export const fetchStudyStreak = async (
+  userId: string
+): Promise<StudyStreak>
+```
+
+**Caching Behavior**:
+- 5-minute cache duration for dashboard data
+- Cache key: `analytics_cache_${userId}_${dateRange}`
+- Automatic cache invalidation on data updates
+- localStorage persistence across sessions
+
+---
+
+### Analytics Store
+
+**File**: `/src/stores/analyticsStore.ts`
+
+**Purpose**: Zustand store for managing analytics state, data fetching, and date range selection.
+
+**State Shape**:
+```typescript
+interface AnalyticsStore {
+  // Data
+  dashboardData: AnalyticsDashboardData | null;
+  dateRange: 'last7' | 'last30' | 'alltime';
+
+  // Loading states
+  loading: boolean;
+  refreshing: boolean;
+  error: string | null;
+
+  // Actions
+  loadAnalytics: (userId: string) => Promise<void>;
+  refreshAnalytics: () => Promise<void>;
+  setDateRange: (range: string) => void;
+  clearError: () => void;
+}
+```
+
+**Selectors**:
+```typescript
+// Memoized selectors for derived data
+export const selectProgressData = (state: AnalyticsStore) => state.dashboardData?.progressData || [];
+export const selectDeckPerformance = (state: AnalyticsStore) => state.dashboardData?.deckStats || [];
+export const selectIsLoading = (state: AnalyticsStore) => state.loading || state.refreshing;
+export const selectError = (state: AnalyticsStore) => state.error;
+```
+
+**Usage Pattern**:
+```tsx
+import { useAnalyticsStore } from '@/stores/analyticsStore';
+
+// Load data on mount
+useEffect(() => {
+  if (user) {
+    useAnalyticsStore.getState().loadAnalytics(user.id);
+  }
+}, [user]);
+
+// Access data with selectors
+const progressData = useAnalyticsStore(selectProgressData);
+const loading = useAnalyticsStore(selectIsLoading);
+```
+
+---
+
+### Data Flow Architecture
+
+**Complete data flow from store to UI components**:
+
+1. **User triggers analytics page load**
+   - `useAnalytics()` hook called with `autoLoad: true`
+   - Hook checks if data exists and loads if needed
+
+2. **Store fetches data from mock API**
+   - `analyticsStore.loadAnalytics(userId)` called
+   - Sets `loading: true`
+   - Calls `fetchAnalyticsDashboard(userId, dateRange)`
+
+3. **Mock API returns data**
+   - Checks localStorage cache (5-minute TTL)
+   - Returns cached data if fresh
+   - Generates mock data if cache expired
+   - Persists to localStorage
+
+4. **Store updates state**
+   - Sets `dashboardData` with response
+   - Sets `loading: false`
+   - Clears any previous errors
+
+5. **Components consume data via hooks**
+   - `useAnalytics()` - Complete dashboard data
+   - `useProgressData()` - Progress chart data
+   - `useDeckPerformance()` - Deck stats for bar charts
+   - `useStudyStreak()` - Streak information
+
+6. **Chart components render visualization**
+   - ChartContainer handles loading/empty states
+   - Recharts renders charts with data
+   - ChartTooltip and ChartLegend provide interactivity
+
+**Refresh Flow**:
+- User clicks refresh button
+- `refreshAnalytics()` called
+- Sets `refreshing: true` (doesn't clear existing data)
+- Bypasses cache by clearing cache entry
+- Fetches fresh data
+- Updates `dashboardData` and sets `refreshing: false`
+
+**Date Range Change Flow**:
+- User selects new date range
+- `setDateRange(newRange)` called
+- Store updates `dateRange` state
+- Automatically triggers `loadAnalytics()` with new range
+- UI updates with filtered data
+
+---
+
+### localStorage Persistence
+
+**Cache Keys**:
+```typescript
+// Analytics dashboard cache
+`analytics_cache_${userId}_${dateRange}`
+
+// Cache metadata
+`analytics_cache_meta_${userId}_${dateRange}`
+```
+
+**Cache Structure**:
+```typescript
+{
+  data: AnalyticsDashboardData,
+  timestamp: number, // Unix timestamp
+  ttl: number // 300000 (5 minutes)
+}
+```
+
+**Cache Invalidation**:
+- Automatic expiration after 5 minutes
+- Manual invalidation on refresh
+- Cleared on logout
+- Cleared on date range change
+
+---
+
+## Analytics Widget Components (5)
+
+**Purpose**: Display key analytics metrics with loading states, color coding, and data visualization for dashboard overview.
+
+**Location**: `/src/components/analytics/`
+
+---
+
+### 1. StatCard
+
+**Purpose**: Generic reusable metric display widget with icon, value, trend indicator, and color scheme support.
+
+**File**: `/src/components/analytics/StatCard.tsx`
+
+**Interface**:
+```typescript
+interface StatCardProps {
+  icon?: React.ReactElement;       // Optional Lucide icon
+  label: string;                    // Metric name
+  value: string | number;           // Metric value (formatted)
+  subtext?: string;                 // Optional additional context
+  trend?: 'up' | 'down';           // Optional trend indicator
+  colorScheme?: 'primary' | 'success' | 'warning' | 'danger';  // Color theme
+  isLoading?: boolean;              // Show skeleton loading state
+}
+```
+
+**Usage**:
+```tsx
+import { StatCard } from '@/components/analytics';
+import { TrendingUp } from 'lucide-react';
+
+// Basic stat card
+<StatCard
+  label="Cards Due"
+  value={24}
+  colorScheme="primary"
+/>
+
+// With icon and trend
+<StatCard
+  icon={<TrendingUp />}
+  label="Accuracy Rate"
+  value="87%"
+  subtext="Last 30 days"
+  trend="up"
+  colorScheme="success"
+/>
+
+// Loading state
+<StatCard
+  label="Total Cards"
+  value={0}
+  isLoading={true}
+/>
+```
+
+**Features**:
+- Flexible value display (string or number)
+- Icon with colored background badge (4 color schemes)
+- Trend arrows (up/down) for metrics
+- Subtext for additional context
+- Skeleton loading state
+- White card with border and shadow
+- 3xl font size for value (32px)
+- Responsive layout with flex
+
+**Color Schemes**:
+- **Primary**: Blue (bg-blue-100, text-blue-600)
+- **Success**: Green (bg-green-100, text-green-600)
+- **Warning**: Yellow (bg-yellow-100, text-yellow-600)
+- **Danger**: Red (bg-red-100, text-red-600)
+
+**Props**:
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| icon | React.ReactElement | undefined | Optional Lucide React icon |
+| label | string | required | Metric label text |
+| value | string \| number | required | Metric value to display |
+| subtext | string | undefined | Optional secondary text below value |
+| trend | 'up' \| 'down' | undefined | Optional trend arrow indicator |
+| colorScheme | 'primary' \| 'success' \| 'warning' \| 'danger' | 'primary' | Color theme for icon background |
+| isLoading | boolean | false | Show skeleton loading state |
+
+---
+
+### 2. StreakWidget
+
+**Purpose**: Display study streak with motivational messaging and flame icon indicator.
+
+**File**: `/src/components/analytics/StreakWidget.tsx`
+
+**Interface**:
+```typescript
+// No props - uses useStudyStreak() hook
+```
+
+**Usage**:
+```tsx
+import { StreakWidget } from '@/components/analytics';
+
+<StreakWidget />
+```
+
+**Features**:
+- Flame icon (orange when active, gray when inactive)
+- Current streak in days (3xl font size)
+- Motivational messages based on streak length
+- Longest streak display
+- Active streak detection (within 48 hours)
+- Orange border highlight when streak active
+- Skeleton loading state
+- Error state handling
+- Empty state message
+
+**Motivational Messages**:
+- 0 days: "Start your learning journey today!"
+- 1 day: "Great start! Keep it going!"
+- 2-6 days: "You're building a habit!"
+- 7-29 days: "Impressive consistency!"
+- 30+ days: "Amazing dedication! 🎉"
+
+**Active Streak Logic**:
+- Streak is active if currentStreak > 0 AND lastActivityDate within 48 hours
+- Active: Orange flame icon, orange border
+- Inactive: Gray flame icon, default border
+
+**Data Source**:
+- `useStudyStreak()` hook from Task 06.02
+- Returns: `{ currentStreak, longestStreak, lastActivityDate, loading, error }`
+
+---
+
+### 3. WordStatusWidget
+
+**Purpose**: Show vocabulary breakdown by learning stage (New, Learning, Review, Mastered) with icons and percentages.
+
+**File**: `/src/components/analytics/WordStatusWidget.tsx`
+
+**Interface**:
+```typescript
+// No props - uses useAnalytics() hook
+```
+
+**Usage**:
+```tsx
+import { WordStatusWidget } from '@/components/analytics';
+
+<WordStatusWidget />
+```
+
+**Features**:
+- 4 learning stages with unique icons and colors
+- Card count badges for each stage
+- Percentage calculation for each stage
+- Total card count at bottom
+- Color-coded icons with background badges
+- Skeleton loading state
+- Empty state: "No cards yet. Start learning!"
+- Error state handling
+
+**Learning Stages**:
+| Stage | Label | Icon | Icon Color | Background |
+|-------|-------|------|------------|------------|
+| New | New | Circle | text-gray-500 | bg-gray-100 |
+| Learning | Learning | BookOpen | text-blue-600 | bg-blue-100 |
+| Review | Review | RefreshCw | text-yellow-600 | bg-yellow-100 |
+| Mastered | Mastered | CheckCircle | text-green-600 | bg-green-100 |
+
+**Display Format**:
+- Icon badge + label (left)
+- Count badge + percentage (right)
+- Total: "X cards" (bottom with border-top)
+
+**Data Source**:
+- `useAnalytics()` hook from Task 06.02
+- Uses `data.wordStatus` field: `{ new, learning, young (Review), mature (Mastered) }`
+
+---
+
+### 4. RetentionWidget
+
+**Purpose**: Display retention rate with color-coded thresholds and brain icon.
+
+**File**: `/src/components/analytics/RetentionWidget.tsx`
+
+**Interface**:
+```typescript
+// No props - uses useAnalytics() hook
+```
+
+**Usage**:
+```tsx
+import { RetentionWidget } from '@/components/analytics';
+
+<RetentionWidget />
+```
+
+**Features**:
+- Color-coded retention rate (green/yellow/red)
+- Brain icon with matching color scheme
+- 7-day retention or average fallback
+- Motivational text based on percentage
+- Trend up arrow for high retention (≥75%)
+- Skeleton loading state
+- Empty state: "Not enough data yet"
+- Error state handling
+
+**Color Coding Thresholds**:
+| Retention Rate | Color | Icon BG | Text | Message |
+|----------------|-------|---------|------|---------|
+| ≥ 80% | Green | bg-green-100 | text-green-600 | "Excellent!" |
+| 60-79% | Yellow | bg-yellow-100 | text-yellow-600 | "Good" |
+| < 60% | Red | bg-red-100 | text-red-600 | "Needs work" |
+
+**Display Format**:
+- Brain icon badge (top)
+- Retention percentage (3xl font size)
+- "% remembered after 7+ days" subtext
+- Status message (Excellent/Good/Needs work)
+
+**Data Source**:
+- `useAnalytics()` hook from Task 06.02
+- Uses `data.retention` array: `[{ interval: 7, rate: 87.5 }, ...]`
+- Prefers 7-day retention, falls back to average
+
+---
+
+### 5. TimeStudiedWidget
+
+**Purpose**: Display total study time with formatted duration (hours + minutes).
+
+**File**: `/src/components/analytics/TimeStudiedWidget.tsx`
+
+**Interface**:
+```typescript
+// No props - uses useAnalytics() hook
+```
+
+**Usage**:
+```tsx
+import { TimeStudiedWidget } from '@/components/analytics';
+
+<TimeStudiedWidget />
+```
+
+**Features**:
+- Clock icon with blue badge
+- Time formatting (Xh Ym format)
+- Date range context text
+- Skeleton loading state
+- Empty state: "No time data available"
+- Error state handling
+
+**Time Formatting**:
+- Input: seconds from `data.summary.totalTimeStudied`
+- Convert to minutes: `Math.floor(seconds / 60)`
+- Format:
+  - 0 min: "0m"
+  - < 60 min: "45m"
+  - ≥ 60 min: "2h 30m" or "3h" (omit minutes if 0)
+
+**Date Range Text**:
+- Based on `useAnalytics()` dateRange state:
+  - 'last7': "in last 7 days"
+  - 'last30': "in last 30 days"
+  - 'alltime': "all time"
+
+**Display Format**:
+- Clock icon badge (blue)
+- Formatted time (3xl font size)
+- Date range subtext (xs font size, gray)
+
+**Data Source**:
+- `useAnalytics()` hook from Task 06.02
+- Uses `data.summary.totalTimeStudied` (seconds)
+- Uses `dateRange` state from hook
+
+---
+
+### Analytics Widgets - Common Patterns
+
+**Shared Features**:
+- All widgets use Shadcn Card components (Card, CardHeader, CardTitle, CardContent)
+- All support Skeleton loading states
+- All handle error states gracefully
+- All show empty states when no data available
+- All use Lucide React icons
+- All follow consistent color scheme (blue/green/yellow/red)
+
+**Data Integration**:
+- StreakWidget: `useStudyStreak()` hook
+- Other 4 widgets: `useAnalytics()` hook
+- Both hooks from Task 06.02
+
+**Loading States**:
+```tsx
+if (loading) {
+  return (
+    <Card>
+      <CardContent className="p-6">
+        <Skeleton className="h-[height] w-full" />
+      </CardContent>
+    </Card>
+  );
+}
+```
+
+**Error/Empty States**:
+```tsx
+if (error || !data) {
+  return (
+    <Card>
+      <CardContent className="p-6">
+        <p className="text-sm text-gray-500">Error message</p>
+      </CardContent>
+    </Card>
+  );
+}
+```
+
+**Typography Scale**:
+- Widget labels: text-sm font-medium
+- Main values: text-3xl font-bold
+- Subtexts: text-xs text-gray-400
+- Secondary info: text-sm
+
+**Color Palette**:
+- Gray: #6b7280, #9ca3af, #e5e7eb
+- Blue: #2563eb, #3b82f6, #dbeafe
+- Green: #10b981, #22c55e, #d1fae5
+- Yellow: #f59e0b, #fbbf24, #fef3c7
+- Red: #ef4444, #f87171, #fee2e2
+- Orange: #f97316, #fb923c, #fed7aa
+
+---
+
+## Activity Feed Components (2)
+
+**Purpose**: Display recent study sessions and achievements in a feed format with navigation capabilities.
+
+**Location**: `/src/components/analytics/`
+
+---
+
+### ActivityFeed
+
+**Location**: `src/components/analytics/ActivityFeed.tsx`
+**Purpose**: Container component that displays a list of recent study sessions and achievements
+
+#### Props
+```typescript
+interface ActivityFeedProps {
+  activities: AnalyticsActivityItem[];  // Array of activity items to display
+  maxItems?: number;                     // Maximum number of items to display (default: 10)
+}
+```
+
+#### Features
+- Displays last N activity items (configurable via `maxItems` prop)
+- Empty state with motivational message and icon
+- Vertical list layout with consistent spacing (space-y-3)
+- Card wrapper with header ("Recent Activity")
+- Auto-slices activities array to show only `maxItems`
+- Responsive design
+
+#### Usage
+```tsx
+import { ActivityFeed } from '@/components/analytics';
+import { useAnalytics } from '@/hooks/useAnalytics';
+
+function Dashboard() {
+  const { data } = useAnalytics({ autoLoad: true });
+
+  return (
+    <ActivityFeed
+      activities={data?.recentActivity || []}
+      maxItems={10}
+    />
+  );
+}
+```
+
+#### Empty State
+When `activities.length === 0`:
+- BookOpen icon (w-12 h-12) centered
+- "No recent activity" message
+- "Start learning to see your progress here!" subtext
+- Gray color scheme (text-gray-400)
+- Centered layout with py-12 padding
+
+#### Layout Structure
+```
+┌─────────────────────────────────┐
+│ Recent Activity                 │  ← CardHeader with CardTitle
+├─────────────────────────────────┤
+│ [ActivityFeedItem]              │  ← First activity
+│ [ActivityFeedItem]              │  ← Second activity
+│ [ActivityFeedItem]              │  ← Third activity
+│ ...                             │
+└─────────────────────────────────┘
+```
+
+---
+
+### ActivityFeedItem
+
+**Location**: `src/components/analytics/ActivityFeedItem.tsx`
+**Purpose**: Display a single activity item (review session or achievement) with deck info, metrics, and navigation
+
+#### Props
+```typescript
+interface ActivityFeedItemProps {
+  activity: AnalyticsActivityItem;  // Single activity item data
+}
+```
+
+#### Features
+- **Deck Name with Icon**: BookOpen icon in primary-100 background, deck name truncated
+- **Card Count**: Singular/plural handling ("1 card" vs "15 cards")
+- **Color-Coded Accuracy**:
+  - Green (≥80%): `text-green-600` - Excellent performance
+  - Yellow (60-79%): `text-yellow-600` - Good, needs improvement
+  - Red (<60%): `text-red-600` - Needs attention
+- **Time Spent**: Clock icon with formatted duration ("8m", "1h 23m")
+- **Relative Time**: Uses `date-fns` `formatDistanceToNow()` ("2 hours ago", "3 days ago")
+- **Click Navigation**: Navigates to `/decks/:deckId` on click
+- **Keyboard Accessible**: Enter/Space keys trigger navigation
+- **Hover State**: Shadow transition (`hover:shadow-md transition-shadow`)
+
+#### Implementation Details
+
+**Time Duration Formatting** (from seconds):
+```typescript
+const formatTimeDuration = (seconds: number): string => {
+  if (seconds === 0) return '0m';
+
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+
+  if (hours > 0 && minutes > 0) return `${hours}h ${minutes}m`;
+  if (hours > 0) return `${hours}h`;
+  return `${minutes}m`;
+};
+```
+
+**Accuracy Color Logic**:
+```typescript
+const getAccuracyColor = (accuracy: number): string => {
+  if (accuracy >= 80) return 'text-green-600';   // Excellent
+  if (accuracy >= 60) return 'text-yellow-600';  // Good
+  return 'text-red-600';                         // Needs attention
+};
+```
+
+**Keyboard Navigation**:
+```typescript
+const handleKeyDown = (e: React.KeyboardEvent) => {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    handleClick();  // Navigate to deck detail page
+  }
+};
+```
+
+#### Usage
+```tsx
+import { ActivityFeedItem } from '@/components/analytics';
+
+function ActivityList() {
+  const activity = {
+    activityId: '1',
+    type: 'review_session',
+    timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),  // 2 hours ago
+    deckId: 'deck-1',
+    deckName: 'A1 Basics',
+    cardsReviewed: 15,
+    accuracy: 87,
+    timeSpent: 480,  // 8 minutes in seconds
+    // ... other fields
+  };
+
+  return <ActivityFeedItem activity={activity} />;
+}
+```
+
+#### Layout Structure
+```
+┌───────────────────────────────────────┐
+│ 📖 A1 Basics                          │  ← Icon + Deck Name
+│ 15 cards • 87% • ⏱️ 8m               │  ← Metrics (cards, accuracy, time)
+│ 2 hours ago                           │  ← Relative time
+└───────────────────────────────────────┘
+```
+
+#### Accessibility
+- `role="button"` for clickable card
+- `tabIndex={0}` for keyboard focus
+- `aria-label="View details for {deckName}"` for screen readers
+- `aria-hidden="true"` on decorative icons
+- Keyboard navigation with Enter/Space keys
+
+#### Styling Patterns
+- **Icon Badge**: `p-2 bg-primary-100 rounded-lg` with `text-primary-600` icon
+- **Hover Effect**: `hover:shadow-md transition-shadow` for smooth shadow appearance
+- **Cursor**: `cursor-pointer` to indicate clickability
+- **Text Truncation**: `truncate` on deck name to prevent overflow
+- **Gap Spacing**: `gap-3` between icon and content
+- **Metrics Row**: `flex items-center gap-3` with `text-sm text-gray-500`
+
+#### Dependencies
+- `react-router-dom`: useNavigate() for navigation
+- `date-fns`: formatDistanceToNow() for relative time
+- `lucide-react`: BookOpen, Clock icons
+- `@/components/ui/card`: Card component from shadcn/ui
 
 ---
 
@@ -2639,6 +4705,6 @@ See Style Guide for complete design tokens including:
 
 ---
 
-**Last Updated**: 2025-11-04
-**Status**: Complete - All Components Implemented (Including Accessibility Features)
-**Version**: 1.2.0
+**Last Updated**: 2025-11-05
+**Status**: Complete - All Components Implemented (Including Chart Components, Analytics Hooks, and Analytics Data Layer)
+**Version**: 1.3.0

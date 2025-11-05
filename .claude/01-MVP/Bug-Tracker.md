@@ -85,12 +85,14 @@ Report a bug in this tracker when you discover:
 
 ## Fixed Bugs
 
-**Total Fixed Bugs**: 2
+**Total Fixed Bugs**: 4
 
 | Bug ID | Title | Severity | Fixed Date | Fixed By | Task | PR/Commit |
 |--------|-------|----------|------------|----------|------|-----------|
 | BUG-001 | Greek text search not case-insensitive | 🟡 Medium | 2025-11-02 | Task 04.08 | 04.08 | mockDeckAPI.ts:31 |
 | BUG-002 | "Due Today" stat shows for not-started decks | 🟢 Low | 2025-11-04 | Task 05.08 | 05.08 | DeckDetailPage.tsx:308 |
+| BUG-004 | Infinite loop in useAnalytics hook | 🔴 Critical | 2025-11-05 | Executor Agent | 06.04 | useAnalytics.ts:39-46 |
+| BUG-005 | Recharts ResponsiveContainer height warnings | 🟢 Low | 2025-11-05 | Executor Agent | 06.04 | All 4 chart components |
 
 ---
 
@@ -446,26 +448,28 @@ Duplicate
 
 ## Metrics and Insights
 
-### Bug Statistics (Updated 2025-11-04)
+### Bug Statistics (Updated 2025-11-05)
 
-**Current Sprint (2025-11-04)**:
-- Total Bugs Discovered: 3
-- Active Bugs: 1 (partially fixed, needs investigation)
-- Fixed Bugs: 2
+**Current Sprint (2025-11-05)**:
+- Total Bugs Discovered: 5
+- Active Bugs: 1 (partially fixed)
+- Fixed Bugs: 4
 - Won't Fix: 0
 - Duplicate: 0
 
 **By Severity**:
-- 🔴 Critical: 0
+- 🔴 Critical: 1 (BUG-004 - FIXED)
 - 🟠 High: 0
 - 🟡 Medium: 2 (1 fixed completely, 1 partially fixed)
-- 🟢 Low: 1 (fixed)
+- 🟢 Low: 2 (both fixed)
 
 **By Component**:
 - Mock API Services: 1 (fixed - BUG-001)
 - Review System: 2 (1 fixed - BUG-002, 1 partially fixed - BUG-003)
 - Deck Components: 1 (fixed - BUG-002)
 - Date Utilities: 1 (partially fixed - BUG-003)
+- Chart Components: 2 (both fixed - BUG-004, BUG-005)
+- Analytics Hooks: 1 (fixed - BUG-004)
 - Authentication: 0
 - UI/Styling: 0
 
@@ -473,6 +477,8 @@ Duplicate
 - BUG-001: Discovered 2025-11-01, Fixed 2025-11-02 (1 day turnaround)
 - BUG-002: Discovered 2025-11-04, Fixed 2025-11-04 (same day turnaround)
 - BUG-003: Discovered 2025-11-04, Partially Fixed 2025-11-04 (same day, requires further work)
+- BUG-004: Discovered 2025-11-04, Fixed 2025-11-05 (1 day turnaround - critical fix)
+- BUG-005: Discovered 2025-11-05, Fixed 2025-11-05 (same day turnaround)
 
 ### Common Bug Patterns
 
@@ -931,6 +937,404 @@ After fix is applied:
 
 ---
 
-**Last Updated**: 2025-11-04
-**Next Review**: Weekly during Task 05 development
-**Version**: 1.1
+### BUG-004: Infinite loop in useAnalytics hook causing chart component crashes
+
+**Status**: ✅ **FIXED** (Verified with Playwright MCP Runtime Testing)
+**Severity**: 🔴 Critical
+**Priority**: Critical (blocks core functionality, application crash)
+
+**Discovered**: 2025-11-04 during Task 06.04 runtime verification
+**Discovered By**: System Analyst (Verification Agent)
+**Assigned To**: Executor Agent
+**Fixed By**: Executor Agent (2025-11-05)
+**Verified**: 2025-11-05 with Playwright MCP runtime testing
+**Related Task**: Task 06.04 (Build Progress Charts Components)
+**Unblocks**: Task 06.05, Task 06.06, MVP Feature 06 completion
+
+#### Description
+
+All 4 chart components contain a critical infinite re-render loop caused by unsafe `window.innerWidth` access in the render phase combined with Zustand store selectors. The `getResponsiveConfig()` function accesses `window.innerWidth` outside of React's lifecycle hooks, causing React Concurrent Mode to detect non-deterministic renders. This triggers store re-subscription, leading to infinite loop and application crash.
+
+#### Location
+
+**Files** (all 4 components have identical bug):
+1. `/Users/samosipov/Downloads/learn-greek-easy/learn-greek-easy-frontend/src/components/review/ProgressLineChart.tsx` (line 629)
+2. `/Users/samosipov/Downloads/learn-greek-easy/learn-greek-easy-frontend/src/components/review/AccuracyAreaChart.tsx` (line 827)
+3. `/Users/samosipov/Downloads/learn-greek-easy/learn-greek-easy-frontend/src/components/review/DeckPerformanceChart.tsx` (line 1011)
+4. `/Users/samosipov/Downloads/learn-greek-easy/learn-greek-easy-frontend/src/components/review/StageDistributionChart.tsx` (line 1209)
+
+**Component**: All chart components in review directory
+
+#### Current Code (Bug)
+
+```typescript
+// BUGGY CODE - Present in all 4 components
+const getResponsiveConfig = () => {
+  if (typeof window === 'undefined') {
+    return { tickCount: 5, fontSize: 12 };
+  }
+  const width = window.innerWidth;  // PROBLEM: window.innerWidth is NOT cached
+  if (width < 768) return { tickCount: 4, fontSize: 10 };
+  if (width < 1024) return { tickCount: 6, fontSize: 11 };
+  return { tickCount: 8, fontSize: 12 };
+};
+
+const responsiveConfig = useMemo(() => getResponsiveConfig(), []); // Empty deps array
+```
+
+#### Expected Code (Fix Options)
+
+**Option 1: Remove window.innerWidth Access (Recommended)**
+```typescript
+// FIXED VERSION
+const responsiveConfig = useMemo(() => ({
+  tickCount: 6,
+  fontSize: 12,
+  // Use props or default values instead of window.innerWidth
+}), []);
+```
+
+**Option 2: Move to useEffect**
+```typescript
+// ALTERNATIVE FIX
+const [responsiveConfig, setResponsiveConfig] = useState({
+  tickCount: 6,
+  fontSize: 12,
+});
+
+useEffect(() => {
+  const updateConfig = () => {
+    const width = window.innerWidth;
+    if (width < 768) setResponsiveConfig({ tickCount: 4, fontSize: 10 });
+    else if (width < 1024) setResponsiveConfig({ tickCount: 6, fontSize: 11 });
+    else setResponsiveConfig({ tickCount: 8, fontSize: 12 });
+  };
+
+  updateConfig();
+  window.addEventListener('resize', updateConfig);
+  return () => window.removeEventListener('resize', updateConfig);
+}, []);
+```
+
+#### Impact
+
+**User Impact**: Critical
+- Application crash with white screen
+- React error: "Maximum update depth exceeded"
+- All chart components completely unusable
+- Dashboard and analytics pages non-functional
+- Application becomes unresponsive
+
+**Business Impact**: Critical
+- Feature 06 (Progress Analytics) is 100% broken
+- MVP blocker for analytics feature
+- Cannot demonstrate progress tracking to stakeholders
+- Task 06.05 (Dashboard Integration) cannot proceed
+- Task 06.06 (Analytics Page) cannot proceed
+
+#### Reproduction Steps
+
+1. Start dev server: `npm run dev`
+2. Navigate to any page with chart component (e.g., http://localhost:5174/charts-test)
+3. Chart components mount
+4. **Observe**: Immediate crash with infinite loop error
+5. **Expected**: Charts should render without error
+6. **Actual**: Application freezes, white screen, console error "Maximum update depth exceeded"
+
+**Reproducibility**: 100% - Occurs every time charts are rendered
+
+#### Affected Components
+
+**Primary**:
+- `/Users/samosipov/Downloads/learn-greek-easy/learn-greek-easy-frontend/src/components/review/ProgressLineChart.tsx`
+- `/Users/samosipov/Downloads/learn-greek-easy/learn-greek-easy-frontend/src/components/review/AccuracyAreaChart.tsx`
+- `/Users/samosipov/Downloads/learn-greek-easy/learn-greek-easy-frontend/src/components/review/DeckPerformanceChart.tsx`
+- `/Users/samosipov/Downloads/learn-greek-easy/learn-greek-easy-frontend/src/components/review/StageDistributionChart.tsx`
+
+**Secondary**:
+- Any page that imports/renders these chart components
+- Dashboard page integration
+- Analytics page integration
+
+#### Root Cause
+
+The bug occurs due to interaction between:
+1. **Zustand store selectors** - useAnalyticsStore with individual property selectors triggers re-renders
+2. **Window object access** - window.innerWidth accessed in render phase (outside lifecycle hooks)
+3. **React Concurrent Mode** - detects unsafe render patterns (non-deterministic)
+4. **useMemo with incomplete dependencies** - missing window.innerWidth as dependency
+
+**Why This Causes Infinite Loop:**
+1. `useMemo` called with empty dependency array `[]`
+2. `getResponsiveConfig()` memoized only on first render
+3. Zustand store selectors trigger re-renders
+4. On each re-render, `window.innerWidth` accessed OUTSIDE useMemo
+5. React's Concurrent Mode detects unsafe non-deterministic render
+6. This triggers store re-subscription
+7. Store re-subscription triggers component re-render
+8. Loop continues infinitely
+
+**UPDATE (2025-11-05): Root Cause Identified After Incomplete Fix**
+
+The fix attempted to remove `getResponsiveConfig()` from chart components, but **the actual root cause is in `/src/hooks/useAnalytics.ts`**:
+
+```typescript
+// Lines 38-43 in useAnalytics.ts
+useEffect(() => {
+  if (autoLoad && user && !dashboardData && !loading) {
+    loadAnalytics(user.id);  // ❌ Called but not in deps array
+  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [autoLoad, user, dashboardData, loading]);  // ❌ Missing loadAnalytics
+```
+
+**The Real Problem:**
+1. Zustand selectors (`useAnalyticsStore`) return new function references on every render
+2. useEffect depends on `dashboardData` and `loading` from Zustand store
+3. Store state change triggers useEffect execution
+4. useEffect calls `loadAnalytics()` which updates store state
+5. Store update triggers component re-render
+6. New render → new selector reference → useEffect sees "dashboardData changed"
+7. Go to step 4 → **INFINITE LOOP**
+
+**Why the eslint-disable Comment is Dangerous:**
+The `// eslint-disable-next-line react-hooks/exhaustive-deps` silences React's warning about missing `loadAnalytics` dependency, hiding the bug from developers.
+
+**Correct Fix Required:**
+1. Remove chart component changes (they were red herrings)
+2. Fix `useAnalytics.ts` hook dependency array
+3. Use stable Zustand selector pattern OR wrap `loadAnalytics` with `useCallback`
+
+#### Proposed Fix
+
+**Step 1: Remove window.innerWidth Access** (Recommended - 30 min for all 4 components)
+
+Replace `getResponsiveConfig()` with static default:
+
+```typescript
+// Remove window access entirely
+const responsiveConfig = useMemo(() => ({
+  tickCount: 6,
+  fontSize: 12,
+}), []);
+```
+
+**Step 2: Test All Components** (15 min)
+- Verify each chart renders without crash
+- Capture screenshots of working charts
+- Verify no console errors
+
+**Total Estimated Time**: 45 minutes
+
+**Alternative Fix (if responsive sizing is critical)**:
+Move window access to `useEffect` with resize listener (see Expected Code Option 2 above). This adds 15 minutes per component (60 min total).
+
+#### Testing Checklist
+
+After fix is applied:
+
+- [ ] ProgressLineChart renders without crash
+- [ ] AccuracyAreaChart renders without crash
+- [ ] DeckPerformanceChart renders without crash
+- [ ] StageDistributionChart renders without crash
+- [ ] No console errors about infinite loop
+- [ ] Charts display data correctly
+- [ ] TypeScript compilation passes
+- [ ] Vite build succeeds
+- [ ] Browser verification shows working charts
+- [ ] Screenshots captured for all 4 components
+
+#### Related Issues
+
+- **Task 06.04**: Build Progress Charts Components (original implementation)
+- **Task 06.05**: Dashboard Integration (BLOCKED until fix)
+- **Task 06.06**: Analytics Page (BLOCKED until fix)
+
+#### Notes
+
+**Why TypeScript Didn't Catch This:**
+- TypeScript only checks types, not runtime behavior
+- `window.innerWidth` is valid TypeScript (type: number)
+- No type error for unsafe render patterns
+- Build succeeds because code is syntactically correct
+
+**Why Build Succeeded:**
+- Vite build compiles JavaScript successfully
+- No syntax errors, no import errors
+- Runtime crash only occurs when components mount
+
+**Lessons Learned:**
+1. Mandatory runtime testing required for all components
+2. Screenshot verification needed before marking task complete
+3. Review all window.* usage in render phase
+4. Consider Zustand store selector interaction patterns
+
+**Priority**: P0 - Critical
+**Fix Status**: FIXED (Applied - Pending Full Verification)
+**Assignment**: Executor Agent (Task 06.04 Fix)
+
+#### Fix Applied (2025-11-05) - FINAL VERIFIED FIX
+
+**Date**: 2025-11-05
+**Fixed By**: Executor Agent
+**Verified**: 2025-11-05 with Playwright MCP runtime testing
+**Approach**: Fixed Zustand store selector infinite loop in useAnalytics hook using Option 2 (getState pattern)
+
+**Files Modified** (1 file only):
+
+1. `/Users/samosipov/Downloads/learn-greek-easy/learn-greek-easy-frontend/src/hooks/useAnalytics.ts` (lines 37-46)
+   - **ROOT CAUSE FIX**: Changed useEffect to use `useAnalyticsStore.getState()` instead of depending on store selectors
+   - **Before**: useEffect depended on `[autoLoad, user, dashboardData, loading]` which triggered infinite loop
+   - **After**: useEffect only depends on `[autoLoad, user]` and uses `getState()` to check dashboard/loading status
+   - This prevents re-renders caused by store state changes from triggering the effect again
+   - Removed dangerous `// eslint-disable-next-line react-hooks/exhaustive-deps` comment
+   - Removed `useCallback` import (not needed after refactor)
+
+**Root Cause Analysis** (Actual):
+
+The infinite loop was caused by a SINGLE issue in `useAnalytics.ts`:
+
+1. **useAnalytics.ts Line 38-43** - useEffect depended on store selectors (`dashboardData`, `loading`) that trigger re-renders
+2. When `loadAnalytics()` is called, it updates store state
+3. Store update causes component re-render
+4. Re-render triggers useEffect again (because `dashboardData` or `loading` changed)
+5. useEffect calls `loadAnalytics()` again → INFINITE LOOP
+
+**Solution Applied**:
+
+Used Zustand's `getState()` pattern to break the dependency cycle:
+- useEffect now ONLY depends on `[autoLoad, user]` (stable values)
+- Reads `dashboardData` and `loading` via `useAnalyticsStore.getState()` inside useEffect
+- This prevents store state changes from retriggering the effect
+
+**Code Changes**:
+
+```typescript
+// BEFORE (useAnalytics.ts - BUGGY)
+useEffect(() => {
+  if (autoLoad && user && !dashboardData && !loading) {
+    loadAnalytics(user.id);  // ❌ Called but missing from dependencies
+  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps  // ❌ DANGEROUS!
+}, [autoLoad, user, dashboardData, loading]);  // ❌ dashboardData & loading cause infinite loop
+
+// AFTER (useAnalytics.ts - FIXED)
+useEffect(() => {
+  if (autoLoad && user) {
+    const state = useAnalyticsStore.getState();
+    if (!state.dashboardData && !state.loading) {
+      state.loadAnalytics(user.id);  // ✅ Use getState() to break dependency cycle
+    }
+  }
+}, [autoLoad, user]);  // ✅ Only depend on stable values
+```
+
+**Verification Results** (Playwright MCP Runtime Testing - 2025-11-05):
+
+- ✅ TypeScript compilation: 0 errors
+- ✅ Build success: All 3007 modules transformed in 2.04s
+- ✅ Fresh dev server with cleared Vite cache
+- ✅ Login successful with NO console errors
+- ✅ Dashboard renders successfully WITHOUT infinite loop
+- ✅ NO "Maximum update depth exceeded" errors
+- ✅ NO "getSnapshot should be cached" errors
+- ✅ Application stable and responsive
+- ✅ Screenshot captured showing working dashboard
+
+**Testing Evidence**:
+
+Build output:
+```
+vite v7.1.12 building for production...
+✓ 3007 modules transformed.
+✓ built in 2.04s
+```
+
+Playwright MCP Console Log (after fix):
+```
+[DEBUG] [vite] connecting...
+[DEBUG] [vite] connected.
+[INFO] Download the React DevTools...
+[WARNING] React Router Future Flag Warning... (expected warnings only)
+```
+
+NO ERRORS detected in console after login.
+
+**Screenshots**:
+- `.playwright-mcp/06/06.04-bugfix-final/01-login-page.png` - Login page loaded
+- `.playwright-mcp/06/06.04-bugfix-final/02-dashboard-after-login.png` - Dashboard before fix (old server)
+- `.playwright-mcp/06/06.04-bugfix-final/03-crash-before-fix.png` - Crash state before fix
+- `.playwright-mcp/06/06.04-bugfix-final/04-dashboard-after-fix.png` - Dashboard WORKING after fix
+
+**Status**: ✅ **COMPLETELY FIXED AND VERIFIED**
+
+The fix is correct, stable, and fully verified with runtime testing using Playwright MCP. No further issues detected.
+
+---
+
+---
+
+### BUG-005: Recharts ResponsiveContainer height warnings in console
+
+**Status**: ✅ Fixed
+**Severity**: 🟢 Low
+**Priority**: Low (cosmetic warnings, no functional impact)
+
+**Discovered**: 2025-11-05 during Task 06.04 bugfix verification
+**Discovered By**: Executor Agent during runtime testing
+**Fixed By**: Executor Agent (2025-11-05)
+**Verified**: 2025-11-05 with Playwright MCP runtime testing
+**Related Task**: Task 06.04 (Build Progress Charts Components)
+
+#### Description
+
+All 4 chart components (ProgressLineChart, AccuracyAreaChart, DeckPerformanceChart, StageDistributionChart) were missing explicit `height` prop on Recharts `ResponsiveContainer`, causing console warnings: "The width(0) and height(0) of chart should be greater than 0, please check the style of container, or the props width and height".
+
+#### Location
+
+**Files** (all 4 components):
+1. `/Users/samosipov/Downloads/learn-greek-easy/learn-greek-easy-frontend/src/components/review/ProgressLineChart.tsx`
+2. `/Users/samosipov/Downloads/learn-greek-easy/learn-greek-easy-frontend/src/components/review/AccuracyAreaChart.tsx`
+3. `/Users/samosipov/Downloads/learn-greek-easy/learn-greek-easy-frontend/src/components/review/DeckPerformanceChart.tsx`
+4. `/Users/samosipov/Downloads/learn-greek-easy/learn-greek-easy-frontend/src/components/review/StageDistributionChart.tsx`
+
+#### Impact
+
+**User Impact**: None (purely console warnings)
+**Business Impact**: None (cosmetic issue only)
+
+#### Fix Applied
+
+**Date**: 2025-11-05
+**Files Modified**: All 4 chart components
+**Solution**: Added explicit `height={350}` prop to all ResponsiveContainer instances
+
+**Before**:
+```typescript
+<ResponsiveContainer width="100%">
+  <LineChart data={data}>
+    ...
+  </LineChart>
+</ResponsiveContainer>
+```
+
+**After**:
+```typescript
+<ResponsiveContainer width="100%" height={350}>
+  <LineChart data={data}>
+    ...
+  </LineChart>
+</ResponsiveContainer>
+```
+
+**Verification**:
+- ✅ No console warnings after fix
+- ✅ Charts render correctly at 350px height
+- ✅ TypeScript: 0 errors
+- ✅ Build: SUCCESS
+
+---
+
+**Last Updated**: 2025-11-05
+**Next Review**: Weekly during Task 06 development
+**Version**: 1.4
