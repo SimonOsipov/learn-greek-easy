@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 
 import { AuthLayout } from '@/components/auth/AuthLayout';
+import { SubmitButton } from '@/components/forms';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -316,29 +317,20 @@ export const Register: React.FC = () => {
           </CardContent>
 
           <CardFooter className="flex flex-col space-y-4">
-            <Button
-              type="submit"
+            <SubmitButton
+              loading={isFormDisabled}
+              loadingText="Creating Account..."
               className="w-full bg-gradient-to-br from-[#667eea] to-[#764ba2] text-white hover:opacity-90"
               size="lg"
-              disabled={isFormDisabled}
             >
-              {isFormDisabled ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Creating Account...
-                </>
-              ) : (
-                'Create Account'
-              )}
-            </Button>
+              Create Account
+            </SubmitButton>
 
-            <div className="relative w-full">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
-              </div>
+            {/* OAuth Divider */}
+            <div className="relative flex items-center my-6">
+              <div className="flex-grow border-t border-gray-300"></div>
+              <span className="px-4 text-sm text-gray-500">OR CONTINUE WITH</span>
+              <div className="flex-grow border-t border-gray-300"></div>
             </div>
 
             <Button type="button" variant="outline" className="w-full" disabled>

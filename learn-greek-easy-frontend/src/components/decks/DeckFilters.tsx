@@ -111,10 +111,10 @@ export const DeckFilters: React.FC<DeckFiltersProps> = ({
         )}
       </div>
 
-      {/* Filter Buttons Row */}
-      <div className="flex flex-wrap items-center gap-2">
-        {/* Level Filters */}
-        <div className="flex flex-wrap gap-2">
+      {/* Filter Buttons - Stacked Layout */}
+      <div className="flex flex-col gap-3">
+        {/* Row 1: Level Filters */}
+        <div className="flex flex-wrap items-center gap-2">
           <span className="text-sm font-medium text-gray-700">Level:</span>
           {LEVEL_OPTIONS.map(({ value, color }) => (
             <Button
@@ -132,8 +132,8 @@ export const DeckFilters: React.FC<DeckFiltersProps> = ({
           ))}
         </div>
 
-        {/* Status Filters */}
-        <div className="flex flex-wrap gap-2">
+        {/* Row 2: Status Filters + Premium + Clear */}
+        <div className="flex flex-wrap items-center gap-2">
           <span className="text-sm font-medium text-gray-700">Status:</span>
           {STATUS_OPTIONS.map(({ value, label }) => (
             <Button
@@ -146,31 +146,31 @@ export const DeckFilters: React.FC<DeckFiltersProps> = ({
               {label}
             </Button>
           ))}
-        </div>
 
-        {/* Premium Filter */}
-        <Button
-          variant={filters.showPremiumOnly ? 'default' : 'outline'}
-          size="sm"
-          onClick={handlePremiumToggle}
-          className={filters.showPremiumOnly ? 'bg-amber-500 text-white hover:bg-amber-600' : ''}
-          aria-pressed={filters.showPremiumOnly}
-        >
-          Premium Only
-        </Button>
-
-        {/* Clear Filters Button */}
-        {activeFilterCount > 0 && (
+          {/* Premium Filter */}
           <Button
-            variant="ghost"
+            variant={filters.showPremiumOnly ? 'default' : 'outline'}
             size="sm"
-            onClick={handleClearFilters}
-            className="ml-auto text-gray-600 hover:text-gray-900"
+            onClick={handlePremiumToggle}
+            className={filters.showPremiumOnly ? 'bg-amber-500 text-white hover:bg-amber-600' : ''}
+            aria-pressed={filters.showPremiumOnly}
           >
-            <X className="mr-1 h-4 w-4" />
-            Clear All ({activeFilterCount})
+            Premium Only
           </Button>
-        )}
+
+          {/* Clear Filters Button */}
+          {activeFilterCount > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleClearFilters}
+              className="ml-auto text-gray-600 hover:text-gray-900"
+            >
+              <X className="mr-1 h-4 w-4" />
+              Clear All ({activeFilterCount})
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Results Counter */}

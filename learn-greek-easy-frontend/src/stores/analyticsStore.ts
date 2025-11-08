@@ -1,5 +1,55 @@
 // src/stores/analyticsStore.ts
 
+/**
+ * Analytics Store
+ *
+ * Manages analytics data state and provides computed values for the analytics dashboard.
+ *
+ * Key Features:
+ * - 5-minute cache to reduce API calls
+ * - Date range filtering (last7, last30, alltime)
+ * - Auto-refresh after review sessions
+ * - Auto-cleanup on logout
+ *
+ * Usage Example:
+ * ```tsx
+ * function Dashboard() {
+ *   const { loadAnalytics, setDateRange } = useAnalyticsStore();
+ *   const dashboardData = useAnalyticsStore(selectDashboardData);
+ *   const isLoading = useAnalyticsStore(selectIsLoading);
+ *   const dateRange = useAnalyticsStore(selectDateRange);
+ *
+ *   useEffect(() => {
+ *     loadAnalytics(userId);
+ *   }, [userId]);
+ *
+ *   return (
+ *     <>
+ *       <DateRangeFilter
+ *         selected={dateRange}
+ *         onChange={setDateRange}
+ *       />
+ *       <ProgressLineChart />
+ *       <ActivityFeed activities={dashboardData?.recentActivity} />
+ *     </>
+ *   );
+ * }
+ * ```
+ *
+ * Selectors:
+ * - selectDashboardData: Get full dashboard data
+ * - selectIsLoading: Get loading state
+ * - selectError: Get error state
+ * - selectDateRange: Get current date range
+ *
+ * Actions:
+ * - loadAnalytics(userId, dateRange?): Fetch analytics data
+ * - setDateRange(range): Change date range filter
+ * - refreshAnalytics(): Force refresh (bypass cache)
+ * - updateSnapshot(userId, sessionSummary): Update after review session
+ * - clearAnalytics(): Clear all data (on logout)
+ */
+
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import type { AnalyticsDashboardData } from '@/types/analytics';

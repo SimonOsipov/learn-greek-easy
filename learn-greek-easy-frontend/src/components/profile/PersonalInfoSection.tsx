@@ -145,24 +145,6 @@ export const PersonalInfoSection: React.FC<PersonalInfoSectionProps> = ({ user }
           </p>
         </div>
 
-        {/* Account ID (Read-only) */}
-        <div>
-          <Label htmlFor="userId" className="mb-2 block text-sm font-medium text-gray-700">
-            Account ID
-          </Label>
-          <Input
-            id="userId"
-            type="text"
-            value={user.id}
-            readOnly
-            disabled
-            className="text-gray-500"
-          />
-          <p className="mt-1 text-xs text-gray-500">
-            Your unique account identifier for support purposes.
-          </p>
-        </div>
-
         {/* Submit Button */}
         <div className="flex justify-end gap-3 border-t border-gray-200 pt-6">
           <Button

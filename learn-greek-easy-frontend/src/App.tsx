@@ -4,6 +4,7 @@ import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { PublicRoute } from '@/components/auth/PublicRoute';
 import { RouteGuard } from '@/components/auth/RouteGuard';
 import { SessionWarningDialog } from '@/components/auth/SessionWarningDialog';
+import { ErrorBoundary } from '@/components/errors';
 import { AppLayout } from '@/components/layout';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -20,6 +21,7 @@ import { SessionSummaryPage } from '@/pages/SessionSummaryPage';
 import { NotFound } from '@/pages/NotFound';
 import { Profile } from '@/pages/Profile';
 import { Unauthorized } from '@/pages/Unauthorized';
+import Settings from '@/pages/Settings';
 import ChartsTestPage from '@/pages/ChartsTestPage';
 import ActivityFeedTest from '@/pages/ActivityFeedTest';
 
@@ -29,13 +31,6 @@ const StatisticsPage = () => (
   <div>
     <h1 className="mb-4 text-2xl font-semibold">Statistics</h1>
     <p>Statistics will go here.</p>
-  </div>
-);
-
-const SettingsPage = () => (
-  <div>
-    <h1 className="mb-4 text-2xl font-semibold">Settings</h1>
-    <p>Settings will go here.</p>
   </div>
 );
 
@@ -70,7 +65,7 @@ function AppContent() {
               <Route path="decks/:id" element={<DeckDetailPage />} />
               <Route path="statistics" element={<StatisticsPage />} />
               <Route path="stats" element={<Navigate to="/statistics" replace />} />
-              <Route path="settings" element={<SettingsPage />} />
+              <Route path="settings" element={<Settings />} />
               <Route path="profile" element={<Profile />} />
               <Route path="charts-test" element={<ChartsTestPage />} />
               <Route path="activity-feed-test" element={<ActivityFeedTest />} />
@@ -108,13 +103,15 @@ function AppContent() {
 
 function App() {
   return (
-    <BrowserRouter>
-      <TooltipProvider>
-        <LayoutProvider>
-          <AppContent />
-        </LayoutProvider>
-      </TooltipProvider>
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <TooltipProvider>
+          <LayoutProvider>
+            <AppContent />
+          </LayoutProvider>
+        </TooltipProvider>
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 }
 

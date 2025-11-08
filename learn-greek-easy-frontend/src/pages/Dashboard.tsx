@@ -3,7 +3,6 @@ import React from 'react';
 import { DeckCard } from '@/components/display/DeckCard';
 import { MetricCard } from '@/components/display/MetricCard';
 import { WelcomeSection } from '@/components/display/WelcomeSection';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import type { DashboardData } from '@/types/dashboard';
 
@@ -150,69 +149,6 @@ export const Dashboard: React.FC = () => {
         </div>
       </section>
 
-      <Separator className="my-6" />
-
-      {/* Configuration Test Section */}
-      <section>
-        <Card>
-          <CardHeader>
-            <CardTitle>Setup Verification ✅</CardTitle>
-            <CardDescription>All configurations are working correctly</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Typography Test */}
-            <div className="space-y-2">
-              <h3 className="font-semibold text-text-primary">Typography Scale</h3>
-              <div className="space-y-1">
-                <p className="text-3xl font-bold">Heading 1 (3xl)</p>
-                <p className="text-2xl font-semibold">Heading 2 (2xl)</p>
-                <p className="text-xl font-medium">Heading 3 (xl)</p>
-                <p className="text-lg">Large text (lg)</p>
-                <p className="text-base">Base text size</p>
-                <p className="text-sm text-text-muted">Small text (sm)</p>
-                <p className="text-xs text-text-subtle">Extra small text (xs)</p>
-              </div>
-            </div>
-
-            <Separator />
-
-            {/* Color Test */}
-            <div className="space-y-2">
-              <h3 className="font-semibold text-text-primary">Color Palette</h3>
-              <div className="flex flex-wrap gap-2">
-                <div className="flex h-20 w-20 items-center justify-center rounded-lg bg-primary text-xs text-white">
-                  Primary
-                </div>
-                <div className="flex h-20 w-20 items-center justify-center rounded-lg bg-gradient-to-br from-[#667eea] to-[#764ba2] text-xs text-white">
-                  Gradient
-                </div>
-                <div className="flex h-20 w-20 items-center justify-center rounded-lg bg-success text-xs text-white">
-                  Success
-                </div>
-                <div className="flex h-20 w-20 items-center justify-center rounded-lg bg-warning text-xs text-white">
-                  Warning
-                </div>
-                <div className="flex h-20 w-20 items-center justify-center rounded-lg bg-info text-xs text-white">
-                  Info
-                </div>
-              </div>
-            </div>
-
-            <Separator />
-
-            {/* Greek Text Rendering */}
-            <div className="space-y-2">
-              <h3 className="font-semibold text-text-primary">Greek Text Support</h3>
-              <div className="space-y-1">
-                <p className="text-lg">Γεια σου! (Hello!)</p>
-                <p>Καλημέρα - Good morning</p>
-                <p>Ευχαριστώ - Thank you</p>
-                <p>Παρακαλώ - Please/You're welcome</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </section>
     </div>
   );
 };

@@ -20,6 +20,7 @@ interface AuthState {
   register: (data: RegisterData) => Promise<void>;
   logout: () => Promise<void>;
   updateProfile: (updates: Partial<User>) => Promise<void>;
+  updatePassword: (currentPassword: string, newPassword: string) => Promise<void>;
   refreshSession: () => Promise<void>;
   checkAuth: () => Promise<void>;
   clearError: () => void;
@@ -143,6 +144,37 @@ export const useAuthStore = create<AuthState>()(
 
           set({
             user: updatedUser,
+            isLoading: false,
+            error: null,
+          });
+        } catch (error) {
+          set({
+            isLoading: false,
+            error: error as AuthError,
+          });
+          throw error;
+        }
+      },
+
+      // Update password action
+      updatePassword: async (_currentPassword: string, _newPassword: string) => {
+        const { user } = get();
+
+        if (!user) {
+          throw new Error('No user logged in');
+        }
+
+        set({ isLoading: true, error: null });
+
+        try {
+          // TODO: In production, verify currentPassword and update via backend API
+          // For MVP with mockAuthAPI, simulate password update
+          await new Promise(resolve => setTimeout(resolve, 1000));
+
+          // In real implementation:
+          // await mockAuthAPI.updatePassword(user.id, currentPassword, newPassword);
+
+          set({
             isLoading: false,
             error: null,
           });

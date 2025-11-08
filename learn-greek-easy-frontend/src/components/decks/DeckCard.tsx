@@ -1,8 +1,9 @@
 import React from 'react';
 
-import { Lock } from 'lucide-react';
+import { Lock, Crown } from 'lucide-react';
 
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import type { Deck } from '@/types/deck';
 
 import { DeckBadge } from './DeckBadge';
@@ -40,6 +41,7 @@ export const DeckCard: React.FC<DeckCardProps> = ({
 
   // Build className for card
   const cardClassName = `
+    min-h-[300px] flex flex-col
     ${isClickable ? 'cursor-pointer transition-all duration-200 hover:shadow-lg' : ''}
     ${isLocked ? 'opacity-70' : ''}
     ${isPremium && !isLocked ? 'border-amber-400 hover:border-amber-500' : ''}
@@ -64,7 +66,7 @@ export const DeckCard: React.FC<DeckCardProps> = ({
       }
       aria-label={`${titleGreek} - ${title} deck, ${level} level, ${completionPercent}% completed${isLocked ? ', locked' : ''}`}
     >
-      <CardHeader className="pb-3">
+      <CardHeader className="pb-3 flex-shrink-0">
         {/* Title and Level Badge Row */}
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
@@ -81,14 +83,15 @@ export const DeckCard: React.FC<DeckCardProps> = ({
           </div>
         </div>
 
-        {/* Premium Badge */}
-        {isPremium && (
-          <div className="mt-2">
-            <span className="inline-flex items-center rounded bg-amber-100 px-2 py-1 text-xs font-medium text-amber-800">
+        {/* Premium Badge - Reserve space for consistency */}
+        <div className="mt-2 h-6">
+          {isPremium && (
+            <Badge className="inline-flex items-center gap-1 bg-gradient-to-r from-purple-500 to-purple-700 text-white border-0">
+              <Crown className="h-3 w-3" />
               Premium
-            </span>
-          </div>
-        )}
+            </Badge>
+          )}
+        </div>
 
         {/* Category Tag */}
         <div className="mt-2">
@@ -96,14 +99,26 @@ export const DeckCard: React.FC<DeckCardProps> = ({
         </div>
       </CardHeader>
 
-      <CardContent className="pt-0">
-        {/* Progress Bar */}
-        {showProgress && progress && (
-          <div className="mb-4">
-            <DeckProgressBar progress={progress} showLegend={false} />
-            <p className="mt-1 text-xs text-gray-500">{completionPercent}% Complete</p>
-          </div>
-        )}
+      <CardContent className="pt-0 flex-1 flex flex-col justify-between">
+        <div>
+          {/* Progress Bar - Always shown if showProgress is true */}
+          {showProgress && (
+            <div className="mb-4">
+              <DeckProgressBar
+                progress={
+                  progress || {
+                    cardsTotal: cardCount,
+                    cardsMastered: 0,
+                    cardsLearning: 0,
+                    cardsNew: cardCount,
+                  }
+                }
+                showLegend={false}
+              />
+              <p className="mt-1 text-xs text-gray-500">{completionPercent}% Complete</p>
+            </div>
+          )}
+        </div>
 
         {/* Stats Row */}
         {showStats && (

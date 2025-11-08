@@ -7,9 +7,9 @@ import { useLocation } from 'react-router-dom';
 
 import { DeckFilters } from '@/components/decks/DeckFilters';
 import { DecksGrid } from '@/components/decks/DecksGrid';
+import { EmptyState, CardSkeleton } from '@/components/feedback';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
 import { useDeckStore } from '@/stores/deckStore';
 
 export const DecksPage: React.FC = () => {
@@ -77,7 +77,18 @@ export const DecksPage: React.FC = () => {
       {!isLoading && !error && decks.length > 0 && <DecksGrid decks={decks} />}
 
       {/* Empty State */}
-      {!isLoading && !error && decks.length === 0 && <EmptyState onClearFilters={clearFilters} />}
+      {!isLoading && !error && decks.length === 0 && (
+        <EmptyState
+          icon={BookOpen}
+          title="No Decks Found"
+          description="No decks match your current filters. Try adjusting your search or clearing filters."
+          action={{
+            label: 'Clear All Filters',
+            onClick: clearFilters,
+            variant: 'secondary'
+          }}
+        />
+      )}
     </div>
   );
 };
@@ -86,44 +97,8 @@ export const DecksPage: React.FC = () => {
 const DeckGridSkeleton: React.FC = () => (
   <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
     {[1, 2, 3, 4, 5, 6].map((i) => (
-      <Card key={i} className="p-6">
-        <div className="space-y-4">
-          <div className="flex items-start justify-between">
-            <div className="flex-1 space-y-2">
-              <Skeleton className="h-5 w-3/4" />
-              <Skeleton className="h-4 w-1/2" />
-            </div>
-            <Skeleton className="h-6 w-12 rounded-full" />
-          </div>
-          <Skeleton className="h-3 w-full" />
-          <Skeleton className="h-2 w-full rounded-full" />
-          <div className="grid grid-cols-3 gap-2 pt-3">
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-full" />
-          </div>
-        </div>
-      </Card>
+      <CardSkeleton key={i} />
     ))}
   </div>
 );
 
-// Empty state component
-interface EmptyStateProps {
-  onClearFilters: () => void;
-}
-
-const EmptyState: React.FC<EmptyStateProps> = ({ onClearFilters }) => (
-  <Card className="mx-auto max-w-md p-8 text-center">
-    <div className="flex justify-center">
-      <BookOpen className="h-16 w-16 text-gray-400" />
-    </div>
-    <h3 className="mt-4 text-lg font-semibold text-gray-900">No Decks Found</h3>
-    <p className="mt-2 text-sm text-gray-600">
-      No decks match your current filters. Try adjusting your search or clearing filters.
-    </p>
-    <Button variant="secondary" onClick={onClearFilters} className="mt-4">
-      Clear All Filters
-    </Button>
-  </Card>
-);
