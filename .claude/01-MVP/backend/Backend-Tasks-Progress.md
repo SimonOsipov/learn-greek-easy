@@ -44,10 +44,22 @@ This document tracks all backend development tasks for the MVP.
 ---
 
 ### 2. Database Design & Schema Creation
-**Status**: ⏸️ **NOT STARTED**
+**Status**: 🔄 **IN PROGRESS** (Subtask 02.01 Complete)
 **Estimated Duration**: 3-4 hours
 **Priority**: Critical Path
 **Dependencies**: Task 1
+
+**Subtask Progress**:
+- ✅ 02.01: Database Connection & Session Management (COMPLETED 2025-11-20)
+  - Duration: ~50 minutes
+  - Files: session.py, base.py, dependencies.py, __init__.py
+  - PostgreSQL Docker container running
+  - Backend server integrated with database
+- ⏸️ 02.02: Define Database Models (User, Deck, Card, Progress, Review)
+- ⏸️ 02.03: PostgreSQL Enums
+- ⏸️ 02.04: Alembic Configuration
+- ⏸️ 02.05: Initial Migration
+- ⏸️ 02.06: Pydantic Schemas
 
 **Subtasks**:
 - 02.01: Design database schema (ERD)
@@ -821,6 +833,7 @@ app.add_middleware(
 ---
 
 **Last Updated**: 2025-11-20
-**Document Version**: 1.2
-**Status**: Task 1 Complete - Backend foundation established (Python 3.14 + Poetry 2.2)
-**Next Milestone**: Task 2 (Database Design & Schema Creation)
+**Document Version**: 1.3
+**Status**: Task 1 Complete, Task 2 In Progress (Subtask 02.01 Complete)
+**Backend Progress**: Task 01 ✅ | Task 02.01 ✅ (Database connection established)
+**Next Milestone**: Task 02.02 (Define Database Models)

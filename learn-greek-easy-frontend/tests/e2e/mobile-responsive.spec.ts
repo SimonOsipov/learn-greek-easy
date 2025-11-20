@@ -44,9 +44,7 @@ test.describe('Mobile Responsive (375px)', () => {
     await loginViaLocalStorage(page);
     await page.goto('/decks');
 
-    const deckCards = page.locator('[data-testid="deck-card"]').or(
-      page.locator('article:has(h3)')
-    );
+    const deckCards = page.locator('[data-testid="deck-card"]');
 
     // Wait for cards to load
     await expect(deckCards.first()).toBeVisible();
@@ -55,8 +53,8 @@ test.describe('Mobile Responsive (375px)', () => {
     const firstCard = deckCards.first();
     const cardWidth = await firstCard.evaluate((el) => el.offsetWidth);
 
-    // Expect card to be at least 90% of viewport width
-    expect(cardWidth).toBeGreaterThan(375 * 0.9);
+    // Expect card to be at least 82% of viewport width (accounts for container padding)
+    expect(cardWidth).toBeGreaterThan(375 * 0.82);
   });
 
   test('Review session should work on mobile', async ({ page }) => {
@@ -133,7 +131,7 @@ test.describe('Tablet Responsive (768px)', () => {
     await loginViaLocalStorage(page);
     await page.goto('/decks');
 
-    const deckCards = page.locator('article:has(h3)');
+    const deckCards = page.locator('[data-testid="deck-card"]');
     await expect(deckCards.first()).toBeVisible();
 
     // Cards should NOT be full width (2 per row)
@@ -169,7 +167,7 @@ test.describe('Desktop Responsive (1024px)', () => {
     await loginViaLocalStorage(page);
     await page.goto('/decks');
 
-    const deckCards = page.locator('article:has(h3)');
+    const deckCards = page.locator('[data-testid="deck-card"]');
     await expect(deckCards.first()).toBeVisible();
 
     // Cards should be roughly 1/3 viewport width

@@ -18,27 +18,25 @@ test.describe('Playwright Setup Validation', () => {
     await expect(page).toHaveURL('/login');
     await expect(page.getByTestId('login-card')).toBeVisible();
 
-    // Check heading
-    await expect(page.getByRole('heading', { name: /log in/i })).toBeVisible();
+    // Check title - app uses Greek text "Καλώς ήρθατε!" (Welcome!)
+    await expect(page.getByTestId('login-title')).toBeVisible();
+    await expect(page.getByTestId('login-title')).toHaveText('Καλώς ήρθατε!');
 
     // Check form fields exist
     await expect(page.getByLabel(/email/i)).toBeVisible();
-    await expect(page.getByLabel(/password/i)).toBeVisible();
-    await expect(page.getByRole('button', { name: /log in/i })).toBeVisible();
+    await expect(page.getByTestId('password-input')).toBeVisible();
+    await expect(page.getByRole('button', { name: /sign in/i })).toBeVisible();
   });
 
   test('should access dashboard when authenticated', async ({ page }) => {
     // Login via localStorage (faster than UI login)
+    // Note: loginViaLocalStorage goes to '/' which shows dashboard content when authenticated
     await loginViaLocalStorage(page);
 
-    // Navigate to dashboard
-    await page.goto('/dashboard');
-    await page.waitForURL('/dashboard');
-    await page.waitForLoadState('networkidle');
-
-    // Verify dashboard loaded
-    await expect(page).toHaveURL('/dashboard');
-    await expect(page.getByRole('heading', { name: /dashboard/i })).toBeVisible();
+    // Verify dashboard content is visible (dashboard is shown at '/' for authenticated users)
+    await expect(page).toHaveURL('/');
+    await expect(page.getByRole('heading', { name: /your progress/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /active decks/i })).toBeVisible();
   });
 
   test('should redirect to login when accessing protected route unauthenticated', async ({
@@ -60,6 +58,7 @@ test.describe('Playwright Setup Validation', () => {
     // Should redirect to login
     await expect(page).toHaveURL('/login');
     await expect(page.getByTestId('login-card')).toBeVisible();
-    await expect(page.getByRole('heading', { name: /log in/i })).toBeVisible();
+    await expect(page.getByTestId('login-title')).toBeVisible();
+    await expect(page.getByTestId('login-title')).toHaveText('Καλώς ήρθατε!');
   });
 });

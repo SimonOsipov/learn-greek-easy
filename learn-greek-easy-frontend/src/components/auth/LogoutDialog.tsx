@@ -52,7 +52,7 @@ export const LogoutDialog: React.FC<LogoutDialogProps> = ({ trigger }) => {
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md" data-testid="logout-dialog">
         <DialogHeader>
           <DialogTitle>Logout Confirmation</DialogTitle>
           <DialogDescription>
@@ -64,7 +64,12 @@ export const LogoutDialog: React.FC<LogoutDialogProps> = ({ trigger }) => {
           <Button type="button" variant="outline" onClick={() => setOpen(false)}>
             Cancel
           </Button>
-          <Button type="button" variant="destructive" onClick={handleLogout}>
+          <Button
+            type="button"
+            variant="destructive"
+            onClick={handleLogout}
+            data-testid="logout-confirm-button"
+          >
             Yes, Logout
           </Button>
         </DialogFooter>

@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: ./learn-greek-easy-frontend
+      dockerfile: Dockerfile
+    image: learn-greek-easy-frontend:latest
+    container_name: learn-greek-easy-frontend
+    ports:
+      - "80:80"
+    environment:
+      - NODE_ENV=production
+    restart: unless-stopped
+    networks:
+      - learn-greek-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  learn-greek-network:
+    driver: bridge
+    name: learn-greek-network
+
+# Placeholder for future services
+# volumes:
+#   postgres_data:
+#     name: learn-greek-easy-postgres-data

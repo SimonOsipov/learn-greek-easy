@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: ./learn-greek-easy-frontend
+      dockerfile: Dockerfile
+      target: builder
+    volumes:
+      - ./learn-greek-easy-frontend/src:/app/src:cached
+      - ./learn-greek-easy-frontend/public:/app/public:cached
+    command: npm run dev
+    ports:
+      - "5173:5173"
+    environment:
+      - NODE_ENV=development

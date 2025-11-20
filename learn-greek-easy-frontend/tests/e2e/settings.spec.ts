@@ -163,10 +163,16 @@ test.describe('Settings Management', () => {
     await expect(backButton).toBeVisible();
     await backButton.click();
 
-    // Verify on dashboard
-    await page.waitForURL('/dashboard', { timeout: 5000 });
+    // Wait for navigation (dashboard route redirects to /)
+    await Promise.race([
+      page.waitForURL('/dashboard', { timeout: 5000 }),
+      page.waitForURL('/', { timeout: 5000 })
+    ]);
     await page.waitForLoadState('networkidle');
-    await expect(page.getByRole('heading', { name: /dashboard/i })).toBeVisible();
+
+    // Verify dashboard content is loaded
+    await expect(page.getByRole('heading', { name: /your progress/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /active decks/i })).toBeVisible();
   });
 
   test('E2E-04.5: Settings page displays user information', async ({ page }) => {

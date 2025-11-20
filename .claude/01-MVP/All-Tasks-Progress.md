@@ -6,7 +6,7 @@
 | Area | Total | Completed | In Progress | Not Started | % |
 |------|-------|-----------|-------------|-------------|---|
 | Frontend | 11 | 11 | 0 | 0 | 100% ✨ |
-| Backend | ~15 | 1 | 0 | ~14 | 7% |
+| Backend | ~15 | 1 | 1 | ~13 | 10% |
 | Infrastructure | 6 | 0 | 0 | 6 | 0% |
 | Testing | ~10 | 0 | 0 | ~10 | 0% |
 | Deployment | 9 | 0 | 0 | 9 | 0% |
@@ -58,9 +58,29 @@ See detailed backend tasks in: [backend/](./backend/)
 - API documentation at /docs and /redoc
 - All code quality tools configured
 
+### 2. Database Design & Schema Creation
+**Status**: 🔄 IN PROGRESS (2025-11-20)
+**File**: [backend/02/02-database-design.md](./backend/02/02-database-design.md)
+
+**Completed Subtasks**:
+- ✅ **02.01**: Database Connection & Session Management (2025-11-20)
+  - Files: [02.01-database-connection-plan.md](./backend/02/02.01-database-connection-plan.md)
+  - Async SQLAlchemy 2.0 engine with connection pooling
+  - FastAPI dependency injection (get_db)
+  - Base models with TimestampMixin
+  - PostgreSQL Docker container operational
+  - Backend server integrated with database
+
+**Remaining Subtasks**:
+- ⏸️ 02.02: Define Database Models (User, Deck, Card, Progress, Review)
+- ⏸️ 02.03: PostgreSQL Enums
+- ⏸️ 02.04: Alembic Configuration
+- ⏸️ 02.05: Initial Migration
+- ⏸️ 02.06: Pydantic Schemas
+
 ### Core Setup
 - [✅] Initialize FastAPI project
-- [ ] Setup SQLAlchemy + PostgreSQL connection
+- [✅] Setup SQLAlchemy + PostgreSQL connection
 - [ ] Configure Alembic for migrations
 - [ ] Setup Redis connection
 - [ ] Configure Celery for background tasks
