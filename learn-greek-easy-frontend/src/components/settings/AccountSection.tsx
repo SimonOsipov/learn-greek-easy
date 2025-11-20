@@ -103,7 +103,7 @@ export function AccountSection() {
         <CardHeader>
           <CardTitle>Account Settings</CardTitle>
           <CardDescription>
-            Manage your password and subscription
+            Manage your password and subscription. Logged in as <strong data-testid="user-email">{user.email}</strong>
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -119,6 +119,7 @@ export function AccountSection() {
                 Change your password to keep your account secure
               </p>
               <Button
+                data-testid="change-password-button"
                 variant="outline"
                 size="sm"
                 onClick={() => setPasswordDialogOpen(true)}
@@ -179,16 +180,17 @@ export function AccountSection() {
 
       {/* Password Change Dialog */}
       <Dialog open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen}>
-        <DialogContent>
+        <DialogContent data-testid="password-dialog">
           <DialogHeader>
-            <DialogTitle>Change Password</DialogTitle>
+            <DialogTitle data-testid="password-change-title">Change Password</DialogTitle>
             <DialogDescription>
               Enter your current password and choose a new password
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handlePasswordSubmit(onPasswordChange)} className="space-y-4">
+          <form data-testid="password-change-form" onSubmit={handlePasswordSubmit(onPasswordChange)} className="space-y-4">
             <PasswordField
+              data-testid="current-password-input"
               label="Current Password"
               name="currentPassword"
               value={watchPassword('currentPassword')}
@@ -200,6 +202,7 @@ export function AccountSection() {
             />
 
             <PasswordField
+              data-testid="new-password-input"
               label="New Password"
               name="newPassword"
               value={watchPassword('newPassword')}
@@ -212,6 +215,7 @@ export function AccountSection() {
             />
 
             <PasswordField
+              data-testid="confirm-password-input"
               label="Confirm New Password"
               name="confirmPassword"
               value={watchPassword('confirmPassword')}
@@ -224,6 +228,7 @@ export function AccountSection() {
 
             <DialogFooter>
               <Button
+                data-testid="password-change-cancel"
                 type="button"
                 variant="outline"
                 onClick={() => {
@@ -234,7 +239,7 @@ export function AccountSection() {
               >
                 Cancel
               </Button>
-              <SubmitButton loading={isPasswordSubmitting} loadingText="Updating...">
+              <SubmitButton data-testid="password-change-submit" loading={isPasswordSubmitting} loadingText="Updating...">
                 Update Password
               </SubmitButton>
             </DialogFooter>

@@ -18,6 +18,7 @@ interface PasswordFieldProps {
   autoComplete?: string;
   showStrength?: boolean;
   className?: string;
+  'data-testid'?: string;
 }
 
 /**
@@ -71,6 +72,7 @@ export function PasswordField({
   autoComplete = 'current-password',
   showStrength = false,
   className,
+  'data-testid': testId,
 }: PasswordFieldProps) {
   const [showPassword, setShowPassword] = useState(false);
   const hasError = !!error;
@@ -114,6 +116,7 @@ export function PasswordField({
           autoComplete={autoComplete}
           aria-invalid={hasError}
           aria-describedby={hasError ? `${name}-error` : undefined}
+          data-testid={testId}
           className={cn(
             'pr-10 text-base',
             hasError && 'border-red-500 focus-visible:ring-red-500'

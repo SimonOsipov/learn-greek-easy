@@ -54,7 +54,7 @@ export const Profile: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div data-testid="profile-page" className="min-h-screen bg-gray-50">
       <div className="container mx-auto max-w-7xl px-4 py-6">
         {/* Mobile Header */}
         <div className="mb-6 flex items-center justify-between md:hidden">

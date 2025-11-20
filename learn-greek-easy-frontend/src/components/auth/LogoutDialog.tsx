@@ -46,7 +46,7 @@ export const LogoutDialog: React.FC<LogoutDialogProps> = ({ trigger }) => {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {trigger || (
-          <Button variant="ghost" className="w-full justify-start">
+          <Button data-testid="logout-button" variant="ghost" className="w-full justify-start">
             <LogOut className="mr-2 h-4 w-4" />
             Logout
           </Button>

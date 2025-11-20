@@ -85,7 +85,7 @@ export const DeckDetailPage: React.FC = () => {
   return (
     <div className="container mx-auto max-w-4xl px-4 py-6 md:py-8">
       {/* Breadcrumb Navigation */}
-      <nav className="mb-4 flex items-center gap-2 text-sm text-gray-600" aria-label="Breadcrumb">
+      <nav data-testid="breadcrumb" className="mb-4 flex items-center gap-2 text-sm text-gray-600" aria-label="Breadcrumb">
         <Link to="/decks" className="flex items-center gap-1 transition-colors hover:text-gray-900">
           <ChevronLeft className="h-4 w-4" />
           Decks
@@ -450,6 +450,7 @@ const ActionButtonsSection: React.FC<ActionButtonsSectionProps> = ({
               {deck.estimatedTime} minutes.
             </p>
             <Button
+              data-testid="start-review-button"
               size="lg"
               onClick={onStartLearning}
               className="bg-gradient-to-br from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700"
@@ -469,6 +470,7 @@ const ActionButtonsSection: React.FC<ActionButtonsSectionProps> = ({
             </p>
             <p className="mb-6 text-xs text-gray-500">Keep your streak going!</p>
             <Button
+              data-testid="start-review-button"
               size="lg"
               onClick={onContinue}
               className="bg-gradient-to-br from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700"
@@ -500,6 +502,7 @@ const ActionButtonsSection: React.FC<ActionButtonsSectionProps> = ({
               Great job! You've mastered this deck. Continue reviewing to maintain your knowledge.
             </p>
             <Button
+              data-testid="start-review-button"
               size="lg"
               onClick={onContinue}
               className="bg-gradient-to-br from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700"

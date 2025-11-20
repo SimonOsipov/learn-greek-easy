@@ -50,6 +50,7 @@ export const DeckCard: React.FC<DeckCardProps> = ({
 
   return (
     <Card
+      data-testid="deck-card"
       className={cardClassName}
       onClick={isClickable ? onClick : undefined}
       role={isClickable ? 'button' : 'article'}
@@ -66,12 +67,12 @@ export const DeckCard: React.FC<DeckCardProps> = ({
       }
       aria-label={`${titleGreek} - ${title} deck, ${level} level, ${completionPercent}% completed${isLocked ? ', locked' : ''}`}
     >
-      <CardHeader className="pb-3 flex-shrink-0">
+      <CardHeader data-testid="deck-card-header" className="pb-3 flex-shrink-0">
         {/* Title and Level Badge Row */}
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
             {/* Greek Title */}
-            <h3 className="truncate text-lg font-semibold text-gray-900">{titleGreek}</h3>
+            <h3 data-testid="deck-card-title" className="truncate text-lg font-semibold text-gray-900">{titleGreek}</h3>
             {/* English Subtitle */}
             <p className="truncate text-sm text-gray-500">{title}</p>
           </div>
@@ -99,7 +100,7 @@ export const DeckCard: React.FC<DeckCardProps> = ({
         </div>
       </CardHeader>
 
-      <CardContent className="pt-0 flex-1 flex flex-col justify-between">
+      <CardContent data-testid="deck-card-content" className="pt-0 flex-1 flex flex-col justify-between">
         <div>
           {/* Progress Bar - Always shown if showProgress is true */}
           {showProgress && (
@@ -122,7 +123,7 @@ export const DeckCard: React.FC<DeckCardProps> = ({
 
         {/* Stats Row */}
         {showStats && (
-          <div className="grid grid-cols-3 gap-2 border-t pt-3 text-center">
+          <div data-testid="deck-card-stats" className="grid grid-cols-3 gap-2 border-t pt-3 text-center">
             {/* Card Count */}
             <div>
               <p className="text-xs text-gray-500">Cards</p>

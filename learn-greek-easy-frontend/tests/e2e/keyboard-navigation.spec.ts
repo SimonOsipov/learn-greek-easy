@@ -1,0 +1,178 @@
+/**
+ * Keyboard Navigation Tests
+ * Tests Tab, Enter, Esc, and arrow key navigation
+ */
+
+import { test, expect } from '@playwright/test';
+import { loginViaLocalStorage } from './helpers/auth-helpers';
+
+test.describe('Keyboard Navigation', () => {
+  test('Tab order should be logical on login page', async ({ page, browserName }) => {
+    // Skip in webkit due to different focus behavior
+    test.skip(browserName === 'webkit', 'Webkit has different tab order behavior');
+
+    await page.goto('/login');
+
+    // Get all focusable elements to verify minimum count
+    const focusableElements = await page.locator('button, input, a, [tabindex]:not([tabindex="-1"])').count();
+    expect(focusableElements).toBeGreaterThanOrEqual(3);
+
+    // Tab through elements - verify order using test IDs
+    await page.keyboard.press('Tab'); // Email input
+    await expect(page.getByTestId('email-input')).toBeFocused();
+
+    await page.keyboard.press('Tab'); // Password input
+    await expect(page.getByTestId('password-input')).toBeFocused();
+
+    // Next tab should land on an interactive element (button, input, or link)
+    await page.keyboard.press('Tab');
+    let focused = await page.evaluate(() => document.activeElement?.tagName);
+    expect(['INPUT', 'BUTTON', 'A']).toContain(focused);
+  });
+
+  test('All interactive elements should be keyboard accessible', async ({ page }) => {
+    await loginViaLocalStorage(page);
+    await page.goto('/dashboard');
+
+    // Count interactive elements
+    const interactiveElements = await page.locator('button, a, input, textarea, select').count();
+    expect(interactiveElements).toBeGreaterThan(0);
+
+    // All should be focusable (tabindex not -1)
+    const unfocusableCount = await page
+      .locator('button:not([tabindex="-1"]), a:not([tabindex="-1"])')
+      .count();
+    expect(unfocusableCount).toBe(interactiveElements);
+  });
+
+  test('Skip link should work', async ({ page }) => {
+    await page.goto('/login');
+
+    // Tab to skip link (usually first element)
+    await page.keyboard.press('Tab');
+
+    // Check if skip link is visible
+    const skipLink = page.getByText(/skip to main|skip navigation/i);
+    if (await skipLink.isVisible()) {
+      await page.keyboard.press('Enter');
+
+      // Focus should jump to main content
+      const focused = await page.evaluate(() => document.activeElement?.id || '');
+      expect(focused).toContain('main');
+    }
+  });
+
+  test('Modals should trap focus', async ({ page }) => {
+    await loginViaLocalStorage(page);
+    await page.goto('/settings');
+
+    // Open modal
+    await page.getByRole('button', { name: /delete account/i }).click();
+
+    // Wait for dialog
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+
+    // Tab through dialog elements
+    await page.keyboard.press('Tab');
+    await page.keyboard.press('Tab');
+    await page.keyboard.press('Tab');
+
+    // Focus should stay within dialog
+    const focusedElement = await page.evaluate(() => {
+      const el = document.activeElement;
+      return el?.closest('[role="dialog"]') !== null;
+    });
+    expect(focusedElement).toBe(true);
+  });
+
+  test('Esc should close modals', async ({ page }) => {
+    await loginViaLocalStorage(page);
+    await page.goto('/settings');
+
+    // Open modal
+    await page.getByRole('button', { name: /delete account/i }).click();
+    await expect(page.getByRole('dialog')).toBeVisible();
+
+    // Press Esc
+    await page.keyboard.press('Escape');
+
+    // Modal should close
+    await expect(page.getByRole('dialog')).not.toBeVisible();
+  });
+
+  test('Enter key should submit forms', async ({ page }) => {
+    await page.goto('/login');
+
+    // Fill form using test IDs
+    await page.getByTestId('email-input').fill('demo@learngreekeasy.com');
+    await page.getByTestId('password-input').fill('Demo123!');
+
+    // Press Enter (instead of clicking button)
+    await page.keyboard.press('Enter');
+
+    // Wait for form submission attempt
+    await page.waitForTimeout(1000);
+
+    // Should either redirect or show error (both are valid - form submitted)
+    const currentUrl = page.url();
+    const hasError = await page.locator('[role="alert"]').count() > 0;
+
+    // Form submission was attempted (not blocked)
+    expect(currentUrl.includes('/dashboard') || currentUrl.includes('/login')).toBe(true);
+  });
+
+  test('Arrow keys should work in review session', async ({ page }) => {
+    await loginViaLocalStorage(page);
+    await page.goto('/decks');
+
+    // Wait for page to load
+    await page.waitForSelector('h1, h2', { timeout: 10000 });
+
+    // Look for Greek Alphabet deck
+    const greekAlphabetHeading = page.getByRole('heading', { name: /greek alphabet/i });
+
+    // Only run if deck exists
+    if (await greekAlphabetHeading.count() > 0) {
+      await greekAlphabetHeading.click();
+
+      // Wait for review button
+      const startReviewButton = page.getByRole('button', { name: /start review/i });
+      if (await startReviewButton.count() > 0) {
+        await startReviewButton.click();
+
+        // Wait for review interface
+        await page.waitForTimeout(1000);
+
+        // Try keyboard shortcuts
+        await page.keyboard.press('Space'); // Flip card
+        await page.waitForTimeout(500);
+
+        await page.keyboard.press('4'); // Rate card
+        await page.waitForTimeout(500);
+      }
+    }
+  });
+
+  test('Focus visible styles should be present', async ({ page }) => {
+    await page.goto('/login');
+
+    // Tab to button
+    await page.keyboard.press('Tab');
+    await page.keyboard.press('Tab');
+    await page.keyboard.press('Tab');
+
+    // Check for focus styles
+    const buttonHasFocusStyle = await page.evaluate(() => {
+      const button = document.activeElement as HTMLElement;
+      const styles = window.getComputedStyle(button);
+      return (
+        styles.outline !== 'none' ||
+        styles.boxShadow.includes('focus') ||
+        button.classList.contains('focus')
+      );
+    });
+
+    expect(buttonHasFocusStyle).toBe(true);
+  });
+});

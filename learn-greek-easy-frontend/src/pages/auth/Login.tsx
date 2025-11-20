@@ -97,16 +97,20 @@ export const Login: React.FC = () => {
 
   return (
     <AuthLayout>
-      <Card className="shadow-xl">
+      <Card className="shadow-xl" data-testid="login-card">
         <CardHeader className="space-y-1 text-center">
           <div className="mb-4">
             <span className="text-4xl">🏛️</span>
           </div>
-          <CardTitle className="text-2xl font-bold">Καλώς ήρθατε!</CardTitle>
-          <CardDescription>Welcome back! Sign in to continue learning Greek</CardDescription>
+          <CardTitle className="text-2xl font-bold" data-testid="login-title">
+            Καλώς ήρθατε!
+          </CardTitle>
+          <CardDescription data-testid="login-description">
+            Welcome back, sign in to continue learning Greek
+          </CardDescription>
         </CardHeader>
 
-        <form onSubmit={handleSubmit(onSubmit)}>
+        <form onSubmit={handleSubmit(onSubmit)} data-testid="login-form">
           <CardContent className="space-y-4">
             {/* Form-level error display (API errors, network errors) */}
             {formError && (
@@ -123,6 +127,7 @@ export const Login: React.FC = () => {
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
+                data-testid="email-input"
                 type="email"
                 placeholder="your@email.com"
                 autoComplete="email"
@@ -144,6 +149,7 @@ export const Login: React.FC = () => {
               <div className="relative">
                 <Input
                   id="password"
+                  data-testid="password-input"
                   type={showPassword ? 'text' : 'password'}
                   placeholder="Enter your password"
                   autoComplete="current-password"
@@ -198,6 +204,7 @@ export const Login: React.FC = () => {
 
           <CardFooter className="flex flex-col space-y-4">
             <SubmitButton
+              data-testid="login-submit"
               loading={isFormDisabled}
               loadingText="Signing in..."
               className="w-full bg-gradient-to-br from-[#667eea] to-[#764ba2] text-white hover:opacity-90"
@@ -237,7 +244,11 @@ export const Login: React.FC = () => {
 
             <p className="text-center text-sm text-muted-foreground">
               Don't have an account?{' '}
-              <Link to="/register" className="font-medium text-primary hover:underline">
+              <Link
+                to="/register"
+                data-testid="register-link"
+                className="font-medium text-primary hover:underline"
+              >
                 Sign up for free
               </Link>
             </p>

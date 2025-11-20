@@ -1,0 +1,112 @@
+/**
+ * Test Setup File
+ * Runs before each test file to configure test environment
+ */
+
+// Ensure localStorage exists BEFORE any other imports
+// This must run before Zustand stores are imported
+// Always use our mock for consistent behavior across tests
+class LocalStorageMock implements Storage {
+  private store: Map<string, string> = new Map();
+
+  getItem(key: string): string | null {
+    return this.store.get(key) || null;
+  }
+
+  setItem(key: string, value: string): void {
+    this.store.set(key, String(value));
+  }
+
+  removeItem(key: string): void {
+    this.store.delete(key);
+  }
+
+  clear(): void {
+    this.store.clear();
+  }
+
+  get length(): number {
+    return this.store.size;
+  }
+
+  key(index: number): string | null {
+    const keys = Array.from(this.store.keys());
+    return keys[index] || null;
+  }
+}
+
+const localStorageMock = new LocalStorageMock();
+const sessionStorageMock = new LocalStorageMock();
+
+// Assign to all possible global references
+(globalThis as any).localStorage = localStorageMock;
+(globalThis as any).sessionStorage = sessionStorageMock;
+if (typeof window !== 'undefined') {
+  (window as any).localStorage = localStorageMock;
+  (window as any).sessionStorage = sessionStorageMock;
+}
+if (typeof global !== 'undefined') {
+  (global as any).localStorage = localStorageMock;
+  (global as any).sessionStorage = sessionStorageMock;
+}
+
+import '@testing-library/jest-dom';
+import { cleanup } from '@testing-library/react';
+import { afterEach, beforeAll, vi } from 'vitest';
+
+// Cleanup after each test (remove rendered components)
+afterEach(() => {
+  cleanup();
+  // Clear localStorage and sessionStorage after each test
+  if (typeof localStorage !== 'undefined') {
+    localStorage.clear();
+  }
+  if (typeof sessionStorage !== 'undefined') {
+    sessionStorage.clear();
+  }
+});
+
+// Mock browser APIs not available in test environment
+beforeAll(() => {
+  // Mock window.matchMedia (for responsive hooks)
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: vi.fn().mockImplementation((query) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: vi.fn(), // deprecated
+      removeListener: vi.fn(), // deprecated
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  });
+
+  // Mock IntersectionObserver (for lazy loading)
+  global.IntersectionObserver = class IntersectionObserver {
+    constructor() {}
+    disconnect() {}
+    observe() {}
+    takeRecords() {
+      return [];
+    }
+    unobserve() {}
+  } as any;
+
+  // Mock ResizeObserver (for chart components)
+  global.ResizeObserver = class ResizeObserver {
+    constructor() {}
+    disconnect() {}
+    observe() {}
+    unobserve() {}
+  } as any;
+
+  // Mock scrollTo
+  window.scrollTo = vi.fn();
+
+  // Suppress console errors in tests (reduce noise)
+  // Comment out if debugging specific console errors
+  // global.console.error = vi.fn();
+  // global.console.warn = vi.fn();
+});

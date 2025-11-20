@@ -2,13 +2,49 @@ import type { User, RegisterData, AuthResponse, AuthError } from '@/types/auth';
 
 import { mockUsers } from './mockData';
 
+/**
+ * Mock Authentication API for Development & Testing
+ *
+ * TEST MODE BEHAVIOR:
+ * - When window.playwright is true or NODE_ENV is 'test', the API accepts
+ *   properly formatted mock tokens without requiring them to be pre-registered.
+ * - This allows E2E tests to use addInitScript() to inject auth state.
+ * - Production builds never trigger test mode (window.playwright is undefined).
+ *
+ * PRODUCTION BEHAVIOR:
+ * - This entire file is excluded from production builds via Vite tree-shaking.
+ * - Production uses real backend API instead.
+ */
+
+declare global {
+  interface Window {
+    playwright?: boolean;
+  }
+}
+
 class MockAuthAPI {
   private users = [...mockUsers];
   private tokens = new Map<string, { userId: string; expiresAt: Date }>();
 
   // Simulate network delay
   private async delay(ms: number = 1000): Promise<void> {
+    // Skip delays in test mode for faster test execution
+    if (this.isTestMode()) {
+      return Promise.resolve();
+    }
     return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  /**
+   * Check if running in test mode (Playwright E2E tests)
+   */
+  private isTestMode(): boolean {
+    return (
+      typeof window !== 'undefined' &&
+      (window.playwright === true ||
+       process.env.NODE_ENV === 'test' ||
+       import.meta.env.VITE_TEST_MODE === 'true')
+    );
   }
 
   // Generate mock JWT token
@@ -101,13 +137,42 @@ class MockAuthAPI {
   async verifyToken(token: string): Promise<User | null> {
     await this.delay(500);
 
+    // In test mode, trust properly formatted mock tokens
+    if (this.isTestMode()) {
+      try {
+        // Token format: mock.{base64(userId)}.{timestamp}.{random}
+        const parts = token.split('.');
+        if (parts.length >= 4 && parts[0] === 'mock') {
+          // Decode userId from token
+          const userId = atob(parts[1]);
+          const user = this.users.find((u) => u.id === userId);
+
+          if (user) {
+            const { password: _, ...userWithoutPassword } = user;
+            return userWithoutPassword as User;
+          }
+        }
+      } catch (e) {
+        console.warn('[MockAuthAPI] Failed to verify test token:', e);
+        // Fall through to normal validation
+      }
+    }
+
+    // Normal token validation (existing code)
     const tokenData = this.tokens.get(token);
-    if (!tokenData || tokenData.expiresAt < new Date()) {
+    if (!tokenData) {
+      return null;
+    }
+
+    if (new Date() > tokenData.expiresAt) {
+      this.tokens.delete(token);
       return null;
     }
 
     const user = this.users.find((u) => u.id === tokenData.userId);
-    if (!user) return null;
+    if (!user) {
+      return null;
+    }
 
     const { password: _, ...userWithoutPassword } = user;
     return userWithoutPassword as User;

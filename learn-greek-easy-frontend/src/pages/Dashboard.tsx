@@ -142,7 +142,7 @@ export const Dashboard: React.FC = () => {
           <h2 className="text-lg font-semibold text-text-primary">Active Decks</h2>
           <button className="text-sm text-primary hover:underline">View all decks →</button>
         </div>
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
           {decks.slice(0, 2).map((deck) => (
             <DeckCard key={deck.id} deck={deck} onContinue={() => handleContinueDeck(deck.id)} />
           ))}

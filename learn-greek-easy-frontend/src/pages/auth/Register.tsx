@@ -138,16 +138,20 @@ export const Register: React.FC = () => {
 
   return (
     <AuthLayout>
-      <Card className="shadow-xl">
+      <Card className="shadow-xl" data-testid="register-card">
         <CardHeader className="space-y-1 text-center">
           <div className="mb-4">
             <span className="text-4xl">📚</span>
           </div>
-          <CardTitle className="text-2xl font-bold">Create your account</CardTitle>
-          <CardDescription>Start your Greek learning journey today</CardDescription>
+          <CardTitle className="text-2xl font-bold" data-testid="register-title">
+            Create your account
+          </CardTitle>
+          <CardDescription data-testid="register-description">
+            Start your Greek learning journey today
+          </CardDescription>
         </CardHeader>
 
-        <form onSubmit={handleSubmit(onSubmit)}>
+        <form onSubmit={handleSubmit(onSubmit)} data-testid="register-form">
           <CardContent className="space-y-4">
             {/* Form-level error display (API errors, network errors) */}
             {formError && (
@@ -164,6 +168,7 @@ export const Register: React.FC = () => {
               <Label htmlFor="name">Full Name</Label>
               <Input
                 id="name"
+                data-testid="name-input"
                 type="text"
                 placeholder="John Smith"
                 autoComplete="name"
@@ -184,6 +189,7 @@ export const Register: React.FC = () => {
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
+                data-testid="email-input"
                 type="email"
                 placeholder="your@email.com"
                 autoComplete="email"
@@ -205,6 +211,7 @@ export const Register: React.FC = () => {
               <div className="relative">
                 <Input
                   id="password"
+                  data-testid="password-input"
                   type={showPassword ? 'text' : 'password'}
                   placeholder="Create a strong password"
                   autoComplete="new-password"
@@ -257,6 +264,7 @@ export const Register: React.FC = () => {
               <div className="relative">
                 <Input
                   id="confirmPassword"
+                  data-testid="confirm-password-input"
                   type={showConfirmPassword ? 'text' : 'password'}
                   placeholder="Confirm your password"
                   autoComplete="new-password"
@@ -318,6 +326,7 @@ export const Register: React.FC = () => {
 
           <CardFooter className="flex flex-col space-y-4">
             <SubmitButton
+              data-testid="register-submit"
               loading={isFormDisabled}
               loadingText="Creating Account..."
               className="w-full bg-gradient-to-br from-[#667eea] to-[#764ba2] text-white hover:opacity-90"
@@ -357,7 +366,11 @@ export const Register: React.FC = () => {
 
             <p className="text-center text-sm text-muted-foreground">
               Already have an account?{' '}
-              <Link to="/login" className="font-medium text-primary hover:underline">
+              <Link
+                to="/login"
+                data-testid="login-link"
+                className="font-medium text-primary hover:underline"
+              >
                 Sign in
               </Link>
             </p>
