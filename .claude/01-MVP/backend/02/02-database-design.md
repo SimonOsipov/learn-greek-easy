@@ -230,500 +230,119 @@ async def get_db() -> AsyncSession:
 
 ---
 
-### 02.02: Create Base Model & Mixins
-**Duration**: 20 minutes
+### 02.02: Define Database Models
+**Status**: ✅ COMPLETED (2025-11-20)
+**Duration**: ~2 hours (estimated 2.5-3 hours)
+**Plan**: [02.02-database-models-plan.md](./02.02-database-models-plan.md)
 
 **Deliverables**:
-- `src/db/base.py` - Declarative base and common mixins
+- ✅ `src/db/models.py` - All 8 SQLAlchemy 2.0 models with relationships
+- ✅ `src/db/__init__.py` - Updated with model exports
+- ✅ `scripts/test_models.py` - Model verification suite
 
-**Implementation**:
+**Models Implemented**:
+- ✅ User, UserSettings, RefreshToken (User management)
+- ✅ Deck, Card (Content)
+- ✅ UserDeckProgress, CardStatistics, Review (Progress tracking)
+- ✅ 4 Enums: DeckLevel, CardDifficulty, CardStatus, ReviewRating
 
-```python
-# src/db/base.py
-from datetime import datetime
-from sqlalchemy import DateTime
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-from sqlalchemy.sql import func
-
-class Base(DeclarativeBase):
-    """Base class for all SQLAlchemy models."""
-    pass
-
-class TimestampMixin:
-    """Mixin for created_at and updated_at columns."""
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        server_default=func.now(),
-        nullable=False,
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        server_default=func.now(),
-        onupdate=func.now(),
-        nullable=False,
-    )
-```
+**Verification**:
+- ✅ All models import successfully
+- ✅ All relationships configured with `lazy="selectin"`
+- ✅ Unique constraints on (user_id, deck_id) and (user_id, card_id)
+- ✅ SM-2 algorithm fields present in CardStatistics
+- ✅ Backend server starts with models loaded
+- ✅ All tests passed (8 models, 4 enums verified)
 
 ---
 
-### 02.03: Define PostgreSQL Enums
-**Duration**: 15 minutes
+### 02.03: PostgreSQL Enums & Alembic Configuration
+**Status**: ✅ COMPLETED (2025-11-21)
+**Duration**: ~60 minutes
+**Plan**: [02.03-postgresql-enums-alembic-plan.md](./02.03-postgresql-enums-alembic-plan.md)
 
 **Deliverables**:
-- `src/models/enums.py` - Python enums mapped to PostgreSQL enums
+- ✅ `alembic.ini` - Alembic configuration with UTF-8 encoding
+- ✅ `alembic/env.py` - Configured for SQLAlchemy 2.0 with sync engine
+- ✅ `scripts/verify_alembic_config.py` - Configuration verification script
+- ✅ `.gitignore` - Updated with Alembic cache entries
 
-**Implementation**:
+**Key Accomplishments**:
+- ✅ Alembic initialized with sync engine (psycopg2-binary)
+- ✅ UTF-8 encoding configured for Greek text support
+- ✅ All 8 models detected by Alembic metadata
+- ✅ All 4 enums detected (DeckLevel: 6, CardDifficulty: 3, CardStatus: 4, ReviewRating: 6)
+- ✅ `compare_type=True` enabled for enum change detection
+- ✅ Database URL from `settings.database_url_sync`
+- ✅ Verification script passes all checks
+- ✅ Ready for initial migration generation
 
+**Enums Defined** (in `src/db/models.py`):
 ```python
-# src/models/enums.py
-import enum
-
 class DeckLevel(str, enum.Enum):
     A1 = "A1"
     A2 = "A2"
     B1 = "B1"
     B2 = "B2"
+    C1 = "C1"
+    C2 = "C2"
 
-class DeckCategory(str, enum.Enum):
-    VOCABULARY = "vocabulary"
-    GRAMMAR = "grammar"
-    PHRASES = "phrases"
-    CULTURE = "culture"
+class CardDifficulty(str, enum.Enum):
+    EASY = "easy"
+    MEDIUM = "medium"
+    HARD = "hard"
 
-class DeckStatus(str, enum.Enum):
-    NOT_STARTED = "not_started"
-    IN_PROGRESS = "in_progress"
-    COMPLETED = "completed"
-
-class CardState(str, enum.Enum):
+class CardStatus(str, enum.Enum):
     NEW = "new"
     LEARNING = "learning"
     REVIEW = "review"
-    RELEARNING = "relearning"
     MASTERED = "mastered"
 
-class ReviewRating(str, enum.Enum):
-    AGAIN = "again"
-    HARD = "hard"
-    GOOD = "good"
-    EASY = "easy"
-
-class PartOfSpeech(str, enum.Enum):
-    NOUN = "noun"
-    VERB = "verb"
-    ADJECTIVE = "adjective"
-    ADVERB = "adverb"
-    PHRASE = "phrase"
+class ReviewRating(int, enum.Enum):
+    AGAIN = 1
+    HARD = 2
+    GOOD = 3
+    EASY = 4
 ```
 
 ---
 
-### 02.04: Implement User Model
-**Duration**: 25 minutes
+### 02.04: Initial Migration
+**Status**: ✅ COMPLETED (2025-11-21)
+**Duration**: ~60 minutes
+**Plan**: [02.04-initial-migration-plan.md](./02.04-initial-migration-plan.md)
 
 **Deliverables**:
-- `src/models/user.py` - User, UserSettings, RefreshToken models
+- ✅ `alembic/versions/20251121_1629_8e2ce3fe8e88_initial_schema_with_users_decks_cards_.py` - Initial migration (193 lines)
+- ✅ `scripts/verify_migration.py` - Migration verification script (205 lines)
 
-**Implementation**:
+**Key Accomplishments**:
+- ✅ Migration generated with all 8 tables, 3 enums, indexes, and constraints
+- ✅ **Composite index** added for efficient due cards queries: `ix_card_statistics_user_due_cards` (user_id, next_review_date, status)
+- ✅ UUID primary keys with `server_default=uuid_generate_v4()`
+- ✅ All foreign keys with CASCADE delete behavior
+- ✅ Unique constraints: `uq_user_card` (user_id, card_id), `uq_user_deck` (user_id, deck_id)
+- ✅ 24+ indexes including critical SRS performance indexes
+- ✅ Rollback tested successfully (downgrade/upgrade)
+- ✅ Verification script passes all checks
+- ✅ Database schema fully operational
 
-```python
-# src/models/user.py
-from sqlalchemy import String, Boolean, DateTime, Integer, ForeignKey
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-from src.db.base import Base, TimestampMixin
-from typing import Optional, List
-from datetime import datetime
-
-class User(Base, TimestampMixin):
-    __tablename__ = "users"
-
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    email: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
-    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
-    name: Mapped[str] = mapped_column(String(100), nullable=False)
-    avatar_url: Mapped[Optional[str]] = mapped_column(String(500))
-
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-    is_premium: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    last_login_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
-
-    # Relationships
-    settings: Mapped["UserSettings"] = relationship(back_populates="user", uselist=False)
-    deck_progress: Mapped[List["UserDeckProgress"]] = relationship(back_populates="user")
-    card_stats: Mapped[List["CardStatistics"]] = relationship(back_populates="user")
-    reviews: Mapped[List["Review"]] = relationship(back_populates="user")
-    refresh_tokens: Mapped[List["RefreshToken"]] = relationship(back_populates="user")
-
-class UserSettings(Base, TimestampMixin):
-    __tablename__ = "user_settings"
-
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), unique=True)
-
-    language: Mapped[str] = mapped_column(String(2), default="en", nullable=False)
-    daily_goal: Mapped[int] = mapped_column(Integer, default=20, nullable=False)
-    notifications_enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-    sound_enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-    theme: Mapped[str] = mapped_column(String(10), default="system", nullable=False)
-
-    # Relationships
-    user: Mapped["User"] = relationship(back_populates="settings")
-
-class RefreshToken(Base, TimestampMixin):
-    __tablename__ = "refresh_tokens"
-
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
-    token_hash: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
-    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    revoked: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    revoked_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
-
-    # Relationships
-    user: Mapped["User"] = relationship(back_populates="refresh_tokens")
-```
-
-**Indexes**:
-- `users.email` (unique)
-- `refresh_tokens.user_id`
-- `refresh_tokens.token_hash` (unique)
-
----
-
-### 02.05: Implement Deck & Card Models
-**Duration**: 35 minutes
-
-**Deliverables**:
-- `src/models/deck.py` - Deck model
-- `src/models/card.py` - Card model
-
-**Implementation**:
-
-```python
-# src/models/deck.py
-from sqlalchemy import String, Integer, Boolean, Text, Enum as SQLEnum
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-from src.db.base import Base, TimestampMixin
-from src.models.enums import DeckLevel, DeckCategory
-from typing import Optional, List
-
-class Deck(Base, TimestampMixin):
-    __tablename__ = "decks"
-
-    id: Mapped[str] = mapped_column(String(50), primary_key=True)  # e.g., "deck-a1-basics"
-    title: Mapped[str] = mapped_column(String(100), nullable=False)
-    title_greek: Mapped[str] = mapped_column(String(100), nullable=False)
-    description: Mapped[str] = mapped_column(Text, nullable=False)
-
-    level: Mapped[DeckLevel] = mapped_column(SQLEnum(DeckLevel), nullable=False, index=True)
-    category: Mapped[DeckCategory] = mapped_column(SQLEnum(DeckCategory), nullable=False, index=True)
-
-    card_count: Mapped[int] = mapped_column(Integer, nullable=False)
-    estimated_time: Mapped[int] = mapped_column(Integer, nullable=False)  # minutes
-
-    is_premium: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, index=True)
-    thumbnail_url: Mapped[Optional[str]] = mapped_column(String(500))
-    created_by: Mapped[str] = mapped_column(String(100), default="Learn Greek Easy")
-
-    # Relationships
-    cards: Mapped[List["Card"]] = relationship(back_populates="deck", cascade="all, delete-orphan")
-    user_progress: Mapped[List["UserDeckProgress"]] = relationship(back_populates="deck")
-
-# src/models/card.py
-from sqlalchemy import String, Integer, Text, ForeignKey, JSON, Enum as SQLEnum
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-from src.db.base import Base, TimestampMixin
-from src.models.enums import PartOfSpeech
-from typing import Optional, List, Dict, Any
-
-class Card(Base, TimestampMixin):
-    __tablename__ = "cards"
-
-    id: Mapped[str] = mapped_column(String(50), primary_key=True)  # e.g., "card-a1-001"
-    deck_id: Mapped[str] = mapped_column(ForeignKey("decks.id", ondelete="CASCADE"), index=True)
-
-    front: Mapped[str] = mapped_column(Text, nullable=False)  # Greek word/phrase
-    back: Mapped[str] = mapped_column(Text, nullable=False)  # English translation
-    pronunciation: Mapped[Optional[str]] = mapped_column(String(200))
-    example: Mapped[Optional[str]] = mapped_column(Text)  # Greek example sentence
-    example_translation: Mapped[Optional[str]] = mapped_column(Text)
-
-    part_of_speech: Mapped[Optional[PartOfSpeech]] = mapped_column(SQLEnum(PartOfSpeech))
-    metadata: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON)  # noun_data, verb_data
-
-    order_index: Mapped[int] = mapped_column(Integer, nullable=False)  # Order in deck
-
-    # Relationships
-    deck: Mapped["Deck"] = relationship(back_populates="cards")
-    statistics: Mapped[List["CardStatistics"]] = relationship(back_populates="card")
-    reviews: Mapped[List["Review"]] = relationship(back_populates="card")
-```
-
-**Indexes**:
-- `decks.level`
-- `decks.category`
-- `decks.is_premium`
-- `cards.deck_id`
-- Composite: `cards(deck_id, order_index)`
-
----
-
-### 02.06: Implement Progress Tracking Models
-**Duration**: 40 minutes
-
-**Deliverables**:
-- `src/models/progress.py` - UserDeckProgress, CardStatistics models
-
-**Implementation**:
-
-```python
-# src/models/progress.py
-from sqlalchemy import String, Integer, Float, ForeignKey, DateTime, Enum as SQLEnum, UniqueConstraint
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-from src.db.base import Base, TimestampMixin
-from src.models.enums import DeckStatus, CardState
-from typing import Optional
-from datetime import datetime
-
-class UserDeckProgress(Base, TimestampMixin):
-    __tablename__ = "user_deck_progress"
-    __table_args__ = (
-        UniqueConstraint("user_id", "deck_id", name="uq_user_deck"),
-    )
-
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
-    deck_id: Mapped[str] = mapped_column(ForeignKey("decks.id", ondelete="CASCADE"), index=True)
-
-    status: Mapped[DeckStatus] = mapped_column(
-        SQLEnum(DeckStatus),
-        default=DeckStatus.NOT_STARTED,
-        nullable=False
-    )
-
-    # Card distribution
-    cards_new: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    cards_learning: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    cards_review: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    cards_mastered: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    due_today: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-
-    # Progress metrics
-    streak: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    total_time_spent: Mapped[int] = mapped_column(Integer, default=0, nullable=False)  # seconds
-    accuracy: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
-
-    # Timestamps
-    last_studied_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
-    started_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
-    completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
-
-    # Relationships
-    user: Mapped["User"] = relationship(back_populates="deck_progress")
-    deck: Mapped["Deck"] = relationship(back_populates="user_progress")
-
-class CardStatistics(Base, TimestampMixin):
-    __tablename__ = "card_statistics"
-    __table_args__ = (
-        UniqueConstraint("user_id", "card_id", name="uq_user_card"),
-    )
-
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
-    card_id: Mapped[str] = mapped_column(ForeignKey("cards.id", ondelete="CASCADE"), index=True)
-    deck_id: Mapped[str] = mapped_column(ForeignKey("decks.id", ondelete="CASCADE"), index=True)
-
-    # SM-2 Algorithm Data
-    state: Mapped[CardState] = mapped_column(
-        SQLEnum(CardState),
-        default=CardState.NEW,
-        nullable=False,
-        index=True
-    )
-    interval: Mapped[int] = mapped_column(Integer, default=0, nullable=False)  # days
-    ease_factor: Mapped[float] = mapped_column(Float, default=2.5, nullable=False)
-    repetitions: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    step: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-
-    due_date: Mapped[Optional[datetime]] = mapped_column(
-        DateTime(timezone=True),
-        index=True
-    )  # Critical for query performance
-    last_reviewed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
-
-    # Statistics
-    review_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    success_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    failure_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    success_rate: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
-
-    # Relationships
-    user: Mapped["User"] = relationship(back_populates="card_stats")
-    card: Mapped["Card"] = relationship(back_populates="statistics")
-```
+**PostgreSQL Enums Created**:
+- `decklevel`: A1, A2, B1, B2, C1, C2
+- `carddifficulty`: easy, medium, hard
+- `cardstatus`: new, learning, review, mastered
 
 **Critical Indexes**:
-- Composite: `card_statistics(user_id, due_date)` - For "due cards" query
-- Composite: `card_statistics(user_id, deck_id, state)` - For deck progress queries
-- `user_deck_progress(user_id, deck_id)` (unique)
+- `ix_card_statistics_next_review_date` - For SRS review queries
+- `ix_card_statistics_user_due_cards` - Composite (user_id, next_review_date, status)
+- `ix_users_email` - Unique index for authentication
+- `ix_refresh_tokens_token` - Unique index for JWT tokens
 
 ---
 
-### 02.07: Implement Review Model
-**Duration**: 20 minutes
-
-**Deliverables**:
-- `src/models/review.py` - Review history model
-
-**Implementation**:
-
-```python
-# src/models/review.py
-from sqlalchemy import String, Integer, Float, ForeignKey, DateTime, Enum as SQLEnum
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-from src.db.base import Base, TimestampMixin
-from src.models.enums import ReviewRating, CardState
-from datetime import datetime
-
-class Review(Base, TimestampMixin):
-    __tablename__ = "reviews"
-
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
-    card_id: Mapped[str] = mapped_column(ForeignKey("cards.id", ondelete="CASCADE"), index=True)
-    deck_id: Mapped[str] = mapped_column(ForeignKey("decks.id", ondelete="CASCADE"), index=True)
-
-    session_id: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
-    rating: Mapped[ReviewRating] = mapped_column(SQLEnum(ReviewRating), nullable=False)
-    time_spent: Mapped[float] = mapped_column(Float, nullable=False)  # seconds
-
-    # Snapshot of card state after review
-    ease_factor_after: Mapped[float] = mapped_column(Float, nullable=False)
-    interval_after: Mapped[int] = mapped_column(Integer, nullable=False)
-    state_after: Mapped[CardState] = mapped_column(SQLEnum(CardState), nullable=False)
-
-    reviewed_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=False,
-        index=True
-    )
-
-    # Relationships
-    user: Mapped["User"] = relationship(back_populates="reviews")
-    card: Mapped["Card"] = relationship(back_populates="reviews")
-```
-
-**Indexes**:
-- `reviews(user_id, reviewed_at)` - For history queries
-- `reviews(session_id)` - For session analytics
-- `reviews(deck_id)` - For deck-level statistics
-
----
-
-### 02.08: Create Alembic Configuration
-**Duration**: 20 minutes
-
-**Deliverables**:
-- `alembic/env.py` - Configured for async SQLAlchemy 2.0
-- `alembic.ini` - Migration settings
-
-**Implementation**:
-
-```python
-# alembic/env.py
-from logging.config import fileConfig
-from sqlalchemy import pool
-from sqlalchemy.ext.asyncio import async_engine_from_config
-from alembic import context
-from src.config import settings
-from src.db.base import Base
-
-# Import all models for Alembic to detect
-from src.models.user import User, UserSettings, RefreshToken
-from src.models.deck import Deck
-from src.models.card import Card
-from src.models.progress import UserDeckProgress, CardStatistics
-from src.models.review import Review
-
-config = context.config
-config.set_main_option("sqlalchemy.url", settings.database_url_sync)
-
-fileConfig(config.config_file_name)
-target_metadata = Base.metadata
-
-def run_migrations_offline() -> None:
-    url = config.get_main_option("sqlalchemy.url")
-    context.configure(
-        url=url,
-        target_metadata=target_metadata,
-        literal_binds=True,
-        dialect_opts={"paramstyle": "named"},
-    )
-    with context.begin_transaction():
-        context.run_migrations()
-
-async def run_migrations_online() -> None:
-    connectable = async_engine_from_config(
-        config.get_section(config.config_ini_section),
-        prefix="sqlalchemy.",
-        poolclass=pool.NullPool,
-    )
-    async with connectable.connect() as connection:
-        await connection.run_sync(do_run_migrations)
-    await connectable.dispose()
-
-def do_run_migrations(connection):
-    context.configure(connection=connection, target_metadata=target_metadata)
-    with context.begin_transaction():
-        context.run_migrations()
-
-if context.is_offline_mode():
-    run_migrations_offline()
-else:
-    import asyncio
-    asyncio.run(run_migrations_online())
-```
-
----
-
-### 02.09: Create Initial Migration
-**Duration**: 15 minutes
-
-**Deliverables**:
-- `alembic/versions/001_initial_schema.py` - Initial database schema
-
-**Commands**:
-
-```bash
-# Generate initial migration
-alembic revision --autogenerate -m "Initial schema with users, decks, cards, progress, reviews"
-
-# Review generated migration
-# Manually add indexes and constraints if needed
-
-# Apply migration
-alembic upgrade head
-```
-
-**Verification**:
-
-```sql
--- Verify all tables created
-SELECT table_name FROM information_schema.tables
-WHERE table_schema = 'public'
-ORDER BY table_name;
-
--- Verify indexes
-SELECT indexname, indexdef
-FROM pg_indexes
-WHERE schemaname = 'public'
-ORDER BY tablename, indexname;
-```
-
----
-
-### 02.10: Create Pydantic Schemas
-**Duration**: 45 minutes
+### 02.05: Create Pydantic Schemas
+**Status**: ⏸️ NOT STARTED
+**Duration**: 45 minutes (estimated)
 
 **Deliverables**:
 - `src/schemas/user.py` - User request/response schemas
@@ -866,84 +485,6 @@ class CardStatisticsResponse(BaseModel):
 - Rating values constrained to enum
 - Time spent maximum 5 minutes per card
 - Daily goal 1-200 cards
-
----
-
-### 02.11: Database Helper Utilities
-**Duration**: 15 minutes
-
-**Deliverables**:
-- `src/db/utils.py` - Database utility functions
-
-**Implementation**:
-
-```python
-# src/db/utils.py
-from sqlalchemy import select, func
-from sqlalchemy.ext.asyncio import AsyncSession
-from src.models.card import Card
-from src.models.progress import CardStatistics
-from typing import List
-from datetime import datetime
-
-async def get_due_cards(
-    session: AsyncSession,
-    user_id: int,
-    deck_id: str,
-    limit: int = 100
-) -> List[Card]:
-    """Get cards due for review."""
-    stmt = (
-        select(Card)
-        .join(CardStatistics)
-        .where(
-            CardStatistics.user_id == user_id,
-            CardStatistics.deck_id == deck_id,
-            CardStatistics.due_date <= datetime.utcnow()
-        )
-        .limit(limit)
-    )
-    result = await session.execute(stmt)
-    return result.scalars().all()
-
-async def update_deck_progress_counts(
-    session: AsyncSession,
-    user_id: int,
-    deck_id: str
-) -> None:
-    """Recalculate deck progress card counts from card statistics."""
-    from src.models.progress import UserDeckProgress
-    from src.models.enums import CardState
-
-    # Count cards by state
-    stmt = (
-        select(
-            CardStatistics.state,
-            func.count(CardStatistics.id).label("count")
-        )
-        .where(
-            CardStatistics.user_id == user_id,
-            CardStatistics.deck_id == deck_id
-        )
-        .group_by(CardStatistics.state)
-    )
-    result = await session.execute(stmt)
-    counts = {row.state: row.count for row in result}
-
-    # Update progress
-    progress_stmt = select(UserDeckProgress).where(
-        UserDeckProgress.user_id == user_id,
-        UserDeckProgress.deck_id == deck_id
-    )
-    progress = (await session.execute(progress_stmt)).scalar_one()
-
-    progress.cards_new = counts.get(CardState.NEW, 0)
-    progress.cards_learning = counts.get(CardState.LEARNING, 0) + counts.get(CardState.RELEARNING, 0)
-    progress.cards_review = counts.get(CardState.REVIEW, 0)
-    progress.cards_mastered = counts.get(CardState.MASTERED, 0)
-
-    await session.commit()
-```
 
 ---
 
@@ -1224,21 +765,41 @@ After completing database design:
 
 **Estimated Total Duration**: 3-4 hours
 
-**Recommended Execution Order**:
-1. Sessions & Base (02.01-02.02) - 50 min
-2. Enums (02.03) - 15 min
-3. User models (02.04) - 25 min
-4. Deck & Card models (02.05) - 35 min
-5. Progress models (02.06) - 40 min
-6. Review model (02.07) - 20 min
-7. Alembic setup (02.08-02.09) - 35 min
-8. Pydantic schemas (02.10) - 45 min
-9. Utilities & testing (02.11) - 15 min
+**Actual Duration**: ~3 hours 50 minutes
+
+**Execution History**:
+1. ✅ Sessions & Base (02.01) - 50 min (COMPLETED 2025-11-20)
+2. ✅ Database Models (02.02) - 2 hours (COMPLETED 2025-11-20)
+3. ✅ Alembic Configuration (02.03) - 60 min (COMPLETED 2025-11-21)
+4. ✅ Initial Migration (02.04) - 60 min (COMPLETED 2025-11-21)
+5. ⏸️ Pydantic Schemas (02.05) - 45 min (NOT STARTED)
 
 ---
 
-**Document Version**: 1.0
+## Current Status Summary
+
+**Completed Tasks**:
+- ✅ 02.01: Database Connection & Session Management
+- ✅ 02.02: Define Database Models (8 models + 4 enums)
+- ✅ 02.03: PostgreSQL Enums & Alembic Configuration
+- ✅ 02.04: Initial Migration (database schema deployed)
+
+**Pending Tasks**:
+- ⏸️ 02.05: Create Pydantic Schemas (45 min estimated)
+
+**Database Status**: ✅ **FULLY OPERATIONAL**
+- All 8 tables created in PostgreSQL
+- 3 enum types deployed
+- 24+ indexes including composite SRS index
+- 9 foreign keys with CASCADE
+- Migration system fully functional
+
+**Next Step**: Implement Pydantic schemas for API request/response validation
+
+---
+
+**Document Version**: 2.0
 **Created**: 2025-11-20
-**Last Updated**: 2025-11-20
-**Status**: Ready for implementation
+**Last Updated**: 2025-11-21
+**Status**: 80% Complete (4/5 subtasks done)
 **Dependencies**: Task 01 Complete ✅

@@ -44,8 +44,8 @@ This document tracks all backend development tasks for the MVP.
 ---
 
 ### 2. Database Design & Schema Creation
-**Status**: 🔄 **IN PROGRESS** (Subtask 02.01 Complete)
-**Estimated Duration**: 3-4 hours
+**Status**: ✅ **COMPLETED** (2025-11-21)
+**Actual Duration**: 4 hours
 **Priority**: Critical Path
 **Dependencies**: Task 1
 
@@ -55,11 +55,52 @@ This document tracks all backend development tasks for the MVP.
   - Files: session.py, base.py, dependencies.py, __init__.py
   - PostgreSQL Docker container running
   - Backend server integrated with database
-- ⏸️ 02.02: Define Database Models (User, Deck, Card, Progress, Review)
-- ⏸️ 02.03: PostgreSQL Enums
-- ⏸️ 02.04: Alembic Configuration
-- ⏸️ 02.05: Initial Migration
-- ⏸️ 02.06: Pydantic Schemas
+- ✅ 02.02: Define Database Models (COMPLETED 2025-11-20)
+  - Duration: ~2 hours
+  - Plan: [02.02-database-models-plan.md](./02/02.02-database-models-plan.md)
+  - Files: models.py (498 lines, 8 models), __init__.py (exports), test_models.py
+  - Models: User, UserSettings, RefreshToken, Deck, Card, UserDeckProgress, CardStatistics, Review
+  - Enums: DeckLevel, CardDifficulty, CardStatus, ReviewRating
+  - All relationships configured with lazy="selectin" for async
+  - All tests passed (8 models, 4 enums verified)
+- ✅ 02.03: PostgreSQL Enums & Alembic Configuration (COMPLETED 2025-11-21)
+  - Duration: ~60 minutes
+  - Plan: [02.03-postgresql-enums-alembic-plan.md](./02/02.03-postgresql-enums-alembic-plan.md)
+  - Files: alembic.ini, alembic/env.py, scripts/verify_alembic_config.py, .gitignore
+  - Alembic initialized with sync engine configuration for SQLAlchemy 2.0
+  - UTF-8 encoding configured for Greek text support
+  - All 8 models detected by Alembic metadata
+  - All 4 enums (6 DeckLevel, 3 CardDifficulty, 4 CardStatus, 6 ReviewRating members) detected
+  - Verification script passes all checks
+  - Ready for initial migration generation
+- ✅ 02.04: Initial Migration (COMPLETED 2025-11-21)
+  - Duration: ~60 minutes
+  - Plan: [02.04-initial-migration-plan.md](./02/02.04-initial-migration-plan.md)
+  - Files: alembic/versions/20251121_1629_8e2ce3fe8e88_initial_schema_with_users_decks_cards_.py, scripts/verify_migration.py
+  - Migration generated with all 8 tables, 3 enums, indexes, and constraints
+  - Composite index added for efficient due cards queries (ix_card_statistics_user_due_cards)
+  - UUID primary keys with server_default=uuid_generate_v4()
+  - All foreign keys with CASCADE delete behavior
+  - Unique constraints on (user_id, card_id) and (user_id, deck_id)
+  - Rollback tested successfully
+  - Verification script passes all checks
+  - Database schema fully operational
+- ✅ 02.05: Pydantic Schemas (COMPLETED 2025-11-21)
+  - Duration: ~45 minutes
+  - Plan: [02.05-pydantic-schemas-plan.md](./02/02.05-pydantic-schemas-plan.md)
+  - Files: user.py, deck.py, card.py, progress.py, review.py, __init__.py
+  - 35+ schemas created across 5 domain files
+  - User schemas: UserCreate, UserLogin, UserUpdate, UserResponse, UserProfileResponse, UserSettingsUpdate, UserSettingsResponse, TokenResponse, TokenRefresh, TokenPayload
+  - Deck schemas: DeckCreate, DeckUpdate, DeckResponse, DeckWithProgressResponse, DeckListResponse
+  - Card schemas: CardCreate, CardUpdate, CardResponse, CardStudyResponse, CardStudyResultResponse, CardWithStatisticsResponse
+  - Progress schemas: UserDeckProgressResponse, CardStatisticsResponse, ProgressSummaryResponse, StudySessionStatsResponse
+  - Review schemas: ReviewSubmit, ReviewResponse, ReviewHistoryResponse, BulkReviewSubmit, BulkReviewResponse
+  - All validation rules implemented (email, password strength, review ratings, time limits, easiness factor)
+  - Pydantic v2 syntax with ConfigDict, Field validators, and forward references
+  - ORM conversion tested successfully with model_validate()
+  - All schemas exported from __init__.py
+  - Field validation tests passed (17/17)
+  - ORM conversion tests passed (5/5)
 
 **Subtasks**:
 - 02.01: Design database schema (ERD)
@@ -832,8 +873,8 @@ app.add_middleware(
 
 ---
 
-**Last Updated**: 2025-11-20
-**Document Version**: 1.3
-**Status**: Task 1 Complete, Task 2 In Progress (Subtask 02.01 Complete)
-**Backend Progress**: Task 01 ✅ | Task 02.01 ✅ (Database connection established)
-**Next Milestone**: Task 02.02 (Define Database Models)
+**Last Updated**: 2025-11-21
+**Document Version**: 1.7
+**Status**: Tasks 1 & 2 Complete
+**Backend Progress**: Task 01 ✅ | Task 02 ✅ (All subtasks complete: 02.01-02.05)
+**Next Milestone**: Task 03 (Core Authentication System)

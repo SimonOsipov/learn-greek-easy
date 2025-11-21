@@ -1,12 +1,12 @@
 # MVP Development - All Tasks Progress
 
-**Last Updated**: 2025-11-20
+**Last Updated**: 2025-11-21
 
 ## Progress Dashboard
 | Area | Total | Completed | In Progress | Not Started | % |
 |------|-------|-----------|-------------|-------------|---|
 | Frontend | 11 | 11 | 0 | 0 | 100% ✨ |
-| Backend | ~15 | 1 | 1 | ~13 | 10% |
+| Backend | ~15 | 1 | 1 | ~13 | 20% |
 | Infrastructure | 6 | 0 | 0 | 6 | 0% |
 | Testing | ~10 | 0 | 0 | ~10 | 0% |
 | Deployment | 9 | 0 | 0 | 9 | 0% |
@@ -59,7 +59,7 @@ See detailed backend tasks in: [backend/](./backend/)
 - All code quality tools configured
 
 ### 2. Database Design & Schema Creation
-**Status**: 🔄 IN PROGRESS (2025-11-20)
+**Status**: 🔄 IN PROGRESS (2025-11-21)
 **File**: [backend/02/02-database-design.md](./backend/02/02-database-design.md)
 
 **Completed Subtasks**:
@@ -71,26 +71,55 @@ See detailed backend tasks in: [backend/](./backend/)
   - PostgreSQL Docker container operational
   - Backend server integrated with database
 
+- ✅ **02.02**: Define Database Models (2025-11-20)
+  - Files: [02.02-database-models-plan.md](./backend/02/02.02-database-models-plan.md)
+  - 8 SQLAlchemy 2.0 models: User, UserSettings, RefreshToken, Deck, Card, UserDeckProgress, CardStatistics, Review
+  - 4 Enums: DeckLevel (A1-C2), CardDifficulty, CardStatus, ReviewRating (0-5)
+  - All relationships with lazy="selectin" for async
+  - Unique constraints on (user_id, deck_id) and (user_id, card_id)
+  - SM-2 algorithm fields: easiness_factor, interval, repetitions, next_review_date
+  - UUID primary keys with server-side generation
+  - All tests passed (8 models, 4 enums verified)
+
+- ✅ **02.03**: PostgreSQL Enums & Alembic Configuration (2025-11-21)
+  - Files: [02.03-postgresql-enums-alembic-plan.md](./backend/02/02.03-postgresql-enums-alembic-plan.md)
+  - Alembic initialized with sync engine for SQLAlchemy 2.0
+  - alembic.ini configured with UTF-8 encoding, readable file template, UTC timezone
+  - env.py configured with all 8 models and 4 enums imported
+  - compare_type=True enabled for enum detection
+  - Verification script created and passed all checks
+  - .gitignore updated with Alembic cache entries
+  - Ready for initial migration generation
+
+- ✅ **02.04**: Initial Migration (2025-11-21)
+  - Files: [02.04-initial-migration-plan.md](./backend/02/02.04-initial-migration-plan.md)
+  - Migration file: alembic/versions/20251121_1629_8e2ce3fe8e88_initial_schema_with_users_decks_cards_.py
+  - All 8 tables created: users, decks, cards, user_settings, refresh_tokens, user_deck_progress, card_statistics, reviews
+  - 3 PostgreSQL enum types: decklevel (A1-C2), carddifficulty (EASY/MEDIUM/HARD), cardstatus (NEW/LEARNING/REVIEW/MASTERED)
+  - UUID primary keys with server_default=uuid_generate_v4()
+  - All foreign keys with CASCADE delete behavior
+  - Critical indexes including composite index for due cards query (ix_card_statistics_user_due_cards)
+  - Unique constraints on (user_id, card_id) and (user_id, deck_id)
+  - Rollback tested successfully
+  - Verification script (scripts/verify_migration.py) passed all checks
+  - Database schema fully operational
+
 **Remaining Subtasks**:
-- ⏸️ 02.02: Define Database Models (User, Deck, Card, Progress, Review)
-- ⏸️ 02.03: PostgreSQL Enums
-- ⏸️ 02.04: Alembic Configuration
-- ⏸️ 02.05: Initial Migration
-- ⏸️ 02.06: Pydantic Schemas
+- ⏸️ 02.05: Pydantic Schemas
 
 ### Core Setup
 - [✅] Initialize FastAPI project
 - [✅] Setup SQLAlchemy + PostgreSQL connection
-- [ ] Configure Alembic for migrations
+- [✅] Configure Alembic for migrations
 - [ ] Setup Redis connection
 - [ ] Configure Celery for background tasks
 - [ ] Implement JWT authentication with Google OAuth
 
 ### Database Schema
-- [ ] Design and create User model
-- [ ] Design and create Deck model
-- [ ] Design and create Card model
-- [ ] Design and create Review/Progress model
+- [✅] Design and create User model (+ UserSettings, RefreshToken)
+- [✅] Design and create Deck model
+- [✅] Design and create Card model
+- [✅] Design and create Review/Progress models (UserDeckProgress, CardStatistics, Review)
 - [ ] Create initial Alembic migrations
 
 ### API Endpoints - Authentication
