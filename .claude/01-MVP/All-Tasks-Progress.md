@@ -1,15 +1,24 @@
 # MVP Development - All Tasks Progress
 
-**Last Updated**: 2025-11-21
+**Last Updated**: 2025-11-29 (Task 03.08 Completed, Task 4 Testing Framework Added)
 
 ## Progress Dashboard
 | Area | Total | Completed | In Progress | Not Started | % |
 |------|-------|-----------|-------------|-------------|---|
 | Frontend | 11 | 11 | 0 | 0 | 100% ✨ |
-| Backend | ~15 | 1 | 1 | ~13 | 20% |
+| Backend | 15 | 2 | 1 | 12 | 20% |
 | Infrastructure | 6 | 0 | 0 | 6 | 0% |
 | Testing | ~10 | 0 | 0 | ~10 | 0% |
 | Deployment | 9 | 0 | 0 | 9 | 0% |
+
+**Backend Task Structure** (15 tasks total):
+- Tasks 1-3: Infrastructure & Auth (2 complete, 1 in progress)
+- **Task 4: Backend Testing Framework (NEW - Critical Path)**
+- Tasks 5-9: API Development
+- Task 10: SM-2 Algorithm
+- Tasks 11-12: Content & Background Jobs
+- Task 13: Integration Testing
+- Tasks 14-15: Documentation & Deployment
 
 ## Frontend Tasks (11/11) - ✅ COMPLETE
 1. ✅ Main Page Design
@@ -59,7 +68,7 @@ See detailed backend tasks in: [backend/](./backend/)
 - All code quality tools configured
 
 ### 2. Database Design & Schema Creation
-**Status**: 🔄 IN PROGRESS (2025-11-21)
+**Status**: ✅ COMPLETED (2025-11-24)
 **File**: [backend/02/02-database-design.md](./backend/02/02-database-design.md)
 
 **Completed Subtasks**:
@@ -104,23 +113,140 @@ See detailed backend tasks in: [backend/](./backend/)
   - Verification script (scripts/verify_migration.py) passed all checks
   - Database schema fully operational
 
-**Remaining Subtasks**:
-- ⏸️ 02.05: Pydantic Schemas
+- ✅ **02.05**: Pydantic Schemas (COMPLETED 2025-11-21)
+  - Files: [02.05-pydantic-schemas-plan.md](./backend/02/02.05-pydantic-schemas-plan.md)
+  - 35+ schemas across 5 domain files (user.py, deck.py, card.py, progress.py, review.py)
+  - Full validation with Pydantic v2 (ConfigDict, Field validators, forward references)
+  - Schemas for User (10), Deck (5), Card (6), Progress (4), Review (5)
+  - ORM conversion tested with model_validate()
+  - All tests passed (17 field validation + 5 ORM conversion = 22 tests)
+
+- ✅ **02.06**: Database Repository Layer (COMPLETED 2025-11-24)
+  - Files: [02.06-database-repository-layer-plan.md](./backend/02/02.06-database-repository-layer-plan.md)
+  - 7 repository classes (BaseRepository + 6 specialized): user.py, deck.py, card.py, progress.py, review.py
+  - 37 repository methods with full async/await and type hints
+  - Generic CRUD operations (create, get, update, delete, list, count, filter_by, exists)
+  - User authentication queries (get_by_email, create_with_settings)
+  - SM-2 algorithm support (get_due_cards, update_sm2_data)
+  - N+1 query prevention with eager loading
+  - Review analytics (streak calculation, average quality)
+  - 50+ unit tests with comprehensive coverage
+  - 2,280 lines total (1,162 repository + 943 tests + 175 verification)
+
+### 3. Core Authentication System
+**Status**: 🔄 IN PROGRESS (Started 2025-11-24)
+**File**: [backend/03/03-authentication-system-plan.md](./backend/03/03-authentication-system-plan.md)
+
+**Completed Subtasks**:
+- ✅ **03.01**: Implement Password Hashing with bcrypt (COMPLETED 2025-11-24)
+  - Files: [03.01-password-hashing-detailed-plan.md](./backend/03/03.01-password-hashing-detailed-plan.md)
+  - Security module (src/core/security.py): hash_password(), verify_password(), validate_password_strength()
+  - Test suite with 35/35 tests passed, 100% coverage
+  - bcrypt cost factor 12, $2b$ variant, automatic salts, constant-time comparison
+  - OWASP compliant password storage
+
+- ✅ **03.02**: JWT Token Generation and Validation (COMPLETED 2025-11-25)
+  - Files: [03.02-jwt-token-management-plan.md](./backend/03/03.02-jwt-token-management-plan.md)
+  - Security module extended: create_access_token(), create_refresh_token(), verify_token(), extract_token_from_header()
+  - Test suite with 28/28 tests passed, 100% coverage
+  - HS256 algorithm, 30-min access tokens, 30-day refresh tokens, token type validation
+  - Confused deputy attack prevention, UTC timestamps
+  - QA verified: READY FOR PRODUCTION
+
+- ✅ **03.03**: User Registration Endpoint (COMPLETED 2025-11-25)
+  - Files: [03.03-user-registration-endpoint-plan.md](./backend/03/03.03-user-registration-endpoint-plan.md)
+  - Service layer (AuthService) with registration logic
+  - Bonus: Also implemented login, refresh, logout endpoints
+
+- ✅ **03.04**: Email/Password Login Endpoint (COMPLETED 2025-11-26)
+  - Files: [03.04-login-endpoint-plan.md](./backend/03/03.04-login-endpoint-plan.md), [03.04-implementation-summary.md](./backend/03/03.04-implementation-summary.md)
+  - Core functionality already in place from Task 03.03
+  - Enhanced with last_login_at and last_login_ip tracking
+  - Added comprehensive audit logging for security monitoring
+  - Created verification scripts and additional test coverage
+  - API router with registration, login, refresh, logout endpoints
+  - Atomic transactions for User + UserSettings + RefreshToken creation
+  - Race condition handling, email uniqueness validation
+  - Unit & integration tests, verification script passed
+  - QA verified: READY FOR PRODUCTION
+
+- ✅ **03.05**: Token Refresh Endpoint (COMPLETED 2025-11-29)
+  - Files: [03.05-token-refresh-endpoint-plan.md](./backend/03/03.05-token-refresh-endpoint-plan.md)
+  - Token rotation implemented (delete old, create new)
+  - User validation (is_active, existence checks)
+  - 11/11 unit tests passed, 100% coverage
+  - QA verified: READY FOR PRODUCTION
+
+- ✅ **03.07**: /auth/me Endpoint (COMPLETED 2025-11-29)
+  - Files: [03.07-auth-me-endpoint-plan.md](./backend/03/03.07-auth-me-endpoint-plan.md)
+  - Created reusable auth dependencies (get_current_user, get_current_superuser, get_current_user_optional)
+  - GET /api/v1/auth/me returns UserProfileResponse with settings
+  - 21/21 unit tests passed, 100% coverage
+  - QA verified: READY FOR PRODUCTION
+
+- ✅ **03.09**: Session Management & Token Revocation (COMPLETED 2025-11-29)
+  - Files: [03.09-session-management-token-revocation-plan.md](./backend/03/03.09-session-management-token-revocation-plan.md)
+  - Service methods: revoke_refresh_token(), revoke_all_user_tokens(), cleanup_expired_tokens(), get_user_sessions(), revoke_session_by_id()
+  - API endpoints: POST /logout (enhanced), POST /logout-all, GET /sessions, DELETE /sessions/{id}
+  - New schemas: SessionInfo, SessionListResponse, LogoutResponse, LogoutAllResponse
+  - 12/12 unit tests passed, 100% coverage
+  - QA verified: READY FOR PRODUCTION
+
+- ✅ **03.10**: Logout with Token Blacklisting (COMPLETED 2025-11-29)
+  - Files: [03.10-logout-endpoints-plan.md](./backend/03/03.10-logout-endpoints-plan.md)
+  - Implemented as part of Task 03.09
+  - Endpoints: POST /logout, POST /logout-all
+  - Database-based token revocation
+
+**Remaining Subtasks** (1/10):
+- ⏸️ 03.06: Google OAuth (Placeholder)
+
+**Completed Optional Tasks**:
+- ✅ **03.08**: Auth Middleware (COMPLETED 2025-11-29)
+  - Plan: [03.08-auth-middleware-plan.md](./backend/03/03.08-auth-middleware-plan.md)
+  - AuthLoggingMiddleware for security audit logging, request timing, client IP tracking
+  - 42/42 tests passed, 100% coverage
+  - QA Report: [qa/task-03.08-verification.md](../qa/task-03.08-verification.md)
+  - Verdict: **READY FOR PRODUCTION**
+
+### 4. Backend Testing Framework (NEW)
+**Status**: ⏸️ NOT STARTED
+**File**: [backend/Backend-Tasks-Progress.md](./backend/Backend-Tasks-Progress.md#4-backend-testing-framework)
+**Estimated Duration**: 3-4 hours
+**Priority**: Critical Path
+
+**Objective**: Establish pytest as the primary testing framework for all backend development. All subsequent tasks must include tests using this framework.
+
+**Key Deliverables**:
+- `tests/conftest.py` - Global fixtures and configuration
+- `tests/unit/` - Unit test structure
+- `tests/integration/` - Integration test structure
+- `tests/factories/` - Test data factories
+- pytest configuration with async support
+- Coverage reporting (90%+ target)
+- CI-ready test commands
+
+**Dependencies**: Task 2, Task 3
+**Unlocks**: Tasks 5-15 (all require testing)
 
 ### Core Setup
 - [✅] Initialize FastAPI project
 - [✅] Setup SQLAlchemy + PostgreSQL connection
 - [✅] Configure Alembic for migrations
+- [✅] Implement password hashing (bcrypt)
+- [✅] Implement JWT token generation
 - [ ] Setup Redis connection
 - [ ] Configure Celery for background tasks
-- [ ] Implement JWT authentication with Google OAuth
+- [ ] Implement full JWT authentication with Google OAuth
 
 ### Database Schema
 - [✅] Design and create User model (+ UserSettings, RefreshToken)
 - [✅] Design and create Deck model
 - [✅] Design and create Card model
 - [✅] Design and create Review/Progress models (UserDeckProgress, CardStatistics, Review)
-- [ ] Create initial Alembic migrations
+- [✅] Create initial Alembic migrations
+- [✅] Create Pydantic schemas for API validation (35+ schemas)
+- [✅] Implement repository layer for data access (7 repositories, 37 methods)
 
 ### API Endpoints - Authentication
 - [ ] POST /auth/register (email/password)
@@ -260,11 +386,12 @@ See detailed backend tasks in: [backend/](./backend/)
 ## Testing
 
 ### Backend Testing
-- [ ] Setup pytest
-- [ ] Write unit tests for SM-2 algorithm
-- [ ] Write API endpoint tests
-- [ ] Write authentication tests
-- [ ] Test database models and migrations
+- [ ] **Task 4: Backend Testing Framework** (Critical Path - sets up pytest infrastructure)
+- [ ] Task 13: Integration Testing (uses Task 4 framework)
+- [ ] Write unit tests for SM-2 algorithm (Task 10)
+- [ ] Write API endpoint tests (Tasks 5-9)
+- [ ] Write authentication tests (covered in Task 3)
+- [ ] Test database models and migrations (covered in Task 2)
 
 ### Frontend Testing
 - [✅] Setup Playwright E2E Testing Framework (Task 10)
