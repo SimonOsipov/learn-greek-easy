@@ -73,403 +73,79 @@ This document tracks all backend development tasks for the MVP.
 **Priority**: Critical Path
 **Dependencies**: Task 1
 
-**Subtask Progress**:
-- ✅ 02.01: Database Connection & Session Management (COMPLETED 2025-11-20)
-  - Duration: ~50 minutes
-  - Files: session.py, base.py, dependencies.py, __init__.py
-  - PostgreSQL Docker container running
-  - Backend server integrated with database
-- ✅ 02.02: Define Database Models (COMPLETED 2025-11-20)
-  - Duration: ~2 hours
-  - Plan: [02.02-database-models-plan.md](./02/02.02-database-models-plan.md)
-  - Files: models.py (498 lines, 8 models), __init__.py (exports), test_models.py
-  - Models: User, UserSettings, RefreshToken, Deck, Card, UserDeckProgress, CardStatistics, Review
-  - Enums: DeckLevel, CardDifficulty, CardStatus, ReviewRating
-  - All relationships configured with lazy="selectin" for async
-  - All tests passed (8 models, 4 enums verified)
-- ✅ 02.03: PostgreSQL Enums & Alembic Configuration (COMPLETED 2025-11-21)
-  - Duration: ~60 minutes
-  - Plan: [02.03-postgresql-enums-alembic-plan.md](./02/02.03-postgresql-enums-alembic-plan.md)
-  - Files: alembic.ini, alembic/env.py, scripts/verify_alembic_config.py, .gitignore
-  - Alembic initialized with sync engine configuration for SQLAlchemy 2.0
-  - UTF-8 encoding configured for Greek text support
-  - All 8 models detected by Alembic metadata
-  - All 4 enums (6 DeckLevel, 3 CardDifficulty, 4 CardStatus, 6 ReviewRating members) detected
-  - Verification script passes all checks
-  - Ready for initial migration generation
-- ✅ 02.04: Initial Migration (COMPLETED 2025-11-21)
-  - Duration: ~60 minutes
-  - Plan: [02.04-initial-migration-plan.md](./02/02.04-initial-migration-plan.md)
-  - Files: alembic/versions/20251121_1629_8e2ce3fe8e88_initial_schema_with_users_decks_cards_.py, scripts/verify_migration.py
-  - Migration generated with all 8 tables, 3 enums, indexes, and constraints
-  - Composite index added for efficient due cards queries (ix_card_statistics_user_due_cards)
-  - UUID primary keys with server_default=uuid_generate_v4()
-  - All foreign keys with CASCADE delete behavior
-  - Unique constraints on (user_id, card_id) and (user_id, deck_id)
-  - Rollback tested successfully
-  - Verification script passes all checks
-  - Database schema fully operational
-- ✅ 02.05: Pydantic Schemas (COMPLETED 2025-11-21)
-  - Duration: ~45 minutes
-  - Plan: [02.05-pydantic-schemas-plan.md](./02/02.05-pydantic-schemas-plan.md)
-  - Files: user.py, deck.py, card.py, progress.py, review.py, __init__.py
-  - 35+ schemas created across 5 domain files
-  - User schemas: UserCreate, UserLogin, UserUpdate, UserResponse, UserProfileResponse, UserSettingsUpdate, UserSettingsResponse, TokenResponse, TokenRefresh, TokenPayload
-  - Deck schemas: DeckCreate, DeckUpdate, DeckResponse, DeckWithProgressResponse, DeckListResponse
-  - Card schemas: CardCreate, CardUpdate, CardResponse, CardStudyResponse, CardStudyResultResponse, CardWithStatisticsResponse
-  - Progress schemas: UserDeckProgressResponse, CardStatisticsResponse, ProgressSummaryResponse, StudySessionStatsResponse
-  - Review schemas: ReviewSubmit, ReviewResponse, ReviewHistoryResponse, BulkReviewSubmit, BulkReviewResponse
-  - All validation rules implemented (email, password strength, review ratings, time limits, easiness factor)
-  - Pydantic v2 syntax with ConfigDict, Field validators, and forward references
-  - ORM conversion tested successfully with model_validate()
-  - All schemas exported from __init__.py
-  - Field validation tests passed (17/17)
-  - ORM conversion tests passed (5/5)
-- ✅ 02.06: Database Repository Layer (COMPLETED 2025-11-24)
-  - Duration: ~90 minutes
-  - Plan: [02.06-database-repository-layer-plan.md](./02/02.06-database-repository-layer-plan.md)
-  - Files: base.py (237 lines), user.py (245), deck.py (128), card.py (89), progress.py (276), review.py (155), __init__.py (32)
-  - Test files: test_repositories.py (763 lines), conftest.py (180), verify_repositories.py (175)
-  - 7 repository classes (BaseRepository + 6 specialized)
-  - 37 repository methods with full type hints
-  - Generic CRUD operations: create, get, get_or_404, list, count, update, delete, filter_by, exists
-  - User authentication queries: get_by_email, create_with_settings, verify_email, update_last_login
-  - Token management: cleanup_expired, revoke_token, revoke_all_for_user
-  - Deck operations: list_active, get_with_cards, get_with_progress, count_cards, search
-  - Card operations: get_by_deck, get_by_difficulty, bulk_create
-  - Progress tracking: get_or_create, update_progress_metrics
-  - SM-2 algorithm support: get_due_cards, update_sm2_data, get_by_status
-  - Review analytics: get_user_reviews, count_reviews_today, get_streak, get_average_quality
-  - N+1 query prevention with eager loading (selectinload)
-  - 50+ unit tests with comprehensive coverage
-  - Total: 2,280 lines of code (1,162 repository + 943 tests + 175 verification)
-
-**Summary**:
-Task 2 is now **100% COMPLETE** with all 6 subtasks finished:
+**Subtasks**:
 - ✅ 02.01: Database Connection & Session Management
-- ✅ 02.02: SQLAlchemy Models (8 models + 4 enums)
-- ✅ 02.03: Alembic Configuration
+- ✅ 02.02: Define Database Models (8 models + 4 enums)
+- ✅ 02.03: PostgreSQL Enums & Alembic Configuration
 - ✅ 02.04: Initial Migration
 - ✅ 02.05: Pydantic Schemas (35+ schemas)
-- ✅ 02.06: Repository Layer (7 repositories, 37 methods)
-
-The database layer is fully operational and ready for API endpoint integration.
-
-**Database Tables**:
-- `users` - User accounts
-- `decks` - Greek vocabulary decks
-- `cards` - Flashcard content
-- `user_deck_progress` - Per-deck progress tracking
-- `reviews` - Review history
-- `card_stats` - Per-card SRS data (difficulty, intervals, next review)
-- `refresh_tokens` - JWT refresh token storage
+- ✅ 02.06: Database Repository Layer (7 repositories, 37 methods)
 
 **Key Deliverables**:
-- `models/` directory with all SQLAlchemy models
-- `alembic/` migration configuration
-- Initial migration script
-- Database schema documentation
+- ✅ `src/db/models.py` - 8 SQLAlchemy models (User, Deck, Card, Review, etc.)
+- ✅ `src/schemas/` - 35+ Pydantic schemas for API validation
+- ✅ `src/repositories/` - Repository layer with generic CRUD + specialized queries
+- ✅ `alembic/` - Migration configuration with initial schema
+- ✅ PostgreSQL-specific features: native enums, UUID generation, CASCADE deletes
 
 ---
 
 ### 3. Core Authentication System
 **Status**: 🔄 **IN PROGRESS** (Started 2025-11-24)
-**Estimated Duration**: 4-5 hours
-**Actual Duration**: 6.5+ hours (so far)
+**Actual Duration**: 6.5+ hours
 **Priority**: Critical Path
 **Dependencies**: Task 2 ✅
 
-**Subtask Progress**:
-- ✅ **03.01**: Implement password hashing with bcrypt (COMPLETED 2025-11-24)
-  - Duration: 30 minutes
-  - Plan: [03.01-password-hashing-detailed-plan.md](./03/03.01-password-hashing-detailed-plan.md)
-  - Files: src/core/security.py (8.5 KB), tests/unit/test_security.py (13 KB), scripts/verify_password_security.py (2.9 KB)
-  - Functions: hash_password(), verify_password(), validate_password_strength()
-  - Security: bcrypt cost factor 12, $2b$ variant, automatic salt generation, constant-time comparison
-  - Tests: 35/35 passed (100% coverage)
-  - OWASP compliant password hashing implementation
-- ✅ **03.02**: Create JWT token generation and validation (COMPLETED 2025-11-25)
-  - Duration: 60 minutes
-  - Plan: [03.02-jwt-token-management-plan.md](./03/03.02-jwt-token-management-plan.md)
-  - Files: src/core/security.py (extended, 542 lines), tests/unit/test_jwt_tokens.py (450+ lines), scripts/verify_jwt_tokens.py (165 lines)
-  - Functions: create_access_token(), create_refresh_token(), verify_token(), extract_token_from_header(), security_scheme
-  - Security: HS256 algorithm, 30-min access tokens, 30-day refresh tokens, token type validation, UTC timestamps
-  - Tests: 28/28 passed (100% coverage)
-  - JWT token management with confused deputy attack prevention
-- ✅ **03.03**: Implement user registration endpoint (COMPLETED 2025-11-25)
-  - Duration: 80 minutes
-  - Plan: [03.03-user-registration-endpoint-plan.md](./03/03.03-user-registration-endpoint-plan.md)
-  - Files: src/services/auth_service.py (245 lines), src/api/v1/auth.py (router), tests, verification script
-  - Features: Registration with atomic transactions (User + UserSettings + RefreshToken), email uniqueness validation
-  - Bonus: login, refresh, logout endpoints implemented (covered tasks 03.04, 03.05, 03.10 partially)
-  - Security: Race condition handling, password hashing (03.01), JWT tokens (03.02)
-  - Tests: Unit tests (registration, duplicate email, race conditions), integration tests (API endpoints)
-  - Verification: scripts/verify_registration.py - ALL CHECKS PASSED
-  - QA Report: [../../qa/task-03.03-verification.md](../../qa/task-03.03-verification.md)
-  - Verdict: READY FOR PRODUCTION
-- ✅ **03.04**: Implement email/password login endpoint (COMPLETED 2025-11-26)
-  - Duration: 4 hours (verification, enhancement, testing, documentation)
-  - Plan: [03.04-login-endpoint-plan.md](./03/03.04-login-endpoint-plan.md)
-  - Core: Already implemented as bonus in Task 03.03
-  - Enhanced: Added last_login_at, last_login_ip tracking + comprehensive audit logging
-  - Files: auth_service.py (enhanced), auth.py (IP tracking), models.py (new fields), migration
-  - Tests: Verification script, 16 comprehensive unit tests (12/16 passing), manual testing via Swagger UI
-  - Security: Audit logging (INFO for success, WARNING for failures), no email enumeration, OAuth user protection
-  - Documentation: [03.04-implementation-summary.md](./03/03.04-implementation-summary.md)
-  - QA Report: [../../qa/task-03.04-verification.md](../../qa/task-03.04-verification.md)
-  - Verdict: **READY FOR PRODUCTION**
-- ✅ **03.05**: Implement Token Refresh Endpoint (COMPLETED 2025-11-29)
-  - Duration: 60 minutes
-  - Plan: [03.05-token-refresh-endpoint-plan.md](./03/03.05-token-refresh-endpoint-plan.md)
-  - Token rotation implemented (old token deleted, new token created)
-  - User validation (is_active, user existence checks)
-  - Files: auth_service.py (enhanced), auth.py (enhanced), test_auth_service_refresh.py (11 tests)
-  - Tests: 11/11 unit tests passed (100% coverage)
-  - QA Report: [../../qa/task-03.05-verification.md](../../qa/task-03.05-verification.md)
-  - Verdict: **READY FOR PRODUCTION**
-- ⏸️ 03.06: Create Google OAuth flow (placeholder)
-- ✅ **03.07**: Implement /auth/me Endpoint (COMPLETED 2025-11-29)
-  - Duration: 45 minutes
-  - Plan: [03.07-auth-me-endpoint-plan.md](./03/03.07-auth-me-endpoint-plan.md)
-  - Created `src/core/dependencies.py` with reusable auth dependencies
-  - get_current_user, get_current_superuser, get_current_user_optional
-  - GET /api/v1/auth/me returns UserProfileResponse with settings
-  - Files: dependencies.py (NEW), auth.py (updated), test_dependencies.py (21 tests)
-  - Tests: 21/21 unit tests passed (100% coverage)
-  - QA Report: [../../qa/task-03.07-verification.md](../../qa/task-03.07-verification.md)
-  - Verdict: **READY FOR PRODUCTION**
-- ✅ **03.08**: Create Authentication Middleware (COMPLETED 2025-11-29)
-  - Duration: 45 minutes
-  - Plan: [03.08-auth-middleware-plan.md](./03/03.08-auth-middleware-plan.md)
-  - AuthLoggingMiddleware for security audit logging
-  - Request timing, client IP extraction (X-Forwarded-For, X-Real-IP, direct)
-  - Log levels based on status code (INFO/WARNING/ERROR)
-  - Sensitive path marking, failed login warning
-  - Files: middleware/__init__.py, middleware/auth.py, main.py (updated)
-  - Tests: 42/42 unit tests passed (100% coverage)
-  - QA Report: [../../qa/task-03.08-verification.md](../../qa/task-03.08-verification.md)
-  - Verdict: **READY FOR PRODUCTION**
-- ✅ **03.09**: Add Session Management and Token Revocation (COMPLETED 2025-11-29)
-  - Duration: 45 minutes
-  - Plan: [03.09-session-management-token-revocation-plan.md](./03/03.09-session-management-token-revocation-plan.md)
-  - Service methods: revoke_refresh_token(), revoke_all_user_tokens(), cleanup_expired_tokens(), get_user_sessions(), revoke_session_by_id()
-  - API endpoints: POST /logout (enhanced with auth), POST /logout-all, GET /sessions, DELETE /sessions/{id}
-  - New Pydantic schemas: SessionInfo, SessionListResponse, LogoutResponse, LogoutAllResponse
-  - Tests: 12/12 unit tests passed (test_auth_service_sessions.py)
-  - QA Report: [../../qa/task-03.09-verification.md](../../qa/task-03.09-verification.md)
-  - Verdict: **READY FOR PRODUCTION**
-- ✅ **03.10**: Logout with Token Blacklisting (COMPLETED 2025-11-29)
-  - Implemented as part of Task 03.09
-  - Plan: [03.10-logout-endpoints-plan.md](./03/03.10-logout-endpoints-plan.md)
-  - Endpoints: POST /logout, POST /logout-all
-  - Token deletion from database (database-based revocation)
-  - Tests: Covered by 03.09 test suite
+**Subtasks**:
+- ✅ 03.01: Password hashing with bcrypt (cost factor 12)
+- ✅ 03.02: JWT token generation/validation (HS256, 30min/30day expiry)
+- ✅ 03.03: User registration endpoint
+- ✅ 03.04: Email/password login endpoint
+- ✅ 03.05: Token refresh endpoint (rotation)
+- ⏸️ 03.06: Google OAuth flow (placeholder)
+- ✅ 03.07: GET /auth/me endpoint
+- ✅ 03.08: Authentication middleware (audit logging)
+- ✅ 03.09: Session management & token revocation
+- ✅ 03.10: Logout endpoints
 
 **Progress**: 9/10 subtasks completed (90%)
 
-**API Endpoints**:
-- `POST /api/auth/register` - Register new user
-- `POST /api/auth/login` - Login with email/password
-- `POST /api/auth/google` - Google OAuth (placeholder)
-- `POST /api/auth/refresh` - Refresh access token
-- `POST /api/auth/logout` - Logout and revoke token
-- `GET /api/auth/me` - Get current user profile
-
-**Security Features**:
-- bcrypt password hashing (cost factor 12)
-- JWT access tokens (30 min expiry)
-- JWT refresh tokens (30 day expiry, stored in database)
-- httpOnly cookies for token storage
-- CORS configuration
-- Rate limiting on auth endpoints
+**Key Deliverables**:
+- ✅ `src/core/security.py` - Password hashing, JWT tokens
+- ✅ `src/core/dependencies.py` - Auth dependencies (get_current_user, etc.)
+- ✅ `src/services/auth_service.py` - Authentication business logic
+- ✅ `src/api/v1/auth.py` - Auth API endpoints
+- ✅ `src/middleware/auth.py` - Request logging middleware
 
 ---
 
 ### 4. Backend Testing Framework
 **Status**: ✅ **COMPLETED** (2025-12-01)
-**Estimated Duration**: 3-4 hours
+**Actual Duration**: ~6 hours
 **Priority**: Critical Path
 **Dependencies**: Task 2, Task 3
 
-**Objective**: Establish pytest as the primary testing framework for all backend development. All subsequent tasks should include comprehensive tests using this framework.
-
-**Completed Subtasks**:
-- ✅ **04.01**: Configure pytest with async support (COMPLETED 2025-11-30)
-  - Files: [04.01-pytest-async-configuration-plan.md](./04/04.01-pytest-async-configuration-plan.md)
-  - `pyproject.toml` updated with `[tool.pytest.ini_options]` section
-  - `asyncio_mode = "auto"` enabled (no `@pytest.mark.asyncio` needed)
-  - Test markers registered (unit, integration, slow, auth, api, db)
-  - `tests/conftest.py` with event loop configuration and pytest hooks
-
-- ✅ **04.02**: Setup Test Database with Fixtures - PostgreSQL Only (COMPLETED 2025-11-30)
-  - Files: [04.02-test-database-fixtures-plan.md](./04/04.02-test-database-fixtures-plan.md)
-  - QA Report: [task-04.02-verification.md](../../qa/task-04.02-verification.md)
-  - Created `tests/helpers/database.py` - 11 PostgreSQL utility functions
-  - Created `tests/fixtures/database.py` - 10 database fixtures (db_engine, db_session, etc.)
-  - Created `tests/unit/test_database_fixtures.py` - 24 comprehensive tests
-  - Created `scripts/verify_database_fixtures.py` - Verification script
-  - Updated `tests/conftest.py` - Import PostgreSQL fixtures, removed SQLite
-  - Test isolation verified, PostgreSQL-specific features working (enums, UUIDs)
-  - Architecture Decision: PostgreSQL-only testing (no SQLite) for test fidelity
-
-- ✅ **04.03**: Create Base Test Classes (COMPLETED 2025-11-30)
-  - Files: [04.03-base-test-classes-plan.md](./04/04.03-base-test-classes-plan.md)
-  - QA Report: [task-04.03-verification.md](../../qa/task-04.03-verification.md)
-  - Created `tests/fixtures/auth.py` - 17 authentication fixtures (users, tokens, headers, bundles)
-  - Created `tests/base.py` - BaseTestCase (11 methods) + AuthenticatedTestCase (10 methods)
-  - Created `tests/unit/test_base_classes.py` - 41 comprehensive tests
-  - Updated `tests/fixtures/__init__.py` and `tests/conftest.py` - Export auth fixtures
-  - All 41 tests passing, no circular imports, full type hints and docstrings
-
-- ✅ **04.04**: Implement Domain Test Fixtures (COMPLETED 2025-11-30)
-  - Files: [04.04-domain-fixtures-plan.md](./04/04.04-domain-fixtures-plan.md)
-  - QA Report: [task-04.04-verification.md](../../qa/task-04.04-verification.md)
-  - Created `tests/fixtures/deck.py` - 13 deck/card fixtures with Greek vocabulary (A1, A2, B1)
-  - Created `tests/fixtures/progress.py` - 20+ progress/review fixtures for SM-2 testing
-  - Types: DeckWithCards, MultiLevelDecks, UserProgress, CardsByStatus, ReviewHistory
-  - SM-2 constants: SM2_DEFAULT_EASINESS_FACTOR (2.5), SM2_MIN_EASINESS_FACTOR (1.3)
-  - Updated `tests/fixtures/__init__.py` and `tests/conftest.py` with all new exports
-  - 324 tests collected, 296 passing (28 pre-existing failures unrelated to fixtures)
-
-- ✅ **04.05**: Create Factory Classes for Test Data Generation (COMPLETED 2025-11-30)
-  - Files: [04.05-factory-classes-plan.md](./04/04.05-factory-classes-plan.md)
-  - QA Report: [task-04.05-verification.md](../../qa/task-04.05-verification.md)
-  - Created `tests/factories/providers/greek.py` - Custom Faker provider with A1/A2/B1 Greek vocabulary
-  - Created `tests/factories/base.py` - BaseFactory with async SQLAlchemy session support
-  - Created `tests/factories/auth.py` - UserFactory, UserSettingsFactory, RefreshTokenFactory
-  - Created `tests/factories/content.py` - DeckFactory, CardFactory with CEFR level traits
-  - Created `tests/factories/progress.py` - UserDeckProgressFactory, CardStatisticsFactory, ReviewFactory
-  - Traits: admin, inactive, oauth, verified, logged_in, a1-c2 levels, easy/medium/hard, new/learning/review/mastered, due/overdue/struggling
-  - SM-2 constants: SM2_DEFAULT_EASINESS_FACTOR=2.5, SM2_MIN_EASINESS_FACTOR=1.3
-  - Updated `tests/conftest.py` with factory session binding fixture
-  - 37/37 factory tests passing (100% pass rate)
-
-- ✅ **04.06**: Configure Coverage Reporting (pytest-cov) (COMPLETED 2025-12-01)
-  - Files: [04.06-coverage-reporting-plan.md](./04/04.06-coverage-reporting-plan.md)
-  - QA Report: [task-04.06-verification.md](../../qa/task-04.06-verification.md)
-  - Updated `pyproject.toml` with complete coverage configuration:
-    - `[tool.coverage.run]`: branch=true, parallel=true, dynamic_context
-    - `[tool.coverage.report]`: fail_under=90, show_missing=true, expanded exclude_lines
-    - `[tool.coverage.html]`: directory, show_contexts, title
-    - `[tool.coverage.xml]` and `[tool.coverage.json]` sections
-  - Updated pytest addopts: --cov-branch, --cov-fail-under=90, --cov-context=test
-  - Created `scripts/verify_coverage_config.py` - 7 verification checks
-  - Added `backend-tests` job to GitHub Actions with PostgreSQL service
-  - All verification checks passing, HTML/XML/JSON reports generating
-
-- ✅ **04.07**: Setup Parallel Test Execution (pytest-xdist) (COMPLETED 2025-12-01)
-  - Files: [04.07-parallel-test-execution-plan.md](./04/04.07-parallel-test-execution-plan.md)
-  - QA Report: [task-04.07-verification.md](../../qa/task-04.07-verification.md)
-  - Installed pytest-xdist 3.8.0 for parallel test execution
-  - Added `worker_id` and `is_parallel_run` fixtures to `tests/fixtures/database.py`
-  - Implemented file-based locking for schema creation coordination between workers
-  - Updated `create_test_engine()` to accept worker_id and set application_name
-  - Registered `no_parallel` marker for tests that cannot run in parallel
-  - Updated `pytest_collection_modifyitems` to skip no_parallel tests in parallel mode
-  - Updated `pytest_report_header` to display parallel worker info
-  - Updated GitHub Actions with `-n auto --dist loadscope` for CI parallel execution
-  - Created `scripts/verify_parallel_execution.py` - 8 verification checks
-  - **Performance: 3.7x speedup (73% faster)** - Sequential: 30.8s → Parallel: 8.3s
-  - 333 tests passing in parallel mode, no database race conditions
-  - All 8 verification checks passing
-
-- ✅ **04.08**: Create Test Utilities and Helpers (COMPLETED 2025-12-01)
-  - Files: [04.08-test-utilities-helpers-plan.md](./04/04.08-test-utilities-helpers-plan.md)
-  - QA Report: [task-04.08-verification.md](../../qa/task-04.08-verification.md)
-  - Created `tests/helpers/assertions.py` - 12 custom assertion functions (user, token, deck, card, progress, SM-2, pagination, error responses)
-  - Created `tests/helpers/time.py` - 13 time utilities (freeze_time, advance_time, token expiration, SM-2 intervals, date ranges)
-  - Created `tests/helpers/api.py` - 12 API helpers (authenticated requests, token extraction, query builders, response validators)
-  - Created `tests/helpers/mocks.py` - 7 mock builders (Redis, email, external API, HTTP response, auth service, async session)
-  - Created `tests/utils/builders.py` - 3 fluent builders (ReviewSessionBuilder, ProgressScenarioBuilder, StudyStreakBuilder) + 3 result dataclasses
-  - Updated `tests/helpers/__init__.py` - Exports all new helpers (40+ functions)
-  - Created `tests/utils/__init__.py` - Exports builders and result types
-  - All imports working, 63 existing tests passing
-  - Full type hints and docstrings on all functions
-
-- ✅ **04.09**: Establish Testing Conventions and Patterns (COMPLETED 2025-12-01)
-  - Files: [04.09-testing-conventions-patterns-plan.md](./04/04.09-testing-conventions-patterns-plan.md)
-  - QA Report: [task-04.09-verification.md](../../qa/task-04.09-verification.md)
-  - Created `tests/unit/conftest.py` - 4 mock fixtures (mock_db_session, mock_auth, mock_email, mock_redis)
-  - Created `tests/integration/conftest.py` - 17 fixtures (URL helpers, test data)
-  - Created `TESTING.md` - 860 lines comprehensive testing documentation (11 sections)
-  - Updated `tests/unit/__init__.py` and `tests/integration/__init__.py` with docstrings
-  - All test markers working (`-m unit` selects 352 tests, `-m integration` selects 9 tests)
-  - 361 tests collected, 333 passing (92.2% - 28 pre-existing failures)
-  - QA Verified: **PASS (96%)**
-
-**Completed Subtasks**:
-- ✅ **04.10**: Document Testing Best Practices (COMPLETED 2025-12-01)
-  - Files: [04.10-testing-best-practices-documentation-plan.md](./04/04.10-testing-best-practices-documentation-plan.md)
-  - QA Report: [task-04.10-verification.md](../qa/task-04.10-verification.md)
-  - Expanded `TESTING.md` from 860 to 2054 lines (+1194 lines, Version 2.0)
-  - Added 7 new sections (12-18): Unit vs Integration Guide, Mocking Strategies, Test Data Management, Async Testing Patterns, Database Testing Patterns, Anti-Patterns (8 documented), Example Pattern Library (6 complete examples)
-  - Updated `CLAUDE.md` with Testing Quick Reference section (Version 1.1)
-  - All documentation follows existing formatting conventions
-  - QA Verified: **PASS (100%)**
-
-**All 10 Subtasks Completed** - Task 04 is now 100% complete.
+**Subtasks**:
+- ✅ 04.01: Configure pytest with async support (asyncio_mode="auto")
+- ✅ 04.02: Setup test database with PostgreSQL fixtures
+- ✅ 04.03: Create base test classes (BaseTestCase, AuthenticatedTestCase)
+- ✅ 04.04: Implement domain test fixtures (decks, cards, progress)
+- ✅ 04.05: Create factory classes (factory-boy, 8 factories)
+- ✅ 04.06: Configure coverage reporting (90%+ target)
+- ✅ 04.07: Setup parallel test execution (3.7x speedup)
+- ✅ 04.08: Create test utilities and helpers (40+ functions)
+- ✅ 04.09: Establish testing conventions
+- ✅ 04.10: Document testing best practices (TESTING.md 2054 lines)
 
 **Key Deliverables**:
-- `tests/conftest.py` - Global fixtures and configuration
-- `tests/unit/` - Unit test structure
-- `tests/integration/` - Integration test structure
-- `tests/factories/` - Test data factories
-- `tests/fixtures/` - Reusable test fixtures
-- `pytest.ini` or `pyproject.toml` [tool.pytest] configuration
-- Coverage configuration (90%+ target)
-- CI-ready test commands
-
-**Test Infrastructure**:
-```python
-# tests/conftest.py
-@pytest.fixture
-async def db_session() -> AsyncGenerator[AsyncSession, None]:
-    """Provide test database session with automatic rollback."""
-    ...
-
-@pytest.fixture
-def test_user(db_session) -> User:
-    """Create authenticated test user."""
-    ...
-
-@pytest.fixture
-def auth_client(test_user) -> TestClient:
-    """HTTP client with authentication headers."""
-    ...
-```
-
-**Testing Patterns**:
-- Unit tests: Test functions/classes in isolation with mocks
-- Integration tests: Test API endpoints with real database
-- All new features must include tests before PR merge
-- Coverage threshold: 90% minimum
-
-**Test Commands**:
-```bash
-# Run all tests
-cd /Users/samosipov/Downloads/learn-greek-easy/learn-greek-easy-backend && \
-/Users/samosipov/.local/bin/poetry run pytest
-
-# Run with coverage
-cd /Users/samosipov/Downloads/learn-greek-easy/learn-greek-easy-backend && \
-/Users/samosipov/.local/bin/poetry run pytest --cov=src --cov-report=term-missing
-
-# Run specific test file
-cd /Users/samosipov/Downloads/learn-greek-easy/learn-greek-easy-backend && \
-/Users/samosipov/.local/bin/poetry run pytest tests/unit/test_auth.py -v
-
-# Run with parallel execution
-cd /Users/samosipov/Downloads/learn-greek-easy/learn-greek-easy-backend && \
-/Users/samosipov/.local/bin/poetry run pytest -n auto
-```
-
-**Coverage Targets**:
-- Overall: 90%+ coverage
-- Core modules (auth, services): 95%+ coverage
-- API Endpoints: 90%+ coverage
-- Utilities: 85%+ coverage
-
-**Note**: This task establishes the testing foundation. All subsequent backend tasks (5-16) must include tests written using this framework.
+- ✅ `tests/conftest.py` - Global fixtures and configuration
+- ✅ `tests/fixtures/` - Database, auth, deck, progress fixtures
+- ✅ `tests/factories/` - 8 test data factories with traits
+- ✅ `tests/helpers/` - Assertions, time, API, mocks utilities
+- ✅ `tests/utils/` - Fluent builders for complex scenarios
+- ✅ `TESTING.md` - 2054 lines comprehensive documentation
+- ✅ pytest-xdist parallel execution (30.8s → 8.3s)
+- ✅ Coverage reporting with 90% threshold
 
 ---
 
