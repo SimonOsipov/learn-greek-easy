@@ -286,20 +286,78 @@ The database layer is fully operational and ready for API endpoint integration.
 ---
 
 ### 4. Backend Testing Framework
-**Status**: ⏸️ **NOT STARTED**
+**Status**: 🔄 **IN PROGRESS** (Started 2025-11-30)
 **Estimated Duration**: 3-4 hours
 **Priority**: Critical Path
 **Dependencies**: Task 2, Task 3
 
 **Objective**: Establish pytest as the primary testing framework for all backend development. All subsequent tasks should include comprehensive tests using this framework.
 
-**Subtasks**:
-- 04.01: Configure pytest with async support (pytest-asyncio)
-- 04.02: Setup test database with fixtures (PostgreSQL test container or SQLite)
-- 04.03: Create base test classes (BaseTestCase, AuthenticatedTestCase)
-- 04.04: Implement test fixtures (users, tokens, decks, cards)
-- 04.05: Create factory classes for test data generation
-- 04.06: Configure coverage reporting (pytest-cov)
+**Completed Subtasks**:
+- ✅ **04.01**: Configure pytest with async support (COMPLETED 2025-11-30)
+  - Files: [04.01-pytest-async-configuration-plan.md](./04/04.01-pytest-async-configuration-plan.md)
+  - `pyproject.toml` updated with `[tool.pytest.ini_options]` section
+  - `asyncio_mode = "auto"` enabled (no `@pytest.mark.asyncio` needed)
+  - Test markers registered (unit, integration, slow, auth, api, db)
+  - `tests/conftest.py` with event loop configuration and pytest hooks
+
+- ✅ **04.02**: Setup Test Database with Fixtures - PostgreSQL Only (COMPLETED 2025-11-30)
+  - Files: [04.02-test-database-fixtures-plan.md](./04/04.02-test-database-fixtures-plan.md)
+  - QA Report: [task-04.02-verification.md](../../qa/task-04.02-verification.md)
+  - Created `tests/helpers/database.py` - 11 PostgreSQL utility functions
+  - Created `tests/fixtures/database.py` - 10 database fixtures (db_engine, db_session, etc.)
+  - Created `tests/unit/test_database_fixtures.py` - 24 comprehensive tests
+  - Created `scripts/verify_database_fixtures.py` - Verification script
+  - Updated `tests/conftest.py` - Import PostgreSQL fixtures, removed SQLite
+  - Test isolation verified, PostgreSQL-specific features working (enums, UUIDs)
+  - Architecture Decision: PostgreSQL-only testing (no SQLite) for test fidelity
+
+- ✅ **04.03**: Create Base Test Classes (COMPLETED 2025-11-30)
+  - Files: [04.03-base-test-classes-plan.md](./04/04.03-base-test-classes-plan.md)
+  - QA Report: [task-04.03-verification.md](../../qa/task-04.03-verification.md)
+  - Created `tests/fixtures/auth.py` - 17 authentication fixtures (users, tokens, headers, bundles)
+  - Created `tests/base.py` - BaseTestCase (11 methods) + AuthenticatedTestCase (10 methods)
+  - Created `tests/unit/test_base_classes.py` - 41 comprehensive tests
+  - Updated `tests/fixtures/__init__.py` and `tests/conftest.py` - Export auth fixtures
+  - All 41 tests passing, no circular imports, full type hints and docstrings
+
+- ✅ **04.04**: Implement Domain Test Fixtures (COMPLETED 2025-11-30)
+  - Files: [04.04-domain-fixtures-plan.md](./04/04.04-domain-fixtures-plan.md)
+  - QA Report: [task-04.04-verification.md](../../qa/task-04.04-verification.md)
+  - Created `tests/fixtures/deck.py` - 13 deck/card fixtures with Greek vocabulary (A1, A2, B1)
+  - Created `tests/fixtures/progress.py` - 20+ progress/review fixtures for SM-2 testing
+  - Types: DeckWithCards, MultiLevelDecks, UserProgress, CardsByStatus, ReviewHistory
+  - SM-2 constants: SM2_DEFAULT_EASINESS_FACTOR (2.5), SM2_MIN_EASINESS_FACTOR (1.3)
+  - Updated `tests/fixtures/__init__.py` and `tests/conftest.py` with all new exports
+  - 324 tests collected, 296 passing (28 pre-existing failures unrelated to fixtures)
+
+- ✅ **04.05**: Create Factory Classes for Test Data Generation (COMPLETED 2025-11-30)
+  - Files: [04.05-factory-classes-plan.md](./04/04.05-factory-classes-plan.md)
+  - QA Report: [task-04.05-verification.md](../../qa/task-04.05-verification.md)
+  - Created `tests/factories/providers/greek.py` - Custom Faker provider with A1/A2/B1 Greek vocabulary
+  - Created `tests/factories/base.py` - BaseFactory with async SQLAlchemy session support
+  - Created `tests/factories/auth.py` - UserFactory, UserSettingsFactory, RefreshTokenFactory
+  - Created `tests/factories/content.py` - DeckFactory, CardFactory with CEFR level traits
+  - Created `tests/factories/progress.py` - UserDeckProgressFactory, CardStatisticsFactory, ReviewFactory
+  - Traits: admin, inactive, oauth, verified, logged_in, a1-c2 levels, easy/medium/hard, new/learning/review/mastered, due/overdue/struggling
+  - SM-2 constants: SM2_DEFAULT_EASINESS_FACTOR=2.5, SM2_MIN_EASINESS_FACTOR=1.3
+  - Updated `tests/conftest.py` with factory session binding fixture
+  - 37/37 factory tests passing (100% pass rate)
+
+- ✅ **04.06**: Configure Coverage Reporting (pytest-cov) (COMPLETED 2025-12-01)
+  - Files: [04.06-coverage-reporting-plan.md](./04/04.06-coverage-reporting-plan.md)
+  - QA Report: [task-04.06-verification.md](../../qa/task-04.06-verification.md)
+  - Updated `pyproject.toml` with complete coverage configuration:
+    - `[tool.coverage.run]`: branch=true, parallel=true, dynamic_context
+    - `[tool.coverage.report]`: fail_under=90, show_missing=true, expanded exclude_lines
+    - `[tool.coverage.html]`: directory, show_contexts, title
+    - `[tool.coverage.xml]` and `[tool.coverage.json]` sections
+  - Updated pytest addopts: --cov-branch, --cov-fail-under=90, --cov-context=test
+  - Created `scripts/verify_coverage_config.py` - 7 verification checks
+  - Added `backend-tests` job to GitHub Actions with PostgreSQL service
+  - All verification checks passing, HTML/XML/JSON reports generating
+
+**Remaining Subtasks**:
 - 04.07: Setup parallel test execution (pytest-xdist)
 - 04.08: Create test utilities and helpers
 - 04.09: Establish testing conventions and patterns
@@ -1059,9 +1117,9 @@ app.add_middleware(
 
 ---
 
-**Last Updated**: 2025-11-29
-**Document Version**: 2.6
-**Status**: Tasks 1 & 2 Complete | Task 3 In Progress (90% complete)
-**Backend Progress**: Task 01 ✅ | Task 02 ✅ (All subtasks: 02.01-02.06) | Task 03 🔄 (Subtasks 03.01-03.05, 03.07, 03.08, 03.09, 03.10 ✅)
-**Next Milestone**: Task 03.06 (Google OAuth Placeholder) → Task 04 (Backend Testing Framework) → Task 05 (API Foundation)
+**Last Updated**: 2025-12-01
+**Document Version**: 3.0
+**Status**: Tasks 1 & 2 Complete | Task 3 In Progress (90%) | Task 4 In Progress (60%)
+**Backend Progress**: Task 01 ✅ | Task 02 ✅ | Task 03 🔄 (9/10) | Task 04 🔄 (6/10: 04.01-04.06 ✅)
+**Next Milestone**: Task 04.07-04.10 (Testing Framework) → Task 05 (API Foundation)
 **Total Tasks**: 15 (renumbered: new Task 4 Testing Framework inserted, old Unit Testing merged)

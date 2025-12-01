@@ -90,3 +90,90 @@ jobs:
           name: playwright-results
           path: learn-greek-easy-frontend/test-results/
           retention-days: 7
+
+  # Job 3: Backend Tests (Python)
+  backend-tests:
+    name: Backend Tests (Python)
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_learn_greek
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: 'pip'
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: 2.0.0
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Load cached venv
+        id: cached-poetry-dependencies
+        uses: actions/cache@v4
+        with:
+          path: learn-greek-easy-backend/.venv
+          key: venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
+
+      - name: Install dependencies
+        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+        working-directory: learn-greek-easy-backend
+        run: poetry install --no-interaction --no-root
+
+      - name: Install project
+        working-directory: learn-greek-easy-backend
+        run: poetry install --no-interaction
+
+      - name: Create test database extensions
+        run: |
+          PGPASSWORD=postgres psql -h localhost -p 5433 -U postgres -d test_learn_greek -c "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";"
+
+      - name: Run tests with coverage
+        working-directory: learn-greek-easy-backend
+        env:
+          TEST_DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5433/test_learn_greek
+        run: |
+          poetry run pytest tests/ \
+            --cov=src \
+            --cov-report=xml:coverage.xml \
+            --cov-report=term-missing \
+            --cov-branch \
+            --cov-fail-under=90 \
+            -v \
+            --tb=short
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: learn-greek-easy-backend/coverage.xml
+          flags: backend
+          name: backend-coverage
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage-report
+          path: learn-greek-easy-backend/htmlcov/
+          retention-days: 7

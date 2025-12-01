@@ -759,20 +759,22 @@ jobs:
 - [ ] Add `aiosqlite` for SQLite async support (test DB)
 
 ### 8.2 Configuration
-- [ ] Update `pyproject.toml` with pytest configuration
-- [ ] Configure coverage settings
-- [ ] Add test markers
+- [x] Update `pyproject.toml` with pytest configuration (COMPLETED 2025-11-30)
+- [x] Configure coverage settings (COMPLETED 2025-12-01)
+- [x] Add test markers (COMPLETED 2025-11-30)
 
 ### 8.3 Fixtures
-- [ ] Enhance `tests/conftest.py` with global fixtures
-- [ ] Create `tests/fixtures/database.py` for DB fixtures
-- [ ] Create `tests/fixtures/auth.py` for auth fixtures
+- [x] Enhance `tests/conftest.py` with global fixtures (COMPLETED 2025-11-30)
+- [x] Create `tests/fixtures/database.py` for DB fixtures (COMPLETED 2025-11-30)
+- [x] Create `tests/fixtures/auth.py` for auth fixtures (COMPLETED 2025-11-30)
 
 ### 8.4 Factories
-- [ ] Create `tests/factories/__init__.py`
-- [ ] Create `tests/factories/user.py` (User, UserSettings, RefreshToken)
-- [ ] Create `tests/factories/deck.py` (Deck, Card)
-- [ ] Create `tests/factories/progress.py` (Progress, Review)
+- [x] Create `tests/factories/__init__.py` (COMPLETED 2025-11-30)
+- [x] Create `tests/factories/auth.py` (User, UserSettings, RefreshToken) (COMPLETED 2025-11-30)
+- [x] Create `tests/factories/content.py` (Deck, Card) (COMPLETED 2025-11-30)
+- [x] Create `tests/factories/progress.py` (Progress, CardStatistics, Review) (COMPLETED 2025-11-30)
+- [x] Create `tests/factories/base.py` (BaseFactory with async support) (COMPLETED 2025-11-30)
+- [x] Create `tests/factories/providers/greek.py` (GreekProvider) (COMPLETED 2025-11-30)
 
 ### 8.5 Structure
 - [ ] Reorganize existing tests into new structure
@@ -822,9 +824,33 @@ jobs:
 
 ---
 
-**Document Version**: 1.0
+**Document Version**: 1.4
 **Created**: 2025-11-29
+**Updated**: 2025-12-01
 **Author**: Architecture Team
-**Status**: Ready for Implementation
+**Status**: 🔄 IN PROGRESS (Subtask 04.06 Completed)
 **Priority**: Critical Path
 **Estimated Duration**: 3-4 hours
+
+**Subtask Progress**:
+- ✅ 04.01: Configure pytest with async support (pytest-asyncio) (COMPLETED 2025-11-30)
+- ✅ 04.02: Setup test database with fixtures - PostgreSQL Only (COMPLETED 2025-11-30)
+- ✅ 04.03: Create base test classes (BaseTestCase, AuthenticatedTestCase) (COMPLETED 2025-11-30)
+- ✅ 04.04: Implement domain test fixtures (Decks, Cards, Progress, Reviews) (COMPLETED 2025-11-30)
+- ✅ 04.05: Create factory classes for test data generation (COMPLETED 2025-11-30)
+  - Files: [04.05-factory-classes-plan.md](./04.05-factory-classes-plan.md)
+  - QA Report: [task-04.05-verification.md](../../qa/task-04.05-verification.md)
+  - 8 factory classes: UserFactory, UserSettingsFactory, RefreshTokenFactory, DeckFactory, CardFactory, UserDeckProgressFactory, CardStatisticsFactory, ReviewFactory
+  - Custom GreekProvider for Faker with A1/A2/B1 vocabulary
+  - SM-2 state presets (new, learning, review, mastered, due, overdue, struggling)
+  - Traits for all factories (admin, inactive, oauth, etc.)
+  - 37/37 factory tests passing
+- ✅ 04.06: Configure coverage reporting (pytest-cov) (COMPLETED 2025-12-01)
+  - Files: [04.06-coverage-reporting-plan.md](./04.06-coverage-reporting-plan.md)
+  - QA Report: [task-04.06-verification.md](../../qa/task-04.06-verification.md)
+  - Complete pyproject.toml coverage configuration (branch, parallel, fail_under=90)
+  - HTML, XML, JSON, and terminal coverage reports
+  - GitHub Actions backend-tests job with PostgreSQL service
+  - Verification script: scripts/verify_coverage_config.py
+  - All 7 verification checks passing
+- ⏸️ 04.07-04.10: Remaining subtasks

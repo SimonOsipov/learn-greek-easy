@@ -1,19 +1,19 @@
 # MVP Development - All Tasks Progress
 
-**Last Updated**: 2025-11-29 (Task 03.08 Completed, Task 4 Testing Framework Added)
+**Last Updated**: 2025-12-01 (Task 04.06 Completed - Configure Coverage Reporting)
 
 ## Progress Dashboard
 | Area | Total | Completed | In Progress | Not Started | % |
 |------|-------|-----------|-------------|-------------|---|
 | Frontend | 11 | 11 | 0 | 0 | 100% ✨ |
-| Backend | 15 | 2 | 1 | 12 | 20% |
+| Backend | 15 | 2 | 2 | 11 | 27% |
 | Infrastructure | 6 | 0 | 0 | 6 | 0% |
 | Testing | ~10 | 0 | 0 | ~10 | 0% |
 | Deployment | 9 | 0 | 0 | 9 | 0% |
 
 **Backend Task Structure** (15 tasks total):
 - Tasks 1-3: Infrastructure & Auth (2 complete, 1 in progress)
-- **Task 4: Backend Testing Framework (NEW - Critical Path)**
+- **Task 4: Backend Testing Framework (IN PROGRESS - 04.06 Complete)**
 - Tasks 5-9: API Development
 - Task 10: SM-2 Algorithm
 - Tasks 11-12: Content & Background Jobs
@@ -209,16 +209,69 @@ See detailed backend tasks in: [backend/](./backend/)
   - QA Report: [qa/task-03.08-verification.md](../qa/task-03.08-verification.md)
   - Verdict: **READY FOR PRODUCTION**
 
-### 4. Backend Testing Framework (NEW)
-**Status**: ⏸️ NOT STARTED
+### 4. Backend Testing Framework
+**Status**: 🔄 IN PROGRESS (Started 2025-11-30)
 **File**: [backend/Backend-Tasks-Progress.md](./backend/Backend-Tasks-Progress.md#4-backend-testing-framework)
 **Estimated Duration**: 3-4 hours
 **Priority**: Critical Path
 
 **Objective**: Establish pytest as the primary testing framework for all backend development. All subsequent tasks must include tests using this framework.
 
+**Completed Subtasks**:
+- ✅ **04.01**: Configure pytest with async support (COMPLETED 2025-11-30)
+  - Files: [04.01-pytest-async-configuration-plan.md](./backend/04/04.01-pytest-async-configuration-plan.md)
+  - `asyncio_mode = "auto"` in pyproject.toml
+  - Test markers: unit, integration, slow, auth, api, db
+  - Event loop configuration in conftest.py
+
+- ✅ **04.02**: Setup Test Database with Fixtures - PostgreSQL Only (COMPLETED 2025-11-30)
+  - Files: [04.02-test-database-fixtures-plan.md](./backend/04/04.02-test-database-fixtures-plan.md)
+  - QA Report: [qa/task-04.02-verification.md](./qa/task-04.02-verification.md)
+  - `tests/fixtures/database.py` - 10 fixtures (db_engine, db_session, etc.)
+  - `tests/helpers/database.py` - 11 PostgreSQL utility functions
+  - 24 fixture tests passing, test isolation verified
+  - Architecture Decision: PostgreSQL-only testing (no SQLite)
+
+- ✅ **04.03**: Create Base Test Classes (COMPLETED 2025-11-30)
+  - Files: [04.03-base-test-classes-plan.md](./backend/04/04.03-base-test-classes-plan.md)
+  - QA Report: [qa/task-04.03-verification.md](./qa/task-04.03-verification.md)
+  - `tests/fixtures/auth.py` - 17 authentication fixtures (users, tokens, headers, bundles)
+  - `tests/base.py` - BaseTestCase (11 methods) + AuthenticatedTestCase (10 methods)
+  - `tests/unit/test_base_classes.py` - 41 comprehensive tests passing
+  - All fixtures exported via `tests/fixtures/__init__.py` and `tests/conftest.py`
+
+- ✅ **04.04**: Implement Domain Test Fixtures (COMPLETED 2025-11-30)
+  - Files: [04.04-domain-fixtures-plan.md](./backend/04/04.04-domain-fixtures-plan.md)
+  - QA Report: [qa/task-04.04-verification.md](./qa/task-04.04-verification.md)
+  - `tests/fixtures/deck.py` - 13 deck/card fixtures with Greek vocabulary (A1, A2, B1)
+  - `tests/fixtures/progress.py` - 20+ progress/review fixtures for SM-2 testing
+  - Types: DeckWithCards, MultiLevelDecks, UserProgress, CardsByStatus, ReviewHistory
+  - 324 tests collected, 296 passing
+
+- ✅ **04.05**: Create Factory Classes for Test Data Generation (COMPLETED 2025-11-30)
+  - Files: [04.05-factory-classes-plan.md](./backend/04/04.05-factory-classes-plan.md)
+  - QA Report: [qa/task-04.05-verification.md](./qa/task-04.05-verification.md)
+  - `tests/factories/providers/greek.py` - Custom Faker provider with A1/A2/B1 vocabulary
+  - `tests/factories/base.py` - BaseFactory with async SQLAlchemy session support
+  - `tests/factories/auth.py` - UserFactory, UserSettingsFactory, RefreshTokenFactory
+  - `tests/factories/content.py` - DeckFactory, CardFactory with CEFR level traits
+  - `tests/factories/progress.py` - UserDeckProgressFactory, CardStatisticsFactory, ReviewFactory
+  - 8 factories with traits (admin, inactive, oauth, mastered, due, struggling, etc.)
+  - 37/37 factory tests passing
+
+- ✅ **04.06**: Configure Coverage Reporting (pytest-cov) (COMPLETED 2025-12-01)
+  - Files: [04.06-coverage-reporting-plan.md](./backend/04/04.06-coverage-reporting-plan.md)
+  - QA Report: [qa/task-04.06-verification.md](./qa/task-04.06-verification.md)
+  - Complete pyproject.toml coverage configuration (branch, parallel, fail_under=90)
+  - HTML, XML, JSON, and terminal coverage reports
+  - GitHub Actions `backend-tests` job with PostgreSQL service
+  - Verification script: `scripts/verify_coverage_config.py`
+  - All 7 verification checks passing
+
+**Remaining Subtasks**: 04.07-04.10
+
 **Key Deliverables**:
-- `tests/conftest.py` - Global fixtures and configuration
+- `tests/conftest.py` - Global fixtures and configuration ✅
 - `tests/unit/` - Unit test structure
 - `tests/integration/` - Integration test structure
 - `tests/factories/` - Test data factories
@@ -386,7 +439,7 @@ See detailed backend tasks in: [backend/](./backend/)
 ## Testing
 
 ### Backend Testing
-- [ ] **Task 4: Backend Testing Framework** (Critical Path - sets up pytest infrastructure)
+- [🔄] **Task 4: Backend Testing Framework** (IN PROGRESS - 04.06 Coverage Reporting complete)
 - [ ] Task 13: Integration Testing (uses Task 4 framework)
 - [ ] Write unit tests for SM-2 algorithm (Task 10)
 - [ ] Write API endpoint tests (Tasks 5-9)
