@@ -319,6 +319,83 @@ When working on this project:
 
 ---
 
-**Document Version**: 1.0
+## Testing Quick Reference
+
+### Running Tests
+
+```bash
+# Run all tests (parallel)
+cd /Users/samosipov/Downloads/learn-greek-easy/learn-greek-easy-backend && \
+/Users/samosipov/.local/bin/poetry run pytest -n auto
+
+# Run with coverage
+cd /Users/samosipov/Downloads/learn-greek-easy/learn-greek-easy-backend && \
+/Users/samosipov/.local/bin/poetry run pytest --cov=src --cov-report=term-missing
+
+# Run unit tests only
+cd /Users/samosipov/Downloads/learn-greek-easy/learn-greek-easy-backend && \
+/Users/samosipov/.local/bin/poetry run pytest -m unit
+
+# Run integration tests only
+cd /Users/samosipov/Downloads/learn-greek-easy/learn-greek-easy-backend && \
+/Users/samosipov/.local/bin/poetry run pytest -m integration
+
+# Run single test file
+cd /Users/samosipov/Downloads/learn-greek-easy/learn-greek-easy-backend && \
+/Users/samosipov/.local/bin/poetry run pytest tests/unit/core/test_security.py -v
+
+# Run with verbose output (debugging)
+cd /Users/samosipov/Downloads/learn-greek-easy/learn-greek-easy-backend && \
+/Users/samosipov/.local/bin/poetry run pytest -vv --tb=long -x
+```
+
+### Test Structure
+
+```
+tests/
+├── unit/           # Fast, isolated tests (mocked DB)
+├── integration/    # Tests with real database
+├── fixtures/       # Pytest fixtures by domain
+├── factories/      # Factory Boy factories
+├── helpers/        # Test utilities (assertions, mocks)
+└── utils/          # Data builders for complex scenarios
+```
+
+### Creating Test Data
+
+```python
+# Fixtures (in test functions)
+async def test_example(self, db_session, test_user, auth_headers):
+    # test_user and auth_headers are pre-created
+
+# Factories (customizable)
+user = await UserFactory.create_async(db_session, admin=True)
+deck = await DeckFactory.create_async(db_session, a1=True)
+cards = await CardFactory.create_batch_async(db_session, 10, deck=deck)
+
+# Builders (complex scenarios)
+result = await ReviewSessionBuilder(db_session).for_user(user).with_cards(cards).build()
+```
+
+### Key Test Files
+
+| File | Purpose |
+|------|---------|
+| `tests/conftest.py` | Global fixtures |
+| `tests/fixtures/database.py` | Database session fixtures |
+| `tests/fixtures/auth.py` | User and token fixtures |
+| `tests/factories/` | Factory classes for test data |
+| `tests/helpers/assertions.py` | Custom assertions |
+| `TESTING.md` | Full testing documentation |
+
+### Coverage Target
+
+- Overall: >= 90%
+- Core modules: >= 95%
+
+---
+
+**Document Version**: 1.1
 **Created**: 2025-11-21
+**Last Updated**: 2025-12-01
 **Maintained By**: Project team and AI assistants
