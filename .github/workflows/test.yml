@@ -1,10 +1,9 @@
 name: Test Suite
 
 on:
-  push:
-    branches: [main, develop]
   pull_request:
     branches: [main, develop]
+    types: [opened, synchronize]
 
 jobs:
   # Job 1: Unit & Integration Tests
