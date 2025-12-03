@@ -1,4 +1,5 @@
 """Alembic environment configuration for SQLAlchemy 2.0."""
+
 from logging.config import fileConfig
 
 from sqlalchemy import engine_from_config, pool
@@ -13,23 +14,20 @@ from src.config import settings
 from src.db.base import Base
 
 # CRITICAL: Import all models for Alembic to detect them
-from src.db.models import (
-    # User management
-    User,
-    UserSettings,
-    RefreshToken,
-    # Content
-    Deck,
+# These imports are required for Alembic autogenerate to work properly
+from src.db.models import (  # noqa: F401
     Card,
-    # Progress tracking
-    UserDeckProgress,
-    CardStatistics,
-    Review,
-    # Enums
-    DeckLevel,
     CardDifficulty,
+    CardStatistics,
     CardStatus,
+    Deck,
+    DeckLevel,
+    RefreshToken,
+    Review,
     ReviewRating,
+    User,
+    UserDeckProgress,
+    UserSettings,
 )
 
 # Alembic Config object

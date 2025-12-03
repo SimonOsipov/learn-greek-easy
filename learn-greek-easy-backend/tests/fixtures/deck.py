@@ -24,14 +24,11 @@ Usage:
 
 from collections.abc import AsyncGenerator
 from typing import Any, NamedTuple
-from uuid import uuid4
 
-import pytest
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.db.models import Card, CardDifficulty, Deck, DeckLevel
-
 
 # =============================================================================
 # Type Definitions
@@ -749,9 +746,7 @@ async def deck_with_many_cards(
 
     cards = []
     for i in range(50):
-        difficulty = [CardDifficulty.EASY, CardDifficulty.MEDIUM, CardDifficulty.HARD][
-            i % 3
-        ]
+        difficulty = [CardDifficulty.EASY, CardDifficulty.MEDIUM, CardDifficulty.HARD][i % 3]
         card = await create_card(
             db_session,
             deck,

@@ -26,15 +26,8 @@ from datetime import date, datetime, timedelta
 import factory
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.db.models import (
-    CardStatistics,
-    CardStatus,
-    Review,
-    ReviewRating,
-    UserDeckProgress,
-)
+from src.db.models import CardStatistics, CardStatus, Review, ReviewRating, UserDeckProgress
 from tests.factories.base import BaseFactory, utc_now
-
 
 # =============================================================================
 # SM-2 Algorithm Constants
@@ -44,11 +37,11 @@ SM2_DEFAULT_EASINESS_FACTOR = 2.5
 SM2_MIN_EASINESS_FACTOR = 1.3
 
 SM2_INTERVALS = {
-    "first_success": 1,    # 1 day after first successful review
-    "second_success": 6,   # 6 days after second success
-    "learning": 1,         # Learning phase interval
-    "review": 10,          # Typical review interval
-    "mastered": 30,        # Mastered card interval
+    "first_success": 1,  # 1 day after first successful review
+    "second_success": 6,  # 6 days after second success
+    "learning": 1,  # Learning phase interval
+    "review": 10,  # Typical review interval
+    "mastered": 30,  # Mastered card interval
 }
 
 
@@ -109,9 +102,7 @@ class UserDeckProgressFactory(BaseFactory):
 
         # Stale progress (hasn't studied recently)
         stale = factory.Trait(
-            last_studied_at=factory.LazyFunction(
-                lambda: utc_now() - timedelta(days=30)
-            ),
+            last_studied_at=factory.LazyFunction(lambda: utc_now() - timedelta(days=30)),
         )
 
 
@@ -176,9 +167,7 @@ class CardStatisticsFactory(BaseFactory):
             easiness_factor=2.36,  # Slightly decreased from reviews
             interval=SM2_INTERVALS["learning"],
             repetitions=2,
-            next_review_date=factory.LazyFunction(
-                lambda: date.today() + timedelta(days=1)
-            ),
+            next_review_date=factory.LazyFunction(lambda: date.today() + timedelta(days=1)),
             status=CardStatus.LEARNING,
         )
 
@@ -187,9 +176,7 @@ class CardStatisticsFactory(BaseFactory):
             easiness_factor=SM2_DEFAULT_EASINESS_FACTOR,
             interval=SM2_INTERVALS["review"],
             repetitions=5,
-            next_review_date=factory.LazyFunction(
-                lambda: date.today() + timedelta(days=10)
-            ),
+            next_review_date=factory.LazyFunction(lambda: date.today() + timedelta(days=10)),
             status=CardStatus.REVIEW,
         )
 
@@ -198,9 +185,7 @@ class CardStatisticsFactory(BaseFactory):
             easiness_factor=2.7,  # Increased from consistent success
             interval=SM2_INTERVALS["mastered"],
             repetitions=10,
-            next_review_date=factory.LazyFunction(
-                lambda: date.today() + timedelta(days=30)
-            ),
+            next_review_date=factory.LazyFunction(lambda: date.today() + timedelta(days=30)),
             status=CardStatus.MASTERED,
         )
 
@@ -218,9 +203,7 @@ class CardStatisticsFactory(BaseFactory):
             easiness_factor=SM2_DEFAULT_EASINESS_FACTOR,
             interval=5,
             repetitions=3,
-            next_review_date=factory.LazyFunction(
-                lambda: date.today() - timedelta(days=3)
-            ),
+            next_review_date=factory.LazyFunction(lambda: date.today() - timedelta(days=3)),
             status=CardStatus.REVIEW,
         )
 

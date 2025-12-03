@@ -38,6 +38,11 @@ export type { ImportMeta };
 
 // Declare global types for the app
 declare global {
+  // Extend Window for E2E testing
+  interface Window {
+    playwright?: boolean;
+  }
+
   // App configuration type
   interface AppConfig {
     apiUrl: string;

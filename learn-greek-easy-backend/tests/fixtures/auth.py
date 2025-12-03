@@ -33,7 +33,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.core.security import create_access_token, create_refresh_token, hash_password
 from src.db.models import RefreshToken, User, UserSettings
 
-
 # =============================================================================
 # Type Definitions
 # =============================================================================
@@ -460,6 +459,7 @@ def expired_access_token() -> str:
         This token will fail validation. Use for testing error handling.
     """
     from jose import jwt
+
     from src.config import settings
 
     payload = {

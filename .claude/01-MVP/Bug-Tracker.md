@@ -3,7 +3,7 @@
 **Project**: Learn Greek Easy - MVP Development
 **Document Purpose**: Track bugs discovered during development, verification, and testing
 **Created**: 2025-11-01
-**Last Updated**: 2025-11-06
+**Last Updated**: 2025-12-03
 **Status**: Active
 
 ---
@@ -69,11 +69,13 @@ Report a bug in this tracker when you discover:
 
 ## Active Bugs
 
-**Total Active Bugs**: 1
+**Total Active Bugs**: 3
 
 | Bug ID | Title | Severity | Status | Discovered | Task | Files Affected |
 |--------|-------|----------|--------|------------|------|----------------|
 | BUG-003 | Date comparison discrepancy between stats and review API | 🟡 Medium | Partially Fixed | 2025-11-04 | 05.06/05.08 | dateUtils.ts, reviewStatsHelpers.ts, spacedRepetition.ts |
+| BUG-006 | Flake8 pre-existing code quality issues | 🟢 Low | Active | 2025-12-03 | 02.03 | Multiple backend files (src/, scripts/) |
+| BUG-007 | MyPy type checking errors in production code | 🟡 Medium | Active | 2025-12-03 | 02.03 | 8 files in src/ |
 
 **Note**: BUG-003 code fix has been implemented (date normalization to midnight), but review queue still returns "No cards due" despite statistics showing cards are due. Requires further investigation of mock data structure and queue building logic.
 
@@ -161,6 +163,168 @@ After full fix is applied:
 
 ---
 
+### BUG-006: Flake8 Pre-existing Code Quality Issues
+
+**Status**: Active
+**Severity**: 🟢 Low
+**Priority**: Low (code quality, not functional bugs)
+
+**Discovered**: 2025-12-03 during Task 02.03 (Pre-commit Hooks Setup)
+**Discovered By**: Pre-commit hooks automated linting
+**Related Task**: Task 02.03 (DevOps - Pre-commit Hooks)
+
+#### Description
+
+Pre-commit hooks identified existing Flake8 violations in the backend codebase. These are code quality issues that should be addressed to maintain clean code standards. The issues do not affect functionality but indicate technical debt.
+
+#### Summary
+
+| Issue Type | Count | Description |
+|------------|-------|-------------|
+| F401 | 35+ | Unused imports |
+| F541 | 12 | f-string missing placeholders |
+| F841 | 4 | Unused variables |
+| C901 | 10 | Function too complex (>10) |
+| E402 | 25+ | Module level import not at top |
+| E226 | 3 | Missing whitespace around operator |
+
+#### Production Code Issues (Priority)
+
+| File | Line | Issue | Description |
+|------|------|-------|-------------|
+| `src/api/v1/auth.py` | 22 | F401 | `UserResponse` imported but unused |
+| `src/api/v1/auth.py` | 176 | F841 | Variable `e` assigned but never used |
+| `src/config.py` | 3 | F401 | `os` imported but unused |
+| `src/config.py` | 5 | F401 | `Dict` imported but unused |
+| `src/core/redis.py` | 7 | F401 | `redis.asyncio` imported but unused |
+| `src/core/security.py` | 28 | F401 | `status` imported but unused |
+
+#### Scripts Issues (Lower Priority)
+
+| File | Issues |
+|------|--------|
+| `scripts/verify_refresh.py` | C901 (complexity 25), E402, F541 (7 occurrences), E226 |
+| `scripts/verify_database_fixtures.py` | C901 (complexity 24) |
+| `scripts/verify_pytest_async.py` | C901 (complexity 20) |
+| `scripts/verify_parallel_execution.py` | C901 (complexity 13, 19) |
+| `scripts/verify_session_management.py` | F401, E226, C901 (complexity 18) |
+| `scripts/verify_registration.py` | C901, E402, F541 |
+| `scripts/verify_login.py` | F401, E402, F841 |
+| `scripts/verify_auth_middleware.py` | C901 (complexity 13) |
+
+#### Note on Alembic
+
+The `alembic/env.py` file has 12 F401 (unused import) warnings. These imports are **intentional** - they ensure SQLAlchemy knows about all models for migration autogeneration. Consider adding to `.flake8` per-file ignores.
+
+#### Recommended Fix
+
+1. **Production code** (`src/`): Remove unused imports and variables
+2. **Alembic**: Add to `.flake8`: `alembic/env.py:F401`
+3. **Scripts**: Either refactor for complexity or add to lint ignores (verification scripts are not production code)
+
+#### Testing Checklist
+
+- [ ] `poetry run flake8 src/` passes with no errors
+- [ ] Backend tests still pass after removing unused imports
+- [ ] CI pipeline passes
+
+---
+
+### BUG-007: MyPy Type Checking Errors in Production Code
+
+**Status**: Active
+**Severity**: 🟡 Medium
+**Priority**: Medium (type safety issues could indicate runtime bugs)
+
+**Discovered**: 2025-12-03 during Task 02.03 (Pre-commit Hooks Setup)
+**Discovered By**: Pre-commit hooks automated type checking
+**Related Task**: Task 02.03 (DevOps - Pre-commit Hooks)
+
+#### Description
+
+Pre-commit hooks identified 20 MyPy type errors in the backend production code. These indicate potential type safety issues that could lead to runtime errors. Some errors suggest missing model attributes or incorrect type annotations.
+
+#### Summary
+
+| Error Type | Count | Description |
+|------------|-------|-------------|
+| no-any-return | 8 | Returning `Any` from typed function |
+| attr-defined | 6 | Attribute doesn't exist on type |
+| arg-type | 1 | Incompatible argument type |
+| return-value | 1 | Incompatible return type |
+| union-attr | 2 | Attribute access on union with incompatible type |
+| valid-type | 1 | Invalid type expression |
+
+#### Detailed Findings
+
+##### `src/services/auth_service.py` (4 errors) - HIGH PRIORITY
+
+```
+Line 178: Argument 2 to "verify_password" has incompatible type "str | None"; expected "str"
+Line 304: "RefreshToken" has no attribute "is_active"
+Line 310: "RefreshToken" has no attribute "email"
+Line 333: "RefreshToken" has no attribute "email"
+Line 336: Incompatible return value type (got "tuple[str, str, RefreshToken]", expected "tuple[str, str, User]")
+```
+
+**Impact**: May indicate missing model attributes on `RefreshToken` or incorrect service implementation.
+
+##### `src/repositories/user.py` (6 errors)
+
+```
+Line 181, 198, 216: Returning Any from function declared to return "int"
+Line 181, 198, 216: "Result[Any]" has no attribute "rowcount"
+```
+
+**Fix**: Use proper SQLAlchemy `Result` type or `CursorResult` for `rowcount`.
+
+##### `src/middleware/auth.py` (3 errors)
+
+```
+Line 119, 124, 128: Returning Any from function declared to return "str | None"
+```
+
+**Fix**: Add explicit type casts when returning values from JWT decode.
+
+##### `src/core/redis.py` (1 error)
+
+```
+Line 71: "Redis[Any]" has no attribute "aclose"; maybe "close"?
+```
+
+**Fix**: Use `close()` instead of `aclose()` or check redis-py version compatibility.
+
+##### `src/services/health_service.py` (2 errors)
+
+```
+Line 191, 194: Item "BaseException" of "ComponentHealth | BaseException" has no attribute "status"
+```
+
+**Fix**: Add type narrowing with `isinstance()` check before accessing `.status`.
+
+##### Other Files
+
+| File | Line | Error |
+|------|------|-------|
+| `src/config.py` | 120 | no-any-return |
+| `src/core/security.py` | 521 | no-any-return |
+| `src/repositories/base.py` | 198 | valid-type (method named `list` conflicts) |
+
+#### Recommended Fix Priority
+
+1. **Priority 1**: `auth_service.py` - May indicate actual bugs (missing RefreshToken attributes)
+2. **Priority 2**: `user.py` - SQLAlchemy typing issues
+3. **Priority 3**: Other `no-any-return` errors - Add explicit type casts
+
+#### Testing Checklist
+
+- [ ] `poetry run mypy src/` passes with no errors
+- [ ] RefreshToken model has required attributes (is_active, email)
+- [ ] Auth service refresh token flow works correctly
+- [ ] All backend tests pass
+
+---
+
 ## Bug Reporting Guidelines
 
 ### How to Report a New Bug
@@ -245,10 +409,10 @@ When you discover a bug, add it to this document following this template:
 
 ## Metrics and Insights
 
-### Bug Statistics (Updated 2025-11-06)
+### Bug Statistics (Updated 2025-12-03)
 
-**Total Bugs Discovered**: 5
-**Active Bugs**: 1 (partially fixed)
+**Total Bugs Discovered**: 7
+**Active Bugs**: 3 (1 partially fixed, 2 new)
 **Fixed Bugs**: 4
 **Won't Fix**: 0
 **Duplicate**: 0
@@ -256,16 +420,18 @@ When you discover a bug, add it to this document following this template:
 **By Severity**:
 - 🔴 Critical: 1 (fixed - BUG-004)
 - 🟠 High: 0
-- 🟡 Medium: 2 (1 fixed - BUG-001, 1 partially fixed - BUG-003)
-- 🟢 Low: 2 (fixed - BUG-002, BUG-005)
+- 🟡 Medium: 3 (1 fixed - BUG-001, 1 partially fixed - BUG-003, 1 active - BUG-007)
+- 🟢 Low: 3 (2 fixed - BUG-002, BUG-005, 1 active - BUG-006)
 
 **By Component**:
 - Mock API Services: 1 (fixed - BUG-001)
 - Review System: 1 (partially fixed - BUG-003)
 - Chart Components: 1 (fixed - BUG-004)
 - Analytics Hooks: 1 (fixed - BUG-004)
+- Backend Code Quality: 1 (active - BUG-006)
+- Backend Type Safety: 1 (active - BUG-007)
 
 ---
 
-**Last Updated**: 2025-11-06
-**Version**: 1.5
+**Last Updated**: 2025-12-03
+**Version**: 1.6

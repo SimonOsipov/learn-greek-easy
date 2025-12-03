@@ -12,9 +12,6 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
-
-logger = logging.getLogger(__name__)
-
 from sqlalchemy.orm import selectinload
 
 from src.core.exceptions import (
@@ -32,7 +29,9 @@ from src.core.security import (
     verify_token,
 )
 from src.db.models import RefreshToken, User, UserSettings
-from src.schemas.user import TokenResponse, UserCreate, UserLogin, UserResponse
+from src.schemas.user import TokenResponse, UserCreate, UserLogin
+
+logger = logging.getLogger(__name__)
 
 
 class AuthService:
@@ -51,9 +50,7 @@ class AuthService:
         """
         self.db = db
 
-    async def register_user(
-        self, user_data: UserCreate
-    ) -> Tuple[User, TokenResponse]:
+    async def register_user(self, user_data: UserCreate) -> Tuple[User, TokenResponse]:
         """Register a new user account.
 
         Creates a new user with hashed password, initializes default
@@ -149,12 +146,12 @@ class AuthService:
         Returns:
             User model if found, None otherwise
         """
-        result = await self.db.execute(
-            select(User).where(User.email == email)
-        )
+        result = await self.db.execute(select(User).where(User.email == email))
         return result.scalar_one_or_none()
 
-    async def login_user(self, login_data: UserLogin, client_ip: str | None = None) -> Tuple[User, TokenResponse]:
+    async def login_user(
+        self, login_data: UserLogin, client_ip: str | None = None
+    ) -> Tuple[User, TokenResponse]:
         """Authenticate user and generate tokens.
 
         Args:
@@ -172,15 +169,15 @@ class AuthService:
         if not user:
             logger.warning(
                 "Failed login attempt - user not found",
-                extra={"email": login_data.email, "ip": client_ip}
+                extra={"email": login_data.email, "ip": client_ip},
             )
             raise InvalidCredentialsException()
 
-        # Verify password
-        if not verify_password(login_data.password, user.password_hash):
+        # Verify password (password_hash is None for OAuth-only users)
+        if not user.password_hash or not verify_password(login_data.password, user.password_hash):
             logger.warning(
                 "Failed login attempt - invalid password",
-                extra={"email": login_data.email, "user_id": str(user.id), "ip": client_ip}
+                extra={"email": login_data.email, "user_id": str(user.id), "ip": client_ip},
             )
             raise InvalidCredentialsException()
 
@@ -188,7 +185,7 @@ class AuthService:
         if not user.is_active:
             logger.warning(
                 "Failed login attempt - inactive account",
-                extra={"email": login_data.email, "user_id": str(user.id), "ip": client_ip}
+                extra={"email": login_data.email, "user_id": str(user.id), "ip": client_ip},
             )
             raise InvalidCredentialsException("Account is deactivated")
 
@@ -229,14 +226,12 @@ class AuthService:
                 "user_id": str(user.id),
                 "email": user.email,
                 "ip": client_ip,
-            }
+            },
         )
 
         return user, token_response
 
-    async def refresh_access_token(
-        self, refresh_token: str
-    ) -> Tuple[str, str, User]:
+    async def refresh_access_token(self, refresh_token: str) -> Tuple[str, str, User]:
         """Generate new access and refresh tokens using refresh token.
 
         Implements token rotation: the old refresh token is deleted and
@@ -279,7 +274,7 @@ class AuthService:
             # Token not in database - it was revoked or never existed
             logger.warning(
                 "Refresh token not found in database (possibly revoked)",
-                extra={"user_id": str(user_id)}
+                extra={"user_id": str(user_id)},
             )
             raise TokenInvalidException("Refresh token has been revoked")
 
@@ -291,22 +286,17 @@ class AuthService:
             raise TokenExpiredException("Refresh token has expired")
 
         # Step 4: Load user with settings using selectinload
-        result = await self.db.execute(
-            select(User)
-            .options(selectinload(User.settings))
-            .where(User.id == user_id)
+        user_result = await self.db.execute(
+            select(User).options(selectinload(User.settings)).where(User.id == user_id)
         )
-        user = result.scalar_one_or_none()
+        user: Optional[User] = user_result.scalar_one_or_none()
 
         # Step 5: Validate user exists
         if not user:
             # User was deleted after token was issued - clean up token
             await self.db.delete(db_token)
             await self.db.commit()
-            logger.warning(
-                "User not found for refresh token",
-                extra={"user_id": str(user_id)}
-            )
+            logger.warning("User not found for refresh token", extra={"user_id": str(user_id)})
             raise UserNotFoundException(user_id=str(user_id))
 
         # Step 6: Validate user is active
@@ -316,7 +306,7 @@ class AuthService:
             await self.db.commit()
             logger.warning(
                 "Inactive user attempted to refresh token",
-                extra={"user_id": str(user_id), "email": user.email}
+                extra={"user_id": str(user_id), "email": user.email},
             )
             raise TokenInvalidException("User account is deactivated")
 
@@ -339,8 +329,7 @@ class AuthService:
         await self.db.commit()
 
         logger.info(
-            "Token refreshed successfully",
-            extra={"user_id": str(user.id), "email": user.email}
+            "Token refreshed successfully", extra={"user_id": str(user.id), "email": user.email}
         )
 
         return new_access_token, new_refresh_token, user
@@ -355,9 +344,7 @@ class AuthService:
             token: The refresh token string to remove
         """
         try:
-            result = await self.db.execute(
-                select(RefreshToken).where(RefreshToken.token == token)
-            )
+            result = await self.db.execute(select(RefreshToken).where(RefreshToken.token == token))
             db_token = result.scalar_one_or_none()
             if db_token:
                 await self.db.delete(db_token)
@@ -407,13 +394,19 @@ class AuthService:
             await self.db.commit()
             logger.info(
                 "Refresh token revoked",
-                extra={"token_id": str(db_token.id), "user_id": str(db_token.user_id)}
+                extra={"token_id": str(db_token.id), "user_id": str(db_token.user_id)},
             )
             return True
 
         logger.warning(
             "Attempted to revoke non-existent token",
-            extra={"token_prefix": refresh_token_str[:20] + "..." if len(refresh_token_str) > 20 else refresh_token_str}
+            extra={
+                "token_prefix": (
+                    refresh_token_str[:20] + "..."
+                    if len(refresh_token_str) > 20
+                    else refresh_token_str
+                )
+            },
         )
         return False
 
@@ -428,9 +421,7 @@ class AuthService:
         Returns:
             Number of tokens revoked
         """
-        result = await self.db.execute(
-            select(RefreshToken).where(RefreshToken.user_id == user_id)
-        )
+        result = await self.db.execute(select(RefreshToken).where(RefreshToken.user_id == user_id))
         tokens = result.scalars().all()
 
         count = len(tokens)
@@ -440,8 +431,7 @@ class AuthService:
         if count > 0:
             await self.db.commit()
             logger.info(
-                "All user tokens revoked",
-                extra={"user_id": str(user_id), "tokens_revoked": count}
+                "All user tokens revoked", extra={"user_id": str(user_id), "tokens_revoked": count}
             )
 
         return count
@@ -456,9 +446,7 @@ class AuthService:
             Number of expired tokens removed
         """
         now = datetime.utcnow()
-        result = await self.db.execute(
-            select(RefreshToken).where(RefreshToken.expires_at <= now)
-        )
+        result = await self.db.execute(select(RefreshToken).where(RefreshToken.expires_at <= now))
         expired_tokens = result.scalars().all()
 
         count = len(expired_tokens)
@@ -467,10 +455,7 @@ class AuthService:
 
         if count > 0:
             await self.db.commit()
-            logger.info(
-                "Expired tokens cleaned up",
-                extra={"tokens_removed": count}
-            )
+            logger.info("Expired tokens cleaned up", extra={"tokens_removed": count})
 
         return count
 
@@ -490,7 +475,7 @@ class AuthService:
         result = await self.db.execute(
             select(RefreshToken).where(
                 RefreshToken.user_id == user_id,
-                RefreshToken.expires_at > now  # Only active (non-expired) sessions
+                RefreshToken.expires_at > now,  # Only active (non-expired) sessions
             )
         )
         tokens = result.scalars().all()
@@ -507,7 +492,7 @@ class AuthService:
 
         logger.debug(
             "User sessions retrieved",
-            extra={"user_id": str(user_id), "session_count": len(sessions)}
+            extra={"user_id": str(user_id), "session_count": len(sessions)},
         )
 
         return sessions
@@ -529,7 +514,7 @@ class AuthService:
         result = await self.db.execute(
             select(RefreshToken).where(
                 RefreshToken.id == session_id,
-                RefreshToken.user_id == user_id  # Authorization check
+                RefreshToken.user_id == user_id,  # Authorization check
             )
         )
         db_token = result.scalar_one_or_none()
@@ -539,12 +524,12 @@ class AuthService:
             await self.db.commit()
             logger.info(
                 "Session revoked by ID",
-                extra={"session_id": str(session_id), "user_id": str(user_id)}
+                extra={"session_id": str(session_id), "user_id": str(user_id)},
             )
             return True
 
         logger.warning(
             "Attempted to revoke non-existent or unauthorized session",
-            extra={"session_id": str(session_id), "user_id": str(user_id)}
+            extra={"session_id": str(session_id), "user_id": str(user_id)},
         )
         return False

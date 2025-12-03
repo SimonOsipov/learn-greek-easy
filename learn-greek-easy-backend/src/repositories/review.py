@@ -40,21 +40,14 @@ class ReviewRepository(BaseRepository[Review]):
         Use Case:
             Review history page, analytics dashboard
         """
-        query = (
-            select(Review)
-            .where(Review.user_id == user_id)
-            .order_by(Review.reviewed_at.desc())
-        )
+        query = select(Review).where(Review.user_id == user_id).order_by(Review.reviewed_at.desc())
 
         if start_date is not None:
             query = query.where(Review.reviewed_at >= start_date)
 
         if end_date is not None:
             # Include entire end_date
-            end_datetime = datetime.combine(
-                end_date,
-                datetime.max.time()
-            )
+            end_datetime = datetime.combine(end_date, datetime.max.time())
             query = query.where(Review.reviewed_at <= end_datetime)
 
         query = query.offset(skip).limit(limit)

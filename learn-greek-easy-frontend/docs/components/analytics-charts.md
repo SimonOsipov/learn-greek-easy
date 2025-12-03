@@ -429,4 +429,3 @@ const ProgressChart = () => {
 - [chartConfig](#chart-configuration) - Shared chart settings
 
 ---
-

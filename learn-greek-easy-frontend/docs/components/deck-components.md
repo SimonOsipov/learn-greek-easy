@@ -459,4 +459,3 @@ navigate(`/decks/${deckId}`);
 *Note: 2 additional Deck Management Components will be documented in future tasks: DeckStats, DeckProgress*
 
 ---
-

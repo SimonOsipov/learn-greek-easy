@@ -6,18 +6,14 @@ Tests cover:
 - get_current_user_optional: Optional authentication for mixed endpoints
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import UUID, uuid4
 
 import pytest
 from fastapi.security import HTTPAuthorizationCredentials
 
-from src.core.dependencies import (
-    get_current_user,
-    get_current_user_optional,
-    get_current_superuser,
-)
+from src.core.dependencies import get_current_superuser, get_current_user, get_current_user_optional
 from src.core.exceptions import (
     ForbiddenException,
     TokenExpiredException,
@@ -25,7 +21,6 @@ from src.core.exceptions import (
     UnauthorizedException,
     UserNotFoundException,
 )
-
 
 # ============================================================================
 # Test Fixtures
@@ -86,10 +81,7 @@ def mock_inactive_user(sample_user_id: UUID) -> MagicMock:
 @pytest.fixture
 def mock_credentials() -> HTTPAuthorizationCredentials:
     """Create mock HTTP credentials with a sample token."""
-    return HTTPAuthorizationCredentials(
-        scheme="Bearer",
-        credentials="valid-jwt-token-123"
-    )
+    return HTTPAuthorizationCredentials(scheme="Bearer", credentials="valid-jwt-token-123")
 
 
 @pytest.fixture
@@ -108,9 +100,7 @@ class TestGetCurrentUser:
     """Tests for get_current_user dependency."""
 
     @pytest.mark.asyncio
-    async def test_no_credentials_raises_unauthorized(
-        self, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_no_credentials_raises_unauthorized(self, mock_db_session: AsyncMock) -> None:
         """Test that missing credentials raises UnauthorizedException."""
         with pytest.raises(UnauthorizedException) as exc_info:
             await get_current_user(credentials=None, db=mock_db_session)
@@ -208,9 +198,7 @@ class TestGetCurrentUser:
             result = await get_current_user(credentials=mock_credentials, db=mock_db_session)
 
             assert result == mock_user
-            mock_verify.assert_called_once_with(
-                mock_credentials.credentials, token_type="access"
-            )
+            mock_verify.assert_called_once_with(mock_credentials.credentials, token_type="access")
 
     @pytest.mark.asyncio
     async def test_verifies_access_token_type(
@@ -244,9 +232,7 @@ class TestGetCurrentSuperuser:
     """Tests for get_current_superuser dependency."""
 
     @pytest.mark.asyncio
-    async def test_regular_user_raises_forbidden(
-        self, mock_user: MagicMock
-    ) -> None:
+    async def test_regular_user_raises_forbidden(self, mock_user: MagicMock) -> None:
         """Test that non-superuser raises ForbiddenException."""
         with pytest.raises(ForbiddenException) as exc_info:
             await get_current_superuser(current_user=mock_user)
@@ -254,17 +240,13 @@ class TestGetCurrentSuperuser:
         assert "Superuser privileges required" in str(exc_info.value.detail)
 
     @pytest.mark.asyncio
-    async def test_superuser_returns_user(
-        self, mock_superuser: MagicMock
-    ) -> None:
+    async def test_superuser_returns_user(self, mock_superuser: MagicMock) -> None:
         """Test that superuser is returned successfully."""
         result = await get_current_superuser(current_user=mock_superuser)
         assert result == mock_superuser
 
     @pytest.mark.asyncio
-    async def test_superuser_check_uses_is_superuser_flag(
-        self, mock_user: MagicMock
-    ) -> None:
+    async def test_superuser_check_uses_is_superuser_flag(self, mock_user: MagicMock) -> None:
         """Test that the is_superuser flag is checked."""
         # Start with regular user
         assert mock_user.is_superuser is False
@@ -286,9 +268,7 @@ class TestGetCurrentUserOptional:
     """Tests for get_current_user_optional dependency."""
 
     @pytest.mark.asyncio
-    async def test_no_credentials_returns_none(
-        self, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_no_credentials_returns_none(self, mock_db_session: AsyncMock) -> None:
         """Test that missing credentials returns None (anonymous user)."""
         result = await get_current_user_optional(credentials=None, db=mock_db_session)
         assert result is None
@@ -416,9 +396,7 @@ class TestDependencyIntegration:
             mock_db_session.execute.return_value = mock_result
 
             # First get_current_user
-            user = await get_current_user(
-                credentials=mock_credentials, db=mock_db_session
-            )
+            user = await get_current_user(credentials=mock_credentials, db=mock_db_session)
             assert user == mock_superuser
 
             # Then get_current_superuser
@@ -442,9 +420,7 @@ class TestDependencyIntegration:
             mock_db_session.execute.return_value = mock_result
 
             # get_current_user should succeed
-            user = await get_current_user(
-                credentials=mock_credentials, db=mock_db_session
-            )
+            user = await get_current_user(credentials=mock_credentials, db=mock_db_session)
             assert user == mock_user
 
             # get_current_superuser should fail
@@ -461,14 +437,9 @@ class TestEdgeCases:
     """Tests for edge cases and unusual scenarios."""
 
     @pytest.mark.asyncio
-    async def test_empty_token_string(
-        self, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_empty_token_string(self, mock_db_session: AsyncMock) -> None:
         """Test handling of empty token string."""
-        empty_credentials = HTTPAuthorizationCredentials(
-            scheme="Bearer",
-            credentials=""
-        )
+        empty_credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials="")
 
         with patch("src.core.dependencies.verify_token") as mock_verify:
             mock_verify.side_effect = TokenInvalidException(detail="Empty token")
@@ -477,22 +448,15 @@ class TestEdgeCases:
                 await get_current_user(credentials=empty_credentials, db=mock_db_session)
 
     @pytest.mark.asyncio
-    async def test_whitespace_only_token(
-        self, mock_db_session: AsyncMock
-    ) -> None:
+    async def test_whitespace_only_token(self, mock_db_session: AsyncMock) -> None:
         """Test handling of whitespace-only token."""
-        whitespace_credentials = HTTPAuthorizationCredentials(
-            scheme="Bearer",
-            credentials="   "
-        )
+        whitespace_credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials="   ")
 
         with patch("src.core.dependencies.verify_token") as mock_verify:
             mock_verify.side_effect = TokenInvalidException(detail="Invalid token")
 
             with pytest.raises(UnauthorizedException):
-                await get_current_user(
-                    credentials=whitespace_credentials, db=mock_db_session
-                )
+                await get_current_user(credentials=whitespace_credentials, db=mock_db_session)
 
     @pytest.mark.asyncio
     async def test_user_with_no_settings_loaded(

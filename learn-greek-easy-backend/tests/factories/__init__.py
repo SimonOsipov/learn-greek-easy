@@ -40,15 +40,11 @@ Note: All factories require a database session. Either pass it explicitly
 or use the factory_session fixture which binds the session automatically.
 """
 
+# Auth factories
+from tests.factories.auth import RefreshTokenFactory, UserFactory, UserSettingsFactory
+
 # Base factory
 from tests.factories.base import BaseFactory, unique_email, unique_token, utc_now
-
-# Auth factories
-from tests.factories.auth import (
-    RefreshTokenFactory,
-    UserFactory,
-    UserSettingsFactory,
-)
 
 # Content factories
 from tests.factories.content import CardFactory, DeckFactory

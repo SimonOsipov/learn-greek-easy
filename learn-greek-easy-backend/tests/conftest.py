@@ -24,6 +24,29 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
+# Import factory base for session binding
+from tests.factories.base import BaseFactory
+
+# Import auth fixtures from fixtures package
+from tests.fixtures.auth import (  # User fixtures; Token fixtures; Header fixtures; Bundle fixtures; Error testing fixtures
+    access_token,
+    auth_headers,
+    authenticated_superuser,
+    authenticated_user,
+    expired_access_token,
+    expired_auth_headers,
+    invalid_token,
+    refresh_token_value,
+    superuser_auth_headers,
+    superuser_tokens,
+    test_inactive_user,
+    test_superuser,
+    test_user,
+    test_user_tokens,
+    test_verified_user,
+    two_users,
+)
+
 # Import database fixtures from fixtures package
 from tests.fixtures.database import (
     clean_tables,
@@ -38,95 +61,58 @@ from tests.fixtures.database import (
     worker_id,
 )
 
-# Import auth fixtures from fixtures package
-from tests.fixtures.auth import (
-    # User fixtures
-    test_user,
-    test_superuser,
-    test_verified_user,
-    test_inactive_user,
-    two_users,
-    # Token fixtures
-    test_user_tokens,
-    superuser_tokens,
-    access_token,
-    refresh_token_value,
-    # Header fixtures
-    auth_headers,
-    superuser_auth_headers,
-    expired_auth_headers,
-    # Bundle fixtures
-    authenticated_user,
-    authenticated_superuser,
-    # Error testing fixtures
-    expired_access_token,
-    invalid_token,
-)
-
 # Import deck fixtures from fixtures package
-from tests.fixtures.deck import (
-    # Type definitions
+from tests.fixtures.deck import (  # Type definitions; Core fixtures; Card fixtures; Composite fixtures
     DeckWithCards,
     MultiLevelDecks,
-    # Core fixtures
+    cards_by_difficulty,
+    deck_with_a2_cards,
+    deck_with_all_a1_cards,
+    deck_with_b1_cards,
+    deck_with_cards,
+    deck_with_many_cards,
+    empty_deck,
+    inactive_deck,
+    multi_level_decks,
+    test_card,
+    test_cards,
     test_deck,
     test_deck_a1,
     test_deck_a2,
     test_deck_b1,
-    inactive_deck,
-    empty_deck,
-    # Card fixtures
-    test_card,
-    test_cards,
-    cards_by_difficulty,
-    # Composite fixtures
-    deck_with_cards,
-    deck_with_all_a1_cards,
-    deck_with_a2_cards,
-    deck_with_b1_cards,
-    multi_level_decks,
     two_decks,
-    deck_with_many_cards,
 )
 
 # Import progress fixtures from fixtures package
-from tests.fixtures.progress import (
-    # Type definitions
-    UserProgress,
-    CardWithStatistics,
-    UserWithLearningData,
+from tests.fixtures.progress import (  # Type definitions; Progress fixtures; Card statistics fixtures; Review fixtures; Bundle fixtures
     CardsByStatus,
+    CardWithStatistics,
     ReviewHistory,
-    # Progress fixtures
-    user_deck_progress,
-    fresh_user_progress,
-    completed_deck_progress,
-    # Card statistics fixtures
-    new_card_statistics,
-    learning_card_statistics,
-    review_card_statistics,
-    mastered_card_statistics,
-    due_card_statistics,
-    overdue_card_statistics,
-    cards_by_status,
-    multiple_due_cards,
-    # Review fixtures
-    test_review,
-    perfect_review,
-    failed_review,
-    review_history,
-    perfect_review_history,
-    struggling_review_history,
-    # Bundle fixtures
-    user_with_deck_progress,
-    card_with_statistics,
+    UserProgress,
+    UserWithLearningData,
     card_with_review_history,
-    user_with_learning_progress,
+    card_with_statistics,
+    cards_by_status,
+    completed_deck_progress,
+    due_card_statistics,
+    failed_review,
+    fresh_user_progress,
+    learning_card_statistics,
+    mastered_card_statistics,
+    multiple_due_cards,
+    new_card_statistics,
+    overdue_card_statistics,
+    perfect_review,
+    perfect_review_history,
+    review_card_statistics,
+    review_history,
+    struggling_review_history,
+    test_review,
     two_users_same_deck,
+    user_deck_progress,
+    user_with_deck_progress,
+    user_with_learning_progress,
 )
-
-# Import factory base for session binding
-from tests.factories.base import BaseFactory
 
 # Re-export for backwards compatibility
 __all__ = [
@@ -244,24 +230,12 @@ def pytest_configure(config: pytest.Config) -> None:
         config: The pytest configuration object.
     """
     # Register custom markers (also defined in pyproject.toml for IDE support)
-    config.addinivalue_line(
-        "markers", "unit: Unit tests (fast, isolated, mocked dependencies)"
-    )
-    config.addinivalue_line(
-        "markers", "integration: Integration tests (slower, real database)"
-    )
-    config.addinivalue_line(
-        "markers", "slow: Slow tests (>1s execution time)"
-    )
-    config.addinivalue_line(
-        "markers", "auth: Authentication-related tests"
-    )
-    config.addinivalue_line(
-        "markers", "api: API endpoint tests"
-    )
-    config.addinivalue_line(
-        "markers", "db: Database-related tests"
-    )
+    config.addinivalue_line("markers", "unit: Unit tests (fast, isolated, mocked dependencies)")
+    config.addinivalue_line("markers", "integration: Integration tests (slower, real database)")
+    config.addinivalue_line("markers", "slow: Slow tests (>1s execution time)")
+    config.addinivalue_line("markers", "auth: Authentication-related tests")
+    config.addinivalue_line("markers", "api: API endpoint tests")
+    config.addinivalue_line("markers", "db: Database-related tests")
     config.addinivalue_line(
         "markers", "no_parallel: Tests that cannot run in parallel (sequential only)"
     )
@@ -483,6 +457,7 @@ async def async_sleep():
     Returns:
         Callable: An async sleep function.
     """
+
     async def _sleep(seconds: float) -> None:
         await asyncio.sleep(seconds)
 

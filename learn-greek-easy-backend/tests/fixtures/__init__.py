@@ -87,6 +87,32 @@ Usage:
         ...
 """
 
+# Auth fixtures
+from tests.fixtures.auth import (  # User fixtures; Token fixtures; Header fixtures; Bundle fixtures; Error testing fixtures; Utility functions; Types
+    AuthenticatedUser,
+    AuthTokens,
+    access_token,
+    auth_headers,
+    authenticated_superuser,
+    authenticated_user,
+    create_auth_headers,
+    create_test_user_data,
+    create_tokens_for_user,
+    create_user_with_settings,
+    expired_access_token,
+    expired_auth_headers,
+    invalid_token,
+    refresh_token_value,
+    superuser_auth_headers,
+    superuser_tokens,
+    test_inactive_user,
+    test_superuser,
+    test_user,
+    test_user_tokens,
+    test_verified_user,
+    two_users,
+)
+
 # Database fixtures
 from tests.fixtures.database import (
     clean_tables,
@@ -101,130 +127,81 @@ from tests.fixtures.database import (
     verify_isolation,
 )
 
-# Auth fixtures
-from tests.fixtures.auth import (
-    # User fixtures
-    test_user,
-    test_superuser,
-    test_verified_user,
-    test_inactive_user,
-    two_users,
-    # Token fixtures
-    test_user_tokens,
-    superuser_tokens,
-    access_token,
-    refresh_token_value,
-    # Header fixtures
-    auth_headers,
-    superuser_auth_headers,
-    expired_auth_headers,
-    # Bundle fixtures
-    authenticated_user,
-    authenticated_superuser,
-    # Error testing fixtures
-    expired_access_token,
-    invalid_token,
-    # Utility functions
-    create_test_user_data,
-    create_user_with_settings,
-    create_tokens_for_user,
-    create_auth_headers,
-    # Types
-    AuthTokens,
-    AuthenticatedUser,
-)
-
 # Deck fixtures
-from tests.fixtures.deck import (
-    # Type definitions
-    DeckWithCards,
-    MultiLevelDecks,
-    # Vocabulary data
+from tests.fixtures.deck import (  # Type definitions; Vocabulary data; Factory functions; Core deck fixtures; Card fixtures; Composite fixtures; Large dataset fixtures
     GREEK_VOCABULARY_A1,
     GREEK_VOCABULARY_A2,
     GREEK_VOCABULARY_B1,
-    # Factory functions
-    create_deck_data,
+    DeckWithCards,
+    MultiLevelDecks,
+    cards_by_difficulty,
+    create_card,
     create_card_data,
     create_deck,
-    create_card,
+    create_deck_data,
     create_deck_with_vocabulary,
-    # Core deck fixtures
+    deck_with_a2_cards,
+    deck_with_all_a1_cards,
+    deck_with_b1_cards,
+    deck_with_cards,
+    deck_with_many_cards,
+    empty_deck,
+    inactive_deck,
+    multi_level_decks,
+    test_card,
+    test_cards,
     test_deck,
     test_deck_a1,
     test_deck_a2,
     test_deck_b1,
-    inactive_deck,
-    empty_deck,
-    # Card fixtures
-    test_card,
-    test_cards,
-    cards_by_difficulty,
-    # Composite fixtures
-    deck_with_cards,
-    deck_with_all_a1_cards,
-    deck_with_a2_cards,
-    deck_with_b1_cards,
-    multi_level_decks,
     two_decks,
-    # Large dataset fixtures
-    deck_with_many_cards,
 )
 
 # Progress fixtures
-from tests.fixtures.progress import (
-    # Type definitions
-    UserProgress,
-    CardWithStatistics,
-    UserWithLearningData,
-    CardsByStatus,
-    ReviewHistory,
-    # SM-2 constants
+from tests.fixtures.progress import (  # Type definitions; SM-2 constants; Factory functions - Progress; Factory functions - Statistics; Factory functions - Reviews; Progress fixtures; Card statistics fixtures; Review fixtures; Bundle fixtures
     SM2_DEFAULT_EASINESS_FACTOR,
-    SM2_MIN_EASINESS_FACTOR,
     SM2_INTERVALS,
-    # Factory functions - Progress
-    create_progress_data,
-    create_user_deck_progress,
-    # Factory functions - Statistics
-    create_statistics_data,
-    create_card_statistics,
-    create_new_card_stats,
-    create_learning_card_stats,
-    create_review_card_stats,
-    create_mastered_card_stats,
-    create_due_card_stats,
-    create_overdue_card_stats,
-    # Factory functions - Reviews
-    create_review_data,
-    create_review,
-    create_review_history,
-    # Progress fixtures
-    user_deck_progress,
-    fresh_user_progress,
-    completed_deck_progress,
-    # Card statistics fixtures
-    new_card_statistics,
-    learning_card_statistics,
-    review_card_statistics,
-    mastered_card_statistics,
-    due_card_statistics,
-    overdue_card_statistics,
-    cards_by_status,
-    multiple_due_cards,
-    # Review fixtures
-    test_review,
-    perfect_review,
-    failed_review,
-    review_history,
-    perfect_review_history,
-    struggling_review_history,
-    # Bundle fixtures
-    user_with_deck_progress,
-    card_with_statistics,
+    SM2_MIN_EASINESS_FACTOR,
+    CardsByStatus,
+    CardWithStatistics,
+    ReviewHistory,
+    UserProgress,
+    UserWithLearningData,
     card_with_review_history,
-    user_with_learning_progress,
+    card_with_statistics,
+    cards_by_status,
+    completed_deck_progress,
+    create_card_statistics,
+    create_due_card_stats,
+    create_learning_card_stats,
+    create_mastered_card_stats,
+    create_new_card_stats,
+    create_overdue_card_stats,
+    create_progress_data,
+    create_review,
+    create_review_card_stats,
+    create_review_data,
+    create_review_history,
+    create_statistics_data,
+    create_user_deck_progress,
+    due_card_statistics,
+    failed_review,
+    fresh_user_progress,
+    learning_card_statistics,
+    mastered_card_statistics,
+    multiple_due_cards,
+    new_card_statistics,
+    overdue_card_statistics,
+    perfect_review,
+    perfect_review_history,
+    review_card_statistics,
+    review_history,
+    struggling_review_history,
+    test_review,
     two_users_same_deck,
+    user_deck_progress,
+    user_with_deck_progress,
+    user_with_learning_progress,
 )
 
 __all__ = [

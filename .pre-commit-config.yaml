@@ -1,0 +1,97 @@
+# .pre-commit-config.yaml
+# Pre-commit hooks for Learn Greek Easy
+# See https://pre-commit.com for more information
+
+default_stages: [pre-commit]
+default_language_version:
+  python: python3
+  node: "20.19.0"
+
+repos:
+  # =============================================================================
+  # General Hooks (All Files)
+  # =============================================================================
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: ^(learn-greek-easy-frontend/node_modules/|\.git/|.*\.lock$)
+      - id: end-of-file-fixer
+        exclude: ^(learn-greek-easy-frontend/node_modules/|\.git/|.*\.lock$)
+      - id: check-yaml
+        args: [--unsafe]  # Allow custom YAML tags (e.g., GitHub Actions)
+      - id: check-json
+        exclude: ^(learn-greek-easy-frontend/node_modules/|.*tsconfig.*\.json$)
+      - id: check-added-large-files
+        args: ['--maxkb=1000']
+      - id: check-merge-conflict
+      - id: detect-private-key
+      - id: no-commit-to-branch
+        args: [--branch, main]
+
+  # =============================================================================
+  # Frontend Hooks (TypeScript/React)
+  # Uses local npm scripts to ensure consistency with CI
+  # =============================================================================
+  - repo: local
+    hooks:
+      - id: frontend-eslint
+        name: Frontend ESLint
+        entry: bash -c 'cd learn-greek-easy-frontend && npm run lint:fix'
+        language: system
+        files: ^learn-greek-easy-frontend/.*\.(ts|tsx|js|jsx)$
+        exclude: ^learn-greek-easy-frontend/(node_modules|dist|build|html)/
+        pass_filenames: false
+
+      - id: frontend-prettier
+        name: Frontend Prettier
+        entry: bash -c 'cd learn-greek-easy-frontend && npm run format'
+        language: system
+        files: ^learn-greek-easy-frontend/.*\.(ts|tsx|js|jsx|css|md|json)$
+        exclude: ^learn-greek-easy-frontend/(node_modules|dist|build|html)/
+        pass_filenames: false
+
+      - id: frontend-typecheck
+        name: Frontend TypeScript Check
+        entry: bash -c 'cd learn-greek-easy-frontend && npm run type-check'
+        language: system
+        files: ^learn-greek-easy-frontend/.*\.(ts|tsx)$
+        exclude: ^learn-greek-easy-frontend/(node_modules|dist|build|html)/
+        pass_filenames: false
+
+  # =============================================================================
+  # Backend Hooks (Python/FastAPI)
+  # =============================================================================
+  - repo: https://github.com/psf/black
+    rev: 24.8.0
+    hooks:
+      - id: black
+        args: [--config=learn-greek-easy-backend/pyproject.toml]
+        files: ^learn-greek-easy-backend/
+
+  - repo: https://github.com/pycqa/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        args: [--settings-path=learn-greek-easy-backend/pyproject.toml]
+        files: ^learn-greek-easy-backend/
+
+  - repo: https://github.com/pycqa/flake8
+    rev: 7.1.0
+    hooks:
+      - id: flake8
+        args: [--config=learn-greek-easy-backend/.flake8]
+        files: ^learn-greek-easy-backend/
+        exclude: ^learn-greek-easy-backend/(alembic/versions|\.venv)/
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.11.0
+    hooks:
+      - id: mypy
+        args: [--config-file=learn-greek-easy-backend/pyproject.toml]
+        files: ^learn-greek-easy-backend/src/
+        additional_dependencies:
+          - types-python-dateutil
+          - types-redis
+          - pydantic>=2.0
+          - sqlalchemy>=2.0

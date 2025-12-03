@@ -82,18 +82,12 @@ async def get_current_user(
     try:
         user_id = verify_token(token, token_type="access")
     except TokenExpiredException:
-        raise UnauthorizedException(
-            detail="Access token has expired. Please refresh your token."
-        )
+        raise UnauthorizedException(detail="Access token has expired. Please refresh your token.")
     except TokenInvalidException as e:
         raise UnauthorizedException(detail=f"Invalid access token: {e.detail}")
 
     # Load user from database with settings
-    stmt = (
-        select(User)
-        .options(selectinload(User.settings))
-        .where(User.id == user_id)
-    )
+    stmt = select(User).options(selectinload(User.settings)).where(User.id == user_id)
     result = await db.execute(stmt)
     user = result.scalar_one_or_none()
 
@@ -103,9 +97,7 @@ async def get_current_user(
 
     # Check if user is active
     if not user.is_active:
-        raise UnauthorizedException(
-            detail="User account has been deactivated."
-        )
+        raise UnauthorizedException(detail="User account has been deactivated.")
 
     return user
 
@@ -137,9 +129,7 @@ async def get_current_superuser(
             await delete_user_by_id(user_id)
     """
     if not current_user.is_superuser:
-        raise ForbiddenException(
-            detail="Superuser privileges required for this action."
-        )
+        raise ForbiddenException(detail="Superuser privileges required for this action.")
 
     return current_user
 
@@ -188,11 +178,7 @@ async def get_current_user_optional(
         return None
 
     # Load user from database with settings
-    stmt = (
-        select(User)
-        .options(selectinload(User.settings))
-        .where(User.id == user_id)
-    )
+    stmt = select(User).options(selectinload(User.settings)).where(User.id == user_id)
     result = await db.execute(stmt)
     user = result.scalar_one_or_none()
 

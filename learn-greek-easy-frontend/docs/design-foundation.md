@@ -287,5 +287,3 @@ transition: width 0.3s ease;
 - **Scale**: Avoid scaling to maintain text readability
 
 ---
-
-

@@ -23,7 +23,6 @@ from tests.helpers.database import (
     table_exists,
 )
 
-
 # =============================================================================
 # Engine Fixture Tests
 # =============================================================================
@@ -156,9 +155,7 @@ class TestSessionIsolation:
         """
         # Check that the isolation_test_user does NOT exist
         result = await db_session.execute(
-            text(
-                "SELECT COUNT(*) FROM users WHERE email = 'isolation_test_user@example.com'"
-            )
+            text("SELECT COUNT(*) FROM users WHERE email = 'isolation_test_user@example.com'")
         )
         count = result.scalar()
         assert count == 0, "Data from previous test leaked through!"
@@ -409,9 +406,7 @@ class TestEdgeCases:
 
     async def test_empty_database_queries(self, db_session: AsyncSession):
         """Test queries on empty tables work correctly."""
-        result = await db_session.execute(
-            text("SELECT * FROM decks WHERE is_active = true")
-        )
+        result = await db_session.execute(text("SELECT * FROM decks WHERE is_active = true"))
         rows = result.fetchall()
         assert isinstance(rows, list)
 

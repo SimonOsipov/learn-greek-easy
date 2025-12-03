@@ -25,7 +25,6 @@ from uuid import UUID
 
 from httpx import Response
 
-
 # =============================================================================
 # API Response Assertions
 # =============================================================================
@@ -68,16 +67,26 @@ def assert_valid_user_response(
 
     # Type validation
     assert isinstance(data["email"], str), f"email must be string, got {type(data['email'])}"
-    assert isinstance(data["is_active"], bool), f"is_active must be bool, got {type(data['is_active'])}"
-    assert isinstance(data["is_superuser"], bool), f"is_superuser must be bool, got {type(data['is_superuser'])}"
+    assert isinstance(
+        data["is_active"], bool
+    ), f"is_active must be bool, got {type(data['is_active'])}"
+    assert isinstance(
+        data["is_superuser"], bool
+    ), f"is_superuser must be bool, got {type(data['is_superuser'])}"
 
     # Expected values
     if email is not None:
         assert data["email"] == email, f"Expected email '{email}', got '{data['email']}'"
     if full_name is not None:
-        assert data.get("full_name") == full_name, f"Expected full_name '{full_name}', got '{data.get('full_name')}'"
-    assert data["is_active"] == is_active, f"Expected is_active={is_active}, got {data['is_active']}"
-    assert data["is_superuser"] == is_superuser, f"Expected is_superuser={is_superuser}, got {data['is_superuser']}"
+        assert (
+            data.get("full_name") == full_name
+        ), f"Expected full_name '{full_name}', got '{data.get('full_name')}'"
+    assert (
+        data["is_active"] == is_active
+    ), f"Expected is_active={is_active}, got {data['is_active']}"
+    assert (
+        data["is_superuser"] == is_superuser
+    ), f"Expected is_superuser={is_superuser}, got {data['is_superuser']}"
 
 
 def assert_valid_token_response(
@@ -111,11 +120,17 @@ def assert_valid_token_response(
     assert len(data["refresh_token"]) > 20, "refresh_token too short"
 
     # Token type
-    assert data["token_type"] == token_type, f"Expected token_type '{token_type}', got '{data['token_type']}'"
+    assert (
+        data["token_type"] == token_type
+    ), f"Expected token_type '{token_type}', got '{data['token_type']}'"
 
     # Expiration
-    assert isinstance(data["expires_in"], int), f"expires_in must be int, got {type(data['expires_in'])}"
-    assert data["expires_in"] >= min_expires_in, f"expires_in too short: {data['expires_in']} < {min_expires_in}"
+    assert isinstance(
+        data["expires_in"], int
+    ), f"expires_in must be int, got {type(data['expires_in'])}"
+    assert (
+        data["expires_in"] >= min_expires_in
+    ), f"expires_in too short: {data['expires_in']} < {min_expires_in}"
 
 
 def assert_api_error(
@@ -140,22 +155,22 @@ def assert_api_error(
         response = await client.post("/api/v1/auth/login", json=bad_credentials)
         assert_api_error(response, 401, detail_contains="Invalid")
     """
-    assert response.status_code == status_code, (
-        f"Expected status {status_code}, got {response.status_code}: {response.text}"
-    )
+    assert (
+        response.status_code == status_code
+    ), f"Expected status {status_code}, got {response.status_code}: {response.text}"
 
     data = response.json()
     assert "detail" in data, f"Error response missing 'detail' field: {data}"
 
     if detail_exact is not None:
-        assert data["detail"] == detail_exact, (
-            f"Expected detail '{detail_exact}', got '{data['detail']}'"
-        )
+        assert (
+            data["detail"] == detail_exact
+        ), f"Expected detail '{detail_exact}', got '{data['detail']}'"
 
     if detail_contains is not None:
-        assert detail_contains in str(data["detail"]), (
-            f"Expected detail to contain '{detail_contains}', got '{data['detail']}'"
-        )
+        assert detail_contains in str(
+            data["detail"]
+        ), f"Expected detail to contain '{detail_contains}', got '{data['detail']}'"
 
 
 def assert_pagination(
@@ -197,7 +212,9 @@ def assert_pagination(
             items_key = items_k
             break
 
-    assert items_key is not None, f"No recognized pagination pattern in response: {list(data.keys())}"
+    assert (
+        items_key is not None
+    ), f"No recognized pagination pattern in response: {list(data.keys())}"
 
     items = data[items_key]
     assert isinstance(items, list), f"Items must be a list, got {type(items)}"
@@ -211,7 +228,9 @@ def assert_pagination(
     if page_size is not None:
         size_key = next((k for k in ["page_size", "per_page", "limit"] if k in data), None)
         if size_key:
-            assert data[size_key] == page_size, f"Expected {size_key} {page_size}, got {data[size_key]}"
+            assert (
+                data[size_key] == page_size
+            ), f"Expected {size_key} {page_size}, got {data[size_key]}"
 
     if min_items is not None:
         assert len(items) >= min_items, f"Expected at least {min_items} items, got {len(items)}"
@@ -395,14 +414,18 @@ def assert_valid_deck_response(
 
     # Level validation
     valid_levels = ["A1", "A2", "B1", "B2", "C1", "C2"]
-    assert data["level"] in valid_levels, f"Invalid level: {data['level']}, expected one of {valid_levels}"
+    assert (
+        data["level"] in valid_levels
+    ), f"Invalid level: {data['level']}, expected one of {valid_levels}"
 
     # Expected values
     if name is not None:
         assert data["name"] == name, f"Expected name '{name}', got '{data['name']}'"
     if level is not None:
         assert data["level"] == level, f"Expected level '{level}', got '{data['level']}'"
-    assert data["is_active"] == is_active, f"Expected is_active={is_active}, got {data['is_active']}"
+    assert (
+        data["is_active"] == is_active
+    ), f"Expected is_active={is_active}, got {data['is_active']}"
 
 
 def assert_valid_card_response(
@@ -436,17 +459,23 @@ def assert_valid_card_response(
 
     # Difficulty validation
     valid_difficulties = ["easy", "medium", "hard", "EASY", "MEDIUM", "HARD"]
-    assert data["difficulty"] in valid_difficulties, (
-        f"Invalid difficulty: {data['difficulty']}, expected one of {valid_difficulties}"
-    )
+    assert (
+        data["difficulty"] in valid_difficulties
+    ), f"Invalid difficulty: {data['difficulty']}, expected one of {valid_difficulties}"
 
     # Expected values
     if deck_id is not None:
-        assert str(data["deck_id"]) == str(deck_id), f"Expected deck_id '{deck_id}', got '{data['deck_id']}'"
+        assert str(data["deck_id"]) == str(
+            deck_id
+        ), f"Expected deck_id '{deck_id}', got '{data['deck_id']}'"
     if front_text is not None:
-        assert data["front_text"] == front_text, f"Expected front_text '{front_text}', got '{data['front_text']}'"
+        assert (
+            data["front_text"] == front_text
+        ), f"Expected front_text '{front_text}', got '{data['front_text']}'"
     if back_text is not None:
-        assert data["back_text"] == back_text, f"Expected back_text '{back_text}', got '{data['back_text']}'"
+        assert (
+            data["back_text"] == back_text
+        ), f"Expected back_text '{back_text}', got '{data['back_text']}'"
 
 
 # =============================================================================
@@ -479,25 +508,33 @@ def assert_valid_progress_response(
         assert field in data, f"Missing required field: {field}"
 
     # Count validation
-    assert data["cards_studied"] >= 0, f"cards_studied must be non-negative: {data['cards_studied']}"
-    assert data["cards_mastered"] >= 0, f"cards_mastered must be non-negative: {data['cards_mastered']}"
-    assert data["cards_mastered"] <= data["cards_studied"], (
-        f"cards_mastered ({data['cards_mastered']}) > cards_studied ({data['cards_studied']})"
-    )
+    assert (
+        data["cards_studied"] >= 0
+    ), f"cards_studied must be non-negative: {data['cards_studied']}"
+    assert (
+        data["cards_mastered"] >= 0
+    ), f"cards_mastered must be non-negative: {data['cards_mastered']}"
+    assert (
+        data["cards_mastered"] <= data["cards_studied"]
+    ), f"cards_mastered ({data['cards_mastered']}) > cards_studied ({data['cards_studied']})"
 
     # Expected values
     if user_id is not None:
-        assert str(data["user_id"]) == str(user_id), f"Expected user_id '{user_id}', got '{data['user_id']}'"
+        assert str(data["user_id"]) == str(
+            user_id
+        ), f"Expected user_id '{user_id}', got '{data['user_id']}'"
     if deck_id is not None:
-        assert str(data["deck_id"]) == str(deck_id), f"Expected deck_id '{deck_id}', got '{data['deck_id']}'"
+        assert str(data["deck_id"]) == str(
+            deck_id
+        ), f"Expected deck_id '{deck_id}', got '{data['deck_id']}'"
     if min_cards_studied is not None:
-        assert data["cards_studied"] >= min_cards_studied, (
-            f"Expected at least {min_cards_studied} cards_studied, got {data['cards_studied']}"
-        )
+        assert (
+            data["cards_studied"] >= min_cards_studied
+        ), f"Expected at least {min_cards_studied} cards_studied, got {data['cards_studied']}"
     if min_cards_mastered is not None:
-        assert data["cards_mastered"] >= min_cards_mastered, (
-            f"Expected at least {min_cards_mastered} cards_mastered, got {data['cards_mastered']}"
-        )
+        assert (
+            data["cards_mastered"] >= min_cards_mastered
+        ), f"Expected at least {min_cards_mastered} cards_mastered, got {data['cards_mastered']}"
 
 
 # =============================================================================

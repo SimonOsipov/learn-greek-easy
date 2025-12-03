@@ -188,6 +188,10 @@ async def get_health_status() -> Tuple[HealthResponse, int]:
     # Redis is non-critical - if unhealthy, system is degraded
     # Memory warning doesn't affect overall status
 
+    # At this point, both checks are guaranteed to be ComponentHealth
+    assert isinstance(db_check, ComponentHealth)
+    assert isinstance(redis_check, ComponentHealth)
+
     if db_check.status == ComponentStatus.UNHEALTHY:
         overall_status = HealthStatus.UNHEALTHY
         http_status = 503
@@ -248,13 +252,9 @@ async def get_readiness_status() -> Tuple[ReadinessResponse, int]:
     )
 
     # Determine readiness
-    db_ready = (
-        isinstance(db_check, ComponentHealth)
-        and db_check.status == ComponentStatus.HEALTHY
-    )
+    db_ready = isinstance(db_check, ComponentHealth) and db_check.status == ComponentStatus.HEALTHY
     redis_ready = (
-        isinstance(redis_check, ComponentHealth)
-        and redis_check.status == ComponentStatus.HEALTHY
+        isinstance(redis_check, ComponentHealth) and redis_check.status == ComponentStatus.HEALTHY
     )
 
     # Both must be ready for the app to be ready

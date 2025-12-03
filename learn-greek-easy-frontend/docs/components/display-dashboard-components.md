@@ -615,4 +615,3 @@ interface ContentLayoutProps {
 - Gap: 1.5rem (24px)
 
 ---
-

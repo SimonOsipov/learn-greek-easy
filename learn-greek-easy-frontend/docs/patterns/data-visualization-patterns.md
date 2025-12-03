@@ -754,5 +754,3 @@ const isActive = (currentValue: number, lastDate: Date, thresholdHours: number =
 - Use rounded-lg (12px) for badge background
 
 ---
-
-

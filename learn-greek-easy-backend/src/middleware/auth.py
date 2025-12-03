@@ -75,7 +75,7 @@ class AuthLoggingMiddleware(BaseHTTPMiddleware):
         start_time = time.perf_counter()
 
         # Process the request
-        response = await call_next(request)
+        response: Response = await call_next(request)
 
         # Calculate duration
         duration_ms = (time.perf_counter() - start_time) * 1000
@@ -116,16 +116,16 @@ class AuthLoggingMiddleware(BaseHTTPMiddleware):
         forwarded_for = request.headers.get("X-Forwarded-For")
         if forwarded_for:
             # X-Forwarded-For can contain multiple IPs; first is the client
-            return forwarded_for.split(",")[0].strip()
+            return str(forwarded_for.split(",")[0].strip())
 
         # Check X-Real-IP (used by some proxies)
         real_ip = request.headers.get("X-Real-IP")
         if real_ip:
-            return real_ip
+            return str(real_ip)
 
         # Fall back to direct client connection
         if request.client:
-            return request.client.host
+            return str(request.client.host)
 
         return None
 

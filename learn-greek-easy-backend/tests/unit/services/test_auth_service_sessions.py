@@ -1,9 +1,10 @@
 """Unit tests for AuthService session management methods."""
 
-import pytest
 from datetime import datetime, timedelta
-from uuid import uuid4
 from unittest.mock import AsyncMock, MagicMock
+from uuid import uuid4
+
+import pytest
 
 from src.db.models import RefreshToken
 from src.services.auth_service import AuthService

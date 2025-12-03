@@ -60,6 +60,7 @@ class BaseFactory(factory.Factory):
 
     class Meta:
         """Factory meta options."""
+
         abstract = True
 
     @classmethod
@@ -95,7 +96,6 @@ class BaseFactory(factory.Factory):
         Raises:
             ValueError: If no session is available
         """
-        global _factory_session
         db_session = session or _factory_session
         if db_session is None:
             raise ValueError(

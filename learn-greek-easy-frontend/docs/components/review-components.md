@@ -527,4 +527,3 @@ return (
 - Verify all shortcuts are documented
 
 ---
-

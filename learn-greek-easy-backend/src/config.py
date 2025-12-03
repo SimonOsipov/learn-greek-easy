@@ -1,8 +1,7 @@
 """Application configuration management using Pydantic Settings."""
 
-import os
 from functools import lru_cache
-from typing import Any, Dict, List, Optional
+from typing import Any, List, Optional
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -117,7 +116,9 @@ class Settings(BaseSettings):
         """Parse list fields from string or list."""
         if isinstance(v, str):
             return [item.strip() for item in v.split(",")]
-        return v
+        if isinstance(v, list):
+            return list(v)
+        return []
 
     # =========================================================================
     # Rate Limiting

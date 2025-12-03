@@ -4,7 +4,7 @@ from typing import Any, Generic, Type, TypeVar
 from uuid import UUID
 
 from pydantic import BaseModel
-from sqlalchemy import Select, func, select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.exceptions import NotFoundException
@@ -74,8 +74,7 @@ class BaseRepository(Generic[ModelType]):
         obj = await self.get(id)
         if obj is None:
             raise NotFoundException(
-                resource=self.model.__name__,
-                detail=f"{self.model.__name__} with id {id} not found"
+                resource=self.model.__name__, detail=f"{self.model.__name__} with id {id} not found"
             )
         return obj
 
@@ -196,7 +195,7 @@ class BaseRepository(Generic[ModelType]):
         await self.db.delete(db_obj)
         await self.db.flush()
 
-    async def filter_by(self, **filters: Any) -> list[ModelType]:
+    async def filter_by(self, **filters: Any) -> list[ModelType]:  # type: ignore[valid-type]
         """Filter records by arbitrary field values.
 
         Args:

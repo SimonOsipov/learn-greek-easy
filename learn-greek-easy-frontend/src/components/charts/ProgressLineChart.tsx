@@ -23,6 +23,19 @@ interface ProgressLineChartProps {
   className?: string;
 }
 
+interface TooltipPayloadItem {
+  name: string;
+  value: number;
+  color: string;
+  dataKey: string;
+}
+
+interface CustomTooltipProps {
+  active?: boolean;
+  payload?: TooltipPayloadItem[];
+  label?: string;
+}
+
 /**
  * LineChart visualization of word status progression over time
  * Shows three trends: New Cards, Learning Cards, Mastered Cards
@@ -49,8 +62,7 @@ export const ProgressLineChart = React.forwardRef<HTMLDivElement, ProgressLineCh
     };
 
     // Custom tooltip for line chart
-    const CustomTooltip = (props: any) => {
-      const { active, payload, label } = props;
+    const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
       if (!active || !payload || payload.length === 0) return null;
 
       return (

@@ -24,6 +24,11 @@ interface DeckPerformanceChartProps {
   className?: string;
 }
 
+interface CustomTooltipProps {
+  active?: boolean;
+  payload?: Array<{ payload: DeckPerformanceStats }>;
+}
+
 /**
  * Horizontal BarChart showing deck completion/mastery percentages
  * Allows comparing performance across all decks
@@ -49,8 +54,7 @@ export const DeckPerformanceChart = React.forwardRef<HTMLDivElement, DeckPerform
     const formatXAxis = (value: number): string => `${Math.round(value)}%`;
 
     // Custom tooltip with detailed info
-    const CustomTooltip = (props: any) => {
-      const { active, payload } = props;
+    const CustomTooltip = ({ active, payload }: CustomTooltipProps) => {
       if (!active || !payload || payload.length === 0) return null;
 
       const data = payload[0].payload as DeckPerformanceStats;

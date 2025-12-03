@@ -13,7 +13,6 @@ from typing import Any
 
 import pytest
 
-
 # =============================================================================
 # Basic Async Tests (no decorator needed with asyncio_mode="auto")
 # =============================================================================
@@ -75,6 +74,7 @@ async def test_event_loop_is_same_within_test():
 
 async def test_gather_works():
     """Verify asyncio.gather works in tests."""
+
     async def delayed_return(value: int, delay: float) -> int:
         await asyncio.sleep(delay)
         return value
@@ -239,6 +239,7 @@ class TestMixedAsyncSync:
 
 async def test_async_exception_handling():
     """Verify exceptions in async tests are properly caught."""
+
     async def raise_error():
         raise ValueError("Test error")
 
@@ -248,6 +249,7 @@ async def test_async_exception_handling():
 
 async def test_async_timeout_handling():
     """Verify timeout handling in async tests."""
+
     async def slow_operation():
         await asyncio.sleep(0.1)
         return "done"

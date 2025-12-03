@@ -5,6 +5,7 @@ import { Brain, TrendingUp } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAnalytics } from '@/hooks/useAnalytics';
+import type { AnalyticsDashboardData, RetentionRate } from '@/types/analytics';
 
 /**
  * Props for RetentionWidget component
@@ -55,18 +56,18 @@ const getRetentionColor = (rate: number): RetentionColors => {
  * Calculate average retention rate from retention data
  * Uses 7-day retention as primary metric
  */
-const calculateRetentionRate = (data: any): number | null => {
+const calculateRetentionRate = (data: AnalyticsDashboardData | null): number | null => {
   // Try to get 7-day retention rate
   if (data?.retention && Array.isArray(data.retention)) {
-    const sevenDayRetention = data.retention.find((r: any) => r.interval === 7);
+    const sevenDayRetention = data.retention.find((r: RetentionRate) => r.interval === 7);
     if (sevenDayRetention && typeof sevenDayRetention.retention === 'number') {
       return sevenDayRetention.retention;
     }
 
     // Fallback: calculate average of all retention intervals
     const validRetentions = data.retention
-      .filter((r: any) => typeof r.retention === 'number')
-      .map((r: any) => r.retention);
+      .filter((r: RetentionRate) => typeof r.retention === 'number')
+      .map((r: RetentionRate) => r.retention);
 
     if (validRetentions.length > 0) {
       return Math.round(

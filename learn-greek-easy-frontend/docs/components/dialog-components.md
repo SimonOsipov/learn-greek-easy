@@ -186,4 +186,3 @@ function ActivityList() {
 - `@/components/ui/card`: Card component from shadcn/ui
 
 ---
-

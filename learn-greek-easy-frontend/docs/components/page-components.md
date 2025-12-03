@@ -858,4 +858,3 @@ if (user.role !== requiredRole) {
 ```
 
 ---
-

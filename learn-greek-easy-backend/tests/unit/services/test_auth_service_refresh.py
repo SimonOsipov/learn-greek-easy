@@ -10,16 +10,13 @@ Tests cover:
 - Token rotation verification
 """
 
-import pytest
 from datetime import datetime, timedelta
-from uuid import uuid4
 from unittest.mock import AsyncMock, MagicMock, patch
+from uuid import uuid4
 
-from src.core.exceptions import (
-    TokenExpiredException,
-    TokenInvalidException,
-    UserNotFoundException,
-)
+import pytest
+
+from src.core.exceptions import TokenExpiredException, TokenInvalidException, UserNotFoundException
 from src.db.models import RefreshToken, User, UserSettings
 from src.services.auth_service import AuthService
 
@@ -95,9 +92,7 @@ class TestAuthServiceRefresh:
                     mock_db.commit.assert_called_once()
 
                     # Verify correct token type was checked
-                    mock_verify.assert_called_once_with(
-                        old_refresh_token, token_type="refresh"
-                    )
+                    mock_verify.assert_called_once_with(old_refresh_token, token_type="refresh")
 
     @pytest.mark.asyncio
     async def test_refresh_invalid_jwt(self):

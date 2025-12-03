@@ -7,12 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from src.db.models import (
-    Card,
-    CardStatistics,
-    CardStatus,
-    UserDeckProgress,
-)
+from src.db.models import Card, CardStatistics, CardStatus, UserDeckProgress
 from src.repositories.base import BaseRepository
 
 
@@ -192,9 +187,7 @@ class CardStatisticsRepository(BaseRepository[CardStatistics]):
             select(CardStatistics)
             .where(CardStatistics.user_id == user_id)
             .where(CardStatistics.next_review_date <= date.today())
-            .options(
-                selectinload(CardStatistics.card).selectinload(Card.deck)
-            )
+            .options(selectinload(CardStatistics.card).selectinload(Card.deck))
             .order_by(CardStatistics.next_review_date)
             .limit(limit)
         )

@@ -2,7 +2,6 @@
 """Shared fixtures for repository tests."""
 
 from datetime import date, datetime
-from uuid import uuid4
 
 import pytest
 

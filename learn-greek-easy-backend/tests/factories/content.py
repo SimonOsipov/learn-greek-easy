@@ -45,10 +45,12 @@ class DeckFactory(BaseFactory):
 
     # Default values
     name = factory.LazyAttribute(
-        lambda obj: fake.deck_name(obj.level.value if hasattr(obj, 'level') and obj.level else "A1")
+        lambda obj: fake.deck_name(obj.level.value if hasattr(obj, "level") and obj.level else "A1")
     )
     description = factory.LazyAttribute(
-        lambda obj: fake.deck_description(obj.level.value if hasattr(obj, 'level') and obj.level else "A1")
+        lambda obj: fake.deck_description(
+            obj.level.value if hasattr(obj, "level") and obj.level else "A1"
+        )
     )
     level = DeckLevel.A1
     is_active = True
@@ -118,7 +120,7 @@ class DeckFactory(BaseFactory):
         deck = await cls.create(session=session, **kwargs)
 
         cards = []
-        level = deck.level.value if deck.level else "A1"
+        # Note: deck.level could be used for level-appropriate vocabulary in future
 
         for i in range(card_count):
             card = await CardFactory.create(

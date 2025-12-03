@@ -25,7 +25,7 @@ export function LogoutExample() {
   const handleLogout = async () => {
     // Simulate API call
     await new Promise((resolve) => setTimeout(resolve, 1000));
-    console.log('User logged out');
+    console.info('User logged out');
   };
 
   return (
@@ -55,7 +55,7 @@ export function DeleteDeckExample() {
   const handleDelete = async () => {
     // Simulate API call
     await new Promise((resolve) => setTimeout(resolve, 1500));
-    console.log('Deck deleted');
+    console.info('Deck deleted');
   };
 
   return (
@@ -83,7 +83,7 @@ export function DeleteDeckExample() {
  */
 export function CancelReviewExample() {
   const handleCancelReview = () => {
-    console.log('Review session cancelled');
+    console.info('Review session cancelled');
   };
 
   return (
@@ -105,11 +105,11 @@ export function UnsavedChangesExample() {
   const [showDialog, setShowDialog] = useState(false);
 
   const handleDiscard = () => {
-    console.log('Changes discarded');
+    console.info('Changes discarded');
   };
 
   const handleCancel = () => {
-    console.log('User chose to keep editing');
+    console.info('User chose to keep editing');
   };
 
   return (
@@ -192,12 +192,12 @@ export function WarningWithActionsExample() {
   const [showWarning, setShowWarning] = useState(false);
 
   const handleRetry = () => {
-    console.log('Retrying action');
+    console.info('Retrying action');
     setShowWarning(false);
   };
 
   const handleCancel = () => {
-    console.log('Action cancelled');
+    console.info('Action cancelled');
     setShowWarning(false);
   };
 
@@ -227,12 +227,12 @@ export function SessionExpiryExample() {
   const [showExpiry, setShowExpiry] = useState(false);
 
   const handleExtend = () => {
-    console.log('Session extended');
+    console.info('Session extended');
     setShowExpiry(false);
   };
 
   const handleLogout = () => {
-    console.log('User logged out');
+    console.info('User logged out');
     setShowExpiry(false);
   };
 

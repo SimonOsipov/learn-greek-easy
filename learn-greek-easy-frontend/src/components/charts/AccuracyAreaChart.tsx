@@ -22,6 +22,19 @@ interface AccuracyAreaChartProps {
   className?: string;
 }
 
+interface TooltipPayloadItem {
+  name: string;
+  value: number;
+  color: string;
+  dataKey: string;
+}
+
+interface CustomTooltipProps {
+  active?: boolean;
+  payload?: TooltipPayloadItem[];
+  label?: string;
+}
+
 /**
  * AreaChart visualization of accuracy percentage trend over time
  * Shows accuracy as a filled area with gradient
@@ -51,8 +64,7 @@ export const AccuracyAreaChart = React.forwardRef<HTMLDivElement, AccuracyAreaCh
     const formatYAxis = (value: number): string => `${Math.round(value)}%`;
 
     // Custom tooltip
-    const CustomTooltip = (props: any) => {
-      const { active, payload, label } = props;
+    const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
       if (!active || !payload || payload.length === 0) return null;
 
       return (

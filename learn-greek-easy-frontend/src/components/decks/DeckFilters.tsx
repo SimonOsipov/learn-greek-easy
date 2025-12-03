@@ -1,6 +1,6 @@
 // /src/components/decks/DeckFilters.tsx
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useMemo } from 'react';
 
 import { Search, X } from 'lucide-react';
 
@@ -41,10 +41,11 @@ export const DeckFilters: React.FC<DeckFiltersProps> = ({
   const [searchInput, setSearchInput] = useState(filters.search);
 
   // Debounced search handler (300ms delay)
-  const debouncedSearch = useCallback(
-    debounce((value: string) => {
-      onChange({ search: value });
-    }, 300),
+  const debouncedSearch = useMemo(
+    () =>
+      debounce((value: string) => {
+        onChange({ search: value });
+      }, 300),
     [onChange]
   );
 
