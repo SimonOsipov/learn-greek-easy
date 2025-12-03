@@ -1,10 +1,12 @@
 // src/components/analytics/ActivityFeedItem.tsx
 
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Card } from '@/components/ui/card';
-import { BookOpen, Clock } from 'lucide-react';
+
 import { formatDistanceToNow } from 'date-fns';
+import { BookOpen, Clock } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+
+import { Card } from '@/components/ui/card';
 import type { AnalyticsActivityItem } from '@/types/analytics';
 
 export interface ActivityFeedItemProps {
@@ -91,7 +93,7 @@ export const ActivityFeedItem: React.FC<ActivityFeedItemProps> = ({ activity }) 
 
   return (
     <Card
-      className="p-4 cursor-pointer hover:shadow-md transition-shadow"
+      className="cursor-pointer p-4 transition-shadow hover:shadow-md"
       onClick={handleClick}
       onKeyDown={handleKeyDown}
       role="button"
@@ -100,18 +102,18 @@ export const ActivityFeedItem: React.FC<ActivityFeedItemProps> = ({ activity }) 
     >
       <div className="flex items-start gap-3">
         {/* Deck Icon */}
-        <div className="p-2 bg-primary-100 rounded-lg flex-shrink-0">
-          <BookOpen className="w-5 h-5 text-primary-600" aria-hidden="true" />
+        <div className="bg-primary-100 flex-shrink-0 rounded-lg p-2">
+          <BookOpen className="text-primary-600 h-5 w-5" aria-hidden="true" />
         </div>
 
         {/* Activity Content */}
-        <div className="flex-1 min-w-0">
+        <div className="min-w-0 flex-1">
           {/* Deck Name */}
-          <p className="font-medium text-gray-900 truncate">{deckName}</p>
+          <p className="truncate font-medium text-gray-900">{deckName}</p>
 
           {/* Metrics Row */}
           {activity.type === 'review_session' && cardsReviewed > 0 && (
-            <div className="flex items-center gap-3 mt-1 text-sm text-gray-500">
+            <div className="mt-1 flex items-center gap-3 text-sm text-gray-500">
               {/* Card Count */}
               <span>
                 {cardsReviewed} {cardsReviewed === 1 ? 'card' : 'cards'}
@@ -125,7 +127,7 @@ export const ActivityFeedItem: React.FC<ActivityFeedItemProps> = ({ activity }) 
               {/* Time Spent */}
               {timeSpent > 0 && (
                 <span className="flex items-center gap-1">
-                  <Clock className="w-3 h-3" aria-hidden="true" />
+                  <Clock className="h-3 w-3" aria-hidden="true" />
                   {formatTimeDuration(timeSpent)}
                 </span>
               )}
@@ -134,13 +136,11 @@ export const ActivityFeedItem: React.FC<ActivityFeedItemProps> = ({ activity }) 
 
           {/* Achievement Type Display (for non-review activities) */}
           {activity.type !== 'review_session' && activity.description && (
-            <p className="text-sm text-gray-600 mt-1">{activity.description}</p>
+            <p className="mt-1 text-sm text-gray-600">{activity.description}</p>
           )}
 
           {/* Relative Time */}
-          <p className="text-xs text-gray-400 mt-1">
-            {getRelativeTime(activity.timestamp)}
-          </p>
+          <p className="mt-1 text-xs text-gray-400">{getRelativeTime(activity.timestamp)}</p>
         </div>
       </div>
     </Card>

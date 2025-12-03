@@ -179,7 +179,8 @@ export const mockDeckAPI = {
     }
 
     // Calculate new card counts based on performance
-    let { cardsNew, cardsLearning, cardsReview, cardsMastered } = currentProgress;
+    let { cardsNew, cardsLearning, cardsMastered } = currentProgress;
+    const { cardsReview } = currentProgress;
 
     // Simple state machine for card difficulty progression
     // In real app, this would track individual card states

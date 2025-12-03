@@ -1,9 +1,12 @@
 import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+
 import { AlertTriangle, Trash2, RotateCcw } from 'lucide-react';
-import { ResetProgressDialog } from './ResetProgressDialog';
+
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+
 import { DeleteAccountDialog } from './DeleteAccountDialog';
+import { ResetProgressDialog } from './ResetProgressDialog';
 
 export function DangerZoneSection() {
   const [showResetDialog, setShowResetDialog] = useState(false);
@@ -17,9 +20,7 @@ export function DangerZoneSection() {
             <AlertTriangle className="h-5 w-5 text-red-600" />
             <CardTitle className="text-red-600">Danger Zone</CardTitle>
           </div>
-          <CardDescription>
-            Irreversible actions that affect your account and data
-          </CardDescription>
+          <CardDescription>Irreversible actions that affect your account and data</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Reset Progress */}
@@ -27,12 +28,11 @@ export function DangerZoneSection() {
             <div className="flex-1">
               <div className="flex items-center gap-2">
                 <RotateCcw className="h-4 w-4 text-red-600" />
-                <h3 className="font-medium text-red-900 dark:text-red-100">
-                  Reset All Progress
-                </h3>
+                <h3 className="font-medium text-red-900 dark:text-red-100">Reset All Progress</h3>
               </div>
               <p className="mt-1 text-sm text-red-700 dark:text-red-300">
-                Clear all learning progress, review history, and statistics. Your account and settings will be preserved.
+                Clear all learning progress, review history, and statistics. Your account and
+                settings will be preserved.
               </p>
             </div>
             <Button
@@ -49,12 +49,11 @@ export function DangerZoneSection() {
             <div className="flex-1">
               <div className="flex items-center gap-2">
                 <Trash2 className="h-4 w-4 text-red-600" />
-                <h3 className="font-medium text-red-900 dark:text-red-100">
-                  Delete Account
-                </h3>
+                <h3 className="font-medium text-red-900 dark:text-red-100">Delete Account</h3>
               </div>
               <p className="mt-1 text-sm text-red-700 dark:text-red-300">
-                Permanently delete your account and all associated data. This action cannot be undone.
+                Permanently delete your account and all associated data. This action cannot be
+                undone.
               </p>
             </div>
             <Button
@@ -68,14 +67,8 @@ export function DangerZoneSection() {
         </CardContent>
       </Card>
 
-      <ResetProgressDialog
-        open={showResetDialog}
-        onOpenChange={setShowResetDialog}
-      />
-      <DeleteAccountDialog
-        open={showDeleteDialog}
-        onOpenChange={setShowDeleteDialog}
-      />
+      <ResetProgressDialog open={showResetDialog} onOpenChange={setShowResetDialog} />
+      <DeleteAccountDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog} />
     </>
   );
 }

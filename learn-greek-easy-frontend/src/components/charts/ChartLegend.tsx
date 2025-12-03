@@ -51,7 +51,7 @@ export const ChartLegend = ({
             key={`legend-item-${index}`}
             className={cn(
               'flex items-center gap-2',
-              onClick && 'cursor-pointer hover:opacity-80 transition-opacity'
+              onClick && 'cursor-pointer transition-opacity hover:opacity-80'
             )}
             onClick={() => onClick && entry.value && onClick(entry.value)}
           >

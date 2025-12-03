@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
-import { useReviewStore } from '@/stores/reviewStore';
+
 import { cn } from '@/lib/utils';
+import { useReviewStore } from '@/stores/reviewStore';
 import type { CardReview } from '@/types/review';
-import { ProgressHeader } from './ProgressHeader';
+
 import { CardMain } from './CardMain';
-import { RatingButtons } from './RatingButtons';
 import { NounGrammarSection } from './grammar/NounGrammarSection';
 import { VerbGrammarSection } from './grammar/VerbGrammarSection';
+import { ProgressHeader } from './ProgressHeader';
+import { RatingButtons } from './RatingButtons';
 import { ExampleSection } from './shared/ExampleSection';
 
 interface FlashcardContainerProps {
@@ -15,9 +17,7 @@ interface FlashcardContainerProps {
 
 export function FlashcardContainer({ card }: FlashcardContainerProps) {
   const { isCardFlipped, flipCard, activeSession, currentCardIndex } = useReviewStore();
-  const [selectedTense, setSelectedTense] = useState<'present' | 'past' | 'future'>(
-    'present'
-  );
+  const [selectedTense, setSelectedTense] = useState<'present' | 'past' | 'future'>('present');
   const [srAnnouncement, setSrAnnouncement] = useState('');
 
   // Reset tense when card changes
@@ -43,18 +43,14 @@ export function FlashcardContainer({ card }: FlashcardContainerProps) {
   return (
     <>
       {/* Screen reader announcements - visually hidden */}
-      <div
-        aria-live="polite"
-        aria-atomic="true"
-        className="sr-only"
-      >
+      <div aria-live="polite" aria-atomic="true" className="sr-only">
         {srAnnouncement}
       </div>
 
       <div
         className={cn(
-          'max-w-4xl mx-auto bg-white rounded-2xl shadow-2xl overflow-hidden',
-          'flex flex-col min-h-[800px] transition-transform duration-300',
+          'mx-auto max-w-4xl overflow-hidden rounded-2xl bg-white shadow-2xl',
+          'flex min-h-[800px] flex-col transition-transform duration-300',
           'hover:-translate-y-1'
         )}
       >

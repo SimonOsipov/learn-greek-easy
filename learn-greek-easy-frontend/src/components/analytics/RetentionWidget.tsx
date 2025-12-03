@@ -1,5 +1,7 @@
 import React from 'react';
+
 import { Brain, TrendingUp } from 'lucide-react';
+
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAnalytics } from '@/hooks/useAnalytics';
@@ -112,11 +114,13 @@ export const RetentionWidget: React.FC<RetentionWidgetProps> = ({ isLoading: pro
   const hasData = retentionRate !== null && retentionRate !== undefined;
   const displayValue = hasData ? `${Math.round(retentionRate)}%` : 'N/A';
 
-  const colors = hasData ? getRetentionColor(retentionRate) : {
-    text: 'text-gray-600',
-    bg: 'bg-gray-100',
-    icon: 'text-gray-600',
-  };
+  const colors = hasData
+    ? getRetentionColor(retentionRate)
+    : {
+        text: 'text-gray-600',
+        bg: 'bg-gray-100',
+        icon: 'text-gray-600',
+      };
 
   return (
     <Card>
@@ -124,20 +128,18 @@ export const RetentionWidget: React.FC<RetentionWidgetProps> = ({ isLoading: pro
         <div className="flex items-center justify-between">
           <div className="flex-1">
             <p className="text-sm font-medium text-gray-500">Retention Rate</p>
-            <div className="flex items-baseline gap-2 mt-2">
-              <span className={`text-3xl font-bold ${colors.text}`}>
-                {displayValue}
-              </span>
+            <div className="mt-2 flex items-baseline gap-2">
+              <span className={`text-3xl font-bold ${colors.text}`}>{displayValue}</span>
               {hasData && retentionRate >= 75 && (
                 <TrendingUp className={`h-5 w-5 ${colors.icon}`} aria-hidden="true" />
               )}
             </div>
-            <p className="text-xs text-gray-400 mt-1">
+            <p className="mt-1 text-xs text-gray-400">
               {hasData ? '% remembered after 7+ days' : 'Insufficient data'}
             </p>
           </div>
-          <div className={`p-3 rounded-full ${colors.bg}`}>
-            <Brain className={`w-8 h-8 ${colors.icon}`} aria-hidden="true" />
+          <div className={`rounded-full p-3 ${colors.bg}`}>
+            <Brain className={`h-8 w-8 ${colors.icon}`} aria-hidden="true" />
           </div>
         </div>
       </CardContent>

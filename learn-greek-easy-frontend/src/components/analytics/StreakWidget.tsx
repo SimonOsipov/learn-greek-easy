@@ -1,5 +1,7 @@
 import React from 'react';
+
 import { Flame } from 'lucide-react';
+
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useStudyStreak } from '@/hooks/useStudyStreak';
@@ -99,26 +101,22 @@ export const StreakWidget: React.FC<StreakWidgetProps> = ({ isLoading: propLoadi
         <div className="flex items-center justify-between">
           <div className="flex-1">
             <p className="text-sm font-medium text-gray-500">Study Streak</p>
-            <div className="flex items-baseline gap-2 mt-2">
-              <span className="text-3xl font-bold text-gray-900">
-                {currentStreak}
-              </span>
-              <span className="text-sm text-gray-500">
-                {currentStreak === 1 ? 'day' : 'days'}
-              </span>
+            <div className="mt-2 flex items-baseline gap-2">
+              <span className="text-3xl font-bold text-gray-900">{currentStreak}</span>
+              <span className="text-sm text-gray-500">{currentStreak === 1 ? 'day' : 'days'}</span>
             </div>
-            <p className="text-xs text-gray-400 mt-1">
+            <p className="mt-1 text-xs text-gray-400">
               Best: {longestStreak} {longestStreak === 1 ? 'day' : 'days'}
             </p>
           </div>
-          <div className={`p-3 rounded-full ${isActive ? 'bg-orange-100' : 'bg-gray-100'}`}>
+          <div className={`rounded-full p-3 ${isActive ? 'bg-orange-100' : 'bg-gray-100'}`}>
             <Flame
-              className={`w-8 h-8 ${isActive ? 'text-orange-500' : 'text-gray-400'}`}
+              className={`h-8 w-8 ${isActive ? 'text-orange-500' : 'text-gray-400'}`}
               aria-hidden="true"
             />
           </div>
         </div>
-        <p className="text-xs text-gray-500 mt-3">{message}</p>
+        <p className="mt-3 text-xs text-gray-500">{message}</p>
       </CardContent>
     </Card>
   );

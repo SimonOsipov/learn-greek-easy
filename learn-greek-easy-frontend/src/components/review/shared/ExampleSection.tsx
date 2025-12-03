@@ -1,6 +1,7 @@
+import { usePremiumAccess } from '@/hooks/usePremiumAccess';
 import { cn } from '@/lib/utils';
 import type { CardReview } from '@/types/review';
-import { usePremiumAccess } from '@/hooks/usePremiumAccess';
+
 import { PremiumGate } from './PremiumGate';
 
 interface ExampleSectionProps {
@@ -30,13 +31,13 @@ export function ExampleSection({ card, selectedTense, isFlipped }: ExampleSectio
 
   return (
     <div className="bg-gray-50 px-6 py-6">
-      <div className="text-xs uppercase tracking-wide text-gray-600 font-semibold mb-2">
+      <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-600">
         💬 Example in Context
       </div>
 
       <PremiumGate isLocked={!isPremium} badgeText="Pro">
-        <div className="bg-white px-4 py-4 rounded-lg border-l-4 border-[#667eea]">
-          <p className="text-sm font-medium text-gray-900 mb-2">{example.greek}</p>
+        <div className="rounded-lg border-l-4 border-[#667eea] bg-white px-4 py-4">
+          <p className="mb-2 text-sm font-medium text-gray-900">{example.greek}</p>
           <p
             className={cn(
               'text-xs italic text-gray-600 transition-opacity duration-300',

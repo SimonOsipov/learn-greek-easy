@@ -12,13 +12,15 @@
  * FlashcardContainer, reviewStore, keyboard shortcuts) work together correctly.
  */
 
-import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { render, screen, waitFor } from '@/lib/test-utils';
 import userEvent from '@testing-library/user-event';
-import { FlashcardReviewPage } from '../FlashcardReviewPage';
-import { useReviewStore } from '@/stores/reviewStore';
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+
+import { render, screen, waitFor } from '@/lib/test-utils';
 import { useAuthStore } from '@/stores/authStore';
 import { useDeckStore } from '@/stores/deckStore';
+import { useReviewStore } from '@/stores/reviewStore';
+
+import { FlashcardReviewPage } from '../FlashcardReviewPage';
 
 // Mock react-router-dom for navigation and params
 const mockNavigate = vi.fn();
@@ -85,7 +87,9 @@ describe('FlashcardReviewPage - Session Initialization', () => {
     if (currentCard?.translation) {
       const translationElements = screen.queryAllByText(currentCard.translation);
       // Translation might appear in hidden sections, so check it's not in the main card area
-      expect(translationElements.length === 0 || !translationElements[0].closest('[role="button"]')).toBeTruthy();
+      expect(
+        translationElements.length === 0 || !translationElements[0].closest('[role="button"]')
+      ).toBeTruthy();
     }
   });
 
@@ -169,7 +173,7 @@ describe('FlashcardReviewPage - Session Initialization', () => {
         if (activeSession) {
           useReviewStore.setState({
             activeSession: null,
-            error: 'No cards due for review. Come back later!'
+            error: 'No cards due for review. Come back later!',
           });
         }
       },
@@ -442,7 +446,7 @@ describe('FlashcardReviewPage - Card Flip and Rating', () => {
 
       // Rate card with current rating
       const ratingButton = screen.getByRole('button', {
-        name: new RegExp(`rate card as ${rating}`, 'i')
+        name: new RegExp(`rate card as ${rating}`, 'i'),
       });
       await user.click(ratingButton);
 
@@ -491,7 +495,7 @@ describe('FlashcardReviewPage - Card Flip and Rating', () => {
       });
 
       const ratingButton = screen.getByRole('button', {
-        name: new RegExp(`rate card as ${rating}`, 'i')
+        name: new RegExp(`rate card as ${rating}`, 'i'),
       });
       await user.click(ratingButton);
 
@@ -647,7 +651,7 @@ describe('FlashcardReviewPage - Keyboard Shortcuts', () => {
     await user.keyboard('3');
 
     // Wait a bit to ensure nothing happened
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise((resolve) => setTimeout(resolve, 500));
 
     // Card should still be unflipped and no rating recorded
     expect(useReviewStore.getState().isCardFlipped).toBe(false);
@@ -717,7 +721,7 @@ describe('FlashcardReviewPage - Keyboard Shortcuts', () => {
     await user.keyboard(' ');
 
     // Card should NOT flip
-    await new Promise(resolve => setTimeout(resolve, 300));
+    await new Promise((resolve) => setTimeout(resolve, 300));
     expect(useReviewStore.getState().isCardFlipped).toBe(false);
 
     // Clean up
@@ -812,9 +816,7 @@ describe('FlashcardReviewPage - Session Completion', () => {
     // Should navigate to summary page
     await waitFor(
       () => {
-        expect(mockNavigate).toHaveBeenCalledWith(
-          expect.stringMatching(/summary/)
-        );
+        expect(mockNavigate).toHaveBeenCalledWith(expect.stringMatching(/summary/));
       },
       { timeout: 2000 }
     );

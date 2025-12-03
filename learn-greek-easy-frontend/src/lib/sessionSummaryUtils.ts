@@ -72,12 +72,12 @@ export function getEncouragingMessage(accuracy: number, cardsReviewed: number): 
 
   // Perfect score
   if (accuracy === 100) {
-    return 'Perfect session! You\'re crushing it!';
+    return "Perfect session! You're crushing it!";
   }
 
   // Excellent (90%+)
   if (accuracy >= 90) {
-    return 'Excellent work! You\'re mastering this deck!';
+    return "Excellent work! You're mastering this deck!";
   }
 
   // Great (70-89%)
@@ -87,7 +87,7 @@ export function getEncouragingMessage(accuracy: number, cardsReviewed: number): 
 
   // Good (50-69%)
   if (accuracy >= 50) {
-    return 'Good effort! Keep practicing and you\'ll improve!';
+    return "Good effort! Keep practicing and you'll improve!";
   }
 
   // All "again" (0%)
@@ -96,7 +96,7 @@ export function getEncouragingMessage(accuracy: number, cardsReviewed: number): 
   }
 
   // Default (1-49%)
-  return 'Every review counts! You\'re making progress!';
+  return "Every review counts! You're making progress!";
 }
 
 /**

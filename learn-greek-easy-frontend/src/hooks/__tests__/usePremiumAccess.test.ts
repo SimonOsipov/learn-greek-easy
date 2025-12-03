@@ -3,8 +3,9 @@
  * Tests premium access detection based on user role
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
+import { describe, it, expect, beforeEach } from 'vitest';
+
 import { usePremiumAccess } from '@/hooks/usePremiumAccess';
 import { useAuthStore } from '@/stores/authStore';
 

@@ -1,11 +1,13 @@
 import { useEffect } from 'react';
+
+import { AlertCircle } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useReviewStore } from '@/stores/reviewStore';
+
 import { SessionSummary } from '@/components/review/SessionSummary';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle } from 'lucide-react';
+import { useReviewStore } from '@/stores/reviewStore';
 
 /**
  * SessionSummaryPage Component
@@ -57,9 +59,9 @@ export function SessionSummaryPage() {
   if (!sessionSummary) {
     return (
       <div className="min-h-screen bg-gray-50 py-8 md:py-12">
-        <div className="container mx-auto px-4 max-w-3xl space-y-6">
+        <div className="container mx-auto max-w-3xl space-y-6 px-4">
           <Skeleton className="h-48 w-full" />
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
             <Skeleton className="h-32" />
             <Skeleton className="h-32" />
             <Skeleton className="h-32" />
@@ -75,18 +77,14 @@ export function SessionSummaryPage() {
   if (!deckId) {
     return (
       <div className="min-h-screen bg-gray-50 py-8 md:py-12">
-        <div className="container mx-auto px-4 max-w-3xl">
+        <div className="container mx-auto max-w-3xl px-4">
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Error</AlertTitle>
-            <AlertDescription>
-              Invalid deck ID. Please return to the dashboard.
-            </AlertDescription>
+            <AlertDescription>Invalid deck ID. Please return to the dashboard.</AlertDescription>
           </Alert>
           <div className="mt-4">
-            <Button onClick={() => navigate('/dashboard')}>
-              Go to Dashboard
-            </Button>
+            <Button onClick={() => navigate('/dashboard')}>Go to Dashboard</Button>
           </div>
         </div>
       </div>

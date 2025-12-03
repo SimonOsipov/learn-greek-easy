@@ -23,7 +23,10 @@ export default [
     ignores: [
       'dist/**',
       'build/**',
+      'html/**',
       'node_modules/**',
+      'tests/**',
+      'src/**/__tests__/**',
       '*.config.js',
       '*.config.ts',
       'vite.config.ts',
@@ -50,6 +53,8 @@ export default [
       globals: {
         ...globals.browser,
         ...globals.es2021,
+        ...globals.node, // For process, global, etc.
+        React: 'readonly', // React 18+ JSX transform still uses React in some type contexts
       },
     },
     plugins: {
@@ -77,7 +82,7 @@ export default [
           argsIgnorePattern: '^_',
           varsIgnorePattern: '^_',
           ignoreRestSiblings: true,
-          caughtErrorsIgnorePattern: '^_',
+          caughtErrors: 'none', // Allow unused caught errors (common pattern in React/async code)
         },
       ],
       'no-unused-vars': 'off', // Turn off base rule as it conflicts with TypeScript version

@@ -1,8 +1,10 @@
 import { useState } from 'react';
+
+import { Eye, EyeOff, AlertCircle } from 'lucide-react';
+
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
-import { Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface PasswordFieldProps {
@@ -117,10 +119,7 @@ export function PasswordField({
           aria-invalid={hasError}
           aria-describedby={hasError ? `${name}-error` : undefined}
           data-testid={testId}
-          className={cn(
-            'pr-10 text-base',
-            hasError && 'border-red-500 focus-visible:ring-red-500'
-          )}
+          className={cn('pr-10 text-base', hasError && 'border-red-500 focus-visible:ring-red-500')}
         />
 
         <Button
@@ -142,18 +141,18 @@ export function PasswordField({
 
       {showStrength && value && strength && (
         <div className="flex items-center gap-2">
-          <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+          <div className="h-2 flex-1 overflow-hidden rounded-full bg-gray-200">
             <div
               className={cn('h-full transition-all duration-300', strength.color)}
               style={{ width: `${(strength.level / 3) * 100}%` }}
             />
           </div>
-          <span className="text-xs text-muted-foreground min-w-[60px]">{strength.label}</span>
+          <span className="min-w-[60px] text-xs text-muted-foreground">{strength.label}</span>
         </div>
       )}
 
       {error && (
-        <p id={`${name}-error`} className="text-sm text-red-600 flex items-center gap-1">
+        <p id={`${name}-error`} className="flex items-center gap-1 text-sm text-red-600">
           <AlertCircle className="h-4 w-4" />
           {error}
         </p>

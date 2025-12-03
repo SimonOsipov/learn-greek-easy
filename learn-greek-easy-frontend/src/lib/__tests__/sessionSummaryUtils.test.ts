@@ -15,6 +15,9 @@
  */
 
 import { describe, it, expect } from 'vitest';
+
+import type { SessionSummary } from '@/types/review';
+
 import {
   formatTime,
   calculateAccuracy,
@@ -24,7 +27,6 @@ import {
   hasProgressTransitions,
   adjustPercentages,
 } from '../sessionSummaryUtils';
-import type { SessionSummary } from '@/types/review';
 
 describe('sessionSummaryUtils', () => {
   // Helper to create test session summary

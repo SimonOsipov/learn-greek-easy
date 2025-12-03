@@ -52,12 +52,10 @@
 
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
+
+import { getAnalytics, updateAnalyticsSnapshot } from '@/services/mockAnalyticsAPI';
 import type { AnalyticsDashboardData } from '@/types/analytics';
 import type { SessionSummary } from '@/types/review';
-import {
-  getAnalytics,
-  updateAnalyticsSnapshot,
-} from '@/services/mockAnalyticsAPI';
 
 /**
  * Date range type for analytics queries
@@ -259,8 +257,7 @@ export const selectProgressData = (state: AnalyticsState) =>
   state.dashboardData?.progressData ?? EMPTY_PROGRESS_DATA;
 export const selectDeckPerformance = (state: AnalyticsState) =>
   state.dashboardData?.deckStats ?? EMPTY_DECK_STATS;
-export const selectStudyStreak = (state: AnalyticsState) =>
-  state.dashboardData?.streak;
+export const selectStudyStreak = (state: AnalyticsState) => state.dashboardData?.streak;
 export const selectRecentActivity = (state: AnalyticsState) =>
   state.dashboardData?.recentActivity ?? EMPTY_RECENT_ACTIVITY;
 export const selectIsLoading = (state: AnalyticsState) => state.loading;

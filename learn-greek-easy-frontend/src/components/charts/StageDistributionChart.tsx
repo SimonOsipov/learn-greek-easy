@@ -1,16 +1,11 @@
 // src/components/charts/StageDistributionChart.tsx
 
 import React, { useMemo } from 'react';
-import {
-  PieChart,
-  Pie,
-  Cell,
-  Legend,
-  Tooltip,
-  ResponsiveContainer,
-} from 'recharts';
-import { useAnalytics } from '@/hooks/useAnalytics';
+
+import { PieChart, Pie, Cell, Legend, Tooltip, ResponsiveContainer } from 'recharts';
+
 import { ChartContainer, ChartTooltip } from '@/components/charts';
+import { useAnalytics } from '@/hooks/useAnalytics';
 import { colorSchemes } from '@/lib/chartConfig';
 
 interface StageDistributionChartProps {
@@ -76,7 +71,7 @@ export const StageDistributionChart = React.forwardRef<HTMLDivElement, StageDist
           percent: wordStatus.relearningPercent,
           original: 'relearning',
         },
-      ].filter(item => item.value > 0);
+      ].filter((item) => item.value > 0);
     }, [data?.wordStatus]);
 
     // Stage-specific colors
@@ -182,17 +177,16 @@ export const StageDistributionChart = React.forwardRef<HTMLDivElement, StageDist
               isAnimationActive={false}
             >
               {pieData.map((entry, index) => (
-                <Cell
-                  key={`cell-${index}`}
-                  fill={stageColors[entry.original]}
-                />
+                <Cell key={`cell-${index}`} fill={stageColors[entry.original]} />
               ))}
             </Pie>
             <Tooltip content={<CustomTooltip />} />
             <Legend
               verticalAlign="bottom"
               height={36}
-              formatter={(_value, entry: any) => `${entry.payload.name} (${Math.round(entry.payload.percent)}%)`}
+              formatter={(_value, entry: any) =>
+                `${entry.payload.name} (${Math.round(entry.payload.percent)}%)`
+              }
             />
           </PieChart>
         </ResponsiveContainer>

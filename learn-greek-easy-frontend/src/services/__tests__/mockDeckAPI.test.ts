@@ -1,9 +1,11 @@
 // src/services/__tests__/mockDeckAPI.test.ts
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+
+import type { DeckFilters } from '@/types/deck';
+
 import { mockDeckAPI } from '../mockDeckAPI';
 import { MOCK_DECKS, MOCK_PROGRESS } from '../mockDeckData';
-import type { DeckFilters } from '@/types/deck';
 
 describe('mockDeckAPI', () => {
   beforeEach(() => {
@@ -429,9 +431,9 @@ describe('mockDeckAPI', () => {
       const deckWithoutProgress = MOCK_DECKS.find((d) => !MOCK_PROGRESS[d.id]);
 
       if (deckWithoutProgress) {
-        await expect(
-          mockDeckAPI.reviewSession(deckWithoutProgress.id, 10, 8, 15)
-        ).rejects.toThrow(`No progress found for deck "${deckWithoutProgress.id}"`);
+        await expect(mockDeckAPI.reviewSession(deckWithoutProgress.id, 10, 8, 15)).rejects.toThrow(
+          `No progress found for deck "${deckWithoutProgress.id}"`
+        );
       }
     });
   });

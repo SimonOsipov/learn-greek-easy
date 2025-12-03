@@ -3,8 +3,9 @@
  * Tests authentication hooks including useAuth, useRequireAuth, useRedirectIfAuth, and useRequireRole
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { renderHook } from '@testing-library/react';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+
 import { useAuth, useRequireAuth, useRedirectIfAuth, useRequireRole } from '@/hooks/useAuth';
 import { useAuthStore } from '@/stores/authStore';
 

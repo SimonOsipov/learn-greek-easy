@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { useReviewStore } from '@/stores/reviewStore';
+
 import { cn } from '@/lib/utils';
+import { useReviewStore } from '@/stores/reviewStore';
 import type { ReviewRating } from '@/types/review';
 
 export function RatingButtons() {
@@ -21,17 +22,17 @@ export function RatingButtons() {
   ];
 
   return (
-    <div className="px-8 py-6 flex gap-3 justify-center">
+    <div className="flex justify-center gap-3 px-8 py-6">
       {buttons.map(({ rating, label, color }) => (
         <button
           key={rating}
           onClick={() => handleRate(rating)}
           disabled={!canRate || isLoading}
           className={cn(
-            'flex-1 max-w-[120px] px-6 py-3 rounded-lg text-white font-semibold text-sm',
-            'transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed',
+            'max-w-[120px] flex-1 rounded-lg px-6 py-3 text-sm font-semibold text-white',
+            'transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50',
             color,
-            highlightedButton === rating && 'ring-2 ring-offset-2 ring-current',
+            highlightedButton === rating && 'ring-2 ring-current ring-offset-2',
             canRate && 'hover:-translate-y-0.5 hover:shadow-lg'
           )}
           aria-label={`Rate card as ${label}`}

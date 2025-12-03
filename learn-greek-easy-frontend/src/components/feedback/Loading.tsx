@@ -1,4 +1,5 @@
 import { Loader2 } from 'lucide-react';
+
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 
@@ -38,22 +39,19 @@ export function Loading({
   variant = 'inline',
   text = 'Loading...',
   rows = 3,
-  className
+  className,
 }: LoadingProps) {
   if (variant === 'page') {
     return (
       <div
-        className={cn(
-          'flex items-center justify-center min-h-[400px]',
-          className
-        )}
+        className={cn('flex min-h-[400px] items-center justify-center', className)}
         role="status"
         aria-live="polite"
         aria-label={text}
       >
-        <div className="text-center space-y-4">
-          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" aria-hidden="true" />
-          <p className="text-muted-foreground text-sm">{text}</p>
+        <div className="space-y-4 text-center">
+          <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" aria-hidden="true" />
+          <p className="text-sm text-muted-foreground">{text}</p>
         </div>
       </div>
     );
@@ -62,7 +60,7 @@ export function Loading({
   if (variant === 'inline') {
     return (
       <div
-        className={cn('flex items-center gap-2 text-muted-foreground text-sm', className)}
+        className={cn('flex items-center gap-2 text-sm text-muted-foreground', className)}
         role="status"
         aria-live="polite"
         aria-label={text}
@@ -77,7 +75,7 @@ export function Loading({
     return (
       <div
         className={cn(
-          'absolute inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center z-50',
+          'absolute inset-0 z-50 flex items-center justify-center bg-white/80 backdrop-blur-sm',
           className
         )}
         role="status"
@@ -113,7 +111,7 @@ export function Loading({
  */
 export function CardSkeleton() {
   return (
-    <div className="p-4 border rounded-lg bg-card" role="status" aria-label="Loading card">
+    <div className="bg-card rounded-lg border p-4" role="status" aria-label="Loading card">
       <div className="space-y-3">
         <Skeleton className="h-4 w-2/3" />
         <Skeleton className="h-3 w-full" />

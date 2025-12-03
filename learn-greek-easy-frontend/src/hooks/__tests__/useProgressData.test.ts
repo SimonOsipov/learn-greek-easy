@@ -3,8 +3,9 @@
  * Tests progress data selector from analytics store
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
+import { describe, it, expect, beforeEach } from 'vitest';
+
 import { useProgressData } from '@/hooks/useProgressData';
 import { useAnalyticsStore } from '@/stores/analyticsStore';
 

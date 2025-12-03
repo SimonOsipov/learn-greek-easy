@@ -1,4 +1,8 @@
 import { useState } from 'react';
+
+import { AlertTriangle, ArrowLeft, Loader2, Check } from 'lucide-react';
+
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -9,8 +13,6 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
-import { AlertTriangle, ArrowLeft, Loader2, Check } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface ResetProgressDialogProps {
@@ -37,7 +39,7 @@ export function ResetProgressDialog({ open, onOpenChange }: ResetProgressDialogP
 
     try {
       // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      await new Promise((resolve) => setTimeout(resolve, 1500));
 
       // Clear progress data from localStorage
       localStorage.removeItem('learn-greek-easy:review-data');
@@ -75,14 +77,10 @@ export function ResetProgressDialog({ open, onOpenChange }: ResetProgressDialogP
             <DialogHeader>
               <div className="flex items-center gap-2">
                 <AlertTriangle className="h-5 w-5 text-red-600" />
-                <DialogTitle className="text-red-600">
-                  Reset All Progress?
-                </DialogTitle>
+                <DialogTitle className="text-red-600">Reset All Progress?</DialogTitle>
               </div>
               <DialogDescription className="space-y-3 pt-2">
-                <p className="font-medium text-foreground">
-                  This will permanently delete:
-                </p>
+                <p className="text-foreground font-medium">This will permanently delete:</p>
                 <ul className="list-inside list-disc space-y-1 text-sm">
                   <li>All deck progress and review history</li>
                   <li>All learning statistics and analytics</li>
@@ -93,19 +91,14 @@ export function ResetProgressDialog({ open, onOpenChange }: ResetProgressDialogP
                   <Check className="mr-2 inline-block h-4 w-4" />
                   Your account and settings will be preserved
                 </p>
-                <p className="font-medium text-red-600">
-                  This action cannot be undone.
-                </p>
+                <p className="font-medium text-red-600">This action cannot be undone.</p>
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
               <Button variant="outline" onClick={handleClose}>
                 Cancel
               </Button>
-              <Button
-                variant="destructive"
-                onClick={() => setStep(2)}
-              >
+              <Button variant="destructive" onClick={() => setStep(2)}>
                 Continue
               </Button>
             </DialogFooter>
@@ -115,9 +108,7 @@ export function ResetProgressDialog({ open, onOpenChange }: ResetProgressDialogP
             <DialogHeader>
               <div className="flex items-center gap-2">
                 <AlertTriangle className="h-5 w-5 text-red-600" />
-                <DialogTitle className="text-red-600">
-                  Final Confirmation
-                </DialogTitle>
+                <DialogTitle className="text-red-600">Final Confirmation</DialogTitle>
               </div>
               <DialogDescription className="space-y-4 pt-2">
                 <p className="text-foreground">
@@ -142,11 +133,7 @@ export function ResetProgressDialog({ open, onOpenChange }: ResetProgressDialogP
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
-              <Button
-                variant="ghost"
-                onClick={() => setStep(1)}
-                disabled={isResetting}
-              >
+              <Button variant="ghost" onClick={() => setStep(1)} disabled={isResetting}>
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Back
               </Button>

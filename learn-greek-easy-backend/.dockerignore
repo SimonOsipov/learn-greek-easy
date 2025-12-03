@@ -1,0 +1,75 @@
+# Git
+.git
+.gitignore
+.github
+
+# Python bytecode
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info
+.eggs
+dist
+build
+
+# Type checking / linting cache
+.mypy_cache
+.ruff_cache
+.pytest_cache
+
+# Coverage
+.coverage
+htmlcov
+coverage.xml
+coverage.json
+*.cover
+
+# Virtual environments
+.venv
+venv
+ENV
+env
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+*~
+
+# Environment files (secrets)
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Logs
+logs/
+*.log
+
+# Testing
+tests/
+TESTING.md
+conftest.py
+
+# Documentation
+README.md
+docs/
+*.md
+!alembic/README
+
+# Docker files (avoid recursion)
+Dockerfile*
+docker-compose*
+.dockerignore
+
+# Scripts (development only)
+scripts/
+
+# Temp/OS files
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db

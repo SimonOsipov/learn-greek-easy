@@ -1,13 +1,15 @@
 // src/stores/__tests__/reviewStore.test.ts
 
-import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
-import { useReviewStore } from '../reviewStore';
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+
 import { mockReviewAPI } from '@/services/mockReviewAPI';
+import type { ReviewSession, CardReview, SessionSummary } from '@/types/review';
+
+import { useAnalyticsStore } from '../analyticsStore';
 import { useAuthStore } from '../authStore';
 import { useDeckStore } from '../deckStore';
-import { useAnalyticsStore } from '../analyticsStore';
-import type { ReviewSession, CardReview, SessionSummary } from '@/types/review';
+import { useReviewStore } from '../reviewStore';
 
 // Mock dependencies
 vi.mock('@/services/mockReviewAPI', () => ({
@@ -681,9 +683,7 @@ describe('reviewStore', () => {
       expect(result.current.activeSession?.pausedAt).toBeTruthy();
 
       // Check sessionStorage
-      const stored = JSON.parse(
-        sessionStorage.getItem('learn-greek-easy:active-session') || '{}'
-      );
+      const stored = JSON.parse(sessionStorage.getItem('learn-greek-easy:active-session') || '{}');
       expect(stored.status).toBe('paused');
     });
 

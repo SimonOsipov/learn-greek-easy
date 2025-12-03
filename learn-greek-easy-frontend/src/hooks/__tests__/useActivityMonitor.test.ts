@@ -3,8 +3,9 @@
  * Tests session timeout and activity monitoring
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+
 import { useActivityMonitor } from '@/hooks/useActivityMonitor';
 import { useAuthStore } from '@/stores/authStore';
 
@@ -200,10 +201,7 @@ describe('useActivityMonitor Hook', () => {
         result.current.extendSession();
       });
 
-      expect(mockExtendSession).toHaveBeenCalledWith(
-        expect.any(Function),
-        expect.any(Function)
-      );
+      expect(mockExtendSession).toHaveBeenCalledWith(expect.any(Function), expect.any(Function));
     });
   });
 

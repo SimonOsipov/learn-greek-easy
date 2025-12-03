@@ -6,20 +6,16 @@ interface PremiumGateProps {
   children: React.ReactNode;
 }
 
-export function PremiumGate({
-  isLocked,
-  badgeText = 'Pro',
-  children,
-}: PremiumGateProps) {
+export function PremiumGate({ isLocked, badgeText = 'Pro', children }: PremiumGateProps) {
   if (!isLocked) {
     return <>{children}</>;
   }
 
   return (
     <div className="relative">
-      <div className="filter blur-sm select-none pointer-events-none">{children}</div>
+      <div className="pointer-events-none select-none blur-sm filter">{children}</div>
       <div className="absolute inset-0 flex items-center justify-center">
-        <span className="bg-amber-400 text-gray-900 text-sm font-bold px-4 py-2 rounded-xl shadow-lg uppercase tracking-wider">
+        <span className="rounded-xl bg-amber-400 px-4 py-2 text-sm font-bold uppercase tracking-wider text-gray-900 shadow-lg">
           {badgeText}
         </span>
       </div>

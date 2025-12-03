@@ -2,37 +2,37 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 export function FlashcardSkeleton() {
   return (
-    <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-2xl overflow-hidden min-h-[800px]">
+    <div className="mx-auto min-h-[800px] max-w-4xl overflow-hidden rounded-2xl bg-white shadow-2xl">
       {/* Progress header skeleton */}
-      <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
-        <Skeleton className="h-2 bg-gray-200 rounded-full mb-2 animate-pulse" />
-        <Skeleton className="h-4 bg-gray-200 rounded w-48 mx-auto animate-pulse" />
+      <div className="border-b border-gray-200 bg-gray-50 px-6 py-4">
+        <Skeleton className="mb-2 h-2 animate-pulse rounded-full bg-gray-200" />
+        <Skeleton className="mx-auto h-4 w-48 animate-pulse rounded bg-gray-200" />
       </div>
 
       {/* Main card skeleton */}
       <div className="px-8 py-12 text-center">
-        <Skeleton className="h-12 bg-gray-200 rounded w-64 mx-auto mb-3 animate-pulse" />
-        <Skeleton className="h-5 bg-gray-200 rounded w-40 mx-auto mb-6 animate-pulse" />
-        <div className="flex gap-2 justify-center mb-6">
-          <Skeleton className="h-6 w-32 bg-gray-200 rounded-full animate-pulse" />
-          <Skeleton className="h-6 w-12 bg-gray-200 rounded-full animate-pulse" />
+        <Skeleton className="mx-auto mb-3 h-12 w-64 animate-pulse rounded bg-gray-200" />
+        <Skeleton className="mx-auto mb-6 h-5 w-40 animate-pulse rounded bg-gray-200" />
+        <div className="mb-6 flex justify-center gap-2">
+          <Skeleton className="h-6 w-32 animate-pulse rounded-full bg-gray-200" />
+          <Skeleton className="h-6 w-12 animate-pulse rounded-full bg-gray-200" />
         </div>
-        <Skeleton className="h-8 bg-gray-200 rounded w-48 mx-auto animate-pulse" />
+        <Skeleton className="mx-auto h-8 w-48 animate-pulse rounded bg-gray-200" />
       </div>
 
       {/* Rating buttons skeleton */}
-      <div className="px-8 py-6 flex gap-3 justify-center">
+      <div className="flex justify-center gap-3 px-8 py-6">
         {[...Array(4)].map((_, i) => (
-          <Skeleton key={i} className="h-11 w-28 bg-gray-200 rounded-lg animate-pulse" />
+          <Skeleton key={i} className="h-11 w-28 animate-pulse rounded-lg bg-gray-200" />
         ))}
       </div>
 
       {/* Grammar section skeleton */}
-      <div className="bg-gray-50 border-t border-gray-200 px-6 py-6">
-        <Skeleton className="h-5 bg-gray-200 rounded w-40 mb-4 animate-pulse" />
-        <div className="bg-white rounded-xl p-4 space-y-3">
+      <div className="border-t border-gray-200 bg-gray-50 px-6 py-6">
+        <Skeleton className="mb-4 h-5 w-40 animate-pulse rounded bg-gray-200" />
+        <div className="space-y-3 rounded-xl bg-white p-4">
           {[...Array(4)].map((_, i) => (
-            <Skeleton key={i} className="h-10 bg-gray-200 rounded animate-pulse" />
+            <Skeleton key={i} className="h-10 animate-pulse rounded bg-gray-200" />
           ))}
         </div>
       </div>

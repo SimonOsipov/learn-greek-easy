@@ -1,0 +1,2 @@
+# This file ensures the logs directory exists for Docker volume mounting
+# Actual log files are gitignored

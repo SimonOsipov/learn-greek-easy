@@ -1,5 +1,7 @@
 import React from 'react';
+
 import { Clock } from 'lucide-react';
+
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAnalytics } from '@/hooks/useAnalytics';
@@ -91,14 +93,12 @@ export const TimeStudiedWidget: React.FC<TimeStudiedWidgetProps> = ({ isLoading:
           <div className="flex-1">
             <p className="text-sm font-medium text-gray-500">Time Studied</p>
             <div className="mt-2">
-              <span className="text-3xl font-bold text-gray-900">
-                {formattedTime}
-              </span>
+              <span className="text-3xl font-bold text-gray-900">{formattedTime}</span>
             </div>
-            <p className="text-xs text-gray-400 mt-1">{rangeText}</p>
+            <p className="mt-1 text-xs text-gray-400">{rangeText}</p>
           </div>
-          <div className="p-3 rounded-full bg-blue-100">
-            <Clock className="w-8 h-8 text-blue-600" aria-hidden="true" />
+          <div className="rounded-full bg-blue-100 p-3">
+            <Clock className="h-8 w-8 text-blue-600" aria-hidden="true" />
           </div>
         </div>
       </CardContent>

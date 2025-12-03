@@ -22,6 +22,11 @@
  */
 
 import { create } from 'zustand';
+
+import { mockReviewAPI } from '@/services/mockReviewAPI';
+import { useAnalyticsStore } from '@/stores/analyticsStore';
+import { useAuthStore } from '@/stores/authStore';
+import { useDeckStore } from '@/stores/deckStore';
 import type {
   ReviewSession,
   ReviewRating,
@@ -30,10 +35,6 @@ import type {
   SessionSummary,
   QueueConfig,
 } from '@/types/review';
-import { mockReviewAPI } from '@/services/mockReviewAPI';
-import { useAuthStore } from '@/stores/authStore';
-import { useDeckStore } from '@/stores/deckStore';
-import { useAnalyticsStore } from '@/stores/analyticsStore';
 
 /**
  * Default queue configuration for review sessions
@@ -288,10 +289,7 @@ export const useReviewStore = create<ReviewState>((set, get) => ({
       });
 
       // Save to sessionStorage for crash recovery
-      sessionStorage.setItem(
-        'learn-greek-easy:active-session',
-        JSON.stringify(session)
-      );
+      sessionStorage.setItem('learn-greek-easy:active-session', JSON.stringify(session));
     } catch (error) {
       const errorMessage =
         error instanceof Error
@@ -364,11 +362,7 @@ export const useReviewStore = create<ReviewState>((set, get) => ({
       );
 
       // Update session stats
-      const updatedStats = calculateUpdatedStats(
-        get().sessionStats,
-        rating,
-        timeSpent
-      );
+      const updatedStats = calculateUpdatedStats(get().sessionStats, rating, timeSpent);
 
       // Advance to next card
       const nextIndex = currentCardIndex + 1;
@@ -400,9 +394,7 @@ export const useReviewStore = create<ReviewState>((set, get) => ({
       );
     } catch (error) {
       const errorMessage =
-        error instanceof Error
-          ? error.message
-          : 'Failed to rate card. Please try again.';
+        error instanceof Error ? error.message : 'Failed to rate card. Please try again.';
 
       set({
         isLoading: false,
@@ -438,10 +430,7 @@ export const useReviewStore = create<ReviewState>((set, get) => ({
     });
 
     // Persist to sessionStorage
-    sessionStorage.setItem(
-      'learn-greek-easy:active-session',
-      JSON.stringify(pausedSession)
-    );
+    sessionStorage.setItem('learn-greek-easy:active-session', JSON.stringify(pausedSession));
   },
 
   /**
@@ -482,9 +471,7 @@ export const useReviewStore = create<ReviewState>((set, get) => ({
       });
     } catch (error) {
       const errorMessage =
-        error instanceof Error
-          ? error.message
-          : 'Failed to resume session. Please try again.';
+        error instanceof Error ? error.message : 'Failed to resume session. Please try again.';
 
       set({
         isLoading: false,
@@ -541,9 +528,7 @@ export const useReviewStore = create<ReviewState>((set, get) => ({
       return summary;
     } catch (error) {
       const errorMessage =
-        error instanceof Error
-          ? error.message
-          : 'Failed to end session. Please try again.';
+        error instanceof Error ? error.message : 'Failed to end session. Please try again.';
 
       set({
         isLoading: false,
@@ -606,8 +591,7 @@ function calculateUpdatedStats(
   };
 
   // Update correct/incorrect counts
-  const cardsCorrect =
-    currentStats.cardsCorrect + (rating === 'good' || rating === 'easy' ? 1 : 0);
+  const cardsCorrect = currentStats.cardsCorrect + (rating === 'good' || rating === 'easy' ? 1 : 0);
   const cardsIncorrect = currentStats.cardsIncorrect + (rating === 'again' ? 1 : 0);
 
   // Calculate accuracy

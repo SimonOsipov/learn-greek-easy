@@ -10,20 +10,20 @@ import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { LayoutProvider } from '@/contexts/LayoutContext';
 import { useActivityMonitor } from '@/hooks/useActivityMonitor';
+import ActivityFeedTest from '@/pages/ActivityFeedTest';
 import { ForgotPassword } from '@/pages/auth/ForgotPassword';
 import { Login } from '@/pages/auth/Login';
 import { Register } from '@/pages/auth/Register';
+import ChartsTestPage from '@/pages/ChartsTestPage';
 import { Dashboard } from '@/pages/Dashboard';
 import { DeckDetailPage } from '@/pages/DeckDetailPage';
 import { DecksPage } from '@/pages/DecksPage';
 import { FlashcardReviewPage } from '@/pages/FlashcardReviewPage';
-import { SessionSummaryPage } from '@/pages/SessionSummaryPage';
 import { NotFound } from '@/pages/NotFound';
 import { Profile } from '@/pages/Profile';
-import { Unauthorized } from '@/pages/Unauthorized';
+import { SessionSummaryPage } from '@/pages/SessionSummaryPage';
 import Settings from '@/pages/Settings';
-import ChartsTestPage from '@/pages/ChartsTestPage';
-import ActivityFeedTest from '@/pages/ActivityFeedTest';
+import { Unauthorized } from '@/pages/Unauthorized';
 
 // Temporary placeholder pages - replace with actual pages
 

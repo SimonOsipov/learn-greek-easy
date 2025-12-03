@@ -3,8 +3,9 @@
  * Tests dashboard data hook (placeholder implementation)
  */
 
-import { describe, it, expect } from 'vitest';
 import { renderHook } from '@testing-library/react';
+import { describe, it, expect } from 'vitest';
+
 import { useDashboard } from '@/hooks/useDashboard';
 
 describe('useDashboard Hook', () => {

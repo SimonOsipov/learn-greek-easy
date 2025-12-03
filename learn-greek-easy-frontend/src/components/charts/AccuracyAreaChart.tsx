@@ -1,6 +1,8 @@
 // src/components/charts/AccuracyAreaChart.tsx
 
 import React from 'react';
+
+import { format } from 'date-fns';
 import {
   AreaChart,
   Area,
@@ -10,9 +12,9 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
-import { format } from 'date-fns';
-import { useProgressData } from '@/hooks/useProgressData';
+
 import { ChartContainer, ChartTooltip } from '@/components/charts';
+import { useProgressData } from '@/hooks/useProgressData';
 import { chartColors } from '@/lib/chartConfig';
 
 interface AccuracyAreaChartProps {
@@ -120,20 +122,14 @@ export const AccuracyAreaChart = React.forwardRef<HTMLDivElement, AccuracyAreaCh
         height={chartHeight}
       >
         <ResponsiveContainer width="100%" height={chartHeight}>
-          <AreaChart
-            data={progressData}
-            margin={{ top: 20, right: 30, left: 0, bottom: 5 }}
-          >
+          <AreaChart data={progressData} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
             <defs>
               <linearGradient id="accuracyGradient" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor={chartColors.chart1} stopOpacity={0.3} />
                 <stop offset="100%" stopColor={chartColors.chart1} stopOpacity={0.05} />
               </linearGradient>
             </defs>
-            <CartesianGrid
-              strokeDasharray="3 3"
-              stroke={chartColors.gray200}
-            />
+            <CartesianGrid strokeDasharray="3 3" stroke={chartColors.gray200} />
             <XAxis
               dataKey="dateString"
               tick={{ fontSize: 12, fill: chartColors.gray600 }}

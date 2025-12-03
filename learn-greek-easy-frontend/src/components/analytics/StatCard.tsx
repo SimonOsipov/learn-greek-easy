@@ -1,5 +1,7 @@
 import React from 'react';
+
 import { TrendingUp, TrendingDown } from 'lucide-react';
+
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -133,11 +135,9 @@ export const StatCard: React.FC<StatCardProps> = ({
             <div className="mt-2">
               <span className="text-3xl font-bold text-gray-900">{value}</span>
             </div>
-            {subtext && (
-              <p className="text-xs text-gray-400 mt-1">{subtext}</p>
-            )}
+            {subtext && <p className="mt-1 text-xs text-gray-400">{subtext}</p>}
             {trend && (
-              <div className="flex items-center gap-1 mt-2">
+              <div className="mt-2 flex items-center gap-1">
                 {trendDisplay?.Icon && (
                   <trendDisplay.Icon
                     className={`h-4 w-4 ${trendDisplay.color}`}
@@ -150,10 +150,8 @@ export const StatCard: React.FC<StatCardProps> = ({
               </div>
             )}
           </div>
-          <div className={`p-3 rounded-full ${colors.bg}`}>
-            <div className={`w-8 h-8 ${colors.icon}`}>
-              {icon}
-            </div>
+          <div className={`rounded-full p-3 ${colors.bg}`}>
+            <div className={`h-8 w-8 ${colors.icon}`}>{icon}</div>
           </div>
         </div>
       </CardContent>

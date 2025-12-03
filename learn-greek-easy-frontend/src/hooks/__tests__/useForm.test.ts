@@ -3,8 +3,9 @@
  * Tests form state management and validation
  */
 
-import { describe, it, expect, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
+
 import { useForm } from '@/hooks/useForm';
 
 describe('useForm Hook', () => {

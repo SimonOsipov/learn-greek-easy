@@ -1,11 +1,13 @@
 // src/stores/__tests__/analyticsStore.test.ts
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
-import { useAnalyticsStore } from '../analyticsStore';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+
 import * as mockAnalyticsAPI from '@/services/mockAnalyticsAPI';
 import type { AnalyticsDashboardData } from '@/types/analytics';
 import type { SessionSummary } from '@/types/review';
+
+import { useAnalyticsStore } from '../analyticsStore';
 
 // Mock the analytics API
 vi.mock('@/services/mockAnalyticsAPI');

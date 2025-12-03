@@ -12,11 +12,13 @@
  * and integrates with navigation and analytics systems.
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen } from '@/lib/test-utils';
 import userEvent from '@testing-library/user-event';
-import { SessionSummary } from '../SessionSummary';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+
+import { render, screen } from '@/lib/test-utils';
 import type { SessionSummary as SessionSummaryType } from '@/types/review';
+
+import { SessionSummary } from '../SessionSummary';
 
 // Mock navigation
 const mockOnBackToDeck = vi.fn();
@@ -267,9 +269,9 @@ describe('SessionSummary - Rating Breakdown', () => {
       cardsReviewed: 10,
       ratingBreakdown: {
         again: 1, // 10%
-        hard: 2,  // 20%
-        good: 5,  // 50%
-        easy: 2,  // 20%
+        hard: 2, // 20%
+        good: 5, // 50%
+        easy: 2, // 20%
       },
     });
 

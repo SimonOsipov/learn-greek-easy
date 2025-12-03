@@ -85,7 +85,7 @@ export const DecksPage: React.FC = () => {
           action={{
             label: 'Clear All Filters',
             onClick: clearFilters,
-            variant: 'secondary'
+            variant: 'secondary',
           }}
         />
       )}
@@ -101,4 +101,3 @@ const DeckGridSkeleton: React.FC = () => (
     ))}
   </div>
 );
-

@@ -1,0 +1,298 @@
+"""FastAPI application entry point."""
+
+import logging
+from contextlib import asynccontextmanager
+from typing import AsyncGenerator
+
+from fastapi import FastAPI, Request, status
+from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
+
+from src.api.health import router as health_router
+from src.api.v1 import auth_router
+from src.config import settings
+from src.core.exceptions import BaseAPIException
+from src.core.logging import setup_logging
+from src.core.redis import close_redis, init_redis
+from src.db import close_db, init_db
+from src.middleware.auth import AuthLoggingMiddleware
+
+# Setup logging
+setup_logging()
+logger = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    """Application lifespan manager."""
+    # Startup
+    logger.info("Starting Learn Greek Easy API", extra={"version": settings.app_version})
+
+    # Initialize database connection
+    await init_db()
+
+    # Initialize Redis connection
+    await init_redis()
+
+    yield
+
+    # Shutdown
+    logger.info("Shutting down Learn Greek Easy API")
+
+    # Close Redis connection
+    await close_redis()
+
+    # Close database connection
+    await close_db()
+
+
+# Create FastAPI application
+app = FastAPI(
+    title=settings.app_name,
+    description="Backend API for Greek language learning with spaced repetition",
+    version=settings.app_version,
+    docs_url="/docs" if settings.debug else None,
+    redoc_url="/redoc" if settings.debug else None,
+    openapi_url="/openapi.json" if settings.debug else None,
+    lifespan=lifespan,
+)
+
+# ============================================================================
+# Middleware
+# ============================================================================
+
+# CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origins,
+    allow_credentials=settings.cors_allow_credentials,
+    allow_methods=settings.cors_allow_methods,
+    allow_headers=settings.cors_allow_headers,
+)
+
+# Trusted host middleware (production only)
+if settings.is_production:
+    app.add_middleware(
+        TrustedHostMiddleware,
+        allowed_hosts=["learngreekeasy.com", "*.learngreekeasy.com"],
+    )
+
+# Auth logging middleware for security monitoring
+app.add_middleware(AuthLoggingMiddleware)
+
+# TODO (Task 4): Add additional custom middleware
+# - Rate limiting
+# - Error handling
+
+# ============================================================================
+# Exception Handlers
+# ============================================================================
+
+
+@app.exception_handler(BaseAPIException)
+async def base_api_exception_handler(
+    request: Request,
+    exc: BaseAPIException,
+) -> JSONResponse:
+    """Handle custom API exceptions."""
+    logger.error(
+        f"API Exception: {exc.error_code}",
+        extra={
+            "error_code": exc.error_code,
+            "detail": exc.detail,
+            "path": request.url.path,
+            "method": request.method,
+        },
+    )
+
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "success": False,
+            "error": {
+                "code": exc.error_code,
+                "message": exc.detail,
+                "extra": exc.extra,
+            },
+        },
+        headers=exc.headers,
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(
+    request: Request,
+    exc: RequestValidationError,
+) -> JSONResponse:
+    """Handle Pydantic validation errors."""
+    logger.warning(
+        "Validation error",
+        extra={
+            "errors": exc.errors(),
+            "path": request.url.path,
+            "method": request.method,
+        },
+    )
+
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        content={
+            "success": False,
+            "error": {
+                "code": "VALIDATION_ERROR",
+                "message": "Request validation failed",
+                "details": exc.errors(),
+            },
+        },
+    )
+
+
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(
+    request: Request,
+    exc: StarletteHTTPException,
+) -> JSONResponse:
+    """Handle HTTP exceptions."""
+    logger.error(
+        f"HTTP {exc.status_code} error",
+        extra={
+            "detail": exc.detail,
+            "path": request.url.path,
+            "method": request.method,
+        },
+    )
+
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "success": False,
+            "error": {
+                "code": f"HTTP_{exc.status_code}",
+                "message": exc.detail,
+            },
+        },
+    )
+
+
+@app.exception_handler(Exception)
+async def generic_exception_handler(
+    request: Request,
+    exc: Exception,
+) -> JSONResponse:
+    """Handle unhandled exceptions."""
+    logger.exception(
+        "Unhandled exception",
+        extra={
+            "path": request.url.path,
+            "method": request.method,
+        },
+    )
+
+    return JSONResponse(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        content={
+            "success": False,
+            "error": {
+                "code": "INTERNAL_SERVER_ERROR",
+                "message": "An unexpected error occurred",
+            },
+        },
+    )
+
+
+# ============================================================================
+# Routes
+# ============================================================================
+
+
+@app.get("/")
+async def root() -> dict:
+    """Root endpoint - API information."""
+    return {
+        "name": settings.app_name,
+        "version": settings.app_version,
+        "environment": settings.app_env,
+        "docs": "/docs" if settings.debug else None,
+        "health": "/health",
+        "api": settings.api_v1_prefix,
+    }
+
+
+@app.get(f"{settings.api_v1_prefix}/status")
+async def api_status() -> dict:
+    """API status endpoint with detailed information."""
+    return {
+        "api_version": "v1",
+        "app_version": settings.app_version,
+        "environment": settings.app_env,
+        "features": {
+            "google_oauth": settings.feature_google_oauth,
+            "email_notifications": settings.feature_email_notifications,
+            "rate_limiting": settings.feature_rate_limiting,
+            "background_tasks": settings.feature_background_tasks,
+        },
+    }
+
+
+# Debug endpoint (development only)
+if settings.debug:
+
+    @app.get("/debug/settings")
+    async def debug_settings() -> dict:
+        """Debug endpoint to view current settings."""
+        return {
+            "app": {
+                "name": settings.app_name,
+                "version": settings.app_version,
+                "env": settings.app_env,
+                "debug": settings.debug,
+            },
+            "cors": {
+                "origins": settings.cors_origins,
+                "credentials": settings.cors_allow_credentials,
+            },
+            "features": {
+                "google_oauth": settings.feature_google_oauth,
+                "email_notifications": settings.feature_email_notifications,
+                "rate_limiting": settings.feature_rate_limiting,
+                "background_tasks": settings.feature_background_tasks,
+            },
+        }
+
+
+# Include health check routes
+app.include_router(health_router)
+
+# Include authentication routes
+app.include_router(auth_router)
+
+# TODO (Task 5): Include deck routes
+# app.include_router(deck_router, prefix=f"{settings.api_v1_prefix}/decks", tags=["decks"])
+
+# TODO (Task 6): Include card routes
+# app.include_router(card_router, prefix=f"{settings.api_v1_prefix}/cards", tags=["cards"])
+
+# TODO (Task 7): Include review routes
+# app.include_router(review_router, prefix=f"{settings.api_v1_prefix}/reviews", tags=["reviews"])
+
+# TODO (Task 8): Include progress routes
+# app.include_router(progress_router, prefix=f"{settings.api_v1_prefix}/progress", tags=["progress"])
+
+
+# ============================================================================
+# Main (for running with python src/main.py)
+# ============================================================================
+
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run(
+        "src.main:app",
+        host=settings.host,
+        port=settings.port,
+        reload=settings.reload,
+        log_level=settings.log_level.lower(),
+    )

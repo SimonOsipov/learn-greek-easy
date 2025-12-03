@@ -2,6 +2,7 @@
 
 import { v4 as uuidv4 } from 'uuid';
 
+import { processCardReview, isCardDue } from '@/lib/spacedRepetition';
 import type {
   ReviewSession,
   ReviewRating,
@@ -12,7 +13,6 @@ import type {
 } from '@/types/review';
 
 import { getCardsForDeck } from './mockReviewData';
-import { processCardReview, isCardDue } from '@/lib/spacedRepetition';
 
 /**
  * localStorage key for review session data

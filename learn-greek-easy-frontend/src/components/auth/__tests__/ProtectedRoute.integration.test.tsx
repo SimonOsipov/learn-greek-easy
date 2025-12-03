@@ -3,11 +3,13 @@
  * Tests route protection, authentication checks, and redirects
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@/lib/test-utils';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
-import { ProtectedRoute } from '../ProtectedRoute';
+import { describe, it, expect, beforeEach } from 'vitest';
+
+import { render, screen, waitFor } from '@/lib/test-utils';
 import { useAuthStore } from '@/stores/authStore';
+
+import { ProtectedRoute } from '../ProtectedRoute';
 
 // Mock components for testing
 const DashboardMock = () => <div>Dashboard Content</div>;

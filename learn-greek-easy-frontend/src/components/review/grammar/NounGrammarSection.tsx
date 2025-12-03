@@ -1,8 +1,10 @@
-import type { Card } from '@/types/review';
-export type { Card };
 import { usePremiumAccess } from '@/hooks/usePremiumAccess';
-import { PremiumGate } from '../shared/PremiumGate';
+import type { Card } from '@/types/review';
+
 import { CasesTable } from './CasesTable';
+import { PremiumGate } from '../shared/PremiumGate';
+
+export type { Card };
 
 interface NounGrammarSectionProps {
   nounData: Card['nounData'];
@@ -21,8 +23,8 @@ export function NounGrammarSection({ nounData }: NounGrammarSectionProps) {
   ];
 
   return (
-    <div className="bg-gray-50 border-t border-gray-200 px-6 py-6">
-      <div className="flex items-center gap-2 mb-5 min-h-[40px]">
+    <div className="border-t border-gray-200 bg-gray-50 px-6 py-6">
+      <div className="mb-5 flex min-h-[40px] items-center gap-2">
         <span className="text-base font-bold text-gray-900">📝</span>
         <span className="text-base font-bold text-gray-900">Noun Forms & Cases</span>
       </div>

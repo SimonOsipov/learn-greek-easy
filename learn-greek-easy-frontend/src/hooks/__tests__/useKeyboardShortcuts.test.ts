@@ -3,8 +3,9 @@
  * Tests keyboard shortcuts for flashcard review
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 
 // Mock the review store

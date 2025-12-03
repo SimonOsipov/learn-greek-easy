@@ -10,6 +10,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
 import { cn, debounce } from '../utils';
 
 describe('utils', () => {
