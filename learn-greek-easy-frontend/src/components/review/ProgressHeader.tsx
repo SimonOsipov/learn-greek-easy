@@ -11,9 +11,9 @@ export function ProgressHeader() {
   const minutesRemaining = Math.ceil((cardsRemaining * avgTimePerCard) / 60);
 
   return (
-    <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
+    <div className="border-b border-gray-200 bg-gray-50 px-6 py-4">
       {/* Progress bar */}
-      <div className="h-2 bg-gray-200 rounded-full overflow-hidden mb-2">
+      <div className="mb-2 h-2 overflow-hidden rounded-full bg-gray-200">
         <div
           className="h-full bg-gradient-to-r from-[#667eea] to-[#764ba2] transition-all duration-300"
           style={{ width: `${percentage}%` }}

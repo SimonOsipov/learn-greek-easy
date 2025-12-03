@@ -1,6 +1,7 @@
+import { AlertCircle } from 'lucide-react';
+
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface FormFieldProps {
@@ -100,7 +101,7 @@ export function FormField({
       )}
 
       {error && (
-        <p id={`${name}-error`} className="text-sm text-red-600 flex items-center gap-1">
+        <p id={`${name}-error`} className="flex items-center gap-1 text-sm text-red-600">
           <AlertCircle className="h-4 w-4" />
           {error}
         </p>

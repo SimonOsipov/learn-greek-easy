@@ -1,6 +1,8 @@
 // src/components/charts/ProgressLineChart.tsx
 
 import React from 'react';
+
+import { format } from 'date-fns';
 import {
   LineChart,
   Line,
@@ -11,9 +13,9 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts';
-import { format } from 'date-fns';
-import { useProgressData } from '@/hooks/useProgressData';
+
 import { ChartContainer, ChartTooltip } from '@/components/charts';
+import { useProgressData } from '@/hooks/useProgressData';
 import { chartColors, colorSchemes } from '@/lib/chartConfig';
 
 interface ProgressLineChartProps {
@@ -118,14 +120,8 @@ export const ProgressLineChart = React.forwardRef<HTMLDivElement, ProgressLineCh
         height={chartHeight}
       >
         <ResponsiveContainer width="100%" height={chartHeight}>
-          <LineChart
-            data={progressData}
-            margin={{ top: 20, right: 30, left: 0, bottom: 5 }}
-          >
-            <CartesianGrid
-              strokeDasharray="3 3"
-              stroke={chartColors.gray200}
-            />
+          <LineChart data={progressData} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke={chartColors.gray200} />
             <XAxis
               dataKey="dateString"
               tick={{ fontSize: 12, fill: chartColors.gray600 }}
@@ -138,10 +134,7 @@ export const ProgressLineChart = React.forwardRef<HTMLDivElement, ProgressLineCh
               tickFormatter={(value) => `${value}`}
             />
             <Tooltip content={<CustomTooltip />} />
-            <Legend
-              wrapperStyle={{ paddingTop: '20px' }}
-              iconType="circle"
-            />
+            <Legend wrapperStyle={{ paddingTop: '20px' }} iconType="circle" />
             <Line
               type="monotone"
               dataKey="cardsNew"

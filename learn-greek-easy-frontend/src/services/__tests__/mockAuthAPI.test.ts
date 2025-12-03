@@ -1,8 +1,10 @@
 // src/services/__tests__/mockAuthAPI.test.ts
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import { mockAuthAPI } from '../mockAuthAPI';
+
 import type { RegisterData, AuthError } from '@/types/auth';
+
+import { mockAuthAPI } from '../mockAuthAPI';
 
 describe('mockAuthAPI', () => {
   // Test credentials from mockData.ts

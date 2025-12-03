@@ -1,7 +1,9 @@
 import React from 'react';
+
 import { Circle, BookOpen, RefreshCw, CheckCircle } from 'lucide-react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+
 import { Badge } from '@/components/ui/badge';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAnalytics } from '@/hooks/useAnalytics';
 
@@ -70,7 +72,7 @@ export const WordStatusWidget: React.FC<WordStatusWidgetProps> = ({ isLoading: p
           <CardTitle>Vocabulary Breakdown</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-gray-400 text-sm">No cards yet. Start learning!</p>
+          <p className="text-sm text-gray-400">No cards yet. Start learning!</p>
         </CardContent>
       </Card>
     );
@@ -133,15 +135,13 @@ export const WordStatusWidget: React.FC<WordStatusWidgetProps> = ({ isLoading: p
                 <span className="text-sm font-medium text-gray-700">{label}</span>
               </div>
               <div className="flex items-center gap-2">
-                <Badge variant={badgeVariant}>
-                  {count}
-                </Badge>
-                <span className="text-xs text-gray-500 w-12 text-right">{percentage}%</span>
+                <Badge variant={badgeVariant}>{count}</Badge>
+                <span className="w-12 text-right text-xs text-gray-500">{percentage}%</span>
               </div>
             </div>
           );
         })}
-        <div className="pt-3 border-t border-gray-200">
+        <div className="border-t border-gray-200 pt-3">
           <div className="flex items-center justify-between">
             <span className="text-sm font-bold text-gray-900">Total Cards</span>
             <span className="text-lg font-bold text-gray-900">{wordStatus.total}</span>

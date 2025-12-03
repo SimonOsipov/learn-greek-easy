@@ -3,9 +3,11 @@
  * Provides helper functions for testing React components with providers
  */
 
-import { render, RenderOptions } from '@testing-library/react';
 import { ReactElement, ReactNode } from 'react';
+
+import { render, RenderOptions } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
+
 import { Toaster } from '@/components/ui/toaster';
 
 // Custom render function that wraps components with providers
@@ -21,10 +23,7 @@ interface CustomRenderOptions extends Omit<RenderOptions, 'wrapper'> {
  */
 export function renderWithProviders(
   ui: ReactElement,
-  {
-    initialRoute = '/',
-    ...renderOptions
-  }: CustomRenderOptions = {}
+  { initialRoute = '/', ...renderOptions }: CustomRenderOptions = {}
 ) {
   // Set initial route if provided
   if (initialRoute !== '/') {

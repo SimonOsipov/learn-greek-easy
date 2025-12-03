@@ -74,7 +74,9 @@ export function useForm<T extends Record<string, any>>({
       // Required validation
       if (rules.required) {
         if (!value || (typeof value === 'string' && !value.trim())) {
-          return typeof rules.required === 'string' ? rules.required : `${String(name)} is required`;
+          return typeof rules.required === 'string'
+            ? rules.required
+            : `${String(name)} is required`;
         }
       }
 

@@ -56,10 +56,7 @@ function getStoredSnapshots(userId: string): AnalyticsSnapshot[] {
   }
 
   // Use mock data and save to localStorage
-  localStorage.setItem(
-    `${ANALYTICS_DATA_KEY}-${userId}`,
-    JSON.stringify(MOCK_ANALYTICS_SNAPSHOTS)
-  );
+  localStorage.setItem(`${ANALYTICS_DATA_KEY}-${userId}`, JSON.stringify(MOCK_ANALYTICS_SNAPSHOTS));
   return MOCK_ANALYTICS_SNAPSHOTS;
 }
 
@@ -71,10 +68,7 @@ function getStoredSnapshots(userId: string): AnalyticsSnapshot[] {
  */
 function saveSnapshots(userId: string, snapshots: AnalyticsSnapshot[]): void {
   try {
-    localStorage.setItem(
-      `${ANALYTICS_DATA_KEY}-${userId}`,
-      JSON.stringify(snapshots)
-    );
+    localStorage.setItem(`${ANALYTICS_DATA_KEY}-${userId}`, JSON.stringify(snapshots));
   } catch (error) {
     console.error('Failed to save analytics to localStorage:', error);
   }
@@ -86,9 +80,7 @@ function saveSnapshots(userId: string, snapshots: AnalyticsSnapshot[]): void {
  * @param snapshots - Analytics snapshots
  * @returns Progress data points for charting
  */
-function convertSnapshotsToProgressData(
-  snapshots: AnalyticsSnapshot[]
-): ProgressDataPoint[] {
+function convertSnapshotsToProgressData(snapshots: AnalyticsSnapshot[]): ProgressDataPoint[] {
   return snapshots.map((s) => ({
     date: new Date(s.date),
     dateString: s.date.toISOString().split('T')[0],
@@ -127,18 +119,9 @@ export async function getAnalytics(
   }
 
   // Calculate summary metrics
-  const totalCardsReviewed = snapshots.reduce(
-    (sum, s) => sum + s.cardsReviewedToday,
-    0
-  );
-  const totalTimeStudied = snapshots.reduce(
-    (sum, s) => sum + s.timeStudiedToday,
-    0
-  );
-  const cardsNewlyMastered = snapshots.reduce(
-    (sum, s) => sum + s.cardsMasteredToday,
-    0
-  );
+  const totalCardsReviewed = snapshots.reduce((sum, s) => sum + s.cardsReviewedToday, 0);
+  const totalTimeStudied = snapshots.reduce((sum, s) => sum + s.timeStudiedToday, 0);
+  const cardsNewlyMastered = snapshots.reduce((sum, s) => sum + s.cardsMasteredToday, 0);
 
   // Calculate average accuracy (weighted by cards reviewed)
   let totalAccuracyWeighted = 0;
@@ -150,9 +133,7 @@ export async function getAnalytics(
     }
   });
   const averageAccuracy =
-    totalCardsForAccuracy > 0
-      ? Math.round(totalAccuracyWeighted / totalCardsForAccuracy)
-      : 0;
+    totalCardsForAccuracy > 0 ? Math.round(totalAccuracyWeighted / totalCardsForAccuracy) : 0;
 
   return {
     userId,
@@ -204,9 +185,7 @@ export async function getProgressData(
  * @param _userId - User ID (unused in mock implementation)
  * @returns Deck performance stats
  */
-export async function getDeckPerformance(
-  _userId: string
-): Promise<DeckPerformanceStats[]> {
+export async function getDeckPerformance(_userId: string): Promise<DeckPerformanceStats[]> {
   await simulateDelay(300 + Math.random() * 200);
 
   // Mock deck performance data (8 decks from mockDeckData)
@@ -488,10 +467,8 @@ export async function getStudyStreak(userId: string): Promise<StudyStreak> {
 
   // Calculate next milestone
   const milestones = [7, 30, 100, 365];
-  let nextMilestone = milestones.find((m) => m > currentStreak) || 365;
-  let milestoneReached = milestones
-    .filter((m) => m <= currentStreak)
-    .pop() || 0;
+  const nextMilestone = milestones.find((m) => m > currentStreak) || 365;
+  const milestoneReached = milestones.filter((m) => m <= currentStreak).pop() || 0;
 
   // Calculate streak start date
   const streakStartDate = new Date();
@@ -537,9 +514,7 @@ export async function getRecentActivity(
   const activities: AnalyticsActivityItem[] = [];
 
   // Get last N days with activity
-  const activeDays = snapshots
-    .filter((s) => s.cardsReviewedToday > 0)
-    .slice(-limit);
+  const activeDays = snapshots.filter((s) => s.cardsReviewedToday > 0).slice(-limit);
 
   activeDays.forEach((snapshot) => {
     // Create review session activity
@@ -592,9 +567,7 @@ export async function getRecentActivity(
   });
 
   // Sort by timestamp descending
-  activities.sort(
-    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-  );
+  activities.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
   return activities.slice(0, limit);
 }
@@ -682,9 +655,7 @@ export async function updateAnalyticsSnapshot(
  * @param userId - User ID
  * @returns Today's snapshot
  */
-export async function getCurrentDaySnapshot(
-  userId: string
-): Promise<AnalyticsSnapshot> {
+export async function getCurrentDaySnapshot(userId: string): Promise<AnalyticsSnapshot> {
   await simulateDelay(150 + Math.random() * 100);
 
   const snapshots = getStoredSnapshots(userId);

@@ -1,5 +1,10 @@
 import { useState } from 'react';
+
+import { AlertTriangle, ArrowLeft, Loader2, Eye, EyeOff } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -10,11 +15,8 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import { AlertTriangle, ArrowLeft, Loader2, Eye, EyeOff } from 'lucide-react';
-import { useAuthStore } from '@/stores/authStore';
 import { useToast } from '@/hooks/use-toast';
+import { useAuthStore } from '@/stores/authStore';
 
 interface DeleteAccountDialogProps {
   open: boolean;
@@ -68,7 +70,7 @@ export function DeleteAccountDialog({ open, onOpenChange }: DeleteAccountDialogP
 
     try {
       // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise((resolve) => setTimeout(resolve, 2000));
 
       // Clear all localStorage data
       localStorage.clear();
@@ -100,14 +102,10 @@ export function DeleteAccountDialog({ open, onOpenChange }: DeleteAccountDialogP
             <DialogHeader>
               <div className="flex items-center gap-2">
                 <AlertTriangle className="h-5 w-5 text-red-600" />
-                <DialogTitle className="text-red-600">
-                  Delete Account?
-                </DialogTitle>
+                <DialogTitle className="text-red-600">Delete Account?</DialogTitle>
               </div>
               <DialogDescription className="space-y-3 pt-2">
-                <p className="font-medium text-foreground">
-                  This will permanently delete:
-                </p>
+                <p className="text-foreground font-medium">This will permanently delete:</p>
                 <ul className="list-inside list-disc space-y-1 text-sm">
                   <li>Your account and all login credentials</li>
                   <li>All learning progress and review history</li>
@@ -124,10 +122,7 @@ export function DeleteAccountDialog({ open, onOpenChange }: DeleteAccountDialogP
               <Button variant="outline" onClick={handleClose}>
                 Cancel
               </Button>
-              <Button
-                variant="destructive"
-                onClick={() => setStep(2)}
-              >
+              <Button variant="destructive" onClick={() => setStep(2)}>
                 Continue
               </Button>
             </DialogFooter>
@@ -137,14 +132,10 @@ export function DeleteAccountDialog({ open, onOpenChange }: DeleteAccountDialogP
             <DialogHeader>
               <div className="flex items-center gap-2">
                 <AlertTriangle className="h-5 w-5 text-red-600" />
-                <DialogTitle className="text-red-600">
-                  Verify Your Password
-                </DialogTitle>
+                <DialogTitle className="text-red-600">Verify Your Password</DialogTitle>
               </div>
               <DialogDescription className="space-y-4 pt-2">
-                <p className="text-foreground">
-                  Enter your current password to continue:
-                </p>
+                <p className="text-foreground">Enter your current password to continue:</p>
                 <div className="space-y-2">
                   <Label htmlFor="verify-password">Current Password</Label>
                   <div className="relative">
@@ -163,18 +154,12 @@ export function DeleteAccountDialog({ open, onOpenChange }: DeleteAccountDialogP
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      className="hover:text-foreground absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
                     >
-                      {showPassword ? (
-                        <EyeOff className="h-4 w-4" />
-                      ) : (
-                        <Eye className="h-4 w-4" />
-                      )}
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
-                  {error && (
-                    <p className="text-sm text-red-600">{error}</p>
-                  )}
+                  {error && <p className="text-sm text-red-600">{error}</p>}
                 </div>
               </DialogDescription>
             </DialogHeader>
@@ -189,11 +174,7 @@ export function DeleteAccountDialog({ open, onOpenChange }: DeleteAccountDialogP
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Back
               </Button>
-              <Button
-                variant="destructive"
-                onClick={handleVerifyPassword}
-                disabled={!password}
-              >
+              <Button variant="destructive" onClick={handleVerifyPassword} disabled={!password}>
                 Verify Password
               </Button>
             </DialogFooter>
@@ -203,12 +184,10 @@ export function DeleteAccountDialog({ open, onOpenChange }: DeleteAccountDialogP
             <DialogHeader>
               <div className="flex items-center gap-2">
                 <AlertTriangle className="h-5 w-5 text-red-600" />
-                <DialogTitle className="text-red-600">
-                  Final Confirmation
-                </DialogTitle>
+                <DialogTitle className="text-red-600">Final Confirmation</DialogTitle>
               </div>
               <DialogDescription className="space-y-4 pt-2">
-                <p className="font-medium text-foreground">
+                <p className="text-foreground font-medium">
                   Are you absolutely sure you want to delete your account?
                 </p>
                 <p className="text-sm">
@@ -228,12 +207,11 @@ export function DeleteAccountDialog({ open, onOpenChange }: DeleteAccountDialogP
                     htmlFor="acknowledge"
                     className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                   >
-                    I understand this action cannot be undone and all my data will be permanently deleted
+                    I understand this action cannot be undone and all my data will be permanently
+                    deleted
                   </label>
                 </div>
-                {error && (
-                  <p className="text-sm text-red-600">{error}</p>
-                )}
+                {error && <p className="text-sm text-red-600">{error}</p>}
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>

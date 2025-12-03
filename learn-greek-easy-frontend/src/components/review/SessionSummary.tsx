@@ -1,7 +1,7 @@
-import type { SessionSummary as SessionSummaryType } from '@/types/review';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { CheckCircle, TrendingUp, Clock, Target } from 'lucide-react';
+
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   formatTime,
   getEncouragingMessage,
@@ -9,6 +9,7 @@ import {
   formatRatingBreakdown,
   hasProgressTransitions,
 } from '@/lib/sessionSummaryUtils';
+import type { SessionSummary as SessionSummaryType } from '@/types/review';
 
 export interface SessionSummaryProps {
   summary: SessionSummaryType;
@@ -45,16 +46,14 @@ export function SessionSummary({
   // Edge case: no cards reviewed
   if (summary.cardsReviewed === 0) {
     return (
-      <div className="w-full max-w-3xl mx-auto space-y-6 p-4">
-        <Card className="text-center bg-gray-50">
-          <CardContent className="pt-8 pb-6">
-            <p className="text-lg text-gray-700 mb-4">
-              Session ended without reviewing any cards.
-            </p>
+      <div className="mx-auto w-full max-w-3xl space-y-6 p-4">
+        <Card className="bg-gray-50 text-center">
+          <CardContent className="pb-6 pt-8">
+            <p className="mb-4 text-lg text-gray-700">Session ended without reviewing any cards.</p>
             <Button
               size="lg"
               onClick={onBackToDeck}
-              className="bg-gradient-to-br from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+              className="bg-gradient-to-br from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700"
             >
               Back to Deck
             </Button>
@@ -70,68 +69,71 @@ export function SessionSummary({
   const ratingBreakdown = formatRatingBreakdown(summary);
 
   return (
-    <div className="w-full max-w-3xl mx-auto space-y-4 sm:space-y-6 p-2 sm:p-4">
+    <div className="mx-auto w-full max-w-3xl space-y-4 p-2 sm:space-y-6 sm:p-4">
       {/* 1. Completion Message */}
       <Card
-        className="text-center bg-gradient-to-br from-blue-50 to-purple-50 border-blue-200"
+        className="border-blue-200 bg-gradient-to-br from-blue-50 to-purple-50 text-center"
         role="status"
         aria-live="polite"
       >
-        <CardContent className="pt-6 sm:pt-8 pb-4 sm:pb-6">
-          <CheckCircle className="w-12 h-12 sm:w-16 sm:h-16 text-green-500 mx-auto mb-3 sm:mb-4" />
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
-            Session Complete!
-          </h2>
-          <p className="text-base sm:text-lg text-gray-700">{message}</p>
+        <CardContent className="pb-4 pt-6 sm:pb-6 sm:pt-8">
+          <CheckCircle className="mx-auto mb-3 h-12 w-12 text-green-500 sm:mb-4 sm:h-16 sm:w-16" />
+          <h2 className="mb-2 text-xl font-bold text-gray-900 sm:text-2xl">Session Complete!</h2>
+          <p className="text-base text-gray-700 sm:text-lg">{message}</p>
         </CardContent>
       </Card>
 
       {/* 2. Statistics Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">
         {/* Cards Reviewed */}
         <Card>
-          <CardContent className="pt-4 sm:pt-6 text-center">
-            <Target className="w-6 h-6 sm:w-8 sm:h-8 text-blue-500 mx-auto mb-2" aria-hidden="true" />
-            <p className="text-2xl sm:text-3xl font-bold text-gray-900">
-              {summary.cardsReviewed}
-            </p>
-            <p className="text-xs sm:text-sm text-gray-600 mt-1">Cards Reviewed</p>
+          <CardContent className="pt-4 text-center sm:pt-6">
+            <Target
+              className="mx-auto mb-2 h-6 w-6 text-blue-500 sm:h-8 sm:w-8"
+              aria-hidden="true"
+            />
+            <p className="text-2xl font-bold text-gray-900 sm:text-3xl">{summary.cardsReviewed}</p>
+            <p className="mt-1 text-xs text-gray-600 sm:text-sm">Cards Reviewed</p>
           </CardContent>
         </Card>
 
         {/* Accuracy (PRIMARY METRIC) */}
         <Card>
-          <CardContent className="pt-4 sm:pt-6 text-center">
+          <CardContent className="pt-4 text-center sm:pt-6">
             <TrendingUp
-              className={`w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-2 ${accuracyColor}`}
+              className={`mx-auto mb-2 h-6 w-6 sm:h-8 sm:w-8 ${accuracyColor}`}
               aria-hidden="true"
             />
-            <p className={`text-2xl sm:text-3xl font-bold ${accuracyColor}`}>
-              {summary.accuracy}%
-            </p>
-            <p className="text-xs sm:text-sm text-gray-600 mt-1">Accuracy</p>
+            <p className={`text-2xl font-bold sm:text-3xl ${accuracyColor}`}>{summary.accuracy}%</p>
+            <p className="mt-1 text-xs text-gray-600 sm:text-sm">Accuracy</p>
           </CardContent>
         </Card>
 
         {/* Time Spent */}
         <Card>
-          <CardContent className="pt-4 sm:pt-6 text-center">
-            <Clock className="w-6 h-6 sm:w-8 sm:h-8 text-orange-500 mx-auto mb-2" aria-hidden="true" />
-            <p className="text-2xl sm:text-3xl font-bold text-gray-900">
+          <CardContent className="pt-4 text-center sm:pt-6">
+            <Clock
+              className="mx-auto mb-2 h-6 w-6 text-orange-500 sm:h-8 sm:w-8"
+              aria-hidden="true"
+            />
+            <p className="text-2xl font-bold text-gray-900 sm:text-3xl">
               {formatTime(summary.totalTime)}
             </p>
-            <p className="text-xs sm:text-sm text-gray-600 mt-1">Time Spent</p>
+            <p className="mt-1 text-xs text-gray-600 sm:text-sm">Time Spent</p>
           </CardContent>
         </Card>
 
         {/* Avg Per Card */}
         <Card>
-          <CardContent className="pt-4 sm:pt-6 text-center">
-            <Clock className="w-6 h-6 sm:w-8 sm:h-8 text-purple-500 mx-auto mb-2" aria-hidden="true" />
-            <p className="text-2xl sm:text-3xl font-bold text-gray-900">
+          <CardContent className="pt-4 text-center sm:pt-6">
+            <Clock
+              className="mx-auto mb-2 h-6 w-6 text-purple-500 sm:h-8 sm:w-8"
+              aria-hidden="true"
+            />
+            <p className="text-2xl font-bold text-gray-900 sm:text-3xl">
               {summary.averageTimePerCard}s
             </p>
-            <p className="text-xs sm:text-sm text-gray-600 mt-1">Avg Per Card</p>
+            <p className="mt-1 text-xs text-gray-600 sm:text-sm">Avg Per Card</p>
           </CardContent>
         </Card>
       </div>
@@ -142,17 +144,12 @@ export function SessionSummary({
           <CardTitle>Rating Breakdown</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">
             {ratingBreakdown.map((item) => (
-              <div
-                key={item.label}
-                className={`text-center p-3 sm:p-4 ${item.bgColor} rounded-lg`}
-              >
-                <p className={`text-xl sm:text-2xl font-bold ${item.color}`}>
-                  {item.count}
-                </p>
-                <p className="text-sm text-gray-700 mt-1">{item.label}</p>
-                <p className="text-xs text-gray-500 mt-0.5">{item.percentage}%</p>
+              <div key={item.label} className={`p-3 text-center sm:p-4 ${item.bgColor} rounded-lg`}>
+                <p className={`text-xl font-bold sm:text-2xl ${item.color}`}>{item.count}</p>
+                <p className="mt-1 text-sm text-gray-700">{item.label}</p>
+                <p className="mt-0.5 text-xs text-gray-500">{item.percentage}%</p>
               </div>
             ))}
           </div>
@@ -169,30 +166,38 @@ export function SessionSummary({
             <div className="space-y-2 text-sm">
               {summary.transitions.newToLearning > 0 && (
                 <p className="text-gray-700">
-                  <span className="mr-2" aria-hidden="true">🆕</span>
-                  <span className="font-semibold">{summary.transitions.newToLearning}</span>{' '}
-                  cards moved to Learning
+                  <span className="mr-2" aria-hidden="true">
+                    🆕
+                  </span>
+                  <span className="font-semibold">{summary.transitions.newToLearning}</span> cards
+                  moved to Learning
                 </p>
               )}
               {summary.transitions.learningToReview > 0 && (
                 <p className="text-gray-700">
-                  <span className="mr-2" aria-hidden="true">📚</span>
+                  <span className="mr-2" aria-hidden="true">
+                    📚
+                  </span>
                   <span className="font-semibold">{summary.transitions.learningToReview}</span>{' '}
                   cards graduated to Review
                 </p>
               )}
               {summary.transitions.reviewToMastered > 0 && (
                 <p className="text-gray-700">
-                  <span className="mr-2" aria-hidden="true">✨</span>
+                  <span className="mr-2" aria-hidden="true">
+                    ✨
+                  </span>
                   <span className="font-semibold">{summary.transitions.reviewToMastered}</span>{' '}
                   cards mastered!
                 </p>
               )}
               {summary.transitions.toRelearning > 0 && (
                 <p className="text-gray-700">
-                  <span className="mr-2" aria-hidden="true">🔄</span>
-                  <span className="font-semibold">{summary.transitions.toRelearning}</span>{' '}
-                  cards need review
+                  <span className="mr-2" aria-hidden="true">
+                    🔄
+                  </span>
+                  <span className="font-semibold">{summary.transitions.toRelearning}</span> cards
+                  need review
                 </p>
               )}
             </div>
@@ -201,28 +206,18 @@ export function SessionSummary({
       )}
 
       {/* 5. Action Buttons */}
-      <div className="flex flex-col sm:flex-row gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row">
         <Button
           size="lg"
           onClick={onBackToDeck}
-          className="flex-1 bg-gradient-to-br from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+          className="flex-1 bg-gradient-to-br from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700"
         >
           Back to Deck
         </Button>
-        <Button
-          size="lg"
-          variant="outline"
-          onClick={onReviewAgain}
-          className="flex-1"
-        >
+        <Button size="lg" variant="outline" onClick={onReviewAgain} className="flex-1">
           Review Again
         </Button>
-        <Button
-          size="lg"
-          variant="ghost"
-          onClick={onDashboard}
-          className="hidden sm:block"
-        >
+        <Button size="lg" variant="ghost" onClick={onDashboard} className="hidden sm:block">
           Dashboard
         </Button>
       </div>

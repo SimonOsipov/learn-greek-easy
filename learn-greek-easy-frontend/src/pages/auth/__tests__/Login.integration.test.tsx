@@ -3,11 +3,13 @@
  * Tests complete login flow with auth store, form validation, and navigation
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, waitFor } from '@/lib/test-utils';
 import userEvent from '@testing-library/user-event';
-import { Login } from '../Login';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+
+import { render, screen, waitFor } from '@/lib/test-utils';
 import { useAuthStore } from '@/stores/authStore';
+
+import { Login } from '../Login';
 
 // Mock react-router-dom for navigation testing
 const mockNavigate = vi.fn();

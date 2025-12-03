@@ -2,8 +2,8 @@ import React from 'react';
 
 import { Lock, Crown } from 'lucide-react';
 
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import type { Deck } from '@/types/deck';
 
 import { DeckBadge } from './DeckBadge';
@@ -67,12 +67,17 @@ export const DeckCard: React.FC<DeckCardProps> = ({
       }
       aria-label={`${titleGreek} - ${title} deck, ${level} level, ${completionPercent}% completed${isLocked ? ', locked' : ''}`}
     >
-      <CardHeader data-testid="deck-card-header" className="pb-3 flex-shrink-0">
+      <CardHeader data-testid="deck-card-header" className="flex-shrink-0 pb-3">
         {/* Title and Level Badge Row */}
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
             {/* Greek Title */}
-            <h3 data-testid="deck-card-title" className="truncate text-lg font-semibold text-gray-900">{titleGreek}</h3>
+            <h3
+              data-testid="deck-card-title"
+              className="truncate text-lg font-semibold text-gray-900"
+            >
+              {titleGreek}
+            </h3>
             {/* English Subtitle */}
             <p className="truncate text-sm text-gray-500">{title}</p>
           </div>
@@ -87,7 +92,7 @@ export const DeckCard: React.FC<DeckCardProps> = ({
         {/* Premium Badge - Reserve space for consistency */}
         <div className="mt-2 h-6">
           {isPremium && (
-            <Badge className="inline-flex items-center gap-1 bg-gradient-to-r from-purple-500 to-purple-700 text-white border-0">
+            <Badge className="inline-flex items-center gap-1 border-0 bg-gradient-to-r from-purple-500 to-purple-700 text-white">
               <Crown className="h-3 w-3" />
               Premium
             </Badge>
@@ -100,7 +105,10 @@ export const DeckCard: React.FC<DeckCardProps> = ({
         </div>
       </CardHeader>
 
-      <CardContent data-testid="deck-card-content" className="pt-0 flex-1 flex flex-col justify-between">
+      <CardContent
+        data-testid="deck-card-content"
+        className="flex flex-1 flex-col justify-between pt-0"
+      >
         <div>
           {/* Progress Bar - Always shown if showProgress is true */}
           {showProgress && (
@@ -123,7 +131,10 @@ export const DeckCard: React.FC<DeckCardProps> = ({
 
         {/* Stats Row */}
         {showStats && (
-          <div data-testid="deck-card-stats" className="grid grid-cols-3 gap-2 border-t pt-3 text-center">
+          <div
+            data-testid="deck-card-stats"
+            className="grid grid-cols-3 gap-2 border-t pt-3 text-center"
+          >
             {/* Card Count */}
             <div>
               <p className="text-xs text-gray-500">Cards</p>

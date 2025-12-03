@@ -1,6 +1,7 @@
 // src/hooks/useAnalytics.ts
 
 import { useEffect } from 'react';
+
 import { useAnalyticsStore } from '@/stores/analyticsStore';
 import { useAuthStore } from '@/stores/authStore';
 

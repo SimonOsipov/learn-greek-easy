@@ -14,6 +14,9 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+
+import type { SpacedRepetitionData } from '@/types/review';
+
 import {
   getAllReviewData,
   getDeckReviewData,
@@ -25,7 +28,6 @@ import {
   formatRelativeDate,
   calculateDeckReviewStats,
 } from '../reviewStatsHelpers';
-import type { SpacedRepetitionData } from '@/types/review';
 
 // Mock the mockReviewData module
 vi.mock('@/services/mockReviewData', () => ({

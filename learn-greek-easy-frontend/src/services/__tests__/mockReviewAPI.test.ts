@@ -1,6 +1,7 @@
 // src/services/__tests__/mockReviewAPI.test.ts
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+
 import { mockReviewAPI } from '../mockReviewAPI';
 
 describe('mockReviewAPI', () => {
@@ -184,12 +185,7 @@ describe('mockReviewAPI', () => {
         maxNewCards: 5,
       });
 
-      const ratings: Array<'again' | 'hard' | 'good' | 'easy'> = [
-        'again',
-        'hard',
-        'good',
-        'easy',
-      ];
+      const ratings: Array<'again' | 'hard' | 'good' | 'easy'> = ['again', 'hard', 'good', 'easy'];
 
       for (const rating of ratings) {
         const card = session.cards[ratings.indexOf(rating)];

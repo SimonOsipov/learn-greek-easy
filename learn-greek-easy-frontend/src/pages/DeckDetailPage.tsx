@@ -15,8 +15,6 @@ import {
 } from 'lucide-react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 
-import { calculateDeckReviewStats, formatRelativeDate } from '@/lib/reviewStatsHelpers';
-
 import { DeckBadge } from '@/components/decks/DeckBadge';
 import { DeckProgressBar } from '@/components/decks/DeckProgressBar';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -29,6 +27,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Skeleton } from '@/components/ui/skeleton';
+import { calculateDeckReviewStats, formatRelativeDate } from '@/lib/reviewStatsHelpers';
 import { useAuthStore } from '@/stores/authStore';
 import { useDeckStore } from '@/stores/deckStore';
 import type { Deck, DeckStatus } from '@/types/deck';
@@ -85,7 +84,11 @@ export const DeckDetailPage: React.FC = () => {
   return (
     <div className="container mx-auto max-w-4xl px-4 py-6 md:py-8">
       {/* Breadcrumb Navigation */}
-      <nav data-testid="breadcrumb" className="mb-4 flex items-center gap-2 text-sm text-gray-600" aria-label="Breadcrumb">
+      <nav
+        data-testid="breadcrumb"
+        className="mb-4 flex items-center gap-2 text-sm text-gray-600"
+        aria-label="Breadcrumb"
+      >
         <Link to="/decks" className="flex items-center gap-1 transition-colors hover:text-gray-900">
           <ChevronLeft className="h-4 w-4" />
           Decks
@@ -276,10 +279,7 @@ const StatisticsSection: React.FC<StatisticsSectionProps> = ({ deck }) => {
   const { progress } = deck;
 
   // Calculate review statistics from localStorage
-  const reviewStats = useMemo(
-    () => calculateDeckReviewStats(deck.id),
-    [deck.id]
-  );
+  const reviewStats = useMemo(() => calculateDeckReviewStats(deck.id), [deck.id]);
 
   return (
     <Card>
@@ -395,10 +395,7 @@ const ActionButtonsSection: React.FC<ActionButtonsSectionProps> = ({
   const [isSimulating, setIsSimulating] = useState(false);
 
   // Calculate review statistics for button text
-  const reviewStats = useMemo(
-    () => calculateDeckReviewStats(deck.id),
-    [deck.id]
-  );
+  const reviewStats = useMemo(() => calculateDeckReviewStats(deck.id), [deck.id]);
 
   // Handler for simulating a study session (demo/testing only)
   const handleSimulateSession = async () => {

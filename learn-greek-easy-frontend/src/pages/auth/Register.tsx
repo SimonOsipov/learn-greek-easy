@@ -336,7 +336,7 @@ export const Register: React.FC = () => {
             </SubmitButton>
 
             {/* OAuth Divider */}
-            <div className="relative flex items-center my-6">
+            <div className="relative my-6 flex items-center">
               <div className="flex-grow border-t border-gray-300"></div>
               <span className="px-4 text-sm text-gray-500">OR CONTINUE WITH</span>
               <div className="flex-grow border-t border-gray-300"></div>

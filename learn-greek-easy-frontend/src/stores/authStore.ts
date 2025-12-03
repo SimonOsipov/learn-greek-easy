@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 
 import { mockAuthAPI } from '@/services/mockAuthAPI';
 import type { User, RegisterData, AuthError } from '@/types/auth';
+
 import { useAnalyticsStore } from './analyticsStore';
 
 interface AuthState {
@@ -169,7 +170,7 @@ export const useAuthStore = create<AuthState>()(
         try {
           // TODO: In production, verify currentPassword and update via backend API
           // For MVP with mockAuthAPI, simulate password update
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          await new Promise((resolve) => setTimeout(resolve, 1000));
 
           // In real implementation:
           // await mockAuthAPI.updatePassword(user.id, currentPassword, newPassword);

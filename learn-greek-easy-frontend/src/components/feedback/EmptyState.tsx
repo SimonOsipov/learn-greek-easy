@@ -1,5 +1,7 @@
 import React from 'react';
+
 import { InboxIcon, type LucideProps } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -41,27 +43,22 @@ export function EmptyState({
   title,
   description,
   action,
-  className
+  className,
 }: EmptyStateProps) {
   return (
     <div
       className={cn(
-        'flex flex-col items-center justify-center min-h-[400px] text-center p-8',
+        'flex min-h-[400px] flex-col items-center justify-center p-8 text-center',
         className
       )}
       role="status"
       aria-label={title}
     >
-      <Icon className="h-16 w-16 text-muted-foreground/50 mb-4" aria-hidden="true" />
-      <h3 className="text-lg font-semibold text-gray-900 mb-2">{title}</h3>
-      {description && (
-        <p className="text-muted-foreground max-w-sm mb-6">{description}</p>
-      )}
+      <Icon className="mb-4 h-16 w-16 text-muted-foreground/50" aria-hidden="true" />
+      <h3 className="mb-2 text-lg font-semibold text-gray-900">{title}</h3>
+      {description && <p className="mb-6 max-w-sm text-muted-foreground">{description}</p>}
       {action && (
-        <Button
-          onClick={action.onClick}
-          variant={action.variant || 'default'}
-        >
+        <Button onClick={action.onClick} variant={action.variant || 'default'}>
           {action.label}
         </Button>
       )}

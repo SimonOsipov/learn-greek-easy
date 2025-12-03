@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
+
 import { Settings, Loader2 } from 'lucide-react';
 
-import { useAuthStore } from '@/stores/authStore';
-import { toast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
+import { toast } from '@/hooks/use-toast';
+import { useAuthStore } from '@/stores/authStore';
 
 /**
  * AppPreferencesSection Component
@@ -69,9 +70,7 @@ export function AppPreferencesSection() {
     <Card>
       <CardHeader>
         <CardTitle>App Preferences</CardTitle>
-        <CardDescription>
-          Customize your learning experience
-        </CardDescription>
+        <CardDescription>Customize your learning experience</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Daily Goal Section */}
@@ -81,9 +80,9 @@ export function AppPreferencesSection() {
             <h3 className="font-medium">Daily Study Goal</h3>
           </div>
 
-          <div className="p-4 bg-muted/50 rounded-lg space-y-4">
+          <div className="space-y-4 rounded-lg bg-muted/50 p-4">
             <div>
-              <p className="text-sm text-muted-foreground mb-4">
+              <p className="mb-4 text-sm text-muted-foreground">
                 Number of new cards to review each day
               </p>
 
@@ -101,12 +100,10 @@ export function AppPreferencesSection() {
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Goal:</span>
               <div className="flex items-center gap-2">
-                <span className="text-lg font-semibold text-foreground">
+                <span className="text-foreground text-lg font-semibold">
                   {dailyGoal} cards per day
                 </span>
-                {isSaving && (
-                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                )}
+                {isSaving && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
               </div>
             </div>
           </div>

@@ -1,25 +1,21 @@
 import { useEffect } from 'react';
+
+import { AlertCircle, ChevronLeft } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useReviewStore } from '@/stores/reviewStore';
-import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
+
 import { FlashcardContainer } from '@/components/review/FlashcardContainer';
 import { FlashcardSkeleton } from '@/components/review/FlashcardSkeleton';
 import { KeyboardShortcutsHelp } from '@/components/review/KeyboardShortcutsHelp';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { AlertCircle, ChevronLeft } from 'lucide-react';
+import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
+import { useReviewStore } from '@/stores/reviewStore';
 
 export function FlashcardReviewPage() {
   const { deckId } = useParams<{ deckId: string }>();
   const navigate = useNavigate();
-  const {
-    activeSession,
-    currentCard,
-    startSession,
-    isLoading,
-    error,
-    sessionSummary,
-  } = useReviewStore();
+  const { activeSession, currentCard, startSession, isLoading, error, sessionSummary } =
+    useReviewStore();
 
   // Enable keyboard shortcuts
   const { showHelp, setShowHelp } = useKeyboardShortcuts();
@@ -56,11 +52,11 @@ export function FlashcardReviewPage() {
   if (error) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#667eea] to-[#764ba2] p-10">
-        <div className="max-w-4xl mx-auto">
+        <div className="mx-auto max-w-4xl">
           <Button
             variant="ghost"
             onClick={() => navigate(`/decks/${deckId}`)}
-            className="text-white hover:bg-white/20 mb-4"
+            className="mb-4 text-white hover:bg-white/20"
           >
             <ChevronLeft className="mr-2 h-4 w-4" />
             Back to Deck
@@ -87,11 +83,11 @@ export function FlashcardReviewPage() {
   if (!currentCard) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#667eea] to-[#764ba2] p-10">
-        <div className="max-w-4xl mx-auto">
+        <div className="mx-auto max-w-4xl">
           <Button
             variant="ghost"
             onClick={() => navigate(`/decks/${deckId}`)}
-            className="text-white hover:bg-white/20 mb-4"
+            className="mb-4 text-white hover:bg-white/20"
           >
             <ChevronLeft className="mr-2 h-4 w-4" />
             Back to Deck
@@ -116,7 +112,7 @@ export function FlashcardReviewPage() {
   // Main flashcard view
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#667eea] to-[#764ba2] p-10">
-      <div className="max-w-4xl mx-auto mb-4">
+      <div className="mx-auto mb-4 max-w-4xl">
         <Button
           variant="ghost"
           onClick={() => navigate(`/decks/${deckId}`)}

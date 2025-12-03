@@ -3,10 +3,11 @@
  * Validates React Testing Library setup
  */
 
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@/lib/test-utils';
 import userEvent from '@testing-library/user-event';
+import { describe, it, expect, vi } from 'vitest';
+
 import { Button } from '@/components/ui/button';
+import { render, screen } from '@/lib/test-utils';
 
 describe('Button Component', () => {
   it('should render button with text', () => {

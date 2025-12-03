@@ -1,15 +1,16 @@
 import { useState } from 'react';
+
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
 import { format } from 'date-fns';
 import { Lock, Crown } from 'lucide-react';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
 
-import { useAuthStore } from '@/stores/authStore';
-import { useToast } from '@/hooks/use-toast';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { PasswordField } from '@/components/forms/PasswordField';
+import { SubmitButton } from '@/components/forms/SubmitButton';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -18,8 +19,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { PasswordField } from '@/components/forms/PasswordField';
-import { SubmitButton } from '@/components/forms/SubmitButton';
+import { useToast } from '@/hooks/use-toast';
+import { useAuthStore } from '@/stores/authStore';
 
 // Password change validation schema
 const passwordChangeSchema = z
@@ -103,7 +104,8 @@ export function AccountSection() {
         <CardHeader>
           <CardTitle>Account Settings</CardTitle>
           <CardDescription>
-            Manage your password and subscription. Logged in as <strong data-testid="user-email">{user.email}</strong>
+            Manage your password and subscription. Logged in as{' '}
+            <strong data-testid="user-email">{user.email}</strong>
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -114,8 +116,8 @@ export function AccountSection() {
               <h3 className="font-medium">Password</h3>
             </div>
 
-            <div className="p-4 bg-muted/50 rounded-lg">
-              <p className="text-sm text-muted-foreground mb-3">
+            <div className="rounded-lg bg-muted/50 p-4">
+              <p className="mb-3 text-sm text-muted-foreground">
                 Change your password to keep your account secure
               </p>
               <Button
@@ -136,13 +138,13 @@ export function AccountSection() {
               <h3 className="font-medium">Subscription</h3>
             </div>
 
-            <div className="p-4 bg-muted/50 rounded-lg space-y-3">
+            <div className="space-y-3 rounded-lg bg-muted/50 p-4">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Current plan</p>
-                  <div className="flex items-center gap-2 mt-1">
+                  <div className="mt-1 flex items-center gap-2">
                     {user.role === 'premium' ? (
-                      <Badge className="bg-gradient-to-r from-purple-500 to-purple-700 text-white border-0">
+                      <Badge className="border-0 bg-gradient-to-r from-purple-500 to-purple-700 text-white">
                         Premium
                       </Badge>
                     ) : (
@@ -168,7 +170,7 @@ export function AccountSection() {
                 )}
               </div>
 
-              <div className="pt-3 border-t">
+              <div className="border-t pt-3">
                 <p className="text-sm text-muted-foreground">
                   Member since {format(new Date(user.createdAt), 'MMMM yyyy')}
                 </p>
@@ -188,13 +190,19 @@ export function AccountSection() {
             </DialogDescription>
           </DialogHeader>
 
-          <form data-testid="password-change-form" onSubmit={handlePasswordSubmit(onPasswordChange)} className="space-y-4">
+          <form
+            data-testid="password-change-form"
+            onSubmit={handlePasswordSubmit(onPasswordChange)}
+            className="space-y-4"
+          >
             <PasswordField
               data-testid="current-password-input"
               label="Current Password"
               name="currentPassword"
               value={watchPassword('currentPassword')}
-              onChange={(value) => registerPassword('currentPassword').onChange({ target: { value } })}
+              onChange={(value) =>
+                registerPassword('currentPassword').onChange({ target: { value } })
+              }
               error={passwordErrors.currentPassword?.message}
               placeholder="Enter your current password"
               required
@@ -219,7 +227,9 @@ export function AccountSection() {
               label="Confirm New Password"
               name="confirmPassword"
               value={watchPassword('confirmPassword')}
-              onChange={(value) => registerPassword('confirmPassword').onChange({ target: { value } })}
+              onChange={(value) =>
+                registerPassword('confirmPassword').onChange({ target: { value } })
+              }
               error={passwordErrors.confirmPassword?.message}
               placeholder="Confirm new password"
               required
@@ -239,7 +249,11 @@ export function AccountSection() {
               >
                 Cancel
               </Button>
-              <SubmitButton data-testid="password-change-submit" loading={isPasswordSubmitting} loadingText="Updating...">
+              <SubmitButton
+                data-testid="password-change-submit"
+                loading={isPasswordSubmitting}
+                loadingText="Updating..."
+              >
                 Update Password
               </SubmitButton>
             </DialogFooter>

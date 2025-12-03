@@ -1,6 +1,7 @@
 // src/components/charts/DeckPerformanceChart.tsx
 
 import React, { useMemo } from 'react';
+
 import {
   BarChart,
   Bar,
@@ -11,8 +12,9 @@ import {
   Cell,
   ResponsiveContainer,
 } from 'recharts';
-import { useDeckPerformance } from '@/hooks/useDeckPerformance';
+
 import { ChartContainer, ChartTooltip } from '@/components/charts';
+import { useDeckPerformance } from '@/hooks/useDeckPerformance';
 import { chartColors, colorSchemes } from '@/lib/chartConfig';
 import type { DeckPerformanceStats } from '@/types/analytics';
 
@@ -40,9 +42,7 @@ export const DeckPerformanceChart = React.forwardRef<HTMLDivElement, DeckPerform
     // Sort and limit decks
     const sortedDecks = useMemo(() => {
       if (!deckStats) return [];
-      return deckStats
-        .sort((a, b) => b.mastery - a.mastery)
-        .slice(0, maxDecks);
+      return deckStats.sort((a, b) => b.mastery - a.mastery).slice(0, maxDecks);
     }, [deckStats, maxDecks]);
 
     // Format X-axis as percentage
@@ -54,7 +54,7 @@ export const DeckPerformanceChart = React.forwardRef<HTMLDivElement, DeckPerform
       if (!active || !payload || payload.length === 0) return null;
 
       const data = payload[0].payload as DeckPerformanceStats;
-      const deckIndex = sortedDecks.findIndex(d => d.deckId === data.deckId);
+      const deckIndex = sortedDecks.findIndex((d) => d.deckId === data.deckId);
 
       return (
         <ChartTooltip
@@ -132,10 +132,7 @@ export const DeckPerformanceChart = React.forwardRef<HTMLDivElement, DeckPerform
             layout="vertical"
             margin={{ top: 20, right: 30, left: 0, bottom: 5 }}
           >
-            <CartesianGrid
-              strokeDasharray="3 3"
-              stroke={chartColors.gray200}
-            />
+            <CartesianGrid strokeDasharray="3 3" stroke={chartColors.gray200} />
             <XAxis
               type="number"
               domain={[0, 100]}
@@ -158,10 +155,7 @@ export const DeckPerformanceChart = React.forwardRef<HTMLDivElement, DeckPerform
               radius={[0, 8, 8, 0]}
             >
               {sortedDecks.map((_entry, index) => (
-                <Cell
-                  key={`cell-${index}`}
-                  fill={colorSchemes.spectrum[index % 8]}
-                />
+                <Cell key={`cell-${index}`} fill={colorSchemes.spectrum[index % 8]} />
               ))}
             </Bar>
           </BarChart>

@@ -2,6 +2,7 @@
 
 import { getCardsForDeck } from '@/services/mockReviewData';
 import type { SpacedRepetitionData } from '@/types/review';
+
 import { isCardDueToday } from './dateUtils';
 
 /**
@@ -82,9 +83,8 @@ export function getCardsDueToday(deckId: string): number {
       dueCount++;
     } else if (srData.dueDate) {
       // Use shared date utility for consistent comparison
-      const dueDateString = srData.dueDate instanceof Date
-        ? srData.dueDate.toISOString()
-        : srData.dueDate;
+      const dueDateString =
+        srData.dueDate instanceof Date ? srData.dueDate.toISOString() : srData.dueDate;
       if (isCardDueToday(dueDateString)) {
         dueCount++;
       }
@@ -247,9 +247,8 @@ export function calculateDeckReviewStats(deckId: string): DeckReviewStats {
       dueCount++;
     } else if (srData.dueDate) {
       // Use shared date utility for consistent comparison
-      const dueDateString = srData.dueDate instanceof Date
-        ? srData.dueDate.toISOString()
-        : srData.dueDate;
+      const dueDateString =
+        srData.dueDate instanceof Date ? srData.dueDate.toISOString() : srData.dueDate;
       if (isCardDueToday(dueDateString)) {
         dueCount++;
       }

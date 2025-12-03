@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { Skeleton } from '@/components/ui/skeleton';
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { cn } from '@/lib/utils';
+import { Skeleton } from '@/components/ui/skeleton';
 import { getResponsiveHeight } from '@/lib/chartConfig';
+import { cn } from '@/lib/utils';
 
 interface ChartContainerProps {
   children: React.ReactNode;
@@ -61,15 +62,11 @@ export const ChartContainer = React.forwardRef<HTMLDivElement, ChartContainerPro
     }, [height]);
 
     const content = (
-      <div
-        ref={ref}
-        className={cn('w-full', className)}
-        style={{ height: responsiveHeight }}
-      >
+      <div ref={ref} className={cn('w-full', className)} style={{ height: responsiveHeight }}>
         {loading ? (
-          <Skeleton className="w-full h-full" />
+          <Skeleton className="h-full w-full" />
         ) : noData ? (
-          <div className="flex items-center justify-center h-full text-muted-foreground">
+          <div className="flex h-full items-center justify-center text-muted-foreground">
             <p>No data available</p>
           </div>
         ) : (

@@ -60,10 +60,7 @@ function generateDailySnapshot(
   // Calculate streak
   const hasStreakPrior = priorSnapshot?.currentStreak ?? 0;
   const currentStreak = hasStreakPrior + 1;
-  const longestStreak = Math.max(
-    currentStreak,
-    priorSnapshot?.longestStreak ?? 0
-  );
+  const longestStreak = Math.max(currentStreak, priorSnapshot?.longestStreak ?? 0);
 
   // Calculate cards mastered (about 1-3 per review session)
   const cardsNewMastered = Math.floor(Math.random() * 3) + 1;
@@ -82,13 +79,10 @@ function generateDailySnapshot(
     Math.floor(cardsReviewed * 0.1);
   const totalCardsReview =
     (priorSnapshot?.totalCardsReview ?? 20) + Math.floor(cardsReviewed * 0.1);
-  const cardsMasteredTotal =
-    (priorSnapshot?.cardsMasteredTotal ?? 10) + cardsNewMastered;
+  const cardsMasteredTotal = (priorSnapshot?.cardsMasteredTotal ?? 10) + cardsNewMastered;
 
   // Calculate overall accuracy (weighted average)
-  const overallAccuracy = Math.round(
-    ((priorSnapshot?.overallAccuracy ?? 80) * 0.7 + accuracy * 0.3)
-  );
+  const overallAccuracy = Math.round((priorSnapshot?.overallAccuracy ?? 80) * 0.7 + accuracy * 0.3);
 
   return {
     snapshotId,
@@ -163,9 +157,7 @@ export function getSnapshotsByDateRange(
  * @param snapshots - All snapshots
  * @returns Most recent snapshot or null
  */
-export function getLatestSnapshot(
-  snapshots: AnalyticsSnapshot[]
-): AnalyticsSnapshot | null {
+export function getLatestSnapshot(snapshots: AnalyticsSnapshot[]): AnalyticsSnapshot | null {
   if (snapshots.length === 0) return null;
   return snapshots[snapshots.length - 1];
 }
@@ -176,9 +168,11 @@ export function getLatestSnapshot(
  * @param range - Date range preset
  * @returns Start and end dates
  */
-export function calculateDateRange(
-  range: 'last7' | 'last30' | 'alltime'
-): { startDate: Date; endDate: Date; label: string } {
+export function calculateDateRange(range: 'last7' | 'last30' | 'alltime'): {
+  startDate: Date;
+  endDate: Date;
+  label: string;
+} {
   const endDate = new Date();
   endDate.setHours(23, 59, 59, 999);
 

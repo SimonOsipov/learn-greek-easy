@@ -3,8 +3,9 @@
  * Tests study streak selector from analytics store
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
+import { describe, it, expect, beforeEach } from 'vitest';
+
 import { useStudyStreak } from '@/hooks/useStudyStreak';
 import { useAnalyticsStore } from '@/stores/analyticsStore';
 

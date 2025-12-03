@@ -39,28 +39,17 @@ export const ChartTooltip = ({
 
   return (
     <div
-      className={cn(
-        'rounded-lg border bg-background p-3 shadow-lg',
-        'min-w-[120px]',
-        className
-      )}
+      className={cn('bg-background rounded-lg border p-3 shadow-lg', 'min-w-[120px]', className)}
     >
       {label && (
-        <p className="mb-2 text-sm font-semibold text-foreground">
-          {labelFormatter(label)}
-        </p>
+        <p className="text-foreground mb-2 text-sm font-semibold">{labelFormatter(label)}</p>
       )}
       <div className="space-y-1">
         {payload.map((entry, index) => (
           <div key={`tooltip-item-${index}`} className="flex items-center gap-2">
-            <div
-              className="h-3 w-3 rounded-full"
-              style={{ backgroundColor: entry.color }}
-            />
+            <div className="h-3 w-3 rounded-full" style={{ backgroundColor: entry.color }} />
             <span className="text-sm text-muted-foreground">{entry.name}:</span>
-            <span className="text-sm font-medium text-foreground">
-              {formatter(entry.value)}
-            </span>
+            <span className="text-foreground text-sm font-medium">{formatter(entry.value)}</span>
           </div>
         ))}
       </div>

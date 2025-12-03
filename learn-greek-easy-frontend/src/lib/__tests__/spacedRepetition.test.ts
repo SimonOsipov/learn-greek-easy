@@ -15,6 +15,9 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+
+import type { SpacedRepetitionData, ReviewRating, CardReviewState } from '@/types/review';
+
 import {
   calculateNextInterval,
   calculateEaseFactor,
@@ -24,7 +27,6 @@ import {
   isCardDue,
   processCardReview,
 } from '../spacedRepetition';
-import type { SpacedRepetitionData, ReviewRating, CardReviewState } from '@/types/review';
 
 describe('spacedRepetition - SM-2 Algorithm', () => {
   // Helper to create test SR data
@@ -436,7 +438,12 @@ describe('spacedRepetition - SM-2 Algorithm', () => {
       });
 
       it('should stay in review and increase interval on "good"', () => {
-        const srData = createSRData({ state: 'review', interval: 10, easeFactor: 2.5, repetitions: 3 });
+        const srData = createSRData({
+          state: 'review',
+          interval: 10,
+          easeFactor: 2.5,
+          repetitions: 3,
+        });
         const result = processCardReview(srData, 'good');
 
         expect(result.state).toBe('review');
@@ -445,7 +452,12 @@ describe('spacedRepetition - SM-2 Algorithm', () => {
       });
 
       it('should stay in review and increase interval on "easy"', () => {
-        const srData = createSRData({ state: 'review', interval: 10, easeFactor: 2.5, repetitions: 3 });
+        const srData = createSRData({
+          state: 'review',
+          interval: 10,
+          easeFactor: 2.5,
+          repetitions: 3,
+        });
         const result = processCardReview(srData, 'easy');
 
         expect(result.interval).toBe(33); // 10 * 2.5 * 1.3

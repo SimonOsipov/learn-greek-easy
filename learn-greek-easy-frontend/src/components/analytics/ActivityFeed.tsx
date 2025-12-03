@@ -1,10 +1,13 @@
 // src/components/analytics/ActivityFeed.tsx
 
 import React from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { ActivityFeedItem } from './ActivityFeedItem';
+
 import { BookOpen } from 'lucide-react';
+
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import type { AnalyticsActivityItem } from '@/types/analytics';
+
+import { ActivityFeedItem } from './ActivityFeedItem';
 
 export interface ActivityFeedProps {
   /**
@@ -48,10 +51,7 @@ export interface ActivityFeedProps {
  * }
  * ```
  */
-export const ActivityFeed: React.FC<ActivityFeedProps> = ({
-  activities,
-  maxItems = 10,
-}) => {
+export const ActivityFeed: React.FC<ActivityFeedProps> = ({ activities, maxItems = 10 }) => {
   // Limit the number of activities displayed
   const displayActivities = activities.slice(0, maxItems);
 
@@ -64,9 +64,9 @@ export const ActivityFeed: React.FC<ActivityFeedProps> = ({
         {displayActivities.length === 0 ? (
           /* Empty State */
           <div className="flex flex-col items-center justify-center py-12 text-gray-400">
-            <BookOpen className="w-12 h-12 mb-3" aria-hidden="true" />
+            <BookOpen className="mb-3 h-12 w-12" aria-hidden="true" />
             <p className="text-sm font-medium">No recent activity</p>
-            <p className="text-xs mt-1">Start learning to see your progress here!</p>
+            <p className="mt-1 text-xs">Start learning to see your progress here!</p>
           </div>
         ) : (
           /* Activity List */

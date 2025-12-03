@@ -2,6 +2,7 @@
 // Task 06.06 - Activity Feed Component Testing
 
 import React from 'react';
+
 import { ActivityFeed } from '@/components/analytics';
 import type { AnalyticsActivityItem } from '@/types/analytics';
 
@@ -100,18 +101,16 @@ export const ActivityFeedTest: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 p-8">
-      <div className="max-w-7xl mx-auto space-y-8">
+      <div className="mx-auto max-w-7xl space-y-8">
         {/* Header */}
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Activity Feed Component Test
-          </h1>
+          <h1 className="mb-2 text-3xl font-bold text-gray-900">Activity Feed Component Test</h1>
           <p className="text-gray-600">Task 06.06 - Verification Page</p>
         </div>
 
         {/* Test 1: Activity Feed with Data */}
         <div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">
+          <h2 className="mb-4 text-xl font-semibold text-gray-900">
             Scenario 1: Activity Feed with Data (5 items)
           </h2>
           <div className="max-w-2xl">
@@ -121,7 +120,7 @@ export const ActivityFeedTest: React.FC = () => {
 
         {/* Test 2: Activity Feed with Limited Items */}
         <div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">
+          <h2 className="mb-4 text-xl font-semibold text-gray-900">
             Scenario 2: Activity Feed with Limit (3 items)
           </h2>
           <div className="max-w-2xl">
@@ -131,7 +130,7 @@ export const ActivityFeedTest: React.FC = () => {
 
         {/* Test 3: Empty Activity Feed */}
         <div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">
+          <h2 className="mb-4 text-xl font-semibold text-gray-900">
             Scenario 3: Empty Activity Feed
           </h2>
           <div className="max-w-2xl">
@@ -140,10 +139,8 @@ export const ActivityFeedTest: React.FC = () => {
         </div>
 
         {/* Test Summary */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">
-            Test Checklist
-          </h2>
+        <div className="rounded-lg bg-white p-6 shadow">
+          <h2 className="mb-4 text-xl font-semibold text-gray-900">Test Checklist</h2>
           <ul className="space-y-2 text-gray-700">
             <li>✅ Activity feed displays recent sessions</li>
             <li>✅ Deck name with icon visible</li>

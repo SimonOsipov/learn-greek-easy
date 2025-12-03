@@ -5,7 +5,10 @@ import { Button } from '@/components/ui/button';
 
 export const NotFound: React.FC = () => {
   return (
-    <div data-testid="not-found-page" className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 via-white to-purple-50 px-4">
+    <div
+      data-testid="not-found-page"
+      className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 via-white to-purple-50 px-4"
+    >
       <div className="max-w-md text-center">
         <div className="mb-4 text-6xl">🏛️</div>
         <h1 className="mb-2 text-4xl font-bold text-gray-900">404</h1>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+
 import { useReviewStore } from '@/stores/reviewStore';
 
 /**
@@ -20,10 +21,7 @@ export function useKeyboardShortcuts() {
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       // Ignore if typing in input or textarea
-      if (
-        event.target instanceof HTMLInputElement ||
-        event.target instanceof HTMLTextAreaElement
-      ) {
+      if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
         return;
       }
 

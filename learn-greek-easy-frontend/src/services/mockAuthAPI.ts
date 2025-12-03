@@ -42,8 +42,8 @@ class MockAuthAPI {
     return (
       typeof window !== 'undefined' &&
       (window.playwright === true ||
-       process.env.NODE_ENV === 'test' ||
-       import.meta.env.VITE_TEST_MODE === 'true')
+        process.env.NODE_ENV === 'test' ||
+        import.meta.env.VITE_TEST_MODE === 'true')
     );
   }
 

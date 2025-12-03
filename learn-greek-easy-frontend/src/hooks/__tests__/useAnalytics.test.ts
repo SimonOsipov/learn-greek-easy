@@ -3,8 +3,9 @@
  * Tests analytics data fetching and management
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+
 import { useAnalytics } from '@/hooks/useAnalytics';
 import { useAnalyticsStore } from '@/stores/analyticsStore';
 import { useAuthStore } from '@/stores/authStore';
@@ -106,9 +107,7 @@ describe.skip('useAnalytics Hook', () => {
           longestStreak: 15,
           lastStudyDate: new Date().toISOString(),
         },
-        progressData: [
-          { date: '2025-01-01', reviewCount: 10, cardsStudied: 5, accuracy: 0.8 },
-        ],
+        progressData: [{ date: '2025-01-01', reviewCount: 10, cardsStudied: 5, accuracy: 0.8 }],
         deckStats: [],
         recentActivity: [],
       };

@@ -1,8 +1,10 @@
 // src/services/__tests__/mockAnalyticsAPI.test.ts
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import * as mockAnalyticsAPI from '../mockAnalyticsAPI';
+
 import type { SessionSummary } from '@/types/review';
+
+import * as mockAnalyticsAPI from '../mockAnalyticsAPI';
 
 describe('mockAnalyticsAPI', () => {
   const testUserId = 'test-user-123';

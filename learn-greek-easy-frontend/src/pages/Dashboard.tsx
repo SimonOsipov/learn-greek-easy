@@ -148,7 +148,6 @@ export const Dashboard: React.FC = () => {
           ))}
         </div>
       </section>
-
     </div>
   );
 };
