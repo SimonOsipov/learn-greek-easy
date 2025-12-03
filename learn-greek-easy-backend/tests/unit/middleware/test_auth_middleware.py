@@ -309,9 +309,7 @@ class TestClientIPExtraction:
             extra = call_args.kwargs.get("extra", {})
             assert extra["client_ip"] == "203.0.113.100"
 
-    def test_x_forwarded_for_takes_precedence_over_x_real_ip(
-        self, client: TestClient
-    ):
+    def test_x_forwarded_for_takes_precedence_over_x_real_ip(self, client: TestClient):
         """Test that X-Forwarded-For takes precedence over X-Real-IP."""
         with patch("src.middleware.auth.logger") as mock_logger:
             client.get(
@@ -571,9 +569,7 @@ class TestFailedLoginWarning:
             assert extra["path"] == "/api/v1/auth/login"
             assert "client_ip" in extra
 
-    def test_no_warning_for_successful_login(
-        self, app_with_successful_login: FastAPI
-    ):
+    def test_no_warning_for_successful_login(self, app_with_successful_login: FastAPI):
         """Test that successful login does not log warning."""
         client = TestClient(app_with_successful_login)
 
@@ -583,9 +579,7 @@ class TestFailedLoginWarning:
             mock_logger.log.assert_called_once()
             mock_logger.warning.assert_not_called()
 
-    def test_no_warning_for_401_on_non_login_endpoint(
-        self, app_with_failed_login: FastAPI
-    ):
+    def test_no_warning_for_401_on_non_login_endpoint(self, app_with_failed_login: FastAPI):
         """Test that 401 on /me does not trigger failed login warning."""
         client = TestClient(app_with_failed_login, raise_server_exceptions=False)
 

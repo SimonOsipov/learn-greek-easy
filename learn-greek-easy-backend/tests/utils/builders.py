@@ -38,7 +38,6 @@ from src.db.models import (
     UserDeckProgress,
 )
 
-
 # =============================================================================
 # Result Containers
 # =============================================================================
@@ -687,7 +686,9 @@ class StudyStreakBuilder:
                     card_id=card.id,
                     quality=ReviewRating.CORRECT_HESITANT,
                     time_taken=5,
-                    reviewed_at=datetime.combine(current_date, datetime.min.time().replace(hour=10)),
+                    reviewed_at=datetime.combine(
+                        current_date, datetime.min.time().replace(hour=10)
+                    ),
                 )
                 self._session.add(review)
                 reviews.append(review)

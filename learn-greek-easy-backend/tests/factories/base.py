@@ -60,6 +60,7 @@ class BaseFactory(factory.Factory):
 
     class Meta:
         """Factory meta options."""
+
         abstract = True
 
     @classmethod

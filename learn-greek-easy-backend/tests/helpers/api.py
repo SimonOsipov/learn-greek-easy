@@ -25,7 +25,6 @@ from urllib.parse import urlencode
 
 from httpx import AsyncClient, Response
 
-
 # =============================================================================
 # Authenticated Request Helpers
 # =============================================================================
@@ -156,9 +155,10 @@ def extract_tokens_from_response(response: Response) -> tuple[str, str]:
         response = await client.post("/api/v1/auth/login", json=credentials)
         access_token, refresh_token = extract_tokens_from_response(response)
     """
-    assert response.status_code in (200, 201), (
-        f"Expected successful auth response, got {response.status_code}: {response.text}"
-    )
+    assert response.status_code in (
+        200,
+        201,
+    ), f"Expected successful auth response, got {response.status_code}: {response.text}"
 
     data = response.json()
     assert "access_token" in data, f"access_token not found in response: {data}"
@@ -357,9 +357,9 @@ def assert_json_response(response: Response) -> dict[str, Any]:
         assert data["id"] == expected_id
     """
     content_type = response.headers.get("content-type", "")
-    assert "application/json" in content_type, (
-        f"Expected JSON response, got content-type: {content_type}"
-    )
+    assert (
+        "application/json" in content_type
+    ), f"Expected JSON response, got content-type: {content_type}"
 
     try:
         return response.json()
@@ -384,9 +384,9 @@ def assert_success_response(
     Raises:
         AssertionError: If response is not successful
     """
-    assert 200 <= response.status_code < 300, (
-        f"Expected success status, got {response.status_code}: {response.text}"
-    )
+    assert (
+        200 <= response.status_code < 300
+    ), f"Expected success status, got {response.status_code}: {response.text}"
 
     data = assert_json_response(response)
 

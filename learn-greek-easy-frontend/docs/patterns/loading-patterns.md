@@ -177,4 +177,3 @@ function EmptyState() {
 - ProtectedRoute: `/src/components/auth/ProtectedRoute.tsx`
 
 ---
-

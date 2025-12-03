@@ -5,7 +5,7 @@
 |------|-------|-----------|-------------|-------------|---|
 | Frontend | 11 | 11 | 0 | 0 | 100% |
 | Backend | 15 | 3 | 1 | 11 | 27% |
-| Infrastructure | 7 | 6 | 0 | 1 | 86% |
+| Infrastructure | 8 | 8 | 0 | 0 | 100% |
 | Deployment | 9 | 0 | 0 | 9 | 0% |
 
 ---
@@ -79,14 +79,16 @@
 
 ---
 
-## Infrastructure (6/7)
+## Infrastructure (8/8)
 - [x] Docker Compose for development (vite + backend + postgres + redis)
 - [x] Docker Compose for production (nginx + backend + postgres + redis)
-- [ ] GitHub Actions CI/CD
+- [x] GitHub Actions CI/CD (02.02 fix complete - Node 20, ESLint, backend submodule)
+- [x] Pre-commit hooks (02.03 complete - 15 hooks, setup script, docs)
+- [x] CI linting & formatting (02.04 complete - frontend-lint + backend-lint jobs, PR #3)
 - [x] Environment variables management (.env.example complete)
 - [x] Redis setup (dev + prod, health checks, AOF persistence, connection pooling)
 - [x] Health endpoints (/health, /health/live, /health/ready with DB + Redis checks)
-- [x] CLAUDE.md documentation (Docker, health endpoints, environment variables)
+- [x] CLAUDE.md documentation (Docker, health endpoints, environment variables, pre-commit)
 - [x] ~~Celery workers~~ (deferred - not needed for MVP)
 
 ---

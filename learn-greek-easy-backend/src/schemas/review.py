@@ -14,7 +14,6 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from src.db.models import ReviewRating
 
-
 # ============================================================================
 # Review Schemas
 # ============================================================================

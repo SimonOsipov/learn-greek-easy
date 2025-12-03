@@ -22,11 +22,7 @@ Example:
     )
 """
 
-from src.core.dependencies import (
-    get_current_user,
-    get_current_user_optional,
-    get_current_superuser,
-)
+from src.core.dependencies import get_current_superuser, get_current_user, get_current_user_optional
 from src.core.security import (
     create_access_token,
     create_refresh_token,

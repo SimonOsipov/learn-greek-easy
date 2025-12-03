@@ -548,4 +548,3 @@ When MobileNav is visible, ensure main content has bottom padding to prevent ove
 - Inactive color: var(--text-muted)
 
 ---
-

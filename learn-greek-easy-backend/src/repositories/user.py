@@ -62,11 +62,7 @@ class UserRepository(BaseRepository[User]):
         Use Case:
             User profile endpoint, settings page
         """
-        query = (
-            select(User)
-            .where(User.id == user_id)
-            .options(selectinload(User.settings))
-        )
+        query = select(User).where(User.id == user_id).options(selectinload(User.settings))
         result = await self.db.execute(query)
         return result.scalar_one_or_none()
 
@@ -179,12 +175,11 @@ class RefreshTokenRepository(BaseRepository[RefreshToken]):
         Use Case:
             Scheduled cleanup job
         """
-        query = delete(RefreshToken).where(
-            RefreshToken.expires_at < datetime.utcnow()
-        )
+        query = delete(RefreshToken).where(RefreshToken.expires_at < datetime.utcnow())
         result = await self.db.execute(query)
         await self.db.flush()
-        return result.rowcount
+        # CursorResult from DELETE has rowcount, but Result[Any] type doesn't expose it
+        return int(result.rowcount) if result.rowcount else 0  # type: ignore[attr-defined]
 
     async def delete_user_tokens(self, user_id: UUID) -> int:
         """Delete all refresh tokens for a specific user.
@@ -201,7 +196,8 @@ class RefreshTokenRepository(BaseRepository[RefreshToken]):
         query = delete(RefreshToken).where(RefreshToken.user_id == user_id)
         result = await self.db.execute(query)
         await self.db.flush()
-        return result.rowcount
+        # CursorResult from DELETE has rowcount, but Result[Any] type doesn't expose it
+        return int(result.rowcount) if result.rowcount else 0  # type: ignore[attr-defined]
 
     async def cleanup(self, days_old: int = 30) -> int:
         """Delete old expired tokens (expired > N days ago).
@@ -219,7 +215,8 @@ class RefreshTokenRepository(BaseRepository[RefreshToken]):
         query = delete(RefreshToken).where(RefreshToken.expires_at < cutoff)
         result = await self.db.execute(query)
         await self.db.flush()
-        return result.rowcount
+        # CursorResult from DELETE has rowcount, but Result[Any] type doesn't expose it
+        return int(result.rowcount) if result.rowcount else 0  # type: ignore[attr-defined]
 
 
 class UserSettingsRepository(BaseRepository[UserSettings]):

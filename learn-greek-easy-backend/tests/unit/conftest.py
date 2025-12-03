@@ -20,8 +20,9 @@ Usage:
         # Test isolated business logic
 """
 
-import pytest
 from unittest.mock import MagicMock
+
+import pytest
 
 from tests.helpers.mocks import (
     mock_async_session,
@@ -29,7 +30,6 @@ from tests.helpers.mocks import (
     mock_email_service,
     mock_redis_client,
 )
-
 
 # =============================================================================
 # Mock Session Fixtures

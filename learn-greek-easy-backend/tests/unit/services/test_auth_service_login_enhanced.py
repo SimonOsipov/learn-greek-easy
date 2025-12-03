@@ -28,10 +28,7 @@ class TestEnhancedLoginFeatures:
         mock_db = AsyncMock()
         service = AuthService(mock_db)
 
-        login_data = UserLogin(
-            email="user@example.com",
-            password="TestPassword123!"
-        )
+        login_data = UserLogin(email="user@example.com", password="TestPassword123!")
         client_ip = "192.168.1.100"
 
         # Mock user
@@ -53,10 +50,16 @@ class TestEnhancedLoginFeatures:
             mock_verify.return_value = True
 
             with patch("src.services.auth_service.create_access_token") as mock_access:
-                mock_access.return_value = ("access_token", datetime.utcnow() + timedelta(minutes=30))
+                mock_access.return_value = (
+                    "access_token",
+                    datetime.utcnow() + timedelta(minutes=30),
+                )
 
                 with patch("src.services.auth_service.create_refresh_token") as mock_refresh:
-                    mock_refresh.return_value = ("refresh_token", datetime.utcnow() + timedelta(days=30))
+                    mock_refresh.return_value = (
+                        "refresh_token",
+                        datetime.utcnow() + timedelta(days=30),
+                    )
 
                     # Act
                     user, token_response = await service.login_user(login_data, client_ip)
@@ -73,10 +76,7 @@ class TestEnhancedLoginFeatures:
         mock_db = AsyncMock()
         service = AuthService(mock_db)
 
-        login_data = UserLogin(
-            email="user@example.com",
-            password="TestPassword123!"
-        )
+        login_data = UserLogin(email="user@example.com", password="TestPassword123!")
         client_ip = "10.0.0.42"
 
         # Mock user
@@ -97,10 +97,16 @@ class TestEnhancedLoginFeatures:
             mock_verify.return_value = True
 
             with patch("src.services.auth_service.create_access_token") as mock_access:
-                mock_access.return_value = ("access_token", datetime.utcnow() + timedelta(minutes=30))
+                mock_access.return_value = (
+                    "access_token",
+                    datetime.utcnow() + timedelta(minutes=30),
+                )
 
                 with patch("src.services.auth_service.create_refresh_token") as mock_refresh:
-                    mock_refresh.return_value = ("refresh_token", datetime.utcnow() + timedelta(days=30))
+                    mock_refresh.return_value = (
+                        "refresh_token",
+                        datetime.utcnow() + timedelta(days=30),
+                    )
 
                     # Act
                     user, token_response = await service.login_user(login_data, client_ip)
@@ -115,10 +121,7 @@ class TestEnhancedLoginFeatures:
         mock_db = AsyncMock()
         service = AuthService(mock_db)
 
-        login_data = UserLogin(
-            email="user@example.com",
-            password="TestPassword123!"
-        )
+        login_data = UserLogin(email="user@example.com", password="TestPassword123!")
 
         # Mock user
         mock_user = MagicMock()
@@ -138,10 +141,16 @@ class TestEnhancedLoginFeatures:
             mock_verify.return_value = True
 
             with patch("src.services.auth_service.create_access_token") as mock_access:
-                mock_access.return_value = ("access_token", datetime.utcnow() + timedelta(minutes=30))
+                mock_access.return_value = (
+                    "access_token",
+                    datetime.utcnow() + timedelta(minutes=30),
+                )
 
                 with patch("src.services.auth_service.create_refresh_token") as mock_refresh:
-                    mock_refresh.return_value = ("refresh_token", datetime.utcnow() + timedelta(days=30))
+                    mock_refresh.return_value = (
+                        "refresh_token",
+                        datetime.utcnow() + timedelta(days=30),
+                    )
 
                     # Act
                     user, token_response = await service.login_user(login_data, client_ip=None)
@@ -157,10 +166,7 @@ class TestEnhancedLoginFeatures:
         mock_db = AsyncMock()
         service = AuthService(mock_db)
 
-        login_data = UserLogin(
-            email="user@example.com",
-            password="TestPassword123!"
-        )
+        login_data = UserLogin(email="user@example.com", password="TestPassword123!")
         client_ip = "192.168.1.100"
 
         # Mock user
@@ -180,10 +186,16 @@ class TestEnhancedLoginFeatures:
             mock_verify.return_value = True
 
             with patch("src.services.auth_service.create_access_token") as mock_access:
-                mock_access.return_value = ("access_token", datetime.utcnow() + timedelta(minutes=30))
+                mock_access.return_value = (
+                    "access_token",
+                    datetime.utcnow() + timedelta(minutes=30),
+                )
 
                 with patch("src.services.auth_service.create_refresh_token") as mock_refresh:
-                    mock_refresh.return_value = ("refresh_token", datetime.utcnow() + timedelta(days=30))
+                    mock_refresh.return_value = (
+                        "refresh_token",
+                        datetime.utcnow() + timedelta(days=30),
+                    )
 
                     # Act
                     with caplog.at_level(logging.INFO):
@@ -201,10 +213,7 @@ class TestEnhancedLoginFeatures:
         mock_db = AsyncMock()
         service = AuthService(mock_db)
 
-        login_data = UserLogin(
-            email="nonexistent@example.com",
-            password="TestPassword123!"
-        )
+        login_data = UserLogin(email="nonexistent@example.com", password="TestPassword123!")
         client_ip = "192.168.1.100"
 
         mock_result = AsyncMock()
@@ -228,10 +237,7 @@ class TestEnhancedLoginFeatures:
         mock_db = AsyncMock()
         service = AuthService(mock_db)
 
-        login_data = UserLogin(
-            email="user@example.com",
-            password="WrongPassword123!"
-        )
+        login_data = UserLogin(email="user@example.com", password="WrongPassword123!")
         client_ip = "192.168.1.100"
 
         # Mock user
@@ -265,10 +271,7 @@ class TestEnhancedLoginFeatures:
         mock_db = AsyncMock()
         service = AuthService(mock_db)
 
-        login_data = UserLogin(
-            email="user@example.com",
-            password="TestPassword123!"
-        )
+        login_data = UserLogin(email="user@example.com", password="TestPassword123!")
         client_ip = "192.168.1.100"
 
         # Mock user
@@ -302,10 +305,7 @@ class TestEnhancedLoginFeatures:
         mock_db = AsyncMock()
         service = AuthService(mock_db)
 
-        login_data = UserLogin(
-            email="oauth_user@example.com",
-            password="AnyPassword123!"
-        )
+        login_data = UserLogin(email="oauth_user@example.com", password="AnyPassword123!")
 
         # Mock OAuth user (no password hash)
         mock_user = MagicMock()
@@ -334,10 +334,7 @@ class TestEnhancedLoginFeatures:
         mock_db = AsyncMock()
         service = AuthService(mock_db)
 
-        login_data = UserLogin(
-            email="user@example.com",
-            password="TestPassword123!"
-        )
+        login_data = UserLogin(email="user@example.com", password="TestPassword123!")
 
         # Mock user
         mock_user = MagicMock()
@@ -356,10 +353,16 @@ class TestEnhancedLoginFeatures:
             mock_verify.return_value = True
 
             with patch("src.services.auth_service.create_access_token") as mock_access:
-                mock_access.return_value = ("access_token", datetime.utcnow() + timedelta(minutes=30))
+                mock_access.return_value = (
+                    "access_token",
+                    datetime.utcnow() + timedelta(minutes=30),
+                )
 
                 with patch("src.services.auth_service.create_refresh_token") as mock_refresh:
-                    mock_refresh.return_value = ("refresh_token", datetime.utcnow() + timedelta(days=30))
+                    mock_refresh.return_value = (
+                        "refresh_token",
+                        datetime.utcnow() + timedelta(days=30),
+                    )
 
                     # Act & Assert
                     with pytest.raises(Exception) as exc_info:

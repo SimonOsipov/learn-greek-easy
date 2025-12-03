@@ -26,7 +26,7 @@ This document tracks all DevOps-related tasks for the Learn Greek Easy MVP.
 | GitHub Actions workflow setup | Done | PR-only test runs |
 | Fix CI pipeline errors | ✅ Done | Node 20, ESLint fixes, backend submodule fix |
 | Pre-commit hooks setup | ✅ Done | 15 hooks (general, FE, BE), setup script, docs |
-| CI linting & formatting | In Progress | frontend-lint + backend-lint jobs added |
+| CI linting & formatting | ✅ Done | frontend-lint + backend-lint jobs, PR #3 |
 | Branch protection rules | Pending | |
 
 ---
@@ -85,9 +85,9 @@ This document tracks all DevOps-related tasks for the Learn Greek Easy MVP.
 | Section | Completed | Total | Progress |
 |---------|-----------|-------|----------|
 | 01. Docker | 6 | 6 | 100% ✅ |
-| 02. GitHub CI/CD | 3 | 5 | 60% |
+| 02. GitHub CI/CD | 4 | 5 | 80% |
 | 03. Environment Variables | 2 | 4 | 50% |
 | 04. Production Deployment | 1 | 8 | 13% |
 | 05. Redis | 2 | 4 | 50% |
 | 06. Celery | 0 | 5 | ⏸️ Deferred |
-| **Total** | **14** | **27** | **52%** |
+| **Total** | **15** | **27** | **56%** |

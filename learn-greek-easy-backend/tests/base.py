@@ -255,9 +255,7 @@ class BaseTestCase:
         Returns:
             int: Number of rows in the table
         """
-        result = await db_session.execute(
-            text(f"SELECT COUNT(*) FROM {table_name}")
-        )
+        result = await db_session.execute(text(f"SELECT COUNT(*) FROM {table_name}"))
         return result.scalar() or 0
 
     async def table_exists(
@@ -372,8 +370,7 @@ class BaseTestCase:
             expected_status: Expected status code (default 200)
         """
         assert response.status_code == expected_status, (
-            f"Expected {expected_status}, got {response.status_code}: "
-            f"{response.text}"
+            f"Expected {expected_status}, got {response.status_code}: " f"{response.text}"
         )
 
     def assert_response_error(
@@ -506,9 +503,7 @@ class AuthenticatedTestCase(BaseTestCase):
         Returns:
             Response: HTTP response
         """
-        return await self.make_authenticated_request(
-            client, "GET", url, headers, **kwargs
-        )
+        return await self.make_authenticated_request(client, "GET", url, headers, **kwargs)
 
     async def post_authenticated(
         self,
@@ -573,9 +568,7 @@ class AuthenticatedTestCase(BaseTestCase):
         Returns:
             Response: HTTP response
         """
-        return await self.make_authenticated_request(
-            client, "DELETE", url, headers, **kwargs
-        )
+        return await self.make_authenticated_request(client, "DELETE", url, headers, **kwargs)
 
     # =========================================================================
     # Authentication Assertion Helpers

@@ -8,38 +8,23 @@ This module verifies that all factories:
 - Create proper SM-2 statistics
 """
 
-from datetime import date, timedelta
+from datetime import date
 
-import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.db.models import (
-    Card,
-    CardDifficulty,
-    CardStatistics,
-    CardStatus,
-    Deck,
-    DeckLevel,
-    RefreshToken,
-    Review,
-    ReviewRating,
-    User,
-    UserDeckProgress,
-    UserSettings,
-)
+from src.db.models import CardDifficulty, CardStatus, DeckLevel, ReviewRating
 from tests.factories import (
+    SM2_DEFAULT_EASINESS_FACTOR,
+    SM2_MIN_EASINESS_FACTOR,
     CardFactory,
     CardStatisticsFactory,
     DeckFactory,
     RefreshTokenFactory,
     ReviewFactory,
-    SM2_DEFAULT_EASINESS_FACTOR,
-    SM2_MIN_EASINESS_FACTOR,
     UserDeckProgressFactory,
     UserFactory,
     UserSettingsFactory,
 )
-
 
 # =============================================================================
 # UserFactory Tests
@@ -90,9 +75,7 @@ class TestUserFactory:
 
     async def test_compose_traits(self, db_session: AsyncSession):
         """Test composing multiple traits."""
-        user = await UserFactory.create(
-            session=db_session, admin=True, logged_in=True
-        )
+        user = await UserFactory.create(session=db_session, admin=True, logged_in=True)
 
         assert user.is_superuser is True
         assert user.last_login_at is not None
@@ -100,9 +83,7 @@ class TestUserFactory:
 
     async def test_create_with_settings(self, db_session: AsyncSession):
         """Test creating user with settings."""
-        user = await UserFactory.create_with_settings(
-            session=db_session, daily_goal=50
-        )
+        user = await UserFactory.create_with_settings(session=db_session, daily_goal=50)
 
         assert user is not None
         assert user.settings is not None
@@ -135,9 +116,7 @@ class TestUserSettingsFactory:
     async def test_create_settings(self, db_session: AsyncSession):
         """Test creating user settings."""
         user = await UserFactory.create(session=db_session)
-        settings = await UserSettingsFactory.create(
-            session=db_session, user_id=user.id
-        )
+        settings = await UserSettingsFactory.create(session=db_session, user_id=user.id)
 
         assert settings is not None
         assert settings.user_id == user.id
@@ -155,9 +134,7 @@ class TestUserSettingsFactory:
     async def test_quiet_trait(self, db_session: AsyncSession):
         """Test quiet settings trait."""
         user = await UserFactory.create(session=db_session)
-        settings = await UserSettingsFactory.create(
-            session=db_session, user_id=user.id, quiet=True
-        )
+        settings = await UserSettingsFactory.create(session=db_session, user_id=user.id, quiet=True)
 
         assert settings.email_notifications is False
 
@@ -173,9 +150,7 @@ class TestRefreshTokenFactory:
     async def test_create_token(self, db_session: AsyncSession):
         """Test creating a refresh token."""
         user = await UserFactory.create(session=db_session)
-        token = await RefreshTokenFactory.create(
-            session=db_session, user_id=user.id
-        )
+        token = await RefreshTokenFactory.create(session=db_session, user_id=user.id)
 
         assert token is not None
         assert token.user_id == user.id
@@ -185,15 +160,16 @@ class TestRefreshTokenFactory:
     async def test_expired_trait(self, db_session: AsyncSession):
         """Test creating an expired token."""
         user = await UserFactory.create(session=db_session)
-        token = await RefreshTokenFactory.create(
-            session=db_session, user_id=user.id, expired=True
-        )
+        token = await RefreshTokenFactory.create(session=db_session, user_id=user.id, expired=True)
 
         from datetime import datetime, timezone
+
         # The expires_at is timezone-aware (from database), so use timezone-aware comparison
         now = datetime.now(timezone.utc)
         # Make both naive for comparison (strip timezone)
-        expires_at_naive = token.expires_at.replace(tzinfo=None) if token.expires_at.tzinfo else token.expires_at
+        expires_at_naive = (
+            token.expires_at.replace(tzinfo=None) if token.expires_at.tzinfo else token.expires_at
+        )
         now_naive = now.replace(tzinfo=None)
         assert expires_at_naive < now_naive
 
@@ -232,9 +208,7 @@ class TestDeckFactory:
 
     async def test_create_with_cards(self, db_session: AsyncSession):
         """Test creating a deck with cards."""
-        deck, cards = await DeckFactory.create_with_cards(
-            session=db_session, card_count=5
-        )
+        deck, cards = await DeckFactory.create_with_cards(session=db_session, card_count=5)
 
         assert deck is not None
         assert len(cards) == 5
@@ -274,9 +248,7 @@ class TestCardFactory:
     async def test_minimal_trait(self, db_session: AsyncSession):
         """Test minimal card trait."""
         deck = await DeckFactory.create(session=db_session)
-        card = await CardFactory.create(
-            session=db_session, deck_id=deck.id, minimal=True
-        )
+        card = await CardFactory.create(session=db_session, deck_id=deck.id, minimal=True)
 
         assert card.pronunciation is None
         assert card.example_sentence is None
@@ -285,9 +257,7 @@ class TestCardFactory:
         """Test that order_index is sequential."""
         deck = await DeckFactory.create(session=db_session)
 
-        cards = await CardFactory.create_batch(
-            3, session=db_session, deck_id=deck.id
-        )
+        cards = await CardFactory.create_batch(3, session=db_session, deck_id=deck.id)
 
         indices = [c.order_index for c in cards]
         assert len(set(indices)) == 3  # All unique
@@ -457,9 +427,7 @@ class TestReviewFactory:
         deck = await DeckFactory.create(session=db_session)
         card = await CardFactory.create(session=db_session, deck_id=deck.id)
 
-        review = await ReviewFactory.create(
-            session=db_session, user_id=user.id, card_id=card.id
-        )
+        review = await ReviewFactory.create(session=db_session, user_id=user.id, card_id=card.id)
 
         assert review is not None
         assert review.user_id == user.id
@@ -523,9 +491,7 @@ class TestFactoryIntegration:
         user = await UserFactory.create_with_settings(session=db_session)
 
         # Create deck with cards
-        deck, cards = await DeckFactory.create_with_cards(
-            session=db_session, card_count=5
-        )
+        deck, cards = await DeckFactory.create_with_cards(session=db_session, card_count=5)
 
         # Create progress
         progress = await UserDeckProgressFactory.create(

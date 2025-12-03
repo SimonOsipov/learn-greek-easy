@@ -9,11 +9,7 @@ import logging
 from fastapi import APIRouter, Response
 
 from src.schemas.health import HealthResponse, LivenessResponse, ReadinessResponse
-from src.services.health_service import (
-    get_health_status,
-    get_liveness_status,
-    get_readiness_status,
-)
+from src.services.health_service import get_health_status, get_liveness_status, get_readiness_status
 
 logger = logging.getLogger(__name__)
 
@@ -42,21 +38,21 @@ router = APIRouter(tags=["Health"])
                                     "database": {
                                         "status": "healthy",
                                         "latency_ms": 5.2,
-                                        "message": "Connection successful"
+                                        "message": "Connection successful",
                                     },
                                     "redis": {
                                         "status": "healthy",
                                         "latency_ms": 1.1,
-                                        "message": "PONG received"
+                                        "message": "PONG received",
                                     },
                                     "memory": {
                                         "status": "healthy",
                                         "used_mb": 128.5,
                                         "percent": 45.2,
-                                        "message": "Memory usage normal"
-                                    }
-                                }
-                            }
+                                        "message": "Memory usage normal",
+                                    },
+                                },
+                            },
                         },
                         "degraded": {
                             "summary": "Non-critical service unavailable",
@@ -70,22 +66,22 @@ router = APIRouter(tags=["Health"])
                                     "database": {
                                         "status": "healthy",
                                         "latency_ms": 5.2,
-                                        "message": "Connection successful"
+                                        "message": "Connection successful",
                                     },
                                     "redis": {
                                         "status": "unhealthy",
                                         "latency_ms": None,
-                                        "message": "Connection timeout after 3s"
+                                        "message": "Connection timeout after 3s",
                                     },
                                     "memory": {
                                         "status": "healthy",
                                         "used_mb": 128.5,
                                         "percent": 45.2,
-                                        "message": "Memory usage normal"
-                                    }
-                                }
-                            }
-                        }
+                                        "message": "Memory usage normal",
+                                    },
+                                },
+                            },
+                        },
                     }
                 }
             },
@@ -104,20 +100,20 @@ router = APIRouter(tags=["Health"])
                             "database": {
                                 "status": "unhealthy",
                                 "latency_ms": None,
-                                "message": "Connection error: Connection refused"
+                                "message": "Connection error: Connection refused",
                             },
                             "redis": {
                                 "status": "healthy",
                                 "latency_ms": 1.1,
-                                "message": "PONG received"
+                                "message": "PONG received",
                             },
                             "memory": {
                                 "status": "healthy",
                                 "used_mb": 128.5,
                                 "percent": 45.2,
-                                "message": "Memory usage normal"
-                            }
-                        }
+                                "message": "Memory usage normal",
+                            },
+                        },
                     }
                 }
             },
@@ -154,10 +150,7 @@ async def health_check(response: Response) -> HealthResponse:
             "description": "Application process is alive",
             "content": {
                 "application/json": {
-                    "example": {
-                        "status": "alive",
-                        "timestamp": "2024-12-02T10:30:00Z"
-                    }
+                    "example": {"status": "alive", "timestamp": "2024-12-02T10:30:00Z"}
                 }
             },
         },
@@ -190,10 +183,7 @@ async def liveness_check() -> LivenessResponse:
                     "example": {
                         "status": "ready",
                         "timestamp": "2024-12-02T10:30:00Z",
-                        "checks": {
-                            "database": True,
-                            "redis": True
-                        }
+                        "checks": {"database": True, "redis": True},
                     }
                 }
             },
@@ -205,10 +195,7 @@ async def liveness_check() -> LivenessResponse:
                     "example": {
                         "status": "not_ready",
                         "timestamp": "2024-12-02T10:30:00Z",
-                        "checks": {
-                            "database": False,
-                            "redis": True
-                        }
+                        "checks": {"database": False, "redis": True},
                     }
                 }
             },

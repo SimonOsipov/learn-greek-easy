@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config import settings
+from src.core.dependencies import get_current_user
 from src.core.exceptions import (
     EmailAlreadyExistsException,
     TokenExpiredException,
@@ -17,7 +18,6 @@ from src.core.exceptions import (
     UserNotFoundException,
 )
 from src.db.dependencies import get_db
-from src.core.dependencies import get_current_user
 from src.db.models import User
 from src.schemas.user import (
     LogoutAllResponse,
@@ -29,7 +29,6 @@ from src.schemas.user import (
     UserCreate,
     UserLogin,
     UserProfileResponse,
-    UserResponse,
 )
 from src.services.auth_service import AuthService
 
@@ -66,9 +65,7 @@ router = APIRouter(
             "description": "Email already registered",
             "content": {
                 "application/json": {
-                    "example": {
-                        "detail": "Email 'user@example.com' is already registered"
-                    }
+                    "example": {"detail": "Email 'user@example.com' is already registered"}
                 }
             },
         },
@@ -144,11 +141,7 @@ async def register(
         },
         401: {
             "description": "Invalid credentials",
-            "content": {
-                "application/json": {
-                    "example": {"detail": "Invalid email or password"}
-                }
-            },
+            "content": {"application/json": {"example": {"detail": "Invalid email or password"}}},
         },
     },
 )
@@ -179,7 +172,7 @@ async def login(
         user, token_response = await service.login_user(login_data, client_ip)
         return token_response
 
-    except Exception as e:
+    except Exception:
         # Log the actual error internally but return generic message
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -212,19 +205,19 @@ async def login(
                     "examples": {
                         "expired": {
                             "summary": "Token expired",
-                            "value": {"detail": "Refresh token has expired"}
+                            "value": {"detail": "Refresh token has expired"},
                         },
                         "invalid": {
                             "summary": "Invalid token",
-                            "value": {"detail": "Invalid refresh token"}
+                            "value": {"detail": "Invalid refresh token"},
                         },
                         "revoked": {
                             "summary": "Token revoked",
-                            "value": {"detail": "Refresh token has been revoked"}
+                            "value": {"detail": "Refresh token has been revoked"},
                         },
                         "inactive_user": {
                             "summary": "User deactivated",
-                            "value": {"detail": "User account is deactivated"}
+                            "value": {"detail": "User account is deactivated"},
                         },
                     }
                 }
@@ -232,11 +225,7 @@ async def login(
         },
         404: {
             "description": "User not found",
-            "content": {
-                "application/json": {
-                    "example": {"detail": "User not found"}
-                }
-            },
+            "content": {"application/json": {"example": {"detail": "User not found"}}},
         },
     },
 )
@@ -513,9 +502,7 @@ async def get_sessions(
         404: {
             "description": "Session not found",
             "content": {
-                "application/json": {
-                    "example": {"detail": "Session not found or already revoked"}
-                }
+                "application/json": {"example": {"detail": "Session not found or already revoked"}}
             },
         },
     },

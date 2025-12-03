@@ -974,4 +974,3 @@ const [showDialog, setShowDialog] = useState(false);
 - DangerZoneSection (triggered by "Delete Account" button)
 
 ---
-

@@ -41,7 +41,6 @@ from sqlalchemy.pool import NullPool
 from src.db.base import Base
 from tests.helpers.database import get_test_database_url, verify_connection
 
-
 # File-based lock for schema creation coordination between workers
 _SCHEMA_LOCK_FILE = Path(tempfile.gettempdir()) / "pytest_learn_greek_schema.lock"
 _SCHEMA_READY_FILE = Path(tempfile.gettempdir()) / "pytest_learn_greek_schema.ready"
@@ -189,8 +188,8 @@ async def ensure_database_ready(engine: AsyncEngine) -> None:
     # Check connection
     if not await verify_connection(engine):
         raise RuntimeError(
-            f"Cannot connect to test database. "
-            f"Ensure PostgreSQL is running: docker-compose up -d postgres"
+            "Cannot connect to test database. "
+            "Ensure PostgreSQL is running: docker-compose up -d postgres"
         )
 
     # Check uuid-ossp extension (required for uuid_generate_v4)
@@ -212,9 +211,7 @@ async def ensure_database_ready(engine: AsyncEngine) -> None:
                 await conn.execute(text('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"'))
                 await conn.commit()
             except Exception as e:
-                raise RuntimeError(
-                    f"uuid-ossp extension not installed and cannot create: {e}"
-                )
+                raise RuntimeError(f"uuid-ossp extension not installed and cannot create: {e}")
 
 
 # =============================================================================
@@ -357,9 +354,7 @@ async def db_session_with_savepoint(
 # =============================================================================
 
 
-async def _create_schema_with_coordination(
-    engine: AsyncEngine, worker_id: str
-) -> None:
+async def _create_schema_with_coordination(engine: AsyncEngine, worker_id: str) -> None:
     """Create database schema with coordination between parallel workers.
 
     Uses file-based signaling to coordinate schema creation:
@@ -373,7 +368,6 @@ async def _create_schema_with_coordination(
         worker_id: The pytest-xdist worker ID.
     """
     import fcntl
-    import time
 
     # Clean up stale lock files from previous runs (only master/gw0 does this)
     if worker_id in ("master", "gw0"):
@@ -414,9 +408,7 @@ async def _create_schema_with_coordination(
                 waited += 0.5
 
             if not _SCHEMA_READY_FILE.exists():
-                raise RuntimeError(
-                    f"Worker {worker_id} timed out waiting for schema creation"
-                )
+                raise RuntimeError(f"Worker {worker_id} timed out waiting for schema creation")
 
 
 @pytest_asyncio.fixture(scope="session")

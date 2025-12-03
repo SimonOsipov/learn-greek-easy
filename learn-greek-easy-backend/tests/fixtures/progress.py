@@ -44,7 +44,6 @@ from datetime import date, datetime, timedelta
 from typing import Any, NamedTuple
 from uuid import UUID
 
-import pytest
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -60,9 +59,8 @@ from src.db.models import (
 )
 
 # Import from sibling fixtures
-from tests.fixtures.auth import AuthenticatedUser
+from tests.fixtures.auth import AuthenticatedUser  # noqa: F401 - used in docstring example
 from tests.fixtures.deck import DeckWithCards
-
 
 # =============================================================================
 # Type Definitions
@@ -122,11 +120,11 @@ SM2_MIN_EASINESS_FACTOR = 1.3
 
 # Typical intervals after successful reviews
 SM2_INTERVALS = {
-    "first_success": 1,    # 1 day after first successful review
-    "second_success": 6,   # 6 days after second success
-    "learning": 1,         # Learning phase interval
-    "review": 10,          # Typical review interval
-    "mastered": 30,        # Mastered card interval
+    "first_success": 1,  # 1 day after first successful review
+    "second_success": 6,  # 6 days after second success
+    "learning": 1,  # Learning phase interval
+    "review": 10,  # Typical review interval
+    "mastered": 30,  # Mastered card interval
 }
 
 

@@ -13,10 +13,9 @@ from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.security import verify_token
-from src.db.models import Card, Deck, DeckLevel, User
+from src.db.models import DeckLevel, User
 from tests.base import AuthenticatedTestCase, BaseTestCase
 from tests.fixtures.auth import AuthenticatedUser, AuthTokens
-
 
 # =============================================================================
 # BaseTestCase Tests
@@ -376,9 +375,7 @@ class TestAuthenticatedHTTPRequests(AuthenticatedTestCase):
         auth_headers: dict[str, str],
     ):
         """Test making authenticated GET request to /me endpoint."""
-        response = await self.get_authenticated(
-            client, "/api/v1/auth/me", auth_headers
-        )
+        response = await self.get_authenticated(client, "/api/v1/auth/me", auth_headers)
 
         # Should succeed with valid auth
         self.assert_response_success(response, 200)
@@ -395,9 +392,7 @@ class TestAuthenticatedHTTPRequests(AuthenticatedTestCase):
         expired_auth_headers: dict[str, str],
     ):
         """Test that expired token returns 401."""
-        response = await self.get_authenticated(
-            client, "/api/v1/auth/me", expired_auth_headers
-        )
+        response = await self.get_authenticated(client, "/api/v1/auth/me", expired_auth_headers)
 
         self.assert_unauthorized(response)
 

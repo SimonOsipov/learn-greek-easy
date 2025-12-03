@@ -481,5 +481,3 @@ const { showHelp, setShowHelp } = useKeyboardShortcuts();
 - Respect system preferences with `prefers-color-scheme`
 
 ---
-
-

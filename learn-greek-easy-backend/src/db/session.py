@@ -62,7 +62,9 @@ def create_engine() -> AsyncEngine:
     logger.info(
         "Database engine created",
         extra={
-            "url": settings.database_url.split("@")[1] if "@" in settings.database_url else "unknown",  # Hide credentials
+            "url": (
+                settings.database_url.split("@")[1] if "@" in settings.database_url else "unknown"
+            ),  # Hide credentials
             "pool_size": settings.database_pool_size,
             "max_overflow": settings.database_max_overflow,
         },
@@ -148,9 +150,7 @@ def get_session_factory() -> async_sessionmaker[AsyncSession]:
         RuntimeError: If database not initialized
     """
     if _session_factory is None:
-        raise RuntimeError(
-            "Database not initialized. Call init_db() first."
-        )
+        raise RuntimeError("Database not initialized. Call init_db() first.")
     return _session_factory
 
 

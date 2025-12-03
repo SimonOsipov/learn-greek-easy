@@ -18,16 +18,13 @@ from typing import Any
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 
-
 # =============================================================================
 # Test Database URL Configuration
 # =============================================================================
 
 # Default test database URL (PostgreSQL only)
 # Port 5433 is the mapped host port from docker-compose (5433:5432)
-DEFAULT_TEST_DATABASE_URL = (
-    "postgresql+asyncpg://postgres:postgres@localhost:5433/test_learn_greek"
-)
+DEFAULT_TEST_DATABASE_URL = "postgresql+asyncpg://postgres:postgres@localhost:5433/test_learn_greek"
 
 
 def get_test_database_url() -> str:

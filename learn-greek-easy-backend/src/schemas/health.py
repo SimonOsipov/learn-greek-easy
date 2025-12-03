@@ -61,31 +61,31 @@ class HealthResponse(BaseModel):
     uptime_seconds: float = Field(description="Application uptime in seconds")
     checks: HealthChecks = Field(description="Individual component checks")
 
-    model_config = {"json_schema_extra": {"example": {
-        "status": "healthy",
-        "version": "0.1.0",
-        "environment": "development",
-        "timestamp": "2024-12-02T10:30:00Z",
-        "uptime_seconds": 3600,
-        "checks": {
-            "database": {
+    model_config = {
+        "json_schema_extra": {
+            "example": {
                 "status": "healthy",
-                "latency_ms": 5.2,
-                "message": "Connection successful"
-            },
-            "redis": {
-                "status": "healthy",
-                "latency_ms": 1.1,
-                "message": "PONG received"
-            },
-            "memory": {
-                "status": "healthy",
-                "used_mb": 128.5,
-                "percent": 45.2,
-                "message": "Memory usage normal"
+                "version": "0.1.0",
+                "environment": "development",
+                "timestamp": "2024-12-02T10:30:00Z",
+                "uptime_seconds": 3600,
+                "checks": {
+                    "database": {
+                        "status": "healthy",
+                        "latency_ms": 5.2,
+                        "message": "Connection successful",
+                    },
+                    "redis": {"status": "healthy", "latency_ms": 1.1, "message": "PONG received"},
+                    "memory": {
+                        "status": "healthy",
+                        "used_mb": 128.5,
+                        "percent": 45.2,
+                        "message": "Memory usage normal",
+                    },
+                },
             }
         }
-    }}}
+    }
 
 
 class LivenessResponse(BaseModel):
@@ -94,10 +94,9 @@ class LivenessResponse(BaseModel):
     status: str = Field(default="alive", description="Liveness status")
     timestamp: datetime = Field(description="Check timestamp")
 
-    model_config = {"json_schema_extra": {"example": {
-        "status": "alive",
-        "timestamp": "2024-12-02T10:30:00Z"
-    }}}
+    model_config = {
+        "json_schema_extra": {"example": {"status": "alive", "timestamp": "2024-12-02T10:30:00Z"}}
+    }
 
 
 class ReadinessChecks(BaseModel):
@@ -114,11 +113,12 @@ class ReadinessResponse(BaseModel):
     timestamp: datetime = Field(description="Check timestamp")
     checks: ReadinessChecks = Field(description="Component readiness")
 
-    model_config = {"json_schema_extra": {"example": {
-        "status": "ready",
-        "timestamp": "2024-12-02T10:30:00Z",
-        "checks": {
-            "database": True,
-            "redis": True
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "status": "ready",
+                "timestamp": "2024-12-02T10:30:00Z",
+                "checks": {"database": True, "redis": True},
+            }
         }
-    }}}
+    }

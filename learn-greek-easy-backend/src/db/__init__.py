@@ -16,12 +16,7 @@ from src.db.models import (
     UserDeckProgress,
     UserSettings,
 )
-from src.db.session import (
-    close_db,
-    get_session,
-    get_session_factory,
-    init_db,
-)
+from src.db.session import close_db, get_session, get_session_factory, init_db
 
 __all__ = [
     # Session management

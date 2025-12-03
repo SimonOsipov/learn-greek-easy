@@ -248,3 +248,48 @@ npm run test:e2e:debug   # Step through
 | JWT_SECRET_KEY required | Set in .env file or environment (min 32 chars for production) |
 | Health check fails | Verify endpoint: `curl -v http://localhost:8000/health` |
 | Port 5433 vs 5432 | Dev uses 5433, prod uses 5432 for PostgreSQL |
+
+---
+
+## Pre-commit Hooks
+
+### First-Time Setup
+
+```bash
+# Option 1: Use setup script (recommended)
+./scripts/setup-hooks.sh
+
+# Option 2: Manual setup
+pip install pre-commit  # or: brew install pre-commit
+pre-commit install
+```
+
+### Daily Usage
+
+Pre-commit hooks run automatically on `git commit`. No action needed!
+
+```bash
+# If hooks fail:
+# 1. Auto-fixed files are already staged
+# 2. Review changes: git diff
+# 3. Stage and commit again: git add . && git commit
+
+# Manual commands
+pre-commit run                    # Run on staged files only
+pre-commit run --all-files        # Run on entire codebase
+pre-commit run black --all-files  # Run specific hook
+pre-commit autoupdate             # Update hook versions
+
+# Skip hooks (emergency only!)
+git commit --no-verify -m "message"
+```
+
+### Troubleshooting
+
+| Issue | Solution |
+|-------|----------|
+| "pre-commit: command not found" | Run: `pip install pre-commit` |
+| Hook fails but CI passes | Run: `pre-commit autoupdate` |
+| "npm: command not found" in hook | Ensure Node.js is installed |
+| MyPy missing dependencies | Run: `cd learn-greek-easy-backend && poetry install` |
+| Want to skip hooks once | Use: `git commit --no-verify` |

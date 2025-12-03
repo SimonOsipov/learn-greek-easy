@@ -3,7 +3,7 @@
 **Project**: Learn Greek Easy - MVP DevOps
 **Task**: GitHub CI/CD Pipeline Setup
 **Created**: 2025-12-02
-**Status**: In Progress (20%)
+**Status**: In Progress (80%)
 
 ---
 
@@ -40,7 +40,7 @@ Establish a robust CI/CD pipeline for the Learn Greek Easy application to:
 | GitHub Actions workflow setup | Done | Optimize & Fix |
 | Fix CI pipeline errors | Pending | Resolve all failures |
 | Pre-commit hooks setup | Pending | Configure for FE & BE |
-| CI linting & formatting | Pending | Mirror pre-commit checks |
+| CI linting & formatting | ✅ Done | frontend-lint + backend-lint jobs, PR #3 |
 | Branch protection rules | Pending | Configure for main |
 
 ### Tech Stack Overview
@@ -808,10 +808,10 @@ updates:
 | # | Task | Priority | Status | Est. Time | Dependencies |
 |---|------|----------|--------|-----------|--------------|
 | 02.01 | GitHub Actions workflow setup | High | Done | - | None |
-| 02.02 | Fix CI pipeline errors | High | Pending | 1-2h | 02.01 |
-| 02.03 | Pre-commit hooks setup | Medium | Pending | 1h | None |
-| 02.04 | CI linting & formatting (Backend) | Medium | Pending | 1h | 02.02 |
-| 02.05 | CI format check (Frontend) | Medium | Pending | 30m | 02.02 |
+| 02.02 | Fix CI pipeline errors | High | ✅ Done | ~2h | 02.01 |
+| 02.03 | Pre-commit hooks setup | Medium | ✅ Done | ~1.5h | None |
+| 02.04 | CI linting & formatting | Medium | ✅ Done | 1h | 02.02 |
+| 02.05 | CI format check (Frontend) | Medium | ✅ Done | - | Merged into 02.04 |
 | 02.06 | Branch protection rules | Low | Pending | 30m | 02.02-05 |
 
 ### Task Details
@@ -829,67 +829,65 @@ updates:
 
 #### 02.02 - Fix CI Pipeline Errors
 
-**Status**: Pending
+**Status**: ✅ COMPLETED (2025-12-03)
+**PR**: https://github.com/SimonOsipov/learn-greek-easy/pull/2
 
-**Investigation Steps**:
-1. Check recent CI run logs for error messages
-2. Identify specific failure point (before tests run)
-3. Common issues to check:
-   - Poetry installation/version mismatch
-   - Python version availability
-   - PostgreSQL service startup
-   - Missing environment variables
-   - Dependency installation failures
+**Issues Found & Fixed**:
+1. **ESLint linting `html/` build output** - Deleted folder, added to ignores
+2. **Node 18 incompatible with Vite 7.x** - Updated to Node 20
+3. **`cache: 'pip'` failing** - Removed (project uses Poetry)
+4. **Backend as broken submodule** - Converted to regular directory
+5. **Import ordering errors** - Auto-fixed with `npm run lint --fix`
+6. **ESLint config gaps** - Added globals.node, React readonly, caughtErrors
 
-**Potential Fixes**:
-- Update Poetry version in workflow
-- Add explicit cache key invalidation
-- Verify PostgreSQL service health before tests
-- Add verbose output for debugging
+**Files Modified**:
+- `.github/workflows/test.yml` - Node 20, removed cache: pip
+- `learn-greek-easy-frontend/.gitignore` - Added `html`
+- `learn-greek-easy-frontend/eslint.config.js` - Multiple fixes
+- `learn-greek-easy-frontend/package.json` - Updated engines
+- 99 files - Import order/prettier auto-fixes
+- 121 files - Backend converted from submodule
 
 #### 02.03 - Pre-commit Hooks Setup
 
-**Status**: Pending
+**Status**: ✅ COMPLETED (2025-12-03)
+**QA Report**: `.claude/qa/02.03-pre-commit-hooks-verification.md`
 
-**Implementation Steps**:
-1. Create `.pre-commit-config.yaml` at repo root
-2. Create `learn-greek-easy-backend/.flake8` config
-3. Create `scripts/setup-hooks.sh` helper script
-4. Test hooks locally on sample commit
-5. Document in CLAUDE.md
+**Files Created**:
+- `.pre-commit-config.yaml` - Main configuration with 15 hooks
+- `learn-greek-easy-backend/.flake8` - Enhanced Flake8 config
+- `scripts/setup-hooks.sh` - One-command setup script (executable)
+- `CLAUDE.md` - Added pre-commit documentation section
 
-**Files to Create**:
-- `.pre-commit-config.yaml`
-- `learn-greek-easy-backend/.flake8`
-- `scripts/setup-hooks.sh`
+**Hooks Configured**:
+- General: trailing-whitespace, end-of-file-fixer, check-yaml, check-json, check-added-large-files, check-merge-conflict, detect-private-key, no-commit-to-branch
+- Frontend: ESLint (auto-fix), Prettier (auto-format), TypeScript check
+- Backend: Black (24.8.0), isort (5.13.2), Flake8 (7.1.0), MyPy (v1.11.0)
 
-#### 02.04 - CI Linting & Formatting (Backend)
+**Notes**:
+- Pre-existing code quality issues detected (tracked in BUG-006, BUG-007)
+- Hooks working correctly - detecting existing technical debt
 
-**Status**: Pending
+#### 02.04 - CI Linting & Formatting
 
-**Implementation Steps**:
-1. Add `backend-lint` job to workflow
-2. Run Black check
-3. Run isort check
-4. Run Flake8
-5. Run MyPy
-6. Make tests depend on lint success
+**Status**: ✅ COMPLETED (2025-12-03)
+**PR**: https://github.com/SimonOsipov/learn-greek-easy/pull/3
 
-**Changes to** `.github/workflows/test.yml`:
-- Add new `backend-lint` job
-- Add `needs: [backend-lint]` to `backend-tests`
+**Implementation Completed**:
+1. Added `frontend-lint` job with TypeScript, ESLint, Prettier checks
+2. Added `backend-lint` job with Black, isort, Flake8, MyPy checks
+3. Updated `unit-tests` to depend on `frontend-lint`
+4. Updated `backend-tests` to depend on `backend-lint`
+5. Proper caching for npm and Poetry dependencies
+
+**Files Modified**:
+- `.github/workflows/test.yml` - Added 2 new lint jobs, updated dependencies
 
 #### 02.05 - CI Format Check (Frontend)
 
-**Status**: Pending
+**Status**: ✅ COMPLETED (Merged into 02.04)
 
-**Implementation Steps**:
-1. Add `npm run format:check` to frontend-lint job
-2. Verify Prettier config is read correctly
-3. Test with intentionally unformatted file
-
-**Changes to** `.github/workflows/test.yml`:
-- Add format check step to existing frontend job
+Prettier format check was included in the `frontend-lint` job as part of task 02.04.
 
 #### 02.06 - Branch Protection Rules
 
@@ -1063,4 +1061,4 @@ gh api repos/{owner}/{repo}/branches/main/protection
 
 ---
 
-**Status**: Implementation in progress - 02.01 complete, 02.02-02.06 pending
+**Status**: Implementation in progress (80%) - 02.01, 02.02, 02.03, 02.04, 02.05 complete, 02.06 pending

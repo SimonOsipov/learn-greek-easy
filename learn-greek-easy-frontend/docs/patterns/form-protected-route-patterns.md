@@ -181,4 +181,3 @@ export const SessionWarningDialog: React.FC<SessionWarningDialogProps> = ({
 - Auth Store: `@/stores/authStore`
 
 ---
-

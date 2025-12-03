@@ -20,7 +20,6 @@ from src.repositories import (
 )
 from src.schemas.user import UserCreate
 
-
 # ============================================================================
 # BaseRepository Tests (via UserRepository)
 # ============================================================================
@@ -661,7 +660,9 @@ async def test_get_user_reviews(db_session: AsyncSession, sample_review):
 
 
 @pytest.mark.asyncio
-async def test_get_user_reviews_with_date_filter(db_session: AsyncSession, sample_user, sample_cards):
+async def test_get_user_reviews_with_date_filter(
+    db_session: AsyncSession, sample_user, sample_cards
+):
     """Test filtering reviews by date range."""
     repo = ReviewRepository(db_session)
 
@@ -733,7 +734,8 @@ async def test_get_streak(db_session: AsyncSession, sample_user, sample_cards):
             reviewed_at=datetime.combine(
                 date.today() - timedelta(days=i),
                 datetime.min.time(),
-            ) + timedelta(hours=10),
+            )
+            + timedelta(hours=10),
         )
         db_session.add(review)
     await db_session.commit()

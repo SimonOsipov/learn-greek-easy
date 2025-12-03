@@ -27,7 +27,6 @@ from src.core.security import (
     verify_token,
 )
 
-
 # ============================================================================
 # Test Fixtures
 # ============================================================================
@@ -75,9 +74,7 @@ class TestAccessTokenGeneration:
         parts = token.split(".")
         assert len(parts) == 3
 
-    def test_access_token_expiry_is_30_minutes(
-        self, sample_user_id: UUID
-    ) -> None:
+    def test_access_token_expiry_is_30_minutes(self, sample_user_id: UUID) -> None:
         """Test that access token expires in 30 minutes (or configured value)."""
         before = datetime.utcnow()
         token, expires_at = create_access_token(sample_user_id)
@@ -91,9 +88,7 @@ class TestAccessTokenGeneration:
         # Expiration should be within this range
         assert min_expiry <= expires_at <= max_expiry
 
-    def test_access_token_contains_correct_payload(
-        self, sample_user_id: UUID
-    ) -> None:
+    def test_access_token_contains_correct_payload(self, sample_user_id: UUID) -> None:
         """Test that access token payload contains correct claims."""
         token, expires_at = create_access_token(sample_user_id)
 
@@ -141,9 +136,7 @@ class TestRefreshTokenGeneration:
         assert isinstance(token, str)
         assert isinstance(expires_at, datetime)
 
-    def test_refresh_token_is_valid_jwt(
-        self, sample_refresh_token: tuple[str, datetime]
-    ) -> None:
+    def test_refresh_token_is_valid_jwt(self, sample_refresh_token: tuple[str, datetime]) -> None:
         """Test that refresh token is a valid JWT format."""
         token, _ = sample_refresh_token
         parts = token.split(".")
@@ -163,9 +156,7 @@ class TestRefreshTokenGeneration:
         # Expiration should be within this range
         assert min_expiry <= expires_at <= max_expiry
 
-    def test_refresh_token_contains_correct_payload(
-        self, sample_user_id: UUID
-    ) -> None:
+    def test_refresh_token_contains_correct_payload(self, sample_user_id: UUID) -> None:
         """Test that refresh token payload contains correct claims."""
         token, expires_at = create_refresh_token(sample_user_id)
 
@@ -185,9 +176,7 @@ class TestRefreshTokenGeneration:
         assert payload["sub"] == str(sample_user_id)
         assert payload["type"] == "refresh"
 
-    def test_refresh_token_different_from_access_token(
-        self, sample_user_id: UUID
-    ) -> None:
+    def test_refresh_token_different_from_access_token(self, sample_user_id: UUID) -> None:
         """Test that access and refresh tokens are different."""
         access_token, _ = create_access_token(sample_user_id)
         refresh_token, _ = create_refresh_token(sample_user_id)
@@ -244,9 +233,7 @@ class TestTokenVerification:
 
         assert "Invalid token type" in str(exc_info.value.detail)
 
-    def test_verify_token_invalid_signature_raises_exception(
-        self, sample_user_id: UUID
-    ) -> None:
+    def test_verify_token_invalid_signature_raises_exception(self, sample_user_id: UUID) -> None:
         """Test that token with invalid signature raises TokenInvalidException."""
         # Create a token with different secret
         fake_token = jwt.encode(
@@ -367,9 +354,7 @@ class TestTokenIntegration:
         assert verified_user_id == sample_user_id
 
         # Step 3: Simulate HTTP header extraction
-        credentials = HTTPAuthorizationCredentials(
-            scheme="Bearer", credentials=access_token
-        )
+        credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials=access_token)
         extracted_token = extract_token_from_header(credentials)
         assert extracted_token == access_token
 
@@ -377,9 +362,7 @@ class TestTokenIntegration:
         final_user_id = verify_token(extracted_token, "access")
         assert final_user_id == sample_user_id
 
-    def test_refresh_token_cannot_be_used_as_access_token(
-        self, sample_user_id: UUID
-    ) -> None:
+    def test_refresh_token_cannot_be_used_as_access_token(self, sample_user_id: UUID) -> None:
         """Test that refresh token cannot be used as access token (confused deputy attack prevention)."""
         refresh_token, _ = create_refresh_token(sample_user_id)
 
@@ -389,9 +372,7 @@ class TestTokenIntegration:
 
         assert "Invalid token type" in str(exc_info.value.detail)
 
-    def test_access_token_cannot_be_used_as_refresh_token(
-        self, sample_user_id: UUID
-    ) -> None:
+    def test_access_token_cannot_be_used_as_refresh_token(self, sample_user_id: UUID) -> None:
         """Test that access token cannot be used as refresh token."""
         access_token, _ = create_access_token(sample_user_id)
 

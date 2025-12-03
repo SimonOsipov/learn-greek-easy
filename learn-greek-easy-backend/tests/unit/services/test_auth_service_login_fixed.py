@@ -11,7 +11,7 @@ These tests verify the complete login functionality including:
 
 import logging
 from datetime import datetime, timedelta
-from unittest.mock import AsyncMock, MagicMock, patch, PropertyMock
+from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
@@ -32,10 +32,7 @@ class TestLoginFunctionality:
         mock_db = AsyncMock()
         service = AuthService(mock_db)
 
-        login_data = UserLogin(
-            email="test@example.com",
-            password="TestPassword123!"
-        )
+        login_data = UserLogin(email="test@example.com", password="TestPassword123!")
         client_ip = "192.168.1.100"
 
         # Create mock user
@@ -58,10 +55,16 @@ class TestLoginFunctionality:
             mock_verify.return_value = True
 
             with patch("src.services.auth_service.create_access_token") as mock_access:
-                mock_access.return_value = ("access_token", datetime.utcnow() + timedelta(minutes=30))
+                mock_access.return_value = (
+                    "access_token",
+                    datetime.utcnow() + timedelta(minutes=30),
+                )
 
                 with patch("src.services.auth_service.create_refresh_token") as mock_refresh:
-                    mock_refresh.return_value = ("refresh_token", datetime.utcnow() + timedelta(days=30))
+                    mock_refresh.return_value = (
+                        "refresh_token",
+                        datetime.utcnow() + timedelta(days=30),
+                    )
 
                     # Act
                     user, token_response = await service.login_user(login_data, client_ip)
@@ -87,10 +90,7 @@ class TestLoginFunctionality:
         mock_db = AsyncMock()
         service = AuthService(mock_db)
 
-        login_data = UserLogin(
-            email="nonexistent@example.com",
-            password="TestPassword123!"
-        )
+        login_data = UserLogin(email="nonexistent@example.com", password="TestPassword123!")
 
         # Setup database mock to return None (user not found)
         mock_result = MagicMock()
@@ -111,10 +111,7 @@ class TestLoginFunctionality:
         mock_db = AsyncMock()
         service = AuthService(mock_db)
 
-        login_data = UserLogin(
-            email="test@example.com",
-            password="WrongPassword123!"
-        )
+        login_data = UserLogin(email="test@example.com", password="WrongPassword123!")
 
         # Create mock user
         mock_user = MagicMock()
@@ -145,10 +142,7 @@ class TestLoginFunctionality:
         mock_db = AsyncMock()
         service = AuthService(mock_db)
 
-        login_data = UserLogin(
-            email="test@example.com",
-            password="TestPassword123!"
-        )
+        login_data = UserLogin(email="test@example.com", password="TestPassword123!")
 
         # Create inactive user
         mock_user = MagicMock()
@@ -179,10 +173,7 @@ class TestLoginFunctionality:
         mock_db = AsyncMock()
         service = AuthService(mock_db)
 
-        login_data = UserLogin(
-            email="oauth@example.com",
-            password="AnyPassword123!"
-        )
+        login_data = UserLogin(email="oauth@example.com", password="AnyPassword123!")
 
         # Create OAuth user (no password hash)
         mock_user = MagicMock()
@@ -214,10 +205,7 @@ class TestLoginFunctionality:
         mock_db = AsyncMock()
         service = AuthService(mock_db)
 
-        login_data = UserLogin(
-            email="test@example.com",
-            password="TestPassword123!"
-        )
+        login_data = UserLogin(email="test@example.com", password="TestPassword123!")
         client_ip = "192.168.1.100"
 
         # Create mock user
@@ -239,10 +227,16 @@ class TestLoginFunctionality:
             mock_verify.return_value = True
 
             with patch("src.services.auth_service.create_access_token") as mock_access:
-                mock_access.return_value = ("access_token", datetime.utcnow() + timedelta(minutes=30))
+                mock_access.return_value = (
+                    "access_token",
+                    datetime.utcnow() + timedelta(minutes=30),
+                )
 
                 with patch("src.services.auth_service.create_refresh_token") as mock_refresh:
-                    mock_refresh.return_value = ("refresh_token", datetime.utcnow() + timedelta(days=30))
+                    mock_refresh.return_value = (
+                        "refresh_token",
+                        datetime.utcnow() + timedelta(days=30),
+                    )
 
                     # Act
                     with caplog.at_level(logging.INFO):
@@ -261,10 +255,7 @@ class TestLoginFunctionality:
         mock_db = AsyncMock()
         service = AuthService(mock_db)
 
-        login_data = UserLogin(
-            email="notfound@example.com",
-            password="TestPassword123!"
-        )
+        login_data = UserLogin(email="notfound@example.com", password="TestPassword123!")
         client_ip = "192.168.1.100"
 
         # Setup database mock to return None
@@ -289,10 +280,7 @@ class TestLoginFunctionality:
         mock_db = AsyncMock()
         service = AuthService(mock_db)
 
-        login_data = UserLogin(
-            email="test@example.com",
-            password="WrongPassword123!"
-        )
+        login_data = UserLogin(email="test@example.com", password="WrongPassword123!")
         client_ip = "192.168.1.100"
 
         # Create mock user
@@ -328,10 +316,7 @@ class TestLoginFunctionality:
         mock_db = AsyncMock()
         service = AuthService(mock_db)
 
-        login_data = UserLogin(
-            email="test@example.com",
-            password="TestPassword123!"
-        )
+        login_data = UserLogin(email="test@example.com", password="TestPassword123!")
         client_ip = "192.168.1.100"
 
         # Create inactive user
@@ -367,10 +352,7 @@ class TestLoginFunctionality:
         mock_db = AsyncMock()
         service = AuthService(mock_db)
 
-        login_data = UserLogin(
-            email="test@example.com",
-            password="TestPassword123!"
-        )
+        login_data = UserLogin(email="test@example.com", password="TestPassword123!")
 
         # Create mock user
         mock_user = MagicMock()
@@ -391,10 +373,16 @@ class TestLoginFunctionality:
             mock_verify.return_value = True
 
             with patch("src.services.auth_service.create_access_token") as mock_access:
-                mock_access.return_value = ("access_token", datetime.utcnow() + timedelta(minutes=30))
+                mock_access.return_value = (
+                    "access_token",
+                    datetime.utcnow() + timedelta(minutes=30),
+                )
 
                 with patch("src.services.auth_service.create_refresh_token") as mock_refresh:
-                    mock_refresh.return_value = ("refresh_token", datetime.utcnow() + timedelta(days=30))
+                    mock_refresh.return_value = (
+                        "refresh_token",
+                        datetime.utcnow() + timedelta(days=30),
+                    )
 
                     # Act
                     user, token_response = await service.login_user(login_data, client_ip=None)
@@ -410,10 +398,7 @@ class TestLoginFunctionality:
         mock_db = AsyncMock()
         service = AuthService(mock_db)
 
-        login_data = UserLogin(
-            email="test@example.com",
-            password="TestPassword123!"
-        )
+        login_data = UserLogin(email="test@example.com", password="TestPassword123!")
 
         # Create mock user
         mock_user = MagicMock()
@@ -456,10 +441,7 @@ class TestLoginFunctionality:
         mock_db = AsyncMock()
         service = AuthService(mock_db)
 
-        login_data = UserLogin(
-            email="test@example.com",
-            password="TestPassword123!"
-        )
+        login_data = UserLogin(email="test@example.com", password="TestPassword123!")
 
         # Create mock user
         mock_user = MagicMock()
@@ -479,10 +461,16 @@ class TestLoginFunctionality:
             mock_verify.return_value = True
 
             with patch("src.services.auth_service.create_access_token") as mock_access:
-                mock_access.return_value = ("access_token", datetime.utcnow() + timedelta(minutes=30))
+                mock_access.return_value = (
+                    "access_token",
+                    datetime.utcnow() + timedelta(minutes=30),
+                )
 
                 with patch("src.services.auth_service.create_refresh_token") as mock_refresh:
-                    mock_refresh.return_value = ("refresh_token", datetime.utcnow() + timedelta(days=30))
+                    mock_refresh.return_value = (
+                        "refresh_token",
+                        datetime.utcnow() + timedelta(days=30),
+                    )
 
                     # Act & Assert
                     with pytest.raises(IntegrityError):
@@ -496,10 +484,7 @@ class TestLoginFunctionality:
         service = AuthService(mock_db)
 
         # Use uppercase email in login
-        login_data = UserLogin(
-            email="TEST@EXAMPLE.COM",
-            password="TestPassword123!"
-        )
+        login_data = UserLogin(email="TEST@EXAMPLE.COM", password="TestPassword123!")
 
         # Create user with lowercase email
         mock_user = MagicMock()
@@ -519,10 +504,16 @@ class TestLoginFunctionality:
             mock_verify.return_value = True
 
             with patch("src.services.auth_service.create_access_token") as mock_access:
-                mock_access.return_value = ("access_token", datetime.utcnow() + timedelta(minutes=30))
+                mock_access.return_value = (
+                    "access_token",
+                    datetime.utcnow() + timedelta(minutes=30),
+                )
 
                 with patch("src.services.auth_service.create_refresh_token") as mock_refresh:
-                    mock_refresh.return_value = ("refresh_token", datetime.utcnow() + timedelta(days=30))
+                    mock_refresh.return_value = (
+                        "refresh_token",
+                        datetime.utcnow() + timedelta(days=30),
+                    )
 
                     # Act
                     user, token_response = await service.login_user(login_data)
@@ -556,10 +547,7 @@ class TestMissingScenarios:
         mock_db = AsyncMock()
         service = AuthService(mock_db)
 
-        login_data = UserLogin(
-            email="test.user+tag@example.com",
-            password="TestPassword123!"
-        )
+        login_data = UserLogin(email="test.user+tag@example.com", password="TestPassword123!")
 
         mock_user = MagicMock()
         mock_user.id = uuid4()
@@ -577,10 +565,16 @@ class TestMissingScenarios:
             mock_verify.return_value = True
 
             with patch("src.services.auth_service.create_access_token") as mock_access:
-                mock_access.return_value = ("access_token", datetime.utcnow() + timedelta(minutes=30))
+                mock_access.return_value = (
+                    "access_token",
+                    datetime.utcnow() + timedelta(minutes=30),
+                )
 
                 with patch("src.services.auth_service.create_refresh_token") as mock_refresh:
-                    mock_refresh.return_value = ("refresh_token", datetime.utcnow() + timedelta(days=30))
+                    mock_refresh.return_value = (
+                        "refresh_token",
+                        datetime.utcnow() + timedelta(days=30),
+                    )
 
                     # Act
                     user, token_response = await service.login_user(login_data)

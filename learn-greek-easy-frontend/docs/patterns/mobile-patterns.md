@@ -180,4 +180,3 @@ Optimize forms for mobile input.
 - AppLayout: `@/components/layout/AppLayout`
 
 ---
-

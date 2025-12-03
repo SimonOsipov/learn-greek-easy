@@ -1,7 +1,6 @@
 """Base model classes and mixins for SQLAlchemy models."""
 
 from datetime import datetime
-from typing import Any
 
 from sqlalchemy import DateTime, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
@@ -23,8 +22,7 @@ class Base(DeclarativeBase):
     def __repr__(self) -> str:
         """String representation of model."""
         columns = ", ".join(
-            f"{col.name}={getattr(self, col.name)!r}"
-            for col in self.__table__.columns
+            f"{col.name}={getattr(self, col.name)!r}" for col in self.__table__.columns
         )
         return f"{self.__class__.__name__}({columns})"
 

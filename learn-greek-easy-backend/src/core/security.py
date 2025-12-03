@@ -25,7 +25,6 @@ from datetime import datetime, timedelta
 from typing import List, Optional, Tuple
 from uuid import UUID
 
-from fastapi import status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
@@ -149,7 +148,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 # ============================================================================
 
 
-def validate_password_strength(password: str) -> Tuple[bool, List[str]]:
+def validate_password_strength(password: str) -> Tuple[bool, List[str]]:  # noqa: C901
     """Validate password strength against security best practices.
 
     This is an optional validation function that can be used during
@@ -293,9 +292,9 @@ def create_access_token(user_id: UUID) -> tuple[str, datetime]:
 
     payload = {
         "sub": str(user_id),  # Subject: user ID (convert UUID to string)
-        "exp": expires_at,    # Expiration time (datetime, auto-converted to timestamp)
-        "iat": now,           # Issued at (datetime, auto-converted to timestamp)
-        "type": "access",     # Token type for validation
+        "exp": expires_at,  # Expiration time (datetime, auto-converted to timestamp)
+        "iat": now,  # Issued at (datetime, auto-converted to timestamp)
+        "type": "access",  # Token type for validation
     }
 
     # Encode the JWT token
@@ -347,9 +346,9 @@ def create_refresh_token(user_id: UUID) -> tuple[str, datetime]:
 
     payload = {
         "sub": str(user_id),  # Subject: user ID
-        "exp": expires_at,    # Expiration time
-        "iat": now,           # Issued at
-        "type": "refresh",    # Token type for validation
+        "exp": expires_at,  # Expiration time
+        "iat": now,  # Issued at
+        "type": "refresh",  # Token type for validation
     }
 
     # Encode the JWT token
@@ -433,9 +432,7 @@ def verify_token(token: str, token_type: str = "access") -> UUID:
         # Verify token type matches expected type
         # This prevents using a refresh token as an access token
         if payload.get("type") != token_type:
-            raise TokenInvalidException(
-                detail=f"Invalid token type, expected {token_type}"
-            )
+            raise TokenInvalidException(detail=f"Invalid token type, expected {token_type}")
 
         # Extract user_id from "sub" claim
         user_id_str = payload.get("sub")
@@ -520,7 +517,7 @@ def extract_token_from_header(
     # HTTPAuthorizationCredentials has:
     # - scheme: "Bearer"
     # - credentials: The actual token string
-    return credentials.credentials
+    return str(credentials.credentials)
 
 
 # ============================================================================

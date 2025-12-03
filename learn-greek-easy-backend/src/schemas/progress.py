@@ -15,7 +15,6 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from src.db.models import CardStatus
 
-
 # ============================================================================
 # Progress Schemas
 # ============================================================================

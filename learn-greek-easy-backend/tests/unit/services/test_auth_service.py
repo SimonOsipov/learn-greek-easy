@@ -1,14 +1,13 @@
 """Unit tests for AuthService."""
 
-import pytest
 from datetime import datetime, timedelta
+from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
-from unittest.mock import AsyncMock, MagicMock, patch, call
 
+import pytest
 from sqlalchemy.exc import IntegrityError
 
 from src.core.exceptions import EmailAlreadyExistsException, InvalidCredentialsException
-from src.db.models import User, UserSettings, RefreshToken
 from src.schemas.user import UserCreate, UserLogin
 from src.services.auth_service import AuthService
 
@@ -24,9 +23,7 @@ class TestAuthService:
         service = AuthService(mock_db)
 
         user_data = UserCreate(
-            email="test@example.com",
-            password="SecurePass123!",
-            full_name="Test User"
+            email="test@example.com", password="SecurePass123!", full_name="Test User"
         )
 
         # Mock database operations
@@ -42,10 +39,16 @@ class TestAuthService:
             mock_hash.return_value = "hashed_password_123"
 
             with patch("src.services.auth_service.create_access_token") as mock_access:
-                mock_access.return_value = ("access_token_abc", datetime.utcnow() + timedelta(minutes=30))
+                mock_access.return_value = (
+                    "access_token_abc",
+                    datetime.utcnow() + timedelta(minutes=30),
+                )
 
                 with patch("src.services.auth_service.create_refresh_token") as mock_refresh:
-                    mock_refresh.return_value = ("refresh_token_xyz", datetime.utcnow() + timedelta(days=30))
+                    mock_refresh.return_value = (
+                        "refresh_token_xyz",
+                        datetime.utcnow() + timedelta(days=30),
+                    )
 
                     # Act
                     user, token_response = await service.register_user(user_data)
@@ -76,9 +79,7 @@ class TestAuthService:
         service = AuthService(mock_db)
 
         user_data = UserCreate(
-            email="existing@example.com",
-            password="SecurePass123!",
-            full_name="Test User"
+            email="existing@example.com", password="SecurePass123!", full_name="Test User"
         )
 
         # Mock existing user
@@ -104,9 +105,7 @@ class TestAuthService:
         service = AuthService(mock_db)
 
         user_data = UserCreate(
-            email="race@example.com",
-            password="SecurePass123!",
-            full_name="Test User"
+            email="race@example.com", password="SecurePass123!", full_name="Test User"
         )
 
         # Mock no existing user on initial check
@@ -140,10 +139,7 @@ class TestAuthService:
         mock_db = AsyncMock()
         service = AuthService(mock_db)
 
-        login_data = UserLogin(
-            email="user@example.com",
-            password="CorrectPass123!"
-        )
+        login_data = UserLogin(email="user@example.com", password="CorrectPass123!")
 
         # Mock user
         mock_user = MagicMock()
@@ -162,10 +158,16 @@ class TestAuthService:
             mock_verify.return_value = True
 
             with patch("src.services.auth_service.create_access_token") as mock_access:
-                mock_access.return_value = ("access_token_login", datetime.utcnow() + timedelta(minutes=30))
+                mock_access.return_value = (
+                    "access_token_login",
+                    datetime.utcnow() + timedelta(minutes=30),
+                )
 
                 with patch("src.services.auth_service.create_refresh_token") as mock_refresh:
-                    mock_refresh.return_value = ("refresh_token_login", datetime.utcnow() + timedelta(days=30))
+                    mock_refresh.return_value = (
+                        "refresh_token_login",
+                        datetime.utcnow() + timedelta(days=30),
+                    )
 
                     # Act
                     user, token_response = await service.login_user(login_data)
@@ -185,10 +187,7 @@ class TestAuthService:
         mock_db = AsyncMock()
         service = AuthService(mock_db)
 
-        login_data = UserLogin(
-            email="nonexistent@example.com",
-            password="SomePass123!"
-        )
+        login_data = UserLogin(email="nonexistent@example.com", password="SomePass123!")
 
         # Mock no user found
         mock_result = AsyncMock()
@@ -208,10 +207,7 @@ class TestAuthService:
         mock_db = AsyncMock()
         service = AuthService(mock_db)
 
-        login_data = UserLogin(
-            email="user@example.com",
-            password="WrongPass123!"
-        )
+        login_data = UserLogin(email="user@example.com", password="WrongPass123!")
 
         # Mock user
         mock_user = MagicMock()
@@ -239,10 +235,7 @@ class TestAuthService:
         mock_db = AsyncMock()
         service = AuthService(mock_db)
 
-        login_data = UserLogin(
-            email="user@example.com",
-            password="CorrectPass123!"
-        )
+        login_data = UserLogin(email="user@example.com", password="CorrectPass123!")
 
         # Mock inactive user
         mock_user = MagicMock()

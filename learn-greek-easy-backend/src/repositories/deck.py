@@ -36,7 +36,7 @@ class DeckRepository(BaseRepository[Deck]):
         Use Case:
             Browse decks page
         """
-        query = select(Deck).where(Deck.is_active == True)
+        query = select(Deck).where(Deck.is_active.is_(True))
 
         if level is not None:
             query = query.where(Deck.level == level)
@@ -61,11 +61,7 @@ class DeckRepository(BaseRepository[Deck]):
         Performance:
             Uses selectinload to prevent N+1 queries
         """
-        query = (
-            select(Deck)
-            .where(Deck.id == deck_id)
-            .options(selectinload(Deck.cards))
-        )
+        query = select(Deck).where(Deck.id == deck_id).options(selectinload(Deck.cards))
         result = await self.db.execute(query)
         return result.scalar_one_or_none()
 
@@ -81,11 +77,7 @@ class DeckRepository(BaseRepository[Deck]):
         Use Case:
             Deck metadata, progress calculations
         """
-        query = (
-            select(func.count())
-            .select_from(Card)
-            .where(Card.deck_id == deck_id)
-        )
+        query = select(func.count()).select_from(Card).where(Card.deck_id == deck_id)
         result = await self.db.execute(query)
         return result.scalar_one()
 
@@ -115,11 +107,8 @@ class DeckRepository(BaseRepository[Deck]):
         search_pattern = f"%{query_text}%"
         query = (
             select(Deck)
-            .where(
-                (Deck.name.ilike(search_pattern))
-                | (Deck.description.ilike(search_pattern))
-            )
-            .where(Deck.is_active == True)
+            .where((Deck.name.ilike(search_pattern)) | (Deck.description.ilike(search_pattern)))
+            .where(Deck.is_active.is_(True))
             .offset(skip)
             .limit(limit)
         )

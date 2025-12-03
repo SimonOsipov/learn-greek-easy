@@ -4,7 +4,6 @@ import asyncio
 import logging
 from typing import Optional, Tuple
 
-import redis.asyncio as redis
 from redis.asyncio import ConnectionPool, Redis
 from redis.exceptions import ConnectionError, TimeoutError
 
@@ -68,7 +67,7 @@ async def close_redis() -> None:
     logger.info("Closing Redis connection...")
 
     try:
-        await _redis_client.aclose()
+        await _redis_client.close()
         if _connection_pool:
             await _connection_pool.disconnect()
     except Exception as e:
