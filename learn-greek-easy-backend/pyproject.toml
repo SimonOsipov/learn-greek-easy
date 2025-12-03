@@ -1,0 +1,288 @@
+[tool.poetry]
+name = "learn-greek-easy-backend"
+version = "0.1.0"
+description = "Backend API for Learn Greek Easy - Greek Language Learning Application"
+authors = ["Learn Greek Easy Team"]
+license = "MIT"
+readme = "README.md"
+packages = [{include = "src"}]
+
+[tool.poetry.dependencies]
+python = "^3.13"
+fastapi = "^0.115.0"
+uvicorn = {extras = ["standard"], version = "^0.30.0"}
+python-multipart = "^0.0.9"
+pydantic = "^2.9.0"
+pydantic-settings = "^2.5.0"
+email-validator = "^2.2.0"
+sqlalchemy = "^2.0.35"
+alembic = "^1.13.2"
+psycopg2-binary = "^2.9.9"
+asyncpg = "^0.30.0"
+python-jose = {extras = ["cryptography"], version = "^3.3.0"}
+passlib = {extras = ["bcrypt"], version = "^1.7.4"}
+bcrypt = "^4.2.0"
+redis = "^5.0.8"
+python-dateutil = "^2.9.0"
+pytz = "^2024.1"
+httpx = "^0.27.0"
+aiohttp = "^3.10.0"
+gunicorn = "^22.0.0"
+greenlet = "^3.2.4"
+psutil = "^5.9.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.0"
+pytest-asyncio = "^0.23.0"
+pytest-cov = "^5.0.0"
+pytest-mock = "^3.14.0"
+faker = "^26.0.0"
+black = "^24.8.0"
+isort = "^5.13.2"
+flake8 = "^7.1.0"
+mypy = "^1.11.0"
+pylint = "^3.2.0"
+types-python-dateutil = "^2.9.0"
+types-pytz = "^2024.1.0"
+types-redis = "^4.6.0"
+ipython = "^8.26.0"
+ipdb = "^0.13.13"
+watchdog = "^4.0.0"
+mkdocs = "^1.6.0"
+mkdocs-material = "^9.5.0"
+aiosqlite = "^0.21.0"
+factory-boy = "^3.3.3"
+pytest-xdist = "^3.8.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 100
+target-version = ['py313']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+  | alembic/versions
+)/
+'''
+
+[tool.isort]
+profile = "black"
+line_length = 100
+multi_line_output = 3
+include_trailing_comma = true
+force_grid_wrap = 0
+use_parentheses = true
+ensure_newline_before_comments = true
+skip_glob = ["*/alembic/versions/*"]
+
+[tool.mypy]
+python_version = "3.13"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_calls = true
+disallow_untyped_decorators = false
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+follow_imports = "normal"
+ignore_missing_imports = true
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = "alembic.*"
+ignore_errors = true
+
+[tool.pytest.ini_options]
+# Minimum pytest version
+minversion = "8.0"
+
+# Test discovery
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+
+# Async mode - automatically discover and run async tests
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+
+# Output configuration
+addopts = [
+    # Verbosity and output
+    "-v",
+    "--tb=short",
+    "--strict-markers",
+    "-ra",
+    "--color=yes",
+
+    # Coverage configuration
+    "--cov=src",
+    "--cov-report=term-missing:skip-covered",
+    "--cov-report=html",
+    "--cov-report=xml",
+    "--cov-branch",
+    "--cov-fail-under=90",
+
+    # Context for coverage tracking
+    "--cov-context=test",
+]
+
+# Test markers
+markers = [
+    "unit: Unit tests (fast, isolated, mocked dependencies)",
+    "integration: Integration tests (slower, real database)",
+    "slow: Slow tests (>1s execution time)",
+    "auth: Authentication-related tests",
+    "api: API endpoint tests",
+    "db: Database-related tests",
+    "no_parallel: Tests that cannot run in parallel (sequential only)",
+]
+
+# Filter warnings for cleaner output
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning",
+    "ignore::pytest.PytestUnraisableExceptionWarning",
+    "ignore::pytest.PytestCollectionWarning",
+    # SQLAlchemy async warnings
+    "ignore:The garbage collector is trying to clean up non-checked-in connection:RuntimeWarning",
+    # pytest-asyncio config warning (for forward compatibility)
+    "ignore:Unknown config option.*asyncio_default_fixture_loop_scope:pytest.PytestConfigWarning",
+]
+
+# =============================================================================
+# Coverage Configuration (pytest-cov)
+# =============================================================================
+
+[tool.coverage.run]
+# Source directories to measure
+source = ["src"]
+
+# Enable branch coverage (tracks conditional branches, not just lines)
+branch = true
+
+# Parallel mode for concurrent test runs (pytest-xdist)
+parallel = true
+
+# Dynamic context for per-test coverage tracking
+dynamic_context = "test_function"
+
+# Files/patterns to exclude from coverage
+omit = [
+    # Test files themselves
+    "*/tests/*",
+    "tests/*",
+    # Database migrations
+    "*/alembic/*",
+    "alembic/*",
+    # Cache directories
+    "*/__pycache__/*",
+    # Init files with only imports
+    "src/__init__.py",
+    "src/*/__init__.py",
+    # Constants file (data only, no logic)
+    "src/constants.py",
+]
+
+
+[tool.coverage.report]
+# Minimum coverage percentage required (fails build if below)
+fail_under = 90
+
+# Show line numbers of missing statements
+show_missing = true
+
+# Show coverage for all files, even those at 100%
+skip_covered = false
+
+# Precision for percentage display
+precision = 1
+
+# Lines to exclude from coverage (code patterns)
+exclude_lines = [
+    # Standard pragmas
+    "pragma: no cover",
+    "pragma: nocover",
+
+    # Defensive assertions
+    "raise AssertionError",
+    "raise NotImplementedError",
+
+    # Abstract methods (implemented in subclasses)
+    "@abstractmethod",
+    "@abc.abstractmethod",
+
+    # Type checking blocks
+    "if TYPE_CHECKING:",
+    "if typing.TYPE_CHECKING:",
+
+    # Main script blocks
+    "if __name__ == .__main__.:",
+
+    # Debug/repr methods (not critical)
+    "def __repr__",
+    "def __str__",
+
+    # Ellipsis (protocol stubs)
+    "\\.\\.\\.",
+
+    # Unreachable code markers
+    "raise$",
+    "pass$",
+
+    # Platform-specific code
+    "if sys.platform",
+
+    # Debug logging that may not execute in tests
+    "logger\\.debug",
+]
+
+# Files to exclude from coverage report
+exclude_also = [
+    # Property setters that just store values
+    "@property",
+    "@.*\\.setter",
+]
+
+# Sort output by coverage percentage (lowest first)
+sort = "Cover"
+
+
+[tool.coverage.html]
+# Output directory for HTML reports
+directory = "htmlcov"
+
+# Show contexts (which tests covered each line)
+show_contexts = true
+
+# Title for HTML report
+title = "Learn Greek Easy Backend - Coverage Report"
+
+# Skip files with 100% coverage in HTML report (optional, set to true if desired)
+skip_covered = false
+
+
+[tool.coverage.xml]
+# Output file for XML report (CI/CD integration)
+output = "coverage.xml"
+
+
+[tool.coverage.json]
+# Output file for JSON report (programmatic access)
+output = "coverage.json"
+pretty_print = true
