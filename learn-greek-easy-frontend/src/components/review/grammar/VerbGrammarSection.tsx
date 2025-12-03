@@ -1,9 +1,11 @@
-import type { Card } from '@/types/review';
-export type { Card };
 import { usePremiumAccess } from '@/hooks/usePremiumAccess';
-import { PremiumGate } from '../shared/PremiumGate';
+import type { Card } from '@/types/review';
+
 import { ConjugationTable } from './ConjugationTable';
 import { TenseTabs } from './TenseTabs';
+import { PremiumGate } from '../shared/PremiumGate';
+
+export type { Card };
 
 interface VerbGrammarSectionProps {
   verbData: Card['verbData'];
@@ -23,8 +25,8 @@ export function VerbGrammarSection({
   const conjugation = verbData.conjugations[selectedTense];
 
   return (
-    <div className="bg-gray-50 border-t border-gray-200 px-6 py-6">
-      <div className="flex items-center justify-between mb-5 min-h-[40px]">
+    <div className="border-t border-gray-200 bg-gray-50 px-6 py-6">
+      <div className="mb-5 flex min-h-[40px] items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="text-base font-bold text-gray-900">📚</span>
           <span className="text-base font-bold text-gray-900">Conjugation</span>
