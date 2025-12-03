@@ -20,6 +20,19 @@ interface PieDataItem {
   original: string;
 }
 
+interface CustomTooltipProps {
+  active?: boolean;
+  payload?: Array<{ payload: PieDataItem }>;
+}
+
+interface LabelProps {
+  percent: number;
+}
+
+interface LegendEntry {
+  payload: PieDataItem;
+}
+
 /**
  * PieChart showing distribution of words across learning stages
  * Displays: New, Learning, Review, Mastered, Relearning
@@ -84,8 +97,7 @@ export const StageDistributionChart = React.forwardRef<HTMLDivElement, StageDist
     };
 
     // Custom tooltip
-    const CustomTooltip = (props: any) => {
-      const { active, payload } = props;
+    const CustomTooltip = ({ active, payload }: CustomTooltipProps) => {
       if (!active || !payload || payload.length === 0) return null;
 
       const data = payload[0].payload as PieDataItem;
@@ -106,8 +118,8 @@ export const StageDistributionChart = React.forwardRef<HTMLDivElement, StageDist
     };
 
     // Custom label renderer for pie slices
-    const renderLabel = (entry: any): string => {
-      return `${Math.round(entry.percent)}%`;
+    const renderLabel = ({ percent }: LabelProps): string => {
+      return `${Math.round(percent)}%`;
     };
 
     // Handle error
@@ -184,7 +196,7 @@ export const StageDistributionChart = React.forwardRef<HTMLDivElement, StageDist
             <Legend
               verticalAlign="bottom"
               height={36}
-              formatter={(_value, entry: any) =>
+              formatter={(_value, entry: LegendEntry) =>
                 `${entry.payload.name} (${Math.round(entry.payload.percent)}%)`
               }
             />

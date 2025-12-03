@@ -33,7 +33,7 @@ export const PublicRoute: React.FC<PublicRouteProps> = ({ redirectTo, children }
   const navigate = useNavigate();
 
   // Check if we're in test mode
-  const isTestMode = typeof window !== 'undefined' && (window as any).playwright === true;
+  const isTestMode = typeof window !== 'undefined' && window.playwright === true;
 
   // Use useEffect to handle redirect to ensure it happens after render
   // Skip redirect in test mode to allow tests to interact with forms
