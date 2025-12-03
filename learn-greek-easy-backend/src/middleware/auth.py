@@ -75,7 +75,7 @@ class AuthLoggingMiddleware(BaseHTTPMiddleware):
         start_time = time.perf_counter()
 
         # Process the request
-        response = await call_next(request)
+        response: Response = await call_next(request)
 
         # Calculate duration
         duration_ms = (time.perf_counter() - start_time) * 1000
