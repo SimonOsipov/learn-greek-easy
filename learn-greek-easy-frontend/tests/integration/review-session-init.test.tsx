@@ -61,9 +61,9 @@ describe('Review Session Initialization', () => {
       expect(screen.getByText(/A1 Basic Vocabulary/i)).toBeInTheDocument();
     }, { timeout: 5000 });
 
-    // Click on deck card to navigate to detail page
-    const deckCard = screen.getByText(/A1 Basic Vocabulary/i).closest('a');
-    expect(deckCard).toBeInTheDocument();
+    // Verify deck card is visible (the card is wrapped in a div with role="listitem")
+    const deckTitle = screen.getByText(/A1 Basic Vocabulary/i);
+    expect(deckTitle).toBeInTheDocument();
 
     // Note: Full navigation flow is tested in e2e tests
     // This integration test verifies the review store can initialize a session
@@ -107,8 +107,9 @@ describe('Review Session Initialization', () => {
     expect(currentCardIndex).toBe(0);
 
     // Progress should be visible in the UI (e.g., "Card 1 of 10")
-    const progressText = screen.getByText(new RegExp(`Card\\s+1\\s+of\\s+${totalCards}`, 'i'));
-    expect(progressText).toBeInTheDocument();
+    // Use getAllByText since there might be multiple progress indicators
+    const progressElements = screen.getAllByText(new RegExp(`Card\\s+1\\s+of\\s+${totalCards}`, 'i'));
+    expect(progressElements.length).toBeGreaterThan(0);
   });
 
   it('should handle empty deck gracefully', async () => {
