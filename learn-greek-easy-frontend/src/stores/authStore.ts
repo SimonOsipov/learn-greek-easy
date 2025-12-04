@@ -77,7 +77,8 @@ export const useAuthStore = create<AuthState>()(
 
         try {
           // Call backend API to exchange Google token for our tokens
-          const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+          // Use relative URL for nginx proxy in production, or VITE_API_URL for dev
+          const apiUrl = import.meta.env.VITE_API_URL || '';
           const response = await fetch(`${apiUrl}/api/v1/auth/google`, {
             method: 'POST',
             headers: {
