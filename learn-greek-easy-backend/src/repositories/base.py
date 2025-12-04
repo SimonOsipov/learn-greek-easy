@@ -1,5 +1,7 @@
 """Base repository with generic CRUD operations."""
 
+from __future__ import annotations
+
 from typing import Any, Generic, Type, TypeVar
 from uuid import UUID
 
