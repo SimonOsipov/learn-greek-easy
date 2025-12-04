@@ -128,6 +128,7 @@ jobs:
   e2e-tests:
     name: E2E Tests (Playwright)
     runs-on: ubuntu-latest
+    needs: [unit-tests, backend-tests]
 
     steps:
       - name: Checkout code
@@ -189,6 +190,16 @@ jobs:
           --health-timeout 5s
           --health-retries 5
 
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -229,6 +240,7 @@ jobs:
         working-directory: learn-greek-easy-backend
         env:
           TEST_DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5433/test_learn_greek
+          REDIS_URL: redis://localhost:6379/0
         run: |
           # Clean stale coverage files from previous runs
           rm -f .coverage .coverage.*

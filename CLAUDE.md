@@ -2,19 +2,21 @@
 
 ## MCP Servers (Model Context Protocol)
 
-**3 MCP servers are available** - use them to enhance development workflow:
+**4 MCP servers are available** - use them to enhance development workflow:
 
 | Server | Prefix | Purpose |
 |--------|--------|---------|
-| **Context7** | `mcp__context7__*` | Library documentation lookup |
+| **Context7** | `mcp__context7__*` | Documentation for libraries, APIs, languages, databases |
 | **Playwright** | `mcp__playwright__*` | Browser automation, screenshots, testing |
 | **GitHub** | `mcp__github__*` | Repos, issues, PRs, code search |
+| **Railway** | `mcp__railway-mcp-server__*` | Cloud deployment, environments, variables |
 
 ### Usage Guidelines
 
 1. **Context7 (Documentation)** - **CRITICAL: Use before writing code**
    - Always verify API signatures and usage patterns before implementation
    - Look up latest docs for any library/framework being used
+   - Use for: libraries, frameworks, APIs, programming languages, databases, ORMs, etc.
    - Tools: `resolve-library-id` → `get-library-docs`
 
 2. **Playwright (Browser Automation)**
@@ -26,6 +28,13 @@
    - Search code across repositories
    - Manage issues and pull requests
    - Review commits and branches
+
+4. **Railway (Cloud Deployment)**
+   - Deploy applications and templates
+   - Manage environments and variables
+   - View logs and deployments
+   - Link projects and services
+   - **⚠️ NO DESTRUCTIVE ACTIONS AVAILABLE** - For delete/destroy operations, guide the user to perform them manually via Railway dashboard or CLI
 
 ---
 

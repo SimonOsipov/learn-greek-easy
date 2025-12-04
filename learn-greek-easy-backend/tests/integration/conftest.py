@@ -4,6 +4,7 @@ This module provides fixtures specifically for integration tests:
 - URL helper fixtures for API endpoints
 - Test data fixtures for common scenarios
 - Integration-specific utilities
+- Factory session binding (autouse for integration tests only)
 
 Note: Database fixtures are available from the global conftest.py
 (tests/conftest.py) which imports them from tests/fixtures/database.py.
@@ -19,7 +20,37 @@ Usage:
         assert response.status_code == 200
 """
 
+from collections.abc import Generator
+
 import pytest
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from tests.factories.base import BaseFactory
+
+# =============================================================================
+# Factory Session Binding
+# =============================================================================
+
+
+@pytest.fixture(autouse=True)
+def bind_factory_session(db_session: AsyncSession) -> Generator[None, None, None]:
+    """Bind the database session to all factories for integration tests.
+
+    This fixture automatically binds the db_session to BaseFactory,
+    making it available to all factory classes in integration tests.
+
+    The binding is done before each test and cleared after.
+
+    Args:
+        db_session: The test database session fixture.
+
+    Yields:
+        None: Allows the test to run.
+    """
+    BaseFactory._session = db_session
+    yield
+    BaseFactory._session = None
+
 
 # =============================================================================
 # API URL Helper Fixtures
@@ -383,6 +414,8 @@ def failed_review_data(test_card) -> dict:
 # =============================================================================
 
 __all__ = [
+    # Factory session binding
+    "bind_factory_session",
     # URL fixtures
     "api_base_url",
     "auth_url",

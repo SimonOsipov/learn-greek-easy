@@ -21,6 +21,7 @@ Example Usage:
 """
 
 import re
+import secrets
 from datetime import datetime, timedelta
 from typing import List, Optional, Tuple
 from uuid import UUID
@@ -246,6 +247,39 @@ def validate_password_strength(password: str) -> Tuple[bool, List[str]]:  # noqa
 
 
 # ============================================================================
+# Token ID Generation
+# ============================================================================
+
+
+def generate_token_id() -> str:
+    """Generate a unique, cryptographically secure token ID (jti).
+
+    This ID is used to uniquely identify refresh tokens for Redis storage
+    and revocation. It uses secrets.token_urlsafe which is suitable for
+    security-sensitive applications.
+
+    Returns:
+        str: A 22-character URL-safe base64 encoded random string.
+             (16 bytes of randomness = 128 bits of entropy)
+
+    Security Notes:
+        - Uses secrets module (CSPRNG) for cryptographic security
+        - 128 bits of entropy is sufficient for token identification
+        - URL-safe encoding avoids issues in Redis keys
+
+    Example:
+        >>> token_id = generate_token_id()
+        >>> print(f"Token ID: {token_id}")
+        Token ID: Ks9J_x2mNpQ3rT5aB7cD
+        >>> len(token_id)
+        22
+    """
+    # token_urlsafe(16) generates 16 random bytes and encodes as URL-safe base64
+    # Result is approximately 22 characters
+    return secrets.token_urlsafe(16)
+
+
+# ============================================================================
 # JWT Token Generation
 # ============================================================================
 
@@ -307,48 +341,59 @@ def create_access_token(user_id: UUID) -> tuple[str, datetime]:
     return token, expires_at
 
 
-def create_refresh_token(user_id: UUID) -> tuple[str, datetime]:
+def create_refresh_token(user_id: UUID, token_id: str | None = None) -> tuple[str, datetime, str]:
     """Create a JWT refresh token for obtaining new access tokens.
 
     Refresh tokens are long-lived (30 days) and used to obtain new access
-    tokens without re-entering credentials. They MUST be stored in the
-    database to enable revocation (logout, password change).
+    tokens without re-entering credentials. They can be stored in Redis
+    (primary) or PostgreSQL (fallback) for session management and revocation.
 
     Args:
         user_id (UUID): The unique identifier of the user.
+        token_id (str | None): Optional unique token identifier (jti claim).
+            If not provided, a new token_id will be generated using
+            generate_token_id(). This ID is used as the Redis key and
+            for session identification.
 
     Returns:
-        tuple[str, datetime]: A tuple containing:
+        tuple[str, datetime, str]: A tuple containing:
             - str: The encoded JWT token string
             - datetime: The expiration timestamp (UTC)
+            - str: The token_id (jti) for Redis storage/revocation
 
     Raises:
         None: This function does not raise exceptions.
 
     Security Notes:
         - Token expires after jwt_refresh_token_expire_days (default: 30)
-        - MUST be stored in database (RefreshToken model)
+        - Contains "jti" claim for unique token identification
         - Contains "type": "refresh" to prevent using as access token
         - Should be revoked on logout or password change
-        - Uses same secret and algorithm as access tokens
+        - Redis storage preferred over PostgreSQL for performance
 
     Example:
         >>> from uuid import uuid4
         >>> user_id = uuid4()
-        >>> token, expires_at = create_refresh_token(user_id)
+        >>> token, expires_at, token_id = create_refresh_token(user_id)
         >>> print(f"Token: {token[:50]}...")
         Token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOi...
-        >>> # This token MUST be stored in the database
-        >>> # refresh_token_record = RefreshToken(user_id=user_id, token=token, expires_at=expires_at)
+        >>> print(f"Token ID (jti): {token_id}")
+        Token ID (jti): Ks9J_x2mNpQ3rT5aB7cD
+        >>> # Store in Redis: refresh:{user_id}:{token_id} -> session_data
     """
     now = datetime.utcnow()
     expires_at = now + timedelta(days=settings.jwt_refresh_token_expire_days)
+
+    # Generate token_id if not provided
+    if token_id is None:
+        token_id = generate_token_id()
 
     payload = {
         "sub": str(user_id),  # Subject: user ID
         "exp": expires_at,  # Expiration time
         "iat": now,  # Issued at
         "type": "refresh",  # Token type for validation
+        "jti": token_id,  # JWT ID for unique identification and revocation
     }
 
     # Encode the JWT token
@@ -358,7 +403,7 @@ def create_refresh_token(user_id: UUID) -> tuple[str, datetime]:
         algorithm=settings.jwt_algorithm,
     )
 
-    return token, expires_at
+    return token, expires_at, token_id
 
 
 # ============================================================================
@@ -462,6 +507,89 @@ def verify_token(token: str, token_type: str = "access") -> UUID:
         raise TokenInvalidException(detail=str(e))
 
 
+def verify_refresh_token_with_jti(token: str) -> tuple[UUID, str | None]:
+    """Verify a refresh token and extract both user_id and jti (token_id).
+
+    This function is specifically for refresh tokens and extracts the jti
+    claim which is used for Redis-based session management. It handles
+    both new tokens (with jti) and legacy tokens (without jti).
+
+    Args:
+        token (str): The JWT refresh token string to verify.
+
+    Returns:
+        tuple[UUID, str | None]: A tuple containing:
+            - UUID: The user_id extracted from the token's "sub" claim
+            - str | None: The token_id (jti claim) or None for legacy tokens
+
+    Raises:
+        TokenExpiredException: If the token has expired (exp claim).
+        TokenInvalidException: If the token is invalid for any reason:
+            - Invalid signature (wrong secret key)
+            - Invalid format (malformed JWT)
+            - Wrong token type (not a refresh token)
+            - Missing required claims (sub, type)
+            - Invalid UUID format in sub claim
+
+    Security Notes:
+        - Always verifies token type is "refresh"
+        - Returns None for jti if the token is a legacy token (before Redis sessions)
+        - For tokens with jti, you MUST also verify the session exists in Redis
+        - For tokens without jti, fall back to PostgreSQL verification
+
+    Example:
+        >>> from uuid import uuid4
+        >>> user_id = uuid4()
+        >>> # Verify new-style token with jti
+        >>> token, expires_at, token_id = create_refresh_token(user_id)
+        >>> verified_user_id, verified_jti = verify_refresh_token_with_jti(token)
+        >>> assert verified_user_id == user_id
+        >>> assert verified_jti == token_id
+        >>>
+        >>> # Legacy tokens return None for jti
+        >>> # legacy_token = ... (old token without jti claim)
+        >>> # verified_user_id, verified_jti = verify_refresh_token_with_jti(legacy_token)
+        >>> # assert verified_jti is None  # Fall back to PostgreSQL
+    """
+    try:
+        # Decode and verify the JWT token
+        payload = jwt.decode(
+            token,
+            settings.jwt_secret_key,
+            algorithms=[settings.jwt_algorithm],
+        )
+
+        # Verify token type is "refresh"
+        if payload.get("type") != "refresh":
+            raise TokenInvalidException(detail="Invalid token type, expected refresh")
+
+        # Extract user_id from "sub" claim
+        user_id_str = payload.get("sub")
+        if not user_id_str:
+            raise TokenInvalidException(detail="Token missing subject claim")
+
+        # Convert string UUID to UUID object
+        try:
+            user_id = UUID(user_id_str)
+        except (ValueError, TypeError) as e:
+            raise TokenInvalidException(detail=f"Invalid user ID format: {e}")
+
+        # Extract jti (token_id) - may be None for legacy tokens
+        jti = payload.get("jti")
+
+        return user_id, jti
+
+    except JWTError as e:
+        error_str = str(e).lower()
+
+        # Check if this is an expiration error
+        if "expired" in error_str or "signature has expired" in error_str:
+            raise TokenExpiredException()
+
+        # All other JWT errors are considered invalid tokens
+        raise TokenInvalidException(detail=str(e))
+
+
 # ============================================================================
 # Token Extraction from HTTP Headers
 # ============================================================================
@@ -536,4 +664,7 @@ __all__ = [
     "verify_token",
     "extract_token_from_header",
     "security_scheme",
+    # Session management (Task 05.02)
+    "generate_token_id",
+    "verify_refresh_token_with_jti",
 ]

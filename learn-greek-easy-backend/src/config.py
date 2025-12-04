@@ -3,7 +3,7 @@
 from functools import lru_cache
 from typing import Any, List, Optional
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -53,6 +53,58 @@ class Settings(BaseSettings):
     )
     cache_ttl_seconds: int = Field(default=300, description="Default cache TTL")
     session_ttl_seconds: int = Field(default=1800, description="Session TTL")
+
+    # Session Storage Configuration
+    session_storage_backend: str = Field(
+        default="redis",
+        description="Session storage backend: 'redis' (primary) or 'postgres' (fallback)",
+    )
+    session_key_prefix: str = Field(
+        default="refresh:",
+        description="Redis key prefix for refresh token sessions",
+    )
+    session_ttl_days: int = Field(
+        default=30,
+        description="Session TTL in days (should match jwt_refresh_token_expire_days)",
+    )
+
+    # Cache Configuration
+    cache_enabled: bool = Field(
+        default=True,
+        description="Enable Redis caching for application data",
+    )
+    cache_key_prefix: str = Field(
+        default="cache",
+        description="Redis key prefix for cached data (separate from sessions)",
+    )
+    cache_default_ttl: int = Field(
+        default=300,
+        description="Default cache TTL in seconds (5 minutes)",
+    )
+    cache_deck_list_ttl: int = Field(
+        default=300,
+        description="Deck list cache TTL in seconds (5 minutes)",
+    )
+    cache_deck_detail_ttl: int = Field(
+        default=600,
+        description="Individual deck cache TTL in seconds (10 minutes)",
+    )
+    cache_cards_by_deck_ttl: int = Field(
+        default=300,
+        description="Cards by deck cache TTL in seconds (5 minutes)",
+    )
+    cache_user_progress_ttl: int = Field(
+        default=60,
+        description="User progress cache TTL in seconds (1 minute)",
+    )
+    cache_due_cards_ttl: int = Field(
+        default=30,
+        description="Due cards cache TTL in seconds (30 seconds - must be fresh)",
+    )
+    cache_user_stats_ttl: int = Field(
+        default=120,
+        description="User statistics cache TTL in seconds (2 minutes)",
+    )
 
     # =========================================================================
     # Authentication & Security
@@ -110,10 +162,23 @@ class Settings(BaseSettings):
     )
     cors_allow_headers: List[str] = Field(default=["*"], description="Allowed headers")
 
+    @model_validator(mode="before")
+    @classmethod
+    def preprocess_list_fields(cls, data: Any) -> Any:
+        """Preprocess comma-separated string fields to lists before JSON parsing."""
+        if isinstance(data, dict):
+            list_fields = ["cors_origins", "cors_allow_methods", "cors_allow_headers"]
+            for field in list_fields:
+                if field in data and isinstance(data[field], str):
+                    # Don't process if already valid JSON array
+                    if not data[field].strip().startswith("["):
+                        data[field] = [item.strip() for item in data[field].split(",")]
+        return data
+
     @field_validator("cors_origins", "cors_allow_methods", "cors_allow_headers", mode="before")
     @classmethod
     def parse_list_fields(cls, v: Any) -> List[str]:
-        """Parse list fields from string or list."""
+        """Parse list fields from string or list (fallback for JSON arrays)."""
         if isinstance(v, str):
             return [item.strip() for item in v.split(",")]
         if isinstance(v, list):

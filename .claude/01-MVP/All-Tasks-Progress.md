@@ -5,8 +5,8 @@
 |------|-------|-----------|-------------|-------------|---|
 | Frontend | 11 | 11 | 0 | 0 | 100% |
 | Backend | 15 | 3 | 1 | 11 | 27% |
-| Infrastructure | 8 | 8 | 0 | 0 | 100% |
-| Deployment | 9 | 0 | 0 | 9 | 0% |
+| Infrastructure | 9 | 9 | 0 | 0 | 100% |
+| Deployment | 9 | 1 | 0 | 8 | 11% |
 
 ---
 
@@ -87,6 +87,8 @@
 - [x] CI linting & formatting (02.04 complete - frontend-lint + backend-lint jobs, PR #3)
 - [x] Environment variables management (.env.example complete)
 - [x] Redis setup (dev + prod, health checks, AOF persistence, connection pooling)
+- [x] Redis session storage (refresh tokens in Redis, jti claim, token rotation)
+- [x] Redis caching layer (CacheService, @cached decorator, 54 tests)
 - [x] Health endpoints (/health, /health/live, /health/ready with DB + Redis checks)
 - [x] CLAUDE.md documentation (Docker, health endpoints, environment variables, pre-commit)
 - [x] ~~Celery workers~~ (deferred - not needed for MVP)
@@ -102,5 +104,6 @@
 
 ## Deployment
 
+**Hosting**: ✅ Railway selected (Free trial → Hobby tier ~$20-30/mo)
 **Frontend**: ✅ Dockerized (88.7 MB image, Nginx, health checks)
 **Backend**: ✅ Dockerized (383 MB image, multi-stage, non-root)
