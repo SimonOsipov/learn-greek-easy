@@ -136,6 +136,7 @@ This document tracks all backend development tasks for the MVP.
 - ✅ 04.08: Create test utilities and helpers (40+ functions)
 - ✅ 04.09: Establish testing conventions
 - ✅ 04.10: Document testing best practices (TESTING.md 2054 lines)
+- ✅ 04.04.01: Fix failing tests (2025-12-04) - Backend: 452 passed, Frontend: 694 passed/74 skipped
 
 **Key Deliverables**:
 - ✅ `tests/conftest.py` - Global fixtures and configuration
