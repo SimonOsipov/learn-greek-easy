@@ -49,6 +49,8 @@ describe('Review Session Initialization', () => {
     // Clean up all session/review data
     localStorage.removeItem('learn-greek-easy:review-data');
     sessionStorage.removeItem('learn-greek-easy:active-session');
+    // Reset deck ID after each test
+    mockParams.deckId = 'deck-a1-basics';
   });
 
   it('should start review session from deck page', async () => {

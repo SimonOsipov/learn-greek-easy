@@ -183,15 +183,16 @@ class MockAuthAPI {
     await this.delay(800);
 
     // Extract user ID from refresh token (mock implementation)
+    // Refresh token format: refresh.mock.{base64UserId}.{timestamp}.{random}
     const parts = refreshToken.split('.');
-    if (parts.length < 3 || !parts[1]) {
+    if (parts.length < 4 || !parts[2]) {
       throw {
         code: 'INVALID_TOKEN',
         message: 'Invalid refresh token',
       } as AuthError;
     }
 
-    const userId = atob(parts[1]);
+    const userId = atob(parts[2]);
     const user = this.users.find((u) => u.id === userId);
 
     if (!user) {

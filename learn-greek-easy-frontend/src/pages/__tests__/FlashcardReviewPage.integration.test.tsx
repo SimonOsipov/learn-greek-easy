@@ -24,7 +24,7 @@ import { FlashcardReviewPage } from '../FlashcardReviewPage';
 
 // Mock react-router-dom for navigation and params
 const mockNavigate = vi.fn();
-const mockParams = { deckId: 'greek-alphabet-a1' };
+const mockParams = { deckId: 'deck-a1-basics' };
 
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom');
@@ -44,6 +44,9 @@ describe('FlashcardReviewPage - Session Initialization', () => {
     mockNavigate.mockClear();
     vi.clearAllMocks();
 
+    // Reset to valid deck ID
+    mockParams.deckId = 'deck-a1-basics';
+
     // Login user
     const authStore = useAuthStore.getState();
     await authStore.login('demo@learngreekeasy.com', 'Demo123!');
@@ -59,6 +62,8 @@ describe('FlashcardReviewPage - Session Initialization', () => {
   afterEach(() => {
     // Clean up any active sessions
     sessionStorage.removeItem('learn-greek-easy:active-session');
+    // Reset deck ID after each test
+    mockParams.deckId = 'deck-a1-basics';
   });
 
   it('should start review session on mount and display first card', async () => {
@@ -205,7 +210,7 @@ describe('FlashcardReviewPage - Session Initialization', () => {
     if (sessionData) {
       const parsedSession = JSON.parse(sessionData);
       expect(parsedSession.sessionId).toBeTruthy();
-      expect(parsedSession.deckId).toBe('greek-alphabet-a1');
+      expect(parsedSession.deckId).toBe('deck-a1-basics');
       expect(parsedSession.cards).toBeTruthy();
     }
   });
@@ -218,16 +223,19 @@ describe('FlashcardReviewPage - Card Flip and Rating', () => {
     mockNavigate.mockClear();
     vi.clearAllMocks();
 
+    // Reset to valid deck ID
+    mockParams.deckId = 'deck-a1-basics';
+
     // Setup authenticated user and decks
     await useAuthStore.getState().login('demo@learngreekeasy.com', 'Demo123!');
     await useDeckStore.getState().fetchDecks();
     useReviewStore.getState().resetSession();
-
-    mockParams.deckId = 'greek-alphabet-a1';
   });
 
   afterEach(() => {
     sessionStorage.removeItem('learn-greek-easy:active-session');
+    // Reset deck ID after each test
+    mockParams.deckId = 'deck-a1-basics';
   });
 
   it('should flip card when clicking the card area', async () => {
@@ -519,15 +527,18 @@ describe('FlashcardReviewPage - Keyboard Shortcuts', () => {
     mockNavigate.mockClear();
     vi.clearAllMocks();
 
+    // Reset to valid deck ID
+    mockParams.deckId = 'deck-a1-basics';
+
     await useAuthStore.getState().login('demo@learngreekeasy.com', 'Demo123!');
     await useDeckStore.getState().fetchDecks();
     useReviewStore.getState().resetSession();
-
-    mockParams.deckId = 'greek-alphabet-a1';
   });
 
   afterEach(() => {
     sessionStorage.removeItem('learn-greek-easy:active-session');
+    // Reset deck ID after each test
+    mockParams.deckId = 'deck-a1-basics';
   });
 
   it('should flip card when pressing Space key', async () => {
@@ -736,15 +747,18 @@ describe('FlashcardReviewPage - Session Completion', () => {
     mockNavigate.mockClear();
     vi.clearAllMocks();
 
+    // Reset to valid deck ID
+    mockParams.deckId = 'deck-a1-basics';
+
     await useAuthStore.getState().login('demo@learngreekeasy.com', 'Demo123!');
     await useDeckStore.getState().fetchDecks();
     useReviewStore.getState().resetSession();
-
-    mockParams.deckId = 'greek-alphabet-a1';
   });
 
   afterEach(() => {
     sessionStorage.removeItem('learn-greek-easy:active-session');
+    // Reset deck ID after each test
+    mockParams.deckId = 'deck-a1-basics';
   });
 
   it('should trigger session end when all cards are reviewed', async () => {
@@ -853,6 +867,9 @@ describe('FlashcardReviewPage - Error Handling', () => {
     mockNavigate.mockClear();
     vi.clearAllMocks();
 
+    // Reset to valid deck ID
+    mockParams.deckId = 'deck-a1-basics';
+
     await useAuthStore.getState().login('demo@learngreekeasy.com', 'Demo123!');
     await useDeckStore.getState().fetchDecks();
     useReviewStore.getState().resetSession();
@@ -860,6 +877,8 @@ describe('FlashcardReviewPage - Error Handling', () => {
 
   afterEach(() => {
     sessionStorage.removeItem('learn-greek-easy:active-session');
+    // Reset deck ID after each test
+    mockParams.deckId = 'deck-a1-basics';
   });
 
   it('should handle missing deckId parameter gracefully', async () => {

@@ -32,17 +32,20 @@ describe('Review Keyboard Shortcuts', () => {
     mockNavigate.mockClear();
     vi.clearAllMocks();
 
+    // Reset to valid deck ID FIRST
+    mockParams.deckId = 'deck-a1-basics';
+
     await useAuthStore.getState().login('demo@learngreekeasy.com', 'Demo123!');
     await useDeckStore.getState().fetchDecks();
     useReviewStore.getState().resetSession();
-
-    mockParams.deckId = 'deck-a1-basics';
   });
 
   afterEach(() => {
     // Clean up all session/review data
     localStorage.removeItem('learn-greek-easy:review-data');
     sessionStorage.removeItem('learn-greek-easy:active-session');
+    // Reset deck ID after each test
+    mockParams.deckId = 'deck-a1-basics';
   });
 
   it('should flip card with Space key', async () => {
