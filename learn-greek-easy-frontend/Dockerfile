@@ -32,13 +32,12 @@ RUN chmod +x /docker-entrypoint.sh
 # Copy built assets from builder
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Railway sets PORT env var, default to 80
+# Railway sets PORT env var at runtime, default to 80
 ENV PORT=80
 ENV BACKEND_URL=http://backend:8000
 
-# Health check (uses the PORT variable)
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD wget --quiet --tries=1 --spider http://localhost:${PORT}/health || exit 1
+# Note: No Docker HEALTHCHECK - Railway handles health checks via /health endpoint
+# Docker HEALTHCHECK uses build-time PORT value, not runtime, causing failures
 
 # Start nginx via entrypoint
 ENTRYPOINT ["/docker-entrypoint.sh"]
