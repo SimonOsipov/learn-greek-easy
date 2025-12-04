@@ -1,9 +1,10 @@
 """Application configuration management using Pydantic Settings."""
 
+import json
 from functools import lru_cache
-from typing import Any, List, Optional
+from typing import List, Optional
 
-from pydantic import Field, field_validator, model_validator
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -17,6 +18,7 @@ class Settings(BaseSettings):
         extra="ignore",
         env_prefix="",
         env_nested_delimiter="__",
+        populate_by_name=True,  # Allow using aliases (CORS_ORIGINS -> cors_origins_raw)
     )
 
     # =========================================================================
@@ -151,39 +153,52 @@ class Settings(BaseSettings):
     # =========================================================================
     # CORS
     # =========================================================================
-    cors_origins: List[str] = Field(
-        default=["http://localhost:5173", "http://localhost:3000"],
-        description="Allowed CORS origins",
+    # Raw string fields - pydantic_settings tries to JSON-parse List[str] fields
+    # BEFORE validators run, causing failures with comma-separated values.
+    # We store as strings and parse via computed properties.
+    cors_origins_raw: str = Field(
+        default="http://localhost:5173,http://localhost:3000",
+        alias="cors_origins",
+        description="Allowed CORS origins (comma-separated or JSON array)",
     )
     cors_allow_credentials: bool = Field(default=True, description="Allow credentials")
-    cors_allow_methods: List[str] = Field(
-        default=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-        description="Allowed HTTP methods",
+    cors_allow_methods_raw: str = Field(
+        default="GET,POST,PUT,DELETE,PATCH,OPTIONS",
+        alias="cors_allow_methods",
+        description="Allowed HTTP methods (comma-separated or JSON array)",
     )
-    cors_allow_headers: List[str] = Field(default=["*"], description="Allowed headers")
+    cors_allow_headers_raw: str = Field(
+        default="*",
+        alias="cors_allow_headers",
+        description="Allowed headers (comma-separated or JSON array)",
+    )
 
-    @model_validator(mode="before")
-    @classmethod
-    def preprocess_list_fields(cls, data: Any) -> Any:
-        """Preprocess comma-separated string fields to lists before JSON parsing."""
-        if isinstance(data, dict):
-            list_fields = ["cors_origins", "cors_allow_methods", "cors_allow_headers"]
-            for field in list_fields:
-                if field in data and isinstance(data[field], str):
-                    # Don't process if already valid JSON array
-                    if not data[field].strip().startswith("["):
-                        data[field] = [item.strip() for item in data[field].split(",")]
-        return data
+    @staticmethod
+    def _parse_list_from_string(value: str) -> List[str]:
+        """Parse a list from either JSON array or comma-separated string."""
+        value = value.strip()
+        if value.startswith("["):
+            try:
+                parsed: List[str] = json.loads(value)
+                return parsed
+            except json.JSONDecodeError:
+                pass
+        return [item.strip() for item in value.split(",") if item.strip()]
 
-    @field_validator("cors_origins", "cors_allow_methods", "cors_allow_headers", mode="before")
-    @classmethod
-    def parse_list_fields(cls, v: Any) -> List[str]:
-        """Parse list fields from string or list (fallback for JSON arrays)."""
-        if isinstance(v, str):
-            return [item.strip() for item in v.split(",")]
-        if isinstance(v, list):
-            return list(v)
-        return []
+    @property
+    def cors_origins(self) -> List[str]:
+        """Get CORS origins as a list."""
+        return self._parse_list_from_string(self.cors_origins_raw)
+
+    @property
+    def cors_allow_methods(self) -> List[str]:
+        """Get allowed methods as a list."""
+        return self._parse_list_from_string(self.cors_allow_methods_raw)
+
+    @property
+    def cors_allow_headers(self) -> List[str]:
+        """Get allowed headers as a list."""
+        return self._parse_list_from_string(self.cors_allow_headers_raw)
 
     # =========================================================================
     # Rate Limiting
