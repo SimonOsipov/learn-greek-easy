@@ -61,6 +61,64 @@ cd /Users/samosipov/Downloads/learn-greek-easy/learn-greek-easy-backend && /User
 
 ---
 
+## Database Migrations (Alembic)
+
+**CRITICAL**: When you modify any SQLAlchemy model in `src/db/models.py`, you MUST create an Alembic migration.
+
+### Why?
+- **CI/CD tests** use `Base.metadata.create_all()` (schema from models directly)
+- **Production** uses Alembic migrations (incremental changes to preserve data)
+- Without a migration, production database won't have your changes!
+
+### Creating a Migration
+
+```bash
+# After modifying models, generate migration:
+cd /Users/samosipov/Downloads/learn-greek-easy/learn-greek-easy-backend && \
+/Users/samosipov/.local/bin/poetry run alembic revision --autogenerate -m "description_of_change"
+
+# Example: Added new column to User model
+/Users/samosipov/.local/bin/poetry run alembic revision --autogenerate -m "add_avatar_url_to_users"
+
+# Review the generated migration file in alembic/versions/
+# Then apply locally to verify:
+/Users/samosipov/.local/bin/poetry run alembic upgrade head
+```
+
+### Migration Workflow
+
+```
+1. Modify model in src/db/models.py
+2. Run: alembic revision --autogenerate -m "description"
+3. Review generated migration in alembic/versions/
+4. Test locally: alembic upgrade head
+5. Commit migration file with your changes
+6. On deploy: Railway runs migrations (if RUN_MIGRATIONS=true)
+```
+
+### Common Commands
+
+```bash
+# Check current migration version
+/Users/samosipov/.local/bin/poetry run alembic current
+
+# View migration history
+/Users/samosipov/.local/bin/poetry run alembic history
+
+# Upgrade to latest
+/Users/samosipov/.local/bin/poetry run alembic upgrade head
+
+# Downgrade one step (careful in production!)
+/Users/samosipov/.local/bin/poetry run alembic downgrade -1
+```
+
+### Railway Production
+
+Set `RUN_MIGRATIONS=true` in Railway environment variables for auto-migrations on deploy.
+Or run manually: `railway run alembic upgrade head`
+
+---
+
 ## Docker
 
 ### Development (Full Stack with Hot Reload)

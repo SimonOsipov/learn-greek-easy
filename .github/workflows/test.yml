@@ -91,7 +91,49 @@ jobs:
         working-directory: learn-greek-easy-backend
         run: poetry run mypy src/
 
-  # Job 3: Unit & Integration Tests
+  # Job 3: Alembic Migration Check (runs in parallel with linting)
+  alembic-check:
+    name: Alembic Migration Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: 2.0.0
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Load cached venv
+        id: cached-poetry-dependencies
+        uses: actions/cache@v4
+        with:
+          path: learn-greek-easy-backend/.venv
+          key: venv-alembic-${{ runner.os }}-${{ hashFiles('learn-greek-easy-backend/poetry.lock') }}
+          restore-keys: |
+            venv-alembic-${{ runner.os }}-
+
+      - name: Install dependencies
+        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+        working-directory: learn-greek-easy-backend
+        run: poetry install --no-interaction --no-root
+
+      - name: Install project
+        working-directory: learn-greek-easy-backend
+        run: poetry install --no-interaction
+
+      - name: Check for pending migrations
+        working-directory: learn-greek-easy-backend
+        run: poetry run alembic check
+
+  # Job 4: Unit & Integration Tests
   unit-tests:
     name: Unit & Integration Tests
     runs-on: ubuntu-latest
@@ -124,7 +166,7 @@ jobs:
           name: codecov-umbrella
           fail_ci_if_error: false
 
-  # Job 4: E2E Tests
+  # Job 5: E2E Tests
   e2e-tests:
     name: E2E Tests
     runs-on: ubuntu-latest
@@ -169,7 +211,7 @@ jobs:
           path: learn-greek-easy-frontend/test-results/
           retention-days: 7
 
-  # Job 5: Backend Tests
+  # Job 6: Backend Tests
   backend-tests:
     name: Backend Tests
     runs-on: ubuntu-latest
