@@ -122,7 +122,7 @@ describe('mockDeckAPI', () => {
       expect(deck).toBeDefined();
       expect(deck.id).toBe(testDeckId);
       expect(deck).toHaveProperty('title');
-      expect(deck).toHaveProperty('cards');
+      expect(deck).toHaveProperty('cardCount');
     });
 
     it('should inject progress data for deck', async () => {
@@ -520,10 +520,11 @@ describe('mockDeckAPI', () => {
       expect(deck).toHaveProperty('level');
       expect(deck).toHaveProperty('category');
       expect(deck).toHaveProperty('cardCount');
-      expect(deck).toHaveProperty('cards');
+      // Note: Deck type has cardCount, not cards array
       expect(deck).toHaveProperty('isPremium');
-      expect(deck).toHaveProperty('color');
-      expect(deck).toHaveProperty('icon');
+      // Note: Deck type doesn't have color/icon - those are UI concerns handled elsewhere
+      expect(deck).toHaveProperty('tags');
+      expect(deck).toHaveProperty('estimatedTime');
     });
 
     it('should return progress with complete structure', async () => {

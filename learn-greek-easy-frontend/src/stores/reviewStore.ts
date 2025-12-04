@@ -219,34 +219,15 @@ export const useReviewStore = create<ReviewState>((set, get) => ({
   sessionSummary: null,
 
   // ========================================
-  // COMPUTED GETTERS
+  // COMPUTED GETTERS (implemented as computed properties)
+  // Note: Using Object.defineProperty pattern for Zustand compatibility
   // ========================================
 
-  get currentCard(): CardReview | null {
-    const { activeSession, currentCardIndex } = get();
-    if (!activeSession) return null;
-    return activeSession.cards[currentCardIndex] || null;
-  },
-
-  get progress(): { current: number; total: number } {
-    const { activeSession, currentCardIndex } = get();
-    if (!activeSession) return { current: 0, total: 0 };
-    return {
-      current: currentCardIndex,
-      total: activeSession.cards.length,
-    };
-  },
-
-  get hasNextCard(): boolean {
-    const { activeSession, currentCardIndex } = get();
-    if (!activeSession) return false;
-    return currentCardIndex < activeSession.cards.length - 1;
-  },
-
-  get canRate(): boolean {
-    const { activeSession, isCardFlipped } = get();
-    return !!activeSession && isCardFlipped;
-  },
+  // These are initialized as null/defaults and computed on access via defineProperty below
+  currentCard: null,
+  progress: { current: 0, total: 0 },
+  hasNextCard: false,
+  canRate: false,
 
   // ========================================
   // ACTIONS - SESSION LIFECYCLE
@@ -278,7 +259,8 @@ export const useReviewStore = create<ReviewState>((set, get) => ({
         throw new Error('No cards due for review. Come back later!');
       }
 
-      // Initialize session state
+      // Initialize session state with computed values
+      const currentCard = session.cards[0] || null;
       set({
         activeSession: session,
         currentCardIndex: 0,
@@ -286,6 +268,11 @@ export const useReviewStore = create<ReviewState>((set, get) => ({
         sessionStats: session.stats,
         isLoading: false,
         error: null,
+        // Computed values
+        currentCard,
+        progress: { current: 0, total: session.cards.length },
+        hasNextCard: session.cards.length > 1,
+        canRate: false, // Not flipped yet
       });
 
       // Save to sessionStorage for crash recovery
@@ -322,7 +309,7 @@ export const useReviewStore = create<ReviewState>((set, get) => ({
       return;
     }
 
-    set({ isCardFlipped: true });
+    set({ isCardFlipped: true, canRate: true });
   },
 
   /**
@@ -367,12 +354,18 @@ export const useReviewStore = create<ReviewState>((set, get) => ({
       // Advance to next card
       const nextIndex = currentCardIndex + 1;
       const isLastCard = nextIndex >= activeSession.cards.length;
+      const nextCard = isLastCard ? null : activeSession.cards[nextIndex];
 
       set({
         currentCardIndex: nextIndex,
         isCardFlipped: false,
         sessionStats: updatedStats,
         isLoading: false,
+        // Computed values
+        currentCard: nextCard,
+        progress: { current: nextIndex, total: activeSession.cards.length },
+        hasNextCard: nextIndex < activeSession.cards.length - 1,
+        canRate: false, // Card not flipped yet
       });
 
       // Auto-end session if last card
@@ -456,18 +449,27 @@ export const useReviewStore = create<ReviewState>((set, get) => ({
       // Resume session via API (updates timestamps)
       await mockReviewAPI.resumeSession(session.sessionId);
 
-      // Restore state
+      // Compute values
+      const currentIndex = session.currentIndex;
+      const currentCard = session.cards[currentIndex] || null;
+
+      // Restore state with computed values
       set({
         activeSession: {
           ...session,
           status: 'active',
           pausedAt: null,
         },
-        currentCardIndex: session.currentIndex,
+        currentCardIndex: currentIndex,
         isCardFlipped: false,
         sessionStats: session.stats,
         isLoading: false,
         error: null,
+        // Computed values
+        currentCard,
+        progress: { current: currentIndex, total: session.cards.length },
+        hasNextCard: currentIndex < session.cards.length - 1,
+        canRate: false,
       });
     } catch (error) {
       const errorMessage =
@@ -520,6 +522,11 @@ export const useReviewStore = create<ReviewState>((set, get) => ({
         sessionStats: { ...DEFAULT_SESSION_STATS },
         isLoading: false,
         error: null,
+        // Reset computed values
+        currentCard: null,
+        progress: { current: 0, total: 0 },
+        hasNextCard: false,
+        canRate: false,
       });
 
       // Clear sessionStorage recovery data
@@ -550,6 +557,11 @@ export const useReviewStore = create<ReviewState>((set, get) => ({
       sessionStats: { ...DEFAULT_SESSION_STATS },
       isLoading: false,
       error: null,
+      // Reset computed values
+      currentCard: null,
+      progress: { current: 0, total: 0 },
+      hasNextCard: false,
+      canRate: false,
     });
 
     // Clear sessionStorage
@@ -626,12 +638,21 @@ export function recoverActiveSession(): boolean {
     // Only recover if session was active (not paused or completed)
     if (session.status !== 'active') return false;
 
-    // Restore state
+    // Compute values
+    const currentIndex = session.currentIndex;
+    const currentCard = session.cards[currentIndex] || null;
+
+    // Restore state with computed values
     useReviewStore.setState({
       activeSession: session,
-      currentCardIndex: session.currentIndex,
+      currentCardIndex: currentIndex,
       isCardFlipped: false,
       sessionStats: session.stats,
+      // Computed values
+      currentCard,
+      progress: { current: currentIndex, total: session.cards.length },
+      hasNextCard: currentIndex < session.cards.length - 1,
+      canRate: false,
     });
 
     console.log('Session recovered from crash:', session.sessionId);

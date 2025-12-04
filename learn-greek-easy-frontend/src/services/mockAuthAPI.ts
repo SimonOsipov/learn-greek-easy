@@ -104,9 +104,9 @@ class MockAuthAPI {
       } as AuthError;
     }
 
-    // Create new user
+    // Create new user with truly unique ID (timestamp + random suffix)
     const newUser: User & { password: string } = {
-      id: `user-${Date.now()}`,
+      id: `user-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
       email: data.email,
       password: data.password,
       name: data.name,
