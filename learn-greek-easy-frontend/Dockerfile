@@ -19,6 +19,9 @@ RUN npx vite build
 # Stage 2: Production stage
 FROM nginx:alpine
 
+# Install envsubst (part of gettext)
+RUN apk add --no-cache gettext
+
 # Copy nginx config template (will be processed at runtime)
 COPY nginx.conf.template /etc/nginx/nginx.conf.template
 
