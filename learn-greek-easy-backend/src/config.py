@@ -3,7 +3,7 @@
 from functools import lru_cache
 from typing import Any, List, Optional
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -162,10 +162,23 @@ class Settings(BaseSettings):
     )
     cors_allow_headers: List[str] = Field(default=["*"], description="Allowed headers")
 
+    @model_validator(mode="before")
+    @classmethod
+    def preprocess_list_fields(cls, data: Any) -> Any:
+        """Preprocess comma-separated string fields to lists before JSON parsing."""
+        if isinstance(data, dict):
+            list_fields = ["cors_origins", "cors_allow_methods", "cors_allow_headers"]
+            for field in list_fields:
+                if field in data and isinstance(data[field], str):
+                    # Don't process if already valid JSON array
+                    if not data[field].strip().startswith("["):
+                        data[field] = [item.strip() for item in data[field].split(",")]
+        return data
+
     @field_validator("cors_origins", "cors_allow_methods", "cors_allow_headers", mode="before")
     @classmethod
     def parse_list_fields(cls, v: Any) -> List[str]:
-        """Parse list fields from string or list."""
+        """Parse list fields from string or list (fallback for JSON arrays)."""
         if isinstance(v, str):
             return [item.strip() for item in v.split(",")]
         if isinstance(v, list):

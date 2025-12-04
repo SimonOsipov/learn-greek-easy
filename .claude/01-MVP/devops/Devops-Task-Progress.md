@@ -45,10 +45,12 @@ This document tracks all DevOps-related tasks for the Learn Greek Easy MVP.
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Hosting provider selection | Pending | |
+| Hosting provider selection | ✅ Done | Railway (Free trial → Hobby tier) |
 | Domain configuration | Pending | |
-| SSL/TLS setup | Pending | |
-| Database provisioning | Pending | |
+| SSL/TLS setup | Pending | Railway provides automatic SSL |
+| Database provisioning | ✅ Done | Postgres provisioned in Railway |
+| Redis provisioning | ✅ Done | Redis provisioned in Railway |
+| Build strategy decision | ✅ Done | Railpack (Railway native), tests in GitHub CI |
 | Automated deployments | Pending | |
 | Deployment scripts | Pending | |
 | Health checks | ✅ Done | /health, /health/live, /health/ready endpoints |
@@ -86,7 +88,7 @@ This document tracks all DevOps-related tasks for the Learn Greek Easy MVP.
 | 01. Docker | 6 | 6 | 100% ✅ |
 | 02. GitHub CI/CD | 4 | 4 | 100% ✅ |
 | 03. Environment Variables | 2 | 4 | 50% |
-| 04. Production Deployment | 1 | 8 | 13% |
+| 04. Production Deployment | 5 | 10 | 50% |
 | 05. Redis | 4 | 4 | 100% ✅ |
 | 06. Celery | 0 | 5 | ⏸️ Deferred |
-| **Total** | **17** | **26** | **65%** |
+| **Total** | **21** | **28** | **75%** |
