@@ -128,6 +128,7 @@ jobs:
   e2e-tests:
     name: E2E Tests (Playwright)
     runs-on: ubuntu-latest
+    needs: [unit-tests, backend-tests]
 
     steps:
       - name: Checkout code
