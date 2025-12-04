@@ -2,7 +2,7 @@
 
 import logging
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Sequence
 
 from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
@@ -122,7 +122,7 @@ async def base_api_exception_handler(
     )
 
 
-def _sanitize_validation_errors(errors: list) -> list:
+def _sanitize_validation_errors(errors: list | Sequence) -> list:
     """Sanitize validation errors for JSON serialization.
 
     Pydantic validation errors may contain non-serializable objects
