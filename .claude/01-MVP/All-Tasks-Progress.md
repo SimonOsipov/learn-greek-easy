@@ -6,7 +6,7 @@
 | Frontend | 11 | 11 | 0 | 0 | 100% |
 | Backend | 15 | 3 | 1 | 11 | 27% |
 | Infrastructure | 9 | 9 | 0 | 0 | 100% |
-| Deployment | 9 | 1 | 0 | 8 | 11% |
+| Deployment | 9 | 9 | 0 | 0 | 100% |
 
 ---
 
@@ -102,8 +102,27 @@
 
 ---
 
-## Deployment
+## Deployment (9/9) - COMPLETE
 
-**Hosting**: ✅ Railway selected (Free trial → Hobby tier ~$20-30/mo)
-**Frontend**: ✅ Dockerized (88.7 MB image, Nginx, health checks)
-**Backend**: ✅ Dockerized (383 MB image, multi-stage, non-root)
+**Status**: ✅ COMPLETED (2025-12-04)
+
+### Completed Tasks
+- [x] Railway project setup & linking
+- [x] PostgreSQL database provisioned (Railway internal)
+- [x] Redis provisioned (Railway internal)
+- [x] Backend deployment with health checks
+- [x] Frontend deployment with nginx + dynamic PORT
+- [x] Environment variables configured (CORS, JWT, DB, Redis)
+- [x] Public domains configured
+- [x] Internal service networking (backend.railway.internal)
+- [x] Production CORS origins configured
+
+### Live URLs
+- **Frontend**: https://frontend-production-1164.up.railway.app
+- **Backend**: Internal (backend.railway.internal:8000)
+
+### Issues Fixed During Deployment
+1. **CORS_ORIGINS parsing** - pydantic_settings JSON-parses List[str] before validators
+2. **list shadowing** - BaseRepository.list() shadowed builtin in type annotations
+3. **nginx PORT** - Docker HEALTHCHECK used build-time PORT, Railway sets runtime PORT
+4. **Domain port** - Railway domain was pointing to 5173 instead of 8080
