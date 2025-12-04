@@ -1,3 +1,4 @@
+import { GoogleOAuthProvider } from '@react-oauth/google';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
@@ -102,15 +103,19 @@ function AppContent() {
 }
 
 function App() {
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
+
   return (
     <ErrorBoundary>
-      <BrowserRouter>
-        <TooltipProvider>
-          <LayoutProvider>
-            <AppContent />
-          </LayoutProvider>
-        </TooltipProvider>
-      </BrowserRouter>
+      <GoogleOAuthProvider clientId={googleClientId}>
+        <BrowserRouter>
+          <TooltipProvider>
+            <LayoutProvider>
+              <AppContent />
+            </LayoutProvider>
+          </TooltipProvider>
+        </BrowserRouter>
+      </GoogleOAuthProvider>
     </ErrorBoundary>
   );
 }

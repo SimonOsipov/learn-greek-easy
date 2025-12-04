@@ -18,6 +18,7 @@ interface AuthState {
 
   // Actions
   login: (email: string, password: string, remember?: boolean) => Promise<void>;
+  loginWithGoogle: (googleToken: string) => Promise<void>;
   register: (data: RegisterData) => Promise<void>;
   logout: () => Promise<void>;
   updateProfile: (updates: Partial<User>) => Promise<void>;
@@ -64,6 +65,79 @@ export const useAuthStore = create<AuthState>()(
           set({
             isLoading: false,
             error: error as AuthError,
+            isAuthenticated: false,
+          });
+          throw error;
+        }
+      },
+
+      // Login with Google OAuth
+      loginWithGoogle: async (googleToken: string) => {
+        set({ isLoading: true, error: null });
+
+        try {
+          // Call backend API to exchange Google token for our tokens
+          const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+          const response = await fetch(`${apiUrl}/api/v1/auth/google`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ id_token: googleToken }),
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            const errorMessage =
+              errorData.detail ||
+              errorData.error?.message ||
+              'Google sign-in failed. Please try again.';
+            throw new Error(errorMessage);
+          }
+
+          const data = await response.json();
+
+          // Transform backend response to match our User type
+          const user: User = {
+            id: data.user?.id || '',
+            email: data.user?.email || '',
+            name: data.user?.full_name || data.user?.email?.split('@')[0] || 'User',
+            role: data.user?.is_superuser ? 'admin' : 'free',
+            preferences: {
+              language: 'en',
+              dailyGoal: 20,
+              notifications: true,
+              theme: 'light',
+            },
+            stats: {
+              streak: 0,
+              wordsLearned: 0,
+              totalXP: 0,
+              joinedDate: new Date(data.user?.created_at || Date.now()),
+            },
+            createdAt: new Date(data.user?.created_at || Date.now()),
+            updatedAt: new Date(data.user?.updated_at || Date.now()),
+          };
+
+          set({
+            user,
+            token: data.access_token,
+            refreshToken: data.refresh_token,
+            isAuthenticated: true,
+            rememberMe: true, // Google users get persistent login
+            isLoading: false,
+            error: null,
+          });
+
+          // Store in sessionStorage as backup
+          sessionStorage.setItem('auth-token', data.access_token);
+        } catch (error) {
+          set({
+            isLoading: false,
+            error: {
+              code: 'GOOGLE_AUTH_FAILED',
+              message: error instanceof Error ? error.message : 'Google sign-in failed',
+            },
             isAuthenticated: false,
           });
           throw error;
