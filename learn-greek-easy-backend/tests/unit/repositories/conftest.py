@@ -107,6 +107,11 @@ async def sample_cards(db_session, sample_deck):
     await db_session.commit()
     for card in cards:
         await db_session.refresh(card)
+
+    # Refresh the deck to update its cards relationship
+    # This ensures selectinload will see the newly created cards
+    db_session.expire(sample_deck, ["cards"])
+
     return cards
 
 

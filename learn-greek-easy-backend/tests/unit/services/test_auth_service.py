@@ -26,10 +26,10 @@ class TestAuthService:
             email="test@example.com", password="SecurePass123!", full_name="Test User"
         )
 
-        # Mock database operations
-        mock_result = AsyncMock()
-        mock_result.scalar_one_or_none.return_value = None  # No existing user
-        mock_db.execute.return_value = mock_result
+        # Mock database operations - use MagicMock for result to avoid coroutine issues
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none = MagicMock(return_value=None)  # No existing user
+        mock_db.execute = AsyncMock(return_value=mock_result)
         mock_db.flush = AsyncMock()
         mock_db.commit = AsyncMock()
         mock_db.refresh = AsyncMock()
@@ -88,9 +88,9 @@ class TestAuthService:
         existing_user = MagicMock()
         existing_user.email = "existing@example.com"
 
-        mock_result = AsyncMock()
-        mock_result.scalar_one_or_none.return_value = existing_user
-        mock_db.execute.return_value = mock_result
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none = MagicMock(return_value=existing_user)
+        mock_db.execute = AsyncMock(return_value=mock_result)
 
         # Act & Assert
         with pytest.raises(EmailAlreadyExistsException) as exc_info:
@@ -111,9 +111,9 @@ class TestAuthService:
         )
 
         # Mock no existing user on initial check
-        mock_result = AsyncMock()
-        mock_result.scalar_one_or_none.return_value = None
-        mock_db.execute.return_value = mock_result
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none = MagicMock(return_value=None)
+        mock_db.execute = AsyncMock(return_value=mock_result)
         mock_db.flush = AsyncMock()
         mock_db.add = MagicMock()
         mock_db.rollback = AsyncMock()
@@ -150,9 +150,9 @@ class TestAuthService:
         mock_user.password_hash = "hashed_password"
         mock_user.is_active = True
 
-        mock_result = AsyncMock()
-        mock_result.scalar_one_or_none.return_value = mock_user
-        mock_db.execute.return_value = mock_result
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none = MagicMock(return_value=mock_user)
+        mock_db.execute = AsyncMock(return_value=mock_result)
         mock_db.add = MagicMock()
         mock_db.commit = AsyncMock()
 
@@ -193,9 +193,9 @@ class TestAuthService:
         login_data = UserLogin(email="nonexistent@example.com", password="SomePass123!")
 
         # Mock no user found
-        mock_result = AsyncMock()
-        mock_result.scalar_one_or_none.return_value = None
-        mock_db.execute.return_value = mock_result
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none = MagicMock(return_value=None)
+        mock_db.execute = AsyncMock(return_value=mock_result)
 
         # Act & Assert
         with pytest.raises(InvalidCredentialsException):
@@ -217,9 +217,9 @@ class TestAuthService:
         mock_user.email = "user@example.com"
         mock_user.password_hash = "hashed_password"
 
-        mock_result = AsyncMock()
-        mock_result.scalar_one_or_none.return_value = mock_user
-        mock_db.execute.return_value = mock_result
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none = MagicMock(return_value=mock_user)
+        mock_db.execute = AsyncMock(return_value=mock_result)
 
         with patch("src.services.auth_service.verify_password") as mock_verify:
             mock_verify.return_value = False
@@ -246,9 +246,9 @@ class TestAuthService:
         mock_user.password_hash = "hashed_password"
         mock_user.is_active = False
 
-        mock_result = AsyncMock()
-        mock_result.scalar_one_or_none.return_value = mock_user
-        mock_db.execute.return_value = mock_result
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none = MagicMock(return_value=mock_user)
+        mock_db.execute = AsyncMock(return_value=mock_result)
 
         with patch("src.services.auth_service.verify_password") as mock_verify:
             mock_verify.return_value = True
@@ -270,9 +270,9 @@ class TestAuthService:
         mock_user = MagicMock()
         mock_user.email = "found@example.com"
 
-        mock_result = AsyncMock()
-        mock_result.scalar_one_or_none.return_value = mock_user
-        mock_db.execute.return_value = mock_result
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none = MagicMock(return_value=mock_user)
+        mock_db.execute = AsyncMock(return_value=mock_result)
 
         # Act
         user = await service._get_user_by_email("found@example.com")
@@ -288,9 +288,9 @@ class TestAuthService:
         mock_db = AsyncMock()
         service = AuthService(mock_db)
 
-        mock_result = AsyncMock()
-        mock_result.scalar_one_or_none.return_value = None
-        mock_db.execute.return_value = mock_result
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none = MagicMock(return_value=None)
+        mock_db.execute = AsyncMock(return_value=mock_result)
 
         # Act
         user = await service._get_user_by_email("notfound@example.com")

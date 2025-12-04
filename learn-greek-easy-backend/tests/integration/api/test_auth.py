@@ -7,7 +7,7 @@ from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.db.models import RefreshToken, User, UserSettings
+from src.db.models import User, UserSettings
 
 
 class TestAuthEndpoints:
@@ -32,7 +32,8 @@ class TestAuthEndpoints:
         assert "access_token" in data
         assert "refresh_token" in data
         assert data["token_type"] == "bearer"
-        assert data["expires_in"] == 1800
+        # Allow 1-2 seconds variance for timing
+        assert 1798 <= data["expires_in"] <= 1800
 
         # Verify user created in database
         result = await db_session.execute(select(User).where(User.email == user_data["email"]))
@@ -51,14 +52,8 @@ class TestAuthEndpoints:
         assert settings.daily_goal == 20
         assert settings.email_notifications is True
 
-        # Verify refresh token stored
-        result = await db_session.execute(
-            select(RefreshToken).where(
-                RefreshToken.user_id == user.id,
-            )
-        )
-        refresh_token = result.scalar_one_or_none()
-        assert refresh_token is not None
+        # Note: Refresh tokens are now stored in Redis only, not in PostgreSQL.
+        # The response contains a valid refresh_token, verifying the token was generated.
 
     @pytest.mark.asyncio
     async def test_register_duplicate_email(self, client: AsyncClient, db_session: AsyncSession):
@@ -78,7 +73,9 @@ class TestAuthEndpoints:
         # Assert
         assert response.status_code == 409
         error = response.json()
-        assert "already registered" in error["detail"]
+        # Error format: {"success": false, "error": {"code": "...", "message": "..."}}
+        error_msg = error.get("detail") or error.get("error", {}).get("message", "")
+        assert "already registered" in error_msg
 
     @pytest.mark.asyncio
     async def test_register_weak_password(self, client: AsyncClient):
@@ -178,7 +175,8 @@ class TestAuthEndpoints:
         assert "access_token" in data
         assert "refresh_token" in data
         assert data["token_type"] == "bearer"
-        assert data["expires_in"] == 1800
+        # Allow 1-2 seconds variance for timing
+        assert 1798 <= data["expires_in"] <= 1800
 
     @pytest.mark.asyncio
     async def test_login_invalid_email(self, client: AsyncClient):
@@ -192,7 +190,9 @@ class TestAuthEndpoints:
         # Assert
         assert response.status_code == 401
         error = response.json()
-        assert "Invalid email or password" in error["detail"]
+        # Error format: {"success": false, "error": {"code": "...", "message": "..."}}
+        error_msg = error.get("detail") or error.get("error", {}).get("message", "")
+        assert "Invalid email or password" in error_msg
 
     @pytest.mark.asyncio
     async def test_login_wrong_password(self, client: AsyncClient, db_session: AsyncSession):
@@ -215,4 +215,6 @@ class TestAuthEndpoints:
         # Assert
         assert response.status_code == 401
         error = response.json()
-        assert "Invalid email or password" in error["detail"]
+        # Error format: {"success": false, "error": {"code": "...", "message": "..."}}
+        error_msg = error.get("detail") or error.get("error", {}).get("message", "")
+        assert "Invalid email or password" in error_msg
