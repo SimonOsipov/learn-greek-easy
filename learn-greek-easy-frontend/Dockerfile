@@ -19,18 +19,23 @@ RUN npx vite build
 # Stage 2: Production stage
 FROM nginx:alpine
 
-# Copy custom nginx configuration
-COPY nginx.conf /etc/nginx/nginx.conf
+# Copy nginx config template (will be processed at runtime)
+COPY nginx.conf.template /etc/nginx/nginx.conf.template
+
+# Copy entrypoint script
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
 
 # Copy built assets from builder
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Expose port 80
-EXPOSE 80
+# Railway sets PORT env var, default to 80
+ENV PORT=80
+ENV BACKEND_URL=http://backend:8000
 
-# Health check
+# Health check (uses the PORT variable)
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD wget --quiet --tries=1 --spider http://localhost/health || exit 1
+  CMD wget --quiet --tries=1 --spider http://localhost:${PORT}/health || exit 1
 
-# Start nginx
-CMD ["nginx", "-g", "daemon off;"]
+# Start nginx via entrypoint
+ENTRYPOINT ["/docker-entrypoint.sh"]
