@@ -400,10 +400,12 @@ describe('mockReviewAPI', () => {
       const cards = await mockReviewAPI.getReviewQueue(testDeckId, 5);
       const card = cards[0];
 
+      // CardReview extends Card and adds srData
+      // Card has: id, front, back, pronunciation, example, exampleTranslation, difficulty, nextReviewDate, timesReviewed, successRate
       expect(card).toHaveProperty('id');
-      expect(card).toHaveProperty('deckId');
       expect(card).toHaveProperty('front');
       expect(card).toHaveProperty('back');
+      expect(card).toHaveProperty('difficulty');
       expect(card).toHaveProperty('srData');
     });
 

@@ -2,7 +2,7 @@
 
 import logging
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Sequence
 
 from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
@@ -122,6 +122,28 @@ async def base_api_exception_handler(
     )
 
 
+def _sanitize_validation_errors(errors: list | Sequence) -> list:
+    """Sanitize validation errors for JSON serialization.
+
+    Pydantic validation errors may contain non-serializable objects
+    in the 'ctx' field (e.g., ValueError instances). This function
+    converts them to strings.
+    """
+    sanitized = []
+    for error in errors:
+        sanitized_error = {}
+        for key, value in error.items():
+            if key == "ctx" and isinstance(value, dict):
+                # Convert any exception objects in ctx to strings
+                sanitized_error[key] = {
+                    k: str(v) if isinstance(v, Exception) else v for k, v in value.items()
+                }
+            else:
+                sanitized_error[key] = value
+        sanitized.append(sanitized_error)
+    return sanitized
+
+
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(
     request: Request,
@@ -144,7 +166,7 @@ async def validation_exception_handler(
             "error": {
                 "code": "VALIDATION_ERROR",
                 "message": "Request validation failed",
-                "details": exc.errors(),
+                "details": _sanitize_validation_errors(exc.errors()),
             },
         },
     )

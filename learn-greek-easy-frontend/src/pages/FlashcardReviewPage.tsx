@@ -23,7 +23,10 @@ export function FlashcardReviewPage() {
   // Start session on mount
   useEffect(() => {
     if (deckId && !activeSession) {
-      startSession(deckId);
+      // Catch errors - they're already handled by setting store error state
+      startSession(deckId).catch(() => {
+        // Error is handled by the store and displayed in UI
+      });
     }
   }, [deckId, activeSession, startSession]);
 

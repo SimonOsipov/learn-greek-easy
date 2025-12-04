@@ -286,23 +286,29 @@ class TestAuthServiceRedisIntegration:
         await session_repo.revoke_all_user_sessions(logged_in_user.id)
 
 
-class TestFallbackToPostgres:
-    """Test fallback behavior when Redis is unavailable."""
+class TestRedisOnlySessionStorage:
+    """Test Redis-only session storage behavior.
+
+    Note: PostgreSQL fallback has been deprecated. Sessions are stored
+    exclusively in Redis. These tests verify the current Redis-only behavior.
+    """
 
     @pytest.mark.asyncio
-    async def test_login_falls_back_to_postgres_when_redis_unavailable(self, db_session):
-        """Test that login stores token in PostgreSQL when Redis unavailable."""
-        from sqlalchemy import select
+    async def test_login_succeeds_but_warns_when_redis_unavailable(self, db_session):
+        """Test that login succeeds even when Redis is unavailable (but warns).
 
+        Note: Sessions won't be stored, but login still returns tokens.
+        The user may need to re-login if Redis becomes available.
+        """
         from src.core.security import hash_password
-        from src.db.models import RefreshToken, User
+        from src.db.models import User
         from src.schemas.user import UserLogin
 
         # Create test user
         user = User(
-            email="postgres_fallback_test@example.com",
+            email="redis_unavailable_test@example.com",
             password_hash=hash_password("TestPass123!"),
-            full_name="Postgres Fallback Test",
+            full_name="Redis Unavailable Test",
             is_active=True,
         )
         db_session.add(user)
@@ -316,26 +322,25 @@ class TestFallbackToPostgres:
         with patch("src.repositories.session.get_redis", return_value=None):
             auth_service = AuthService(db=db_session, session_repo=session_repo)
 
-            # Login
+            # Login should still succeed
             login_data = UserLogin(
-                email="postgres_fallback_test@example.com",
+                email="redis_unavailable_test@example.com",
                 password="TestPass123!",
             )
             logged_in_user, tokens = await auth_service.login_user(login_data)
 
-        # Verify token is in PostgreSQL
-        result = await db_session.execute(
-            select(RefreshToken).where(RefreshToken.user_id == logged_in_user.id)
-        )
-        db_tokens = result.scalars().all()
-        assert len(db_tokens) >= 1
+        # Verify login succeeded (tokens were generated)
+        assert tokens.access_token is not None
+        assert tokens.refresh_token is not None
+        assert logged_in_user.email == "redis_unavailable_test@example.com"
 
     @pytest.mark.asyncio
-    async def test_get_user_sessions_includes_both_sources(self, db_session):
-        """Test that get_user_sessions returns sessions from both Redis and PostgreSQL."""
-        from unittest.mock import AsyncMock
+    async def test_get_user_sessions_returns_redis_only(self, db_session):
+        """Test that get_user_sessions returns sessions from Redis only.
 
-        from src.db.models import RefreshToken
+        PostgreSQL is no longer used for session storage.
+        """
+        from unittest.mock import AsyncMock
 
         user_id = uuid4()
 
@@ -352,40 +357,15 @@ class TestFallbackToPostgres:
         ]
         mock_session_repo.revoke_all_user_sessions.return_value = 0
 
-        # Create PostgreSQL token directly in database
-        from src.db.models import User
-
-        user = User(
-            id=user_id,
-            email="both_sources_test@example.com",
-            password_hash="hashed",
-            full_name="Both Sources Test",
-            is_active=True,
-        )
-        db_session.add(user)
-        await db_session.flush()
-
-        pg_token = RefreshToken(
-            user_id=user_id,
-            token="pg_token_123",
-            expires_at=datetime.utcnow() + timedelta(days=30),
-        )
-        db_session.add(pg_token)
-        await db_session.commit()
-
         # Create auth service
         auth_service = AuthService(db=db_session, session_repo=mock_session_repo)
 
-        # Get sessions
+        # Get sessions - should return Redis sessions only
         sessions = await auth_service.get_user_sessions(user_id)
 
-        # Should have sessions from both sources
-        assert len(sessions) == 2
-
-        # Check sources
-        sources = [s["source"] for s in sessions]
-        assert "redis" in sources
-        assert "postgres" in sources
+        # Should have exactly the sessions from Redis
+        assert len(sessions) == 1
+        assert sessions[0]["id"] == "redis_session_1"
 
 
 # =============================================================================

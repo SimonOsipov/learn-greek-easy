@@ -137,7 +137,7 @@ def create_tokens_for_user(user: User) -> AuthTokens:
         AuthTokens: Container with access and refresh tokens
     """
     access_token, access_expires = create_access_token(user.id)
-    refresh_token, refresh_expires = create_refresh_token(user.id)
+    refresh_token, refresh_expires, _ = create_refresh_token(user.id)
 
     return AuthTokens(
         access_token=access_token,

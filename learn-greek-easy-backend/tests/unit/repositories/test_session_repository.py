@@ -60,7 +60,15 @@ class TestCreateSession:
         """Test successful session creation in Redis."""
         mock_redis = AsyncMock()
         mock_pipeline = AsyncMock()
-        mock_redis.pipeline.return_value.__aenter__.return_value = mock_pipeline
+        mock_pipeline.setex = AsyncMock()
+        mock_pipeline.sadd = AsyncMock()
+        mock_pipeline.expire = AsyncMock()
+        mock_pipeline.execute = AsyncMock(return_value=[True, True, True])
+
+        mock_ctx = MagicMock()
+        mock_ctx.__aenter__ = AsyncMock(return_value=mock_pipeline)
+        mock_ctx.__aexit__ = AsyncMock(return_value=None)
+        mock_redis.pipeline = MagicMock(return_value=mock_ctx)
 
         repo = SessionRepository(redis_client=mock_redis)
 
@@ -226,7 +234,14 @@ class TestDeleteSession:
         """Test successful session deletion."""
         mock_redis = AsyncMock()
         mock_pipeline = AsyncMock()
-        mock_redis.pipeline.return_value.__aenter__.return_value = mock_pipeline
+        mock_pipeline.delete = AsyncMock()
+        mock_pipeline.srem = AsyncMock()
+        mock_pipeline.execute = AsyncMock(return_value=[True, True])
+
+        mock_ctx = MagicMock()
+        mock_ctx.__aenter__ = AsyncMock(return_value=mock_pipeline)
+        mock_ctx.__aexit__ = AsyncMock(return_value=None)
+        mock_redis.pipeline = MagicMock(return_value=mock_ctx)
 
         repo = SessionRepository(redis_client=mock_redis)
 
@@ -256,7 +271,17 @@ class TestRotateSession:
         """Test successful session rotation."""
         mock_redis = AsyncMock()
         mock_pipeline = AsyncMock()
-        mock_redis.pipeline.return_value.__aenter__.return_value = mock_pipeline
+        mock_pipeline.delete = AsyncMock()
+        mock_pipeline.srem = AsyncMock()
+        mock_pipeline.setex = AsyncMock()
+        mock_pipeline.sadd = AsyncMock()
+        mock_pipeline.expire = AsyncMock()
+        mock_pipeline.execute = AsyncMock(return_value=[True, True, True, True, True])
+
+        mock_ctx = MagicMock()
+        mock_ctx.__aenter__ = AsyncMock(return_value=mock_pipeline)
+        mock_ctx.__aexit__ = AsyncMock(return_value=None)
+        mock_redis.pipeline = MagicMock(return_value=mock_ctx)
 
         repo = SessionRepository(redis_client=mock_redis)
 
@@ -359,7 +384,13 @@ class TestRevokeAllUserSessions:
         mock_redis.smembers.return_value = {"token1", "token2", "token3"}
 
         mock_pipeline = AsyncMock()
-        mock_redis.pipeline.return_value.__aenter__.return_value = mock_pipeline
+        mock_pipeline.delete = AsyncMock()
+        mock_pipeline.execute = AsyncMock(return_value=[True, True, True, True])
+
+        mock_ctx = MagicMock()
+        mock_ctx.__aenter__ = AsyncMock(return_value=mock_pipeline)
+        mock_ctx.__aexit__ = AsyncMock(return_value=None)
+        mock_redis.pipeline = MagicMock(return_value=mock_ctx)
 
         repo = SessionRepository(redis_client=mock_redis)
         count = await repo.revoke_all_user_sessions(uuid4())

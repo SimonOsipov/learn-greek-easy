@@ -529,7 +529,7 @@ async def revoke_session(
         HTTPException(404): If session not found or belongs to another user
     """
     service = AuthService(db)
-    token_revoked = await service.revoke_session_by_id(current_user.id, session_id)
+    token_revoked = await service.revoke_session_by_id(current_user.id, str(session_id))
 
     if not token_revoked:
         raise HTTPException(

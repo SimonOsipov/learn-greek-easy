@@ -45,8 +45,8 @@ def sample_access_token(sample_user_id: UUID) -> tuple[str, datetime]:
 
 
 @pytest.fixture
-def sample_refresh_token(sample_user_id: UUID) -> tuple[str, datetime]:
-    """Provide a sample refresh token and expiration."""
+def sample_refresh_token(sample_user_id: UUID) -> tuple[str, datetime, str]:
+    """Provide a sample refresh token, expiration, and token ID (jti)."""
     return create_refresh_token(sample_user_id)
 
 
@@ -128,24 +128,27 @@ class TestRefreshTokenGeneration:
     """Tests for refresh token generation."""
 
     def test_create_refresh_token_returns_tuple(self, sample_user_id: UUID) -> None:
-        """Test that create_refresh_token returns (token, expiration) tuple."""
+        """Test that create_refresh_token returns (token, expiration, jti) tuple."""
         result = create_refresh_token(sample_user_id)
         assert isinstance(result, tuple)
-        assert len(result) == 2
-        token, expires_at = result
+        assert len(result) == 3
+        token, expires_at, jti = result
         assert isinstance(token, str)
         assert isinstance(expires_at, datetime)
+        assert isinstance(jti, str)
 
-    def test_refresh_token_is_valid_jwt(self, sample_refresh_token: tuple[str, datetime]) -> None:
+    def test_refresh_token_is_valid_jwt(
+        self, sample_refresh_token: tuple[str, datetime, str]
+    ) -> None:
         """Test that refresh token is a valid JWT format."""
-        token, _ = sample_refresh_token
+        token, _, _ = sample_refresh_token
         parts = token.split(".")
         assert len(parts) == 3
 
     def test_refresh_token_expiry_is_30_days(self, sample_user_id: UUID) -> None:
         """Test that refresh token expires in 30 days (or configured value)."""
         before = datetime.utcnow()
-        token, expires_at = create_refresh_token(sample_user_id)
+        token, expires_at, jti = create_refresh_token(sample_user_id)
         after = datetime.utcnow()
 
         # Calculate expected expiry range
@@ -158,7 +161,7 @@ class TestRefreshTokenGeneration:
 
     def test_refresh_token_contains_correct_payload(self, sample_user_id: UUID) -> None:
         """Test that refresh token payload contains correct claims."""
-        token, expires_at = create_refresh_token(sample_user_id)
+        token, expires_at, jti = create_refresh_token(sample_user_id)
 
         payload = jwt.decode(
             token,
@@ -171,15 +174,17 @@ class TestRefreshTokenGeneration:
         assert "exp" in payload
         assert "iat" in payload
         assert "type" in payload
+        assert "jti" in payload
 
         # Verify payload values
         assert payload["sub"] == str(sample_user_id)
         assert payload["type"] == "refresh"
+        assert payload["jti"] == jti
 
     def test_refresh_token_different_from_access_token(self, sample_user_id: UUID) -> None:
         """Test that access and refresh tokens are different."""
         access_token, _ = create_access_token(sample_user_id)
-        refresh_token, _ = create_refresh_token(sample_user_id)
+        refresh_token, _, _ = create_refresh_token(sample_user_id)
 
         assert access_token != refresh_token
 
@@ -203,10 +208,10 @@ class TestTokenVerification:
         assert user_id == sample_user_id
 
     def test_verify_refresh_token_returns_user_id(
-        self, sample_user_id: UUID, sample_refresh_token: tuple[str, datetime]
+        self, sample_user_id: UUID, sample_refresh_token: tuple[str, datetime, str]
     ) -> None:
         """Test that verifying refresh token returns correct user_id."""
-        token, _ = sample_refresh_token
+        token, _, _ = sample_refresh_token
         user_id = verify_token(token, "refresh")
 
         assert isinstance(user_id, UUID)
@@ -364,7 +369,7 @@ class TestTokenIntegration:
 
     def test_refresh_token_cannot_be_used_as_access_token(self, sample_user_id: UUID) -> None:
         """Test that refresh token cannot be used as access token (confused deputy attack prevention)."""
-        refresh_token, _ = create_refresh_token(sample_user_id)
+        refresh_token, _, _ = create_refresh_token(sample_user_id)
 
         # Attempting to verify refresh token as access token should fail
         with pytest.raises(TokenInvalidException) as exc_info:
