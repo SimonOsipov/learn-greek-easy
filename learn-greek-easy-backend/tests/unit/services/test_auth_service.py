@@ -48,6 +48,7 @@ class TestAuthService:
                     mock_refresh.return_value = (
                         "refresh_token_xyz",
                         datetime.utcnow() + timedelta(days=30),
+                        "token_id_123",
                     )
 
                     # Act
@@ -68,8 +69,9 @@ class TestAuthService:
                     mock_hash.assert_called_once_with(user_data.password)
                     mock_db.commit.assert_called_once()
                     mock_db.refresh.assert_called_once()
-                    # Check that 3 objects were added: User, UserSettings, RefreshToken
-                    assert mock_db.add.call_count == 3
+                    # Check that 2 objects were added: User, UserSettings
+                    # (RefreshToken is now stored in Redis, not PostgreSQL)
+                    assert mock_db.add.call_count == 2
 
     @pytest.mark.asyncio
     async def test_register_user_email_already_exists(self):
@@ -167,6 +169,7 @@ class TestAuthService:
                     mock_refresh.return_value = (
                         "refresh_token_login",
                         datetime.utcnow() + timedelta(days=30),
+                        "token_id_123",
                     )
 
                     # Act

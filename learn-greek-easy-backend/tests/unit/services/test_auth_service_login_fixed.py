@@ -64,6 +64,7 @@ class TestLoginFunctionality:
                     mock_refresh.return_value = (
                         "refresh_token",
                         datetime.utcnow() + timedelta(days=30),
+                        "token_id_123",
                     )
 
                     # Act
@@ -236,6 +237,7 @@ class TestLoginFunctionality:
                     mock_refresh.return_value = (
                         "refresh_token",
                         datetime.utcnow() + timedelta(days=30),
+                        "token_id_123",
                     )
 
                     # Act
@@ -382,6 +384,7 @@ class TestLoginFunctionality:
                     mock_refresh.return_value = (
                         "refresh_token",
                         datetime.utcnow() + timedelta(days=30),
+                        "token_id_123",
                     )
 
                     # Act
@@ -425,7 +428,7 @@ class TestLoginFunctionality:
                 mock_access.return_value = ("access_token", access_expiry)
 
                 with patch("src.services.auth_service.create_refresh_token") as mock_refresh:
-                    mock_refresh.return_value = ("refresh_token", refresh_expiry)
+                    mock_refresh.return_value = ("refresh_token", refresh_expiry, "token_id_123")
 
                     # Act
                     user, token_response = await service.login_user(login_data)
@@ -470,6 +473,7 @@ class TestLoginFunctionality:
                     mock_refresh.return_value = (
                         "refresh_token",
                         datetime.utcnow() + timedelta(days=30),
+                        "token_id_123",
                     )
 
                     # Act & Assert
@@ -513,6 +517,7 @@ class TestLoginFunctionality:
                     mock_refresh.return_value = (
                         "refresh_token",
                         datetime.utcnow() + timedelta(days=30),
+                        "token_id_123",
                     )
 
                     # Act
@@ -574,6 +579,7 @@ class TestMissingScenarios:
                     mock_refresh.return_value = (
                         "refresh_token",
                         datetime.utcnow() + timedelta(days=30),
+                        "token_id_123",
                     )
 
                     # Act

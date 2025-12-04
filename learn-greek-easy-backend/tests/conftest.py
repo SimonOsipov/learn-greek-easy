@@ -24,9 +24,6 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-# Import factory base for session binding
-from tests.factories.base import BaseFactory
-
 # Import auth fixtures from fixtures package
 from tests.fixtures.auth import (  # User fixtures; Token fixtures; Header fixtures; Bundle fixtures; Error testing fixtures
     access_token,
@@ -482,28 +479,3 @@ def reset_test_state() -> Generator[None, None, None]:
     # Setup: nothing to do yet
     yield
     # Teardown: nothing to do yet (database cleanup handled by db_session)
-
-
-# =============================================================================
-# Factory Session Binding
-# =============================================================================
-
-
-@pytest.fixture(autouse=True)
-def bind_factory_session(db_session: AsyncSession) -> Generator[None, None, None]:
-    """Bind the database session to all factories.
-
-    This fixture automatically binds the db_session to BaseFactory,
-    making it available to all factory classes that inherit from it.
-
-    The binding is done before each test and cleared after.
-
-    Args:
-        db_session: The test database session fixture.
-
-    Yields:
-        None: Allows the test to run.
-    """
-    BaseFactory._session = db_session
-    yield
-    BaseFactory._session = None

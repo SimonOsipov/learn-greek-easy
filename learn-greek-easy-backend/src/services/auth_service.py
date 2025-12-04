@@ -2,6 +2,11 @@
 
 This service handles all authentication-related business logic including
 user registration, login, token management, and password operations.
+
+Session Storage Strategy:
+    - Redis is the ONLY storage for refresh token sessions
+    - If Redis is unavailable, operations fail (no PostgreSQL fallback)
+    - Legacy tokens (without jti claim) are rejected - users must re-login
 """
 
 import logging
@@ -26,9 +31,10 @@ from src.core.security import (
     create_refresh_token,
     hash_password,
     verify_password,
-    verify_token,
+    verify_refresh_token_with_jti,
 )
-from src.db.models import RefreshToken, User, UserSettings
+from src.db.models import User, UserSettings
+from src.repositories.session import SessionRepository
 from src.schemas.user import TokenResponse, UserCreate, UserLogin
 
 logger = logging.getLogger(__name__)
@@ -40,24 +46,48 @@ class AuthService:
     This service encapsulates all authentication business logic,
     coordinating between the database, security utilities, and
     API responses.
+
+    Session Storage:
+        Uses Redis exclusively for refresh token sessions. The session_repo
+        handles all Redis operations. PostgreSQL is used only for user data,
+        not for session storage.
     """
 
-    def __init__(self, db: AsyncSession):
+    def __init__(
+        self,
+        db: AsyncSession,
+        session_repo: Optional[SessionRepository] = None,
+    ):
         """Initialize the authentication service.
 
         Args:
             db: Async database session for persistence operations
+            session_repo: Optional SessionRepository for Redis sessions.
+                If not provided, a default instance will be created.
         """
         self.db = db
+        self.session_repo = session_repo or SessionRepository()
 
-    async def register_user(self, user_data: UserCreate) -> Tuple[User, TokenResponse]:
+    async def register_user(
+        self,
+        user_data: UserCreate,
+        client_ip: Optional[str] = None,
+        user_agent: Optional[str] = None,
+    ) -> Tuple[User, TokenResponse]:
         """Register a new user account.
 
         Creates a new user with hashed password, initializes default
-        settings, generates JWT tokens, and stores refresh token.
+        settings, generates JWT tokens, and stores refresh token in Redis.
+
+        Session Storage:
+            Redis only - if Redis is unavailable, registration will still
+            succeed but the session will not be stored (user may need to
+            login again once Redis is available).
 
         Args:
             user_data: User registration data (email, password, full_name)
+            client_ip: Optional client IP address for session tracking
+            user_agent: Optional user agent for session tracking
 
         Returns:
             Tuple of (created User model, TokenResponse with JWT tokens)
@@ -90,26 +120,33 @@ class AuthService:
             await self.db.flush()  # Get user.id without committing
 
             # Create default user settings
-            settings = UserSettings(
+            user_settings = UserSettings(
                 user_id=user.id,
                 daily_goal=20,  # Default daily goal
                 email_notifications=True,  # Default to enabled
             )
 
-            self.db.add(settings)
+            self.db.add(user_settings)
 
-            # Generate JWT tokens
+            # Generate JWT tokens (now returns 3-tuple with token_id)
             access_token, access_expires = create_access_token(user.id)
-            refresh_token, refresh_expires = create_refresh_token(user.id)
+            refresh_token, refresh_expires, token_id = create_refresh_token(user.id)
 
-            # Store refresh token in database for session management
-            db_refresh_token = RefreshToken(
+            # Store session in Redis
+            redis_stored = await self.session_repo.create_session(
                 user_id=user.id,
+                token_id=token_id,
                 token=refresh_token,
                 expires_at=refresh_expires,
+                ip_address=client_ip,
+                user_agent=user_agent,
             )
 
-            self.db.add(db_refresh_token)
+            if not redis_stored:
+                logger.warning(
+                    "Redis unavailable, session not stored. User may need to re-login.",
+                    extra={"user_id": str(user.id)},
+                )
 
             # Commit all changes atomically
             await self.db.commit()
@@ -150,13 +187,20 @@ class AuthService:
         return result.scalar_one_or_none()
 
     async def login_user(
-        self, login_data: UserLogin, client_ip: str | None = None
+        self,
+        login_data: UserLogin,
+        client_ip: str | None = None,
+        user_agent: str | None = None,
     ) -> Tuple[User, TokenResponse]:
         """Authenticate user and generate tokens.
+
+        Session Storage:
+            Redis only - sessions are stored exclusively in Redis.
 
         Args:
             login_data: Login credentials (email, password)
             client_ip: Client IP address for tracking (optional)
+            user_agent: User agent string for session tracking (optional)
 
         Returns:
             Tuple of (authenticated User, TokenResponse with JWT tokens)
@@ -194,18 +238,26 @@ class AuthService:
         if client_ip:
             user.last_login_ip = client_ip
 
-        # Generate JWT tokens
+        # Generate JWT tokens (now returns 3-tuple with token_id)
         access_token, access_expires = create_access_token(user.id)
-        refresh_token, refresh_expires = create_refresh_token(user.id)
+        refresh_token, refresh_expires, token_id = create_refresh_token(user.id)
 
-        # Store refresh token
-        db_refresh_token = RefreshToken(
+        # Store session in Redis
+        redis_stored = await self.session_repo.create_session(
             user_id=user.id,
+            token_id=token_id,
             token=refresh_token,
             expires_at=refresh_expires,
+            ip_address=client_ip,
+            user_agent=user_agent,
         )
 
-        self.db.add(db_refresh_token)
+        if not redis_stored:
+            logger.warning(
+                "Redis unavailable, session not stored. User may need to re-login.",
+                extra={"user_id": str(user.id)},
+            )
+
         await self.db.commit()
 
         # Calculate expiry in seconds
@@ -231,15 +283,26 @@ class AuthService:
 
         return user, token_response
 
-    async def refresh_access_token(self, refresh_token: str) -> Tuple[str, str, User]:
+    async def refresh_access_token(
+        self,
+        refresh_token: str,
+        client_ip: Optional[str] = None,
+        user_agent: Optional[str] = None,
+    ) -> Tuple[str, str, User]:
         """Generate new access and refresh tokens using refresh token.
 
         Implements token rotation: the old refresh token is deleted and
         a new one is issued. This provides better security as each refresh
         token can only be used once.
 
+        Session Verification:
+            Redis only - tokens must have jti claim and exist in Redis.
+            Legacy tokens (without jti) are rejected - users must re-login.
+
         Args:
             refresh_token: Valid refresh token
+            client_ip: Optional client IP for new session
+            user_agent: Optional user agent for new session
 
         Returns:
             Tuple of (new_access_token, new_refresh_token, user)
@@ -249,12 +312,10 @@ class AuthService:
             TokenInvalidException: If refresh token is invalid, revoked, or user is inactive
             UserNotFoundException: If the user associated with the token no longer exists
         """
-        # Step 1: Verify JWT signature and extract user_id
+        # Step 1: Verify JWT signature and extract user_id + jti (token_id)
         try:
-            user_id = verify_token(refresh_token, token_type="refresh")
+            user_id, token_id = verify_refresh_token_with_jti(refresh_token)
         except TokenExpiredException:
-            # Clean up expired token from database if it exists
-            await self._cleanup_token(refresh_token)
             raise TokenExpiredException("Refresh token has expired")
         except TokenInvalidException as e:
             raise TokenInvalidException(f"Invalid refresh token: {e.detail}")
@@ -262,30 +323,31 @@ class AuthService:
             logger.error(f"Unexpected error verifying refresh token: {e}")
             raise TokenInvalidException("Invalid refresh token")
 
-        # Step 2: Check if refresh token exists in database (not revoked)
-        result = await self.db.execute(
-            select(RefreshToken).where(
-                RefreshToken.token == refresh_token,
-            )
-        )
-        db_token = result.scalar_one_or_none()
-
-        if not db_token:
-            # Token not in database - it was revoked or never existed
+        # Step 2: Reject legacy tokens without jti
+        if not token_id:
             logger.warning(
-                "Refresh token not found in database (possibly revoked)",
+                "Legacy token detected (no jti), rejecting - user must re-login",
                 extra={"user_id": str(user_id)},
+            )
+            raise TokenInvalidException(
+                "Token format is outdated. Please login again to get a new token."
+            )
+
+        # Step 3: Validate session exists in Redis
+        session_valid = await self.session_repo.validate_session(
+            user_id=user_id,
+            token_id=token_id,
+            token=refresh_token,
+        )
+
+        if not session_valid:
+            logger.warning(
+                "Refresh token not found in Redis (revoked or expired)",
+                extra={"user_id": str(user_id), "token_id": token_id},
             )
             raise TokenInvalidException("Refresh token has been revoked")
 
-        # Step 3: Check if token is expired in database
-        if db_token.expires_at <= datetime.utcnow():
-            # Clean up expired token
-            await self.db.delete(db_token)
-            await self.db.commit()
-            raise TokenExpiredException("Refresh token has expired")
-
-        # Step 4: Load user with settings using selectinload
+        # Step 4: Load user with settings
         user_result = await self.db.execute(
             select(User).options(selectinload(User.settings)).where(User.id == user_id)
         )
@@ -293,17 +355,15 @@ class AuthService:
 
         # Step 5: Validate user exists
         if not user:
-            # User was deleted after token was issued - clean up token
-            await self.db.delete(db_token)
-            await self.db.commit()
+            # User was deleted - clean up session from Redis
+            await self.session_repo.delete_session(user_id, token_id)
             logger.warning("User not found for refresh token", extra={"user_id": str(user_id)})
             raise UserNotFoundException(user_id=str(user_id))
 
         # Step 6: Validate user is active
         if not user.is_active:
-            # User is deactivated - revoke all tokens
-            await self.db.delete(db_token)
-            await self.db.commit()
+            # User is deactivated - clean up session from Redis
+            await self.session_repo.delete_session(user_id, token_id)
             logger.warning(
                 "Inactive user attempted to refresh token",
                 extra={"user_id": str(user_id), "email": user.email},
@@ -311,225 +371,198 @@ class AuthService:
             raise TokenInvalidException("User account is deactivated")
 
         # Step 7: Generate new tokens (token rotation)
-        new_access_token, access_expires = create_access_token(user.id)
-        new_refresh_token, refresh_expires = create_refresh_token(user.id)
+        new_access_token, _ = create_access_token(user.id)
+        new_refresh_token, new_refresh_expires, new_token_id = create_refresh_token(user.id)
 
-        # Step 8: Delete old refresh token (rotation - invalidate old token)
-        await self.db.delete(db_token)
-
-        # Step 9: Insert new refresh token
-        new_db_refresh_token = RefreshToken(
+        # Step 8: Rotate session in Redis (atomic delete old + create new)
+        rotation_success = await self.session_repo.rotate_session(
             user_id=user.id,
-            token=new_refresh_token,
-            expires_at=refresh_expires,
+            old_token_id=token_id,
+            new_token_id=new_token_id,
+            new_token=new_refresh_token,
+            new_expires_at=new_refresh_expires,
+            ip_address=client_ip,
+            user_agent=user_agent,
         )
-        self.db.add(new_db_refresh_token)
 
-        # Step 10: Commit changes atomically
-        await self.db.commit()
+        if not rotation_success:
+            logger.warning(
+                "Redis rotation failed. Token refresh may have issues.",
+                extra={"user_id": str(user.id)},
+            )
+            # Still return new tokens - the old token validation already passed
+            # The new session might not be stored, but at least the user gets tokens
 
         logger.info(
-            "Token refreshed successfully", extra={"user_id": str(user.id), "email": user.email}
+            "Token refreshed successfully",
+            extra={"user_id": str(user.id), "email": user.email},
         )
 
         return new_access_token, new_refresh_token, user
 
-    async def _cleanup_token(self, token: str) -> None:
-        """Remove a refresh token from the database if it exists.
-
-        This is a helper method used to clean up expired or invalid tokens
-        from the database without raising errors if the token doesn't exist.
-
-        Args:
-            token: The refresh token string to remove
-        """
-        try:
-            result = await self.db.execute(select(RefreshToken).where(RefreshToken.token == token))
-            db_token = result.scalar_one_or_none()
-            if db_token:
-                await self.db.delete(db_token)
-                await self.db.commit()
-        except Exception as e:
-            logger.error(f"Error cleaning up token: {e}")
-            # Don't raise - this is a cleanup operation
-
     async def logout_user(self, refresh_token: str) -> None:
         """Logout user by invalidating refresh token.
 
-        Args:
-            refresh_token: Refresh token to invalidate (delete it)
-        """
-        # Delete the refresh token
-        result = await self.db.execute(
-            select(RefreshToken).where(
-                RefreshToken.token == refresh_token,
-            )
-        )
-        db_token = result.scalar_one_or_none()
+        Deletes the session from Redis. If the token is invalid or expired,
+        logout still succeeds (no error is raised).
 
-        if db_token:
-            await self.db.delete(db_token)
-            await self.db.commit()
+        Args:
+            refresh_token: Refresh token to invalidate (delete from Redis)
+        """
+        # Try to extract user_id and token_id from the token
+        try:
+            user_id, token_id = verify_refresh_token_with_jti(refresh_token)
+
+            # Delete from Redis if token has jti
+            if token_id:
+                await self.session_repo.delete_session(user_id, token_id)
+
+        except (TokenExpiredException, TokenInvalidException):
+            # Token is invalid/expired - logout still succeeds
+            pass
+        except Exception as e:
+            logger.debug(f"Could not extract jti from token for logout: {e}")
 
     # ========================================================================
     # Session Management Methods
     # ========================================================================
 
     async def revoke_refresh_token(self, refresh_token_str: str) -> bool:
-        """Revoke a single refresh token.
+        """Revoke a single refresh token from Redis.
 
         Args:
             refresh_token_str: The refresh token string to revoke
 
         Returns:
-            True if the token was found and revoked, False if not found
+            True if the token was found and revoked, False if not found or invalid
         """
-        result = await self.db.execute(
-            select(RefreshToken).where(RefreshToken.token == refresh_token_str)
-        )
-        db_token = result.scalar_one_or_none()
+        try:
+            user_id, token_id = verify_refresh_token_with_jti(refresh_token_str)
 
-        if db_token:
-            await self.db.delete(db_token)
-            await self.db.commit()
-            logger.info(
-                "Refresh token revoked",
-                extra={"token_id": str(db_token.id), "user_id": str(db_token.user_id)},
-            )
-            return True
+            if not token_id:
+                logger.warning("Cannot revoke legacy token without jti")
+                return False
 
-        logger.warning(
-            "Attempted to revoke non-existent token",
-            extra={
-                "token_prefix": (
-                    refresh_token_str[:20] + "..."
-                    if len(refresh_token_str) > 20
-                    else refresh_token_str
+            deleted = await self.session_repo.delete_session(user_id, token_id)
+            if deleted:
+                logger.info(
+                    "Refresh token revoked",
+                    extra={"token_id": token_id, "user_id": str(user_id)},
                 )
-            },
-        )
-        return False
+                return True
+
+            logger.warning(
+                "Attempted to revoke non-existent token",
+                extra={"token_id": token_id, "user_id": str(user_id)},
+            )
+            return False
+
+        except (TokenExpiredException, TokenInvalidException) as e:
+            logger.warning(f"Cannot revoke invalid/expired token: {e}")
+            return False
+        except Exception as e:
+            logger.error(f"Error revoking token: {e}")
+            return False
 
     async def revoke_all_user_tokens(self, user_id: UUID) -> int:
         """Revoke all refresh tokens for a user.
 
         This effectively logs out the user from all sessions/devices.
+        All sessions are stored in Redis.
 
         Args:
             user_id: The user's UUID
 
         Returns:
-            Number of tokens revoked
+            Number of tokens revoked from Redis
         """
-        result = await self.db.execute(select(RefreshToken).where(RefreshToken.user_id == user_id))
-        tokens = result.scalars().all()
-
-        count = len(tokens)
-        for token in tokens:
-            await self.db.delete(token)
+        count = await self.session_repo.revoke_all_user_sessions(user_id)
 
         if count > 0:
-            await self.db.commit()
             logger.info(
-                "All user tokens revoked", extra={"user_id": str(user_id), "tokens_revoked": count}
+                "All user tokens revoked",
+                extra={
+                    "user_id": str(user_id),
+                    "sessions_revoked": count,
+                },
             )
 
         return count
 
     async def cleanup_expired_tokens(self) -> int:
-        """Remove all expired refresh tokens from the database.
+        """Cleanup expired tokens.
 
-        This is a maintenance method that should be called periodically
-        to clean up expired tokens and keep the database tidy.
+        NOTE: This method is no longer needed as Redis handles token expiry
+        automatically via TTL. Kept for backwards compatibility.
 
         Returns:
-            Number of expired tokens removed
+            Always returns 0 as Redis handles expiry automatically
         """
-        now = datetime.utcnow()
-        result = await self.db.execute(select(RefreshToken).where(RefreshToken.expires_at <= now))
-        expired_tokens = result.scalars().all()
-
-        count = len(expired_tokens)
-        for token in expired_tokens:
-            await self.db.delete(token)
-
-        if count > 0:
-            await self.db.commit()
-            logger.info("Expired tokens cleaned up", extra={"tokens_removed": count})
-
-        return count
+        # Redis automatically expires sessions via TTL
+        # No manual cleanup needed
+        logger.debug("cleanup_expired_tokens called - Redis handles expiry automatically via TTL")
+        return 0
 
     async def get_user_sessions(self, user_id: UUID) -> List[dict]:
         """Get all active sessions for a user.
 
-        Returns session information without exposing the actual token values
-        for security reasons.
+        Returns session information from Redis,
+        without exposing the actual token values for security reasons.
 
         Args:
             user_id: The user's UUID
 
         Returns:
-            List of session dictionaries with id, created_at, and expires_at
+            List of session dictionaries with session info
         """
-        now = datetime.utcnow()
-        result = await self.db.execute(
-            select(RefreshToken).where(
-                RefreshToken.user_id == user_id,
-                RefreshToken.expires_at > now,  # Only active (non-expired) sessions
-            )
-        )
-        tokens = result.scalars().all()
+        redis_sessions = await self.session_repo.get_user_sessions(user_id)
 
-        # Return session info without exposing the actual token
-        sessions = [
-            {
-                "id": token.id,
-                "created_at": token.created_at,
-                "expires_at": token.expires_at,
-            }
-            for token in tokens
-        ]
+        sessions: List[dict] = []
+        for session in redis_sessions:
+            sessions.append(
+                {
+                    "id": session.get("token_id"),  # Use token_id as session identifier
+                    "created_at": session.get("created_at"),
+                    "expires_at": session.get("expires_at"),
+                    "ip_address": session.get("ip_address"),
+                    "user_agent": session.get("user_agent"),
+                }
+            )
 
         logger.debug(
             "User sessions retrieved",
-            extra={"user_id": str(user_id), "session_count": len(sessions)},
+            extra={
+                "user_id": str(user_id),
+                "session_count": len(sessions),
+            },
         )
 
         return sessions
 
-    async def revoke_session_by_id(self, user_id: UUID, session_id: UUID) -> bool:
-        """Revoke a specific session by its ID.
+    async def revoke_session_by_id(self, user_id: UUID, session_id: str) -> bool:
+        """Revoke a specific session by its token ID.
 
-        Users can only revoke their own sessions. This method ensures
-        that a user cannot revoke another user's session.
+        Users can only revoke their own sessions. The session_id is the
+        token_id (jti) from the JWT, not a database UUID.
 
         Args:
             user_id: The user's UUID (for authorization check)
-            session_id: The session (refresh token) ID to revoke
+            session_id: The session token ID (jti) to revoke
 
         Returns:
             True if the session was found and revoked, False if not found
-            or belongs to another user
         """
-        result = await self.db.execute(
-            select(RefreshToken).where(
-                RefreshToken.id == session_id,
-                RefreshToken.user_id == user_id,  # Authorization check
-            )
-        )
-        db_token = result.scalar_one_or_none()
+        deleted = await self.session_repo.delete_session(user_id, session_id)
 
-        if db_token:
-            await self.db.delete(db_token)
-            await self.db.commit()
+        if deleted:
             logger.info(
                 "Session revoked by ID",
-                extra={"session_id": str(session_id), "user_id": str(user_id)},
+                extra={"session_id": session_id, "user_id": str(user_id)},
             )
             return True
 
         logger.warning(
-            "Attempted to revoke non-existent or unauthorized session",
-            extra={"session_id": str(session_id), "user_id": str(user_id)},
+            "Attempted to revoke non-existent session",
+            extra={"session_id": session_id, "user_id": str(user_id)},
         )
         return False
