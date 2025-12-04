@@ -12,7 +12,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.config import settings
 from src.core.dependencies import get_current_user
 from src.core.exceptions import (
+    AccountLinkingConflictException,
     EmailAlreadyExistsException,
+    GoogleOAuthDisabledException,
+    GoogleTokenInvalidException,
+    InvalidCredentialsException,
     TokenExpiredException,
     TokenInvalidException,
     UserNotFoundException,
@@ -20,6 +24,7 @@ from src.core.exceptions import (
 from src.db.dependencies import get_db
 from src.db.models import User
 from src.schemas.user import (
+    GoogleAuthRequest,
     LogoutAllResponse,
     LogoutResponse,
     SessionInfo,
@@ -177,6 +182,125 @@ async def login(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password",
+        )
+
+
+@router.post(
+    "/google",
+    response_model=TokenResponse,
+    summary="Login with Google",
+    description="Authenticate using Google Sign-In ID token",
+    responses={
+        200: {
+            "description": "Successfully authenticated with Google",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "access_token": "eyJhbGciOiJIUzI1NiIs...",
+                        "refresh_token": "eyJhbGciOiJIUzI1NiIs...",
+                        "token_type": "bearer",
+                        "expires_in": 1800,
+                    }
+                }
+            },
+        },
+        401: {
+            "description": "Invalid Google token",
+            "content": {
+                "application/json": {"example": {"detail": "Invalid or expired Google token"}}
+            },
+        },
+        409: {
+            "description": "Account linking conflict",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "This email is already registered. Please login with your password to link your Google account."
+                    }
+                }
+            },
+        },
+        503: {
+            "description": "Google OAuth not enabled",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "Google OAuth is not enabled. Please use email/password authentication."
+                    }
+                }
+            },
+        },
+    },
+)
+async def google_login(
+    auth_data: GoogleAuthRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+) -> TokenResponse:
+    """Authenticate with Google Sign-In.
+
+    This endpoint accepts a Google ID token obtained from the Google Sign-In
+    JavaScript SDK on the frontend. The token is verified against Google's
+    public keys, and if valid, the user is authenticated.
+
+    **New Users**: A new account is created automatically with the email
+    and name from Google. The email is auto-verified.
+
+    **Existing Users (by email)**: If an account exists with the same email
+    but no Google account linked, the Google account is automatically linked.
+
+    **Existing Google Users**: If the user has previously logged in with Google,
+    they are authenticated to their existing account.
+
+    Args:
+        auth_data: Google ID token from frontend
+        request: FastAPI request object for client IP
+        db: Database session (injected)
+
+    Returns:
+        TokenResponse containing access and refresh tokens
+
+    Raises:
+        HTTPException(401): If Google token is invalid or expired
+        HTTPException(409): If email is registered with a different Google account
+        HTTPException(503): If Google OAuth is not enabled
+    """
+    service = AuthService(db)
+
+    # Extract client info for session tracking
+    client_ip = request.client.host if request.client else None
+    user_agent = request.headers.get("user-agent")
+
+    try:
+        user, token_response = await service.authenticate_google(
+            id_token=auth_data.id_token,
+            client_ip=client_ip,
+            user_agent=user_agent,
+        )
+        return token_response
+
+    except GoogleOAuthDisabledException as e:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=e.detail,
+        )
+
+    except GoogleTokenInvalidException as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=e.detail,
+        )
+
+    except AccountLinkingConflictException as e:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=e.detail,
+        )
+
+    except InvalidCredentialsException as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=e.detail,
         )
 
 

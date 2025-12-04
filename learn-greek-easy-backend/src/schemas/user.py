@@ -164,3 +164,38 @@ class LogoutAllResponse(BaseModel):
     success: bool
     message: str
     sessions_revoked: int
+
+
+# ============================================================================
+# Google OAuth Schemas
+# ============================================================================
+
+
+class GoogleAuthRequest(BaseModel):
+    """Schema for Google OAuth authentication request.
+
+    The frontend obtains this token from Google Sign-In SDK
+    and sends it to the backend for verification.
+    """
+
+    id_token: str = Field(
+        ...,
+        min_length=100,  # Google ID tokens are ~1000+ chars
+        description="Google ID token (JWT) from Google Sign-In",
+    )
+
+
+class GoogleUserInfo(BaseModel):
+    """Internal schema for parsed Google user information.
+
+    Extracted from verified Google ID token payload.
+    Not used in API responses.
+    """
+
+    model_config = ConfigDict(frozen=True)  # Immutable
+
+    google_id: str = Field(..., description="Google's unique user identifier (sub claim)")
+    email: EmailStr = Field(..., description="User's email from Google")
+    email_verified: bool = Field(..., description="Whether Google has verified the email")
+    full_name: Optional[str] = Field(None, description="User's full name from Google")
+    picture_url: Optional[str] = Field(None, description="Profile picture URL")

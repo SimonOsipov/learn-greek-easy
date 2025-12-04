@@ -220,3 +220,47 @@ class RateLimitException(BaseAPIException):
             error_code="RATE_LIMIT_EXCEEDED",
             headers={"Retry-After": "60"},
         )
+
+
+# ============================================================================
+# Google OAuth Exceptions
+# ============================================================================
+
+
+class GoogleOAuthDisabledException(BaseAPIException):
+    """Google OAuth is not enabled or configured."""
+
+    def __init__(
+        self,
+        detail: str = "Google OAuth is not enabled. Please use email/password authentication.",
+    ) -> None:
+        super().__init__(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=detail,
+            error_code="GOOGLE_OAUTH_DISABLED",
+        )
+
+
+class GoogleTokenInvalidException(BaseAPIException):
+    """Google ID token is invalid or could not be verified."""
+
+    def __init__(self, detail: str = "Invalid or expired Google token") -> None:
+        super().__init__(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=detail,
+            error_code="GOOGLE_TOKEN_INVALID",
+        )
+
+
+class AccountLinkingConflictException(BaseAPIException):
+    """Account linking conflict - email exists with different Google ID."""
+
+    def __init__(
+        self,
+        detail: str = "This email is already registered. Please login with your password to link your Google account.",
+    ) -> None:
+        super().__init__(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=detail,
+            error_code="ACCOUNT_LINKING_CONFLICT",
+        )

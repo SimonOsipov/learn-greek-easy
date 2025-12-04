@@ -23,15 +23,24 @@ Example Usage:
 import re
 import secrets
 from datetime import datetime, timedelta
-from typing import List, Optional, Tuple
+from typing import TYPE_CHECKING, List, Optional, Tuple
 from uuid import UUID
 
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from google.auth.transport import requests as google_requests
+from google.oauth2 import id_token as google_id_token
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 
 from src.config import settings
-from src.core.exceptions import TokenExpiredException, TokenInvalidException
+from src.core.exceptions import (
+    GoogleTokenInvalidException,
+    TokenExpiredException,
+    TokenInvalidException,
+)
+
+if TYPE_CHECKING:
+    from src.schemas.user import GoogleUserInfo
 
 # ============================================================================
 # Password Hashing Configuration
@@ -649,6 +658,72 @@ def extract_token_from_header(
 
 
 # ============================================================================
+# Google OAuth Token Verification
+# ============================================================================
+
+
+def verify_google_id_token(token: str, client_id: str) -> "GoogleUserInfo":
+    """Verify Google ID token and extract user information.
+
+    Uses Google's official library to verify the token signature
+    against Google's public keys (automatically cached).
+
+    Args:
+        token: Google ID token (JWT) from frontend
+        client_id: Google OAuth client ID for audience verification
+
+    Returns:
+        GoogleUserInfo with extracted user data
+
+    Raises:
+        GoogleTokenInvalidException: If token is invalid, expired, or
+            doesn't match the expected audience (client_id)
+
+    Security Notes:
+        - Token signature is verified against Google's public keys
+        - Token expiration is automatically checked
+        - Audience (aud) claim must match our client_id
+        - Issuer (iss) must be accounts.google.com or https://accounts.google.com
+    """
+    # Import here to avoid circular import at module load time
+    from src.schemas.user import GoogleUserInfo
+
+    try:
+        # Verify the token with Google's public keys
+        # This handles signature verification, expiration, and issuer validation
+        # google-auth library does not have type stubs
+        idinfo = google_id_token.verify_oauth2_token(
+            token,
+            google_requests.Request(),
+            client_id,
+        )
+
+        # Additional validation: check issuer
+        issuer = idinfo.get("iss", "")
+        if issuer not in ["accounts.google.com", "https://accounts.google.com"]:
+            raise GoogleTokenInvalidException(detail=f"Invalid token issuer: {issuer}")
+
+        # Extract user information
+        return GoogleUserInfo(
+            google_id=idinfo["sub"],  # Unique Google user ID
+            email=idinfo["email"],
+            email_verified=idinfo.get("email_verified", False),
+            full_name=idinfo.get("name"),
+            picture_url=idinfo.get("picture"),
+        )
+
+    except ValueError as e:
+        # ValueError is raised for invalid tokens
+        raise GoogleTokenInvalidException(detail=f"Invalid Google ID token: {str(e)}")
+    except Exception as e:
+        # Catch any other verification errors
+        # Check if it's already our exception type
+        if isinstance(e, GoogleTokenInvalidException):
+            raise
+        raise GoogleTokenInvalidException(detail=f"Failed to verify Google ID token: {str(e)}")
+
+
+# ============================================================================
 # Export Public API
 # ============================================================================
 
@@ -667,4 +742,6 @@ __all__ = [
     # Session management (Task 05.02)
     "generate_token_id",
     "verify_refresh_token_with_jti",
+    # Google OAuth (Task 03.06)
+    "verify_google_id_token",
 ]

@@ -290,6 +290,20 @@ class Settings(BaseSettings):
         return self.app_env == "testing"
 
     @property
+    def google_oauth_configured(self) -> bool:
+        """Check if Google OAuth is properly configured.
+
+        Returns True only if both the feature flag is enabled AND
+        the Google client ID is set. This is used to determine
+        whether to accept Google OAuth login requests.
+        """
+        return (
+            self.feature_google_oauth
+            and self.google_client_id is not None
+            and len(self.google_client_id) > 0
+        )
+
+    @property
     def database_url_sync(self) -> str:
         """Get synchronous database URL (for Alembic)."""
         return self.database_url.replace("+asyncpg", "")
