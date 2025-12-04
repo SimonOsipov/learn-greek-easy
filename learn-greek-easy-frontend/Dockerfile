@@ -4,6 +4,14 @@ FROM node:18-alpine AS builder
 # Set working directory
 WORKDIR /app
 
+# Build arguments for Vite environment variables (must be available at build time)
+ARG VITE_GOOGLE_CLIENT_ID
+ARG VITE_API_URL
+
+# Set them as environment variables for the build
+ENV VITE_GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID}
+ENV VITE_API_URL=${VITE_API_URL}
+
 # Copy package files
 COPY package*.json ./
 
