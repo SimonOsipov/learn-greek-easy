@@ -50,9 +50,37 @@ if (typeof global !== 'undefined') {
   (global as any).sessionStorage = sessionStorageMock;
 }
 
+import React from 'react';
+
 import '@testing-library/jest-dom';
 import { cleanup } from '@testing-library/react';
 import { afterEach, beforeAll, vi } from 'vitest';
+
+// Mock @react-oauth/google library
+// This prevents "Google OAuth components must be used within GoogleOAuthProvider" errors
+vi.mock('@react-oauth/google', () => ({
+  GoogleOAuthProvider: ({ children }: { children: React.ReactNode }) => children,
+  GoogleLogin: ({
+    onSuccess,
+    onError,
+  }: {
+    onSuccess?: (response: { credential: string }) => void;
+    onError?: () => void;
+  }) =>
+    React.createElement(
+      'button',
+      {
+        type: 'button',
+        'data-testid': 'google-login-mock',
+        onClick: () => onSuccess?.({ credential: 'mock-credential-token' }),
+        onKeyDown: (e: React.KeyboardEvent) => {
+          if (e.key === 'Escape') onError?.();
+        },
+      },
+      'Continue with Google'
+    ),
+  useGoogleLogin: () => vi.fn(),
+}));
 
 // Cleanup after each test (remove rendered components)
 afterEach(() => {
