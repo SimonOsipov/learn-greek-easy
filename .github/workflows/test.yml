@@ -95,6 +95,22 @@ jobs:
   alembic-check:
     name: Alembic Migration Check
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_learn_greek
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -131,6 +147,8 @@ jobs:
 
       - name: Check for pending migrations
         working-directory: learn-greek-easy-backend
+        env:
+          DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5433/test_learn_greek
         run: poetry run alembic check
 
   # Job 4: Unit & Integration Tests
