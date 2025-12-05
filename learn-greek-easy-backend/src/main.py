@@ -31,6 +31,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Startup
     logger.info("Starting Learn Greek Easy API", extra={"version": settings.app_version})
 
+    # Validate CORS configuration
+    cors_warnings = settings.validate_cors_for_production()
+    for warning in cors_warnings:
+        logger.warning(
+            f"CORS configuration warning: {warning}",
+            extra={"category": "security", "config": "cors"},
+        )
+
     # Initialize database connection
     await init_db()
 
@@ -71,6 +79,7 @@ app.add_middleware(
     allow_credentials=settings.cors_allow_credentials,
     allow_methods=settings.cors_allow_methods,
     allow_headers=settings.cors_allow_headers,
+    expose_headers=settings.cors_expose_headers,
 )
 
 # Trusted host middleware (production only)
@@ -275,6 +284,9 @@ if settings.debug:
             "cors": {
                 "origins": settings.cors_origins,
                 "credentials": settings.cors_allow_credentials,
+                "expose_headers": settings.cors_expose_headers,
+                "methods": settings.cors_allow_methods,
+                "headers": settings.cors_allow_headers,
             },
             "features": {
                 "google_oauth": settings.feature_google_oauth,

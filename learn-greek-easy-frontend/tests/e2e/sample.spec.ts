@@ -25,7 +25,7 @@ test.describe('Playwright Setup Validation', () => {
     // Check form fields exist
     await expect(page.getByLabel(/email/i)).toBeVisible();
     await expect(page.getByTestId('password-input')).toBeVisible();
-    await expect(page.getByRole('button', { name: /sign in/i })).toBeVisible();
+    await expect(page.getByTestId('login-submit')).toBeVisible();
   });
 
   test('should access dashboard when authenticated', async ({ page }) => {

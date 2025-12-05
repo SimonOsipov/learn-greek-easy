@@ -4,7 +4,7 @@
 | Area | Total | Completed | In Progress | Not Started | % |
 |------|-------|-----------|-------------|-------------|---|
 | Frontend | 11 | 11 | 0 | 0 | 100% |
-| Backend | 15 | 3 | 1 | 11 | 27% |
+| Backend | 15 | 4 | 1 | 10 | 33% |
 | Infrastructure | 9 | 9 | 0 | 0 | 100% |
 | Deployment | 9 | 9 | 0 | 0 | 100% |
 
@@ -26,7 +26,7 @@
 
 ---
 
-## Backend Tasks (4/15)
+## Backend Tasks (5/15)
 
 ### 1. Project Setup
 **Status**: ✅ COMPLETED (2025-11-20)
@@ -65,7 +65,14 @@
 - Subtasks: 04.01-04.10 all completed
 - ✅ 04.04.01: Test fixes (2025-12-04) - Backend: 452 passed, Frontend: 694 passed/74 skipped
 
-### 5-15. Remaining Tasks (Not Started)
+### 15. Docker & Deployment
+**Status**: ✅ COMPLETED (2025-12-05)
+- Docker Compose for dev/prod environments
+- GitHub Actions CI/CD pipeline
+- Railway deployment (frontend + backend + PostgreSQL + Redis)
+- Health endpoints, environment variables, CORS configured
+
+### 5-14. Remaining Tasks (Not Started)
 - 5: API Foundation & Middleware
 - 6: Deck API Endpoints
 - 7: Card API Endpoints
@@ -76,7 +83,6 @@
 - 12: Background Jobs (Celery)
 - 13: Integration Testing
 - 14: API Documentation
-- 15: Production Deployment
 
 ---
 

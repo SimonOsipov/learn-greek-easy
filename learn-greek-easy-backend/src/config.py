@@ -172,6 +172,11 @@ class Settings(BaseSettings):
         alias="cors_allow_headers",
         description="Allowed headers (comma-separated or JSON array)",
     )
+    cors_expose_headers_raw: str = Field(
+        default="X-Request-ID,X-RateLimit-Limit,X-RateLimit-Remaining,X-RateLimit-Reset",
+        alias="cors_expose_headers",
+        description="Headers exposed to browser JavaScript (comma-separated or JSON array)",
+    )
 
     @staticmethod
     def _parse_list_from_string(value: str) -> List[str]:
@@ -199,6 +204,39 @@ class Settings(BaseSettings):
     def cors_allow_headers(self) -> List[str]:
         """Get allowed headers as a list."""
         return self._parse_list_from_string(self.cors_allow_headers_raw)
+
+    @property
+    def cors_expose_headers(self) -> List[str]:
+        """Get exposed headers as a list."""
+        return self._parse_list_from_string(self.cors_expose_headers_raw)
+
+    def validate_cors_for_production(self) -> List[str]:
+        """Validate CORS configuration for production safety.
+
+        Returns:
+            List of warning messages (empty if configuration is valid)
+        """
+        warnings: List[str] = []
+        origins = self.cors_origins
+
+        # Check for wildcard with credentials (security risk)
+        if "*" in origins and self.cors_allow_credentials:
+            warnings.append(
+                "CORS_ORIGINS contains '*' with CORS_ALLOW_CREDENTIALS=true - "
+                "browsers will reject this configuration"
+            )
+
+        # Check for empty origins in production
+        if self.is_production and not origins:
+            warnings.append("CORS_ORIGINS is empty in production")
+
+        # Check for HTTP origins in production (should be HTTPS, except localhost)
+        if self.is_production:
+            http_origins = [o for o in origins if o.startswith("http://") and "localhost" not in o]
+            if http_origins:
+                warnings.append(f"Non-localhost HTTP origins in production: {http_origins}")
+
+        return warnings
 
     # =========================================================================
     # Rate Limiting
