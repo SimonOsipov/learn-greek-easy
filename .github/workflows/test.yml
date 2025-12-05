@@ -145,6 +145,12 @@ jobs:
         working-directory: learn-greek-easy-backend
         run: poetry install --no-interaction
 
+      - name: Apply migrations to fresh database
+        working-directory: learn-greek-easy-backend
+        env:
+          DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5433/test_learn_greek
+        run: poetry run alembic upgrade head
+
       - name: Check for pending migrations
         working-directory: learn-greek-easy-backend
         env:
