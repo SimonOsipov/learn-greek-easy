@@ -26,7 +26,7 @@
 
 ---
 
-## Backend Tasks (5/15)
+## Backend Tasks (4 complete + 2 in progress / 15)
 
 ### 1. Project Setup
 **Status**: ✅ COMPLETED (2025-11-20)
@@ -72,8 +72,13 @@
 - Railway deployment (frontend + backend + PostgreSQL + Redis)
 - Health endpoints, environment variables, CORS configured
 
-### 5-14. Remaining Tasks (Not Started)
-- 5: API Foundation & Middleware
+### 5. API Foundation & Middleware
+**Status**: 🔄 IN PROGRESS (1/8 subtasks)
+**File**: [05-api-foundation-middleware-plan.md](./backend/05/05-api-foundation-middleware-plan.md)
+- ✅ 05.01: CORS middleware configuration (expose_headers, production validation)
+- ⏸️ 05.02-05.08: Remaining middleware subtasks
+
+### 6-14. Remaining Tasks (Not Started)
 - 6: Deck API Endpoints
 - 7: Card API Endpoints
 - 8: Review API Endpoints

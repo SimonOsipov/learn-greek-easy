@@ -20,7 +20,7 @@ This document tracks all backend development tasks for the MVP.
 | 2 | Database Design | ✅ | Complete |
 | 3 | Authentication | 🔄 | 90% (9/10 subtasks) |
 | **4** | **Backend Testing Framework** | ✅ | **Complete (10/10 subtasks)** |
-| 5 | API Foundation & Middleware | ⏸️ | Was Task 4 |
+| 5 | API Foundation & Middleware | 🔄 | 1/8 (05.01 CORS done) |
 | 6 | Deck Management API | ⏸️ | Was Task 5 |
 | 7 | Card Management API | ⏸️ | Was Task 6 |
 | 8 | Review & Progress Tracking | ⏸️ | Was Task 7 |
@@ -32,7 +32,7 @@ This document tracks all backend development tasks for the MVP.
 | 14 | API Documentation | ⏸️ | Was Task 14 |
 | 15 | Docker & Deployment | ✅ | Complete |
 
-**Total**: 15 tasks | **Completed**: 4 | **In Progress**: 1 | **Not Started**: 10
+**Total**: 15 tasks | **Completed**: 4 | **In Progress**: 2 | **Not Started**: 9
 
 ---
 
@@ -151,20 +151,20 @@ This document tracks all backend development tasks for the MVP.
 ---
 
 ### 5. API Foundation & Middleware
-**Status**: ⏸️ **NOT STARTED**
+**Status**: 🔄 **IN PROGRESS** (1/8 subtasks)
 **Estimated Duration**: 2-3 hours
 **Priority**: High
 **Dependencies**: Task 3, Task 4
 
 **Subtasks**:
-- 05.01: Configure CORS middleware
-- 05.02: Implement request logging middleware
-- 05.03: Create error handling middleware
-- 05.04: Add rate limiting middleware
-- 05.05: Implement request validation
-- 05.06: Create response formatting utilities
-- 05.07: Setup API versioning (/api/v1/)
-- 05.08: Add health check endpoint
+- ✅ 05.01: Configure CORS middleware (expose_headers, production validation)
+- ⏸️ 05.02: Implement request logging middleware
+- ⏸️ 05.03: Create error handling middleware
+- ⏸️ 05.04: Add rate limiting middleware
+- ⏸️ 05.05: Implement request validation
+- ⏸️ 05.06: Create response formatting utilities
+- ⏸️ 05.07: Setup API versioning (/api/v1/)
+- ⏸️ 05.08: Add health check endpoint
 
 **Key Deliverables**:
 - `middleware/` directory with all middleware
