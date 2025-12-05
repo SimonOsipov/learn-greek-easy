@@ -139,6 +139,9 @@ def cors_expose_headers(self) -> List[str]:
 
 ### 05.02: Request Logging Middleware
 
+**Status**: ✅ COMPLETED (2025-12-05)
+**PR**: [#11](https://github.com/SimonOsipov/learn-greek-easy/pull/11)
+
 **Purpose**: Log all HTTP requests with timing, request IDs, and correlation data for observability.
 
 **File**: `src/middleware/logging.py`
