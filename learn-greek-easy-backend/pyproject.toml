@@ -109,6 +109,15 @@ plugins = ["pydantic.mypy"]
 module = "alembic.*"
 ignore_errors = true
 
+[[tool.mypy.overrides]]
+module = ["google.oauth2.*", "google.auth.*"]
+disallow_untyped_calls = false
+
+# security.py uses google-auth library which has no type stubs
+[[tool.mypy.overrides]]
+module = "src.core.security"
+disallow_untyped_calls = false
+
 [tool.pytest.ini_options]
 # Minimum pytest version
 minversion = "8.0"
