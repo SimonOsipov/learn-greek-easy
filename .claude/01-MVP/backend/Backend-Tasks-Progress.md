@@ -151,14 +151,14 @@ This document tracks all backend development tasks for the MVP.
 ---
 
 ### 5. API Foundation & Middleware
-**Status**: 🔄 **IN PROGRESS** (1/8 subtasks)
+**Status**: 🔄 **IN PROGRESS** (2/8 subtasks)
 **Estimated Duration**: 2-3 hours
 **Priority**: High
 **Dependencies**: Task 3, Task 4
 
 **Subtasks**:
 - ✅ 05.01: Configure CORS middleware (expose_headers, production validation)
-- ⏸️ 05.02: Implement request logging middleware
+- ✅ 05.02: Implement request logging middleware (PR #11, 67 tests, 100% coverage)
 - ⏸️ 05.03: Create error handling middleware
 - ⏸️ 05.04: Add rate limiting middleware
 - ⏸️ 05.05: Implement request validation
