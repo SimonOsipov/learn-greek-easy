@@ -9,9 +9,10 @@ If Redis is not available, tests will be skipped.
 
 import uuid
 
+import httpx
 import pytest
 from fastapi import FastAPI
-from fastapi.testclient import TestClient
+from httpx import ASGITransport
 
 from src.core.redis import close_redis, get_redis, init_redis
 from src.middleware.rate_limit import RateLimitingMiddleware
@@ -47,40 +48,43 @@ def generate_unique_ip() -> str:
     return f"10.{octets[1] % 256}.{octets[2] % 256}.{octets[3] % 256}"
 
 
+def create_test_app() -> FastAPI:
+    """Create a test FastAPI app with rate limiting middleware."""
+    app = FastAPI()
+    app.add_middleware(RateLimitingMiddleware)
+
+    @app.get("/api/v1/test")
+    async def test_endpoint():
+        return {"status": "ok"}
+
+    @app.post("/api/v1/auth/login")
+    async def login_endpoint():
+        return {"status": "logged_in"}
+
+    return app
+
+
 @pytest.mark.integration
 class TestRateLimitingWithRedis:
-    """Integration tests for rate limiting with actual Redis."""
+    """Integration tests for rate limiting with actual Redis.
 
-    @pytest.fixture
-    def app(self) -> FastAPI:
-        """Create test FastAPI app with middleware."""
-        app = FastAPI()
-        app.add_middleware(RateLimitingMiddleware)
-
-        @app.get("/api/v1/test")
-        async def test_endpoint():
-            return {"status": "ok"}
-
-        @app.post("/api/v1/auth/login")
-        async def login_endpoint():
-            return {"status": "logged_in"}
-
-        return app
-
-    @pytest.fixture
-    def client(self, app: FastAPI) -> TestClient:
-        """Create test client."""
-        return TestClient(app)
+    Uses httpx.AsyncClient with ASGITransport to keep everything in the
+    same async context, ensuring the Redis client is accessible.
+    """
 
     @pytest.mark.asyncio
-    async def test_rate_limit_headers_with_real_redis(self, redis_initialized, client: TestClient):
+    async def test_rate_limit_headers_with_real_redis(self, redis_initialized):
         """Test that rate limit headers are correct with real Redis."""
+        app = create_test_app()
         unique_ip = generate_unique_ip()
 
-        response = client.get(
-            "/api/v1/test",
-            headers={"X-Forwarded-For": unique_ip},
-        )
+        async with httpx.AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            response = await client.get(
+                "/api/v1/test",
+                headers={"X-Forwarded-For": unique_ip},
+            )
 
         assert response.status_code == 200
 
@@ -88,34 +92,38 @@ class TestRateLimitingWithRedis:
         remaining = int(response.headers["X-RateLimit-Remaining"])
         reset = int(response.headers["X-RateLimit-Reset"])
 
-        assert limit == 100  # General API limit
+        assert limit == 100, f"Expected limit 100, got {limit}"
         assert remaining >= 0
-        # After first request, remaining should be less than limit
-        assert remaining < limit, f"Expected remaining < {limit}, got {remaining}"
+        # After first request, remaining should be limit - 1
+        assert remaining == limit - 1, f"Expected {limit - 1}, got {remaining}"
         assert reset > 0
 
     @pytest.mark.asyncio
-    async def test_remaining_decreases_with_requests(self, redis_initialized, client: TestClient):
+    async def test_remaining_decreases_with_requests(self, redis_initialized):
         """Test that remaining count decreases with each request."""
+        app = create_test_app()
         unique_ip = generate_unique_ip()
 
-        # Make first request
-        response1 = client.get(
-            "/api/v1/test",
-            headers={"X-Forwarded-For": unique_ip},
-        )
+        async with httpx.AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            # Make first request
+            response1 = await client.get(
+                "/api/v1/test",
+                headers={"X-Forwarded-For": unique_ip},
+            )
 
-        assert response1.status_code == 200
-        remaining1 = int(response1.headers["X-RateLimit-Remaining"])
+            assert response1.status_code == 200
+            remaining1 = int(response1.headers["X-RateLimit-Remaining"])
 
-        # Make second request
-        response2 = client.get(
-            "/api/v1/test",
-            headers={"X-Forwarded-For": unique_ip},
-        )
+            # Make second request
+            response2 = await client.get(
+                "/api/v1/test",
+                headers={"X-Forwarded-For": unique_ip},
+            )
 
-        assert response2.status_code == 200
-        remaining2 = int(response2.headers["X-RateLimit-Remaining"])
+            assert response2.status_code == 200
+            remaining2 = int(response2.headers["X-RateLimit-Remaining"])
 
         # Remaining should have decreased by exactly 1
         assert (
@@ -123,22 +131,26 @@ class TestRateLimitingWithRedis:
         ), f"Expected remaining to decrease by 1: {remaining1} -> {remaining2}"
 
     @pytest.mark.asyncio
-    async def test_different_ips_have_separate_limits(self, redis_initialized, client: TestClient):
+    async def test_different_ips_have_separate_limits(self, redis_initialized):
         """Test that different IPs have independent rate limits."""
+        app = create_test_app()
         ip1 = generate_unique_ip()
         ip2 = generate_unique_ip()
 
-        # Request from IP 1
-        response1 = client.get(
-            "/api/v1/test",
-            headers={"X-Forwarded-For": ip1},
-        )
+        async with httpx.AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            # Request from IP 1
+            response1 = await client.get(
+                "/api/v1/test",
+                headers={"X-Forwarded-For": ip1},
+            )
 
-        # Request from IP 2
-        response2 = client.get(
-            "/api/v1/test",
-            headers={"X-Forwarded-For": ip2},
-        )
+            # Request from IP 2
+            response2 = await client.get(
+                "/api/v1/test",
+                headers={"X-Forwarded-For": ip2},
+            )
 
         # Both should succeed (independent limits)
         assert response1.status_code == 200
@@ -154,14 +166,18 @@ class TestRateLimitingWithRedis:
         assert remaining2 == limit - 1, f"IP2: expected {limit - 1}, got {remaining2}"
 
     @pytest.mark.asyncio
-    async def test_auth_endpoint_has_stricter_limit(self, redis_initialized, client: TestClient):
+    async def test_auth_endpoint_has_stricter_limit(self, redis_initialized):
         """Test that auth endpoints have stricter rate limits."""
+        app = create_test_app()
         unique_ip = generate_unique_ip()
 
-        response = client.post(
-            "/api/v1/auth/login",
-            headers={"X-Forwarded-For": unique_ip},
-        )
+        async with httpx.AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            response = await client.post(
+                "/api/v1/auth/login",
+                headers={"X-Forwarded-For": unique_ip},
+            )
 
         assert response.status_code == 200
 
@@ -185,33 +201,28 @@ class TestRateLimitExhaustion:
         This test uses the auth endpoint which has a limit of 10,
         so we only need to make 11 requests to trigger 429.
         """
-        # Create app with auth endpoint for faster testing (limit=10)
-        app = FastAPI()
-        app.add_middleware(RateLimitingMiddleware)
-
-        @app.post("/api/v1/auth/login")
-        async def login():
-            return {"status": "ok"}
-
-        test_client = TestClient(app)
+        app = create_test_app()
         unique_ip = generate_unique_ip()
 
         got_429 = False
-        # Make requests until limit is exceeded (auth limit is 10)
-        for i in range(15):
-            response = test_client.post(
-                "/api/v1/auth/login",
-                headers={"X-Forwarded-For": unique_ip},
-            )
+        async with httpx.AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            # Make requests until limit is exceeded (auth limit is 10)
+            for i in range(15):
+                response = await client.post(
+                    "/api/v1/auth/login",
+                    headers={"X-Forwarded-For": unique_ip},
+                )
 
-            if response.status_code == 429:
-                # Verify 429 response format
-                data = response.json()
-                assert data["success"] is False
-                assert data["error"]["code"] == "RATE_LIMIT_EXCEEDED"
-                assert "retry_after" in data["error"]
-                assert "Retry-After" in response.headers
-                got_429 = True
-                break
+                if response.status_code == 429:
+                    # Verify 429 response format
+                    data = response.json()
+                    assert data["success"] is False
+                    assert data["error"]["code"] == "RATE_LIMIT_EXCEEDED"
+                    assert "retry_after" in data["error"]
+                    assert "Retry-After" in response.headers
+                    got_429 = True
+                    break
 
         assert got_429, "Expected to receive 429 after exceeding rate limit"
