@@ -242,8 +242,14 @@ class Settings(BaseSettings):
     # Rate Limiting
     # =========================================================================
     rate_limit_enabled: bool = Field(default=True, description="Enable rate limiting")
-    rate_limit_per_minute: int = Field(default=60, description="General rate limit")
-    rate_limit_auth_per_minute: int = Field(default=5, description="Auth endpoint rate limit")
+    rate_limit_per_minute: int = Field(
+        default=100,
+        description="General API rate limit per minute",
+    )
+    rate_limit_auth_per_minute: int = Field(
+        default=10,
+        description="Auth endpoint rate limit per minute (stricter for brute force protection)",
+    )
 
     # =========================================================================
     # Logging
