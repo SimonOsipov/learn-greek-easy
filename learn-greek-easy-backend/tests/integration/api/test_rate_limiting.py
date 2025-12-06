@@ -14,29 +14,27 @@ import pytest
 from fastapi import FastAPI
 from httpx import ASGITransport
 
-from src.core.redis import close_redis, get_redis, init_redis
+from src.config import settings
+from src.core.redis import get_redis, init_redis
 from src.middleware.rate_limit import RateLimitingMiddleware
 
 
-@pytest.fixture(scope="module")
-async def redis_initialized():
-    """Initialize Redis once for the entire test module.
+async def ensure_redis_initialized() -> bool:
+    """Initialize Redis and verify connection in the current event loop.
 
-    Uses module scope to avoid closing Redis while other tests are running.
+    Returns True if Redis is available, False otherwise.
+    This must be called within each test to ensure Redis is initialized
+    in the same event loop context as the test.
     """
     try:
         await init_redis()
         client = get_redis()
         if client:
-            # Test connection
             await client.ping()
-            yield client
-        else:
-            pytest.skip("Redis not available")
-    except Exception as e:
-        pytest.skip(f"Redis connection failed: {e}")
-    finally:
-        await close_redis()
+            return True
+        return False
+    except Exception:
+        return False
 
 
 def generate_unique_ip() -> str:
@@ -73,8 +71,12 @@ class TestRateLimitingWithRedis:
     """
 
     @pytest.mark.asyncio
-    async def test_rate_limit_headers_with_real_redis(self, redis_initialized):
+    async def test_rate_limit_headers_with_real_redis(self):
         """Test that rate limit headers are correct with real Redis."""
+        # Initialize Redis in this test's event loop
+        if not await ensure_redis_initialized():
+            pytest.skip("Redis not available")
+
         app = create_test_app()
         unique_ip = generate_unique_ip()
 
@@ -92,15 +94,21 @@ class TestRateLimitingWithRedis:
         remaining = int(response.headers["X-RateLimit-Remaining"])
         reset = int(response.headers["X-RateLimit-Reset"])
 
-        assert limit == 100, f"Expected limit 100, got {limit}"
+        # Use configured limit from settings
+        expected_limit = settings.rate_limit_per_minute
+        assert limit == expected_limit, f"Expected limit {expected_limit}, got {limit}"
         assert remaining >= 0
         # After first request, remaining should be limit - 1
         assert remaining == limit - 1, f"Expected {limit - 1}, got {remaining}"
         assert reset > 0
 
     @pytest.mark.asyncio
-    async def test_remaining_decreases_with_requests(self, redis_initialized):
+    async def test_remaining_decreases_with_requests(self):
         """Test that remaining count decreases with each request."""
+        # Initialize Redis in this test's event loop
+        if not await ensure_redis_initialized():
+            pytest.skip("Redis not available")
+
         app = create_test_app()
         unique_ip = generate_unique_ip()
 
@@ -131,8 +139,12 @@ class TestRateLimitingWithRedis:
         ), f"Expected remaining to decrease by 1: {remaining1} -> {remaining2}"
 
     @pytest.mark.asyncio
-    async def test_different_ips_have_separate_limits(self, redis_initialized):
+    async def test_different_ips_have_separate_limits(self):
         """Test that different IPs have independent rate limits."""
+        # Initialize Redis in this test's event loop
+        if not await ensure_redis_initialized():
+            pytest.skip("Redis not available")
+
         app = create_test_app()
         ip1 = generate_unique_ip()
         ip2 = generate_unique_ip()
@@ -166,8 +178,12 @@ class TestRateLimitingWithRedis:
         assert remaining2 == limit - 1, f"IP2: expected {limit - 1}, got {remaining2}"
 
     @pytest.mark.asyncio
-    async def test_auth_endpoint_has_stricter_limit(self, redis_initialized):
+    async def test_auth_endpoint_has_stricter_limit(self):
         """Test that auth endpoints have stricter rate limits."""
+        # Initialize Redis in this test's event loop
+        if not await ensure_redis_initialized():
+            pytest.skip("Redis not available")
+
         app = create_test_app()
         unique_ip = generate_unique_ip()
 
@@ -184,9 +200,18 @@ class TestRateLimitingWithRedis:
         limit = int(response.headers["X-RateLimit-Limit"])
         remaining = int(response.headers["X-RateLimit-Remaining"])
 
-        # Auth endpoints should have limit of 10
-        assert limit == 10, f"Expected auth limit 10, got {limit}"
+        # Auth endpoints should have stricter limit from settings
+        expected_auth_limit = settings.rate_limit_auth_per_minute
+        assert (
+            limit == expected_auth_limit
+        ), f"Expected auth limit {expected_auth_limit}, got {limit}"
         assert remaining == limit - 1, f"Expected {limit - 1}, got {remaining}"
+
+        # Auth limit should be stricter than general limit
+        assert limit < settings.rate_limit_per_minute, (
+            f"Auth limit ({limit}) should be less than "
+            f"general limit ({settings.rate_limit_per_minute})"
+        )
 
 
 @pytest.mark.integration
@@ -195,21 +220,30 @@ class TestRateLimitExhaustion:
     """Tests for rate limit exhaustion (may be slow)."""
 
     @pytest.mark.asyncio
-    async def test_returns_429_when_limit_exceeded(self, redis_initialized):
+    async def test_returns_429_when_limit_exceeded(self):
         """Test that 429 is returned when limit is exceeded.
 
-        This test uses the auth endpoint which has a limit of 10,
-        so we only need to make 11 requests to trigger 429.
+        This test uses the auth endpoint which has a stricter limit,
+        so we need fewer requests to trigger 429.
         """
+        # Initialize Redis in this test's event loop
+        if not await ensure_redis_initialized():
+            pytest.skip("Redis not available")
+
         app = create_test_app()
         unique_ip = generate_unique_ip()
+
+        # Use auth limit which should be stricter
+        auth_limit = settings.rate_limit_auth_per_minute
+        # Make more requests than the limit to ensure we hit 429
+        max_requests = auth_limit + 5
 
         got_429 = False
         async with httpx.AsyncClient(
             transport=ASGITransport(app=app), base_url="http://test"
         ) as client:
-            # Make requests until limit is exceeded (auth limit is 10)
-            for i in range(15):
+            # Make requests until limit is exceeded
+            for i in range(max_requests):
                 response = await client.post(
                     "/api/v1/auth/login",
                     headers={"X-Forwarded-For": unique_ip},
