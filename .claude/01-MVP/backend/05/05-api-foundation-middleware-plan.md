@@ -400,6 +400,9 @@ class ErrorHandlingMiddleware(BaseHTTPMiddleware):
 
 ### 05.04: Rate Limiting Middleware
 
+**Status**: ✅ COMPLETED (2025-12-06)
+**PR**: [#13](https://github.com/SimonOsipov/learn-greek-easy/pull/13)
+
 **Purpose**: Protect API from abuse with configurable rate limits.
 
 **File**: `src/middleware/rate_limit.py`
