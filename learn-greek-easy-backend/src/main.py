@@ -18,8 +18,7 @@ from src.core.exceptions import BaseAPIException
 from src.core.logging import setup_logging
 from src.core.redis import close_redis, init_redis
 from src.db import close_db, init_db
-from src.middleware.auth import AuthLoggingMiddleware
-from src.middleware.logging import RequestLoggingMiddleware
+from src.middleware import AuthLoggingMiddleware, ErrorHandlingMiddleware, RequestLoggingMiddleware
 
 # Setup logging
 setup_logging()
@@ -93,14 +92,17 @@ if settings.is_production:
 # Auth logging middleware for security monitoring
 app.add_middleware(AuthLoggingMiddleware)
 
+# Error handling middleware - catches exceptions from downstream middleware
+# Registered after AuthLogging so it can catch errors from that middleware
+app.add_middleware(ErrorHandlingMiddleware)
+
 # Request logging middleware for comprehensive API observability
-# Registered after AuthLoggingMiddleware so it executes first on requests
+# Registered last so it executes first on requests (sets request_id)
 # (Starlette middleware execution: last registered = first to execute on request)
 app.add_middleware(RequestLoggingMiddleware)
 
 # TODO (Task 4): Add additional custom middleware
 # - Rate limiting
-# - Error handling
 
 # ============================================================================
 # Exception Handlers

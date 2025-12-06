@@ -291,6 +291,9 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 
 ### 05.03: Error Handling Middleware
 
+**Status**: ✅ COMPLETED (2025-12-06)
+**PR**: [#12](https://github.com/SimonOsipov/learn-greek-easy/pull/12)
+
 **Purpose**: Centralize exception handling with consistent error response format.
 
 **File**: `src/middleware/error_handler.py`
