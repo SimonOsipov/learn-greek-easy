@@ -119,13 +119,15 @@ class RateLimitingMiddleware(BaseHTTPMiddleware):
         """
         # Skip if rate limiting is disabled
         if not settings.feature_rate_limiting:
-            return await call_next(request)
+            response: Response = await call_next(request)
+            return response
 
         path = request.url.path
 
         # Skip exempt paths
         if self._is_exempt(path):
-            return await call_next(request)
+            response = await call_next(request)
+            return response
 
         # Get rate limit configuration for this path
         rate_config = self._get_rate_config(path)
@@ -157,7 +159,7 @@ class RateLimitingMiddleware(BaseHTTPMiddleware):
             return self._rate_limit_response(rate_config, reset_at, request_id)
 
         # Process request normally
-        response: Response = await call_next(request)
+        response = await call_next(request)
 
         # Add rate limit headers to response
         response.headers["X-RateLimit-Limit"] = str(rate_config.limit)
