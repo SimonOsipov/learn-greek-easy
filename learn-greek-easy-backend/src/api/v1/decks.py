@@ -14,7 +14,7 @@ from src.core.exceptions import DeckNotFoundException
 from src.db.dependencies import get_db
 from src.db.models import DeckLevel
 from src.repositories.deck import DeckRepository
-from src.schemas.deck import DeckDetailResponse, DeckListResponse, DeckResponse
+from src.schemas.deck import DeckDetailResponse, DeckListResponse, DeckResponse, DeckSearchResponse
 
 router = APIRouter(
     # Note: prefix is set by parent router in v1/router.py
@@ -95,6 +95,85 @@ async def list_decks(
         total=total,
         page=page,
         page_size=page_size,
+        decks=[DeckResponse.model_validate(deck) for deck in decks],
+    )
+
+
+@router.get(
+    "/search",
+    response_model=DeckSearchResponse,
+    summary="Search decks",
+    description="Search for decks by name or description with case-insensitive partial matching.",
+    responses={
+        200: {
+            "description": "Search results with pagination",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "total": 5,
+                        "page": 1,
+                        "page_size": 20,
+                        "query": "vocabulary",
+                        "decks": [
+                            {
+                                "id": "550e8400-e29b-41d4-a716-446655440000",
+                                "name": "Greek A1 Vocabulary",
+                                "description": "Essential beginner vocabulary",
+                                "level": "A1",
+                                "is_active": True,
+                                "created_at": "2024-01-15T10:30:00Z",
+                                "updated_at": "2024-01-15T10:30:00Z",
+                            }
+                        ],
+                    }
+                }
+            },
+        },
+        422: {"description": "Validation error (missing or invalid query parameter)"},
+    },
+)
+async def search_decks(
+    q: str = Query(
+        ...,  # Required parameter
+        min_length=1,
+        max_length=100,
+        description="Search query (searches name and description)",
+    ),
+    page: int = Query(default=1, ge=1, description="Page number (starting from 1)"),
+    page_size: int = Query(default=20, ge=1, le=50, description="Items per page (max 50)"),
+    db: AsyncSession = Depends(get_db),
+) -> DeckSearchResponse:
+    """Search decks by name or description.
+
+    Performs case-insensitive partial matching on deck names and descriptions.
+    Only active decks are included in search results.
+
+    Args:
+        q: Search query (required, 1-100 characters)
+        page: Page number starting from 1
+        page_size: Number of items per page (1-50)
+        db: Database session (injected)
+
+    Returns:
+        DeckSearchResponse with total count, pagination info, query, and matching decks
+
+    Example:
+        GET /api/v1/decks/search?q=vocabulary&page=1&page_size=10
+    """
+    repo = DeckRepository(db)
+
+    # Calculate offset from page number
+    skip = (page - 1) * page_size
+
+    # Search decks and get total count
+    decks = await repo.search(query_text=q, skip=skip, limit=page_size)
+    total = await repo.count_search(query_text=q)
+
+    return DeckSearchResponse(
+        total=total,
+        page=page,
+        page_size=page_size,
+        query=q,
         decks=[DeckResponse.model_validate(deck) for deck in decks],
     )
 

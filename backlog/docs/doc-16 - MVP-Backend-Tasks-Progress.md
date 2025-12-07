@@ -3,7 +3,7 @@ id: doc-16
 title: MVP Backend - Tasks Progress
 type: other
 created_date: '2025-12-07 09:25'
-updated_date: '2025-12-07 19:31'
+updated_date: '2025-12-07 20:13'
 ---
 # MVP Backend - Tasks Progress
 
@@ -21,7 +21,7 @@ updated_date: '2025-12-07 19:31'
 | 3 | Authentication | 🔄 | 90% (9/10 subtasks) |
 | 4 | Testing Framework | ✅ | 452 tests, TESTING.md 2054 lines |
 | 5 | API Foundation | ✅ | 8/8 complete |
-| 6 | Deck API | 🔄 | 2/6 subtasks (06.01, 06.02 done) |
+| 6 | Deck API | 🔄 | 3/6 subtasks (06.01, 06.02, 06.03 done) |
 | 7-14 | API Development | ⏸️ | Cards, Reviews, Progress, SM-2, Content, Celery, Integration, Docs |
 | 15 | Docker & Deployment | ✅ | Railway deployed |
 
@@ -68,10 +68,10 @@ updated_date: '2025-12-07 19:31'
 - ✅ GET /auth/me, Middleware, Session management
 - ⏸️ Google OAuth (placeholder)
 
-### Task 6: Deck API (33%)
+### Task 6: Deck API (50%)
 - ✅ 06.01: Create Deck Router and List Endpoint (PR #18)
-- ✅ 06.02: Get Single Deck Endpoint (2025-12-07)
-- ⏸️ 06.03: Search Decks Endpoint
+- ✅ 06.02: Get Single Deck Endpoint (PR #19)
+- ✅ 06.03: Search Decks Endpoint (PR #21)
 - ⏸️ 06.04: Create Deck Endpoint (Admin)
 - ⏸️ 06.05: Update and Delete Deck Endpoints (Admin)
 - ⏸️ 06.06: Deck API Tests
