@@ -110,6 +110,76 @@ def validate_pagination(
     return offset, page_size
 
 
+def calculate_pagination_meta(
+    page: int,
+    page_size: int,
+    total_items: int,
+) -> dict:
+    """Calculate pagination metadata from query parameters.
+
+    Computes pagination metadata including total_pages, has_next, and
+    has_previous based on the current page position and total item count.
+    This is useful when building paginated response objects.
+
+    Args:
+        page: Current page number (1-indexed).
+        page_size: Number of items per page.
+        total_items: Total count of all items.
+
+    Returns:
+        Dictionary with pagination metadata fields:
+        - page: Current page number
+        - page_size: Items per page
+        - total_items: Total count
+        - total_pages: Calculated total pages
+        - has_next: Whether more pages exist after current
+        - has_previous: Whether pages exist before current
+
+    Examples:
+        >>> calculate_pagination_meta(page=1, page_size=20, total_items=150)
+        {
+            "page": 1,
+            "page_size": 20,
+            "total_items": 150,
+            "total_pages": 8,
+            "has_next": True,
+            "has_previous": False,
+        }
+
+        >>> calculate_pagination_meta(page=4, page_size=20, total_items=150)
+        {
+            "page": 4,
+            "page_size": 20,
+            "total_items": 150,
+            "total_pages": 8,
+            "has_next": True,
+            "has_previous": True,
+        }
+
+        >>> calculate_pagination_meta(page=1, page_size=20, total_items=0)
+        {
+            "page": 1,
+            "page_size": 20,
+            "total_items": 0,
+            "total_pages": 0,
+            "has_next": False,
+            "has_previous": False,
+        }
+    """
+    # Calculate total pages using ceiling division
+    # Formula: (total + size - 1) // size handles edge cases correctly
+    total_pages = (total_items + page_size - 1) // page_size if page_size > 0 else 0
+
+    return {
+        "page": page,
+        "page_size": page_size,
+        "total_items": total_items,
+        "total_pages": total_pages,
+        "has_next": page < total_pages,
+        "has_previous": page > 1,
+    }
+
+
 # ============================================================================
 # Search Query Sanitization
 # ============================================================================

@@ -11,7 +11,13 @@ Target coverage: 95%+
 
 import pytest
 
-from src.utils.validation import EMAIL_REGEX, UUID_REGEX, sanitize_search_query, validate_pagination
+from src.utils.validation import (
+    EMAIL_REGEX,
+    UUID_REGEX,
+    calculate_pagination_meta,
+    sanitize_search_query,
+    validate_pagination,
+)
 
 
 class TestEmailRegex:
@@ -248,3 +254,92 @@ class TestSanitizeSearchQuery:
         """Test that function returns a string."""
         result = sanitize_search_query("test")
         assert isinstance(result, str)
+
+
+class TestCalculatePaginationMeta:
+    """Tests for calculate_pagination_meta function."""
+
+    def test_first_page_calculation(self) -> None:
+        """Test pagination metadata for first page."""
+        result = calculate_pagination_meta(page=1, page_size=20, total_items=150)
+        assert result["page"] == 1
+        assert result["page_size"] == 20
+        assert result["total_items"] == 150
+        assert result["total_pages"] == 8  # ceil(150/20)
+        assert result["has_next"] is True
+        assert result["has_previous"] is False
+
+    def test_middle_page(self) -> None:
+        """Test pagination metadata for middle page."""
+        result = calculate_pagination_meta(page=4, page_size=20, total_items=150)
+        assert result["page"] == 4
+        assert result["has_next"] is True
+        assert result["has_previous"] is True
+
+    def test_last_page(self) -> None:
+        """Test pagination metadata for last page."""
+        result = calculate_pagination_meta(page=8, page_size=20, total_items=150)
+        assert result["page"] == 8
+        assert result["has_next"] is False
+        assert result["has_previous"] is True
+
+    def test_empty_results(self) -> None:
+        """Test pagination metadata with zero items."""
+        result = calculate_pagination_meta(page=1, page_size=20, total_items=0)
+        assert result["total_pages"] == 0
+        assert result["has_next"] is False
+        assert result["has_previous"] is False
+
+    def test_single_page(self) -> None:
+        """Test pagination metadata when all items fit on one page."""
+        result = calculate_pagination_meta(page=1, page_size=20, total_items=15)
+        assert result["total_pages"] == 1
+        assert result["has_next"] is False
+        assert result["has_previous"] is False
+
+    def test_exact_page_boundary(self) -> None:
+        """Test pagination when items divide evenly into pages."""
+        result = calculate_pagination_meta(page=1, page_size=20, total_items=40)
+        assert result["total_pages"] == 2
+
+    def test_one_over_boundary(self) -> None:
+        """Test pagination when one item over page boundary."""
+        result = calculate_pagination_meta(page=1, page_size=20, total_items=41)
+        assert result["total_pages"] == 3
+
+    def test_page_size_one(self) -> None:
+        """Test pagination with page_size of 1."""
+        result = calculate_pagination_meta(page=1, page_size=1, total_items=5)
+        assert result["total_pages"] == 5
+        assert result["has_next"] is True
+
+    def test_page_size_zero(self) -> None:
+        """Test pagination with page_size of 0 (edge case)."""
+        result = calculate_pagination_meta(page=1, page_size=0, total_items=10)
+        assert result["total_pages"] == 0
+
+    def test_large_page_number(self) -> None:
+        """Test pagination with large page numbers."""
+        result = calculate_pagination_meta(page=500, page_size=10, total_items=5000)
+        assert result["page"] == 500
+        assert result["total_pages"] == 500
+        assert result["has_next"] is False
+        assert result["has_previous"] is True
+
+    def test_returns_dict(self) -> None:
+        """Test that function returns a dictionary."""
+        result = calculate_pagination_meta(page=1, page_size=20, total_items=100)
+        assert isinstance(result, dict)
+
+    def test_all_keys_present(self) -> None:
+        """Test that all expected keys are present."""
+        result = calculate_pagination_meta(page=1, page_size=20, total_items=100)
+        expected_keys = {
+            "page",
+            "page_size",
+            "total_items",
+            "total_pages",
+            "has_next",
+            "has_previous",
+        }
+        assert set(result.keys()) == expected_keys
