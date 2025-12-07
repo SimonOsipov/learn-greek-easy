@@ -38,7 +38,8 @@ from src.schemas.user import (
 from src.services.auth_service import AuthService
 
 router = APIRouter(
-    prefix="/api/v1/auth",
+    # Note: prefix is set by parent router in v1/router.py
+    # This router is mounted at /auth under the /api/v1 prefix
     tags=["Authentication"],
     responses={
         401: {"description": "Authentication failed"},
