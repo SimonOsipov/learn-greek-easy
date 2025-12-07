@@ -46,6 +46,24 @@ class DeckRepository(BaseRepository[Deck]):
         result = await self.db.execute(query)
         return list(result.scalars().all())
 
+    async def count_active(self, level: DeckLevel | None = None) -> int:
+        """Count all active decks, optionally filtered by level.
+
+        Args:
+            level: Optional CEFR level filter (A1, A2, B1, B2, C1, C2)
+
+        Returns:
+            Total number of active decks matching criteria
+
+        Use Case:
+            Pagination total count for deck listings
+        """
+        query = select(func.count(Deck.id)).where(Deck.is_active.is_(True))
+        if level is not None:
+            query = query.where(Deck.level == level)
+        result = await self.db.execute(query)
+        return result.scalar() or 0
+
     async def get_with_cards(self, deck_id: UUID) -> Deck | None:
         """Get deck with all cards eagerly loaded.
 
