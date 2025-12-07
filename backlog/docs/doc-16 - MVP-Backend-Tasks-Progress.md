@@ -3,14 +3,14 @@ id: doc-16
 title: MVP Backend - Tasks Progress
 type: other
 created_date: '2025-12-07 09:25'
-updated_date: '2025-12-07 13:41'
+updated_date: '2025-12-07 19:31'
 ---
 # MVP Backend - Tasks Progress
 
 ## Overview
 - **Tech Stack**: FastAPI + PostgreSQL + Redis + SQLAlchemy + Alembic
 - **Python**: 3.14+ | **Dependency Management**: Poetry 2.2+
-- **Status**: 5 complete, 1 in progress, 9 not started (37%)
+- **Status**: 5 complete, 2 in progress, 8 not started (33%)
 
 ## Task Summary
 
@@ -21,7 +21,8 @@ updated_date: '2025-12-07 13:41'
 | 3 | Authentication | 🔄 | 90% (9/10 subtasks) |
 | 4 | Testing Framework | ✅ | 452 tests, TESTING.md 2054 lines |
 | 5 | API Foundation | ✅ | 8/8 complete |
-| 6-14 | API Development | ⏸️ | Decks, Cards, Reviews, Progress, SM-2, Content, Celery, Integration, Docs |
+| 6 | Deck API | 🔄 | 2/6 subtasks (06.01, 06.02 done) |
+| 7-14 | API Development | ⏸️ | Cards, Reviews, Progress, SM-2, Content, Celery, Integration, Docs |
 | 15 | Docker & Deployment | ✅ | Railway deployed |
 
 ## Completed Tasks
@@ -67,8 +68,16 @@ updated_date: '2025-12-07 13:41'
 - ✅ GET /auth/me, Middleware, Session management
 - ⏸️ Google OAuth (placeholder)
 
+### Task 6: Deck API (33%)
+- ✅ 06.01: Create Deck Router and List Endpoint (PR #18)
+- ✅ 06.02: Get Single Deck Endpoint (2025-12-07)
+- ⏸️ 06.03: Search Decks Endpoint
+- ⏸️ 06.04: Create Deck Endpoint (Admin)
+- ⏸️ 06.05: Update and Delete Deck Endpoints (Admin)
+- ⏸️ 06.06: Deck API Tests
+
 ## Critical Path
-1. Task 3 (Auth) → Task 6 (Decks)
+1. Task 3 (Auth) → Task 6 (Decks) → Task 7 (Cards)
 2. Task 10 (SM-2) → Task 8 (Reviews) → Task 9 (Progress)
 3. Task 11 (Content), Task 12 (Celery), Task 13-14 (Testing, Docs)
 

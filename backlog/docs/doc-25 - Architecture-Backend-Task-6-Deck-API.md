@@ -3,6 +3,7 @@ id: doc-25
 title: 'Architecture - Backend Task 6: Deck API'
 type: other
 created_date: '2025-12-07 14:07'
+updated_date: '2025-12-07 19:53'
 ---
 # Backend Task 6: Deck API - Technical Design Document
 
@@ -29,6 +30,19 @@ created_date: '2025-12-07 14:07'
 | Exceptions | `src/core/exceptions.py` | `DeckNotFoundException`, `ForbiddenException` |
 | Database | `src/db/dependencies.py` | `get_db` for session injection |
 | Router | `src/api/v1/router.py` | Mount deck router at `/decks` |
+
+## Subtasks Progress
+
+| Subtask | Description | Status | PR |
+|---------|-------------|--------|-----|
+| 06.01 | Create Deck Router and List Endpoint | ✅ Done | PR #18 |
+| 06.02 | Get Single Deck Endpoint | ✅ Done | PR #19 |
+| 06.03 | Search Decks Endpoint | ⏸️ To Do | - |
+| 06.04 | Create Deck Endpoint (Admin) | ⏸️ To Do | - |
+| 06.05 | Update and Delete Deck Endpoints (Admin) | ⏸️ To Do | - |
+| 06.06 | Deck API Tests | ⏸️ To Do | - |
+
+**Progress: 2/6 subtasks complete (33%)**
 
 ## System Architecture
 
@@ -495,101 +509,6 @@ deck, cards = await DeckFactory.create_with_cards(session=db_session, card_count
 # Create admin user
 admin = await UserFactory.create(session=db_session, superuser=True)
 ```
-
-## Subtasks Breakdown
-
-### 06.01: Create Deck Router and List Endpoint
-
-**Description**: Create the base router file and implement GET /decks endpoint with pagination and level filtering.
-
-**Files to Create/Modify**:
-- CREATE: `src/api/v1/decks.py`
-- MODIFY: `src/api/v1/router.py`
-
-**Acceptance Criteria**:
-- Router file created with proper structure
-- GET /decks returns paginated list of active decks
-- Pagination works (page, page_size query params)
-- Level filter works (optional level query param)
-- Returns DeckListResponse with total count
-- Router registered in v1_router
-
-### 06.02: Get Single Deck Endpoint
-
-**Description**: Implement GET /decks/{id} endpoint with card count.
-
-**Files to Create/Modify**:
-- MODIFY: `src/api/v1/decks.py`
-- MODIFY: `src/schemas/deck.py` (add DeckDetailResponse)
-
-**Acceptance Criteria**:
-- GET /decks/{id} returns deck with card_count
-- Returns 404 for non-existent deck
-- Returns 404 for inactive deck
-- DeckDetailResponse schema created
-- Invalid UUID returns 422
-
-### 06.03: Search Decks Endpoint
-
-**Description**: Implement GET /decks/search endpoint.
-
-**Files to Create/Modify**:
-- MODIFY: `src/api/v1/decks.py`
-- MODIFY: `src/schemas/deck.py` (add DeckSearchResponse)
-
-**Acceptance Criteria**:
-- GET /decks/search?q=query returns matching decks
-- Search is case-insensitive
-- Pagination works for search results
-- Empty query returns 422
-- DeckSearchResponse schema created with query field
-
-### 06.04: Create Deck Endpoint (Admin)
-
-**Description**: Implement POST /decks endpoint for admins.
-
-**Files to Create/Modify**:
-- MODIFY: `src/api/v1/decks.py`
-
-**Acceptance Criteria**:
-- POST /decks creates new deck (admin only)
-- Returns 201 with created deck
-- Returns 401 if not authenticated
-- Returns 403 if not superuser
-- Validates DeckCreate schema
-- Sets is_active=True by default
-
-### 06.05: Update and Delete Deck Endpoints (Admin)
-
-**Description**: Implement PATCH /decks/{id} and DELETE /decks/{id} endpoints.
-
-**Files to Create/Modify**:
-- MODIFY: `src/api/v1/decks.py`
-
-**Acceptance Criteria**:
-- PATCH /decks/{id} updates deck (admin only)
-- Partial updates work (only provided fields updated)
-- DELETE /decks/{id} soft-deletes deck (sets is_active=False)
-- DELETE returns 204 No Content
-- Both return 404 for non-existent deck
-- Both return 401/403 for non-admin users
-
-### 06.06: Deck API Tests
-
-**Description**: Write unit and integration tests for all deck endpoints.
-
-**Files to Create**:
-- CREATE: `tests/unit/api/test_decks.py`
-- CREATE: `tests/integration/api/test_decks.py`
-
-**Acceptance Criteria**:
-- Unit tests for all 6 endpoints
-- Tests for success and error cases
-- Tests for pagination and filtering
-- Tests for authentication/authorization
-- Integration tests for full CRUD flow
-- All tests passing
-- Coverage > 90% for deck router
 
 ## Technical Risks and Mitigations
 
