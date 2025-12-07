@@ -1,10 +1,11 @@
 ---
 id: doc-2
-title: 'Task 02: Core Frontend Setup'
+title: 'MVP Frontend - 02: Core Setup & Configuration'
 type: other
 created_date: '2025-12-07 09:11'
+updated_date: '2025-12-07 09:14'
 ---
-# Task 02: Core Frontend Setup & Configuration
+# MVP Frontend - 02: Core Setup & Configuration
 
 **Status**: ✅ COMPLETED
 **Completed**: 2025-10-28
