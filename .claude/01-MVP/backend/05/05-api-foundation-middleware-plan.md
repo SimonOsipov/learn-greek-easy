@@ -660,6 +660,9 @@ class RateLimitingMiddleware(BaseHTTPMiddleware):
 
 ### 05.05: Request Validation Enhancement
 
+**Status**: ✅ COMPLETED (2025-12-07)
+**PR**: [#14](https://github.com/SimonOsipov/learn-greek-easy/pull/14)
+
 **Current State**: Pydantic validation is already implemented via FastAPI's automatic schema validation.
 
 **Enhancement**: Create validation utilities for complex scenarios.
