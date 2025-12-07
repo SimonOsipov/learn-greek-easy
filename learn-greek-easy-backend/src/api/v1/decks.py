@@ -7,7 +7,7 @@ listing decks with pagination and filtering.
 from typing import Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.dependencies import get_current_superuser
@@ -21,6 +21,7 @@ from src.schemas.deck import (
     DeckListResponse,
     DeckResponse,
     DeckSearchResponse,
+    DeckUpdate,
 )
 
 router = APIRouter(
@@ -318,3 +319,129 @@ async def get_deck(
         updated_at=deck.updated_at,
         card_count=card_count,
     )
+
+
+@router.patch(
+    "/{deck_id}",
+    response_model=DeckResponse,
+    summary="Update a deck",
+    description="Update an existing deck. Requires superuser privileges.",
+    responses={
+        200: {
+            "description": "Deck updated successfully",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "id": "550e8400-e29b-41d4-a716-446655440000",
+                        "name": "Updated Greek B1 Grammar",
+                        "description": "Updated description",
+                        "level": "B1",
+                        "is_active": True,
+                        "created_at": "2024-01-15T10:30:00Z",
+                        "updated_at": "2024-01-16T14:00:00Z",
+                    }
+                }
+            },
+        },
+        401: {"description": "Not authenticated"},
+        403: {"description": "Not authorized (requires superuser)"},
+        404: {"description": "Deck not found"},
+    },
+)
+async def update_deck(
+    deck_id: UUID,
+    deck_data: DeckUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> DeckResponse:
+    """Update an existing deck.
+
+    Requires superuser privileges.
+    Only provided fields will be updated (partial update).
+
+    Args:
+        deck_id: UUID of the deck to update
+        deck_data: Fields to update (all optional)
+        db: Database session (injected)
+        current_user: Authenticated superuser (injected)
+
+    Returns:
+        DeckResponse: The updated deck
+
+    Raises:
+        401: If not authenticated
+        403: If authenticated but not superuser
+        404: If deck doesn't exist
+        422: If validation fails
+    """
+    repo = DeckRepository(db)
+
+    # Get existing deck (include inactive - admins can update any deck)
+    deck = await repo.get(deck_id)
+    if deck is None:
+        raise DeckNotFoundException(deck_id=str(deck_id))
+
+    # Update using BaseRepository.update() pattern
+    updated_deck = await repo.update(deck, deck_data)
+
+    # Commit the transaction
+    await db.commit()
+    await db.refresh(updated_deck)
+
+    return DeckResponse.model_validate(updated_deck)
+
+
+@router.delete(
+    "/{deck_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete a deck",
+    description="Soft delete a deck by setting is_active to False. Requires superuser privileges.",
+    responses={
+        204: {"description": "Deck deleted successfully"},
+        401: {"description": "Not authenticated"},
+        403: {"description": "Not authorized (requires superuser)"},
+        404: {"description": "Deck not found"},
+    },
+)
+async def delete_deck(
+    deck_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> Response:
+    """Soft delete a deck.
+
+    Requires superuser privileges.
+
+    This does NOT physically delete the deck from the database.
+    Instead, it sets is_active=False, making the deck invisible
+    to public endpoints while preserving the data.
+
+    Note: Deleting an already-inactive deck is idempotent (returns 204).
+
+    Args:
+        deck_id: UUID of the deck to delete
+        db: Database session (injected)
+        current_user: Authenticated superuser (injected)
+
+    Returns:
+        Empty response with 204 status
+
+    Raises:
+        401: If not authenticated
+        403: If authenticated but not superuser
+        404: If deck doesn't exist
+    """
+    repo = DeckRepository(db)
+
+    # Get existing deck (don't filter by is_active - allow re-deleting)
+    deck = await repo.get(deck_id)
+    if deck is None:
+        raise DeckNotFoundException(deck_id=str(deck_id))
+
+    # Soft delete by setting is_active to False
+    deck.is_active = False
+
+    # Commit changes
+    await db.commit()
+
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
