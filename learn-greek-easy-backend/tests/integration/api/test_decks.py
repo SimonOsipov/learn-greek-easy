@@ -1,6 +1,7 @@
 """Integration tests for deck API endpoints.
 
 This module provides comprehensive tests for the deck endpoints including:
+- GET /api/v1/decks/search - Search decks by name or description
 - GET /api/v1/decks/{deck_id} - Get single deck with card count
 """
 
@@ -10,7 +11,220 @@ import pytest
 from httpx import AsyncClient
 
 from src.db.models import Deck
-from tests.fixtures.deck import DeckWithCards
+from tests.fixtures.deck import DeckWithCards, MultiLevelDecks
+
+
+class TestSearchDecksEndpoint:
+    """Test suite for GET /api/v1/decks/search endpoint."""
+
+    @pytest.mark.asyncio
+    async def test_search_decks_success(self, client: AsyncClient, deck_with_cards: DeckWithCards):
+        """Test successful search returns matching decks."""
+        # Search for part of deck name (deck_with_cards creates "Greek A1 Vocabulary")
+        response = await client.get("/api/v1/decks/search?q=Greek")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert "total" in data
+        assert "page" in data
+        assert "page_size" in data
+        assert "query" in data
+        assert data["query"] == "Greek"
+        assert "decks" in data
+        assert len(data["decks"]) >= 1
+
+    @pytest.mark.asyncio
+    async def test_search_decks_case_insensitive(
+        self, client: AsyncClient, deck_with_cards: DeckWithCards
+    ):
+        """Test search is case-insensitive."""
+        # Search with different cases
+        response_lower = await client.get("/api/v1/decks/search?q=greek")
+        response_upper = await client.get("/api/v1/decks/search?q=GREEK")
+        response_mixed = await client.get("/api/v1/decks/search?q=GrEeK")
+
+        assert response_lower.status_code == 200
+        assert response_upper.status_code == 200
+        assert response_mixed.status_code == 200
+
+        # All should return the same results
+        assert response_lower.json()["total"] == response_upper.json()["total"]
+        assert response_lower.json()["total"] == response_mixed.json()["total"]
+
+    @pytest.mark.asyncio
+    async def test_search_decks_partial_match_name(
+        self, client: AsyncClient, deck_with_cards: DeckWithCards
+    ):
+        """Test search matches partial text in name."""
+        # Search for partial word "Vocab" should match "Vocabulary"
+        response = await client.get("/api/v1/decks/search?q=Vocab")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] >= 1
+        # Verify we found the deck with "Vocabulary" in name
+        deck_names = [d["name"] for d in data["decks"]]
+        assert any("Vocabulary" in name for name in deck_names)
+
+    @pytest.mark.asyncio
+    async def test_search_decks_partial_match_description(
+        self, client: AsyncClient, deck_with_cards: DeckWithCards
+    ):
+        """Test search matches partial text in description."""
+        # Deck fixture description contains "beginner" or "Essential"
+        response = await client.get("/api/v1/decks/search?q=beginner")
+
+        assert response.status_code == 200
+        data = response.json()
+        # Should find deck with "beginner" in description
+        assert data["total"] >= 1
+
+    @pytest.mark.asyncio
+    async def test_search_decks_pagination(
+        self, client: AsyncClient, multi_level_decks: MultiLevelDecks
+    ):
+        """Test pagination works for search results."""
+        # multi_level_decks creates 3 decks named "Greek A1/A2/B1 Vocabulary"
+        # First page with page_size=1
+        response_page1 = await client.get("/api/v1/decks/search?q=Greek&page=1&page_size=1")
+
+        assert response_page1.status_code == 200
+        data_page1 = response_page1.json()
+        assert data_page1["page"] == 1
+        assert data_page1["page_size"] == 1
+        assert len(data_page1["decks"]) == 1
+        assert data_page1["total"] >= 3  # At least 3 decks match "Greek"
+
+        # Second page
+        response_page2 = await client.get("/api/v1/decks/search?q=Greek&page=2&page_size=1")
+
+        assert response_page2.status_code == 200
+        data_page2 = response_page2.json()
+        assert data_page2["page"] == 2
+        assert len(data_page2["decks"]) == 1
+
+        # Ensure different decks on different pages
+        assert data_page1["decks"][0]["id"] != data_page2["decks"][0]["id"]
+
+    @pytest.mark.asyncio
+    async def test_search_decks_missing_query_returns_422(self, client: AsyncClient):
+        """Test missing q parameter returns 422."""
+        response = await client.get("/api/v1/decks/search")
+
+        assert response.status_code == 422
+        data = response.json()
+        assert data["success"] is False
+        assert data["error"]["code"] == "VALIDATION_ERROR"
+
+    @pytest.mark.asyncio
+    async def test_search_decks_empty_query_returns_422(self, client: AsyncClient):
+        """Test empty q parameter returns 422."""
+        response = await client.get("/api/v1/decks/search?q=")
+
+        assert response.status_code == 422
+        data = response.json()
+        assert data["success"] is False
+        assert data["error"]["code"] == "VALIDATION_ERROR"
+
+    @pytest.mark.asyncio
+    async def test_search_decks_query_too_long_returns_422(self, client: AsyncClient):
+        """Test query exceeding 100 characters returns 422."""
+        long_query = "a" * 101
+        response = await client.get(f"/api/v1/decks/search?q={long_query}")
+
+        assert response.status_code == 422
+        data = response.json()
+        assert data["success"] is False
+        assert data["error"]["code"] == "VALIDATION_ERROR"
+
+    @pytest.mark.asyncio
+    async def test_search_decks_excludes_inactive(
+        self, client: AsyncClient, inactive_deck: Deck, deck_with_cards: DeckWithCards
+    ):
+        """Test inactive decks are not returned in search."""
+        # inactive_deck has name "Archived Deck"
+        response = await client.get("/api/v1/decks/search?q=Archived")
+
+        assert response.status_code == 200
+        data = response.json()
+        # Should not find the inactive deck
+        deck_ids = [d["id"] for d in data["decks"]]
+        assert str(inactive_deck.id) not in deck_ids
+
+    @pytest.mark.asyncio
+    async def test_search_decks_no_results(
+        self, client: AsyncClient, deck_with_cards: DeckWithCards
+    ):
+        """Test search with no matching decks returns empty list."""
+        response = await client.get("/api/v1/decks/search?q=xyznonexistent123")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 0
+        assert data["decks"] == []
+        assert data["query"] == "xyznonexistent123"
+
+    @pytest.mark.asyncio
+    async def test_search_decks_response_includes_query(
+        self, client: AsyncClient, deck_with_cards: DeckWithCards
+    ):
+        """Test response includes the search query that was used."""
+        search_term = "vocabulary"
+        response = await client.get(f"/api/v1/decks/search?q={search_term}")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["query"] == search_term
+
+    @pytest.mark.asyncio
+    async def test_search_decks_response_includes_total_count(
+        self, client: AsyncClient, multi_level_decks: MultiLevelDecks
+    ):
+        """Test response includes total count for pagination."""
+        response = await client.get("/api/v1/decks/search?q=Greek&page_size=1")
+
+        assert response.status_code == 200
+        data = response.json()
+        # Total should be >= number of returned decks (for pagination)
+        assert data["total"] >= len(data["decks"])
+        assert data["total"] >= 3  # At least 3 decks match "Greek"
+
+    @pytest.mark.asyncio
+    async def test_search_decks_default_pagination(
+        self, client: AsyncClient, deck_with_cards: DeckWithCards
+    ):
+        """Test default pagination values (page=1, page_size=20)."""
+        response = await client.get("/api/v1/decks/search?q=Greek")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["page"] == 1
+        assert data["page_size"] == 20
+
+    @pytest.mark.asyncio
+    async def test_search_decks_response_deck_fields(
+        self, client: AsyncClient, deck_with_cards: DeckWithCards
+    ):
+        """Test that deck objects in response have all required fields."""
+        response = await client.get("/api/v1/decks/search?q=Greek")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data["decks"]) >= 1
+
+        # Verify deck object has all required fields
+        deck = data["decks"][0]
+        required_fields = [
+            "id",
+            "name",
+            "description",
+            "level",
+            "is_active",
+            "created_at",
+            "updated_at",
+        ]
+        for field in required_fields:
+            assert field in deck, f"Missing required field: {field}"
 
 
 class TestGetDeckEndpoint:
