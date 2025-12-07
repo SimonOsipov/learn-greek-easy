@@ -1,10 +1,11 @@
 ---
 id: doc-1
-title: 'Task 01: Main Page Design'
+title: 'MVP Frontend - 01: Main Page Design'
 type: other
 created_date: '2025-12-07 09:11'
+updated_date: '2025-12-07 09:14'
 ---
-# Task 01: Main Page Design
+# MVP Frontend - 01: Main Page Design
 
 **Status**: ✅ COMPLETED
 **Started**: 2025-10-25
