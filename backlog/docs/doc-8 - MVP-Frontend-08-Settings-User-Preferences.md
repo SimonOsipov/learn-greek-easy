@@ -1,10 +1,11 @@
 ---
 id: doc-8
-title: 'Task 08: Settings & User Preferences'
+title: 'MVP Frontend - 08: Settings & User Preferences'
 type: other
 created_date: '2025-12-07 09:11'
+updated_date: '2025-12-07 09:14'
 ---
-# Task 08: Settings & User Preferences (Simplified)
+# MVP Frontend - 08: Settings & User Preferences
 
 **Status**: ✅ COMPLETED
 **Completed**: 2025-11-06
