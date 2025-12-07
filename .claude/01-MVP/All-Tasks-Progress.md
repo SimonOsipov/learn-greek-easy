@@ -73,13 +73,14 @@
 - Health endpoints, environment variables, CORS configured
 
 ### 5. API Foundation & Middleware
-**Status**: 🔄 IN PROGRESS (4/8 subtasks)
+**Status**: 🔄 IN PROGRESS (5/8 subtasks)
 **File**: [05-api-foundation-middleware-plan.md](./backend/05/05-api-foundation-middleware-plan.md)
 - ✅ 05.01: CORS middleware configuration (expose_headers, production validation)
 - ✅ 05.02: Request logging middleware (PR #11, 67 tests, 100% coverage)
 - ✅ 05.03: Error handling middleware (PR #12, 44 tests, 100% coverage)
 - ✅ 05.04: Rate limiting middleware (PR #13, 37 tests, 98% coverage)
-- ⏸️ 05.05-05.08: Remaining middleware subtasks
+- ✅ 05.05: Request validation utilities (PR #14, 59 tests, 100% coverage)
+- ⏸️ 05.06-05.08: Remaining middleware subtasks
 
 ### 6-14. Remaining Tasks (Not Started)
 - 6: Deck API Endpoints
