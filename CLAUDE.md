@@ -318,6 +318,67 @@ npm run test:e2e:debug   # Step through
 
 ---
 
+## Git Workflow for Tasks
+
+**CRITICAL**: All task implementations must follow this workflow:
+
+### 1. Create Feature Branch
+```bash
+# Before starting any task
+git checkout main
+git pull origin main
+git checkout -b feature/[task-id]-short-description
+
+# Examples:
+git checkout -b feature/task-140-response-formatting
+git checkout -b fix/task-141-api-versioning
+```
+
+### 2. Implement and Commit
+```bash
+# Make changes, then commit
+git add .
+git commit -m "[task-id] Description of changes"
+
+# Example:
+git commit -m "[task-140] Add response formatting utilities"
+```
+
+### 3. Push and Create PR
+```bash
+# Push branch
+git push -u origin feature/[task-id]-short-description
+
+# Create PR using GitHub CLI
+gh pr create --title "[task-id] Feature description" --body "## Summary
+- Description of changes
+
+## Test Plan
+- How to verify
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)"
+```
+
+### 4. Add PR Link to Task
+After creating PR, add the link to task implementation notes in Backlog.
+
+### Branch Naming Convention
+
+| Type | Pattern | Example |
+|------|---------|---------|
+| Feature | `feature/[task-id]-description` | `feature/task-140-response-formatting` |
+| Bug Fix | `fix/[task-id]-description` | `fix/task-141-validation-error` |
+| Refactor | `refactor/[task-id]-description` | `refactor/task-142-cleanup` |
+
+### Task Completion Rules
+
+- **Executor**: Creates branch, implements, creates PR, adds PR link to notes
+- **Executor**: Leaves status as "In Progress" after PR creation
+- **QA Agent**: Verifies implementation, marks task as "Done"
+- **Only QA can mark tasks as Done!**
+
+---
+
 ## Pre-commit Hooks
 
 ### First-Time Setup
