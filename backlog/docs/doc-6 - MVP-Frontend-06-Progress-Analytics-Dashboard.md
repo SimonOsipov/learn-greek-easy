@@ -1,10 +1,11 @@
 ---
 id: doc-6
-title: 'Task 06: Progress & Analytics Dashboard'
+title: 'MVP Frontend - 06: Progress & Analytics Dashboard'
 type: other
 created_date: '2025-12-07 09:11'
+updated_date: '2025-12-07 09:14'
 ---
-# Task 06: Progress & Analytics Dashboard
+# MVP Frontend - 06: Progress & Analytics Dashboard
 
 **Status**: ✅ COMPLETED
 **Started**: 2025-11-04
