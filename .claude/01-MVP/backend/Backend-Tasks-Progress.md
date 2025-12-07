@@ -20,7 +20,7 @@ This document tracks all backend development tasks for the MVP.
 | 2 | Database Design | ✅ | Complete |
 | 3 | Authentication | 🔄 | 90% (9/10 subtasks) |
 | **4** | **Backend Testing Framework** | ✅ | **Complete (10/10 subtasks)** |
-| 5 | API Foundation & Middleware | 🔄 | 4/8 (05.01-05.04 done) |
+| 5 | API Foundation & Middleware | 🔄 | 5/8 (05.01-05.05 done) |
 | 6 | Deck Management API | ⏸️ | Was Task 5 |
 | 7 | Card Management API | ⏸️ | Was Task 6 |
 | 8 | Review & Progress Tracking | ⏸️ | Was Task 7 |
@@ -161,7 +161,7 @@ This document tracks all backend development tasks for the MVP.
 - ✅ 05.02: Implement request logging middleware (PR #11, 67 tests, 100% coverage)
 - ✅ 05.03: Create error handling middleware (PR #12, 44 tests, 100% coverage)
 - ✅ 05.04: Add rate limiting middleware (PR #13, 37 tests, 98% coverage)
-- ⏸️ 05.05: Implement request validation
+- ✅ 05.05: Implement request validation
 - ⏸️ 05.06: Create response formatting utilities
 - ⏸️ 05.07: Setup API versioning (/api/v1/)
 - ⏸️ 05.08: Add health check endpoint
@@ -837,12 +837,3 @@ app.add_middleware(
 - Gamification (achievements, badges)
 - Mobile app (React Native)
 - Offline support (Service Workers)
-
----
-
-**Last Updated**: 2025-12-05
-**Document Version**: 3.4
-**Status**: Tasks 1, 2, 4 & 15 Complete | Task 3 In Progress (90%)
-**Backend Progress**: Task 01 ✅ | Task 02 ✅ | Task 03 🔄 (9/10) | Task 04 ✅ (10/10) | Task 15 ✅ (10/10)
-**Next Milestone**: Task 03.06 (Google OAuth) → Task 05 (API Foundation)
-**Total Tasks**: 15 (renumbered: new Task 4 Testing Framework inserted, old Unit Testing merged)
