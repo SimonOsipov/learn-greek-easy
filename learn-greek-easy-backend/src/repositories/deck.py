@@ -133,3 +133,23 @@ class DeckRepository(BaseRepository[Deck]):
 
         result = await self.db.execute(query)
         return list(result.scalars().all())
+
+    async def count_search(self, query_text: str) -> int:
+        """Count decks matching search query.
+
+        Args:
+            query_text: Search query string
+
+        Returns:
+            Total number of matching active decks
+
+        Use Case:
+            Pagination total count for search results
+        """
+        search_pattern = f"%{query_text}%"
+        query = select(func.count(Deck.id)).where(
+            Deck.is_active.is_(True),
+            (Deck.name.ilike(search_pattern)) | (Deck.description.ilike(search_pattern)),
+        )
+        result = await self.db.execute(query)
+        return result.scalar() or 0

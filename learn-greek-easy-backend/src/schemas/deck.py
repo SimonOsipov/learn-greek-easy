@@ -74,6 +74,16 @@ class DeckListResponse(BaseModel):
     decks: list[DeckResponse]
 
 
+class DeckSearchResponse(BaseModel):
+    """Schema for deck search results with query echo."""
+
+    total: int
+    page: int
+    page_size: int
+    query: str = Field(..., description="The search query that was used")
+    decks: list[DeckResponse]
+
+
 # Import at the end to avoid circular dependencies
 from src.schemas.progress import UserDeckProgressResponse  # noqa: E402
 
