@@ -1,10 +1,11 @@
 ---
 id: doc-4
-title: 'Task 04: Deck Management Interface'
+title: 'MVP Frontend - 04: Deck Management Interface'
 type: other
 created_date: '2025-12-07 09:11'
+updated_date: '2025-12-07 09:14'
 ---
-# Task 04: Deck Management Interface
+# MVP Frontend - 04: Deck Management Interface
 
 **Status**: ✅ COMPLETED
 **Started**: 2025-10-30
