@@ -12,7 +12,7 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from src.api.health import router as health_router
-from src.api.v1 import auth_router
+from src.api.v1 import v1_router
 from src.config import settings
 from src.core.exceptions import BaseAPIException
 from src.core.logging import setup_logging
@@ -311,23 +311,17 @@ if settings.debug:
         }
 
 
-# Include health check routes
+# Include health check routes (not versioned - available at /health*)
 app.include_router(health_router)
 
-# Include authentication routes
-app.include_router(auth_router)
+# Include API v1 routes
+# All v1 endpoints are aggregated in src/api/v1/router.py
+app.include_router(v1_router, prefix=settings.api_v1_prefix)
 
-# TODO (Task 5): Include deck routes
-# app.include_router(deck_router, prefix=f"{settings.api_v1_prefix}/decks", tags=["decks"])
-
-# TODO (Task 6): Include card routes
-# app.include_router(card_router, prefix=f"{settings.api_v1_prefix}/cards", tags=["cards"])
-
-# TODO (Task 7): Include review routes
-# app.include_router(review_router, prefix=f"{settings.api_v1_prefix}/reviews", tags=["reviews"])
-
-# TODO (Task 8): Include progress routes
-# app.include_router(progress_router, prefix=f"{settings.api_v1_prefix}/progress", tags=["progress"])
+# Future: API v2 routes
+# When breaking changes are needed, create src/api/v2/router.py and mount it:
+# from src.api.v2 import v2_router
+# app.include_router(v2_router, prefix="/api/v2")
 
 
 # ============================================================================
