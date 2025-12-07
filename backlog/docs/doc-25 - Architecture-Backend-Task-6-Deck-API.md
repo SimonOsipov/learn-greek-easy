@@ -3,7 +3,7 @@ id: doc-25
 title: 'Architecture - Backend Task 6: Deck API'
 type: other
 created_date: '2025-12-07 14:07'
-updated_date: '2025-12-07 20:31'
+updated_date: '2025-12-07 20:44'
 ---
 # Backend Task 6: Deck API - Technical Design Document
 
@@ -38,7 +38,7 @@ updated_date: '2025-12-07 20:31'
 | 06.01 | Create Deck Router and List Endpoint | ✅ Done | PR #18 |
 | 06.02 | Get Single Deck Endpoint | ✅ Done | PR #19 |
 | 06.03 | Search Decks Endpoint | ✅ Done | PR #21 |
-| 06.04 | Create Deck Endpoint (Admin) | ✅ Done | Commit e4813b4 |
+| 06.04 | Create Deck Endpoint (Admin) | ✅ Done | PR #22 |
 | 06.05 | Update and Delete Deck Endpoints (Admin) | ⏸️ To Do | - |
 | 06.06 | Deck API Tests | ⏸️ To Do | - |
 
