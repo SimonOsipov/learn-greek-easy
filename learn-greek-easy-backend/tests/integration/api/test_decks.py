@@ -1,6 +1,7 @@
 """Integration tests for deck API endpoints.
 
 This module provides comprehensive tests for the deck endpoints including:
+- POST /api/v1/decks - Create a new deck (admin only)
 - GET /api/v1/decks/search - Search decks by name or description
 - GET /api/v1/decks/{deck_id} - Get single deck with card count
 """
@@ -12,6 +13,247 @@ from httpx import AsyncClient
 
 from src.db.models import Deck
 from tests.fixtures.deck import DeckWithCards, MultiLevelDecks
+
+
+class TestCreateDeckEndpoint:
+    """Test suite for POST /api/v1/decks endpoint."""
+
+    @pytest.mark.asyncio
+    async def test_create_deck_success(self, client: AsyncClient, superuser_auth_headers: dict):
+        """Test superuser can create a deck successfully."""
+        deck_data = {
+            "name": "Test Deck Creation",
+            "description": "A test deck created via API",
+            "level": "A1",
+        }
+
+        response = await client.post(
+            "/api/v1/decks",
+            json=deck_data,
+            headers=superuser_auth_headers,
+        )
+
+        assert response.status_code == 201
+        data = response.json()
+        assert data["name"] == deck_data["name"]
+        assert data["description"] == deck_data["description"]
+        assert data["level"] == deck_data["level"]
+        assert data["is_active"] is True
+        assert "id" in data
+        assert "created_at" in data
+        assert "updated_at" in data
+
+    @pytest.mark.asyncio
+    async def test_create_deck_without_description(
+        self, client: AsyncClient, superuser_auth_headers: dict
+    ):
+        """Test creating a deck without optional description."""
+        deck_data = {
+            "name": "Deck Without Description",
+            "level": "B1",
+        }
+
+        response = await client.post(
+            "/api/v1/decks",
+            json=deck_data,
+            headers=superuser_auth_headers,
+        )
+
+        assert response.status_code == 201
+        data = response.json()
+        assert data["name"] == deck_data["name"]
+        assert data["description"] is None
+        assert data["level"] == deck_data["level"]
+
+    @pytest.mark.asyncio
+    async def test_create_deck_all_levels(self, client: AsyncClient, superuser_auth_headers: dict):
+        """Test creating decks with all valid CEFR levels."""
+        levels = ["A1", "A2", "B1", "B2", "C1", "C2"]
+
+        for level in levels:
+            deck_data = {
+                "name": f"Test {level} Deck",
+                "level": level,
+            }
+
+            response = await client.post(
+                "/api/v1/decks",
+                json=deck_data,
+                headers=superuser_auth_headers,
+            )
+
+            assert response.status_code == 201
+            assert response.json()["level"] == level
+
+    @pytest.mark.asyncio
+    async def test_create_deck_unauthenticated_returns_401(self, client: AsyncClient):
+        """Test unauthenticated request returns 401."""
+        deck_data = {
+            "name": "Test Deck",
+            "level": "A1",
+        }
+
+        response = await client.post("/api/v1/decks", json=deck_data)
+
+        assert response.status_code == 401
+        data = response.json()
+        assert data["success"] is False
+
+    @pytest.mark.asyncio
+    async def test_create_deck_non_superuser_returns_403(
+        self, client: AsyncClient, auth_headers: dict
+    ):
+        """Test regular user (non-superuser) returns 403."""
+        deck_data = {
+            "name": "Test Deck",
+            "level": "A1",
+        }
+
+        response = await client.post(
+            "/api/v1/decks",
+            json=deck_data,
+            headers=auth_headers,
+        )
+
+        assert response.status_code == 403
+        data = response.json()
+        assert data["success"] is False
+
+    @pytest.mark.asyncio
+    async def test_create_deck_missing_name_returns_422(
+        self, client: AsyncClient, superuser_auth_headers: dict
+    ):
+        """Test missing required name field returns 422."""
+        deck_data = {
+            "description": "Missing name",
+            "level": "A1",
+        }
+
+        response = await client.post(
+            "/api/v1/decks",
+            json=deck_data,
+            headers=superuser_auth_headers,
+        )
+
+        assert response.status_code == 422
+        data = response.json()
+        assert data["success"] is False
+        assert data["error"]["code"] == "VALIDATION_ERROR"
+
+    @pytest.mark.asyncio
+    async def test_create_deck_missing_level_returns_422(
+        self, client: AsyncClient, superuser_auth_headers: dict
+    ):
+        """Test missing required level field returns 422."""
+        deck_data = {
+            "name": "Test Deck",
+        }
+
+        response = await client.post(
+            "/api/v1/decks",
+            json=deck_data,
+            headers=superuser_auth_headers,
+        )
+
+        assert response.status_code == 422
+        data = response.json()
+        assert data["success"] is False
+        assert data["error"]["code"] == "VALIDATION_ERROR"
+
+    @pytest.mark.asyncio
+    async def test_create_deck_invalid_level_returns_422(
+        self, client: AsyncClient, superuser_auth_headers: dict
+    ):
+        """Test invalid level value returns 422."""
+        deck_data = {
+            "name": "Test Deck",
+            "level": "INVALID",
+        }
+
+        response = await client.post(
+            "/api/v1/decks",
+            json=deck_data,
+            headers=superuser_auth_headers,
+        )
+
+        assert response.status_code == 422
+        data = response.json()
+        assert data["success"] is False
+        assert data["error"]["code"] == "VALIDATION_ERROR"
+
+    @pytest.mark.asyncio
+    async def test_create_deck_empty_name_returns_422(
+        self, client: AsyncClient, superuser_auth_headers: dict
+    ):
+        """Test empty name string returns 422."""
+        deck_data = {
+            "name": "",
+            "level": "A1",
+        }
+
+        response = await client.post(
+            "/api/v1/decks",
+            json=deck_data,
+            headers=superuser_auth_headers,
+        )
+
+        assert response.status_code == 422
+        data = response.json()
+        assert data["success"] is False
+        assert data["error"]["code"] == "VALIDATION_ERROR"
+
+    @pytest.mark.asyncio
+    async def test_create_deck_name_too_long_returns_422(
+        self, client: AsyncClient, superuser_auth_headers: dict
+    ):
+        """Test name exceeding 255 characters returns 422."""
+        deck_data = {
+            "name": "A" * 256,
+            "level": "A1",
+        }
+
+        response = await client.post(
+            "/api/v1/decks",
+            json=deck_data,
+            headers=superuser_auth_headers,
+        )
+
+        assert response.status_code == 422
+        data = response.json()
+        assert data["success"] is False
+        assert data["error"]["code"] == "VALIDATION_ERROR"
+
+    @pytest.mark.asyncio
+    async def test_created_deck_is_persisted(
+        self, client: AsyncClient, superuser_auth_headers: dict
+    ):
+        """Test created deck can be retrieved via GET endpoint."""
+        deck_data = {
+            "name": "Persistence Test Deck",
+            "description": "Testing persistence",
+            "level": "B2",
+        }
+
+        # Create deck
+        create_response = await client.post(
+            "/api/v1/decks",
+            json=deck_data,
+            headers=superuser_auth_headers,
+        )
+        assert create_response.status_code == 201
+        created_deck = create_response.json()
+        deck_id = created_deck["id"]
+
+        # Retrieve deck
+        get_response = await client.get(f"/api/v1/decks/{deck_id}")
+        assert get_response.status_code == 200
+
+        retrieved_deck = get_response.json()
+        assert retrieved_deck["id"] == deck_id
+        assert retrieved_deck["name"] == deck_data["name"]
+        assert retrieved_deck["description"] == deck_data["description"]
+        assert retrieved_deck["level"] == deck_data["level"]
+        assert retrieved_deck["card_count"] == 0  # New deck has no cards
 
 
 class TestSearchDecksEndpoint:

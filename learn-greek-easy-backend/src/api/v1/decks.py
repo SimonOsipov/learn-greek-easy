@@ -7,14 +7,21 @@ listing decks with pagination and filtering.
 from typing import Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.dependencies import get_current_superuser
 from src.core.exceptions import DeckNotFoundException
 from src.db.dependencies import get_db
-from src.db.models import DeckLevel
+from src.db.models import DeckLevel, User
 from src.repositories.deck import DeckRepository
-from src.schemas.deck import DeckDetailResponse, DeckListResponse, DeckResponse, DeckSearchResponse
+from src.schemas.deck import (
+    DeckCreate,
+    DeckDetailResponse,
+    DeckListResponse,
+    DeckResponse,
+    DeckSearchResponse,
+)
 
 router = APIRouter(
     # Note: prefix is set by parent router in v1/router.py
@@ -97,6 +104,68 @@ async def list_decks(
         page_size=page_size,
         decks=[DeckResponse.model_validate(deck) for deck in decks],
     )
+
+
+@router.post(
+    "",
+    response_model=DeckResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create a new deck",
+    description="Create a new deck. Requires superuser privileges.",
+    responses={
+        201: {
+            "description": "Deck created successfully",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "id": "550e8400-e29b-41d4-a716-446655440000",
+                        "name": "Greek B1 Grammar",
+                        "description": "Intermediate grammar concepts",
+                        "level": "B1",
+                        "is_active": True,
+                        "created_at": "2024-01-15T10:30:00Z",
+                        "updated_at": "2024-01-15T10:30:00Z",
+                    }
+                }
+            },
+        },
+        401: {"description": "Not authenticated"},
+        403: {"description": "Not authorized (requires superuser)"},
+    },
+)
+async def create_deck(
+    deck_data: DeckCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> DeckResponse:
+    """Create a new deck.
+
+    Requires superuser privileges.
+
+    Args:
+        deck_data: Deck creation data (name, description, level)
+        db: Database session (injected)
+        current_user: Authenticated superuser (injected)
+
+    Returns:
+        DeckResponse: The created deck
+
+    Raises:
+        401: If not authenticated
+        403: If authenticated but not superuser
+        422: If validation fails
+    """
+    repo = DeckRepository(db)
+
+    # Create the deck using BaseRepository.create()
+    # Note: BaseRepository.create() uses flush, not commit
+    deck = await repo.create(deck_data)
+
+    # Commit the transaction
+    await db.commit()
+    await db.refresh(deck)
+
+    return DeckResponse.model_validate(deck)
 
 
 @router.get(
