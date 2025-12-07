@@ -1,10 +1,11 @@
 ---
 id: doc-5
-title: 'Task 05: Flashcard Review System'
+title: 'MVP Frontend - 05: Flashcard Review System'
 type: other
 created_date: '2025-12-07 09:11'
+updated_date: '2025-12-07 09:14'
 ---
-# Task 05: Flashcard Review System
+# MVP Frontend - 05: Flashcard Review System
 
 **Status**: ✅ COMPLETED
 **Started**: 2025-11-02
