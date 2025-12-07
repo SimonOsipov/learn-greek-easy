@@ -53,6 +53,12 @@ class DeckResponse(DeckBase):
     updated_at: datetime
 
 
+class DeckDetailResponse(DeckResponse):
+    """Schema for single deck response with card count."""
+
+    card_count: int = Field(..., ge=0, description="Number of cards in the deck")
+
+
 class DeckWithProgressResponse(DeckResponse):
     """Schema for deck with user progress."""
 
