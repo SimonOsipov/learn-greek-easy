@@ -168,7 +168,7 @@ test.describe('Settings Management', () => {
       page.waitForURL('/dashboard', { timeout: 5000 }),
       page.waitForURL('/', { timeout: 5000 })
     ]);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Verify dashboard content is loaded
     await expect(page.getByRole('heading', { name: /your progress/i })).toBeVisible();

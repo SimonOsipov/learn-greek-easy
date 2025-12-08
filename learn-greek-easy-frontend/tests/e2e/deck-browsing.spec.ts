@@ -75,7 +75,7 @@ test.describe('Deck Browsing', () => {
     await page.goto('/profile');
 
     // Wait for profile page navigation to complete
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Verify profile page loaded (heading is hidden on desktop with md:hidden, use test ID)
     await expect(page.getByTestId('profile-page')).toBeVisible();
