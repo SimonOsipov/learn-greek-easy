@@ -1,10 +1,10 @@
 ---
 id: task-159
 title: 'BUG: Firefox E2E tests timeout on networkidle wait'
-status: In Progress
+status: Done
 assignee: []
 created_date: '2025-12-08 10:34'
-updated_date: '2025-12-08 12:26'
+updated_date: '2025-12-08 12:57'
 labels:
   - bug
   - e2e
@@ -13,6 +13,7 @@ labels:
   - firefox
 dependencies: []
 priority: high
+ordinal: 12000
 ---
 
 ## Description
