@@ -30,7 +30,7 @@ test.describe('Mobile Responsive (375px)', () => {
 
     // Check page loaded successfully (not redirected to login)
     await expect(page).not.toHaveURL(/\/login/);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Check for any heading (page has content)
     await expect(page.getByRole('heading').first()).toBeVisible();
@@ -96,7 +96,7 @@ test.describe('Mobile Responsive (375px)', () => {
     await page.goto('/dashboard');
 
     // Wait for page to load
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Check for any navigation elements or buttons
     const buttons = page.locator('button');
@@ -121,7 +121,7 @@ test.describe('Tablet Responsive (768px)', () => {
 
     // Check page loaded successfully (not redirected to login)
     await expect(page).not.toHaveURL(/\/login/);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     const viewportSize = page.viewportSize();
     expect(viewportSize?.width).toBe(768);
@@ -156,7 +156,7 @@ test.describe('Desktop Responsive (1024px)', () => {
     await page.goto('/dashboard');
 
     // Wait for page to load
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Check page has content
     await expect(page.getByRole('heading').first()).toBeVisible();

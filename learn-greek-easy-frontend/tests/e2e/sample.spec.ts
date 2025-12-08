@@ -13,7 +13,7 @@ test.describe('Playwright Setup Validation', () => {
 
   test('should navigate to login page', async ({ page }) => {
     await page.goto('/login');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     await expect(page).toHaveURL('/login');
     await expect(page.getByTestId('login-card')).toBeVisible();
@@ -53,7 +53,7 @@ test.describe('Playwright Setup Validation', () => {
 
     // Wait for redirect to complete
     await page.waitForURL('/login', { timeout: 5000 });
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Should redirect to login
     await expect(page).toHaveURL('/login');

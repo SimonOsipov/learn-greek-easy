@@ -11,7 +11,9 @@ import { Page, expect } from '@playwright/test';
  */
 export async function navigateTo(page: Page, path: string): Promise<void> {
   await page.goto(path);
-  await page.waitForLoadState('networkidle');
+  // Use 'domcontentloaded' instead of 'networkidle' - more reliable across browsers
+  // Firefox has issues with 'networkidle' in CI environments
+  await page.waitForLoadState('domcontentloaded');
 }
 
 /**
