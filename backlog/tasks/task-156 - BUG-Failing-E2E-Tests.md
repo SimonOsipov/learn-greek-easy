@@ -1,12 +1,13 @@
 ---
 id: task-156
 title: 'BUG: Failing E2E Tests'
-status: In Progress
+status: Done
 assignee: []
 created_date: '2025-12-08 07:12'
-updated_date: '2025-12-08 10:15'
+updated_date: '2025-12-08 10:38'
 labels: []
 dependencies: []
+ordinal: 10000
 ---
 
 ## Description
