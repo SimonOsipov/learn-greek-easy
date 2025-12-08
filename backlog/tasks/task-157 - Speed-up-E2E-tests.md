@@ -4,7 +4,7 @@ title: Speed up E2E tests
 status: In Progress
 assignee: []
 created_date: '2025-12-08 07:12'
-updated_date: '2025-12-08 07:20'
+updated_date: '2025-12-08 07:24'
 labels: []
 dependencies: []
 ---
@@ -307,3 +307,15 @@ Remove the cache-related steps from test.yml and revert to simple:
 - [GitHub Actions Cache](https://github.com/actions/cache)
 - [Playwright Issue #7249 - Caching Discussion](https://github.com/microsoft/playwright/issues/7249)
 <!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+PR: https://github.com/SimonOsipov/learn-greek-easy/pull/27
+
+Implementation complete. Changes:
+- `playwright.config.ts`: Workers changed from 1 to 4 for CI
+- `test.yml`: Added Playwright browser caching with version-based cache key
+
+Awaiting QA verification.
+<!-- SECTION:NOTES:END -->
