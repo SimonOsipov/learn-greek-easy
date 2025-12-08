@@ -3,7 +3,7 @@ id: doc-26
 title: 'MVP Backend - 07: Cards API'
 type: other
 created_date: '2025-12-08 05:17'
-updated_date: '2025-12-08 06:00'
+updated_date: '2025-12-08 07:03'
 ---
 # Backend Task 07: Cards API - Technical Design Document
 
@@ -38,7 +38,7 @@ updated_date: '2025-12-08 06:00'
 | Subtask | Description | Status |
 |---------|-------------|--------|
 | 07.01 | Create Card Router and List by Deck Endpoint | Done |
-| 07.02 | Get Single Card Endpoint | Pending |
+| 07.02 | Get Single Card Endpoint | Done |
 | 07.03 | Search Cards Endpoint | Pending |
 | 07.04 | Create Card Endpoint (Admin) | Pending |
 | 07.05 | Update and Delete Card Endpoints (Admin) | Pending |
@@ -46,7 +46,7 @@ updated_date: '2025-12-08 06:00'
 | 07.07 | Cards API Tests | Pending |
 
 
-**Progress: 1/7 subtasks complete (14%)**
+**Progress: 2/7 subtasks complete (29%)**
 
 ## System Architecture
 
