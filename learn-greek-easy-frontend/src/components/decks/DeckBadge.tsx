@@ -13,22 +13,22 @@ export interface DeckBadgeProps {
 const LEVEL_CONFIG = {
   A1: {
     label: 'A1 - Beginner',
-    bgColor: 'bg-green-500',
+    bgColor: 'bg-green-700',
     textColor: 'text-white',
   },
   A2: {
     label: 'A2 - Elementary',
-    bgColor: 'bg-blue-500',
+    bgColor: 'bg-blue-700',
     textColor: 'text-white',
   },
   B1: {
     label: 'B1 - Intermediate',
-    bgColor: 'bg-orange-500',
+    bgColor: 'bg-orange-700',
     textColor: 'text-white',
   },
   B2: {
     label: 'B2 - Upper-Intermediate',
-    bgColor: 'bg-purple-600',
+    bgColor: 'bg-purple-700',
     textColor: 'text-white',
   },
 } as const;
