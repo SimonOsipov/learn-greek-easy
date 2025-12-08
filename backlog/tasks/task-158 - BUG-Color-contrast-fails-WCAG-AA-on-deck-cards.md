@@ -4,7 +4,7 @@ title: 'BUG: Color contrast fails WCAG AA on deck cards'
 status: In Progress
 assignee: []
 created_date: '2025-12-08 10:32'
-updated_date: '2025-12-08 10:48'
+updated_date: '2025-12-08 11:07'
 labels:
   - bug
   - accessibility
@@ -248,4 +248,14 @@ Branch pushed. Ready for QA verification before PR creation.
 **PR:** https://github.com/SimonOsipov/learn-greek-easy/pull/29
 
 Awaiting CI/CD pipeline completion before marking task as Done.
+
+## Additional Fix
+
+During CI/CD testing, discovered additional WCAG AA violations on level badges:
+- `DeckBadge.tsx`: Changed level colors from `*-500` to `*-700` shades
+- `LevelBadge.tsx`: Same fix applied
+
+Contrast ratio improved from ~2.27:1 to ~4.5:1+ (WCAG AA compliant).
+
+Commit: 50d58a8
 <!-- SECTION:NOTES:END -->
