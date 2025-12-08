@@ -1,0 +1,274 @@
+name: PR Preview Deployment
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [main, develop]
+
+concurrency:
+  group: preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  PR_NUMBER: ${{ github.event.pull_request.number }}
+
+jobs:
+  # Job 1: Run existing CI tests first (reusable workflow)
+  ci-tests:
+    name: CI Tests
+    uses: ./.github/workflows/test.yml
+    secrets: inherit
+
+  # Job 2: Check if preview should be deployed
+  should-deploy:
+    name: Check Deploy Conditions
+    runs-on: ubuntu-latest
+    outputs:
+      deploy: ${{ steps.check.outputs.deploy }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Need full history for diff
+
+      - name: Check changed files
+        id: check
+        run: |
+          # Get changed files between PR base and head
+          CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
+
+          # Check if any non-docs files changed
+          if echo "$CHANGED_FILES" | grep -qvE '^(docs/|.*\.md$|\.github/.*\.md$)'; then
+            echo "deploy=true" >> $GITHUB_OUTPUT
+            echo "Non-documentation changes detected - will deploy preview"
+          else
+            echo "deploy=false" >> $GITHUB_OUTPUT
+            echo "Only documentation changes - skipping preview deployment"
+          fi
+
+  # Job 3: Deploy preview environment to Railway
+  deploy-preview:
+    name: Deploy Preview
+    needs: [ci-tests, should-deploy]
+    if: needs.should-deploy.outputs.deploy == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      frontend_url: ${{ steps.urls.outputs.frontend_url }}
+      backend_url: ${{ steps.urls.outputs.backend_url }}
+      environment_id: ${{ steps.urls.outputs.environment_id }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Create Preview Environment
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          echo "Creating preview environment: pr-${{ env.PR_NUMBER }}"
+          railway environment create "pr-${{ env.PR_NUMBER }}" 2>/dev/null || echo "Environment may already exist"
+
+      - name: Set Environment Variables
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          railway link --environment "pr-${{ env.PR_NUMBER }}"
+
+          # Set preview environment variables
+          railway variables set \
+            ENVIRONMENT=preview \
+            PR_NUMBER=${{ env.PR_NUMBER }} \
+            JWT_SECRET_KEY=${{ secrets.PREVIEW_JWT_SECRET }} \
+            JWT_ALGORITHM=HS256 \
+            ACCESS_TOKEN_EXPIRE_MINUTES=30 \
+            LOG_LEVEL=INFO \
+            DEBUG=false \
+            API_V1_PREFIX=/api/v1
+
+      - name: Deploy Backend
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          railway link --environment "pr-${{ env.PR_NUMBER }}"
+          cd learn-greek-easy-backend
+          railway up --detach
+          echo "Backend deployment initiated"
+
+      - name: Deploy Frontend
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          railway link --environment "pr-${{ env.PR_NUMBER }}"
+          cd learn-greek-easy-frontend
+          railway up --detach
+          echo "Frontend deployment initiated"
+
+      - name: Wait for Deployments to Initialize
+        run: |
+          echo "Waiting for services to initialize..."
+          sleep 60  # Give Railway time to start building
+
+      - name: Generate and Get Deployment URLs
+        id: urls
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          railway link --environment "pr-${{ env.PR_NUMBER }}"
+
+          # Generate domains for services (creates if not exists)
+          echo "Generating domains..."
+          railway domain 2>/dev/null || echo "Domain generation attempted"
+
+          # Railway domains follow pattern: {service}-{project}.up.railway.app
+          # For preview environments, construct expected URLs
+          FRONTEND_URL="https://pr-${{ env.PR_NUMBER }}-frontend.up.railway.app"
+          BACKEND_URL="https://pr-${{ env.PR_NUMBER }}-backend.up.railway.app"
+
+          echo "frontend_url=${FRONTEND_URL}" >> $GITHUB_OUTPUT
+          echo "backend_url=${BACKEND_URL}" >> $GITHUB_OUTPUT
+          echo "environment_id=pr-${{ env.PR_NUMBER }}" >> $GITHUB_OUTPUT
+
+          echo "Frontend URL: ${FRONTEND_URL}"
+          echo "Backend URL: ${BACKEND_URL}"
+
+      - name: Wait for Services to be Ready
+        run: |
+          FRONTEND_URL="${{ steps.urls.outputs.frontend_url }}"
+          BACKEND_URL="${{ steps.urls.outputs.backend_url }}"
+
+          echo "Waiting for services to be ready..."
+          for i in {1..30}; do
+            BACKEND_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${BACKEND_URL}/health" 2>/dev/null || echo "000")
+            FRONTEND_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${FRONTEND_URL}/" 2>/dev/null || echo "000")
+
+            echo "Attempt $i/30 - Backend: $BACKEND_STATUS, Frontend: $FRONTEND_STATUS"
+
+            if [ "$BACKEND_STATUS" = "200" ] && [ "$FRONTEND_STATUS" = "200" ]; then
+              echo "All services are ready!"
+              exit 0
+            fi
+
+            sleep 10
+          done
+
+          echo "Warning: Services may not be fully ready yet"
+          # Don't fail - services might still be deploying
+
+  # Job 4: Post deployment comment on PR
+  comment-results:
+    name: Post Deployment Comment
+    needs: [deploy-preview, should-deploy]
+    if: always() && needs.should-deploy.outputs.deploy == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post or Update PR Comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const deployStatus = '${{ needs.deploy-preview.result }}';
+            const frontendUrl = '${{ needs.deploy-preview.outputs.frontend_url }}';
+            const backendUrl = '${{ needs.deploy-preview.outputs.backend_url }}';
+            const envId = '${{ needs.deploy-preview.outputs.environment_id }}';
+
+            let body;
+            if (deployStatus === 'success') {
+              body = `## Preview Deployment Ready
+
+            | Service | URL |
+            |---------|-----|
+            | Frontend | ${frontendUrl} |
+            | Backend | ${backendUrl} |
+            | API Docs | ${backendUrl}/docs |
+
+            **Environment**: \`${envId}\`
+            **Status**: Deployed
+
+            > This preview environment will be automatically destroyed when the PR is closed.`;
+            } else {
+              body = `## Preview Deployment Failed
+
+            **Environment**: \`${envId}\`
+            **Status**: Failed
+
+            Please check the [workflow logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}) for details.`;
+            }
+
+            // Find existing comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const botComment = comments.find(c =>
+              c.user.type === 'Bot' && (c.body.includes('## Preview Deployment Ready') || c.body.includes('## Preview Deployment Failed') || c.body.includes('## Preview Deployment Skipped'))
+            );
+
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body
+              });
+            }
+
+  # Job 5: Post skip comment for docs-only PRs
+  skip-comment:
+    name: Post Skip Comment
+    needs: [should-deploy]
+    if: needs.should-deploy.outputs.deploy == 'false'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post Skip Comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = `## Preview Deployment Skipped
+
+            This PR contains only documentation changes. Preview deployment has been skipped.
+
+            If you need a preview environment, please add code changes or request manual deployment.`;
+
+            // Find existing preview comment to update
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const botComment = comments.find(c =>
+              c.user.type === 'Bot' && (
+                c.body.includes('Preview Deployment Ready') ||
+                c.body.includes('Preview Deployment Failed') ||
+                c.body.includes('Preview Deployment Skipped')
+              )
+            );
+
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body
+              });
+            }
