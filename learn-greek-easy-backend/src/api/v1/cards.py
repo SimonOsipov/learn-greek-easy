@@ -15,7 +15,7 @@ from src.db.dependencies import get_db
 from src.db.models import CardDifficulty
 from src.repositories.card import CardRepository
 from src.repositories.deck import DeckRepository
-from src.schemas.card import CardListResponse, CardResponse
+from src.schemas.card import CardListResponse, CardResponse, CardSearchResponse
 
 router = APIRouter(
     # Note: prefix is set by parent router in v1/router.py
@@ -124,9 +124,93 @@ async def list_cards(
     )
 
 
-# NOTE: When adding the /search endpoint (task-151), it MUST be placed
-# BEFORE this /{card_id} endpoint to avoid route conflicts.
-# FastAPI matches routes in order, so /search must come before /{card_id}.
+@router.get(
+    "/search",
+    response_model=CardSearchResponse,
+    summary="Search cards",
+    description="Search cards by Greek or English text with optional deck filtering.",
+    responses={
+        200: {
+            "description": "Search results with pagination",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "total": 5,
+                        "page": 1,
+                        "page_size": 20,
+                        "query": "morning",
+                        "deck_id": None,
+                        "cards": [],
+                    }
+                }
+            },
+        },
+        404: {"description": "Deck not found (if deck_id provided)"},
+        422: {"description": "Validation error"},
+    },
+)
+async def search_cards(
+    q: str = Query(
+        ...,
+        min_length=1,
+        max_length=100,
+        description="Search query (searches front_text, back_text, example_sentence)",
+    ),
+    deck_id: Optional[UUID] = Query(
+        default=None, description="Optional: limit search to specific deck"
+    ),
+    page: int = Query(default=1, ge=1, description="Page number (starting from 1)"),
+    page_size: int = Query(default=20, ge=1, le=50, description="Items per page (max 50)"),
+    db: AsyncSession = Depends(get_db),
+) -> CardSearchResponse:
+    """Search cards by text content.
+
+    Performs case-insensitive partial matching on card text fields
+    (front_text, back_text, example_sentence). Optionally filter by deck
+    to narrow results.
+
+    Args:
+        q: Search query string (min 1 char, max 100 chars)
+        deck_id: Optional deck UUID to limit search scope
+        page: Page number starting from 1
+        page_size: Number of items per page (1-50)
+        db: Database session (injected)
+
+    Returns:
+        CardSearchResponse with total count, pagination info, and matching cards
+
+    Raises:
+        DeckNotFoundException: If deck_id is provided but deck doesn't exist
+
+    Example:
+        GET /api/v1/cards/search?q=morning
+        GET /api/v1/cards/search?q=hello&deck_id=550e8400-...&page=1&page_size=10
+    """
+    # Validate deck exists if provided
+    if deck_id:
+        deck_repo = DeckRepository(db)
+        deck = await deck_repo.get(deck_id)
+        if deck is None:
+            raise DeckNotFoundException(deck_id=str(deck_id))
+
+    card_repo = CardRepository(db)
+    skip = (page - 1) * page_size
+
+    cards = await card_repo.search(query_text=q, deck_id=deck_id, skip=skip, limit=page_size)
+    total = await card_repo.count_search(query_text=q, deck_id=deck_id)
+
+    return CardSearchResponse(
+        total=total,
+        page=page,
+        page_size=page_size,
+        query=q,
+        deck_id=deck_id,
+        cards=[CardResponse.model_validate(card) for card in cards],
+    )
+
+
+# NOTE: The /search endpoint above MUST stay BEFORE this /{card_id} endpoint
+# to avoid route conflicts. FastAPI matches routes in order.
 
 
 @router.get(

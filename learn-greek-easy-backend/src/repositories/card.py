@@ -2,7 +2,7 @@
 
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.db.models import Card, CardDifficulty
@@ -101,5 +101,79 @@ class CardRepository(BaseRepository[Card]):
             Pagination for card listing
         """
         query = select(func.count()).select_from(Card).where(Card.deck_id == deck_id)
+        result = await self.db.execute(query)
+        return result.scalar_one()
+
+    async def search(
+        self,
+        query_text: str,
+        deck_id: UUID | None = None,
+        *,
+        skip: int = 0,
+        limit: int = 50,
+    ) -> list[Card]:
+        """Search cards by text in front_text, back_text, example_sentence.
+
+        Args:
+            query_text: Search query (case-insensitive)
+            deck_id: Optional deck filter
+            skip: Pagination offset
+            limit: Max results
+
+        Returns:
+            List of matching cards ordered by order_index
+
+        Use Case:
+            Search functionality for finding cards by Greek or English text
+        """
+        search_pattern = f"%{query_text}%"
+        query = select(Card).where(
+            or_(
+                Card.front_text.ilike(search_pattern),
+                Card.back_text.ilike(search_pattern),
+                Card.example_sentence.ilike(search_pattern),
+            )
+        )
+
+        if deck_id:
+            query = query.where(Card.deck_id == deck_id)
+
+        query = query.order_by(Card.order_index).offset(skip).limit(limit)
+        result = await self.db.execute(query)
+        return list(result.scalars().all())
+
+    async def count_search(
+        self,
+        query_text: str,
+        deck_id: UUID | None = None,
+    ) -> int:
+        """Count cards matching search query.
+
+        Args:
+            query_text: Search query (case-insensitive)
+            deck_id: Optional deck filter
+
+        Returns:
+            Total count of matching cards
+
+        Use Case:
+            Pagination total count for search results
+        """
+        search_pattern = f"%{query_text}%"
+        query = (
+            select(func.count())
+            .select_from(Card)
+            .where(
+                or_(
+                    Card.front_text.ilike(search_pattern),
+                    Card.back_text.ilike(search_pattern),
+                    Card.example_sentence.ilike(search_pattern),
+                )
+            )
+        )
+
+        if deck_id:
+            query = query.where(Card.deck_id == deck_id)
+
         result = await self.db.execute(query)
         return result.scalar_one()

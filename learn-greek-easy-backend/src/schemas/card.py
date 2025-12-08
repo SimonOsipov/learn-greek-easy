@@ -93,6 +93,17 @@ class CardListResponse(BaseModel):
     cards: list[CardResponse]
 
 
+class CardSearchResponse(BaseModel):
+    """Schema for card search results."""
+
+    total: int
+    page: int
+    page_size: int
+    query: str
+    deck_id: UUID | None
+    cards: list[CardResponse]
+
+
 # Import at the end to avoid circular dependencies
 from src.schemas.progress import CardStatisticsResponse  # noqa: E402
 
