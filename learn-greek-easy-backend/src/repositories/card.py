@@ -2,7 +2,7 @@
 
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.db.models import Card, CardDifficulty
@@ -87,3 +87,19 @@ class CardRepository(BaseRepository[Card]):
         self.db.add_all(cards)
         await self.db.flush()
         return cards
+
+    async def count_by_deck(self, deck_id: UUID) -> int:
+        """Count total cards in a deck.
+
+        Args:
+            deck_id: Deck UUID
+
+        Returns:
+            Total number of cards in the deck
+
+        Use Case:
+            Pagination for card listing
+        """
+        query = select(func.count()).select_from(Card).where(Card.deck_id == deck_id)
+        result = await self.db.execute(query)
+        return result.scalar_one()

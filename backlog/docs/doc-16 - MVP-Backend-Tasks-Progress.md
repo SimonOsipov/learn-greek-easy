@@ -3,14 +3,14 @@ id: doc-16
 title: MVP Backend - Tasks Progress
 type: other
 created_date: '2025-12-07 09:25'
-updated_date: '2025-12-07 21:42'
+updated_date: '2025-12-08 06:04'
 ---
 # MVP Backend - Tasks Progress
 
 ## Overview
 - **Tech Stack**: FastAPI + PostgreSQL + Redis + SQLAlchemy + Alembic
 - **Python**: 3.14+ | **Dependency Management**: Poetry 2.2+
-- **Status**: 6 complete, 1 in progress, 8 not started (40%)
+- **Status**: 6 complete, 2 in progress, 7 not started (40%)
 
 ## Task Summary
 
@@ -22,7 +22,8 @@ updated_date: '2025-12-07 21:42'
 | 4 | Testing Framework | ✅ | 452 tests, TESTING.md 2054 lines |
 | 5 | API Foundation | ✅ | 8/8 complete |
 | 6 | Deck API | ✅ | 6/6 complete (100%) |
-| 7-14 | API Development | ⏸️ | Cards, Reviews, Progress, SM-2, Content, Celery, Integration, Docs |
+| 7 | Cards API | 🔄 | 1/7 complete (14%) |
+| 8-14 | API Development | ⏸️ | Reviews, Progress, SM-2, Content, Celery, Integration, Docs |
 | 15 | Docker & Deployment | ✅ | Railway deployed |
 
 ## Completed Tasks
@@ -76,8 +77,17 @@ updated_date: '2025-12-07 21:42'
 - ✅ GET /auth/me, Middleware, Session management
 - ⏸️ Google OAuth (placeholder)
 
+### Task 7: Cards API (14%)
+- ✅ 07.01: Create Card Router and List by Deck Endpoint (PR #25)
+- ⏸️ 07.02: Get Single Card Endpoint
+- ⏸️ 07.03: Search Cards Endpoint
+- ⏸️ 07.04: Create Card Endpoint (Admin)
+- ⏸️ 07.05: Update and Delete Card Endpoints (Admin)
+- ⏸️ 07.06: Bulk Create Cards Endpoint (Admin)
+- ⏸️ 07.07: Cards API Tests
+
 ## Critical Path
-1. Task 3 (Auth) → Task 6 (Decks) ✅ → Task 7 (Cards)
+1. Task 3 (Auth) → Task 6 (Decks) ✅ → Task 7 (Cards) 🔄
 2. Task 10 (SM-2) → Task 8 (Reviews) → Task 9 (Progress)
 3. Task 11 (Content), Task 12 (Celery), Task 13-14 (Testing, Docs)
 
