@@ -3,7 +3,7 @@ id: doc-15
 title: MVP - All Tasks Progress Dashboard
 type: other
 created_date: '2025-12-07 09:25'
-updated_date: '2025-12-08 07:04'
+updated_date: '2025-12-08 14:43'
 ---
 # MVP - All Tasks Progress Dashboard
 
@@ -42,7 +42,14 @@ updated_date: '2025-12-08 07:04'
 
 ### In Progress
 - 🔄 3. Authentication (90% - 9/10 subtasks)
-- 🔄 7. Cards API (29% - 2/7 subtasks, PR #25, PR #26)
+- 🔄 7. Cards API (57% - 4/7 subtasks)
+  - ✅ 07.01: Create Card Router and List by Deck Endpoint (PR #25)
+  - ✅ 07.02: Get Single Card Endpoint (PR #26)
+  - ✅ 07.03: Search Cards Endpoint (PR #29)
+  - ✅ 07.04: Create Card Endpoint (Admin) (PR #32)
+  - ⏸️ 07.05: Update and Delete Card Endpoints (Admin)
+  - ⏸️ 07.06: Bulk Create Cards Endpoint (Admin)
+  - ⏸️ 07.07: Cards API Tests
 
 ### Not Started
 - 8-14: Review API, Progress API, SM-2 Algorithm, Content Seeding, Background Jobs, Integration Testing, API Documentation
