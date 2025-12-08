@@ -3,7 +3,7 @@ id: doc-16
 title: MVP Backend - Tasks Progress
 type: other
 created_date: '2025-12-07 09:25'
-updated_date: '2025-12-08 15:47'
+updated_date: '2025-12-08 16:46'
 ---
 # MVP Backend - Tasks Progress
 
@@ -22,7 +22,7 @@ updated_date: '2025-12-08 15:47'
 | 4 | Testing Framework | Done | 452 tests, TESTING.md 2054 lines |
 | 5 | API Foundation | Done | 8/8 complete |
 | 6 | Deck API | Done | 6/6 complete (100%) |
-| 7 | Cards API | In Progress | 5/7 complete (71%) |
+| 7 | Cards API | In Progress | 6/7 complete (86%) |
 | 8-14 | API Development | Pending | Reviews, Progress, SM-2, Content, Celery, Integration, Docs |
 | 15 | Docker & Deployment | Done | Railway deployed |
 
@@ -77,13 +77,13 @@ updated_date: '2025-12-08 15:47'
 - Done: GET /auth/me, Middleware, Session management
 - Pending: Google OAuth (placeholder)
 
-### Task 7: Cards API (71%)
+### Task 7: Cards API (86%)
 - Done: 07.01: Create Card Router and List by Deck Endpoint (PR #25)
 - Done: 07.02: Get Single Card Endpoint (PR #26)
 - Done: 07.03: Search Cards Endpoint (PR #29)
 - Done: 07.04: Create Card Endpoint (Admin) (PR #32) - 14 tests
 - Done: 07.05: Update and Delete Card Endpoints (Admin) (PR #33)
-- Pending: 07.06: Bulk Create Cards Endpoint (Admin)
+- Done: 07.06: Bulk Create Cards Endpoint (Admin) (PR #34) - 20 tests
 - Pending: 07.07: Cards API Tests
 
 ## Critical Path
