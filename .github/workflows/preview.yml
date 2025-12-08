@@ -12,6 +12,11 @@ concurrency:
 env:
   PR_NUMBER: ${{ github.event.pull_request.number }}
 
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
 jobs:
   # Job 1: Run existing CI tests first (reusable workflow)
   ci-tests:
