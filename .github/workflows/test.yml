@@ -161,7 +161,7 @@ jobs:
   unit-tests:
     name: Unit & Integration Tests
     runs-on: ubuntu-latest
-    needs: [frontend-lint]
+    needs: [frontend-lint, backend-lint, alembic-check]
 
     steps:
       - name: Checkout code
@@ -194,7 +194,7 @@ jobs:
   e2e-tests:
     name: E2E Tests (${{ matrix.browser }})
     runs-on: ubuntu-latest
-    needs: [unit-tests, backend-tests]
+    needs: [frontend-lint, backend-lint, alembic-check]
     strategy:
       fail-fast: false
       matrix:
@@ -268,7 +268,7 @@ jobs:
   backend-tests:
     name: Backend Tests
     runs-on: ubuntu-latest
-    needs: [backend-lint]
+    needs: [frontend-lint, backend-lint, alembic-check]
 
     services:
       postgres:
