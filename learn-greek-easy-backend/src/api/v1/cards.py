@@ -7,7 +7,7 @@ listing cards by deck with pagination and optional difficulty filtering.
 from typing import Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.dependencies import get_current_superuser
@@ -16,7 +16,13 @@ from src.db.dependencies import get_db
 from src.db.models import CardDifficulty, User
 from src.repositories.card import CardRepository
 from src.repositories.deck import DeckRepository
-from src.schemas.card import CardCreate, CardListResponse, CardResponse, CardSearchResponse
+from src.schemas.card import (
+    CardCreate,
+    CardListResponse,
+    CardResponse,
+    CardSearchResponse,
+    CardUpdate,
+)
 
 router = APIRouter(
     # Note: prefix is set by parent router in v1/router.py
@@ -339,3 +345,131 @@ async def get_card(
         raise CardNotFoundException(card_id=str(card_id))
 
     return CardResponse.model_validate(card)
+
+
+@router.patch(
+    "/{card_id}",
+    response_model=CardResponse,
+    summary="Update a card",
+    description="Update an existing card. Requires superuser privileges.",
+    responses={
+        200: {
+            "description": "Card updated successfully",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "id": "660e8400-e29b-41d4-a716-446655440001",
+                        "deck_id": "550e8400-e29b-41d4-a716-446655440000",
+                        "front_text": "Updated Greek text",
+                        "back_text": "Updated English text",
+                        "example_sentence": "Updated example",
+                        "pronunciation": "updated",
+                        "difficulty": "hard",
+                        "order_index": 5,
+                        "created_at": "2024-01-15T10:30:00Z",
+                        "updated_at": "2024-01-16T14:00:00Z",
+                    }
+                }
+            },
+        },
+        401: {"description": "Not authenticated"},
+        403: {"description": "Not authorized (requires superuser)"},
+        404: {"description": "Card not found"},
+        422: {"description": "Validation error"},
+    },
+)
+async def update_card(
+    card_id: UUID,
+    card_data: CardUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> CardResponse:
+    """Update an existing card.
+
+    Requires superuser privileges.
+    Only provided fields will be updated (partial update).
+    Note: deck_id cannot be changed.
+
+    Args:
+        card_id: UUID of the card to update
+        card_data: Fields to update (all optional)
+        db: Database session (injected)
+        current_user: Authenticated superuser (injected)
+
+    Returns:
+        CardResponse: The updated card
+
+    Raises:
+        401: If not authenticated
+        403: If authenticated but not superuser
+        404: If card doesn't exist
+        422: If validation fails
+    """
+    repo = CardRepository(db)
+
+    # Get existing card
+    card = await repo.get(card_id)
+    if card is None:
+        raise CardNotFoundException(card_id=str(card_id))
+
+    # Update card
+    updated_card = await repo.update(card, card_data)
+
+    # Commit the transaction
+    await db.commit()
+    await db.refresh(updated_card)
+
+    return CardResponse.model_validate(updated_card)
+
+
+@router.delete(
+    "/{card_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete a card",
+    description="Delete a card. Requires superuser privileges. This is a hard delete.",
+    responses={
+        204: {"description": "Card deleted successfully"},
+        401: {"description": "Not authenticated"},
+        403: {"description": "Not authorized (requires superuser)"},
+        404: {"description": "Card not found"},
+    },
+)
+async def delete_card(
+    card_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> Response:
+    """Delete a card.
+
+    Requires superuser privileges.
+
+    WARNING: This is a HARD DELETE. The card and all associated
+    statistics/reviews will be permanently removed.
+
+    Args:
+        card_id: UUID of the card to delete
+        db: Database session (injected)
+        current_user: Authenticated superuser (injected)
+
+    Returns:
+        Empty response with 204 status
+
+    Raises:
+        401: If not authenticated
+        403: If authenticated but not superuser
+        404: If card doesn't exist
+    """
+    repo = CardRepository(db)
+
+    # Get existing card
+    card = await repo.get(card_id)
+    if card is None:
+        raise CardNotFoundException(card_id=str(card_id))
+
+    # Hard delete the card
+    await repo.delete(card)
+
+    # Commit the transaction
+    await db.commit()
+
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
