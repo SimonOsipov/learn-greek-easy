@@ -422,6 +422,119 @@ git commit --no-verify -m "message"
 | MyPy missing dependencies | Run: `cd learn-greek-easy-backend && poetry install` |
 | Want to skip hooks once | Use: `git commit --no-verify` |
 
+---
+
+## PR Labels for CI/CD Control
+
+Use labels on Pull Requests to control which CI/CD tests run:
+
+| Label | Effect |
+|-------|--------|
+| `visual-test` | Force full visual regression suite (all pages, all viewports) |
+| `skip-visual` | Skip visual regression tests entirely |
+| `skip-e2e` | Skip E2E tests (use sparingly) |
+| (no label) | Smart mode - run tests based on changed files |
+
+### When to Use Each Label
+
+| Scenario | Recommended Label |
+|----------|-------------------|
+| Major UI changes, new pages | `visual-test` |
+| Design system updates | `visual-test` |
+| Backend-only changes | `skip-visual` |
+| Config/documentation changes | `skip-visual` |
+| Most feature PRs | (no label) - smart detection |
+
+### Adding Labels via CLI
+
+```bash
+# When creating PR
+gh pr create --title "..." --body "..." --label "visual-test"
+
+# Add to existing PR
+gh pr edit 123 --add-label "skip-visual"
+
+# Remove label
+gh pr edit 123 --remove-label "visual-test"
+```
+
+---
+
+## Railway PR Preview Environments
+
+Railway PR preview environments allow testing changes in isolated environments before merging.
+
+### Configuration Files
+
+| File | Purpose |
+|------|---------|
+| `railway.json` | Root project configuration |
+| `learn-greek-easy-backend/railway.json` | Backend service config |
+| `learn-greek-easy-frontend/railway.json` | Frontend service config |
+| `.railway/variables.json` | Environment variable templates |
+| `scripts/railway-preview.sh` | CLI helper script |
+
+### GitHub Secrets Required
+
+Configure the following secrets in GitHub repository settings:
+
+| Secret | Description | How to Generate |
+|--------|-------------|-----------------|
+| `RAILWAY_TOKEN` | Railway API token for CI/CD | Railway Dashboard > Account Settings > Tokens > Create Token |
+| `PREVIEW_JWT_SECRET` | JWT secret for preview environments | `openssl rand -hex 32` |
+
+### Setting Up Railway Token
+
+1. Go to [Railway Dashboard](https://railway.app/dashboard)
+2. Click on your profile icon (top right)
+3. Select **Account Settings**
+4. Navigate to **Tokens** section
+5. Click **Create Token**
+6. Name it (e.g., "GitHub Actions PR Preview")
+7. Copy the token and add to GitHub Secrets
+
+### Setting Up GitHub Secrets
+
+1. Go to GitHub repository > **Settings** > **Secrets and variables** > **Actions**
+2. Click **New repository secret**
+3. Add `RAILWAY_TOKEN` with the token from Railway
+4. Add `PREVIEW_JWT_SECRET` with: `openssl rand -hex 32`
+
+### Manual Preview Environment Management
+
+Use the helper script for manual environment management:
+
+```bash
+# Create a preview environment for PR #123
+./scripts/railway-preview.sh 123 create
+
+# Deploy to the preview environment
+./scripts/railway-preview.sh 123 deploy
+
+# Destroy the preview environment
+./scripts/railway-preview.sh 123 destroy
+```
+
+### Railway MCP Tools
+
+You can also use Railway MCP tools for environment management:
+
+```bash
+# Create environment
+mcp__railway-mcp-server__create-environment
+
+# List services
+mcp__railway-mcp-server__list-services
+
+# Set variables
+mcp__railway-mcp-server__set-variables
+
+# View logs
+mcp__railway-mcp-server__get-logs
+```
+
+**Note**: Railway MCP does not support delete/destroy operations. Use the Railway CLI or Dashboard for cleanup.
+
 <!-- BACKLOG.MD MCP GUIDELINES START -->
 
 <CRITICAL_INSTRUCTION>
