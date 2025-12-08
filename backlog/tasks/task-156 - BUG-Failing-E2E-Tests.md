@@ -4,7 +4,7 @@ title: 'BUG: Failing E2E Tests'
 status: In Progress
 assignee: []
 created_date: '2025-12-08 07:12'
-updated_date: '2025-12-08 10:08'
+updated_date: '2025-12-08 10:15'
 labels: []
 dependencies: []
 ---
@@ -99,3 +99,23 @@ cd learn-greek-easy-frontend && npm run test:e2e -- --grep "keyboard accessible"
 ### Estimated Complexity
 - **Low** - Single file change with straightforward fix
 <!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+## Implementation Complete
+
+**PR**: https://github.com/SimonOsipov/learn-greek-easy/pull/28
+
+**Changes Made**:
+1. Added `waitForSelector('h1, h2, [data-testid]', { timeout: 10000 })` after navigation to ensure dashboard loads
+2. Fixed selector logic:
+   - Use proper selector for focusable elements (excluding `tabindex="-1"` and disabled)
+   - Verify focusable elements exist (`> 0`)
+   - Add actual Tab key test to verify keyboard navigation works
+3. Skip webkit browser due to different tab focus behavior (consistent with other keyboard tests in the file)
+
+**Test Results**:
+- All keyboard navigation tests pass (22 passed, 2 skipped for webkit)
+- Specific test passes on chromium and firefox
+<!-- SECTION:NOTES:END -->
