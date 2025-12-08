@@ -1,9 +1,12 @@
 """Integration tests for deck API endpoints.
 
 This module provides comprehensive tests for the deck endpoints including:
+- GET /api/v1/decks - List active decks with pagination and filtering
 - POST /api/v1/decks - Create a new deck (admin only)
 - GET /api/v1/decks/search - Search decks by name or description
 - GET /api/v1/decks/{deck_id} - Get single deck with card count
+- PATCH /api/v1/decks/{deck_id} - Update a deck (admin only)
+- DELETE /api/v1/decks/{deck_id} - Soft delete a deck (admin only)
 """
 
 from uuid import uuid4
@@ -13,6 +16,224 @@ from httpx import AsyncClient
 
 from src.db.models import Deck
 from tests.fixtures.deck import DeckWithCards, MultiLevelDecks
+
+
+class TestListDecksEndpoint:
+    """Test suite for GET /api/v1/decks endpoint."""
+
+    @pytest.mark.asyncio
+    async def test_list_decks_empty(self, client: AsyncClient):
+        """Test empty database returns empty list."""
+        response = await client.get("/api/v1/decks")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 0
+        assert data["decks"] == []
+        assert data["page"] == 1
+        assert data["page_size"] == 20
+
+    @pytest.mark.asyncio
+    async def test_list_decks_with_data(
+        self, client: AsyncClient, multi_level_decks: MultiLevelDecks
+    ):
+        """Test returns decks when data exists."""
+        response = await client.get("/api/v1/decks")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 3
+        assert len(data["decks"]) == 3
+
+    @pytest.mark.asyncio
+    async def test_list_decks_pagination_first_page(
+        self, client: AsyncClient, multi_level_decks: MultiLevelDecks
+    ):
+        """Test first page of pagination."""
+        response = await client.get("/api/v1/decks?page=1&page_size=2")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["page"] == 1
+        assert data["page_size"] == 2
+        assert len(data["decks"]) == 2
+        assert data["total"] == 3  # Total still shows all
+
+    @pytest.mark.asyncio
+    async def test_list_decks_pagination_second_page(
+        self, client: AsyncClient, multi_level_decks: MultiLevelDecks
+    ):
+        """Test second page returns different decks."""
+        # Get first page
+        response_page1 = await client.get("/api/v1/decks?page=1&page_size=2")
+        data_page1 = response_page1.json()
+
+        # Get second page
+        response_page2 = await client.get("/api/v1/decks?page=2&page_size=2")
+        data_page2 = response_page2.json()
+
+        assert response_page2.status_code == 200
+        assert data_page2["page"] == 2
+        assert len(data_page2["decks"]) == 1  # Only 1 left on page 2
+
+        # Deck on page 2 should not be on page 1
+        page1_ids = [d["id"] for d in data_page1["decks"]]
+        page2_ids = [d["id"] for d in data_page2["decks"]]
+        assert not set(page1_ids).intersection(set(page2_ids))
+
+    @pytest.mark.asyncio
+    async def test_list_decks_default_pagination(
+        self, client: AsyncClient, deck_with_cards: DeckWithCards
+    ):
+        """Test default pagination values (page=1, page_size=20)."""
+        response = await client.get("/api/v1/decks")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["page"] == 1
+        assert data["page_size"] == 20
+
+    @pytest.mark.asyncio
+    async def test_list_decks_filter_by_level(
+        self, client: AsyncClient, multi_level_decks: MultiLevelDecks
+    ):
+        """Test level filter returns only matching decks."""
+        response = await client.get("/api/v1/decks?level=A1")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 1
+        assert len(data["decks"]) == 1
+        assert data["decks"][0]["level"] == "A1"
+
+    @pytest.mark.asyncio
+    async def test_list_decks_filter_all_levels(
+        self, client: AsyncClient, multi_level_decks: MultiLevelDecks
+    ):
+        """Test filtering by each CEFR level works."""
+        levels = ["A1", "A2", "B1"]
+
+        for level in levels:
+            response = await client.get(f"/api/v1/decks?level={level}")
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data["total"] == 1
+            assert all(d["level"] == level for d in data["decks"])
+
+    @pytest.mark.asyncio
+    async def test_list_decks_excludes_inactive(
+        self, client: AsyncClient, inactive_deck: Deck, deck_with_cards: DeckWithCards
+    ):
+        """Test inactive decks are not returned."""
+        response = await client.get("/api/v1/decks")
+
+        assert response.status_code == 200
+        data = response.json()
+        deck_ids = [d["id"] for d in data["decks"]]
+        assert str(inactive_deck.id) not in deck_ids
+
+    @pytest.mark.asyncio
+    async def test_list_decks_invalid_page_returns_422(self, client: AsyncClient):
+        """Test page=0 returns 422."""
+        response = await client.get("/api/v1/decks?page=0")
+
+        assert response.status_code == 422
+        data = response.json()
+        assert data["success"] is False
+        assert data["error"]["code"] == "VALIDATION_ERROR"
+
+    @pytest.mark.asyncio
+    async def test_list_decks_negative_page_returns_422(self, client: AsyncClient):
+        """Test negative page returns 422."""
+        response = await client.get("/api/v1/decks?page=-1")
+
+        assert response.status_code == 422
+        data = response.json()
+        assert data["success"] is False
+
+    @pytest.mark.asyncio
+    async def test_list_decks_invalid_page_size_zero_returns_422(self, client: AsyncClient):
+        """Test page_size=0 returns 422."""
+        response = await client.get("/api/v1/decks?page_size=0")
+
+        assert response.status_code == 422
+        data = response.json()
+        assert data["success"] is False
+
+    @pytest.mark.asyncio
+    async def test_list_decks_invalid_page_size_over_100_returns_422(self, client: AsyncClient):
+        """Test page_size > 100 returns 422."""
+        response = await client.get("/api/v1/decks?page_size=101")
+
+        assert response.status_code == 422
+        data = response.json()
+        assert data["success"] is False
+
+    @pytest.mark.asyncio
+    async def test_list_decks_invalid_level_returns_422(self, client: AsyncClient):
+        """Test invalid level filter returns 422."""
+        response = await client.get("/api/v1/decks?level=INVALID")
+
+        assert response.status_code == 422
+        data = response.json()
+        assert data["success"] is False
+        assert data["error"]["code"] == "VALIDATION_ERROR"
+
+    @pytest.mark.asyncio
+    async def test_list_decks_response_fields(
+        self, client: AsyncClient, deck_with_cards: DeckWithCards
+    ):
+        """Test response includes total, page, page_size, decks."""
+        response = await client.get("/api/v1/decks")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert "total" in data
+        assert "page" in data
+        assert "page_size" in data
+        assert "decks" in data
+        assert isinstance(data["total"], int)
+        assert isinstance(data["page"], int)
+        assert isinstance(data["page_size"], int)
+        assert isinstance(data["decks"], list)
+
+    @pytest.mark.asyncio
+    async def test_list_decks_deck_object_fields(
+        self, client: AsyncClient, deck_with_cards: DeckWithCards
+    ):
+        """Test each deck object has all required fields."""
+        response = await client.get("/api/v1/decks")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data["decks"]) >= 1
+
+        deck = data["decks"][0]
+        required_fields = [
+            "id",
+            "name",
+            "description",
+            "level",
+            "is_active",
+            "created_at",
+            "updated_at",
+        ]
+        for field in required_fields:
+            assert field in deck, f"Missing required field: {field}"
+
+    @pytest.mark.asyncio
+    async def test_list_decks_total_count_accurate(
+        self, client: AsyncClient, multi_level_decks: MultiLevelDecks
+    ):
+        """Test total count matches actual number of decks."""
+        # With small page size to verify total is separate from returned count
+        response = await client.get("/api/v1/decks?page_size=1")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 3  # 3 decks created by multi_level_decks
+        assert len(data["decks"]) == 1  # But only 1 returned per page
 
 
 class TestCreateDeckEndpoint:
@@ -1044,3 +1265,190 @@ class TestDeleteDeckEndpoint:
         data = get_response.json()
         assert data["success"] is False
         assert data["error"]["code"] == "NOT_FOUND"
+
+
+class TestDeckCRUDFlow:
+    """Integration tests for complete deck CRUD operations."""
+
+    @pytest.mark.asyncio
+    async def test_full_deck_lifecycle(self, client: AsyncClient, superuser_auth_headers: dict):
+        """Test complete create-read-update-delete flow."""
+        # 1. CREATE
+        create_data = {
+            "name": "CRUD Test Deck",
+            "description": "Testing full lifecycle",
+            "level": "A2",
+        }
+        create_response = await client.post(
+            "/api/v1/decks",
+            json=create_data,
+            headers=superuser_auth_headers,
+        )
+        assert create_response.status_code == 201
+        created_deck = create_response.json()
+        deck_id = created_deck["id"]
+
+        # 2. READ
+        get_response = await client.get(f"/api/v1/decks/{deck_id}")
+        assert get_response.status_code == 200
+        fetched_deck = get_response.json()
+        assert fetched_deck["name"] == create_data["name"]
+        assert fetched_deck["description"] == create_data["description"]
+        assert fetched_deck["level"] == create_data["level"]
+        assert fetched_deck["card_count"] == 0
+
+        # 3. UPDATE
+        update_data = {
+            "name": "Updated CRUD Deck",
+            "description": "Updated description",
+            "level": "B1",
+        }
+        update_response = await client.patch(
+            f"/api/v1/decks/{deck_id}",
+            json=update_data,
+            headers=superuser_auth_headers,
+        )
+        assert update_response.status_code == 200
+        updated_deck = update_response.json()
+        assert updated_deck["name"] == update_data["name"]
+        assert updated_deck["description"] == update_data["description"]
+        assert updated_deck["level"] == update_data["level"]
+
+        # Verify update persisted
+        verify_response = await client.get(f"/api/v1/decks/{deck_id}")
+        assert verify_response.status_code == 200
+        assert verify_response.json()["name"] == update_data["name"]
+
+        # 4. DELETE
+        delete_response = await client.delete(
+            f"/api/v1/decks/{deck_id}",
+            headers=superuser_auth_headers,
+        )
+        assert delete_response.status_code == 204
+
+        # 5. VERIFY DELETION
+        final_get_response = await client.get(f"/api/v1/decks/{deck_id}")
+        assert final_get_response.status_code == 404
+
+    @pytest.mark.asyncio
+    async def test_deck_appears_in_list_after_creation(
+        self, client: AsyncClient, superuser_auth_headers: dict
+    ):
+        """Test newly created deck appears in list and search."""
+        # Create a uniquely named deck
+        unique_name = f"UniqueListTestDeck_{uuid4().hex[:8]}"
+        create_data = {
+            "name": unique_name,
+            "description": "Testing visibility in list",
+            "level": "A1",
+        }
+
+        # Create deck
+        create_response = await client.post(
+            "/api/v1/decks",
+            json=create_data,
+            headers=superuser_auth_headers,
+        )
+        assert create_response.status_code == 201
+        deck_id = create_response.json()["id"]
+
+        # Check it appears in list
+        list_response = await client.get("/api/v1/decks")
+        assert list_response.status_code == 200
+        deck_ids = [d["id"] for d in list_response.json()["decks"]]
+        assert deck_id in deck_ids
+
+        # Check it appears in search by unique name
+        search_response = await client.get(f"/api/v1/decks/search?q={unique_name[:10]}")
+        assert search_response.status_code == 200
+        search_deck_ids = [d["id"] for d in search_response.json()["decks"]]
+        assert deck_id in search_deck_ids
+
+    @pytest.mark.asyncio
+    async def test_updated_deck_reflects_changes_in_list(
+        self, client: AsyncClient, superuser_auth_headers: dict
+    ):
+        """Test updates are reflected when fetching deck from list."""
+        # Create deck
+        create_data = {
+            "name": "Before Update",
+            "description": "Initial description",
+            "level": "A1",
+        }
+        create_response = await client.post(
+            "/api/v1/decks",
+            json=create_data,
+            headers=superuser_auth_headers,
+        )
+        assert create_response.status_code == 201
+        deck_id = create_response.json()["id"]
+
+        # Update deck with new name and level
+        update_data = {
+            "name": "After Update",
+            "level": "C2",
+        }
+        update_response = await client.patch(
+            f"/api/v1/decks/{deck_id}",
+            json=update_data,
+            headers=superuser_auth_headers,
+        )
+        assert update_response.status_code == 200
+
+        # Verify changes in list
+        list_response = await client.get("/api/v1/decks?level=C2")
+        assert list_response.status_code == 200
+        decks = list_response.json()["decks"]
+        matching = [d for d in decks if d["id"] == deck_id]
+        assert len(matching) == 1
+        assert matching[0]["name"] == "After Update"
+        assert matching[0]["level"] == "C2"
+
+    @pytest.mark.asyncio
+    async def test_auth_flow_for_admin_endpoints(
+        self, client: AsyncClient, auth_headers: dict, superuser_auth_headers: dict
+    ):
+        """Test authentication flow for admin-only endpoints."""
+        # 1. Regular user cannot create
+        create_data = {"name": "Auth Test", "level": "A1"}
+        create_response = await client.post("/api/v1/decks", json=create_data, headers=auth_headers)
+        assert create_response.status_code == 403
+
+        # 2. Superuser can create
+        create_response = await client.post(
+            "/api/v1/decks", json=create_data, headers=superuser_auth_headers
+        )
+        assert create_response.status_code == 201
+        deck_id = create_response.json()["id"]
+
+        # 3. Regular user cannot update
+        update_response = await client.patch(
+            f"/api/v1/decks/{deck_id}",
+            json={"name": "Should Fail"},
+            headers=auth_headers,
+        )
+        assert update_response.status_code == 403
+
+        # 4. Regular user cannot delete
+        delete_response = await client.delete(f"/api/v1/decks/{deck_id}", headers=auth_headers)
+        assert delete_response.status_code == 403
+
+        # 5. Unauthenticated requests fail
+        unauth_create = await client.post("/api/v1/decks", json=create_data)
+        assert unauth_create.status_code == 401
+
+        unauth_update = await client.patch(f"/api/v1/decks/{deck_id}", json={"name": "Fail"})
+        assert unauth_update.status_code == 401
+
+        unauth_delete = await client.delete(f"/api/v1/decks/{deck_id}")
+        assert unauth_delete.status_code == 401
+
+        # 6. Public endpoints work without auth
+        get_response = await client.get(f"/api/v1/decks/{deck_id}")
+        assert get_response.status_code == 200
+
+        list_response = await client.get("/api/v1/decks")
+        assert list_response.status_code == 200
+
+        search_response = await client.get("/api/v1/decks/search?q=Auth")
+        assert search_response.status_code == 200

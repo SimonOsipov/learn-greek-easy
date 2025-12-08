@@ -3,14 +3,14 @@ id: doc-16
 title: MVP Backend - Tasks Progress
 type: other
 created_date: '2025-12-07 09:25'
-updated_date: '2025-12-07 21:02'
+updated_date: '2025-12-07 21:42'
 ---
 # MVP Backend - Tasks Progress
 
 ## Overview
 - **Tech Stack**: FastAPI + PostgreSQL + Redis + SQLAlchemy + Alembic
 - **Python**: 3.14+ | **Dependency Management**: Poetry 2.2+
-- **Status**: 5 complete, 2 in progress, 8 not started (33%)
+- **Status**: 6 complete, 1 in progress, 8 not started (40%)
 
 ## Task Summary
 
@@ -21,7 +21,7 @@ updated_date: '2025-12-07 21:02'
 | 3 | Authentication | 🔄 | 90% (9/10 subtasks) |
 | 4 | Testing Framework | ✅ | 452 tests, TESTING.md 2054 lines |
 | 5 | API Foundation | ✅ | 8/8 complete |
-| 6 | Deck API | 🔄 | 5/6 subtasks (06.01-06.05 done) |
+| 6 | Deck API | ✅ | 6/6 complete (100%) |
 | 7-14 | API Development | ⏸️ | Cards, Reviews, Progress, SM-2, Content, Celery, Integration, Docs |
 | 15 | Docker & Deployment | ✅ | Railway deployed |
 
@@ -55,6 +55,14 @@ updated_date: '2025-12-07 21:02'
 - ✅ 05.07: API versioning strategy (PR #16)
 - ✅ 05.08: Health check endpoint (already implemented)
 
+### Task 6: Deck API (2025-12-07)
+- ✅ 06.01: Create Deck Router and List Endpoint (PR #18)
+- ✅ 06.02: Get Single Deck Endpoint (PR #19)
+- ✅ 06.03: Search Decks Endpoint (PR #21)
+- ✅ 06.04: Create Deck Endpoint (Admin) (PR #22)
+- ✅ 06.05: Update and Delete Deck Endpoints (Admin) (PR #23)
+- ✅ 06.06: Deck API Tests (PR #24) - 103 tests, 96.6% coverage
+
 ### Task 15: Docker & Deployment (2025-12-05)
 - Docker Compose dev/prod
 - GitHub Actions CI/CD
@@ -68,16 +76,8 @@ updated_date: '2025-12-07 21:02'
 - ✅ GET /auth/me, Middleware, Session management
 - ⏸️ Google OAuth (placeholder)
 
-### Task 6: Deck API (83%)
-- ✅ 06.01: Create Deck Router and List Endpoint (PR #18)
-- ✅ 06.02: Get Single Deck Endpoint (PR #19)
-- ✅ 06.03: Search Decks Endpoint (PR #21)
-- ✅ 06.04: Create Deck Endpoint (Admin) (PR #22)
-- ✅ 06.05: Update and Delete Deck Endpoints (Admin) (PR #23)
-- ⏸️ 06.06: Deck API Tests
-
 ## Critical Path
-1. Task 3 (Auth) → Task 6 (Decks) → Task 7 (Cards)
+1. Task 3 (Auth) → Task 6 (Decks) ✅ → Task 7 (Cards)
 2. Task 10 (SM-2) → Task 8 (Reviews) → Task 9 (Progress)
 3. Task 11 (Content), Task 12 (Celery), Task 13-14 (Testing, Docs)
 
