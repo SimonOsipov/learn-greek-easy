@@ -4,7 +4,7 @@ title: 'BUG: Color contrast fails WCAG AA on deck cards'
 status: In Progress
 assignee: []
 created_date: '2025-12-08 10:32'
-updated_date: '2025-12-08 10:43'
+updated_date: '2025-12-08 10:44'
 labels:
   - bug
   - accessibility
@@ -167,3 +167,37 @@ npm run test:e2e -- tests/e2e/accessibility.spec.ts
 
 **Pattern consistency**: The rest of the codebase (especially `DeckDetailPage.tsx`) already uses `text-gray-600` for similar muted/label text, so this change aligns with existing conventions.
 <!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+## Implementation Notes
+
+**Date:** 2025-12-08
+**Branch:** `fix/task-158-wcag-color-contrast`
+
+### Changes Made
+
+Modified `/learn-greek-easy-frontend/src/components/decks/DeckCard.tsx`:
+
+Changed all 5 instances of `text-gray-500` to `text-gray-600`:
+
+| Line | Element | Change |
+|------|---------|--------|
+| 82 | English subtitle | `text-gray-500` -> `text-gray-600` |
+| 127 | "X% Complete" text | `text-gray-500` -> `text-gray-600` |
+| 140 | "Cards" label | `text-gray-500` -> `text-gray-600` |
+| 146 | "Time" label | `text-gray-500` -> `text-gray-600` |
+| 152 | "Mastery" label | `text-gray-500` -> `text-gray-600` |
+
+### Contrast Improvement
+- **Before:** `text-gray-500` (#959ba5) = 2.65:1 contrast ratio
+- **After:** `text-gray-600` (#4b5563) = ~5.9:1 contrast ratio
+- **WCAG AA Requirement:** 4.5:1 for small text
+
+### Pre-commit Checks
+All hooks passed: ESLint, Prettier, TypeScript
+
+### Status
+Branch pushed. Ready for QA verification before PR creation.
+<!-- SECTION:NOTES:END -->
