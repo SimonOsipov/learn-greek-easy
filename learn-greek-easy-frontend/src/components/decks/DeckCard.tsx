@@ -40,10 +40,12 @@ export const DeckCard: React.FC<DeckCardProps> = ({
   const isClickable = onClick && !isLocked;
 
   // Build className for card
+  // Note: Removed opacity-70 from locked cards to maintain WCAG AA contrast
+  // Locked state is indicated by Lock icon and non-clickable behavior
   const cardClassName = `
     min-h-[300px] flex flex-col
     ${isClickable ? 'cursor-pointer transition-all duration-200 hover:shadow-lg' : ''}
-    ${isLocked ? 'opacity-70' : ''}
+    ${isLocked ? 'grayscale-[30%]' : ''}
     ${isPremium && !isLocked ? 'border-amber-400 hover:border-amber-500' : ''}
     ${variant === 'list' ? 'flex flex-row items-center' : ''}
   `.trim();
