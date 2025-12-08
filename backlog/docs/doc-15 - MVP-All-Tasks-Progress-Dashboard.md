@@ -3,7 +3,7 @@ id: doc-15
 title: MVP - All Tasks Progress Dashboard
 type: other
 created_date: '2025-12-07 09:25'
-updated_date: '2025-12-07 13:59'
+updated_date: '2025-12-08 05:05'
 ---
 # MVP - All Tasks Progress Dashboard
 
@@ -12,7 +12,7 @@ updated_date: '2025-12-07 13:59'
 | Area | Total | Completed | In Progress | Not Started | % |
 |------|-------|-----------|-------------|-------------|---|
 | Frontend | 11 | 11 | 0 | 0 | 100% |
-| Backend | 15 | 5 | 1 | 9 | 33% |
+| Backend | 15 | 6 | 1 | 8 | 40% |
 | Infrastructure | 9 | 9 | 0 | 0 | 100% |
 | Deployment | 9 | 9 | 0 | 0 | 100% |
 
@@ -30,20 +30,21 @@ updated_date: '2025-12-07 13:59'
 10. ✅ Testing Framework (179+ tests, 97% pass)
 11. ✅ Docker Containerization
 
-## Backend Tasks (5/15) - IN PROGRESS
+## Backend Tasks (6/15) - IN PROGRESS
 
 ### Completed
 - ✅ 1. Project Setup (2025-11-20)
 - ✅ 2. Database Design & Schema (2025-11-24)
 - ✅ 4. Backend Testing Framework (2025-12-01)
 - ✅ 5. API Foundation & Middleware (2025-12-07)
+- ✅ 6. Deck API (2025-12-07) - 6 endpoints, 103 tests, 96.6% coverage
 - ✅ 15. Docker & Deployment (2025-12-05)
 
 ### In Progress
 - 🔄 3. Authentication (90% - 9/10 subtasks)
 
 ### Not Started
-- 6-14: Deck API, Card API, Review API, Progress API, SM-2 Algorithm, Content Seeding, Background Jobs, Integration Testing, API Documentation
+- 7-14: Card API, Review API, Progress API, SM-2 Algorithm, Content Seeding, Background Jobs, Integration Testing, API Documentation
 
 ## Infrastructure (9/9) - COMPLETE ✅
 
