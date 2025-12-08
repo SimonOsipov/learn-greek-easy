@@ -1,12 +1,13 @@
 ---
 id: task-157
 title: Speed up E2E tests
-status: In Progress
+status: Done
 assignee: []
 created_date: '2025-12-08 07:12'
-updated_date: '2025-12-08 09:10'
+updated_date: '2025-12-08 09:56'
 labels: []
 dependencies: []
+ordinal: 9000
 ---
 
 ## Description
