@@ -3,7 +3,7 @@ id: doc-26
 title: 'MVP Backend - 07: Cards API'
 type: other
 created_date: '2025-12-08 05:17'
-updated_date: '2025-12-08 14:20'
+updated_date: '2025-12-08 15:47'
 ---
 # Backend Task 07: Cards API - Technical Design Document
 
@@ -41,12 +41,12 @@ updated_date: '2025-12-08 14:20'
 | 07.02 | Get Single Card Endpoint | Done |
 | 07.03 | Search Cards Endpoint | Done |
 | 07.04 | Create Card Endpoint (Admin) | Done |
-| 07.05 | Update and Delete Card Endpoints (Admin) | Pending |
+| 07.05 | Update and Delete Card Endpoints (Admin) | Done |
 | 07.06 | Bulk Create Cards Endpoint (Admin) | Pending |
 | 07.07 | Cards API Tests | Pending |
 
 
-**Progress: 4/7 subtasks complete (57%)**
+**Progress: 5/7 subtasks complete (71%)**
 
 ## System Architecture
 
