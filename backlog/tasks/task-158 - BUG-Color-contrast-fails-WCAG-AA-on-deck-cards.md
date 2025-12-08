@@ -4,7 +4,7 @@ title: 'BUG: Color contrast fails WCAG AA on deck cards'
 status: In Progress
 assignee: []
 created_date: '2025-12-08 10:32'
-updated_date: '2025-12-08 10:44'
+updated_date: '2025-12-08 10:48'
 labels:
   - bug
   - accessibility
@@ -200,4 +200,52 @@ All hooks passed: ESLint, Prettier, TypeScript
 
 ### Status
 Branch pushed. Ready for QA verification before PR creation.
+
+## QA Verification Report
+
+**Date:** 2025-12-08
+**Verified by:** QA Agent
+
+### Test Results
+
+#### Accessibility E2E Test
+- **Test:** `Decks page should have no accessibility violations`
+- **Result:** PASSED (all 3 browsers: Chromium, Firefox, WebKit)
+- **Time:** 4.4s
+
+#### Full E2E Test Suite
+- **Total tests:** 237
+- **Passed:** 181
+- **Skipped:** 56 (conditional skips based on environment)
+- **Failed:** 0
+- **Time:** 59.8s
+
+### Code Review
+
+| Line | Element | Change | Status |
+|------|---------|--------|--------|
+| 82 | English subtitle | `text-gray-500` -> `text-gray-600` | Verified |
+| 104 | Category text | `text-gray-500` -> `text-gray-600` | Verified |
+| 127 | "X% Complete" text | `text-gray-500` -> `text-gray-600` | Verified |
+| 140 | "Cards" label | `text-gray-500` -> `text-gray-600` | Verified |
+| 146 | "Time" label | `text-gray-500` -> `text-gray-600` | Verified |
+| 152 | "Mastery" label | `text-gray-500` -> `text-gray-600` | Verified |
+
+### Contrast Improvement
+- **Before:** `text-gray-500` (#959ba5) = 2.65:1 contrast ratio
+- **After:** `text-gray-600` (#4b5563) = ~5.9:1 contrast ratio
+- **WCAG AA Requirement:** 4.5:1 for small text - PASSED
+
+### Acceptance Criteria Verification
+- [x] Deck card labels have contrast ratio >= 4.5:1
+- [x] Accessibility test passes
+- [x] No visual regression (consistent with existing `text-gray-600` usage in codebase)
+
+### Result: PASSED
+
+---
+
+**PR:** https://github.com/SimonOsipov/learn-greek-easy/pull/29
+
+Awaiting CI/CD pipeline completion before marking task as Done.
 <!-- SECTION:NOTES:END -->
