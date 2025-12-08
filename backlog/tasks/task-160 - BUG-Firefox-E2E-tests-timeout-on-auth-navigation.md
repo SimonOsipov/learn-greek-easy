@@ -4,6 +4,7 @@ title: 'BUG: Firefox E2E tests timeout on auth/navigation'
 status: Done
 assignee: []
 created_date: '2025-12-08 12:17'
+updated_date: '2025-12-08 14:09'
 labels:
   - bug
   - e2e-tests
@@ -12,6 +13,7 @@ labels:
   - frontend
 dependencies: []
 priority: medium
+ordinal: 13000
 ---
 
 ## Description
@@ -77,6 +79,7 @@ Error: page.waitForLoadState: Test timeout of 60000ms exceeded.
 
 ## Implementation Notes
 
+<!-- SECTION:NOTES:BEGIN -->
 ### Resolution (PR #30)
 
 Fixed Firefox E2E timeout issue by replacing `networkidle` wait strategy with `domcontentloaded`:
@@ -85,3 +88,4 @@ Fixed Firefox E2E timeout issue by replacing `networkidle` wait strategy with `d
 - Updated `auth-helpers.ts` to use `domcontentloaded` instead of `networkidle` for Firefox
 - All browsers now pass consistently in CI
 - PR: https://github.com/SimonOsipov/learn-greek-easy/pull/30
+<!-- SECTION:NOTES:END -->
