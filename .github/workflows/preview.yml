@@ -76,13 +76,14 @@ jobs:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
         run: |
           echo "Creating preview environment: pr-${{ env.PR_NUMBER }}"
+          railway link --project ${{ secrets.RAILWAY_PROJECT_ID }}
           railway environment create "pr-${{ env.PR_NUMBER }}" 2>/dev/null || echo "Environment may already exist"
 
       - name: Set Environment Variables
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
         run: |
-          railway link --environment "pr-${{ env.PR_NUMBER }}"
+          railway link --project ${{ secrets.RAILWAY_PROJECT_ID }} --environment "pr-${{ env.PR_NUMBER }}"
 
           # Set preview environment variables
           railway variables set \
@@ -99,7 +100,7 @@ jobs:
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
         run: |
-          railway link --environment "pr-${{ env.PR_NUMBER }}"
+          railway link --project ${{ secrets.RAILWAY_PROJECT_ID }} --environment "pr-${{ env.PR_NUMBER }}"
           cd learn-greek-easy-backend
           railway up --detach
           echo "Backend deployment initiated"
@@ -108,7 +109,7 @@ jobs:
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
         run: |
-          railway link --environment "pr-${{ env.PR_NUMBER }}"
+          railway link --project ${{ secrets.RAILWAY_PROJECT_ID }} --environment "pr-${{ env.PR_NUMBER }}"
           cd learn-greek-easy-frontend
           railway up --detach
           echo "Frontend deployment initiated"
@@ -123,7 +124,7 @@ jobs:
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
         run: |
-          railway link --environment "pr-${{ env.PR_NUMBER }}"
+          railway link --project ${{ secrets.RAILWAY_PROJECT_ID }} --environment "pr-${{ env.PR_NUMBER }}"
 
           # Generate domains for services (creates if not exists)
           echo "Generating domains..."
