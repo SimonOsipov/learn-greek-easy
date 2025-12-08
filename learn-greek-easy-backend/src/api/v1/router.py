@@ -23,6 +23,7 @@ Adding new feature routers:
 from fastapi import APIRouter
 
 from src.api.v1.auth import router as auth_router
+from src.api.v1.cards import router as card_router
 from src.api.v1.decks import router as deck_router
 
 # Create the main v1 router
@@ -47,12 +48,18 @@ v1_router.include_router(
 )
 
 # =============================================================================
+# Card Routes
+# =============================================================================
+v1_router.include_router(
+    card_router,
+    prefix="/cards",
+    tags=["Cards"],
+)
+
+# =============================================================================
 # Future Route Placeholders
 # =============================================================================
 # When implementing new features, add routers here:
-#
-# from src.api.v1.cards import router as card_router
-# v1_router.include_router(card_router, prefix="/cards", tags=["Cards"])
 #
 # from src.api.v1.reviews import router as review_router
 # v1_router.include_router(review_router, prefix="/reviews", tags=["Reviews"])
