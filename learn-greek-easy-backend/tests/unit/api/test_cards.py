@@ -273,3 +273,79 @@ class TestListCardsResponseFormat:
             assert isinstance(data["page"], int)
             assert isinstance(data["page_size"], int)
             assert isinstance(data["cards"], list)
+
+
+class TestGetCardUnit:
+    """Unit tests for GET /api/v1/cards/{card_id} endpoint."""
+
+    @pytest.fixture
+    def mock_card(self):
+        """Create a mock card."""
+        card = MagicMock(spec=Card)
+        card.id = uuid4()
+        card.deck_id = uuid4()
+        card.front_text = "kalimera"
+        card.back_text = "good morning"
+        card.example_sentence = "Kalimera! Pos eisai?"
+        card.pronunciation = "kah-lee-MEH-rah"
+        card.difficulty = CardDifficulty.EASY
+        card.order_index = 0
+        card.created_at = MagicMock()
+        card.updated_at = MagicMock()
+        return card
+
+    @pytest.mark.asyncio
+    async def test_get_card_calls_repository_with_card_id(self, client: AsyncClient, mock_card):
+        """Test that get_card calls repository.get with correct card_id."""
+        with patch("src.api.v1.cards.CardRepository") as MockCardRepo:
+            mock_card_repo = AsyncMock()
+            mock_card_repo.get.return_value = mock_card
+            MockCardRepo.return_value = mock_card_repo
+
+            response = await client.get(f"/api/v1/cards/{mock_card.id}")
+
+            assert response.status_code == 200
+            mock_card_repo.get.assert_called_once_with(mock_card.id)
+
+    @pytest.mark.asyncio
+    async def test_get_card_not_found_returns_404(self, client: AsyncClient):
+        """Test 404 response when card doesn't exist."""
+        with patch("src.api.v1.cards.CardRepository") as MockCardRepo:
+            mock_card_repo = AsyncMock()
+            mock_card_repo.get.return_value = None
+            MockCardRepo.return_value = mock_card_repo
+
+            non_existent_id = uuid4()
+            response = await client.get(f"/api/v1/cards/{non_existent_id}")
+
+            assert response.status_code == 404
+
+    @pytest.mark.asyncio
+    async def test_get_card_invalid_uuid_returns_422(self, client: AsyncClient):
+        """Test 422 response for invalid UUID format."""
+        response = await client.get("/api/v1/cards/not-a-uuid")
+
+        assert response.status_code == 422
+
+    @pytest.mark.asyncio
+    async def test_get_card_response_format(self, client: AsyncClient, mock_card):
+        """Test that response matches CardResponse schema."""
+        with patch("src.api.v1.cards.CardRepository") as MockCardRepo:
+            mock_card_repo = AsyncMock()
+            mock_card_repo.get.return_value = mock_card
+            MockCardRepo.return_value = mock_card_repo
+
+            response = await client.get(f"/api/v1/cards/{mock_card.id}")
+
+            assert response.status_code == 200
+            data = response.json()
+
+            # Verify all CardResponse fields
+            assert data["id"] == str(mock_card.id)
+            assert data["deck_id"] == str(mock_card.deck_id)
+            assert data["front_text"] == mock_card.front_text
+            assert data["back_text"] == mock_card.back_text
+            assert data["example_sentence"] == mock_card.example_sentence
+            assert data["pronunciation"] == mock_card.pronunciation
+            assert data["difficulty"] == mock_card.difficulty.value
+            assert data["order_index"] == mock_card.order_index

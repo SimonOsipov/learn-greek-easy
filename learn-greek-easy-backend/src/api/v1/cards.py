@@ -10,7 +10,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.exceptions import DeckNotFoundException
+from src.core.exceptions import CardNotFoundException, DeckNotFoundException
 from src.db.dependencies import get_db
 from src.db.models import CardDifficulty
 from src.repositories.card import CardRepository
@@ -122,3 +122,63 @@ async def list_cards(
         deck_id=deck_id,
         cards=[CardResponse.model_validate(card) for card in cards],
     )
+
+
+# NOTE: When adding the /search endpoint (task-151), it MUST be placed
+# BEFORE this /{card_id} endpoint to avoid route conflicts.
+# FastAPI matches routes in order, so /search must come before /{card_id}.
+
+
+@router.get(
+    "/{card_id}",
+    response_model=CardResponse,
+    summary="Get card by ID",
+    description="Get a single card by its UUID.",
+    responses={
+        200: {
+            "description": "Card details",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "id": "660e8400-e29b-41d4-a716-446655440001",
+                        "deck_id": "550e8400-e29b-41d4-a716-446655440000",
+                        "front_text": "kalimera",
+                        "back_text": "good morning",
+                        "example_sentence": "Kalimera! Pos eisai?",
+                        "pronunciation": "kalimera",
+                        "difficulty": "easy",
+                        "order_index": 1,
+                        "created_at": "2024-01-15T10:30:00Z",
+                        "updated_at": "2024-01-15T10:30:00Z",
+                    }
+                }
+            },
+        },
+        404: {"description": "Card not found"},
+    },
+)
+async def get_card(
+    card_id: UUID,
+    db: AsyncSession = Depends(get_db),
+) -> CardResponse:
+    """Get a specific card by ID.
+
+    This is a public endpoint that returns full card details.
+
+    Args:
+        card_id: UUID of the card to retrieve
+        db: Database session (injected)
+
+    Returns:
+        CardResponse with card details
+
+    Raises:
+        CardNotFoundException: If card doesn't exist
+    """
+    repo = CardRepository(db)
+
+    card = await repo.get(card_id)
+    if card is None:
+        raise CardNotFoundException(card_id=str(card_id))
+
+    return CardResponse.model_validate(card)

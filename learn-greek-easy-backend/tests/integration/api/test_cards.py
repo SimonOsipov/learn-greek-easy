@@ -332,3 +332,163 @@ class TestListCardsValidation:
         response = await client.get(f"/api/v1/cards?deck_id={deck_id}&difficulty=super_hard")
 
         assert response.status_code == 422
+
+
+class TestGetCardEndpoint:
+    """Integration tests for GET /api/v1/cards/{card_id} endpoint."""
+
+    @pytest.fixture
+    async def active_deck(self, db_session):
+        """Create an active deck in the database."""
+        deck = Deck(
+            id=uuid4(),
+            name="Test Active Deck",
+            description="A test deck for get card API testing",
+            level=DeckLevel.A1,
+            is_active=True,
+        )
+        db_session.add(deck)
+        await db_session.commit()
+        await db_session.refresh(deck)
+        return deck
+
+    @pytest.fixture
+    async def inactive_deck(self, db_session):
+        """Create an inactive deck in the database."""
+        deck = Deck(
+            id=uuid4(),
+            name="Test Inactive Deck",
+            description="An inactive test deck",
+            level=DeckLevel.A1,
+            is_active=False,
+        )
+        db_session.add(deck)
+        await db_session.commit()
+        await db_session.refresh(deck)
+        return deck
+
+    @pytest.fixture
+    async def card_in_active_deck(self, db_session, active_deck):
+        """Create a card in an active deck."""
+        card = Card(
+            id=uuid4(),
+            deck_id=active_deck.id,
+            front_text="kalimera",
+            back_text="good morning",
+            example_sentence="Kalimera! Pos eisai?",
+            pronunciation="kah-lee-MEH-rah",
+            difficulty=CardDifficulty.EASY,
+            order_index=0,
+        )
+        db_session.add(card)
+        await db_session.commit()
+        await db_session.refresh(card)
+        return card
+
+    @pytest.fixture
+    async def card_in_inactive_deck(self, db_session, inactive_deck):
+        """Create a card in an inactive deck."""
+        card = Card(
+            id=uuid4(),
+            deck_id=inactive_deck.id,
+            front_text="kalinihta",
+            back_text="good night",
+            example_sentence="Kalinihta! Kali orexi!",
+            pronunciation="kah-lee-NEEKH-tah",
+            difficulty=CardDifficulty.MEDIUM,
+            order_index=0,
+        )
+        db_session.add(card)
+        await db_session.commit()
+        await db_session.refresh(card)
+        return card
+
+    @pytest.mark.asyncio
+    async def test_get_card_success(self, client: AsyncClient, card_in_active_deck):
+        """Test successful retrieval of a card by ID."""
+        card = card_in_active_deck
+
+        response = await client.get(f"/api/v1/cards/{card.id}")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["id"] == str(card.id)
+        assert data["deck_id"] == str(card.deck_id)
+        assert data["front_text"] == "kalimera"
+        assert data["back_text"] == "good morning"
+        assert data["example_sentence"] == "Kalimera! Pos eisai?"
+        assert data["pronunciation"] == "kah-lee-MEH-rah"
+        assert data["difficulty"] == "easy"
+        assert data["order_index"] == 0
+        assert "created_at" in data
+        assert "updated_at" in data
+
+    @pytest.mark.asyncio
+    async def test_get_card_not_found(self, client: AsyncClient):
+        """Test 404 response when card doesn't exist."""
+        non_existent_id = uuid4()
+
+        response = await client.get(f"/api/v1/cards/{non_existent_id}")
+
+        assert response.status_code == 404
+        data = response.json()
+        assert data["success"] is False
+        assert data["error"]["code"] == "NOT_FOUND"
+        assert str(non_existent_id) in data["error"]["message"]
+
+    @pytest.mark.asyncio
+    async def test_get_card_invalid_uuid(self, client: AsyncClient):
+        """Test 422 response for invalid UUID format."""
+        response = await client.get("/api/v1/cards/not-a-valid-uuid")
+
+        assert response.status_code == 422
+        data = response.json()
+        assert data["success"] is False
+        assert data["error"]["code"] == "VALIDATION_ERROR"
+
+    @pytest.mark.asyncio
+    async def test_get_card_includes_all_fields(self, client: AsyncClient, card_in_active_deck):
+        """Test that response includes all required CardResponse fields."""
+        card = card_in_active_deck
+
+        response = await client.get(f"/api/v1/cards/{card.id}")
+
+        assert response.status_code == 200
+        data = response.json()
+
+        # Verify all required CardResponse fields are present
+        required_fields = [
+            "id",
+            "deck_id",
+            "front_text",
+            "back_text",
+            "example_sentence",
+            "pronunciation",
+            "difficulty",
+            "order_index",
+            "created_at",
+            "updated_at",
+        ]
+        for field in required_fields:
+            assert field in data, f"Missing required field: {field}"
+
+    @pytest.mark.asyncio
+    async def test_get_card_from_inactive_deck_still_accessible(
+        self, client: AsyncClient, card_in_inactive_deck
+    ):
+        """Test that card from inactive deck is still accessible.
+
+        Unlike the list endpoint which filters by active deck,
+        the get single card endpoint returns any card by ID
+        regardless of deck active status.
+        """
+        card = card_in_inactive_deck
+
+        response = await client.get(f"/api/v1/cards/{card.id}")
+
+        # Card should be accessible even if deck is inactive
+        assert response.status_code == 200
+        data = response.json()
+        assert data["id"] == str(card.id)
+        assert data["front_text"] == "kalinihta"
+        assert data["difficulty"] == "medium"
