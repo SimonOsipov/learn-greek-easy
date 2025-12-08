@@ -1,10 +1,10 @@
 ---
 id: task-158
 title: 'BUG: Color contrast fails WCAG AA on deck cards'
-status: To Do
+status: In Progress
 assignee: []
 created_date: '2025-12-08 10:32'
-updated_date: '2025-12-08 10:42'
+updated_date: '2025-12-08 10:43'
 labels:
   - bug
   - accessibility
