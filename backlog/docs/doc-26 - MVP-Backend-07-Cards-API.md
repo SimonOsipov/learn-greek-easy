@@ -3,6 +3,7 @@ id: doc-26
 title: 'MVP Backend - 07: Cards API'
 type: other
 created_date: '2025-12-08 05:17'
+updated_date: '2025-12-08 06:00'
 ---
 # Backend Task 07: Cards API - Technical Design Document
 
@@ -36,7 +37,7 @@ created_date: '2025-12-08 05:17'
 
 | Subtask | Description | Status |
 |---------|-------------|--------|
-| 07.01 | Create Card Router and List by Deck Endpoint | Pending |
+| 07.01 | Create Card Router and List by Deck Endpoint | Done |
 | 07.02 | Get Single Card Endpoint | Pending |
 | 07.03 | Search Cards Endpoint | Pending |
 | 07.04 | Create Card Endpoint (Admin) | Pending |
@@ -44,7 +45,7 @@ created_date: '2025-12-08 05:17'
 | 07.06 | Bulk Create Cards Endpoint (Admin) | Pending |
 | 07.07 | Cards API Tests | Pending |
 
-**Progress: 0/7 subtasks complete (0%)**
+**Progress: 1/7 subtasks complete (14%)**
 
 ## System Architecture
 
@@ -125,9 +126,9 @@ Client Request
     {
       "id": "660e8400-e29b-41d4-a716-446655440001",
       "deck_id": "550e8400-e29b-41d4-a716-446655440000",
-      "front_text": "καλημέρα",
+      "front_text": "kalimera",
       "back_text": "good morning",
-      "example_sentence": "Καλημέρα! Πώς είσαι;",
+      "example_sentence": "Kalimera! Pos eisai;",
       "pronunciation": "kalimera",
       "difficulty": "easy",
       "order_index": 1,
@@ -175,9 +176,9 @@ class CardListResponse(BaseModel):
 {
   "id": "660e8400-e29b-41d4-a716-446655440001",
   "deck_id": "550e8400-e29b-41d4-a716-446655440000",
-  "front_text": "καλημέρα",
+  "front_text": "kalimera",
   "back_text": "good morning",
-  "example_sentence": "Καλημέρα! Πώς είσαι;",
+  "example_sentence": "Kalimera! Pos eisai;",
   "pronunciation": "kalimera",
   "difficulty": "easy",
   "order_index": 1,
@@ -219,7 +220,7 @@ class CardListResponse(BaseModel):
     {
       "id": "...",
       "deck_id": "...",
-      "front_text": "καλημέρα",
+      "front_text": "kalimera",
       "back_text": "good morning",
       "example_sentence": "...",
       "pronunciation": "kalimera",
@@ -277,9 +278,9 @@ async def search(
 ```json
 {
   "deck_id": "550e8400-e29b-41d4-a716-446655440000",
-  "front_text": "ευχαριστώ",
+  "front_text": "efharisto",
   "back_text": "thank you",
-  "example_sentence": "Ευχαριστώ πολύ!",
+  "example_sentence": "Efharisto poly!",
   "pronunciation": "efharisto",
   "difficulty": "easy",
   "order_index": 0
@@ -300,9 +301,9 @@ async def search(
 {
   "id": "660e8400-e29b-41d4-a716-446655440002",
   "deck_id": "550e8400-e29b-41d4-a716-446655440000",
-  "front_text": "ευχαριστώ",
+  "front_text": "efharisto",
   "back_text": "thank you",
-  "example_sentence": "Ευχαριστώ πολύ!",
+  "example_sentence": "Efharisto poly!",
   "pronunciation": "efharisto",
   "difficulty": "easy",
   "order_index": 0,
@@ -335,13 +336,13 @@ async def search(
   "deck_id": "550e8400-e29b-41d4-a716-446655440000",
   "cards": [
     {
-      "front_text": "καλημέρα",
+      "front_text": "kalimera",
       "back_text": "good morning",
       "difficulty": "easy",
       "order_index": 1
     },
     {
-      "front_text": "καλησπέρα",
+      "front_text": "kalispera",
       "back_text": "good evening",
       "difficulty": "easy",
       "order_index": 2
@@ -364,14 +365,14 @@ async def search(
     {
       "id": "...",
       "deck_id": "...",
-      "front_text": "καλημέρα",
+      "front_text": "kalimera",
       "back_text": "good morning",
       ...
     },
     {
       "id": "...",
       "deck_id": "...",
-      "front_text": "καλησπέρα",
+      "front_text": "kalispera",
       "back_text": "good evening",
       ...
     }
