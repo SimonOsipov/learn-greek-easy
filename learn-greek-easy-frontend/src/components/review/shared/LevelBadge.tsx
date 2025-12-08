@@ -9,10 +9,10 @@ export function LevelBadge({ level }: LevelBadgeProps) {
   if (!level) return null;
 
   const colorMap: Record<string, string> = {
-    A1: 'bg-green-500 text-white',
-    A2: 'bg-blue-500 text-white',
-    B1: 'bg-orange-500 text-white',
-    B2: 'bg-purple-600 text-white',
+    A1: 'bg-green-700 text-white',
+    A2: 'bg-blue-700 text-white',
+    B1: 'bg-orange-700 text-white',
+    B2: 'bg-purple-700 text-white',
   };
 
   return (

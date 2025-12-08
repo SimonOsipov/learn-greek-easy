@@ -40,10 +40,12 @@ export const DeckCard: React.FC<DeckCardProps> = ({
   const isClickable = onClick && !isLocked;
 
   // Build className for card
+  // Note: Removed opacity-70 from locked cards to maintain WCAG AA contrast
+  // Locked state is indicated by Lock icon and non-clickable behavior
   const cardClassName = `
     min-h-[300px] flex flex-col
     ${isClickable ? 'cursor-pointer transition-all duration-200 hover:shadow-lg' : ''}
-    ${isLocked ? 'opacity-70' : ''}
+    ${isLocked ? 'grayscale-[30%]' : ''}
     ${isPremium && !isLocked ? 'border-amber-400 hover:border-amber-500' : ''}
     ${variant === 'list' ? 'flex flex-row items-center' : ''}
   `.trim();
@@ -79,7 +81,7 @@ export const DeckCard: React.FC<DeckCardProps> = ({
               {titleGreek}
             </h3>
             {/* English Subtitle */}
-            <p className="truncate text-sm text-gray-500">{title}</p>
+            <p className="truncate text-sm text-gray-600">{title}</p>
           </div>
 
           {/* Level Badge and Lock Icon */}
@@ -124,7 +126,7 @@ export const DeckCard: React.FC<DeckCardProps> = ({
                 }
                 showLegend={false}
               />
-              <p className="mt-1 text-xs text-gray-500">{completionPercent}% Complete</p>
+              <p className="mt-1 text-xs text-gray-600">{completionPercent}% Complete</p>
             </div>
           )}
         </div>
@@ -137,19 +139,19 @@ export const DeckCard: React.FC<DeckCardProps> = ({
           >
             {/* Card Count */}
             <div>
-              <p className="text-xs text-gray-500">Cards</p>
+              <p className="text-xs text-gray-600">Cards</p>
               <p className="text-sm font-semibold text-gray-900">{cardCount}</p>
             </div>
 
             {/* Estimated Time */}
             <div>
-              <p className="text-xs text-gray-500">Time</p>
+              <p className="text-xs text-gray-600">Time</p>
               <p className="text-sm font-semibold text-gray-900">{estimatedTime}m</p>
             </div>
 
             {/* Completion or Mastery Rate */}
             <div>
-              <p className="text-xs text-gray-500">Mastery</p>
+              <p className="text-xs text-gray-600">Mastery</p>
               <p className="text-sm font-semibold text-gray-900">{completionPercent}%</p>
             </div>
           </div>
