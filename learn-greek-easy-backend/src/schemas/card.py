@@ -83,6 +83,16 @@ class CardWithStatisticsResponse(CardResponse):
     statistics: Optional["CardStatisticsResponse"] = None
 
 
+class CardListResponse(BaseModel):
+    """Schema for paginated card list by deck."""
+
+    total: int
+    page: int
+    page_size: int
+    deck_id: UUID
+    cards: list[CardResponse]
+
+
 # Import at the end to avoid circular dependencies
 from src.schemas.progress import CardStatisticsResponse  # noqa: E402
 
