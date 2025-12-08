@@ -59,6 +59,7 @@ jobs:
     needs: [ci-tests, should-deploy]
     if: needs.should-deploy.outputs.deploy == 'true'
     runs-on: ubuntu-latest
+    container: ghcr.io/railwayapp/cli:latest
     outputs:
       frontend_url: ${{ steps.urls.outputs.frontend_url }}
       backend_url: ${{ steps.urls.outputs.backend_url }}
@@ -67,9 +68,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Install Railway CLI
-        run: npm install -g @railway/cli
 
       - name: Create Preview Environment
         env:
