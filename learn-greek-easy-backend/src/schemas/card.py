@@ -104,6 +104,42 @@ class CardSearchResponse(BaseModel):
     cards: list[CardResponse]
 
 
+# ============================================================================
+# Bulk Card Schemas
+# ============================================================================
+
+
+class CardBulkItemCreate(BaseModel):
+    """Single card in bulk create (without deck_id)."""
+
+    front_text: str = Field(..., min_length=1)
+    back_text: str = Field(..., min_length=1)
+    example_sentence: Optional[str] = None
+    pronunciation: Optional[str] = Field(None, max_length=255)
+    difficulty: CardDifficulty
+    order_index: int = Field(default=0, ge=0)
+
+
+class CardBulkCreateRequest(BaseModel):
+    """Request body for bulk card creation."""
+
+    deck_id: UUID
+    cards: list[CardBulkItemCreate] = Field(
+        ...,
+        min_length=1,
+        max_length=100,
+        description="Array of cards to create (1-100)",
+    )
+
+
+class CardBulkCreateResponse(BaseModel):
+    """Response for bulk card creation."""
+
+    deck_id: UUID
+    created_count: int
+    cards: list[CardResponse]
+
+
 # Import at the end to avoid circular dependencies
 from src.schemas.progress import CardStatisticsResponse  # noqa: E402
 
