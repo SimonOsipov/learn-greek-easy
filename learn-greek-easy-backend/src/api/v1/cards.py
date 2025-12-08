@@ -7,15 +7,16 @@ listing cards by deck with pagination and optional difficulty filtering.
 from typing import Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.dependencies import get_current_superuser
 from src.core.exceptions import CardNotFoundException, DeckNotFoundException
 from src.db.dependencies import get_db
-from src.db.models import CardDifficulty
+from src.db.models import CardDifficulty, User
 from src.repositories.card import CardRepository
 from src.repositories.deck import DeckRepository
-from src.schemas.card import CardListResponse, CardResponse, CardSearchResponse
+from src.schemas.card import CardCreate, CardListResponse, CardResponse, CardSearchResponse
 
 router = APIRouter(
     # Note: prefix is set by parent router in v1/router.py
@@ -122,6 +123,78 @@ async def list_cards(
         deck_id=deck_id,
         cards=[CardResponse.model_validate(card) for card in cards],
     )
+
+
+@router.post(
+    "",
+    response_model=CardResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create a new card",
+    description="Create a new card in a deck. Requires superuser privileges.",
+    responses={
+        201: {
+            "description": "Card created successfully",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "id": "660e8400-e29b-41d4-a716-446655440002",
+                        "deck_id": "550e8400-e29b-41d4-a716-446655440000",
+                        "front_text": "efharisto",
+                        "back_text": "thank you",
+                        "example_sentence": "Efharisto poly!",
+                        "pronunciation": "efharisto",
+                        "difficulty": "easy",
+                        "order_index": 0,
+                        "created_at": "2024-01-15T10:30:00Z",
+                        "updated_at": "2024-01-15T10:30:00Z",
+                    }
+                }
+            },
+        },
+        401: {"description": "Not authenticated"},
+        403: {"description": "Not authorized (requires superuser)"},
+        404: {"description": "Deck not found"},
+        422: {"description": "Validation error"},
+    },
+)
+async def create_card(
+    card_data: CardCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> CardResponse:
+    """Create a new card.
+
+    Requires superuser privileges.
+
+    Args:
+        card_data: Card creation data
+        db: Database session (injected)
+        current_user: Authenticated superuser (injected)
+
+    Returns:
+        CardResponse: The created card
+
+    Raises:
+        401: If not authenticated
+        403: If authenticated but not superuser
+        404: If deck doesn't exist
+        422: If validation fails
+    """
+    # Validate deck exists (allow inactive decks - admin privilege)
+    deck_repo = DeckRepository(db)
+    deck = await deck_repo.get(card_data.deck_id)
+    if deck is None:
+        raise DeckNotFoundException(deck_id=str(card_data.deck_id))
+
+    # Create the card using BaseRepository.create() pattern
+    card_repo = CardRepository(db)
+    card = await card_repo.create(card_data)
+
+    # Commit the transaction
+    await db.commit()
+    await db.refresh(card)
+
+    return CardResponse.model_validate(card)
 
 
 @router.get(
