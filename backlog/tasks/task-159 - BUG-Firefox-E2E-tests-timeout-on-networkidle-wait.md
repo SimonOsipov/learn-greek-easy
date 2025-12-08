@@ -1,9 +1,10 @@
 ---
 id: task-159
 title: 'BUG: Firefox E2E tests timeout on networkidle wait'
-status: To Do
+status: In Progress
 assignee: []
 created_date: '2025-12-08 10:34'
+updated_date: '2025-12-08 12:26'
 labels:
   - bug
   - e2e
@@ -89,3 +90,16 @@ await page.waitForSelector('nav', { timeout: 10000 });
 - [ ] #2 loginViaLocalStorage() uses reliable wait strategy (not networkidle)
 - [ ] #3 All 3 browser E2E jobs pass in CI
 <!-- AC:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+## Implementation
+
+PR: https://github.com/SimonOsipov/learn-greek-easy/pull/30
+
+**Fix applied:**
+- Replaced `networkidle` with `domcontentloaded` across all E2E test files
+- Added element-based waiting in auth-helpers for more reliable page ready detection
+- Firefox E2E tests now pass locally (18/18 tests)
+<!-- SECTION:NOTES:END -->
