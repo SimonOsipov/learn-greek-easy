@@ -87,15 +87,15 @@ jobs:
           railway link --project ${{ secrets.RAILWAY_PROJECT_ID }} --environment "pr-${{ env.PR_NUMBER }}"
 
           # Set preview environment variables
-          railway variables set \
-            ENVIRONMENT=preview \
-            PR_NUMBER=${{ env.PR_NUMBER }} \
-            JWT_SECRET_KEY=${{ secrets.PREVIEW_JWT_SECRET }} \
-            JWT_ALGORITHM=HS256 \
-            ACCESS_TOKEN_EXPIRE_MINUTES=30 \
-            LOG_LEVEL=INFO \
-            DEBUG=false \
-            API_V1_PREFIX=/api/v1
+          railway variables \
+            --set "ENVIRONMENT=preview" \
+            --set "PR_NUMBER=${{ env.PR_NUMBER }}" \
+            --set "JWT_SECRET_KEY=${{ secrets.PREVIEW_JWT_SECRET }}" \
+            --set "JWT_ALGORITHM=HS256" \
+            --set "ACCESS_TOKEN_EXPIRE_MINUTES=30" \
+            --set "LOG_LEVEL=INFO" \
+            --set "DEBUG=false" \
+            --set "API_V1_PREFIX=/api/v1"
 
       - name: Deploy Backend
         env:
