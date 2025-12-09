@@ -1,7 +1,9 @@
 """FastAPI application entry point."""
 
 import logging
+import os
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 from typing import AsyncGenerator, Sequence
 
 from fastapi import FastAPI, Request, status
@@ -279,6 +281,27 @@ async def api_status() -> dict:
             "rate_limiting": settings.feature_rate_limiting,
             "background_tasks": settings.feature_background_tasks,
         },
+    }
+
+
+# Store the startup time when the module loads
+_startup_time = datetime.now(timezone.utc).isoformat()
+
+
+@app.get("/version")
+async def version() -> dict:
+    """Version endpoint for deployment verification.
+
+    Returns commit SHA, branch, and build time to verify
+    which code is actually deployed in preview environments.
+    """
+    return {
+        "commit_sha": os.environ.get(
+            "RAILWAY_GIT_COMMIT_SHA", os.environ.get("GITHUB_SHA", "local")
+        ),
+        "branch": os.environ.get("RAILWAY_GIT_BRANCH", "unknown"),
+        "build_time": _startup_time,
+        "environment": settings.app_env,
     }
 
 

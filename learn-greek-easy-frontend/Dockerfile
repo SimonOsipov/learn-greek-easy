@@ -7,10 +7,13 @@ WORKDIR /app
 # Build arguments for Vite environment variables (must be available at build time)
 ARG VITE_GOOGLE_CLIENT_ID
 ARG VITE_API_URL
+ARG RAILWAY_GIT_COMMIT_SHA
 
 # Set them as environment variables for the build
 ENV VITE_GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID}
 ENV VITE_API_URL=${VITE_API_URL}
+# Expose Railway's commit SHA as VITE_COMMIT_SHA for the frontend build
+ENV RAILWAY_GIT_COMMIT_SHA=${RAILWAY_GIT_COMMIT_SHA}
 
 # Copy package files
 COPY package*.json ./
