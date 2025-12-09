@@ -93,25 +93,39 @@ jobs:
           echo "=== Railway CLI Version ==="
           railway --version
 
-      - name: Link to dev environment
+      - name: Create or link to dev environment
         id: env
         env:
           RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
         run: |
-          # Use static 'dev' environment for all PR previews
-          # This environment is pre-configured with:
-          # - Frontend: https://frontend-dev-b901.up.railway.app (public)
-          # - Backend: https://backend-dev-f22e.up.railway.app (public)
-          # - DEBUG=true, ENVIRONMENT=development
+          # Dev environment for PR previews
+          # Will be created if it doesn't exist (deleted after PR merge)
           ENV_NAME="dev"
-          echo "Using static dev environment for PR preview"
+          echo "Using dev environment for PR preview"
 
-          # Link to the dev environment
-          echo "Linking to environment $ENV_NAME..."
+          # First, link to production to get project context
+          echo "Linking to production for project context..."
           railway link \
             --project ${{ secrets.RAILWAY_PROJECT_ID }} \
-            --environment "$ENV_NAME" \
+            --environment production \
             --workspace ${{ secrets.RAILWAY_WORKSPACE_ID }}
+
+          # Try to link to dev environment, create if it doesn't exist
+          echo "Attempting to link to dev environment..."
+          if ! railway link \
+            --project ${{ secrets.RAILWAY_PROJECT_ID }} \
+            --environment "$ENV_NAME" \
+            --workspace ${{ secrets.RAILWAY_WORKSPACE_ID }} 2>&1; then
+
+            echo "Dev environment not found, creating it by duplicating production..."
+            railway environment create "$ENV_NAME" --copy production
+
+            echo "Linking to newly created dev environment..."
+            railway link \
+              --project ${{ secrets.RAILWAY_PROJECT_ID }} \
+              --environment "$ENV_NAME" \
+              --workspace ${{ secrets.RAILWAY_WORKSPACE_ID }}
+          fi
 
           # Get current environment status
           echo "=== Environment Status ==="
