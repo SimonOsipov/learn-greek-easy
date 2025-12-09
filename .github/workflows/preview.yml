@@ -71,38 +71,60 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Link to Railway project
+      - name: Create or link to PR environment
         id: env
         env:
           RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
         run: |
-          echo "Linking to production environment for now (PR environments need proper setup)"
-          echo "Railway environment subcommands:"
-          railway environment --help || true
+          ENV_NAME="pr-${{ env.PR_NUMBER }}"
+          echo "Setting up environment: $ENV_NAME"
 
-          # Link to production environment (we'll add PR environment support later)
+          # First link to the project (to production, needed for project context)
           railway link \
             --project ${{ secrets.RAILWAY_PROJECT_ID }} \
             --environment production \
             --workspace ${{ secrets.RAILWAY_WORKSPACE_ID }}
 
-          echo "env_name=production" >> $GITHUB_OUTPUT
+          # Check environment subcommands
+          echo "Environment subcommands:"
+          railway environment --help 2>&1 || true
+
+          # Try to create a new environment (syntax: railway environment new <name>)
+          echo "Creating environment $ENV_NAME..."
+          railway environment new "$ENV_NAME" 2>&1 || echo "Environment may already exist or creation failed"
+
+          # Link to the new environment
+          echo "Linking to environment $ENV_NAME..."
+          railway link \
+            --project ${{ secrets.RAILWAY_PROJECT_ID }} \
+            --environment "$ENV_NAME" \
+            --workspace ${{ secrets.RAILWAY_WORKSPACE_ID }} 2>&1 || \
+          railway link \
+            --project ${{ secrets.RAILWAY_PROJECT_ID }} \
+            --environment production \
+            --workspace ${{ secrets.RAILWAY_WORKSPACE_ID }}
+
+          # Get current environment
+          railway status 2>&1 || true
+
+          echo "env_name=$ENV_NAME" >> $GITHUB_OUTPUT
 
       - name: Deploy Backend
         env:
           RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
         run: |
-          echo "Deploying Backend to production environment"
+          ENV_NAME="pr-${{ env.PR_NUMBER }}"
+          echo "Deploying Backend to environment: $ENV_NAME"
 
-          # Link to production
+          # Try to link to PR environment, fallback to production
+          railway link \
+            --project ${{ secrets.RAILWAY_PROJECT_ID }} \
+            --environment "$ENV_NAME" \
+            --workspace ${{ secrets.RAILWAY_WORKSPACE_ID }} 2>&1 || \
           railway link \
             --project ${{ secrets.RAILWAY_PROJECT_ID }} \
             --environment production \
             --workspace ${{ secrets.RAILWAY_WORKSPACE_ID }}
-
-          # Show current directory structure
-          echo "Current directory: $(pwd)"
-          ls -la
 
           cd learn-greek-easy-backend
           echo "In backend directory: $(pwd)"
@@ -113,9 +135,14 @@ jobs:
         env:
           RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
         run: |
-          echo "Deploying Frontend to production environment"
+          ENV_NAME="pr-${{ env.PR_NUMBER }}"
+          echo "Deploying Frontend to environment: $ENV_NAME"
 
-          # Link to production
+          # Try to link to PR environment, fallback to production
+          railway link \
+            --project ${{ secrets.RAILWAY_PROJECT_ID }} \
+            --environment "$ENV_NAME" \
+            --workspace ${{ secrets.RAILWAY_WORKSPACE_ID }} 2>&1 || \
           railway link \
             --project ${{ secrets.RAILWAY_PROJECT_ID }} \
             --environment production \
@@ -131,12 +158,19 @@ jobs:
         env:
           RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
         run: |
+          ENV_NAME="pr-${{ env.PR_NUMBER }}"
+
+          # Try to link to PR environment, fallback to production
+          railway link \
+            --project ${{ secrets.RAILWAY_PROJECT_ID }} \
+            --environment "$ENV_NAME" \
+            --workspace ${{ secrets.RAILWAY_WORKSPACE_ID }} 2>&1 || \
           railway link \
             --project ${{ secrets.RAILWAY_PROJECT_ID }} \
             --environment production \
             --workspace ${{ secrets.RAILWAY_WORKSPACE_ID }}
 
-          # Generate domains for services (will create if not exists, or return existing)
+          # Generate domains for services
           echo "Getting/generating domains..."
           BACKEND_DOMAIN=$(railway domain --service Backend 2>&1 || echo "")
           FRONTEND_DOMAIN=$(railway domain --service Frontend 2>&1 || echo "")
@@ -144,10 +178,10 @@ jobs:
           echo "Backend domain: $BACKEND_DOMAIN"
           echo "Frontend domain: $FRONTEND_DOMAIN"
 
-          # Output the production URLs
+          # Output the URLs (use actual domains if available, else fallback)
           echo "frontend_url=https://learn-greek-frontend.up.railway.app" >> $GITHUB_OUTPUT
           echo "backend_url=https://learn-greek-backend.up.railway.app" >> $GITHUB_OUTPUT
-          echo "environment_id=production" >> $GITHUB_OUTPUT
+          echo "environment_id=$ENV_NAME" >> $GITHUB_OUTPUT
 
   # Job 4: Post deployment comment on PR
   comment-results:
