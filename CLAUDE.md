@@ -460,6 +460,62 @@ gh pr edit 123 --remove-label "visual-test"
 
 ---
 
+## Railway Production Backend Privacy
+
+**CRITICAL**: In production, the backend service should NOT have a public domain. It should only be accessible via Railway's private network through the frontend nginx proxy.
+
+### Network Architecture
+
+| Environment | Frontend Access | Backend Access |
+|-------------|-----------------|----------------|
+| **Production** | Public (https://learn-greek-frontend.up.railway.app) | Private (http://backend:8000 - internal only) |
+| **Preview/Dev** | Public | Public (for testing) |
+
+### Security Benefits
+
+1. Eliminates direct backend access in production
+2. Reduces attack surface (backend not publicly discoverable)
+3. Enforces gateway pattern (all requests via frontend)
+4. CORS defense-in-depth
+
+### CORS Configuration
+
+Backend CORS must be configured to allow only the production frontend:
+
+**Environment Variable (Production Backend)**:
+```bash
+CORS_ORIGINS=https://learn-greek-frontend.up.railway.app
+```
+
+This is configured in `.railway/variables.json` under the `production` section.
+
+### Implementation Guide
+
+For detailed steps on removing the backend public domain and configuring production security, see:
+
+**[docs/railway-backend-privacy.md](docs/railway-backend-privacy.md)**
+
+Key steps:
+1. Update backend `CORS_ORIGINS` environment variable in Railway
+2. Remove backend public domain via Railway Dashboard (Settings → Public Networking → Remove Domain)
+3. Verify frontend can reach backend via private network (`http://backend:8000`)
+4. Test that direct backend access fails (connection refused)
+
+### Verification
+
+After implementing backend privacy:
+
+```bash
+# Frontend health check should work
+curl https://learn-greek-frontend.up.railway.app/api/health
+
+# Direct backend access should fail
+curl https://learn-greek-backend.up.railway.app/health
+# Expected: Connection refused or 404
+```
+
+---
+
 ## Railway PR Preview Environments
 
 Railway PR preview environments allow testing changes in isolated environments before merging.
