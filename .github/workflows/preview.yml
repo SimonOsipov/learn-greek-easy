@@ -189,13 +189,11 @@ jobs:
             --service Backend \
             --skip-deploys
 
-          # Set BACKEND_URL for Frontend
-          # For PR environments, use public backend URL (private networking is unreliable in ephemeral envs)
-          # Production uses private networking configured separately in Railway Dashboard
-          BACKEND_PUBLIC_URL="https://backend-pr-${PR_NUM}.up.railway.app"
-          echo "Setting BACKEND_URL for Frontend: $BACKEND_PUBLIC_URL"
+          # Set BACKEND_URL for Frontend to use Railway private networking
+          # Railway assigns port 8080 by default (same as production)
+          echo "Setting BACKEND_URL for Frontend: http://backend.railway.internal:8080"
           railway variables \
-            --set "BACKEND_URL=$BACKEND_PUBLIC_URL" \
+            --set "BACKEND_URL=http://backend.railway.internal:8080" \
             --service Frontend \
             --skip-deploys
 
