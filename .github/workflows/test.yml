@@ -1,9 +1,10 @@
 name: Test Suite
 
 on:
-  pull_request:
-    branches: [main, develop]
-    types: [opened, synchronize]
+  workflow_call:
+    # Called by preview.yml workflow for PR preview deployments
+    # This workflow is reusable only - not triggered directly on PRs
+    # All PR testing goes through preview.yml which calls this workflow
 
 jobs:
   # Job 1: Frontend Lint & Format

@@ -105,11 +105,13 @@ USER appuser
 EXPOSE 8000
 
 # Health check for container orchestration
+# Note: Railway uses its own health checks, but this is useful for local Docker
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD curl --fail --silent http://localhost:8000/health || exit 1
+    CMD curl --fail --silent http://localhost:${PORT:-8000}/health || exit 1
 
 # Entrypoint handles startup tasks
 ENTRYPOINT ["docker-entrypoint.sh"]
 
 # Default command: run uvicorn
-CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
+# Use shell form to expand PORT variable (Railway sets this dynamically)
+CMD uvicorn src.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 1
