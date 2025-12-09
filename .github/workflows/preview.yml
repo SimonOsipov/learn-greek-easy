@@ -208,7 +208,7 @@ jobs:
         run: |
           # Static dev environment URLs (pre-configured in Railway)
           FRONTEND_URL="https://frontend-dev-8db9.up.railway.app"
-          BACKEND_URL="https://backend-dev-ea07f243-bb63-47dd-b0a5-5fa2461895da.up.railway.app"
+          BACKEND_URL="https://backend-dev-bc44.up.railway.app"
           DEPLOY_ENV="${{ steps.env.outputs.env_name }}"
 
           echo "=== Static Dev Environment URLs ==="
