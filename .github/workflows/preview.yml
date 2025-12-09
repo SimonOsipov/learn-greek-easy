@@ -181,6 +181,14 @@ jobs:
             --service Frontend \
             --skip-deploys
 
+          # Set CORS_ORIGINS for preview environment to accept preview frontend
+          PR_NUM="${{ env.PR_NUMBER }}"
+          echo "Setting CORS_ORIGINS for preview frontend: https://frontend-pr-${PR_NUM}.up.railway.app"
+          railway variables \
+            --set "CORS_ORIGINS=https://frontend-pr-${PR_NUM}.up.railway.app" \
+            --service Backend \
+            --skip-deploys
+
       - name: Deploy Backend
         env:
           RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
