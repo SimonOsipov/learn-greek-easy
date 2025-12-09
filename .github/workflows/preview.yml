@@ -19,15 +19,45 @@ permissions:
 
 jobs:
   # Job 1: Run existing CI tests first (reusable workflow)
-  # TODO: Re-enable after preview workflow is stable
-  # ci-tests:
-  #   name: CI Tests
-  #   uses: ./.github/workflows/test.yml
-  #   secrets: inherit
+  ci-tests:
+    name: CI Tests
+    uses: ./.github/workflows/test.yml
+    secrets: inherit
 
-  # Job 2: Deploy preview environment to Railway
+  # Job 2: Check if preview should be deployed
+  should-deploy:
+    name: Check Deploy Conditions
+    runs-on: ubuntu-latest
+    outputs:
+      deploy: ${{ steps.check.outputs.deploy }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check changed files
+        id: check
+        run: |
+          # Get changed files between PR base and head
+          CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
+
+          # Check if any non-docs files changed
+          if echo "$CHANGED_FILES" | grep -qvE '^(docs/|.*\.md$|\.github/.*\.md$)'; then
+            echo "deploy=true" >> $GITHUB_OUTPUT
+            echo "Non-documentation changes detected - will deploy preview"
+          else
+            echo "deploy=false" >> $GITHUB_OUTPUT
+            echo "Only documentation changes - skipping preview deployment"
+          fi
+
+  # Job 3: Deploy preview environment to Railway
   deploy-preview:
     name: Deploy Preview
+    needs: [ci-tests, should-deploy]
+    if: needs.should-deploy.outputs.deploy == 'true'
     runs-on: ubuntu-latest
     container: ghcr.io/railwayapp/cli:latest
     outputs:
@@ -89,11 +119,11 @@ jobs:
 
           echo "Deployment initiated"
 
-  # Job 3: Post deployment comment on PR
+  # Job 4: Post deployment comment on PR
   comment-results:
     name: Post Deployment Comment
-    needs: [deploy-preview]
-    if: always()
+    needs: [deploy-preview, should-deploy]
+    if: always() && needs.should-deploy.outputs.deploy == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Post or Update PR Comment
@@ -155,4 +185,50 @@ jobs:
               });
             }
 
-  # TODO: Re-enable skip-comment job when CI tests are re-enabled
+  # Job 5: Post skip comment for docs-only PRs
+  skip-comment:
+    name: Post Skip Comment
+    needs: [should-deploy]
+    if: needs.should-deploy.outputs.deploy == 'false'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post Skip Comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = `## Preview Deployment Skipped
+
+            This PR contains only documentation changes. Preview deployment has been skipped.
+
+            If you need a preview environment, please add code changes or request manual deployment.`;
+
+            // Find existing preview comment to update
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const botComment = comments.find(c =>
+              c.user.type === 'Bot' && (
+                c.body.includes('Preview Deployment Ready') ||
+                c.body.includes('Preview Deployment Failed') ||
+                c.body.includes('Preview Deployment Skipped')
+              )
+            );
+
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body
+              });
+            }
