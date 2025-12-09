@@ -191,10 +191,10 @@ jobs:
 
           # Set BACKEND_URL for Frontend to use Railway private networking
           # Railway private network uses lowercase service names in DNS
-          # The RAILWAY_PRIVATE_DOMAIN for Backend service is: backend.railway.internal
-          echo "Setting BACKEND_URL for Frontend: http://backend.railway.internal:8000"
+          # Railway assigns port 8080 by default (not 8000)
+          echo "Setting BACKEND_URL for Frontend: http://backend.railway.internal:8080"
           railway variables \
-            --set "BACKEND_URL=http://backend.railway.internal:8000" \
+            --set "BACKEND_URL=http://backend.railway.internal:8080" \
             --service Frontend \
             --skip-deploys
 
