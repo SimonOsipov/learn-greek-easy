@@ -39,66 +39,41 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Create Preview Environment
-        env:
-          RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
-        run: |
-          echo "Creating preview environment: pr-${{ env.PR_NUMBER }}"
-          railway --version
-          railway whoami
-
-          # Create .railwayrc config file to avoid interactive prompts
-          mkdir -p ~/.railway
-          cat > ~/.railway/config.json << EOF
-          {
-            "project": "${{ secrets.RAILWAY_PROJECT_ID }}",
-            "environment": "production"
-          }
-          EOF
-
-          # Also create local railway.json for the project
-          cat > railway.json << EOF
-          {
-            "\$schema": "https://railway.app/railway.schema.json",
-            "build": {},
-            "deploy": {}
-          }
-          EOF
-
-          # Try to create environment using the Railway API via CLI
-          echo "Creating environment pr-${{ env.PR_NUMBER }}..."
-          railway environment new "pr-${{ env.PR_NUMBER }}" 2>&1 || echo "Environment may already exist or creation skipped"
-
-          echo "Environment setup complete"
-
-      - name: Deploy to Railway
+      - name: Link and Deploy to Railway
         id: urls
         env:
           RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
         run: |
-          # For now, deploy to production environment until we figure out preview env creation
-          # The Railway CLI link command requires interactive input for workspace/project selection
-          # even with project ID, which doesn't work in CI
+          echo "Railway CLI version:"
+          railway --version
+          railway whoami
 
-          echo "Deploying to Railway..."
+          # Link to project with all required flags for non-interactive mode
+          # --team "personal" is for personal accounts, use team slug for team accounts
+          echo "Linking to project..."
+          railway link \
+            --project ${{ secrets.RAILWAY_PROJECT_ID }} \
+            --environment production \
+            --team personal
 
-          # Use Railway's deploy command with service flag directly
-          # This uses the railway.json files in each service directory
+          echo "Link successful, deploying..."
 
+          # Deploy backend
           echo "Deploying backend..."
           cd learn-greek-easy-backend
-          railway up --detach 2>&1 || echo "Backend deployment attempted"
+          railway up --detach
           cd ..
 
+          # Deploy frontend
           echo "Deploying frontend..."
           cd learn-greek-easy-frontend
-          railway up --detach 2>&1 || echo "Frontend deployment attempted"
+          railway up --detach
           cd ..
 
-          # Set placeholder URLs for now
+          # Set URLs
           echo "frontend_url=https://learn-greek-frontend.up.railway.app" >> $GITHUB_OUTPUT
           echo "backend_url=https://learn-greek-backend.up.railway.app" >> $GITHUB_OUTPUT
-          echo "environment_id=pr-${{ env.PR_NUMBER }}" >> $GITHUB_OUTPUT
+          echo "environment_id=production" >> $GITHUB_OUTPUT
 
           echo "Deployment initiated"
 
