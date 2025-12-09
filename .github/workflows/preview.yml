@@ -156,42 +156,9 @@ jobs:
           # - CORS_ORIGINS=https://${{ env.DEV_FRONTEND_URL }},http://localhost:5173,http://localhost:3000
           # - BACKEND_URL=http://backend.railway.internal:8080
 
-      - name: Start Postgres Service
-        env:
-          RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
-        run: |
-          DEPLOY_ENV="${{ steps.env.outputs.env_name }}"
-          echo "=== Starting Postgres in environment: $DEPLOY_ENV ==="
-
-          railway link \
-            --project ${{ secrets.RAILWAY_PROJECT_ID }} \
-            --environment "$DEPLOY_ENV" \
-            --workspace ${{ secrets.RAILWAY_WORKSPACE_ID }}
-
-          # Redeploy Postgres (pre-configured database service)
-          railway redeploy --service Postgres --yes || echo "Postgres may already be running"
-          echo "Postgres service started"
-
-      - name: Start Redis Service
-        env:
-          RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
-        run: |
-          DEPLOY_ENV="${{ steps.env.outputs.env_name }}"
-          echo "=== Starting Redis in environment: $DEPLOY_ENV ==="
-
-          railway link \
-            --project ${{ secrets.RAILWAY_PROJECT_ID }} \
-            --environment "$DEPLOY_ENV" \
-            --workspace ${{ secrets.RAILWAY_WORKSPACE_ID }}
-
-          # Redeploy Redis (pre-configured database service)
-          railway redeploy --service Redis --yes || echo "Redis may already be running"
-          echo "Redis service started"
-
-      - name: Wait for databases to be ready
-        run: |
-          echo "Waiting 30 seconds for Postgres and Redis to initialize..."
-          sleep 30
+      # Note: Postgres and Redis are always kept running in dev environment
+      # They are stateful services that are never stopped during cleanup
+      # This avoids issues with `railway redeploy` failing on stopped services
 
       - name: Deploy Backend
         env:
