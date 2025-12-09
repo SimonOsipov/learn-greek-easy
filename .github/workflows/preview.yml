@@ -19,12 +19,10 @@ permissions:
 
 jobs:
   # Job 1: Run existing CI tests first (reusable workflow)
-  # TEMPORARILY DISABLED for faster preview deployment verification
-  # TODO: Uncomment after verifying PR preview deploys correct code
-  # ci-tests:
-  #   name: CI Tests
-  #   uses: ./.github/workflows/test.yml
-  #   secrets: inherit
+  ci-tests:
+    name: CI Tests
+    uses: ./.github/workflows/test.yml
+    secrets: inherit
 
   # Job 2: Check if preview should be deployed
   should-deploy:
@@ -58,9 +56,7 @@ jobs:
   # Job 3: Deploy preview environment to Railway
   deploy-preview:
     name: Deploy Preview
-    # TEMPORARILY: Removed ci-tests dependency for faster verification
-    # TODO: Restore to needs: [ci-tests, should-deploy] after verification
-    needs: [should-deploy]
+    needs: [ci-tests, should-deploy]
     if: needs.should-deploy.outputs.deploy == 'true'
     runs-on: ubuntu-latest
     container: ghcr.io/railwayapp/cli:latest
@@ -165,17 +161,19 @@ jobs:
             --workspace ${{ secrets.RAILWAY_WORKSPACE_ID }}
 
           # Set commit SHA and branch for both services
-          echo "Setting RAILWAY_GIT_COMMIT_SHA=${{ github.sha }}"
+          # Use PR head SHA (not merge commit) for clearer version tracking
+          PR_HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+          echo "Setting RAILWAY_GIT_COMMIT_SHA=$PR_HEAD_SHA (PR head commit)"
           echo "Setting RAILWAY_GIT_BRANCH=${{ github.head_ref }}"
 
           railway variables \
-            --set "RAILWAY_GIT_COMMIT_SHA=${{ github.sha }}" \
+            --set "RAILWAY_GIT_COMMIT_SHA=$PR_HEAD_SHA" \
             --set "RAILWAY_GIT_BRANCH=${{ github.head_ref }}" \
             --service Backend \
             --skip-deploys
 
           railway variables \
-            --set "RAILWAY_GIT_COMMIT_SHA=${{ github.sha }}" \
+            --set "RAILWAY_GIT_COMMIT_SHA=$PR_HEAD_SHA" \
             --set "RAILWAY_GIT_BRANCH=${{ github.head_ref }}" \
             --service Frontend \
             --skip-deploys
@@ -280,9 +278,7 @@ jobs:
   # Job 4: Post deployment comment on PR
   comment-results:
     name: Post Deployment Comment
-    # TEMPORARILY: Removed ci-tests dependency for faster verification
-    # TODO: Restore to needs: [ci-tests, should-deploy, deploy-preview] after verification
-    needs: [should-deploy, deploy-preview]
+    needs: [ci-tests, should-deploy, deploy-preview]
     if: always() && needs.should-deploy.outputs.deploy == 'true'
     runs-on: ubuntu-latest
     steps:
@@ -290,10 +286,7 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            // TEMPORARILY: Removed ci-tests check for faster verification
-            // TODO: Restore ci-tests check after verification
-            // const ciStatus = '${{ needs.ci-tests.result }}';
-            const ciStatus = 'success'; // Temporarily assume success
+            const ciStatus = '${{ needs.ci-tests.result }}';
             const deployStatus = '${{ needs.deploy-preview.result }}';
             const frontendUrl = '${{ needs.deploy-preview.outputs.frontend_url }}';
             const backendUrl = '${{ needs.deploy-preview.outputs.backend_url }}';
