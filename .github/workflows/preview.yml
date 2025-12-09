@@ -11,6 +11,9 @@ concurrency:
 
 env:
   PR_NUMBER: ${{ github.event.pull_request.number }}
+  # Dev environment URLs (public, not secrets)
+  DEV_FRONTEND_URL: frontend-dev-8db9.up.railway.app
+  DEV_BACKEND_URL: backend-dev-bc44.up.railway.app
 
 permissions:
   contents: read
@@ -149,7 +152,7 @@ jobs:
             --skip-deploys
 
           # Note: CORS_ORIGINS and BACKEND_URL are pre-configured in the dev environment
-          # - CORS_ORIGINS=https://${{ secrets.DEV_FRONTEND_URL }},http://localhost:5173,http://localhost:3000
+          # - CORS_ORIGINS=https://${{ env.DEV_FRONTEND_URL }},http://localhost:5173,http://localhost:3000
           # - BACKEND_URL=http://backend.railway.internal:8080
 
       - name: Deploy Backend
@@ -205,13 +208,10 @@ jobs:
 
       - name: Get deployment URLs
         id: urls
-        env:
-          DEV_FRONTEND_URL: ${{ secrets.DEV_FRONTEND_URL }}
-          DEV_BACKEND_URL: ${{ secrets.DEV_BACKEND_URL }}
         run: |
-          # Dev environment URLs from GitHub Secrets
-          FRONTEND_URL="https://${DEV_FRONTEND_URL}"
-          BACKEND_URL="https://${DEV_BACKEND_URL}"
+          # Dev environment URLs from workflow env vars
+          FRONTEND_URL="https://${{ env.DEV_FRONTEND_URL }}"
+          BACKEND_URL="https://${{ env.DEV_BACKEND_URL }}"
           DEPLOY_ENV="${{ steps.env.outputs.env_name }}"
 
           echo "=== Dev Environment URLs ==="
