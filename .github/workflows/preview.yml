@@ -189,6 +189,14 @@ jobs:
             --service Backend \
             --skip-deploys
 
+          # Set BACKEND_URL for Frontend to use Railway private networking
+          # Railway private network uses format: http://<ServiceName>.railway.internal:<port>
+          echo "Setting BACKEND_URL for Frontend: http://Backend.railway.internal:8000"
+          railway variables \
+            --set "BACKEND_URL=http://Backend.railway.internal:8000" \
+            --service Frontend \
+            --skip-deploys
+
       - name: Deploy Backend
         env:
           RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
