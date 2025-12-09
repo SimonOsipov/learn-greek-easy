@@ -74,8 +74,11 @@ jobs:
           RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
         run: |
           echo "Creating preview environment: pr-${{ env.PR_NUMBER }}"
+          # First link to project only (no environment yet)
           railway link --project ${{ secrets.RAILWAY_PROJECT_ID }}
+          # Create the environment (ignore error if already exists)
           railway environment create "pr-${{ env.PR_NUMBER }}" 2>/dev/null || echo "Environment may already exist"
+          echo "Environment pr-${{ env.PR_NUMBER }} ready"
 
       - name: Set Environment Variables
         env:
