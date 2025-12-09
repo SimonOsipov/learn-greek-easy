@@ -168,15 +168,17 @@ jobs:
           echo "Setting RAILWAY_GIT_COMMIT_SHA=${{ github.sha }}"
           echo "Setting RAILWAY_GIT_BRANCH=${{ github.head_ref }}"
 
-          railway variables set \
-            RAILWAY_GIT_COMMIT_SHA=${{ github.sha }} \
-            RAILWAY_GIT_BRANCH=${{ github.head_ref }} \
-            --service Backend
+          railway variables \
+            --set "RAILWAY_GIT_COMMIT_SHA=${{ github.sha }}" \
+            --set "RAILWAY_GIT_BRANCH=${{ github.head_ref }}" \
+            --service Backend \
+            --skip-deploys
 
-          railway variables set \
-            RAILWAY_GIT_COMMIT_SHA=${{ github.sha }} \
-            RAILWAY_GIT_BRANCH=${{ github.head_ref }} \
-            --service Frontend
+          railway variables \
+            --set "RAILWAY_GIT_COMMIT_SHA=${{ github.sha }}" \
+            --set "RAILWAY_GIT_BRANCH=${{ github.head_ref }}" \
+            --service Frontend \
+            --skip-deploys
 
       - name: Deploy Backend
         env:
