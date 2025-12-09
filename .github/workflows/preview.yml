@@ -94,39 +94,23 @@ jobs:
           echo "=== Railway CLI Version ==="
           railway --version
 
-      - name: Create or link to dev environment
+      - name: Link to dev environment
         id: env
         env:
           RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
         run: |
           # Dev environment for PR previews
-          # Will be created if it doesn't exist (deleted after PR merge)
+          # This environment is persistent to maintain stable URLs (for Google OAuth, etc.)
+          # Services are stopped on PR merge but environment is preserved
           ENV_NAME="dev"
           echo "Using dev environment for PR preview"
 
-          # First, link to production to get project context
-          echo "Linking to production for project context..."
+          # Link to dev environment
+          echo "Linking to dev environment..."
           railway link \
             --project ${{ secrets.RAILWAY_PROJECT_ID }} \
-            --environment production \
-            --workspace ${{ secrets.RAILWAY_WORKSPACE_ID }}
-
-          # Try to link to dev environment, create if it doesn't exist
-          echo "Attempting to link to dev environment..."
-          if ! railway link \
-            --project ${{ secrets.RAILWAY_PROJECT_ID }} \
             --environment "$ENV_NAME" \
-            --workspace ${{ secrets.RAILWAY_WORKSPACE_ID }} 2>&1; then
-
-            echo "Dev environment not found, creating it by duplicating production..."
-            railway environment new "$ENV_NAME" --duplicate production
-
-            echo "Linking to newly created dev environment..."
-            railway link \
-              --project ${{ secrets.RAILWAY_PROJECT_ID }} \
-              --environment "$ENV_NAME" \
-              --workspace ${{ secrets.RAILWAY_WORKSPACE_ID }}
-          fi
+            --workspace ${{ secrets.RAILWAY_WORKSPACE_ID }}
 
           # Get current environment status
           echo "=== Environment Status ==="
@@ -165,7 +149,7 @@ jobs:
             --skip-deploys
 
           # Note: CORS_ORIGINS and BACKEND_URL are pre-configured in the dev environment
-          # - CORS_ORIGINS=https://frontend-dev-b901.up.railway.app,http://localhost:5173,http://localhost:3000
+          # - CORS_ORIGINS=https://frontend-dev-8db9.up.railway.app,http://localhost:5173,http://localhost:3000
           # - BACKEND_URL=http://backend.railway.internal:8080
 
       - name: Deploy Backend
@@ -223,8 +207,8 @@ jobs:
         id: urls
         run: |
           # Static dev environment URLs (pre-configured in Railway)
-          FRONTEND_URL="https://frontend-dev-b901.up.railway.app"
-          BACKEND_URL="https://backend-dev-f22e.up.railway.app"
+          FRONTEND_URL="https://frontend-dev-8db9.up.railway.app"
+          BACKEND_URL="https://backend-dev-ea07f243-bb63-47dd-b0a5-5fa2461895da.up.railway.app"
           DEPLOY_ENV="${{ steps.env.outputs.env_name }}"
 
           echo "=== Static Dev Environment URLs ==="
