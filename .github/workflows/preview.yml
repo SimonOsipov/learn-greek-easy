@@ -152,6 +152,32 @@ jobs:
           echo "env_name=$DEPLOY_ENV" >> $GITHUB_OUTPUT
           echo "created_new=$CREATED_NEW" >> $GITHUB_OUTPUT
 
+      - name: Set version environment variables
+        env:
+          RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
+        run: |
+          DEPLOY_ENV="${{ steps.env.outputs.env_name }}"
+          echo "=== Setting version environment variables ==="
+
+          railway link \
+            --project ${{ secrets.RAILWAY_PROJECT_ID }} \
+            --environment "$DEPLOY_ENV" \
+            --workspace ${{ secrets.RAILWAY_WORKSPACE_ID }}
+
+          # Set commit SHA and branch for both services
+          echo "Setting RAILWAY_GIT_COMMIT_SHA=${{ github.sha }}"
+          echo "Setting RAILWAY_GIT_BRANCH=${{ github.head_ref }}"
+
+          railway variables set \
+            RAILWAY_GIT_COMMIT_SHA=${{ github.sha }} \
+            RAILWAY_GIT_BRANCH=${{ github.head_ref }} \
+            --service Backend
+
+          railway variables set \
+            RAILWAY_GIT_COMMIT_SHA=${{ github.sha }} \
+            RAILWAY_GIT_BRANCH=${{ github.head_ref }} \
+            --service Frontend
+
       - name: Deploy Backend
         env:
           RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
