@@ -77,10 +77,11 @@ jobs:
           RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
         run: |
           echo "Creating/linking to PR environment: pr-${{ env.PR_NUMBER }}"
-          echo "Railway CLI version:"
-          railway version
+          echo "Railway CLI help:"
+          railway --help || true
 
           # First link to the project to production env (required to create new env)
+          echo "Linking to project with production environment..."
           railway link \
             --project ${{ secrets.RAILWAY_PROJECT_ID }} \
             --environment production \
