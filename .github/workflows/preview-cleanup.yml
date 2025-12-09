@@ -91,10 +91,44 @@ jobs:
           railway down --service Frontend --yes || echo "Frontend service may not have active deployment"
 
           echo "Frontend service stopped"
+
+      - name: Stop Redis Service
+        if: steps.check-env.outputs.exists == 'true'
+        env:
+          RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
+        run: |
+          ENV_NAME="${{ steps.check-env.outputs.env_name }}"
+          echo "Stopping Redis service in environment: $ENV_NAME"
+
+          railway link \
+            --project ${{ secrets.RAILWAY_PROJECT_ID }} \
+            --environment "$ENV_NAME" \
+            --workspace ${{ secrets.RAILWAY_WORKSPACE_ID }}
+
+          railway down --service Redis --yes || echo "Redis service may not have active deployment"
+
+          echo "Redis service stopped"
+
+      - name: Stop Postgres Service
+        if: steps.check-env.outputs.exists == 'true'
+        env:
+          RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
+        run: |
+          ENV_NAME="${{ steps.check-env.outputs.env_name }}"
+          echo "Stopping Postgres service in environment: $ENV_NAME"
+
+          railway link \
+            --project ${{ secrets.RAILWAY_PROJECT_ID }} \
+            --environment "$ENV_NAME" \
+            --workspace ${{ secrets.RAILWAY_WORKSPACE_ID }}
+
+          railway down --service Postgres --yes || echo "Postgres service may not have active deployment"
+
+          echo "Postgres service stopped"
           echo ""
           echo "=== Cleanup Complete ==="
           echo "Environment '$ENV_NAME' preserved with stable URLs"
-          echo "Services stopped to save resources"
+          echo "All services stopped to save resources"
 
   # Job 2: Update PR comment (separate job because Railway container lacks GitHub tools)
   update-comment:
