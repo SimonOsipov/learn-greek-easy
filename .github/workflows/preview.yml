@@ -118,7 +118,7 @@ jobs:
             --workspace ${{ secrets.RAILWAY_WORKSPACE_ID }} 2>&1; then
 
             echo "Dev environment not found, creating it by duplicating production..."
-            railway environment create "$ENV_NAME" --copy production
+            railway environment new "$ENV_NAME" --duplicate production
 
             echo "Linking to newly created dev environment..."
             railway link \
