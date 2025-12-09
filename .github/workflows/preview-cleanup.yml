@@ -108,7 +108,8 @@ jobs:
 
             const botComment = comments.find(c =>
               c.user.type === 'Bot' && (
-                c.body.includes('## Preview Deployment') ||
+                c.body.includes(':rocket: Preview Deployment') ||
+                // Backward compatibility with old format
                 c.body.includes('## Preview Deployment Ready') ||
                 c.body.includes('## Preview Deployment Failed') ||
                 c.body.includes('## Preview Deployment Skipped') ||
