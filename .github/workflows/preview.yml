@@ -149,7 +149,7 @@ jobs:
             --skip-deploys
 
           # Note: CORS_ORIGINS and BACKEND_URL are pre-configured in the dev environment
-          # - CORS_ORIGINS=https://frontend-dev-8db9.up.railway.app,http://localhost:5173,http://localhost:3000
+          # - CORS_ORIGINS=https://${{ secrets.DEV_FRONTEND_URL }},http://localhost:5173,http://localhost:3000
           # - BACKEND_URL=http://backend.railway.internal:8080
 
       - name: Deploy Backend
@@ -205,13 +205,16 @@ jobs:
 
       - name: Get deployment URLs
         id: urls
+        env:
+          DEV_FRONTEND_URL: ${{ secrets.DEV_FRONTEND_URL }}
+          DEV_BACKEND_URL: ${{ secrets.DEV_BACKEND_URL }}
         run: |
-          # Static dev environment URLs (pre-configured in Railway)
-          FRONTEND_URL="https://frontend-dev-8db9.up.railway.app"
-          BACKEND_URL="https://backend-dev-bc44.up.railway.app"
+          # Dev environment URLs from GitHub Secrets
+          FRONTEND_URL="https://${DEV_FRONTEND_URL}"
+          BACKEND_URL="https://${DEV_BACKEND_URL}"
           DEPLOY_ENV="${{ steps.env.outputs.env_name }}"
 
-          echo "=== Static Dev Environment URLs ==="
+          echo "=== Dev Environment URLs ==="
           echo "Frontend URL: $FRONTEND_URL"
           echo "Backend URL: $BACKEND_URL"
           echo "Environment: $DEPLOY_ENV"
