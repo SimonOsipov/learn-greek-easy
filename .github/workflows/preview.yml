@@ -71,20 +71,30 @@ jobs:
 
       - name: Create Preview Environment
         env:
-          RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
         run: |
           echo "Creating preview environment: pr-${{ env.PR_NUMBER }}"
-          # First link to project only (no environment yet)
-          railway link --project ${{ secrets.RAILWAY_PROJECT_ID }}
+
+          # Check Railway CLI version and status
+          railway version
+          railway whoami || echo "Auth check completed"
+
+          # Use RAILWAY_TOKEN env var (set above) - Railway CLI auto-detects it
+          # The project ID must be a valid Railway project UUID
+          echo "Project ID: ${{ secrets.RAILWAY_PROJECT_ID }}"
+
+          # Link to project (Railway CLI uses RAILWAY_TOKEN automatically)
+          railway link ${{ secrets.RAILWAY_PROJECT_ID }}
+
           # Create the environment - show output for debugging
           railway environment new "pr-${{ env.PR_NUMBER }}" || echo "Environment creation failed or already exists"
           echo "Environment pr-${{ env.PR_NUMBER }} ready"
 
       - name: Set Environment Variables
         env:
-          RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
         run: |
-          railway link --project ${{ secrets.RAILWAY_PROJECT_ID }} --environment "pr-${{ env.PR_NUMBER }}"
+          railway link ${{ secrets.RAILWAY_PROJECT_ID }} --environment "pr-${{ env.PR_NUMBER }}"
 
           # Set preview environment variables
           railway variables \
@@ -99,18 +109,18 @@ jobs:
 
       - name: Deploy Backend
         env:
-          RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
         run: |
-          railway link --project ${{ secrets.RAILWAY_PROJECT_ID }} --environment "pr-${{ env.PR_NUMBER }}"
+          railway link ${{ secrets.RAILWAY_PROJECT_ID }} --environment "pr-${{ env.PR_NUMBER }}"
           cd learn-greek-easy-backend
           railway up --detach
           echo "Backend deployment initiated"
 
       - name: Deploy Frontend
         env:
-          RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
         run: |
-          railway link --project ${{ secrets.RAILWAY_PROJECT_ID }} --environment "pr-${{ env.PR_NUMBER }}"
+          railway link ${{ secrets.RAILWAY_PROJECT_ID }} --environment "pr-${{ env.PR_NUMBER }}"
           cd learn-greek-easy-frontend
           railway up --detach
           echo "Frontend deployment initiated"
@@ -123,9 +133,9 @@ jobs:
       - name: Generate and Get Deployment URLs
         id: urls
         env:
-          RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
         run: |
-          railway link --project ${{ secrets.RAILWAY_PROJECT_ID }} --environment "pr-${{ env.PR_NUMBER }}"
+          railway link ${{ secrets.RAILWAY_PROJECT_ID }} --environment "pr-${{ env.PR_NUMBER }}"
 
           # Generate domains for services (creates if not exists)
           echo "Generating domains..."
