@@ -98,13 +98,9 @@ jobs:
 
             # Create a new environment by duplicating from production
             echo "Creating environment $ENV_NAME by duplicating from production..."
-            if railway environment new "$ENV_NAME" --duplicate production 2>&1; then
-              echo "Environment $ENV_NAME created successfully"
-              DEPLOY_ENV="$ENV_NAME"
-            else
-              echo "Failed to create PR environment, using production as fallback"
-              DEPLOY_ENV="production"
-            fi
+            railway environment new "$ENV_NAME" --duplicate production
+            echo "Environment $ENV_NAME created successfully"
+            DEPLOY_ENV="$ENV_NAME"
           fi
 
           # Link to the chosen environment
