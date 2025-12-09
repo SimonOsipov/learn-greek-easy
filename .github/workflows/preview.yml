@@ -142,6 +142,7 @@ jobs:
           railway variables \
             --set "RAILWAY_GIT_COMMIT_SHA=$PR_HEAD_SHA" \
             --set "RAILWAY_GIT_BRANCH=${{ github.head_ref }}" \
+            --set "DEBUG=true" \
             --service Backend \
             --skip-deploys
 
