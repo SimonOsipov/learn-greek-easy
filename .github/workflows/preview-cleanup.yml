@@ -14,9 +14,9 @@ permissions:
   issues: write
 
 jobs:
-  # Job 1: Delete Railway preview environment
+  # Job 1: Stop services in dev environment (keep env for stable URLs)
   cleanup:
-    name: Cleanup Preview Environment
+    name: Stop Preview Services
     runs-on: ubuntu-latest
     container: ghcr.io/railwayapp/cli:latest
     outputs:
@@ -33,52 +33,68 @@ jobs:
           echo "Railway CLI Version:"
           railway --version
 
-      - name: Link to project and check environment
+      - name: Link to dev environment
         id: check-env
         env:
           RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
         run: |
           # Use 'dev' environment for all PR previews (one PR at a time)
+          # We keep the environment but stop the services to preserve URLs
           ENV_NAME="dev"
           echo "Checking for environment: $ENV_NAME"
           echo "env_name=$ENV_NAME" >> $GITHUB_OUTPUT
 
-          # Link to production first (needed for project context)
-          railway link \
-            --project ${{ secrets.RAILWAY_PROJECT_ID }} \
-            --environment production \
-            --workspace ${{ secrets.RAILWAY_WORKSPACE_ID }}
-
-          # Try to link to the dev environment to check if it exists
+          # Try to link to the dev environment
           if railway link \
             --project ${{ secrets.RAILWAY_PROJECT_ID }} \
             --environment "$ENV_NAME" \
             --workspace ${{ secrets.RAILWAY_WORKSPACE_ID }} 2>&1; then
             echo "exists=true" >> $GITHUB_OUTPUT
-            echo "Environment $ENV_NAME exists, will proceed with cleanup"
+            echo "Environment $ENV_NAME exists, will stop services"
           else
             echo "exists=false" >> $GITHUB_OUTPUT
             echo "Environment $ENV_NAME does not exist, skipping cleanup"
           fi
 
-      - name: Delete Preview Environment
+      - name: Stop Backend Service
         if: steps.check-env.outputs.exists == 'true'
         env:
           RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
         run: |
           ENV_NAME="${{ steps.check-env.outputs.env_name }}"
-          echo "Deleting environment: $ENV_NAME"
+          echo "Stopping Backend service in environment: $ENV_NAME"
 
-          # Link to production first (required for delete command context)
           railway link \
             --project ${{ secrets.RAILWAY_PROJECT_ID }} \
-            --environment production \
+            --environment "$ENV_NAME" \
             --workspace ${{ secrets.RAILWAY_WORKSPACE_ID }}
 
-          # Delete the preview environment
-          railway environment delete "$ENV_NAME" --yes
+          # Remove the latest deployment (stops the service but keeps config)
+          railway down --service Backend --yes || echo "Backend service may not have active deployment"
 
-          echo "Environment $ENV_NAME deleted successfully"
+          echo "Backend service stopped"
+
+      - name: Stop Frontend Service
+        if: steps.check-env.outputs.exists == 'true'
+        env:
+          RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
+        run: |
+          ENV_NAME="${{ steps.check-env.outputs.env_name }}"
+          echo "Stopping Frontend service in environment: $ENV_NAME"
+
+          railway link \
+            --project ${{ secrets.RAILWAY_PROJECT_ID }} \
+            --environment "$ENV_NAME" \
+            --workspace ${{ secrets.RAILWAY_WORKSPACE_ID }}
+
+          # Remove the latest deployment (stops the service but keeps config)
+          railway down --service Frontend --yes || echo "Frontend service may not have active deployment"
+
+          echo "Frontend service stopped"
+          echo ""
+          echo "=== Cleanup Complete ==="
+          echo "Environment '$ENV_NAME' preserved with stable URLs"
+          echo "Services stopped to save resources"
 
   # Job 2: Update PR comment (separate job because Railway container lacks GitHub tools)
   update-comment:
@@ -126,9 +142,10 @@ jobs:
               if (cleanupResult === 'success' && envExisted === 'true') {
                 newBody = `## Preview Deployment Cleaned Up
 
-            **Status**: Environment Destroyed
+            **Status**: Services Stopped
 
-            The preview environment \`${envName}\` has been automatically cleaned up.
+            The preview services have been stopped to save resources.
+            The environment \`${envName}\` is preserved with stable URLs for future PRs.
 
             This PR was ${action} on ${date}.`;
               } else if (envExisted === 'false') {
