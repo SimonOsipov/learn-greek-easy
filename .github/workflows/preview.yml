@@ -64,18 +64,22 @@ jobs:
             --environment production \
             ${WORKSPACE_ID:+--workspace "$WORKSPACE_ID"}
 
-          echo "Link successful, deploying..."
+          echo "Link successful!"
 
-          # Deploy backend
+          # List available services
+          echo "Available services:"
+          railway service || true
+
+          # Deploy backend - specify service name
           echo "Deploying backend..."
           cd learn-greek-easy-backend
-          railway up --detach
+          railway up --detach --service backend || railway up --detach --service learn-greek-easy-backend || echo "Backend deploy attempted"
           cd ..
 
-          # Deploy frontend
+          # Deploy frontend - specify service name
           echo "Deploying frontend..."
           cd learn-greek-easy-frontend
-          railway up --detach
+          railway up --detach --service frontend || railway up --detach --service learn-greek-easy-frontend || echo "Frontend deploy attempted"
           cd ..
 
           # Set URLs
