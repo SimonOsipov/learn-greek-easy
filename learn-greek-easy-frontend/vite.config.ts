@@ -10,6 +10,17 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react()],
 
+    // Define global constants that are replaced at build time
+    define: {
+      // Pass commit SHA from environment or Railway's built-in variable
+      'import.meta.env.VITE_COMMIT_SHA': JSON.stringify(
+        process.env.RAILWAY_GIT_COMMIT_SHA ||
+          process.env.GITHUB_SHA ||
+          process.env.VITE_COMMIT_SHA ||
+          'dev'
+      ),
+    },
+
     resolve: {
       alias: {
         '@': path.resolve(__dirname, './src'),
