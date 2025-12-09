@@ -93,63 +93,31 @@ jobs:
           echo "=== Railway CLI Version ==="
           railway --version
 
-      - name: Create or link to PR environment
+      - name: Link to dev environment
         id: env
         env:
           RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
         run: |
-          ENV_NAME="pr-${{ env.PR_NUMBER }}"
-          echo "Setting up environment: $ENV_NAME"
-          CREATED_NEW=false
+          # Use static 'dev' environment for all PR previews
+          # This environment is pre-configured with:
+          # - Frontend: https://frontend-dev-b901.up.railway.app (public)
+          # - Backend: https://backend-dev-f22e.up.railway.app (public)
+          # - DEBUG=true, ENVIRONMENT=development
+          ENV_NAME="dev"
+          echo "Using static dev environment for PR preview"
 
-          # First link to the project (to production, needed for project context)
+          # Link to the dev environment
+          echo "Linking to environment $ENV_NAME..."
           railway link \
             --project ${{ secrets.RAILWAY_PROJECT_ID }} \
-            --environment production \
+            --environment "$ENV_NAME" \
             --workspace ${{ secrets.RAILWAY_WORKSPACE_ID }}
-
-          # Check if the PR environment exists and is valid
-          echo "Checking if environment $ENV_NAME exists..."
-          if railway link --project ${{ secrets.RAILWAY_PROJECT_ID }} --environment "$ENV_NAME" --workspace ${{ secrets.RAILWAY_WORKSPACE_ID }} 2>&1; then
-            echo "Environment $ENV_NAME exists and is valid"
-            DEPLOY_ENV="$ENV_NAME"
-          else
-            echo "Environment $ENV_NAME does not exist or is invalid, trying to create..."
-
-            # Try to delete any orphaned environment first
-            railway link --project ${{ secrets.RAILWAY_PROJECT_ID }} --environment production --workspace ${{ secrets.RAILWAY_WORKSPACE_ID }}
-            railway environment delete "$ENV_NAME" --yes 2>&1 || true
-            sleep 5  # Wait for deletion to propagate
-
-            # Create a new environment by duplicating from production
-            echo "Creating environment $ENV_NAME by duplicating from production..."
-            railway environment new "$ENV_NAME" --duplicate production
-            echo "Environment $ENV_NAME created successfully"
-            DEPLOY_ENV="$ENV_NAME"
-            CREATED_NEW=true
-          fi
-
-          # Link to the chosen environment
-          echo "Linking to environment $DEPLOY_ENV..."
-          railway link \
-            --project ${{ secrets.RAILWAY_PROJECT_ID }} \
-            --environment "$DEPLOY_ENV" \
-            --workspace ${{ secrets.RAILWAY_WORKSPACE_ID }}
-
-          # If we created a new environment, wait for Railway's automatic deployment to start
-          # This happens because duplicating copies the GitHub connection which triggers a deploy
-          if [ "$CREATED_NEW" = true ]; then
-            echo "New environment created - waiting 30s for Railway's auto-deploy to initialize..."
-            echo "This prevents our railway up from being overwritten by the GitHub-triggered deploy"
-            sleep 30
-          fi
 
           # Get current environment status
           echo "=== Environment Status ==="
           railway status 2>&1 || true
 
-          echo "env_name=$DEPLOY_ENV" >> $GITHUB_OUTPUT
-          echo "created_new=$CREATED_NEW" >> $GITHUB_OUTPUT
+          echo "env_name=$ENV_NAME" >> $GITHUB_OUTPUT
 
       - name: Set version environment variables
         env:
@@ -181,21 +149,9 @@ jobs:
             --service Frontend \
             --skip-deploys
 
-          # Set CORS_ORIGINS for preview environment to accept preview frontend
-          PR_NUM="${{ env.PR_NUMBER }}"
-          echo "Setting CORS_ORIGINS for preview frontend: https://frontend-pr-${PR_NUM}.up.railway.app"
-          railway variables \
-            --set "CORS_ORIGINS=https://frontend-pr-${PR_NUM}.up.railway.app" \
-            --service Backend \
-            --skip-deploys
-
-          # Set BACKEND_URL for Frontend to use Railway private networking
-          # Railway assigns port 8080 by default (same as production)
-          echo "Setting BACKEND_URL for Frontend: http://backend.railway.internal:8080"
-          railway variables \
-            --set "BACKEND_URL=http://backend.railway.internal:8080" \
-            --service Frontend \
-            --skip-deploys
+          # Note: CORS_ORIGINS and BACKEND_URL are pre-configured in the dev environment
+          # - CORS_ORIGINS=https://frontend-dev-b901.up.railway.app,http://localhost:5173,http://localhost:3000
+          # - BACKEND_URL=http://backend.railway.internal:8080
 
       - name: Deploy Backend
         env:
@@ -250,45 +206,16 @@ jobs:
 
       - name: Get deployment URLs
         id: urls
-        env:
-          RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
         run: |
+          # Static dev environment URLs (pre-configured in Railway)
+          FRONTEND_URL="https://frontend-dev-b901.up.railway.app"
+          BACKEND_URL="https://backend-dev-f22e.up.railway.app"
           DEPLOY_ENV="${{ steps.env.outputs.env_name }}"
 
-          railway link \
-            --project ${{ secrets.RAILWAY_PROJECT_ID }} \
-            --environment "$DEPLOY_ENV" \
-            --workspace ${{ secrets.RAILWAY_WORKSPACE_ID }}
-
-          echo "=== Getting/Generating Domains ==="
-
-          # Generate domains for services if they don't exist
-          echo "Generating Backend domain..."
-          BACKEND_DOMAIN=$(railway domain --service Backend 2>&1) || BACKEND_DOMAIN=""
-          echo "Backend domain result: $BACKEND_DOMAIN"
-
-          echo "Generating Frontend domain..."
-          FRONTEND_DOMAIN=$(railway domain --service Frontend 2>&1) || FRONTEND_DOMAIN=""
-          echo "Frontend domain result: $FRONTEND_DOMAIN"
-
-          # Extract just the domain from the output (railway domain returns the full URL or domain)
-          # If domain generation failed, construct expected URLs
-          if [ -z "$BACKEND_DOMAIN" ] || echo "$BACKEND_DOMAIN" | grep -qi "error"; then
-            BACKEND_URL="https://learn-greek-backend-${DEPLOY_ENV}.up.railway.app"
-          else
-            # Clean up the domain output
-            BACKEND_URL=$(echo "$BACKEND_DOMAIN" | grep -oE 'https?://[^ ]+' | head -1 || echo "https://$BACKEND_DOMAIN")
-          fi
-
-          if [ -z "$FRONTEND_DOMAIN" ] || echo "$FRONTEND_DOMAIN" | grep -qi "error"; then
-            FRONTEND_URL="https://learn-greek-frontend-${DEPLOY_ENV}.up.railway.app"
-          else
-            FRONTEND_URL=$(echo "$FRONTEND_DOMAIN" | grep -oE 'https?://[^ ]+' | head -1 || echo "https://$FRONTEND_DOMAIN")
-          fi
-
-          echo "=== Final URLs ==="
+          echo "=== Static Dev Environment URLs ==="
           echo "Frontend URL: $FRONTEND_URL"
           echo "Backend URL: $BACKEND_URL"
+          echo "Environment: $DEPLOY_ENV"
 
           echo "frontend_url=$FRONTEND_URL" >> $GITHUB_OUTPUT
           echo "backend_url=$BACKEND_URL" >> $GITHUB_OUTPUT
