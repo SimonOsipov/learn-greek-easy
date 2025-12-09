@@ -85,13 +85,14 @@ jobs:
             --environment production \
             --workspace ${{ secrets.RAILWAY_WORKSPACE_ID }}
 
-          # Check environment subcommands
-          echo "Environment subcommands:"
-          railway environment --help 2>&1 || true
+          # Try to delete existing PR environment (if it exists but is empty/broken)
+          echo "Cleaning up any existing $ENV_NAME environment..."
+          railway environment delete "$ENV_NAME" --yes 2>&1 || echo "No existing environment to delete"
 
-          # Try to create a new environment (syntax: railway environment new <name>)
-          echo "Creating environment $ENV_NAME..."
-          railway environment new "$ENV_NAME" 2>&1 || echo "Environment may already exist or creation failed"
+          # Create a new environment by duplicating from production
+          # This copies all services, databases, and their configurations
+          echo "Creating environment $ENV_NAME by duplicating from production..."
+          railway environment new "$ENV_NAME" --duplicate production 2>&1 || echo "Environment creation failed or already exists"
 
           # Link to the new environment
           echo "Linking to environment $ENV_NAME..."
@@ -104,7 +105,7 @@ jobs:
             --environment production \
             --workspace ${{ secrets.RAILWAY_WORKSPACE_ID }}
 
-          # Get current environment
+          # Get current environment status
           railway status 2>&1 || true
 
           echo "env_name=$ENV_NAME" >> $GITHUB_OUTPUT
