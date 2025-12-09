@@ -71,7 +71,7 @@ jobs:
 
       - name: Create Preview Environment
         env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
         run: |
           echo "Creating preview environment: pr-${{ env.PR_NUMBER }}"
           railway link --project ${{ secrets.RAILWAY_PROJECT_ID }}
@@ -79,7 +79,7 @@ jobs:
 
       - name: Set Environment Variables
         env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
         run: |
           railway link --project ${{ secrets.RAILWAY_PROJECT_ID }} --environment "pr-${{ env.PR_NUMBER }}"
 
@@ -96,7 +96,7 @@ jobs:
 
       - name: Deploy Backend
         env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
         run: |
           railway link --project ${{ secrets.RAILWAY_PROJECT_ID }} --environment "pr-${{ env.PR_NUMBER }}"
           cd learn-greek-easy-backend
@@ -105,7 +105,7 @@ jobs:
 
       - name: Deploy Frontend
         env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
         run: |
           railway link --project ${{ secrets.RAILWAY_PROJECT_ID }} --environment "pr-${{ env.PR_NUMBER }}"
           cd learn-greek-easy-frontend
@@ -120,7 +120,7 @@ jobs:
       - name: Generate and Get Deployment URLs
         id: urls
         env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
         run: |
           railway link --project ${{ secrets.RAILWAY_PROJECT_ID }} --environment "pr-${{ env.PR_NUMBER }}"
 
