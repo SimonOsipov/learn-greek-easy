@@ -49,12 +49,20 @@ jobs:
           railway whoami
 
           # Link to project with all required flags for non-interactive mode
-          # Requires RAILWAY_WORKSPACE_ID secret (find in Railway dashboard URL)
           echo "Linking to project..."
+
+          # Try to get workspace ID from whoami output, or use provided secret
+          WORKSPACE_ID="${{ secrets.RAILWAY_WORKSPACE_ID }}"
+          if [ -z "$WORKSPACE_ID" ]; then
+            echo "No RAILWAY_WORKSPACE_ID secret set, trying to find workspace..."
+            # List available workspaces
+            railway list 2>&1 | head -20 || true
+          fi
+
           railway link \
             --project ${{ secrets.RAILWAY_PROJECT_ID }} \
             --environment production \
-            --workspace ${{ secrets.RAILWAY_WORKSPACE_ID }}
+            ${WORKSPACE_ID:+--workspace "$WORKSPACE_ID"}
 
           echo "Link successful, deploying..."
 
