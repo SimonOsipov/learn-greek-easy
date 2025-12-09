@@ -100,6 +100,7 @@ jobs:
         run: |
           ENV_NAME="pr-${{ env.PR_NUMBER }}"
           echo "Setting up environment: $ENV_NAME"
+          CREATED_NEW=false
 
           # First link to the project (to production, needed for project context)
           railway link \
@@ -118,13 +119,14 @@ jobs:
             # Try to delete any orphaned environment first
             railway link --project ${{ secrets.RAILWAY_PROJECT_ID }} --environment production --workspace ${{ secrets.RAILWAY_WORKSPACE_ID }}
             railway environment delete "$ENV_NAME" --yes 2>&1 || true
-            sleep 2  # Wait for deletion to propagate
+            sleep 5  # Wait for deletion to propagate
 
             # Create a new environment by duplicating from production
             echo "Creating environment $ENV_NAME by duplicating from production..."
             railway environment new "$ENV_NAME" --duplicate production
             echo "Environment $ENV_NAME created successfully"
             DEPLOY_ENV="$ENV_NAME"
+            CREATED_NEW=true
           fi
 
           # Link to the chosen environment
@@ -134,11 +136,20 @@ jobs:
             --environment "$DEPLOY_ENV" \
             --workspace ${{ secrets.RAILWAY_WORKSPACE_ID }}
 
+          # If we created a new environment, wait for Railway's automatic deployment to start
+          # This happens because duplicating copies the GitHub connection which triggers a deploy
+          if [ "$CREATED_NEW" = true ]; then
+            echo "New environment created - waiting 30s for Railway's auto-deploy to initialize..."
+            echo "This prevents our railway up from being overwritten by the GitHub-triggered deploy"
+            sleep 30
+          fi
+
           # Get current environment status
           echo "=== Environment Status ==="
           railway status 2>&1 || true
 
           echo "env_name=$DEPLOY_ENV" >> $GITHUB_OUTPUT
+          echo "created_new=$CREATED_NEW" >> $GITHUB_OUTPUT
 
       - name: Deploy Backend
         env:
