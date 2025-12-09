@@ -70,16 +70,16 @@ jobs:
           echo "Available services:"
           railway service || true
 
-          # Deploy backend - specify service name
+          # Deploy backend - service name is "Backend" (capitalized)
           echo "Deploying backend..."
           cd learn-greek-easy-backend
-          railway up --detach --service backend || railway up --detach --service learn-greek-easy-backend || echo "Backend deploy attempted"
+          railway up --detach --service Backend
           cd ..
 
-          # Deploy frontend - specify service name
+          # Deploy frontend - service name is "Frontend" (capitalized)
           echo "Deploying frontend..."
           cd learn-greek-easy-frontend
-          railway up --detach --service frontend || railway up --detach --service learn-greek-easy-frontend || echo "Frontend deploy attempted"
+          railway up --detach --service Frontend
           cd ..
 
           # Set URLs
