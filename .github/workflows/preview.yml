@@ -69,55 +69,22 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Link and Deploy to Railway
+      - name: Deploy to Railway
         id: urls
         env:
           RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
         run: |
-          echo "Railway CLI version:"
-          railway --version
-          railway whoami
-
-          # Link to project with all required flags for non-interactive mode
-          echo "Linking to project..."
-
-          # Try to get workspace ID from whoami output, or use provided secret
-          WORKSPACE_ID="${{ secrets.RAILWAY_WORKSPACE_ID }}"
-          if [ -z "$WORKSPACE_ID" ]; then
-            echo "No RAILWAY_WORKSPACE_ID secret set, trying to find workspace..."
-            # List available workspaces
-            railway list 2>&1 | head -20 || true
-          fi
-
           railway link \
             --project ${{ secrets.RAILWAY_PROJECT_ID }} \
             --environment production \
-            ${WORKSPACE_ID:+--workspace "$WORKSPACE_ID"}
+            --workspace ${{ secrets.RAILWAY_WORKSPACE_ID }}
 
-          echo "Link successful!"
+          cd learn-greek-easy-backend && railway up --detach --service Backend && cd ..
+          cd learn-greek-easy-frontend && railway up --detach --service Frontend && cd ..
 
-          # List available services
-          echo "Available services:"
-          railway service || true
-
-          # Deploy backend - service name is "Backend" (capitalized)
-          echo "Deploying backend..."
-          cd learn-greek-easy-backend
-          railway up --detach --service Backend
-          cd ..
-
-          # Deploy frontend - service name is "Frontend" (capitalized)
-          echo "Deploying frontend..."
-          cd learn-greek-easy-frontend
-          railway up --detach --service Frontend
-          cd ..
-
-          # Set URLs
           echo "frontend_url=https://learn-greek-frontend.up.railway.app" >> $GITHUB_OUTPUT
           echo "backend_url=https://learn-greek-backend.up.railway.app" >> $GITHUB_OUTPUT
           echo "environment_id=production" >> $GITHUB_OUTPUT
-
-          echo "Deployment initiated"
 
   # Job 4: Post deployment comment on PR
   comment-results:
