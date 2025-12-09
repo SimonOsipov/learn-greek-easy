@@ -49,12 +49,12 @@ jobs:
           railway whoami
 
           # Link to project with all required flags for non-interactive mode
-          # --team "personal" is for personal accounts, use team slug for team accounts
+          # Requires RAILWAY_WORKSPACE_ID secret (find in Railway dashboard URL)
           echo "Linking to project..."
           railway link \
             --project ${{ secrets.RAILWAY_PROJECT_ID }} \
             --environment production \
-            --team personal
+            --workspace ${{ secrets.RAILWAY_WORKSPACE_ID }}
 
           echo "Link successful, deploying..."
 
