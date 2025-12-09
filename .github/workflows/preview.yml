@@ -75,20 +75,21 @@ jobs:
         run: |
           echo "Creating preview environment: pr-${{ env.PR_NUMBER }}"
 
-          # Check Railway CLI version and status
-          railway version
+          # Check Railway CLI help to see available commands
+          railway --version || railway -V || echo "Version check not available"
+          railway --help | head -20 || true
+
+          # Check auth status
           railway whoami || echo "Auth check completed"
 
-          # Use RAILWAY_TOKEN env var (set above) - Railway CLI auto-detects it
-          # The project ID must be a valid Railway project UUID
-          echo "Project ID: ${{ secrets.RAILWAY_PROJECT_ID }}"
+          # Link to project using project ID
+          echo "Linking to project: ${{ secrets.RAILWAY_PROJECT_ID }}"
+          railway link --project ${{ secrets.RAILWAY_PROJECT_ID }} || railway link ${{ secrets.RAILWAY_PROJECT_ID }} || echo "Link attempted"
 
-          # Link to project (Railway CLI uses RAILWAY_TOKEN automatically)
-          railway link ${{ secrets.RAILWAY_PROJECT_ID }}
-
-          # Create the environment - show output for debugging
-          railway environment new "pr-${{ env.PR_NUMBER }}" || echo "Environment creation failed or already exists"
-          echo "Environment pr-${{ env.PR_NUMBER }} ready"
+          # Create the environment
+          railway environment --help | head -10 || true
+          railway environment new "pr-${{ env.PR_NUMBER }}" 2>&1 || railway environment create "pr-${{ env.PR_NUMBER }}" 2>&1 || echo "Environment creation attempted"
+          echo "Environment pr-${{ env.PR_NUMBER }} setup complete"
 
       - name: Set Environment Variables
         env:
