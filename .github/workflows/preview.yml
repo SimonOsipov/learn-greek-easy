@@ -77,7 +77,7 @@ jobs:
           # First link to project only (no environment yet)
           railway link --project ${{ secrets.RAILWAY_PROJECT_ID }}
           # Create the environment - show output for debugging
-          railway environment create "pr-${{ env.PR_NUMBER }}" || echo "Environment creation failed or already exists"
+          railway environment new "pr-${{ env.PR_NUMBER }}" || echo "Environment creation failed or already exists"
           echo "Environment pr-${{ env.PR_NUMBER }} ready"
 
       - name: Set Environment Variables
