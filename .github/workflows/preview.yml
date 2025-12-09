@@ -16,6 +16,7 @@ permissions:
   contents: read
   pull-requests: write
   issues: write
+  statuses: write
 
 jobs:
   # Job 1: Run existing CI tests first (reusable workflow)
@@ -221,18 +222,75 @@ jobs:
           echo "backend_url=$BACKEND_URL" >> $GITHUB_OUTPUT
           echo "environment_id=$DEPLOY_ENV" >> $GITHUB_OUTPUT
 
-  # Job 4: Report deployment results and test outcomes
-  # Currently shows deployment URLs only. Test results will be added when implemented:
-  # - Health Check job (future task)
-  # - Lighthouse job (future task)
-  # - Visual Regression job (future task)
-  # - Accessibility job (future task)
+  # Job 4: Health and smoke tests for deployed preview
+  health-check:
+    name: Health and Smoke Tests
+    needs: [deploy]
+    if: needs.deploy.result == 'success' && needs.deploy.outputs.frontend_url != ''
+    runs-on: ubuntu-latest
+    outputs:
+      status: ${{ steps.health.outputs.status }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Health Checks
+        id: health
+        run: |
+          chmod +x scripts/preview-health-check.sh
+          if ./scripts/preview-health-check.sh \
+            "${{ needs.deploy.outputs.frontend_url }}" \
+            "${{ needs.deploy.outputs.backend_url }}" \
+            30 \
+            10; then
+            echo "status=success" >> $GITHUB_OUTPUT
+          else
+            echo "status=failure" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run API Smoke Tests
+        id: smoke
+        if: steps.health.outputs.status == 'success'
+        run: |
+          chmod +x scripts/preview-api-smoke.sh
+          ./scripts/preview-api-smoke.sh "${{ needs.deploy.outputs.backend_url }}" || true
+          # API smoke tests are informational - don't fail the job
+
+      - name: Upload Health Check Results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: health-check-results
+          path: |
+            health-check-results.json
+            api-smoke-results.json
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: Create Status Check
+        uses: actions/github-script@v7
+        if: always()
+        with:
+          script: |
+            const status = '${{ steps.health.outputs.status }}';
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: context.sha,
+              state: status === 'success' ? 'success' : 'failure',
+              target_url: '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}',
+              description: status === 'success' ? 'Health checks passed' : 'Health checks failed',
+              context: 'preview/health'
+            });
+
+  # Job 6: Report deployment results and test outcomes
   report-results:
     name: Report Results
     # TEMPORARILY REMOVED ci-tests DEPENDENCY - UNCOMMENT WHEN DONE TESTING
-    # needs: [ci-tests, should-deploy, deploy]
-    needs: [should-deploy, deploy]
-    # FUTURE: Add test jobs to needs array when implemented
+    # needs: [ci-tests, should-deploy, deploy, health-check]
+    needs: [should-deploy, deploy, health-check]
+    # FUTURE: Add more test jobs to needs array when implemented
     # needs: [should-deploy, deploy, health-check, lighthouse, visual-regression, accessibility]
     if: always() && needs.should-deploy.outputs.deploy == 'true'
     runs-on: ubuntu-latest
@@ -249,8 +307,12 @@ jobs:
             const backendUrl = '${{ needs.deploy.outputs.backend_url }}';
             const envId = '${{ needs.deploy.outputs.environment_id }}';
 
-            // FUTURE: Get test job outputs when implemented
-            // const healthStatus = '${{ needs.health-check.outputs.status }}';
+            // Health check status
+            const healthStatus = '${{ needs.health-check.outputs.status }}';
+            const healthIcon = healthStatus === 'success' ? ':white_check_mark:' : ':x:';
+            const healthDetails = healthStatus === 'success' ? 'All health checks passed' : 'Some health checks failed';
+
+            // FUTURE: Get more test job outputs when implemented
             // const desktopScore = '${{ needs.lighthouse.outputs.desktop_score }}';
             // const mobileScore = '${{ needs.lighthouse.outputs.mobile_score }}';
             // const visualStatus = '${{ needs.visual-regression.outputs.status }}';
@@ -273,23 +335,26 @@ jobs:
               body += `| Backend | ${backendUrl} |\n`;
               body += `| API Docs | ${backendUrl}/docs |\n\n`;
 
-              // Test Results section (placeholder until test jobs are implemented)
+              // Test Results section
               body += `### Test Results\n\n`;
-              body += `_Automated testing is being configured. Results will appear here once ready._\n\n`;
-
-              // FUTURE: Uncomment when test jobs are added
-              // body += `| Test | Status | Details |\n`;
-              // body += `|------|--------|---------|\\n`;
-              // body += `| Health Check | ${healthIcon} | ${healthDetails} |\n`;
+              body += `| Test | Status | Details |\n`;
+              body += `|------|--------|---------|\n`;
+              body += `| Health Check | ${healthIcon} | ${healthDetails} |\n`;
+              // FUTURE: Add more test results when implemented
               // body += `| Lighthouse (Desktop) | ${desktopIcon} | Performance: ${desktopScore} |\n`;
               // body += `| Lighthouse (Mobile) | ${mobileIcon} | Performance: ${mobileScore} |\n`;
               // body += `| Visual Regression | ${visualIcon} | ${visualDetails} |\n`;
-              // body += `| Accessibility | ${a11yIcon} | ${a11yDetails} |\n\n`;
+              // body += `| Accessibility | ${a11yIcon} | ${a11yDetails} |\n`;
+              body += `\n`;
 
-              // Status indicator
-              body += `:white_check_mark: **Deployment successful!** Preview environment is ready.\n\n`;
+              // Status indicator based on health check
+              if (healthStatus === 'success') {
+                body += `:white_check_mark: **Deployment successful!** Preview environment is ready.\n\n`;
+              } else {
+                body += `:warning: **Deployment complete but health checks failed.** Please review the results above.\n\n`;
+              }
 
-              // FUTURE: When test jobs are added, use this logic:
+              // FUTURE: When more test jobs are added, use this logic:
               // const allPassed = healthStatus === 'success' &&
               //                  desktopScore >= 80 &&
               //                  mobileScore >= 70 &&
@@ -356,7 +421,7 @@ jobs:
               });
             }
 
-  # Job 5: Post skip comment for docs-only PRs
+  # Job 7: Post skip comment for docs-only PRs
   skip-comment:
     name: Post Skip Comment
     needs: [should-deploy]
