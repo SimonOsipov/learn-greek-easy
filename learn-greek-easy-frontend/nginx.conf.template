@@ -35,7 +35,7 @@ http {
                application/vnd.ms-fontobject image/svg+xml;
 
     # DNS resolver for Railway internal hostnames
-    resolver 127.0.0.11 valid=10s ipv6=off;
+    resolver 127.0.0.11 valid=10s;
 
     server {
         listen ${PORT} default_server;
