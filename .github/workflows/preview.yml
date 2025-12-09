@@ -19,47 +19,45 @@ permissions:
 
 jobs:
   # Job 1: Run existing CI tests first (reusable workflow)
-  # TEMPORARILY COMMENTED OUT for faster Railway deploy debugging
-  # ci-tests:
-  #   name: CI Tests
-  #   uses: ./.github/workflows/test.yml
-  #   secrets: inherit
+  ci-tests:
+    name: CI Tests
+    uses: ./.github/workflows/test.yml
+    secrets: inherit
 
   # Job 2: Check if preview should be deployed
-  # TEMPORARILY COMMENTED OUT for faster Railway deploy debugging
-  # should-deploy:
-  #   name: Check Deploy Conditions
-  #   runs-on: ubuntu-latest
-  #   outputs:
-  #     deploy: ${{ steps.check.outputs.deploy }}
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v4
-  #       with:
-  #         fetch-depth: 0
-  #
-  #     - name: Check changed files
-  #       id: check
-  #       run: |
-  #         # Get changed files between PR base and head
-  #         CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
-  #         echo "Changed files:"
-  #         echo "$CHANGED_FILES"
-  #
-  #         # Check if any non-docs files changed
-  #         if echo "$CHANGED_FILES" | grep -qvE '^(docs/|.*\.md$|\.github/.*\.md$)'; then
-  #           echo "deploy=true" >> $GITHUB_OUTPUT
-  #           echo "Non-documentation changes detected - will deploy preview"
-  #         else
-  #           echo "deploy=false" >> $GITHUB_OUTPUT
-  #           echo "Only documentation changes - skipping preview deployment"
-  #         fi
+  should-deploy:
+    name: Check Deploy Conditions
+    runs-on: ubuntu-latest
+    outputs:
+      deploy: ${{ steps.check.outputs.deploy }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check changed files
+        id: check
+        run: |
+          # Get changed files between PR base and head
+          CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
+
+          # Check if any non-docs files changed
+          if echo "$CHANGED_FILES" | grep -qvE '^(docs/|.*\.md$|\.github/.*\.md$)'; then
+            echo "deploy=true" >> $GITHUB_OUTPUT
+            echo "Non-documentation changes detected - will deploy preview"
+          else
+            echo "deploy=false" >> $GITHUB_OUTPUT
+            echo "Only documentation changes - skipping preview deployment"
+          fi
 
   # Job 3: Deploy preview environment to Railway
   deploy-preview:
     name: Deploy Preview
-    # needs: [ci-tests, should-deploy]
-    # if: needs.should-deploy.outputs.deploy == 'true'
+    needs: [ci-tests, should-deploy]
+    if: needs.should-deploy.outputs.deploy == 'true'
     runs-on: ubuntu-latest
     container: ghcr.io/railwayapp/cli:latest
     outputs:
@@ -183,21 +181,29 @@ jobs:
   # Job 4: Post deployment comment on PR
   comment-results:
     name: Post Deployment Comment
-    needs: [deploy-preview]
-    if: always()
+    needs: [ci-tests, should-deploy, deploy-preview]
+    if: always() && needs.should-deploy.outputs.deploy == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Post or Update PR Comment
         uses: actions/github-script@v7
         with:
           script: |
+            const ciStatus = '${{ needs.ci-tests.result }}';
             const deployStatus = '${{ needs.deploy-preview.result }}';
             const frontendUrl = '${{ needs.deploy-preview.outputs.frontend_url }}';
             const backendUrl = '${{ needs.deploy-preview.outputs.backend_url }}';
             const envId = '${{ needs.deploy-preview.outputs.environment_id }}';
 
             let body;
-            if (deployStatus === 'success') {
+            if (ciStatus === 'failure') {
+              body = `## Preview Deployment Blocked
+
+            **Status**: CI Tests Failed
+
+            The preview deployment was not started because CI tests failed.
+            Please check the [workflow logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}) for details.`;
+            } else if (deployStatus === 'success') {
               body = `## Preview Deployment Ready
 
             | Service | URL |
@@ -227,7 +233,7 @@ jobs:
             });
 
             const botComment = comments.find(c =>
-              c.user.type === 'Bot' && (c.body.includes('## Preview Deployment Ready') || c.body.includes('## Preview Deployment Failed') || c.body.includes('## Preview Deployment Skipped'))
+              c.user.type === 'Bot' && (c.body.includes('## Preview Deployment') || c.body.includes('## Preview Deployment Ready') || c.body.includes('## Preview Deployment Failed') || c.body.includes('## Preview Deployment Skipped'))
             );
 
             if (botComment) {
@@ -247,50 +253,49 @@ jobs:
             }
 
   # Job 5: Post skip comment for docs-only PRs
-  # TEMPORARILY COMMENTED OUT - depends on should-deploy job
-  # skip-comment:
-  #   name: Post Skip Comment
-  #   needs: [should-deploy]
-  #   if: needs.should-deploy.outputs.deploy == 'false'
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - name: Post Skip Comment
-  #       uses: actions/github-script@v7
-  #       with:
-  #         script: |
-  #           const body = `## Preview Deployment Skipped
-  #
-  #           This PR contains only documentation changes. Preview deployment has been skipped.
-  #
-  #           If you need a preview environment, please add code changes or request manual deployment.`;
-  #
-  #           // Find existing preview comment to update
-  #           const { data: comments } = await github.rest.issues.listComments({
-  #             owner: context.repo.owner,
-  #             repo: context.repo.repo,
-  #             issue_number: context.issue.number,
-  #           });
-  #
-  #           const botComment = comments.find(c =>
-  #             c.user.type === 'Bot' && (
-  #               c.body.includes('Preview Deployment Ready') ||
-  #               c.body.includes('Preview Deployment Failed') ||
-  #               c.body.includes('Preview Deployment Skipped')
-  #             )
-  #           );
-  #
-  #           if (botComment) {
-  #             await github.rest.issues.updateComment({
-  #               owner: context.repo.owner,
-  #               repo: context.repo.repo,
-  #               comment_id: botComment.id,
-  #               body
-  #             });
-  #           } else {
-  #             await github.rest.issues.createComment({
-  #               owner: context.repo.owner,
-  #               repo: context.repo.repo,
-  #               issue_number: context.issue.number,
-  #               body
-  #             });
-  #           }
+  skip-comment:
+    name: Post Skip Comment
+    needs: [should-deploy]
+    if: needs.should-deploy.outputs.deploy == 'false'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post Skip Comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = `## Preview Deployment Skipped
+
+            This PR contains only documentation changes. Preview deployment has been skipped.
+
+            If you need a preview environment, please add code changes or request manual deployment.`;
+
+            // Find existing preview comment to update
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const botComment = comments.find(c =>
+              c.user.type === 'Bot' && (
+                c.body.includes('Preview Deployment Ready') ||
+                c.body.includes('Preview Deployment Failed') ||
+                c.body.includes('Preview Deployment Skipped')
+              )
+            );
+
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body
+              });
+            }
