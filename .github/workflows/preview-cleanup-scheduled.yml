@@ -1,0 +1,113 @@
+name: Scheduled Preview Cleanup
+
+on:
+  schedule:
+    # Run daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch: # Allow manual trigger
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  cleanup-orphans:
+    name: Cleanup Orphaned Environments
+    runs-on: ubuntu-latest
+    container: ghcr.io/railwayapp/cli:latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Show context
+        run: |
+          echo "=== Scheduled Cleanup Context ==="
+          echo "Trigger: ${{ github.event_name }}"
+          echo "Time: $(date -u)"
+          echo "Railway CLI Version:"
+          railway --version
+
+      - name: Find and Cleanup Orphaned Environments
+        env:
+          RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "=== Scanning for orphaned preview environments ==="
+
+          # Link to project
+          railway link \
+            --project ${{ secrets.RAILWAY_PROJECT_ID }} \
+            --environment production \
+            --workspace ${{ secrets.RAILWAY_WORKSPACE_ID }}
+
+          # Get list of all environments
+          echo "Listing all environments..."
+          ALL_ENVS=$(railway environment list 2>&1 || echo "")
+          echo "Raw environment list:"
+          echo "$ALL_ENVS"
+          echo ""
+
+          # Filter to only pr-* environments
+          ENVS=$(echo "$ALL_ENVS" | grep -oE "pr-[0-9]+" || true)
+
+          if [ -z "$ENVS" ]; then
+            echo "No preview environments found"
+            exit 0
+          fi
+
+          echo "Found preview environments:"
+          echo "$ENVS"
+          echo ""
+
+          # Track results
+          CLEANED=0
+          KEPT=0
+          FAILED=0
+
+          # Check each preview environment
+          for ENV in $ENVS; do
+            PR_NUMBER=${ENV#pr-}
+            echo "Checking PR #$PR_NUMBER..."
+
+            # Install gh CLI if not available (Railway container may not have it)
+            if ! command -v gh &> /dev/null; then
+              echo "Installing GitHub CLI..."
+              apk add --no-cache github-cli 2>/dev/null || apt-get update && apt-get install -y gh 2>/dev/null || true
+            fi
+
+            # Use gh CLI to check PR state
+            PR_STATE=$(gh pr view $PR_NUMBER --repo ${{ github.repository }} --json state --jq '.state' 2>/dev/null || echo "NOT_FOUND")
+
+            if [ "$PR_STATE" != "OPEN" ]; then
+              echo "  -> PR is $PR_STATE, cleaning up environment: $ENV"
+
+              # Re-link to production before delete
+              railway link \
+                --project ${{ secrets.RAILWAY_PROJECT_ID }} \
+                --environment production \
+                --workspace ${{ secrets.RAILWAY_WORKSPACE_ID }}
+
+              if railway environment delete "$ENV" --yes 2>&1; then
+                echo "  -> Successfully deleted $ENV"
+                CLEANED=$((CLEANED + 1))
+              else
+                echo "  -> Failed to delete $ENV"
+                FAILED=$((FAILED + 1))
+              fi
+            else
+              echo "  -> PR is still OPEN, keeping environment: $ENV"
+              KEPT=$((KEPT + 1))
+            fi
+          done
+
+          echo ""
+          echo "=== Scheduled cleanup completed ==="
+          echo "Cleaned: $CLEANED"
+          echo "Kept: $KEPT"
+          echo "Failed: $FAILED"
+
+      - name: Report Summary
+        if: always()
+        run: |
+          echo "Scheduled cleanup job finished at $(date -u)"
