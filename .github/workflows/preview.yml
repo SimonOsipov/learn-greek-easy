@@ -19,11 +19,10 @@ permissions:
 
 jobs:
   # Job 1: Run existing CI tests first (reusable workflow)
-  # TODO: Re-enable after fixing preview deployment
-  # ci-tests:
-  #   name: CI Tests
-  #   uses: ./.github/workflows/test.yml
-  #   secrets: inherit
+  ci-tests:
+    name: CI Tests
+    uses: ./.github/workflows/test.yml
+    secrets: inherit
 
   # Job 2: Check if preview should be deployed
   should-deploy:
@@ -57,9 +56,7 @@ jobs:
   # Job 3: Deploy preview environment to Railway
   deploy-preview:
     name: Deploy Preview
-    # TODO: Re-enable ci-tests dependency after fixing preview deployment
-    # needs: [ci-tests, should-deploy]
-    needs: [should-deploy]
+    needs: [ci-tests, should-deploy]
     if: needs.should-deploy.outputs.deploy == 'true'
     runs-on: ubuntu-latest
     container: ghcr.io/railwayapp/cli:latest
@@ -251,9 +248,7 @@ jobs:
   # Job 4: Post deployment comment on PR
   comment-results:
     name: Post Deployment Comment
-    # TODO: Re-enable ci-tests dependency after fixing preview deployment
-    # needs: [ci-tests, should-deploy, deploy-preview]
-    needs: [should-deploy, deploy-preview]
+    needs: [ci-tests, should-deploy, deploy-preview]
     if: always() && needs.should-deploy.outputs.deploy == 'true'
     runs-on: ubuntu-latest
     steps:
@@ -261,9 +256,7 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            // TODO: Re-enable CI status check after fixing preview deployment
-            // const ciStatus = '${{ needs.ci-tests.result }}';
-            const ciStatus = 'success'; // Temporarily assume success
+            const ciStatus = '${{ needs.ci-tests.result }}';
             const deployStatus = '${{ needs.deploy-preview.result }}';
             const frontendUrl = '${{ needs.deploy-preview.outputs.frontend_url }}';
             const backendUrl = '${{ needs.deploy-preview.outputs.backend_url }}';
