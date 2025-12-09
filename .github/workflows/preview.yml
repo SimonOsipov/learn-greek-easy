@@ -190,10 +190,11 @@ jobs:
             --skip-deploys
 
           # Set BACKEND_URL for Frontend to use Railway private networking
-          # Railway private network uses format: http://<ServiceName>.railway.internal:<port>
-          echo "Setting BACKEND_URL for Frontend: http://Backend.railway.internal:8000"
+          # Railway private network uses lowercase service names in DNS
+          # The RAILWAY_PRIVATE_DOMAIN for Backend service is: backend.railway.internal
+          echo "Setting BACKEND_URL for Frontend: http://backend.railway.internal:8000"
           railway variables \
-            --set "BACKEND_URL=http://Backend.railway.internal:8000" \
+            --set "BACKEND_URL=http://backend.railway.internal:8000" \
             --service Frontend \
             --skip-deploys
 
