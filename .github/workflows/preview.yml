@@ -85,46 +85,52 @@ jobs:
             --environment production \
             --workspace ${{ secrets.RAILWAY_WORKSPACE_ID }}
 
-          # Try to delete existing PR environment (if it exists but is empty/broken)
-          echo "Cleaning up any existing $ENV_NAME environment..."
-          railway environment delete "$ENV_NAME" --yes 2>&1 || echo "No existing environment to delete"
+          # Check if the PR environment exists and is valid
+          echo "Checking if environment $ENV_NAME exists..."
+          if railway link --project ${{ secrets.RAILWAY_PROJECT_ID }} --environment "$ENV_NAME" --workspace ${{ secrets.RAILWAY_WORKSPACE_ID }} 2>&1; then
+            echo "Environment $ENV_NAME exists and is valid"
+            DEPLOY_ENV="$ENV_NAME"
+          else
+            echo "Environment $ENV_NAME does not exist or is invalid, trying to create..."
 
-          # Create a new environment by duplicating from production
-          # This copies all services, databases, and their configurations
-          echo "Creating environment $ENV_NAME by duplicating from production..."
-          railway environment new "$ENV_NAME" --duplicate production 2>&1 || echo "Environment creation failed or already exists"
+            # Try to delete any orphaned environment first
+            railway link --project ${{ secrets.RAILWAY_PROJECT_ID }} --environment production --workspace ${{ secrets.RAILWAY_WORKSPACE_ID }}
+            railway environment delete "$ENV_NAME" --yes 2>&1 || true
+            sleep 2  # Wait for deletion to propagate
 
-          # Link to the new environment
-          echo "Linking to environment $ENV_NAME..."
+            # Create a new environment by duplicating from production
+            echo "Creating environment $ENV_NAME by duplicating from production..."
+            if railway environment new "$ENV_NAME" --duplicate production 2>&1; then
+              echo "Environment $ENV_NAME created successfully"
+              DEPLOY_ENV="$ENV_NAME"
+            else
+              echo "Failed to create PR environment, using production as fallback"
+              DEPLOY_ENV="production"
+            fi
+          fi
+
+          # Link to the chosen environment
+          echo "Linking to environment $DEPLOY_ENV..."
           railway link \
             --project ${{ secrets.RAILWAY_PROJECT_ID }} \
-            --environment "$ENV_NAME" \
-            --workspace ${{ secrets.RAILWAY_WORKSPACE_ID }} 2>&1 || \
-          railway link \
-            --project ${{ secrets.RAILWAY_PROJECT_ID }} \
-            --environment production \
+            --environment "$DEPLOY_ENV" \
             --workspace ${{ secrets.RAILWAY_WORKSPACE_ID }}
 
           # Get current environment status
           railway status 2>&1 || true
 
-          echo "env_name=$ENV_NAME" >> $GITHUB_OUTPUT
+          echo "env_name=$DEPLOY_ENV" >> $GITHUB_OUTPUT
 
       - name: Deploy Backend
         env:
           RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
         run: |
-          ENV_NAME="pr-${{ env.PR_NUMBER }}"
-          echo "Deploying Backend to environment: $ENV_NAME"
+          DEPLOY_ENV="${{ steps.env.outputs.env_name }}"
+          echo "Deploying Backend to environment: $DEPLOY_ENV"
 
-          # Try to link to PR environment, fallback to production
           railway link \
             --project ${{ secrets.RAILWAY_PROJECT_ID }} \
-            --environment "$ENV_NAME" \
-            --workspace ${{ secrets.RAILWAY_WORKSPACE_ID }} 2>&1 || \
-          railway link \
-            --project ${{ secrets.RAILWAY_PROJECT_ID }} \
-            --environment production \
+            --environment "$DEPLOY_ENV" \
             --workspace ${{ secrets.RAILWAY_WORKSPACE_ID }}
 
           cd learn-greek-easy-backend
@@ -136,17 +142,12 @@ jobs:
         env:
           RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
         run: |
-          ENV_NAME="pr-${{ env.PR_NUMBER }}"
-          echo "Deploying Frontend to environment: $ENV_NAME"
+          DEPLOY_ENV="${{ steps.env.outputs.env_name }}"
+          echo "Deploying Frontend to environment: $DEPLOY_ENV"
 
-          # Try to link to PR environment, fallback to production
           railway link \
             --project ${{ secrets.RAILWAY_PROJECT_ID }} \
-            --environment "$ENV_NAME" \
-            --workspace ${{ secrets.RAILWAY_WORKSPACE_ID }} 2>&1 || \
-          railway link \
-            --project ${{ secrets.RAILWAY_PROJECT_ID }} \
-            --environment production \
+            --environment "$DEPLOY_ENV" \
             --workspace ${{ secrets.RAILWAY_WORKSPACE_ID }}
 
           cd learn-greek-easy-frontend
@@ -159,16 +160,11 @@ jobs:
         env:
           RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
         run: |
-          ENV_NAME="pr-${{ env.PR_NUMBER }}"
+          DEPLOY_ENV="${{ steps.env.outputs.env_name }}"
 
-          # Try to link to PR environment, fallback to production
           railway link \
             --project ${{ secrets.RAILWAY_PROJECT_ID }} \
-            --environment "$ENV_NAME" \
-            --workspace ${{ secrets.RAILWAY_WORKSPACE_ID }} 2>&1 || \
-          railway link \
-            --project ${{ secrets.RAILWAY_PROJECT_ID }} \
-            --environment production \
+            --environment "$DEPLOY_ENV" \
             --workspace ${{ secrets.RAILWAY_WORKSPACE_ID }}
 
           # Generate domains for services
@@ -182,7 +178,7 @@ jobs:
           # Output the URLs (use actual domains if available, else fallback)
           echo "frontend_url=https://learn-greek-frontend.up.railway.app" >> $GITHUB_OUTPUT
           echo "backend_url=https://learn-greek-backend.up.railway.app" >> $GITHUB_OUTPUT
-          echo "environment_id=$ENV_NAME" >> $GITHUB_OUTPUT
+          echo "environment_id=$DEPLOY_ENV" >> $GITHUB_OUTPUT
 
   # Job 4: Post deployment comment on PR
   comment-results:
