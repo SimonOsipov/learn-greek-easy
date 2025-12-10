@@ -373,12 +373,178 @@ jobs:
               context: 'preview/a11y'
             });
 
-  # Job 6: Report deployment results and test outcomes
+  # Job 6: Lighthouse CI performance testing
+  lighthouse:
+    name: Lighthouse CI
+    needs: [deploy, health-check]
+    if: needs.health-check.outputs.status == 'success'
+    runs-on: ubuntu-latest
+    outputs:
+      desktop_score: ${{ steps.lighthouse.outputs.desktop_score }}
+      mobile_score: ${{ steps.lighthouse.outputs.mobile_score }}
+      desktop_a11y: ${{ steps.lighthouse.outputs.desktop_a11y }}
+      mobile_a11y: ${{ steps.lighthouse.outputs.mobile_a11y }}
+      report_url: ${{ steps.lighthouse.outputs.report_url }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Lighthouse CI
+        run: npm install -g @lhci/cli
+
+      - name: Run Lighthouse CI (Desktop)
+        id: lhci-desktop
+        working-directory: learn-greek-easy-frontend
+        env:
+          LIGHTHOUSE_URLS: "${{ needs.deploy.outputs.frontend_url }},${{ needs.deploy.outputs.frontend_url }}/login,${{ needs.deploy.outputs.frontend_url }}/register"
+        run: |
+          echo "=== Running Lighthouse CI (Desktop) ==="
+          echo "URLs: $LIGHTHOUSE_URLS"
+
+          lhci collect --config=lighthouserc.cjs
+          lhci assert --config=lighthouserc.cjs || true
+          lhci upload --config=lighthouserc.cjs
+
+          # Debug: List files in .lighthouseci
+          echo "=== Files in .lighthouseci ==="
+          ls -la .lighthouseci/ 2>/dev/null || echo "Directory not found"
+
+          # Extract scores from LHR JSON files (lhr-*.json)
+          LHR_FILE=$(ls .lighthouseci/lhr-*.json 2>/dev/null | head -1)
+          if [ -n "$LHR_FILE" ]; then
+            echo "=== Desktop Results (from $LHR_FILE) ==="
+            PERF_SCORE=$(cat "$LHR_FILE" | jq -r '.categories.performance.score * 100 | floor')
+            A11Y_SCORE=$(cat "$LHR_FILE" | jq -r '.categories.accessibility.score * 100 | floor')
+            echo "Performance: $PERF_SCORE"
+            echo "Accessibility: $A11Y_SCORE"
+            echo "desktop_score=$PERF_SCORE" >> $GITHUB_OUTPUT
+            echo "desktop_a11y=$A11Y_SCORE" >> $GITHUB_OUTPUT
+          else
+            echo "Warning: No LHR JSON files found in .lighthouseci"
+            echo "desktop_score=0" >> $GITHUB_OUTPUT
+            echo "desktop_a11y=0" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Preserve Desktop Reports
+        working-directory: learn-greek-easy-frontend
+        run: |
+          # Save desktop reports before mobile run overwrites them
+          mkdir -p lighthouse-reports/desktop
+          cp -r .lighthouseci/*.html lighthouse-reports/desktop/ 2>/dev/null || true
+          cp -r .lighthouseci/*.json lighthouse-reports/desktop/ 2>/dev/null || true
+
+          # Save desktop links.json for report URL
+          if [ -f .lighthouseci/links.json ]; then
+            cp .lighthouseci/links.json lighthouse-reports/desktop-links.json
+          fi
+
+          # Clear for mobile run
+          rm -rf .lighthouseci
+
+      - name: Run Lighthouse CI (Mobile)
+        id: lhci-mobile
+        working-directory: learn-greek-easy-frontend
+        env:
+          LIGHTHOUSE_URLS: "${{ needs.deploy.outputs.frontend_url }},${{ needs.deploy.outputs.frontend_url }}/login,${{ needs.deploy.outputs.frontend_url }}/register"
+        run: |
+          echo "=== Running Lighthouse CI (Mobile) ==="
+          echo "URLs: $LIGHTHOUSE_URLS"
+
+          lhci collect --config=lighthouserc.mobile.cjs
+          lhci assert --config=lighthouserc.mobile.cjs || true
+          lhci upload --config=lighthouserc.mobile.cjs
+
+          # Debug: List files in .lighthouseci
+          echo "=== Files in .lighthouseci ==="
+          ls -la .lighthouseci/ 2>/dev/null || echo "Directory not found"
+
+          # Extract scores from LHR JSON files (lhr-*.json)
+          LHR_FILE=$(ls .lighthouseci/lhr-*.json 2>/dev/null | head -1)
+          if [ -n "$LHR_FILE" ]; then
+            echo "=== Mobile Results (from $LHR_FILE) ==="
+            PERF_SCORE=$(cat "$LHR_FILE" | jq -r '.categories.performance.score * 100 | floor')
+            A11Y_SCORE=$(cat "$LHR_FILE" | jq -r '.categories.accessibility.score * 100 | floor')
+            echo "Performance: $PERF_SCORE"
+            echo "Accessibility: $A11Y_SCORE"
+            echo "mobile_score=$PERF_SCORE" >> $GITHUB_OUTPUT
+            echo "mobile_a11y=$A11Y_SCORE" >> $GITHUB_OUTPUT
+          else
+            echo "Warning: No LHR JSON files found in .lighthouseci"
+            echo "mobile_score=0" >> $GITHUB_OUTPUT
+            echo "mobile_a11y=0" >> $GITHUB_OUTPUT
+          fi
+
+          # Save mobile reports
+          mkdir -p lighthouse-reports/mobile
+          cp -r .lighthouseci/*.html lighthouse-reports/mobile/ 2>/dev/null || true
+          cp -r .lighthouseci/*.json lighthouse-reports/mobile/ 2>/dev/null || true
+
+      - name: Aggregate Results
+        id: lighthouse
+        working-directory: learn-greek-easy-frontend
+        run: |
+          echo "desktop_score=${{ steps.lhci-desktop.outputs.desktop_score }}" >> $GITHUB_OUTPUT
+          echo "mobile_score=${{ steps.lhci-mobile.outputs.mobile_score }}" >> $GITHUB_OUTPUT
+          echo "desktop_a11y=${{ steps.lhci-desktop.outputs.desktop_a11y }}" >> $GITHUB_OUTPUT
+          echo "mobile_a11y=${{ steps.lhci-mobile.outputs.mobile_a11y }}" >> $GITHUB_OUTPUT
+
+          # Get report URL from desktop links (first uploaded)
+          if [ -f lighthouse-reports/desktop-links.json ]; then
+            REPORT_URL=$(cat lighthouse-reports/desktop-links.json | jq -r 'to_entries[0].value // empty')
+            echo "report_url=$REPORT_URL" >> $GITHUB_OUTPUT
+            echo "Report URL: $REPORT_URL"
+          else
+            echo "report_url=" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload Lighthouse Reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-reports
+          path: learn-greek-easy-frontend/lighthouse-reports/
+          retention-days: 7
+
+      - name: Set Lighthouse Status Check
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const desktopScore = parseInt('${{ steps.lighthouse.outputs.desktop_score }}') || 0;
+            const mobileScore = parseInt('${{ steps.lighthouse.outputs.mobile_score }}') || 0;
+            const reportUrl = '${{ steps.lighthouse.outputs.report_url }}';
+
+            // Determine status based on thresholds
+            // Desktop: 80+ = success, 60-79 = warning, <60 = failure
+            // Mobile: 70+ = success, 50-69 = warning, <50 = failure
+            let state = 'success';
+            if (desktopScore < 60 || mobileScore < 50) {
+              state = 'failure';
+            } else if (desktopScore < 80 || mobileScore < 70) {
+              state = 'pending'; // Warning state
+            }
+
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: context.sha,
+              state: state,
+              target_url: reportUrl || '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}',
+              description: `Desktop: ${desktopScore}, Mobile: ${mobileScore}`,
+              context: 'preview/lighthouse'
+            });
+
+  # Job 7: Report deployment results and test outcomes
   report-results:
     name: Report Results
     # TEMPORARILY REMOVED ci-tests DEPENDENCY - UNCOMMENT WHEN DONE TESTING
     # needs: [ci-tests, should-deploy, deploy, health-check]
-    needs: [should-deploy, deploy, health-check, accessibility]
+    needs: [should-deploy, deploy, health-check, accessibility, lighthouse]
     # FUTURE: Add more test jobs to needs array when implemented
     # needs: [should-deploy, deploy, health-check, lighthouse, visual-regression, accessibility]
     if: always() && needs.should-deploy.outputs.deploy == 'true'
@@ -413,9 +579,25 @@ jobs:
               ? 'Skipped (health check failed)'
               : `${a11yViolations} critical/serious violation(s)`;
 
+            // Lighthouse scores
+            const desktopScore = '${{ needs.lighthouse.outputs.desktop_score }}' || '0';
+            const mobileScore = '${{ needs.lighthouse.outputs.mobile_score }}' || '0';
+            const lighthouseReportUrl = '${{ needs.lighthouse.outputs.report_url }}';
+            const desktopScoreNum = parseInt(desktopScore) || 0;
+            const mobileScoreNum = parseInt(mobileScore) || 0;
+
+            // Lighthouse status icon based on thresholds (Desktop: 80+, Mobile: 70+)
+            let lighthouseIcon = ':white_check_mark:';
+            if (desktopScoreNum < 60 || mobileScoreNum < 50) {
+              lighthouseIcon = ':x:';
+            } else if (desktopScoreNum < 80 || mobileScoreNum < 70) {
+              lighthouseIcon = ':yellow_circle:';
+            }
+            const lighthouseDetails = lighthouseReportUrl
+              ? `[Desktop: ${desktopScore}, Mobile: ${mobileScore}](${lighthouseReportUrl})`
+              : `Desktop: ${desktopScore}, Mobile: ${mobileScore}`;
+
             // FUTURE: Get more test job outputs when implemented
-            // const desktopScore = '${{ needs.lighthouse.outputs.desktop_score }}';
-            // const mobileScore = '${{ needs.lighthouse.outputs.mobile_score }}';
             // const visualStatus = '${{ needs.visual-regression.outputs.status }}';
 
             let body;
@@ -441,16 +623,17 @@ jobs:
               body += `|------|--------|---------|\n`;
               body += `| Health Check | ${healthIcon} | ${healthDetails} |\n`;
               body += `| Accessibility | ${a11yIcon} | ${a11yDetails} |\n`;
+              body += `| Lighthouse | ${lighthouseIcon} | ${lighthouseDetails} |\n`;
               // FUTURE: Add more test results when implemented
-              // body += `| Lighthouse (Desktop) | ${desktopIcon} | Performance: ${desktopScore} |\n`;
-              // body += `| Lighthouse (Mobile) | ${mobileIcon} | Performance: ${mobileScore} |\n`;
               // body += `| Visual Regression | ${visualIcon} | ${visualDetails} |\n`;
               body += `\n`;
 
               // Status indicator based on all checks
-              const allPassed = healthStatus === 'success' && a11yStatus === 'success';
-              const hasWarnings = (healthStatus === 'success' || a11yStatus === 'success') &&
-                                  (healthStatus !== 'success' || a11yStatus !== 'success');
+              const lighthousePassed = desktopScoreNum >= 80 && mobileScoreNum >= 70;
+              const lighthouseWarning = desktopScoreNum >= 60 && mobileScoreNum >= 50;
+              const allPassed = healthStatus === 'success' && a11yStatus === 'success' && lighthousePassed;
+              const hasWarnings = (healthStatus === 'success' || a11yStatus === 'success' || lighthouseWarning) &&
+                                  !(healthStatus === 'success' && a11yStatus === 'success' && lighthousePassed);
 
               if (allPassed) {
                 body += `:white_check_mark: **All checks passed!** Preview environment is ready for review.\n\n`;
@@ -460,11 +643,7 @@ jobs:
                 body += `:x: **Checks failed.** Please review the results above and fix issues.\n\n`;
               }
 
-              // FUTURE: When more test jobs are added, expand this logic:
-              // const allPassed = healthStatus === 'success' &&
-              //                  desktopScore >= 80 &&
-              //                  mobileScore >= 70 &&
-              //                  a11yStatus === 'success';
+              // FUTURE: When more test jobs are added, expand this logic to include visual-regression, etc.
 
               // Deployment metadata (collapsible)
               body += `---\n`;
@@ -524,7 +703,7 @@ jobs:
               });
             }
 
-  # Job 7: Post skip comment for docs-only PRs
+  # Job 8: Post skip comment for docs-only PRs
   skip-comment:
     name: Post Skip Comment
     needs: [should-deploy]
