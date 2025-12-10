@@ -30,10 +30,18 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.exceptions import DeckNotFoundException
 from src.core.sm2 import calculate_next_review_date, calculate_sm2
 from src.db.models import Card, CardStatus, Review
 from src.repositories import CardStatisticsRepository, ReviewRepository, UserDeckProgressRepository
-from src.schemas.sm2 import SM2BulkReviewResult, SM2ReviewResult
+from src.repositories.deck import DeckRepository
+from src.schemas.sm2 import (
+    SM2BulkReviewResult,
+    SM2ReviewResult,
+    StudyQueue,
+    StudyQueueCard,
+    StudyQueueRequest,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -65,6 +73,7 @@ class SM2Service:
         self.stats_repo = CardStatisticsRepository(db)
         self.review_repo = ReviewRepository(db)
         self.progress_repo = UserDeckProgressRepository(db)
+        self.deck_repo = DeckRepository(db)
 
     async def process_review(
         self,
@@ -269,6 +278,224 @@ class SM2Service:
             failed=failed_count,
             results=results,
         )
+
+    # =========================================================================
+    # Study Queue Methods
+    # =========================================================================
+
+    async def get_study_queue(
+        self,
+        user_id: UUID,
+        request: StudyQueueRequest,
+    ) -> StudyQueue:
+        """Get study queue with due cards and optional new cards.
+
+        The queue prioritizes:
+        1. Overdue cards (past next_review_date) - ordered oldest first
+        2. Cards due today - ordered by next_review_date
+        3. New cards (if include_new=True)
+
+        Args:
+            user_id: User requesting study queue
+            request: Queue parameters (deck_id, limits, etc.)
+
+        Returns:
+            StudyQueue with cards to study
+
+        Raises:
+            DeckNotFoundException: If deck_id specified but not found or inactive
+        """
+        deck_name = "All Decks"
+
+        # Validate deck if specified
+        if request.deck_id:
+            deck = await self.deck_repo.get(request.deck_id)
+            if not deck or not deck.is_active:
+                raise DeckNotFoundException(deck_id=str(request.deck_id))
+            deck_name = deck.name
+
+        logger.debug(
+            "Building study queue",
+            extra={
+                "user_id": str(user_id),
+                "deck_id": str(request.deck_id) if request.deck_id else "all",
+                "limit": request.limit,
+                "include_new": request.include_new,
+            },
+        )
+
+        # Get due cards (already ordered by next_review_date - oldest first)
+        due_cards = await self.stats_repo.get_due_cards(
+            user_id=user_id,
+            deck_id=request.deck_id,
+            limit=request.limit,
+        )
+
+        logger.debug(
+            "Found due cards",
+            extra={
+                "user_id": str(user_id),
+                "due_count": len(due_cards),
+            },
+        )
+
+        # Get new cards if requested and there's room
+        new_cards: list[Card] = []
+        if request.include_new and len(due_cards) < request.limit:
+            remaining_slots = min(
+                request.new_cards_limit,
+                request.limit - len(due_cards),
+            )
+            if remaining_slots > 0:
+                new_cards = await self._get_new_cards(
+                    user_id=user_id,
+                    deck_id=request.deck_id,
+                    limit=remaining_slots,
+                )
+
+                logger.debug(
+                    "Added new cards to queue",
+                    extra={
+                        "user_id": str(user_id),
+                        "new_count": len(new_cards),
+                    },
+                )
+
+        # Build queue cards list
+        queue_cards: list[StudyQueueCard] = []
+
+        # Add due cards first (have statistics) - AC #1
+        for stats in due_cards:
+            card = stats.card  # Eager loaded
+            queue_cards.append(
+                StudyQueueCard(
+                    card_id=card.id,
+                    front_text=card.front_text,
+                    back_text=card.back_text,
+                    example_sentence=card.example_sentence,
+                    pronunciation=card.pronunciation,
+                    difficulty=card.difficulty,
+                    status=stats.status,
+                    is_new=False,
+                    due_date=stats.next_review_date,
+                    easiness_factor=stats.easiness_factor,
+                    interval=stats.interval,
+                )
+            )
+
+        # Add new cards (no statistics yet) - AC #1
+        for card in new_cards:
+            queue_cards.append(
+                StudyQueueCard(
+                    card_id=card.id,
+                    front_text=card.front_text,
+                    back_text=card.back_text,
+                    example_sentence=card.example_sentence,
+                    pronunciation=card.pronunciation,
+                    difficulty=card.difficulty,
+                    status=CardStatus.NEW,
+                    is_new=True,
+                    due_date=None,
+                    easiness_factor=None,
+                    interval=None,
+                )
+            )
+
+        logger.info(
+            "Study queue built successfully",
+            extra={
+                "user_id": str(user_id),
+                "deck_id": str(request.deck_id) if request.deck_id else "all",
+                "total_due": len(due_cards),
+                "total_new": len(new_cards),
+                "total_in_queue": len(queue_cards),
+            },
+        )
+
+        # Use a zero UUID as placeholder for "all decks" if no deck_id specified
+        # This matches the schema expectation for deck_id being required
+        return StudyQueue(
+            deck_id=request.deck_id or UUID(int=0),
+            deck_name=deck_name,
+            total_due=len(due_cards),
+            total_new=len(new_cards),
+            total_in_queue=len(queue_cards),
+            cards=queue_cards,
+        )
+
+    async def _get_new_cards(
+        self,
+        user_id: UUID,
+        deck_id: UUID | None,
+        limit: int,
+    ) -> list[Card]:
+        """Get cards the user hasn't studied yet.
+
+        Finds cards that don't have CardStatistics records for this user.
+        Cards are returned ordered by order_index, then created_at.
+
+        Args:
+            user_id: User ID
+            deck_id: Optional deck filter
+            limit: Maximum cards to return
+
+        Returns:
+            List of Card objects not yet studied by user
+        """
+        return await self.stats_repo.get_new_cards_for_deck(
+            user_id=user_id,
+            deck_id=deck_id,
+            limit=limit,
+        )
+
+    async def get_study_stats(
+        self,
+        user_id: UUID,
+        deck_id: UUID | None = None,
+    ) -> dict:
+        """Get study statistics for a user.
+
+        Returns counts by status, reviews today, streak, and due count.
+
+        Args:
+            user_id: User ID
+            deck_id: Optional deck filter
+
+        Returns:
+            Dict with counts by status, due today, streak, etc.
+            {
+                "by_status": {"new": int, "learning": int, "review": int, "mastered": int, "due": int},
+                "reviews_today": int,
+                "current_streak": int,
+                "due_today": int,
+            }
+        """
+        logger.debug(
+            "Getting study stats",
+            extra={
+                "user_id": str(user_id),
+                "deck_id": str(deck_id) if deck_id else "all",
+            },
+        )
+
+        # Count by status (includes "due" count)
+        status_counts = await self.stats_repo.count_by_status(
+            user_id=user_id,
+            deck_id=deck_id,
+        )
+
+        # Get reviews today
+        reviews_today = await self.review_repo.count_reviews_today(user_id)
+
+        # Get streak
+        streak = await self.review_repo.get_streak(user_id)
+
+        return {
+            "by_status": status_counts,
+            "reviews_today": reviews_today,
+            "current_streak": streak,
+            "due_today": status_counts.get("due", 0),
+        }
 
     async def _process_single_review_safe(
         self,
