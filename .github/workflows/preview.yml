@@ -632,7 +632,6 @@ jobs:
     outputs:
       build_url: ${{ steps.chromatic.outputs.buildUrl }}
       change_count: ${{ steps.chromatic.outputs.changeCount }}
-      status: ${{ steps.status.outputs.status }}
 
     steps:
       - name: Checkout code
@@ -669,38 +668,6 @@ jobs:
         env:
           CHROMATIC_ARCHIVE_LOCATION: ./test-results
 
-      - name: Determine Status
-        id: status
-        run: |
-          CHANGE_COUNT="${{ steps.chromatic.outputs.changeCount }}"
-          if [ "$CHANGE_COUNT" = "0" ] || [ -z "$CHANGE_COUNT" ]; then
-            echo "status=success" >> $GITHUB_OUTPUT
-          else
-            echo "status=changes_detected" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Create Visual Status Check
-        if: always()
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const changeCount = '${{ steps.chromatic.outputs.changeCount }}' || '0';
-            const buildUrl = '${{ steps.chromatic.outputs.buildUrl }}';
-            const status = changeCount === '0' ? 'success' : 'pending';
-            const description = changeCount === '0'
-              ? 'No visual changes detected'
-              : `${changeCount} visual change(s) need review`;
-
-            await github.rest.repos.createCommitStatus({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              sha: context.sha,
-              state: status,
-              target_url: buildUrl || '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}',
-              description: description,
-              context: 'preview/visual'
-            });
 
   # =============================================================================
   # JOB 9: Report Results
@@ -759,10 +726,18 @@ jobs:
               ? `[Desktop: ${desktopScore}, Mobile: ${mobileScore}](${lighthouseReportUrl})`
               : `Desktop: ${desktopScore}, Mobile: ${mobileScore}`;
 
-            // Visual regression (Chromatic) status
-            const visualStatus = '${{ needs.chromatic.outputs.status }}' || 'skipped';
+            // Visual regression (Chromatic) status - derive from change_count
             const visualChangeCount = '${{ needs.chromatic.outputs.change_count }}' || '0';
             const visualBuildUrl = '${{ needs.chromatic.outputs.build_url }}';
+            const chromaticResult = '${{ needs.chromatic.result }}';
+
+            // Determine visual status from change count (Chromatic's native status handles auto-update on approval)
+            const visualChangeCountNum = parseInt(visualChangeCount) || 0;
+            const visualStatus = chromaticResult === 'skipped' ? 'skipped'
+              : chromaticResult !== 'success' ? 'failed'
+              : visualChangeCountNum === 0 ? 'success'
+              : 'changes_detected';
+
             const visualIcon = visualStatus === 'success' ? ':white_check_mark:'
               : visualStatus === 'skipped' ? ':yellow_circle:'
               : visualStatus === 'changes_detected' ? ':yellow_circle:'
