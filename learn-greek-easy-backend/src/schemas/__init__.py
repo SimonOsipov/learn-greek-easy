@@ -36,6 +36,18 @@ from src.schemas.review import (
     ReviewResponse,
     ReviewSubmit,
 )
+
+# SM-2 schemas
+from src.schemas.sm2 import (
+    CardInitializationRequest,
+    CardInitializationResult,
+    SM2BulkReviewResult,
+    SM2CalculationResponse,
+    SM2ReviewResult,
+    StudyQueue,
+    StudyQueueCard,
+    StudyQueueRequest,
+)
 from src.schemas.user import (
     TokenPayload,
     TokenRefresh,
@@ -85,4 +97,13 @@ __all__ = [
     "ReviewHistoryResponse",
     "BulkReviewSubmit",
     "BulkReviewResponse",
+    # SM-2
+    "SM2CalculationResponse",
+    "SM2ReviewResult",
+    "SM2BulkReviewResult",
+    "StudyQueueCard",
+    "StudyQueue",
+    "StudyQueueRequest",
+    "CardInitializationRequest",
+    "CardInitializationResult",
 ]
