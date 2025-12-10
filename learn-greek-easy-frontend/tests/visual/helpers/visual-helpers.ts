@@ -59,7 +59,8 @@ function generateValidMockToken(userId: string): string {
  * @param page - Playwright page object
  */
 export async function loginForVisualTest(page: Page): Promise<void> {
-  const userId = 'visual-test-user';
+  // Use existing user from mockData.ts - 'visual-test-user' doesn't exist!
+  const userId = 'user-1';
   const mockToken = generateValidMockToken(userId);
 
   // Set auth state BEFORE page loads using addInitScript
@@ -79,10 +80,11 @@ export async function loginForVisualTest(page: Page): Promise<void> {
     },
     {
       state: {
+        // User data must match user-1 from mockData.ts for verifyToken() to succeed
         user: {
           id: userId,
-          email: 'visual@test.com',
-          name: 'Visual Test User',
+          email: 'demo@learngreekeasy.com',
+          name: 'Demo User',
           role: 'premium',
           avatar: undefined,
           preferences: {

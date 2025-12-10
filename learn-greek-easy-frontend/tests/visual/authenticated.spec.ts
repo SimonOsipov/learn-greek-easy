@@ -24,7 +24,7 @@ test.describe('Authenticated Pages Visual Tests', () => {
 
     // Wait for dashboard content to load
     await expect(page.getByRole('heading').first()).toBeVisible();
-    await takeSnapshot(page, 'Dashboard', testInfo);
+    await takeSnapshot(page, 'Dashboard Page', testInfo);
   });
 
   test('Decks Page', async ({ page }, testInfo) => {
@@ -34,7 +34,7 @@ test.describe('Authenticated Pages Visual Tests', () => {
     // Wait for deck list to load
     await expect(page.getByRole('heading', { name: /decks/i })).toBeVisible();
     await page.waitForTimeout(1000); // Wait for deck cards to render
-    await takeSnapshot(page, 'Decks List', testInfo);
+    await takeSnapshot(page, 'Decks Page', testInfo);
   });
 
   test('Profile Page', async ({ page }, testInfo) => {
