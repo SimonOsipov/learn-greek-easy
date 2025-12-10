@@ -591,6 +591,71 @@ mcp__railway-mcp-server__get-logs
 
 **Note**: Railway MCP does not support delete/destroy operations. Use the Railway CLI or Dashboard for cleanup.
 
+---
+
+## PR Preview Deployments
+
+PR preview deployments provide automatic testing and deployment for every pull request. This section covers the deployed workflow and how to use it.
+
+### Overview
+
+Every pull request automatically receives a preview deployment on Railway's dev environment. This includes:
+- Full stack deployment (frontend, backend, database, Redis)
+- Automated testing (health, performance, visual, accessibility)
+- PR comment with deployment URLs and test results
+
+### Workflow
+
+```
+PR Opened/Updated --> CI Tests --> Deploy to Dev Environment --> Run Tests --> Report Results
+PR Closed/Merged --> Auto-stop Services (environment preserved for stable URLs)
+```
+
+### Preview URLs
+
+The dev environment uses stable URLs (for OAuth callback compatibility):
+
+| Service | URL |
+|---------|-----|
+| Frontend | https://frontend-dev-8db9.up.railway.app |
+| Backend | https://backend-dev-bc44.up.railway.app |
+| API Docs | https://backend-dev-bc44.up.railway.app/docs |
+
+### Test Results
+
+| Test | Purpose | Threshold |
+|------|---------|-----------|
+| Health Check | Verify deployment works | All endpoints 200 |
+| Lighthouse (Desktop) | Performance metrics | Score >= 80 |
+| Lighthouse (Mobile) | Mobile performance | Score >= 70 |
+| Visual Regression | UI change detection | Review in Chromatic |
+| Accessibility | WCAG 2.1 AA compliance | No critical/serious violations |
+
+### Skipping Preview Deployment
+
+Documentation-only changes (`.md` files, `docs/` folder) skip preview automatically.
+
+### Manual Scripts
+
+```bash
+# Run health checks manually
+./scripts/preview-health-check.sh <FRONTEND_URL> <BACKEND_URL> [MAX_RETRIES] [RETRY_INTERVAL]
+
+# Example
+./scripts/preview-health-check.sh https://frontend-dev-8db9.up.railway.app https://backend-dev-bc44.up.railway.app 30 10
+
+# Run API smoke tests
+./scripts/preview-api-smoke.sh <BACKEND_URL>
+
+# Example
+./scripts/preview-api-smoke.sh https://backend-dev-bc44.up.railway.app
+
+# Manual environment management (legacy per-PR environments)
+./scripts/railway-preview.sh <PR_NUMBER> create|deploy|destroy
+```
+
+For comprehensive documentation, see [docs/pr-preview-deployments.md](docs/pr-preview-deployments.md).
+
 <!-- BACKLOG.MD MCP GUIDELINES START -->
 
 <CRITICAL_INSTRUCTION>
