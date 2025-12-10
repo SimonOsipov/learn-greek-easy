@@ -3,11 +3,11 @@
 from datetime import date, datetime
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, not_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from src.db.models import Card, CardStatistics, CardStatus, UserDeckProgress
+from src.db.models import Card, CardStatistics, CardStatus, Deck, UserDeckProgress
 from src.repositories.base import BaseRepository
 
 
@@ -267,3 +267,225 @@ class CardStatisticsRepository(BaseRepository[CardStatistics]):
         self.db.add(stats)
         await self.db.flush()
         return stats
+
+    async def get_new_cards_for_deck(
+        self,
+        user_id: UUID,
+        deck_id: UUID | None = None,
+        limit: int = 10,
+    ) -> list[Card]:
+        """Get cards that user hasn't studied yet.
+
+        Finds cards that don't have CardStatistics records for this user.
+        Returns Card objects (not CardStatistics) since stats don't exist yet.
+
+        Args:
+            user_id: User UUID
+            deck_id: Optional deck filter
+            limit: Maximum cards to return
+
+        Returns:
+            List of Card objects not yet studied by user
+
+        Use Case:
+            Study queue - include new cards alongside due cards
+        """
+        # Subquery to find card_ids that have statistics for this user
+        studied_cards_subq = (
+            select(CardStatistics.card_id)
+            .where(CardStatistics.user_id == user_id)
+            .scalar_subquery()
+        )
+
+        # Main query: cards NOT in studied_cards
+        query = (
+            select(Card)
+            .join(Deck, Card.deck_id == Deck.id)
+            .where(Deck.is_active == True)  # noqa: E712
+            .where(not_(Card.id.in_(studied_cards_subq)))
+            .order_by(Card.order_index, Card.created_at)
+            .limit(limit)
+        )
+
+        if deck_id is not None:
+            query = query.where(Card.deck_id == deck_id)
+
+        result = await self.db.execute(query)
+        return list(result.scalars().all())
+
+    async def count_new_cards_for_deck(
+        self,
+        user_id: UUID,
+        deck_id: UUID,
+    ) -> int:
+        """Count cards not yet studied by user in a deck.
+
+        Args:
+            user_id: User UUID
+            deck_id: Deck UUID
+
+        Returns:
+            Count of unstudied cards
+        """
+        # Subquery to find studied card_ids
+        studied_cards_subq = (
+            select(CardStatistics.card_id)
+            .where(CardStatistics.user_id == user_id)
+            .scalar_subquery()
+        )
+
+        # Count cards not in subquery
+        query = (
+            select(func.count())
+            .select_from(Card)
+            .where(Card.deck_id == deck_id)
+            .where(not_(Card.id.in_(studied_cards_subq)))
+        )
+
+        result = await self.db.execute(query)
+        return result.scalar_one()
+
+    async def count_by_status(
+        self,
+        user_id: UUID,
+        deck_id: UUID | None = None,
+    ) -> dict[str, int]:
+        """Count cards by status for a user.
+
+        Args:
+            user_id: User UUID
+            deck_id: Optional deck filter
+
+        Returns:
+            Dict with status counts: {
+                "new": int,
+                "learning": int,
+                "review": int,
+                "mastered": int,
+                "due": int,  # Cards due today or overdue
+            }
+
+        Use Case:
+            Progress dashboard, deck statistics
+        """
+        # Base query
+        query = (
+            select(CardStatistics.status, func.count().label("count"))
+            .where(CardStatistics.user_id == user_id)
+            .group_by(CardStatistics.status)
+        )
+
+        if deck_id is not None:
+            query = query.join(Card).where(Card.deck_id == deck_id)
+
+        result = await self.db.execute(query)
+        rows = result.all()
+
+        # Initialize all statuses to 0
+        counts: dict[str, int] = {
+            "new": 0,
+            "learning": 0,
+            "review": 0,
+            "mastered": 0,
+        }
+
+        # Fill in actual counts
+        for status, count in rows:
+            counts[status.value] = count
+
+        # Count due cards (separate query)
+        due_query = (
+            select(func.count())
+            .select_from(CardStatistics)
+            .where(CardStatistics.user_id == user_id)
+            .where(CardStatistics.next_review_date <= date.today())
+        )
+
+        if deck_id is not None:
+            due_query = due_query.join(Card).where(Card.deck_id == deck_id)
+
+        due_result = await self.db.execute(due_query)
+        counts["due"] = due_result.scalar_one()
+
+        return counts
+
+    async def get_user_stats_for_deck(
+        self,
+        user_id: UUID,
+        deck_id: UUID,
+    ) -> list[CardStatistics]:
+        """Get all statistics for a user in a specific deck.
+
+        Args:
+            user_id: User UUID
+            deck_id: Deck UUID
+
+        Returns:
+            List of CardStatistics with card data loaded
+
+        Use Case:
+            Deck detail view, export progress
+        """
+        query = (
+            select(CardStatistics)
+            .join(Card)
+            .where(CardStatistics.user_id == user_id)
+            .where(Card.deck_id == deck_id)
+            .options(selectinload(CardStatistics.card))
+            .order_by(Card.order_index)
+        )
+
+        result = await self.db.execute(query)
+        return list(result.scalars().all())
+
+    async def bulk_create_statistics(
+        self,
+        user_id: UUID,
+        card_ids: list[UUID],
+    ) -> list[CardStatistics]:
+        """Create statistics for multiple cards efficiently.
+
+        Skips cards that already have statistics for this user.
+
+        Args:
+            user_id: User UUID
+            card_ids: Card UUIDs to initialize
+
+        Returns:
+            List of newly created CardStatistics
+
+        Use Case:
+            Initialize deck for user, bulk operations
+        """
+        if not card_ids:
+            return []
+
+        # Find which cards already have statistics
+        existing_query = (
+            select(CardStatistics.card_id)
+            .where(CardStatistics.user_id == user_id)
+            .where(CardStatistics.card_id.in_(card_ids))
+        )
+        result = await self.db.execute(existing_query)
+        existing_ids = {row[0] for row in result.all()}
+
+        # Create statistics for new cards only
+        new_stats = []
+        for card_id in card_ids:
+            if card_id not in existing_ids:
+                stats = CardStatistics(
+                    user_id=user_id,
+                    card_id=card_id,
+                    easiness_factor=2.5,
+                    interval=0,
+                    repetitions=0,
+                    next_review_date=date.today(),
+                    status=CardStatus.NEW,
+                )
+                self.db.add(stats)
+                new_stats.append(stats)
+
+        if new_stats:
+            await self.db.flush()
+
+        return new_stats
