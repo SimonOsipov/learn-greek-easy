@@ -46,6 +46,10 @@ export default defineConfig({
     // In CI, this will be the Railway preview URL
     baseURL: process.env.VISUAL_TEST_URL || 'http://localhost:5173',
 
+    // Disable Chromatic's automatic end-of-test snapshots
+    // We use manual takeSnapshot() calls with explicit names instead
+    disableAutoSnapshot: true,
+
     // Collect trace on first retry for debugging
     trace: 'on-first-retry',
 
