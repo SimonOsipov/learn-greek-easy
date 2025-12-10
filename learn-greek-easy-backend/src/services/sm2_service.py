@@ -33,9 +33,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.core.exceptions import DeckNotFoundException
 from src.core.sm2 import calculate_next_review_date, calculate_sm2
 from src.db.models import Card, CardStatus, Review
-from src.repositories import CardStatisticsRepository, ReviewRepository, UserDeckProgressRepository
+from src.repositories import (
+    CardRepository,
+    CardStatisticsRepository,
+    ReviewRepository,
+    UserDeckProgressRepository,
+)
 from src.repositories.deck import DeckRepository
 from src.schemas.sm2 import (
+    CardInitializationRequest,
+    CardInitializationResult,
     SM2BulkReviewResult,
     SM2ReviewResult,
     StudyQueue,
@@ -61,6 +68,8 @@ class SM2Service:
         stats_repo: Repository for CardStatistics operations
         review_repo: Repository for Review operations
         progress_repo: Repository for UserDeckProgress operations
+        deck_repo: Repository for Deck operations
+        card_repo: Repository for Card operations
     """
 
     def __init__(self, db: AsyncSession):
@@ -74,6 +83,7 @@ class SM2Service:
         self.review_repo = ReviewRepository(db)
         self.progress_repo = UserDeckProgressRepository(db)
         self.deck_repo = DeckRepository(db)
+        self.card_repo = CardRepository(db)
 
     async def process_review(
         self,
@@ -719,6 +729,131 @@ class SM2Service:
             return "Good start!"
 
         return None
+
+    # =========================================================================
+    # Card Initialization Methods
+    # =========================================================================
+
+    async def initialize_cards_for_user(
+        self,
+        user_id: UUID,
+        request: CardInitializationRequest,
+    ) -> CardInitializationResult:
+        """Initialize CardStatistics for specified cards.
+
+        Creates CardStatistics records for cards the user hasn't studied.
+        This is called when:
+        1. User starts a new deck
+        2. New cards are added to a deck they're studying
+        3. Frontend explicitly requests initialization
+
+        Args:
+            user_id: User ID
+            request: Contains deck_id and list of card_ids
+
+        Returns:
+            CardInitializationResult with counts and IDs
+
+        Raises:
+            DeckNotFoundException: If deck doesn't exist
+        """
+        # Step 1: Validate deck exists
+        deck = await self.deck_repo.get(request.deck_id)
+        if not deck:
+            raise DeckNotFoundException(deck_id=str(request.deck_id))
+
+        # Step 2: Validate cards belong to deck
+        valid_card_ids = await self._validate_cards_in_deck(
+            card_ids=request.card_ids,
+            deck_id=request.deck_id,
+        )
+
+        # Step 3: Bulk create statistics (efficient - skips existing)
+        new_stats = await self.stats_repo.bulk_create_statistics(
+            user_id=user_id,
+            card_ids=valid_card_ids,
+        )
+
+        # Step 4: Calculate already_exists_count
+        initialized_ids = [s.card_id for s in new_stats]
+        already_exists_count = len(valid_card_ids) - len(initialized_ids)
+
+        # Step 5: Ensure deck progress record exists
+        await self.progress_repo.get_or_create(user_id, request.deck_id)
+
+        logger.info(
+            "Cards initialized for user",
+            extra={
+                "user_id": str(user_id),
+                "deck_id": str(request.deck_id),
+                "initialized": len(initialized_ids),
+                "already_existed": already_exists_count,
+            },
+        )
+
+        return CardInitializationResult(
+            initialized_count=len(initialized_ids),
+            already_exists_count=already_exists_count,
+            card_ids=initialized_ids,
+        )
+
+    async def initialize_deck_for_user(
+        self,
+        user_id: UUID,
+        deck_id: UUID,
+    ) -> CardInitializationResult:
+        """Initialize all cards in a deck for a user.
+
+        Convenience method to start studying an entire deck.
+
+        Args:
+            user_id: User ID
+            deck_id: Deck to initialize
+
+        Returns:
+            CardInitializationResult
+        """
+        # Get all card IDs in the deck
+        cards = await self.card_repo.get_by_deck(deck_id, skip=0, limit=1000)
+        card_ids = [card.id for card in cards]
+
+        # Handle empty deck
+        if not card_ids:
+            return CardInitializationResult(
+                initialized_count=0,
+                already_exists_count=0,
+                card_ids=[],
+            )
+
+        # Delegate to main method
+        return await self.initialize_cards_for_user(
+            user_id=user_id,
+            request=CardInitializationRequest(
+                deck_id=deck_id,
+                card_ids=card_ids,
+            ),
+        )
+
+    async def _validate_cards_in_deck(
+        self,
+        card_ids: list[UUID],
+        deck_id: UUID,
+    ) -> list[UUID]:
+        """Validate that cards belong to the specified deck.
+
+        Args:
+            card_ids: Card IDs to validate
+            deck_id: Expected deck ID
+
+        Returns:
+            List of valid card IDs (belong to deck)
+        """
+        valid_ids = []
+        for card_id in card_ids:
+            card = await self.card_repo.get(card_id)
+            if card and card.deck_id == deck_id:
+                valid_ids.append(card_id)
+        return valid_ids
 
 
 # ============================================================================
