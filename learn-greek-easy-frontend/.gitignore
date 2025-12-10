@@ -18,6 +18,10 @@ coverage
 test-results/
 playwright-report/
 playwright/.cache/
+visual-report/
+
+# Chromatic
+.chromatic/
 
 # Environment variables
 .env.local
