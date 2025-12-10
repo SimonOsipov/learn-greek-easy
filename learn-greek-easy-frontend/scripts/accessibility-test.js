@@ -136,16 +136,13 @@ async function runAccessibilityTests() {
         for (const violation of accessibilityResults.violations) {
           results.summary.total_violations++;
           if (violation.impact) {
-            results.summary[violation.impact] =
-              (results.summary[violation.impact] || 0) + 1;
+            results.summary[violation.impact] = (results.summary[violation.impact] || 0) + 1;
           }
         }
 
         // Log results for this page
         if (accessibilityResults.violations.length > 0) {
-          console.log(
-            `  Found ${accessibilityResults.violations.length} violation(s):`
-          );
+          console.log(`  Found ${accessibilityResults.violations.length} violation(s):`);
           for (const v of accessibilityResults.violations) {
             const impactUpper = (v.impact || 'unknown').toUpperCase();
             console.log(`    - [${impactUpper}] ${v.id}: ${v.help}`);
@@ -178,8 +175,7 @@ async function runAccessibilityTests() {
   writeMarkdownReport(results);
 
   // Print summary and determine exit code
-  const hasBlockingViolations =
-    results.summary.critical > 0 || results.summary.serious > 0;
+  const hasBlockingViolations = results.summary.critical > 0 || results.summary.serious > 0;
 
   console.log('');
   console.log('='.repeat(60));
@@ -198,18 +194,12 @@ async function runAccessibilityTests() {
   if (hasBlockingViolations) {
     console.log('');
     console.log('FAILED: Critical or serious accessibility violations found!');
-    console.log(
-      'These violations must be fixed before the PR can be merged.'
-    );
+    console.log('These violations must be fixed before the PR can be merged.');
     process.exit(1);
   } else if (results.summary.total_violations > 0) {
     console.log('');
-    console.log(
-      'WARNING: Moderate or minor accessibility violations found.'
-    );
-    console.log(
-      'Consider fixing these issues, but they will not block the PR.'
-    );
+    console.log('WARNING: Moderate or minor accessibility violations found.');
+    console.log('Consider fixing these issues, but they will not block the PR.');
     process.exit(0);
   } else {
     console.log('');
@@ -247,8 +237,7 @@ function writeMarkdownReport(results) {
   markdown += `| **Total** | **${results.summary.total_violations}** |\n\n`;
 
   // Blocking status
-  const hasBlockingViolations =
-    results.summary.critical > 0 || results.summary.serious > 0;
+  const hasBlockingViolations = results.summary.critical > 0 || results.summary.serious > 0;
   if (hasBlockingViolations) {
     markdown += `> **Status**: FAILED - Critical or serious violations found\n\n`;
   } else if (results.summary.total_violations > 0) {

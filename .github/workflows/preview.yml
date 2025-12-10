@@ -322,11 +322,11 @@ jobs:
 
       - name: Run Accessibility Tests
         id: a11y
+        working-directory: learn-greek-easy-frontend
         env:
           FRONTEND_URL: ${{ needs.deploy.outputs.frontend_url }}
         run: |
-          cd scripts
-          if node accessibility-test.js; then
+          if node scripts/accessibility-test.js; then
             echo "status=success" >> $GITHUB_OUTPUT
             echo "violations=0" >> $GITHUB_OUTPUT
           else
@@ -347,8 +347,8 @@ jobs:
         with:
           name: accessibility-report
           path: |
-            scripts/accessibility-report.json
-            scripts/accessibility-report.md
+            learn-greek-easy-frontend/accessibility-report.json
+            learn-greek-easy-frontend/accessibility-report.md
           retention-days: 7
           if-no-files-found: ignore
 

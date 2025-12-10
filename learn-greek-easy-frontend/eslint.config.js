@@ -27,6 +27,7 @@ export default [
       'node_modules/**',
       'tests/**',
       'src/**/__tests__/**',
+      'scripts/**', // Node.js scripts - not browser code
       '*.config.js',
       '*.config.ts',
       'vite.config.ts',
