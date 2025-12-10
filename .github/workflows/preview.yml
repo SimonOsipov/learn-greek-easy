@@ -539,14 +539,146 @@ jobs:
               context: 'preview/lighthouse'
             });
 
-  # Job 7: Report deployment results and test outcomes
+  # Job 7: Visual regression tests with Chromatic
+  visual-tests:
+    name: Visual Tests (Playwright)
+    needs: [deploy, health-check]
+    if: |
+      needs.health-check.outputs.status == 'success' &&
+      !contains(github.event.pull_request.labels.*.name, 'skip-visual')
+    runs-on: ubuntu-latest
+    outputs:
+      status: ${{ steps.visual.outputs.status }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: learn-greek-easy-frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: learn-greek-easy-frontend
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        working-directory: learn-greek-easy-frontend
+        run: npx playwright install chromium
+
+      - name: Run Visual Tests
+        id: visual
+        working-directory: learn-greek-easy-frontend
+        env:
+          VISUAL_TEST_URL: ${{ needs.deploy.outputs.frontend_url }}
+        run: |
+          echo "=== Running Visual Tests ==="
+          echo "Target URL: $VISUAL_TEST_URL"
+
+          if npx playwright test --config=playwright.visual.config.ts; then
+            echo "status=success" >> $GITHUB_OUTPUT
+          else
+            echo "status=failure" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload Visual Test Results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: visual-test-results
+          path: |
+            learn-greek-easy-frontend/test-results/
+            learn-greek-easy-frontend/visual-report/
+          retention-days: 30
+
+  # Job 8: Chromatic visual regression upload
+  chromatic:
+    name: Chromatic Upload
+    needs: [visual-tests]
+    if: needs.visual-tests.result == 'success'
+    runs-on: ubuntu-latest
+    outputs:
+      build_url: ${{ steps.chromatic.outputs.buildUrl }}
+      change_count: ${{ steps.chromatic.outputs.changeCount }}
+      status: ${{ steps.status.outputs.status }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Required for Chromatic to detect git history
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: learn-greek-easy-frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: learn-greek-easy-frontend
+        run: npm ci
+
+      - name: Download Visual Test Results
+        uses: actions/download-artifact@v4
+        with:
+          name: visual-test-results
+          path: learn-greek-easy-frontend/
+
+      - name: Run Chromatic
+        id: chromatic
+        uses: chromaui/action@latest
+        with:
+          workingDir: learn-greek-easy-frontend
+          projectToken: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
+          playwright: true
+          exitZeroOnChanges: true
+          autoAcceptChanges: main
+        env:
+          CHROMATIC_ARCHIVE_LOCATION: ./test-results
+
+      - name: Determine Status
+        id: status
+        run: |
+          CHANGE_COUNT="${{ steps.chromatic.outputs.changeCount }}"
+          if [ "$CHANGE_COUNT" = "0" ] || [ -z "$CHANGE_COUNT" ]; then
+            echo "status=success" >> $GITHUB_OUTPUT
+          else
+            echo "status=changes_detected" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create Visual Status Check
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const changeCount = '${{ steps.chromatic.outputs.changeCount }}' || '0';
+            const buildUrl = '${{ steps.chromatic.outputs.buildUrl }}';
+            const status = changeCount === '0' ? 'success' : 'pending';
+            const description = changeCount === '0'
+              ? 'No visual changes detected'
+              : `${changeCount} visual change(s) need review`;
+
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: context.sha,
+              state: status,
+              target_url: buildUrl || '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}',
+              description: description,
+              context: 'preview/visual'
+            });
+
+  # Job 9: Report deployment results and test outcomes
   report-results:
     name: Report Results
     # TEMPORARILY REMOVED ci-tests DEPENDENCY - UNCOMMENT WHEN DONE TESTING
     # needs: [ci-tests, should-deploy, deploy, health-check]
-    needs: [should-deploy, deploy, health-check, accessibility, lighthouse]
-    # FUTURE: Add more test jobs to needs array when implemented
-    # needs: [should-deploy, deploy, health-check, lighthouse, visual-regression, accessibility]
+    needs: [should-deploy, deploy, health-check, accessibility, lighthouse, chromatic]
     if: always() && needs.should-deploy.outputs.deploy == 'true'
     runs-on: ubuntu-latest
     steps:
@@ -597,8 +729,23 @@ jobs:
               ? `[Desktop: ${desktopScore}, Mobile: ${mobileScore}](${lighthouseReportUrl})`
               : `Desktop: ${desktopScore}, Mobile: ${mobileScore}`;
 
-            // FUTURE: Get more test job outputs when implemented
-            // const visualStatus = '${{ needs.visual-regression.outputs.status }}';
+            // Visual regression (Chromatic) status
+            const visualStatus = '${{ needs.chromatic.outputs.status }}' || 'skipped';
+            const visualChangeCount = '${{ needs.chromatic.outputs.change_count }}' || '0';
+            const visualBuildUrl = '${{ needs.chromatic.outputs.build_url }}';
+            const visualIcon = visualStatus === 'success' ? ':white_check_mark:'
+              : visualStatus === 'skipped' ? ':yellow_circle:'
+              : visualStatus === 'changes_detected' ? ':yellow_circle:'
+              : ':x:';
+            const visualDetails = visualStatus === 'success'
+              ? 'No visual changes'
+              : visualStatus === 'skipped'
+              ? 'Skipped'
+              : visualStatus === 'changes_detected'
+              ? visualBuildUrl
+                ? `[${visualChangeCount} change(s) need review](${visualBuildUrl})`
+                : `${visualChangeCount} change(s) need review`
+              : 'Visual tests failed';
 
             let body;
             if (ciStatus === 'failure') {
@@ -624,26 +771,29 @@ jobs:
               body += `| Health Check | ${healthIcon} | ${healthDetails} |\n`;
               body += `| Accessibility | ${a11yIcon} | ${a11yDetails} |\n`;
               body += `| Lighthouse | ${lighthouseIcon} | ${lighthouseDetails} |\n`;
-              // FUTURE: Add more test results when implemented
-              // body += `| Visual Regression | ${visualIcon} | ${visualDetails} |\n`;
+              body += `| Visual Regression | ${visualIcon} | ${visualDetails} |\n`;
               body += `\n`;
 
               // Status indicator based on all checks
               const lighthousePassed = desktopScoreNum >= 80 && mobileScoreNum >= 70;
               const lighthouseWarning = desktopScoreNum >= 60 && mobileScoreNum >= 50;
-              const allPassed = healthStatus === 'success' && a11yStatus === 'success' && lighthousePassed;
-              const hasWarnings = (healthStatus === 'success' || a11yStatus === 'success' || lighthouseWarning) &&
-                                  !(healthStatus === 'success' && a11yStatus === 'success' && lighthousePassed);
+              const visualPassed = visualStatus === 'success' || visualStatus === 'skipped';
+              const visualNeedsReview = visualStatus === 'changes_detected';
+              const allPassed = healthStatus === 'success' && a11yStatus === 'success' && lighthousePassed && visualPassed;
+              const hasWarnings = !allPassed && (
+                healthStatus === 'success' &&
+                (a11yStatus === 'success' || a11yStatus === 'skipped') &&
+                lighthouseWarning &&
+                (visualPassed || visualNeedsReview)
+              );
 
               if (allPassed) {
                 body += `:white_check_mark: **All checks passed!** Preview environment is ready for review.\n\n`;
-              } else if (hasWarnings) {
+              } else if (hasWarnings || visualNeedsReview) {
                 body += `:warning: **Deployment complete but some checks need attention.** Please review the results above.\n\n`;
               } else {
                 body += `:x: **Checks failed.** Please review the results above and fix issues.\n\n`;
               }
-
-              // FUTURE: When more test jobs are added, expand this logic to include visual-regression, etc.
 
               // Deployment metadata (collapsible)
               body += `---\n`;
