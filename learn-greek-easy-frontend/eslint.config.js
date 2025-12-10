@@ -28,6 +28,7 @@ export default [
       'tests/**',
       'src/**/__tests__/**',
       'scripts/**', // Node.js scripts - not browser code
+      'lighthouserc*.cjs', // Lighthouse CI configs - Node.js
       '*.config.js',
       '*.config.ts',
       'vite.config.ts',
