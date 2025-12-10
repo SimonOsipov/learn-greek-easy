@@ -431,9 +431,10 @@ Use labels on Pull Requests to control which CI/CD tests run:
 | Label | Effect |
 |-------|--------|
 | `visual-test` | Force full visual regression suite (all pages, all viewports) |
-| `skip-visual` | Skip visual regression tests entirely |
-| `skip-e2e` | Skip E2E tests (use sparingly) |
-| (no label) | Smart mode - run tests based on changed files |
+| `skip-visual` | Skip post-deploy visual tests (Playwright visual + Chromatic) |
+| (no label) | Default - all tests run |
+
+**Note:** E2E tests (functional tests in CI) always run and cannot be skipped via labels. They verify functionality, not appearance.
 
 ### When to Use Each Label
 
