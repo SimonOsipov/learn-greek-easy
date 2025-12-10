@@ -411,17 +411,22 @@ jobs:
           lhci assert --config=lighthouserc.cjs || true
           lhci upload --config=lighthouserc.cjs
 
-          # Extract scores from manifest
-          if [ -f .lighthouseci/manifest.json ]; then
-            echo "=== Desktop Results ==="
-            PERF_SCORE=$(cat .lighthouseci/manifest.json | jq -r '.[0].summary.performance * 100 | floor')
-            A11Y_SCORE=$(cat .lighthouseci/manifest.json | jq -r '.[0].summary.accessibility * 100 | floor')
+          # Debug: List files in .lighthouseci
+          echo "=== Files in .lighthouseci ==="
+          ls -la .lighthouseci/ 2>/dev/null || echo "Directory not found"
+
+          # Extract scores from LHR JSON files (lhr-*.json)
+          LHR_FILE=$(ls .lighthouseci/lhr-*.json 2>/dev/null | head -1)
+          if [ -n "$LHR_FILE" ]; then
+            echo "=== Desktop Results (from $LHR_FILE) ==="
+            PERF_SCORE=$(cat "$LHR_FILE" | jq -r '.categories.performance.score * 100 | floor')
+            A11Y_SCORE=$(cat "$LHR_FILE" | jq -r '.categories.accessibility.score * 100 | floor')
             echo "Performance: $PERF_SCORE"
             echo "Accessibility: $A11Y_SCORE"
             echo "desktop_score=$PERF_SCORE" >> $GITHUB_OUTPUT
             echo "desktop_a11y=$A11Y_SCORE" >> $GITHUB_OUTPUT
           else
-            echo "Warning: manifest.json not found"
+            echo "Warning: No LHR JSON files found in .lighthouseci"
             echo "desktop_score=0" >> $GITHUB_OUTPUT
             echo "desktop_a11y=0" >> $GITHUB_OUTPUT
           fi
@@ -455,17 +460,22 @@ jobs:
           lhci assert --config=lighthouserc.mobile.cjs || true
           lhci upload --config=lighthouserc.mobile.cjs
 
-          # Extract scores from manifest
-          if [ -f .lighthouseci/manifest.json ]; then
-            echo "=== Mobile Results ==="
-            PERF_SCORE=$(cat .lighthouseci/manifest.json | jq -r '.[0].summary.performance * 100 | floor')
-            A11Y_SCORE=$(cat .lighthouseci/manifest.json | jq -r '.[0].summary.accessibility * 100 | floor')
+          # Debug: List files in .lighthouseci
+          echo "=== Files in .lighthouseci ==="
+          ls -la .lighthouseci/ 2>/dev/null || echo "Directory not found"
+
+          # Extract scores from LHR JSON files (lhr-*.json)
+          LHR_FILE=$(ls .lighthouseci/lhr-*.json 2>/dev/null | head -1)
+          if [ -n "$LHR_FILE" ]; then
+            echo "=== Mobile Results (from $LHR_FILE) ==="
+            PERF_SCORE=$(cat "$LHR_FILE" | jq -r '.categories.performance.score * 100 | floor')
+            A11Y_SCORE=$(cat "$LHR_FILE" | jq -r '.categories.accessibility.score * 100 | floor')
             echo "Performance: $PERF_SCORE"
             echo "Accessibility: $A11Y_SCORE"
             echo "mobile_score=$PERF_SCORE" >> $GITHUB_OUTPUT
             echo "mobile_a11y=$A11Y_SCORE" >> $GITHUB_OUTPUT
           else
-            echo "Warning: manifest.json not found"
+            echo "Warning: No LHR JSON files found in .lighthouseci"
             echo "mobile_score=0" >> $GITHUB_OUTPUT
             echo "mobile_a11y=0" >> $GITHUB_OUTPUT
           fi
