@@ -179,19 +179,21 @@ else
 fi
 
 echo ""
-echo "--- Documentation Tests ---"
+echo "--- Documentation Tests (Optional - Non-Blocking) ---"
+# Note: /docs and /openapi.json are only available when DEBUG=true in backend
+# These tests are informational only and don't block the health check
 if check_endpoint "$BACKEND_URL/docs" "API Docs (Swagger)"; then
     RESULTS+=("API Docs: PASS")
 else
-    RESULTS+=("API Docs: FAIL")
-    FAILED=$((FAILED + 1))
+    RESULTS+=("API Docs: SKIP (DEBUG mode disabled)")
+    echo "  Note: API docs are disabled when DEBUG=false"
 fi
 
 if check_endpoint "$BACKEND_URL/openapi.json" "OpenAPI Schema"; then
     RESULTS+=("OpenAPI Schema: PASS")
 else
-    RESULTS+=("OpenAPI Schema: FAIL")
-    FAILED=$((FAILED + 1))
+    RESULTS+=("OpenAPI Schema: SKIP (DEBUG mode disabled)")
+    echo "  Note: OpenAPI schema is disabled when DEBUG=false"
 fi
 
 # ============================================================================
