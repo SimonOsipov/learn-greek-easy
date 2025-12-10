@@ -22,8 +22,7 @@ module.exports = {
       numberOfRuns: 3,
 
       settings: {
-        // Mobile preset and form factor
-        preset: 'mobile',
+        // Mobile form factor (no preset - configure manually)
         formFactor: 'mobile',
 
         // Required for CI environment
