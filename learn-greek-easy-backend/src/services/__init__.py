@@ -6,5 +6,6 @@ business rules validation, and domain logic.
 """
 
 from src.services.auth_service import AuthService
+from src.services.sm2_service import SM2Service
 
-__all__ = ["AuthService"]
+__all__ = ["AuthService", "SM2Service"]
