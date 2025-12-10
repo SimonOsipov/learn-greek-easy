@@ -877,7 +877,7 @@ describe('FlashcardReviewPage - Session Completion', () => {
   });
 
   it('should clear sessionStorage when session completes', async () => {
-    render(<FlashcardReviewPage />);
+    const { unmount } = render(<FlashcardReviewPage />);
 
     await waitFor(
       () => {
@@ -890,6 +890,10 @@ describe('FlashcardReviewPage - Session Completion', () => {
 
     // Verify session is in sessionStorage
     expect(sessionStorage.getItem('learn-greek-easy:active-session')).toBeTruthy();
+
+    // Unmount component first to remove keyboard event listeners
+    // This prevents unhandled rejections from pending operations
+    unmount();
 
     // Simulate session end by resetting the store (which clears sessionStorage)
     // This avoids the mockReviewAPI session ID mismatch issue

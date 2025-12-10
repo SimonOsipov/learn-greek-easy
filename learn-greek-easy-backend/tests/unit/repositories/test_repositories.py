@@ -768,3 +768,380 @@ async def test_get_average_quality(db_session: AsyncSession, sample_user, sample
 
     assert avg_quality >= 3.0
     assert avg_quality <= 5.0
+
+
+# ============================================================================
+# CardStatisticsRepository - New SM-2 Methods Tests
+# ============================================================================
+
+
+@pytest.mark.asyncio
+async def test_get_new_cards_for_deck(
+    db_session: AsyncSession, sample_user, sample_deck, sample_cards
+):
+    """Test getting cards that user hasn't studied yet."""
+    repo = CardStatisticsRepository(db_session)
+
+    # Create statistics for only one card
+    from src.db.models import CardStatistics
+
+    stats = CardStatistics(
+        user_id=sample_user.id,
+        card_id=sample_cards[0].id,
+        easiness_factor=2.5,
+        interval=0,
+        repetitions=0,
+        next_review_date=date.today(),
+        status=CardStatus.NEW,
+    )
+    db_session.add(stats)
+    await db_session.commit()
+
+    # Get new cards - should exclude the one with statistics
+    new_cards = await repo.get_new_cards_for_deck(sample_user.id, sample_deck.id)
+
+    assert len(new_cards) == 2  # 3 cards - 1 with stats = 2 new cards
+    assert sample_cards[0].id not in [c.id for c in new_cards]
+    assert sample_cards[1].id in [c.id for c in new_cards]
+    assert sample_cards[2].id in [c.id for c in new_cards]
+
+
+@pytest.mark.asyncio
+async def test_get_new_cards_for_deck_with_limit(
+    db_session: AsyncSession, sample_user, sample_deck, sample_cards
+):
+    """Test get_new_cards_for_deck respects limit parameter."""
+    repo = CardStatisticsRepository(db_session)
+
+    # Get only 1 new card
+    new_cards = await repo.get_new_cards_for_deck(sample_user.id, sample_deck.id, limit=1)
+
+    assert len(new_cards) == 1
+
+
+@pytest.mark.asyncio
+async def test_get_new_cards_for_deck_no_deck_filter(
+    db_session: AsyncSession, sample_user, sample_deck
+):
+    """Test get_new_cards_for_deck without deck filter returns all unstudied cards."""
+    repo = CardStatisticsRepository(db_session)
+
+    # Create another deck with cards
+    from src.db.models import Card, Deck
+
+    another_deck = Deck(
+        name="Another Deck",
+        description="Test",
+        level=DeckLevel.A2,
+        is_active=True,
+    )
+    db_session.add(another_deck)
+    await db_session.flush()
+
+    card = Card(
+        deck_id=another_deck.id,
+        front_text="Test",
+        back_text="Test",
+        difficulty=CardDifficulty.EASY,
+        order_index=1,
+    )
+    db_session.add(card)
+    await db_session.commit()
+
+    # Get all new cards (no deck filter)
+    new_cards = await repo.get_new_cards_for_deck(sample_user.id, deck_id=None, limit=100)
+
+    # Should include cards from both decks
+    assert len(new_cards) >= 1
+
+
+@pytest.mark.asyncio
+async def test_count_new_cards_for_deck(
+    db_session: AsyncSession, sample_user, sample_deck, sample_cards
+):
+    """Test counting unstudied cards in a deck."""
+    repo = CardStatisticsRepository(db_session)
+
+    # Create statistics for one card
+    from src.db.models import CardStatistics
+
+    stats = CardStatistics(
+        user_id=sample_user.id,
+        card_id=sample_cards[0].id,
+        easiness_factor=2.5,
+        interval=0,
+        repetitions=0,
+        next_review_date=date.today(),
+        status=CardStatus.NEW,
+    )
+    db_session.add(stats)
+    await db_session.commit()
+
+    count = await repo.count_new_cards_for_deck(sample_user.id, sample_deck.id)
+
+    assert count == 2  # 3 cards - 1 with stats = 2 new cards
+
+
+@pytest.mark.asyncio
+async def test_count_by_status(db_session: AsyncSession, sample_user, sample_deck, sample_cards):
+    """Test counting cards by status."""
+    repo = CardStatisticsRepository(db_session)
+
+    # Create statistics with different statuses
+    from src.db.models import CardStatistics
+
+    stats1 = CardStatistics(
+        user_id=sample_user.id,
+        card_id=sample_cards[0].id,
+        easiness_factor=2.5,
+        interval=0,
+        repetitions=0,
+        next_review_date=date.today(),
+        status=CardStatus.NEW,
+    )
+    stats2 = CardStatistics(
+        user_id=sample_user.id,
+        card_id=sample_cards[1].id,
+        easiness_factor=2.5,
+        interval=1,
+        repetitions=1,
+        next_review_date=date.today(),  # Due today
+        status=CardStatus.LEARNING,
+    )
+    stats3 = CardStatistics(
+        user_id=sample_user.id,
+        card_id=sample_cards[2].id,
+        easiness_factor=2.6,
+        interval=5,
+        repetitions=3,
+        next_review_date=date.today() + timedelta(days=5),  # Not due
+        status=CardStatus.MASTERED,
+    )
+    db_session.add(stats1)
+    db_session.add(stats2)
+    db_session.add(stats3)
+    await db_session.commit()
+
+    counts = await repo.count_by_status(sample_user.id, sample_deck.id)
+
+    assert counts["new"] == 1
+    assert counts["learning"] == 1
+    assert counts["mastered"] == 1
+    assert counts["review"] == 0
+    # Due count includes new and learning cards due today
+    assert counts["due"] == 2  # stats1 and stats2 are due today
+
+
+@pytest.mark.asyncio
+async def test_count_by_status_no_deck_filter(
+    db_session: AsyncSession, sample_user, sample_deck, sample_cards
+):
+    """Test count_by_status without deck filter."""
+    repo = CardStatisticsRepository(db_session)
+
+    # Create some statistics
+    from src.db.models import CardStatistics
+
+    stats = CardStatistics(
+        user_id=sample_user.id,
+        card_id=sample_cards[0].id,
+        easiness_factor=2.5,
+        interval=0,
+        repetitions=0,
+        next_review_date=date.today(),
+        status=CardStatus.NEW,
+    )
+    db_session.add(stats)
+    await db_session.commit()
+
+    counts = await repo.count_by_status(sample_user.id, deck_id=None)
+
+    assert counts["new"] >= 1
+    assert "due" in counts
+
+
+@pytest.mark.asyncio
+async def test_get_user_stats_for_deck(
+    db_session: AsyncSession, sample_user, sample_deck, sample_cards
+):
+    """Test getting all statistics for a user in a specific deck."""
+    repo = CardStatisticsRepository(db_session)
+
+    # Create statistics for all cards
+    from src.db.models import CardStatistics
+
+    for i, card in enumerate(sample_cards):
+        stats = CardStatistics(
+            user_id=sample_user.id,
+            card_id=card.id,
+            easiness_factor=2.5,
+            interval=i,
+            repetitions=i,
+            next_review_date=date.today() + timedelta(days=i),
+            status=CardStatus.NEW,
+        )
+        db_session.add(stats)
+    await db_session.commit()
+
+    stats_list = await repo.get_user_stats_for_deck(sample_user.id, sample_deck.id)
+
+    assert len(stats_list) == 3
+    # Check that cards are loaded (eager loading works)
+    for stat in stats_list:
+        assert stat.card is not None
+        assert stat.card.front_text is not None
+
+
+@pytest.mark.asyncio
+async def test_bulk_create_statistics(
+    db_session: AsyncSession, sample_user, sample_deck, sample_cards
+):
+    """Test bulk creating statistics for multiple cards."""
+    repo = CardStatisticsRepository(db_session)
+
+    card_ids = [card.id for card in sample_cards]
+    new_stats = await repo.bulk_create_statistics(sample_user.id, card_ids)
+    await db_session.commit()
+
+    assert len(new_stats) == 3
+    for stat in new_stats:
+        assert stat.user_id == sample_user.id
+        assert stat.easiness_factor == 2.5
+        assert stat.status == CardStatus.NEW
+        assert stat.interval == 0
+        assert stat.repetitions == 0
+
+
+@pytest.mark.asyncio
+async def test_bulk_create_statistics_skips_existing(
+    db_session: AsyncSession, sample_user, sample_cards
+):
+    """Test bulk_create_statistics skips cards that already have statistics."""
+    repo = CardStatisticsRepository(db_session)
+
+    # Create statistics for first card
+    from src.db.models import CardStatistics
+
+    existing_stats = CardStatistics(
+        user_id=sample_user.id,
+        card_id=sample_cards[0].id,
+        easiness_factor=2.5,
+        interval=0,
+        repetitions=0,
+        next_review_date=date.today(),
+        status=CardStatus.NEW,
+    )
+    db_session.add(existing_stats)
+    await db_session.commit()
+
+    # Bulk create for all cards - should skip the first one
+    card_ids = [card.id for card in sample_cards]
+    new_stats = await repo.bulk_create_statistics(sample_user.id, card_ids)
+    await db_session.commit()
+
+    # Only 2 new stats should be created (3 cards - 1 existing)
+    assert len(new_stats) == 2
+    new_card_ids = [s.card_id for s in new_stats]
+    assert sample_cards[0].id not in new_card_ids
+
+
+@pytest.mark.asyncio
+async def test_bulk_create_statistics_empty_list(db_session: AsyncSession, sample_user):
+    """Test bulk_create_statistics with empty list."""
+    repo = CardStatisticsRepository(db_session)
+
+    new_stats = await repo.bulk_create_statistics(sample_user.id, [])
+
+    assert new_stats == []
+
+
+# ============================================================================
+# ReviewRepository - New SM-2 Methods Tests
+# ============================================================================
+
+
+@pytest.mark.asyncio
+async def test_get_total_reviews(db_session: AsyncSession, sample_user, sample_cards):
+    """Test counting total reviews for a user."""
+    repo = ReviewRepository(db_session)
+
+    # Create multiple reviews
+    from src.db.models import Review
+
+    for i in range(5):
+        review = Review(
+            user_id=sample_user.id,
+            card_id=sample_cards[0].id,
+            quality=4,
+            time_taken=10,
+            reviewed_at=datetime.utcnow() - timedelta(days=i),
+        )
+        db_session.add(review)
+    await db_session.commit()
+
+    total = await repo.get_total_reviews(sample_user.id)
+
+    assert total >= 5
+
+
+@pytest.mark.asyncio
+async def test_get_total_reviews_no_reviews(db_session: AsyncSession, sample_user):
+    """Test get_total_reviews returns 0 for users with no reviews."""
+    repo = ReviewRepository(db_session)
+
+    # Create a new user with no reviews
+    new_user = User(
+        email="no_reviews@example.com",
+        password_hash="hashed",
+        full_name="No Reviews",
+    )
+    db_session.add(new_user)
+    await db_session.commit()
+
+    total = await repo.get_total_reviews(new_user.id)
+
+    assert total == 0
+
+
+@pytest.mark.asyncio
+async def test_get_total_study_time(db_session: AsyncSession, sample_user, sample_cards):
+    """Test summing total study time for a user."""
+    repo = ReviewRepository(db_session)
+
+    # Create reviews with known time_taken values
+    from src.db.models import Review
+
+    times = [10, 20, 30]  # Total: 60 seconds
+    for time_taken in times:
+        review = Review(
+            user_id=sample_user.id,
+            card_id=sample_cards[0].id,
+            quality=4,
+            time_taken=time_taken,
+            reviewed_at=datetime.utcnow(),
+        )
+        db_session.add(review)
+    await db_session.commit()
+
+    total_time = await repo.get_total_study_time(sample_user.id)
+
+    assert total_time >= 60  # At least 60 seconds from our test data
+
+
+@pytest.mark.asyncio
+async def test_get_total_study_time_no_reviews(db_session: AsyncSession, sample_user):
+    """Test get_total_study_time returns 0 for users with no reviews."""
+    repo = ReviewRepository(db_session)
+
+    # Create a new user with no reviews
+    new_user = User(
+        email="no_study_time@example.com",
+        password_hash="hashed",
+        full_name="No Study Time",
+    )
+    db_session.add(new_user)
+    await db_session.commit()
+
+    total_time = await repo.get_total_study_time(new_user.id)
+
+    assert total_time == 0

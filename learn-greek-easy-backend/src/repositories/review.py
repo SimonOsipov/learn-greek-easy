@@ -146,3 +146,31 @@ class ReviewRepository(BaseRepository[Review]):
         result = await self.db.execute(query)
         avg = result.scalar_one_or_none()
         return float(avg) if avg is not None else 0.0
+
+    async def get_total_reviews(self, user_id: UUID) -> int:
+        """Get total number of reviews for a user.
+
+        Args:
+            user_id: User UUID
+
+        Returns:
+            Total review count
+        """
+        query = select(func.count()).select_from(Review).where(Review.user_id == user_id)
+        result = await self.db.execute(query)
+        return result.scalar_one()
+
+    async def get_total_study_time(self, user_id: UUID) -> int:
+        """Get total study time in seconds.
+
+        Args:
+            user_id: User UUID
+
+        Returns:
+            Total seconds spent studying
+        """
+        query = select(func.coalesce(func.sum(Review.time_taken), 0)).where(
+            Review.user_id == user_id
+        )
+        result = await self.db.execute(query)
+        return result.scalar_one()
