@@ -326,7 +326,7 @@ jobs:
         env:
           FRONTEND_URL: ${{ needs.deploy.outputs.frontend_url }}
         run: |
-          if node scripts/accessibility-test.js; then
+          if node scripts/accessibility-test.cjs; then
             echo "status=success" >> $GITHUB_OUTPUT
             echo "violations=0" >> $GITHUB_OUTPUT
           else
