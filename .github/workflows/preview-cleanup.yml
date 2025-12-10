@@ -91,10 +91,17 @@ jobs:
           railway down --service Frontend --yes || echo "Frontend service may not have active deployment"
 
           echo "Frontend service stopped"
+
+          # Note: Postgres and Redis are kept running intentionally
+          # - They are stateful services with persistent volumes
+          # - Low cost when idle (no active connections)
+          # - Cannot be easily restarted with `railway redeploy` after `railway down`
+          # - Only Backend and Frontend (compute services) are stopped
           echo ""
           echo "=== Cleanup Complete ==="
           echo "Environment '$ENV_NAME' preserved with stable URLs"
-          echo "Services stopped to save resources"
+          echo "Backend and Frontend stopped to save compute resources"
+          echo "Postgres and Redis kept running (stateful services)"
 
   # Job 2: Update PR comment (separate job because Railway container lacks GitHub tools)
   update-comment:
