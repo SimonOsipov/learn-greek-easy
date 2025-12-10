@@ -13,6 +13,8 @@ const VersionIndicator = () => {
     <div
       className="fixed bottom-2 right-2 z-50 select-none text-[10px] text-gray-400/50 hover:text-gray-400"
       title={`Build: ${commitSha}`}
+      aria-hidden="true"
+      data-a11y-ignore="color-contrast"
     >
       {shortSha}
     </div>

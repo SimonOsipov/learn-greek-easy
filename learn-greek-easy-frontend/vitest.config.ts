@@ -55,6 +55,7 @@ export default defineConfig({
       '.git',
       '.cache',
       'tests/e2e/**', // E2E tests run separately with Playwright
+      'tests/visual/**', // Visual tests run separately with Playwright/Chromatic
     ],
 
     // Test timeout (10 seconds)

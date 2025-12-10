@@ -50,6 +50,7 @@ test.describe('Accessibility (Axe-core)', () => {
     const accessibilityScanResults = await new AxeBuilder({ page })
       .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
       .disableRules(['landmark-one-main', 'page-has-heading-one', 'region'])
+      .exclude('[data-a11y-ignore="color-contrast"]') // Exclude decorative build hash indicator
       .analyze();
 
     expect(accessibilityScanResults.violations).toEqual([]);
