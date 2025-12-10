@@ -291,12 +291,94 @@ jobs:
               context: 'preview/health'
             });
 
+  # Job 5: Accessibility tests using axe-core
+  accessibility:
+    name: Accessibility Tests (axe-core)
+    needs: [deploy, health-check]
+    if: needs.health-check.outputs.status == 'success'
+    runs-on: ubuntu-latest
+    outputs:
+      status: ${{ steps.a11y.outputs.status }}
+      violations: ${{ steps.a11y.outputs.violations }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: learn-greek-easy-frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: learn-greek-easy-frontend
+        run: npm ci
+
+      - name: Install Playwright browsers
+        working-directory: learn-greek-easy-frontend
+        run: npx playwright install chromium
+
+      - name: Run Accessibility Tests
+        id: a11y
+        env:
+          FRONTEND_URL: ${{ needs.deploy.outputs.frontend_url }}
+        run: |
+          cd scripts
+          if node accessibility-test.js; then
+            echo "status=success" >> $GITHUB_OUTPUT
+            echo "violations=0" >> $GITHUB_OUTPUT
+          else
+            # Capture violations count even on failure
+            if [ -f accessibility-report.json ]; then
+              VIOLATIONS=$(cat accessibility-report.json | jq '.summary.critical + .summary.serious')
+              echo "status=failure" >> $GITHUB_OUTPUT
+              echo "violations=$VIOLATIONS" >> $GITHUB_OUTPUT
+            else
+              echo "status=failure" >> $GITHUB_OUTPUT
+              echo "violations=unknown" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+      - name: Upload Accessibility Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: accessibility-report
+          path: |
+            scripts/accessibility-report.json
+            scripts/accessibility-report.md
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: Create Status Check
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const status = '${{ steps.a11y.outputs.status }}';
+            const violations = '${{ steps.a11y.outputs.violations }}';
+
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: context.sha,
+              state: status === 'success' ? 'success' : 'failure',
+              target_url: '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}',
+              description: status === 'success'
+                ? 'No critical accessibility violations'
+                : `${violations} critical/serious violations found`,
+              context: 'preview/a11y'
+            });
+
   # Job 6: Report deployment results and test outcomes
   report-results:
     name: Report Results
     # TEMPORARILY REMOVED ci-tests DEPENDENCY - UNCOMMENT WHEN DONE TESTING
     # needs: [ci-tests, should-deploy, deploy, health-check]
-    needs: [should-deploy, deploy, health-check]
+    needs: [should-deploy, deploy, health-check, accessibility]
     # FUTURE: Add more test jobs to needs array when implemented
     # needs: [should-deploy, deploy, health-check, lighthouse, visual-regression, accessibility]
     if: always() && needs.should-deploy.outputs.deploy == 'true'
@@ -319,11 +401,22 @@ jobs:
             const healthIcon = healthStatus === 'success' ? ':white_check_mark:' : ':x:';
             const healthDetails = healthStatus === 'success' ? 'All health checks passed' : 'Some health checks failed';
 
+            // Accessibility check status
+            const a11yStatus = '${{ needs.accessibility.outputs.status }}' || 'skipped';
+            const a11yViolations = '${{ needs.accessibility.outputs.violations }}' || '0';
+            const a11yIcon = a11yStatus === 'success' ? ':white_check_mark:'
+              : a11yStatus === 'skipped' ? ':yellow_circle:'
+              : ':x:';
+            const a11yDetails = a11yStatus === 'success'
+              ? 'No critical/serious violations'
+              : a11yStatus === 'skipped'
+              ? 'Skipped (health check failed)'
+              : `${a11yViolations} critical/serious violation(s)`;
+
             // FUTURE: Get more test job outputs when implemented
             // const desktopScore = '${{ needs.lighthouse.outputs.desktop_score }}';
             // const mobileScore = '${{ needs.lighthouse.outputs.mobile_score }}';
             // const visualStatus = '${{ needs.visual-regression.outputs.status }}';
-            // const a11yStatus = '${{ needs.accessibility.outputs.status }}';
 
             let body;
             if (ciStatus === 'failure') {
@@ -347,28 +440,31 @@ jobs:
               body += `| Test | Status | Details |\n`;
               body += `|------|--------|---------|\n`;
               body += `| Health Check | ${healthIcon} | ${healthDetails} |\n`;
+              body += `| Accessibility | ${a11yIcon} | ${a11yDetails} |\n`;
               // FUTURE: Add more test results when implemented
               // body += `| Lighthouse (Desktop) | ${desktopIcon} | Performance: ${desktopScore} |\n`;
               // body += `| Lighthouse (Mobile) | ${mobileIcon} | Performance: ${mobileScore} |\n`;
               // body += `| Visual Regression | ${visualIcon} | ${visualDetails} |\n`;
-              // body += `| Accessibility | ${a11yIcon} | ${a11yDetails} |\n`;
               body += `\n`;
 
-              // Status indicator based on health check
-              if (healthStatus === 'success') {
-                body += `:white_check_mark: **Deployment successful!** Preview environment is ready.\n\n`;
+              // Status indicator based on all checks
+              const allPassed = healthStatus === 'success' && a11yStatus === 'success';
+              const hasWarnings = (healthStatus === 'success' || a11yStatus === 'success') &&
+                                  (healthStatus !== 'success' || a11yStatus !== 'success');
+
+              if (allPassed) {
+                body += `:white_check_mark: **All checks passed!** Preview environment is ready for review.\n\n`;
+              } else if (hasWarnings) {
+                body += `:warning: **Deployment complete but some checks need attention.** Please review the results above.\n\n`;
               } else {
-                body += `:warning: **Deployment complete but health checks failed.** Please review the results above.\n\n`;
+                body += `:x: **Checks failed.** Please review the results above and fix issues.\n\n`;
               }
 
-              // FUTURE: When more test jobs are added, use this logic:
+              // FUTURE: When more test jobs are added, expand this logic:
               // const allPassed = healthStatus === 'success' &&
               //                  desktopScore >= 80 &&
               //                  mobileScore >= 70 &&
               //                  a11yStatus === 'success';
-              // body += allPassed
-              //   ? `:tada: **All checks passed!** This PR is ready for review.\n\n`
-              //   : `:warning: **Some checks need attention.** Please review the results above.\n\n`;
 
               // Deployment metadata (collapsible)
               body += `---\n`;
