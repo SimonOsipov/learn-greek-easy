@@ -386,6 +386,14 @@ export const useReviewStore = create<ReviewState>((set, get) => ({
         })
       );
     } catch (error) {
+      // Check if this is an expected "session cleared" error
+      // This can happen during test cleanup or when component unmounts during async operation
+      if (error instanceof Error && error.message === 'No active review session found') {
+        console.debug('rateCard: Session cleared during async operation, ignoring');
+        set({ isLoading: false });
+        return; // Don't re-throw - this is expected behavior during cleanup
+      }
+
       const errorMessage =
         error instanceof Error ? error.message : 'Failed to rate card. Please try again.';
 
