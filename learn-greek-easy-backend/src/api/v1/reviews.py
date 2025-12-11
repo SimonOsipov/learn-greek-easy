@@ -12,8 +12,8 @@ from src.core.exceptions import CardNotFoundException
 from src.db.dependencies import get_db
 from src.db.models import User
 from src.repositories.card import CardRepository
-from src.schemas.review import ReviewSubmit
-from src.schemas.sm2 import SM2ReviewResult
+from src.schemas.review import BulkReviewSubmit, ReviewSubmit
+from src.schemas.sm2 import SM2BulkReviewResult, SM2ReviewResult
 from src.services.sm2_service import SM2Service
 
 router = APIRouter(
@@ -102,4 +102,100 @@ async def submit_review(
         card_id=review.card_id,
         quality=review.quality,
         time_taken=review.time_taken,
+    )
+
+
+@router.post(
+    "/bulk",
+    response_model=SM2BulkReviewResult,
+    summary="Submit multiple card reviews",
+    description="Submit multiple card reviews in a single request. Handles partial failures gracefully - individual card failures don't affect other reviews in the batch.",
+    responses={
+        200: {
+            "description": "Bulk review processed (may include partial failures)",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "session_id": "study-session-123",
+                        "total_submitted": 10,
+                        "successful": 9,
+                        "failed": 1,
+                        "results": [
+                            {
+                                "success": True,
+                                "card_id": "660e8400-e29b-41d4-a716-446655440001",
+                                "quality": 4,
+                                "previous_status": "new",
+                                "new_status": "learning",
+                                "easiness_factor": 2.5,
+                                "interval": 1,
+                                "repetitions": 1,
+                                "next_review_date": "2024-01-16",
+                                "message": "Good start!",
+                            }
+                        ],
+                    }
+                }
+            },
+        },
+        401: {"description": "Not authenticated - missing or invalid token"},
+        422: {
+            "description": "Validation error - invalid request body, max 100 reviews exceeded, or invalid quality/time_taken values"
+        },
+    },
+)
+async def submit_bulk_reviews(
+    request: BulkReviewSubmit,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> SM2BulkReviewResult:
+    """Submit multiple card reviews in bulk.
+
+    This endpoint processes multiple flashcard reviews in a single request using
+    the SM-2 spaced repetition algorithm. It handles partial failures gracefully -
+    if some reviews fail (e.g., card not found), the successful ones are still
+    processed and committed.
+
+    The request must include:
+    - deck_id: UUID of the deck containing the cards
+    - session_id: Client-provided identifier for the study session
+    - reviews: Array of 1-100 review objects, each with card_id, quality, and time_taken
+
+    Quality rating scale (same as single review):
+    - 0: Complete blackout, no recognition
+    - 1: Incorrect, but upon seeing answer, remembered
+    - 2: Incorrect, but answer seemed easy to recall
+    - 3: Correct with serious difficulty
+    - 4: Correct with some hesitation
+    - 5: Perfect response, no hesitation
+
+    Args:
+        request: Bulk review submission containing deck_id, session_id, and reviews array
+        db: Database session (injected)
+        current_user: Authenticated user (injected)
+
+    Returns:
+        SM2BulkReviewResult: Summary with total_submitted, successful, failed counts
+            and individual SM2ReviewResult for each card
+
+    Raises:
+        UnauthorizedException (401): If not authenticated
+        ValidationError (422): If request body validation fails (e.g., >100 reviews)
+    """
+    service = SM2Service(db)
+
+    # Convert Pydantic models to dictionaries for the service
+    reviews_data = [
+        {
+            "card_id": review.card_id,
+            "quality": review.quality,
+            "time_taken": review.time_taken,
+        }
+        for review in request.reviews
+    ]
+
+    return await service.process_bulk_reviews(
+        user_id=current_user.id,
+        reviews=reviews_data,
+        session_id=request.session_id,
     )
