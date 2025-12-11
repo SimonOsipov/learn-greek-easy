@@ -97,30 +97,80 @@ async def invalidate_cache_task(
     cache_type: str,
     entity_id: UUID,
     user_id: UUID | None = None,
+    deck_id: UUID | None = None,
 ) -> None:
-    """Invalidate cached data after a data modification.
+    """Invalidate cache entries after data changes.
 
     This task runs asynchronously to clear stale cache entries after
     deck, card, or progress updates.
 
     Args:
-        cache_type: Type of cache to invalidate (e.g., "deck", "card", "progress").
-        entity_id: ID of the entity that was modified.
-        user_id: Optional user ID for user-specific cache invalidation.
+        cache_type: Type of cache to invalidate ("deck", "card", "progress")
+        entity_id: ID of the entity that changed
+        user_id: Optional user ID for user-specific cache
+        deck_id: Optional deck ID (required for card cache invalidation)
 
-    Note:
-        Placeholder - full implementation in 12.03.
+    Supported cache types:
+        - "deck": Invalidates deck cache. entity_id is the deck_id.
+        - "card": Invalidates card cache. entity_id is the card_id, deck_id is required.
+        - "progress": Invalidates user progress cache. entity_id is the deck_id, user_id is required.
     """
     if not is_background_tasks_enabled():
         logger.debug("Background tasks disabled, skipping invalidate_cache_task")
         return
 
-    logger.debug(
-        f"invalidate_cache_task called: cache_type={cache_type}, "
-        f"entity_id={entity_id}, user_id={user_id}"
+    logger.info(
+        "Starting cache invalidation",
+        extra={
+            "cache_type": cache_type,
+            "entity_id": str(entity_id),
+            "user_id": str(user_id) if user_id else None,
+            "deck_id": str(deck_id) if deck_id else None,
+            "task": "invalidate_cache",
+        },
     )
-    # TODO: Implement in 12.03
-    pass
+
+    try:
+        from src.core.cache import get_cache
+
+        cache = get_cache()
+        deleted = 0
+
+        if cache_type == "deck":
+            deleted = await cache.invalidate_deck(entity_id)
+        elif cache_type == "card" and deck_id:
+            deleted = await cache.invalidate_card(entity_id, deck_id)
+        elif cache_type == "progress" and user_id:
+            deleted = await cache.invalidate_user_progress(user_id, entity_id)
+        else:
+            logger.warning(
+                "Invalid cache invalidation request",
+                extra={
+                    "cache_type": cache_type,
+                    "has_user_id": user_id is not None,
+                    "has_deck_id": deck_id is not None,
+                },
+            )
+            return
+
+        logger.info(
+            "Cache invalidation complete",
+            extra={
+                "cache_type": cache_type,
+                "deleted_entries": deleted,
+            },
+        )
+
+    except Exception as e:
+        logger.error(
+            "Cache invalidation failed",
+            extra={
+                "cache_type": cache_type,
+                "entity_id": str(entity_id),
+                "error": str(e),
+            },
+            exc_info=True,
+        )
 
 
 async def log_analytics_task(
