@@ -246,11 +246,29 @@ class TestScheduledTaskStubs:
 
     @pytest.mark.asyncio
     async def test_streak_reset_task_runs_without_error(self, caplog):
-        """Test that streak_reset_task placeholder runs without error."""
+        """Test that streak_reset_task runs without error (with mocked DB)."""
+        from unittest.mock import AsyncMock, MagicMock, patch
+
         from src.tasks.scheduled import streak_reset_task
 
-        with caplog.at_level("INFO"):
-            await streak_reset_task()
+        with patch("src.tasks.scheduled.create_async_engine") as mock_engine_creator:
+            mock_engine = AsyncMock()
+            mock_engine_creator.return_value = mock_engine
+
+            with patch("src.tasks.scheduled.async_sessionmaker") as mock_sessionmaker:
+                mock_session = AsyncMock()
+                mock_context = MagicMock()
+                mock_context.__aenter__ = AsyncMock(return_value=mock_session)
+                mock_context.__aexit__ = AsyncMock(return_value=False)
+                mock_session_factory = MagicMock(return_value=mock_context)
+                mock_sessionmaker.return_value = mock_session_factory
+
+                mock_result = MagicMock()
+                mock_result.fetchall.return_value = []
+                mock_session.execute.return_value = mock_result
+
+                with caplog.at_level("INFO"):
+                    await streak_reset_task()
 
         assert "streak reset" in caplog.text.lower()
 
