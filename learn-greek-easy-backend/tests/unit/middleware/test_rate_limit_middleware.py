@@ -105,6 +105,7 @@ class TestRateLimitEnforcement:
             patch("src.middleware.rate_limit.settings") as mock_settings,
         ):
             mock_settings.feature_rate_limiting = True
+            mock_settings.is_testing = False
             mock_settings.rate_limit_per_minute = 100
 
             # Create a proper async mock pipeline
@@ -134,6 +135,7 @@ class TestRateLimitEnforcement:
             patch("src.middleware.rate_limit.settings") as mock_settings,
         ):
             mock_settings.feature_rate_limiting = True
+            mock_settings.is_testing = False
             mock_settings.rate_limit_per_minute = 100
 
             # Create a proper async mock pipeline
@@ -197,6 +199,7 @@ class TestAuthEndpointLimits:
             patch("src.middleware.rate_limit.settings") as mock_settings,
         ):
             mock_settings.feature_rate_limiting = True
+            mock_settings.is_testing = False
             mock_settings.rate_limit_per_minute = 100
             mock_settings.rate_limit_auth_per_minute = 10
 
@@ -225,6 +228,7 @@ class TestAuthEndpointLimits:
             patch("src.middleware.rate_limit.settings") as mock_settings,
         ):
             mock_settings.feature_rate_limiting = True
+            mock_settings.is_testing = False
             mock_settings.rate_limit_per_minute = 100
             mock_settings.rate_limit_auth_per_minute = 10
 
@@ -380,6 +384,7 @@ class TestGracefulDegradation:
             patch("src.middleware.rate_limit.settings") as mock_settings,
         ):
             mock_settings.feature_rate_limiting = True
+            mock_settings.is_testing = False
             mock_settings.rate_limit_per_minute = 100
             mock_get_redis.return_value = None
 
@@ -395,6 +400,7 @@ class TestGracefulDegradation:
             patch("src.middleware.rate_limit.logger") as mock_logger,
         ):
             mock_settings.feature_rate_limiting = True
+            mock_settings.is_testing = False
             mock_settings.rate_limit_per_minute = 100
             mock_get_redis.return_value = None
 
@@ -411,6 +417,7 @@ class TestGracefulDegradation:
             patch("src.middleware.rate_limit.settings") as mock_settings,
         ):
             mock_settings.feature_rate_limiting = True
+            mock_settings.is_testing = False
             mock_settings.rate_limit_per_minute = 100
 
             # Create a proper async mock pipeline that raises on execute
@@ -634,6 +641,7 @@ class TestMiddlewareIntegration:
             patch("src.middleware.rate_limit.settings") as mock_settings,
         ):
             mock_settings.feature_rate_limiting = True
+            mock_settings.is_testing = False
             mock_settings.rate_limit_per_minute = 100
 
             # Create a proper async mock pipeline
