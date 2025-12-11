@@ -284,11 +284,32 @@ class TestScheduledTaskStubs:
 
     @pytest.mark.asyncio
     async def test_stats_aggregate_task_runs_without_error(self, caplog):
-        """Test that stats_aggregate_task placeholder runs without error."""
+        """Test that stats_aggregate_task runs without error (with mocked DB)."""
+        from unittest.mock import AsyncMock, MagicMock, patch
+
         from src.tasks.scheduled import stats_aggregate_task
 
-        with caplog.at_level("INFO"):
-            await stats_aggregate_task()
+        with patch("src.tasks.scheduled.create_async_engine") as mock_engine_creator:
+            mock_engine = AsyncMock()
+            mock_engine_creator.return_value = mock_engine
+
+            with patch("src.tasks.scheduled.async_sessionmaker") as mock_sessionmaker:
+                mock_session = AsyncMock()
+                mock_context = MagicMock()
+                mock_context.__aenter__ = AsyncMock(return_value=mock_session)
+                mock_context.__aexit__ = AsyncMock(return_value=False)
+                mock_session_factory = MagicMock(return_value=mock_context)
+                mock_sessionmaker.return_value = mock_session_factory
+
+                # Mock empty results for both queries
+                review_result = MagicMock()
+                review_result.fetchall.return_value = []
+                mastery_result = MagicMock()
+                mastery_result.fetchall.return_value = []
+                mock_session.execute.side_effect = [review_result, mastery_result]
+
+                with caplog.at_level("INFO"):
+                    await stats_aggregate_task()
 
         assert "stats aggregation" in caplog.text.lower()
 
