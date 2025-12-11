@@ -4,13 +4,19 @@ This module provides endpoints for progress tracking and analytics,
 including dashboard statistics, deck progress, and learning trends.
 """
 
-from fastapi import APIRouter, Depends
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.dependencies import get_current_user
 from src.db.dependencies import get_db
 from src.db.models import User
-from src.schemas.progress import DashboardStatsResponse
+from src.schemas.progress import (
+    DashboardStatsResponse,
+    DeckProgressDetailResponse,
+    DeckProgressListResponse,
+)
 from src.services.progress_service import ProgressService
 
 router = APIRouter(
@@ -102,3 +108,171 @@ async def get_dashboard_stats(
     """
     service = ProgressService(db)
     return await service.get_dashboard_stats(current_user.id)
+
+
+@router.get(
+    "/decks",
+    response_model=DeckProgressListResponse,
+    summary="List deck progress",
+    description="""
+    Get paginated list of progress for all decks the user has started studying.
+
+    Each deck includes:
+    - Basic deck info (name, level)
+    - Progress metrics (studied, mastered, due)
+    - Percentage completion and mastery
+    - Estimated review time
+    - Average easiness factor
+
+    Use `page` and `page_size` query parameters for pagination.
+    """,
+    responses={
+        200: {
+            "description": "Deck progress list retrieved successfully",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "total": 3,
+                        "page": 1,
+                        "page_size": 20,
+                        "decks": [
+                            {
+                                "deck_id": "550e8400-e29b-41d4-a716-446655440000",
+                                "deck_name": "Greek A1 Vocabulary",
+                                "deck_level": "A1",
+                                "total_cards": 100,
+                                "cards_studied": 75,
+                                "cards_mastered": 30,
+                                "cards_due": 15,
+                                "mastery_percentage": 30.0,
+                                "completion_percentage": 75.0,
+                                "last_studied_at": "2024-01-15T10:30:00Z",
+                                "average_easiness_factor": 2.35,
+                                "estimated_review_time_minutes": 8,
+                            }
+                        ],
+                    }
+                }
+            },
+        },
+    },
+)
+async def get_deck_progress_list(
+    page: int = Query(1, ge=1, description="Page number (1-indexed)"),
+    page_size: int = Query(20, ge=1, le=100, description="Items per page (1-100)"),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> DeckProgressListResponse:
+    """Get paginated list of deck progress.
+
+    Returns progress for all decks the user has started studying,
+    with pagination support.
+
+    Args:
+        page: Page number starting from 1
+        page_size: Number of items per page (1-100)
+        db: Database session (injected)
+        current_user: Authenticated user (injected)
+
+    Returns:
+        DeckProgressListResponse with total count and paginated deck list
+    """
+    service = ProgressService(db)
+    return await service.get_deck_progress_list(
+        user_id=current_user.id,
+        page=page,
+        page_size=page_size,
+    )
+
+
+@router.get(
+    "/decks/{deck_id}",
+    response_model=DeckProgressDetailResponse,
+    summary="Get deck progress details",
+    description="""
+    Get detailed progress for a specific deck.
+
+    Includes:
+    - **Progress metrics**: Cards studied, mastered, due, by status
+    - **Statistics**: Total reviews, study time, average quality/EF/interval
+    - **Timeline**: First/last studied, days active, estimated completion
+
+    Returns 404 if:
+    - Deck doesn't exist
+    - User has no progress for the deck
+    """,
+    responses={
+        200: {
+            "description": "Deck progress details retrieved successfully",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "deck_id": "550e8400-e29b-41d4-a716-446655440000",
+                        "deck_name": "Greek A1 Vocabulary",
+                        "deck_level": "A1",
+                        "deck_description": "Essential Greek vocabulary for beginners",
+                        "progress": {
+                            "total_cards": 100,
+                            "cards_studied": 75,
+                            "cards_mastered": 30,
+                            "cards_due": 15,
+                            "cards_new": 25,
+                            "cards_learning": 20,
+                            "cards_review": 25,
+                            "mastery_percentage": 30.0,
+                            "completion_percentage": 75.0,
+                        },
+                        "statistics": {
+                            "total_reviews": 250,
+                            "total_study_time_seconds": 7500,
+                            "average_quality": 3.8,
+                            "average_easiness_factor": 2.35,
+                            "average_interval_days": 4.5,
+                        },
+                        "timeline": {
+                            "first_studied_at": "2024-01-01T10:00:00Z",
+                            "last_studied_at": "2024-01-15T10:30:00Z",
+                            "days_active": 15,
+                            "estimated_completion_days": 10,
+                        },
+                    }
+                }
+            },
+        },
+        404: {
+            "description": "Deck not found or no progress exists",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Deck not found", "error_code": "NOT_FOUND"}
+                }
+            },
+        },
+    },
+)
+async def get_deck_progress_detail(
+    deck_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> DeckProgressDetailResponse:
+    """Get detailed progress for a specific deck.
+
+    Returns comprehensive progress information including metrics,
+    statistics, and timeline for the specified deck.
+
+    Args:
+        deck_id: UUID of the deck to get progress for
+        db: Database session (injected)
+        current_user: Authenticated user (injected)
+
+    Returns:
+        DeckProgressDetailResponse with detailed deck progress
+
+    Raises:
+        DeckNotFoundException: If deck doesn't exist
+        NotFoundException: If user has no progress for deck
+    """
+    service = ProgressService(db)
+    return await service.get_deck_progress_detail(
+        user_id=current_user.id,
+        deck_id=deck_id,
+    )
