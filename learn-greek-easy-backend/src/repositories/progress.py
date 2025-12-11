@@ -113,6 +113,53 @@ class UserDeckProgressRepository(BaseRepository[UserDeckProgress]):
         await self.db.flush()
         return progress
 
+    async def count_user_decks(self, user_id: UUID) -> int:
+        """Count decks user has started.
+
+        Args:
+            user_id: User UUID
+
+        Returns:
+            Number of decks with progress records for this user
+        """
+        query = (
+            select(func.count())
+            .select_from(UserDeckProgress)
+            .where(UserDeckProgress.user_id == user_id)
+        )
+        result = await self.db.execute(query)
+        return result.scalar() or 0
+
+    async def get_total_cards_studied(self, user_id: UUID) -> int:
+        """Get sum of cards_studied across all decks.
+
+        Args:
+            user_id: User UUID
+
+        Returns:
+            Total cards studied across all decks
+        """
+        query = select(func.coalesce(func.sum(UserDeckProgress.cards_studied), 0)).where(
+            UserDeckProgress.user_id == user_id
+        )
+        result = await self.db.execute(query)
+        return result.scalar() or 0
+
+    async def get_total_cards_mastered(self, user_id: UUID) -> int:
+        """Get sum of cards_mastered across all decks.
+
+        Args:
+            user_id: User UUID
+
+        Returns:
+            Total cards mastered across all decks
+        """
+        query = select(func.coalesce(func.sum(UserDeckProgress.cards_mastered), 0)).where(
+            UserDeckProgress.user_id == user_id
+        )
+        result = await self.db.execute(query)
+        return result.scalar() or 0
+
 
 class CardStatisticsRepository(BaseRepository[CardStatistics]):
     """Repository for CardStatistics model (SM-2 algorithm)."""
@@ -489,3 +536,82 @@ class CardStatisticsRepository(BaseRepository[CardStatistics]):
             await self.db.flush()
 
         return new_stats
+
+    async def get_average_easiness_factor(
+        self,
+        user_id: UUID,
+        deck_id: UUID | None = None,
+    ) -> float:
+        """Get average easiness factor for user's cards.
+
+        Args:
+            user_id: User UUID
+            deck_id: Optional deck filter
+
+        Returns:
+            Average easiness factor (default 2.5 if no data)
+        """
+        query = select(func.avg(CardStatistics.easiness_factor)).where(
+            CardStatistics.user_id == user_id
+        )
+        if deck_id:
+            query = query.join(Card).where(Card.deck_id == deck_id)
+        result = await self.db.execute(query)
+        avg = result.scalar()
+        return float(avg) if avg else 2.5
+
+    async def get_average_interval(
+        self,
+        user_id: UUID,
+        deck_id: UUID | None = None,
+    ) -> float:
+        """Get average interval in days for user's cards.
+
+        Args:
+            user_id: User UUID
+            deck_id: Optional deck filter
+
+        Returns:
+            Average interval in days (default 0.0 if no data)
+        """
+        query = select(func.avg(CardStatistics.interval)).where(CardStatistics.user_id == user_id)
+        if deck_id:
+            query = query.join(Card).where(Card.deck_id == deck_id)
+        result = await self.db.execute(query)
+        avg = result.scalar()
+        return float(avg) if avg else 0.0
+
+    async def count_cards_mastered_in_range(
+        self,
+        user_id: UUID,
+        start_date: date,
+        end_date: date,
+    ) -> int:
+        """Count cards that reached mastered status in date range.
+
+        A card is considered mastered when status is MASTERED.
+        Uses updated_at to approximate when mastery was achieved.
+
+        Args:
+            user_id: User UUID
+            start_date: Start date (inclusive)
+            end_date: End date (inclusive)
+
+        Returns:
+            Count of cards mastered in the date range
+
+        Note:
+            This is an approximation since CardStatistics doesn't track
+            when a card first reached mastered status. Uses updated_at
+            and status=MASTERED as proxy.
+        """
+        query = (
+            select(func.count())
+            .select_from(CardStatistics)
+            .where(CardStatistics.user_id == user_id)
+            .where(CardStatistics.status == CardStatus.MASTERED)
+            .where(func.date(CardStatistics.updated_at) >= start_date)
+            .where(func.date(CardStatistics.updated_at) <= end_date)
+        )
+        result = await self.db.execute(query)
+        return result.scalar() or 0

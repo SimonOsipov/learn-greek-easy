@@ -1,12 +1,13 @@
 """Review repository for history and analytics."""
 
 from datetime import date, datetime, timedelta
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.db.models import Review
+from src.db.models import Card, Review
 from src.repositories.base import BaseRepository
 
 
@@ -210,3 +211,165 @@ class ReviewRepository(BaseRepository[Review]):
 
         result = await self.db.execute(query)
         return result.scalar_one()
+
+    async def get_reviews_by_date_range(
+        self,
+        user_id: UUID,
+        start_date: date,
+        end_date: date,
+        deck_id: UUID | None = None,
+    ) -> list[Review]:
+        """Get reviews within a date range for trends.
+
+        Args:
+            user_id: User ID to filter by
+            start_date: Start date (inclusive)
+            end_date: End date (inclusive)
+            deck_id: Optional deck filter
+
+        Returns:
+            List of Review objects within the date range
+        """
+        query = (
+            select(Review)
+            .where(Review.user_id == user_id)
+            .where(func.date(Review.reviewed_at) >= start_date)
+            .where(func.date(Review.reviewed_at) <= end_date)
+        )
+        if deck_id:
+            query = query.join(Card).where(Card.deck_id == deck_id)
+        result = await self.db.execute(query)
+        return list(result.scalars().all())
+
+    async def get_daily_review_counts(
+        self,
+        user_id: UUID,
+        start_date: date,
+        end_date: date,
+    ) -> list[tuple[Any, int]]:
+        """Get review counts grouped by date.
+
+        Args:
+            user_id: User ID to filter by
+            start_date: Start date (inclusive)
+            end_date: End date (inclusive)
+
+        Returns:
+            List of (date, count) tuples ordered by date ascending
+        """
+        query = (
+            select(
+                func.date(Review.reviewed_at).label("review_date"),
+                func.count().label("count"),
+            )
+            .where(Review.user_id == user_id)
+            .where(func.date(Review.reviewed_at) >= start_date)
+            .where(func.date(Review.reviewed_at) <= end_date)
+            .group_by(func.date(Review.reviewed_at))
+            .order_by(func.date(Review.reviewed_at))
+        )
+        result = await self.db.execute(query)
+        return [(row[0], row[1]) for row in result.all()]
+
+    async def get_daily_stats(
+        self,
+        user_id: UUID,
+        start_date: date,
+        end_date: date,
+    ) -> list[dict]:
+        """Get aggregated daily statistics for trends.
+
+        Args:
+            user_id: User ID to filter by
+            start_date: Start date (inclusive)
+            end_date: End date (inclusive)
+
+        Returns:
+            List of dicts with:
+            - date: The review date
+            - reviews_count: Number of reviews
+            - total_time_seconds: Sum of time_taken
+            - average_quality: Average quality rating (0-5)
+        """
+        query = (
+            select(
+                func.date(Review.reviewed_at).label("review_date"),
+                func.count().label("reviews_count"),
+                func.coalesce(func.sum(Review.time_taken), 0).label("total_time_seconds"),
+                func.avg(Review.quality).label("average_quality"),
+            )
+            .where(Review.user_id == user_id)
+            .where(func.date(Review.reviewed_at) >= start_date)
+            .where(func.date(Review.reviewed_at) <= end_date)
+            .group_by(func.date(Review.reviewed_at))
+            .order_by(func.date(Review.reviewed_at))
+        )
+        result = await self.db.execute(query)
+        return [
+            {
+                "date": row[0],
+                "reviews_count": row[1],
+                "total_time_seconds": row[2],
+                "average_quality": float(row[3]) if row[3] else 0.0,
+            }
+            for row in result.all()
+        ]
+
+    async def get_study_time_today(self, user_id: UUID) -> int:
+        """Get total study time in seconds for today.
+
+        Args:
+            user_id: User UUID
+
+        Returns:
+            Total study time in seconds for today
+        """
+        today = date.today()
+        query = (
+            select(func.coalesce(func.sum(Review.time_taken), 0))
+            .where(Review.user_id == user_id)
+            .where(func.date(Review.reviewed_at) == today)
+        )
+        result = await self.db.execute(query)
+        return result.scalar() or 0
+
+    async def get_longest_streak(self, user_id: UUID) -> int:
+        """Calculate longest historical streak.
+
+        Scans full review history to find the longest consecutive
+        day streak where user had at least one review.
+
+        Args:
+            user_id: User UUID
+
+        Returns:
+            Longest streak in days
+
+        Note:
+            For production, consider caching this value or using
+            a materialized approach for users with extensive history.
+        """
+        # Get all unique dates with reviews, ordered
+        query = (
+            select(func.date(Review.reviewed_at).label("review_date"))
+            .where(Review.user_id == user_id)
+            .group_by(func.date(Review.reviewed_at))
+            .order_by(func.date(Review.reviewed_at))
+        )
+        result = await self.db.execute(query)
+        dates = [row.review_date for row in result.all()]
+
+        if not dates:
+            return 0
+
+        longest = 1
+        current = 1
+
+        for i in range(1, len(dates)):
+            if (dates[i] - dates[i - 1]).days == 1:
+                current += 1
+                longest = max(longest, current)
+            else:
+                current = 1
+
+        return longest

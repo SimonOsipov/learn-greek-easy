@@ -162,6 +162,8 @@ markers = [
     "api: API endpoint tests",
     "db: Database-related tests",
     "sm2: SM-2 spaced repetition algorithm tests",
+    "progress: Progress API service tests",
+    "achievements: Achievement system tests",
     "no_parallel: Tests that cannot run in parallel (sequential only)",
 ]
 
