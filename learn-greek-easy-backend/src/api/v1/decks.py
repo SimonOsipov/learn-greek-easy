@@ -7,9 +7,10 @@ listing decks with pagination and filtering.
 from typing import Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, Response, status
+from fastapi import APIRouter, BackgroundTasks, Depends, Query, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.config import settings
 from src.core.dependencies import get_current_superuser
 from src.core.exceptions import DeckNotFoundException
 from src.db.dependencies import get_db
@@ -23,6 +24,7 @@ from src.schemas.deck import (
     DeckSearchResponse,
     DeckUpdate,
 )
+from src.tasks.background import invalidate_cache_task
 
 router = APIRouter(
     # Note: prefix is set by parent router in v1/router.py
@@ -351,6 +353,7 @@ async def get_deck(
 async def update_deck(
     deck_id: UUID,
     deck_data: DeckUpdate,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_superuser),
 ) -> DeckResponse:
@@ -362,6 +365,7 @@ async def update_deck(
     Args:
         deck_id: UUID of the deck to update
         deck_data: Fields to update (all optional)
+        background_tasks: FastAPI BackgroundTasks for scheduling async operations
         db: Database session (injected)
         current_user: Authenticated superuser (injected)
 
@@ -388,6 +392,14 @@ async def update_deck(
     await db.commit()
     await db.refresh(updated_deck)
 
+    # Schedule background tasks if enabled
+    if settings.feature_background_tasks:
+        background_tasks.add_task(
+            invalidate_cache_task,
+            cache_type="deck",
+            entity_id=deck_id,
+        )
+
     return DeckResponse.model_validate(updated_deck)
 
 
@@ -405,6 +417,7 @@ async def update_deck(
 )
 async def delete_deck(
     deck_id: UUID,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_superuser),
 ) -> Response:
@@ -420,6 +433,7 @@ async def delete_deck(
 
     Args:
         deck_id: UUID of the deck to delete
+        background_tasks: FastAPI BackgroundTasks for scheduling async operations
         db: Database session (injected)
         current_user: Authenticated superuser (injected)
 
@@ -443,5 +457,13 @@ async def delete_deck(
 
     # Commit changes
     await db.commit()
+
+    # Schedule background tasks if enabled
+    if settings.feature_background_tasks:
+        background_tasks.add_task(
+            invalidate_cache_task,
+            cache_type="deck",
+            entity_id=deck_id,
+        )
 
     return Response(status_code=status.HTTP_204_NO_CONTENT)

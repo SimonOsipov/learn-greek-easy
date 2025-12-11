@@ -7,9 +7,10 @@ allowing users to submit card reviews and receive SM-2 algorithm results.
 from datetime import date
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.config import settings
 from src.core.dependencies import get_current_user
 from src.core.exceptions import CardNotFoundException
 from src.db.dependencies import get_db
@@ -24,6 +25,7 @@ from src.schemas.review import (
 )
 from src.schemas.sm2 import SM2BulkReviewResult, SM2ReviewResult
 from src.services.sm2_service import SM2Service
+from src.tasks.background import check_achievements_task, invalidate_cache_task, log_analytics_task
 
 router = APIRouter(
     # Note: prefix is set by parent router in v1/router.py
@@ -177,6 +179,7 @@ async def get_review_history(
 )
 async def submit_review(
     review: ReviewSubmit,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> SM2ReviewResult:
@@ -195,6 +198,7 @@ async def submit_review(
 
     Args:
         review: Review submission data containing card_id, quality (0-5), and time_taken (0-300 seconds)
+        background_tasks: FastAPI BackgroundTasks for scheduling async operations
         db: Database session (injected)
         current_user: Authenticated user (injected)
 
@@ -215,12 +219,44 @@ async def submit_review(
 
     # Process the review using SM2Service
     service = SM2Service(db)
-    return await service.process_review(
+    result = await service.process_review(
         user_id=current_user.id,
         card_id=review.card_id,
         quality=review.quality,
         time_taken=review.time_taken,
     )
+
+    # Schedule background tasks if enabled
+    if settings.feature_background_tasks:
+        # Check for new achievements
+        background_tasks.add_task(
+            check_achievements_task,
+            user_id=current_user.id,
+            db_url=settings.database_url,
+        )
+
+        # Invalidate progress cache
+        background_tasks.add_task(
+            invalidate_cache_task,
+            cache_type="progress",
+            entity_id=review.card_id,
+            user_id=current_user.id,
+        )
+
+        # Log analytics event
+        background_tasks.add_task(
+            log_analytics_task,
+            event_type="review_completed",
+            user_id=current_user.id,
+            data={
+                "card_id": str(review.card_id),
+                "quality": review.quality,
+                "time_taken": review.time_taken,
+                "new_status": result.new_status.value,
+            },
+        )
+
+    return result
 
 
 @router.post(
@@ -264,6 +300,7 @@ async def submit_review(
 )
 async def submit_bulk_reviews(
     request: BulkReviewSubmit,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> SM2BulkReviewResult:
@@ -289,6 +326,7 @@ async def submit_bulk_reviews(
 
     Args:
         request: Bulk review submission containing deck_id, session_id, and reviews array
+        background_tasks: FastAPI BackgroundTasks for scheduling async operations
         db: Database session (injected)
         current_user: Authenticated user (injected)
 
@@ -312,8 +350,33 @@ async def submit_bulk_reviews(
         for review in request.reviews
     ]
 
-    return await service.process_bulk_reviews(
+    result = await service.process_bulk_reviews(
         user_id=current_user.id,
         reviews=reviews_data,
         session_id=request.session_id,
     )
+
+    # Schedule background tasks if enabled
+    if settings.feature_background_tasks:
+        # Check achievements after bulk reviews
+        background_tasks.add_task(
+            check_achievements_task,
+            user_id=current_user.id,
+            db_url=settings.database_url,
+        )
+
+        # Log bulk review analytics
+        background_tasks.add_task(
+            log_analytics_task,
+            event_type="bulk_review_completed",
+            user_id=current_user.id,
+            data={
+                "session_id": request.session_id,
+                "deck_id": str(request.deck_id),
+                "total_reviews": result.total_submitted,
+                "successful": result.successful,
+                "failed": result.failed,
+            },
+        )
+
+    return result
