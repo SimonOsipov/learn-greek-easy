@@ -6,10 +6,7 @@ on a periodic basis using APScheduler's CronTrigger.
 Tasks:
 - streak_reset_task: Daily at midnight UTC - Check and log broken streaks
 - session_cleanup_task: Daily at 3 AM UTC - Clean up orphaned Redis sessions
-- stats_aggregate_task: Daily at 00:30 UTC - Aggregate user statistics
-
-Note: stats_aggregate_task is a placeholder implementation.
-Full implementation will be added in task 12.09.
+- stats_aggregate_task: Daily at 4 AM UTC - Aggregate user statistics for analytics
 """
 
 import logging
@@ -274,17 +271,131 @@ async def session_cleanup_task() -> None:
 
 
 async def stats_aggregate_task() -> None:
-    """Aggregate daily user statistics.
+    """Pre-compute daily statistics for faster dashboard queries.
 
-    This task runs daily at 00:30 UTC (after streak reset) and:
-    1. Aggregates review counts, accuracy rates, study time
-    2. Updates daily/weekly/monthly summary tables
-    3. Prepares data for analytics dashboards
+    This task aggregates review data from the previous day into
+    summary statistics. Currently logs aggregated data; future
+    versions could populate a dedicated stats table.
 
-    Note: Full implementation in task 12.09.
+    Aggregates:
+    - Reviews per user
+    - Average quality per user
+    - Total study time per user
+    - Cards mastered per user
+
+    Runs daily during off-peak hours (4 AM UTC).
     """
-    logger.info("Running stats aggregation task (placeholder)")
-    # TODO: Implement in task 12.09
-    # - Aggregate yesterday's review data per user
-    # - Update summary statistics tables
-    # - Log aggregation results
+    logger.info("Starting stats aggregation task")
+    start_time = datetime.now(timezone.utc)
+    engine = None
+
+    try:
+        # Create dedicated engine for this scheduled task
+        engine = create_async_engine(settings.database_url, pool_pre_ping=True)
+        async_session_factory = async_sessionmaker(
+            engine, class_=AsyncSession, expire_on_commit=False
+        )
+
+        async with async_session_factory() as session:
+            yesterday = datetime.now(timezone.utc).date() - timedelta(days=1)
+
+            # Aggregate review statistics by user for yesterday
+            review_stats_query = text(
+                """
+                SELECT
+                    r.user_id,
+                    COUNT(*) as review_count,
+                    ROUND(AVG(r.quality)::numeric, 2) as avg_quality,
+                    COALESCE(SUM(r.time_taken), 0) as total_time_seconds,
+                    COUNT(DISTINCT r.card_id) as unique_cards
+                FROM reviews r
+                WHERE DATE(r.reviewed_at) = :target_date
+                GROUP BY r.user_id
+                ORDER BY review_count DESC
+            """
+            )
+
+            result = await session.execute(review_stats_query, {"target_date": yesterday})
+            daily_review_stats = result.fetchall()
+
+            # Aggregate mastery statistics (cards that became mastered yesterday)
+            # Note: PostgreSQL enum values are uppercase (MASTERED, not mastered)
+            mastery_stats_query = text(
+                """
+                SELECT
+                    cs.user_id,
+                    COUNT(*) as cards_mastered
+                FROM card_statistics cs
+                WHERE cs.status = 'MASTERED'
+                  AND DATE(cs.updated_at) = :target_date
+                GROUP BY cs.user_id
+            """
+            )
+
+            mastery_result = await session.execute(mastery_stats_query, {"target_date": yesterday})
+            mastery_stats = {row[0]: row[1] for row in mastery_result.fetchall()}
+
+            # Calculate totals (handle empty results and None values defensively)
+            total_users = len(daily_review_stats)
+            total_reviews = sum(row[1] for row in daily_review_stats) if daily_review_stats else 0
+            total_time = sum(row[3] or 0 for row in daily_review_stats) if daily_review_stats else 0
+
+            # Log per-user stats for analytics
+            for (
+                user_id,
+                review_count,
+                avg_quality,
+                time_seconds,
+                unique_cards,
+            ) in daily_review_stats:
+                cards_mastered = mastery_stats.get(user_id, 0)
+
+                logger.info(
+                    "Daily user stats",
+                    extra={
+                        "date": str(yesterday),
+                        "user_id": str(user_id),
+                        "review_count": review_count,
+                        "avg_quality": float(avg_quality) if avg_quality else 0,
+                        "study_time_seconds": time_seconds or 0,
+                        "unique_cards": unique_cards,
+                        "cards_mastered": cards_mastered,
+                    },
+                )
+
+            # Calculate platform-wide statistics
+            if daily_review_stats:
+                avg_reviews_per_user = total_reviews / total_users
+                avg_time_per_user = total_time / total_users
+                total_mastered = sum(mastery_stats.values())
+            else:
+                avg_reviews_per_user = 0
+                avg_time_per_user = 0
+                total_mastered = 0
+
+            duration_ms = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
+
+            logger.info(
+                "Stats aggregation complete",
+                extra={
+                    "date": str(yesterday),
+                    "total_active_users": total_users,
+                    "total_reviews": total_reviews,
+                    "total_study_time_seconds": total_time,
+                    "total_cards_mastered": total_mastered,
+                    "avg_reviews_per_user": round(avg_reviews_per_user, 1),
+                    "avg_time_per_user_seconds": round(avg_time_per_user, 1),
+                    "duration_ms": duration_ms,
+                },
+            )
+
+            await session.commit()
+
+    except Exception as e:
+        logger.error(f"Stats aggregation failed: {e}", exc_info=True)
+        raise
+
+    finally:
+        # Always dispose of the engine to clean up connections
+        if engine is not None:
+            await engine.dispose()
