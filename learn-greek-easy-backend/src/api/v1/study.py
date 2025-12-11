@@ -15,7 +15,13 @@ from src.core.dependencies import get_current_user
 from src.db.dependencies import get_db
 from src.db.models import User
 from src.repositories.review import ReviewRepository
-from src.schemas.sm2 import StudyQueue, StudyQueueRequest, StudyStatsResponse
+from src.schemas.sm2 import (
+    CardInitializationRequest,
+    CardInitializationResult,
+    StudyQueue,
+    StudyQueueRequest,
+    StudyStatsResponse,
+)
 from src.services.sm2_service import SM2Service
 
 router = APIRouter(
@@ -303,4 +309,135 @@ async def get_study_stats(
         total_reviews=total_reviews,
         total_study_time=total_time,
         average_quality=avg_quality,
+    )
+
+
+@router.post(
+    "/initialize",
+    response_model=CardInitializationResult,
+    summary="Initialize specific cards for study",
+    description="Initialize CardStatistics records for specific cards in a deck. "
+    "Creates records for cards that haven't been studied yet.",
+    responses={
+        200: {
+            "description": "Cards initialized successfully",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "initialized_count": 5,
+                        "already_exists_count": 2,
+                        "card_ids": [
+                            "550e8400-e29b-41d4-a716-446655440000",
+                            "550e8400-e29b-41d4-a716-446655440001",
+                        ],
+                    }
+                }
+            },
+        },
+        401: {"description": "Not authenticated - missing or invalid token"},
+        404: {"description": "Deck not found or inactive"},
+        422: {"description": "Validation error - invalid deck_id or card_ids"},
+    },
+)
+async def initialize_cards(
+    request: CardInitializationRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> CardInitializationResult:
+    """Initialize specific cards for study.
+
+    This endpoint creates CardStatistics records for cards that haven't been
+    studied yet. Use this when:
+    1. User starts a new deck
+    2. New cards are added to a deck they're studying
+    3. Frontend explicitly requests initialization
+
+    The service validates that:
+    - The deck exists and is active
+    - All card_ids belong to the specified deck
+    - Cards that already have statistics are skipped (not errors)
+
+    Args:
+        request: CardInitializationRequest with deck_id and list of card_ids
+        db: Database session (injected)
+        current_user: Authenticated user (injected)
+
+    Returns:
+        CardInitializationResult with counts of initialized and already-existing cards
+
+    Raises:
+        DeckNotFoundException (404): If deck doesn't exist or is inactive
+
+    Example:
+        POST /api/v1/study/initialize
+        {
+            "deck_id": "660e8400-e29b-41d4-a716-446655440001",
+            "card_ids": ["550e8400-e29b-41d4-a716-446655440000"]
+        }
+    """
+    service = SM2Service(db)
+    return await service.initialize_cards_for_user(
+        user_id=current_user.id,
+        request=request,
+    )
+
+
+@router.post(
+    "/initialize/{deck_id}",
+    response_model=CardInitializationResult,
+    summary="Initialize all cards in a deck for study",
+    description="Convenience endpoint to initialize all cards in a deck at once. "
+    "Creates CardStatistics records for all cards the user hasn't studied.",
+    responses={
+        200: {
+            "description": "Deck cards initialized successfully",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "initialized_count": 50,
+                        "already_exists_count": 10,
+                        "card_ids": [
+                            "550e8400-e29b-41d4-a716-446655440000",
+                            "550e8400-e29b-41d4-a716-446655440001",
+                        ],
+                    }
+                }
+            },
+        },
+        401: {"description": "Not authenticated - missing or invalid token"},
+        404: {"description": "Deck not found or inactive"},
+        422: {"description": "Validation error - invalid deck_id format"},
+    },
+)
+async def initialize_deck(
+    deck_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> CardInitializationResult:
+    """Initialize all cards in a deck for study.
+
+    This is a convenience endpoint that initializes all cards in a deck
+    at once. Use this when a user wants to start studying an entire deck.
+
+    For decks with many cards, consider using the specific card initialization
+    endpoint to control which cards are initialized.
+
+    Args:
+        deck_id: UUID of the deck to initialize
+        db: Database session (injected)
+        current_user: Authenticated user (injected)
+
+    Returns:
+        CardInitializationResult with counts of initialized and already-existing cards
+
+    Raises:
+        DeckNotFoundException (404): If deck doesn't exist or is inactive
+
+    Example:
+        POST /api/v1/study/initialize/660e8400-e29b-41d4-a716-446655440001
+    """
+    service = SM2Service(db)
+    return await service.initialize_deck_for_user(
+        user_id=current_user.id,
+        deck_id=deck_id,
     )
