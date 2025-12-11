@@ -235,21 +235,111 @@ async def recalculate_progress_task(
 ) -> None:
     """Recalculate user progress statistics for a deck.
 
-    This task runs asynchronously to update aggregated progress
-    metrics after reviews without blocking the response.
+    This ensures progress metrics are accurate after reviews.
+    Useful when metrics might have drifted due to edge cases
+    (concurrent updates, partial failures, etc.).
+
+    The task creates its own database connection to avoid issues with
+    connection sharing across async contexts.
 
     Args:
-        user_id: ID of the user whose progress to recalculate.
-        deck_id: ID of the deck to recalculate progress for.
-        db_url: Database connection URL for creating a new session.
-
-    Note:
-        Placeholder - full implementation in 12.05.
+        user_id: UUID of the user to recalculate for
+        deck_id: UUID of the deck to recalculate
+        db_url: Database connection URL
     """
     if not is_background_tasks_enabled():
         logger.debug("Background tasks disabled, skipping recalculate_progress_task")
         return
 
-    logger.debug(f"recalculate_progress_task called: user_id={user_id}, deck_id={deck_id}")
-    # TODO: Implement in 12.05
-    pass
+    logger.info(
+        "Starting progress recalculation",
+        extra={
+            "user_id": str(user_id),
+            "deck_id": str(deck_id),
+            "task": "recalculate_progress",
+        },
+    )
+
+    start_time = datetime.now(timezone.utc)
+    engine = None
+
+    try:
+        # Create dedicated engine for this background task
+        engine = create_async_engine(db_url, pool_pre_ping=True)
+        async_session_factory = async_sessionmaker(
+            engine, class_=AsyncSession, expire_on_commit=False
+        )
+
+        async with async_session_factory() as session:
+            # Import here to avoid circular imports
+            from src.repositories import CardStatisticsRepository, UserDeckProgressRepository
+
+            progress_repo = UserDeckProgressRepository(session)
+            stats_repo = CardStatisticsRepository(session)
+
+            # Get actual counts from card statistics
+            status_counts = await stats_repo.count_by_status(user_id, deck_id)
+
+            # Recalculate studied (learning + review + mastered)
+            cards_studied = sum(status_counts.get(s, 0) for s in ["learning", "review", "mastered"])
+            cards_mastered = status_counts.get("mastered", 0)
+
+            # Get or create progress record
+            progress = await progress_repo.get_or_create(user_id, deck_id)
+
+            # Track changes for logging
+            old_studied = progress.cards_studied
+            old_mastered = progress.cards_mastered
+
+            # Update if different
+            if progress.cards_studied != cards_studied or progress.cards_mastered != cards_mastered:
+                progress.cards_studied = cards_studied
+                progress.cards_mastered = cards_mastered
+                await session.commit()
+
+                logger.info(
+                    "Progress recalculated with changes",
+                    extra={
+                        "user_id": str(user_id),
+                        "deck_id": str(deck_id),
+                        "old_studied": old_studied,
+                        "new_studied": cards_studied,
+                        "old_mastered": old_mastered,
+                        "new_mastered": cards_mastered,
+                    },
+                )
+            else:
+                logger.info(
+                    "Progress recalculation - no changes needed",
+                    extra={
+                        "user_id": str(user_id),
+                        "deck_id": str(deck_id),
+                        "cards_studied": cards_studied,
+                        "cards_mastered": cards_mastered,
+                    },
+                )
+
+        duration_ms = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
+        logger.info(
+            "Progress recalculation complete",
+            extra={
+                "user_id": str(user_id),
+                "deck_id": str(deck_id),
+                "duration_ms": duration_ms,
+            },
+        )
+
+    except Exception as e:
+        logger.error(
+            "Progress recalculation failed",
+            extra={
+                "user_id": str(user_id),
+                "deck_id": str(deck_id),
+                "error": str(e),
+            },
+            exc_info=True,
+        )
+    finally:
+        # Always dispose of the engine to clean up connections
+        if engine is not None:
+            await engine.dispose()
