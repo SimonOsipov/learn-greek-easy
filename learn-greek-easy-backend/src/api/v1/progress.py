@@ -14,6 +14,7 @@ from src.core.dependencies import get_current_user
 from src.db.dependencies import get_db
 from src.db.models import User
 from src.schemas.progress import (
+    AchievementsResponse,
     DashboardStatsResponse,
     DeckProgressDetailResponse,
     DeckProgressListResponse,
@@ -402,3 +403,86 @@ async def get_learning_trends(
         period=period,
         deck_id=deck_id,
     )
+
+
+@router.get(
+    "/achievements",
+    response_model=AchievementsResponse,
+    summary="Get user achievements",
+    description="""
+    Get user achievements and gamification progress.
+
+    This endpoint returns:
+    - **Achievements**: All available achievements with unlock status and progress
+    - **Total points**: Sum of points from unlocked achievements
+    - **Next milestone**: The closest achievement to being unlocked
+
+    Achievements are calculated in real-time based on user statistics including:
+    - **Streak achievements**: Based on longest consecutive study days
+    - **Mastery achievements**: Based on total cards mastered
+    - **Review achievements**: Based on total reviews completed
+    - **Time achievements**: Based on total study time
+    - **Deck achievements**: Based on number of decks started
+
+    Progress percentage shows how close the user is to unlocking each achievement.
+    """,
+    responses={
+        200: {
+            "description": "Achievements retrieved successfully",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "achievements": [
+                            {
+                                "id": "streak_7",
+                                "name": "Week Warrior",
+                                "description": "Maintain a 7-day study streak",
+                                "icon": "flame",
+                                "unlocked": True,
+                                "unlocked_at": None,
+                                "progress": 100.0,
+                                "points": 50,
+                            },
+                            {
+                                "id": "mastered_100",
+                                "name": "Century Club",
+                                "description": "Master 100 flashcards",
+                                "icon": "medal",
+                                "unlocked": False,
+                                "unlocked_at": None,
+                                "progress": 45.0,
+                                "points": 0,
+                            },
+                        ],
+                        "total_points": 145,
+                        "next_milestone": {
+                            "id": "mastered_100",
+                            "name": "Century Club",
+                            "progress": 45.0,
+                            "remaining": 55,
+                        },
+                    }
+                }
+            },
+        },
+        401: {"description": "Not authenticated - missing or invalid token"},
+    },
+)
+async def get_achievements(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> AchievementsResponse:
+    """Get user achievements and gamification progress.
+
+    Returns all available achievements with their unlock status, progress
+    percentage, total points earned, and the next milestone to unlock.
+
+    Args:
+        db: Database session (injected)
+        current_user: Authenticated user (injected)
+
+    Returns:
+        AchievementsResponse with achievements, total points, and next milestone
+    """
+    service = ProgressService(db)
+    return await service.get_achievements(current_user.id)

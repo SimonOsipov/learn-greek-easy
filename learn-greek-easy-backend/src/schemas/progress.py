@@ -258,12 +258,14 @@ class Achievement(BaseModel):
     unlocked: bool
     unlocked_at: Optional[datetime]
     progress: float = Field(..., ge=0, le=100)
+    points: int = Field(..., ge=0)
 
 
 class NextMilestone(BaseModel):
     """Next achievement to unlock."""
 
     id: str
+    name: str
     progress: float = Field(..., ge=0, le=100)
     remaining: int = Field(..., ge=0)
 

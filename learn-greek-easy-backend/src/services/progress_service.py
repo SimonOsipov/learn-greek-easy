@@ -31,6 +31,8 @@ from src.repositories import (
     UserDeckProgressRepository,
 )
 from src.schemas.progress import (
+    Achievement,
+    AchievementsResponse,
     DailyStats,
     DashboardStatsResponse,
     DeckProgressDetailResponse,
@@ -40,12 +42,14 @@ from src.schemas.progress import (
     DeckStatistics,
     DeckTimeline,
     LearningTrendsResponse,
+    NextMilestone,
     OverviewStats,
     RecentActivity,
     StreakStats,
     TodayStats,
     TrendsSummary,
 )
+from src.services.achievements import ACHIEVEMENTS, AchievementType
 
 logger = logging.getLogger(__name__)
 
@@ -641,6 +645,113 @@ class ProgressService:
             end_date=end_date,
             daily_stats=daily_stats,
             summary=summary,
+        )
+
+    # =========================================================================
+    # Achievements
+    # =========================================================================
+
+    def _get_achievement_value(
+        self,
+        achievement_type: AchievementType,
+        stats: dict[str, int],
+    ) -> int:
+        """Get current value for an achievement type.
+
+        Args:
+            achievement_type: Type of achievement to check
+            stats: Dict containing user statistics
+
+        Returns:
+            Current value for the achievement metric
+        """
+        type_to_stat: dict[AchievementType, str] = {
+            AchievementType.STREAK: "longest_streak",
+            AchievementType.MASTERED: "total_mastered",
+            AchievementType.REVIEWS: "total_reviews",
+            AchievementType.STUDY_TIME: "total_study_time",
+            AchievementType.DECKS: "total_decks",
+        }
+        stat_key = type_to_stat.get(achievement_type, "")
+        return stats.get(stat_key, 0)
+
+    async def get_achievements(self, user_id: UUID) -> AchievementsResponse:
+        """Get user achievements and progress.
+
+        Calculates achievement progress in real-time based on user statistics.
+        Returns all achievements with their unlock status, progress percentage,
+        total points earned, and the next milestone to unlock.
+
+        Args:
+            user_id: User UUID
+
+        Returns:
+            AchievementsResponse with achievements list, total points, and next milestone
+        """
+        logger.debug(
+            "Building achievements",
+            extra={"user_id": str(user_id)},
+        )
+
+        # Gather user statistics
+        stats = {
+            "longest_streak": await self.review_repo.get_longest_streak(user_id),
+            "total_mastered": await self.progress_repo.get_total_cards_mastered(user_id),
+            "total_reviews": await self.review_repo.get_total_reviews(user_id),
+            "total_study_time": await self.review_repo.get_total_study_time(user_id),
+            "total_decks": await self.progress_repo.count_user_decks(user_id),
+        }
+
+        achievements: list[Achievement] = []
+        total_points = 0
+        next_milestone: NextMilestone | None = None
+        best_progress_for_next = -1.0  # Track closest to completion
+
+        for definition in ACHIEVEMENTS:
+            current_value = self._get_achievement_value(definition.type, stats)
+            progress = min((current_value / definition.threshold) * 100, 100.0)
+            unlocked = current_value >= definition.threshold
+
+            achievement = Achievement(
+                id=definition.id,
+                name=definition.name,
+                description=definition.description,
+                icon=definition.icon,
+                unlocked=unlocked,
+                unlocked_at=None,  # Would need DB tracking for actual unlock time
+                progress=round(progress, 1),
+                points=definition.points if unlocked else 0,
+            )
+            achievements.append(achievement)
+
+            if unlocked:
+                total_points += definition.points
+            else:
+                # Track as potential next milestone (highest progress that's not complete)
+                if progress > best_progress_for_next:
+                    best_progress_for_next = progress
+                    remaining = definition.threshold - current_value
+                    next_milestone = NextMilestone(
+                        id=definition.id,
+                        name=definition.name,
+                        progress=round(progress, 1),
+                        remaining=remaining,
+                    )
+
+        logger.info(
+            "Achievements built successfully",
+            extra={
+                "user_id": str(user_id),
+                "total_achievements": len(achievements),
+                "unlocked_count": sum(1 for a in achievements if a.unlocked),
+                "total_points": total_points,
+            },
+        )
+
+        return AchievementsResponse(
+            achievements=achievements,
+            total_points=total_points,
+            next_milestone=next_milestone,
         )
 
 
