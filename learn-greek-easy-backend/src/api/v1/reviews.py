@@ -4,7 +4,10 @@ This module provides HTTP endpoints for flashcard review operations,
 allowing users to submit card reviews and receive SM-2 algorithm results.
 """
 
-from fastapi import APIRouter, Depends
+from datetime import date
+from typing import Optional
+
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.dependencies import get_current_user
@@ -12,7 +15,13 @@ from src.core.exceptions import CardNotFoundException
 from src.db.dependencies import get_db
 from src.db.models import User
 from src.repositories.card import CardRepository
-from src.schemas.review import BulkReviewSubmit, ReviewSubmit
+from src.repositories.review import ReviewRepository
+from src.schemas.review import (
+    BulkReviewSubmit,
+    ReviewHistoryListResponse,
+    ReviewHistoryResponse,
+    ReviewSubmit,
+)
 from src.schemas.sm2 import SM2BulkReviewResult, SM2ReviewResult
 from src.services.sm2_service import SM2Service
 
@@ -25,6 +34,115 @@ router = APIRouter(
         422: {"description": "Validation error"},
     },
 )
+
+
+@router.get(
+    "",
+    response_model=ReviewHistoryListResponse,
+    summary="Get review history",
+    description="Retrieve paginated review history for the current user with optional date filtering.",
+    responses={
+        200: {
+            "description": "Review history retrieved successfully",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "total": 150,
+                        "page": 1,
+                        "page_size": 50,
+                        "reviews": [
+                            {
+                                "id": "550e8400-e29b-41d4-a716-446655440000",
+                                "user_id": "660e8400-e29b-41d4-a716-446655440001",
+                                "card_id": "770e8400-e29b-41d4-a716-446655440002",
+                                "quality": 4,
+                                "time_taken": 15,
+                                "reviewed_at": "2024-01-15T10:30:00Z",
+                            }
+                        ],
+                    }
+                }
+            },
+        },
+        401: {"description": "Not authenticated - missing or invalid token"},
+        422: {"description": "Validation error - invalid date format or pagination parameters"},
+    },
+)
+async def get_review_history(
+    start_date: Optional[date] = Query(
+        default=None,
+        description="Filter reviews from this date (inclusive, ISO format: YYYY-MM-DD)",
+    ),
+    end_date: Optional[date] = Query(
+        default=None,
+        description="Filter reviews until this date (inclusive, ISO format: YYYY-MM-DD)",
+    ),
+    page: int = Query(
+        default=1,
+        ge=1,
+        description="Page number (starting from 1)",
+    ),
+    page_size: int = Query(
+        default=50,
+        ge=1,
+        le=100,
+        description="Items per page (max 100)",
+    ),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> ReviewHistoryListResponse:
+    """Get paginated review history for the current user.
+
+    This endpoint retrieves the user's review history with optional date
+    filtering and pagination support. Reviews are returned in reverse
+    chronological order (most recent first).
+
+    Date Filtering:
+    - Use start_date to filter reviews from a specific date
+    - Use end_date to filter reviews until a specific date
+    - Both filters are inclusive
+    - Dates should be in ISO format (YYYY-MM-DD)
+
+    Args:
+        start_date: Optional start date filter (inclusive)
+        end_date: Optional end date filter (inclusive)
+        page: Page number starting from 1
+        page_size: Number of items per page (1-100)
+        db: Database session (injected)
+        current_user: Authenticated user (injected)
+
+    Returns:
+        ReviewHistoryListResponse with total count and paginated review list
+
+    Example:
+        GET /api/v1/reviews?start_date=2024-01-01&end_date=2024-01-31&page=1&page_size=50
+    """
+    repo = ReviewRepository(db)
+
+    # Calculate offset from page number
+    skip = (page - 1) * page_size
+
+    # Get reviews and total count with same filters
+    reviews = await repo.get_user_reviews(
+        user_id=current_user.id,
+        start_date=start_date,
+        end_date=end_date,
+        skip=skip,
+        limit=page_size,
+    )
+
+    total = await repo.count_user_reviews(
+        user_id=current_user.id,
+        start_date=start_date,
+        end_date=end_date,
+    )
+
+    return ReviewHistoryListResponse(
+        total=total,
+        page=page,
+        page_size=page_size,
+        reviews=[ReviewHistoryResponse.model_validate(r) for r in reviews],
+    )
 
 
 @router.post(

@@ -174,3 +174,39 @@ class ReviewRepository(BaseRepository[Review]):
         )
         result = await self.db.execute(query)
         return result.scalar_one()
+
+    async def count_user_reviews(
+        self,
+        user_id: UUID,
+        *,
+        start_date: date | None = None,
+        end_date: date | None = None,
+    ) -> int:
+        """Count user's reviews with optional date filter.
+
+        This method counts reviews matching the same filter criteria as
+        get_user_reviews(), making it suitable for pagination total counts.
+
+        Args:
+            user_id: User UUID
+            start_date: Optional start date filter (inclusive)
+            end_date: Optional end date filter (inclusive)
+
+        Returns:
+            Total count of reviews matching criteria
+
+        Use Case:
+            Pagination - get total count for review history endpoint
+        """
+        query = select(func.count()).select_from(Review).where(Review.user_id == user_id)
+
+        if start_date is not None:
+            query = query.where(Review.reviewed_at >= start_date)
+
+        if end_date is not None:
+            # Include entire end_date
+            end_datetime = datetime.combine(end_date, datetime.max.time())
+            query = query.where(Review.reviewed_at <= end_datetime)
+
+        result = await self.db.execute(query)
+        return result.scalar_one()

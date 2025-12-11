@@ -77,3 +77,18 @@ class BulkReviewResponse(BaseModel):
     successful_reviews: int
     failed_reviews: int
     results: list[ReviewResponse]
+
+
+class ReviewHistoryListResponse(BaseModel):
+    """Paginated review history response.
+
+    Used by the GET /api/v1/reviews endpoint to return a paginated
+    list of user reviews with metadata for pagination.
+    """
+
+    total: int = Field(..., ge=0, description="Total number of reviews matching criteria")
+    page: int = Field(..., ge=1, description="Current page number")
+    page_size: int = Field(..., ge=1, le=100, description="Items per page")
+    reviews: list[ReviewHistoryResponse] = Field(
+        ..., description="List of reviews for current page"
+    )

@@ -1145,3 +1145,171 @@ async def test_get_total_study_time_no_reviews(db_session: AsyncSession, sample_
     total_time = await repo.get_total_study_time(new_user.id)
 
     assert total_time == 0
+
+
+# ============================================================================
+# ReviewRepository - count_user_reviews Tests
+# ============================================================================
+
+
+@pytest.mark.asyncio
+async def test_count_user_reviews_no_filter(db_session: AsyncSession, sample_user, sample_cards):
+    """Test counting all reviews for a user without date filters."""
+    repo = ReviewRepository(db_session)
+
+    # Create multiple reviews
+    from src.db.models import Review
+
+    for i in range(5):
+        review = Review(
+            user_id=sample_user.id,
+            card_id=sample_cards[0].id,
+            quality=4,
+            time_taken=10,
+            reviewed_at=datetime.utcnow() - timedelta(days=i),
+        )
+        db_session.add(review)
+    await db_session.commit()
+
+    count = await repo.count_user_reviews(sample_user.id)
+
+    assert count >= 5
+
+
+@pytest.mark.asyncio
+async def test_count_user_reviews_with_start_date(
+    db_session: AsyncSession, sample_user, sample_cards
+):
+    """Test counting reviews with start date filter."""
+    repo = ReviewRepository(db_session)
+
+    # Create reviews on different dates
+    from src.db.models import Review
+
+    old_review = Review(
+        user_id=sample_user.id,
+        card_id=sample_cards[0].id,
+        quality=4,
+        time_taken=5,
+        reviewed_at=datetime.utcnow() - timedelta(days=10),
+    )
+    recent_review = Review(
+        user_id=sample_user.id,
+        card_id=sample_cards[1].id,
+        quality=5,
+        time_taken=3,
+        reviewed_at=datetime.utcnow(),
+    )
+    db_session.add(old_review)
+    db_session.add(recent_review)
+    await db_session.commit()
+
+    # Filter by start date (last 5 days)
+    start_date = date.today() - timedelta(days=5)
+    count = await repo.count_user_reviews(sample_user.id, start_date=start_date)
+
+    # Should only count recent_review (today is within last 5 days)
+    assert count >= 1
+
+
+@pytest.mark.asyncio
+async def test_count_user_reviews_with_end_date(
+    db_session: AsyncSession, sample_user, sample_cards
+):
+    """Test counting reviews with end date filter."""
+    repo = ReviewRepository(db_session)
+
+    # Create reviews on different dates
+    from src.db.models import Review
+
+    old_review = Review(
+        user_id=sample_user.id,
+        card_id=sample_cards[0].id,
+        quality=4,
+        time_taken=5,
+        reviewed_at=datetime.utcnow() - timedelta(days=10),
+    )
+    recent_review = Review(
+        user_id=sample_user.id,
+        card_id=sample_cards[1].id,
+        quality=5,
+        time_taken=3,
+        reviewed_at=datetime.utcnow(),
+    )
+    db_session.add(old_review)
+    db_session.add(recent_review)
+    await db_session.commit()
+
+    # Filter by end date (up to 5 days ago)
+    end_date = date.today() - timedelta(days=5)
+    count = await repo.count_user_reviews(sample_user.id, end_date=end_date)
+
+    # Should only count old_review (10 days ago is before 5 days ago)
+    assert count >= 1
+
+
+@pytest.mark.asyncio
+async def test_count_user_reviews_with_date_range(
+    db_session: AsyncSession, sample_user, sample_cards
+):
+    """Test counting reviews with both start and end date filters."""
+    repo = ReviewRepository(db_session)
+
+    # Create reviews on different dates
+    from src.db.models import Review
+
+    # Review 15 days ago
+    very_old_review = Review(
+        user_id=sample_user.id,
+        card_id=sample_cards[0].id,
+        quality=3,
+        time_taken=5,
+        reviewed_at=datetime.utcnow() - timedelta(days=15),
+    )
+    # Review 7 days ago
+    mid_review = Review(
+        user_id=sample_user.id,
+        card_id=sample_cards[1].id,
+        quality=4,
+        time_taken=5,
+        reviewed_at=datetime.utcnow() - timedelta(days=7),
+    )
+    # Review today
+    recent_review = Review(
+        user_id=sample_user.id,
+        card_id=sample_cards[2].id,
+        quality=5,
+        time_taken=3,
+        reviewed_at=datetime.utcnow(),
+    )
+    db_session.add(very_old_review)
+    db_session.add(mid_review)
+    db_session.add(recent_review)
+    await db_session.commit()
+
+    # Filter by date range (10 days ago to 5 days ago)
+    start_date = date.today() - timedelta(days=10)
+    end_date = date.today() - timedelta(days=5)
+    count = await repo.count_user_reviews(sample_user.id, start_date=start_date, end_date=end_date)
+
+    # Should only count mid_review (7 days ago is in range)
+    assert count >= 1
+
+
+@pytest.mark.asyncio
+async def test_count_user_reviews_no_reviews(db_session: AsyncSession, sample_user):
+    """Test count_user_reviews returns 0 for users with no reviews."""
+    repo = ReviewRepository(db_session)
+
+    # Create a new user with no reviews
+    new_user = User(
+        email="no_reviews_count@example.com",
+        password_hash="hashed",
+        full_name="No Reviews Count",
+    )
+    db_session.add(new_user)
+    await db_session.commit()
+
+    count = await repo.count_user_reviews(new_user.id)
+
+    assert count == 0
