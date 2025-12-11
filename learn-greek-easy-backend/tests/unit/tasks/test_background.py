@@ -2,12 +2,14 @@
 
 import asyncio
 import inspect
+import re
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
 
 from src.config import settings
+from src.tasks.background import ANALYTICS_EVENTS
 
 
 class TestModuleImports:
@@ -16,6 +18,7 @@ class TestModuleImports:
     def test_import_from_tasks_package(self):
         """Test importing functions from src.tasks package."""
         from src.tasks import (
+            ANALYTICS_EVENTS,
             check_achievements_task,
             invalidate_cache_task,
             is_background_tasks_enabled,
@@ -28,10 +31,12 @@ class TestModuleImports:
         assert callable(is_background_tasks_enabled)
         assert callable(log_analytics_task)
         assert callable(recalculate_progress_task)
+        assert isinstance(ANALYTICS_EVENTS, dict)
 
     def test_import_from_background_module(self):
         """Test importing directly from background module."""
         from src.tasks.background import (
+            ANALYTICS_EVENTS,
             check_achievements_task,
             invalidate_cache_task,
             is_background_tasks_enabled,
@@ -44,12 +49,14 @@ class TestModuleImports:
         assert callable(is_background_tasks_enabled)
         assert callable(log_analytics_task)
         assert callable(recalculate_progress_task)
+        assert isinstance(ANALYTICS_EVENTS, dict)
 
     def test_all_exports_defined(self):
         """Test that __all__ is properly defined."""
         from src.tasks import __all__
 
         expected_exports = [
+            "ANALYTICS_EVENTS",
             "check_achievements_task",
             "invalidate_cache_task",
             "is_background_tasks_enabled",
@@ -764,3 +771,294 @@ class TestInvalidateCacheTaskImplementation:
                     start_call = mock_logger.info.call_args_list[0]
                     assert start_call[1]["extra"]["user_id"] == str(user_id)
                     assert start_call[1]["extra"]["deck_id"] == str(deck_id)
+
+
+class TestLogAnalyticsTaskImplementation:
+    """Test the full implementation of log_analytics_task."""
+
+    @pytest.mark.asyncio
+    async def test_log_analytics_review_completed(self):
+        """Test logging a review_completed analytics event."""
+        from src.tasks.background import log_analytics_task
+
+        user_id = uuid4()
+        data = {
+            "card_id": str(uuid4()),
+            "deck_id": str(uuid4()),
+            "quality": 4,
+            "time_taken": 15,
+            "previous_status": "learning",
+            "new_status": "review",
+        }
+
+        with patch.object(settings, "feature_background_tasks", True):
+            with patch("src.tasks.background.logger") as mock_logger:
+                await log_analytics_task("review_completed", user_id, data)
+
+                mock_logger.info.assert_called_once()
+                call_args = mock_logger.info.call_args
+                assert "ANALYTICS: review_completed" in call_args[0][0]
+                assert call_args[1]["extra"]["analytics"] is True
+                assert call_args[1]["extra"]["event_type"] == "review_completed"
+                assert call_args[1]["extra"]["user_id"] == str(user_id)
+                assert call_args[1]["extra"]["event_data"] == data
+
+    @pytest.mark.asyncio
+    async def test_log_analytics_unknown_event_warns(self):
+        """Test that unknown event types log a warning but still log the event."""
+        from src.tasks.background import log_analytics_task
+
+        user_id = uuid4()
+
+        with patch.object(settings, "feature_background_tasks", True):
+            with patch("src.tasks.background.logger") as mock_logger:
+                await log_analytics_task("unknown_event", user_id, {})
+
+                # Should log warning for unknown event type
+                mock_logger.warning.assert_called_once()
+                warning_call = mock_logger.warning.call_args
+                assert "Unknown analytics event type" in warning_call[0][0]
+                assert warning_call[1]["extra"]["event_type"] == "unknown_event"
+
+                # Should still log the analytics event
+                mock_logger.info.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_log_analytics_all_event_types_defined(self):
+        """Test that all expected event types are defined in ANALYTICS_EVENTS."""
+        expected_events = [
+            "review_completed",
+            "bulk_review_completed",
+            "session_started",
+            "session_ended",
+            "deck_started",
+            "achievement_unlocked",
+            "streak_milestone",
+            "mastery_milestone",
+        ]
+
+        for event in expected_events:
+            assert event in ANALYTICS_EVENTS, f"Missing event type: {event}"
+
+        # Verify total count matches expected
+        assert len(ANALYTICS_EVENTS) == 8
+
+    @pytest.mark.asyncio
+    async def test_log_analytics_timestamp_utc_format(self):
+        """Test that timestamp is in UTC ISO format."""
+        from src.tasks.background import log_analytics_task
+
+        user_id = uuid4()
+
+        with patch.object(settings, "feature_background_tasks", True):
+            with patch("src.tasks.background.logger") as mock_logger:
+                await log_analytics_task("review_completed", user_id, {})
+
+                call_args = mock_logger.info.call_args
+                timestamp = call_args[1]["extra"]["timestamp"]
+
+                # Verify it's a valid ISO format timestamp with UTC timezone
+                # ISO format: 2024-01-15T10:30:00.123456+00:00
+                iso_pattern = r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?\+00:00"
+                assert re.match(iso_pattern, timestamp), f"Invalid timestamp format: {timestamp}"
+
+    @pytest.mark.asyncio
+    async def test_log_analytics_bulk_review_completed(self):
+        """Test logging a bulk_review_completed analytics event."""
+        from src.tasks.background import log_analytics_task
+
+        user_id = uuid4()
+        data = {
+            "session_id": "session123",
+            "deck_id": str(uuid4()),
+            "total_reviews": 10,
+            "successful": 10,
+            "failed": 0,
+            "total_time_seconds": 150,
+        }
+
+        with patch.object(settings, "feature_background_tasks", True):
+            with patch("src.tasks.background.logger") as mock_logger:
+                await log_analytics_task("bulk_review_completed", user_id, data)
+
+                mock_logger.info.assert_called_once()
+                call_args = mock_logger.info.call_args
+                assert "ANALYTICS: bulk_review_completed" in call_args[0][0]
+                assert call_args[1]["extra"]["event_data"]["total_reviews"] == 10
+
+    @pytest.mark.asyncio
+    async def test_log_analytics_session_events(self):
+        """Test logging session_started and session_ended events."""
+        from src.tasks.background import log_analytics_task
+
+        user_id = uuid4()
+        deck_id = str(uuid4())
+
+        with patch.object(settings, "feature_background_tasks", True):
+            with patch("src.tasks.background.logger") as mock_logger:
+                # Test session_started
+                await log_analytics_task("session_started", user_id, {"deck_id": deck_id})
+
+                mock_logger.info.assert_called_once()
+                call_args = mock_logger.info.call_args
+                assert "ANALYTICS: session_started" in call_args[0][0]
+
+                mock_logger.reset_mock()
+
+                # Test session_ended
+                session_data = {
+                    "deck_id": deck_id,
+                    "duration_seconds": 600,
+                    "cards_reviewed": 20,
+                    "average_quality": 3.8,
+                }
+                await log_analytics_task("session_ended", user_id, session_data)
+
+                mock_logger.info.assert_called_once()
+                call_args = mock_logger.info.call_args
+                assert "ANALYTICS: session_ended" in call_args[0][0]
+                assert call_args[1]["extra"]["event_data"]["duration_seconds"] == 600
+
+    @pytest.mark.asyncio
+    async def test_log_analytics_achievement_unlocked(self):
+        """Test logging achievement_unlocked event."""
+        from src.tasks.background import log_analytics_task
+
+        user_id = uuid4()
+        data = {
+            "achievement_id": "streak_7",
+            "achievement_name": "Week Warrior",
+            "points_earned": 50,
+            "total_points": 150,
+        }
+
+        with patch.object(settings, "feature_background_tasks", True):
+            with patch("src.tasks.background.logger") as mock_logger:
+                await log_analytics_task("achievement_unlocked", user_id, data)
+
+                mock_logger.info.assert_called_once()
+                call_args = mock_logger.info.call_args
+                assert "ANALYTICS: achievement_unlocked" in call_args[0][0]
+                assert call_args[1]["extra"]["event_data"]["achievement_id"] == "streak_7"
+
+    @pytest.mark.asyncio
+    async def test_log_analytics_milestone_events(self):
+        """Test logging streak_milestone and mastery_milestone events."""
+        from src.tasks.background import log_analytics_task
+
+        user_id = uuid4()
+
+        with patch.object(settings, "feature_background_tasks", True):
+            with patch("src.tasks.background.logger") as mock_logger:
+                # Test streak_milestone
+                streak_data = {"streak_days": 30, "milestone": "30_days"}
+                await log_analytics_task("streak_milestone", user_id, streak_data)
+
+                mock_logger.info.assert_called_once()
+                assert "ANALYTICS: streak_milestone" in mock_logger.info.call_args[0][0]
+
+                mock_logger.reset_mock()
+
+                # Test mastery_milestone
+                mastery_data = {"deck_id": str(uuid4()), "mastery_percentage": 100}
+                await log_analytics_task("mastery_milestone", user_id, mastery_data)
+
+                mock_logger.info.assert_called_once()
+                assert "ANALYTICS: mastery_milestone" in mock_logger.info.call_args[0][0]
+
+    @pytest.mark.asyncio
+    async def test_log_analytics_skipped_when_disabled(self):
+        """Test that analytics logging is skipped when background tasks are disabled."""
+        from src.tasks.background import log_analytics_task
+
+        user_id = uuid4()
+
+        with patch.object(settings, "feature_background_tasks", False):
+            with patch("src.tasks.background.logger") as mock_logger:
+                await log_analytics_task("review_completed", user_id, {})
+
+                # Should only log debug message about being disabled
+                mock_logger.debug.assert_called_once()
+                assert "disabled" in mock_logger.debug.call_args[0][0].lower()
+
+                # Should NOT log info (the analytics event)
+                mock_logger.info.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_log_analytics_deck_started(self):
+        """Test logging deck_started event."""
+        from src.tasks.background import log_analytics_task
+
+        user_id = uuid4()
+        data = {
+            "deck_id": str(uuid4()),
+            "deck_name": "Greek Basics A1",
+            "total_cards": 50,
+        }
+
+        with patch.object(settings, "feature_background_tasks", True):
+            with patch("src.tasks.background.logger") as mock_logger:
+                await log_analytics_task("deck_started", user_id, data)
+
+                mock_logger.info.assert_called_once()
+                call_args = mock_logger.info.call_args
+                assert "ANALYTICS: deck_started" in call_args[0][0]
+                assert call_args[1]["extra"]["event_data"]["deck_name"] == "Greek Basics A1"
+
+    @pytest.mark.asyncio
+    async def test_log_analytics_with_empty_data(self):
+        """Test logging analytics event with empty data dictionary."""
+        from src.tasks.background import log_analytics_task
+
+        user_id = uuid4()
+
+        with patch.object(settings, "feature_background_tasks", True):
+            with patch("src.tasks.background.logger") as mock_logger:
+                await log_analytics_task("session_started", user_id, {})
+
+                mock_logger.info.assert_called_once()
+                call_args = mock_logger.info.call_args
+                assert call_args[1]["extra"]["event_data"] == {}
+
+    @pytest.mark.asyncio
+    async def test_log_analytics_user_id_converted_to_string(self):
+        """Test that user_id UUID is properly converted to string."""
+        from src.tasks.background import log_analytics_task
+
+        user_id = uuid4()
+
+        with patch.object(settings, "feature_background_tasks", True):
+            with patch("src.tasks.background.logger") as mock_logger:
+                await log_analytics_task("review_completed", user_id, {})
+
+                call_args = mock_logger.info.call_args
+                logged_user_id = call_args[1]["extra"]["user_id"]
+
+                # Should be a string representation of UUID
+                assert isinstance(logged_user_id, str)
+                assert logged_user_id == str(user_id)
+
+
+class TestAnalyticsEventsConstant:
+    """Test the ANALYTICS_EVENTS constant."""
+
+    def test_analytics_events_is_dict(self):
+        """Test that ANALYTICS_EVENTS is a dictionary."""
+        assert isinstance(ANALYTICS_EVENTS, dict)
+
+    def test_analytics_events_has_descriptions(self):
+        """Test that all event types have string descriptions."""
+        for event_type, description in ANALYTICS_EVENTS.items():
+            assert isinstance(event_type, str)
+            assert isinstance(description, str)
+            assert len(description) > 0
+
+    def test_analytics_events_keys_are_snake_case(self):
+        """Test that all event type keys are snake_case."""
+        for event_type in ANALYTICS_EVENTS:
+            assert (
+                "_" in event_type or event_type.islower()
+            ), f"Event type '{event_type}' should be snake_case"
+            assert (
+                event_type == event_type.lower()
+            ), f"Event type '{event_type}' should be lowercase"

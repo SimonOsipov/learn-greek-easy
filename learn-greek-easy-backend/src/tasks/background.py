@@ -15,6 +15,7 @@ Usage:
 """
 
 import logging
+from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID
 
@@ -173,33 +174,58 @@ async def invalidate_cache_task(
         )
 
 
+# Supported analytics event types
+ANALYTICS_EVENTS = {
+    "review_completed": "Single card review completed",
+    "bulk_review_completed": "Bulk review session completed",
+    "session_started": "Study session started",
+    "session_ended": "Study session ended",
+    "deck_started": "User started a new deck",
+    "achievement_unlocked": "User unlocked an achievement",
+    "streak_milestone": "User reached streak milestone",
+    "mastery_milestone": "User reached mastery milestone",
+}
+
+
 async def log_analytics_task(
     event_type: str,
     user_id: UUID,
     data: dict[str, Any],
 ) -> None:
-    """Log analytics events asynchronously.
+    """Log analytics event for study sessions.
 
-    This task captures user activity events for analytics and reporting
-    without blocking the main request/response flow.
+    This logs structured analytics data that can be processed
+    by log aggregation systems (e.g., Railway logs, DataDog, Sentry).
 
     Args:
-        event_type: Type of event (e.g., "review_completed", "deck_created").
-        user_id: ID of the user who triggered the event.
-        data: Additional event data to log.
-
-    Note:
-        Placeholder - full implementation in 12.04.
+        event_type: Type of event (see ANALYTICS_EVENTS)
+        user_id: User who triggered the event
+        data: Additional event-specific data
     """
     if not is_background_tasks_enabled():
         logger.debug("Background tasks disabled, skipping log_analytics_task")
         return
 
-    logger.debug(
-        f"log_analytics_task called: event_type={event_type}, " f"user_id={user_id}, data={data}"
+    timestamp = datetime.now(timezone.utc).isoformat()
+
+    # Validate event type
+    if event_type not in ANALYTICS_EVENTS:
+        logger.warning(
+            "Unknown analytics event type",
+            extra={"event_type": event_type, "user_id": str(user_id)},
+        )
+
+    # Log the analytics event
+    logger.info(
+        f"ANALYTICS: {event_type}",
+        extra={
+            "analytics": True,  # Tag for log filtering
+            "event_type": event_type,
+            "user_id": str(user_id),
+            "timestamp": timestamp,
+            "event_data": data,
+        },
     )
-    # TODO: Implement in 12.04
-    pass
 
 
 async def recalculate_progress_task(

@@ -27,6 +27,7 @@ Example usage:
 """
 
 from src.tasks.background import (
+    ANALYTICS_EVENTS,
     check_achievements_task,
     invalidate_cache_task,
     is_background_tasks_enabled,
@@ -35,6 +36,7 @@ from src.tasks.background import (
 )
 
 __all__ = [
+    "ANALYTICS_EVENTS",
     "check_achievements_task",
     "invalidate_cache_task",
     "is_background_tasks_enabled",
