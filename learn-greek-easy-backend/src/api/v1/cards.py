@@ -7,9 +7,10 @@ listing cards by deck with pagination and optional difficulty filtering.
 from typing import Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, Response, status
+from fastapi import APIRouter, BackgroundTasks, Depends, Query, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.config import settings
 from src.core.dependencies import get_current_superuser
 from src.core.exceptions import CardNotFoundException, DeckNotFoundException
 from src.db.dependencies import get_db
@@ -25,6 +26,7 @@ from src.schemas.card import (
     CardSearchResponse,
     CardUpdate,
 )
+from src.tasks.background import invalidate_cache_task
 
 router = APIRouter(
     # Note: prefix is set by parent router in v1/router.py
@@ -167,6 +169,7 @@ async def list_cards(
 )
 async def create_card(
     card_data: CardCreate,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_superuser),
 ) -> CardResponse:
@@ -176,6 +179,7 @@ async def create_card(
 
     Args:
         card_data: Card creation data
+        background_tasks: FastAPI BackgroundTasks for scheduling async operations
         db: Database session (injected)
         current_user: Authenticated superuser (injected)
 
@@ -201,6 +205,15 @@ async def create_card(
     # Commit the transaction
     await db.commit()
     await db.refresh(card)
+
+    # Schedule background tasks if enabled
+    if settings.feature_background_tasks:
+        background_tasks.add_task(
+            invalidate_cache_task,
+            cache_type="card",
+            entity_id=card.id,
+            deck_id=card.deck_id,
+        )
 
     return CardResponse.model_validate(card)
 
@@ -470,6 +483,7 @@ async def get_card(
 async def update_card(
     card_id: UUID,
     card_data: CardUpdate,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_superuser),
 ) -> CardResponse:
@@ -482,6 +496,7 @@ async def update_card(
     Args:
         card_id: UUID of the card to update
         card_data: Fields to update (all optional)
+        background_tasks: FastAPI BackgroundTasks for scheduling async operations
         db: Database session (injected)
         current_user: Authenticated superuser (injected)
 
@@ -508,6 +523,15 @@ async def update_card(
     await db.commit()
     await db.refresh(updated_card)
 
+    # Schedule background tasks if enabled
+    if settings.feature_background_tasks:
+        background_tasks.add_task(
+            invalidate_cache_task,
+            cache_type="card",
+            entity_id=card_id,
+            deck_id=updated_card.deck_id,
+        )
+
     return CardResponse.model_validate(updated_card)
 
 
@@ -525,6 +549,7 @@ async def update_card(
 )
 async def delete_card(
     card_id: UUID,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_superuser),
 ) -> Response:
@@ -537,6 +562,7 @@ async def delete_card(
 
     Args:
         card_id: UUID of the card to delete
+        background_tasks: FastAPI BackgroundTasks for scheduling async operations
         db: Database session (injected)
         current_user: Authenticated superuser (injected)
 
@@ -555,10 +581,22 @@ async def delete_card(
     if card is None:
         raise CardNotFoundException(card_id=str(card_id))
 
+    # Store deck_id before deletion for cache invalidation
+    deck_id = card.deck_id
+
     # Hard delete the card
     await repo.delete(card)
 
     # Commit the transaction
     await db.commit()
+
+    # Schedule background tasks if enabled
+    if settings.feature_background_tasks:
+        background_tasks.add_task(
+            invalidate_cache_task,
+            cache_type="card",
+            entity_id=card_id,
+            deck_id=deck_id,
+        )
 
     return Response(status_code=status.HTTP_204_NO_CONTENT)
