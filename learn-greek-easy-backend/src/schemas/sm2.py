@@ -297,3 +297,52 @@ class CardInitializationResult(BaseModel):
         default_factory=list,
         description="IDs of newly initialized cards",
     )
+
+
+# ============================================================================
+# Study Statistics Schemas
+# ============================================================================
+
+
+class StudyStatsResponse(BaseModel):
+    """Study statistics response for dashboard and analytics.
+
+    This schema provides comprehensive study statistics including card
+    status counts, review metrics, and streak information.
+    """
+
+    by_status: dict[str, int] = Field(
+        ...,
+        description="Card counts by status (new, learning, review, mastered, due)",
+    )
+    reviews_today: int = Field(
+        ...,
+        ge=0,
+        description="Number of reviews completed today",
+    )
+    current_streak: int = Field(
+        ...,
+        ge=0,
+        description="Current consecutive days study streak",
+    )
+    due_today: int = Field(
+        ...,
+        ge=0,
+        description="Number of cards due for review today",
+    )
+    total_reviews: int = Field(
+        default=0,
+        ge=0,
+        description="Total lifetime reviews",
+    )
+    total_study_time: int = Field(
+        default=0,
+        ge=0,
+        description="Total study time in seconds",
+    )
+    average_quality: float = Field(
+        default=0.0,
+        ge=0.0,
+        le=5.0,
+        description="Average review quality rating",
+    )

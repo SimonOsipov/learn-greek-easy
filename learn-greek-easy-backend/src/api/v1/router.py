@@ -25,6 +25,8 @@ from fastapi import APIRouter
 from src.api.v1.auth import router as auth_router
 from src.api.v1.cards import router as card_router
 from src.api.v1.decks import router as deck_router
+from src.api.v1.reviews import router as review_router
+from src.api.v1.study import router as study_router
 
 # Create the main v1 router
 v1_router = APIRouter()
@@ -57,12 +59,27 @@ v1_router.include_router(
 )
 
 # =============================================================================
+# Review Routes
+# =============================================================================
+v1_router.include_router(
+    review_router,
+    prefix="/reviews",
+    tags=["Reviews"],
+)
+
+# =============================================================================
+# Study Routes
+# =============================================================================
+v1_router.include_router(
+    study_router,
+    prefix="/study",
+    tags=["Study"],
+)
+
+# =============================================================================
 # Future Route Placeholders
 # =============================================================================
 # When implementing new features, add routers here:
-#
-# from src.api.v1.reviews import router as review_router
-# v1_router.include_router(review_router, prefix="/reviews", tags=["Reviews"])
 #
 # from src.api.v1.progress import router as progress_router
 # v1_router.include_router(progress_router, prefix="/progress", tags=["Progress"])
