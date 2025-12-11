@@ -236,9 +236,14 @@ def pytest_configure(config: pytest.Config) -> None:
     config.addinivalue_line(
         "markers", "no_parallel: Tests that cannot run in parallel (sequential only)"
     )
+    # E2E test markers
+    config.addinivalue_line("markers", "e2e: End-to-end API workflow tests")
+    config.addinivalue_line("markers", "workflow: User journey tests")
+    config.addinivalue_line("markers", "scenario: Business scenario tests")
+    config.addinivalue_line("markers", "edge_case: Edge case tests")
 
 
-def pytest_collection_modifyitems(
+def pytest_collection_modifyitems(  # noqa: C901
     session: pytest.Session,
     config: pytest.Config,
     items: list[pytest.Item],
@@ -273,6 +278,16 @@ def pytest_collection_modifyitems(
         # Auto-mark middleware tests
         if "middleware" in test_path.lower():
             item.add_marker(pytest.mark.unit)
+
+        # Auto-mark E2E tests based on directory
+        if "e2e/" in test_path:
+            item.add_marker(pytest.mark.e2e)
+            if "workflows/" in test_path:
+                item.add_marker(pytest.mark.workflow)
+            elif "scenarios/" in test_path:
+                item.add_marker(pytest.mark.scenario)
+            elif "edge_cases/" in test_path:
+                item.add_marker(pytest.mark.edge_case)
 
         # Auto-mark database tests
         if "db_session" in item.fixturenames or "db_engine" in item.fixturenames:

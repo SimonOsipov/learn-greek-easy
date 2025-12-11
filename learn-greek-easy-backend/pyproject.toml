@@ -166,6 +166,10 @@ markers = [
     "progress: Progress API service tests",
     "achievements: Achievement system tests",
     "no_parallel: Tests that cannot run in parallel (sequential only)",
+    "e2e: End-to-end API workflow tests",
+    "workflow: User journey tests",
+    "scenario: Business scenario tests",
+    "edge_case: Edge case tests",
 ]
 
 # Filter warnings for cleaner output
