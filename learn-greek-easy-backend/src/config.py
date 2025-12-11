@@ -316,6 +316,14 @@ class Settings(BaseSettings):
     streak_reset_hour_utc: int = Field(default=0, description="Hour to reset daily streaks")
 
     # =========================================================================
+    # Background Tasks
+    # =========================================================================
+    background_task_timeout: int = Field(
+        default=30,
+        description="Background task timeout in seconds",
+    )
+
+    # =========================================================================
     # Helper Properties
     # =========================================================================
     @property
