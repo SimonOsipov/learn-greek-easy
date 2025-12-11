@@ -4,6 +4,7 @@ This module provides endpoints for progress tracking and analytics,
 including dashboard statistics, deck progress, and learning trends.
 """
 
+from typing import Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
@@ -16,6 +17,7 @@ from src.schemas.progress import (
     DashboardStatsResponse,
     DeckProgressDetailResponse,
     DeckProgressListResponse,
+    LearningTrendsResponse,
 )
 from src.services.progress_service import ProgressService
 
@@ -274,5 +276,129 @@ async def get_deck_progress_detail(
     service = ProgressService(db)
     return await service.get_deck_progress_detail(
         user_id=current_user.id,
+        deck_id=deck_id,
+    )
+
+
+@router.get(
+    "/trends",
+    response_model=LearningTrendsResponse,
+    summary="Get learning trends",
+    description="""
+    Get historical learning trends and analytics for charts and graphs.
+
+    This endpoint provides:
+    - **Daily statistics**: Reviews count, cards learned/mastered, study time, quality per day
+    - **Summary**: Total reviews, study time, cards mastered, average daily reviews, best day, quality trend
+
+    **Period options**:
+    - `week`: Last 7 days (default)
+    - `month`: Last 30 days
+    - `year`: Last 365 days
+
+    Daily stats are zero-filled for days with no activity, ensuring consistent chart data.
+
+    Quality trend is calculated by comparing the first half vs second half of the period:
+    - `improving`: Second half average quality > first half + 0.3
+    - `declining`: Second half average quality < first half - 0.3
+    - `stable`: Within 0.3 of first half
+    """,
+    responses={
+        200: {
+            "description": "Learning trends retrieved successfully",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "period": "week",
+                        "start_date": "2024-01-08",
+                        "end_date": "2024-01-15",
+                        "daily_stats": [
+                            {
+                                "date": "2024-01-15",
+                                "reviews_count": 25,
+                                "cards_learned": 5,
+                                "cards_mastered": 2,
+                                "study_time_seconds": 1800,
+                                "average_quality": 4.2,
+                            },
+                            {
+                                "date": "2024-01-14",
+                                "reviews_count": 0,
+                                "cards_learned": 0,
+                                "cards_mastered": 0,
+                                "study_time_seconds": 0,
+                                "average_quality": 0.0,
+                            },
+                        ],
+                        "summary": {
+                            "total_reviews": 150,
+                            "total_study_time_seconds": 10800,
+                            "cards_mastered": 12,
+                            "average_daily_reviews": 21.4,
+                            "best_day": "2024-01-12",
+                            "quality_trend": "improving",
+                        },
+                    }
+                }
+            },
+        },
+        401: {"description": "Not authenticated - missing or invalid token"},
+        422: {
+            "description": "Validation error - invalid period value",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": [
+                            {
+                                "type": "string_pattern_mismatch",
+                                "loc": ["query", "period"],
+                                "msg": "String should match pattern '^(week|month|year)$'",
+                                "input": "invalid",
+                                "ctx": {"pattern": "^(week|month|year)$"},
+                            }
+                        ]
+                    }
+                }
+            },
+        },
+    },
+)
+async def get_learning_trends(
+    period: str = Query(
+        default="week",
+        pattern="^(week|month|year)$",
+        description="Time period for trends: 'week' (7 days), 'month' (30 days), or 'year' (365 days)",
+    ),
+    deck_id: Optional[UUID] = Query(
+        default=None,
+        description="Optional deck UUID to filter trends for a specific deck",
+    ),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> LearningTrendsResponse:
+    """Get learning trends for charts and analytics.
+
+    Retrieves historical learning data aggregated by day for the specified
+    period. Supports optional filtering by deck.
+
+    The quality_trend in the summary indicates whether the user's recall
+    quality is improving, stable, or declining over the period.
+
+    Args:
+        period: Time period - "week" (7 days), "month" (30 days), or "year" (365 days)
+        deck_id: Optional deck UUID to filter trends
+        db: Database session (injected)
+        current_user: Authenticated user (injected)
+
+    Returns:
+        LearningTrendsResponse with daily stats and summary
+
+    Raises:
+        ValidationError (422): If period is not week/month/year
+    """
+    service = ProgressService(db)
+    return await service.get_learning_trends(
+        user_id=current_user.id,
+        period=period,
         deck_id=deck_id,
     )
