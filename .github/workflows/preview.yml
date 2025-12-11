@@ -544,10 +544,17 @@ jobs:
             // Desktop: 80+ = success, 60-79 = warning, <60 = failure
             // Mobile: 70+ = success, 50-69 = warning, <50 = failure
             let state = 'success';
+            let description = `Desktop: ${desktopScore}, Mobile: ${mobileScore}`;
+
             if (desktopScore < 60 || mobileScore < 50) {
               state = 'failure';
+              description = `❌ ${description} (below minimum)`;
             } else if (desktopScore < 80 || mobileScore < 70) {
-              state = 'pending'; // Warning state
+              // Warning state: still success but with warning indicator in description
+              // Note: GitHub only supports 'success', 'failure', 'pending', 'error' states
+              // Using 'pending' incorrectly appears as "waiting for result", so we use
+              // 'success' with a warning emoji in the description instead
+              description = `⚠️ ${description} (below target)`;
             }
 
             await github.rest.repos.createCommitStatus({
@@ -556,7 +563,7 @@ jobs:
               sha: context.sha,
               state: state,
               target_url: reportUrl || '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}',
-              description: `Desktop: ${desktopScore}, Mobile: ${mobileScore}`,
+              description: description,
               context: 'preview/lighthouse'
             });
 
