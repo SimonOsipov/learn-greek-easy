@@ -466,6 +466,16 @@ class TestRateLimitRecovery(E2ETestCase):
     These tests require Redis to be available.
     """
 
+    @pytest.fixture(autouse=True)
+    def enable_rate_limiting(self, monkeypatch):
+        """Enable rate limiting for these specific tests.
+
+        The global test configuration disables rate limiting via TESTING=true.
+        These tests specifically test rate limiting behavior, so we need to
+        temporarily re-enable it by setting testing=False.
+        """
+        monkeypatch.setattr(settings, "testing", False)
+
     @pytest.mark.asyncio
     @pytest.mark.e2e
     @pytest.mark.edge_case

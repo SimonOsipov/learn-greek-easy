@@ -117,8 +117,8 @@ class RateLimitingMiddleware(BaseHTTPMiddleware):
             Either the normal response with rate limit headers,
             or a 429 response if rate limit is exceeded.
         """
-        # Skip if rate limiting is disabled
-        if not settings.feature_rate_limiting:
+        # Skip if rate limiting is disabled or in test mode
+        if not settings.feature_rate_limiting or settings.is_testing:
             response: Response = await call_next(request)
             return response
 

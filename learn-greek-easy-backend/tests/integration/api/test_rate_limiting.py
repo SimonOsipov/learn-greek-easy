@@ -19,6 +19,17 @@ from src.core.redis import get_redis, init_redis
 from src.middleware.rate_limit import RateLimitingMiddleware
 
 
+@pytest.fixture(autouse=True)
+def enable_rate_limiting_for_tests(monkeypatch):
+    """Enable rate limiting for these specific tests.
+
+    The global test configuration disables rate limiting via TESTING=true.
+    These tests specifically test rate limiting behavior, so we need to
+    temporarily re-enable it by setting testing=False.
+    """
+    monkeypatch.setattr(settings, "testing", False)
+
+
 async def ensure_redis_initialized() -> bool:
     """Initialize Redis and verify connection in the current event loop.
 
