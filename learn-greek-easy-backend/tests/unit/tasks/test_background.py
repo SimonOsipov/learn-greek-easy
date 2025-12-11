@@ -56,12 +56,17 @@ class TestModuleImports:
         from src.tasks import __all__
 
         expected_exports = [
+            # Background tasks (API-side)
             "ANALYTICS_EVENTS",
             "check_achievements_task",
             "invalidate_cache_task",
             "is_background_tasks_enabled",
             "log_analytics_task",
             "recalculate_progress_task",
+            # Scheduler (dedicated service)
+            "get_scheduler",
+            "setup_scheduler",
+            "shutdown_scheduler",
         ]
         assert set(__all__) == set(expected_exports)
 

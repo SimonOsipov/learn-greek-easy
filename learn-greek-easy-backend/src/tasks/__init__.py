@@ -1,10 +1,10 @@
 """Background tasks module.
 
 This module provides:
-1. FastAPI BackgroundTasks functions for async operations
-2. Railway Cron task runners for scheduled jobs (future)
+1. FastAPI BackgroundTasks functions for async fire-and-forget operations
+2. APScheduler for scheduled periodic jobs (in dedicated service)
 
-Example usage:
+Example usage for background tasks:
     from fastapi import BackgroundTasks
     from src.tasks import check_achievements_task, is_background_tasks_enabled
 
@@ -24,6 +24,16 @@ Example usage:
             )
 
         return response
+
+Example usage for scheduler (in scheduler_main.py):
+    from src.tasks import setup_scheduler, shutdown_scheduler
+
+    async def main():
+        setup_scheduler()
+        try:
+            await asyncio.Event().wait()  # Run forever
+        finally:
+            shutdown_scheduler()
 """
 
 from src.tasks.background import (
@@ -34,12 +44,18 @@ from src.tasks.background import (
     log_analytics_task,
     recalculate_progress_task,
 )
+from src.tasks.scheduler import get_scheduler, setup_scheduler, shutdown_scheduler
 
 __all__ = [
+    # Background tasks (API-side, fire-and-forget)
     "ANALYTICS_EVENTS",
     "check_achievements_task",
     "invalidate_cache_task",
     "is_background_tasks_enabled",
     "log_analytics_task",
     "recalculate_progress_task",
+    # Scheduler (dedicated service)
+    "get_scheduler",
+    "setup_scheduler",
+    "shutdown_scheduler",
 ]
