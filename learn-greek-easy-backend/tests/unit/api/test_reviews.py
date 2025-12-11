@@ -4,14 +4,15 @@ These tests mock the ReviewRepository to test endpoint logic in isolation.
 For full integration tests, see tests/integration/api/test_reviews_integration.py
 """
 
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
 from httpx import AsyncClient
 
-from src.db.models import Review
+from src.db.models import CardStatus, Review
+from src.schemas.sm2 import SM2BulkReviewResult, SM2ReviewResult
 
 
 class TestGetReviewHistoryUnit:
@@ -258,6 +259,132 @@ class TestSubmitReviewUnit:
         data = response.json()
         assert data["success"] is False
 
+    @pytest.mark.asyncio
+    async def test_submit_review_success(self, client: AsyncClient, auth_headers: dict, test_user):
+        """Test successful review submission."""
+        card_id = uuid4()
+        mock_result = SM2ReviewResult(
+            success=True,
+            card_id=card_id,
+            quality=4,
+            previous_status=CardStatus.NEW,
+            new_status=CardStatus.LEARNING,
+            easiness_factor=2.5,
+            interval=1,
+            repetitions=1,
+            next_review_date=date.today() + timedelta(days=1),
+        )
+
+        with (
+            patch("src.api.v1.reviews.CardRepository") as mock_card_repo_class,
+            patch("src.api.v1.reviews.SM2Service") as mock_service_class,
+        ):
+            mock_card_repo = AsyncMock()
+            mock_card_repo.get.return_value = MagicMock()
+            mock_card_repo_class.return_value = mock_card_repo
+
+            mock_service = AsyncMock()
+            mock_service.process_review.return_value = mock_result
+            mock_service_class.return_value = mock_service
+
+            response = await client.post(
+                "/api/v1/reviews",
+                json={"card_id": str(card_id), "quality": 4, "time_taken": 10},
+                headers=auth_headers,
+            )
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data["success"] is True
+            assert data["card_id"] == str(card_id)
+            assert data["quality"] == 4
+            assert data["new_status"] == "learning"
+
+    @pytest.mark.asyncio
+    async def test_submit_review_card_not_found_returns_404(
+        self, client: AsyncClient, auth_headers: dict
+    ):
+        """Test that non-existent card returns 404."""
+        with patch("src.api.v1.reviews.CardRepository") as mock_class:
+            mock_repo = AsyncMock()
+            mock_repo.get.return_value = None
+            mock_class.return_value = mock_repo
+
+            response = await client.post(
+                "/api/v1/reviews",
+                json={"card_id": str(uuid4()), "quality": 4, "time_taken": 10},
+                headers=auth_headers,
+            )
+
+            assert response.status_code == 404
+            data = response.json()
+            assert data["success"] is False
+            assert data["error"]["code"] == "NOT_FOUND"
+
+    @pytest.mark.asyncio
+    async def test_submit_review_invalid_quality_too_high_returns_422(
+        self, client: AsyncClient, auth_headers: dict
+    ):
+        """Test that quality > 5 returns 422."""
+        response = await client.post(
+            "/api/v1/reviews",
+            json={"card_id": str(uuid4()), "quality": 6, "time_taken": 10},
+            headers=auth_headers,
+        )
+
+        assert response.status_code == 422
+        data = response.json()
+        assert data["success"] is False
+        assert data["error"]["code"] == "VALIDATION_ERROR"
+
+    @pytest.mark.asyncio
+    async def test_submit_review_invalid_quality_negative_returns_422(
+        self, client: AsyncClient, auth_headers: dict
+    ):
+        """Test that quality < 0 returns 422."""
+        response = await client.post(
+            "/api/v1/reviews",
+            json={"card_id": str(uuid4()), "quality": -1, "time_taken": 10},
+            headers=auth_headers,
+        )
+
+        assert response.status_code == 422
+        data = response.json()
+        assert data["success"] is False
+        assert data["error"]["code"] == "VALIDATION_ERROR"
+
+    @pytest.mark.asyncio
+    async def test_submit_review_invalid_time_too_high_returns_422(
+        self, client: AsyncClient, auth_headers: dict
+    ):
+        """Test that time_taken > 300 returns 422."""
+        response = await client.post(
+            "/api/v1/reviews",
+            json={"card_id": str(uuid4()), "quality": 4, "time_taken": 301},
+            headers=auth_headers,
+        )
+
+        assert response.status_code == 422
+        data = response.json()
+        assert data["success"] is False
+        assert data["error"]["code"] == "VALIDATION_ERROR"
+
+    @pytest.mark.asyncio
+    async def test_submit_review_invalid_time_negative_returns_422(
+        self, client: AsyncClient, auth_headers: dict
+    ):
+        """Test that negative time_taken returns 422."""
+        response = await client.post(
+            "/api/v1/reviews",
+            json={"card_id": str(uuid4()), "quality": 4, "time_taken": -1},
+            headers=auth_headers,
+        )
+
+        assert response.status_code == 422
+        data = response.json()
+        assert data["success"] is False
+        assert data["error"]["code"] == "VALIDATION_ERROR"
+
 
 class TestBulkReviewUnit:
     """Unit tests for POST /api/v1/reviews/bulk endpoint."""
@@ -274,5 +401,199 @@ class TestBulkReviewUnit:
         response = await client.post("/api/v1/reviews/bulk", json=bulk_data)
 
         assert response.status_code == 401
+        data = response.json()
+        assert data["success"] is False
+
+    @pytest.mark.asyncio
+    async def test_bulk_review_success(self, client: AsyncClient, auth_headers: dict):
+        """Test successful bulk review submission."""
+        card_id_1 = uuid4()
+        card_id_2 = uuid4()
+        deck_id = uuid4()
+
+        mock_result = SM2BulkReviewResult(
+            session_id="test-session",
+            total_submitted=2,
+            successful=2,
+            failed=0,
+            results=[
+                SM2ReviewResult(
+                    success=True,
+                    card_id=card_id_1,
+                    quality=4,
+                    previous_status=CardStatus.NEW,
+                    new_status=CardStatus.LEARNING,
+                    easiness_factor=2.5,
+                    interval=1,
+                    repetitions=1,
+                    next_review_date=date.today() + timedelta(days=1),
+                ),
+                SM2ReviewResult(
+                    success=True,
+                    card_id=card_id_2,
+                    quality=5,
+                    previous_status=CardStatus.LEARNING,
+                    new_status=CardStatus.REVIEW,
+                    easiness_factor=2.6,
+                    interval=6,
+                    repetitions=2,
+                    next_review_date=date.today() + timedelta(days=6),
+                ),
+            ],
+        )
+
+        with patch("src.api.v1.reviews.SM2Service") as mock_class:
+            mock_service = AsyncMock()
+            mock_service.process_bulk_reviews.return_value = mock_result
+            mock_class.return_value = mock_service
+
+            response = await client.post(
+                "/api/v1/reviews/bulk",
+                json={
+                    "deck_id": str(deck_id),
+                    "session_id": "test-session",
+                    "reviews": [
+                        {"card_id": str(card_id_1), "quality": 4, "time_taken": 10},
+                        {"card_id": str(card_id_2), "quality": 5, "time_taken": 8},
+                    ],
+                },
+                headers=auth_headers,
+            )
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data["session_id"] == "test-session"
+            assert data["total_submitted"] == 2
+            assert data["successful"] == 2
+            assert data["failed"] == 0
+            assert len(data["results"]) == 2
+
+    @pytest.mark.asyncio
+    async def test_bulk_review_partial_failure(self, client: AsyncClient, auth_headers: dict):
+        """Test bulk review with partial failures."""
+        card_id_1 = uuid4()
+        card_id_2 = uuid4()
+        deck_id = uuid4()
+
+        mock_result = SM2BulkReviewResult(
+            session_id="test-session",
+            total_submitted=2,
+            successful=1,
+            failed=1,
+            results=[
+                SM2ReviewResult(
+                    success=True,
+                    card_id=card_id_1,
+                    quality=4,
+                    previous_status=CardStatus.NEW,
+                    new_status=CardStatus.LEARNING,
+                    easiness_factor=2.5,
+                    interval=1,
+                    repetitions=1,
+                    next_review_date=date.today() + timedelta(days=1),
+                ),
+            ],
+        )
+
+        with patch("src.api.v1.reviews.SM2Service") as mock_class:
+            mock_service = AsyncMock()
+            mock_service.process_bulk_reviews.return_value = mock_result
+            mock_class.return_value = mock_service
+
+            response = await client.post(
+                "/api/v1/reviews/bulk",
+                json={
+                    "deck_id": str(deck_id),
+                    "session_id": "test-session",
+                    "reviews": [
+                        {"card_id": str(card_id_1), "quality": 4, "time_taken": 10},
+                        {"card_id": str(card_id_2), "quality": 5, "time_taken": 8},
+                    ],
+                },
+                headers=auth_headers,
+            )
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data["successful"] == 1
+            assert data["failed"] == 1
+
+    @pytest.mark.asyncio
+    async def test_bulk_review_empty_reviews_returns_422(
+        self, client: AsyncClient, auth_headers: dict
+    ):
+        """Test that empty reviews array returns 422."""
+        response = await client.post(
+            "/api/v1/reviews/bulk",
+            json={
+                "deck_id": str(uuid4()),
+                "session_id": "test-session",
+                "reviews": [],
+            },
+            headers=auth_headers,
+        )
+
+        assert response.status_code == 422
+        data = response.json()
+        assert data["success"] is False
+        assert data["error"]["code"] == "VALIDATION_ERROR"
+
+    @pytest.mark.asyncio
+    async def test_bulk_review_too_many_reviews_returns_422(
+        self, client: AsyncClient, auth_headers: dict
+    ):
+        """Test that more than 100 reviews returns 422."""
+        reviews = [{"card_id": str(uuid4()), "quality": 4, "time_taken": 10} for _ in range(101)]
+
+        response = await client.post(
+            "/api/v1/reviews/bulk",
+            json={
+                "deck_id": str(uuid4()),
+                "session_id": "test-session",
+                "reviews": reviews,
+            },
+            headers=auth_headers,
+        )
+
+        assert response.status_code == 422
+        data = response.json()
+        assert data["success"] is False
+        assert data["error"]["code"] == "VALIDATION_ERROR"
+
+    @pytest.mark.asyncio
+    async def test_bulk_review_invalid_quality_returns_422(
+        self, client: AsyncClient, auth_headers: dict
+    ):
+        """Test that invalid quality in bulk review returns 422."""
+        response = await client.post(
+            "/api/v1/reviews/bulk",
+            json={
+                "deck_id": str(uuid4()),
+                "session_id": "test-session",
+                "reviews": [{"card_id": str(uuid4()), "quality": 6, "time_taken": 10}],
+            },
+            headers=auth_headers,
+        )
+
+        assert response.status_code == 422
+        data = response.json()
+        assert data["success"] is False
+
+    @pytest.mark.asyncio
+    async def test_bulk_review_invalid_time_taken_returns_422(
+        self, client: AsyncClient, auth_headers: dict
+    ):
+        """Test that invalid time_taken in bulk review returns 422."""
+        response = await client.post(
+            "/api/v1/reviews/bulk",
+            json={
+                "deck_id": str(uuid4()),
+                "session_id": "test-session",
+                "reviews": [{"card_id": str(uuid4()), "quality": 4, "time_taken": 301}],
+            },
+            headers=auth_headers,
+        )
+
+        assert response.status_code == 422
         data = response.json()
         assert data["success"] is False
