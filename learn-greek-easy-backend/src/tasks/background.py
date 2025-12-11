@@ -18,6 +18,8 @@ import logging
 from typing import Any
 from uuid import UUID
 
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+
 from src.config import settings
 
 logger = logging.getLogger(__name__)
@@ -33,25 +35,62 @@ def is_background_tasks_enabled() -> bool:
 
 
 async def check_achievements_task(user_id: UUID, db_url: str) -> None:
-    """Check and award achievements for a user after a review session.
+    """Check if user has earned new achievements after a review.
 
-    This task runs asynchronously after a review is submitted to check
-    if the user has earned any new achievements (streaks, milestones, etc.).
+    This task runs asynchronously after the review response is sent.
+    It checks all achievement thresholds and logs any new unlocks.
+
+    The task creates its own database connection to avoid issues with
+    connection sharing across async contexts.
 
     Args:
-        user_id: The ID of the user to check achievements for.
-        db_url: Database connection URL for creating a new session.
-
-    Note:
-        Placeholder - full implementation in 12.02.
+        user_id: UUID of the user to check
+        db_url: Database connection URL
     """
     if not is_background_tasks_enabled():
         logger.debug("Background tasks disabled, skipping check_achievements_task")
         return
 
-    logger.debug(f"check_achievements_task called for user_id={user_id}")
-    # TODO: Implement in 12.02
-    pass
+    logger.info(
+        "Starting achievement check",
+        extra={"user_id": str(user_id), "task": "check_achievements"},
+    )
+
+    engine = None
+    try:
+        # Create dedicated engine for this background task
+        engine = create_async_engine(db_url, pool_pre_ping=True)
+        async_session_factory = async_sessionmaker(
+            engine, class_=AsyncSession, expire_on_commit=False
+        )
+
+        async with async_session_factory() as session:
+            # Import here to avoid circular imports
+            from src.services.progress_service import ProgressService
+
+            service = ProgressService(session)
+            achievements = await service.get_achievements(user_id)
+
+            unlocked = [a for a in achievements.achievements if a.unlocked]
+            logger.info(
+                "Achievement check complete",
+                extra={
+                    "user_id": str(user_id),
+                    "total_unlocked": len(unlocked),
+                    "total_points": achievements.total_points,
+                },
+            )
+
+    except Exception as e:
+        logger.error(
+            "Achievement check failed",
+            extra={"user_id": str(user_id), "error": str(e)},
+            exc_info=True,
+        )
+    finally:
+        # Always dispose of the engine to clean up connections
+        if engine is not None:
+            await engine.dispose()
 
 
 async def invalidate_cache_task(

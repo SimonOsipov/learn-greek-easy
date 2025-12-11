@@ -2,7 +2,7 @@
 
 import asyncio
 import inspect
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
@@ -143,14 +143,15 @@ class TestPlaceholderExecution:
 
     @pytest.mark.asyncio
     async def test_check_achievements_task_executes(self):
-        """Test that check_achievements_task can be called."""
+        """Test that check_achievements_task can be called without raising."""
         from src.tasks.background import check_achievements_task
 
         user_id = uuid4()
         db_url = "postgresql+asyncpg://test:test@localhost/test"
 
-        # Should not raise any exception
-        await check_achievements_task(user_id, db_url)
+        # With feature disabled, should just return early without error
+        with patch.object(settings, "feature_background_tasks", False):
+            await check_achievements_task(user_id, db_url)
 
     @pytest.mark.asyncio
     async def test_invalidate_cache_task_executes(self):
@@ -264,9 +265,296 @@ class TestLoggingBehavior:
 
         user_id = uuid4()
         with patch.object(settings, "feature_background_tasks", True):
-            with patch("src.tasks.background.logger") as mock_logger:
-                await check_achievements_task(user_id, "test_url")
-                mock_logger.debug.assert_called()
-                # Should log the actual execution, not "disabled"
-                call_args = mock_logger.debug.call_args[0][0]
-                assert str(user_id) in call_args
+            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
+                # Set up mock engine
+                mock_engine = AsyncMock()
+                mock_engine_creator.return_value = mock_engine
+
+                with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
+                    # Set up mock session factory and session
+                    mock_session = AsyncMock()
+                    mock_session_factory = MagicMock()
+                    mock_session_factory.return_value.__aenter__ = AsyncMock(
+                        return_value=mock_session
+                    )
+                    mock_session_factory.return_value.__aexit__ = AsyncMock()
+                    mock_sessionmaker.return_value = mock_session_factory
+
+                    with patch(
+                        "src.services.progress_service.ProgressService"
+                    ) as mock_service_class:
+                        mock_service = AsyncMock()
+                        mock_service.get_achievements.return_value = MagicMock(
+                            achievements=[],
+                            total_points=0,
+                        )
+                        mock_service_class.return_value = mock_service
+
+                        with patch("src.tasks.background.logger") as mock_logger:
+                            await check_achievements_task(
+                                user_id, "postgresql+asyncpg://test:test@localhost/test"
+                            )
+                            # Should log info on start
+                            mock_logger.info.assert_called()
+                            # Verify engine was disposed
+                            mock_engine.dispose.assert_called_once()
+
+
+class TestCheckAchievementsTaskImplementation:
+    """Test the full implementation of check_achievements_task."""
+
+    @pytest.mark.asyncio
+    async def test_check_achievements_success(self):
+        """Test successful achievement check."""
+        from src.tasks.background import check_achievements_task
+
+        user_id = uuid4()
+
+        with patch.object(settings, "feature_background_tasks", True):
+            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
+                mock_engine = AsyncMock()
+                mock_engine_creator.return_value = mock_engine
+
+                with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
+                    mock_session = AsyncMock()
+                    mock_session_factory = MagicMock()
+                    mock_session_factory.return_value.__aenter__ = AsyncMock(
+                        return_value=mock_session
+                    )
+                    mock_session_factory.return_value.__aexit__ = AsyncMock()
+                    mock_sessionmaker.return_value = mock_session_factory
+
+                    with patch(
+                        "src.services.progress_service.ProgressService"
+                    ) as mock_service_class:
+                        mock_service = AsyncMock()
+                        mock_service.get_achievements.return_value = MagicMock(
+                            achievements=[
+                                MagicMock(unlocked=True),
+                                MagicMock(unlocked=False),
+                            ],
+                            total_points=100,
+                        )
+                        mock_service_class.return_value = mock_service
+
+                        await check_achievements_task(
+                            user_id, "postgresql+asyncpg://test:test@localhost/test"
+                        )
+
+                        # Verify service was called with correct user_id
+                        mock_service.get_achievements.assert_called_once_with(user_id)
+                        # Verify engine was disposed
+                        mock_engine.dispose.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_check_achievements_handles_database_error(self):
+        """Test that database connection errors are handled gracefully."""
+        from src.tasks.background import check_achievements_task
+
+        user_id = uuid4()
+
+        with patch.object(settings, "feature_background_tasks", True):
+            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
+                mock_engine_creator.side_effect = Exception("Connection failed")
+
+                with patch("src.tasks.background.logger") as mock_logger:
+                    # Should not raise - errors are caught and logged
+                    await check_achievements_task(
+                        user_id, "postgresql+asyncpg://test:test@localhost/test"
+                    )
+
+                    # Should log the error
+                    mock_logger.error.assert_called()
+                    error_call = mock_logger.error.call_args
+                    assert "Achievement check failed" in error_call[0][0]
+
+    @pytest.mark.asyncio
+    async def test_check_achievements_handles_service_error(self):
+        """Test that service errors are handled gracefully."""
+        from src.tasks.background import check_achievements_task
+
+        user_id = uuid4()
+
+        with patch.object(settings, "feature_background_tasks", True):
+            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
+                mock_engine = AsyncMock()
+                mock_engine_creator.return_value = mock_engine
+
+                with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
+                    mock_session = AsyncMock()
+                    # Create proper async context manager mock
+                    mock_context = MagicMock()
+                    mock_context.__aenter__ = AsyncMock(return_value=mock_session)
+                    mock_context.__aexit__ = AsyncMock(return_value=False)  # Propagate exceptions
+                    mock_session_factory = MagicMock(return_value=mock_context)
+                    mock_sessionmaker.return_value = mock_session_factory
+
+                    with patch("src.tasks.background.logger") as mock_logger:
+                        # Patch at the source module since it's imported locally
+                        with patch(
+                            "src.services.progress_service.ProgressService"
+                        ) as mock_service_class:
+                            mock_service_class.return_value.get_achievements = AsyncMock(
+                                side_effect=Exception("Service error")
+                            )
+
+                            # Should not raise
+                            await check_achievements_task(
+                                user_id, "postgresql+asyncpg://test:test@localhost/test"
+                            )
+
+                            # Should log the error
+                            mock_logger.error.assert_called()
+                            # Engine should still be disposed
+                            mock_engine.dispose.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_check_achievements_disposes_engine_on_success(self):
+        """Test that engine is properly disposed after successful execution."""
+        from src.tasks.background import check_achievements_task
+
+        user_id = uuid4()
+
+        with patch.object(settings, "feature_background_tasks", True):
+            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
+                mock_engine = AsyncMock()
+                mock_engine_creator.return_value = mock_engine
+
+                with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
+                    mock_session = AsyncMock()
+                    mock_session_factory = MagicMock()
+                    mock_session_factory.return_value.__aenter__ = AsyncMock(
+                        return_value=mock_session
+                    )
+                    mock_session_factory.return_value.__aexit__ = AsyncMock()
+                    mock_sessionmaker.return_value = mock_session_factory
+
+                    with patch(
+                        "src.services.progress_service.ProgressService"
+                    ) as mock_service_class:
+                        mock_service = AsyncMock()
+                        mock_service.get_achievements.return_value = MagicMock(
+                            achievements=[],
+                            total_points=0,
+                        )
+                        mock_service_class.return_value = mock_service
+
+                        await check_achievements_task(
+                            user_id, "postgresql+asyncpg://test:test@localhost/test"
+                        )
+
+                        # Verify engine.dispose() was called
+                        mock_engine.dispose.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_check_achievements_disposes_engine_on_error(self):
+        """Test that engine is disposed even when an error occurs."""
+        from src.tasks.background import check_achievements_task
+
+        user_id = uuid4()
+
+        with patch.object(settings, "feature_background_tasks", True):
+            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
+                mock_engine = AsyncMock()
+                mock_engine_creator.return_value = mock_engine
+
+                with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
+                    # Make session factory raise an error
+                    mock_sessionmaker.side_effect = Exception("Session creation failed")
+
+                    await check_achievements_task(
+                        user_id, "postgresql+asyncpg://test:test@localhost/test"
+                    )
+
+                    # Engine should still be disposed even after error
+                    mock_engine.dispose.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_check_achievements_creates_engine_with_pool_pre_ping(self):
+        """Test that engine is created with pool_pre_ping=True."""
+        from src.tasks.background import check_achievements_task
+
+        user_id = uuid4()
+        db_url = "postgresql+asyncpg://test:test@localhost/test"
+
+        with patch.object(settings, "feature_background_tasks", True):
+            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
+                mock_engine = AsyncMock()
+                mock_engine_creator.return_value = mock_engine
+
+                with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
+                    mock_session = AsyncMock()
+                    mock_session_factory = MagicMock()
+                    mock_session_factory.return_value.__aenter__ = AsyncMock(
+                        return_value=mock_session
+                    )
+                    mock_session_factory.return_value.__aexit__ = AsyncMock()
+                    mock_sessionmaker.return_value = mock_session_factory
+
+                    with patch(
+                        "src.services.progress_service.ProgressService"
+                    ) as mock_service_class:
+                        mock_service = AsyncMock()
+                        mock_service.get_achievements.return_value = MagicMock(
+                            achievements=[],
+                            total_points=0,
+                        )
+                        mock_service_class.return_value = mock_service
+
+                        await check_achievements_task(user_id, db_url)
+
+                        # Verify create_async_engine was called with pool_pre_ping=True
+                        mock_engine_creator.assert_called_once_with(db_url, pool_pre_ping=True)
+
+    @pytest.mark.asyncio
+    async def test_check_achievements_logs_start_and_completion(self):
+        """Test that achievement check logs start and completion."""
+        from src.tasks.background import check_achievements_task
+
+        user_id = uuid4()
+
+        with patch.object(settings, "feature_background_tasks", True):
+            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
+                mock_engine = AsyncMock()
+                mock_engine_creator.return_value = mock_engine
+
+                with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
+                    mock_session = AsyncMock()
+                    mock_session_factory = MagicMock()
+                    mock_session_factory.return_value.__aenter__ = AsyncMock(
+                        return_value=mock_session
+                    )
+                    mock_session_factory.return_value.__aexit__ = AsyncMock()
+                    mock_sessionmaker.return_value = mock_session_factory
+
+                    with patch(
+                        "src.services.progress_service.ProgressService"
+                    ) as mock_service_class:
+                        mock_service = AsyncMock()
+                        mock_service.get_achievements.return_value = MagicMock(
+                            achievements=[
+                                MagicMock(unlocked=True),
+                                MagicMock(unlocked=True),
+                                MagicMock(unlocked=False),
+                            ],
+                            total_points=150,
+                        )
+                        mock_service_class.return_value = mock_service
+
+                        with patch("src.tasks.background.logger") as mock_logger:
+                            await check_achievements_task(
+                                user_id, "postgresql+asyncpg://test:test@localhost/test"
+                            )
+
+                            # Should have at least 2 info logs (start and completion)
+                            assert mock_logger.info.call_count >= 2
+
+                            # Check start log
+                            start_call = mock_logger.info.call_args_list[0]
+                            assert "Starting achievement check" in start_call[0][0]
+
+                            # Check completion log
+                            completion_call = mock_logger.info.call_args_list[1]
+                            assert "Achievement check complete" in completion_call[0][0]
+                            assert completion_call[1]["extra"]["total_unlocked"] == 2
+                            assert completion_call[1]["extra"]["total_points"] == 150
