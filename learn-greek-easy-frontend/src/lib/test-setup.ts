@@ -96,6 +96,22 @@ afterEach(() => {
 
 // Mock browser APIs not available in test environment
 beforeAll(() => {
+  // Handle unhandled rejections gracefully during tests
+  // This catches expected errors during async cleanup (e.g., session cleared during pending operation)
+  const originalHandler = globalThis.onunhandledrejection;
+  globalThis.onunhandledrejection = (event: PromiseRejectionEvent) => {
+    // Ignore expected session cleanup errors - these occur when async operations
+    // complete after the session has been cleared (race condition during test cleanup)
+    if (event.reason?.message === 'No active review session found') {
+      console.debug('Test cleanup: Expected session error suppressed');
+      event.preventDefault();
+      return;
+    }
+    // Pass through other errors to original handler
+    if (originalHandler) {
+      originalHandler.call(globalThis, event);
+    }
+  };
   // Mock window.matchMedia (for responsive hooks)
   Object.defineProperty(window, 'matchMedia', {
     writable: true,

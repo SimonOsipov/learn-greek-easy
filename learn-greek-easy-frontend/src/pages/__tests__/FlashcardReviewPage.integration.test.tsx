@@ -891,9 +891,21 @@ describe('FlashcardReviewPage - Session Completion', () => {
     // Verify session is in sessionStorage
     expect(sessionStorage.getItem('learn-greek-easy:active-session')).toBeTruthy();
 
+    // Wait for any pending async operations to settle before unmounting
+    // This prevents race conditions where async operations complete after cleanup
+    await waitFor(
+      () => {
+        expect(useReviewStore.getState().isLoading).toBe(false);
+      },
+      { timeout: 1000 }
+    );
+
     // Unmount component first to remove keyboard event listeners
     // This prevents unhandled rejections from pending operations
     unmount();
+
+    // Small delay to allow any in-flight promises to resolve
+    await new Promise((resolve) => setTimeout(resolve, 100));
 
     // Simulate session end by resetting the store (which clears sessionStorage)
     // This avoids the mockReviewAPI session ID mismatch issue

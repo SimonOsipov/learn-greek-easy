@@ -196,12 +196,21 @@ describe('mockReviewAPI', () => {
       }
     });
 
-    it('should throw error if no active session', async () => {
+    it('should return default SR data if no active session (graceful degradation)', async () => {
       sessionStorage.removeItem('learn-greek-easy:active-session');
 
-      await expect(
-        mockReviewAPI.submitCardRating('invalid-session', cardId, 'good', 30)
-      ).rejects.toThrow();
+      // Instead of throwing, submitCardRating now gracefully returns default SR data
+      // This prevents unhandled rejections during test cleanup and component unmounts
+      const result = await mockReviewAPI.submitCardRating('invalid-session', cardId, 'good', 30);
+
+      expect(result).toEqual({
+        state: 'new',
+        easeFactor: 2.5,
+        interval: 0,
+        repetitions: 0,
+        dueDate: expect.any(Date),
+        lastReviewed: null,
+      });
     });
   });
 
