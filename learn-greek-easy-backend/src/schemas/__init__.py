@@ -21,10 +21,27 @@ from src.schemas.deck import (
 )
 
 # Progress schemas
-from src.schemas.progress import (
+from src.schemas.progress import (  # Existing; Dashboard schemas; Deck Progress schemas; Learning Trends schemas; Achievements schemas
+    Achievement,
+    AchievementsResponse,
     CardStatisticsResponse,
+    DailyStats,
+    DashboardStatsResponse,
+    DeckProgressDetailResponse,
+    DeckProgressListResponse,
+    DeckProgressMetrics,
+    DeckProgressSummary,
+    DeckStatistics,
+    DeckTimeline,
+    LearningTrendsResponse,
+    NextMilestone,
+    OverviewStats,
     ProgressSummaryResponse,
+    RecentActivity,
+    StreakStats,
     StudySessionStatsResponse,
+    TodayStats,
+    TrendsSummary,
     UserDeckProgressResponse,
 )
 
@@ -91,6 +108,27 @@ __all__ = [
     "CardStatisticsResponse",
     "ProgressSummaryResponse",
     "StudySessionStatsResponse",
+    # Dashboard
+    "OverviewStats",
+    "TodayStats",
+    "StreakStats",
+    "RecentActivity",
+    "DashboardStatsResponse",
+    # Deck Progress
+    "DeckProgressSummary",
+    "DeckProgressListResponse",
+    "DeckProgressMetrics",
+    "DeckStatistics",
+    "DeckTimeline",
+    "DeckProgressDetailResponse",
+    # Learning Trends
+    "DailyStats",
+    "TrendsSummary",
+    "LearningTrendsResponse",
+    # Achievements
+    "Achievement",
+    "NextMilestone",
+    "AchievementsResponse",
     # Review
     "ReviewSubmit",
     "ReviewResponse",
