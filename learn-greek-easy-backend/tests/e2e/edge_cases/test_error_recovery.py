@@ -545,3 +545,739 @@ class TestRateLimitRecovery(E2ETestCase):
             assert (
                 recovery_response.status_code == 401
             ), f"New IP should not be rate limited, got {recovery_response.status_code}"
+
+
+class TestValidationEdgeCases(E2ETestCase):
+    """E2E tests for validation edge cases and error handling.
+
+    Tests cover:
+    - Invalid quality values (out of range 0-5)
+    - Invalid time_taken values (negative, zero)
+    - Missing required fields
+    - Type mismatches
+    - Boundary value testing
+    """
+
+    @pytest.mark.asyncio
+    @pytest.mark.e2e
+    @pytest.mark.edge_case
+    async def test_review_quality_too_high_returns_422(
+        self,
+        client: AsyncClient,
+        auth_headers: dict[str, str],
+        deck_with_cards: DeckWithCards,
+    ) -> None:
+        """Test: Quality > 5 returns 422 validation error."""
+        card = deck_with_cards.cards[0]
+
+        response = await client.post(
+            "/api/v1/reviews",
+            json={
+                "card_id": str(card.id),
+                "quality": 6,  # Invalid: max is 5
+                "time_taken": 15,
+            },
+            headers=auth_headers,
+        )
+
+        assert response.status_code == 422
+        data = response.json()
+        assert "detail" in data or "error" in data
+
+    @pytest.mark.asyncio
+    @pytest.mark.e2e
+    @pytest.mark.edge_case
+    async def test_review_quality_negative_returns_422(
+        self,
+        client: AsyncClient,
+        auth_headers: dict[str, str],
+        deck_with_cards: DeckWithCards,
+    ) -> None:
+        """Test: Quality < 0 returns 422 validation error."""
+        card = deck_with_cards.cards[0]
+
+        response = await client.post(
+            "/api/v1/reviews",
+            json={
+                "card_id": str(card.id),
+                "quality": -1,  # Invalid: min is 0
+                "time_taken": 15,
+            },
+            headers=auth_headers,
+        )
+
+        assert response.status_code == 422
+
+    @pytest.mark.asyncio
+    @pytest.mark.e2e
+    @pytest.mark.edge_case
+    async def test_review_quality_boundary_zero_valid(
+        self,
+        client: AsyncClient,
+        fresh_user_session: UserSession,
+        deck_with_cards: DeckWithCards,
+    ) -> None:
+        """Test: Quality = 0 (complete blackout) is valid."""
+        headers = fresh_user_session.headers
+        deck = deck_with_cards.deck
+        card = deck_with_cards.cards[0]
+
+        # Initialize study session first
+        init_response = await client.post(
+            f"/api/v1/study/initialize/{deck.id}",
+            headers=headers,
+        )
+        assert init_response.status_code == 200
+
+        response = await client.post(
+            "/api/v1/reviews",
+            json={
+                "card_id": str(card.id),
+                "quality": 0,  # Valid: complete blackout
+                "time_taken": 15,
+            },
+            headers=headers,
+        )
+
+        assert response.status_code == 200
+
+    @pytest.mark.asyncio
+    @pytest.mark.e2e
+    @pytest.mark.edge_case
+    async def test_review_quality_boundary_five_valid(
+        self,
+        client: AsyncClient,
+        fresh_user_session: UserSession,
+        deck_with_cards: DeckWithCards,
+    ) -> None:
+        """Test: Quality = 5 (perfect response) is valid."""
+        headers = fresh_user_session.headers
+        deck = deck_with_cards.deck
+        card = deck_with_cards.cards[0]
+
+        # Initialize study session first
+        init_response = await client.post(
+            f"/api/v1/study/initialize/{deck.id}",
+            headers=headers,
+        )
+        assert init_response.status_code == 200
+
+        response = await client.post(
+            "/api/v1/reviews",
+            json={
+                "card_id": str(card.id),
+                "quality": 5,  # Valid: perfect response
+                "time_taken": 15,
+            },
+            headers=headers,
+        )
+
+        assert response.status_code == 200
+
+    @pytest.mark.asyncio
+    @pytest.mark.e2e
+    @pytest.mark.edge_case
+    async def test_review_time_taken_negative_returns_422(
+        self,
+        client: AsyncClient,
+        auth_headers: dict[str, str],
+        deck_with_cards: DeckWithCards,
+    ) -> None:
+        """Test: Negative time_taken returns 422 validation error."""
+        card = deck_with_cards.cards[0]
+
+        response = await client.post(
+            "/api/v1/reviews",
+            json={
+                "card_id": str(card.id),
+                "quality": 4,
+                "time_taken": -5,  # Invalid: must be >= 0
+            },
+            headers=auth_headers,
+        )
+
+        assert response.status_code == 422
+
+    @pytest.mark.asyncio
+    @pytest.mark.e2e
+    @pytest.mark.edge_case
+    async def test_review_time_taken_zero_valid(
+        self,
+        client: AsyncClient,
+        fresh_user_session: UserSession,
+        deck_with_cards: DeckWithCards,
+    ) -> None:
+        """Test: time_taken = 0 is valid (instant response)."""
+        headers = fresh_user_session.headers
+        deck = deck_with_cards.deck
+        card = deck_with_cards.cards[0]
+
+        # Initialize study session first
+        init_response = await client.post(
+            f"/api/v1/study/initialize/{deck.id}",
+            headers=headers,
+        )
+        assert init_response.status_code == 200
+
+        response = await client.post(
+            "/api/v1/reviews",
+            json={
+                "card_id": str(card.id),
+                "quality": 4,
+                "time_taken": 0,  # Valid: instant response
+            },
+            headers=headers,
+        )
+
+        assert response.status_code == 200
+
+    @pytest.mark.asyncio
+    @pytest.mark.e2e
+    @pytest.mark.edge_case
+    async def test_review_missing_card_id_returns_422(
+        self,
+        client: AsyncClient,
+        auth_headers: dict[str, str],
+    ) -> None:
+        """Test: Missing card_id returns 422 validation error."""
+        response = await client.post(
+            "/api/v1/reviews",
+            json={
+                "quality": 4,
+                "time_taken": 15,
+                # Missing card_id
+            },
+            headers=auth_headers,
+        )
+
+        assert response.status_code == 422
+
+    @pytest.mark.asyncio
+    @pytest.mark.e2e
+    @pytest.mark.edge_case
+    async def test_review_missing_quality_returns_422(
+        self,
+        client: AsyncClient,
+        auth_headers: dict[str, str],
+        deck_with_cards: DeckWithCards,
+    ) -> None:
+        """Test: Missing quality returns 422 validation error."""
+        card = deck_with_cards.cards[0]
+
+        response = await client.post(
+            "/api/v1/reviews",
+            json={
+                "card_id": str(card.id),
+                "time_taken": 15,
+                # Missing quality
+            },
+            headers=auth_headers,
+        )
+
+        assert response.status_code == 422
+
+    @pytest.mark.asyncio
+    @pytest.mark.e2e
+    @pytest.mark.edge_case
+    async def test_review_quality_string_type_returns_422(
+        self,
+        client: AsyncClient,
+        auth_headers: dict[str, str],
+        deck_with_cards: DeckWithCards,
+    ) -> None:
+        """Test: String quality value returns 422 validation error."""
+        card = deck_with_cards.cards[0]
+
+        response = await client.post(
+            "/api/v1/reviews",
+            json={
+                "card_id": str(card.id),
+                "quality": "good",  # Invalid: should be int
+                "time_taken": 15,
+            },
+            headers=auth_headers,
+        )
+
+        assert response.status_code == 422
+
+    @pytest.mark.asyncio
+    @pytest.mark.e2e
+    @pytest.mark.edge_case
+    async def test_review_quality_float_coerced_to_int(
+        self,
+        client: AsyncClient,
+        fresh_user_session: UserSession,
+        deck_with_cards: DeckWithCards,
+    ) -> None:
+        """Test: Float quality value is coerced to int or rejected.
+
+        Pydantic may coerce 4.0 to 4, or reject it depending on config.
+        This test documents current behavior.
+        """
+        headers = fresh_user_session.headers
+        deck = deck_with_cards.deck
+        card = deck_with_cards.cards[0]
+
+        # Initialize study session first
+        init_response = await client.post(
+            f"/api/v1/study/initialize/{deck.id}",
+            headers=headers,
+        )
+        assert init_response.status_code == 200
+
+        response = await client.post(
+            "/api/v1/reviews",
+            json={
+                "card_id": str(card.id),
+                "quality": 4.0,  # Float - may be coerced to int
+                "time_taken": 15,
+            },
+            headers=headers,
+        )
+
+        # Either coerced (200) or rejected (422)
+        assert response.status_code in [200, 422]
+
+    @pytest.mark.asyncio
+    @pytest.mark.e2e
+    @pytest.mark.edge_case
+    async def test_review_null_values_return_422(
+        self,
+        client: AsyncClient,
+        auth_headers: dict[str, str],
+    ) -> None:
+        """Test: Null values for required fields return 422."""
+        response = await client.post(
+            "/api/v1/reviews",
+            json={
+                "card_id": None,
+                "quality": None,
+                "time_taken": None,
+            },
+            headers=auth_headers,
+        )
+
+        assert response.status_code == 422
+
+    @pytest.mark.asyncio
+    @pytest.mark.e2e
+    @pytest.mark.edge_case
+    async def test_review_empty_body_returns_422(
+        self,
+        client: AsyncClient,
+        auth_headers: dict[str, str],
+    ) -> None:
+        """Test: Empty request body returns 422."""
+        response = await client.post(
+            "/api/v1/reviews",
+            json={},
+            headers=auth_headers,
+        )
+
+        assert response.status_code == 422
+
+    @pytest.mark.asyncio
+    @pytest.mark.e2e
+    @pytest.mark.edge_case
+    async def test_review_extra_fields_ignored(
+        self,
+        client: AsyncClient,
+        fresh_user_session: UserSession,
+        deck_with_cards: DeckWithCards,
+    ) -> None:
+        """Test: Extra fields in request are ignored."""
+        headers = fresh_user_session.headers
+        deck = deck_with_cards.deck
+        card = deck_with_cards.cards[0]
+
+        # Initialize study session first
+        init_response = await client.post(
+            f"/api/v1/study/initialize/{deck.id}",
+            headers=headers,
+        )
+        assert init_response.status_code == 200
+
+        response = await client.post(
+            "/api/v1/reviews",
+            json={
+                "card_id": str(card.id),
+                "quality": 4,
+                "time_taken": 15,
+                "extra_field": "should be ignored",
+                "another_extra": 12345,
+            },
+            headers=headers,
+        )
+
+        # Extra fields should be ignored, request should succeed
+        assert response.status_code == 200
+
+
+class TestBulkReviewValidation(E2ETestCase):
+    """E2E tests for bulk review validation edge cases."""
+
+    @pytest.mark.asyncio
+    @pytest.mark.e2e
+    @pytest.mark.edge_case
+    async def test_bulk_review_empty_array_returns_422(
+        self,
+        client: AsyncClient,
+        fresh_user_session: UserSession,
+        deck_with_cards: DeckWithCards,
+    ) -> None:
+        """Test: Empty reviews array returns 422."""
+        headers = fresh_user_session.headers
+        deck = deck_with_cards.deck
+
+        response = await client.post(
+            "/api/v1/reviews/bulk",
+            json={
+                "deck_id": str(deck.id),
+                "session_id": "test-empty",
+                "reviews": [],  # Empty array
+            },
+            headers=headers,
+        )
+
+        assert response.status_code == 422
+
+    @pytest.mark.asyncio
+    @pytest.mark.e2e
+    @pytest.mark.edge_case
+    async def test_bulk_review_missing_deck_id_returns_422(
+        self,
+        client: AsyncClient,
+        fresh_user_session: UserSession,
+        deck_with_cards: DeckWithCards,
+    ) -> None:
+        """Test: Missing deck_id returns 422."""
+        headers = fresh_user_session.headers
+        card = deck_with_cards.cards[0]
+
+        response = await client.post(
+            "/api/v1/reviews/bulk",
+            json={
+                "session_id": "test-no-deck",
+                "reviews": [
+                    {"card_id": str(card.id), "quality": 4, "time_taken": 15},
+                ],
+                # Missing deck_id
+            },
+            headers=headers,
+        )
+
+        assert response.status_code == 422
+
+    @pytest.mark.asyncio
+    @pytest.mark.e2e
+    @pytest.mark.edge_case
+    async def test_bulk_review_invalid_quality_in_array(
+        self,
+        client: AsyncClient,
+        fresh_user_session: UserSession,
+        deck_with_cards: DeckWithCards,
+    ) -> None:
+        """Test: Invalid quality value in reviews array returns 422."""
+        headers = fresh_user_session.headers
+        deck = deck_with_cards.deck
+        cards = deck_with_cards.cards
+
+        response = await client.post(
+            "/api/v1/reviews/bulk",
+            json={
+                "deck_id": str(deck.id),
+                "session_id": "test-invalid-quality",
+                "reviews": [
+                    {"card_id": str(cards[0].id), "quality": 4, "time_taken": 15},
+                    {"card_id": str(cards[1].id), "quality": 10, "time_taken": 15},  # Invalid
+                ],
+            },
+            headers=headers,
+        )
+
+        assert response.status_code == 422
+
+    @pytest.mark.asyncio
+    @pytest.mark.e2e
+    @pytest.mark.edge_case
+    async def test_bulk_review_nonexistent_deck_handled(
+        self,
+        client: AsyncClient,
+        fresh_user_session: UserSession,
+        deck_with_cards: DeckWithCards,
+    ) -> None:
+        """Test: Non-existent deck_id is handled gracefully.
+
+        Note: The current implementation returns 200 with failed results
+        when the deck doesn't exist, rather than 404. This is because
+        the bulk review endpoint processes individual reviews and reports
+        failures per card.
+        """
+        headers = fresh_user_session.headers
+        card = deck_with_cards.cards[0]
+        fake_deck_id = str(uuid.uuid4())
+
+        response = await client.post(
+            "/api/v1/reviews/bulk",
+            json={
+                "deck_id": fake_deck_id,
+                "session_id": "test-nonexistent-deck",
+                "reviews": [
+                    {"card_id": str(card.id), "quality": 4, "time_taken": 15},
+                ],
+            },
+            headers=headers,
+        )
+
+        # Could return 404 (deck not found), 422 (validation), or 200 with failures
+        assert response.status_code in [200, 404, 422]
+
+        # If 200, check that the operation was handled (may have failures)
+        if response.status_code == 200:
+            data = response.json()
+            assert "total_submitted" in data
+            assert "successful" in data
+            assert "failed" in data
+
+
+class TestDeckValidationEdgeCases(E2ETestCase):
+    """E2E tests for deck-related validation edge cases."""
+
+    @pytest.mark.asyncio
+    @pytest.mark.e2e
+    @pytest.mark.edge_case
+    async def test_deck_search_empty_query_returns_422(
+        self,
+        client: AsyncClient,
+    ) -> None:
+        """Test: Empty search query returns 422."""
+        response = await client.get(
+            "/api/v1/decks/search",
+            params={"q": ""},
+        )
+
+        assert response.status_code == 422
+
+    @pytest.mark.asyncio
+    @pytest.mark.e2e
+    @pytest.mark.edge_case
+    async def test_deck_search_missing_query_returns_422(
+        self,
+        client: AsyncClient,
+    ) -> None:
+        """Test: Missing search query returns 422."""
+        response = await client.get("/api/v1/decks/search")
+
+        assert response.status_code == 422
+
+    @pytest.mark.asyncio
+    @pytest.mark.e2e
+    @pytest.mark.edge_case
+    async def test_deck_invalid_uuid_returns_422(
+        self,
+        client: AsyncClient,
+    ) -> None:
+        """Test: Invalid UUID format in deck ID returns 422."""
+        response = await client.get("/api/v1/decks/not-a-valid-uuid")
+
+        assert response.status_code == 422
+
+    @pytest.mark.asyncio
+    @pytest.mark.e2e
+    @pytest.mark.edge_case
+    async def test_deck_nonexistent_uuid_returns_404(
+        self,
+        client: AsyncClient,
+    ) -> None:
+        """Test: Non-existent deck UUID returns 404."""
+        fake_deck_id = str(uuid.uuid4())
+
+        response = await client.get(f"/api/v1/decks/{fake_deck_id}")
+
+        assert response.status_code == 404
+
+    @pytest.mark.asyncio
+    @pytest.mark.e2e
+    @pytest.mark.edge_case
+    async def test_deck_create_invalid_level_returns_422(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+    ) -> None:
+        """Test: Invalid level value returns 422."""
+        response = await client.post(
+            "/api/v1/decks",
+            json={
+                "name": "Invalid Level Deck",
+                "level": "Z9",  # Invalid level
+            },
+            headers=superuser_auth_headers,
+        )
+
+        assert response.status_code == 422
+
+    @pytest.mark.asyncio
+    @pytest.mark.e2e
+    @pytest.mark.edge_case
+    async def test_deck_create_missing_name_returns_422(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+    ) -> None:
+        """Test: Missing deck name returns 422."""
+        response = await client.post(
+            "/api/v1/decks",
+            json={
+                "level": "A1",
+                # Missing name
+            },
+            headers=superuser_auth_headers,
+        )
+
+        assert response.status_code == 422
+
+    @pytest.mark.asyncio
+    @pytest.mark.e2e
+    @pytest.mark.edge_case
+    async def test_deck_create_empty_name_returns_422(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+    ) -> None:
+        """Test: Empty deck name returns 422."""
+        response = await client.post(
+            "/api/v1/decks",
+            json={
+                "name": "",
+                "level": "A1",
+            },
+            headers=superuser_auth_headers,
+        )
+
+        assert response.status_code == 422
+
+
+class TestAuthValidationEdgeCases(E2ETestCase):
+    """E2E tests for authentication validation edge cases."""
+
+    @pytest.mark.asyncio
+    @pytest.mark.e2e
+    @pytest.mark.edge_case
+    async def test_register_invalid_email_returns_422(
+        self,
+        client: AsyncClient,
+    ) -> None:
+        """Test: Invalid email format returns 422."""
+        response = await client.post(
+            "/api/v1/auth/register",
+            json={
+                "email": "not-an-email",
+                "password": "ValidPassword123!",
+                "full_name": "Test User",
+            },
+        )
+
+        assert response.status_code == 422
+
+    @pytest.mark.asyncio
+    @pytest.mark.e2e
+    @pytest.mark.edge_case
+    async def test_register_short_password_returns_422(
+        self,
+        client: AsyncClient,
+    ) -> None:
+        """Test: Password < 8 characters returns 422."""
+        response = await client.post(
+            "/api/v1/auth/register",
+            json={
+                "email": "test@example.com",
+                "password": "Short1!",  # Too short
+                "full_name": "Test User",
+            },
+        )
+
+        assert response.status_code == 422
+
+    @pytest.mark.asyncio
+    @pytest.mark.e2e
+    @pytest.mark.edge_case
+    async def test_register_missing_email_returns_422(
+        self,
+        client: AsyncClient,
+    ) -> None:
+        """Test: Missing email returns 422."""
+        response = await client.post(
+            "/api/v1/auth/register",
+            json={
+                "password": "ValidPassword123!",
+                "full_name": "Test User",
+            },
+        )
+
+        assert response.status_code == 422
+
+    @pytest.mark.asyncio
+    @pytest.mark.e2e
+    @pytest.mark.edge_case
+    async def test_login_empty_credentials_returns_422(
+        self,
+        client: AsyncClient,
+    ) -> None:
+        """Test: Empty credentials return 422."""
+        response = await client.post(
+            "/api/v1/auth/login",
+            json={
+                "email": "",
+                "password": "",
+            },
+        )
+
+        assert response.status_code == 422
+
+    @pytest.mark.asyncio
+    @pytest.mark.e2e
+    @pytest.mark.edge_case
+    async def test_login_wrong_password_returns_401(
+        self,
+        client: AsyncClient,
+    ) -> None:
+        """Test: Wrong password returns 401."""
+        # First register a user
+        email = f"wrong_pass_test_{uuid.uuid4().hex[:8]}@example.com"
+        await client.post(
+            "/api/v1/auth/register",
+            json={
+                "email": email,
+                "password": "CorrectPassword123!",
+                "full_name": "Test User",
+            },
+        )
+
+        # Try to login with wrong password
+        response = await client.post(
+            "/api/v1/auth/login",
+            json={
+                "email": email,
+                "password": "WrongPassword123!",
+            },
+        )
+
+        assert response.status_code == 401
+
+    @pytest.mark.asyncio
+    @pytest.mark.e2e
+    @pytest.mark.edge_case
+    async def test_login_nonexistent_user_returns_401(
+        self,
+        client: AsyncClient,
+    ) -> None:
+        """Test: Non-existent user returns 401."""
+        response = await client.post(
+            "/api/v1/auth/login",
+            json={
+                "email": "nonexistent@example.com",
+                "password": "SomePassword123!",
+            },
+        )
+
+        assert response.status_code == 401

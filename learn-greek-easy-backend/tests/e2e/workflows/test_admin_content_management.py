@@ -618,3 +618,228 @@ class TestPermissionBoundaries(E2ETestCase):
             },
         )
         assert unauth_bulk.status_code == 401
+
+
+@pytest.mark.e2e
+class TestAdminCardDeletion(E2ETestCase):
+    """E2E tests for admin card deletion operations."""
+
+    @pytest.mark.asyncio
+    async def test_delete_card_success(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+    ):
+        """Test superuser can delete a card.
+
+        Flow:
+        Admin Creates Deck -> Admin Creates Card -> Admin Deletes Card ->
+        Verify Card No Longer Exists
+        """
+        # Step 1: Create deck
+        deck_response = await client.post(
+            "/api/v1/decks",
+            json={
+                "name": "Card Deletion Test Deck",
+                "description": "Deck for testing card deletion",
+                "level": "A1",
+            },
+            headers=superuser_auth_headers,
+        )
+        assert deck_response.status_code == 201
+        deck_id = deck_response.json()["id"]
+
+        # Step 2: Create a card
+        card_response = await client.post(
+            "/api/v1/cards",
+            json={
+                "deck_id": deck_id,
+                "front_text": "to_be_deleted",
+                "back_text": "will be removed",
+                "difficulty": "easy",
+            },
+            headers=superuser_auth_headers,
+        )
+        assert card_response.status_code == 201
+        card_id = card_response.json()["id"]
+
+        # Step 3: Verify card exists
+        get_before = await client.get(f"/api/v1/cards/{card_id}")
+        assert get_before.status_code == 200
+        assert get_before.json()["front_text"] == "to_be_deleted"
+
+        # Step 4: Delete the card
+        delete_response = await client.delete(
+            f"/api/v1/cards/{card_id}",
+            headers=superuser_auth_headers,
+        )
+        assert delete_response.status_code == 204
+
+        # Step 5: Verify card no longer exists
+        get_after = await client.get(f"/api/v1/cards/{card_id}")
+        assert get_after.status_code == 404
+
+        # Step 6: Verify deck card count is 0
+        deck_get = await client.get(f"/api/v1/decks/{deck_id}")
+        assert deck_get.status_code == 200
+        assert deck_get.json()["card_count"] == 0
+
+    @pytest.mark.asyncio
+    async def test_delete_card_not_found(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+    ):
+        """Test deleting non-existent card returns 404."""
+        from uuid import uuid4
+
+        fake_card_id = str(uuid4())
+
+        response = await client.delete(
+            f"/api/v1/cards/{fake_card_id}",
+            headers=superuser_auth_headers,
+        )
+        assert response.status_code == 404
+
+    @pytest.mark.asyncio
+    async def test_delete_card_invalid_uuid_returns_422(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+    ):
+        """Test deleting with invalid UUID format returns 422."""
+        response = await client.delete(
+            "/api/v1/cards/not-a-valid-uuid",
+            headers=superuser_auth_headers,
+        )
+        assert response.status_code == 422
+
+    @pytest.mark.asyncio
+    async def test_delete_card_non_superuser_returns_403(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        superuser_auth_headers: dict,
+    ):
+        """Test regular user cannot delete cards."""
+        # Step 1: Admin creates deck and card
+        deck_response = await client.post(
+            "/api/v1/decks",
+            json={"name": "Non-Admin Delete Test", "level": "A1"},
+            headers=superuser_auth_headers,
+        )
+        deck_id = deck_response.json()["id"]
+
+        card_response = await client.post(
+            "/api/v1/cards",
+            json={
+                "deck_id": deck_id,
+                "front_text": "protected_card",
+                "back_text": "cannot delete",
+                "difficulty": "easy",
+            },
+            headers=superuser_auth_headers,
+        )
+        card_id = card_response.json()["id"]
+
+        # Step 2: Regular user tries to delete
+        delete_response = await client.delete(
+            f"/api/v1/cards/{card_id}",
+            headers=auth_headers,
+        )
+        assert delete_response.status_code == 403
+
+        # Step 3: Verify card still exists
+        get_response = await client.get(f"/api/v1/cards/{card_id}")
+        assert get_response.status_code == 200
+        assert get_response.json()["front_text"] == "protected_card"
+
+    @pytest.mark.asyncio
+    async def test_delete_card_unauthenticated_returns_401(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+    ):
+        """Test unauthenticated user cannot delete cards."""
+        # Step 1: Admin creates deck and card
+        deck_response = await client.post(
+            "/api/v1/decks",
+            json={"name": "Unauth Delete Test", "level": "A1"},
+            headers=superuser_auth_headers,
+        )
+        deck_id = deck_response.json()["id"]
+
+        card_response = await client.post(
+            "/api/v1/cards",
+            json={
+                "deck_id": deck_id,
+                "front_text": "auth_protected",
+                "back_text": "requires auth",
+                "difficulty": "easy",
+            },
+            headers=superuser_auth_headers,
+        )
+        card_id = card_response.json()["id"]
+
+        # Step 2: Unauthenticated request
+        delete_response = await client.delete(f"/api/v1/cards/{card_id}")
+        assert delete_response.status_code == 401
+
+        # Step 3: Verify card still exists
+        get_response = await client.get(f"/api/v1/cards/{card_id}")
+        assert get_response.status_code == 200
+
+    @pytest.mark.asyncio
+    async def test_delete_multiple_cards_workflow(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+    ):
+        """Test admin deletes multiple cards from a deck.
+
+        Flow:
+        Create Deck -> Create 3 Cards -> Delete 2 Cards -> Verify 1 Remains
+        """
+        # Step 1: Create deck
+        deck_response = await client.post(
+            "/api/v1/decks",
+            json={"name": "Multi-Delete Test Deck", "level": "A1"},
+            headers=superuser_auth_headers,
+        )
+        deck_id = deck_response.json()["id"]
+
+        # Step 2: Create 3 cards
+        card_ids = []
+        for i in range(3):
+            card_response = await client.post(
+                "/api/v1/cards",
+                json={
+                    "deck_id": deck_id,
+                    "front_text": f"card_{i}",
+                    "back_text": f"translation_{i}",
+                    "difficulty": "easy",
+                },
+                headers=superuser_auth_headers,
+            )
+            card_ids.append(card_response.json()["id"])
+
+        # Step 3: Verify 3 cards exist
+        list_before = await client.get(f"/api/v1/cards?deck_id={deck_id}")
+        assert list_before.json()["total"] == 3
+
+        # Step 4: Delete 2 cards
+        for card_id in card_ids[:2]:
+            delete_response = await client.delete(
+                f"/api/v1/cards/{card_id}",
+                headers=superuser_auth_headers,
+            )
+            assert delete_response.status_code == 204
+
+        # Step 5: Verify only 1 card remains
+        list_after = await client.get(f"/api/v1/cards?deck_id={deck_id}")
+        assert list_after.json()["total"] == 1
+
+        # Step 6: Verify the remaining card is the last one
+        remaining_card = list_after.json()["cards"][0]
+        assert remaining_card["id"] == card_ids[2]
+        assert remaining_card["front_text"] == "card_2"
