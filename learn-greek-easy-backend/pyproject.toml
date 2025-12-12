@@ -217,6 +217,11 @@ omit = [
     "src/*/__init__.py",
     # Constants file (data only, no logic)
     "src/constants.py",
+    # Scheduler/background task modules (standalone processes, not API-testable)
+    "src/scheduler_main.py",
+    "src/tasks/scheduled.py",
+    "src/tasks/scheduler.py",
+    "src/tasks/background.py",
 ]
 
 
