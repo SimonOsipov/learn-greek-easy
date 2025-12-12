@@ -9,7 +9,6 @@ import { ErrorBoundary } from '@/components/errors';
 import { AppLayout } from '@/components/layout';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import VersionIndicator from '@/components/VersionIndicator';
 import { LayoutProvider } from '@/contexts/LayoutContext';
 import { useActivityMonitor } from '@/hooks/useActivityMonitor';
 import ActivityFeedTest from '@/pages/ActivityFeedTest';
@@ -113,7 +112,6 @@ function App() {
           <TooltipProvider>
             <LayoutProvider>
               <AppContent />
-              <VersionIndicator />
             </LayoutProvider>
           </TooltipProvider>
         </BrowserRouter>
