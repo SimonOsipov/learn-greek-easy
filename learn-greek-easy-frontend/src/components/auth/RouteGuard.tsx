@@ -8,11 +8,25 @@ interface RouteGuardProps {
   children: React.ReactNode;
 }
 
+/**
+ * RouteGuard waits for store hydration before checking authentication.
+ *
+ * This prevents a race condition where checkAuth() runs before Zustand's
+ * persist middleware has hydrated state from localStorage, which would
+ * cause authenticated users to be incorrectly redirected to login.
+ */
 export const RouteGuard: React.FC<RouteGuardProps> = ({ children }) => {
-  const { checkAuth } = useAuthStore();
+  const { checkAuth, _hasHydrated } = useAuthStore();
   const [isChecking, setIsChecking] = useState(true);
 
   useEffect(() => {
+    // Wait for Zustand persist middleware to hydrate before checking auth
+    // In test mode, _hasHydrated is true immediately (no persist middleware)
+    // In dev/prod, _hasHydrated becomes true after onRehydrateStorage callback
+    if (!_hasHydrated) {
+      return;
+    }
+
     const verifyAuth = async () => {
       try {
         await checkAuth();
@@ -22,9 +36,10 @@ export const RouteGuard: React.FC<RouteGuardProps> = ({ children }) => {
     };
 
     verifyAuth();
-  }, [checkAuth]);
+  }, [checkAuth, _hasHydrated]);
 
-  if (isChecking) {
+  // Show loading spinner while waiting for hydration or auth check
+  if (!_hasHydrated || isChecking) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 via-white to-purple-50">
         <div className="space-y-4 text-center">

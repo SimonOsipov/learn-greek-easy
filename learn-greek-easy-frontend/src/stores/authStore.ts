@@ -15,6 +15,7 @@ interface AuthState {
   isLoading: boolean;
   error: AuthError | null;
   rememberMe: boolean;
+  _hasHydrated: boolean; // Tracks if persist middleware has hydrated from localStorage
 
   // Actions
   login: (email: string, password: string, remember?: boolean) => Promise<void>;
@@ -41,6 +42,7 @@ const storeConfig: StateCreator<AuthState, [], []> = (set, get) => ({
   isLoading: false,
   error: null,
   rememberMe: false,
+  _hasHydrated: false, // Set to true after persist hydration completes
 
   // Login action
   login: async (email: string, password: string, remember = false) => {
@@ -359,7 +361,24 @@ const persistConfig: PersistOptions<AuthState, Partial<AuthState>> = {
           isAuthenticated: state.isAuthenticated,
         } as Partial<AuthState>)
       : ({} as Partial<AuthState>),
+  onRehydrateStorage: () => {
+    // Called when hydration starts; returns callback for when hydration finishes
+    return () => {
+      // Hydration complete - mark store as hydrated
+      // This allows RouteGuard to know when it's safe to check auth
+      useAuthStore.setState({ _hasHydrated: true });
+    };
+  },
 };
+
+/**
+ * Test mode store configuration - wraps storeConfig with _hasHydrated = true
+ * since there's no persist middleware to trigger hydration
+ */
+const testStoreConfig: StateCreator<AuthState, [], []> = (set, get, api) => ({
+  ...storeConfig(set, get, api),
+  _hasHydrated: true, // No hydration needed in test mode - mark as ready immediately
+});
 
 /**
  * Auth store with conditional persistence
@@ -367,5 +386,5 @@ const persistConfig: PersistOptions<AuthState, Partial<AuthState>> = {
  * - In dev/prod: full persistence functionality is enabled
  */
 export const useAuthStore = create<AuthState>()(
-  import.meta.env.MODE === 'test' ? storeConfig : persist(storeConfig, persistConfig)
+  import.meta.env.MODE === 'test' ? testStoreConfig : persist(storeConfig, persistConfig)
 );
