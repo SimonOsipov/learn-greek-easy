@@ -22,6 +22,7 @@ This document describes the testing conventions, patterns, and commands for the 
 16. [Database Testing Patterns](#database-testing-patterns)
 17. [Anti-Patterns (What NOT to Do)](#anti-patterns-what-not-to-do)
 18. [Example Pattern Library](#example-pattern-library)
+19. [E2E API Tests](#19-e2e-api-tests)
 
 ---
 
@@ -2049,6 +2050,259 @@ class TestComplexScenarios:
 
 ---
 
-**Last Updated**: 2025-12-01
-**Version**: 2.0
+## 19. E2E API Tests
+
+End-to-End API tests validate complete user workflows across multiple API endpoints. Unlike integration tests (which test individual endpoints), E2E tests verify that entire user journeys work correctly from start to finish.
+
+### Test Type Comparison
+
+| Test Type | Focus | Example |
+|-----------|-------|---------|
+| **Unit Tests** | Single function/method isolation | `test_sm2_calculate_interval()` |
+| **Integration Tests** | Single endpoint + database | `test_register_endpoint_success()` |
+| **E2E API Tests** | Complete user workflows | Register -> Login -> Create Deck -> Study -> Review -> Check Progress |
+
+### Directory Structure
+
+```
+tests/e2e/
+├── __init__.py
+├── conftest.py                         # E2E-specific fixtures
+│
+├── workflows/                          # User workflow tests
+│   ├── __init__.py
+│   ├── test_new_user_journey.py        # Complete new user flow
+│   ├── test_learning_session.py        # Study/review workflow
+│   ├── test_progress_tracking.py       # Progress over time
+│   └── test_admin_content_management.py # Admin deck/card management
+│
+├── scenarios/                          # Business scenario tests
+│   ├── __init__.py
+│   ├── test_spaced_repetition_cycle.py # SM-2 over multiple days
+│   ├── test_achievement_unlocks.py     # Achievement triggers
+│   ├── test_streak_maintenance.py      # Daily streak logic
+│   └── test_multi_deck_learning.py     # Multiple deck management
+│
+└── edge_cases/                         # Complex edge case tests
+    ├── __init__.py
+    ├── test_concurrent_sessions.py     # Multiple device simulation
+    ├── test_data_consistency.py        # Cross-endpoint data integrity
+    └── test_error_recovery.py          # Error handling workflows
+```
+
+### Running E2E Tests
+
+```bash
+# Run all E2E tests
+poetry run pytest tests/e2e/ -v
+
+# Run specific workflow category
+poetry run pytest tests/e2e/workflows/ -v
+poetry run pytest tests/e2e/scenarios/ -v
+poetry run pytest tests/e2e/edge_cases/ -v
+
+# Run with E2E marker
+poetry run pytest -m e2e -v
+
+# Run E2E tests in parallel
+poetry run pytest tests/e2e/ -n auto -v
+
+# Run E2E tests with coverage
+poetry run pytest tests/e2e/ --cov=src --cov-report=term-missing -v
+```
+
+### E2E Quick Reference
+
+| Task | Command |
+|------|---------|
+| Run all E2E | `poetry run pytest tests/e2e/ -v` |
+| Run workflows only | `poetry run pytest tests/e2e/workflows/ -v` |
+| Run with marker | `poetry run pytest -m e2e -v` |
+| Skip slow E2E | `poetry run pytest tests/e2e/ -m "e2e and not slow"` |
+| E2E + coverage | `poetry run pytest tests/e2e/ --cov=src` |
+
+### E2E Test Markers
+
+```python
+# Available markers for E2E tests
+@pytest.mark.e2e          # All E2E tests
+@pytest.mark.workflow     # User journey tests
+@pytest.mark.scenario     # Business scenario tests
+@pytest.mark.edge_case    # Edge case and error tests
+@pytest.mark.slow         # Tests taking > 5 seconds
+```
+
+### E2E Fixtures Reference
+
+| Fixture | Scope | Description |
+|---------|-------|-------------|
+| `fresh_user_session` | function | New user with auth headers, no history |
+| `admin_session` | function | Admin user session for content management |
+| `populated_study_environment` | function | User with deck, cards, initialized study |
+| `multi_day_study_history` | function | User with simulated study history |
+
+### Writing New E2E Tests
+
+#### 1. Use the E2ETestCase Base Class
+
+```python
+from tests.e2e.conftest import E2ETestCase
+
+class TestMyWorkflow(E2ETestCase):
+    """E2E tests for my workflow."""
+
+    @pytest.mark.e2e
+    @pytest.mark.workflow
+    async def test_complete_workflow(self, client, db_session, fresh_user_session):
+        # Use helper methods from base class
+        headers = fresh_user_session.headers
+
+        # Step 1: Perform action
+        response = await client.post("/api/v1/...", headers=headers, json={...})
+        assert response.status_code == 200
+
+        # Step 2: Verify state
+        await self.assert_progress_matches_reviews(client, headers, deck_id)
+```
+
+#### 2. Follow the Workflow Pattern
+
+```python
+@pytest.mark.e2e
+async def test_user_journey(self, client, fresh_user_session):
+    """Test: Action description -> Expected outcome."""
+
+    # Step 1: Action (with descriptive comment)
+    response = await client.post(...)
+
+    # Step 2: Intermediate verification
+    assert response.status_code == 200
+
+    # Step 3: Next action
+    response = await client.get(...)
+
+    # Step 4: Final verification (both API and DB state)
+    assert response.json()["expected_field"] == expected_value
+    db_record = await db_session.get(Model, id)
+    assert db_record.field == expected_value
+```
+
+#### 3. Time Simulation for SM-2 Tests
+
+```python
+from unittest.mock import patch
+from datetime import datetime, timedelta
+
+async def test_card_due_after_interval(self, client, populated_study_environment):
+    """Test card becomes due after its interval passes."""
+    # Submit review with quality 4 (interval ~1 day)
+    await client.post("/api/v1/reviews", json={
+        "card_id": card_id,
+        "quality": 4
+    }, headers=headers)
+
+    # Simulate 2 days passing
+    future_time = datetime.utcnow() + timedelta(days=2)
+    with patch('src.services.study.datetime') as mock_dt:
+        mock_dt.utcnow.return_value = future_time
+
+        queue = await client.get(f"/api/v1/study/queue/{deck_id}", headers=headers)
+        assert card_id in [c["card_id"] for c in queue.json()["cards"]]
+```
+
+### E2E Test Best Practices
+
+| Practice | Reason |
+|----------|--------|
+| Always verify both API response AND database state | Ensures data consistency |
+| Use descriptive test names (`test_action_scenario`) | Self-documenting tests |
+| Group related assertions with comments | Easier debugging on failure |
+| Clean up created resources (use fixtures) | Prevent test pollution |
+| Mark slow tests with `@pytest.mark.slow` | Enable selective running |
+| Use `fresh_user_session` for isolation | Each test starts fresh |
+
+### E2E Troubleshooting
+
+| Issue | Solution |
+|-------|----------|
+| Test depends on previous test | Use fixtures, not shared state |
+| Time-dependent test fails | Use datetime mocking consistently |
+| Random failures in parallel | Check for shared database state |
+| Slow test suite | Run with `-n auto` for parallelism |
+| Can't find fixture | Check conftest.py imports |
+
+### Contributing New E2E Tests
+
+#### When to Write an E2E Test
+
+Write an E2E test when:
+- Testing a complete user workflow (multiple API calls)
+- Validating data consistency across endpoints
+- Testing business logic that spans multiple services
+- Verifying time-dependent behavior (SM-2 scheduling)
+
+#### E2E Test Checklist
+
+Before submitting a PR with new E2E tests:
+
+- [ ] Test file is in correct directory (`workflows/`, `scenarios/`, or `edge_cases/`)
+- [ ] Test uses `@pytest.mark.e2e` marker
+- [ ] Test uses appropriate fixtures (`fresh_user_session`, etc.)
+- [ ] Test verifies both API response and database state
+- [ ] Test has descriptive name and docstring
+- [ ] Test runs independently (no dependency on other tests)
+- [ ] Test cleans up any created resources
+- [ ] Slow tests (>5s) are marked with `@pytest.mark.slow`
+
+#### E2E Test Template
+
+```python
+"""
+E2E Test: [Workflow Name]
+
+Tests: [Brief description of what workflow is tested]
+Steps:
+1. [Step 1]
+2. [Step 2]
+...
+"""
+
+import pytest
+from httpx import AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession
+
+class Test[WorkflowName]:
+    """E2E tests for [workflow description]."""
+
+    @pytest.mark.e2e
+    @pytest.mark.workflow  # or @pytest.mark.scenario or @pytest.mark.edge_case
+    async def test_[action]_[scenario](
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        fresh_user_session,  # or other appropriate fixture
+    ):
+        """Test: [Action] when [condition] should [expected outcome]."""
+        # Arrange
+        headers = fresh_user_session.headers
+
+        # Act - Step 1
+        response = await client.post("/api/v1/...", headers=headers, json={})
+
+        # Assert - Step 1
+        assert response.status_code == 200
+
+        # Act - Step 2
+        response = await client.get("/api/v1/...", headers=headers)
+
+        # Assert - Final (API + DB)
+        assert response.json()["field"] == expected_value
+        db_record = await db_session.get(Model, id)
+        assert db_record is not None
+```
+
+---
+
+**Last Updated**: 2025-12-11
+**Version**: 2.1
 **Maintained By**: Development Team

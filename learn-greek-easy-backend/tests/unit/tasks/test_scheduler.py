@@ -274,11 +274,24 @@ class TestScheduledTaskStubs:
 
     @pytest.mark.asyncio
     async def test_session_cleanup_task_runs_without_error(self, caplog):
-        """Test that session_cleanup_task placeholder runs without error."""
+        """Test that session_cleanup_task runs without error (with mocked Redis)."""
+        from unittest.mock import AsyncMock, patch
+
         from src.tasks.scheduled import session_cleanup_task
 
-        with caplog.at_level("INFO"):
-            await session_cleanup_task()
+        with patch("src.core.redis.init_redis", new_callable=AsyncMock) as mock_init:
+            with patch("src.core.redis.get_redis") as mock_get_redis:
+                with patch("src.core.redis.close_redis", new_callable=AsyncMock) as mock_close:
+                    # Return None to trigger the "Redis not available" branch
+                    mock_get_redis.return_value = None
+
+                    with caplog.at_level("INFO"):
+                        await session_cleanup_task()
+
+                    # Verify Redis functions were called
+                    mock_init.assert_called_once()
+                    mock_get_redis.assert_called_once()
+                    mock_close.assert_called_once()
 
         assert "session cleanup" in caplog.text.lower()
 

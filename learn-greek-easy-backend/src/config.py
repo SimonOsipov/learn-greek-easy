@@ -28,6 +28,7 @@ class Settings(BaseSettings):
     app_version: str = Field(default="0.1.0", description="Application version")
     app_env: str = Field(default="development", description="Environment (dev/staging/prod)")
     debug: bool = Field(default=False, description="Debug mode")
+    testing: bool = Field(default=False, description="Testing mode (disables rate limiting)")
     api_v1_prefix: str = Field(default="/api/v1", description="API v1 prefix")
 
     # Server
@@ -339,7 +340,7 @@ class Settings(BaseSettings):
     @property
     def is_testing(self) -> bool:
         """Check if running tests."""
-        return self.app_env == "testing"
+        return self.app_env == "testing" or self.testing
 
     @property
     def google_oauth_configured(self) -> bool:

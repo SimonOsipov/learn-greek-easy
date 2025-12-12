@@ -16,6 +16,13 @@ Note: All database fixtures use PostgreSQL exclusively.
       SQLite is not supported due to PostgreSQL-specific features.
 """
 
+# Set testing mode BEFORE any imports that load settings
+# This disables rate limiting for all tests
+import os
+
+os.environ["TESTING"] = "true"
+
+# flake8: noqa: E402 - imports must come after os.environ is set
 import asyncio
 from collections.abc import AsyncGenerator, Generator
 from typing import Any
