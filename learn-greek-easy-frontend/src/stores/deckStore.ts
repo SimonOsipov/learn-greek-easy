@@ -3,8 +3,6 @@
 /**
  * Deck State Management Store
  *
- * ⚠️ TEMPORARY IMPLEMENTATION (MVP)
- *
  * This store manages deck data and progress on the frontend using:
  * - Zustand for state management
  * - localStorage for progress persistence
@@ -21,8 +19,8 @@
  * Estimated migration time: 4-6 hours
  */
 
-import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
+import { create, StateCreator } from 'zustand';
+import { persist, createJSONStorage, PersistOptions } from 'zustand/middleware';
 
 import { mockDeckAPI } from '@/services/mockDeckAPI';
 import { useAuthStore } from '@/stores/authStore';
@@ -164,6 +162,462 @@ interface DeckState {
 }
 
 /**
+ * Store configuration - extracted for conditional persistence
+ * In test environment, persist middleware is disabled to allow proper unit testing
+ */
+const storeConfig: StateCreator<DeckState, [], []> = (set, get) => ({
+  // ========================================
+  // INITIAL STATE
+  // ========================================
+
+  decks: [],
+  selectedDeck: null,
+  deckProgress: {}, // Will be hydrated from localStorage on init
+  filters: DEFAULT_FILTERS,
+  isLoading: false,
+  error: null,
+
+  // ========================================
+  // ACTIONS - DECK FETCHING
+  // ========================================
+
+  /**
+   * Fetch all decks with current filters
+   * TODO: Replace mockDeckAPI with real API when backend ready
+   */
+  fetchDecks: async () => {
+    const { filters } = get();
+
+    set({ isLoading: true, error: null });
+
+    try {
+      // TODO: Backend Migration - Replace with real API call
+      // const decks = await deckAPI.getAll(filters);
+      const decks = await mockDeckAPI.getAllDecks(filters);
+
+      // Inject user's progress into decks
+      // TODO: Backend Migration - Remove when backend returns joined data
+      const { deckProgress } = get();
+      const decksWithProgress = decks.map((deck) => ({
+        ...deck,
+        progress: deckProgress[deck.id] || deck.progress,
+      }));
+
+      set({
+        decks: decksWithProgress,
+        isLoading: false,
+        error: null,
+      });
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Failed to load decks. Please try again.';
+
+      set({
+        isLoading: false,
+        error: errorMessage,
+        decks: [], // Clear decks on error
+      });
+
+      // Re-throw for component-level handling if needed
+      throw error;
+    }
+  },
+
+  /**
+   * Select a specific deck by ID
+   * TODO: Backend Migration - Replace mockDeckAPI with real API when backend ready
+   */
+  selectDeck: async (deckId: string) => {
+    set({ isLoading: true, error: null });
+
+    try {
+      // TODO: Backend Migration - Replace with real API call
+      // const deck = await deckAPI.getById(deckId);
+      const deck = await mockDeckAPI.getDeckById(deckId);
+
+      // Inject user's progress
+      // TODO: Backend Migration - Remove when backend returns joined data
+      const { deckProgress } = get();
+      const deckWithProgress = {
+        ...deck,
+        progress: deckProgress[deck.id] || deck.progress,
+      };
+
+      set({
+        selectedDeck: deckWithProgress,
+        isLoading: false,
+        error: null,
+      });
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Failed to load deck details. Please try again.';
+
+      set({
+        isLoading: false,
+        error: errorMessage,
+        selectedDeck: null,
+      });
+
+      throw error;
+    }
+  },
+
+  /**
+   * Clear the currently selected deck
+   */
+  clearSelection: () => {
+    set({ selectedDeck: null });
+  },
+
+  // ========================================
+  // ACTIONS - FILTERING
+  // ========================================
+
+  /**
+   * Update filters and automatically re-fetch decks
+   */
+  setFilters: (newFilters: Partial<DeckFilters>) => {
+    const { filters, fetchDecks } = get();
+
+    // Merge new filters with existing
+    const updatedFilters = {
+      ...filters,
+      ...newFilters,
+    };
+
+    set({ filters: updatedFilters });
+
+    // Automatically re-fetch with new filters
+    // Don't await - let it run in background
+    fetchDecks().catch((error) => {
+      console.error('Error fetching decks after filter change:', error);
+    });
+  },
+
+  /**
+   * Reset all filters to defaults
+   */
+  clearFilters: () => {
+    const { fetchDecks } = get();
+
+    set({ filters: DEFAULT_FILTERS });
+
+    // Re-fetch with default filters
+    fetchDecks().catch((error) => {
+      console.error('Error fetching decks after clearing filters:', error);
+    });
+  },
+
+  // ========================================
+  // ACTIONS - LEARNING FLOW
+  // ========================================
+
+  /**
+   * Start learning a deck
+   * Checks premium access and initializes progress
+   * TODO: Backend Migration - Replace with backend API call when ready
+   */
+  startLearning: async (deckId: string) => {
+    set({ isLoading: true, error: null });
+
+    try {
+      // Get deck to check premium status
+      // TODO: Backend Migration - Replace with real API call
+      const deck = await mockDeckAPI.getDeckById(deckId);
+
+      // Check premium access
+      const { user } = useAuthStore.getState();
+      const isPremiumLocked = deck.isPremium && user?.role === 'free';
+
+      if (isPremiumLocked) {
+        throw new Error(
+          'This is a premium deck. Please upgrade your account to access premium content.'
+        );
+      }
+
+      // Initialize progress
+      // TODO: Backend Migration - Replace with backend API call
+      // const progress = await deckAPI.startLearning(deckId);
+      const progress = await mockDeckAPI.startDeck(deckId);
+
+      // Update local progress state
+      // TODO: Backend Migration - Remove when backend handles this
+      set((state) => ({
+        deckProgress: {
+          ...state.deckProgress,
+          [deckId]: progress,
+        },
+        isLoading: false,
+        error: null,
+      }));
+
+      // Update selected deck if it's the current one
+      const { selectedDeck } = get();
+      if (selectedDeck?.id === deckId) {
+        set({
+          selectedDeck: {
+            ...selectedDeck,
+            progress,
+          },
+        });
+      }
+
+      // Re-fetch decks to update list with new progress
+      await get().fetchDecks();
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Failed to start learning. Please try again.';
+
+      set({
+        isLoading: false,
+        error: errorMessage,
+      });
+
+      throw error;
+    }
+  },
+
+  /**
+   * Update user's progress for a deck
+   * TODO: Backend Migration - Replace with backend API call when ready
+   */
+  updateProgress: (deckId: string, progressUpdates: Partial<DeckProgress>) => {
+    set((state) => {
+      const currentProgress = state.deckProgress[deckId];
+
+      if (!currentProgress) {
+        console.warn(`No progress found for deck ${deckId}. Cannot update.`);
+        return state;
+      }
+
+      // Merge updates
+      const updatedProgress = {
+        ...currentProgress,
+        ...progressUpdates,
+      };
+
+      // Update deck progress map
+      const newDeckProgress = {
+        ...state.deckProgress,
+        [deckId]: updatedProgress,
+      };
+
+      // Update selected deck if it matches
+      let newSelectedDeck = state.selectedDeck;
+      if (state.selectedDeck?.id === deckId) {
+        newSelectedDeck = {
+          ...state.selectedDeck,
+          progress: updatedProgress,
+        };
+      }
+
+      // Update decks array
+      const newDecks = state.decks.map((deck) =>
+        deck.id === deckId ? { ...deck, progress: updatedProgress } : deck
+      );
+
+      return {
+        deckProgress: newDeckProgress,
+        selectedDeck: newSelectedDeck,
+        decks: newDecks,
+      };
+    });
+
+    // TODO: Backend Migration - When backend ready, add API call:
+    // await deckAPI.updateProgress(deckId, progressUpdates);
+  },
+
+  /**
+   * Review a single card and update progress
+   */
+  reviewCard: async (deckId: string, cardId: string, wasCorrect: boolean) => {
+    set({ isLoading: true, error: null });
+
+    try {
+      // Call mock API
+      const updatedProgress = await mockDeckAPI.reviewCard(deckId, cardId, wasCorrect);
+
+      // Update store state
+      set((state) => ({
+        deckProgress: {
+          ...state.deckProgress,
+          [deckId]: updatedProgress,
+        },
+        isLoading: false,
+      }));
+
+      // Sync to selected deck and decks array
+      const { updateProgress } = get();
+      updateProgress(deckId, updatedProgress);
+
+      // Re-fetch decks to ensure full sync
+      await get().fetchDecks();
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Failed to update card progress.';
+
+      set({
+        isLoading: false,
+        error: errorMessage,
+      });
+
+      throw error;
+    }
+  },
+
+  /**
+   * Review a study session and update progress
+   */
+  reviewSession: async (
+    deckId: string,
+    cardsReviewed: number,
+    correctCount: number,
+    sessionTimeMinutes: number
+  ) => {
+    set({ isLoading: true, error: null });
+
+    try {
+      // Call mock API
+      const updatedProgress = await mockDeckAPI.reviewSession(
+        deckId,
+        cardsReviewed,
+        correctCount,
+        sessionTimeMinutes
+      );
+
+      // Update store state
+      set((state) => ({
+        deckProgress: {
+          ...state.deckProgress,
+          [deckId]: updatedProgress,
+        },
+        isLoading: false,
+      }));
+
+      // Sync to selected deck and decks array
+      const { updateProgress } = get();
+      updateProgress(deckId, updatedProgress);
+
+      // Re-fetch decks to ensure full sync
+      await get().fetchDecks();
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Failed to update session progress.';
+
+      set({
+        isLoading: false,
+        error: errorMessage,
+      });
+
+      throw error;
+    }
+  },
+
+  /**
+   * Complete a deck (all cards mastered)
+   */
+  completeDeck: async (deckId: string) => {
+    set({ isLoading: true, error: null });
+
+    try {
+      // Call mock API
+      const updatedProgress = await mockDeckAPI.completeDeck(deckId);
+
+      // Update store state
+      set((state) => ({
+        deckProgress: {
+          ...state.deckProgress,
+          [deckId]: updatedProgress,
+        },
+        isLoading: false,
+      }));
+
+      // Sync to selected deck and decks array
+      const { updateProgress } = get();
+      updateProgress(deckId, updatedProgress);
+
+      // Re-fetch decks
+      await get().fetchDecks();
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to complete deck.';
+
+      set({
+        isLoading: false,
+        error: errorMessage,
+      });
+
+      throw error;
+    }
+  },
+
+  /**
+   * Reset deck progress to initial state
+   */
+  resetProgress: async (deckId: string) => {
+    set({ isLoading: true, error: null });
+
+    try {
+      // Call mock API
+      const resetProgress = await mockDeckAPI.resetDeckProgress(deckId);
+
+      // Update store state
+      set((state) => ({
+        deckProgress: {
+          ...state.deckProgress,
+          [deckId]: resetProgress,
+        },
+        isLoading: false,
+      }));
+
+      // Sync to selected deck and decks array
+      const { updateProgress } = get();
+      updateProgress(deckId, resetProgress);
+
+      // Re-fetch decks
+      await get().fetchDecks();
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Failed to reset deck progress.';
+
+      set({
+        isLoading: false,
+        error: errorMessage,
+      });
+
+      throw error;
+    }
+  },
+
+  // ========================================
+  // ACTIONS - ERROR HANDLING
+  // ========================================
+
+  /**
+   * Clear current error message
+   */
+  clearError: () => {
+    set({ error: null });
+  },
+});
+
+/**
+ * Persist configuration - only applied in non-test environments
+ * Only persist user progress (temporary until backend)
+ *
+ * TODO: Backend Migration - Remove this persist configuration when migrating to backend
+ * Progress will be stored in PostgreSQL user_deck_progress table
+ */
+const persistConfig: PersistOptions<DeckState, Pick<DeckState, 'deckProgress'>> = {
+  name: 'deck-progress-storage', // localStorage key
+  storage: createJSONStorage(() => localStorage),
+
+  // Only persist user progress (temporary until backend)
+  partialize: (state) => ({
+    deckProgress: state.deckProgress,
+  }),
+};
+
+/**
  * Deck store hook for components
  *
  * Usage:
@@ -174,456 +628,10 @@ interface DeckState {
  *   fetchDecks();
  * }, [fetchDecks]);
  * ```
+ *
+ * Note: In test mode (vitest), persist middleware is disabled for proper unit testing.
+ * In dev/prod, full persistence functionality is enabled.
  */
 export const useDeckStore = create<DeckState>()(
-  persist(
-    (set, get) => ({
-      // ========================================
-      // INITIAL STATE
-      // ========================================
-
-      decks: [],
-      selectedDeck: null,
-      deckProgress: {}, // Will be hydrated from localStorage on init
-      filters: DEFAULT_FILTERS,
-      isLoading: false,
-      error: null,
-
-      // ========================================
-      // ACTIONS - DECK FETCHING
-      // ========================================
-
-      /**
-       * Fetch all decks with current filters
-       * TODO: Replace mockDeckAPI with real API when backend ready
-       */
-      fetchDecks: async () => {
-        const { filters } = get();
-
-        set({ isLoading: true, error: null });
-
-        try {
-          // TODO: Backend Migration - Replace with real API call
-          // const decks = await deckAPI.getAll(filters);
-          const decks = await mockDeckAPI.getAllDecks(filters);
-
-          // Inject user's progress into decks
-          // TODO: Backend Migration - Remove when backend returns joined data
-          const { deckProgress } = get();
-          const decksWithProgress = decks.map((deck) => ({
-            ...deck,
-            progress: deckProgress[deck.id] || deck.progress,
-          }));
-
-          set({
-            decks: decksWithProgress,
-            isLoading: false,
-            error: null,
-          });
-        } catch (error) {
-          const errorMessage =
-            error instanceof Error ? error.message : 'Failed to load decks. Please try again.';
-
-          set({
-            isLoading: false,
-            error: errorMessage,
-            decks: [], // Clear decks on error
-          });
-
-          // Re-throw for component-level handling if needed
-          throw error;
-        }
-      },
-
-      /**
-       * Select a specific deck by ID
-       * TODO: Backend Migration - Replace mockDeckAPI with real API when backend ready
-       */
-      selectDeck: async (deckId: string) => {
-        set({ isLoading: true, error: null });
-
-        try {
-          // TODO: Backend Migration - Replace with real API call
-          // const deck = await deckAPI.getById(deckId);
-          const deck = await mockDeckAPI.getDeckById(deckId);
-
-          // Inject user's progress
-          // TODO: Backend Migration - Remove when backend returns joined data
-          const { deckProgress } = get();
-          const deckWithProgress = {
-            ...deck,
-            progress: deckProgress[deck.id] || deck.progress,
-          };
-
-          set({
-            selectedDeck: deckWithProgress,
-            isLoading: false,
-            error: null,
-          });
-        } catch (error) {
-          const errorMessage =
-            error instanceof Error
-              ? error.message
-              : 'Failed to load deck details. Please try again.';
-
-          set({
-            isLoading: false,
-            error: errorMessage,
-            selectedDeck: null,
-          });
-
-          throw error;
-        }
-      },
-
-      /**
-       * Clear the currently selected deck
-       */
-      clearSelection: () => {
-        set({ selectedDeck: null });
-      },
-
-      // ========================================
-      // ACTIONS - FILTERING
-      // ========================================
-
-      /**
-       * Update filters and automatically re-fetch decks
-       */
-      setFilters: (newFilters: Partial<DeckFilters>) => {
-        const { filters, fetchDecks } = get();
-
-        // Merge new filters with existing
-        const updatedFilters = {
-          ...filters,
-          ...newFilters,
-        };
-
-        set({ filters: updatedFilters });
-
-        // Automatically re-fetch with new filters
-        // Don't await - let it run in background
-        fetchDecks().catch((error) => {
-          console.error('Error fetching decks after filter change:', error);
-        });
-      },
-
-      /**
-       * Reset all filters to defaults
-       */
-      clearFilters: () => {
-        const { fetchDecks } = get();
-
-        set({ filters: DEFAULT_FILTERS });
-
-        // Re-fetch with default filters
-        fetchDecks().catch((error) => {
-          console.error('Error fetching decks after clearing filters:', error);
-        });
-      },
-
-      // ========================================
-      // ACTIONS - LEARNING FLOW
-      // ========================================
-
-      /**
-       * Start learning a deck
-       * Checks premium access and initializes progress
-       * TODO: Backend Migration - Replace with backend API call when ready
-       */
-      startLearning: async (deckId: string) => {
-        set({ isLoading: true, error: null });
-
-        try {
-          // Get deck to check premium status
-          // TODO: Backend Migration - Replace with real API call
-          const deck = await mockDeckAPI.getDeckById(deckId);
-
-          // Check premium access
-          const { user } = useAuthStore.getState();
-          const isPremiumLocked = deck.isPremium && user?.role === 'free';
-
-          if (isPremiumLocked) {
-            throw new Error(
-              'This is a premium deck. Please upgrade your account to access premium content.'
-            );
-          }
-
-          // Initialize progress
-          // TODO: Backend Migration - Replace with backend API call
-          // const progress = await deckAPI.startLearning(deckId);
-          const progress = await mockDeckAPI.startDeck(deckId);
-
-          // Update local progress state
-          // TODO: Backend Migration - Remove when backend handles this
-          set((state) => ({
-            deckProgress: {
-              ...state.deckProgress,
-              [deckId]: progress,
-            },
-            isLoading: false,
-            error: null,
-          }));
-
-          // Update selected deck if it's the current one
-          const { selectedDeck } = get();
-          if (selectedDeck?.id === deckId) {
-            set({
-              selectedDeck: {
-                ...selectedDeck,
-                progress,
-              },
-            });
-          }
-
-          // Re-fetch decks to update list with new progress
-          await get().fetchDecks();
-        } catch (error) {
-          const errorMessage =
-            error instanceof Error ? error.message : 'Failed to start learning. Please try again.';
-
-          set({
-            isLoading: false,
-            error: errorMessage,
-          });
-
-          throw error;
-        }
-      },
-
-      /**
-       * Update user's progress for a deck
-       * TODO: Backend Migration - Replace with backend API call when ready
-       */
-      updateProgress: (deckId: string, progressUpdates: Partial<DeckProgress>) => {
-        set((state) => {
-          const currentProgress = state.deckProgress[deckId];
-
-          if (!currentProgress) {
-            console.warn(`No progress found for deck ${deckId}. Cannot update.`);
-            return state;
-          }
-
-          // Merge updates
-          const updatedProgress = {
-            ...currentProgress,
-            ...progressUpdates,
-          };
-
-          // Update deck progress map
-          const newDeckProgress = {
-            ...state.deckProgress,
-            [deckId]: updatedProgress,
-          };
-
-          // Update selected deck if it matches
-          let newSelectedDeck = state.selectedDeck;
-          if (state.selectedDeck?.id === deckId) {
-            newSelectedDeck = {
-              ...state.selectedDeck,
-              progress: updatedProgress,
-            };
-          }
-
-          // Update decks array
-          const newDecks = state.decks.map((deck) =>
-            deck.id === deckId ? { ...deck, progress: updatedProgress } : deck
-          );
-
-          return {
-            deckProgress: newDeckProgress,
-            selectedDeck: newSelectedDeck,
-            decks: newDecks,
-          };
-        });
-
-        // TODO: Backend Migration - When backend ready, add API call:
-        // await deckAPI.updateProgress(deckId, progressUpdates);
-      },
-
-      /**
-       * Review a single card and update progress
-       */
-      reviewCard: async (deckId: string, cardId: string, wasCorrect: boolean) => {
-        set({ isLoading: true, error: null });
-
-        try {
-          // Call mock API
-          const updatedProgress = await mockDeckAPI.reviewCard(deckId, cardId, wasCorrect);
-
-          // Update store state
-          set((state) => ({
-            deckProgress: {
-              ...state.deckProgress,
-              [deckId]: updatedProgress,
-            },
-            isLoading: false,
-          }));
-
-          // Sync to selected deck and decks array
-          const { updateProgress } = get();
-          updateProgress(deckId, updatedProgress);
-
-          // Re-fetch decks to ensure full sync
-          await get().fetchDecks();
-        } catch (error) {
-          const errorMessage =
-            error instanceof Error ? error.message : 'Failed to update card progress.';
-
-          set({
-            isLoading: false,
-            error: errorMessage,
-          });
-
-          throw error;
-        }
-      },
-
-      /**
-       * Review a study session and update progress
-       */
-      reviewSession: async (
-        deckId: string,
-        cardsReviewed: number,
-        correctCount: number,
-        sessionTimeMinutes: number
-      ) => {
-        set({ isLoading: true, error: null });
-
-        try {
-          // Call mock API
-          const updatedProgress = await mockDeckAPI.reviewSession(
-            deckId,
-            cardsReviewed,
-            correctCount,
-            sessionTimeMinutes
-          );
-
-          // Update store state
-          set((state) => ({
-            deckProgress: {
-              ...state.deckProgress,
-              [deckId]: updatedProgress,
-            },
-            isLoading: false,
-          }));
-
-          // Sync to selected deck and decks array
-          const { updateProgress } = get();
-          updateProgress(deckId, updatedProgress);
-
-          // Re-fetch decks to ensure full sync
-          await get().fetchDecks();
-        } catch (error) {
-          const errorMessage =
-            error instanceof Error ? error.message : 'Failed to update session progress.';
-
-          set({
-            isLoading: false,
-            error: errorMessage,
-          });
-
-          throw error;
-        }
-      },
-
-      /**
-       * Complete a deck (all cards mastered)
-       */
-      completeDeck: async (deckId: string) => {
-        set({ isLoading: true, error: null });
-
-        try {
-          // Call mock API
-          const updatedProgress = await mockDeckAPI.completeDeck(deckId);
-
-          // Update store state
-          set((state) => ({
-            deckProgress: {
-              ...state.deckProgress,
-              [deckId]: updatedProgress,
-            },
-            isLoading: false,
-          }));
-
-          // Sync to selected deck and decks array
-          const { updateProgress } = get();
-          updateProgress(deckId, updatedProgress);
-
-          // Re-fetch decks
-          await get().fetchDecks();
-        } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : 'Failed to complete deck.';
-
-          set({
-            isLoading: false,
-            error: errorMessage,
-          });
-
-          throw error;
-        }
-      },
-
-      /**
-       * Reset deck progress to initial state
-       */
-      resetProgress: async (deckId: string) => {
-        set({ isLoading: true, error: null });
-
-        try {
-          // Call mock API
-          const resetProgress = await mockDeckAPI.resetDeckProgress(deckId);
-
-          // Update store state
-          set((state) => ({
-            deckProgress: {
-              ...state.deckProgress,
-              [deckId]: resetProgress,
-            },
-            isLoading: false,
-          }));
-
-          // Sync to selected deck and decks array
-          const { updateProgress } = get();
-          updateProgress(deckId, resetProgress);
-
-          // Re-fetch decks
-          await get().fetchDecks();
-        } catch (error) {
-          const errorMessage =
-            error instanceof Error ? error.message : 'Failed to reset deck progress.';
-
-          set({
-            isLoading: false,
-            error: errorMessage,
-          });
-
-          throw error;
-        }
-      },
-
-      // ========================================
-      // ACTIONS - ERROR HANDLING
-      // ========================================
-
-      /**
-       * Clear current error message
-       */
-      clearError: () => {
-        set({ error: null });
-      },
-    }),
-    {
-      name: 'deck-progress-storage', // localStorage key
-      storage: createJSONStorage(() => localStorage),
-
-      // Only persist user progress (temporary until backend)
-      partialize: (state) => ({
-        deckProgress: state.deckProgress,
-      }),
-
-      // TODO: Backend Migration - Remove this persist configuration when migrating to backend
-      // Progress will be stored in PostgreSQL user_deck_progress table
-    }
-  )
+  import.meta.env.MODE === 'test' ? storeConfig : persist(storeConfig, persistConfig)
 );
