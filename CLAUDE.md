@@ -2,10 +2,11 @@
 
 ## MCP Servers (Model Context Protocol)
 
-**4 MCP servers are available** - use them to enhance development workflow:
+**5 MCP servers are available** - use them to enhance development workflow:
 
 | Server | Prefix | Purpose |
 |--------|--------|---------|
+| **Vibe Kanban** | `mcp__vibe_kanban__*` | Task management, project tracking |
 | **Context7** | `mcp__context7__*` | Documentation for libraries, APIs, languages, databases |
 | **Playwright** | `mcp__playwright__*` | Browser automation, screenshots, testing |
 | **GitHub** | `mcp__github__*` | Repos, issues, PRs, code search |
@@ -13,23 +14,30 @@
 
 ### Usage Guidelines
 
-1. **Context7 (Documentation)** - **CRITICAL: Use before writing code**
+1. **Vibe Kanban (Task Management)** - **Use for all task tracking**
+   - Create and manage tasks for features, bugs, and improvements
+   - Track task status: `todo` → `inprogress` → `inreview` → `done`
+   - Store implementation plans and specs in task descriptions
+   - Tools: `list_projects`, `list_tasks`, `create_task`, `get_task`, `update_task`
+   - **Project ID**: `cb892c2b-4a17-4402-83f2-8f6cb086468b` (learn-greek-easy)
+
+2. **Context7 (Documentation)** - **CRITICAL: Use before writing code**
    - Always verify API signatures and usage patterns before implementation
    - Look up latest docs for any library/framework being used
    - Use for: libraries, frameworks, APIs, programming languages, databases, ORMs, etc.
    - Tools: `resolve-library-id` → `get-library-docs`
 
-2. **Playwright (Browser Automation)**
+3. **Playwright (Browser Automation)**
    - Use for visual verification of UI changes
    - Take screenshots to confirm implementations
    - Test user flows and interactions
 
-3. **GitHub (Repository Operations)**
+4. **GitHub (Repository Operations)**
    - Search code across repositories
    - Manage issues and pull requests
    - Review commits and branches
 
-4. **Railway (Cloud Deployment)**
+5. **Railway (Cloud Deployment)**
    - Deploy applications and templates
    - Manage environments and variables
    - View logs and deployments
@@ -360,7 +368,7 @@ gh pr create --title "[task-id] Feature description" --body "## Summary
 ```
 
 ### 4. Add PR Link to Task
-After creating PR, add the link to task implementation notes in Backlog.
+After creating PR, update task description in Vibe Kanban with the PR link.
 
 ### Branch Naming Convention
 
@@ -657,31 +665,62 @@ Documentation-only changes (`.md` files, `docs/` folder) skip preview automatica
 
 For comprehensive documentation, see [docs/pr-preview-deployments.md](docs/pr-preview-deployments.md).
 
-<!-- BACKLOG.MD MCP GUIDELINES START -->
+<!-- VIBE KANBAN MCP GUIDELINES START -->
 
-<CRITICAL_INSTRUCTION>
+## Vibe Kanban Task Management
 
-## BACKLOG WORKFLOW INSTRUCTIONS
+This project uses **Vibe Kanban MCP** for task management.
 
-This project uses Backlog.md MCP for all task and project management activities.
+### Project ID
 
-**CRITICAL GUIDANCE**
+```
+cb892c2b-4a17-4402-83f2-8f6cb086468b
+```
 
-- If your client supports MCP resources, read `backlog://workflow/overview` to understand when and how to use Backlog for this project.
-- If your client only supports tools or the above request fails, call `backlog.get_workflow_overview()` tool to load the tool-oriented overview (it lists the matching guide tools).
+### Quick Reference
 
-- **First time working here?** Read the overview resource IMMEDIATELY to learn the workflow
-- **Already familiar?** You should have the overview cached ("## Backlog.md Overview (MCP)")
-- **When to read it**: BEFORE creating tasks, or when you're unsure whether to track work
+```bash
+# List all tasks
+mcp__vibe_kanban__list_tasks:
+  project_id: "cb892c2b-4a17-4402-83f2-8f6cb086468b"
 
-These guides cover:
-- Decision framework for when to create tasks
-- Search-first workflow to avoid duplicates
-- Links to detailed guides for task creation, execution, and completion
-- MCP tools reference
+# Create a task
+mcp__vibe_kanban__create_task:
+  project_id: "cb892c2b-4a17-4402-83f2-8f6cb086468b"
+  title: "Task title"
+  description: "Full specification including acceptance criteria and implementation plan"
 
-You MUST read the overview resource to understand the complete workflow. The information is NOT summarized here.
+# Get task details
+mcp__vibe_kanban__get_task:
+  task_id: "[task-uuid]"
 
-</CRITICAL_INSTRUCTION>
+# Update task status
+mcp__vibe_kanban__update_task:
+  task_id: "[task-uuid]"
+  status: "inprogress"  # todo, inprogress, inreview, done, cancelled
+```
 
-<!-- BACKLOG.MD MCP GUIDELINES END -->
+### Task Status Flow
+
+```
+todo → inprogress → inreview → done
+```
+
+| Status | When to Use |
+|--------|-------------|
+| `todo` | Task created, not started |
+| `inprogress` | Actively being worked on |
+| `inreview` | PR created, awaiting review |
+| `done` | Completed and verified (QA only) |
+| `cancelled` | No longer needed |
+
+### Key Differences from Backlog.md
+
+- **No document storage** - PRDs and architecture go in task descriptions
+- **No separate plan field** - Implementation plan is part of description
+- **No notes field** - All updates appended to description
+- **Simpler status** - Uses `todo/inprogress/inreview/done/cancelled`
+
+For full agent workflow instructions, see `~/.claude/CLAUDE.md`.
+
+<!-- VIBE KANBAN MCP GUIDELINES END -->
