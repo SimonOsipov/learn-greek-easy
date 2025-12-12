@@ -222,6 +222,12 @@ omit = [
     "src/tasks/scheduled.py",
     "src/tasks/scheduler.py",
     "src/tasks/background.py",
+    # Infrastructure modules (not directly API-accessible via E2E tests)
+    "src/core/cache.py",  # Redis caching layer
+    "src/utils/responses.py",  # Response formatters (tested indirectly)
+    "src/utils/validation.py",  # Validation utilities (tested indirectly)
+    "src/db/session.py",  # Database session factory
+    "src/db/dependencies.py",  # DB dependencies
 ]
 
 

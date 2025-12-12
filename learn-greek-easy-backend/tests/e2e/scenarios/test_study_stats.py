@@ -16,7 +16,7 @@ from uuid import uuid4
 import pytest
 from httpx import AsyncClient
 
-from tests.e2e.conftest import E2ETestCase, UserSession
+from tests.e2e.conftest import E2ETestCase, StudyEnvironment, UserSession
 
 
 class TestStudyStatsBasic(E2ETestCase):
@@ -93,21 +93,17 @@ class TestStudyStatsDeckFilter(E2ETestCase):
     @pytest.mark.asyncio
     @pytest.mark.e2e
     async def test_study_stats_with_deck_filter(
-        self, client: AsyncClient, fresh_user_session: UserSession
+        self, client: AsyncClient, populated_study_environment: StudyEnvironment
     ) -> None:
         """Test stats endpoint with deck_id filter."""
-        # First get available decks
-        decks = await self.browse_available_decks(client, fresh_user_session.headers)
-
-        if not decks:
-            pytest.skip("No decks available for testing")
-
-        deck_id = decks[0]["id"]
+        # Use the pre-populated deck from the fixture
+        deck_id = str(populated_study_environment.deck.id)
+        headers = populated_study_environment.headers
 
         response = await client.get(
             "/api/v1/study/stats",
             params={"deck_id": deck_id},
-            headers=fresh_user_session.headers,
+            headers=headers,
         )
 
         assert response.status_code == 200

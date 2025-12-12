@@ -17,7 +17,7 @@ from uuid import uuid4
 import pytest
 from httpx import AsyncClient
 
-from tests.e2e.conftest import E2ETestCase, UserSession
+from tests.e2e.conftest import E2ETestCase, StudyEnvironment
 
 
 class TestCardSearchBasic(E2ETestCase):
@@ -165,19 +165,17 @@ class TestCardSearchDeckFilter(E2ETestCase):
     @pytest.mark.asyncio
     @pytest.mark.e2e
     async def test_card_search_with_deck_filter(
-        self, client: AsyncClient, fresh_user_session: UserSession
+        self, client: AsyncClient, populated_study_environment: StudyEnvironment
     ) -> None:
         """Test search with deck_id filter."""
-        decks = await self.browse_available_decks(client, fresh_user_session.headers)
-
-        if not decks:
-            pytest.skip("No decks available for testing")
-
-        deck_id = decks[0]["id"]
+        # Use the pre-populated deck from the fixture
+        deck_id = str(populated_study_environment.deck.id)
+        headers = populated_study_environment.headers
 
         response = await client.get(
             "/api/v1/cards/search",
             params={"q": "hello", "deck_id": deck_id},
+            headers=headers,
         )
 
         assert response.status_code == 200
@@ -335,41 +333,28 @@ class TestCardSearchResponseFormat(E2ETestCase):
     @pytest.mark.asyncio
     @pytest.mark.e2e
     async def test_card_search_cards_have_expected_fields(
-        self, client: AsyncClient, fresh_user_session: UserSession
+        self, client: AsyncClient, populated_study_environment: StudyEnvironment
     ) -> None:
         """Test that card objects have expected fields."""
-        decks = await self.browse_available_decks(client, fresh_user_session.headers)
+        # Use the pre-populated deck and cards from the fixture
+        headers = populated_study_environment.headers
+        cards = populated_study_environment.cards
 
-        if not decks:
-            pytest.skip("No decks available for testing")
+        # Get front_text from first card for search
+        search_term = cards[0].front_text[:10] if cards else "hello"
 
-        deck_id = decks[0]["id"]
-
-        # Get cards from deck first
-        cards_response = await client.get(
-            f"/api/v1/decks/{deck_id}/cards",
-            headers=fresh_user_session.headers,
+        response = await client.get(
+            "/api/v1/cards/search",
+            params={"q": search_term},
+            headers=headers,
         )
 
-        if cards_response.status_code == 200:
-            cards_data = cards_response.json()
-            if cards_data.get("items") or cards_data.get("cards"):
-                cards = cards_data.get("items", cards_data.get("cards", []))
-                if cards:
-                    # Get front_text from first card for search
-                    search_term = cards[0].get("front_text", "hello")[:10]
+        assert response.status_code == 200
+        data = response.json()
 
-                    response = await client.get(
-                        "/api/v1/cards/search",
-                        params={"q": search_term},
-                    )
-
-                    assert response.status_code == 200
-                    data = response.json()
-
-                    if data["cards"]:
-                        card = data["cards"][0]
-                        assert "id" in card
-                        assert "deck_id" in card
-                        assert "front_text" in card
-                        assert "back_text" in card
+        if data["cards"]:
+            card = data["cards"][0]
+            assert "id" in card
+            assert "deck_id" in card
+            assert "front_text" in card
+            assert "back_text" in card
