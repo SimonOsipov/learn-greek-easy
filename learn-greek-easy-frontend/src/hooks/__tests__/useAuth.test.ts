@@ -1,6 +1,12 @@
 /**
  * useAuth Hook Tests
- * Tests authentication hooks including useAuth, useRequireAuth, useRedirectIfAuth, and useRequireRole
+ *
+ * Tests authentication hooks including useAuth, useRequireAuth,
+ * useRedirectIfAuth, and useRequireRole.
+ *
+ * Note: Tests work because authStore uses conditional persistence
+ * (disabled in test environment via import.meta.env.MODE check).
+ * See src/stores/authStore.ts for implementation details.
  */
 
 import { renderHook } from '@testing-library/react';
@@ -15,15 +21,7 @@ vi.mock('react-router-dom', () => ({
   useNavigate: () => mockNavigate,
 }));
 
-/**
- * NOTE: These tests are skipped due to zustand persist middleware
- * incompatibility with test environment. The persist middleware
- * captures localStorage at module load time, before mocks are set up.
- *
- * TODO: Consider using msw or similar to mock storage at a lower level,
- * or test these hooks via integration tests instead of unit tests.
- */
-describe.skip('useAuth Hook', () => {
+describe('useAuth Hook', () => {
   beforeEach(() => {
     // Clear localStorage
     localStorage.clear();
