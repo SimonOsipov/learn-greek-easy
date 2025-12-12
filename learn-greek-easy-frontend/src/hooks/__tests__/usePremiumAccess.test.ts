@@ -1,6 +1,11 @@
 /**
  * usePremiumAccess Hook Tests
- * Tests premium access detection based on user role
+ *
+ * Tests premium access detection based on user role.
+ *
+ * Note: Tests work because authStore uses conditional persistence
+ * (disabled in test environment via import.meta.env.MODE check).
+ * See src/stores/authStore.ts for implementation details.
  */
 
 import { renderHook } from '@testing-library/react';
@@ -9,15 +14,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { usePremiumAccess } from '@/hooks/usePremiumAccess';
 import { useAuthStore } from '@/stores/authStore';
 
-/**
- * NOTE: These tests are skipped due to zustand persist middleware
- * incompatibility with test environment. The persist middleware
- * captures localStorage at module load time, before mocks are set up.
- *
- * TODO: Consider using msw or similar to mock storage at a lower level,
- * or test these hooks via integration tests instead of unit tests.
- */
-describe.skip('usePremiumAccess Hook', () => {
+describe('usePremiumAccess Hook', () => {
   beforeEach(() => {
     // Clear localStorage
     localStorage.clear();
