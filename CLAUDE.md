@@ -526,6 +526,7 @@ Use labels on Pull Requests to control which CI/CD tests run:
 | `run-full-tests` | Force full test suite + deployment on draft PRs |
 | `visual-test` | Force full visual regression suite (all pages, all viewports) |
 | `skip-visual` | Skip post-deploy visual tests (Playwright visual + Chromatic) |
+| `skip-seed` | Skip database seeding in dev environment |
 | (no label) | Default - see workflow behavior below |
 
 ### CI Workflow Behavior
@@ -552,6 +553,8 @@ The CI is split into **Quick Checks** (every commit) and **Full Tests** (on-dema
 | Design system updates | `visual-test` |
 | Backend-only changes | `skip-visual` |
 | Config/documentation changes | `skip-visual` |
+| Backend-only changes (no test data needed) | `skip-seed` |
+| Infrastructure/CI changes | `skip-seed` |
 | Most feature PRs | (no label) - smart detection |
 
 ### Adding Labels via CLI
