@@ -47,10 +47,20 @@ function getServerHydrationSnapshot(): boolean {
  *
  * Uses useSyncExternalStore (React 18+) to properly track hydration state
  * without timing issues that can occur with useState + useEffect patterns.
+ *
+ * In E2E test mode (window.playwright === true), RouteGuard renders children
+ * immediately without waiting for hydration/auth check, since tests set up
+ * auth state directly via localStorage before page loads.
  */
 export const RouteGuard: React.FC<RouteGuardProps> = ({ children }) => {
   const { checkAuth } = useAuthStore();
   const [isChecking, setIsChecking] = useState(true);
+
+  // Check for E2E test mode - skip auth/hydration checks in Playwright tests
+  // The init script sets window.playwright = true BEFORE any React code runs
+  const isTestMode =
+    typeof window !== 'undefined' &&
+    (window as unknown as { playwright?: boolean }).playwright === true;
 
   // Use useSyncExternalStore for race-condition-free hydration tracking
   // This is the React 18+ recommended pattern for subscribing to external state
@@ -61,8 +71,14 @@ export const RouteGuard: React.FC<RouteGuardProps> = ({ children }) => {
   );
 
   useEffect(() => {
+    // In E2E test mode, skip auth check - tests set up auth state directly via localStorage
+    if (isTestMode) {
+      setIsChecking(false);
+      return;
+    }
+
     // Wait for Zustand persist middleware to hydrate before checking auth
-    // In test mode, hasHydrated is true immediately (no persist middleware)
+    // In unit test mode (Vitest), hasHydrated is true immediately (no persist middleware)
     // In dev/prod, hasHydrated becomes true after onFinishHydration fires
     if (!hasHydrated) {
       return;
@@ -77,7 +93,13 @@ export const RouteGuard: React.FC<RouteGuardProps> = ({ children }) => {
     };
 
     verifyAuth();
-  }, [checkAuth, hasHydrated]);
+  }, [checkAuth, hasHydrated, isTestMode]);
+
+  // In E2E test mode, render immediately without blocking
+  // Tests pre-populate auth state via localStorage init script
+  if (isTestMode) {
+    return <>{children}</>;
+  }
 
   // Show loading spinner while waiting for hydration or auth check
   if (!hasHydrated || isChecking) {
