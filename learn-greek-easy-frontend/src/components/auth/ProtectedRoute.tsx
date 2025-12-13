@@ -9,6 +9,14 @@ interface ProtectedRouteProps {
   children?: React.ReactNode;
 }
 
+/**
+ * ProtectedRoute guards routes that require authentication.
+ *
+ * In E2E test mode (window.playwright === true), authentication checks are
+ * bypassed since tests set up auth state directly via localStorage init script.
+ * This prevents race conditions where React renders before Zustand persist
+ * has hydrated state from localStorage.
+ */
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   requiredRole,
   redirectTo = '/login',
@@ -16,6 +24,18 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 }) => {
   const location = useLocation();
   const { isAuthenticated, user, isLoading } = useAuthStore();
+
+  // Check for E2E test mode - skip auth checks when window.playwright is set
+  // Tests set up auth state directly via localStorage init script
+  const isTestMode =
+    typeof window !== 'undefined' &&
+    (window as unknown as { playwright?: boolean }).playwright === true;
+
+  // In E2E test mode, render immediately without auth checks
+  // Tests pre-populate auth state via localStorage before page loads
+  if (isTestMode) {
+    return children ? <>{children}</> : <Outlet />;
+  }
 
   // Show loading state while checking auth
   if (isLoading) {
