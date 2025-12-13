@@ -46,6 +46,7 @@ def enable_seeding():
 # ============================================================================
 
 
+@pytest.mark.no_parallel
 class TestSeedServiceIntegration:
     """Integration tests with real database."""
 
@@ -153,6 +154,7 @@ class TestSeedServiceIntegration:
 # ============================================================================
 
 
+@pytest.mark.no_parallel
 class TestSeedServiceTruncation:
     """Tests for table truncation with real database."""
 
@@ -205,6 +207,7 @@ class TestSeedServiceTruncation:
 # ============================================================================
 
 
+@pytest.mark.no_parallel
 class TestSeedServiceIdempotency:
     """Tests for seed idempotency."""
 
@@ -244,6 +247,7 @@ class TestSeedServiceIdempotency:
 # ============================================================================
 
 
+@pytest.mark.no_parallel
 class TestSeedServiceAuthentication:
     """Tests for seeded user authentication."""
 
@@ -290,6 +294,7 @@ class TestSeedServiceAuthentication:
 # ============================================================================
 
 
+@pytest.mark.no_parallel
 class TestSeedServiceDataIntegrity:
     """Tests for data integrity and relationships."""
 

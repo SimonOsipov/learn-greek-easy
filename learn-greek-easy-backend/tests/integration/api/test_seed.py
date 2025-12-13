@@ -60,6 +60,7 @@ def enable_seeding_service():
 # ============================================================================
 
 
+@pytest.mark.no_parallel
 class TestSeedStatusIntegration:
     """Integration tests for status endpoint."""
 
@@ -105,6 +106,7 @@ class TestSeedStatusIntegration:
 # ============================================================================
 
 
+@pytest.mark.no_parallel
 class TestSeedAllIntegration:
     """Integration tests for full seeding endpoint."""
 
@@ -204,6 +206,7 @@ class TestSeedAllIntegration:
 # ============================================================================
 
 
+@pytest.mark.no_parallel
 class TestSeedTruncateIntegration:
     """Integration tests for truncation endpoint."""
 
@@ -232,8 +235,8 @@ class TestSeedTruncateIntegration:
         assert data["success"] is True
         assert data["operation"] == "truncate"
 
-        # Refresh session to see changes
-        await db_session.expire_all()
+        # Refresh session to see changes (expire_all is synchronous)
+        db_session.expire_all()
 
         # Verify tables are empty
         user_count = await db_session.scalar(select(func.count(User.id)))
@@ -248,6 +251,7 @@ class TestSeedTruncateIntegration:
 # ============================================================================
 
 
+@pytest.mark.no_parallel
 class TestSeedUsersIntegration:
     """Integration tests for users-only seeding endpoint."""
 
@@ -285,6 +289,7 @@ class TestSeedUsersIntegration:
 # ============================================================================
 
 
+@pytest.mark.no_parallel
 class TestSeedContentIntegration:
     """Integration tests for content-only seeding endpoint."""
 
@@ -323,6 +328,7 @@ class TestSeedContentIntegration:
 # ============================================================================
 
 
+@pytest.mark.no_parallel
 class TestSeedSkipTruncateIntegration:
     """Integration tests for skip_truncate option."""
 
@@ -365,6 +371,7 @@ class TestSeedSkipTruncateIntegration:
 # ============================================================================
 
 
+@pytest.mark.no_parallel
 class TestSeedResponseFormat:
     """Tests for response format compliance."""
 
