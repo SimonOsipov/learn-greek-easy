@@ -255,6 +255,9 @@ omit = [
     "src/middleware/logging.py",  # Request logging middleware
     "src/middleware/auth.py",  # Auth middleware
     "src/middleware/error_handler.py",  # Error handling middleware
+    # E2E test infrastructure (not production code)
+    "src/services/seed_service.py",  # Test data seeding service
+    "src/api/v1/test/*",  # Test API endpoints (seed, etc.)
 ]
 
 
