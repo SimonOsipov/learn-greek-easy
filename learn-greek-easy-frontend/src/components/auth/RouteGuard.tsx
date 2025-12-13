@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 
 import { Loader2 } from 'lucide-react';
 
@@ -9,33 +9,56 @@ interface RouteGuardProps {
 }
 
 /**
+ * Subscribe to Zustand persist hydration state changes.
+ * Uses onFinishHydration callback which fires when hydration completes.
+ *
+ * @param callback - Function to call when hydration state changes
+ * @returns Cleanup function to unsubscribe
+ */
+function subscribeToHydration(callback: () => void): () => void {
+  // Subscribe to hydration completion if persist middleware is available
+  // In test mode (no persist middleware), this returns undefined
+  const unsub = useAuthStore.persist?.onFinishHydration?.(callback);
+  return () => unsub?.();
+}
+
+/**
+ * Get current hydration state snapshot.
+ * Returns true if already hydrated or if persist middleware is not present.
+ */
+function getHydrationSnapshot(): boolean {
+  return useAuthStore.persist?.hasHydrated?.() ?? true;
+}
+
+/**
+ * Server-side rendering fallback - always return true since there's no
+ * localStorage to hydrate from on the server.
+ */
+function getServerHydrationSnapshot(): boolean {
+  return true;
+}
+
+/**
  * RouteGuard waits for store hydration before checking authentication.
  *
  * This prevents a race condition where checkAuth() runs before Zustand's
  * persist middleware has hydrated state from localStorage, which would
  * cause authenticated users to be incorrectly redirected to login.
  *
- * Uses Zustand's built-in persist API (hasHydrated/onFinishHydration) to
- * track hydration state without circular reference issues.
+ * Uses useSyncExternalStore (React 18+) to properly track hydration state
+ * without timing issues that can occur with useState + useEffect patterns.
  */
 export const RouteGuard: React.FC<RouteGuardProps> = ({ children }) => {
   const { checkAuth } = useAuthStore();
   const [isChecking, setIsChecking] = useState(true);
-  // In test mode (no persist middleware), useAuthStore.persist is undefined
-  // Default to true since there's no hydration needed without persist
-  const [hasHydrated, setHasHydrated] = useState(useAuthStore.persist?.hasHydrated?.() ?? true);
 
-  useEffect(() => {
-    // Subscribe to hydration completion if persist middleware is available
-    // In test mode, this is a no-op since persist is undefined
-    const unsubFinishHydration = useAuthStore.persist?.onFinishHydration?.(() => {
-      setHasHydrated(true);
-    });
-
-    return () => {
-      unsubFinishHydration?.();
-    };
-  }, []);
+  // Use useSyncExternalStore for race-condition-free hydration tracking
+  // This is the React 18+ recommended pattern for subscribing to external state
+  const hasHydrated = useSyncExternalStore(
+    subscribeToHydration,
+    getHydrationSnapshot,
+    getServerHydrationSnapshot
+  );
 
   useEffect(() => {
     // Wait for Zustand persist middleware to hydrate before checking auth
