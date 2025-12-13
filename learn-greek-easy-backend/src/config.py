@@ -286,6 +286,22 @@ class Settings(BaseSettings):
     feature_background_tasks: bool = Field(default=False, description="Enable background tasks")
 
     # =========================================================================
+    # E2E Test Seeding
+    # =========================================================================
+    test_seed_enabled: bool = Field(
+        default=False,
+        description="Enable E2E test database seeding endpoints and functionality",
+    )
+    test_seed_secret: Optional[str] = Field(
+        default=None,
+        description="Optional secret for additional seed endpoint protection (X-Test-Seed-Secret header)",
+    )
+    seed_on_deploy: bool = Field(
+        default=False,
+        description="Auto-seed database on application startup (for local dev only)",
+    )
+
+    # =========================================================================
     # Health Checks
     # =========================================================================
     health_check_db_timeout: int = Field(
@@ -360,6 +376,33 @@ class Settings(BaseSettings):
     def database_url_sync(self) -> str:
         """Get synchronous database URL (for Alembic)."""
         return self.database_url.replace("+asyncpg", "")
+
+    # =========================================================================
+    # Seed Validation Methods
+    # =========================================================================
+    def can_seed_database(self) -> bool:
+        """Check if database seeding is allowed (enabled AND not production)."""
+        return self.test_seed_enabled and not self.is_production
+
+    def validate_seed_secret(self, provided_secret: Optional[str]) -> bool:
+        """Validate provided secret against configured secret."""
+        if not self.test_seed_secret:
+            return True
+        return provided_secret == self.test_seed_secret
+
+    def get_seed_validation_errors(self) -> List[str]:
+        """Get list of errors preventing seeding."""
+        errors: List[str] = []
+        if self.is_production:
+            errors.append("Seeding is disabled in production environment")
+        if not self.test_seed_enabled:
+            errors.append("TEST_SEED_ENABLED is not set to true")
+        return errors
+
+    @property
+    def seed_requires_secret(self) -> bool:
+        """Check if seed operations require a secret."""
+        return bool(self.test_seed_secret)
 
 
 @lru_cache()
