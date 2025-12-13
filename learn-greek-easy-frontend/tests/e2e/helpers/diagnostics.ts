@@ -2,41 +2,28 @@
  * E2E Test Diagnostics Helper
  *
  * Provides diagnostic logging for debugging test failures:
- * - Logs when test mode is active
- * - Tracks localStorage changes
- * - Monitors store hydration
  * - Captures browser console output
+ * - Logs authentication state
+ *
+ * NOTE: The init script logic (setting window.playwright, localStorage overrides)
+ * has been moved to auth-helpers.ts loginViaLocalStorage() to ensure atomic
+ * execution order. This file now only provides console capture utilities.
  */
 
 import { Page } from '@playwright/test';
 
 /**
- * Enable diagnostic logging for test execution
+ * Enable diagnostic console capture for test execution
  *
- * This function adds initialization scripts to log key events during
- * test execution, helping diagnose timing and state issues.
+ * This function sets up console capture to log [TEST] prefixed messages
+ * from the browser to the Node.js console.
+ *
+ * NOTE: This does NOT add any init scripts. All init script logic is now
+ * in auth-helpers.ts loginViaLocalStorage() to ensure window.playwright
+ * is set FIRST before any other code runs.
  */
 export async function enableTestDiagnostics(page: Page): Promise<void> {
-  // Use context.addInitScript() for consistent timing with auth-helpers.ts
-  // This ensures diagnostics run BEFORE any page JavaScript
-  await page.context().addInitScript(() => {
-    // Log when test mode is active
-    console.log('[TEST] Test mode active, window.playwright =', window.playwright);
-
-    // Log when localStorage changes
-    const originalSetItem = localStorage.setItem;
-    localStorage.setItem = function(key: string, value: string) {
-      console.log('[TEST] localStorage.setItem:', key, value.substring(0, 100));
-      return originalSetItem.call(this, key, value);
-    };
-
-    // Log when stores hydrate
-    window.addEventListener('storage', (e) => {
-      console.log('[TEST] Storage event:', e.key);
-    });
-  });
-
-  // Capture browser console logs
+  // Only set up console capture - init script logic moved to auth-helpers.ts
   page.on('console', msg => {
     if (msg.text().startsWith('[TEST]')) {
       console.log('Browser:', msg.text());

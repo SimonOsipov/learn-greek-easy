@@ -3,7 +3,7 @@
  */
 
 import { Page } from '@playwright/test';
-import { enableTestDiagnostics, logAuthState } from './diagnostics';
+import { logAuthState } from './diagnostics';
 
 // TypeScript declarations for test-mode globals
 declare global {
@@ -62,36 +62,48 @@ export async function loginViaUI(
 
 /**
  * Login via localStorage (faster - bypass UI)
- * Uses addInitScript() to inject auth state BEFORE page loads
+ * Uses a SINGLE atomic addInitScript() to inject auth state BEFORE page loads
  * This prevents timing issues with authentication state
  * @param page - Playwright page object
  */
 export async function loginViaLocalStorage(page: Page): Promise<void> {
-  // Enable diagnostics for debugging
-  await enableTestDiagnostics(page);
-
   const userId = 'user-1';
   const mockToken = generateValidMockToken(userId);
 
-  // CRITICAL: Use context.addInitScript() instead of page.addInitScript()
-  // context.addInitScript() runs at browser context level, BEFORE any page is created
-  // page.addInitScript() runs during document creation which is TOO LATE for Vite's
-  // inline scripts that check window.playwright at module import time
+  // CRITICAL: Single atomic init script that:
+  // 1. Sets window.playwright FIRST (before ANY other code)
+  // 2. Sets auth storage
+  // 3. Sets up diagnostics AFTER
+  //
+  // This ensures window.playwright = true is set before any other code runs.
+  // Multiple separate addInitScript calls execute in registration order,
+  // which caused timing issues where diagnostics ran before auth was set.
   await page.context().addInitScript((authData) => {
-    // Clear any existing state first
-    localStorage.clear();
-    sessionStorage.clear();
-
-    console.log('[TEST] Setting window.playwright = true');
-    // CRITICAL: Set test mode flag FIRST so mockAuthAPI.isTestMode() returns true
-    // Without this, mockAuthAPI will reject the mock token even though localStorage is set
+    // STEP 1: Set test mode flag FIRST (before ANY other code in this script)
+    // This MUST be the first line to ensure mockAuthAPI.isTestMode() returns true
     window.playwright = true;
 
-    console.log('[TEST] Setting auth-storage');
+    // STEP 2: Clear and set storage
+    localStorage.clear();
+    sessionStorage.clear();
     localStorage.setItem('auth-storage', JSON.stringify(authData));
     sessionStorage.setItem('auth-token', authData.state.token);
 
-    console.log('[TEST] Auth initialization complete');
+    // STEP 3: Log diagnostics (AFTER window.playwright is set)
+    console.log('[TEST] Test mode active, window.playwright =', window.playwright);
+    console.log('[TEST] Auth storage initialized');
+
+    // STEP 4: Override localStorage.setItem for diagnostic logging
+    const originalSetItem = localStorage.setItem;
+    localStorage.setItem = function(key: string, value: string) {
+      console.log('[TEST] localStorage.setItem:', key, value.substring(0, 100));
+      return originalSetItem.call(this, key, value);
+    };
+
+    // Listen for storage events
+    window.addEventListener('storage', (e) => {
+      console.log('[TEST] Storage event:', e.key);
+    });
   }, {
     state: {
       user: {
@@ -116,6 +128,13 @@ export async function loginViaLocalStorage(page: Page): Promise<void> {
       rememberMe: true,
     },
     version: 0,
+  });
+
+  // Set up console capture (doesn't need init script - runs in Node.js)
+  page.on('console', msg => {
+    if (msg.text().startsWith('[TEST]')) {
+      console.log('Browser:', msg.text());
+    }
   });
 
   // Now navigate to the page - auth state will already be present
