@@ -143,9 +143,9 @@ export async function loginViaLocalStorage(page: Page): Promise<void> {
   // Firefox has issues with 'networkidle' in CI environments
   await page.waitForLoadState('domcontentloaded');
 
-  // Wait for the app to be ready by checking for a key element
-  // This is more reliable than network-based waits across all browsers
-  await page.waitForSelector('[data-testid="app-container"], [data-testid="dashboard"], nav, main', {
+  // Wait for the app to be ready by checking for the main content element
+  // AppLayout.tsx renders a <main> element - this confirms the app has loaded
+  await page.waitForSelector('main', {
     timeout: 10000
   });
 
