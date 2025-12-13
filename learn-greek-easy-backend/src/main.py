@@ -52,6 +52,28 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Initialize Redis connection
     await init_redis()
 
+    # Auto-seed on deploy (local dev only)
+    if settings.seed_on_deploy and settings.can_seed_database():
+        logger.info("SEED_ON_DEPLOY enabled, auto-seeding database...")
+        try:
+            from src.db import get_session_factory
+            from src.services.seed_service import SeedService
+
+            session_factory = get_session_factory()
+            async with session_factory() as db:
+                service = SeedService(db)
+                result = await service.seed_all()
+                logger.info(
+                    "Auto-seed completed",
+                    extra={
+                        "users_created": len(result.get("users", {}).get("users", [])),
+                        "decks_created": len(result.get("content", {}).get("decks", [])),
+                    },
+                )
+        except Exception as e:
+            logger.error(f"Auto-seed failed: {e}", exc_info=True)
+            # Don't fail startup on seed error
+
     yield
 
     # Shutdown
