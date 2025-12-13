@@ -85,3 +85,17 @@ v1_router.include_router(
     prefix="/progress",
     tags=["Progress"],
 )
+
+# =============================================================================
+# Test Routes (non-production only)
+# =============================================================================
+# Import settings here to avoid circular imports at module level
+from src.config import settings  # noqa: E402
+
+if not settings.is_production:
+    from src.api.v1.test.seed import router as seed_router
+
+    v1_router.include_router(
+        seed_router,
+        tags=["Testing"],
+    )
