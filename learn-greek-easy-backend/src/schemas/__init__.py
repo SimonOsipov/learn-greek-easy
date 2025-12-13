@@ -54,6 +54,9 @@ from src.schemas.review import (
     ReviewSubmit,
 )
 
+# Seed schemas
+from src.schemas.seed import SeedOptions, SeedRequest, SeedResultResponse, SeedStatusResponse
+
 # SM-2 schemas
 from src.schemas.sm2 import (
     CardInitializationRequest,
@@ -144,4 +147,9 @@ __all__ = [
     "StudyQueueRequest",
     "CardInitializationRequest",
     "CardInitializationResult",
+    # Seed
+    "SeedOptions",
+    "SeedRequest",
+    "SeedResultResponse",
+    "SeedStatusResponse",
 ]

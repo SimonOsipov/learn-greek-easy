@@ -264,3 +264,41 @@ class AccountLinkingConflictException(BaseAPIException):
             detail=detail,
             error_code="ACCOUNT_LINKING_CONFLICT",
         )
+
+
+# ============================================================================
+# Seed API Exceptions
+# ============================================================================
+
+
+class SeedForbiddenException(BaseAPIException):
+    """Seeding is forbidden in production environment."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Database seeding is forbidden in production environment",
+            error_code="SEED_FORBIDDEN",
+        )
+
+
+class SeedDisabledException(BaseAPIException):
+    """Seeding feature is disabled via configuration."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Database seeding is disabled. Set TEST_SEED_ENABLED=true to enable",
+            error_code="SEED_DISABLED",
+        )
+
+
+class SeedUnauthorizedException(BaseAPIException):
+    """Invalid or missing seed secret header."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or missing X-Test-Seed-Secret header",
+            error_code="SEED_UNAUTHORIZED",
+        )

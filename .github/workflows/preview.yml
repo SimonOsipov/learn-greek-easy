@@ -361,9 +361,59 @@ jobs:
             });
 
   # =============================================================================
-  # JOB 5: Accessibility Tests
+  # JOB 5: Seed Dev Database
+  # Purpose: Populate the dev database with test data for E2E testing
+  # Uses the seed API endpoint to create users, decks, cards, and progress data
+  # =============================================================================
+  seed-database:
+    name: Seed Dev Database
+    needs: [deploy, health-check]
+    if: |
+      needs.health-check.outputs.status == 'success' &&
+      !contains(github.event.pull_request.labels.*.name, 'skip-seed')
+    runs-on: ubuntu-latest
+    outputs:
+      status: ${{ steps.seed.outputs.status }}
+
+    steps:
+      - name: Seed Database
+        id: seed
+        run: |
+          echo "=== Seeding Dev Database ==="
+          BACKEND_URL="${{ needs.deploy.outputs.backend_url }}"
+
+          # Check if seeding is enabled
+          STATUS_RESPONSE=$(curl -s "$BACKEND_URL/api/v1/test/seed/status" || echo '{"enabled": false}')
+          echo "Seed status: $STATUS_RESPONSE"
+
+          ENABLED=$(echo $STATUS_RESPONSE | jq -r '.enabled')
+          if [ "$ENABLED" != "true" ]; then
+            echo "WARNING: Seeding is not enabled in dev environment"
+            echo "Set TEST_SEED_ENABLED=true in Railway to enable"
+            echo "status=skipped" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Call seed endpoint
+          RESPONSE=$(curl -s -X POST "$BACKEND_URL/api/v1/test/seed/all")
+          echo "Seed response: $RESPONSE"
+
+          # Verify success
+          SUCCESS=$(echo $RESPONSE | jq -r '.success')
+          if [ "$SUCCESS" != "true" ]; then
+            echo "ERROR: Seeding failed"
+            echo "status=failure" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+          echo "Database seeded successfully"
+          echo "status=success" >> $GITHUB_OUTPUT
+
+  # =============================================================================
+  # JOB 6: Accessibility Tests
   # Purpose: Scan pages for WCAG 2.1 AA violations using axe-core
   # Pages tested: Home, Login, Register
+  # Note: Runs in parallel with seed-database (doesn't depend on seeded data)
   # =============================================================================
   accessibility:
     name: Accessibility Tests (axe-core)
@@ -447,7 +497,7 @@ jobs:
             });
 
   # =============================================================================
-  # JOB 6: Lighthouse CI
+  # JOB 7: Lighthouse CI
   # Purpose: Measure performance, accessibility, best practices, SEO
   # Runs both desktop and mobile configurations
   # =============================================================================
@@ -624,7 +674,7 @@ jobs:
             });
 
   # =============================================================================
-  # JOB 7: Visual Tests (Playwright)
+  # JOB 8: Visual Tests (Playwright)
   # Purpose: Capture screenshots of pages for visual regression
   # Screenshots are later uploaded to Chromatic for comparison
   # =============================================================================
@@ -683,7 +733,7 @@ jobs:
           retention-days: 30
 
   # =============================================================================
-  # JOB 8: Chromatic Upload
+  # JOB 9: Chromatic Upload
   # Purpose: Upload Playwright screenshots to Chromatic for visual comparison
   # Compares against main branch baseline, reports changes in PR
   # =============================================================================
@@ -733,13 +783,13 @@ jobs:
 
 
   # =============================================================================
-  # JOB 9: Report Results
+  # JOB 10: Report Results
   # Purpose: Post/update PR comment with deployment URLs and test results
   # Summarizes: CI status, health checks, accessibility, Lighthouse, Chromatic
   # =============================================================================
   report-results:
     name: Report Results
-    needs: [ci-tests, should-deploy, should-run-full, deploy, health-check, accessibility, lighthouse, chromatic]
+    needs: [ci-tests, should-deploy, should-run-full, deploy, health-check, seed-database, accessibility, lighthouse, chromatic]
     if: always() && needs.should-run-full.outputs.run_full == 'true' && needs.should-deploy.outputs.deploy == 'true'
     runs-on: ubuntu-latest
     steps:
@@ -758,6 +808,17 @@ jobs:
             const healthStatus = '${{ needs.health-check.outputs.status }}';
             const healthIcon = healthStatus === 'success' ? ':white_check_mark:' : ':x:';
             const healthDetails = healthStatus === 'success' ? 'All health checks passed' : 'Some health checks failed';
+
+            // Seed database status
+            const seedStatus = '${{ needs.seed-database.outputs.status }}' || 'skipped';
+            const seedIcon = seedStatus === 'success' ? ':white_check_mark:'
+              : seedStatus === 'skipped' ? ':yellow_circle:'
+              : ':x:';
+            const seedDetails = seedStatus === 'success'
+              ? 'Test data seeded'
+              : seedStatus === 'skipped'
+              ? 'Skipped (not enabled or skip-seed label)'
+              : 'Seeding failed';
 
             // Accessibility check status
             const a11yStatus = '${{ needs.accessibility.outputs.status }}' || 'skipped';
@@ -837,6 +898,7 @@ jobs:
               body += `| Test | Status | Details |\n`;
               body += `|------|--------|---------|\n`;
               body += `| Health Check | ${healthIcon} | ${healthDetails} |\n`;
+              body += `| Seed Database | ${seedIcon} | ${seedDetails} |\n`;
               body += `| Accessibility | ${a11yIcon} | ${a11yDetails} |\n`;
               body += `| Lighthouse | ${lighthouseIcon} | ${lighthouseDetails} |\n`;
               body += `| Visual Regression | ${visualIcon} | ${visualDetails} |\n`;
@@ -922,7 +984,7 @@ jobs:
             }
 
   # =============================================================================
-  # JOB 10: Skip Comment (Docs-only)
+  # JOB 11: Skip Comment (Docs-only)
   # Purpose: Post comment when preview is skipped (docs-only changes)
   # =============================================================================
   skip-comment:
@@ -975,7 +1037,7 @@ jobs:
             }
 
   # =============================================================================
-  # JOB 11: Draft Skip Comment
+  # JOB 12: Draft Skip Comment
   # Purpose: Post comment when full tests are skipped (draft PR)
   # =============================================================================
   draft-skip-comment:

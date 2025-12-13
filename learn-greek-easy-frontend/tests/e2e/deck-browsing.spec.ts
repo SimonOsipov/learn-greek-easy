@@ -33,8 +33,8 @@ test.describe('Deck Browsing', () => {
     await expect(page.getByRole('heading', { name: /decks/i })).toBeVisible();
   });
 
-  // TEMPORARILY SKIPPED: Dashboard uses hardcoded "Alex" instead of user data
-  test.skip('should display dashboard page with user greeting', async ({ page }) => {
+  // ENABLED: Now uses seed data from E2E database seeding infrastructure (SEED-10)
+  test('should display dashboard page with user greeting', async ({ page }) => {
     await page.goto('/dashboard');
 
     // Verify dashboard heading

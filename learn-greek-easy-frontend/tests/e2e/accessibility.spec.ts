@@ -30,8 +30,8 @@ test.describe('Accessibility (Axe-core)', () => {
     expect(accessibilityScanResults.violations).toEqual([]);
   });
 
-  // TEMPORARILY SKIPPED: Dashboard uses hardcoded data
-  test.skip('Dashboard should have no accessibility violations', async ({ page }) => {
+  // ENABLED: Now uses seed data from E2E database seeding infrastructure (SEED-10)
+  test('Dashboard should have no accessibility violations', async ({ page }) => {
     await loginViaLocalStorage(page);
     await page.goto('/dashboard');
 
@@ -56,8 +56,8 @@ test.describe('Accessibility (Axe-core)', () => {
     expect(accessibilityScanResults.violations).toEqual([]);
   });
 
-  // TEMPORARILY SKIPPED: Settings page uses hardcoded data
-  test.skip('Settings page should have no accessibility violations', async ({ page }) => {
+  // ENABLED: Now uses seed data from E2E database seeding infrastructure (SEED-10)
+  test('Settings page should have no accessibility violations', async ({ page }) => {
     await loginViaLocalStorage(page);
     await page.goto('/settings');
 
