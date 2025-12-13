@@ -2,11 +2,17 @@ name: PR Preview Deployment
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
+    types: [opened, synchronize, reopened, ready_for_review, labeled]
     branches: [main, develop]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number (for manual trigger)'
+        required: false
+        type: number
 
 concurrency:
-  group: preview-${{ github.event.pull_request.number }}
+  group: preview-${{ github.event.pull_request.number || github.event.inputs.pr_number }}
   cancel-in-progress: true
 
 env:
@@ -23,12 +29,56 @@ permissions:
 
 jobs:
   # =============================================================================
+  # JOB 0: Check Full Test Conditions
+  # Purpose: Determine if full tests should run based on PR state and labels
+  # Draft PRs skip full tests unless 'run-full-tests' label is present
+  # =============================================================================
+  should-run-full:
+    name: Check Full Test Conditions
+    runs-on: ubuntu-latest
+    outputs:
+      run_full: ${{ steps.check.outputs.run_full }}
+    steps:
+      - name: Check conditions
+        id: check
+        run: |
+          IS_DRAFT="${{ github.event.pull_request.draft }}"
+          EVENT="${{ github.event.action }}"
+          HAS_LABEL="${{ contains(github.event.pull_request.labels.*.name, 'run-full-tests') }}"
+          IS_DISPATCH="${{ github.event_name == 'workflow_dispatch' }}"
+
+          echo "=== Full Test Condition Check ==="
+          echo "Event: $EVENT"
+          echo "Is Draft: $IS_DRAFT"
+          echo "Has run-full-tests label: $HAS_LABEL"
+          echo "Is workflow_dispatch: $IS_DISPATCH"
+
+          # Run full tests if:
+          # 1. Manual workflow_dispatch
+          # 2. ready_for_review event (draft -> ready transition)
+          # 3. Label 'run-full-tests' is present
+          # 4. Non-draft PR with standard events (opened, synchronize, reopened)
+          if [[ "$IS_DISPATCH" == "true" ]] || \
+             [[ "$EVENT" == "ready_for_review" ]] || \
+             [[ "$HAS_LABEL" == "true" ]] || \
+             [[ "$IS_DRAFT" == "false" && ("$EVENT" == "opened" || "$EVENT" == "synchronize" || "$EVENT" == "reopened") ]]; then
+            echo "run_full=true" >> $GITHUB_OUTPUT
+            echo "Result: Full test suite will run"
+          else
+            echo "run_full=false" >> $GITHUB_OUTPUT
+            echo "Result: Skipping full tests (draft PR without run-full-tests label)"
+          fi
+
+  # =============================================================================
   # JOB 1: CI Tests
   # Purpose: Run existing CI tests first (lint, unit, integration, E2E)
   # This job uses the reusable workflow defined in test.yml
+  # Only runs when full test conditions are met
   # =============================================================================
   ci-tests:
     name: CI Tests
+    needs: should-run-full
+    if: needs.should-run-full.outputs.run_full == 'true'
     uses: ./.github/workflows/test.yml
     secrets: inherit
 
@@ -36,9 +86,12 @@ jobs:
   # JOB 2: Check Deploy Conditions
   # Purpose: Determine if preview should be deployed based on changed files
   # Docs-only changes (*.md, docs/*) are automatically skipped
+  # Only runs when full test conditions are met
   # =============================================================================
   should-deploy:
     name: Check Deploy Conditions
+    needs: should-run-full
+    if: needs.should-run-full.outputs.run_full == 'true'
     runs-on: ubuntu-latest
     outputs:
       deploy: ${{ steps.check.outputs.deploy }}
@@ -72,8 +125,11 @@ jobs:
   # =============================================================================
   deploy:
     name: Deploy
-    needs: [ci-tests, should-deploy]
-    if: needs.should-deploy.outputs.deploy == 'true' && needs.ci-tests.result == 'success'
+    needs: [ci-tests, should-deploy, should-run-full]
+    if: |
+      needs.should-run-full.outputs.run_full == 'true' &&
+      needs.should-deploy.outputs.deploy == 'true' &&
+      needs.ci-tests.result == 'success'
     runs-on: ubuntu-latest
     container: ghcr.io/railwayapp/cli:latest
     outputs:
@@ -683,8 +739,8 @@ jobs:
   # =============================================================================
   report-results:
     name: Report Results
-    needs: [ci-tests, should-deploy, deploy, health-check, accessibility, lighthouse, chromatic]
-    if: always() && needs.should-deploy.outputs.deploy == 'true'
+    needs: [ci-tests, should-deploy, should-run-full, deploy, health-check, accessibility, lighthouse, chromatic]
+    if: always() && needs.should-run-full.outputs.run_full == 'true' && needs.should-deploy.outputs.deploy == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Post or Update PR Comment
@@ -866,13 +922,13 @@ jobs:
             }
 
   # =============================================================================
-  # JOB 10: Skip Comment
+  # JOB 10: Skip Comment (Docs-only)
   # Purpose: Post comment when preview is skipped (docs-only changes)
   # =============================================================================
   skip-comment:
     name: Post Skip Comment
-    needs: [should-deploy]
-    if: needs.should-deploy.outputs.deploy == 'false'
+    needs: [should-deploy, should-run-full]
+    if: needs.should-run-full.outputs.run_full == 'true' && needs.should-deploy.outputs.deploy == 'false'
     runs-on: ubuntu-latest
     steps:
       - name: Post Skip Comment
@@ -883,6 +939,62 @@ jobs:
             body += `:information_source: **Skipped** - Documentation changes only\n\n`;
             body += `This PR contains only documentation changes. Preview deployment has been skipped.\n\n`;
             body += `If you need a preview environment, please add code changes or request manual deployment.`;
+
+            // Find existing preview comment to update
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const botComment = comments.find(c =>
+              c.user.type === 'Bot' && (
+                c.body.includes(':rocket: Preview Deployment') ||
+                // Backward compatibility with old format
+                c.body.includes('## Preview Deployment Ready') ||
+                c.body.includes('## Preview Deployment Failed') ||
+                c.body.includes('## Preview Deployment Skipped') ||
+                c.body.includes('## Preview Deployment Blocked')
+              )
+            );
+
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body
+              });
+            }
+
+  # =============================================================================
+  # JOB 11: Draft Skip Comment
+  # Purpose: Post comment when full tests are skipped (draft PR)
+  # =============================================================================
+  draft-skip-comment:
+    name: Post Draft Skip Comment
+    needs: [should-run-full]
+    if: needs.should-run-full.outputs.run_full == 'false'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post Draft Skip Comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = `## :rocket: Preview Deployment\n\n` +
+              `:yellow_circle: **Skipped** - Draft PR\n\n` +
+              `Full tests and deployment are skipped for draft PRs to save CI minutes.\n\n` +
+              `**Quick checks** (lint, format, typecheck) run on every commit.\n\n` +
+              `**To trigger full tests:**\n` +
+              `- Mark PR as "Ready for review", OR\n` +
+              `- Add the \`run-full-tests\` label`;
 
             // Find existing preview comment to update
             const { data: comments } = await github.rest.issues.listComments({

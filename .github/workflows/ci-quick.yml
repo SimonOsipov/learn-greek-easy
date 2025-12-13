@@ -1,0 +1,167 @@
+name: Quick Checks
+
+# Runs on every commit to provide fast feedback (~2-3 min)
+# Full tests and deployment are handled by preview.yml (on-demand)
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches: [main, develop]
+  push:
+    branches: [main, develop]
+
+concurrency:
+  group: quick-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Job 1: Frontend Lint & Format
+  frontend-lint:
+    name: Frontend Lint & Format
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: learn-greek-easy-frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: learn-greek-easy-frontend
+        run: npm ci
+
+      - name: Check TypeScript types
+        working-directory: learn-greek-easy-frontend
+        run: npm run type-check
+
+      - name: Run ESLint
+        working-directory: learn-greek-easy-frontend
+        run: npm run lint
+
+      - name: Check Prettier formatting
+        working-directory: learn-greek-easy-frontend
+        run: npm run format:check
+
+  # Job 2: Backend Lint & Format
+  backend-lint:
+    name: Backend Lint & Format
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: 2.0.0
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Load cached venv
+        id: cached-poetry-dependencies
+        uses: actions/cache@v4
+        with:
+          path: learn-greek-easy-backend/.venv
+          key: venv-lint-${{ runner.os }}-${{ hashFiles('learn-greek-easy-backend/poetry.lock') }}
+          restore-keys: |
+            venv-lint-${{ runner.os }}-
+
+      - name: Install dependencies
+        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+        working-directory: learn-greek-easy-backend
+        run: poetry install --no-interaction --no-root
+
+      - name: Install project
+        working-directory: learn-greek-easy-backend
+        run: poetry install --no-interaction
+
+      - name: Check Black formatting
+        working-directory: learn-greek-easy-backend
+        run: poetry run black --check src/ tests/
+
+      - name: Check isort import ordering
+        working-directory: learn-greek-easy-backend
+        run: poetry run isort --check-only src/ tests/
+
+      - name: Run Flake8 linter
+        working-directory: learn-greek-easy-backend
+        run: poetry run flake8 src/ tests/
+
+      - name: Run MyPy type checker
+        working-directory: learn-greek-easy-backend
+        run: poetry run mypy src/
+
+  # Job 3: Alembic Migration Check
+  alembic-check:
+    name: Alembic Migration Check
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_learn_greek
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: 2.0.0
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Load cached venv
+        id: cached-poetry-dependencies
+        uses: actions/cache@v4
+        with:
+          path: learn-greek-easy-backend/.venv
+          key: venv-alembic-${{ runner.os }}-${{ hashFiles('learn-greek-easy-backend/poetry.lock') }}
+          restore-keys: |
+            venv-alembic-${{ runner.os }}-
+
+      - name: Install dependencies
+        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+        working-directory: learn-greek-easy-backend
+        run: poetry install --no-interaction --no-root
+
+      - name: Install project
+        working-directory: learn-greek-easy-backend
+        run: poetry install --no-interaction
+
+      - name: Apply migrations to fresh database
+        working-directory: learn-greek-easy-backend
+        env:
+          DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5433/test_learn_greek
+        run: poetry run alembic upgrade head
+
+      - name: Check for pending migrations
+        working-directory: learn-greek-easy-backend
+        env:
+          DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5433/test_learn_greek
+        run: poetry run alembic check
