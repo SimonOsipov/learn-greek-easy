@@ -73,9 +73,11 @@ export async function loginViaLocalStorage(page: Page): Promise<void> {
   const userId = 'user-1';
   const mockToken = generateValidMockToken(userId);
 
-  // Set auth state BEFORE page loads using addInitScript
-  // This ensures localStorage is populated before any app code runs
-  await page.addInitScript((authData) => {
+  // CRITICAL: Use context.addInitScript() instead of page.addInitScript()
+  // context.addInitScript() runs at browser context level, BEFORE any page is created
+  // page.addInitScript() runs during document creation which is TOO LATE for Vite's
+  // inline scripts that check window.playwright at module import time
+  await page.context().addInitScript((authData) => {
     // Clear any existing state first
     localStorage.clear();
     sessionStorage.clear();

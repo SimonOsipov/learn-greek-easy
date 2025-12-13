@@ -17,7 +17,9 @@ import { Page } from '@playwright/test';
  * test execution, helping diagnose timing and state issues.
  */
 export async function enableTestDiagnostics(page: Page): Promise<void> {
-  await page.addInitScript(() => {
+  // Use context.addInitScript() for consistent timing with auth-helpers.ts
+  // This ensures diagnostics run BEFORE any page JavaScript
+  await page.context().addInitScript(() => {
     // Log when test mode is active
     console.log('[TEST] Test mode active, window.playwright =', window.playwright);
 
