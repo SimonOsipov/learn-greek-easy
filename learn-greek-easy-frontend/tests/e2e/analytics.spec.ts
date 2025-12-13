@@ -6,9 +6,9 @@
 import { test, expect } from '@playwright/test';
 import { loginViaLocalStorage } from './helpers/auth-helpers';
 
-// TEMPORARILY SKIPPED: Dashboard uses hardcoded data instead of store data
-// Re-enable after fixing Dashboard to use analyticsStore
-test.describe.skip('Analytics Dashboard', () => {
+// ENABLED: Now uses seed data from E2E database seeding infrastructure (SEED-10)
+// Seed creates review history and card stats for the learner user
+test.describe('Analytics Dashboard', () => {
   test.beforeEach(async ({ page }) => {
     await loginViaLocalStorage(page);
     await page.goto('/dashboard');

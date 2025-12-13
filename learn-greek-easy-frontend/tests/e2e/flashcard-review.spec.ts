@@ -6,9 +6,9 @@
 import { test, expect } from '@playwright/test';
 import { loginViaLocalStorage } from './helpers/auth-helpers';
 
-// TEMPORARILY SKIPPED: Review sessions require mock card data initialization
-// Re-enable after implementing mock data helper in auth-helpers
-test.describe.skip('Flashcard Review Session', () => {
+// ENABLED: Now uses seed data from E2E database seeding infrastructure (SEED-10)
+// Seed creates 60 cards (10 per deck) with SM-2 spaced repetition states
+test.describe('Flashcard Review Session', () => {
   test.beforeEach(async ({ page }) => {
     // Login before each test (using fast localStorage method)
     await loginViaLocalStorage(page);

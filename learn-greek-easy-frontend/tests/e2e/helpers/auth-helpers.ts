@@ -26,6 +26,35 @@ export const TEST_USER: TestUser = {
   name: 'Demo User',
 };
 
+// Seed users - available when TEST_SEED_ENABLED=true in environment
+// These users have real data (decks, cards, progress, reviews)
+export const SEED_USERS = {
+  // Regular learner with progress history, card stats, and reviews
+  LEARNER: {
+    email: 'e2e_learner@test.com',
+    password: 'TestPassword123!',
+    name: 'E2E Learner',
+  } as TestUser,
+  // New user with no progress (for new user journey tests)
+  BEGINNER: {
+    email: 'e2e_beginner@test.com',
+    password: 'TestPassword123!',
+    name: 'E2E Beginner',
+  } as TestUser,
+  // Advanced user with more progress
+  ADVANCED: {
+    email: 'e2e_advanced@test.com',
+    password: 'TestPassword123!',
+    name: 'E2E Advanced',
+  } as TestUser,
+  // Admin user
+  ADMIN: {
+    email: 'e2e_admin@test.com',
+    password: 'TestPassword123!',
+    name: 'E2E Admin',
+  } as TestUser,
+};
+
 /**
  * Generate a valid mock token that matches the format expected by mockAuthAPI
  * @param userId - User ID to encode in the token
