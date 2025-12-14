@@ -17,10 +17,12 @@ from unittest.mock import patch
 class TestSeedConfigurationDefaults:
     """Tests for seed configuration default values."""
 
-    def test_seed_disabled_by_default(self):
+    def test_seed_disabled_by_default(self, monkeypatch):
         """Seeding should be disabled by default."""
         from src.config import Settings
 
+        # Remove TEST_SEED_ENABLED to test the true default
+        monkeypatch.delenv("TEST_SEED_ENABLED", raising=False)
         settings = Settings()
         assert settings.test_seed_enabled is False
 
@@ -42,10 +44,12 @@ class TestSeedConfigurationDefaults:
 class TestCanSeedDatabase:
     """Tests for can_seed_database() method."""
 
-    def test_can_seed_database_disabled_by_default(self):
+    def test_can_seed_database_disabled_by_default(self, monkeypatch):
         """Seeding should be disabled by default."""
         from src.config import Settings
 
+        # Remove TEST_SEED_ENABLED to test the true default
+        monkeypatch.delenv("TEST_SEED_ENABLED", raising=False)
         settings = Settings()
         assert settings.can_seed_database() is False
 
