@@ -190,7 +190,7 @@ test.describe('Flashcard Review Session', () => {
 
     // Verify we're in review mode
     const reviewUrl = page.url();
-    expect(reviewUrl).toContain('/deck/');
+    expect(reviewUrl).toContain('/decks/');
 
     // Press Esc to attempt exit
     await page.keyboard.press('Escape');

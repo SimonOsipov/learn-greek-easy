@@ -23,7 +23,7 @@ export default {
           foreground: '#374151',
         },
         // Semantic colors
-        success: '#10b981',
+        success: '#059669',
         warning: '#ea580c',
         info: '#3b82f6',
         danger: '#ef4444',
