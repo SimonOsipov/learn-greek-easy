@@ -26,8 +26,8 @@ test.describe('Flashcard Review Session', () => {
     // Wait for decks to load and select first available deck
     await page.waitForTimeout(1000);
 
-    // Find and click on a deck card (look for heading in article or card)
-    const deckCard = page.locator('article').first();
+    // Find and click on a deck card
+    const deckCard = page.locator('[data-testid="deck-card"]').first();
     await expect(deckCard).toBeVisible({ timeout: 5000 });
     await deckCard.click();
 
@@ -97,7 +97,7 @@ test.describe('Flashcard Review Session', () => {
     await page.waitForTimeout(1000);
 
     // Click first deck
-    const deckCard = page.locator('article').first();
+    const deckCard = page.locator('[data-testid="deck-card"]').first();
     await deckCard.click();
     await page.waitForTimeout(500);
 
@@ -136,7 +136,7 @@ test.describe('Flashcard Review Session', () => {
     await page.waitForTimeout(1000);
 
     // Click first deck
-    const deckCard = page.locator('article').first();
+    const deckCard = page.locator('[data-testid="deck-card"]').first();
     await deckCard.click();
     await page.waitForTimeout(500);
 
@@ -179,7 +179,7 @@ test.describe('Flashcard Review Session', () => {
     await page.waitForTimeout(1000);
 
     // Click first deck
-    const deckCard = page.locator('article').first();
+    const deckCard = page.locator('[data-testid="deck-card"]').first();
     await deckCard.click();
     await page.waitForTimeout(500);
 
@@ -222,7 +222,7 @@ test.describe('Flashcard Review Session', () => {
     await page.goto('/decks');
     await page.waitForTimeout(1000);
 
-    const deckCard = page.locator('article').first();
+    const deckCard = page.locator('[data-testid="deck-card"]').first();
     await deckCard.click();
     await page.waitForTimeout(500);
 
