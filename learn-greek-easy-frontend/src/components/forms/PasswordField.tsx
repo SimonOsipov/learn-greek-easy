@@ -141,7 +141,15 @@ export function PasswordField({
 
       {showStrength && value && strength && (
         <div className="flex items-center gap-2">
-          <div className="h-2 flex-1 overflow-hidden rounded-full bg-gray-200">
+          <div
+            className="h-2 flex-1 overflow-hidden rounded-full bg-gray-200"
+            role="progressbar"
+            aria-label="Password strength"
+            aria-valuenow={strength.level}
+            aria-valuemin={0}
+            aria-valuemax={3}
+            aria-valuetext={strength.label}
+          >
             <div
               className={cn('h-full transition-all duration-300', strength.color)}
               style={{ width: `${(strength.level / 3) * 100}%` }}

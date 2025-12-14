@@ -56,6 +56,25 @@ jobs:
             echo "Environment $ENV_NAME does not exist, skipping cleanup"
           fi
 
+      - name: Truncate Database
+        if: steps.check-env.outputs.exists == 'true'
+        run: |
+          echo "=== Truncating Dev Database ==="
+          # Backend should still be running, call truncate endpoint
+          # This cleans up seed data before stopping services
+          BACKEND_URL="https://backend-dev-bc44.up.railway.app"
+
+          RESPONSE=$(curl -s -X POST "$BACKEND_URL/api/v1/test/seed/truncate" || echo '{"skipped": true, "error": "Backend not reachable"}')
+          echo "Truncate response: $RESPONSE"
+
+          # Don't fail if truncate fails - service might already be stopped
+          SUCCESS=$(echo $RESPONSE | jq -r '.success // false')
+          if [ "$SUCCESS" == "true" ]; then
+            echo "Database truncated successfully"
+          else
+            echo "Truncate skipped or failed (this is OK if backend is already stopped)"
+          fi
+
       - name: Stop Backend Service
         if: steps.check-env.outputs.exists == 'true'
         env:

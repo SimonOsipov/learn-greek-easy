@@ -25,9 +25,9 @@ export const WelcomeSection: React.FC<WelcomeSectionProps> = ({
   return (
     <div className="mb-8 flex flex-col md:flex-row md:items-center md:justify-between">
       <div>
-        <h1 className="mb-2 text-2xl font-semibold text-text-primary md:text-3xl">
+        <h2 className="mb-2 text-xl font-semibold text-text-primary md:text-2xl">
           Γεια σου, {userName}! 👋
-        </h1>
+        </h2>
         <p className="text-text-muted">
           You have <span className="font-semibold text-primary">{dueCount} cards</span> to review
           today. {getEncouragement()}

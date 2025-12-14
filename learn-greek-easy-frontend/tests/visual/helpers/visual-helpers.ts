@@ -52,59 +52,52 @@ function generateValidMockToken(userId: string): string {
 
 /**
  * Login via localStorage for visual tests
- *
- * This sets up authentication state BEFORE page loads using addInitScript.
- * This is faster than UI login and ensures consistent auth state for visual tests.
- *
- * @param page - Playwright page object
+ * Uses a two-step approach to avoid race conditions
  */
 export async function loginForVisualTest(page: Page): Promise<void> {
-  // Use existing user from mockData.ts - 'visual-test-user' doesn't exist!
   const userId = 'user-1';
   const mockToken = generateValidMockToken(userId);
 
-  // Set auth state BEFORE page loads using addInitScript
-  // This ensures localStorage is populated before any app code runs
-  await page.addInitScript(
-    (authData) => {
-      // Clear any existing state first
-      localStorage.clear();
-      sessionStorage.clear();
-
-      // CRITICAL: Set test mode flag FIRST so mockAuthAPI.isTestMode() returns true
-      window.playwright = true;
-
-      // Set auth storage
-      localStorage.setItem('auth-storage', JSON.stringify(authData));
-      sessionStorage.setItem('auth-token', authData.state.token);
-    },
-    {
-      state: {
-        // User data must match user-1 from mockData.ts for verifyToken() to succeed
-        user: {
-          id: userId,
-          email: 'demo@learngreekeasy.com',
-          name: 'Demo User',
-          role: 'premium',
-          avatar: undefined,
-          preferences: {
-            language: 'en',
-            dailyGoal: 15,
-            notifications: true,
-          },
-          stats: {
-            streak: 7,
-            wordsLearned: 142,
-            totalXP: 1250,
-          },
+  const authData = {
+    state: {
+      user: {
+        id: userId,
+        email: 'demo@learngreekeasy.com',
+        name: 'Demo User',
+        role: 'premium',
+        avatar: undefined,
+        preferences: {
+          language: 'en',
+          dailyGoal: 15,
+          notifications: true,
         },
-        token: mockToken,
-        isAuthenticated: true,
-        rememberMe: true,
+        stats: {
+          streak: 7,
+          wordsLearned: 142,
+          totalXP: 1250,
+        },
       },
-      version: 0,
-    }
-  );
+      token: mockToken,
+      isAuthenticated: true,
+      rememberMe: true,
+    },
+    version: 0,
+  };
+
+  // Step 1: Navigate to login page to establish context
+  await page.goto('/login');
+  await page.waitForLoadState('domcontentloaded');
+
+  // Step 2: Set auth state synchronously via evaluate()
+  await page.evaluate((data) => {
+    localStorage.clear();
+    sessionStorage.clear();
+    window.playwright = true;
+    localStorage.setItem('auth-storage', JSON.stringify(data));
+    sessionStorage.setItem('auth-token', data.state.token);
+  }, authData);
+
+  // Note: Visual tests navigate to specific pages after calling this
 }
 
 /**

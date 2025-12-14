@@ -23,8 +23,8 @@ export default {
           foreground: '#374151',
         },
         // Semantic colors
-        success: '#10b981',
-        warning: '#f97316',
+        success: '#059669',
+        warning: '#ea580c',
         info: '#3b82f6',
         danger: '#ef4444',
         // Text colors
@@ -32,7 +32,7 @@ export default {
           primary: '#1a1a1a',
           secondary: '#374151',
           muted: '#6b7280',
-          subtle: '#9ca3af',
+          subtle: '#6b7280',
         },
         // Background colors
         bg: {

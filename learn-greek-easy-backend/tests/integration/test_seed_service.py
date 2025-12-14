@@ -1,0 +1,363 @@
+"""Integration tests for SeedService.
+
+Tests cover:
+- Full seed cycle with real database
+- Truncation actually clears data
+- Idempotency (running twice produces same result)
+- Data integrity and foreign key relationships
+- Password verification for seeded users
+"""
+
+from unittest.mock import patch
+
+import pytest
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from src.core.security import verify_password
+from src.db.models import (
+    Card,
+    CardStatistics,
+    Deck,
+    DeckLevel,
+    Review,
+    User,
+    UserDeckProgress,
+    UserSettings,
+)
+from src.services.seed_service import SeedService
+
+# ============================================================================
+# Test Fixtures
+# ============================================================================
+
+
+@pytest.fixture
+def enable_seeding():
+    """Enable seeding for tests."""
+    with patch("src.services.seed_service.settings") as mock_settings:
+        mock_settings.can_seed_database.return_value = True
+        mock_settings.get_seed_validation_errors.return_value = []
+        yield mock_settings
+
+
+# ============================================================================
+# Full Seed Cycle Tests
+# ============================================================================
+
+
+@pytest.mark.no_parallel
+class TestSeedServiceIntegration:
+    """Integration tests with real database."""
+
+    @pytest.mark.asyncio
+    async def test_full_seed_creates_all_data(self, db_session: AsyncSession, enable_seeding):
+        """seed_all creates complete test data set."""
+        seed_service = SeedService(db_session)
+
+        result = await seed_service.seed_all()
+
+        assert result["success"] is True
+
+        # Verify users were created
+        user_count = await db_session.scalar(select(func.count(User.id)))
+        assert user_count == 4
+
+        # Verify decks were created
+        deck_count = await db_session.scalar(select(func.count(Deck.id)))
+        assert deck_count == 6
+
+        # Verify cards were created (10 per deck)
+        card_count = await db_session.scalar(select(func.count(Card.id)))
+        assert card_count == 60
+
+        # Verify user settings were created
+        settings_count = await db_session.scalar(select(func.count(UserSettings.id)))
+        assert settings_count == 4
+
+    @pytest.mark.asyncio
+    async def test_seed_creates_correct_users(self, db_session: AsyncSession, enable_seeding):
+        """Verify all expected users are created with correct attributes."""
+        seed_service = SeedService(db_session)
+
+        await seed_service.seed_all()
+
+        # Verify learner user
+        learner = await db_session.scalar(select(User).where(User.email == "e2e_learner@test.com"))
+        assert learner is not None
+        assert learner.full_name == "E2E Learner"
+        assert learner.is_superuser is False
+        assert learner.is_active is True
+        assert learner.email_verified_at is not None
+
+        # Verify admin user
+        admin = await db_session.scalar(select(User).where(User.email == "e2e_admin@test.com"))
+        assert admin is not None
+        assert admin.is_superuser is True
+
+    @pytest.mark.asyncio
+    async def test_seed_creates_correct_decks(self, db_session: AsyncSession, enable_seeding):
+        """Verify all CEFR level decks are created."""
+        seed_service = SeedService(db_session)
+
+        await seed_service.seed_all()
+
+        # Verify all CEFR levels
+        for level in DeckLevel:
+            deck = await db_session.scalar(select(Deck).where(Deck.level == level))
+            assert deck is not None, f"Deck for level {level} not found"
+            assert deck.is_active is True
+            assert f"{level.value}" in deck.name
+
+    @pytest.mark.asyncio
+    async def test_seed_creates_cards_with_greek_text(
+        self, db_session: AsyncSession, enable_seeding
+    ):
+        """Verify cards contain Greek vocabulary."""
+        seed_service = SeedService(db_session)
+
+        await seed_service.seed_all()
+
+        # Get a sample of cards
+        cards = (await db_session.execute(select(Card).limit(10))).scalars().all()
+
+        for card in cards:
+            # front_text should contain Greek characters
+            has_greek = any(
+                "\u0370" <= char <= "\u03FF" or "\u1F00" <= char <= "\u1FFF"
+                for char in card.front_text
+            )
+            assert has_greek, f"Card front_text '{card.front_text}' should contain Greek"
+
+    @pytest.mark.asyncio
+    async def test_seed_creates_learner_progress(self, db_session: AsyncSession, enable_seeding):
+        """Verify progress data is created for learner user."""
+        seed_service = SeedService(db_session)
+
+        await seed_service.seed_all()
+
+        # Verify card statistics were created
+        stats_count = await db_session.scalar(select(func.count(CardStatistics.id)))
+        assert stats_count > 0
+
+        # Verify user deck progress was created
+        progress_count = await db_session.scalar(select(func.count(UserDeckProgress.id)))
+        assert progress_count > 0
+
+        # Verify reviews were created
+        review_count = await db_session.scalar(select(func.count(Review.id)))
+        assert review_count > 0
+
+
+# ============================================================================
+# Truncation Tests
+# ============================================================================
+
+
+@pytest.mark.no_parallel
+class TestSeedServiceTruncation:
+    """Tests for table truncation with real database."""
+
+    @pytest.mark.asyncio
+    async def test_truncate_clears_all_tables(self, db_session: AsyncSession, enable_seeding):
+        """truncate_tables removes all seeded data."""
+        seed_service = SeedService(db_session)
+
+        # First, seed some data
+        await seed_service.seed_all()
+
+        # Verify data exists
+        user_count = await db_session.scalar(select(func.count(User.id)))
+        assert user_count > 0
+
+        # Now truncate
+        result = await seed_service.truncate_tables()
+        await db_session.commit()
+
+        assert result["success"] is True
+
+        # Verify all tables are empty
+        user_count = await db_session.scalar(select(func.count(User.id)))
+        assert user_count == 0
+
+        deck_count = await db_session.scalar(select(func.count(Deck.id)))
+        assert deck_count == 0
+
+        card_count = await db_session.scalar(select(func.count(Card.id)))
+        assert card_count == 0
+
+    @pytest.mark.asyncio
+    async def test_truncation_order_is_fk_safe(self, db_session: AsyncSession, enable_seeding):
+        """Verify truncation doesn't violate FK constraints."""
+        seed_service = SeedService(db_session)
+
+        # Seed data with FK relationships
+        await seed_service.seed_all()
+
+        # Truncation should not raise FK constraint errors
+        result = await seed_service.truncate_tables()
+        await db_session.commit()
+
+        assert result["success"] is True
+        assert len(result["truncated_tables"]) == 8
+
+
+# ============================================================================
+# Idempotency Tests
+# ============================================================================
+
+
+@pytest.mark.no_parallel
+class TestSeedServiceIdempotency:
+    """Tests for seed idempotency."""
+
+    @pytest.mark.asyncio
+    async def test_seed_is_idempotent(self, db_session: AsyncSession, enable_seeding):
+        """Running seed_all twice produces same result."""
+        seed_service = SeedService(db_session)
+
+        # First seed
+        result1 = await seed_service.seed_all()
+
+        # Get counts after first seed
+        user_count1 = await db_session.scalar(select(func.count(User.id)))
+        deck_count1 = await db_session.scalar(select(func.count(Deck.id)))
+        card_count1 = await db_session.scalar(select(func.count(Card.id)))
+
+        # Second seed (should truncate and recreate)
+        result2 = await seed_service.seed_all()
+
+        # Get counts after second seed
+        user_count2 = await db_session.scalar(select(func.count(User.id)))
+        deck_count2 = await db_session.scalar(select(func.count(Deck.id)))
+        card_count2 = await db_session.scalar(select(func.count(Card.id)))
+
+        # Counts should be identical
+        assert user_count1 == user_count2
+        assert deck_count1 == deck_count2
+        assert card_count1 == card_count2
+
+        # Both should succeed
+        assert result1["success"] is True
+        assert result2["success"] is True
+
+
+# ============================================================================
+# Password Verification Tests
+# ============================================================================
+
+
+@pytest.mark.no_parallel
+class TestSeedServiceAuthentication:
+    """Tests for seeded user authentication."""
+
+    @pytest.mark.asyncio
+    async def test_users_can_login_with_seeded_password(
+        self, db_session: AsyncSession, enable_seeding
+    ):
+        """Seeded users can authenticate with the default password."""
+        seed_service = SeedService(db_session)
+
+        result = await seed_service.seed_all()
+
+        # Get the seeded password
+        default_password = result["users"]["password"]
+
+        # Verify each user can authenticate
+        users = (await db_session.execute(select(User))).scalars().all()
+
+        for user in users:
+            # Password hash should be set
+            assert user.password_hash is not None
+
+            # Verify password matches
+            is_valid = verify_password(default_password, user.password_hash)
+            assert is_valid, f"Password verification failed for {user.email}"
+
+    @pytest.mark.asyncio
+    async def test_all_users_have_same_password(self, db_session: AsyncSession, enable_seeding):
+        """All seeded users have the same password hash."""
+        seed_service = SeedService(db_session)
+
+        await seed_service.seed_all()
+
+        users = (await db_session.execute(select(User))).scalars().all()
+
+        # Since bcrypt generates unique salts, hashes will differ
+        # But all should verify against the same password
+        for user in users:
+            assert verify_password(SeedService.DEFAULT_PASSWORD, user.password_hash)
+
+
+# ============================================================================
+# Data Integrity Tests
+# ============================================================================
+
+
+@pytest.mark.no_parallel
+class TestSeedServiceDataIntegrity:
+    """Tests for data integrity and relationships."""
+
+    @pytest.mark.asyncio
+    async def test_user_settings_linked_correctly(self, db_session: AsyncSession, enable_seeding):
+        """Each user has linked settings."""
+        seed_service = SeedService(db_session)
+
+        await seed_service.seed_all()
+
+        users = (await db_session.execute(select(User))).scalars().all()
+
+        for user in users:
+            settings = await db_session.scalar(
+                select(UserSettings).where(UserSettings.user_id == user.id)
+            )
+            assert settings is not None, f"Settings not found for user {user.email}"
+
+    @pytest.mark.asyncio
+    async def test_cards_linked_to_decks(self, db_session: AsyncSession, enable_seeding):
+        """All cards are linked to valid decks."""
+        seed_service = SeedService(db_session)
+
+        await seed_service.seed_all()
+
+        cards = (await db_session.execute(select(Card))).scalars().all()
+
+        for card in cards:
+            deck = await db_session.scalar(select(Deck).where(Deck.id == card.deck_id))
+            assert deck is not None, f"Deck not found for card {card.id}"
+
+    @pytest.mark.asyncio
+    async def test_statistics_linked_to_users_and_cards(
+        self, db_session: AsyncSession, enable_seeding
+    ):
+        """Card statistics are linked to valid users and cards."""
+        seed_service = SeedService(db_session)
+
+        await seed_service.seed_all()
+
+        stats = (await db_session.execute(select(CardStatistics))).scalars().all()
+
+        for stat in stats:
+            user = await db_session.scalar(select(User).where(User.id == stat.user_id))
+            assert user is not None, f"User not found for stat {stat.id}"
+
+            card = await db_session.scalar(select(Card).where(Card.id == stat.card_id))
+            assert card is not None, f"Card not found for stat {stat.id}"
+
+    @pytest.mark.asyncio
+    async def test_reviews_linked_to_users_and_cards(
+        self, db_session: AsyncSession, enable_seeding
+    ):
+        """Reviews are linked to valid users and cards."""
+        seed_service = SeedService(db_session)
+
+        await seed_service.seed_all()
+
+        reviews = (await db_session.execute(select(Review))).scalars().all()
+
+        for review in reviews:
+            user = await db_session.scalar(select(User).where(User.id == review.user_id))
+            assert user is not None, f"User not found for review {review.id}"
+
+            card = await db_session.scalar(select(Card).where(Card.id == review.card_id))
+            assert card is not None, f"Card not found for review {review.id}"

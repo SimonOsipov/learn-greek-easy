@@ -337,6 +337,7 @@ jobs:
         env:
           TEST_DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5433/test_learn_greek
           REDIS_URL: redis://localhost:6379/0
+          TEST_SEED_ENABLED: "true"
         run: |
           # Clean stale coverage files from previous runs
           rm -f .coverage .coverage.*
@@ -435,11 +436,40 @@ jobs:
         run: |
           PGPASSWORD=postgres psql -h localhost -p 5433 -U postgres -d test_learn_greek -c "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";"
 
+      - name: Validate Seed API
+        working-directory: learn-greek-easy-backend
+        env:
+          DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5433/test_learn_greek
+          REDIS_URL: redis://localhost:6379/0
+          TEST_SEED_ENABLED: "true"
+        run: |
+          echo "=== Validating Seed API ==="
+          # Start the app in background to test seed endpoint
+          poetry run uvicorn src.main:app --host 0.0.0.0 --port 8000 &
+          APP_PID=$!
+          sleep 5
+
+          # Check seed status endpoint
+          RESPONSE=$(curl -s http://localhost:8000/api/v1/test/seed/status)
+          echo "Seed status response: $RESPONSE"
+
+          # Verify seeding is enabled
+          ENABLED=$(echo $RESPONSE | jq -r '.enabled')
+          if [ "$ENABLED" != "true" ]; then
+            echo "ERROR: Seeding is not enabled"
+            kill $APP_PID 2>/dev/null || true
+            exit 1
+          fi
+
+          echo "Seed API validation passed"
+          kill $APP_PID 2>/dev/null || true
+
       - name: Run E2E API tests
         working-directory: learn-greek-easy-backend
         env:
           TEST_DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5433/test_learn_greek
           REDIS_URL: redis://localhost:6379/0
+          TEST_SEED_ENABLED: "true"
         run: |
           # Run E2E tests with coverage
           poetry run pytest tests/e2e/ \

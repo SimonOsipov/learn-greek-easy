@@ -223,8 +223,8 @@ test.describe('Authentication Flow', () => {
         // Try to access protected route again to verify logout
         await page.goto('/dashboard');
 
-        // Should redirect to home page (proof of logout) - app redirects unauthenticated users to /
-        await page.waitForURL('/', { timeout: 5000 });
+        // Should redirect to login page (proof of logout) - app redirects unauthenticated users to /login
+        await page.waitForURL('/login', { timeout: 5000 });
         const finalUrl = page.url();
         expect(finalUrl).toMatch(/\/(login|)$/); // Can be / or /login depending on routing
       }

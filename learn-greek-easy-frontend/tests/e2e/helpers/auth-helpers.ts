@@ -26,6 +26,35 @@ export const TEST_USER: TestUser = {
   name: 'Demo User',
 };
 
+// Seed users - available when TEST_SEED_ENABLED=true in environment
+// These users have real data (decks, cards, progress, reviews)
+export const SEED_USERS = {
+  // Regular learner with progress history, card stats, and reviews
+  LEARNER: {
+    email: 'e2e_learner@test.com',
+    password: 'TestPassword123!',
+    name: 'E2E Learner',
+  } as TestUser,
+  // New user with no progress (for new user journey tests)
+  BEGINNER: {
+    email: 'e2e_beginner@test.com',
+    password: 'TestPassword123!',
+    name: 'E2E Beginner',
+  } as TestUser,
+  // Advanced user with more progress
+  ADVANCED: {
+    email: 'e2e_advanced@test.com',
+    password: 'TestPassword123!',
+    name: 'E2E Advanced',
+  } as TestUser,
+  // Admin user
+  ADMIN: {
+    email: 'e2e_admin@test.com',
+    password: 'TestPassword123!',
+    name: 'E2E Admin',
+  } as TestUser,
+};
+
 /**
  * Generate a valid mock token that matches the format expected by mockAuthAPI
  * @param userId - User ID to encode in the token
@@ -62,35 +91,25 @@ export async function loginViaUI(
 
 /**
  * Login via localStorage (faster - bypass UI)
- * Uses addInitScript() to inject auth state BEFORE page loads
- * This prevents timing issues with authentication state
- * @param page - Playwright page object
+ * Uses addInitScript to ensure window.playwright persists across navigations:
+ * 1. Register addInitScript to set window.playwright = true BEFORE any page loads
+ * 2. Navigate to login page to establish origin context
+ * 3. Set localStorage auth data
+ * 4. Navigate to target page - addInitScript ensures test mode is active
+ *
+ * CRITICAL: addInitScript runs before EVERY page load, unlike evaluate() which
+ * only runs once in current context. This prevents window.playwright from being
+ * lost when navigating to the target page.
  */
-export async function loginViaLocalStorage(page: Page): Promise<void> {
+export async function loginViaLocalStorage(page: Page, targetPath: string = '/'): Promise<void> {
   // Enable diagnostics for debugging
   await enableTestDiagnostics(page);
 
   const userId = 'user-1';
   const mockToken = generateValidMockToken(userId);
 
-  // Set auth state BEFORE page loads using addInitScript
-  // This ensures localStorage is populated before any app code runs
-  await page.addInitScript((authData) => {
-    // Clear any existing state first
-    localStorage.clear();
-    sessionStorage.clear();
-
-    console.log('[TEST] Setting window.playwright = true');
-    // CRITICAL: Set test mode flag FIRST so mockAuthAPI.isTestMode() returns true
-    // Without this, mockAuthAPI will reject the mock token even though localStorage is set
-    window.playwright = true;
-
-    console.log('[TEST] Setting auth-storage');
-    localStorage.setItem('auth-storage', JSON.stringify(authData));
-    sessionStorage.setItem('auth-token', authData.state.token);
-
-    console.log('[TEST] Auth initialization complete');
-  }, {
+  // Auth data to inject
+  const authData = {
     state: {
       user: {
         id: userId,
@@ -114,21 +133,42 @@ export async function loginViaLocalStorage(page: Page): Promise<void> {
       rememberMe: true,
     },
     version: 0,
+  };
+
+  // Step 1: Register addInitScript to set window.playwright = true BEFORE any page loads
+  // This runs before every navigation, ensuring test mode persists
+  await page.addInitScript(() => {
+    console.log('[TEST] addInitScript: Setting window.playwright = true');
+    window.playwright = true;
   });
 
-  // Now navigate to the page - auth state will already be present
-  await page.goto('/');
-  // Use 'domcontentloaded' instead of 'networkidle' - more reliable across browsers
-  // Firefox has issues with 'networkidle' in CI environments
+  // Step 2: Navigate to login page to establish origin context for localStorage
+  await page.goto('/login');
   await page.waitForLoadState('domcontentloaded');
 
-  // Wait for the app to be ready by checking for a key element
-  // This is more reliable than network-based waits across all browsers
+  // Step 3: Set auth data in localStorage (now that we have origin context)
+  await page.evaluate((data) => {
+    // Clear any existing state
+    localStorage.clear();
+    sessionStorage.clear();
+
+    console.log('[TEST] Setting auth-storage');
+    localStorage.setItem('auth-storage', JSON.stringify(data));
+    sessionStorage.setItem('auth-token', data.state.token);
+
+    console.log('[TEST] Auth initialization complete, window.playwright =', window.playwright);
+  }, authData);
+
+  // Step 4: Navigate to target page - addInitScript ensures window.playwright is set
+  await page.goto(targetPath);
+  await page.waitForLoadState('domcontentloaded');
+
+  // Wait for the app to be ready
   await page.waitForSelector('[data-testid="app-container"], [data-testid="dashboard"], nav, main', {
     timeout: 10000
   });
 
-  // Log final auth state
+  // Log final auth state for debugging
   await logAuthState(page);
 }
 

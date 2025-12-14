@@ -40,7 +40,11 @@ export const DeckCard: React.FC<DeckCardProps> = ({ deck, onContinue }) => {
             </span>
             <span className="font-medium">{deck.progress.percentage}%</span>
           </div>
-          <Progress value={deck.progress.percentage} className="h-2" />
+          <Progress
+            value={deck.progress.percentage}
+            className="h-2"
+            aria-label={`${deck.title} progress: ${deck.progress.percentage}% complete`}
+          />
         </div>
 
         {/* Stats Row */}

@@ -6,9 +6,9 @@
 import { test, expect } from '@playwright/test';
 import { loginViaLocalStorage } from './helpers/auth-helpers';
 
-// TEMPORARILY SKIPPED: Review sessions require mock card data initialization
-// Re-enable after implementing mock data helper in auth-helpers
-test.describe.skip('Flashcard Review Session', () => {
+// ENABLED: Now uses seed data from E2E database seeding infrastructure (SEED-10)
+// Seed creates 60 cards (10 per deck) with SM-2 spaced repetition states
+test.describe('Flashcard Review Session', () => {
   test.beforeEach(async ({ page }) => {
     // Login before each test (using fast localStorage method)
     await loginViaLocalStorage(page);
@@ -26,8 +26,8 @@ test.describe.skip('Flashcard Review Session', () => {
     // Wait for decks to load and select first available deck
     await page.waitForTimeout(1000);
 
-    // Find and click on a deck card (look for heading in article or card)
-    const deckCard = page.locator('article').first();
+    // Find and click on a deck card
+    const deckCard = page.locator('[data-testid="deck-card"]').first();
     await expect(deckCard).toBeVisible({ timeout: 5000 });
     await deckCard.click();
 
@@ -97,7 +97,7 @@ test.describe.skip('Flashcard Review Session', () => {
     await page.waitForTimeout(1000);
 
     // Click first deck
-    const deckCard = page.locator('article').first();
+    const deckCard = page.locator('[data-testid="deck-card"]').first();
     await deckCard.click();
     await page.waitForTimeout(500);
 
@@ -136,7 +136,7 @@ test.describe.skip('Flashcard Review Session', () => {
     await page.waitForTimeout(1000);
 
     // Click first deck
-    const deckCard = page.locator('article').first();
+    const deckCard = page.locator('[data-testid="deck-card"]').first();
     await deckCard.click();
     await page.waitForTimeout(500);
 
@@ -179,7 +179,7 @@ test.describe.skip('Flashcard Review Session', () => {
     await page.waitForTimeout(1000);
 
     // Click first deck
-    const deckCard = page.locator('article').first();
+    const deckCard = page.locator('[data-testid="deck-card"]').first();
     await deckCard.click();
     await page.waitForTimeout(500);
 
@@ -190,7 +190,7 @@ test.describe.skip('Flashcard Review Session', () => {
 
     // Verify we're in review mode
     const reviewUrl = page.url();
-    expect(reviewUrl).toContain('/deck/');
+    expect(reviewUrl).toContain('/decks/');
 
     // Press Esc to attempt exit
     await page.keyboard.press('Escape');
@@ -222,7 +222,7 @@ test.describe.skip('Flashcard Review Session', () => {
     await page.goto('/decks');
     await page.waitForTimeout(1000);
 
-    const deckCard = page.locator('article').first();
+    const deckCard = page.locator('[data-testid="deck-card"]').first();
     await deckCard.click();
     await page.waitForTimeout(500);
 

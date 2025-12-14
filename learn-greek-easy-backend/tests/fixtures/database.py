@@ -22,7 +22,6 @@ Usage:
         # Session automatically rolls back after test
 """
 
-import asyncio
 import tempfile
 from collections.abc import AsyncGenerator
 from pathlib import Path
@@ -357,9 +356,10 @@ async def db_session_with_savepoint(
 async def _create_schema_with_coordination(engine: AsyncEngine, worker_id: str) -> None:
     """Create database schema with coordination between parallel workers.
 
-    Uses file-based signaling to coordinate schema creation:
-    - First worker (gw0 or master) creates the schema
-    - Other workers wait for the schema to be ready
+    Uses file-based locking to coordinate schema creation:
+    - Workers block waiting for the lock (no polling/busy-wait)
+    - First worker to acquire lock creates the schema
+    - Other workers wait, then verify schema is ready
 
     This avoids race conditions with PostgreSQL enum type creation.
 
@@ -368,6 +368,7 @@ async def _create_schema_with_coordination(engine: AsyncEngine, worker_id: str) 
         worker_id: The pytest-xdist worker ID.
     """
     import fcntl
+    import signal
 
     # Clean up stale lock files from previous runs (only master/gw0 does this)
     if worker_id in ("master", "gw0"):
@@ -379,10 +380,23 @@ async def _create_schema_with_coordination(engine: AsyncEngine, worker_id: str) 
     _SCHEMA_LOCK_FILE.parent.mkdir(parents=True, exist_ok=True)
     _SCHEMA_LOCK_FILE.touch(exist_ok=True)
 
+    # Timeout handler for blocking lock
+    lock_timeout = 60  # seconds
+
+    def timeout_handler(signum, frame):
+        raise TimeoutError(f"Worker {worker_id} timed out waiting for schema lock")
+
     with open(_SCHEMA_LOCK_FILE, "w") as lock_file:
+        # Set up timeout for blocking lock acquisition
+        old_handler = signal.signal(signal.SIGALRM, timeout_handler)
+        signal.alarm(lock_timeout)
+
         try:
-            # Try to acquire exclusive lock (non-blocking)
-            fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+            # Acquire exclusive lock (BLOCKING - waits for other workers)
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+
+            # Cancel the alarm - we got the lock
+            signal.alarm(0)
 
             # We got the lock - check if schema is already ready
             if not _SCHEMA_READY_FILE.exists():
@@ -396,19 +410,18 @@ async def _create_schema_with_coordination(engine: AsyncEngine, worker_id: str) 
                 # Signal that schema is ready
                 _SCHEMA_READY_FILE.touch()
 
-            # Release lock
-            fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+        except TimeoutError:
+            raise RuntimeError(f"Worker {worker_id} timed out waiting for schema creation lock")
 
-        except (IOError, OSError):
-            # Another worker has the lock - wait for schema to be ready
-            max_wait = 30  # seconds
-            waited = 0
-            while not _SCHEMA_READY_FILE.exists() and waited < max_wait:
-                await asyncio.sleep(0.5)
-                waited += 0.5
-
-            if not _SCHEMA_READY_FILE.exists():
-                raise RuntimeError(f"Worker {worker_id} timed out waiting for schema creation")
+        finally:
+            # Always restore signal handler and cancel alarm
+            signal.alarm(0)
+            signal.signal(signal.SIGALRM, old_handler)
+            # Release lock (also released automatically when file closes)
+            try:
+                fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+            except (IOError, OSError):
+                pass  # File may already be closed
 
 
 @pytest_asyncio.fixture(scope="session")

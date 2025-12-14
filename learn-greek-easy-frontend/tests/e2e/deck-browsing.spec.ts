@@ -33,8 +33,8 @@ test.describe('Deck Browsing', () => {
     await expect(page.getByRole('heading', { name: /decks/i })).toBeVisible();
   });
 
-  // TEMPORARILY SKIPPED: Dashboard uses hardcoded "Alex" instead of user data
-  test.skip('should display dashboard page with user greeting', async ({ page }) => {
+  // ENABLED: Now uses seed data from E2E database seeding infrastructure (SEED-10)
+  test('should display dashboard page with user greeting', async ({ page }) => {
     await page.goto('/dashboard');
 
     // Verify dashboard heading
@@ -90,12 +90,8 @@ test.describe('Deck Browsing', () => {
     // Wait for decks to load
     await page.waitForTimeout(1000);
 
-    // Verify at least 1 deck card visible (using flexible selectors)
-    const deckCards = page.locator('[data-testid="deck-card"]').or(
-      page.locator('article').or(
-        page.locator('[class*="deck"]')
-      )
-    );
+    // Verify at least 1 deck card visible
+    const deckCards = page.locator('[data-testid="deck-card"]');
 
     const count = await deckCards.count();
     expect(count).toBeGreaterThanOrEqual(1);
@@ -176,9 +172,7 @@ test.describe('Deck Browsing', () => {
     await page.waitForTimeout(1000);
 
     // Click on first available deck
-    const firstDeck = page.locator('article').or(
-      page.locator('[data-testid="deck-card"]')
-    ).first();
+    const firstDeck = page.locator('[data-testid="deck-card"]').first();
 
     await expect(firstDeck).toBeVisible({ timeout: 5000 });
     await firstDeck.click();

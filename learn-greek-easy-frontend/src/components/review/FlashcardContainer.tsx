@@ -48,6 +48,7 @@ export function FlashcardContainer({ card }: FlashcardContainerProps) {
       </div>
 
       <div
+        data-testid="flashcard"
         className={cn(
           'mx-auto max-w-4xl overflow-hidden rounded-2xl bg-white shadow-2xl',
           'flex min-h-[800px] flex-col transition-transform duration-300',
