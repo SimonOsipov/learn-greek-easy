@@ -12,33 +12,23 @@ import { Page } from '@playwright/test';
 
 /**
  * Enable diagnostic logging for test execution
- *
- * This function adds initialization scripts to log key events during
- * test execution, helping diagnose timing and state issues.
  */
 export async function enableTestDiagnostics(page: Page): Promise<void> {
-  await page.addInitScript(() => {
-    // Log when test mode is active
-    console.log('[TEST] Test mode active, window.playwright =', window.playwright);
+  // Capture browser console logs that start with [TEST]
+  page.on('console', msg => {
+    if (msg.text().startsWith('[TEST]') || msg.text().startsWith('[AUTH')) {
+      console.log('Browser:', msg.text());
+    }
+  });
 
+  // Add localStorage monitoring via addInitScript (for debugging, not critical timing)
+  await page.addInitScript(() => {
     // Log when localStorage changes
     const originalSetItem = localStorage.setItem;
     localStorage.setItem = function(key: string, value: string) {
       console.log('[TEST] localStorage.setItem:', key, value.substring(0, 100));
       return originalSetItem.call(this, key, value);
     };
-
-    // Log when stores hydrate
-    window.addEventListener('storage', (e) => {
-      console.log('[TEST] Storage event:', e.key);
-    });
-  });
-
-  // Capture browser console logs
-  page.on('console', msg => {
-    if (msg.text().startsWith('[TEST]')) {
-      console.log('Browser:', msg.text());
-    }
   });
 }
 

@@ -91,35 +91,20 @@ export async function loginViaUI(
 
 /**
  * Login via localStorage (faster - bypass UI)
- * Uses addInitScript() to inject auth state BEFORE page loads
- * This prevents timing issues with authentication state
- * @param page - Playwright page object
+ * Uses a two-step approach to avoid race conditions:
+ * 1. Navigate to login page first (establishes origin context)
+ * 2. Use page.evaluate() to set auth state immediately (no race)
+ * 3. Then navigate to target page with auth already present
  */
-export async function loginViaLocalStorage(page: Page): Promise<void> {
+export async function loginViaLocalStorage(page: Page, targetPath: string = '/'): Promise<void> {
   // Enable diagnostics for debugging
   await enableTestDiagnostics(page);
 
   const userId = 'user-1';
   const mockToken = generateValidMockToken(userId);
 
-  // Set auth state BEFORE page loads using addInitScript
-  // This ensures localStorage is populated before any app code runs
-  await page.addInitScript((authData) => {
-    // Clear any existing state first
-    localStorage.clear();
-    sessionStorage.clear();
-
-    console.log('[TEST] Setting window.playwright = true');
-    // CRITICAL: Set test mode flag FIRST so mockAuthAPI.isTestMode() returns true
-    // Without this, mockAuthAPI will reject the mock token even though localStorage is set
-    window.playwright = true;
-
-    console.log('[TEST] Setting auth-storage');
-    localStorage.setItem('auth-storage', JSON.stringify(authData));
-    sessionStorage.setItem('auth-token', authData.state.token);
-
-    console.log('[TEST] Auth initialization complete');
-  }, {
+  // Auth data to inject
+  const authData = {
     state: {
       user: {
         id: userId,
@@ -143,21 +128,40 @@ export async function loginViaLocalStorage(page: Page): Promise<void> {
       rememberMe: true,
     },
     version: 0,
-  });
+  };
 
-  // Now navigate to the page - auth state will already be present
-  await page.goto('/');
-  // Use 'domcontentloaded' instead of 'networkidle' - more reliable across browsers
-  // Firefox has issues with 'networkidle' in CI environments
+  // Step 1: Navigate to login page first
+  // This establishes the page context without triggering auth redirects
+  await page.goto('/login');
   await page.waitForLoadState('domcontentloaded');
 
-  // Wait for the app to be ready by checking for a key element
-  // This is more reliable than network-based waits across all browsers
+  // Step 2: Use page.evaluate() to set auth state IMMEDIATELY
+  // This executes synchronously in the already-loaded page context (NO race condition)
+  await page.evaluate((data) => {
+    // Clear any existing state
+    localStorage.clear();
+    sessionStorage.clear();
+
+    console.log('[TEST] Setting window.playwright = true');
+    window.playwright = true;
+
+    console.log('[TEST] Setting auth-storage');
+    localStorage.setItem('auth-storage', JSON.stringify(data));
+    sessionStorage.setItem('auth-token', data.state.token);
+
+    console.log('[TEST] Auth initialization complete, window.playwright =', window.playwright);
+  }, authData);
+
+  // Step 3: Now navigate to target page - auth state is already present
+  await page.goto(targetPath);
+  await page.waitForLoadState('domcontentloaded');
+
+  // Wait for the app to be ready
   await page.waitForSelector('[data-testid="app-container"], [data-testid="dashboard"], nav, main', {
     timeout: 10000
   });
 
-  // Log final auth state
+  // Log final auth state for debugging
   await logAuthState(page);
 }
 
