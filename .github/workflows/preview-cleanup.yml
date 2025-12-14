@@ -60,6 +60,9 @@ jobs:
         if: steps.check-env.outputs.exists == 'true'
         run: |
           echo "=== Truncating Dev Database ==="
+          # Install curl and jq (Railway CLI container is Alpine-based)
+          apk add --no-cache curl jq
+
           # Backend should still be running, call truncate endpoint
           # This cleans up seed data before stopping services
           BACKEND_URL="https://backend-dev-bc44.up.railway.app"
