@@ -1,10 +1,20 @@
-import { defineConfig } from 'vitest/config';
+import { defineConfig, loadEnv } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 
-export default defineConfig({
-  plugins: [react()],
-  test: {
+export default defineConfig(({ mode }) => {
+  // Load environment variables for the current mode
+  const env = loadEnv(mode, process.cwd(), '');
+
+  return {
+    plugins: [react()],
+    // Define environment variables for tests
+    define: {
+      'import.meta.env.VITE_API_URL': JSON.stringify(
+        env.VITE_API_URL || process.env.VITE_API_URL || 'http://localhost:8000'
+      ),
+    },
+    test: {
     // Test environment
     environment: 'happy-dom',
 
@@ -87,5 +97,5 @@ export default defineConfig({
       '@lib': path.resolve(__dirname, './src/lib'),
       '@types': path.resolve(__dirname, './src/types'),
     },
-  },
+  };
 });
