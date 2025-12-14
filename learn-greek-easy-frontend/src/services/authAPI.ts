@@ -149,3 +149,6 @@ export const authAPI = {
    */
   clearTokens: clearAuthTokens,
 };
+
+// Re-export for consumers who import from authAPI
+export { clearAuthTokens } from './api';
