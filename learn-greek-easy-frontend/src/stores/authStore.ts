@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 
-import { mockAuthAPI } from '@/services/mockAuthAPI';
+import { authAPI, clearAuthTokens } from '@/services/authAPI';
 import type { User, RegisterData, AuthError } from '@/types/auth';
 
 import { useAnalyticsStore } from './analyticsStore';
@@ -45,12 +45,41 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null });
 
         try {
-          const response = await mockAuthAPI.login(email, password);
+          // Call real backend API
+          const tokenResponse = await authAPI.login({ email, password });
+
+          // Fetch user profile after login
+          // First store token temporarily for the profile request
+          sessionStorage.setItem('auth-token', tokenResponse.access_token);
+
+          const profileResponse = await authAPI.getProfile();
+
+          // Transform backend user response to frontend User type
+          const user: User = {
+            id: profileResponse.id,
+            email: profileResponse.email,
+            name: profileResponse.full_name || profileResponse.email.split('@')[0],
+            role: profileResponse.is_superuser ? 'admin' : 'free',
+            preferences: {
+              language: 'en',
+              dailyGoal: profileResponse.settings?.daily_goal || 20,
+              notifications: profileResponse.settings?.email_notifications || true,
+              theme: 'light',
+            },
+            stats: {
+              streak: 0,
+              wordsLearned: 0,
+              totalXP: 0,
+              joinedDate: new Date(profileResponse.created_at),
+            },
+            createdAt: new Date(profileResponse.created_at),
+            updatedAt: new Date(profileResponse.updated_at),
+          };
 
           set({
-            user: response.user,
-            token: response.token,
-            refreshToken: response.refreshToken,
+            user,
+            token: tokenResponse.access_token,
+            refreshToken: tokenResponse.refresh_token,
             isAuthenticated: true,
             rememberMe: remember,
             isLoading: false,
@@ -59,12 +88,15 @@ export const useAuthStore = create<AuthState>()(
 
           // If not remember me, store in sessionStorage instead
           if (!remember) {
-            sessionStorage.setItem('auth-token', response.token);
+            sessionStorage.setItem('auth-token', tokenResponse.access_token);
           }
         } catch (error) {
           set({
             isLoading: false,
-            error: error as AuthError,
+            error: {
+              code: 'LOGIN_FAILED',
+              message: error instanceof Error ? error.message : 'Login failed',
+            },
             isAuthenticated: false,
           });
           throw error;
@@ -150,12 +182,45 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null });
 
         try {
-          const response = await mockAuthAPI.register(data);
+          // Call real backend API
+          const tokenResponse = await authAPI.register({
+            email: data.email,
+            password: data.password,
+            full_name: data.name,
+          });
+
+          // Store token temporarily for the profile request
+          sessionStorage.setItem('auth-token', tokenResponse.access_token);
+
+          // Fetch user profile after registration
+          const profileResponse = await authAPI.getProfile();
+
+          // Transform backend user response to frontend User type
+          const user: User = {
+            id: profileResponse.id,
+            email: profileResponse.email,
+            name: profileResponse.full_name || profileResponse.email.split('@')[0],
+            role: 'free', // New users are always free tier
+            preferences: {
+              language: 'en',
+              dailyGoal: profileResponse.settings?.daily_goal || 20,
+              notifications: profileResponse.settings?.email_notifications || true,
+              theme: 'light',
+            },
+            stats: {
+              streak: 0,
+              wordsLearned: 0,
+              totalXP: 0,
+              joinedDate: new Date(profileResponse.created_at),
+            },
+            createdAt: new Date(profileResponse.created_at),
+            updatedAt: new Date(profileResponse.updated_at),
+          };
 
           set({
-            user: response.user,
-            token: response.token,
-            refreshToken: response.refreshToken,
+            user,
+            token: tokenResponse.access_token,
+            refreshToken: tokenResponse.refresh_token,
             isAuthenticated: true,
             rememberMe: false,
             isLoading: false,
@@ -163,11 +228,14 @@ export const useAuthStore = create<AuthState>()(
           });
 
           // New users start with session storage
-          sessionStorage.setItem('auth-token', response.token);
+          sessionStorage.setItem('auth-token', tokenResponse.access_token);
         } catch (error) {
           set({
             isLoading: false,
-            error: error as AuthError,
+            error: {
+              code: 'REGISTRATION_FAILED',
+              message: error instanceof Error ? error.message : 'Registration failed',
+            },
             isAuthenticated: false,
           });
           throw error;
@@ -176,15 +244,18 @@ export const useAuthStore = create<AuthState>()(
 
       // Logout action
       logout: async () => {
-        const { token } = get();
+        const { refreshToken: storedRefreshToken } = get();
 
-        if (token) {
+        if (storedRefreshToken) {
           try {
-            await mockAuthAPI.logout(token);
+            await authAPI.logout(storedRefreshToken);
           } catch (error) {
             console.error('Logout error:', error);
           }
         }
+
+        // Clear all auth data using the centralized function
+        clearAuthTokens();
 
         // Clear all auth data
         set({
@@ -196,16 +267,13 @@ export const useAuthStore = create<AuthState>()(
           error: null,
         });
 
-        // Clear session storage
-        sessionStorage.removeItem('auth-token');
-
         // Clear analytics state
         useAnalyticsStore.getState().clearAnalytics();
-
-        // Clear localStorage (handled by persist middleware)
       },
 
       // Update profile action
+      // Note: Backend doesn't currently support profile updates via API
+      // This is a local-only update for MVP
       updateProfile: async (updates: Partial<User>) => {
         const { user } = get();
 
@@ -216,7 +284,13 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null });
 
         try {
-          const updatedUser = await mockAuthAPI.updateProfile(user.id, updates);
+          // TODO: When backend supports profile updates, call the API here
+          // For now, just update the local state
+          const updatedUser = {
+            ...user,
+            ...updates,
+            updatedAt: new Date(),
+          };
 
           set({
             user: updatedUser,
@@ -274,12 +348,39 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null });
 
         try {
-          const response = await mockAuthAPI.refreshToken(storedRefreshToken);
+          // Call real backend API to refresh tokens
+          const tokenResponse = await authAPI.refresh(storedRefreshToken);
+
+          // Fetch updated user profile
+          sessionStorage.setItem('auth-token', tokenResponse.access_token);
+          const profileResponse = await authAPI.getProfile();
+
+          // Transform backend user response to frontend User type
+          const user: User = {
+            id: profileResponse.id,
+            email: profileResponse.email,
+            name: profileResponse.full_name || profileResponse.email.split('@')[0],
+            role: profileResponse.is_superuser ? 'admin' : 'free',
+            preferences: {
+              language: 'en',
+              dailyGoal: profileResponse.settings?.daily_goal || 20,
+              notifications: profileResponse.settings?.email_notifications || true,
+              theme: 'light',
+            },
+            stats: {
+              streak: 0,
+              wordsLearned: 0,
+              totalXP: 0,
+              joinedDate: new Date(profileResponse.created_at),
+            },
+            createdAt: new Date(profileResponse.created_at),
+            updatedAt: new Date(profileResponse.updated_at),
+          };
 
           set({
-            user: response.user,
-            token: response.token,
-            refreshToken: response.refreshToken,
+            user,
+            token: tokenResponse.access_token,
+            refreshToken: tokenResponse.refresh_token,
             isLoading: false,
             error: null,
           });
@@ -309,26 +410,49 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true });
 
         try {
-          const user = await mockAuthAPI.verifyToken(activeToken);
-
-          if (user) {
-            set({
-              user,
-              token: activeToken,
-              isAuthenticated: true,
-              isLoading: false,
-            });
-          } else {
-            // Token expired or invalid
-            set({
-              user: null,
-              token: null,
-              isAuthenticated: false,
-              isLoading: false,
-            });
+          // Verify token by fetching user profile
+          // Ensure the token is available for the request
+          if (!sessionToken && activeToken) {
+            sessionStorage.setItem('auth-token', activeToken);
           }
-        } catch (error) {
+
+          const profileResponse = await authAPI.getProfile();
+
+          // Transform backend user response to frontend User type
+          const user: User = {
+            id: profileResponse.id,
+            email: profileResponse.email,
+            name: profileResponse.full_name || profileResponse.email.split('@')[0],
+            role: profileResponse.is_superuser ? 'admin' : 'free',
+            preferences: {
+              language: 'en',
+              dailyGoal: profileResponse.settings?.daily_goal || 20,
+              notifications: profileResponse.settings?.email_notifications || true,
+              theme: 'light',
+            },
+            stats: {
+              streak: 0,
+              wordsLearned: 0,
+              totalXP: 0,
+              joinedDate: new Date(profileResponse.created_at),
+            },
+            createdAt: new Date(profileResponse.created_at),
+            updatedAt: new Date(profileResponse.updated_at),
+          };
+
           set({
+            user,
+            token: activeToken,
+            isAuthenticated: true,
+            isLoading: false,
+          });
+        } catch (error) {
+          // Token expired or invalid - clear auth state
+          clearAuthTokens();
+          set({
+            user: null,
+            token: null,
+            refreshToken: null,
             isAuthenticated: false,
             isLoading: false,
           });

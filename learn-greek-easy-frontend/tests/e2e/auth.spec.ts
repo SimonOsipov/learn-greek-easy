@@ -1,9 +1,12 @@
 /**
  * Authentication E2E Tests
+ *
+ * Tests authentication flows using real backend API.
+ * Uses seeded test users from the database.
  */
 
 import { test, expect } from '@playwright/test';
-import { loginViaUI, loginViaLocalStorage } from './helpers/auth-helpers';
+import { loginViaUI, loginViaLocalStorage, SEED_USERS } from './helpers/auth-helpers';
 
 test.describe('Authentication Flow', () => {
   test.beforeEach(async ({ page }) => {
@@ -133,52 +136,44 @@ test.describe('Authentication Flow', () => {
     // Verify login form exists using test ID
     await expect(page.getByTestId('login-card')).toBeVisible();
 
-    // Fill login form with test user credentials using test IDs
-    await page.getByTestId('email-input').fill('demo@learngreekeasy.com');
-    await page.getByTestId('password-input').fill('Demo123!');
+    // Fill login form with seed user credentials
+    await page.getByTestId('email-input').fill(SEED_USERS.LEARNER.email);
+    await page.getByTestId('password-input').fill(SEED_USERS.LEARNER.password);
 
     // Submit form using test ID
     await page.getByTestId('login-submit').click();
 
-    // Wait for redirect to dashboard (may take time for API call)
-    await page.waitForTimeout(1000);
+    // Wait for redirect to dashboard (with increased timeout for real API)
+    await page.waitForURL('/dashboard', { timeout: 15000 });
 
-    // Should navigate to dashboard or stay on current page
+    // Verify we're on dashboard
     const currentUrl = page.url();
-
-    // Verify either redirected to dashboard or profile button is visible (indicating logged in)
-    const isDashboard = currentUrl.includes('/dashboard');
-    const profileBtn = page.getByRole('button', { name: /profile|account|user/i }).first();
-    const hasProfile = await profileBtn.isVisible().catch(() => false);
-
-    expect(isDashboard || hasProfile).toBe(true);
+    expect(currentUrl).toContain('/dashboard');
   });
 
   test('E2E-01.2: Login fails with invalid credentials', async ({ page }) => {
     await page.goto('/login');
 
     // Fill form with wrong password using test IDs
-    await page.getByTestId('email-input').fill('demo@learngreekeasy.com');
+    await page.getByTestId('email-input').fill(SEED_USERS.LEARNER.email);
     await page.getByTestId('password-input').fill('WrongPassword123!');
 
     // Submit form using test ID
     await page.getByTestId('login-submit').click();
 
-    // Wait for response
-    await page.waitForTimeout(1000);
+    // Wait for response (real API call)
+    await page.waitForTimeout(2000);
 
-    // Should show error message or stay on login page
+    // Should still be on login page
     const currentUrl = page.url();
     expect(currentUrl).toContain('/login');
 
-    // Look for error indication (error message or validation)
-    const pageContent = await page.textContent('body');
-    const hasError = pageContent.toLowerCase().includes('error') ||
-                     pageContent.toLowerCase().includes('invalid') ||
-                     pageContent.toLowerCase().includes('incorrect');
+    // Look for error indication
+    const errorMessage = page.getByText(/invalid|incorrect|error|failed/i);
+    const hasError = await errorMessage.isVisible().catch(() => false);
 
     // Either error message visible or still on login page (both valid)
-    expect(currentUrl.includes('/login')).toBe(true);
+    expect(currentUrl.includes('/login') || hasError).toBe(true);
   });
 
   test('E2E-01.3: User can log out successfully', async ({ page }) => {

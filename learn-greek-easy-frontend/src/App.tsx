@@ -15,7 +15,6 @@ import ActivityFeedTest from '@/pages/ActivityFeedTest';
 import { ForgotPassword } from '@/pages/auth/ForgotPassword';
 import { Login } from '@/pages/auth/Login';
 import { Register } from '@/pages/auth/Register';
-import ChartsTestPage from '@/pages/ChartsTestPage';
 import { Dashboard } from '@/pages/Dashboard';
 import { DeckDetailPage } from '@/pages/DeckDetailPage';
 import { DecksPage } from '@/pages/DecksPage';
@@ -68,7 +67,6 @@ function AppContent() {
               <Route path="stats" element={<Navigate to="/statistics" replace />} />
               <Route path="settings" element={<Settings />} />
               <Route path="profile" element={<Profile />} />
-              <Route path="charts-test" element={<ChartsTestPage />} />
               <Route path="activity-feed-test" element={<ActivityFeedTest />} />
             </Route>
             {/* Review page outside AppLayout for full-screen experience */}

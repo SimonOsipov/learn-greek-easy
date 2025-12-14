@@ -3,30 +3,18 @@
 /**
  * Review Session State Management Store
  *
- * ⚠️ TEMPORARY IMPLEMENTATION (MVP)
- *
- * This store manages active review sessions using:
- * - Zustand for state management
- * - sessionStorage for crash recovery
- * - mockReviewAPI for data persistence
- * - SM-2 algorithm for spaced repetition
- *
- * TODO: Backend Migration Required
- * When backend is ready, refactor as follows:
- * 1. Replace mockReviewAPI with real API client
- * 2. Move SR data persistence to PostgreSQL
- * 3. Store session progress on backend
- * 4. Keep only UI state (isCardFlipped, isLoading) in Zustand
- *
- * Estimated migration time: 4-6 hours
+ * Uses Zustand for state management with real backend API integration.
+ * Reviews are submitted individually via the SM-2 algorithm on the backend.
  */
 
 import { create } from 'zustand';
+import { devtools } from 'zustand/middleware';
 
-import { mockReviewAPI } from '@/services/mockReviewAPI';
+import { reviewAPI } from '@/services/reviewAPI';
+import { studyAPI } from '@/services/studyAPI';
+import type { StudyQueueCard } from '@/services/studyAPI';
 import { useAnalyticsStore } from '@/stores/analyticsStore';
 import { useAuthStore } from '@/stores/authStore';
-import { useDeckStore } from '@/stores/deckStore';
 import type {
   ReviewSession,
   ReviewRating,
@@ -38,13 +26,12 @@ import type {
 
 /**
  * Default queue configuration for review sessions
- * Matches Anki-style defaults
  */
 const DEFAULT_QUEUE_CONFIG: QueueConfig = {
-  maxNewCards: 20, // 20 new cards per session
-  maxReviewCards: 100, // 100 review cards per session
-  learningFirst: true, // Prioritize learning cards
-  randomize: false, // Don't randomize (show by due date)
+  maxNewCards: 20,
+  maxReviewCards: 100,
+  learningFirst: true,
+  randomize: false,
 };
 
 /**
@@ -65,13 +52,58 @@ const DEFAULT_SESSION_STATS: SessionStats = {
 };
 
 /**
+ * Map frontend rating to backend quality (SM-2 scale 0-5)
+ */
+const mapRatingToQuality = (rating: ReviewRating): number => {
+  switch (rating) {
+    case 'again':
+      return 0; // Complete blackout
+    case 'hard':
+      return 2; // Incorrect but remembered
+    case 'good':
+      return 4; // Correct with hesitation
+    case 'easy':
+      return 5; // Perfect response
+    default:
+      return 3;
+  }
+};
+
+/**
+ * Transform backend study queue card to frontend CardReview type
+ */
+const transformStudyQueueCard = (card: StudyQueueCard, deckId: string): CardReview => ({
+  id: card.card_id,
+  deckId,
+  front: card.greek_word,
+  back: card.english_translation,
+  pronunciation: card.pronunciation || '',
+  example: card.example_sentence || '',
+  exampleTranslation: card.example_translation || '',
+  notes: '',
+  status: card.status as 'new' | 'learning' | 'review' | 'mastered',
+  difficulty: card.difficulty as 'easy' | 'medium' | 'hard',
+  easeFactor: card.easiness_factor,
+  interval: card.interval,
+  repetitions: card.repetitions,
+  nextReviewDate: card.next_review_date ? new Date(card.next_review_date) : new Date(),
+  lastReviewDate: undefined,
+  reviewCount: card.repetitions,
+  correctCount: 0,
+  averageTime: 0,
+});
+
+/**
+ * Generate a unique session ID
+ */
+const generateSessionId = (): string => {
+  return `session-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+};
+
+/**
  * Review Store State Interface
  */
 interface ReviewState {
-  // ========================================
-  // SESSION STATE
-  // ========================================
-
   /** Active review session (null when not in review mode) */
   activeSession: ReviewSession | null;
 
@@ -84,10 +116,6 @@ interface ReviewState {
   /** Real-time session statistics */
   sessionStats: SessionStats;
 
-  // ========================================
-  // UI STATE
-  // ========================================
-
   /** Loading state for async operations */
   isLoading: boolean;
 
@@ -97,499 +125,441 @@ interface ReviewState {
   /** Session summary after completion (null = no completed session) */
   sessionSummary: SessionSummary | null;
 
-  // ========================================
-  // COMPUTED GETTERS
-  // ========================================
+  /** Time when current card was shown (for timing) */
+  cardStartTime: number | null;
 
-  /** Get current card being reviewed (null if no active session) */
+  // Computed getters (as direct properties for Zustand)
   readonly currentCard: CardReview | null;
-
-  /** Get session progress (cards reviewed / total cards) */
   readonly progress: { current: number; total: number };
-
-  /** Check if there are more cards in queue */
   readonly hasNextCard: boolean;
-
-  /** Check if current card can be rated (must be flipped first) */
   readonly canRate: boolean;
 
-  // ========================================
-  // ACTIONS - SESSION LIFECYCLE
-  // ========================================
-
-  /**
-   * Start a new review session for a deck
-   * Loads due cards, creates queue, initializes session
-   *
-   * @param deckId - Deck to review
-   * @param maxCards - Optional max cards limit (overrides default)
-   * @throws Error if user not authenticated
-   * @throws Error if deck not found
-   * @throws Error if no cards due
-   */
+  // Actions
   startSession: (deckId: string, maxCards?: number) => Promise<void>;
-
-  /**
-   * Rate current card and advance to next
-   * Applies SM-2 algorithm, updates statistics
-   *
-   * @param rating - User's performance rating (again/hard/good/easy)
-   * @throws Error if no active session
-   * @throws Error if card not flipped
-   */
   rateCard: (rating: ReviewRating) => Promise<void>;
-
-  /**
-   * Flip current card to show answer (back side)
-   * Disabled if no active session or already flipped
-   */
   flipCard: () => void;
-
-  /**
-   * Pause current session (save state for later)
-   * Persists session to sessionStorage for crash recovery
-   */
   pauseSession: () => void;
-
-  /**
-   * Resume paused session from sessionStorage
-   * Restores session state and continues from last card
-   */
   resumeSession: () => Promise<void>;
-
-  /**
-   * End session and return summary statistics
-   * Calculates final accuracy, time spent, rating breakdown
-   * Updates deck progress in deckStore
-   *
-   * @returns Session summary with performance metrics
-   * @throws Error if no active session
-   */
   endSession: () => Promise<SessionSummary>;
-
-  /**
-   * Clear current session without saving (discard progress)
-   * Used when user exits session early
-   */
   resetSession: () => void;
-
-  /**
-   * Clear current error message
-   */
   clearError: () => void;
-
-  /**
-   * Clear session summary from state
-   * Called when user navigates away from summary page
-   */
   clearSessionSummary: () => void;
 }
 
 /**
  * Review store hook for components
- *
- * Usage:
- * ```tsx
- * const { activeSession, currentCard, flipCard, rateCard } = useReviewStore();
- *
- * // Start session
- * await startSession('deck-a1-basics', 20);
- *
- * // Flip card
- * flipCard();
- *
- * // Rate card
- * await rateCard('good');
- *
- * // End session
- * const summary = await endSession();
- * ```
  */
-export const useReviewStore = create<ReviewState>((set, get) => ({
-  // ========================================
-  // INITIAL STATE
-  // ========================================
-
-  activeSession: null,
-  currentCardIndex: 0,
-  isCardFlipped: false,
-  sessionStats: { ...DEFAULT_SESSION_STATS },
-  isLoading: false,
-  error: null,
-  sessionSummary: null,
-
-  // ========================================
-  // COMPUTED GETTERS (implemented as computed properties)
-  // Note: Using Object.defineProperty pattern for Zustand compatibility
-  // ========================================
-
-  // These are initialized as null/defaults and computed on access via defineProperty below
-  currentCard: null,
-  progress: { current: 0, total: 0 },
-  hasNextCard: false,
-  canRate: false,
-
-  // ========================================
-  // ACTIONS - SESSION LIFECYCLE
-  // ========================================
-
-  /**
-   * Start a new review session
-   */
-  startSession: async (deckId: string, maxCards?: number) => {
-    set({ isLoading: true, error: null });
-
-    try {
-      // Check authentication
-      const { user } = useAuthStore.getState();
-      if (!user) {
-        throw new Error('You must be logged in to start a review session');
-      }
-
-      // Build queue config
-      const config: Partial<QueueConfig> = maxCards
-        ? { ...DEFAULT_QUEUE_CONFIG, maxNewCards: maxCards }
-        : DEFAULT_QUEUE_CONFIG;
-
-      // Call API to start session
-      const session = await mockReviewAPI.startReviewSession(deckId, undefined, config);
-
-      // Check if there are cards to review
-      if (session.cards.length === 0) {
-        throw new Error('No cards due for review. Come back later!');
-      }
-
-      // Initialize session state with computed values
-      const currentCard = session.cards[0] || null;
-      set({
-        activeSession: session,
-        currentCardIndex: 0,
-        isCardFlipped: false,
-        sessionStats: session.stats,
-        isLoading: false,
-        error: null,
-        // Computed values
-        currentCard,
-        progress: { current: 0, total: session.cards.length },
-        hasNextCard: session.cards.length > 1,
-        canRate: false, // Not flipped yet
-      });
-
-      // Save to sessionStorage for crash recovery
-      sessionStorage.setItem('learn-greek-easy:active-session', JSON.stringify(session));
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : 'Failed to start review session. Please try again.';
-
-      set({
-        isLoading: false,
-        error: errorMessage,
-        activeSession: null,
-      });
-
-      throw error;
-    }
-  },
-
-  /**
-   * Flip current card to show answer
-   */
-  flipCard: () => {
-    const { activeSession, isCardFlipped } = get();
-
-    if (!activeSession) {
-      console.warn('No active session. Cannot flip card.');
-      return;
-    }
-
-    if (isCardFlipped) {
-      console.warn('Card already flipped.');
-      return;
-    }
-
-    set({ isCardFlipped: true, canRate: true });
-  },
-
-  /**
-   * Rate current card and advance to next
-   */
-  rateCard: async (rating: ReviewRating) => {
-    const { activeSession, currentCardIndex, isCardFlipped } = get();
-
-    // Validation
-    if (!activeSession) {
-      throw new Error('No active session');
-    }
-
-    if (!isCardFlipped) {
-      throw new Error('You must flip the card before rating');
-    }
-
-    const currentCard = activeSession.cards[currentCardIndex];
-    if (!currentCard) {
-      throw new Error('No current card');
-    }
-
-    set({ isLoading: true, error: null });
-
-    try {
-      // Calculate time spent on this card
-      const timeSpent = Math.floor(
-        (Date.now() - new Date(activeSession.startTime).getTime()) / 1000
-      );
-
-      // Submit rating to API (applies SM-2 algorithm)
-      await mockReviewAPI.submitCardRating(
-        activeSession.sessionId,
-        currentCard.id,
-        rating,
-        timeSpent
-      );
-
-      // Update session stats
-      const updatedStats = calculateUpdatedStats(get().sessionStats, rating, timeSpent);
-
-      // Advance to next card
-      const nextIndex = currentCardIndex + 1;
-      const isLastCard = nextIndex >= activeSession.cards.length;
-      const nextCard = isLastCard ? null : activeSession.cards[nextIndex];
-
-      set({
-        currentCardIndex: nextIndex,
-        isCardFlipped: false,
-        sessionStats: updatedStats,
-        isLoading: false,
-        // Computed values
-        currentCard: nextCard,
-        progress: { current: nextIndex, total: activeSession.cards.length },
-        hasNextCard: nextIndex < activeSession.cards.length - 1,
-        canRate: false, // Card not flipped yet
-      });
-
-      // Auto-end session if last card
-      if (isLastCard) {
-        // Don't await - let endSession handle async
-        setTimeout(() => {
-          get().endSession();
-        }, 500); // Small delay for UI transition
-      }
-
-      // Update sessionStorage recovery data
-      sessionStorage.setItem(
-        'learn-greek-easy:active-session',
-        JSON.stringify({
-          ...activeSession,
-          currentIndex: nextIndex,
-          stats: updatedStats,
-        })
-      );
-    } catch (error) {
-      // Check if this is an expected "session cleared" error
-      // This can happen during test cleanup or when component unmounts during async operation
-      if (error instanceof Error && error.message === 'No active review session found') {
-        console.debug('rateCard: Session cleared during async operation, ignoring');
-        set({ isLoading: false });
-        return; // Don't re-throw - this is expected behavior during cleanup
-      }
-
-      const errorMessage =
-        error instanceof Error ? error.message : 'Failed to rate card. Please try again.';
-
-      set({
-        isLoading: false,
-        error: errorMessage,
-      });
-
-      throw error;
-    }
-  },
-
-  /**
-   * Pause current session
-   */
-  pauseSession: () => {
-    const { activeSession, currentCardIndex, sessionStats } = get();
-
-    if (!activeSession) {
-      console.warn('No active session to pause');
-      return;
-    }
-
-    // Update session status
-    const pausedSession: ReviewSession = {
-      ...activeSession,
-      status: 'paused',
-      pausedAt: new Date(),
-      currentIndex: currentCardIndex,
-      stats: sessionStats,
-    };
-
-    set({
-      activeSession: pausedSession,
-    });
-
-    // Persist to sessionStorage
-    sessionStorage.setItem('learn-greek-easy:active-session', JSON.stringify(pausedSession));
-  },
-
-  /**
-   * Resume paused session
-   */
-  resumeSession: async () => {
-    set({ isLoading: true, error: null });
-
-    try {
-      // Load from sessionStorage
-      const savedData = sessionStorage.getItem('learn-greek-easy:active-session');
-      if (!savedData) {
-        throw new Error('No paused session found');
-      }
-
-      const session: ReviewSession = JSON.parse(savedData);
-
-      // Validate session
-      if (session.status !== 'paused') {
-        throw new Error('Session is not paused');
-      }
-
-      // Resume session via API (updates timestamps)
-      await mockReviewAPI.resumeSession(session.sessionId);
-
-      // Compute values
-      const currentIndex = session.currentIndex;
-      const currentCard = session.cards[currentIndex] || null;
-
-      // Restore state with computed values
-      set({
-        activeSession: {
-          ...session,
-          status: 'active',
-          pausedAt: null,
-        },
-        currentCardIndex: currentIndex,
-        isCardFlipped: false,
-        sessionStats: session.stats,
-        isLoading: false,
-        error: null,
-        // Computed values
-        currentCard,
-        progress: { current: currentIndex, total: session.cards.length },
-        hasNextCard: currentIndex < session.cards.length - 1,
-        canRate: false,
-      });
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : 'Failed to resume session. Please try again.';
-
-      set({
-        isLoading: false,
-        error: errorMessage,
-      });
-
-      throw error;
-    }
-  },
-
-  /**
-   * End session and return summary
-   */
-  endSession: async (): Promise<SessionSummary> => {
-    const { activeSession } = get();
-
-    if (!activeSession) {
-      throw new Error('No active session to end');
-    }
-
-    set({ isLoading: true, error: null });
-
-    try {
-      // Call API to end session (calculates summary)
-      const summary = await mockReviewAPI.endReviewSession(activeSession.sessionId);
-
-      // Update deck progress in deckStore
-      const { updateProgress } = useDeckStore.getState();
-      updateProgress(activeSession.deckId, {
-        lastStudied: new Date(),
-      });
-
-      // Update analytics snapshot
-      const { user } = useAuthStore.getState();
-      if (user) {
-        const { updateSnapshot } = useAnalyticsStore.getState();
-        await updateSnapshot(user.id, summary);
-      }
-
-      // Clear session state and store summary
-      set({
-        sessionSummary: summary,
-        activeSession: null,
-        currentCardIndex: 0,
-        isCardFlipped: false,
-        sessionStats: { ...DEFAULT_SESSION_STATS },
-        isLoading: false,
-        error: null,
-        // Reset computed values
-        currentCard: null,
-        progress: { current: 0, total: 0 },
-        hasNextCard: false,
-        canRate: false,
-      });
-
-      // Clear sessionStorage recovery data
-      sessionStorage.removeItem('learn-greek-easy:active-session');
-
-      return summary;
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : 'Failed to end session. Please try again.';
-
-      set({
-        isLoading: false,
-        error: errorMessage,
-      });
-
-      throw error;
-    }
-  },
-
-  /**
-   * Reset session without saving (discard progress)
-   */
-  resetSession: () => {
-    set({
+export const useReviewStore = create<ReviewState>()(
+  devtools(
+    (set, get) => ({
+      // Initial state
       activeSession: null,
       currentCardIndex: 0,
       isCardFlipped: false,
       sessionStats: { ...DEFAULT_SESSION_STATS },
       isLoading: false,
       error: null,
-      // Reset computed values
+      sessionSummary: null,
+      cardStartTime: null,
+
+      // Computed properties
       currentCard: null,
       progress: { current: 0, total: 0 },
       hasNextCard: false,
       canRate: false,
-    });
 
-    // Clear sessionStorage
-    sessionStorage.removeItem('learn-greek-easy:active-session');
-  },
+      /**
+       * Start a new review session
+       */
+      startSession: async (deckId: string, maxCards?: number) => {
+        set({ isLoading: true, error: null });
 
-  /**
-   * Clear current error message
-   */
-  clearError: () => {
-    set({ error: null });
-  },
+        try {
+          // Check authentication
+          const { user } = useAuthStore.getState();
+          if (!user) {
+            throw new Error('You must be logged in to start a review session');
+          }
 
-  /**
-   * Clear session summary from state
-   */
-  clearSessionSummary: () => {
-    set({ sessionSummary: null });
-  },
-}));
+          // Build queue config
+          const config: Partial<QueueConfig> = maxCards
+            ? { ...DEFAULT_QUEUE_CONFIG, maxNewCards: maxCards, maxReviewCards: maxCards }
+            : DEFAULT_QUEUE_CONFIG;
+
+          // Fetch study queue from backend
+          const queue = await studyAPI.getQueue({
+            deck_id: deckId,
+            limit: config.maxNewCards || 20,
+          });
+
+          // Check if there are cards to review
+          if (queue.cards.length === 0) {
+            throw new Error('No cards due for review. Come back later!');
+          }
+
+          // Transform cards to frontend format
+          const cards = queue.cards.map((card) => transformStudyQueueCard(card, deckId));
+
+          // Create session
+          const session: ReviewSession = {
+            sessionId: generateSessionId(),
+            deckId,
+            userId: user.id,
+            cards,
+            status: 'active',
+            startTime: new Date(),
+            currentIndex: 0,
+            config: config as QueueConfig,
+            stats: {
+              ...DEFAULT_SESSION_STATS,
+              cardsRemaining: cards.length,
+            },
+          };
+
+          // Initialize state
+          const currentCard = cards[0] || null;
+          set({
+            activeSession: session,
+            currentCardIndex: 0,
+            isCardFlipped: false,
+            sessionStats: session.stats,
+            isLoading: false,
+            error: null,
+            cardStartTime: Date.now(),
+            currentCard,
+            progress: { current: 0, total: cards.length },
+            hasNextCard: cards.length > 1,
+            canRate: false,
+          });
+
+          // Save to sessionStorage for crash recovery
+          sessionStorage.setItem('learn-greek-easy:active-session', JSON.stringify(session));
+        } catch (error) {
+          const errorMessage =
+            error instanceof Error
+              ? error.message
+              : 'Failed to start review session. Please try again.';
+
+          set({
+            isLoading: false,
+            error: errorMessage,
+            activeSession: null,
+          });
+
+          throw error;
+        }
+      },
+
+      /**
+       * Flip current card to show answer
+       */
+      flipCard: () => {
+        const { activeSession, isCardFlipped } = get();
+
+        if (!activeSession) {
+          console.warn('No active session. Cannot flip card.');
+          return;
+        }
+
+        if (isCardFlipped) {
+          console.warn('Card already flipped.');
+          return;
+        }
+
+        set({ isCardFlipped: true, canRate: true });
+      },
+
+      /**
+       * Rate current card and advance to next
+       */
+      rateCard: async (rating: ReviewRating) => {
+        const { activeSession, currentCardIndex, isCardFlipped, cardStartTime } = get();
+
+        // Validation
+        if (!activeSession) {
+          throw new Error('No active session');
+        }
+
+        if (!isCardFlipped) {
+          throw new Error('You must flip the card before rating');
+        }
+
+        const currentCard = activeSession.cards[currentCardIndex];
+        if (!currentCard) {
+          throw new Error('No current card');
+        }
+
+        set({ isLoading: true, error: null });
+
+        try {
+          // Calculate time spent on this card
+          const timeSpent = cardStartTime
+            ? Math.min(Math.floor((Date.now() - cardStartTime) / 1000), 300)
+            : 10;
+
+          // Submit review to backend
+          await reviewAPI.submit({
+            card_id: currentCard.id,
+            quality: mapRatingToQuality(rating),
+            time_taken: timeSpent,
+          });
+
+          // Update session stats
+          const updatedStats = calculateUpdatedStats(get().sessionStats, rating, timeSpent);
+
+          // Advance to next card
+          const nextIndex = currentCardIndex + 1;
+          const isLastCard = nextIndex >= activeSession.cards.length;
+          const nextCard = isLastCard ? null : activeSession.cards[nextIndex];
+
+          set({
+            currentCardIndex: nextIndex,
+            isCardFlipped: false,
+            sessionStats: updatedStats,
+            isLoading: false,
+            cardStartTime: isLastCard ? null : Date.now(),
+            currentCard: nextCard,
+            progress: { current: nextIndex, total: activeSession.cards.length },
+            hasNextCard: nextIndex < activeSession.cards.length - 1,
+            canRate: false,
+          });
+
+          // Auto-end session if last card
+          if (isLastCard) {
+            setTimeout(() => {
+              get().endSession();
+            }, 500);
+          }
+
+          // Update sessionStorage recovery data
+          sessionStorage.setItem(
+            'learn-greek-easy:active-session',
+            JSON.stringify({
+              ...activeSession,
+              currentIndex: nextIndex,
+              stats: updatedStats,
+            })
+          );
+        } catch (error) {
+          // Check if this is an expected "session cleared" error
+          if (error instanceof Error && error.message === 'No active review session found') {
+            console.debug('rateCard: Session cleared during async operation, ignoring');
+            set({ isLoading: false });
+            return;
+          }
+
+          const errorMessage =
+            error instanceof Error ? error.message : 'Failed to rate card. Please try again.';
+
+          set({
+            isLoading: false,
+            error: errorMessage,
+          });
+
+          throw error;
+        }
+      },
+
+      /**
+       * Pause current session
+       */
+      pauseSession: () => {
+        const { activeSession, currentCardIndex, sessionStats } = get();
+
+        if (!activeSession) {
+          console.warn('No active session to pause');
+          return;
+        }
+
+        const pausedSession: ReviewSession = {
+          ...activeSession,
+          status: 'paused',
+          pausedAt: new Date(),
+          currentIndex: currentCardIndex,
+          stats: sessionStats,
+        };
+
+        set({ activeSession: pausedSession });
+
+        sessionStorage.setItem('learn-greek-easy:active-session', JSON.stringify(pausedSession));
+      },
+
+      /**
+       * Resume paused session
+       */
+      resumeSession: async () => {
+        set({ isLoading: true, error: null });
+
+        try {
+          const savedData = sessionStorage.getItem('learn-greek-easy:active-session');
+          if (!savedData) {
+            throw new Error('No paused session found');
+          }
+
+          const session: ReviewSession = JSON.parse(savedData);
+
+          if (session.status !== 'paused') {
+            throw new Error('Session is not paused');
+          }
+
+          const currentIndex = session.currentIndex;
+          const currentCard = session.cards[currentIndex] || null;
+
+          set({
+            activeSession: {
+              ...session,
+              status: 'active',
+              pausedAt: undefined,
+            },
+            currentCardIndex: currentIndex,
+            isCardFlipped: false,
+            sessionStats: session.stats,
+            isLoading: false,
+            error: null,
+            cardStartTime: Date.now(),
+            currentCard,
+            progress: { current: currentIndex, total: session.cards.length },
+            hasNextCard: currentIndex < session.cards.length - 1,
+            canRate: false,
+          });
+        } catch (error) {
+          const errorMessage =
+            error instanceof Error ? error.message : 'Failed to resume session. Please try again.';
+
+          set({
+            isLoading: false,
+            error: errorMessage,
+          });
+
+          throw error;
+        }
+      },
+
+      /**
+       * End session and return summary
+       */
+      endSession: async (): Promise<SessionSummary> => {
+        const { activeSession, sessionStats } = get();
+
+        if (!activeSession) {
+          throw new Error('No active session to end');
+        }
+
+        set({ isLoading: true, error: null });
+
+        try {
+          // Calculate session summary from local stats
+          const endTime = new Date();
+          const startTime = new Date(activeSession.startTime);
+          const durationMinutes = Math.max(
+            1,
+            Math.round((endTime.getTime() - startTime.getTime()) / 60000)
+          );
+
+          const summary: SessionSummary = {
+            sessionId: activeSession.sessionId,
+            deckId: activeSession.deckId,
+            userId: activeSession.userId,
+            startTime,
+            endTime,
+            duration: durationMinutes,
+            stats: {
+              cardsReviewed: sessionStats.cardsReviewed,
+              cardsRemaining: sessionStats.cardsRemaining,
+              accuracy: sessionStats.accuracy,
+              cardsCorrect: sessionStats.cardsCorrect,
+              cardsIncorrect: sessionStats.cardsIncorrect,
+              totalTime: sessionStats.totalTime,
+              averageTime: sessionStats.averageTime,
+              againCount: sessionStats.againCount,
+              hardCount: sessionStats.hardCount,
+              goodCount: sessionStats.goodCount,
+              easyCount: sessionStats.easyCount,
+            },
+            newCardsLearned: sessionStats.cardsCorrect,
+            cardsGraduated: Math.floor(sessionStats.easyCount * 0.5),
+            averageEaseFactor: 2.5,
+            xpEarned: sessionStats.cardsReviewed * 10 + sessionStats.cardsCorrect * 5,
+            streakMaintained: true,
+          };
+
+          // Update analytics snapshot
+          const { user } = useAuthStore.getState();
+          if (user) {
+            const { updateSnapshot } = useAnalyticsStore.getState();
+            await updateSnapshot(user.id, summary);
+          }
+
+          // Clear session state and store summary
+          set({
+            sessionSummary: summary,
+            activeSession: null,
+            currentCardIndex: 0,
+            isCardFlipped: false,
+            sessionStats: { ...DEFAULT_SESSION_STATS },
+            isLoading: false,
+            error: null,
+            cardStartTime: null,
+            currentCard: null,
+            progress: { current: 0, total: 0 },
+            hasNextCard: false,
+            canRate: false,
+          });
+
+          sessionStorage.removeItem('learn-greek-easy:active-session');
+
+          return summary;
+        } catch (error) {
+          const errorMessage =
+            error instanceof Error ? error.message : 'Failed to end session. Please try again.';
+
+          set({
+            isLoading: false,
+            error: errorMessage,
+          });
+
+          throw error;
+        }
+      },
+
+      /**
+       * Reset session without saving (discard progress)
+       */
+      resetSession: () => {
+        set({
+          activeSession: null,
+          currentCardIndex: 0,
+          isCardFlipped: false,
+          sessionStats: { ...DEFAULT_SESSION_STATS },
+          isLoading: false,
+          error: null,
+          cardStartTime: null,
+          currentCard: null,
+          progress: { current: 0, total: 0 },
+          hasNextCard: false,
+          canRate: false,
+        });
+
+        sessionStorage.removeItem('learn-greek-easy:active-session');
+      },
+
+      /**
+       * Clear current error message
+       */
+      clearError: () => {
+        set({ error: null });
+      },
+
+      /**
+       * Clear session summary from state
+       */
+      clearSessionSummary: () => {
+        set({ sessionSummary: null });
+      },
+    }),
+    { name: 'reviewStore' }
+  )
+);
 
 /**
  * Helper: Calculate updated stats after rating a card
@@ -602,7 +572,6 @@ function calculateUpdatedStats(
   const cardsReviewed = currentStats.cardsReviewed + 1;
   const totalTime = currentStats.totalTime + timeSpent;
 
-  // Update rating counts
   const ratingCounts = {
     againCount: currentStats.againCount + (rating === 'again' ? 1 : 0),
     hardCount: currentStats.hardCount + (rating === 'hard' ? 1 : 0),
@@ -610,14 +579,9 @@ function calculateUpdatedStats(
     easyCount: currentStats.easyCount + (rating === 'easy' ? 1 : 0),
   };
 
-  // Update correct/incorrect counts
   const cardsCorrect = currentStats.cardsCorrect + (rating === 'good' || rating === 'easy' ? 1 : 0);
   const cardsIncorrect = currentStats.cardsIncorrect + (rating === 'again' ? 1 : 0);
-
-  // Calculate accuracy
   const accuracy = cardsReviewed > 0 ? Math.round((cardsCorrect / cardsReviewed) * 100) : 0;
-
-  // Calculate average time
   const averageTime = cardsReviewed > 0 ? Math.round(totalTime / cardsReviewed) : 0;
 
   return {
@@ -634,7 +598,6 @@ function calculateUpdatedStats(
 
 /**
  * Attempt to recover active session from sessionStorage
- * Call this on app mount (in App.tsx or ReviewSessionPage)
  */
 export function recoverActiveSession(): boolean {
   try {
@@ -643,20 +606,17 @@ export function recoverActiveSession(): boolean {
 
     const session: ReviewSession = JSON.parse(savedData);
 
-    // Only recover if session was active (not paused or completed)
     if (session.status !== 'active') return false;
 
-    // Compute values
     const currentIndex = session.currentIndex;
     const currentCard = session.cards[currentIndex] || null;
 
-    // Restore state with computed values
     useReviewStore.setState({
       activeSession: session,
       currentCardIndex: currentIndex,
       isCardFlipped: false,
       sessionStats: session.stats,
-      // Computed values
+      cardStartTime: Date.now(),
       currentCard,
       progress: { current: currentIndex, total: session.cards.length },
       hasNextCard: currentIndex < session.cards.length - 1,
