@@ -97,5 +97,6 @@ export default defineConfig(({ mode }) => {
       '@lib': path.resolve(__dirname, './src/lib'),
       '@types': path.resolve(__dirname, './src/types'),
     },
-  };
+  },
+};
 });
