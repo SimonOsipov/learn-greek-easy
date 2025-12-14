@@ -91,10 +91,15 @@ export async function loginViaUI(
 
 /**
  * Login via localStorage (faster - bypass UI)
- * Uses a two-step approach to avoid race conditions:
- * 1. Navigate to login page first (establishes origin context)
- * 2. Use page.evaluate() to set auth state immediately (no race)
- * 3. Then navigate to target page with auth already present
+ * Uses addInitScript to ensure window.playwright persists across navigations:
+ * 1. Register addInitScript to set window.playwright = true BEFORE any page loads
+ * 2. Navigate to login page to establish origin context
+ * 3. Set localStorage auth data
+ * 4. Navigate to target page - addInitScript ensures test mode is active
+ *
+ * CRITICAL: addInitScript runs before EVERY page load, unlike evaluate() which
+ * only runs once in current context. This prevents window.playwright from being
+ * lost when navigating to the target page.
  */
 export async function loginViaLocalStorage(page: Page, targetPath: string = '/'): Promise<void> {
   // Enable diagnostics for debugging
@@ -130,20 +135,22 @@ export async function loginViaLocalStorage(page: Page, targetPath: string = '/')
     version: 0,
   };
 
-  // Step 1: Navigate to login page first
-  // This establishes the page context without triggering auth redirects
+  // Step 1: Register addInitScript to set window.playwright = true BEFORE any page loads
+  // This runs before every navigation, ensuring test mode persists
+  await page.addInitScript(() => {
+    console.log('[TEST] addInitScript: Setting window.playwright = true');
+    window.playwright = true;
+  });
+
+  // Step 2: Navigate to login page to establish origin context for localStorage
   await page.goto('/login');
   await page.waitForLoadState('domcontentloaded');
 
-  // Step 2: Use page.evaluate() to set auth state IMMEDIATELY
-  // This executes synchronously in the already-loaded page context (NO race condition)
+  // Step 3: Set auth data in localStorage (now that we have origin context)
   await page.evaluate((data) => {
     // Clear any existing state
     localStorage.clear();
     sessionStorage.clear();
-
-    console.log('[TEST] Setting window.playwright = true');
-    window.playwright = true;
 
     console.log('[TEST] Setting auth-storage');
     localStorage.setItem('auth-storage', JSON.stringify(data));
@@ -152,7 +159,7 @@ export async function loginViaLocalStorage(page: Page, targetPath: string = '/')
     console.log('[TEST] Auth initialization complete, window.playwright =', window.playwright);
   }, authData);
 
-  // Step 3: Now navigate to target page - auth state is already present
+  // Step 4: Navigate to target page - addInitScript ensures window.playwright is set
   await page.goto(targetPath);
   await page.waitForLoadState('domcontentloaded');
 
