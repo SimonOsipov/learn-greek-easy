@@ -111,6 +111,9 @@ export const Dashboard: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-8">
+      {/* Page Title - visible for accessibility and E2E tests */}
+      <h1 className="text-2xl font-semibold text-text-primary md:text-3xl">Dashboard</h1>
+
       {/* Welcome Section */}
       <WelcomeSection
         userName={user.name}
