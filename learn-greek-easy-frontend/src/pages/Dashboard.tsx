@@ -58,7 +58,7 @@ export const Dashboard: React.FC = () => {
   const handleStartReview = () => {
     // Navigate to first deck with due cards, or decks page
     const deckWithDue = decks.find(
-      (d) => d.progress.cardsReviewed > 0 || d.status === 'in-progress'
+      (d) => (d.progress?.cardsReview ?? 0) > 0 || d.status === 'in-progress'
     );
     if (deckWithDue) {
       navigate(`/review/${deckWithDue.id}`);
@@ -139,7 +139,7 @@ export const Dashboard: React.FC = () => {
 
   // Get active decks (in-progress or with progress)
   const activeDecks = decks
-    .filter((deck) => deck.status === 'in-progress' || deck.progress.cardsReviewed > 0)
+    .filter((deck) => deck.status === 'in-progress' || (deck.progress?.cardsReview ?? 0) > 0)
     .slice(0, 2);
 
   // Loading state
@@ -262,16 +262,19 @@ export const Dashboard: React.FC = () => {
                   status: deck.status,
                   level: deck.level,
                   progress: {
-                    current: deck.progress.cardsLearned,
-                    total: deck.totalCards,
-                    percentage: deck.progress.masteryPercentage,
+                    current: deck.progress?.cardsMastered ?? 0,
+                    total: deck.cardCount,
+                    percentage:
+                      deck.progress && deck.progress.cardsTotal > 0
+                        ? Math.round((deck.progress.cardsMastered / deck.progress.cardsTotal) * 100)
+                        : 0,
                   },
                   stats: {
-                    due: deck.totalCards - deck.progress.cardsLearned,
-                    mastered: deck.progress.cardsLearned,
-                    learning: deck.progress.cardsReviewed - deck.progress.cardsLearned,
+                    due: deck.progress?.dueToday ?? 0,
+                    mastered: deck.progress?.cardsMastered ?? 0,
+                    learning: deck.progress?.cardsLearning ?? 0,
                   },
-                  lastStudied: deck.progress.lastStudied,
+                  lastStudied: deck.progress?.lastStudied,
                 }}
                 onContinue={() => handleContinueDeck(deck.id)}
               />
