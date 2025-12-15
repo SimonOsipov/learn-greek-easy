@@ -29,6 +29,9 @@ export interface DeckResponse {
   description: string | null;
   level: DeckLevel;
   is_active: boolean;
+  card_count: number;
+  estimated_time_minutes?: number;
+  tags?: string[];
   created_at: string;
   updated_at: string;
 }
@@ -87,7 +90,7 @@ export const deckAPI = {
   /**
    * List all active decks with pagination and optional level filtering
    */
-  list: async (params: ListDecksParams = {}): Promise<DeckListResponse> => {
+  getList: async (params: ListDecksParams = {}): Promise<DeckListResponse> => {
     const queryString = buildQueryString({
       page: params.page || 1,
       page_size: params.page_size || 20,
