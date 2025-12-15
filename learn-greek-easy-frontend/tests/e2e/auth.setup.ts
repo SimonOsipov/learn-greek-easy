@@ -34,6 +34,9 @@ async function authenticateAndSave(
   await page.getByTestId('email-input').fill(user.email);
   await page.getByTestId('password-input').fill(user.password);
 
+  // Check "Remember Me" to persist auth state in localStorage
+  await page.locator('#remember').check();
+
   // Click submit and wait for navigation
   await page.getByTestId('login-submit').click();
 
