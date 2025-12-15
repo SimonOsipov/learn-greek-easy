@@ -44,45 +44,45 @@ const transformDeckResponse = (deck: DeckResponse, progressData?: DeckProgressSu
     }
   }
 
-  // Build progress object
-  const progress: DeckProgress = progressData
+  // Get total cards from progress data (more reliable) or deck response
+  const totalCards = progressData?.total_cards ?? deck.card_count ?? 0;
+
+  // Build progress object matching DeckProgress interface
+  const progress: DeckProgress | undefined = progressData
     ? {
-        cardsLearned: progressData.cards_mastered,
-        cardsReviewed: progressData.cards_studied,
-        masteryPercentage: progressData.mastery_percentage,
+        deckId: deck.id,
+        status,
+        cardsTotal: progressData.total_cards,
+        cardsNew: progressData.total_cards - progressData.cards_studied,
+        cardsLearning: progressData.cards_studied - progressData.cards_mastered,
+        cardsReview: progressData.cards_due,
+        cardsMastered: progressData.cards_mastered,
+        dueToday: progressData.cards_due,
+        streak: 0, // Not available at deck level
         lastStudied: progressData.last_studied_at
           ? new Date(progressData.last_studied_at)
           : undefined,
-        timeSpentMinutes: progressData.estimated_review_time_minutes,
-        streak: 0, // Not available at deck level
-        averageAccuracy: progressData.mastery_percentage,
+        totalTimeSpent: progressData.estimated_review_time_minutes ?? 0,
+        accuracy: progressData.mastery_percentage ?? 0,
       }
-    : {
-        cardsLearned: 0,
-        cardsReviewed: 0,
-        masteryPercentage: 0,
-        lastStudied: undefined,
-        timeSpentMinutes: 0,
-        streak: 0,
-        averageAccuracy: 0,
-      };
+    : undefined;
 
   return {
     id: deck.id,
     title: deck.name,
+    titleGreek: deck.name, // Use name as Greek title (backend stores Greek names)
     description: deck.description || '',
     level: deck.level.toUpperCase() as 'A1' | 'A2' | 'B1' | 'B2',
     category: 'vocabulary', // Default category - backend doesn't have categories
-    totalCards: deck.card_count,
-    estimatedTime: deck.estimated_time_minutes,
-    difficulty: mapLevelToDifficulty(deck.level),
+    cardCount: totalCards,
+    estimatedTime: deck.estimated_time_minutes ?? 10,
     isPremium: false, // Backend doesn't have premium concept yet
     tags: deck.tags || [],
-    imageUrl: `/images/decks/${deck.level.toLowerCase()}.jpg`,
-    status,
-    progress,
+    thumbnail: `/images/decks/${deck.level.toLowerCase()}.jpg`,
+    createdBy: 'Learn Greek Easy', // Default author
     createdAt: new Date(deck.created_at),
     updatedAt: new Date(deck.updated_at),
+    progress,
   };
 };
 
@@ -113,16 +113,6 @@ const transformDeckDetailResponse = (
   }
 
   return baseDeck;
-};
-
-/**
- * Map CEFR level to difficulty
- */
-const mapLevelToDifficulty = (level: string): 'beginner' | 'intermediate' | 'advanced' => {
-  const upperLevel = level.toUpperCase();
-  if (upperLevel === 'A1' || upperLevel === 'A2') return 'beginner';
-  if (upperLevel === 'B1' || upperLevel === 'B2') return 'intermediate';
-  return 'advanced';
 };
 
 /**
