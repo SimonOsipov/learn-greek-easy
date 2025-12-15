@@ -129,62 +129,41 @@ test.describe('Authentication Flow', () => {
     await expect(page.getByRole('heading').first()).toBeVisible();
   });
 
-  test('E2E-01.1: User can log in with valid credentials (via UI)', async ({ page }) => {
-    const maxRetries = 3;
-    let lastError: Error | null = null;
+  test('E2E-01.1: User can log in with valid credentials (via UI)', async ({ browser }) => {
+    // Create a fresh browser context to avoid addInitScript pollution from other tests
+    // This ensures no auth state is injected before React loads
+    const context = await browser.newContext();
+    const page = await context.newPage();
 
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      try {
-        // Navigate to login page
-        await page.goto('/login');
+    try {
+      // Clear any stored state (defense in depth)
+      await page.goto('/');
+      await context.clearCookies();
+      await page.evaluate(() => localStorage.clear());
 
-        // Verify login form exists using test ID
-        await expect(page.getByTestId('login-card')).toBeVisible();
+      // Navigate to login page
+      await page.goto('/login');
 
-        // Fill login form with seed user credentials
-        await page.getByTestId('email-input').fill(SEED_USERS.LEARNER.email);
-        await page.getByTestId('password-input').fill(SEED_USERS.LEARNER.password);
+      // Verify login form exists using test ID
+      await expect(page.getByTestId('login-card')).toBeVisible();
 
-        // Submit form using test ID
-        await page.getByTestId('login-submit').click();
+      // Fill login form with seed user credentials
+      await page.getByTestId('email-input').fill(SEED_USERS.LEARNER.email);
+      await page.getByTestId('password-input').fill(SEED_USERS.LEARNER.password);
 
-        // Wait for redirect to dashboard (with increased timeout for real API)
-        await page.waitForURL('/dashboard', { timeout: 15000 });
+      // Submit form using test ID
+      await page.getByTestId('login-submit').click();
 
-        // Verify we're on dashboard
-        const currentUrl = page.url();
-        expect(currentUrl).toContain('/dashboard');
+      // Wait for redirect to dashboard (with increased timeout for real API)
+      await page.waitForURL('/dashboard', { timeout: 15000 });
 
-        // Success - exit retry loop
-        return;
-      } catch (error) {
-        lastError = error as Error;
-        const errorMessage = lastError.message || String(lastError);
-
-        // Check if error is retryable (network issues)
-        const isRetryable =
-          errorMessage.includes('ECONNRESET') ||
-          errorMessage.includes('ECONNREFUSED') ||
-          errorMessage.includes('socket hang up') ||
-          errorMessage.includes('network') ||
-          errorMessage.includes('Timeout') ||
-          errorMessage.includes('timeout') ||
-          errorMessage.includes('waiting for navigation');
-
-        if (!isRetryable || attempt === maxRetries) {
-          console.error(`[TEST] UI login failed after ${attempt} attempt(s):`, errorMessage);
-          throw lastError;
-        }
-
-        console.log(`[TEST] UI login attempt ${attempt}/${maxRetries} failed, retrying in 2s...`);
-        await page.waitForTimeout(2000);
-
-        // Clear state before retry
-        await page.evaluate(() => localStorage.clear());
-      }
+      // Verify we're on dashboard
+      const currentUrl = page.url();
+      expect(currentUrl).toContain('/dashboard');
+    } finally {
+      // Always close the context to release resources
+      await context.close();
     }
-
-    throw lastError;
   });
 
   test('E2E-01.2: Login fails with invalid credentials', async ({ page }) => {
@@ -215,50 +194,54 @@ test.describe('Authentication Flow', () => {
   test('E2E-01.3: User can log out successfully', async ({ page }) => {
     // First, log in via localStorage (faster)
     await loginViaLocalStorage(page);
+
+    // Navigate to dashboard and wait for full page load
     await page.goto('/dashboard');
+
+    // Wait for network to be idle (all API calls complete)
+    await page.waitForLoadState('networkidle');
+
+    // Wait for Dashboard content to be visible (indicates React has rendered)
+    await page.waitForSelector('h2:has-text("Your Progress")', { timeout: 10000 });
+
+    // Additional wait for any pending re-renders to complete
     await page.waitForTimeout(500);
 
-    // Look for profile/account button or menu
-    const profileButton = page.getByRole('button', { name: /profile|account|user|menu/i }).first();
-    const isProfileVisible = await profileButton.isVisible().catch(() => false);
+    // Use exact aria-label selector for user menu button (from Header.tsx)
+    const userMenuButton = page.getByRole('button', { name: 'User menu' });
 
-    if (isProfileVisible) {
-      // Open profile dropdown
-      await profileButton.click();
-      await page.waitForTimeout(300);
+    // Wait for button to be visible and stable
+    await userMenuButton.waitFor({ state: 'visible', timeout: 5000 });
 
-      // Click logout using test ID
-      const logoutButton = page.getByTestId('logout-button');
-      const isLogoutVisible = await logoutButton.isVisible().catch(() => false);
+    // Click to open user menu dropdown
+    await userMenuButton.click();
 
-      if (isLogoutVisible) {
-        await logoutButton.click();
+    // Wait for dropdown to appear
+    await page.waitForTimeout(300);
 
-        // Wait for dialog to appear using Playwright's waitFor
-        const dialog = page.getByTestId('logout-dialog');
-        await dialog.waitFor({ state: 'visible', timeout: 5000 });
+    // Click logout button
+    const logoutButton = page.getByTestId('logout-button');
+    await logoutButton.waitFor({ state: 'visible', timeout: 5000 });
+    await logoutButton.click();
 
-        // Click confirmation button using test ID
-        const confirmButton = page.getByTestId('logout-confirm-button');
-        await confirmButton.waitFor({ state: 'visible', timeout: 2000 });
-        await confirmButton.click();
+    // Wait for confirmation dialog
+    const dialog = page.getByTestId('logout-dialog');
+    await dialog.waitFor({ state: 'visible', timeout: 5000 });
 
-        // Wait for dialog to close
-        await dialog.waitFor({ state: 'hidden', timeout: 2000 });
-        await page.waitForTimeout(500);
+    // Click confirm button
+    const confirmButton = page.getByTestId('logout-confirm-button');
+    await confirmButton.waitFor({ state: 'visible', timeout: 2000 });
+    await confirmButton.click();
 
-        // Should redirect to login or home page
-        const currentUrl = page.url();
-        expect(currentUrl).toMatch(/\/(login|)$/);
+    // Wait for logout to complete and redirect
+    await page.waitForURL(/\/(login)?$/, { timeout: 10000 });
 
-        // Try to access protected route again to verify logout
-        await page.goto('/dashboard');
+    // Verify logout by trying to access protected route
+    await page.goto('/dashboard');
 
-        // Should redirect to login page (proof of logout) - app redirects unauthenticated users to /login
-        await page.waitForURL('/login', { timeout: 5000 });
-        const finalUrl = page.url();
-        expect(finalUrl).toMatch(/\/(login|)$/); // Can be / or /login depending on routing
-      }
-    }
+    // Should redirect to login page (proof of logout)
+    await page.waitForURL('/login', { timeout: 5000 });
+    const finalUrl = page.url();
+    expect(finalUrl).toContain('/login');
   });
 });
