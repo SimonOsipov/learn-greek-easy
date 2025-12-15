@@ -478,6 +478,12 @@ jobs:
           fi
           echo "Database seeded successfully!"
 
+      - name: Run Playwright Setup
+        working-directory: learn-greek-easy-frontend
+        env:
+          VITE_API_URL: http://localhost:8000
+        run: npx playwright test --project=setup
+
       - name: Run E2E tests
         working-directory: learn-greek-easy-frontend
         env:
