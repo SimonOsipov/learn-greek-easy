@@ -46,6 +46,35 @@ async function retryRequest<T>(
   throw lastError;
 }
 
+/**
+ * Verify auth state is correctly set in localStorage
+ * Returns true if authenticated, false if auth was cleared by Zustand
+ */
+async function verifyAuthStateInLocalStorage(page: Page): Promise<boolean> {
+  return await page.evaluate(() => {
+    const stored = localStorage.getItem('auth-storage');
+    if (!stored) return false;
+    try {
+      const parsed = JSON.parse(stored);
+      return parsed.state?.isAuthenticated === true && parsed.state?.token !== null;
+    } catch {
+      return false;
+    }
+  });
+}
+
+/**
+ * Re-inject auth data directly into localStorage via page.evaluate
+ * Used when addInitScript injection was overwritten by Zustand persist
+ */
+async function reinjectAuthState(page: Page, authData: object): Promise<void> {
+  await page.evaluate((data) => {
+    localStorage.setItem('auth-storage', JSON.stringify(data));
+    sessionStorage.setItem('auth-token', (data as any).state.token);
+    console.log('[TEST] Auth data re-injected via page.evaluate (Zustand overwrote)');
+  }, authData);
+}
+
 export interface TestUser {
   email: string;
   password: string;
@@ -198,7 +227,35 @@ export async function loginViaAPI(
     await page.goto(targetPath);
     await page.waitForLoadState('domcontentloaded');
 
-    // 6. Wait for authenticated content to appear
+    // 6. CRITICAL: Verify auth state wasn't overwritten by Zustand's persist middleware
+    // This is a Chromium-specific race condition where Zustand can initialize
+    // before addInitScript completes, causing it to read empty state and overwrite our auth
+    const authStateValid = await verifyAuthStateInLocalStorage(page);
+
+    if (!authStateValid) {
+      console.log('[TEST] Auth state was overwritten by Zustand - re-injecting and reloading');
+
+      // Re-inject auth state directly via page.evaluate
+      await reinjectAuthState(page, authData);
+
+      // Reload the page to pick up the corrected auth state
+      await page.reload();
+      await page.waitForLoadState('domcontentloaded');
+
+      // Give React a moment to hydrate with correct state
+      await page.waitForTimeout(100);
+
+      // Verify again after reload
+      const authStateValidAfterReload = await verifyAuthStateInLocalStorage(page);
+      if (!authStateValidAfterReload) {
+        await logAuthState(page);
+        throw new Error('Auth state still invalid after re-injection - this indicates a deeper issue');
+      }
+
+      console.log('[TEST] Auth state successfully re-injected and verified');
+    }
+
+    // 7. Wait for authenticated content to appear
     try {
       await page.waitForSelector(
         '[data-testid="dashboard"], [data-testid="user-menu"], h1:has-text("Dashboard"), h1:has-text("Welcome"), nav[aria-label="Main navigation"]',
@@ -216,7 +273,7 @@ export async function loginViaAPI(
       throw new Error(`Authentication failed - page did not show authenticated content. URL: ${currentUrl}`);
     }
 
-    // Log final auth state for debugging
+    // 8. Log final auth state for debugging
     await logAuthState(page);
   } catch (error) {
     console.error('[TEST] API login failed:', error);
