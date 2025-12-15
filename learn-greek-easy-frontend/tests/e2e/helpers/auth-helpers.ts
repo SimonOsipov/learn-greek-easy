@@ -62,6 +62,17 @@ function getApiBaseUrl(): string {
  * Login via real backend API and inject tokens
  * This is the preferred method for E2E tests with a real backend
  *
+ * CRITICAL: Uses addInitScript to inject localStorage BEFORE React loads.
+ * This prevents Zustand's persist middleware from overwriting auth state
+ * during hydration.
+ *
+ * Flow:
+ * 1. Get tokens via API (before any navigation)
+ * 2. Register addInitScript to set localStorage on page load
+ * 3. Navigate to target path
+ * 4. localStorage is set BEFORE React/Zustand initializes
+ * 5. Zustand rehydrates from existing localStorage correctly
+ *
  * @param page - Playwright page object
  * @param user - User credentials (defaults to SEED_USERS.LEARNER)
  * @param targetPath - Path to navigate to after login (defaults to '/dashboard')
@@ -76,12 +87,8 @@ export async function loginViaAPI(
   // Enable diagnostics for debugging
   await enableTestDiagnostics(page);
 
-  // First navigate to establish origin context
-  await page.goto('/login');
-  await page.waitForLoadState('domcontentloaded');
-
   try {
-    // Call real backend API to get tokens
+    // 1. Get tokens via API FIRST (before any navigation)
     const loginResponse = await page.request.post(`${apiBaseUrl}/api/v1/auth/login`, {
       data: {
         email: user.email,
@@ -99,7 +106,7 @@ export async function loginViaAPI(
 
     const tokenData = await loginResponse.json();
 
-    // Fetch user profile
+    // 2. Fetch user profile
     const profileResponse = await page.request.get(`${apiBaseUrl}/api/v1/auth/me`, {
       headers: {
         Authorization: `Bearer ${tokenData.access_token}`,
@@ -111,57 +118,60 @@ export async function loginViaAPI(
     }
 
     const profileData = await profileResponse.json();
+    // Handle wrapped response (data field) or direct response
+    const userData = profileData.data || profileData;
 
-    // Build auth data matching Zustand store structure
+    // 3. Build auth data matching Zustand store structure
     const authData = {
       state: {
         user: {
-          id: profileData.id,
-          email: profileData.email,
-          name: profileData.full_name || profileData.email.split('@')[0],
-          role: profileData.is_superuser ? 'admin' : 'free',
-          preferences: {
-            language: 'en',
-            dailyGoal: profileData.settings?.daily_goal || 20,
-            notifications: profileData.settings?.email_notifications ?? true,
-            theme: 'light',
-          },
-          stats: {
-            streak: 0,
-            wordsLearned: 0,
-            totalXP: 0,
-            joinedDate: profileData.created_at,
-          },
-          createdAt: profileData.created_at,
-          updatedAt: profileData.updated_at,
+          id: userData.id,
+          email: userData.email,
+          displayName: userData.display_name || userData.displayName || userData.email.split('@')[0],
+          nativeLanguage: userData.native_language || userData.nativeLanguage || 'en',
+          createdAt: userData.created_at || userData.createdAt || new Date().toISOString(),
         },
         token: tokenData.access_token,
         refreshToken: tokenData.refresh_token,
         isAuthenticated: true,
         rememberMe: true,
+        isLoading: false,
+        error: null,
       },
       version: 0,
     };
 
-    // Inject auth data into localStorage
-    await page.evaluate((data) => {
-      localStorage.clear();
-      sessionStorage.clear();
-
+    // 4. Use addInitScript to set localStorage BEFORE React loads
+    // This runs on every navigation, ensuring auth state persists
+    await page.addInitScript((data) => {
+      // Set auth storage before any JavaScript runs
       localStorage.setItem('auth-storage', JSON.stringify(data));
+      // Also set session storage token as backup
       sessionStorage.setItem('auth-token', data.state.token);
-
-      console.log('[TEST] Auth data injected via API login');
+      console.log('[TEST] Auth data injected via addInitScript (before React)');
     }, authData);
 
-    // Navigate to target page
+    // 5. Navigate directly to target path - localStorage is set BEFORE React initializes
     await page.goto(targetPath);
     await page.waitForLoadState('domcontentloaded');
 
-    // Wait for app to be ready
-    await page.waitForSelector('[data-testid="app-container"], [data-testid="dashboard"], nav, main', {
-      timeout: 10000,
-    });
+    // 6. Wait for authenticated content to appear
+    try {
+      await page.waitForSelector(
+        '[data-testid="dashboard"], [data-testid="user-menu"], h1:has-text("Dashboard"), h1:has-text("Welcome"), nav[aria-label="Main navigation"]',
+        { timeout: 10000 }
+      );
+    } catch {
+      // Log diagnostic info if wait fails
+      console.log('[TEST] Auth verification failed, checking state...');
+      const currentUrl = page.url();
+      console.log(`[TEST] Current URL: ${currentUrl}`);
+
+      // Log auth state for debugging
+      await logAuthState(page);
+
+      throw new Error(`Authentication failed - page did not show authenticated content. URL: ${currentUrl}`);
+    }
 
     // Log final auth state for debugging
     await logAuthState(page);
