@@ -37,12 +37,28 @@ test.describe('Keyboard Navigation', () => {
     await loginViaLocalStorage(page);
     await page.goto('/dashboard');
 
+    // CRITICAL: Verify we're authenticated and not redirected to login
+    const currentUrl = page.url();
+    if (currentUrl.includes('/login')) {
+      throw new Error('Authentication failed - redirected to login page. Check backend connectivity.');
+    }
+
+    // Additional check: Wait for authenticated content
+    const heading = page.getByRole('heading').first();
+    await expect(heading).toBeVisible({ timeout: 5000 });
+
     // Wait for dashboard to fully load
     await page.waitForSelector('h1, h2, [data-testid]', { timeout: 10000 });
 
     // Count focusable interactive elements (excluding those intentionally removed from tab order)
     const focusableSelector = 'button:not([tabindex="-1"]):not([disabled]), a:not([tabindex="-1"]), input:not([tabindex="-1"]):not([disabled]), textarea:not([tabindex="-1"]):not([disabled]), select:not([tabindex="-1"]):not([disabled])';
     const focusableElements = await page.locator(focusableSelector).count();
+
+    // Log diagnostic info if count is unexpectedly low
+    if (focusableElements === 0) {
+      console.error('[TEST] No focusable elements found - possible auth failure');
+      console.error('[TEST] Current URL:', page.url());
+    }
 
     // Dashboard should have focusable elements (nav links, buttons, etc.)
     expect(focusableElements).toBeGreaterThan(0);

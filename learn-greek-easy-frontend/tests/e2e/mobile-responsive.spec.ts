@@ -98,9 +98,25 @@ test.describe('Mobile Responsive (375px)', () => {
     // Wait for page to load
     await page.waitForLoadState('domcontentloaded');
 
+    // CRITICAL: Verify we're authenticated and not redirected to login
+    const currentUrl = page.url();
+    if (currentUrl.includes('/login')) {
+      throw new Error('Authentication failed - redirected to login page. Check backend connectivity.');
+    }
+
+    // Verify dashboard content is present
+    const heading = page.getByRole('heading').first();
+    await expect(heading).toBeVisible({ timeout: 5000 });
+
     // Check for any navigation elements or buttons
     const buttons = page.locator('button');
     const buttonCount = await buttons.count();
+
+    // Log diagnostic info if count is unexpectedly low
+    if (buttonCount === 0) {
+      console.error('[TEST] No buttons found on mobile dashboard');
+      console.error('[TEST] Current URL:', page.url());
+    }
 
     // Just verify page has interactive elements (menu exists in some form)
     expect(buttonCount).toBeGreaterThan(0);

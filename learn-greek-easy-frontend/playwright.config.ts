@@ -29,7 +29,7 @@ export default defineConfig({
   retries: process.env.CI ? 3 : 0,
 
   // Number of parallel workers - reduced for stability
-  workers: process.env.CI ? 2 : undefined, // CI: 2 workers for stability, Local: auto
+  workers: process.env.CI ? 1 : undefined, // CI: 1 worker for stability, Local: auto
 
   // Reporter configuration
   reporter: [

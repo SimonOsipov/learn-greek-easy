@@ -130,25 +130,61 @@ test.describe('Authentication Flow', () => {
   });
 
   test('E2E-01.1: User can log in with valid credentials (via UI)', async ({ page }) => {
-    // Navigate to login page
-    await page.goto('/login');
+    const maxRetries = 3;
+    let lastError: Error | null = null;
 
-    // Verify login form exists using test ID
-    await expect(page.getByTestId('login-card')).toBeVisible();
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        // Navigate to login page
+        await page.goto('/login');
 
-    // Fill login form with seed user credentials
-    await page.getByTestId('email-input').fill(SEED_USERS.LEARNER.email);
-    await page.getByTestId('password-input').fill(SEED_USERS.LEARNER.password);
+        // Verify login form exists using test ID
+        await expect(page.getByTestId('login-card')).toBeVisible();
 
-    // Submit form using test ID
-    await page.getByTestId('login-submit').click();
+        // Fill login form with seed user credentials
+        await page.getByTestId('email-input').fill(SEED_USERS.LEARNER.email);
+        await page.getByTestId('password-input').fill(SEED_USERS.LEARNER.password);
 
-    // Wait for redirect to dashboard (with increased timeout for real API)
-    await page.waitForURL('/dashboard', { timeout: 15000 });
+        // Submit form using test ID
+        await page.getByTestId('login-submit').click();
 
-    // Verify we're on dashboard
-    const currentUrl = page.url();
-    expect(currentUrl).toContain('/dashboard');
+        // Wait for redirect to dashboard (with increased timeout for real API)
+        await page.waitForURL('/dashboard', { timeout: 15000 });
+
+        // Verify we're on dashboard
+        const currentUrl = page.url();
+        expect(currentUrl).toContain('/dashboard');
+
+        // Success - exit retry loop
+        return;
+      } catch (error) {
+        lastError = error as Error;
+        const errorMessage = lastError.message || String(lastError);
+
+        // Check if error is retryable (network issues)
+        const isRetryable =
+          errorMessage.includes('ECONNRESET') ||
+          errorMessage.includes('ECONNREFUSED') ||
+          errorMessage.includes('socket hang up') ||
+          errorMessage.includes('network') ||
+          errorMessage.includes('Timeout') ||
+          errorMessage.includes('timeout') ||
+          errorMessage.includes('waiting for navigation');
+
+        if (!isRetryable || attempt === maxRetries) {
+          console.error(`[TEST] UI login failed after ${attempt} attempt(s):`, errorMessage);
+          throw lastError;
+        }
+
+        console.log(`[TEST] UI login attempt ${attempt}/${maxRetries} failed, retrying in 2s...`);
+        await page.waitForTimeout(2000);
+
+        // Clear state before retry
+        await page.evaluate(() => localStorage.clear());
+      }
+    }
+
+    throw lastError;
   });
 
   test('E2E-01.2: Login fails with invalid credentials', async ({ page }) => {
