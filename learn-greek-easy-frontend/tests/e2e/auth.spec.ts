@@ -2,20 +2,26 @@
  * Authentication E2E Tests
  *
  * Tests authentication flows using real backend API.
- * Uses seeded test users from the database.
+ * Uses Playwright's storageState pattern for efficient authentication.
+ *
+ * Test Organization:
+ * - Unauthenticated tests: Use empty storageState to test login/register forms
+ * - Authenticated tests: Use default storageState (learner user) from config
  */
 
 import { test, expect } from '@playwright/test';
-import { loginViaUI, loginViaLocalStorage, SEED_USERS } from './helpers/auth-helpers';
+import { SEED_USERS } from './helpers/auth-helpers';
 
-test.describe('Authentication Flow', () => {
-  test.beforeEach(async ({ page }) => {
-    // Navigate to app first to ensure we have a proper origin
-    await page.goto('/');
-    // Clear storage before each test
-    await page.context().clearCookies();
-    await page.evaluate(() => localStorage.clear());
-  });
+/**
+ * UNAUTHENTICATED TESTS
+ *
+ * These tests use empty storageState to ensure no user is logged in.
+ * This is required for testing login forms, registration, and
+ * authentication redirects.
+ */
+test.describe('Unauthenticated - Login & Register Forms', () => {
+  // Override storageState to be empty (no auth)
+  test.use({ storageState: { cookies: [], origins: [] } });
 
   test('should display login form with all elements', async ({ page }) => {
     await page.goto('/login');
@@ -72,35 +78,9 @@ test.describe('Authentication Flow', () => {
     await expect(page.getByText(/already have an account/i)).toBeVisible();
   });
 
-  test('should access protected routes when authenticated via localStorage', async ({
-    page,
-  }) => {
-    // Login via localStorage (faster method)
-    await loginViaLocalStorage(page);
-
-    // Navigate to dashboard - just check we're not redirected to login
-    await page.goto('/dashboard');
-    await expect(page).not.toHaveURL(/\/login/);
-    await expect(page.getByRole('heading').first()).toBeVisible();
-
-    // Navigate to decks
-    await page.goto('/decks');
-    await expect(page).not.toHaveURL(/\/login/);
-    await expect(page.getByRole('heading').first()).toBeVisible();
-
-    // Navigate to profile
-    await page.goto('/profile');
-    await expect(page).not.toHaveURL(/\/login/);
-    await expect(page.getByRole('heading').first()).toBeVisible();
-  });
-
   test('should redirect unauthenticated users to login from protected routes', async ({
     page,
   }) => {
-    // Ensure logged out
-    await page.goto('/');
-    await page.evaluate(() => localStorage.clear());
-
     // Try to access protected routes
     const protectedRoutes = ['/dashboard', '/decks', '/profile', '/settings'];
 
@@ -112,26 +92,7 @@ test.describe('Authentication Flow', () => {
     }
   });
 
-  test('should maintain authentication state after page reload', async ({ page }) => {
-    // Login via localStorage
-    await loginViaLocalStorage(page);
-
-    // Navigate to dashboard
-    await page.goto('/dashboard');
-    await expect(page).not.toHaveURL(/\/login/);
-    await expect(page.getByRole('heading').first()).toBeVisible();
-
-    // Reload page
-    await page.reload();
-
-    // Should still be on dashboard (not redirected to login)
-    await expect(page).not.toHaveURL(/\/login/);
-    await expect(page.getByRole('heading').first()).toBeVisible();
-  });
-
   test('E2E-01.1: User can log in with valid credentials (via UI)', async ({ page }) => {
-    // Use shared page fixture - beforeEach already clears storage
-
     // Navigate to login page
     await page.goto('/login');
 
@@ -177,19 +138,66 @@ test.describe('Authentication Flow', () => {
     // Either error message visible or still on login page (both valid)
     expect(currentUrl.includes('/login') || hasError).toBe(true);
   });
+});
+
+/**
+ * AUTHENTICATED TESTS
+ *
+ * These tests use the default storageState from config (learner user).
+ * The storageState is loaded BEFORE the test starts, so the user is
+ * already authenticated when the browser opens.
+ *
+ * This eliminates:
+ * - Per-test login overhead
+ * - Zustand hydration race conditions
+ * - Complex auth injection workarounds
+ */
+test.describe('Authenticated - Protected Routes & Logout', () => {
+  // Uses default storageState from config (learner user)
+  // No need to call loginViaLocalStorage or loginViaAPI
+
+  test('should access protected routes when authenticated', async ({ page }) => {
+    // Navigate to dashboard - should work with pre-loaded auth
+    await page.goto('/dashboard');
+    await expect(page).not.toHaveURL(/\/login/);
+    await expect(page.getByRole('heading').first()).toBeVisible();
+
+    // Navigate to decks
+    await page.goto('/decks');
+    await expect(page).not.toHaveURL(/\/login/);
+    await expect(page.getByRole('heading').first()).toBeVisible();
+
+    // Navigate to profile
+    await page.goto('/profile');
+    await expect(page).not.toHaveURL(/\/login/);
+    await expect(page.getByRole('heading').first()).toBeVisible();
+  });
+
+  test('should maintain authentication state after page reload', async ({ page }) => {
+    // Navigate to dashboard
+    await page.goto('/dashboard');
+    await expect(page).not.toHaveURL(/\/login/);
+    await expect(page.getByRole('heading').first()).toBeVisible();
+
+    // Reload page
+    await page.reload();
+
+    // Should still be on dashboard (not redirected to login)
+    await expect(page).not.toHaveURL(/\/login/);
+    await expect(page.getByRole('heading').first()).toBeVisible();
+  });
 
   test('E2E-01.3: User can log out successfully', async ({ page }) => {
-    // Log in via localStorage (now uses reliable loginViaUI internally)
-    await loginViaLocalStorage(page);
+    // Navigate to dashboard (auth state already loaded)
+    await page.goto('/dashboard');
 
-    // loginViaLocalStorage already navigates to /dashboard and waits for auth content
-    // The Header with user menu should be visible immediately
+    // Wait for page to be ready
+    await page.waitForLoadState('domcontentloaded');
 
     // Use exact aria-label selector for user menu button (from Header.tsx)
     const userMenuButton = page.getByRole('button', { name: 'User menu' });
 
     // Wait for user menu button - this confirms Header has rendered
-    // Header renders before Dashboard content loads, so this is faster and more reliable
     await userMenuButton.waitFor({ state: 'visible', timeout: 10000 });
 
     // Click to open user menu dropdown

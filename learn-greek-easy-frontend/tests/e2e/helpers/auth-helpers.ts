@@ -1,79 +1,24 @@
 /**
  * Authentication Helpers for E2E Tests
  *
- * Uses real backend API for authentication when available.
- * Falls back to localStorage injection for mock scenarios.
+ * With the storageState pattern, most authentication is handled automatically:
+ * - Setup project (auth.setup.ts) authenticates users ONCE
+ * - Browser projects load saved auth state from JSON files
+ * - Tests run with pre-authenticated browser context
+ *
+ * This file now contains:
+ * - SEED_USERS: Test user credentials (used by auth.setup.ts)
+ * - loginViaUI: For testing the login form itself
+ * - logout: For testing logout functionality
+ * - isLoggedIn, clearAuthState: Utility functions
+ * - waitForAPIReady, seedDatabase: Test setup helpers
+ *
+ * DEPRECATED functions (kept for backwards compatibility):
+ * - loginViaLocalStorage: Now a no-op, use storageState instead
+ * - loginViaAPI: Now a no-op, use storageState instead
  */
 
 import { Page, APIRequestContext } from '@playwright/test';
-import { enableTestDiagnostics, logAuthState } from './diagnostics';
-
-/**
- * Retry helper for flaky network requests
- */
-async function retryRequest<T>(
-  fn: () => Promise<T>,
-  maxRetries: number = 3,
-  delayMs: number = 1000,
-  context: string = 'request'
-): Promise<T> {
-  let lastError: Error | null = null;
-
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      return await fn();
-    } catch (error) {
-      lastError = error as Error;
-      const errorMessage = lastError.message || String(lastError);
-
-      const isRetryable =
-        errorMessage.includes('ECONNRESET') ||
-        errorMessage.includes('ECONNREFUSED') ||
-        errorMessage.includes('socket hang up') ||
-        errorMessage.includes('network') ||
-        errorMessage.includes('timeout');
-
-      if (!isRetryable || attempt === maxRetries) {
-        console.error(`[TEST] ${context} failed after ${attempt} attempt(s):`, errorMessage);
-        throw lastError;
-      }
-
-      console.log(`[TEST] ${context} attempt ${attempt}/${maxRetries} failed, retrying in ${delayMs}ms...`);
-      await new Promise(resolve => setTimeout(resolve, delayMs));
-    }
-  }
-
-  throw lastError;
-}
-
-/**
- * Verify auth state is correctly set in localStorage
- * Returns true if authenticated, false if auth was cleared by Zustand
- */
-async function verifyAuthStateInLocalStorage(page: Page): Promise<boolean> {
-  return await page.evaluate(() => {
-    const stored = localStorage.getItem('auth-storage');
-    if (!stored) return false;
-    try {
-      const parsed = JSON.parse(stored);
-      return parsed.state?.isAuthenticated === true && parsed.state?.token !== null;
-    } catch {
-      return false;
-    }
-  });
-}
-
-/**
- * Re-inject auth data directly into localStorage via page.evaluate
- * Used when addInitScript injection was overwritten by Zustand persist
- */
-async function reinjectAuthState(page: Page, authData: object): Promise<void> {
-  await page.evaluate((data) => {
-    localStorage.setItem('auth-storage', JSON.stringify(data));
-    sessionStorage.setItem('auth-token', (data as any).state.token);
-    console.log('[TEST] Auth data re-injected via page.evaluate (Zustand overwrote)');
-  }, authData);
-}
 
 export interface TestUser {
   email: string;
@@ -126,169 +71,13 @@ function getApiBaseUrl(): string {
 }
 
 /**
- * Login via real backend API and inject tokens
- * This is the preferred method for E2E tests with a real backend
- *
- * CRITICAL: Uses addInitScript to inject localStorage BEFORE React loads.
- * This prevents Zustand's persist middleware from overwriting auth state
- * during hydration.
- *
- * Flow:
- * 1. Get tokens via API (before any navigation)
- * 2. Register addInitScript to set localStorage on page load
- * 3. Navigate to target path
- * 4. localStorage is set BEFORE React/Zustand initializes
- * 5. Zustand rehydrates from existing localStorage correctly
- *
- * @param page - Playwright page object
- * @param user - User credentials (defaults to SEED_USERS.LEARNER)
- * @param targetPath - Path to navigate to after login (defaults to '/dashboard')
- */
-export async function loginViaAPI(
-  page: Page,
-  user: TestUser = SEED_USERS.LEARNER,
-  targetPath: string = '/dashboard'
-): Promise<void> {
-  const apiBaseUrl = getApiBaseUrl();
-
-  // Enable diagnostics for debugging
-  await enableTestDiagnostics(page);
-
-  try {
-    // 1. Get tokens via API FIRST (before any navigation) - with retry for flaky connections
-    const tokenData = await retryRequest(
-      async () => {
-        const loginResponse = await page.request.post(`${apiBaseUrl}/api/v1/auth/login`, {
-          data: { email: user.email, password: user.password },
-          headers: { 'Content-Type': 'application/json' },
-          timeout: 10000,
-        });
-        if (!loginResponse.ok()) {
-          const errorText = await loginResponse.text();
-          throw new Error(`Login API failed: ${loginResponse.status()} - ${errorText}`);
-        }
-        return await loginResponse.json();
-      },
-      3,
-      1000,
-      'Login API'
-    );
-
-    // 2. Fetch user profile - with retry for flaky connections
-    const profileData = await retryRequest(
-      async () => {
-        const profileResponse = await page.request.get(`${apiBaseUrl}/api/v1/auth/me`, {
-          headers: { Authorization: `Bearer ${tokenData.access_token}` },
-          timeout: 10000,
-        });
-        if (!profileResponse.ok()) {
-          throw new Error(`Profile API failed: ${profileResponse.status()}`);
-        }
-        return await profileResponse.json();
-      },
-      3,
-      1000,
-      'Profile API'
-    );
-    // Handle wrapped response (data field) or direct response
-    const userData = profileData.data || profileData;
-
-    // 3. Build auth data matching Zustand store structure
-    const authData = {
-      state: {
-        user: {
-          id: userData.id,
-          email: userData.email,
-          displayName: userData.display_name || userData.displayName || userData.email.split('@')[0],
-          nativeLanguage: userData.native_language || userData.nativeLanguage || 'en',
-          createdAt: userData.created_at || userData.createdAt || new Date().toISOString(),
-        },
-        token: tokenData.access_token,
-        refreshToken: tokenData.refresh_token,
-        isAuthenticated: true,
-        rememberMe: true,
-        isLoading: false,
-        error: null,
-      },
-      version: 0,
-    };
-
-    // 4. Use addInitScript to set localStorage BEFORE React loads
-    // This runs on every navigation, ensuring auth state persists
-    await page.addInitScript((data) => {
-      // Set auth storage before any JavaScript runs
-      localStorage.setItem('auth-storage', JSON.stringify(data));
-      // Also set session storage token as backup
-      sessionStorage.setItem('auth-token', data.state.token);
-      console.log('[TEST] Auth data injected via addInitScript (before React)');
-    }, authData);
-
-    // 5. Navigate directly to target path - localStorage is set BEFORE React initializes
-    await page.goto(targetPath);
-    await page.waitForLoadState('domcontentloaded');
-
-    // 6. CRITICAL: Verify auth state wasn't overwritten by Zustand's persist middleware
-    // This is a Chromium-specific race condition where Zustand can initialize
-    // before addInitScript completes, causing it to read empty state and overwrite our auth
-    const authStateValid = await verifyAuthStateInLocalStorage(page);
-
-    if (!authStateValid) {
-      console.log('[TEST] Auth state was overwritten by Zustand - re-injecting and reloading');
-
-      // Re-inject auth state directly via page.evaluate
-      await reinjectAuthState(page, authData);
-
-      // Reload the page to pick up the corrected auth state
-      await page.reload();
-      await page.waitForLoadState('domcontentloaded');
-
-      // Give React a moment to hydrate with correct state
-      await page.waitForTimeout(100);
-
-      // Verify again after reload
-      const authStateValidAfterReload = await verifyAuthStateInLocalStorage(page);
-      if (!authStateValidAfterReload) {
-        await logAuthState(page);
-        throw new Error('Auth state still invalid after re-injection - this indicates a deeper issue');
-      }
-
-      console.log('[TEST] Auth state successfully re-injected and verified');
-    }
-
-    // 7. Wait for authenticated content to appear
-    try {
-      await page.waitForSelector(
-        '[data-testid="dashboard"], [data-testid="user-menu"], h1:has-text("Dashboard"), h1:has-text("Welcome"), nav[aria-label="Main navigation"]',
-        { timeout: 10000 }
-      );
-    } catch {
-      // Log diagnostic info if wait fails
-      console.log('[TEST] Auth verification failed, checking state...');
-      const currentUrl = page.url();
-      console.log(`[TEST] Current URL: ${currentUrl}`);
-
-      // Log auth state for debugging
-      await logAuthState(page);
-
-      throw new Error(`Authentication failed - page did not show authenticated content. URL: ${currentUrl}`);
-    }
-
-    // 8. Log final auth state for debugging
-    await logAuthState(page);
-  } catch (error) {
-    console.error('[TEST] API login failed:', error);
-    throw error;
-  }
-}
-
-/**
  * Login via UI with robust error handling
  *
- * This function:
- * 1. Sets up API response interception before clicking submit
- * 2. Checks if the login API succeeded or failed
- * 3. Detects error messages displayed on the login page
- * 4. Uses Promise.race for efficient success/failure detection
+ * Use this for:
+ * - Testing the login form UI itself
+ * - Tests that specifically verify login functionality
+ *
+ * For other tests, use storageState pattern (automatic with config)
  *
  * @param page - Playwright page object
  * @param user - User credentials (defaults to SEED_USERS.LEARNER for real backend)
@@ -297,9 +86,6 @@ export async function loginViaUI(
   page: Page,
   user: TestUser = SEED_USERS.LEARNER
 ): Promise<void> {
-  // Enable diagnostics for debugging
-  await enableTestDiagnostics(page);
-
   // Navigate to login page
   await page.goto('/login');
 
@@ -311,7 +97,6 @@ export async function loginViaUI(
   await page.getByTestId('password-input').fill(user.password);
 
   // Set up response interception BEFORE clicking submit
-  // This ensures we don't miss the response due to timing
   const responsePromise = page.waitForResponse(
     response =>
       response.url().includes('/api/v1/auth/login') &&
@@ -340,9 +125,6 @@ export async function loginViaUI(
       }
     }
 
-    // Log auth state for debugging
-    await logAuthState(page);
-
     // Also check if error message appeared on page
     const errorAlert = page.locator('[role="alert"]');
     const hasErrorAlert = await errorAlert.isVisible().catch(() => false);
@@ -357,12 +139,10 @@ export async function loginViaUI(
     );
   }
 
-  // API succeeded, now wait for navigation to dashboard
-  // This should be quick since the API already succeeded
+  // API succeeded, wait for navigation to dashboard
   try {
     await page.waitForURL('**/dashboard**', { timeout: 10000 });
   } catch (navError) {
-    // Navigation failed - check current state
     const currentUrl = page.url();
 
     // Check for error message on page
@@ -371,58 +151,73 @@ export async function loginViaUI(
 
     if (hasErrorAlert) {
       const errorText = await errorAlert.textContent() || 'Unknown error';
-      await logAuthState(page);
       throw new Error(`Login navigation failed - error on page: ${errorText}`);
     }
 
-    // Log auth state for debugging
-    await logAuthState(page);
-
     throw new Error(
       `Login succeeded but navigation to dashboard failed. ` +
-      `Current URL: ${currentUrl}. ` +
-      `This may indicate a routing issue or slow state update.`
+      `Current URL: ${currentUrl}. `
     );
   }
 
   // Verify we're actually on the dashboard
   const currentUrl = page.url();
   if (!currentUrl.includes('/dashboard')) {
-    await logAuthState(page);
     throw new Error(
       `Expected to be on /dashboard but got: ${currentUrl}`
     );
   }
 
-  // Log success for debugging
   console.log('[TEST] loginViaUI: Successfully logged in and navigated to dashboard');
-  await logAuthState(page);
 }
 
 /**
- * Login via localStorage using API-based authentication
+ * @deprecated Use storageState pattern instead. This function now just navigates.
  *
- * Uses loginViaAPI which injects auth state via addInitScript BEFORE React loads.
- * This is fast and deterministic because it bypasses the UI login flow.
+ * With storageState pattern:
+ * - Auth state is loaded from JSON file before test starts
+ * - No need to call any login function
+ * - Just navigate directly to your target page
  *
- * The loginViaAPI function handles the Zustand persist race condition by:
- * 1. Using addInitScript to inject auth BEFORE React loads
- * 2. Verifying auth state after navigation
- * 3. Re-injecting and reloading if Zustand overwrote the state
- *
- * @param page - Playwright page object
- * @param targetPath - Path to navigate to after login (defaults to '/dashboard')
- * @param user - User credentials (defaults to SEED_USERS.LEARNER)
+ * For unauthenticated tests, use:
+ *   test.use({ storageState: { cookies: [], origins: [] } })
  */
 export async function loginViaLocalStorage(
   page: Page,
   targetPath: string = '/dashboard',
-  user: TestUser = SEED_USERS.LEARNER
+  _user: TestUser = SEED_USERS.LEARNER
 ): Promise<void> {
-  // Use API-based login - fast and deterministic
-  // loginViaAPI uses addInitScript to inject auth BEFORE React loads
-  // and handles Zustand persist race condition with verification + re-injection
-  await loginViaAPI(page, user, targetPath);
+  console.warn(
+    '[DEPRECATED] loginViaLocalStorage is deprecated. ' +
+    'Auth is now handled via storageState pattern. ' +
+    'Just navigate directly to your target page.'
+  );
+  // Just navigate - storageState handles auth
+  await page.goto(targetPath);
+  await page.waitForLoadState('domcontentloaded');
+}
+
+/**
+ * @deprecated Use storageState pattern instead. This function now just navigates.
+ *
+ * With storageState pattern:
+ * - Auth state is loaded from JSON file before test starts
+ * - No need to call any login function
+ * - Just navigate directly to your target page
+ */
+export async function loginViaAPI(
+  page: Page,
+  _user: TestUser = SEED_USERS.LEARNER,
+  targetPath: string = '/dashboard'
+): Promise<void> {
+  console.warn(
+    '[DEPRECATED] loginViaAPI is deprecated. ' +
+    'Auth is now handled via storageState pattern. ' +
+    'Just navigate directly to your target page.'
+  );
+  // Just navigate - storageState handles auth
+  await page.goto(targetPath);
+  await page.waitForLoadState('domcontentloaded');
 }
 
 /**
