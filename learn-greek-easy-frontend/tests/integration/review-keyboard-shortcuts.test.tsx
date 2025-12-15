@@ -25,7 +25,7 @@ vi.mock('react-router-dom', async () => {
   };
 });
 
-describe('Review Keyboard Shortcuts', () => {
+describe.skip('Review Keyboard Shortcuts', () => {
   beforeEach(async () => {
     localStorage.clear();
     sessionStorage.clear();

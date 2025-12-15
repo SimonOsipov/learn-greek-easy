@@ -22,10 +22,92 @@ vi.mock('react-router-dom', async () => {
   };
 });
 
+// Mock all API services to prevent real network calls
+vi.mock('@/services/authAPI', () => {
+  // Track registered emails for duplicate check - must be inside factory
+  const registeredEmails = ['demo@learngreekeasy.com'];
+  // Store the last registered user info for getProfile to return
+  const lastRegisteredUser = { email: '', full_name: '' };
+
+  return {
+    authAPI: {
+      login: vi.fn().mockResolvedValue({
+        access_token: 'mock-access-token',
+        refresh_token: 'mock-refresh-token',
+        token_type: 'bearer',
+      }),
+      getProfile: vi.fn().mockImplementation(() => {
+        // Return the most recently registered user's profile
+        const email = lastRegisteredUser.email || 'test@example.com';
+        const full_name = lastRegisteredUser.full_name || 'Test User';
+        return Promise.resolve({
+          id: 'test-user-' + Date.now(),
+          email: email,
+          full_name: full_name,
+          is_superuser: false,
+          created_at: '2025-01-01T00:00:00Z',
+          updated_at: '2025-01-01T00:00:00Z',
+          settings: { daily_goal: 20, email_notifications: true },
+        });
+      }),
+      logout: vi.fn().mockResolvedValue(undefined),
+      register: vi.fn().mockImplementation(({ email, full_name }) => {
+        // Simulate existing email check
+        if (registeredEmails.includes(email)) {
+          return Promise.reject(new Error('Email already exists'));
+        }
+        // Track the registered email
+        registeredEmails.push(email);
+        // Store for getProfile to use
+        lastRegisteredUser.email = email;
+        lastRegisteredUser.full_name = full_name;
+        return Promise.resolve({
+          access_token: 'mock-access-token',
+          refresh_token: 'mock-refresh-token',
+          token_type: 'bearer',
+        });
+      }),
+      refresh: vi.fn().mockResolvedValue({
+        access_token: 'mock-new-access-token',
+        refresh_token: 'mock-new-refresh-token',
+        token_type: 'bearer',
+      }),
+    },
+    clearAuthTokens: vi.fn(),
+  };
+});
+
+vi.mock('@/services/progressAPI', () => ({
+  progressAPI: {
+    getDashboard: vi.fn().mockResolvedValue({
+      overview: { total_cards_studied: 100, total_cards_mastered: 10 },
+    }),
+    getTrends: vi.fn().mockResolvedValue({
+      period: 'week',
+      daily_stats: [],
+      summary: {},
+    }),
+    getDeckProgressList: vi.fn().mockResolvedValue({ total: 0, page: 1, page_size: 50, decks: [] }),
+  },
+}));
+
+// Helper to reset auth store state directly
+const resetAuthStore = () => {
+  useAuthStore.setState({
+    user: null,
+    token: null,
+    refreshToken: null,
+    isAuthenticated: false,
+    isLoading: false,
+    error: null,
+    rememberMe: false,
+  });
+};
+
 describe('Registration Flow Integration Tests', () => {
   beforeEach(() => {
-    // Reset auth store to initial state
-    useAuthStore.getState().logout();
+    // Reset auth store state directly (don't call logout which uses API)
+    resetAuthStore();
     localStorage.clear();
     sessionStorage.clear();
     mockNavigate.mockClear();

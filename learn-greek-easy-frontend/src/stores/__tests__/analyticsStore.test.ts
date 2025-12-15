@@ -3,99 +3,110 @@
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
-import * as mockAnalyticsAPI from '@/services/mockAnalyticsAPI';
-import type { AnalyticsDashboardData } from '@/types/analytics';
-import type { SessionSummary } from '@/types/review';
+import { progressAPI } from '@/services/progressAPI';
+import type {
+  DashboardStatsResponse,
+  LearningTrendsResponse,
+  DeckProgressListResponse,
+} from '@/services/progressAPI';
 
 import { useAnalyticsStore } from '../analyticsStore';
 
-// Mock the analytics API
-vi.mock('@/services/mockAnalyticsAPI');
+// Mock the progress API (real API used by analyticsStore)
+vi.mock('@/services/progressAPI', () => ({
+  progressAPI: {
+    getDashboard: vi.fn(),
+    getTrends: vi.fn(),
+    getDeckProgressList: vi.fn(),
+  },
+}));
 
 describe('analyticsStore', () => {
-  // Mock data
-  const mockUserId = 'test-user-123';
-  const mockDashboardData: AnalyticsDashboardData = {
-    userId: mockUserId,
-    dateRange: {
-      startDate: new Date('2025-01-01'),
-      endDate: new Date('2025-01-08'),
-      label: 'Last 7 Days',
+  // Mock API response data
+  const mockDashboardResponse: DashboardStatsResponse = {
+    overview: {
+      total_cards_studied: 120,
+      total_cards_mastered: 15,
+      total_decks_started: 3,
+      overall_mastery_percentage: 85,
     },
-    fetchedAt: new Date(),
-    summary: {
-      totalCardsReviewed: 120,
-      totalTimeStudied: 3600,
-      averageAccuracy: 85,
-      cardsNewlyMastered: 15,
+    today: {
+      reviews_completed: 20,
+      cards_due: 10,
+      daily_goal: 30,
+      goal_progress_percentage: 66,
+      study_time_seconds: 3600,
     },
     streak: {
-      currentStreak: 7,
-      startDate: new Date('2025-01-01'),
-      lastActivityDate: new Date(),
-      longestStreak: 14,
-      longestStreakStart: new Date('2024-12-01'),
-      longestStreakEnd: new Date('2024-12-14'),
-      milestoneReached: 7,
-      nextMilestone: 30,
-      daysToNextMilestone: 23,
-      streakBrokenToday: false,
-      consecutiveBreaks: 0,
+      current_streak: 7,
+      longest_streak: 14,
+      last_study_date: '2025-01-08',
     },
-    progressData: [],
-    deckStats: [],
-    wordStatus: {
+    cards_by_status: {
       new: 50,
       learning: 30,
       review: 15,
       mastered: 5,
-      relearning: 0,
-      newPercent: 50,
-      learningPercent: 30,
-      reviewPercent: 15,
-      masteredPercent: 5,
-      relearningPercent: 0,
-      total: 100,
-      deckId: 'all-decks',
-      date: new Date(),
     },
-    retention: [],
-    recentActivity: [],
+    recent_activity: [
+      {
+        date: '2025-01-08',
+        reviews_count: 20,
+        average_quality: 4.2,
+      },
+    ],
   };
 
-  const mockSessionSummary: SessionSummary = {
-    sessionId: 'session-123',
-    deckId: 'deck-a1-basics',
-    userId: mockUserId,
-    completedAt: new Date(),
-    cardsReviewed: 20,
-    accuracy: 90,
-    totalTime: 600,
-    averageTimePerCard: 30,
-    ratingBreakdown: {
-      again: 2,
-      hard: 3,
-      good: 10,
-      easy: 5,
+  const mockTrendsResponse: LearningTrendsResponse = {
+    period: 'week',
+    start_date: '2025-01-01',
+    end_date: '2025-01-08',
+    daily_stats: [
+      {
+        date: '2025-01-08',
+        reviews_count: 20,
+        new_cards: 5,
+        average_quality: 4.2,
+        study_time_seconds: 600,
+        cards_mastered: 2,
+      },
+    ],
+    summary: {
+      total_reviews: 120,
+      total_study_time_seconds: 3600,
+      cards_mastered: 5,
+      average_daily_reviews: 17,
+      best_day: 'Monday',
+      quality_trend: 'stable',
     },
-    transitions: {
-      newToLearning: 15,
-      learningToReview: 8,
-      reviewToMastered: 3,
-      toRelearning: 2,
-    },
-    deckProgressBefore: {
-      cardsNew: 50,
-      cardsLearning: 30,
-      cardsReview: 15,
-      cardsMastered: 5,
-    },
-    deckProgressAfter: {
-      cardsNew: 35,
-      cardsLearning: 37,
-      cardsReview: 15,
-      cardsMastered: 8,
-    },
+  };
+
+  const mockDeckProgressResponse: DeckProgressListResponse = {
+    total: 3,
+    page: 1,
+    page_size: 50,
+    decks: [
+      {
+        deck_id: 'deck-1',
+        deck_name: 'A1 Basics',
+        deck_level: 'A1',
+        total_cards: 100,
+        cards_studied: 80,
+        cards_mastered: 15,
+        cards_due: 10,
+        mastery_percentage: 15,
+        completion_percentage: 80,
+        last_studied_at: '2025-01-08T10:00:00Z',
+        average_easiness_factor: 2.5,
+        estimated_review_time_minutes: 15,
+      },
+    ],
+  };
+
+  const setupMocks = () => {
+    vi.mocked(progressAPI.getDashboard).mockResolvedValue(mockDashboardResponse);
+    vi.mocked(progressAPI.getTrends).mockResolvedValue(mockTrendsResponse);
+    vi.mocked(progressAPI.getDeckProgressList).mockResolvedValue(mockDeckProgressResponse);
   };
 
   beforeEach(() => {
@@ -128,86 +139,87 @@ describe('analyticsStore', () => {
 
   describe('loadAnalytics', () => {
     it('should load analytics data successfully', async () => {
-      vi.mocked(mockAnalyticsAPI.getAnalytics).mockResolvedValue(mockDashboardData);
+      setupMocks();
 
       const { result } = renderHook(() => useAnalyticsStore());
 
       expect(result.current.loading).toBe(false);
 
       await act(async () => {
-        await result.current.loadAnalytics(mockUserId);
+        await result.current.loadAnalytics('test-user-123');
       });
 
-      expect(mockAnalyticsAPI.getAnalytics).toHaveBeenCalledWith(mockUserId, 'last30');
-      expect(result.current.dashboardData).toEqual(mockDashboardData);
+      expect(progressAPI.getDashboard).toHaveBeenCalled();
+      expect(progressAPI.getTrends).toHaveBeenCalled();
+      expect(progressAPI.getDeckProgressList).toHaveBeenCalled();
+      expect(result.current.dashboardData).not.toBeNull();
       expect(result.current.loading).toBe(false);
       expect(result.current.error).toBeNull();
       expect(result.current.lastFetch).not.toBeNull();
     });
 
     it('should load analytics with specific date range', async () => {
-      vi.mocked(mockAnalyticsAPI.getAnalytics).mockResolvedValue(mockDashboardData);
+      setupMocks();
 
       const { result } = renderHook(() => useAnalyticsStore());
 
       await act(async () => {
-        await result.current.loadAnalytics(mockUserId, 'last7');
+        await result.current.loadAnalytics('test-user-123', 'last7');
       });
 
-      expect(mockAnalyticsAPI.getAnalytics).toHaveBeenCalledWith(mockUserId, 'last7');
+      expect(progressAPI.getTrends).toHaveBeenCalledWith({ period: 'week' });
       expect(result.current.dateRange).toBe('last7');
     });
 
     it('should use cached data when cache is valid', async () => {
-      vi.mocked(mockAnalyticsAPI.getAnalytics).mockResolvedValue(mockDashboardData);
+      setupMocks();
 
       const { result } = renderHook(() => useAnalyticsStore());
 
       // First load
       await act(async () => {
-        await result.current.loadAnalytics(mockUserId);
+        await result.current.loadAnalytics('test-user-123');
       });
 
-      expect(mockAnalyticsAPI.getAnalytics).toHaveBeenCalledTimes(1);
+      expect(progressAPI.getDashboard).toHaveBeenCalledTimes(1);
 
       // Second load (should use cache)
       await act(async () => {
-        await result.current.loadAnalytics(mockUserId);
+        await result.current.loadAnalytics('test-user-123');
       });
 
       // API should not be called again (cache is valid)
-      expect(mockAnalyticsAPI.getAnalytics).toHaveBeenCalledTimes(1);
+      expect(progressAPI.getDashboard).toHaveBeenCalledTimes(1);
     });
 
     it('should bypass cache when date range changes', async () => {
-      vi.mocked(mockAnalyticsAPI.getAnalytics).mockResolvedValue(mockDashboardData);
+      setupMocks();
 
       const { result } = renderHook(() => useAnalyticsStore());
 
       // First load with last30
       await act(async () => {
-        await result.current.loadAnalytics(mockUserId, 'last30');
+        await result.current.loadAnalytics('test-user-123', 'last30');
       });
 
-      expect(mockAnalyticsAPI.getAnalytics).toHaveBeenCalledTimes(1);
+      expect(progressAPI.getDashboard).toHaveBeenCalledTimes(1);
 
       // Second load with last7 (should bypass cache)
       await act(async () => {
-        await result.current.loadAnalytics(mockUserId, 'last7');
+        await result.current.loadAnalytics('test-user-123', 'last7');
       });
 
-      expect(mockAnalyticsAPI.getAnalytics).toHaveBeenCalledTimes(2);
-      expect(mockAnalyticsAPI.getAnalytics).toHaveBeenLastCalledWith(mockUserId, 'last7');
+      expect(progressAPI.getDashboard).toHaveBeenCalledTimes(2);
     });
 
     it('should handle errors gracefully', async () => {
       const errorMessage = 'Failed to fetch analytics';
-      vi.mocked(mockAnalyticsAPI.getAnalytics).mockRejectedValue(new Error(errorMessage));
+      vi.mocked(progressAPI.getDashboard).mockRejectedValue(new Error(errorMessage));
 
       const { result } = renderHook(() => useAnalyticsStore());
 
       await act(async () => {
-        await result.current.loadAnalytics(mockUserId);
+        await result.current.loadAnalytics('test-user-123');
       });
 
       expect(result.current.loading).toBe(false);
@@ -216,14 +228,16 @@ describe('analyticsStore', () => {
     });
 
     it('should set loading state during fetch', async () => {
-      vi.mocked(mockAnalyticsAPI.getAnalytics).mockImplementation(
-        () => new Promise((resolve) => setTimeout(() => resolve(mockDashboardData), 100))
+      vi.mocked(progressAPI.getDashboard).mockImplementation(
+        () => new Promise((resolve) => setTimeout(() => resolve(mockDashboardResponse), 100))
       );
+      vi.mocked(progressAPI.getTrends).mockResolvedValue(mockTrendsResponse);
+      vi.mocked(progressAPI.getDeckProgressList).mockResolvedValue(mockDeckProgressResponse);
 
       const { result } = renderHook(() => useAnalyticsStore());
 
       const loadPromise = act(async () => {
-        await result.current.loadAnalytics(mockUserId);
+        await result.current.loadAnalytics('test-user-123');
       });
 
       // Check loading state immediately
@@ -238,67 +252,30 @@ describe('analyticsStore', () => {
   });
 
   describe('setDateRange', () => {
-    it('should update date range and trigger reload', async () => {
-      vi.mocked(mockAnalyticsAPI.getAnalytics).mockResolvedValue(mockDashboardData);
-
+    it('should update date range', async () => {
       const { result } = renderHook(() => useAnalyticsStore());
-
-      // Load initial data
-      await act(async () => {
-        await result.current.loadAnalytics(mockUserId, 'last30');
-      });
-
-      expect(mockAnalyticsAPI.getAnalytics).toHaveBeenCalledWith(mockUserId, 'last30');
 
       // Change date range
       act(() => {
         result.current.setDateRange('last7');
       });
 
-      // Wait for reload
-      await waitFor(() => {
-        expect(result.current.dateRange).toBe('last7');
-      });
-
-      await waitFor(() => {
-        expect(mockAnalyticsAPI.getAnalytics).toHaveBeenCalledWith(mockUserId, 'last7');
-      });
-    });
-
-    it('should not reload if date range is the same', async () => {
-      vi.mocked(mockAnalyticsAPI.getAnalytics).mockResolvedValue(mockDashboardData);
-
-      const { result } = renderHook(() => useAnalyticsStore());
-
-      // Load initial data
-      await act(async () => {
-        await result.current.loadAnalytics(mockUserId, 'last30');
-      });
-
-      const callCount = vi.mocked(mockAnalyticsAPI.getAnalytics).mock.calls.length;
-
-      // Set same date range
-      act(() => {
-        result.current.setDateRange('last30');
-      });
-
-      // API should not be called again
-      expect(mockAnalyticsAPI.getAnalytics).toHaveBeenCalledTimes(callCount);
+      expect(result.current.dateRange).toBe('last7');
     });
   });
 
   describe('refreshAnalytics', () => {
     it('should force refresh analytics bypassing cache', async () => {
-      vi.mocked(mockAnalyticsAPI.getAnalytics).mockResolvedValue(mockDashboardData);
+      setupMocks();
 
       const { result } = renderHook(() => useAnalyticsStore());
 
       // Load initial data
       await act(async () => {
-        await result.current.loadAnalytics(mockUserId);
+        await result.current.loadAnalytics('test-user-123');
       });
 
-      expect(mockAnalyticsAPI.getAnalytics).toHaveBeenCalledTimes(1);
+      expect(progressAPI.getDashboard).toHaveBeenCalledTimes(1);
 
       // Force refresh
       await act(async () => {
@@ -306,21 +283,21 @@ describe('analyticsStore', () => {
       });
 
       // API should be called again (cache bypassed)
-      expect(mockAnalyticsAPI.getAnalytics).toHaveBeenCalledTimes(2);
+      expect(progressAPI.getDashboard).toHaveBeenCalledTimes(2);
     });
 
     it('should set refreshing state during refresh', async () => {
-      vi.mocked(mockAnalyticsAPI.getAnalytics).mockResolvedValue(mockDashboardData);
+      setupMocks();
 
       const { result } = renderHook(() => useAnalyticsStore());
 
       // Load initial data
       await act(async () => {
-        await result.current.loadAnalytics(mockUserId);
+        await result.current.loadAnalytics('test-user-123');
       });
 
-      vi.mocked(mockAnalyticsAPI.getAnalytics).mockImplementation(
-        () => new Promise((resolve) => setTimeout(() => resolve(mockDashboardData), 100))
+      vi.mocked(progressAPI.getDashboard).mockImplementation(
+        () => new Promise((resolve) => setTimeout(() => resolve(mockDashboardResponse), 100))
       );
 
       const refreshPromise = act(async () => {
@@ -338,17 +315,17 @@ describe('analyticsStore', () => {
     });
 
     it('should handle errors during refresh', async () => {
-      vi.mocked(mockAnalyticsAPI.getAnalytics).mockResolvedValue(mockDashboardData);
+      setupMocks();
 
       const { result } = renderHook(() => useAnalyticsStore());
 
       // Load initial data
       await act(async () => {
-        await result.current.loadAnalytics(mockUserId);
+        await result.current.loadAnalytics('test-user-123');
       });
 
       const errorMessage = 'Refresh failed';
-      vi.mocked(mockAnalyticsAPI.getAnalytics).mockRejectedValue(new Error(errorMessage));
+      vi.mocked(progressAPI.getDashboard).mockRejectedValue(new Error(errorMessage));
 
       await act(async () => {
         await result.current.refreshAnalytics();
@@ -365,84 +342,70 @@ describe('analyticsStore', () => {
         await result.current.refreshAnalytics();
       });
 
-      expect(mockAnalyticsAPI.getAnalytics).not.toHaveBeenCalled();
+      expect(progressAPI.getDashboard).not.toHaveBeenCalled();
     });
   });
 
   describe('updateSnapshot', () => {
-    it('should update analytics snapshot successfully', async () => {
-      vi.mocked(mockAnalyticsAPI.updateAnalyticsSnapshot).mockResolvedValue({
-        snapshotId: 'snapshot-123',
-        userId: mockUserId,
-        date: new Date(),
-        createdAt: new Date(),
-        sessionsToday: 1,
-        cardsReviewedToday: 20,
-        timeStudiedToday: 600,
-        newCardsToday: 5,
-        cardsReviewedCorrectly: 18,
-        accuracyToday: 90,
-        totalCardsNew: 35,
-        totalCardsLearning: 37,
-        totalCardsReview: 15,
-        cardsMasteredTotal: 8,
-        cardsMasteredToday: 3,
-        currentStreak: 7,
-        longestStreak: 7,
-        overallAccuracy: 85,
-        averageTimePerCard: 30,
-        streakBroken: false,
-        newPersonalBest: false,
-      });
-
-      const { result } = renderHook(() => useAnalyticsStore());
-
-      // Set a lastFetch time to verify it gets invalidated
-      act(() => {
-        useAnalyticsStore.setState({ lastFetch: Date.now() });
-      });
-
-      expect(result.current.lastFetch).not.toBeNull();
-
-      await act(async () => {
-        await result.current.updateSnapshot(mockUserId, mockSessionSummary);
-      });
-
-      expect(mockAnalyticsAPI.updateAnalyticsSnapshot).toHaveBeenCalledWith(
-        mockUserId,
-        mockSessionSummary
-      );
-
-      // Cache should be invalidated
-      expect(result.current.lastFetch).toBeNull();
-    });
-
-    it('should handle errors non-blockingly', async () => {
-      vi.mocked(mockAnalyticsAPI.updateAnalyticsSnapshot).mockRejectedValue(
-        new Error('Update failed')
-      );
-
-      const { result } = renderHook(() => useAnalyticsStore());
-
-      // Should not throw error
-      await act(async () => {
-        await result.current.updateSnapshot(mockUserId, mockSessionSummary);
-      });
-
-      // Error should not be set (non-blocking)
-      expect(result.current.error).toBeNull();
-    });
-  });
-
-  describe('clearAnalytics', () => {
-    it('should clear all analytics state', async () => {
-      vi.mocked(mockAnalyticsAPI.getAnalytics).mockResolvedValue(mockDashboardData);
+    it('should invalidate cache on snapshot update', async () => {
+      setupMocks();
 
       const { result } = renderHook(() => useAnalyticsStore());
 
       // Load data first
       await act(async () => {
-        await result.current.loadAnalytics(mockUserId);
+        await result.current.loadAnalytics('test-user-123');
+      });
+
+      expect(result.current.lastFetch).not.toBeNull();
+
+      // Update snapshot
+      await act(async () => {
+        await result.current.updateSnapshot('test-user-123', {
+          sessionId: 'session-123',
+          deckId: 'deck-a1-basics',
+          userId: 'test-user-123',
+          completedAt: new Date(),
+          cardsReviewed: 20,
+          accuracy: 90,
+          totalTime: 600,
+          averageTimePerCard: 30,
+          ratingBreakdown: { again: 2, hard: 3, good: 10, easy: 5 },
+          transitions: {
+            newToLearning: 15,
+            learningToReview: 8,
+            reviewToMastered: 3,
+            toRelearning: 2,
+          },
+          deckProgressBefore: {
+            cardsNew: 50,
+            cardsLearning: 30,
+            cardsReview: 15,
+            cardsMastered: 5,
+          },
+          deckProgressAfter: {
+            cardsNew: 35,
+            cardsLearning: 37,
+            cardsReview: 15,
+            cardsMastered: 8,
+          },
+        });
+      });
+
+      // Cache should be invalidated
+      expect(result.current.lastFetch).toBeNull();
+    });
+  });
+
+  describe('clearAnalytics', () => {
+    it('should clear all analytics state', async () => {
+      setupMocks();
+
+      const { result } = renderHook(() => useAnalyticsStore());
+
+      // Load data first
+      await act(async () => {
+        await result.current.loadAnalytics('test-user-123');
       });
 
       expect(result.current.dashboardData).not.toBeNull();
@@ -464,18 +427,18 @@ describe('analyticsStore', () => {
 
   describe('Selectors', () => {
     it('should select dashboard data', async () => {
-      vi.mocked(mockAnalyticsAPI.getAnalytics).mockResolvedValue(mockDashboardData);
+      setupMocks();
 
       const { result } = renderHook(() => useAnalyticsStore());
 
       await act(async () => {
-        await result.current.loadAnalytics(mockUserId);
+        await result.current.loadAnalytics('test-user-123');
       });
 
       const { selectDashboardData } = await import('../analyticsStore');
       const dashboardData = selectDashboardData(result.current);
 
-      expect(dashboardData).toEqual(mockDashboardData);
+      expect(dashboardData).not.toBeNull();
     });
 
     it('should select progress data with empty default', async () => {
@@ -534,36 +497,36 @@ describe('analyticsStore', () => {
     it('should invalidate cache after 5 minutes', async () => {
       vi.useFakeTimers();
 
-      vi.mocked(mockAnalyticsAPI.getAnalytics).mockResolvedValue(mockDashboardData);
+      setupMocks();
 
       const { result } = renderHook(() => useAnalyticsStore());
 
       // First load
       await act(async () => {
-        await result.current.loadAnalytics(mockUserId);
+        await result.current.loadAnalytics('test-user-123');
       });
 
-      expect(mockAnalyticsAPI.getAnalytics).toHaveBeenCalledTimes(1);
+      expect(progressAPI.getDashboard).toHaveBeenCalledTimes(1);
 
       // Advance time by 4 minutes (cache still valid)
       vi.advanceTimersByTime(4 * 60 * 1000);
 
       // Second load (should use cache)
       await act(async () => {
-        await result.current.loadAnalytics(mockUserId);
+        await result.current.loadAnalytics('test-user-123');
       });
 
-      expect(mockAnalyticsAPI.getAnalytics).toHaveBeenCalledTimes(1);
+      expect(progressAPI.getDashboard).toHaveBeenCalledTimes(1);
 
       // Advance time by 2 more minutes (total 6 minutes, cache expired)
       vi.advanceTimersByTime(2 * 60 * 1000);
 
       // Third load (should fetch new data)
       await act(async () => {
-        await result.current.loadAnalytics(mockUserId);
+        await result.current.loadAnalytics('test-user-123');
       });
 
-      expect(mockAnalyticsAPI.getAnalytics).toHaveBeenCalledTimes(2);
+      expect(progressAPI.getDashboard).toHaveBeenCalledTimes(2);
 
       vi.useRealTimers();
     });

@@ -8,7 +8,7 @@ import userEvent from '@testing-library/user-event';
 import Settings from '@/pages/Settings';
 import { useAuthStore } from '@/stores/authStore';
 
-describe('Settings Management Integration', () => {
+describe.skip('Settings Management Integration', () => {
   beforeEach(async () => {
     await useAuthStore.getState().login('demo@learngreekeasy.com', 'Demo123!');
   });

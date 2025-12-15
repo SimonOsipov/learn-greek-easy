@@ -3,14 +3,9 @@
  * Runs before each test file to configure test environment
  */
 
-// Set VITE_API_URL from process.env if available (for CI with real backend)
-// This must run before any imports that might use the API URL
-if (typeof process !== 'undefined' && process.env?.VITE_API_URL) {
-  // @ts-expect-error - Setting import.meta.env for test environment
-  if (typeof import.meta !== 'undefined' && import.meta.env) {
-    import.meta.env.VITE_API_URL = process.env.VITE_API_URL;
-  }
-}
+// NOTE: We intentionally do NOT set VITE_API_URL from process.env for unit tests.
+// Unit tests should use mocked API calls, not real backend connections.
+// E2E tests (Playwright) handle their own API configuration.
 
 // Ensure localStorage exists BEFORE any other imports
 // This must run before Zustand stores are imported
