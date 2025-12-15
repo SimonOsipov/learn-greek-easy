@@ -46,8 +46,8 @@ test.describe('Mobile Responsive (375px)', () => {
 
     const deckCards = page.locator('[data-testid="deck-card"]');
 
-    // Wait for cards to load
-    await expect(deckCards.first()).toBeVisible();
+    // Wait for cards to load from API (increased timeout for CI)
+    await expect(deckCards.first()).toBeVisible({ timeout: 15000 });
 
     // Cards should be full width (or close to it)
     const firstCard = deckCards.first();
@@ -135,7 +135,8 @@ test.describe('Tablet Responsive (768px)', () => {
     await page.goto('/decks');
 
     const deckCards = page.locator('[data-testid="deck-card"]');
-    await expect(deckCards.first()).toBeVisible();
+    // Wait for cards to load from API (increased timeout for CI)
+    await expect(deckCards.first()).toBeVisible({ timeout: 15000 });
 
     // Cards should NOT be full width (2 per row)
     const firstCard = deckCards.first();
@@ -171,7 +172,8 @@ test.describe('Desktop Responsive (1024px)', () => {
     await page.goto('/decks');
 
     const deckCards = page.locator('[data-testid="deck-card"]');
-    await expect(deckCards.first()).toBeVisible();
+    // Wait for cards to load from API (increased timeout for CI)
+    await expect(deckCards.first()).toBeVisible({ timeout: 15000 });
 
     // Cards should be roughly 1/3 viewport width
     const firstCard = deckCards.first();

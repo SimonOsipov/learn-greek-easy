@@ -87,12 +87,11 @@ test.describe('Deck Browsing', () => {
     // Verify decks page loaded
     await expect(page.getByRole('heading', { name: /decks/i })).toBeVisible();
 
-    // Wait for decks to load
-    await page.waitForTimeout(1000);
+    // Wait for deck cards to load from API (replaces fixed timeout with proper wait)
+    const deckCards = page.locator('[data-testid="deck-card"]');
+    await expect(deckCards.first()).toBeVisible({ timeout: 15000 });
 
     // Verify at least 1 deck card visible
-    const deckCards = page.locator('[data-testid="deck-card"]');
-
     const count = await deckCards.count();
     expect(count).toBeGreaterThanOrEqual(1);
   });
@@ -169,12 +168,10 @@ test.describe('Deck Browsing', () => {
 
   test('E2E-03.5: View deck details', async ({ page }) => {
     await page.goto('/decks');
-    await page.waitForTimeout(1000);
 
-    // Click on first available deck
+    // Wait for deck cards to load from API (replaces fixed timeout)
     const firstDeck = page.locator('[data-testid="deck-card"]').first();
-
-    await expect(firstDeck).toBeVisible({ timeout: 5000 });
+    await expect(firstDeck).toBeVisible({ timeout: 15000 });
     await firstDeck.click();
 
     // Wait for detail page to load
@@ -194,7 +191,10 @@ test.describe('Deck Browsing', () => {
 
   test('E2E-03.6: Reset filters', async ({ page }) => {
     await page.goto('/decks');
-    await page.waitForTimeout(1000);
+
+    // Wait for deck cards to load from API (replaces fixed timeout)
+    const deckCards = page.locator('[data-testid="deck-card"]');
+    await expect(deckCards.first()).toBeVisible({ timeout: 15000 });
 
     // Try to apply a filter first
     const filterButton = page.getByRole('button', { name: /^a1$|filter/i }).first();
