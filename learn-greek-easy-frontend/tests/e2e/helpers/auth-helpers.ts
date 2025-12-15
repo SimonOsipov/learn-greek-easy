@@ -400,8 +400,13 @@ export async function loginViaUI(
 }
 
 /**
- * Login via localStorage (faster - bypass UI)
- * Uses API authentication to get real tokens, then injects into localStorage
+ * Login via localStorage (now uses UI login for reliability)
+ *
+ * Previously used addInitScript to inject auth state directly, but this
+ * caused race conditions with Zustand's persist middleware in Chromium.
+ *
+ * Now uses loginViaUI which is slower but 100% reliable since it goes
+ * through the app's real login flow.
  *
  * @param page - Playwright page object
  * @param targetPath - Path to navigate to after login (defaults to '/dashboard')
@@ -412,8 +417,15 @@ export async function loginViaLocalStorage(
   targetPath: string = '/dashboard',
   user: TestUser = SEED_USERS.LEARNER
 ): Promise<void> {
-  // Use API-based login which is now the standard approach
-  await loginViaAPI(page, user, targetPath);
+  // Use the real login flow - no race conditions with Zustand persist
+  await loginViaUI(page, user);
+
+  // Navigate to target path if different from dashboard
+  // loginViaUI always ends up on /dashboard after successful login
+  if (targetPath !== '/dashboard' && targetPath !== '/') {
+    await page.goto(targetPath);
+    await page.waitForLoadState('domcontentloaded');
+  }
 }
 
 /**
