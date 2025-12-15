@@ -22,14 +22,14 @@ export default defineConfig({
   // Fail fast: stop after first failure (useful for debugging)
   // fullyParallel: false,
 
-  // Run tests in parallel (faster CI)
-  fullyParallel: true,
+  // Run tests sequentially for stability (parallel can cause connection pool issues)
+  fullyParallel: false,
 
-  // Retry failed tests in CI (catch flaky tests)
-  retries: process.env.CI ? 2 : 0,
+  // Retry failed tests in CI (catch flaky tests) - increased retries for stability
+  retries: process.env.CI ? 3 : 0,
 
-  // Number of parallel workers
-  workers: process.env.CI ? 4 : undefined, // CI: 4 workers for parallel execution, Local: auto
+  // Number of parallel workers - reduced for stability
+  workers: process.env.CI ? 2 : undefined, // CI: 2 workers for stability, Local: auto
 
   // Reporter configuration
   reporter: [

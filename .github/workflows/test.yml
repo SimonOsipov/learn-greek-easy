@@ -260,6 +260,16 @@ jobs:
           done
           # Final check
           curl -sf http://localhost:8000/health/ready || (echo "Backend failed to start" && exit 1)
+          # Warmup phase: Make several requests to ensure connection pools are ready
+          echo "Warming up backend connection pools..."
+          for i in {1..5}; do
+            curl -sf http://localhost:8000/health > /dev/null 2>&1 || true
+            curl -sf http://localhost:8000/api/v1/test/seed/status > /dev/null 2>&1 || true
+            sleep 1
+          done
+          echo "Backend warmup complete, waiting 3 more seconds..."
+          sleep 3
+          echo "Backend is ready for E2E tests!"
 
       - name: Seed database
         run: |
@@ -442,6 +452,16 @@ jobs:
           done
           # Final check
           curl -sf http://localhost:8000/health/ready || (echo "Backend failed to start" && exit 1)
+          # Warmup phase: Make several requests to ensure connection pools are ready
+          echo "Warming up backend connection pools..."
+          for i in {1..5}; do
+            curl -sf http://localhost:8000/health > /dev/null 2>&1 || true
+            curl -sf http://localhost:8000/api/v1/test/seed/status > /dev/null 2>&1 || true
+            sleep 1
+          done
+          echo "Backend warmup complete, waiting 3 more seconds..."
+          sleep 3
+          echo "Backend is ready for E2E tests!"
 
       - name: Seed database
         run: |

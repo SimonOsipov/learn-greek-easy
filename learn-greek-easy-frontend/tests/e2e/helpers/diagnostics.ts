@@ -23,6 +23,9 @@ export async function enableTestDiagnostics(page: Page): Promise<void> {
 
   // Add localStorage monitoring via addInitScript (for debugging, not critical timing)
   await page.addInitScript(() => {
+    // Set playwright flag to enable test mode in PublicRoute
+    (window as any).playwright = true;
+    console.log('[TEST] window.playwright flag set to true');
     // Log when localStorage changes
     const originalSetItem = localStorage.setItem;
     localStorage.setItem = function(key: string, value: string) {

@@ -8,6 +8,44 @@
 import { Page, APIRequestContext } from '@playwright/test';
 import { enableTestDiagnostics, logAuthState } from './diagnostics';
 
+/**
+ * Retry helper for flaky network requests
+ */
+async function retryRequest<T>(
+  fn: () => Promise<T>,
+  maxRetries: number = 3,
+  delayMs: number = 1000,
+  context: string = 'request'
+): Promise<T> {
+  let lastError: Error | null = null;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error as Error;
+      const errorMessage = lastError.message || String(lastError);
+
+      const isRetryable =
+        errorMessage.includes('ECONNRESET') ||
+        errorMessage.includes('ECONNREFUSED') ||
+        errorMessage.includes('socket hang up') ||
+        errorMessage.includes('network') ||
+        errorMessage.includes('timeout');
+
+      if (!isRetryable || attempt === maxRetries) {
+        console.error(`[TEST] ${context} failed after ${attempt} attempt(s):`, errorMessage);
+        throw lastError;
+      }
+
+      console.log(`[TEST] ${context} attempt ${attempt}/${maxRetries} failed, retrying in ${delayMs}ms...`);
+      await new Promise(resolve => setTimeout(resolve, delayMs));
+    }
+  }
+
+  throw lastError;
+}
+
 export interface TestUser {
   email: string;
   password: string;
@@ -88,36 +126,41 @@ export async function loginViaAPI(
   await enableTestDiagnostics(page);
 
   try {
-    // 1. Get tokens via API FIRST (before any navigation)
-    const loginResponse = await page.request.post(`${apiBaseUrl}/api/v1/auth/login`, {
-      data: {
-        email: user.email,
-        password: user.password,
+    // 1. Get tokens via API FIRST (before any navigation) - with retry for flaky connections
+    const tokenData = await retryRequest(
+      async () => {
+        const loginResponse = await page.request.post(`${apiBaseUrl}/api/v1/auth/login`, {
+          data: { email: user.email, password: user.password },
+          headers: { 'Content-Type': 'application/json' },
+          timeout: 10000,
+        });
+        if (!loginResponse.ok()) {
+          const errorText = await loginResponse.text();
+          throw new Error(`Login API failed: ${loginResponse.status()} - ${errorText}`);
+        }
+        return await loginResponse.json();
       },
-      headers: {
-        'Content-Type': 'application/json',
+      3,
+      1000,
+      'Login API'
+    );
+
+    // 2. Fetch user profile - with retry for flaky connections
+    const profileData = await retryRequest(
+      async () => {
+        const profileResponse = await page.request.get(`${apiBaseUrl}/api/v1/auth/me`, {
+          headers: { Authorization: `Bearer ${tokenData.access_token}` },
+          timeout: 10000,
+        });
+        if (!profileResponse.ok()) {
+          throw new Error(`Profile API failed: ${profileResponse.status()}`);
+        }
+        return await profileResponse.json();
       },
-    });
-
-    if (!loginResponse.ok()) {
-      const errorText = await loginResponse.text();
-      throw new Error(`Login API failed: ${loginResponse.status()} - ${errorText}`);
-    }
-
-    const tokenData = await loginResponse.json();
-
-    // 2. Fetch user profile
-    const profileResponse = await page.request.get(`${apiBaseUrl}/api/v1/auth/me`, {
-      headers: {
-        Authorization: `Bearer ${tokenData.access_token}`,
-      },
-    });
-
-    if (!profileResponse.ok()) {
-      throw new Error(`Profile API failed: ${profileResponse.status()}`);
-    }
-
-    const profileData = await profileResponse.json();
+      3,
+      1000,
+      'Profile API'
+    );
     // Handle wrapped response (data field) or direct response
     const userData = profileData.data || profileData;
 
