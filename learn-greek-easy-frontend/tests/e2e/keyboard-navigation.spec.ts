@@ -34,8 +34,8 @@ test.describe('Keyboard Navigation', () => {
     // Skip in webkit due to different focus behavior
     test.skip(browserName === 'webkit', 'Webkit has different tab focus behavior');
 
+    // loginViaLocalStorage already navigates to /dashboard and waits for auth content
     await loginViaLocalStorage(page);
-    await page.goto('/dashboard');
 
     // CRITICAL: Verify we're authenticated and not redirected to login
     const currentUrl = page.url();
@@ -43,12 +43,9 @@ test.describe('Keyboard Navigation', () => {
       throw new Error('Authentication failed - redirected to login page. Check backend connectivity.');
     }
 
-    // Additional check: Wait for authenticated content
-    const heading = page.getByRole('heading').first();
-    await expect(heading).toBeVisible({ timeout: 5000 });
-
-    // Wait for dashboard to fully load
-    await page.waitForSelector('h1, h2, [data-testid]', { timeout: 10000 });
+    // Wait for Dashboard heading specifically (ensures page is fully rendered)
+    await expect(page.getByRole('heading', { name: /dashboard/i }))
+      .toBeVisible({ timeout: 15000 });
 
     // Count focusable interactive elements (excluding those intentionally removed from tab order)
     const focusableSelector = 'button:not([tabindex="-1"]):not([disabled]), a:not([tabindex="-1"]), input:not([tabindex="-1"]):not([disabled]), textarea:not([tabindex="-1"]):not([disabled]), select:not([tabindex="-1"]):not([disabled])';

@@ -10,9 +10,12 @@ import { loginViaLocalStorage } from './helpers/auth-helpers';
 // Seed creates review history and card stats for the learner user
 test.describe('Analytics Dashboard', () => {
   test.beforeEach(async ({ page }) => {
+    // loginViaLocalStorage already navigates to /dashboard and waits for auth content
     await loginViaLocalStorage(page);
-    await page.goto('/dashboard');
-    await page.waitForTimeout(1000); // Wait for dashboard to load
+
+    // Wait for Dashboard heading to be visible (explicit wait instead of fixed timeout)
+    await expect(page.getByRole('heading', { name: /dashboard/i }))
+      .toBeVisible({ timeout: 15000 });
   });
 
   // TODO: Skip chart tests - Dashboard currently shows MetricCards, not Recharts charts.
