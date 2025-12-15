@@ -282,7 +282,14 @@ export async function loginViaAPI(
 }
 
 /**
- * Login via UI
+ * Login via UI with robust error handling
+ *
+ * This function:
+ * 1. Sets up API response interception before clicking submit
+ * 2. Checks if the login API succeeded or failed
+ * 3. Detects error messages displayed on the login page
+ * 4. Uses Promise.race for efficient success/failure detection
+ *
  * @param page - Playwright page object
  * @param user - User credentials (defaults to SEED_USERS.LEARNER for real backend)
  */
@@ -290,18 +297,106 @@ export async function loginViaUI(
   page: Page,
   user: TestUser = SEED_USERS.LEARNER
 ): Promise<void> {
+  // Enable diagnostics for debugging
+  await enableTestDiagnostics(page);
+
   // Navigate to login page
   await page.goto('/login');
+
+  // Wait for login form to be ready
+  await page.waitForSelector('[data-testid="login-card"]', { timeout: 10000 });
 
   // Fill login form
   await page.getByTestId('email-input').fill(user.email);
   await page.getByTestId('password-input').fill(user.password);
 
-  // Submit form
+  // Set up response interception BEFORE clicking submit
+  // This ensures we don't miss the response due to timing
+  const responsePromise = page.waitForResponse(
+    response =>
+      response.url().includes('/api/v1/auth/login') &&
+      response.request().method() === 'POST',
+    { timeout: 15000 }
+  );
+
+  // Click submit
   await page.getByTestId('login-submit').click();
 
-  // Wait for redirect to dashboard (with increased timeout for real API)
-  await page.waitForURL('/dashboard', { timeout: 15000 });
+  // Wait for API response
+  const response = await responsePromise;
+
+  // Check if API succeeded
+  if (!response.ok()) {
+    // Get error details from response body
+    let errorBody = 'Unknown error';
+    try {
+      const jsonBody = await response.json();
+      errorBody = jsonBody.detail || jsonBody.message || JSON.stringify(jsonBody);
+    } catch {
+      try {
+        errorBody = await response.text();
+      } catch {
+        // Keep default error message
+      }
+    }
+
+    // Log auth state for debugging
+    await logAuthState(page);
+
+    // Also check if error message appeared on page
+    const errorAlert = page.locator('[role="alert"]');
+    const hasErrorAlert = await errorAlert.isVisible().catch(() => false);
+    let pageError = '';
+    if (hasErrorAlert) {
+      pageError = await errorAlert.textContent() || '';
+    }
+
+    throw new Error(
+      `Login API failed with status ${response.status()}: ${errorBody}` +
+      (pageError ? ` | Page error: ${pageError}` : '')
+    );
+  }
+
+  // API succeeded, now wait for navigation to dashboard
+  // This should be quick since the API already succeeded
+  try {
+    await page.waitForURL('**/dashboard**', { timeout: 10000 });
+  } catch (navError) {
+    // Navigation failed - check current state
+    const currentUrl = page.url();
+
+    // Check for error message on page
+    const errorAlert = page.locator('[role="alert"]');
+    const hasErrorAlert = await errorAlert.isVisible().catch(() => false);
+
+    if (hasErrorAlert) {
+      const errorText = await errorAlert.textContent() || 'Unknown error';
+      await logAuthState(page);
+      throw new Error(`Login navigation failed - error on page: ${errorText}`);
+    }
+
+    // Log auth state for debugging
+    await logAuthState(page);
+
+    throw new Error(
+      `Login succeeded but navigation to dashboard failed. ` +
+      `Current URL: ${currentUrl}. ` +
+      `This may indicate a routing issue or slow state update.`
+    );
+  }
+
+  // Verify we're actually on the dashboard
+  const currentUrl = page.url();
+  if (!currentUrl.includes('/dashboard')) {
+    await logAuthState(page);
+    throw new Error(
+      `Expected to be on /dashboard but got: ${currentUrl}`
+    );
+  }
+
+  // Log success for debugging
+  console.log('[TEST] loginViaUI: Successfully logged in and navigated to dashboard');
+  await logAuthState(page);
 }
 
 /**
