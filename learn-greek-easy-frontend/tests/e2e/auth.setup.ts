@@ -35,7 +35,9 @@ async function authenticateAndSave(
   await page.getByTestId('password-input').fill(user.password);
 
   // Check "Remember Me" to persist auth state in localStorage
-  await page.locator('#remember').check();
+  // Note: Using click() instead of check() because Radix UI renders
+  // <button role="checkbox"> not native <input>, and check() times out
+  await page.locator('#remember').click();
 
   // Click submit and wait for navigation
   await page.getByTestId('login-submit').click();
