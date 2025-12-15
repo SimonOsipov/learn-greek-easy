@@ -299,11 +299,10 @@ describe('Login Flow Integration Tests', () => {
       await user.click(screen.getByRole('button', { name: /sign in/i }));
 
       // Wait for error message to appear
-      // Note: mockAuthAPI throws a plain object, not an Error, so the Login component
-      // falls back to the generic error message
+      // The mock throws an Error with message 'Invalid credentials'
       await waitFor(
         () => {
-          expect(screen.getByText(/login failed/i)).toBeInTheDocument();
+          expect(screen.getByText(/invalid credentials/i)).toBeInTheDocument();
         },
         { timeout: 5000, interval: 100 }
       );
@@ -327,7 +326,7 @@ describe('Login Flow Integration Tests', () => {
       // Wait for error
       await waitFor(
         () => {
-          expect(screen.getByText(/login failed/i)).toBeInTheDocument();
+          expect(screen.getByText(/invalid credentials/i)).toBeInTheDocument();
         },
         { timeout: 5000, interval: 100 }
       );
@@ -345,7 +344,7 @@ describe('Login Flow Integration Tests', () => {
 
       // Error should be cleared during new attempt
       await waitFor(() => {
-        expect(screen.queryByText(/login failed/i)).not.toBeInTheDocument();
+        expect(screen.queryByText(/invalid credentials/i)).not.toBeInTheDocument();
       });
 
       // Login should succeed
