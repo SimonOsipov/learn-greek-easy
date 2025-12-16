@@ -600,9 +600,139 @@ The new helper:
 2. If visible, waits for it to disappear (auth check complete)
 3. Waits for `domcontentloaded` as a final safety check
 
+#### CI Status - Still Failing
+
+**Date**: 2024-12-16
+**Run ID**: 20271146967
+**Status**: Test back to consistently failing (not just flaky)
+
+The `waitForAuthCheck` helper still has a race condition. The fix with `isVisible()` check was insufficient.
+
+### Final Root Cause - Race Condition in waitForAuthCheck
+
+The `waitForAuthCheck` helper uses a **point-in-time check** that misses the loading state:
+
+```typescript
+// Previous implementation (still flawed)
+export async function waitForAuthCheck(page: Page, timeout = 15000): Promise<void> {
+  const loadingText = page.getByText(/loading your experience/i);
+  const isLoading = await loadingText.isVisible().catch(() => false);  // ← Point-in-time check!
+
+  if (isLoading) {
+    await expect(loadingText).not.toBeVisible({ timeout });
+  }
+
+  await page.waitForLoadState('domcontentloaded');
+}
+```
+
+**Race Condition Timeline in CI:**
+
+| Step | Time | Local | CI |
+|------|------|-------|-----|
+| 1 | 0ms | `page.goto()` completes | `page.goto()` completes |
+| 2 | 1ms | `waitForAuthCheck()` runs | `waitForAuthCheck()` runs |
+| 3 | 2ms | `isVisible()` check | `isVisible()` check |
+| 4 | 3ms | React already loaded | React NOT hydrated yet! |
+| 5 | 4ms | `isLoading = false` (done) | `isLoading = false` (not started!) |
+| 6 | 5ms | Function returns ✓ | Function returns ✓ |
+| 7 | 50ms | - | React shows loading screen |
+| 8 | 51ms | - | Test fails - loading visible |
+
+**Key insight**: The `isVisible()` call is a snapshot in time. In CI, when it runs, React hasn't mounted RouteGuard yet, so the loading screen hasn't appeared. The function sees `isLoading = false` and returns immediately. Then React shows the loading screen AFTER the check.
+
+### Final Fix Implemented ✅
+
+**Date**: 2024-12-16
+**Commit**: `cea1fc9` - `fix(e2e): Fix race condition in waitForAuthCheck helper`
+**Branch**: `feature/connect-frontend-backend-api`
+
+#### Changes Made
+
+##### 1. Added `data-testid` to RouteGuard
+
+**File**: `src/components/auth/RouteGuard.tsx` (line 29-32)
+
+```tsx
+// Before
+<div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 via-white to-purple-50">
+
+// After
+<div
+  data-testid="auth-loading"
+  className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 via-white to-purple-50"
+>
+```
+
+**Why**: Using `data-testid` is more reliable than text matching - won't break if copy changes.
+
+##### 2. Rewrote `waitForAuthCheck` with `waitFor()` Pattern
+
+**File**: `tests/e2e/helpers/auth-helpers.ts` (lines 488-519)
+
+```typescript
+/**
+ * Wait for RouteGuard auth check to complete after navigation
+ *
+ * RouteGuard shows "Loading your experience..." while verifying the auth token.
+ * This loading state can appear AFTER page.goto() returns due to React hydration timing.
+ *
+ * The fix handles three scenarios:
+ * 1. Fast (local): Loading never appears - we fall through after short timeout
+ * 2. Normal: Loading appears quickly - we wait for it to disappear
+ * 3. Slow (CI): Loading appears after a delay - waitFor catches it within timeout
+ *
+ * @param page - Playwright page object
+ * @param timeout - Maximum time to wait for loading to complete (default: 15000ms)
+ */
+export async function waitForAuthCheck(page: Page, timeout = 15000): Promise<void> {
+  const loadingIndicator = page.getByTestId('auth-loading');
+
+  try {
+    // Wait up to 3 seconds for React to hydrate and potentially show loading screen.
+    // This catches the race condition where loading appears AFTER our initial check.
+    await loadingIndicator.waitFor({ state: 'visible', timeout: 3000 });
+
+    // Loading appeared - now wait for it to disappear (auth check complete)
+    await expect(loadingIndicator).not.toBeVisible({ timeout });
+  } catch {
+    // Loading never appeared within 3 seconds. Either:
+    // 1. Auth check completed very fast (already past loading)
+    // 2. Page didn't need auth check
+    // Ensure DOM is ready as a safety check
+    await page.waitForLoadState('domcontentloaded');
+  }
+}
+```
+
+#### Why This Fix Works
+
+| Previous Approach | New Approach |
+|-------------------|--------------|
+| `isVisible()` - point-in-time snapshot | `waitFor({ state: 'visible' })` - actively polls for 3s |
+| Misses loading if React not hydrated | Catches loading even if it appears later |
+| Returns immediately if not visible | Waits up to 3s for loading to appear |
+| Text-based selector | `data-testid` selector (more stable) |
+
+**The key difference**: `waitFor({ state: 'visible', timeout: 3000 })` **continuously polls** for 3 seconds, catching the loading state even if React hydration delays its appearance.
+
+#### QA Verification Results
+
+**Local test runs**: 5/5 passed
+
+```
+Run 1: PASS (666ms)
+Run 2: PASS (675ms)
+Run 3: PASS (669ms)
+Run 4: PASS (670ms)
+Run 5: PASS (673ms)
+```
+
+**All settings tests**: 6/6 passed
+
 #### CI Status
 
-⏳ Awaiting CI results...
+⏳ Pushed to `feature/connect-frontend-backend-api` - monitoring CI results...
 
 ---
 
