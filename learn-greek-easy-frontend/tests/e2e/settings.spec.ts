@@ -4,11 +4,17 @@
  */
 
 import { test, expect } from '@playwright/test';
+import { verifyAuthSucceeded } from './helpers/auth-helpers';
 
 test.describe('Settings Management', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/settings');
-    await page.waitForTimeout(500);
+
+    // Fail fast with clear error if auth failed
+    await verifyAuthSucceeded(page, '/settings');
+
+    // Wait for settings page content
+    await expect(page.getByRole('heading', { name: /settings/i })).toBeVisible({ timeout: 10000 });
   });
 
   test('E2E-04.1: Change password', async ({ page }) => {

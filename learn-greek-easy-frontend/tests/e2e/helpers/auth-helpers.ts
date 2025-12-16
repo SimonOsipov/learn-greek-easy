@@ -461,3 +461,26 @@ export async function verifySeedUsers(request: APIRequestContext): Promise<void>
 
   console.log(`[TEST] Successfully verified seed user ${testUser.email} can login`);
 }
+
+/**
+ * Verify authentication succeeded after navigation
+ * Use in beforeEach hooks for protected page tests
+ *
+ * @param page - Playwright page object
+ * @param expectedPath - Expected URL path (e.g., '/settings')
+ * @throws Error with clear message if redirected to login
+ */
+export async function verifyAuthSucceeded(page: Page, expectedPath: string): Promise<void> {
+  const currentUrl = page.url();
+
+  if (currentUrl.includes('/login')) {
+    throw new Error(
+      `Auth verification failed: Expected ${expectedPath} but was redirected to /login. ` +
+        `This usually means:\n` +
+        `  1. The storageState auth file is missing (playwright/.auth/learner.json)\n` +
+        `  2. The auth setup (auth.setup.ts) failed to authenticate\n` +
+        `  3. The token in storageState has expired\n` +
+        `Current URL: ${currentUrl}`
+    );
+  }
+}
