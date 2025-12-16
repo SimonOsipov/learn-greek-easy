@@ -16,11 +16,36 @@ export const RouteGuard: React.FC<RouteGuardProps> = ({ children }) => {
 
   useEffect(() => {
     const verifyAuth = async () => {
+      // TODO: Remove after debugging
+      const startTime = Date.now();
+      const timestamp = new Date().toISOString();
+      console.log(`[E2E-DEBUG][RouteGuard][${timestamp}] verifyAuth START`);
+
       try {
+        // TODO: Remove after debugging
+        console.log(
+          `[E2E-DEBUG][RouteGuard][${timestamp}] verifyAuth BEFORE_CHECK_AUTH | elapsed=${Date.now() - startTime}ms`
+        );
+
         await checkAuth();
+
+        // TODO: Remove after debugging
+        console.log(
+          `[E2E-DEBUG][RouteGuard][${timestamp}] verifyAuth AFTER_CHECK_AUTH | elapsed=${Date.now() - startTime}ms`
+        );
       } finally {
+        // TODO: Remove after debugging
+        console.log(
+          `[E2E-DEBUG][RouteGuard][${timestamp}] verifyAuth FINALLY_BLOCK | elapsed=${Date.now() - startTime}ms | settingIsChecking=false`
+        );
+
         setIsChecking(false);
         setAuthInitialized();
+
+        // TODO: Remove after debugging
+        console.log(
+          `[E2E-DEBUG][RouteGuard][${timestamp}] verifyAuth COMPLETE | elapsed=${Date.now() - startTime}ms`
+        );
       }
     };
 

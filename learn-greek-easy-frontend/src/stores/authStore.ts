@@ -396,13 +396,25 @@ export const useAuthStore = create<AuthState>()(
 
       // Check auth on app load
       checkAuth: async () => {
+        // TODO: Remove after debugging
+        const startTime = Date.now();
+        const timestamp = new Date().toISOString();
         const { token, rememberMe: _rememberMe } = get();
 
         // Check session storage if not remember me
         const sessionToken = sessionStorage.getItem('auth-token');
         const activeToken = token || sessionToken;
 
+        // TODO: Remove after debugging
+        console.log(
+          `[E2E-DEBUG][AuthStore][${timestamp}] checkAuth START | hasStoreToken=${!!token} | hasSessionToken=${!!sessionToken} | activeToken=${activeToken ? 'present' : 'missing'}`
+        );
+
         if (!activeToken) {
+          // TODO: Remove after debugging
+          console.log(
+            `[E2E-DEBUG][AuthStore][${timestamp}] checkAuth NO_TOKEN | elapsed=${Date.now() - startTime}ms | isAuthenticated=false`
+          );
           set({ isAuthenticated: false });
           return;
         }
@@ -416,7 +428,17 @@ export const useAuthStore = create<AuthState>()(
             sessionStorage.setItem('auth-token', activeToken);
           }
 
+          // TODO: Remove after debugging
+          console.log(
+            `[E2E-DEBUG][AuthStore][${timestamp}] checkAuth API_CALL_START | elapsed=${Date.now() - startTime}ms`
+          );
+
           const profileResponse = await authAPI.getProfile();
+
+          // TODO: Remove after debugging
+          console.log(
+            `[E2E-DEBUG][AuthStore][${timestamp}] checkAuth API_CALL_SUCCESS | elapsed=${Date.now() - startTime}ms | userId=${profileResponse.id}`
+          );
 
           // Transform backend user response to frontend User type
           const user: User = {
@@ -446,7 +468,17 @@ export const useAuthStore = create<AuthState>()(
             isAuthenticated: true,
             isLoading: false,
           });
+
+          // TODO: Remove after debugging
+          console.log(
+            `[E2E-DEBUG][AuthStore][${timestamp}] checkAuth COMPLETE_SUCCESS | elapsed=${Date.now() - startTime}ms | isAuthenticated=true`
+          );
         } catch (error) {
+          // TODO: Remove after debugging
+          console.log(
+            `[E2E-DEBUG][AuthStore][${timestamp}] checkAuth API_CALL_FAILED | elapsed=${Date.now() - startTime}ms | error=${error instanceof Error ? error.message : 'Unknown'}`
+          );
+
           // Token expired or invalid - clear auth state
           clearAuthTokens();
           set({
@@ -456,6 +488,11 @@ export const useAuthStore = create<AuthState>()(
             isAuthenticated: false,
             isLoading: false,
           });
+
+          // TODO: Remove after debugging
+          console.log(
+            `[E2E-DEBUG][AuthStore][${timestamp}] checkAuth COMPLETE_FAILED | elapsed=${Date.now() - startTime}ms | isAuthenticated=false`
+          );
         }
       },
 

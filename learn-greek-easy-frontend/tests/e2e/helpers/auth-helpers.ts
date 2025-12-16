@@ -533,3 +533,69 @@ export async function waitForAuthCheck(page: Page, timeout = 15000): Promise<voi
     await expect(loadingIndicator).toBeHidden({ timeout });
   }
 }
+
+// TODO: Remove after debugging - Debug helper functions
+
+/**
+ * Capture browser console messages filtered by E2E-DEBUG prefix
+ * Sets up a listener that logs all E2E-DEBUG messages from the browser
+ *
+ * @param page - Playwright page object
+ * @returns Cleanup function to remove the listener
+ */
+export function captureConsoleMessages(page: Page): () => void {
+  const handler = (msg: import('@playwright/test').ConsoleMessage) => {
+    const text = msg.text();
+    if (text.includes('[E2E-DEBUG]')) {
+      console.log(`[BROWSER] ${text}`);
+    }
+  };
+
+  page.on('console', handler);
+
+  return () => {
+    page.off('console', handler);
+  };
+}
+
+/**
+ * Enhanced version of waitForAppReady with detailed timeout state logging
+ *
+ * @param page - Playwright page object
+ * @param timeout - Maximum time to wait (default: 30000ms)
+ */
+export async function waitForAppReadyWithDebug(page: Page, timeout = 30000): Promise<void> {
+  const startTime = Date.now();
+
+  console.log(`[E2E-DEBUG-TEST] waitForAppReadyWithDebug START | timeout=${timeout}ms`);
+
+  try {
+    await page.waitForSelector('[data-app-ready="true"]', {
+      state: 'attached',
+      timeout,
+    });
+    console.log(`[E2E-DEBUG-TEST] waitForAppReadyWithDebug SUCCESS | elapsed=${Date.now() - startTime}ms`);
+  } catch (error) {
+    // On timeout, log the current state
+    const elapsed = Date.now() - startTime;
+    console.log(`[E2E-DEBUG-TEST] waitForAppReadyWithDebug TIMEOUT | elapsed=${elapsed}ms`);
+
+    // Try to get current app-ready state
+    try {
+      const appReadyAttr = await page.getAttribute('[data-app-ready]', 'data-app-ready');
+      console.log(`[E2E-DEBUG-TEST] data-app-ready attribute value: ${appReadyAttr}`);
+    } catch {
+      console.log(`[E2E-DEBUG-TEST] data-app-ready element not found`);
+    }
+
+    // Check for auth-loading indicator
+    const authLoading = page.getByTestId('auth-loading');
+    const isAuthLoadingVisible = await authLoading.isVisible().catch(() => false);
+    console.log(`[E2E-DEBUG-TEST] auth-loading visible: ${isAuthLoadingVisible}`);
+
+    // Check current URL
+    console.log(`[E2E-DEBUG-TEST] current URL: ${page.url()}`);
+
+    throw error;
+  }
+}
