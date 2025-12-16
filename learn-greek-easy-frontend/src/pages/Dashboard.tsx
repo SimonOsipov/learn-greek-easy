@@ -160,7 +160,7 @@ export const Dashboard: React.FC = () => {
   const metrics = buildMetrics();
 
   return (
-    <div className="space-y-6 pb-8">
+    <div className="space-y-6 pb-8" data-testid="dashboard">
       {/* Page Title - visible for accessibility and E2E tests */}
       <h1 className="text-2xl font-semibold text-text-primary md:text-3xl">Dashboard</h1>
 

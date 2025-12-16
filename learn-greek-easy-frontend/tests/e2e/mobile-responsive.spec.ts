@@ -26,7 +26,7 @@ test.describe('Mobile Responsive (375px)', () => {
 
   test('Dashboard should adapt to mobile layout', async ({ page }) => {
     await loginViaLocalStorage(page);
-    await page.goto('/dashboard');
+    await page.goto('/');
 
     // Check page loaded successfully (not redirected to login)
     await expect(page).not.toHaveURL(/\/login/);
@@ -130,7 +130,7 @@ test.describe('Tablet Responsive (768px)', () => {
 
   test('Dashboard should use tablet layout', async ({ page }) => {
     await loginViaLocalStorage(page);
-    await page.goto('/dashboard');
+    await page.goto('/');
 
     // Check page loaded successfully (not redirected to login)
     await expect(page).not.toHaveURL(/\/login/);
@@ -167,7 +167,7 @@ test.describe('Desktop Responsive (1024px)', () => {
 
   test('Dashboard should use full desktop layout', async ({ page }) => {
     await loginViaLocalStorage(page);
-    await page.goto('/dashboard');
+    await page.goto('/');
 
     // Wait for page to load
     await page.waitForLoadState('domcontentloaded');

@@ -33,7 +33,7 @@ test.describe('Accessibility (Axe-core)', () => {
   // ENABLED: Now uses seed data from E2E database seeding infrastructure (SEED-10)
   test('Dashboard should have no accessibility violations', async ({ page }) => {
     await loginViaLocalStorage(page);
-    await page.goto('/dashboard');
+    await page.goto('/');
 
     const accessibilityScanResults = await new AxeBuilder({ page })
       .withTags(['wcag2a', 'wcag2aa'])

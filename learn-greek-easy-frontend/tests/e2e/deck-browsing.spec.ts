@@ -22,7 +22,7 @@ test.describe('Deck Browsing', () => {
   });
 
   test('should navigate to decks page from dashboard', async ({ page }) => {
-    await page.goto('/dashboard');
+    await page.goto('/');
 
     // Find and click decks navigation link
     const decksLink = page.getByRole('link', { name: /decks/i }).first();
@@ -35,7 +35,7 @@ test.describe('Deck Browsing', () => {
 
   // ENABLED: Now uses seed data from E2E database seeding infrastructure (SEED-10)
   test('should display dashboard page with user greeting', async ({ page }) => {
-    await page.goto('/dashboard');
+    await page.goto('/');
 
     // Verify dashboard heading
     await expect(page.getByRole('heading', { name: /dashboard/i })).toBeVisible();
@@ -50,11 +50,11 @@ test.describe('Deck Browsing', () => {
   });
 
   test('should have working navigation menu', async ({ page }) => {
-    await page.goto('/dashboard');
+    await page.goto('/');
 
     // Verify main navigation items exist
     const mainNav = [
-      { name: /dashboard/i, url: '/dashboard' },
+      { name: /dashboard/i, url: '/' },
       { name: /decks/i, url: '/decks' },
     ];
 

@@ -50,7 +50,7 @@ export const useRequireAuth = (redirectTo = '/login') => {
 };
 
 // Hook to redirect if already authenticated
-export const useRedirectIfAuth = (redirectTo = '/dashboard') => {
+export const useRedirectIfAuth = (redirectTo = '/') => {
   const { isAuthenticated } = useAuthStore();
   const navigate = useNavigate();
 

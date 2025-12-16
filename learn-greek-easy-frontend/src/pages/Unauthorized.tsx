@@ -34,7 +34,7 @@ export const Unauthorized: React.FC = () => {
               </Button>
             </Link>
           )}
-          <Link to="/dashboard">
+          <Link to="/">
             <Button variant="outline" className="w-full sm:w-auto">
               Back to Dashboard
             </Button>

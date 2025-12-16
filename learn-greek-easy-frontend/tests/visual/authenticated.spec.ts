@@ -19,7 +19,7 @@ test.describe('Authenticated Pages Visual Tests', () => {
   });
 
   test('Dashboard Page', async ({ page }, testInfo) => {
-    await page.goto('/dashboard');
+    await page.goto('/');
     await waitForPageReady(page);
 
     // Wait for dashboard content to load

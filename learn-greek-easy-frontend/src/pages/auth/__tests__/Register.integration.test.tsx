@@ -157,7 +157,7 @@ describe('Registration Flow Integration Tests', () => {
 
       // Verify navigation to dashboard
       await waitFor(() => {
-        expect(mockNavigate).toHaveBeenCalledWith('/dashboard');
+        expect(mockNavigate).toHaveBeenCalledWith('/');
       });
     });
 

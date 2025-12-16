@@ -129,7 +129,7 @@ test.describe('Settings Management', () => {
       await page.waitForTimeout(1500); // Wait for auto-save
 
       // Navigate away and back
-      await page.goto('/dashboard');
+      await page.goto('/');
       await page.waitForTimeout(500);
       await page.goto('/settings');
       await page.waitForTimeout(500);
@@ -146,7 +146,7 @@ test.describe('Settings Management', () => {
       await expect(page.getByRole('heading', { name: /settings/i })).toBeVisible();
 
       // Navigate away and back
-      await page.goto('/dashboard');
+      await page.goto('/');
       await page.goto('/settings');
 
       // Should still load settings page

@@ -17,7 +17,7 @@ const Settings: React.FC = () => {
             data-testid="back-to-dashboard"
             variant="ghost"
             size="icon"
-            onClick={() => navigate('/dashboard')}
+            onClick={() => navigate('/')}
             aria-label="Back to dashboard"
           >
             <ArrowLeft className="h-5 w-5" />

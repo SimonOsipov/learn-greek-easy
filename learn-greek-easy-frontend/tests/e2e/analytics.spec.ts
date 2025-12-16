@@ -146,7 +146,7 @@ test.describe('Analytics Dashboard', () => {
 
   test('E2E-05.5: Dashboard loads within reasonable time', async ({ page }) => {
     // Navigate to dashboard fresh
-    await page.goto('/dashboard');
+    await page.goto('/');
     const startTime = Date.now();
 
     // Wait for dashboard heading to be visible

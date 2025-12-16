@@ -82,7 +82,7 @@ test.describe('Unauthenticated - Login & Register Forms', () => {
     page,
   }) => {
     // Try to access protected routes
-    const protectedRoutes = ['/dashboard', '/decks', '/profile', '/settings'];
+    const protectedRoutes = ['/', '/decks', '/profile', '/settings'];
 
     for (const route of protectedRoutes) {
       await page.goto(route);
@@ -106,12 +106,12 @@ test.describe('Unauthenticated - Login & Register Forms', () => {
     // Submit form using test ID
     await page.getByTestId('login-submit').click();
 
-    // Wait for redirect to dashboard (with increased timeout for real API)
-    await page.waitForURL('/dashboard', { timeout: 15000 });
+    // Wait for redirect to dashboard at root (with increased timeout for real API)
+    await page.waitForURL('/', { timeout: 15000 });
 
-    // Verify we're on dashboard
+    // Verify we're on dashboard (root path)
     const currentUrl = page.url();
-    expect(currentUrl).toContain('/dashboard');
+    expect(currentUrl.endsWith('/') || currentUrl.match(/\/$/)).toBeTruthy();
   });
 
   test('E2E-01.2: Login fails with invalid credentials', async ({ page }) => {

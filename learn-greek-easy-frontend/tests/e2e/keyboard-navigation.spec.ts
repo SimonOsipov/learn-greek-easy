@@ -140,7 +140,7 @@ test.describe('Keyboard Navigation', () => {
     const hasError = await page.locator('[role="alert"]').count() > 0;
 
     // Form submission was attempted (not blocked)
-    expect(currentUrl.includes('/dashboard') || currentUrl.includes('/login')).toBe(true);
+    expect(currentUrl === '/' || currentUrl.endsWith('/') || currentUrl.includes('/login')).toBe(true);
   });
 
   test('Arrow keys should work in review session', async ({ page }) => {

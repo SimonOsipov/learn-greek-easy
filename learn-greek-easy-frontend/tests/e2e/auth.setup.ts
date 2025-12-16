@@ -42,8 +42,8 @@ async function authenticateAndSave(
   // Click submit and wait for navigation
   await page.getByTestId('login-submit').click();
 
-  // Wait for successful login - either dashboard or authenticated content
-  await expect(page).toHaveURL(/\/dashboard/, { timeout: 15000 });
+  // Wait for successful login - either root (dashboard) or authenticated content
+  await expect(page).toHaveURL(/^\/$|^\/[^l]/, { timeout: 15000 });
 
   // Wait for authenticated content to ensure state is fully set
   await page.waitForSelector(

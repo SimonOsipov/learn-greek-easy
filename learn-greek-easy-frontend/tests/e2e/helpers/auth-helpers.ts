@@ -139,9 +139,10 @@ export async function loginViaUI(
     );
   }
 
-  // API succeeded, wait for navigation to dashboard
+  // API succeeded, wait for navigation away from login page
   try {
-    await page.waitForURL('**/dashboard**', { timeout: 10000 });
+    // Wait until we're no longer on /login
+    await page.waitForFunction(() => !window.location.pathname.includes('/login'), { timeout: 10000 });
   } catch (navError) {
     const currentUrl = page.url();
 
@@ -155,16 +156,16 @@ export async function loginViaUI(
     }
 
     throw new Error(
-      `Login succeeded but navigation to dashboard failed. ` +
+      `Login succeeded but navigation failed. ` +
       `Current URL: ${currentUrl}. `
     );
   }
 
-  // Verify we're actually on the dashboard
+  // Verify we're no longer on login page (dashboard is at /)
   const currentUrl = page.url();
-  if (!currentUrl.includes('/dashboard')) {
+  if (currentUrl.includes('/login')) {
     throw new Error(
-      `Expected to be on /dashboard but got: ${currentUrl}`
+      `Expected to be on dashboard (/) but still on: ${currentUrl}`
     );
   }
 
@@ -184,7 +185,7 @@ export async function loginViaUI(
  */
 export async function loginViaLocalStorage(
   page: Page,
-  targetPath: string = '/dashboard',
+  targetPath: string = '/',
   _user: TestUser = SEED_USERS.LEARNER
 ): Promise<void> {
   console.warn(
@@ -208,7 +209,7 @@ export async function loginViaLocalStorage(
 export async function loginViaAPI(
   page: Page,
   _user: TestUser = SEED_USERS.LEARNER,
-  targetPath: string = '/dashboard'
+  targetPath: string = '/'
 ): Promise<void> {
   console.warn(
     '[DEPRECATED] loginViaAPI is deprecated. ' +
