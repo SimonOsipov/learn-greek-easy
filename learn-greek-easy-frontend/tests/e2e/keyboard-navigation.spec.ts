@@ -1,12 +1,25 @@
 /**
  * Keyboard Navigation Tests
  * Tests Tab, Enter, Esc, and arrow key navigation
+ *
+ * Test Organization:
+ * - Public Pages: Use empty storageState to test unauthenticated pages (login)
+ * - Protected Pages: Use default storageState (learner user) from config
  */
 
 import { test, expect } from '@playwright/test';
 import { SEED_USERS } from './helpers/auth-helpers';
 
-test.describe('Keyboard Navigation', () => {
+/**
+ * PUBLIC PAGES - UNAUTHENTICATED TESTS
+ *
+ * These tests use empty storageState to ensure no user is logged in.
+ * This is required for testing login page keyboard navigation.
+ */
+test.describe('Keyboard Navigation - Public Pages', () => {
+  // Override storageState to be empty (no auth)
+  test.use({ storageState: { cookies: [], origins: [] } });
+
   test('Tab order should be logical on login page', async ({ page, browserName }) => {
     // Skip in webkit due to different focus behavior
     test.skip(browserName === 'webkit', 'Webkit has different tab order behavior');
@@ -14,7 +27,9 @@ test.describe('Keyboard Navigation', () => {
     await page.goto('/login');
 
     // Get all focusable elements to verify minimum count
-    const focusableElements = await page.locator('button, input, a, [tabindex]:not([tabindex="-1"])').count();
+    const focusableElements = await page
+      .locator('button, input, a, [tabindex]:not([tabindex="-1"])')
+      .count();
     expect(focusableElements).toBeGreaterThanOrEqual(3);
 
     // Tab through elements - verify order using test IDs
@@ -28,42 +43,6 @@ test.describe('Keyboard Navigation', () => {
     await page.keyboard.press('Tab');
     let focused = await page.evaluate(() => document.activeElement?.tagName);
     expect(['INPUT', 'BUTTON', 'A']).toContain(focused);
-  });
-
-  test('All interactive elements should be keyboard accessible', async ({ page, browserName }) => {
-    // Skip in webkit due to different focus behavior
-    test.skip(browserName === 'webkit', 'Webkit has different tab focus behavior');
-
-    // Navigate to dashboard - storageState handles auth
-    await page.goto('/');
-
-    // CRITICAL: Verify we're authenticated and not redirected to login
-    const currentUrl = page.url();
-    if (currentUrl.includes('/login')) {
-      throw new Error('Authentication failed - redirected to login page. Check backend connectivity.');
-    }
-
-    // Wait for Dashboard heading specifically (ensures page is fully rendered)
-    await expect(page.getByRole('heading', { name: /dashboard/i }))
-      .toBeVisible({ timeout: 15000 });
-
-    // Count focusable interactive elements (excluding those intentionally removed from tab order)
-    const focusableSelector = 'button:not([tabindex="-1"]):not([disabled]), a:not([tabindex="-1"]), input:not([tabindex="-1"]):not([disabled]), textarea:not([tabindex="-1"]):not([disabled]), select:not([tabindex="-1"]):not([disabled])';
-    const focusableElements = await page.locator(focusableSelector).count();
-
-    // Log diagnostic info if count is unexpectedly low
-    if (focusableElements === 0) {
-      console.error('[TEST] No focusable elements found - possible auth failure');
-      console.error('[TEST] Current URL:', page.url());
-    }
-
-    // Dashboard should have focusable elements (nav links, buttons, etc.)
-    expect(focusableElements).toBeGreaterThan(0);
-
-    // Verify we can tab through at least some elements
-    await page.keyboard.press('Tab');
-    const firstFocused = await page.evaluate(() => document.activeElement?.tagName);
-    expect(['BUTTON', 'A', 'INPUT', 'TEXTAREA', 'SELECT']).toContain(firstFocused);
   });
 
   test('Skip link should work', async ({ page }) => {
@@ -81,6 +60,100 @@ test.describe('Keyboard Navigation', () => {
       const focused = await page.evaluate(() => document.activeElement?.id || '');
       expect(focused).toContain('main');
     }
+  });
+
+  test('Enter key should submit forms', async ({ page }) => {
+    await page.goto('/login');
+
+    // Fill form using test IDs
+    await page.getByTestId('email-input').fill(SEED_USERS.LEARNER.email);
+    await page.getByTestId('password-input').fill(SEED_USERS.LEARNER.password);
+
+    // Press Enter (instead of clicking button)
+    await page.keyboard.press('Enter');
+
+    // Wait for form submission attempt
+    await page.waitForTimeout(1000);
+
+    // Should either redirect or show error (both are valid - form submitted)
+    const currentUrl = page.url();
+    const hasError = (await page.locator('[role="alert"]').count()) > 0;
+
+    // Form submission was attempted (not blocked)
+    expect(currentUrl === '/' || currentUrl.endsWith('/') || currentUrl.includes('/login')).toBe(
+      true
+    );
+  });
+
+  test('Focus visible styles should be present', async ({ page }) => {
+    await page.goto('/login');
+
+    // Tab to button
+    await page.keyboard.press('Tab');
+    await page.keyboard.press('Tab');
+    await page.keyboard.press('Tab');
+
+    // Check for focus styles
+    const buttonHasFocusStyle = await page.evaluate(() => {
+      const button = document.activeElement as HTMLElement;
+      const styles = window.getComputedStyle(button);
+      return (
+        styles.outline !== 'none' ||
+        styles.boxShadow.includes('focus') ||
+        button.classList.contains('focus')
+      );
+    });
+
+    expect(buttonHasFocusStyle).toBe(true);
+  });
+});
+
+/**
+ * PROTECTED PAGES - AUTHENTICATED TESTS
+ *
+ * These tests use the default storageState from config (learner user).
+ * The storageState is loaded BEFORE the test starts, so the user is
+ * already authenticated when the browser opens.
+ */
+test.describe('Keyboard Navigation - Protected Pages', () => {
+  // Uses default storageState from config (learner user)
+
+  test('All interactive elements should be keyboard accessible', async ({ page, browserName }) => {
+    // Skip in webkit due to different focus behavior
+    test.skip(browserName === 'webkit', 'Webkit has different tab focus behavior');
+
+    // Navigate to dashboard - storageState handles auth
+    await page.goto('/');
+
+    // CRITICAL: Verify we're authenticated and not redirected to login
+    const currentUrl = page.url();
+    if (currentUrl.includes('/login')) {
+      throw new Error(
+        'Authentication failed - redirected to login page. Check backend connectivity.'
+      );
+    }
+
+    // Wait for Dashboard heading specifically (ensures page is fully rendered)
+    await expect(page.getByRole('heading', { name: /dashboard/i })).toBeVisible({ timeout: 15000 });
+
+    // Count focusable interactive elements (excluding those intentionally removed from tab order)
+    const focusableSelector =
+      'button:not([tabindex="-1"]):not([disabled]), a:not([tabindex="-1"]), input:not([tabindex="-1"]):not([disabled]), textarea:not([tabindex="-1"]):not([disabled]), select:not([tabindex="-1"]):not([disabled])';
+    const focusableElements = await page.locator(focusableSelector).count();
+
+    // Log diagnostic info if count is unexpectedly low
+    if (focusableElements === 0) {
+      console.error('[TEST] No focusable elements found - possible auth failure');
+      console.error('[TEST] Current URL:', page.url());
+    }
+
+    // Dashboard should have focusable elements (nav links, buttons, etc.)
+    expect(focusableElements).toBeGreaterThan(0);
+
+    // Verify we can tab through at least some elements
+    await page.keyboard.press('Tab');
+    const firstFocused = await page.evaluate(() => document.activeElement?.tagName);
+    expect(['BUTTON', 'A', 'INPUT', 'TEXTAREA', 'SELECT']).toContain(firstFocused);
   });
 
   test('Modals should trap focus', async ({ page }) => {
@@ -120,27 +193,6 @@ test.describe('Keyboard Navigation', () => {
     await expect(page.getByRole('dialog')).not.toBeVisible();
   });
 
-  test('Enter key should submit forms', async ({ page }) => {
-    await page.goto('/login');
-
-    // Fill form using test IDs
-    await page.getByTestId('email-input').fill(SEED_USERS.LEARNER.email);
-    await page.getByTestId('password-input').fill(SEED_USERS.LEARNER.password);
-
-    // Press Enter (instead of clicking button)
-    await page.keyboard.press('Enter');
-
-    // Wait for form submission attempt
-    await page.waitForTimeout(1000);
-
-    // Should either redirect or show error (both are valid - form submitted)
-    const currentUrl = page.url();
-    const hasError = await page.locator('[role="alert"]').count() > 0;
-
-    // Form submission was attempted (not blocked)
-    expect(currentUrl === '/' || currentUrl.endsWith('/') || currentUrl.includes('/login')).toBe(true);
-  });
-
   test('Arrow keys should work in review session', async ({ page }) => {
     await page.goto('/decks');
 
@@ -151,12 +203,12 @@ test.describe('Keyboard Navigation', () => {
     const deckHeading = page.getByRole('heading', { name: /greek.*vocabulary/i });
 
     // Only run if deck exists
-    if (await deckHeading.count() > 0) {
+    if ((await deckHeading.count()) > 0) {
       await deckHeading.click();
 
       // Wait for review button
       const startReviewButton = page.getByRole('button', { name: /start review/i });
-      if (await startReviewButton.count() > 0) {
+      if ((await startReviewButton.count()) > 0) {
         await startReviewButton.click();
 
         // Wait for review interface
@@ -170,27 +222,5 @@ test.describe('Keyboard Navigation', () => {
         await page.waitForTimeout(500);
       }
     }
-  });
-
-  test('Focus visible styles should be present', async ({ page }) => {
-    await page.goto('/login');
-
-    // Tab to button
-    await page.keyboard.press('Tab');
-    await page.keyboard.press('Tab');
-    await page.keyboard.press('Tab');
-
-    // Check for focus styles
-    const buttonHasFocusStyle = await page.evaluate(() => {
-      const button = document.activeElement as HTMLElement;
-      const styles = window.getComputedStyle(button);
-      return (
-        styles.outline !== 'none' ||
-        styles.boxShadow.includes('focus') ||
-        button.classList.contains('focus')
-      );
-    });
-
-    expect(buttonHasFocusStyle).toBe(true);
   });
 });

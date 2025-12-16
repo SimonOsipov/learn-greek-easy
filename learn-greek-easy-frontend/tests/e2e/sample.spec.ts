@@ -47,7 +47,7 @@ test.describe('Playwright Setup Validation', () => {
     await page.evaluate(() => localStorage.clear());
 
     // Try to access protected route
-    await page.goto('/dashboard');
+    await page.goto('/');
 
     // Wait for redirect to complete
     await page.waitForURL('/login', { timeout: 5000 });

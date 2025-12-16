@@ -62,7 +62,7 @@ export const useRedirectIfAuth = (redirectTo = '/') => {
 };
 
 // Hook for role-based access
-export const useRequireRole = (requiredRole: 'admin' | 'premium', redirectTo = '/dashboard') => {
+export const useRequireRole = (requiredRole: 'admin' | 'premium', redirectTo = '/') => {
   const { user, isAuthenticated } = useAuthStore();
   const navigate = useNavigate();
 

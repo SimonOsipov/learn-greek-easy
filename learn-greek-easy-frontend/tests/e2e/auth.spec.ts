@@ -158,7 +158,7 @@ test.describe('Authenticated - Protected Routes & Logout', () => {
 
   test('should access protected routes when authenticated', async ({ page }) => {
     // Navigate to dashboard - should work with pre-loaded auth
-    await page.goto('/dashboard');
+    await page.goto('/');
     await expect(page).not.toHaveURL(/\/login/);
     await expect(page.getByRole('heading').first()).toBeVisible();
 
@@ -175,7 +175,7 @@ test.describe('Authenticated - Protected Routes & Logout', () => {
 
   test('should maintain authentication state after page reload', async ({ page }) => {
     // Navigate to dashboard
-    await page.goto('/dashboard');
+    await page.goto('/');
     await expect(page).not.toHaveURL(/\/login/);
     await expect(page.getByRole('heading').first()).toBeVisible();
 
@@ -189,7 +189,7 @@ test.describe('Authenticated - Protected Routes & Logout', () => {
 
   test('E2E-01.3: User can log out successfully', async ({ page }) => {
     // Navigate to dashboard (auth state already loaded)
-    await page.goto('/dashboard');
+    await page.goto('/');
 
     // Wait for page to be ready
     await page.waitForLoadState('domcontentloaded');
@@ -224,7 +224,7 @@ test.describe('Authenticated - Protected Routes & Logout', () => {
     await page.waitForURL(/\/(login)?$/, { timeout: 10000 });
 
     // Verify logout by trying to access protected route
-    await page.goto('/dashboard');
+    await page.goto('/');
 
     // Should redirect to login page (proof of logout)
     await page.waitForURL('/login', { timeout: 5000 });
