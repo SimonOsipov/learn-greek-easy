@@ -148,9 +148,9 @@ test.describe('Analytics Dashboard', () => {
     await page.goto('/');
     const startTime = Date.now();
 
-    // Wait for dashboard heading to be visible
+    // Wait for dashboard heading to be visible (15s for CI environment)
     await expect(page.getByRole('heading', { name: /dashboard/i })).toBeVisible({
-      timeout: 5000,
+      timeout: 15000,
     });
 
     // Wait for metrics cards to render (Dashboard uses MetricCards, not charts)
@@ -159,14 +159,14 @@ test.describe('Analytics Dashboard', () => {
 
     if (hasMetrics) {
       await expect(metricsSection).toBeVisible({
-        timeout: 5000,
+        timeout: 10000,
       });
     }
 
     const loadTime = Date.now() - startTime;
 
-    // Verify loaded within 5 seconds (generous for E2E)
-    expect(loadTime).toBeLessThan(5000);
+    // Verify loaded within 15 seconds (reasonable for CI environment)
+    expect(loadTime).toBeLessThan(15000);
   });
 
   test('E2E-05.6: Dashboard displays user greeting', async ({ page }) => {

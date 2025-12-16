@@ -276,6 +276,32 @@ cd /Users/samosipov/Downloads/learn-greek-easy/learn-greek-easy-backend && \
 
 **Test Structure**: `tests/unit/`, `tests/integration/`, `tests/fixtures/`, `tests/factories/`
 
+### Test Alignment Verification
+
+**CRITICAL**: When modifying code, always verify that existing tests are aligned with the changes.
+
+| Situation | Required Action |
+|-----------|-----------------|
+| Changed function signature | Update all tests calling that function |
+| Changed API response format | Update API tests and E2E tests |
+| Changed model fields | Update factory defaults and test assertions |
+| Changed validation rules | Update validation tests |
+| Renamed/moved files | Update test imports |
+| Changed error messages | Update tests asserting on error messages |
+
+**Verification Checklist**:
+1. Run affected tests: `pytest tests/path/to/relevant_tests.py -v`
+2. Search for usages: `grep -r "function_name" tests/`
+3. Check test imports match current module structure
+4. Verify mocks/stubs match current interfaces
+5. Ensure test data factories produce valid data for current schema
+
+**Common Test Drift Issues**:
+- Tests pass but assert on outdated behavior
+- Mocked functions have different signatures than actual
+- Test fixtures create data incompatible with current schema
+- E2E tests use outdated selectors or API endpoints
+
 **Creating Test Data**:
 ```python
 # Fixtures

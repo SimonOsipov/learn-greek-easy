@@ -160,31 +160,31 @@ test.describe('Authenticated - Protected Routes & Logout', () => {
     // Navigate to dashboard - should work with pre-loaded auth
     await page.goto('/');
     await expect(page).not.toHaveURL(/\/login/);
-    await expect(page.getByRole('heading').first()).toBeVisible();
+    await expect(page.getByRole('heading', { name: /dashboard/i })).toBeVisible({ timeout: 15000 });
 
     // Navigate to decks
     await page.goto('/decks');
     await expect(page).not.toHaveURL(/\/login/);
-    await expect(page.getByRole('heading').first()).toBeVisible();
+    await expect(page.getByRole('heading', { name: /decks|flashcard/i })).toBeVisible({ timeout: 15000 });
 
     // Navigate to profile
     await page.goto('/profile');
     await expect(page).not.toHaveURL(/\/login/);
-    await expect(page.getByRole('heading').first()).toBeVisible();
+    await expect(page.getByRole('heading', { name: /profile/i })).toBeVisible({ timeout: 15000 });
   });
 
   test('should maintain authentication state after page reload', async ({ page }) => {
     // Navigate to dashboard
     await page.goto('/');
     await expect(page).not.toHaveURL(/\/login/);
-    await expect(page.getByRole('heading').first()).toBeVisible();
+    await expect(page.getByRole('heading', { name: /dashboard/i })).toBeVisible({ timeout: 15000 });
 
     // Reload page
     await page.reload();
 
     // Should still be on dashboard (not redirected to login)
     await expect(page).not.toHaveURL(/\/login/);
-    await expect(page.getByRole('heading').first()).toBeVisible();
+    await expect(page.getByRole('heading', { name: /dashboard/i })).toBeVisible({ timeout: 15000 });
   });
 
   test('E2E-01.3: User can log out successfully', async ({ page }) => {
