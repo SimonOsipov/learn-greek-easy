@@ -68,11 +68,8 @@ test.describe('Deck Browsing', () => {
   test('should access profile page', async ({ page }) => {
     await page.goto('/profile');
 
-    // Wait for profile page navigation to complete
-    await page.waitForLoadState('domcontentloaded');
-
-    // Verify profile page loaded (heading is hidden on desktop with md:hidden, use test ID)
-    await expect(page.getByTestId('profile-page')).toBeVisible();
+    // Verify profile page loaded
+    await expect(page.getByRole('heading', { name: /profile/i })).toBeVisible();
   });
 
   test('E2E-03.1: Browse all decks', async ({ page }) => {

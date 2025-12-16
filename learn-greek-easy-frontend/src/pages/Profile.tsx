@@ -56,10 +56,17 @@ export const Profile: React.FC = () => {
   return (
     <div data-testid="profile-page" className="min-h-screen bg-gray-50">
       <div className="container mx-auto max-w-7xl px-4 py-6">
-        {/* Mobile Header */}
-        <div className="mb-6 flex items-center justify-between md:hidden">
-          <h1 className="text-2xl font-bold text-gray-900">Profile</h1>
-          <Button variant="outline" size="icon" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
+        {/* Page Header - Always visible */}
+        <div className="mb-6 flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-gray-900 md:text-3xl">Profile</h1>
+          {/* Mobile menu toggle */}
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            className="md:hidden"
+            aria-label={isSidebarOpen ? 'Close menu' : 'Open menu'}
+          >
             {isSidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </Button>
         </div>
