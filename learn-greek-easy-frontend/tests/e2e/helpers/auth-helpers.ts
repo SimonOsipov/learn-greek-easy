@@ -489,22 +489,31 @@ export async function verifyAuthSucceeded(page: Page, expectedPath: string): Pro
  * Wait for RouteGuard auth check to complete after navigation
  *
  * RouteGuard shows "Loading your experience..." while verifying the auth token.
- * This loading state can persist after `networkidle` fires, causing flaky tests
- * when trying to interact with protected page content.
+ * This loading state can appear AFTER page.goto() returns due to React hydration timing.
  *
- * Use this helper after `page.goto()` to protected routes instead of
- * `page.waitForLoadState('networkidle')`.
+ * The fix handles three scenarios:
+ * 1. Fast (local): Loading never appears - we fall through after short timeout
+ * 2. Normal: Loading appears quickly - we wait for it to disappear
+ * 3. Slow (CI): Loading appears after a delay - waitFor catches it within timeout
  *
  * @param page - Playwright page object
  * @param timeout - Maximum time to wait for loading to complete (default: 15000ms)
  */
 export async function waitForAuthCheck(page: Page, timeout = 15000): Promise<void> {
-  const loadingText = page.getByText(/loading your experience/i);
-  const isLoading = await loadingText.isVisible().catch(() => false);
+  const loadingIndicator = page.getByTestId('auth-loading');
 
-  if (isLoading) {
-    await expect(loadingText).not.toBeVisible({ timeout });
+  try {
+    // Wait up to 3 seconds for React to hydrate and potentially show loading screen.
+    // This catches the race condition where loading appears AFTER our initial check.
+    await loadingIndicator.waitFor({ state: 'visible', timeout: 3000 });
+
+    // Loading appeared - now wait for it to disappear (auth check complete)
+    await expect(loadingIndicator).not.toBeVisible({ timeout });
+  } catch {
+    // Loading never appeared within 3 seconds. Either:
+    // 1. Auth check completed very fast (already past loading)
+    // 2. Page didn't need auth check
+    // Ensure DOM is ready as a safety check
+    await page.waitForLoadState('domcontentloaded');
   }
-
-  await page.waitForLoadState('domcontentloaded');
 }

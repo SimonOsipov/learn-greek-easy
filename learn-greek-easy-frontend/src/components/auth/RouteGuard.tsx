@@ -26,7 +26,10 @@ export const RouteGuard: React.FC<RouteGuardProps> = ({ children }) => {
 
   if (isChecking) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      <div
+        data-testid="auth-loading"
+        className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 via-white to-purple-50"
+      >
         <div className="space-y-4 text-center">
           <div className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
