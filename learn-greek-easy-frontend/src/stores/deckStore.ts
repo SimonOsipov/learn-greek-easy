@@ -223,7 +223,9 @@ export const useDeckStore = create<DeckState>()(
 
           // Apply status filter client-side
           if (filters.status.length > 0) {
-            decks = decks.filter((deck) => filters.status.includes(deck.status));
+            decks = decks.filter((deck) =>
+              filters.status.includes(deck.progress?.status ?? 'not-started')
+            );
           }
 
           set({
