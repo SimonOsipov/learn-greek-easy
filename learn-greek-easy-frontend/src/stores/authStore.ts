@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 
+import { APIRequestError } from '@/services/api';
 import { authAPI, clearAuthTokens } from '@/services/authAPI';
 import type { User, RegisterData, AuthError } from '@/types/auth';
 
@@ -24,7 +25,7 @@ interface AuthState {
   updateProfile: (updates: Partial<User>) => Promise<void>;
   updatePassword: (currentPassword: string, newPassword: string) => Promise<void>;
   refreshSession: () => Promise<void>;
-  checkAuth: () => Promise<void>;
+  checkAuth: (options?: { signal?: AbortSignal }) => Promise<void>;
   clearError: () => void;
 }
 
@@ -395,11 +396,12 @@ export const useAuthStore = create<AuthState>()(
       },
 
       // Check auth on app load
-      checkAuth: async () => {
+      checkAuth: async (options?: { signal?: AbortSignal }) => {
         // TODO: Remove after debugging
         const startTime = Date.now();
         const timestamp = new Date().toISOString();
         const { token, rememberMe: _rememberMe } = get();
+        const signal = options?.signal;
 
         // Check session storage if not remember me
         const sessionToken = sessionStorage.getItem('auth-token');
@@ -433,7 +435,16 @@ export const useAuthStore = create<AuthState>()(
             `[E2E-DEBUG][AuthStore][${timestamp}] checkAuth API_CALL_START | elapsed=${Date.now() - startTime}ms`
           );
 
-          const profileResponse = await authAPI.getProfile();
+          const profileResponse = await authAPI.getProfile({ signal });
+
+          // Check if aborted after the call (signal might have been aborted during fetch)
+          if (signal?.aborted) {
+            // TODO: Remove after debugging
+            console.log(
+              `[E2E-DEBUG][AuthStore][${timestamp}] checkAuth ABORTED_AFTER_CALL | elapsed=${Date.now() - startTime}ms`
+            );
+            return;
+          }
 
           // TODO: Remove after debugging
           console.log(
@@ -474,25 +485,51 @@ export const useAuthStore = create<AuthState>()(
             `[E2E-DEBUG][AuthStore][${timestamp}] checkAuth COMPLETE_SUCCESS | elapsed=${Date.now() - startTime}ms | isAuthenticated=true`
           );
         } catch (error) {
-          // TODO: Remove after debugging
-          console.log(
-            `[E2E-DEBUG][AuthStore][${timestamp}] checkAuth API_CALL_FAILED | elapsed=${Date.now() - startTime}ms | error=${error instanceof Error ? error.message : 'Unknown'}`
-          );
-
-          // Token expired or invalid - clear auth state
-          clearAuthTokens();
-          set({
-            user: null,
-            token: null,
-            refreshToken: null,
-            isAuthenticated: false,
-            isLoading: false,
-          });
+          // Check if request was aborted - don't update state for aborted requests
+          if (signal?.aborted || (error instanceof Error && error.name === 'AbortError')) {
+            // TODO: Remove after debugging
+            console.log(
+              `[E2E-DEBUG][AuthStore][${timestamp}] checkAuth ABORTED | elapsed=${Date.now() - startTime}ms | skipping state update`
+            );
+            return;
+          }
 
           // TODO: Remove after debugging
           console.log(
-            `[E2E-DEBUG][AuthStore][${timestamp}] checkAuth COMPLETE_FAILED | elapsed=${Date.now() - startTime}ms | isAuthenticated=false`
+            `[E2E-DEBUG][AuthStore][${timestamp}] checkAuth API_CALL_FAILED | elapsed=${Date.now() - startTime}ms | error=${error instanceof Error ? error.message : 'Unknown'} | errorType=${error instanceof APIRequestError ? 'APIRequestError' : error?.constructor?.name || 'unknown'} | status=${error instanceof APIRequestError ? error.status : 'N/A'}`
           );
+
+          // Only clear tokens on explicit auth failures (401/403)
+          // Network errors (status 0), timeouts (408), or other errors should NOT clear auth
+          if (error instanceof APIRequestError && (error.status === 401 || error.status === 403)) {
+            // TODO: Remove after debugging
+            console.log(
+              `[E2E-DEBUG][AuthStore][${timestamp}] checkAuth AUTH_FAILURE | status=${error.status} | clearing tokens`
+            );
+
+            // Token expired or invalid - clear auth state
+            clearAuthTokens();
+            set({
+              user: null,
+              token: null,
+              refreshToken: null,
+              isAuthenticated: false,
+              isLoading: false,
+            });
+
+            // TODO: Remove after debugging
+            console.log(
+              `[E2E-DEBUG][AuthStore][${timestamp}] checkAuth COMPLETE_FAILED | elapsed=${Date.now() - startTime}ms | isAuthenticated=false`
+            );
+          } else {
+            // Network error or other non-auth error - keep existing auth state, just stop loading
+            // TODO: Remove after debugging
+            console.log(
+              `[E2E-DEBUG][AuthStore][${timestamp}] checkAuth NETWORK_ERROR | keeping existing auth state | isLoading=false`
+            );
+
+            set({ isLoading: false });
+          }
         }
       },
 

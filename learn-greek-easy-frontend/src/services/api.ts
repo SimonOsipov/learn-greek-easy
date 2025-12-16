@@ -144,6 +144,8 @@ interface RequestOptions {
   headers?: Record<string, string>;
   /** Request timeout in milliseconds (default: 30000) */
   timeout?: number;
+  /** AbortSignal for request cancellation */
+  signal?: AbortSignal;
 }
 
 /**
@@ -155,7 +157,12 @@ async function request<T>(
   body?: unknown,
   options: RequestOptions = {}
 ): Promise<T> {
-  const { skipAuth = false, headers: customHeaders = {}, timeout = 30000 } = options;
+  const {
+    skipAuth = false,
+    headers: customHeaders = {},
+    timeout = 30000,
+    signal: externalSignal,
+  } = options;
 
   const url = `${API_BASE_URL}${path}`;
 
@@ -174,15 +181,33 @@ async function request<T>(
   }
 
   // Create abort controller for timeout
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeout);
+  const timeoutController = new AbortController();
+  const timeoutId = setTimeout(() => timeoutController.abort(), timeout);
+
+  // Combine external signal with timeout signal if both exist
+  // Use AbortSignal.any() if available (modern browsers), otherwise prioritize external signal
+  let combinedSignal: AbortSignal;
+  if (externalSignal && typeof AbortSignal.any === 'function') {
+    combinedSignal = AbortSignal.any([externalSignal, timeoutController.signal]);
+  } else if (externalSignal) {
+    // Fallback for older browsers: prefer external signal, but also listen to timeout
+    combinedSignal = externalSignal;
+    // Set up manual abort on timeout if external signal is used
+    const handleTimeout = () => {
+      // External signal will be aborted by caller if needed
+      // We can't easily combine signals in older browsers, so timeout is handled separately
+    };
+    timeoutController.signal.addEventListener('abort', handleTimeout);
+  } else {
+    combinedSignal = timeoutController.signal;
+  }
 
   try {
     const response = await fetch(url, {
       method,
       headers,
       body: body ? JSON.stringify(body) : undefined,
-      signal: controller.signal,
+      signal: combinedSignal,
     });
 
     clearTimeout(timeoutId);

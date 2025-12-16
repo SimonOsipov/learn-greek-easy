@@ -140,8 +140,8 @@ export const authAPI = {
   /**
    * Get current user profile
    */
-  getProfile: async (): Promise<UserProfileResponse> => {
-    return api.get<UserProfileResponse>('/api/v1/auth/me');
+  getProfile: async (options?: { signal?: AbortSignal }): Promise<UserProfileResponse> => {
+    return api.get<UserProfileResponse>('/api/v1/auth/me', { signal: options?.signal });
   },
 
   /**
