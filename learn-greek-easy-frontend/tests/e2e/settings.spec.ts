@@ -134,9 +134,10 @@ test.describe('Settings Management', () => {
 
       // Navigate away and back
       await page.goto('/');
-      await page.waitForTimeout(500);
+      await page.waitForLoadState('networkidle');
       await page.goto('/settings');
-      await page.waitForTimeout(500);
+      // Wait for auth to complete (RouteGuard shows "Loading your experience..." while checking)
+      await page.waitForLoadState('networkidle');
 
       // Verify value persisted
       const slider = page.getByRole('slider', { name: /daily goal/i });
@@ -151,10 +152,14 @@ test.describe('Settings Management', () => {
 
       // Navigate away and back
       await page.goto('/');
+      await page.waitForLoadState('networkidle');
       await page.goto('/settings');
+      // Wait for auth to complete - full page reload triggers RouteGuard.checkAuth()
+      // which makes an API call to verify the token. Must wait for this to complete.
+      await page.waitForLoadState('networkidle');
 
       // Should still load settings page
-      await expect(page.getByRole('heading', { name: /settings/i })).toBeVisible();
+      await expect(page.getByRole('heading', { name: /settings/i })).toBeVisible({ timeout: 15000 });
     }
   });
 
