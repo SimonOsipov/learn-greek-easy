@@ -1,3 +1,5 @@
+import { useEffect } from 'react';
+
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 
@@ -24,6 +26,7 @@ import { Profile } from '@/pages/Profile';
 import { SessionSummaryPage } from '@/pages/SessionSummaryPage';
 import Settings from '@/pages/Settings';
 import { Unauthorized } from '@/pages/Unauthorized';
+import { useAppStore, selectIsReady } from '@/stores/appStore';
 
 // Temporary placeholder pages - replace with actual pages
 
@@ -44,9 +47,15 @@ const AdminPanel = () => (
 
 function AppContent() {
   const { showWarning, remainingSeconds, extendSession } = useActivityMonitor();
+  const isAppReady = useAppStore(selectIsReady);
+  const setReactHydrated = useAppStore((state) => state.setReactHydrated);
+
+  useEffect(() => {
+    setReactHydrated();
+  }, [setReactHydrated]);
 
   return (
-    <>
+    <div data-app-ready={isAppReady}>
       <RouteGuard>
         <Routes>
           {/* Public Routes - redirect to dashboard if authenticated */}
@@ -96,7 +105,7 @@ function AppContent() {
       />
 
       <Toaster />
-    </>
+    </div>
   );
 }
 

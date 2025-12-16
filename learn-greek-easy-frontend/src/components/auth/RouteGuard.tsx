@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 
 import { Loader2 } from 'lucide-react';
 
+import { useAppStore } from '@/stores/appStore';
 import { useAuthStore } from '@/stores/authStore';
 
 interface RouteGuardProps {
@@ -10,6 +11,7 @@ interface RouteGuardProps {
 
 export const RouteGuard: React.FC<RouteGuardProps> = ({ children }) => {
   const { checkAuth } = useAuthStore();
+  const setAuthInitialized = useAppStore((state) => state.setAuthInitialized);
   const [isChecking, setIsChecking] = useState(true);
 
   useEffect(() => {
@@ -18,11 +20,12 @@ export const RouteGuard: React.FC<RouteGuardProps> = ({ children }) => {
         await checkAuth();
       } finally {
         setIsChecking(false);
+        setAuthInitialized();
       }
     };
 
     verifyAuth();
-  }, [checkAuth]);
+  }, [checkAuth, setAuthInitialized]);
 
   if (isChecking) {
     return (

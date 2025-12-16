@@ -4,7 +4,7 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { verifyAuthSucceeded, waitForAuthCheck } from './helpers/auth-helpers';
+import { verifyAuthSucceeded, waitForAuthCheck, waitForAppReady } from './helpers/auth-helpers';
 
 test.describe('Settings Management', () => {
   test.beforeEach(async ({ page }) => {
@@ -134,10 +134,10 @@ test.describe('Settings Management', () => {
 
       // Navigate away and back
       await page.goto('/');
-      await waitForAuthCheck(page);
+      await waitForAppReady(page);
       await page.goto('/settings');
-      // Wait for auth to complete (RouteGuard shows "Loading your experience..." while checking)
-      await waitForAuthCheck(page);
+      // Wait for app to be ready (RouteGuard auth check complete)
+      await waitForAppReady(page);
 
       // Verify value persisted
       const slider = page.getByRole('slider', { name: /daily goal/i });
@@ -152,11 +152,10 @@ test.describe('Settings Management', () => {
 
       // Navigate away and back
       await page.goto('/');
-      await waitForAuthCheck(page);
+      await waitForAppReady(page);
       await page.goto('/settings');
-      // Wait for auth to complete - full page reload triggers RouteGuard.checkAuth()
-      // which makes an API call to verify the token. Must wait for this to complete.
-      await waitForAuthCheck(page);
+      // Wait for app to be ready - RouteGuard auth check must complete
+      await waitForAppReady(page);
 
       // Should still load settings page
       await expect(page.getByRole('heading', { name: /settings/i })).toBeVisible({ timeout: 15000 });

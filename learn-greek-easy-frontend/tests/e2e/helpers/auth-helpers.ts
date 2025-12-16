@@ -486,6 +486,26 @@ export async function verifyAuthSucceeded(page: Page, expectedPath: string): Pro
 }
 
 /**
+ * Wait for the application to be fully ready for interaction.
+ *
+ * This is the PREFERRED method for E2E tests - it's deterministic and doesn't
+ * rely on timing assumptions.
+ *
+ * The app signals readiness via `data-app-ready="true"` attribute when:
+ * 1. React has mounted and rendered
+ * 2. RouteGuard has completed auth check (success or failure)
+ *
+ * @param page - Playwright page object
+ * @param timeout - Maximum time to wait (default: 30000ms for CI environments)
+ */
+export async function waitForAppReady(page: Page, timeout = 30000): Promise<void> {
+  await page.waitForSelector('[data-app-ready="true"]', {
+    state: 'attached',
+    timeout,
+  });
+}
+
+/**
  * Wait for RouteGuard auth check to complete after navigation
  *
  * RouteGuard shows "Loading your experience..." while verifying the auth token.
@@ -503,17 +523,13 @@ export async function waitForAuthCheck(page: Page, timeout = 15000): Promise<voi
   const loadingIndicator = page.getByTestId('auth-loading');
 
   try {
-    // Wait up to 3 seconds for React to hydrate and potentially show loading screen.
-    // This catches the race condition where loading appears AFTER our initial check.
-    await loadingIndicator.waitFor({ state: 'visible', timeout: 3000 });
-
-    // Loading appeared - now wait for it to disappear (auth check complete)
-    await expect(loadingIndicator).not.toBeVisible({ timeout });
+    // First try the new deterministic approach
+    await page.waitForSelector('[data-app-ready="true"]', {
+      state: 'attached',
+      timeout: 5000,
+    });
   } catch {
-    // Loading never appeared within 3 seconds. Either:
-    // 1. Auth check completed very fast (already past loading)
-    // 2. Page didn't need auth check
-    // Ensure DOM is ready as a safety check
-    await page.waitForLoadState('domcontentloaded');
+    // Fall back to waiting for loading to be hidden
+    await expect(loadingIndicator).toBeHidden({ timeout });
   }
 }
