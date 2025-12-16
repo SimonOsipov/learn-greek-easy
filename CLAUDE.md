@@ -421,6 +421,133 @@ Set `SEED_ON_DEPLOY=true` to automatically seed the database when the applicatio
 
 ---
 
+## Bug Research Workflow
+
+**CRITICAL**: When investigating bugs or unexpected behavior, DO NOT GUESS. Use this workflow to observe actual behavior with Playwright MCP.
+
+### Why This Matters
+
+- **No guessing**: Observe actual behavior instead of assuming
+- **Reproducible**: Same seeded data ensures consistent reproduction
+- **Visual proof**: Screenshots document the issue
+- **Faster debugging**: See exactly what users see
+
+### Step 1: Start Dev Environment
+
+```bash
+# Start full stack with docker-compose
+cd /Users/samosipov/Downloads/learn-greek-easy && docker-compose -f docker-compose.dev.yml up -d
+
+# Verify services are running
+docker-compose -f docker-compose.dev.yml ps
+
+# Check backend is healthy
+curl http://localhost:8000/health
+
+# Check frontend is running
+curl http://localhost:5173
+```
+
+### Step 2: Seed Test Data
+
+```bash
+# Check seeding is enabled
+curl http://localhost:8000/api/v1/test/seed/status
+
+# Full seed (truncate + create all test data)
+curl -X POST http://localhost:8000/api/v1/test/seed/all
+
+# Or use CLI
+cd /Users/samosipov/Downloads/learn-greek-easy/learn-greek-easy-backend && \
+TEST_SEED_ENABLED=true /Users/samosipov/.local/bin/poetry run python scripts/seed_e2e_data.py
+```
+
+**Test Users Available After Seeding**:
+| Email | Password | Role |
+|-------|----------|------|
+| e2e_learner@test.com | TestPassword123! | Regular user with progress |
+| e2e_beginner@test.com | TestPassword123! | New user, no progress |
+| e2e_advanced@test.com | TestPassword123! | Advanced user |
+| e2e_admin@test.com | TestPassword123! | Admin user |
+
+### Step 3: Use Playwright MCP to Investigate
+
+Use MCP Playwright tools to visually verify and investigate:
+
+```yaml
+# Navigate to the page with the issue
+mcp__playwright__browser_navigate:
+  url: "http://localhost:5173"
+
+# Take a snapshot to see the current state (better than screenshot for actions)
+mcp__playwright__browser_snapshot
+
+# Take a screenshot for documentation
+mcp__playwright__browser_take_screenshot:
+  filename: "bug-investigation.png"
+
+# Interact with elements to reproduce the bug
+mcp__playwright__browser_click:
+  element: "Login button"
+  ref: "[ref from snapshot]"
+
+# Fill forms
+mcp__playwright__browser_type:
+  element: "Email input"
+  ref: "[ref from snapshot]"
+  text: "e2e_learner@test.com"
+
+# Check console for errors
+mcp__playwright__browser_console_messages:
+  onlyErrors: true
+
+# Check network requests
+mcp__playwright__browser_network_requests
+```
+
+### Step 4: Document Findings
+
+After investigation, document:
+1. **Actual behavior observed** (with screenshots)
+2. **Expected behavior** (from task/PRD)
+3. **Steps to reproduce** (with Playwright commands used)
+4. **Console errors** (if any)
+5. **Network failures** (if any)
+6. **Root cause identified** (if found)
+
+### Common Investigation Patterns
+
+| Scenario | Playwright Tools to Use |
+|----------|------------------------|
+| UI not rendering | `browser_snapshot` + `browser_take_screenshot` |
+| Button not working | `browser_click` + `browser_console_messages` |
+| Form submission fails | `browser_type` + `browser_network_requests` |
+| Navigation broken | `browser_navigate` + `browser_snapshot` |
+| Error state display | `browser_snapshot` + `browser_take_screenshot` |
+| Auth issues | Login flow + `browser_network_requests` |
+
+### Full Investigation Example
+
+```bash
+# 1. Start environment
+docker-compose -f docker-compose.dev.yml up -d
+
+# 2. Seed data
+curl -X POST http://localhost:8000/api/v1/test/seed/all
+
+# 3. Use Playwright MCP tools:
+# - Navigate to http://localhost:5173
+# - Take snapshot to see page structure
+# - Click on elements to reproduce bug
+# - Take screenshot for documentation
+# - Check console for errors
+# - Check network requests for API failures
+
+# 4. Document findings in task description
+```
+
+---
+
 ## Common Issues
 
 | Issue | Solution |
