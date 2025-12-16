@@ -2,3 +2,5 @@
 
 # Backlog.md MCP files (local only)
 backlog/
+# Claude Code local files
+.claude/
