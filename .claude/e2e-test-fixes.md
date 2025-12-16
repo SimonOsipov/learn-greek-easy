@@ -375,6 +375,159 @@ npx playwright test --grep "E2E-04.3" --project=chromium
 
 **Also fixed**: Added `TEST_SEED_ENABLED=true` to `docker-compose.dev.yml` for easier local testing
 
+### CI Results After Fix - Now FLAKY (Not Failing)
+
+**Date**: 2024-12-16
+**Status**: Test passes on retry (1 flaky)
+
+```
+1 flaky
+    [chromium] › tests/e2e/settings.spec.ts:125:3 › Settings Management › E2E-04.3: Settings persist after page refresh
+95 [chromium] › tests/e2e/settings.spec.ts:125:3 › Settings Management › E2E-04.3: Settings persist after page refresh (18.6s)
+  ✓  96 [chromium] › tests/e2e/settings.spec.ts:125:3 › Settings Management › E2E-04.3: Settings persist after page refresh (retry #1) (3.9s)
+```
+
+### Why Still Flaky? - Deeper Analysis
+
+The `waitForLoadState('networkidle')` fix improved reliability but is inherently unreliable because:
+
+#### Race Condition Details
+
+1. **`page.goto('/settings')` completes** when DOM is ready
+2. **React hydration starts** (small gap - no network yet)
+3. **`networkidle` may fire HERE** - before React makes any API calls!
+4. **RouteGuard mounts** and calls `checkAuth()`
+5. **`checkAuth()` makes API call** to `/api/v1/auth/profile`
+6. **Loading screen shown** ("Loading your experience...")
+7. **API responds** → `isChecking=false` → children render
+8. **Settings heading appears** - only NOW can test pass
+
+The issue: `networkidle` means "no network requests for 500ms" but:
+- It can fire in step 3 (before React makes API call)
+- Or in step 7 (after API completes)
+- This timing is non-deterministic in CI
+
+#### Evidence from RouteGuard.tsx
+
+```tsx
+// RouteGuard.tsx lines 15-25
+useEffect(() => {
+  const verifyAuth = async () => {
+    try {
+      await checkAuth();  // <-- API call happens HERE
+    } finally {
+      setIsChecking(false);  // <-- Only after API completes
+    }
+  };
+  verifyAuth();
+}, [checkAuth]);
+
+// Lines 27-40
+if (isChecking) {
+  return (
+    <div>
+      <p>Loading your experience...</p>  // <-- Test can't find "Settings" heading here!
+    </div>
+  );
+}
+```
+
+### Proposed Fix - More Reliable Approaches
+
+#### Option 1: Wait for Loading State to DISAPPEAR (Recommended)
+
+Instead of `networkidle`, wait for the loading indicator to disappear:
+
+```typescript
+// Current (flaky)
+await page.goto('/settings');
+await page.waitForLoadState('networkidle');
+await expect(page.getByRole('heading', { name: /settings/i })).toBeVisible({ timeout: 15000 });
+
+// Proposed (reliable)
+await page.goto('/settings');
+// Wait for auth check to complete (loading state to disappear)
+await expect(page.getByText(/loading your experience/i)).not.toBeVisible({ timeout: 15000 });
+// Now the Settings page is definitely rendered
+await expect(page.getByRole('heading', { name: /settings/i })).toBeVisible();
+```
+
+**Why this is better:**
+- Waits for specific UI state change (loading → loaded)
+- Independent of network timing
+- Mirrors actual user experience
+- If loading is already done, assertion passes immediately
+
+#### Option 2: Wait for Auth API Call Specifically
+
+```typescript
+await page.goto('/settings');
+// Wait for the auth verification API call to complete
+await page.waitForResponse(
+  response => response.url().includes('/api/v1/auth/') && response.ok(),
+  { timeout: 15000 }
+);
+// Now auth is verified and page should render
+await expect(page.getByRole('heading', { name: /settings/i })).toBeVisible();
+```
+
+#### Option 3: Handle Both Fast and Slow Scenarios
+
+```typescript
+await page.goto('/settings');
+
+// Either loading is visible and we wait for it to disappear, or content is already there
+const loadingLocator = page.getByText(/loading your experience/i);
+const headingLocator = page.getByRole('heading', { name: /settings/i });
+
+// Race: either loading disappears or heading appears
+await Promise.race([
+  expect(loadingLocator).not.toBeVisible({ timeout: 15000 }),
+  expect(headingLocator).toBeVisible({ timeout: 15000 })
+]);
+
+// Final verification
+await expect(headingLocator).toBeVisible();
+```
+
+#### Option 4: Create Reusable Helper Function
+
+Add to `auth-helpers.ts`:
+
+```typescript
+/**
+ * Wait for RouteGuard auth check to complete after navigation
+ * Use after page.goto() to protected routes
+ */
+export async function waitForAuthCheck(page: Page, timeout = 15000): Promise<void> {
+  const loadingText = page.getByText(/loading your experience/i);
+
+  // If loading indicator is visible, wait for it to disappear
+  const isLoading = await loadingText.isVisible().catch(() => false);
+  if (isLoading) {
+    await expect(loadingText).not.toBeVisible({ timeout });
+  }
+}
+```
+
+Then in tests:
+
+```typescript
+await page.goto('/settings');
+await waitForAuthCheck(page);
+await expect(page.getByRole('heading', { name: /settings/i })).toBeVisible();
+```
+
+### Recommended Implementation
+
+**Priority**: Option 1 with Option 4 for reusability
+
+1. Create `waitForAuthCheck()` helper function
+2. Update `settings.spec.ts` line 155-162 to use the new pattern
+3. Update other protected route tests to use the same pattern
+
+This will make tests more reliable and provide consistent behavior across all protected route tests.
+
 ---
 
 ## 2. analytics.spec.ts:146 - E2E-05.5: Dashboard loads within reasonable time

@@ -18,7 +18,7 @@
  * - loginViaAPI: Now a no-op, use storageState instead
  */
 
-import { Page, APIRequestContext } from '@playwright/test';
+import { Page, APIRequestContext, expect } from '@playwright/test';
 
 export interface TestUser {
   email: string;
@@ -483,4 +483,28 @@ export async function verifyAuthSucceeded(page: Page, expectedPath: string): Pro
         `Current URL: ${currentUrl}`
     );
   }
+}
+
+/**
+ * Wait for RouteGuard auth check to complete after navigation
+ *
+ * RouteGuard shows "Loading your experience..." while verifying the auth token.
+ * This loading state can persist after `networkidle` fires, causing flaky tests
+ * when trying to interact with protected page content.
+ *
+ * Use this helper after `page.goto()` to protected routes instead of
+ * `page.waitForLoadState('networkidle')`.
+ *
+ * @param page - Playwright page object
+ * @param timeout - Maximum time to wait for loading to complete (default: 15000ms)
+ */
+export async function waitForAuthCheck(page: Page, timeout = 15000): Promise<void> {
+  const loadingText = page.getByText(/loading your experience/i);
+  const isLoading = await loadingText.isVisible().catch(() => false);
+
+  if (isLoading) {
+    await expect(loadingText).not.toBeVisible({ timeout });
+  }
+
+  await page.waitForLoadState('domcontentloaded');
 }
