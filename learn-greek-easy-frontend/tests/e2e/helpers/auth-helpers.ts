@@ -378,3 +378,86 @@ export async function seedDatabase(request: APIRequestContext): Promise<void> {
 
   console.log('[TEST] Database seeded successfully');
 }
+
+/**
+ * Verify that seed users exist and can authenticate
+ * This is useful for debugging auth setup failures
+ * @param request - Playwright APIRequestContext
+ * @throws Error if seeding is not enabled or users cannot login
+ */
+export async function verifySeedUsers(request: APIRequestContext): Promise<void> {
+  const apiBaseUrl = getApiBaseUrl();
+
+  console.log('[TEST] Verifying seed users...');
+  console.log(`[TEST] API Base URL: ${apiBaseUrl}`);
+
+  // Step 1: Check seed status endpoint
+  let statusResponse;
+  try {
+    statusResponse = await request.get(`${apiBaseUrl}/api/v1/test/seed/status`);
+  } catch (error) {
+    throw new Error(
+      `[VERIFY] Failed to reach seed status endpoint at ${apiBaseUrl}/api/v1/test/seed/status: ${error}`
+    );
+  }
+
+  if (!statusResponse.ok()) {
+    throw new Error(
+      `[VERIFY] Seed status endpoint returned ${statusResponse.status()}. ` +
+      `Seeding may not be available. Response: ${await statusResponse.text()}`
+    );
+  }
+
+  const status = await statusResponse.json();
+  console.log('[TEST] Seed status:', JSON.stringify(status));
+
+  if (!status.enabled) {
+    throw new Error(
+      '[VERIFY] TEST_SEED_ENABLED is not true on backend. ' +
+      'Seed users will not exist. Set TEST_SEED_ENABLED=true in environment.'
+    );
+  }
+
+  // Step 2: Try to login as the primary test user
+  const testUser = SEED_USERS.LEARNER;
+  console.log(`[TEST] Attempting to login as ${testUser.email}...`);
+
+  let loginResponse;
+  try {
+    loginResponse = await request.post(`${apiBaseUrl}/api/v1/auth/login`, {
+      data: {
+        email: testUser.email,
+        password: testUser.password,
+      },
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+  } catch (error) {
+    throw new Error(
+      `[VERIFY] Failed to reach login endpoint at ${apiBaseUrl}/api/v1/auth/login: ${error}`
+    );
+  }
+
+  if (!loginResponse.ok()) {
+    let errorBody = 'Unknown error';
+    try {
+      const jsonBody = await loginResponse.json();
+      errorBody = jsonBody.detail || jsonBody.message || JSON.stringify(jsonBody);
+    } catch {
+      try {
+        errorBody = await loginResponse.text();
+      } catch {
+        // Keep default error message
+      }
+    }
+
+    throw new Error(
+      `[VERIFY] Seed user ${testUser.email} cannot login. ` +
+      `Status: ${loginResponse.status()}, Error: ${errorBody}. ` +
+      `This likely means the database was not seeded properly.`
+    );
+  }
+
+  console.log(`[TEST] Successfully verified seed user ${testUser.email} can login`);
+}
