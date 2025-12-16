@@ -3,7 +3,6 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { loginViaLocalStorage } from './helpers/auth-helpers';
 
 test.describe('Playwright Setup Validation', () => {
   test('should load homepage', async ({ page }) => {
@@ -29,9 +28,8 @@ test.describe('Playwright Setup Validation', () => {
   });
 
   test('should access dashboard when authenticated', async ({ page }) => {
-    // Login via localStorage (faster than UI login)
-    // Note: loginViaLocalStorage goes to '/' which shows dashboard content when authenticated
-    await loginViaLocalStorage(page);
+    // Navigate to dashboard - storageState handles auth
+    await page.goto('/');
 
     // Verify dashboard content is visible (dashboard is shown at '/' for authenticated users)
     await expect(page).toHaveURL('/');

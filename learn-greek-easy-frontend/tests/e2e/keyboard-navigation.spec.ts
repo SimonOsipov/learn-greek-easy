@@ -4,7 +4,7 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { loginViaLocalStorage } from './helpers/auth-helpers';
+import { SEED_USERS } from './helpers/auth-helpers';
 
 test.describe('Keyboard Navigation', () => {
   test('Tab order should be logical on login page', async ({ page, browserName }) => {
@@ -34,8 +34,8 @@ test.describe('Keyboard Navigation', () => {
     // Skip in webkit due to different focus behavior
     test.skip(browserName === 'webkit', 'Webkit has different tab focus behavior');
 
-    // loginViaLocalStorage already navigates to /dashboard and waits for auth content
-    await loginViaLocalStorage(page);
+    // Navigate to dashboard - storageState handles auth
+    await page.goto('/');
 
     // CRITICAL: Verify we're authenticated and not redirected to login
     const currentUrl = page.url();
@@ -84,7 +84,6 @@ test.describe('Keyboard Navigation', () => {
   });
 
   test('Modals should trap focus', async ({ page }) => {
-    await loginViaLocalStorage(page);
     await page.goto('/settings');
 
     // Open modal
@@ -108,7 +107,6 @@ test.describe('Keyboard Navigation', () => {
   });
 
   test('Esc should close modals', async ({ page }) => {
-    await loginViaLocalStorage(page);
     await page.goto('/settings');
 
     // Open modal
@@ -126,8 +124,8 @@ test.describe('Keyboard Navigation', () => {
     await page.goto('/login');
 
     // Fill form using test IDs
-    await page.getByTestId('email-input').fill('demo@learngreekeasy.com');
-    await page.getByTestId('password-input').fill('Demo123!');
+    await page.getByTestId('email-input').fill(SEED_USERS.LEARNER.email);
+    await page.getByTestId('password-input').fill(SEED_USERS.LEARNER.password);
 
     // Press Enter (instead of clicking button)
     await page.keyboard.press('Enter');
@@ -144,18 +142,17 @@ test.describe('Keyboard Navigation', () => {
   });
 
   test('Arrow keys should work in review session', async ({ page }) => {
-    await loginViaLocalStorage(page);
     await page.goto('/decks');
 
     // Wait for page to load
     await page.waitForSelector('h1, h2', { timeout: 10000 });
 
-    // Look for Greek Alphabet deck
-    const greekAlphabetHeading = page.getByRole('heading', { name: /greek alphabet/i });
+    // Look for Greek vocabulary deck
+    const deckHeading = page.getByRole('heading', { name: /greek.*vocabulary/i });
 
     // Only run if deck exists
-    if (await greekAlphabetHeading.count() > 0) {
-      await greekAlphabetHeading.click();
+    if (await deckHeading.count() > 0) {
+      await deckHeading.click();
 
       // Wait for review button
       const startReviewButton = page.getByRole('button', { name: /start review/i });

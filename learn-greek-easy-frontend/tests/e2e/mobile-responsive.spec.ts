@@ -4,7 +4,6 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { loginViaLocalStorage } from './helpers/auth-helpers';
 
 // Mobile Tests (375px - iPhone SE)
 test.describe('Mobile Responsive (375px)', () => {
@@ -25,7 +24,6 @@ test.describe('Mobile Responsive (375px)', () => {
   });
 
   test('Dashboard should adapt to mobile layout', async ({ page }) => {
-    await loginViaLocalStorage(page);
     await page.goto('/');
 
     // Check page loaded successfully (not redirected to login)
@@ -41,7 +39,6 @@ test.describe('Mobile Responsive (375px)', () => {
   });
 
   test('Deck cards should stack vertically on mobile', async ({ page }) => {
-    await loginViaLocalStorage(page);
     await page.goto('/decks');
 
     const deckCards = page.locator('[data-testid="deck-card"]');
@@ -58,18 +55,17 @@ test.describe('Mobile Responsive (375px)', () => {
   });
 
   test('Review session should work on mobile', async ({ page }) => {
-    await loginViaLocalStorage(page);
     await page.goto('/decks');
 
     // Wait for page to load
     await page.waitForSelector('h1, h2', { timeout: 10000 });
 
-    // Look for Greek Alphabet deck
-    const greekAlphabetHeading = page.getByRole('heading', { name: /greek alphabet/i });
+    // Look for Greek vocabulary deck
+    const deckHeading = page.getByRole('heading', { name: /greek.*vocabulary/i });
 
     // Only run if deck exists
-    if (await greekAlphabetHeading.count() > 0) {
-      await greekAlphabetHeading.click();
+    if (await deckHeading.count() > 0) {
+      await deckHeading.click();
 
       // Wait for review button
       const startReviewButton = page.getByRole('button', { name: /start review/i });
@@ -92,8 +88,8 @@ test.describe('Mobile Responsive (375px)', () => {
   });
 
   test('Mobile navigation menu should open and close', async ({ page }) => {
-    // loginViaLocalStorage already navigates to /dashboard and waits for auth content
-    await loginViaLocalStorage(page);
+    // Navigate to dashboard - storageState handles auth
+    await page.goto('/');
 
     // CRITICAL: Verify we're authenticated and not redirected to login
     const currentUrl = page.url();
@@ -129,7 +125,6 @@ test.describe('Tablet Responsive (768px)', () => {
   test.use({ viewport: { width: 768, height: 1024 } });
 
   test('Dashboard should use tablet layout', async ({ page }) => {
-    await loginViaLocalStorage(page);
     await page.goto('/');
 
     // Check page loaded successfully (not redirected to login)
@@ -144,7 +139,6 @@ test.describe('Tablet Responsive (768px)', () => {
   });
 
   test('Deck cards should be 2-column grid on tablet', async ({ page }) => {
-    await loginViaLocalStorage(page);
     await page.goto('/decks');
 
     const deckCards = page.locator('[data-testid="deck-card"]');
@@ -166,7 +160,6 @@ test.describe('Desktop Responsive (1024px)', () => {
   test.use({ viewport: { width: 1024, height: 768 } });
 
   test('Dashboard should use full desktop layout', async ({ page }) => {
-    await loginViaLocalStorage(page);
     await page.goto('/');
 
     // Wait for page to load
@@ -181,7 +174,6 @@ test.describe('Desktop Responsive (1024px)', () => {
   });
 
   test('Deck cards should be 3-column grid on desktop', async ({ page }) => {
-    await loginViaLocalStorage(page);
     await page.goto('/decks');
 
     const deckCards = page.locator('[data-testid="deck-card"]');

@@ -3,14 +3,8 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { loginViaLocalStorage } from './helpers/auth-helpers';
 
 test.describe('Deck Browsing', () => {
-  test.beforeEach(async ({ page }) => {
-    // Login before each test
-    await loginViaLocalStorage(page);
-  });
-
   test('should display decks page with navigation', async ({ page }) => {
     await page.goto('/decks');
 
@@ -152,7 +146,7 @@ test.describe('Deck Browsing', () => {
 
     if (isSearchVisible) {
       // Type in search box
-      await searchInput.fill('alphabet');
+      await searchInput.fill('Greek');
 
       // Wait for filtering (debounced)
       await page.waitForTimeout(800);

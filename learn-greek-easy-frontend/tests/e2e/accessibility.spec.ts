@@ -5,7 +5,6 @@
 
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { loginViaLocalStorage } from './helpers/auth-helpers';
 
 test.describe('Accessibility (Axe-core)', () => {
   test('Login page should have no accessibility violations', async ({ page }) => {
@@ -32,7 +31,6 @@ test.describe('Accessibility (Axe-core)', () => {
 
   // ENABLED: Now uses seed data from E2E database seeding infrastructure (SEED-10)
   test('Dashboard should have no accessibility violations', async ({ page }) => {
-    await loginViaLocalStorage(page);
     await page.goto('/');
 
     const accessibilityScanResults = await new AxeBuilder({ page })
@@ -44,7 +42,6 @@ test.describe('Accessibility (Axe-core)', () => {
   });
 
   test('Decks page should have no accessibility violations', async ({ page }) => {
-    await loginViaLocalStorage(page);
     await page.goto('/decks');
 
     const accessibilityScanResults = await new AxeBuilder({ page })
@@ -58,7 +55,6 @@ test.describe('Accessibility (Axe-core)', () => {
 
   // ENABLED: Now uses seed data from E2E database seeding infrastructure (SEED-10)
   test('Settings page should have no accessibility violations', async ({ page }) => {
-    await loginViaLocalStorage(page);
     await page.goto('/settings');
 
     const accessibilityScanResults = await new AxeBuilder({ page })
@@ -70,18 +66,17 @@ test.describe('Accessibility (Axe-core)', () => {
   });
 
   test('Review session should have no accessibility violations', async ({ page }) => {
-    await loginViaLocalStorage(page);
     await page.goto('/decks');
 
     // Wait for page to load
     await page.waitForSelector('h1, h2', { timeout: 10000 });
 
-    // Look for Greek Alphabet deck
-    const greekAlphabetHeading = page.getByRole('heading', { name: /greek alphabet/i });
+    // Look for Greek vocabulary deck
+    const deckHeading = page.getByRole('heading', { name: /greek.*vocabulary/i });
 
     // Only run if deck exists
-    if (await greekAlphabetHeading.count() > 0) {
-      await greekAlphabetHeading.click();
+    if (await deckHeading.count() > 0) {
+      await deckHeading.click();
 
       // Wait for review button
       const startReviewButton = page.getByRole('button', { name: /start review/i });
@@ -159,7 +154,6 @@ test.describe('Accessibility (Axe-core)', () => {
   });
 
   test('Modals should have proper ARIA attributes', async ({ page }) => {
-    await loginViaLocalStorage(page);
     await page.goto('/settings');
 
     // Wait for page to load

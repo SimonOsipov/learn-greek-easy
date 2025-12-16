@@ -4,11 +4,9 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { loginViaLocalStorage } from './helpers/auth-helpers';
 
 test.describe('Settings Management', () => {
   test.beforeEach(async ({ page }) => {
-    await loginViaLocalStorage(page);
     await page.goto('/settings');
     await page.waitForTimeout(500);
   });
@@ -31,7 +29,7 @@ test.describe('Settings Management', () => {
       const newPasswordField = page.getByTestId('new-password-input');
       const confirmPasswordField = page.getByTestId('confirm-password-input');
 
-      await currentPasswordField.fill('Test1234!');
+      await currentPasswordField.fill('TestPassword123!');
       await newPasswordField.fill('NewPassword123!');
       await confirmPasswordField.fill('NewPassword123!');
 

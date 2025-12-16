@@ -4,14 +4,13 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { loginViaLocalStorage } from './helpers/auth-helpers';
 
 // ENABLED: Now uses seed data from E2E database seeding infrastructure (SEED-10)
 // Seed creates review history and card stats for the learner user
 test.describe('Analytics Dashboard', () => {
   test.beforeEach(async ({ page }) => {
-    // loginViaLocalStorage already navigates to /dashboard and waits for auth content
-    await loginViaLocalStorage(page);
+    // Navigate to dashboard - storageState handles auth
+    await page.goto('/');
 
     // Wait for Dashboard heading to be visible (explicit wait instead of fixed timeout)
     await expect(page.getByRole('heading', { name: /dashboard/i }))
