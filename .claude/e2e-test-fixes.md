@@ -528,6 +528,82 @@ await expect(page.getByRole('heading', { name: /settings/i })).toBeVisible();
 
 This will make tests more reliable and provide consistent behavior across all protected route tests.
 
+### Implementation Completed ✅
+
+**Date**: 2024-12-16
+**Commit**: `bce9821` - `fix(e2e): Replace networkidle with waitForAuthCheck helper for reliable auth waits`
+**Branch**: `feature/connect-frontend-backend-api`
+
+#### Files Modified
+
+##### 1. `tests/e2e/helpers/auth-helpers.ts`
+
+**Line 21**: Added `expect` import:
+```typescript
+import { Page, APIRequestContext, expect } from '@playwright/test';
+```
+
+**Lines 488-510**: Added new helper function:
+```typescript
+/**
+ * Wait for RouteGuard auth check to complete after navigation
+ *
+ * RouteGuard shows "Loading your experience..." while verifying the auth token.
+ * This loading state can persist after `networkidle` fires, causing flaky tests
+ * when trying to interact with protected page content.
+ *
+ * Use this helper after `page.goto()` to protected routes instead of
+ * `page.waitForLoadState('networkidle')`.
+ *
+ * @param page - Playwright page object
+ * @param timeout - Maximum time to wait for loading to complete (default: 15000ms)
+ */
+export async function waitForAuthCheck(page: Page, timeout = 15000): Promise<void> {
+  const loadingText = page.getByText(/loading your experience/i);
+  const isLoading = await loadingText.isVisible().catch(() => false);
+
+  if (isLoading) {
+    await expect(loadingText).not.toBeVisible({ timeout });
+  }
+
+  await page.waitForLoadState('domcontentloaded');
+}
+```
+
+##### 2. `tests/e2e/settings.spec.ts`
+
+**Line 7**: Updated import:
+```typescript
+import { verifyAuthSucceeded, waitForAuthCheck } from './helpers/auth-helpers';
+```
+
+**Lines 137, 140, 155, 159**: Replaced `waitForLoadState('networkidle')` with `waitForAuthCheck(page)`:
+```typescript
+// Before
+await page.waitForLoadState('networkidle');
+
+// After
+await waitForAuthCheck(page);
+```
+
+#### Why This Fix Works
+
+| Previous Approach | New Approach |
+|-------------------|--------------|
+| `networkidle` - waits for no network activity for 500ms | `waitForAuthCheck` - waits for specific UI state change |
+| Can fire before React makes API call | Waits for loading text to disappear |
+| Race condition with React hydration | Deterministic - checks actual UI state |
+| Timing-dependent | State-dependent |
+
+The new helper:
+1. Checks if "Loading your experience..." is visible
+2. If visible, waits for it to disappear (auth check complete)
+3. Waits for `domcontentloaded` as a final safety check
+
+#### CI Status
+
+⏳ Awaiting CI results...
+
 ---
 
 ## 2. analytics.spec.ts:146 - E2E-05.5: Dashboard loads within reasonable time
