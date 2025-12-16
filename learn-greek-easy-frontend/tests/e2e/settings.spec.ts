@@ -4,46 +4,17 @@
  */
 
 import { test, expect } from '@playwright/test';
-import {
-  verifyAuthSucceeded,
-  waitForAuthCheck,
-  waitForAppReady,
-  captureConsoleMessages,
-  waitForAppReadyWithDebug,
-} from './helpers/auth-helpers';
+import { verifyAuthSucceeded, waitForAppReady } from './helpers/auth-helpers';
 
 test.describe('Settings Management', () => {
-  // TODO: Remove after debugging
-  let cleanupConsole: (() => void) | undefined;
-
   test.beforeEach(async ({ page }) => {
-    // TODO: Remove after debugging - capture browser console
-    cleanupConsole = captureConsoleMessages(page);
-    console.log('[E2E-DEBUG-TEST] beforeEach START | navigating to /settings');
-
     await page.goto('/settings');
-
-    // TODO: Remove after debugging
-    console.log('[E2E-DEBUG-TEST] beforeEach AFTER_GOTO | verifying auth');
 
     // Fail fast with clear error if auth failed
     await verifyAuthSucceeded(page, '/settings');
 
-    // TODO: Remove after debugging
-    console.log('[E2E-DEBUG-TEST] beforeEach AUTH_VERIFIED | waiting for settings heading');
-
     // Wait for settings page content
     await expect(page.getByRole('heading', { name: /settings/i })).toBeVisible({ timeout: 10000 });
-
-    // TODO: Remove after debugging
-    console.log('[E2E-DEBUG-TEST] beforeEach COMPLETE');
-  });
-
-  test.afterEach(async () => {
-    // TODO: Remove after debugging - cleanup console listener
-    if (cleanupConsole) {
-      cleanupConsole();
-    }
   });
 
   test('E2E-04.1: Change password', async ({ page }) => {
@@ -152,9 +123,6 @@ test.describe('Settings Management', () => {
   });
 
   test('E2E-04.3: Settings persist after page refresh', async ({ page }) => {
-    // TODO: Remove after debugging
-    console.log('[E2E-DEBUG-TEST] E2E-04.3 START');
-
     // Try to update any setting
     const dailyGoalSlider = page.getByRole('slider', { name: /daily goal/i });
     const isSliderVisible = await dailyGoalSlider.isVisible().catch(() => false);
@@ -164,30 +132,14 @@ test.describe('Settings Management', () => {
       await dailyGoalSlider.fill('45');
       await page.waitForTimeout(1500); // Wait for auto-save
 
-      // TODO: Remove after debugging
-      console.log('[E2E-DEBUG-TEST] E2E-04.3 BEFORE_NAV_TO_HOME | current URL=' + page.url());
-
       // Navigate away and back
       await page.goto('/');
-
-      // TODO: Remove after debugging
-      console.log('[E2E-DEBUG-TEST] E2E-04.3 AFTER_NAV_TO_HOME | current URL=' + page.url());
-
-      await waitForAppReadyWithDebug(page);
-
-      // TODO: Remove after debugging
-      console.log('[E2E-DEBUG-TEST] E2E-04.3 AFTER_WAIT_HOME | current URL=' + page.url());
+      await waitForAppReady(page);
 
       await page.goto('/settings');
 
-      // TODO: Remove after debugging
-      console.log('[E2E-DEBUG-TEST] E2E-04.3 AFTER_NAV_TO_SETTINGS | current URL=' + page.url());
-
       // Wait for app to be ready (RouteGuard auth check complete)
-      await waitForAppReadyWithDebug(page);
-
-      // TODO: Remove after debugging
-      console.log('[E2E-DEBUG-TEST] E2E-04.3 AFTER_WAIT_SETTINGS | current URL=' + page.url());
+      await waitForAppReady(page);
 
       // Verify value persisted
       const slider = page.getByRole('slider', { name: /daily goal/i });
@@ -200,36 +152,17 @@ test.describe('Settings Management', () => {
       // Just verify settings page is accessible and persists state
       await expect(page.getByRole('heading', { name: /settings/i })).toBeVisible();
 
-      // TODO: Remove after debugging
-      console.log('[E2E-DEBUG-TEST] E2E-04.3 NO_SLIDER_BEFORE_NAV_TO_HOME | current URL=' + page.url());
-
       // Navigate away and back
       await page.goto('/');
-
-      // TODO: Remove after debugging
-      console.log('[E2E-DEBUG-TEST] E2E-04.3 NO_SLIDER_AFTER_NAV_TO_HOME | current URL=' + page.url());
-
-      await waitForAppReadyWithDebug(page);
-
-      // TODO: Remove after debugging
-      console.log('[E2E-DEBUG-TEST] E2E-04.3 NO_SLIDER_AFTER_WAIT_HOME | current URL=' + page.url());
+      await waitForAppReady(page);
 
       await page.goto('/settings');
 
-      // TODO: Remove after debugging
-      console.log('[E2E-DEBUG-TEST] E2E-04.3 NO_SLIDER_AFTER_NAV_TO_SETTINGS | current URL=' + page.url());
-
       // Wait for app to be ready - RouteGuard auth check must complete
-      await waitForAppReadyWithDebug(page);
-
-      // TODO: Remove after debugging
-      console.log('[E2E-DEBUG-TEST] E2E-04.3 NO_SLIDER_AFTER_WAIT_SETTINGS | current URL=' + page.url());
+      await waitForAppReady(page);
 
       // Should still load settings page
       await expect(page.getByRole('heading', { name: /settings/i })).toBeVisible({ timeout: 15000 });
-
-      // TODO: Remove after debugging
-      console.log('[E2E-DEBUG-TEST] E2E-04.3 COMPLETE');
     }
   });
 

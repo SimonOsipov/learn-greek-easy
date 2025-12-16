@@ -51,15 +51,8 @@ function AppContent() {
   const setReactHydrated = useAppStore((state) => state.setReactHydrated);
 
   useEffect(() => {
-    // TODO: Remove after debugging
-    const timestamp = new Date().toISOString();
-    console.log(`[E2E-DEBUG][App][${timestamp}] useEffect CALLING_SET_REACT_HYDRATED`);
     setReactHydrated();
   }, [setReactHydrated]);
-
-  // TODO: Remove after debugging
-  const timestamp = new Date().toISOString();
-  console.log(`[E2E-DEBUG][App][${timestamp}] RENDER | isAppReady=${isAppReady}`);
 
   return (
     <div data-app-ready={isAppReady}>

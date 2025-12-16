@@ -19,44 +19,14 @@ export const RouteGuard: React.FC<RouteGuardProps> = ({ children }) => {
     const abortController = new AbortController();
 
     const verifyAuth = async () => {
-      // TODO: Remove after debugging
-      const startTime = Date.now();
-      const timestamp = new Date().toISOString();
-      console.log(`[E2E-DEBUG][RouteGuard][${timestamp}] verifyAuth START`);
-
       try {
-        // TODO: Remove after debugging
-        console.log(
-          `[E2E-DEBUG][RouteGuard][${timestamp}] verifyAuth BEFORE_CHECK_AUTH | elapsed=${Date.now() - startTime}ms`
-        );
-
         await checkAuth({ signal: abortController.signal });
-
-        // TODO: Remove after debugging
-        console.log(
-          `[E2E-DEBUG][RouteGuard][${timestamp}] verifyAuth AFTER_CHECK_AUTH | elapsed=${Date.now() - startTime}ms`
-        );
       } finally {
         // Only update state if the request wasn't aborted
         // This prevents race conditions from React StrictMode double-invocation
         if (!abortController.signal.aborted) {
-          // TODO: Remove after debugging
-          console.log(
-            `[E2E-DEBUG][RouteGuard][${timestamp}] verifyAuth FINALLY_BLOCK | elapsed=${Date.now() - startTime}ms | settingIsChecking=false`
-          );
-
           setIsChecking(false);
           setAuthInitialized();
-
-          // TODO: Remove after debugging
-          console.log(
-            `[E2E-DEBUG][RouteGuard][${timestamp}] verifyAuth COMPLETE | elapsed=${Date.now() - startTime}ms`
-          );
-        } else {
-          // TODO: Remove after debugging
-          console.log(
-            `[E2E-DEBUG][RouteGuard][${timestamp}] verifyAuth ABORTED | elapsed=${Date.now() - startTime}ms | skipping state updates`
-          );
         }
       }
     };
@@ -65,10 +35,6 @@ export const RouteGuard: React.FC<RouteGuardProps> = ({ children }) => {
 
     // Cleanup: abort any pending request when effect re-runs or component unmounts
     return () => {
-      // TODO: Remove after debugging
-      console.log(
-        `[E2E-DEBUG][RouteGuard][${new Date().toISOString()}] cleanup ABORTING pending auth check`
-      );
       abortController.abort();
     };
   }, [checkAuth, setAuthInitialized]);

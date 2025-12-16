@@ -30,43 +30,17 @@ export const useAppStore = create<AppState>()(
       isReady: false,
 
       setReactHydrated: () => {
-        // TODO: Remove after debugging
-        const timestamp = new Date().toISOString();
-        const prevState = useAppStore.getState();
-        console.log(
-          `[E2E-DEBUG][AppStore][${timestamp}] setReactHydrated BEFORE | reactHydrated=${prevState.reactHydrated} | authInitialized=${prevState.authInitialized} | isReady=${prevState.isReady}`
-        );
-
         set((state) => ({
           reactHydrated: true,
           isReady: state.authInitialized,
         }));
-
-        // TODO: Remove after debugging
-        const newState = useAppStore.getState();
-        console.log(
-          `[E2E-DEBUG][AppStore][${timestamp}] setReactHydrated AFTER | reactHydrated=${newState.reactHydrated} | authInitialized=${newState.authInitialized} | isReady=${newState.isReady}`
-        );
       },
 
       setAuthInitialized: () => {
-        // TODO: Remove after debugging
-        const timestamp = new Date().toISOString();
-        const prevState = useAppStore.getState();
-        console.log(
-          `[E2E-DEBUG][AppStore][${timestamp}] setAuthInitialized BEFORE | reactHydrated=${prevState.reactHydrated} | authInitialized=${prevState.authInitialized} | isReady=${prevState.isReady}`
-        );
-
         set((state) => ({
           authInitialized: true,
           isReady: state.reactHydrated,
         }));
-
-        // TODO: Remove after debugging
-        const newState = useAppStore.getState();
-        console.log(
-          `[E2E-DEBUG][AppStore][${timestamp}] setAuthInitialized AFTER | reactHydrated=${newState.reactHydrated} | authInitialized=${newState.authInitialized} | isReady=${newState.isReady}`
-        );
       },
 
       reset: () => {

@@ -17,15 +17,8 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const location = useLocation();
   const { isAuthenticated, user, isLoading } = useAuthStore();
 
-  // TODO: Remove after debugging
-  const timestamp = new Date().toISOString();
-
   // Show loading state while checking auth
   if (isLoading) {
-    // TODO: Remove after debugging
-    console.log(
-      `[E2E-DEBUG][ProtectedRoute][${timestamp}] RENDER_LOADING | path=${location.pathname} | isLoading=true | isAuthenticated=${isAuthenticated}`
-    );
     return (
       <div className="bg-background flex min-h-screen items-center justify-center">
         <div className="space-y-4 text-center">
@@ -38,19 +31,10 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   // Not authenticated - redirect to login with return URL
   if (!isAuthenticated) {
-    // TODO: Remove after debugging
-    console.log(
-      `[E2E-DEBUG][ProtectedRoute][${timestamp}] RENDER_REDIRECT | path=${location.pathname} | isLoading=${isLoading} | isAuthenticated=false | redirectTo=${redirectTo}`
-    );
     return (
       <Navigate to={redirectTo} state={{ from: location.pathname + location.search }} replace />
     );
   }
-
-  // TODO: Remove after debugging
-  console.log(
-    `[E2E-DEBUG][ProtectedRoute][${timestamp}] RENDER_ALLOW | path=${location.pathname} | isLoading=${isLoading} | isAuthenticated=true | userId=${user?.id}`
-  );
 
   // Check role requirements
   if (requiredRole) {
