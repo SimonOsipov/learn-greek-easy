@@ -656,6 +656,34 @@ See test files for examples:
 - `tests/e2e/mobile-responsive.spec.ts` - Mobile tests
 - `tests/e2e/keyboard-navigation.spec.ts` - Keyboard tests
 
+## E2E Test Fixes
+
+This section documents resolved E2E test issues and their solutions to help with future debugging.
+
+### Profile Heading Visibility (Dec 2024)
+
+**Failed Test**: `auth.spec.ts:169 - should access protected routes when authenticated`
+
+**Error**: `expect(locator).toBeVisible() failed` for `getByRole('heading', { name: /profile/i })`
+
+**Root Cause**: The Profile page had `<h1>Profile</h1>` inside a `md:hidden` container, making it invisible on desktop viewports (1280x720). E2E tests run in desktop viewport and check for visible heading elements to verify page loads correctly.
+
+**Files Affected**:
+- `src/pages/Profile.tsx` (line 59-65)
+- `tests/e2e/deck-browsing.spec.ts` (had workaround using testId)
+
+**Solution**:
+- Moved `md:hidden` from the container to the mobile menu button only
+- Heading now always visible with responsive sizing (`text-2xl md:text-3xl`)
+- Added `aria-label` to mobile menu button for accessibility
+- Removed testId workaround from `deck-browsing.spec.ts`
+
+**Lesson Learned**: Page headings should always be visible regardless of viewport for both accessibility (WCAG) and E2E testing reliability. Mobile-only UI controls can be hidden, but main content structure should remain visible.
+
+**Commit**: `f7e9845` - `fix(e2e): Make Profile heading always visible for desktop viewport`
+
+---
+
 ## Next Steps
 
 1. Write tests for existing utilities in `src/lib/` and `src/utils/`
