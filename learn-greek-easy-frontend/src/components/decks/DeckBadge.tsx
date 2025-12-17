@@ -31,6 +31,16 @@ const LEVEL_CONFIG = {
     bgColor: 'bg-purple-700',
     textColor: 'text-white',
   },
+  C1: {
+    label: 'C1 - Advanced',
+    bgColor: 'bg-red-700',
+    textColor: 'text-white',
+  },
+  C2: {
+    label: 'C2 - Mastery',
+    bgColor: 'bg-gray-800',
+    textColor: 'text-white',
+  },
 } as const;
 
 const STATUS_CONFIG = {

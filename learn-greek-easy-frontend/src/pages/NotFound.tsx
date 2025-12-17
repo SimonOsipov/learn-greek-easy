@@ -18,7 +18,7 @@ export const NotFound: React.FC = () => {
           back on track!
         </p>
         <div className="flex flex-col justify-center gap-4 sm:flex-row">
-          <Link to="/dashboard">
+          <Link to="/">
             <Button className="w-full sm:w-auto">
               <Home className="mr-2 h-4 w-4" />
               Go to Dashboard

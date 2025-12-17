@@ -4,29 +4,33 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { loginViaLocalStorage } from './helpers/auth-helpers';
 
 // Mobile Tests (375px - iPhone SE)
 test.describe('Mobile Responsive (375px)', () => {
   test.use({ viewport: { width: 375, height: 667 } });
 
-  test('Login page should be mobile-friendly', async ({ page }) => {
-    await page.goto('/login');
+  // Public pages - need to clear authentication to access login page
+  test.describe('Public pages', () => {
+    // Override storageState to be empty (no auth) - same pattern as sample.spec.ts
+    test.use({ storageState: { cookies: [], origins: [] } });
 
-    // Check viewport
-    const viewportSize = page.viewportSize();
-    expect(viewportSize?.width).toBe(375);
+    test('Login page should be mobile-friendly', async ({ page }) => {
+      await page.goto('/login');
 
-    // Form should be visible and usable using test IDs
-    await expect(page.getByTestId('login-card')).toBeVisible();
-    await expect(page.getByTestId('email-input')).toBeVisible();
-    await expect(page.getByTestId('password-input')).toBeVisible();
-    await expect(page.getByTestId('login-submit')).toBeVisible();
+      // Check viewport
+      const viewportSize = page.viewportSize();
+      expect(viewportSize?.width).toBe(375);
+
+      // Form should be visible and usable using test IDs
+      await expect(page.getByTestId('login-card')).toBeVisible();
+      await expect(page.getByTestId('email-input')).toBeVisible();
+      await expect(page.getByTestId('password-input')).toBeVisible();
+      await expect(page.getByTestId('login-submit')).toBeVisible();
+    });
   });
 
   test('Dashboard should adapt to mobile layout', async ({ page }) => {
-    await loginViaLocalStorage(page);
-    await page.goto('/dashboard');
+    await page.goto('/');
 
     // Check page loaded successfully (not redirected to login)
     await expect(page).not.toHaveURL(/\/login/);
@@ -41,13 +45,12 @@ test.describe('Mobile Responsive (375px)', () => {
   });
 
   test('Deck cards should stack vertically on mobile', async ({ page }) => {
-    await loginViaLocalStorage(page);
     await page.goto('/decks');
 
     const deckCards = page.locator('[data-testid="deck-card"]');
 
-    // Wait for cards to load
-    await expect(deckCards.first()).toBeVisible();
+    // Wait for cards to load from API (increased timeout for CI)
+    await expect(deckCards.first()).toBeVisible({ timeout: 15000 });
 
     // Cards should be full width (or close to it)
     const firstCard = deckCards.first();
@@ -58,18 +61,17 @@ test.describe('Mobile Responsive (375px)', () => {
   });
 
   test('Review session should work on mobile', async ({ page }) => {
-    await loginViaLocalStorage(page);
     await page.goto('/decks');
 
     // Wait for page to load
     await page.waitForSelector('h1, h2', { timeout: 10000 });
 
-    // Look for Greek Alphabet deck
-    const greekAlphabetHeading = page.getByRole('heading', { name: /greek alphabet/i });
+    // Look for Greek vocabulary deck
+    const deckHeading = page.getByRole('heading', { name: /greek.*vocabulary/i });
 
     // Only run if deck exists
-    if (await greekAlphabetHeading.count() > 0) {
-      await greekAlphabetHeading.click();
+    if (await deckHeading.count() > 0) {
+      await deckHeading.click();
 
       // Wait for review button
       const startReviewButton = page.getByRole('button', { name: /start review/i });
@@ -92,15 +94,28 @@ test.describe('Mobile Responsive (375px)', () => {
   });
 
   test('Mobile navigation menu should open and close', async ({ page }) => {
-    await loginViaLocalStorage(page);
-    await page.goto('/dashboard');
+    // Navigate to dashboard - storageState handles auth
+    await page.goto('/');
 
-    // Wait for page to load
-    await page.waitForLoadState('domcontentloaded');
+    // CRITICAL: Verify we're authenticated and not redirected to login
+    const currentUrl = page.url();
+    if (currentUrl.includes('/login')) {
+      throw new Error('Authentication failed - redirected to login page. Check backend connectivity.');
+    }
+
+    // Wait for Dashboard heading specifically (ensures page is fully rendered)
+    await expect(page.getByRole('heading', { name: /dashboard/i }))
+      .toBeVisible({ timeout: 15000 });
 
     // Check for any navigation elements or buttons
     const buttons = page.locator('button');
     const buttonCount = await buttons.count();
+
+    // Log diagnostic info if count is unexpectedly low
+    if (buttonCount === 0) {
+      console.error('[TEST] No buttons found on mobile dashboard');
+      console.error('[TEST] Current URL:', page.url());
+    }
 
     // Just verify page has interactive elements (menu exists in some form)
     expect(buttonCount).toBeGreaterThan(0);
@@ -116,8 +131,7 @@ test.describe('Tablet Responsive (768px)', () => {
   test.use({ viewport: { width: 768, height: 1024 } });
 
   test('Dashboard should use tablet layout', async ({ page }) => {
-    await loginViaLocalStorage(page);
-    await page.goto('/dashboard');
+    await page.goto('/');
 
     // Check page loaded successfully (not redirected to login)
     await expect(page).not.toHaveURL(/\/login/);
@@ -131,11 +145,11 @@ test.describe('Tablet Responsive (768px)', () => {
   });
 
   test('Deck cards should be 2-column grid on tablet', async ({ page }) => {
-    await loginViaLocalStorage(page);
     await page.goto('/decks');
 
     const deckCards = page.locator('[data-testid="deck-card"]');
-    await expect(deckCards.first()).toBeVisible();
+    // Wait for cards to load from API (increased timeout for CI)
+    await expect(deckCards.first()).toBeVisible({ timeout: 15000 });
 
     // Cards should NOT be full width (2 per row)
     const firstCard = deckCards.first();
@@ -152,8 +166,7 @@ test.describe('Desktop Responsive (1024px)', () => {
   test.use({ viewport: { width: 1024, height: 768 } });
 
   test('Dashboard should use full desktop layout', async ({ page }) => {
-    await loginViaLocalStorage(page);
-    await page.goto('/dashboard');
+    await page.goto('/');
 
     // Wait for page to load
     await page.waitForLoadState('domcontentloaded');
@@ -167,11 +180,11 @@ test.describe('Desktop Responsive (1024px)', () => {
   });
 
   test('Deck cards should be 3-column grid on desktop', async ({ page }) => {
-    await loginViaLocalStorage(page);
     await page.goto('/decks');
 
     const deckCards = page.locator('[data-testid="deck-card"]');
-    await expect(deckCards.first()).toBeVisible();
+    // Wait for cards to load from API (increased timeout for CI)
+    await expect(deckCards.first()).toBeVisible({ timeout: 15000 });
 
     // Cards should be roughly 1/3 viewport width
     const firstCard = deckCards.first();

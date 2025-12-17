@@ -4,15 +4,17 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { loginViaLocalStorage } from './helpers/auth-helpers';
 
 // ENABLED: Now uses seed data from E2E database seeding infrastructure (SEED-10)
 // Seed creates review history and card stats for the learner user
 test.describe('Analytics Dashboard', () => {
   test.beforeEach(async ({ page }) => {
-    await loginViaLocalStorage(page);
-    await page.goto('/dashboard');
-    await page.waitForTimeout(1000); // Wait for dashboard to load
+    // Navigate to dashboard - storageState handles auth
+    await page.goto('/');
+
+    // Wait for Dashboard heading to be visible (explicit wait instead of fixed timeout)
+    await expect(page.getByRole('heading', { name: /dashboard/i }))
+      .toBeVisible({ timeout: 15000 });
   });
 
   // TODO: Skip chart tests - Dashboard currently shows MetricCards, not Recharts charts.
@@ -143,12 +145,12 @@ test.describe('Analytics Dashboard', () => {
 
   test('E2E-05.5: Dashboard loads within reasonable time', async ({ page }) => {
     // Navigate to dashboard fresh
-    await page.goto('/dashboard');
+    await page.goto('/');
     const startTime = Date.now();
 
-    // Wait for dashboard heading to be visible
+    // Wait for dashboard heading to be visible (15s for CI environment)
     await expect(page.getByRole('heading', { name: /dashboard/i })).toBeVisible({
-      timeout: 5000,
+      timeout: 15000,
     });
 
     // Wait for metrics cards to render (Dashboard uses MetricCards, not charts)
@@ -157,14 +159,14 @@ test.describe('Analytics Dashboard', () => {
 
     if (hasMetrics) {
       await expect(metricsSection).toBeVisible({
-        timeout: 5000,
+        timeout: 10000,
       });
     }
 
     const loadTime = Date.now() - startTime;
 
-    // Verify loaded within 5 seconds (generous for E2E)
-    expect(loadTime).toBeLessThan(5000);
+    // Verify loaded within 15 seconds (reasonable for CI environment)
+    expect(loadTime).toBeLessThan(15000);
   });
 
   test('E2E-05.6: Dashboard displays user greeting', async ({ page }) => {

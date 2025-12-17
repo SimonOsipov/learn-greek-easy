@@ -39,7 +39,7 @@ export const getTodayAtMidnight = (): Date => {
  *
  * A card is considered due if:
  * - Its dueDate is today or earlier (when normalized to midnight)
- * - This ensures consistent behavior across reviewStatsHelpers and mockReviewAPI
+ * - This ensures consistent behavior across different date comparison contexts
  *
  * @param dueDateIso - ISO date string from card's spaced repetition data
  * @returns true if card should be reviewed today

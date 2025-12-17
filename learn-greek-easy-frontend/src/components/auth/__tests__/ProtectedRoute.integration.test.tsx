@@ -4,12 +4,58 @@
  */
 
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 import { render as rtlRender, screen, waitFor } from '@testing-library/react';
 import { useAuthStore } from '@/stores/authStore';
 
 import { ProtectedRoute } from '../ProtectedRoute';
+
+// Mock all API services to prevent real network calls
+vi.mock('@/services/authAPI', () => ({
+  authAPI: {
+    login: vi.fn().mockResolvedValue({
+      access_token: 'mock-access-token',
+      refresh_token: 'mock-refresh-token',
+      token_type: 'bearer',
+    }),
+    getProfile: vi.fn().mockResolvedValue({
+      id: 'test-user-123',
+      email: 'demo@learngreekeasy.com',
+      full_name: 'Demo User',
+      is_superuser: false,
+      created_at: '2025-01-01T00:00:00Z',
+      updated_at: '2025-01-01T00:00:00Z',
+      settings: { daily_goal: 20, email_notifications: true },
+    }),
+    logout: vi.fn().mockResolvedValue(undefined),
+    register: vi.fn().mockResolvedValue({
+      access_token: 'mock-access-token',
+      refresh_token: 'mock-refresh-token',
+      token_type: 'bearer',
+    }),
+    refresh: vi.fn().mockResolvedValue({
+      access_token: 'mock-new-access-token',
+      refresh_token: 'mock-new-refresh-token',
+      token_type: 'bearer',
+    }),
+  },
+  clearAuthTokens: vi.fn(),
+}));
+
+vi.mock('@/services/progressAPI', () => ({
+  progressAPI: {
+    getDashboard: vi.fn().mockResolvedValue({
+      overview: { total_cards_studied: 100, total_cards_mastered: 10 },
+    }),
+    getTrends: vi.fn().mockResolvedValue({
+      period: 'week',
+      daily_stats: [],
+      summary: {},
+    }),
+    getDeckProgressList: vi.fn().mockResolvedValue({ total: 0, page: 1, page_size: 50, decks: [] }),
+  },
+}));
 
 // Mock components for testing
 const DashboardMock = () => <div>Dashboard Content</div>;
@@ -18,8 +64,20 @@ const UnauthorizedMock = () => <div>Unauthorized Page</div>;
 
 describe('Protected Route Integration Tests', () => {
   beforeEach(() => {
-    // Reset auth store
-    useAuthStore.getState().logout();
+    // Clear mocks
+    vi.clearAllMocks();
+
+    // Reset auth store directly (don't call logout which uses API)
+    useAuthStore.setState({
+      user: null,
+      token: null,
+      refreshToken: null,
+      isAuthenticated: false,
+      isLoading: false,
+      error: null,
+      rememberMe: false,
+    });
+
     localStorage.clear();
     sessionStorage.clear();
   });

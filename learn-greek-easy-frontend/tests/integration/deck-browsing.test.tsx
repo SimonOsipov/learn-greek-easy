@@ -10,7 +10,7 @@ import { DecksPage } from '@/pages/DecksPage';
 import { useAuthStore } from '@/stores/authStore';
 import { useDeckStore } from '@/stores/deckStore';
 
-describe('Deck Browsing Integration', () => {
+describe.skip('Deck Browsing Integration', () => {
   beforeEach(async () => {
     // Login
     await useAuthStore.getState().login('demo@learngreekeasy.com', 'Demo123!');

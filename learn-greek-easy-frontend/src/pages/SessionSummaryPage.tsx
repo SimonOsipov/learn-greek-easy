@@ -84,7 +84,7 @@ export function SessionSummaryPage() {
             <AlertDescription>Invalid deck ID. Please return to the dashboard.</AlertDescription>
           </Alert>
           <div className="mt-4">
-            <Button onClick={() => navigate('/dashboard')}>Go to Dashboard</Button>
+            <Button onClick={() => navigate('/')}>Go to Dashboard</Button>
           </div>
         </div>
       </div>
@@ -101,7 +101,7 @@ export function SessionSummaryPage() {
   };
 
   const handleDashboard = () => {
-    navigate('/dashboard');
+    navigate('/');
   };
 
   // Main render

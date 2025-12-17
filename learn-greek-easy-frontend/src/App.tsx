@@ -1,3 +1,5 @@
+import { useEffect } from 'react';
+
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 
@@ -15,7 +17,6 @@ import ActivityFeedTest from '@/pages/ActivityFeedTest';
 import { ForgotPassword } from '@/pages/auth/ForgotPassword';
 import { Login } from '@/pages/auth/Login';
 import { Register } from '@/pages/auth/Register';
-import ChartsTestPage from '@/pages/ChartsTestPage';
 import { Dashboard } from '@/pages/Dashboard';
 import { DeckDetailPage } from '@/pages/DeckDetailPage';
 import { DecksPage } from '@/pages/DecksPage';
@@ -25,6 +26,7 @@ import { Profile } from '@/pages/Profile';
 import { SessionSummaryPage } from '@/pages/SessionSummaryPage';
 import Settings from '@/pages/Settings';
 import { Unauthorized } from '@/pages/Unauthorized';
+import { useAppStore, selectIsReady } from '@/stores/appStore';
 
 // Temporary placeholder pages - replace with actual pages
 
@@ -45,9 +47,15 @@ const AdminPanel = () => (
 
 function AppContent() {
   const { showWarning, remainingSeconds, extendSession } = useActivityMonitor();
+  const isAppReady = useAppStore(selectIsReady);
+  const setReactHydrated = useAppStore((state) => state.setReactHydrated);
+
+  useEffect(() => {
+    setReactHydrated();
+  }, [setReactHydrated]);
 
   return (
-    <>
+    <div data-app-ready={isAppReady}>
       <RouteGuard>
         <Routes>
           {/* Public Routes - redirect to dashboard if authenticated */}
@@ -68,7 +76,6 @@ function AppContent() {
               <Route path="stats" element={<Navigate to="/statistics" replace />} />
               <Route path="settings" element={<Settings />} />
               <Route path="profile" element={<Profile />} />
-              <Route path="charts-test" element={<ChartsTestPage />} />
               <Route path="activity-feed-test" element={<ActivityFeedTest />} />
             </Route>
             {/* Review page outside AppLayout for full-screen experience */}
@@ -98,7 +105,7 @@ function AppContent() {
       />
 
       <Toaster />
-    </>
+    </div>
   );
 }
 

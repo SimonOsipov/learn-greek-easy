@@ -52,6 +52,7 @@ services:
       - ACCESS_TOKEN_EXPIRE_MINUTES=30
       - CORS_ORIGINS=["http://localhost","http://localhost:80","http://localhost:3000","http://localhost:5173"]
       - API_V1_PREFIX=/api/v1
+      - TEST_SEED_ENABLED=true
     volumes:
       - ./learn-greek-easy-backend/src:/app/src
       - ./learn-greek-easy-backend/alembic:/app/alembic

@@ -22,10 +22,75 @@ vi.mock('react-router-dom', async () => {
   };
 });
 
+// Mock all API services to prevent real network calls
+vi.mock('@/services/authAPI', () => ({
+  authAPI: {
+    login: vi.fn().mockImplementation(({ email, password }) => {
+      // Simulate invalid credentials
+      if (email !== 'demo@learngreekeasy.com' || password !== 'Demo123!') {
+        return Promise.reject(new Error('Invalid credentials'));
+      }
+      return Promise.resolve({
+        access_token: 'mock-access-token',
+        refresh_token: 'mock-refresh-token',
+        token_type: 'bearer',
+      });
+    }),
+    getProfile: vi.fn().mockResolvedValue({
+      id: 'test-user-123',
+      email: 'demo@learngreekeasy.com',
+      full_name: 'Demo User',
+      is_superuser: false,
+      created_at: '2025-01-01T00:00:00Z',
+      updated_at: '2025-01-01T00:00:00Z',
+      settings: { daily_goal: 20, email_notifications: true },
+    }),
+    logout: vi.fn().mockResolvedValue(undefined),
+    register: vi.fn().mockResolvedValue({
+      access_token: 'mock-access-token',
+      refresh_token: 'mock-refresh-token',
+      token_type: 'bearer',
+    }),
+    refresh: vi.fn().mockResolvedValue({
+      access_token: 'mock-new-access-token',
+      refresh_token: 'mock-new-refresh-token',
+      token_type: 'bearer',
+    }),
+  },
+  clearAuthTokens: vi.fn(),
+}));
+
+vi.mock('@/services/progressAPI', () => ({
+  progressAPI: {
+    getDashboard: vi.fn().mockResolvedValue({
+      overview: { total_cards_studied: 100, total_cards_mastered: 10 },
+    }),
+    getTrends: vi.fn().mockResolvedValue({
+      period: 'week',
+      daily_stats: [],
+      summary: {},
+    }),
+    getDeckProgressList: vi.fn().mockResolvedValue({ total: 0, page: 1, page_size: 50, decks: [] }),
+  },
+}));
+
+// Helper to reset auth store state directly
+const resetAuthStore = () => {
+  useAuthStore.setState({
+    user: null,
+    token: null,
+    refreshToken: null,
+    isAuthenticated: false,
+    isLoading: false,
+    error: null,
+    rememberMe: false,
+  });
+};
+
 describe('Login Flow Integration Tests', () => {
   beforeEach(() => {
-    // Reset auth store to initial state
-    useAuthStore.getState().logout();
+    // Reset auth store state directly (don't call logout which uses API)
+    resetAuthStore();
     localStorage.clear();
     sessionStorage.clear();
     mockNavigate.mockClear();
@@ -74,7 +139,7 @@ describe('Login Flow Integration Tests', () => {
 
       // Verify navigation to dashboard
       await waitFor(() => {
-        expect(mockNavigate).toHaveBeenCalledWith('/dashboard', { replace: true });
+        expect(mockNavigate).toHaveBeenCalledWith('/', { replace: true });
       });
     });
 
@@ -234,11 +299,10 @@ describe('Login Flow Integration Tests', () => {
       await user.click(screen.getByRole('button', { name: /sign in/i }));
 
       // Wait for error message to appear
-      // Note: mockAuthAPI throws a plain object, not an Error, so the Login component
-      // falls back to the generic error message
+      // The mock throws an Error with message 'Invalid credentials'
       await waitFor(
         () => {
-          expect(screen.getByText(/login failed/i)).toBeInTheDocument();
+          expect(screen.getByText(/invalid credentials/i)).toBeInTheDocument();
         },
         { timeout: 5000, interval: 100 }
       );
@@ -262,7 +326,7 @@ describe('Login Flow Integration Tests', () => {
       // Wait for error
       await waitFor(
         () => {
-          expect(screen.getByText(/login failed/i)).toBeInTheDocument();
+          expect(screen.getByText(/invalid credentials/i)).toBeInTheDocument();
         },
         { timeout: 5000, interval: 100 }
       );
@@ -280,7 +344,7 @@ describe('Login Flow Integration Tests', () => {
 
       // Error should be cleared during new attempt
       await waitFor(() => {
-        expect(screen.queryByText(/login failed/i)).not.toBeInTheDocument();
+        expect(screen.queryByText(/invalid credentials/i)).not.toBeInTheDocument();
       });
 
       // Login should succeed

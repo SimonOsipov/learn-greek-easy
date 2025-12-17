@@ -3,12 +3,27 @@ import { defineConfig, devices } from '@playwright/test';
 /**
  * Playwright Configuration
  * See https://playwright.dev/docs/test-configuration
+ *
+ * Authentication Strategy:
+ * - Uses storageState pattern for pre-authenticated tests
+ * - Setup project runs first to authenticate all user roles
+ * - Browser projects depend on setup and use saved auth state
+ * - This eliminates Zustand race conditions and speeds up tests
  */
+
+// Storage state paths for authenticated users
+const STORAGE_STATE = {
+  LEARNER: 'playwright/.auth/learner.json',
+  BEGINNER: 'playwright/.auth/beginner.json',
+  ADVANCED: 'playwright/.auth/advanced.json',
+  ADMIN: 'playwright/.auth/admin.json',
+};
+
 export default defineConfig({
   // Test directory
   testDir: './tests/e2e',
 
-  // Test file pattern
+  // Test file pattern - exclude setup files from regular test runs
   testMatch: '**/*.spec.ts',
 
   // Timeout for each test (60 seconds)
@@ -19,17 +34,14 @@ export default defineConfig({
     timeout: 10 * 1000,
   },
 
-  // Fail fast: stop after first failure (useful for debugging)
-  // fullyParallel: false,
+  // Run tests sequentially for stability (parallel can cause connection pool issues)
+  fullyParallel: false,
 
-  // Run tests in parallel (faster CI)
-  fullyParallel: true,
+  // Retry failed tests in CI (catch flaky tests) - increased retries for stability
+  retries: process.env.CI ? 3 : 0,
 
-  // Retry failed tests in CI (catch flaky tests)
-  retries: process.env.CI ? 2 : 0,
-
-  // Number of parallel workers
-  workers: process.env.CI ? 4 : undefined, // CI: 4 workers for parallel execution, Local: auto
+  // Number of parallel workers - reduced for stability
+  workers: process.env.CI ? 1 : undefined, // CI: 1 worker for stability, Local: auto
 
   // Reporter configuration
   reporter: [
@@ -61,29 +73,58 @@ export default defineConfig({
 
   // Test projects (browsers to run tests in)
   projects: [
+    // Setup project - runs ONCE to authenticate all users
+    // Saves browser state (localStorage, cookies) to JSON files
+    {
+      name: 'setup',
+      testMatch: /.*\.setup\.ts/,
+    },
+
+    // Browser projects - depend on setup, use saved auth state
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      use: {
+        ...devices['Desktop Chrome'],
+        // Use learner auth state by default (most common test user)
+        storageState: STORAGE_STATE.LEARNER,
+      },
+      dependencies: ['setup'],
     },
 
     {
       name: 'firefox',
-      use: { ...devices['Desktop Firefox'] },
+      use: {
+        ...devices['Desktop Firefox'],
+        storageState: STORAGE_STATE.LEARNER,
+      },
+      dependencies: ['setup'],
     },
 
     {
       name: 'webkit',
-      use: { ...devices['Desktop Safari'] },
+      use: {
+        ...devices['Desktop Safari'],
+        storageState: STORAGE_STATE.LEARNER,
+      },
+      dependencies: ['setup'],
     },
 
     // Mobile browsers (optional - uncomment if needed)
     // {
     //   name: 'Mobile Chrome',
-    //   use: { ...devices['Pixel 5'] },
+    //   use: {
+    //     ...devices['Pixel 5'],
+    //     storageState: STORAGE_STATE.LEARNER,
+    //   },
+    //   dependencies: ['setup'],
     // },
     // {
     //   name: 'Mobile Safari',
-    //   use: { ...devices['iPhone 12'] },
+    //   use: {
+    //     ...devices['iPhone 12'],
+    //     storageState: STORAGE_STATE.LEARNER,
+    //   },
+    //   dependencies: ['setup'],
     // },
   ],
 
@@ -95,3 +136,6 @@ export default defineConfig({
     timeout: 120 * 1000, // 2 minutes to start
   },
 });
+
+// Export storage state paths for use in tests
+export { STORAGE_STATE };

@@ -1,139 +1,235 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 
+import { useNavigate } from 'react-router-dom';
+
+import {
+  ProgressLineChart,
+  AccuracyAreaChart,
+  DeckPerformanceChart,
+  StageDistributionChart,
+} from '@/components/charts';
 import { DeckCard } from '@/components/display/DeckCard';
 import { MetricCard } from '@/components/display/MetricCard';
 import { WelcomeSection } from '@/components/display/WelcomeSection';
 import { Separator } from '@/components/ui/separator';
-import type { DashboardData } from '@/types/dashboard';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useAnalytics } from '@/hooks/useAnalytics';
+import { useAuthStore } from '@/stores/authStore';
+import { useDeckStore } from '@/stores/deckStore';
+import type { Metric } from '@/types/dashboard';
 
-// Sample data with Greek content for authenticity
-const mockDashboardData: DashboardData = {
-  user: {
-    name: 'Alex',
-    email: 'alex@example.com',
-    streak: 12,
-    totalWords: 186,
-    lastActivity: new Date('2025-10-28T10:00:00'),
-  },
-  metrics: [
-    {
-      id: '1',
-      label: 'Due Today',
-      value: 24,
-      sublabel: 'cards to review',
-      color: 'primary',
-      icon: '📚',
-      trend: { value: 5, direction: 'up' },
-    },
-    {
-      id: '2',
-      label: 'Current Streak',
-      value: 12,
-      sublabel: 'days',
-      color: 'orange',
-      icon: '🔥',
-    },
-    {
-      id: '3',
-      label: 'Mastered',
-      value: 186,
-      sublabel: 'words total',
-      color: 'green',
-      icon: '✅',
-    },
-    {
-      id: '4',
-      label: 'Accuracy',
-      value: '92%',
-      sublabel: 'last 7 days',
-      color: 'blue',
-      icon: '🎯',
-    },
-    {
-      id: '5',
-      label: 'Total Time',
-      value: '4.5h',
-      sublabel: 'this week',
-      color: 'muted',
-      icon: '⏱️',
-    },
-  ],
-  decks: [
-    {
-      id: '1',
-      title: 'A1 Βασικές Λέξεις', // A1 Essential Words in Greek
-      description: 'Basic vocabulary for everyday communication',
-      status: 'in-progress',
-      level: 'A1',
-      progress: { current: 68, total: 100, percentage: 68 },
-      stats: { due: 12, mastered: 68, learning: 20 },
-      lastStudied: new Date('2025-10-28T09:00:00'),
-    },
-    {
-      id: '2',
-      title: 'Αριθμοί & Χρόνος', // Numbers & Time in Greek
-      description: 'Numbers, dates, time expressions',
-      status: 'in-progress',
-      level: 'A1',
-      progress: { current: 45, total: 75, percentage: 60 },
-      stats: { due: 8, mastered: 45, learning: 15 },
-      lastStudied: new Date('2025-10-27T14:00:00'),
-    },
-    {
-      id: '3',
-      title: 'Οικογένεια & Σχέσεις', // Family & Relationships in Greek
-      description: 'Family members, relationships, and social terms',
-      status: 'not-started',
-      level: 'A2',
-      progress: { current: 0, total: 80, percentage: 0 },
-      stats: { due: 0, mastered: 0, learning: 0 },
-    },
-  ],
-  upcomingReviews: {
-    today: 24,
-    tomorrow: 18,
-    week: 96,
-  },
-};
-
+/**
+ * Dashboard Page
+ *
+ * Main user dashboard showing:
+ * - Welcome section with streak and due cards
+ * - Key metrics (due today, streak, mastered, accuracy, time)
+ * - Progress charts (line, area, bar, pie)
+ * - Active decks
+ *
+ * Uses real backend API data via analyticsStore and deckStore.
+ */
 export const Dashboard: React.FC = () => {
-  const { user, metrics, decks } = mockDashboardData;
+  const navigate = useNavigate();
 
+  // Auth state
+  const user = useAuthStore((state) => state.user);
+
+  // Analytics data (auto-loads on mount)
+  const {
+    data: analyticsData,
+    loading: analyticsLoading,
+    error: analyticsError,
+  } = useAnalytics(true);
+
+  // Deck data
+  const decks = useDeckStore((state) => state.decks);
+  const decksLoading = useDeckStore((state) => state.isLoading);
+  const fetchDecks = useDeckStore((state) => state.fetchDecks);
+
+  // Fetch decks on mount
+  useEffect(() => {
+    fetchDecks().catch((error) => {
+      console.error('Failed to fetch decks:', error);
+    });
+  }, [fetchDecks]);
+
+  // Navigate to review session
   const handleStartReview = () => {
-    console.log('Starting review session...');
-    // This would navigate to review page
+    // Navigate to first deck with due cards, or decks page
+    const deckWithDue = decks.find(
+      (d) => (d.progress?.cardsReview ?? 0) > 0 || d.progress?.status === 'in-progress'
+    );
+    if (deckWithDue) {
+      navigate(`/review/${deckWithDue.id}`);
+    } else if (decks.length > 0) {
+      navigate(`/review/${decks[0].id}`);
+    } else {
+      navigate('/decks');
+    }
   };
 
+  // Navigate to deck study
   const handleContinueDeck = (deckId: string) => {
-    console.log(`Continuing deck: ${deckId}`);
-    // This would navigate to deck study page
+    navigate(`/review/${deckId}`);
   };
+
+  // Build metrics from analytics data
+  const buildMetrics = (): Metric[] => {
+    if (!analyticsData) {
+      return [];
+    }
+
+    const { summary, streak, wordStatus } = analyticsData;
+
+    // Calculate due cards from word status
+    const dueToday = wordStatus.learning + wordStatus.review;
+
+    return [
+      {
+        id: '1',
+        label: 'Due Today',
+        value: dueToday,
+        sublabel: 'cards to review',
+        color: 'primary',
+        icon: '📚',
+      },
+      {
+        id: '2',
+        label: 'Current Streak',
+        value: streak.currentStreak,
+        sublabel: 'days',
+        color: 'orange',
+        icon: '🔥',
+      },
+      {
+        id: '3',
+        label: 'Mastered',
+        value: wordStatus.mastered,
+        sublabel: 'words total',
+        color: 'green',
+        icon: '✅',
+      },
+      {
+        id: '4',
+        label: 'Accuracy',
+        value: `${Math.round(summary.averageAccuracy)}%`,
+        sublabel: analyticsData.dateRange.label.toLowerCase(),
+        color: 'blue',
+        icon: '🎯',
+      },
+      {
+        id: '5',
+        label: 'Total Time',
+        value: formatStudyTime(summary.totalTimeStudied),
+        sublabel: 'this period',
+        color: 'muted',
+        icon: '⏱️',
+      },
+    ];
+  };
+
+  // Format study time (seconds to readable format)
+  const formatStudyTime = (seconds: number): string => {
+    if (seconds < 60) return `${seconds}s`;
+    if (seconds < 3600) return `${Math.round(seconds / 60)}m`;
+    const hours = seconds / 3600;
+    return hours >= 10 ? `${Math.round(hours)}h` : `${hours.toFixed(1)}h`;
+  };
+
+  // Get active decks (in-progress or with progress)
+  const activeDecks = decks
+    .filter(
+      (deck) => deck.progress?.status === 'in-progress' || (deck.progress?.cardsReview ?? 0) > 0
+    )
+    .slice(0, 2);
+
+  // Loading state
+  const isLoading = analyticsLoading || decksLoading;
+
+  // Get user display name
+  const userName = user?.name || user?.email?.split('@')[0] || 'Learner';
+
+  // Get due count for welcome section
+  const dueCount = analyticsData
+    ? analyticsData.wordStatus.learning + analyticsData.wordStatus.review
+    : 0;
+
+  // Get streak for welcome section
+  const currentStreak = analyticsData?.streak.currentStreak || 0;
+
+  // Build metrics
+  const metrics = buildMetrics();
 
   return (
-    <div className="space-y-6 pb-8">
+    <div className="space-y-6 pb-8" data-testid="dashboard">
       {/* Page Title - visible for accessibility and E2E tests */}
       <h1 className="text-2xl font-semibold text-text-primary md:text-3xl">Dashboard</h1>
 
       {/* Welcome Section */}
       <WelcomeSection
-        userName={user.name}
-        dueCount={metrics[0].value as number}
-        streak={user.streak}
+        userName={userName}
+        dueCount={dueCount}
+        streak={currentStreak}
         onStartReview={handleStartReview}
       />
 
       {/* Metrics Grid */}
       <section>
         <h2 className="mb-4 text-lg font-semibold text-text-primary">Your Progress</h2>
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
-          {metrics.map((metric) => (
-            <MetricCard
-              key={metric.id}
-              {...metric}
-              tooltip={`Click to view ${metric.label.toLowerCase()} details`}
-              onClick={() => console.log(`Clicked metric: ${metric.label}`)}
-            />
-          ))}
+        {isLoading ? (
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <Skeleton key={i} className="h-24 rounded-lg" />
+            ))}
+          </div>
+        ) : analyticsError ? (
+          <div className="border-destructive/50 bg-destructive/10 text-destructive rounded-lg border p-4 text-center">
+            Failed to load metrics. Please try refreshing the page.
+          </div>
+        ) : metrics.length > 0 ? (
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
+            {metrics.map((metric) => (
+              <MetricCard
+                key={metric.id}
+                {...metric}
+                tooltip={`Click to view ${metric.label.toLowerCase()} details`}
+                onClick={() => console.log(`Clicked metric: ${metric.label}`)}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-lg border border-muted p-4 text-center text-muted-foreground">
+            No progress data yet. Start studying to see your metrics!
+          </div>
+        )}
+      </section>
+
+      <Separator className="my-6" />
+
+      {/* Progress Charts Section */}
+      <section>
+        <h2 className="mb-4 text-lg font-semibold text-text-primary">Analytics</h2>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          {/* Progress Over Time */}
+          <div className="bg-card rounded-lg border p-4">
+            <ProgressLineChart height={280} />
+          </div>
+
+          {/* Accuracy Trend */}
+          <div className="bg-card rounded-lg border p-4">
+            <AccuracyAreaChart height={280} />
+          </div>
+
+          {/* Deck Performance */}
+          <div className="bg-card rounded-lg border p-4">
+            <DeckPerformanceChart height={320} maxDecks={6} />
+          </div>
+
+          {/* Stage Distribution */}
+          <div className="bg-card rounded-lg border p-4">
+            <StageDistributionChart height={320} />
+          </div>
         </div>
       </section>
 
@@ -143,13 +239,60 @@ export const Dashboard: React.FC = () => {
       <section>
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-text-primary">Active Decks</h2>
-          <button className="text-sm text-primary hover:underline">View all decks →</button>
+          <button
+            className="text-sm text-primary hover:underline"
+            onClick={() => navigate('/decks')}
+          >
+            View all decks →
+          </button>
         </div>
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {decks.slice(0, 2).map((deck) => (
-            <DeckCard key={deck.id} deck={deck} onContinue={() => handleContinueDeck(deck.id)} />
-          ))}
-        </div>
+        {decksLoading ? (
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {[1, 2].map((i) => (
+              <Skeleton key={i} className="h-48 rounded-lg" />
+            ))}
+          </div>
+        ) : activeDecks.length > 0 ? (
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {activeDecks.map((deck) => (
+              <DeckCard
+                key={deck.id}
+                deck={{
+                  id: deck.id,
+                  title: deck.title,
+                  description: deck.description,
+                  status: deck.progress?.status ?? 'not-started',
+                  level: deck.level,
+                  progress: {
+                    current: deck.progress?.cardsMastered ?? 0,
+                    total: deck.cardCount,
+                    percentage:
+                      deck.progress && deck.progress.cardsTotal > 0
+                        ? Math.round((deck.progress.cardsMastered / deck.progress.cardsTotal) * 100)
+                        : 0,
+                  },
+                  stats: {
+                    due: deck.progress?.dueToday ?? 0,
+                    mastered: deck.progress?.cardsMastered ?? 0,
+                    learning: deck.progress?.cardsLearning ?? 0,
+                  },
+                  lastStudied: deck.progress?.lastStudied,
+                }}
+                onContinue={() => handleContinueDeck(deck.id)}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-lg border border-muted p-8 text-center">
+            <p className="text-muted-foreground">No active decks yet.</p>
+            <button
+              className="mt-4 text-sm text-primary hover:underline"
+              onClick={() => navigate('/decks')}
+            >
+              Browse available decks →
+            </button>
+          </div>
+        )}
       </section>
     </div>
   );

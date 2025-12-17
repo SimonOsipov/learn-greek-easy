@@ -264,7 +264,7 @@ describe.skip('useAuth Hook', () => {
 
       renderHook(() => useRedirectIfAuth());
 
-      expect(mockNavigate).toHaveBeenCalledWith('/dashboard', { replace: true });
+      expect(mockNavigate).toHaveBeenCalledWith('/', { replace: true });
     });
 
     it('should not redirect when not authenticated', () => {
@@ -338,7 +338,7 @@ describe.skip('useAuth Hook', () => {
 
       renderHook(() => useRequireRole('premium'));
 
-      expect(mockNavigate).toHaveBeenCalledWith('/dashboard', { replace: true });
+      expect(mockNavigate).toHaveBeenCalledWith('/', { replace: true });
     });
 
     it('should allow admin users to access premium features', () => {
@@ -389,7 +389,7 @@ describe.skip('useAuth Hook', () => {
 
       renderHook(() => useRequireRole('admin'));
 
-      expect(mockNavigate).toHaveBeenCalledWith('/dashboard', { replace: true });
+      expect(mockNavigate).toHaveBeenCalledWith('/', { replace: true });
     });
 
     it('should use custom redirect path when access denied', () => {

@@ -1,6 +1,6 @@
 // src/pages/DeckDetailPage.tsx
 
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState } from 'react';
 
 import {
   ChevronLeft,
@@ -27,7 +27,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Skeleton } from '@/components/ui/skeleton';
-import { calculateDeckReviewStats, formatRelativeDate } from '@/lib/reviewStatsHelpers';
+import { formatRelativeDate } from '@/lib/helpers';
 import { useAuthStore } from '@/stores/authStore';
 import { useDeckStore } from '@/stores/deckStore';
 import type { Deck, DeckStatus } from '@/types/deck';
@@ -278,9 +278,6 @@ interface StatisticsSectionProps {
 const StatisticsSection: React.FC<StatisticsSectionProps> = ({ deck }) => {
   const { progress } = deck;
 
-  // Calculate review statistics from localStorage
-  const reviewStats = useMemo(() => calculateDeckReviewStats(deck.id), [deck.id]);
-
   return (
     <Card>
       <CardHeader>
@@ -309,7 +306,7 @@ const StatisticsSection: React.FC<StatisticsSectionProps> = ({ deck }) => {
             <StatCard
               icon={<Clock className="h-5 w-5 text-red-500" />}
               label="Due Today"
-              value={reviewStats.dueToday}
+              value={progress.dueToday}
               subtext="cards to review"
             />
           )}
@@ -344,9 +341,9 @@ const StatisticsSection: React.FC<StatisticsSectionProps> = ({ deck }) => {
         )}
 
         {/* Last Review Date (if reviewed) */}
-        {reviewStats.lastReviewed && (
+        {progress?.lastStudied && (
           <div className="mt-4 border-t pt-4 text-center text-sm text-gray-600">
-            Last reviewed: {formatRelativeDate(reviewStats.lastReviewed)}
+            Last reviewed: {formatRelativeDate(progress.lastStudied)}
           </div>
         )}
       </CardContent>
@@ -393,9 +390,6 @@ const ActionButtonsSection: React.FC<ActionButtonsSectionProps> = ({
 }) => {
   const { reviewSession } = useDeckStore();
   const [isSimulating, setIsSimulating] = useState(false);
-
-  // Calculate review statistics for button text
-  const reviewStats = useMemo(() => calculateDeckReviewStats(deck.id), [deck.id]);
 
   // Handler for simulating a study session (demo/testing only)
   const handleSimulateSession = async () => {
@@ -463,7 +457,7 @@ const ActionButtonsSection: React.FC<ActionButtonsSectionProps> = ({
             <TrendingUp className="mx-auto mb-4 h-12 w-12 text-green-500" />
             <h3 className="mb-2 text-lg font-semibold text-gray-900">Continue Your Progress</h3>
             <p className="mx-auto mb-2 max-w-md text-sm text-gray-600">
-              You have {reviewStats.dueToday} cards due for review today.
+              You have {deck.progress?.dueToday || 0} cards due for review today.
             </p>
             <p className="mb-6 text-xs text-gray-500">Keep your streak going!</p>
             <Button

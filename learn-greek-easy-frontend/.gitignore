@@ -18,6 +18,8 @@ coverage
 test-results/
 playwright-report/
 playwright/.cache/
+playwright/.auth/
+!playwright/.auth/.gitkeep
 visual-report/
 
 # Chromatic

@@ -41,12 +41,13 @@ export default defineConfig(({ mode }) => {
       cors: true,
 
       // Configure proxy for API calls to avoid CORS issues
+      // Note: No path rewriting needed - backend expects /api/v1/* paths
       proxy: {
         '/api': {
           target: env.VITE_API_URL || 'http://localhost:8000',
           changeOrigin: true,
           secure: false,
-          rewrite: (path) => path.replace(/^\/api/, ''),
+          // DO NOT rewrite path - backend expects /api/v1/* prefix
           configure: (proxy, _options) => {
             proxy.on('error', (err, _req, _res) => {
               console.log('proxy error', err);

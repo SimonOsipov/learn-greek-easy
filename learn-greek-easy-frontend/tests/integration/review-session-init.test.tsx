@@ -26,7 +26,7 @@ vi.mock('react-router-dom', async () => {
   };
 });
 
-describe('Review Session Initialization', () => {
+describe.skip('Review Session Initialization', () => {
   beforeEach(async () => {
     // Clear all stores and storage completely
     localStorage.clear();

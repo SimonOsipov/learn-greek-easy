@@ -4,13 +4,17 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { loginViaLocalStorage } from './helpers/auth-helpers';
+import { verifyAuthSucceeded, waitForAppReady } from './helpers/auth-helpers';
 
 test.describe('Settings Management', () => {
   test.beforeEach(async ({ page }) => {
-    await loginViaLocalStorage(page);
     await page.goto('/settings');
-    await page.waitForTimeout(500);
+
+    // Fail fast with clear error if auth failed
+    await verifyAuthSucceeded(page, '/settings');
+
+    // Wait for settings page content
+    await expect(page.getByRole('heading', { name: /settings/i })).toBeVisible({ timeout: 10000 });
   });
 
   test('E2E-04.1: Change password', async ({ page }) => {
@@ -31,7 +35,7 @@ test.describe('Settings Management', () => {
       const newPasswordField = page.getByTestId('new-password-input');
       const confirmPasswordField = page.getByTestId('confirm-password-input');
 
-      await currentPasswordField.fill('Test1234!');
+      await currentPasswordField.fill('TestPassword123!');
       await newPasswordField.fill('NewPassword123!');
       await confirmPasswordField.fill('NewPassword123!');
 
@@ -129,10 +133,13 @@ test.describe('Settings Management', () => {
       await page.waitForTimeout(1500); // Wait for auto-save
 
       // Navigate away and back
-      await page.goto('/dashboard');
-      await page.waitForTimeout(500);
+      await page.goto('/');
+      await waitForAppReady(page);
+
       await page.goto('/settings');
-      await page.waitForTimeout(500);
+
+      // Wait for app to be ready (RouteGuard auth check complete)
+      await waitForAppReady(page);
 
       // Verify value persisted
       const slider = page.getByRole('slider', { name: /daily goal/i });
@@ -146,11 +153,16 @@ test.describe('Settings Management', () => {
       await expect(page.getByRole('heading', { name: /settings/i })).toBeVisible();
 
       // Navigate away and back
-      await page.goto('/dashboard');
+      await page.goto('/');
+      await waitForAppReady(page);
+
       await page.goto('/settings');
 
+      // Wait for app to be ready - RouteGuard auth check must complete
+      await waitForAppReady(page);
+
       // Should still load settings page
-      await expect(page.getByRole('heading', { name: /settings/i })).toBeVisible();
+      await expect(page.getByRole('heading', { name: /settings/i })).toBeVisible({ timeout: 15000 });
     }
   });
 

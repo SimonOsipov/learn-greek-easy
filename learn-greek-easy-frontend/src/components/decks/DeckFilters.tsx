@@ -22,6 +22,8 @@ const LEVEL_OPTIONS: { value: DeckLevel; label: string; color: string }[] = [
   { value: 'A2', label: 'A2 - Elementary', color: 'bg-blue-500' },
   { value: 'B1', label: 'B1 - Intermediate', color: 'bg-orange-500' },
   { value: 'B2', label: 'B2 - Upper-Intermediate', color: 'bg-purple-600' },
+  { value: 'C1', label: 'C1 - Advanced', color: 'bg-red-500' },
+  { value: 'C2', label: 'C2 - Mastery', color: 'bg-gray-700' },
 ];
 
 const STATUS_OPTIONS: { value: DeckStatus; label: string }[] = [

@@ -2,10 +2,9 @@
  * E2E Test Diagnostics Helper
  *
  * Provides diagnostic logging for debugging test failures:
- * - Logs when test mode is active
- * - Tracks localStorage changes
- * - Monitors store hydration
  * - Captures browser console output
+ * - Tracks localStorage changes
+ * - Logs authentication state
  */
 
 import { Page } from '@playwright/test';
@@ -21,7 +20,7 @@ export async function enableTestDiagnostics(page: Page): Promise<void> {
     }
   });
 
-  // Add localStorage monitoring via addInitScript (for debugging, not critical timing)
+  // Add localStorage monitoring via addInitScript (for debugging)
   await page.addInitScript(() => {
     // Log when localStorage changes
     const originalSetItem = localStorage.setItem;
@@ -43,7 +42,6 @@ export async function logAuthState(page: Page): Promise<void> {
     return {
       localStorage: localStorage.getItem('auth-storage'),
       sessionStorage: sessionStorage.getItem('auth-token'),
-      playwrightFlag: (window as any).playwright,
     };
   });
   console.log('[AUTH STATE]', JSON.stringify(state, null, 2));

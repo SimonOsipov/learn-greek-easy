@@ -1,13 +1,25 @@
 /**
  * Accessibility Tests with Axe-core
  * Automated WCAG 2.1 AA compliance testing
+ *
+ * Test Organization:
+ * - Public Pages: Use empty storageState to test unauthenticated pages (login, register)
+ * - Protected Pages: Use default storageState (learner user) from config
  */
 
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { loginViaLocalStorage } from './helpers/auth-helpers';
 
-test.describe('Accessibility (Axe-core)', () => {
+/**
+ * PUBLIC PAGES - UNAUTHENTICATED TESTS
+ *
+ * These tests use empty storageState to ensure no user is logged in.
+ * This is required for testing login/register pages and their accessibility.
+ */
+test.describe('Accessibility - Public Pages', () => {
+  // Override storageState to be empty (no auth)
+  test.use({ storageState: { cookies: [], origins: [] } });
+
   test('Login page should have no accessibility violations', async ({ page }) => {
     await page.goto('/login');
 
@@ -28,77 +40,6 @@ test.describe('Accessibility (Axe-core)', () => {
       .analyze();
 
     expect(accessibilityScanResults.violations).toEqual([]);
-  });
-
-  // ENABLED: Now uses seed data from E2E database seeding infrastructure (SEED-10)
-  test('Dashboard should have no accessibility violations', async ({ page }) => {
-    await loginViaLocalStorage(page);
-    await page.goto('/dashboard');
-
-    const accessibilityScanResults = await new AxeBuilder({ page })
-      .withTags(['wcag2a', 'wcag2aa'])
-      .disableRules(['landmark-one-main', 'page-has-heading-one', 'region'])
-      .analyze();
-
-    expect(accessibilityScanResults.violations).toEqual([]);
-  });
-
-  test('Decks page should have no accessibility violations', async ({ page }) => {
-    await loginViaLocalStorage(page);
-    await page.goto('/decks');
-
-    const accessibilityScanResults = await new AxeBuilder({ page })
-      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
-      .disableRules(['landmark-one-main', 'page-has-heading-one', 'region'])
-      .exclude('[data-a11y-ignore="color-contrast"]') // Exclude decorative build hash indicator
-      .analyze();
-
-    expect(accessibilityScanResults.violations).toEqual([]);
-  });
-
-  // ENABLED: Now uses seed data from E2E database seeding infrastructure (SEED-10)
-  test('Settings page should have no accessibility violations', async ({ page }) => {
-    await loginViaLocalStorage(page);
-    await page.goto('/settings');
-
-    const accessibilityScanResults = await new AxeBuilder({ page })
-      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
-      .disableRules(['landmark-one-main', 'page-has-heading-one', 'region'])
-      .analyze();
-
-    expect(accessibilityScanResults.violations).toEqual([]);
-  });
-
-  test('Review session should have no accessibility violations', async ({ page }) => {
-    await loginViaLocalStorage(page);
-    await page.goto('/decks');
-
-    // Wait for page to load
-    await page.waitForSelector('h1, h2', { timeout: 10000 });
-
-    // Look for Greek Alphabet deck
-    const greekAlphabetHeading = page.getByRole('heading', { name: /greek alphabet/i });
-
-    // Only run if deck exists
-    if (await greekAlphabetHeading.count() > 0) {
-      await greekAlphabetHeading.click();
-
-      // Wait for review button
-      const startReviewButton = page.getByRole('button', { name: /start review/i });
-      if (await startReviewButton.count() > 0) {
-        await startReviewButton.click();
-
-        // Wait for review interface to load
-        await page.waitForTimeout(1000);
-
-        const accessibilityScanResults = await new AxeBuilder({ page })
-          .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
-          .disableRules(['landmark-one-main', 'page-has-heading-one', 'region'])
-          .analyze();
-
-        expect(accessibilityScanResults.violations).toEqual([]);
-      }
-    }
   });
 
   test('Form inputs should have accessible labels', async ({ page }) => {
@@ -158,8 +99,101 @@ test.describe('Accessibility (Axe-core)', () => {
     expect(hasError).toBeGreaterThan(0);
   });
 
+  test('Color contrast should meet WCAG AA standards', async ({ page }) => {
+    await page.goto('/login');
+
+    const accessibilityScanResults = await new AxeBuilder({ page })
+      .withTags(['wcag2aa'])
+      .disableRules(['landmark-one-main', 'page-has-heading-one', 'region'])
+      .analyze();
+
+    // Find color contrast violations specifically
+    const contrastViolations = accessibilityScanResults.violations.filter((v) =>
+      v.id.includes('color-contrast')
+    );
+
+    expect(contrastViolations).toEqual([]);
+  });
+});
+
+/**
+ * PROTECTED PAGES - AUTHENTICATED TESTS
+ *
+ * These tests use the default storageState from config (learner user).
+ * The storageState is loaded BEFORE the test starts, so the user is
+ * already authenticated when the browser opens.
+ */
+test.describe('Accessibility - Protected Pages', () => {
+  // Uses default storageState from config (learner user)
+
+  // ENABLED: Now uses seed data from E2E database seeding infrastructure (SEED-10)
+  test('Dashboard should have no accessibility violations', async ({ page }) => {
+    await page.goto('/');
+
+    const accessibilityScanResults = await new AxeBuilder({ page })
+      .withTags(['wcag2a', 'wcag2aa'])
+      .disableRules(['landmark-one-main', 'page-has-heading-one', 'region'])
+      .analyze();
+
+    expect(accessibilityScanResults.violations).toEqual([]);
+  });
+
+  test('Decks page should have no accessibility violations', async ({ page }) => {
+    await page.goto('/decks');
+
+    const accessibilityScanResults = await new AxeBuilder({ page })
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+      .disableRules(['landmark-one-main', 'page-has-heading-one', 'region'])
+      .exclude('[data-a11y-ignore="color-contrast"]') // Exclude decorative build hash indicator
+      .analyze();
+
+    expect(accessibilityScanResults.violations).toEqual([]);
+  });
+
+  // ENABLED: Now uses seed data from E2E database seeding infrastructure (SEED-10)
+  test('Settings page should have no accessibility violations', async ({ page }) => {
+    await page.goto('/settings');
+
+    const accessibilityScanResults = await new AxeBuilder({ page })
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+      .disableRules(['landmark-one-main', 'page-has-heading-one', 'region'])
+      .analyze();
+
+    expect(accessibilityScanResults.violations).toEqual([]);
+  });
+
+  test('Review session should have no accessibility violations', async ({ page }) => {
+    await page.goto('/decks');
+
+    // Wait for page to load
+    await page.waitForSelector('h1, h2', { timeout: 10000 });
+
+    // Look for Greek vocabulary deck
+    const deckHeading = page.getByRole('heading', { name: /greek.*vocabulary/i });
+
+    // Only run if deck exists
+    if (await deckHeading.count() > 0) {
+      await deckHeading.click();
+
+      // Wait for review button
+      const startReviewButton = page.getByRole('button', { name: /start review/i });
+      if (await startReviewButton.count() > 0) {
+        await startReviewButton.click();
+
+        // Wait for review interface to load
+        await page.waitForTimeout(1000);
+
+        const accessibilityScanResults = await new AxeBuilder({ page })
+          .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+          .disableRules(['landmark-one-main', 'page-has-heading-one', 'region'])
+          .analyze();
+
+        expect(accessibilityScanResults.violations).toEqual([]);
+      }
+    }
+  });
+
   test('Modals should have proper ARIA attributes', async ({ page }) => {
-    await loginViaLocalStorage(page);
     await page.goto('/settings');
 
     // Wait for page to load
@@ -182,21 +216,5 @@ test.describe('Accessibility (Axe-core)', () => {
       });
       expect(hasAccessibleName).toBe(true);
     }
-  });
-
-  test('Color contrast should meet WCAG AA standards', async ({ page }) => {
-    await page.goto('/login');
-
-    const accessibilityScanResults = await new AxeBuilder({ page })
-      .withTags(['wcag2aa'])
-      .disableRules(['landmark-one-main', 'page-has-heading-one', 'region'])
-      .analyze();
-
-    // Find color contrast violations specifically
-    const contrastViolations = accessibilityScanResults.violations.filter((v) =>
-      v.id.includes('color-contrast')
-    );
-
-    expect(contrastViolations).toEqual([]);
   });
 });

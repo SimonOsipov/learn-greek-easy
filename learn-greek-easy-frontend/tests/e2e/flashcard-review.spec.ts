@@ -4,19 +4,13 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { loginViaLocalStorage } from './helpers/auth-helpers';
 
 // ENABLED: Now uses seed data from E2E database seeding infrastructure (SEED-10)
 // Seed creates 60 cards (10 per deck) with SM-2 spaced repetition states
 test.describe('Flashcard Review Session', () => {
-  test.beforeEach(async ({ page }) => {
-    // Login before each test (using fast localStorage method)
-    await loginViaLocalStorage(page);
-  });
-
   test('E2E-02.1: Complete review session with 5 cards', async ({ page }) => {
     // Start at dashboard
-    await page.goto('/dashboard');
+    await page.goto('/');
 
     // Navigate to decks page
     const decksLink = page.getByRole('link', { name: /decks/i }).first();
@@ -212,7 +206,7 @@ test.describe('Flashcard Review Session', () => {
 
   test('E2E-02.5: Dashboard statistics update after review session', async ({ page }) => {
     // Check initial statistics on dashboard
-    await page.goto('/dashboard');
+    await page.goto('/');
     await page.waitForTimeout(1000);
 
     // Try to get words learned count (may not be visible if no data yet)
@@ -256,7 +250,7 @@ test.describe('Flashcard Review Session', () => {
     }
 
     // Return to dashboard (either via button or navigation)
-    await page.goto('/dashboard');
+    await page.goto('/');
     await page.waitForTimeout(1000);
 
     // Verify dashboard loaded

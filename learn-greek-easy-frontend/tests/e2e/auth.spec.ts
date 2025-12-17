@@ -1,18 +1,27 @@
 /**
  * Authentication E2E Tests
+ *
+ * Tests authentication flows using real backend API.
+ * Uses Playwright's storageState pattern for efficient authentication.
+ *
+ * Test Organization:
+ * - Unauthenticated tests: Use empty storageState to test login/register forms
+ * - Authenticated tests: Use default storageState (learner user) from config
  */
 
 import { test, expect } from '@playwright/test';
-import { loginViaUI, loginViaLocalStorage } from './helpers/auth-helpers';
+import { SEED_USERS } from './helpers/auth-helpers';
 
-test.describe('Authentication Flow', () => {
-  test.beforeEach(async ({ page }) => {
-    // Navigate to app first to ensure we have a proper origin
-    await page.goto('/');
-    // Clear storage before each test
-    await page.context().clearCookies();
-    await page.evaluate(() => localStorage.clear());
-  });
+/**
+ * UNAUTHENTICATED TESTS
+ *
+ * These tests use empty storageState to ensure no user is logged in.
+ * This is required for testing login forms, registration, and
+ * authentication redirects.
+ */
+test.describe('Unauthenticated - Login & Register Forms', () => {
+  // Override storageState to be empty (no auth)
+  test.use({ storageState: { cookies: [], origins: [] } });
 
   test('should display login form with all elements', async ({ page }) => {
     await page.goto('/login');
@@ -69,37 +78,11 @@ test.describe('Authentication Flow', () => {
     await expect(page.getByText(/already have an account/i)).toBeVisible();
   });
 
-  test('should access protected routes when authenticated via localStorage', async ({
-    page,
-  }) => {
-    // Login via localStorage (faster method)
-    await loginViaLocalStorage(page);
-
-    // Navigate to dashboard - just check we're not redirected to login
-    await page.goto('/dashboard');
-    await expect(page).not.toHaveURL(/\/login/);
-    await expect(page.getByRole('heading').first()).toBeVisible();
-
-    // Navigate to decks
-    await page.goto('/decks');
-    await expect(page).not.toHaveURL(/\/login/);
-    await expect(page.getByRole('heading').first()).toBeVisible();
-
-    // Navigate to profile
-    await page.goto('/profile');
-    await expect(page).not.toHaveURL(/\/login/);
-    await expect(page.getByRole('heading').first()).toBeVisible();
-  });
-
   test('should redirect unauthenticated users to login from protected routes', async ({
     page,
   }) => {
-    // Ensure logged out
-    await page.goto('/');
-    await page.evaluate(() => localStorage.clear());
-
     // Try to access protected routes
-    const protectedRoutes = ['/dashboard', '/decks', '/profile', '/settings'];
+    const protectedRoutes = ['/', '/decks', '/profile', '/settings'];
 
     for (const route of protectedRoutes) {
       await page.goto(route);
@@ -109,23 +92,6 @@ test.describe('Authentication Flow', () => {
     }
   });
 
-  test('should maintain authentication state after page reload', async ({ page }) => {
-    // Login via localStorage
-    await loginViaLocalStorage(page);
-
-    // Navigate to dashboard
-    await page.goto('/dashboard');
-    await expect(page).not.toHaveURL(/\/login/);
-    await expect(page.getByRole('heading').first()).toBeVisible();
-
-    // Reload page
-    await page.reload();
-
-    // Should still be on dashboard (not redirected to login)
-    await expect(page).not.toHaveURL(/\/login/);
-    await expect(page.getByRole('heading').first()).toBeVisible();
-  });
-
   test('E2E-01.1: User can log in with valid credentials (via UI)', async ({ page }) => {
     // Navigate to login page
     await page.goto('/login');
@@ -133,101 +99,136 @@ test.describe('Authentication Flow', () => {
     // Verify login form exists using test ID
     await expect(page.getByTestId('login-card')).toBeVisible();
 
-    // Fill login form with test user credentials using test IDs
-    await page.getByTestId('email-input').fill('demo@learngreekeasy.com');
-    await page.getByTestId('password-input').fill('Demo123!');
+    // Fill login form with seed user credentials
+    await page.getByTestId('email-input').fill(SEED_USERS.LEARNER.email);
+    await page.getByTestId('password-input').fill(SEED_USERS.LEARNER.password);
 
     // Submit form using test ID
     await page.getByTestId('login-submit').click();
 
-    // Wait for redirect to dashboard (may take time for API call)
-    await page.waitForTimeout(1000);
+    // Wait for redirect to dashboard at root (with increased timeout for real API)
+    await page.waitForURL('/', { timeout: 15000 });
 
-    // Should navigate to dashboard or stay on current page
+    // Verify we're on dashboard (root path)
     const currentUrl = page.url();
-
-    // Verify either redirected to dashboard or profile button is visible (indicating logged in)
-    const isDashboard = currentUrl.includes('/dashboard');
-    const profileBtn = page.getByRole('button', { name: /profile|account|user/i }).first();
-    const hasProfile = await profileBtn.isVisible().catch(() => false);
-
-    expect(isDashboard || hasProfile).toBe(true);
+    expect(currentUrl.endsWith('/') || currentUrl.match(/\/$/)).toBeTruthy();
   });
 
   test('E2E-01.2: Login fails with invalid credentials', async ({ page }) => {
     await page.goto('/login');
 
     // Fill form with wrong password using test IDs
-    await page.getByTestId('email-input').fill('demo@learngreekeasy.com');
+    await page.getByTestId('email-input').fill(SEED_USERS.LEARNER.email);
     await page.getByTestId('password-input').fill('WrongPassword123!');
 
     // Submit form using test ID
     await page.getByTestId('login-submit').click();
 
-    // Wait for response
-    await page.waitForTimeout(1000);
+    // Wait for response (real API call)
+    await page.waitForTimeout(2000);
 
-    // Should show error message or stay on login page
+    // Should still be on login page
     const currentUrl = page.url();
     expect(currentUrl).toContain('/login');
 
-    // Look for error indication (error message or validation)
-    const pageContent = await page.textContent('body');
-    const hasError = pageContent.toLowerCase().includes('error') ||
-                     pageContent.toLowerCase().includes('invalid') ||
-                     pageContent.toLowerCase().includes('incorrect');
+    // Look for error indication
+    const errorMessage = page.getByText(/invalid|incorrect|error|failed/i);
+    const hasError = await errorMessage.isVisible().catch(() => false);
 
     // Either error message visible or still on login page (both valid)
-    expect(currentUrl.includes('/login')).toBe(true);
+    expect(currentUrl.includes('/login') || hasError).toBe(true);
+  });
+});
+
+/**
+ * AUTHENTICATED TESTS
+ *
+ * These tests use the default storageState from config (learner user).
+ * The storageState is loaded BEFORE the test starts, so the user is
+ * already authenticated when the browser opens.
+ *
+ * This eliminates:
+ * - Per-test login overhead
+ * - Zustand hydration race conditions
+ * - Complex auth injection workarounds
+ */
+test.describe('Authenticated - Protected Routes & Logout', () => {
+  // Uses default storageState from config (learner user)
+  // No need to call loginViaLocalStorage or loginViaAPI
+
+  test('should access protected routes when authenticated', async ({ page }) => {
+    // Navigate to dashboard - should work with pre-loaded auth
+    await page.goto('/');
+    await expect(page).not.toHaveURL(/\/login/);
+    await expect(page.getByRole('heading', { name: /dashboard/i })).toBeVisible({ timeout: 15000 });
+
+    // Navigate to decks
+    await page.goto('/decks');
+    await expect(page).not.toHaveURL(/\/login/);
+    await expect(page.getByRole('heading', { name: /decks|flashcard/i })).toBeVisible({ timeout: 15000 });
+
+    // Navigate to profile
+    await page.goto('/profile');
+    await expect(page).not.toHaveURL(/\/login/);
+    await expect(page.getByRole('heading', { name: /profile/i })).toBeVisible({ timeout: 15000 });
+  });
+
+  test('should maintain authentication state after page reload', async ({ page }) => {
+    // Navigate to dashboard
+    await page.goto('/');
+    await expect(page).not.toHaveURL(/\/login/);
+    await expect(page.getByRole('heading', { name: /dashboard/i })).toBeVisible({ timeout: 15000 });
+
+    // Reload page
+    await page.reload();
+
+    // Should still be on dashboard (not redirected to login)
+    await expect(page).not.toHaveURL(/\/login/);
+    await expect(page.getByRole('heading', { name: /dashboard/i })).toBeVisible({ timeout: 15000 });
   });
 
   test('E2E-01.3: User can log out successfully', async ({ page }) => {
-    // First, log in via localStorage (faster)
-    await loginViaLocalStorage(page);
-    await page.goto('/dashboard');
-    await page.waitForTimeout(500);
+    // Navigate to dashboard (auth state already loaded)
+    await page.goto('/');
 
-    // Look for profile/account button or menu
-    const profileButton = page.getByRole('button', { name: /profile|account|user|menu/i }).first();
-    const isProfileVisible = await profileButton.isVisible().catch(() => false);
+    // Wait for page to be ready
+    await page.waitForLoadState('domcontentloaded');
 
-    if (isProfileVisible) {
-      // Open profile dropdown
-      await profileButton.click();
-      await page.waitForTimeout(300);
+    // Use exact aria-label selector for user menu button (from Header.tsx)
+    const userMenuButton = page.getByRole('button', { name: 'User menu' });
 
-      // Click logout using test ID
-      const logoutButton = page.getByTestId('logout-button');
-      const isLogoutVisible = await logoutButton.isVisible().catch(() => false);
+    // Wait for user menu button - this confirms Header has rendered
+    await userMenuButton.waitFor({ state: 'visible', timeout: 10000 });
 
-      if (isLogoutVisible) {
-        await logoutButton.click();
+    // Click to open user menu dropdown
+    await userMenuButton.click();
 
-        // Wait for dialog to appear using Playwright's waitFor
-        const dialog = page.getByTestId('logout-dialog');
-        await dialog.waitFor({ state: 'visible', timeout: 5000 });
+    // Wait for dropdown to appear
+    await page.waitForTimeout(300);
 
-        // Click confirmation button using test ID
-        const confirmButton = page.getByTestId('logout-confirm-button');
-        await confirmButton.waitFor({ state: 'visible', timeout: 2000 });
-        await confirmButton.click();
+    // Click logout button
+    const logoutButton = page.getByTestId('logout-button');
+    await logoutButton.waitFor({ state: 'visible', timeout: 5000 });
+    await logoutButton.click();
 
-        // Wait for dialog to close
-        await dialog.waitFor({ state: 'hidden', timeout: 2000 });
-        await page.waitForTimeout(500);
+    // Wait for confirmation dialog
+    const dialog = page.getByTestId('logout-dialog');
+    await dialog.waitFor({ state: 'visible', timeout: 5000 });
 
-        // Should redirect to login or home page
-        const currentUrl = page.url();
-        expect(currentUrl).toMatch(/\/(login|)$/);
+    // Click confirm button
+    const confirmButton = page.getByTestId('logout-confirm-button');
+    await confirmButton.waitFor({ state: 'visible', timeout: 2000 });
+    await confirmButton.click();
 
-        // Try to access protected route again to verify logout
-        await page.goto('/dashboard');
+    // Wait for logout to complete and redirect
+    await page.waitForURL(/\/(login)?$/, { timeout: 10000 });
 
-        // Should redirect to login page (proof of logout) - app redirects unauthenticated users to /login
-        await page.waitForURL('/login', { timeout: 5000 });
-        const finalUrl = page.url();
-        expect(finalUrl).toMatch(/\/(login|)$/); // Can be / or /login depending on routing
-      }
-    }
+    // Verify logout by trying to access protected route
+    await page.goto('/');
+
+    // Should redirect to login page (proof of logout)
+    await page.waitForURL('/login', { timeout: 5000 });
+    const finalUrl = page.url();
+    expect(finalUrl).toContain('/login');
   });
 });

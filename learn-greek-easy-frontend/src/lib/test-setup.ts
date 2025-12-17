@@ -3,6 +3,10 @@
  * Runs before each test file to configure test environment
  */
 
+// NOTE: We intentionally do NOT set VITE_API_URL from process.env for unit tests.
+// Unit tests should use mocked API calls, not real backend connections.
+// E2E tests (Playwright) handle their own API configuration.
+
 // Ensure localStorage exists BEFORE any other imports
 // This must run before Zustand stores are imported
 // Always use our mock for consistent behavior across tests

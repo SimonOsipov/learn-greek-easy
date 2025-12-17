@@ -1,5 +1,4 @@
 import { AlertCircle, RefreshCw, Home } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -27,11 +26,8 @@ export interface ErrorFallbackProps {
  * ```
  */
 export function ErrorFallback({ error, onReset }: ErrorFallbackProps) {
-  const navigate = useNavigate();
-
   const handleGoHome = () => {
-    navigate('/');
-    onReset?.();
+    window.location.href = '/';
   };
 
   const handleTryAgain = () => {

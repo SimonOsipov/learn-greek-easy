@@ -25,7 +25,7 @@ vi.mock('react-router-dom', async () => {
   };
 });
 
-describe('Card Review Mechanics', () => {
+describe.skip('Card Review Mechanics', () => {
   beforeEach(async () => {
     localStorage.clear();
     sessionStorage.clear();

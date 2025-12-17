@@ -26,8 +26,10 @@ export const DeckCard: React.FC<DeckCardProps> = ({ deck, onContinue }) => {
             <CardTitle className="text-lg">{deck.title}</CardTitle>
             <CardDescription className="text-text-muted">{deck.description}</CardDescription>
           </div>
-          <Badge className={statusVariants[deck.status]}>
-            {deck.status.replace('-', ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
+          <Badge className={statusVariants[deck.status ?? 'not-started']}>
+            {(deck.status ?? 'not-started')
+              .replace('-', ' ')
+              .replace(/\b\w/g, (l) => l.toUpperCase())}
           </Badge>
         </div>
       </CardHeader>
@@ -66,7 +68,9 @@ export const DeckCard: React.FC<DeckCardProps> = ({ deck, onContinue }) => {
           className="w-full transition-colors group-hover:bg-primary group-hover:text-white"
           onClick={onContinue}
         >
-          {deck.status === 'not-started' ? 'Start Learning' : 'Continue Learning'}
+          {(deck.status ?? 'not-started') === 'not-started'
+            ? 'Start Learning'
+            : 'Continue Learning'}
         </Button>
       </CardContent>
     </Card>
