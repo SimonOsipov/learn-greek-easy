@@ -119,10 +119,19 @@ app.add_middleware(
 )
 
 # Trusted host middleware (production only)
+# NOTE: Railway handles host security at the edge, but we keep this for defense-in-depth
+# The allowed hosts include both the custom domain (future) and Railway's internal routing
 if settings.is_production:
     app.add_middleware(
         TrustedHostMiddleware,
-        allowed_hosts=["learngreekeasy.com", "*.learngreekeasy.com"],
+        allowed_hosts=[
+            "learngreekeasy.com",
+            "*.learngreekeasy.com",
+            # Railway domains - requests come via nginx with these Host headers
+            "learn-greek-frontend.up.railway.app",
+            "backend.railway.internal",  # Internal service-to-service
+            "*.railway.internal",  # Wildcard for Railway internal
+        ],
     )
 
 # Auth logging middleware for security monitoring
