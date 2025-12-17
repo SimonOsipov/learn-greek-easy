@@ -691,7 +691,6 @@ The CI is split into **Quick Checks** (every commit) and **Full Tests** (on-dema
 | Draft PR | Every commit | Skipped | Skipped |
 | Draft + `run-full-tests` label | Every commit | Runs | Runs |
 | Ready for review | Every commit | Runs | Runs |
-| Push to main | Runs | Runs | N/A |
 
 **Quick Checks (~2-3 min):** Frontend lint/typecheck, Backend lint/typecheck (black, isort, flake8, mypy), Alembic migration check
 

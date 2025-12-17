@@ -1,13 +1,12 @@
 name: Quick Checks
 
-# Runs on every commit to provide fast feedback (~2-3 min)
-# Full tests and deployment are handled by preview.yml (on-demand)
+# Runs on PR commits to provide fast feedback (~2-3 min) for draft PRs
+# Full tests and deployment are handled by preview.yml (for ready PRs)
+# Note: No push trigger - merged PRs have already passed full tests during review
 
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
-    branches: [main, develop]
-  push:
     branches: [main, develop]
 
 concurrency:
@@ -25,21 +24,12 @@ jobs:
       - name: Check conditions
         id: check
         run: |
-          EVENT_NAME="${{ github.event_name }}"
           IS_DRAFT="${{ github.event.pull_request.draft }}"
           HAS_LABEL="${{ contains(github.event.pull_request.labels.*.name, 'run-full-tests') }}"
 
           echo "=== Quick Check Condition Analysis ==="
-          echo "Event name: $EVENT_NAME"
           echo "Is Draft PR: $IS_DRAFT"
           echo "Has run-full-tests label: $HAS_LABEL"
-
-          # Push events: Always run quick checks
-          if [[ "$EVENT_NAME" == "push" ]]; then
-            echo "run_quick=true" >> $GITHUB_OUTPUT
-            echo "Result: Push event - running quick checks"
-            exit 0
-          fi
 
           # PR events: Check if preview.yml will run full tests
           if [[ "$IS_DRAFT" == "false" ]] || [[ "$HAS_LABEL" == "true" ]]; then
