@@ -15,9 +15,46 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Job 0: Determine if quick checks should run
+  should-run:
+    name: Check Quick Test Conditions
+    runs-on: ubuntu-latest
+    outputs:
+      run_quick: ${{ steps.check.outputs.run_quick }}
+    steps:
+      - name: Check conditions
+        id: check
+        run: |
+          EVENT_NAME="${{ github.event_name }}"
+          IS_DRAFT="${{ github.event.pull_request.draft }}"
+          HAS_LABEL="${{ contains(github.event.pull_request.labels.*.name, 'run-full-tests') }}"
+
+          echo "=== Quick Check Condition Analysis ==="
+          echo "Event name: $EVENT_NAME"
+          echo "Is Draft PR: $IS_DRAFT"
+          echo "Has run-full-tests label: $HAS_LABEL"
+
+          # Push events: Always run quick checks
+          if [[ "$EVENT_NAME" == "push" ]]; then
+            echo "run_quick=true" >> $GITHUB_OUTPUT
+            echo "Result: Push event - running quick checks"
+            exit 0
+          fi
+
+          # PR events: Check if preview.yml will run full tests
+          if [[ "$IS_DRAFT" == "false" ]] || [[ "$HAS_LABEL" == "true" ]]; then
+            echo "run_quick=false" >> $GITHUB_OUTPUT
+            echo "Result: Skipping - preview.yml will run full test suite"
+          else
+            echo "run_quick=true" >> $GITHUB_OUTPUT
+            echo "Result: Draft PR without run-full-tests - running quick checks"
+          fi
+
   # Job 1: Frontend Lint & Format
   frontend-lint:
     name: Frontend Lint & Format
+    needs: should-run
+    if: needs.should-run.outputs.run_quick == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -49,6 +86,8 @@ jobs:
   # Job 2: Backend Lint & Format
   backend-lint:
     name: Backend Lint & Format
+    needs: should-run
+    if: needs.should-run.outputs.run_quick == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -103,6 +142,8 @@ jobs:
   # Job 3: Alembic Migration Check
   alembic-check:
     name: Alembic Migration Check
+    needs: should-run
+    if: needs.should-run.outputs.run_quick == 'true'
     runs-on: ubuntu-latest
 
     services:
