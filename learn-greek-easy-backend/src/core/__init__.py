@@ -28,6 +28,14 @@ Example:
 """
 
 from src.core.dependencies import get_current_superuser, get_current_user, get_current_user_optional
+from src.core.posthog import (
+    capture_event,
+    get_posthog_client,
+    identify_user,
+    init_posthog,
+    is_posthog_enabled,
+    shutdown_posthog,
+)
 from src.core.security import (
     create_access_token,
     create_refresh_token,
@@ -65,6 +73,13 @@ __all__ = [
     "get_current_user",
     "get_current_superuser",
     "get_current_user_optional",
+    # PostHog analytics (from posthog.py)
+    "capture_event",
+    "identify_user",
+    "get_posthog_client",
+    "init_posthog",
+    "shutdown_posthog",
+    "is_posthog_enabled",
     # SM-2 Algorithm (from sm2.py)
     "SM2Calculation",
     "calculate_sm2",

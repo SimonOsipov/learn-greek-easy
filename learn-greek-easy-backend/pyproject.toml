@@ -33,6 +33,7 @@ psutil = "^5.9.0"
 google-auth = "^2.43.0"
 requests = "^2.32.0"
 apscheduler = "^3.11.1"
+posthog = "^3.7.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.0"
@@ -118,6 +119,16 @@ disallow_untyped_calls = false
 # security.py uses google-auth library which has no type stubs
 [[tool.mypy.overrides]]
 module = "src.core.security"
+disallow_untyped_calls = false
+
+# PostHog SDK has no type stubs
+[[tool.mypy.overrides]]
+module = "posthog.*"
+ignore_missing_imports = true
+
+# PostHog module uses untyped SDK calls
+[[tool.mypy.overrides]]
+module = "src.core.posthog"
 disallow_untyped_calls = false
 
 [tool.pytest.ini_options]
