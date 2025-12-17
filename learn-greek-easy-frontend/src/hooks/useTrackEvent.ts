@@ -11,6 +11,7 @@ export type AnalyticsEventName =
   // Study session events
   | 'study_session_started'
   | 'study_session_completed'
+  | 'study_session_abandoned'
   | 'card_reviewed'
   // Engagement events
   | 'deck_selected'
@@ -41,6 +42,23 @@ export interface CardReviewedProperties extends BaseEventProperties {
   rating: 1 | 2 | 3 | 4;
   time_ms: number;
   card_status: 'new' | 'learning' | 'review' | 'relearning';
+}
+
+export interface StudySessionCompletedProperties extends BaseEventProperties {
+  deck_id: string;
+  session_id: string;
+  cards_reviewed: number;
+  duration_sec: number;
+  accuracy: number;
+  cards_mastered: number;
+  cards_failed: number;
+}
+
+export interface StudySessionAbandonedProperties extends BaseEventProperties {
+  deck_id: string;
+  session_id: string;
+  cards_reviewed: number;
+  duration_sec: number;
 }
 
 // Generic properties type for flexibility

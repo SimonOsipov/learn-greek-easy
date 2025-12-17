@@ -23,6 +23,7 @@ import type {
   SessionSummary,
   QueueConfig,
 } from '@/types/review';
+import { generateSessionId } from '@/utils/analytics';
 
 /**
  * Default queue configuration for review sessions
@@ -92,13 +93,6 @@ const transformStudyQueueCard = (card: StudyQueueCard, deckId: string): CardRevi
   correctCount: 0,
   averageTime: 0,
 });
-
-/**
- * Generate a unique session ID
- */
-const generateSessionId = (): string => {
-  return `session-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-};
 
 /**
  * Review Store State Interface

@@ -1,6 +1,7 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 import { AlertCircle, ChevronLeft } from 'lucide-react';
+import posthog from 'posthog-js';
 import { useParams, useNavigate } from 'react-router-dom';
 
 import { FlashcardContainer } from '@/components/review/FlashcardContainer';
@@ -9,13 +10,28 @@ import { KeyboardShortcutsHelp } from '@/components/review/KeyboardShortcutsHelp
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
+import { useTrackEvent } from '@/hooks/useTrackEvent';
+import { useDeckStore } from '@/stores/deckStore';
 import { useReviewStore } from '@/stores/reviewStore';
 
 export function FlashcardReviewPage() {
   const { deckId } = useParams<{ deckId: string }>();
   const navigate = useNavigate();
-  const { activeSession, currentCard, startSession, isLoading, error, sessionSummary } =
-    useReviewStore();
+  const {
+    activeSession,
+    currentCard,
+    startSession,
+    isLoading,
+    error,
+    sessionSummary,
+    sessionStats,
+  } = useReviewStore();
+  const { decks } = useDeckStore();
+  const { track } = useTrackEvent();
+
+  // Refs to prevent duplicate event tracking
+  const hasTrackedStart = useRef(false);
+  const sessionStartTime = useRef<number | null>(null);
 
   // Enable keyboard shortcuts
   const { showHelp, setShowHelp } = useKeyboardShortcuts();
@@ -41,6 +57,63 @@ export function FlashcardReviewPage() {
       return () => clearTimeout(timer);
     }
   }, [sessionSummary, deckId, navigate]);
+
+  // Track study_session_started when session becomes active
+  useEffect(() => {
+    if (activeSession && !hasTrackedStart.current) {
+      hasTrackedStart.current = true;
+      sessionStartTime.current = Date.now();
+
+      try {
+        const deck = decks.find((d) => d.id === activeSession.deckId);
+        track('study_session_started', {
+          deck_id: activeSession.deckId,
+          deck_level: deck?.level ?? 'A1',
+          cards_due: activeSession.cards.length,
+          is_first_session: !deck?.progress?.lastStudied,
+          session_id: activeSession.sessionId,
+        });
+      } catch {
+        // Silent failure - don't break session flow
+      }
+    }
+  }, [activeSession, decks, track]);
+
+  // Track study_session_abandoned on page unload
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      // Only track abandonment if:
+      // 1. There's an active session
+      // 2. Cards have been reviewed (not immediate exit)
+      // 3. Session hasn't completed (no summary yet)
+      if (activeSession && sessionStats.cardsReviewed > 0 && !sessionSummary) {
+        const durationSec = sessionStartTime.current
+          ? Math.round((Date.now() - sessionStartTime.current) / 1000)
+          : Math.round(sessionStats.totalTime);
+
+        // Use sendBeacon for fire-and-forget on page unload
+        if (typeof navigator?.sendBeacon === 'function' && typeof posthog?.capture === 'function') {
+          try {
+            // PostHog doesn't have a direct sendBeacon method, but we can try to capture
+            // The PostHog SDK internally handles beforeunload, but we explicitly track abandonment
+            posthog.capture('study_session_abandoned', {
+              deck_id: activeSession.deckId,
+              session_id: activeSession.sessionId,
+              cards_reviewed: sessionStats.cardsReviewed,
+              duration_sec: durationSec,
+            });
+          } catch {
+            // Silent failure - fire-and-forget pattern
+          }
+        }
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [activeSession, sessionStats, sessionSummary]);
 
   // Loading state
   if (isLoading) {

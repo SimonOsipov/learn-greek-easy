@@ -31,3 +31,21 @@ export function isTestUser(userId: string | undefined | null): boolean {
   }
   return userId.startsWith('test_') || userId.includes('@test.') || userId.startsWith('e2e_');
 }
+
+/**
+ * Generates a unique session ID using crypto.randomUUID().
+ * Falls back to a polyfill for older browsers that don't support it.
+ *
+ * @returns A UUID v4 string for session identification
+ */
+export function generateSessionId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  // Fallback for older browsers (produces UUID v4 format)
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
