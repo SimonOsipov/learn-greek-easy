@@ -44,8 +44,8 @@ RUN chmod +x /docker-entrypoint.sh
 COPY --from=builder /app/dist /usr/share/nginx/html
 
 # Railway sets PORT env var at runtime, default to 80
-ENV PORT=80
 # Default for local Docker Compose; Railway overrides via environment variable
+ENV PORT=80
 ENV BACKEND_URL=http://backend:8000
 
 # Note: No Docker HEALTHCHECK - Railway handles health checks via /health endpoint
