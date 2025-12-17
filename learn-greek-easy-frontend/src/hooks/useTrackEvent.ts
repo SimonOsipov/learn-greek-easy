@@ -62,6 +62,27 @@ export interface StudySessionAbandonedProperties extends BaseEventProperties {
   duration_sec: number;
 }
 
+// Engagement event properties
+export interface DeckSelectedProperties extends BaseEventProperties {
+  deck_id: string;
+  deck_name: string;
+  level: 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
+  total_cards: number;
+  cards_due: number;
+}
+
+export interface StreakAchievedProperties extends BaseEventProperties {
+  streak_days: number;
+  milestone: 3 | 7 | 14 | 30 | 60 | 90 | 180 | 365;
+}
+
+export interface CardMasteredProperties extends BaseEventProperties {
+  deck_id: string;
+  card_id: string;
+  reviews_to_master: number;
+  days_to_master: number;
+}
+
 // Generic properties type for flexibility
 export type EventProperties = Record<string, unknown>;
 

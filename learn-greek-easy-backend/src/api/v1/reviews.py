@@ -6,6 +6,7 @@ allowing users to submit card reviews and receive SM-2 algorithm results.
 
 from datetime import date
 from typing import Optional
+from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.config import settings
 from src.core.dependencies import get_current_user
 from src.core.exceptions import CardNotFoundException
+from src.core.posthog import capture_event
 from src.db.dependencies import get_db
 from src.db.models import User
 from src.repositories.card import CardRepository
@@ -26,6 +28,42 @@ from src.schemas.review import (
 from src.schemas.sm2 import SM2BulkReviewResult, SM2ReviewResult
 from src.services.sm2_service import SM2Service
 from src.tasks.background import check_achievements_task, invalidate_cache_task, log_analytics_task
+
+# Streak milestones to track
+STREAK_MILESTONES = [3, 7, 14, 30, 60, 90, 180, 365]
+
+
+def _check_streak_milestone(
+    user_id: UUID,
+    user_email: str,
+    new_streak: int,
+    previous_streak: int,
+) -> None:
+    """Check if user crossed a streak milestone and track if so.
+
+    This function fires a streak_achieved event when the user crosses
+    one of the predefined milestones (3, 7, 14, 30, 60, 90, 180, 365 days).
+    Only the highest milestone crossed in a single review is tracked.
+
+    Args:
+        user_id: UUID of the user
+        user_email: User's email for PostHog tracking
+        new_streak: Current streak after review
+        previous_streak: Streak before the review
+    """
+    for milestone in STREAK_MILESTONES:
+        if new_streak >= milestone and previous_streak < milestone:
+            capture_event(
+                distinct_id=str(user_id),
+                event="streak_achieved",
+                properties={
+                    "streak_days": new_streak,
+                    "milestone": milestone,
+                },
+                user_email=user_email,
+            )
+            break  # Only track highest milestone crossed
+
 
 router = APIRouter(
     # Note: prefix is set by parent router in v1/router.py
@@ -217,6 +255,10 @@ async def submit_review(
     if card is None:
         raise CardNotFoundException(card_id=str(review.card_id))
 
+    # Get streak BEFORE processing review (for milestone tracking)
+    review_repo = ReviewRepository(db)
+    previous_streak = await review_repo.get_streak(current_user.id)
+
     # Process the review using SM2Service
     service = SM2Service(db)
     result = await service.process_review(
@@ -224,7 +266,20 @@ async def submit_review(
         card_id=review.card_id,
         quality=review.quality,
         time_taken=review.time_taken,
+        user_email=current_user.email,
     )
+
+    # Get streak AFTER processing review
+    new_streak = await review_repo.get_streak(current_user.id)
+
+    # Check for streak milestone achievement
+    if new_streak > previous_streak:
+        _check_streak_milestone(
+            user_id=current_user.id,
+            user_email=current_user.email,
+            new_streak=new_streak,
+            previous_streak=previous_streak,
+        )
 
     # Schedule background tasks if enabled
     if settings.feature_background_tasks:
