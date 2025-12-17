@@ -1,6 +1,7 @@
 import React from 'react';
 
 import { Badge } from '@/components/ui/badge';
+import { getCEFRColor, getCEFRLabel, getCEFRTextColor } from '@/lib/cefrColors';
 import type { DeckLevel, DeckStatus } from '@/types/deck';
 
 export interface DeckBadgeProps {
@@ -9,39 +10,6 @@ export interface DeckBadgeProps {
   status?: DeckStatus;
   className?: string;
 }
-
-const LEVEL_CONFIG = {
-  A1: {
-    label: 'A1 - Beginner',
-    bgColor: 'bg-green-700',
-    textColor: 'text-white',
-  },
-  A2: {
-    label: 'A2 - Elementary',
-    bgColor: 'bg-blue-700',
-    textColor: 'text-white',
-  },
-  B1: {
-    label: 'B1 - Intermediate',
-    bgColor: 'bg-orange-700',
-    textColor: 'text-white',
-  },
-  B2: {
-    label: 'B2 - Upper-Intermediate',
-    bgColor: 'bg-purple-700',
-    textColor: 'text-white',
-  },
-  C1: {
-    label: 'C1 - Advanced',
-    bgColor: 'bg-red-700',
-    textColor: 'text-white',
-  },
-  C2: {
-    label: 'C2 - Mastery',
-    bgColor: 'bg-gray-800',
-    textColor: 'text-white',
-  },
-} as const;
 
 const STATUS_CONFIG = {
   'not-started': {
@@ -63,11 +31,13 @@ const STATUS_CONFIG = {
 
 export const DeckBadge: React.FC<DeckBadgeProps> = ({ type, level, status, className = '' }) => {
   if (type === 'level' && level) {
-    const config = LEVEL_CONFIG[level];
+    const bgColor = getCEFRColor(level);
+    const textColor = getCEFRTextColor(level);
+    const label = getCEFRLabel(level);
     return (
       <Badge
-        className={`${config.bgColor} ${config.textColor} rounded px-2 py-1 text-xs font-semibold ${className}`}
-        aria-label={`Level ${config.label}`}
+        className={`${bgColor} ${textColor} rounded px-2 py-1 text-xs font-semibold ${className}`}
+        aria-label={`Level ${label}`}
       >
         {level}
       </Badge>

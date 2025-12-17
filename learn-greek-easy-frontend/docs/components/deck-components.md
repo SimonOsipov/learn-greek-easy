@@ -55,7 +55,7 @@ import { MOCK_DECKS } from '@/services/mockDeckData';
 **Features**:
 - Greek title displayed prominently (1rem, font-semibold)
 - English subtitle below Greek title (0.875rem, gray-500)
-- Color-coded level badge (A1: green, A2: blue, B1: orange, B2: purple)
+- Tier-based color-coded level badge (A1/A2: green, B1/B2: blue, C1/C2: red)
 - Premium indicator with lock icon for locked decks
 - Segmented progress bar showing new/learning/mastered cards
 - Stats grid with card count, estimated time, mastery percentage
@@ -200,11 +200,12 @@ import { DeckBadge } from '@/components/decks';
 | status | DeckStatus | undefined | Status value (not-started, in-progress, completed) - required if type='status' |
 | className | string | '' | Additional Tailwind CSS classes |
 
-**Level Badge Colors**:
-- **A1 - Beginner**: Green (#10b981), white text
-- **A2 - Elementary**: Blue (#3b82f6), white text
-- **B1 - Intermediate**: Orange (#f97316), white text
-- **B2 - Upper-Intermediate**: Purple (#764ba2), white text
+**Level Badge Colors** (Tier-based):
+- **A1, A2 (Beginner)**: Green (`bg-green-700`), white text
+- **B1, B2 (Intermediate)**: Blue (`bg-blue-700`), white text
+- **C1, C2 (Advanced)**: Red (`bg-red-700`), white text
+
+**Note**: Colors are managed centrally via `/src/lib/cefrColors.ts` for consistency across the application.
 
 **Status Badge Colors**:
 - **Not Started**: Gray background, dark gray text
@@ -324,11 +325,12 @@ const { filters, setFilters, clearFilters, decks } = useDeckStore();
 - **status**: DeckStatus[] (not-started, in-progress, completed)
 - **showPremiumOnly**: boolean (true/false)
 
-**Level Badge Colors**:
-- **A1**: Green (bg-green-500)
-- **A2**: Blue (bg-blue-500)
-- **B1**: Orange (bg-orange-500)
-- **B2**: Purple (bg-purple-600)
+**Level Filter Button Colors** (Tier-based):
+- **A1, A2 (Beginner)**: Green (`bg-green-500`)
+- **B1, B2 (Intermediate)**: Blue (`bg-blue-500`)
+- **C1, C2 (Advanced)**: Red (`bg-red-500`)
+
+**Note**: Colors are managed centrally via `/src/lib/cefrColors.ts` for consistency across the application.
 
 **Debounce Behavior**:
 - Search input has 300ms debounce delay

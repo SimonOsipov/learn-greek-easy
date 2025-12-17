@@ -173,15 +173,16 @@ interface GreekWordProps {
 
 ### 9. LevelBadge
 
-**Purpose**: CEFR level badge (A1, A2, B1, B2).
+**Purpose**: CEFR level badge (A1, A2, B1, B2, C1, C2).
 
 **File**: `/src/components/review/shared/LevelBadge.tsx`
 
-**Colors**:
-- A1: Green
-- A2: Blue
-- B1: Orange
-- B2: Purple
+**Colors** (Tier-based):
+- A1, A2 (Beginner): Green (`bg-green-700`)
+- B1, B2 (Intermediate): Blue (`bg-blue-700`)
+- C1, C2 (Advanced): Red (`bg-red-700`)
+
+**Note**: Colors are managed centrally via `/src/lib/cefrColors.ts` for consistency across the application.
 
 ---
 
