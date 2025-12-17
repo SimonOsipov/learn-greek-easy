@@ -41,7 +41,8 @@ export interface CardReviewedProperties extends BaseEventProperties {
   card_id: string;
   rating: 1 | 2 | 3 | 4;
   time_ms: number;
-  card_status: 'new' | 'learning' | 'review' | 'relearning';
+  card_status: 'new' | 'learning' | 'review' | 'mastered';
+  session_id: string;
 }
 
 export interface StudySessionCompletedProperties extends BaseEventProperties {
