@@ -1,3 +1,4 @@
+import posthog from 'posthog-js';
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 
@@ -77,6 +78,20 @@ export const useAuthStore = create<AuthState>()(
             updatedAt: new Date(profileResponse.updated_at),
           };
 
+          // Identify user in PostHog
+          if (typeof posthog?.identify === 'function') {
+            posthog.identify(user.id, {
+              email: user.email,
+              created_at: user.createdAt.toISOString(),
+              auth_method: 'email',
+            });
+          }
+          if (typeof posthog?.capture === 'function') {
+            posthog.capture('user_logged_in', {
+              method: 'email',
+            });
+          }
+
           set({
             user,
             token: tokenResponse.access_token,
@@ -153,6 +168,20 @@ export const useAuthStore = create<AuthState>()(
             updatedAt: new Date(data.user?.updated_at || Date.now()),
           };
 
+          // Identify user in PostHog (Google auth)
+          if (typeof posthog?.identify === 'function') {
+            posthog.identify(user.id, {
+              email: user.email,
+              created_at: user.createdAt.toISOString(),
+              auth_method: 'google',
+            });
+          }
+          if (typeof posthog?.capture === 'function') {
+            posthog.capture('user_logged_in', {
+              method: 'google',
+            });
+          }
+
           set({
             user,
             token: data.access_token,
@@ -218,6 +247,22 @@ export const useAuthStore = create<AuthState>()(
             updatedAt: new Date(profileResponse.updated_at),
           };
 
+          // Identify new user in PostHog
+          if (typeof posthog?.identify === 'function') {
+            posthog.identify(user.id, {
+              email: user.email,
+              created_at: user.createdAt.toISOString(),
+              auth_method: 'email',
+            });
+          }
+          if (typeof posthog?.capture === 'function') {
+            posthog.capture('user_signed_up', {
+              method: 'email',
+              referrer:
+                typeof document !== 'undefined' ? document.referrer || undefined : undefined,
+            });
+          }
+
           set({
             user,
             token: tokenResponse.access_token,
@@ -247,6 +292,11 @@ export const useAuthStore = create<AuthState>()(
       logout: async () => {
         const { refreshToken: storedRefreshToken } = get();
 
+        // Track logout event before reset
+        if (typeof posthog?.capture === 'function') {
+          posthog.capture('user_logged_out');
+        }
+
         if (storedRefreshToken) {
           try {
             await authAPI.logout(storedRefreshToken);
@@ -270,6 +320,11 @@ export const useAuthStore = create<AuthState>()(
 
         // Clear analytics state
         useAnalyticsStore.getState().clearAnalytics();
+
+        // Reset PostHog identity so next session is anonymous
+        if (typeof posthog?.reset === 'function') {
+          posthog.reset();
+        }
       },
 
       // Update profile action
@@ -446,6 +501,14 @@ export const useAuthStore = create<AuthState>()(
             createdAt: new Date(profileResponse.created_at),
             updatedAt: new Date(profileResponse.updated_at),
           };
+
+          // Re-identify user to ensure PostHog session continuity
+          if (typeof posthog?.identify === 'function') {
+            posthog.identify(user.id, {
+              email: user.email,
+              created_at: user.createdAt.toISOString(),
+            });
+          }
 
           set({
             user,

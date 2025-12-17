@@ -26,6 +26,7 @@ import { Profile } from '@/pages/Profile';
 import { SessionSummaryPage } from '@/pages/SessionSummaryPage';
 import Settings from '@/pages/Settings';
 import { Unauthorized } from '@/pages/Unauthorized';
+import { PostHogProvider } from '@/providers';
 import { useAppStore, selectIsReady } from '@/stores/appStore';
 
 // Temporary placeholder pages - replace with actual pages
@@ -116,11 +117,13 @@ function App() {
     <ErrorBoundary>
       <GoogleOAuthProvider clientId={googleClientId}>
         <BrowserRouter>
-          <TooltipProvider>
-            <LayoutProvider>
-              <AppContent />
-            </LayoutProvider>
-          </TooltipProvider>
+          <PostHogProvider>
+            <TooltipProvider>
+              <LayoutProvider>
+                <AppContent />
+              </LayoutProvider>
+            </TooltipProvider>
+          </PostHogProvider>
         </BrowserRouter>
       </GoogleOAuthProvider>
     </ErrorBoundary>

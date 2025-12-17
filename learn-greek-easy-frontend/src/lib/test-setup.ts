@@ -86,6 +86,31 @@ vi.mock('@react-oauth/google', () => ({
   useGoogleLogin: () => vi.fn(),
 }));
 
+// Mock posthog-js library
+// This prevents PostHog from initializing during tests
+vi.mock('posthog-js', () => ({
+  default: {
+    init: vi.fn(),
+    capture: vi.fn(),
+    identify: vi.fn(),
+    register: vi.fn(),
+    reset: vi.fn(),
+    people: {
+      set: vi.fn(),
+    },
+  },
+}));
+
+// Mock posthog-js/react library
+// This provides a passthrough provider for tests
+vi.mock('posthog-js/react', () => ({
+  PostHogProvider: ({ children }: { children: React.ReactNode }) => children,
+  usePostHog: () => ({
+    capture: vi.fn(),
+    identify: vi.fn(),
+  }),
+}));
+
 // Cleanup after each test (remove rendered components)
 afterEach(() => {
   cleanup();

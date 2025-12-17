@@ -4,6 +4,7 @@ import React from 'react';
 
 import { useNavigate } from 'react-router-dom';
 
+import { useTrackEvent } from '@/hooks/useTrackEvent';
 import type { Deck } from '@/types/deck';
 
 import { DeckCard } from './DeckCard';
@@ -15,8 +16,23 @@ export interface DecksGridProps {
 
 export const DecksGrid: React.FC<DecksGridProps> = ({ decks, onDeckClick }) => {
   const navigate = useNavigate();
+  const { track } = useTrackEvent();
 
   const handleDeckClick = (deckId: string) => {
+    // Find the deck to get properties for tracking
+    const deck = decks.find((d) => d.id === deckId);
+
+    // Track deck selection event
+    if (deck) {
+      track('deck_selected', {
+        deck_id: deck.id,
+        deck_name: deck.title,
+        level: deck.level,
+        total_cards: deck.cardCount,
+        cards_due: deck.progress?.dueToday ?? 0,
+      });
+    }
+
     if (onDeckClick) {
       onDeckClick(deckId);
     } else {
