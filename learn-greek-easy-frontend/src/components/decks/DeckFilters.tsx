@@ -6,6 +6,7 @@ import { Search, X } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { CEFR_LEVEL_OPTIONS } from '@/lib/cefrColors';
 import { debounce } from '@/lib/utils';
 import type { DeckFilters as DeckFiltersType, DeckLevel, DeckStatus } from '@/types/deck';
 
@@ -16,15 +17,6 @@ export interface DeckFiltersProps {
   totalDecks: number;
   filteredDecks: number;
 }
-
-const LEVEL_OPTIONS: { value: DeckLevel; label: string; color: string }[] = [
-  { value: 'A1', label: 'A1 - Beginner', color: 'bg-green-500' },
-  { value: 'A2', label: 'A2 - Elementary', color: 'bg-blue-500' },
-  { value: 'B1', label: 'B1 - Intermediate', color: 'bg-orange-500' },
-  { value: 'B2', label: 'B2 - Upper-Intermediate', color: 'bg-purple-600' },
-  { value: 'C1', label: 'C1 - Advanced', color: 'bg-red-500' },
-  { value: 'C2', label: 'C2 - Mastery', color: 'bg-gray-700' },
-];
 
 const STATUS_OPTIONS: { value: DeckStatus; label: string }[] = [
   { value: 'not-started', label: 'Not Started' },
@@ -119,7 +111,7 @@ export const DeckFilters: React.FC<DeckFiltersProps> = ({
         {/* Row 1: Level Filters */}
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-sm font-medium text-gray-700">Level:</span>
-          {LEVEL_OPTIONS.map(({ value, color }) => (
+          {CEFR_LEVEL_OPTIONS.map(({ value, color }) => (
             <Button
               key={value}
               variant={filters.levels.includes(value) ? 'default' : 'outline'}
