@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 import { AlertCircle } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -7,6 +7,7 @@ import { SessionSummary } from '@/components/review/SessionSummary';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useTrackEvent } from '@/hooks/useTrackEvent';
 import { useReviewStore } from '@/stores/reviewStore';
 
 /**
@@ -39,6 +40,10 @@ export function SessionSummaryPage() {
   const { deckId } = useParams<{ deckId: string }>();
   const navigate = useNavigate();
   const { sessionSummary, clearSessionSummary } = useReviewStore();
+  const { track } = useTrackEvent();
+
+  // Ref to prevent duplicate event tracking
+  const hasTrackedComplete = useRef(false);
 
   // Redirect if no summary available
   useEffect(() => {
@@ -47,6 +52,52 @@ export function SessionSummaryPage() {
       navigate(`/decks/${deckId}`, { replace: true });
     }
   }, [sessionSummary, deckId, navigate]);
+
+  // Track study_session_completed when summary is available
+  useEffect(() => {
+    if (sessionSummary && !hasTrackedComplete.current) {
+      hasTrackedComplete.current = true;
+
+      // Extract data from sessionSummary (handle both type shapes)
+      // The store creates: stats.cardsReviewed, stats.totalTime, etc.
+      // The type expects: cardsReviewed, totalTime directly
+      const summary = sessionSummary as Record<string, unknown>;
+      const stats = (summary.stats as Record<string, number>) ?? {};
+
+      const cardsReviewed = (summary.cardsReviewed as number) ?? stats.cardsReviewed ?? 0;
+      const totalTime = (summary.totalTime as number) ?? stats.totalTime ?? 0;
+      const accuracy = (summary.accuracy as number) ?? stats.accuracy ?? 0;
+
+      // Don't track empty sessions
+      if (cardsReviewed === 0) {
+        return;
+      }
+
+      // Get cards_mastered and cards_failed
+      // The store uses stats.easyCount as approximation for mastered
+      // and stats.againCount for failed (ratingBreakdown.again equivalent)
+      const transitions = summary.transitions as Record<string, number> | undefined;
+      const ratingBreakdown = summary.ratingBreakdown as Record<string, number> | undefined;
+
+      const cardsMastered =
+        transitions?.reviewToMastered ?? Math.floor((stats.easyCount ?? 0) * 0.5);
+      const cardsFailed = ratingBreakdown?.again ?? stats.againCount ?? 0;
+
+      try {
+        track('study_session_completed', {
+          deck_id: sessionSummary.deckId,
+          session_id: sessionSummary.sessionId,
+          cards_reviewed: cardsReviewed,
+          duration_sec: Math.round(totalTime),
+          accuracy: Math.round(Math.min(100, Math.max(0, accuracy))),
+          cards_mastered: cardsMastered,
+          cards_failed: cardsFailed,
+        });
+      } catch {
+        // Silent failure - don't break session summary display
+      }
+    }
+  }, [sessionSummary, track]);
 
   // Clean up summary when component unmounts
   useEffect(() => {

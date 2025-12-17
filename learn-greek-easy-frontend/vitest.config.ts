@@ -14,6 +14,11 @@ export default defineConfig({
     // Setup files (run before each test file)
     setupFiles: ['./src/lib/test-setup.ts'],
 
+    // Environment variables for tests (prevent analytics pollution)
+    env: {
+      VITE_ENVIRONMENT: 'test',
+    },
+
     // Coverage configuration
     coverage: {
       provider: 'v8',

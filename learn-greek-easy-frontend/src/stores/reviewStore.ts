@@ -7,6 +7,7 @@
  * Reviews are submitted individually via the SM-2 algorithm on the backend.
  */
 
+import posthog from 'posthog-js';
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 
@@ -23,6 +24,7 @@ import type {
   SessionSummary,
   QueueConfig,
 } from '@/types/review';
+import { generateSessionId } from '@/utils/analytics';
 
 /**
  * Default queue configuration for review sessions
@@ -70,6 +72,24 @@ const mapRatingToQuality = (rating: ReviewRating): number => {
 };
 
 /**
+ * Map frontend rating to numeric value for analytics (1-4 scale)
+ */
+const mapRatingToAnalytics = (rating: ReviewRating): 1 | 2 | 3 | 4 => {
+  switch (rating) {
+    case 'again':
+      return 1;
+    case 'hard':
+      return 2;
+    case 'good':
+      return 3;
+    case 'easy':
+      return 4;
+    default:
+      return 3;
+  }
+};
+
+/**
  * Transform backend study queue card to frontend CardReview type
  */
 const transformStudyQueueCard = (card: StudyQueueCard, deckId: string): CardReview => ({
@@ -92,13 +112,6 @@ const transformStudyQueueCard = (card: StudyQueueCard, deckId: string): CardRevi
   correctCount: 0,
   averageTime: 0,
 });
-
-/**
- * Generate a unique session ID
- */
-const generateSessionId = (): string => {
-  return `session-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-};
 
 /**
  * Review Store State Interface
@@ -303,6 +316,24 @@ export const useReviewStore = create<ReviewState>()(
             quality: mapRatingToQuality(rating),
             time_taken: timeSpent,
           });
+
+          // Track card_reviewed event for analytics
+          try {
+            const timeMs = cardStartTime ? Date.now() - cardStartTime : timeSpent * 1000;
+            if (typeof posthog?.capture === 'function') {
+              posthog.capture('card_reviewed', {
+                deck_id: activeSession.deckId,
+                card_id: currentCard.id,
+                rating: mapRatingToAnalytics(rating),
+                time_ms: timeMs,
+                card_status: currentCard.status,
+                session_id: activeSession.sessionId,
+                timestamp: new Date().toISOString(),
+              });
+            }
+          } catch {
+            // Silent failure - don't break review flow for analytics
+          }
 
           // Update session stats
           const updatedStats = calculateUpdatedStats(get().sessionStats, rating, timeSpent);

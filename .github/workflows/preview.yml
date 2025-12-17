@@ -420,6 +420,9 @@ jobs:
     needs: [deploy, health-check]
     if: needs.health-check.outputs.status == 'success'
     runs-on: ubuntu-latest
+    env:
+      VITE_ENVIRONMENT: test
+      ENVIRONMENT: test
     outputs:
       status: ${{ steps.a11y.outputs.status }}
       violations: ${{ steps.a11y.outputs.violations }}
@@ -685,6 +688,9 @@ jobs:
       needs.health-check.outputs.status == 'success' &&
       !contains(github.event.pull_request.labels.*.name, 'skip-visual')
     runs-on: ubuntu-latest
+    env:
+      VITE_ENVIRONMENT: test
+      ENVIRONMENT: test
     outputs:
       status: ${{ steps.visual.outputs.status }}
 

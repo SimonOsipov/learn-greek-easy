@@ -24,15 +24,19 @@ Example Usage:
 
 import logging
 from datetime import datetime
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.exceptions import DeckNotFoundException
+from src.core.posthog import capture_event
 from src.core.sm2 import calculate_next_review_date, calculate_sm2
 from src.db.models import Card, CardStatus, Review
+
+if TYPE_CHECKING:
+    from src.db.models import CardStatistics
 from src.repositories import (
     CardRepository,
     CardStatisticsRepository,
@@ -91,6 +95,7 @@ class SM2Service:
         card_id: UUID,
         quality: int,
         time_taken: int,
+        user_email: Optional[str] = None,
     ) -> SM2ReviewResult:
         """Process a single card review and update all related data.
 
@@ -106,6 +111,7 @@ class SM2Service:
             card_id: UUID of the card being reviewed
             quality: Quality rating (0-5) from the review
             time_taken: Time spent on review in seconds
+            user_email: User's email for PostHog tracking (optional)
 
         Returns:
             SM2ReviewResult containing all updated values and next review date
@@ -176,6 +182,8 @@ class SM2Service:
             is_first_review=is_first_review,
             was_mastered=was_mastered,
             is_now_mastered=sm2_result.new_status == CardStatus.MASTERED,
+            user_email=user_email,
+            stats=stats,
         )
 
         # Step 7: Commit transaction
@@ -638,6 +646,8 @@ class SM2Service:
         is_first_review: bool,
         was_mastered: bool,
         is_now_mastered: bool,
+        user_email: Optional[str] = None,
+        stats: Optional["CardStatistics"] = None,
     ) -> None:
         """Update UserDeckProgress metrics after a review.
 
@@ -645,12 +655,16 @@ class SM2Service:
         - cards_studied: +1 on first review (NEW -> anything)
         - cards_mastered: +1 when newly mastered, -1 when losing mastery
 
+        Also tracks card_mastered event to PostHog when a card is newly mastered.
+
         Args:
             user_id: UUID of the user
             card_id: UUID of the reviewed card
             is_first_review: True if card was NEW before this review
             was_mastered: True if card was MASTERED before this review
             is_now_mastered: True if card is now MASTERED after this review
+            user_email: User's email for PostHog tracking (optional)
+            stats: CardStatistics for tracking metrics (optional)
         """
         # Get deck_id from card
         query = select(Card.deck_id).where(Card.id == card_id)
@@ -674,6 +688,29 @@ class SM2Service:
         if is_now_mastered and not was_mastered:
             # Card newly mastered
             cards_mastered_delta = 1
+
+            # Track card mastery event to PostHog
+            if stats is not None:
+                days_to_master = 0
+                if stats.created_at:
+                    # Handle timezone-aware datetime
+                    created_at = stats.created_at
+                    if created_at.tzinfo is not None:
+                        created_at = created_at.replace(tzinfo=None)
+                    days_to_master = (datetime.utcnow() - created_at).days
+
+                capture_event(
+                    distinct_id=str(user_id),
+                    event="card_mastered",
+                    properties={
+                        "deck_id": str(deck_id),
+                        "card_id": str(card_id),
+                        "reviews_to_master": stats.repetitions,
+                        "days_to_master": days_to_master,
+                    },
+                    user_email=user_email,
+                )
+
         elif was_mastered and not is_now_mastered:
             # Card lost mastery (failed review)
             cards_mastered_delta = -1

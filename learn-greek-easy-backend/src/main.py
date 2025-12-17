@@ -18,6 +18,7 @@ from src.api.v1 import v1_router
 from src.config import settings
 from src.core.exceptions import BaseAPIException
 from src.core.logging import setup_logging
+from src.core.posthog import init_posthog, shutdown_posthog
 from src.core.redis import close_redis, init_redis
 from src.db import close_db, init_db
 from src.middleware import (
@@ -52,6 +53,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Initialize Redis connection
     await init_redis()
 
+    # Initialize PostHog analytics
+    init_posthog()
+
     # Auto-seed on deploy (local dev only)
     if settings.seed_on_deploy and settings.can_seed_database():
         logger.info("SEED_ON_DEPLOY enabled, auto-seeding database...")
@@ -78,6 +82,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     # Shutdown
     logger.info("Shutting down Learn Greek Easy API")
+
+    # Shutdown PostHog analytics (flush events before closing connections)
+    shutdown_posthog()
 
     # Close Redis connection
     await close_redis()

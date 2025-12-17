@@ -1,0 +1,78 @@
+import { type ReactNode, useEffect, useState } from 'react';
+
+import posthog from 'posthog-js';
+import { PostHogProvider as PHProvider } from 'posthog-js/react';
+
+import { isTestUser, shouldInitializePostHog } from '@/utils/analytics';
+
+const POSTHOG_KEY = import.meta.env.VITE_POSTHOG_KEY;
+const POSTHOG_HOST = import.meta.env.VITE_POSTHOG_HOST || 'https://us.i.posthog.com';
+const ENVIRONMENT = import.meta.env.VITE_ENVIRONMENT || 'development';
+
+interface PostHogProviderProps {
+  children: ReactNode;
+}
+
+/**
+ * PostHog Analytics Provider
+ *
+ * Wraps the application with PostHog analytics tracking.
+ * Features:
+ * - Graceful degradation: Works without API key (no-op)
+ * - Test environment filtering: Disabled when VITE_ENVIRONMENT=test
+ * - Test user filtering: Blocks events from test_*, e2e_*, *@test.* users
+ * - Super properties: Attaches environment and app_version to all events
+ *
+ * Configuration:
+ * - person_profiles: 'identified_only' - Only create profiles for identified users
+ * - autocapture: false - Manual events only for precise control
+ * - disable_session_recording: true - Enable later if needed
+ */
+export function PostHogProvider({ children }: PostHogProviderProps) {
+  const [initialized, setInitialized] = useState(false);
+
+  useEffect(() => {
+    // Initialize only if conditions are met
+    if (!shouldInitializePostHog(POSTHOG_KEY, ENVIRONMENT)) {
+      return;
+    }
+
+    try {
+      // POSTHOG_KEY is guaranteed to be defined here due to shouldInitializePostHog check
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      posthog.init(POSTHOG_KEY!, {
+        api_host: POSTHOG_HOST,
+        person_profiles: 'identified_only',
+        capture_pageview: true,
+        capture_pageleave: true,
+        autocapture: false, // Manual events only for control
+        disable_session_recording: true, // Enable later if needed
+        loaded: (posthogInstance) => {
+          posthogInstance.register({
+            environment: ENVIRONMENT,
+            app_version: import.meta.env.VITE_APP_VERSION || '1.0.0',
+          });
+          setInitialized(true);
+        },
+        before_send: (event) => {
+          // Filter out test users
+          const userId = event?.properties?.$user_id;
+          if (isTestUser(userId)) {
+            return null; // Don't send
+          }
+          return event;
+        },
+      });
+    } catch (error) {
+      console.error('[PostHog] Failed to initialize:', error);
+      // Continue without PostHog - graceful degradation
+    }
+  }, []);
+
+  // Always render children, provider is optional
+  if (!shouldInitializePostHog(POSTHOG_KEY, ENVIRONMENT) || !initialized) {
+    return <>{children}</>;
+  }
+
+  return <PHProvider client={posthog}>{children}</PHProvider>;
+}

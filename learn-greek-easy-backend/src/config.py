@@ -318,6 +318,18 @@ class Settings(BaseSettings):
     )
 
     # =========================================================================
+    # PostHog Analytics
+    # =========================================================================
+    posthog_api_key: Optional[str] = Field(
+        default=None,
+        description="PostHog project API key for server-side analytics",
+    )
+    posthog_host: str = Field(
+        default="https://us.i.posthog.com",
+        description="PostHog API host URL",
+    )
+
+    # =========================================================================
     # Business Logic
     # =========================================================================
     srs_initial_ease_factor: float = Field(default=2.5, description="Initial ease factor")
