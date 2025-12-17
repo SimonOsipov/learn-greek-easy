@@ -18,8 +18,8 @@ module.exports = {
         ? process.env.LIGHTHOUSE_URLS.split(',')
         : ['http://localhost:5173'],
 
-      // Number of runs per URL (for consistency)
-      numberOfRuns: 3,
+      // Single run per URL (consistent scores in CI)
+      numberOfRuns: 1,
 
       settings: {
         preset: 'desktop',
