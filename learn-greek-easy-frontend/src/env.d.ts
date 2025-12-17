@@ -27,6 +27,11 @@ interface ImportMetaEnv {
   readonly VITE_SENTRY_DSN?: string;
   readonly VITE_GA_ID?: string;
   readonly VITE_STRIPE_PUBLISHABLE_KEY?: string;
+
+  // PostHog Analytics
+  readonly VITE_POSTHOG_KEY?: string;
+  readonly VITE_POSTHOG_HOST?: string;
+  readonly VITE_ENVIRONMENT?: 'development' | 'staging' | 'production' | 'test';
 }
 
 interface ImportMeta {
