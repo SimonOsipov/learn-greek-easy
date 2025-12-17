@@ -134,6 +134,9 @@ export default defineConfig({
     url: 'http://localhost:5173',
     reuseExistingServer: !process.env.CI, // CI: always start fresh
     timeout: 120 * 1000, // 2 minutes to start
+    env: {
+      VITE_ENVIRONMENT: 'test',
+    },
   },
 });
 

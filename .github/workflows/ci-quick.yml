@@ -56,6 +56,9 @@ jobs:
     needs: should-run
     if: needs.should-run.outputs.run_quick == 'true'
     runs-on: ubuntu-latest
+    env:
+      VITE_ENVIRONMENT: test
+      ENVIRONMENT: test
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -89,6 +92,9 @@ jobs:
     needs: should-run
     if: needs.should-run.outputs.run_quick == 'true'
     runs-on: ubuntu-latest
+    env:
+      VITE_ENVIRONMENT: test
+      ENVIRONMENT: test
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -145,6 +151,9 @@ jobs:
     needs: should-run
     if: needs.should-run.outputs.run_quick == 'true'
     runs-on: ubuntu-latest
+    env:
+      VITE_ENVIRONMENT: test
+      ENVIRONMENT: test
 
     services:
       postgres:
