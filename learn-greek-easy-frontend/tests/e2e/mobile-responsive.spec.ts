@@ -9,18 +9,24 @@ import { test, expect } from '@playwright/test';
 test.describe('Mobile Responsive (375px)', () => {
   test.use({ viewport: { width: 375, height: 667 } });
 
-  test('Login page should be mobile-friendly', async ({ page }) => {
-    await page.goto('/login');
+  // Public pages - need to clear authentication to access login page
+  test.describe('Public pages', () => {
+    // Override storageState to be empty (no auth) - same pattern as sample.spec.ts
+    test.use({ storageState: { cookies: [], origins: [] } });
 
-    // Check viewport
-    const viewportSize = page.viewportSize();
-    expect(viewportSize?.width).toBe(375);
+    test('Login page should be mobile-friendly', async ({ page }) => {
+      await page.goto('/login');
 
-    // Form should be visible and usable using test IDs
-    await expect(page.getByTestId('login-card')).toBeVisible();
-    await expect(page.getByTestId('email-input')).toBeVisible();
-    await expect(page.getByTestId('password-input')).toBeVisible();
-    await expect(page.getByTestId('login-submit')).toBeVisible();
+      // Check viewport
+      const viewportSize = page.viewportSize();
+      expect(viewportSize?.width).toBe(375);
+
+      // Form should be visible and usable using test IDs
+      await expect(page.getByTestId('login-card')).toBeVisible();
+      await expect(page.getByTestId('email-input')).toBeVisible();
+      await expect(page.getByTestId('password-input')).toBeVisible();
+      await expect(page.getByTestId('login-submit')).toBeVisible();
+    });
   });
 
   test('Dashboard should adapt to mobile layout', async ({ page }) => {
