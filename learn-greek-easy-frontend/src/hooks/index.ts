@@ -14,6 +14,8 @@ export { useAnalytics } from './useAnalytics';
 export { useProgressData } from './useProgressData';
 export { useDeckPerformance } from './useDeckPerformance';
 export { useStudyStreak } from './useStudyStreak';
+export { useTrackEvent } from './useTrackEvent';
+export type { AnalyticsEventName, EventProperties } from './useTrackEvent';
 
 // Utility hooks
 export { useActivityMonitor } from './useActivityMonitor';

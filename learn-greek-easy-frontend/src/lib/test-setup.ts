@@ -95,6 +95,9 @@ vi.mock('posthog-js', () => ({
     identify: vi.fn(),
     register: vi.fn(),
     reset: vi.fn(),
+    people: {
+      set: vi.fn(),
+    },
   },
 }));
 
