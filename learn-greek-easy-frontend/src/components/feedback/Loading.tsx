@@ -111,7 +111,7 @@ export function Loading({
  */
 export function CardSkeleton() {
   return (
-    <div className="bg-card rounded-lg border p-4" role="status" aria-label="Loading card">
+    <div className="rounded-lg border bg-card p-4" role="status" aria-label="Loading card">
       <div className="space-y-3">
         <Skeleton className="h-4 w-2/3" />
         <Skeleton className="h-3 w-full" />

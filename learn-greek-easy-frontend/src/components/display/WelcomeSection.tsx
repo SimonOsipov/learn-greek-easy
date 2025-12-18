@@ -34,8 +34,9 @@ export const WelcomeSection: React.FC<WelcomeSectionProps> = ({
         </p>
       </div>
       <Button
+        variant="success"
         size="lg"
-        className="mt-4 bg-gradient-to-br from-[#667eea] to-[#764ba2] transition-all hover:shadow-lg md:mt-0"
+        className="mt-4 transition-all hover:shadow-lg md:mt-0"
         onClick={onStartReview}
       >
         Start Review Session

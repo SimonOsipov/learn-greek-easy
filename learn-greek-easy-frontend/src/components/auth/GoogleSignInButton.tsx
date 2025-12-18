@@ -62,7 +62,7 @@ export const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({
         <button
           type="button"
           disabled
-          className="border-input bg-background flex w-full items-center justify-center rounded-md border px-4 py-2 text-sm font-medium text-muted-foreground opacity-50"
+          className="flex w-full items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-muted-foreground opacity-50"
           data-testid="google-signin-button"
         >
           {isGoogleLoading ? (

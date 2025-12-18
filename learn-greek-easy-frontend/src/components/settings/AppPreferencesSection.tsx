@@ -100,7 +100,7 @@ export function AppPreferencesSection() {
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Goal:</span>
               <div className="flex items-center gap-2">
-                <span className="text-foreground text-lg font-semibold">
+                <span className="text-lg font-semibold text-foreground">
                   {dailyGoal} cards per day
                 </span>
                 {isSaving && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}

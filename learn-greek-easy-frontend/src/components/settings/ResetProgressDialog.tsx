@@ -80,7 +80,7 @@ export function ResetProgressDialog({ open, onOpenChange }: ResetProgressDialogP
                 <DialogTitle className="text-red-600">Reset All Progress?</DialogTitle>
               </div>
               <DialogDescription className="space-y-3 pt-2">
-                <p className="text-foreground font-medium">This will permanently delete:</p>
+                <p className="font-medium text-foreground">This will permanently delete:</p>
                 <ul className="list-inside list-disc space-y-1 text-sm">
                   <li>All deck progress and review history</li>
                   <li>All learning statistics and analytics</li>

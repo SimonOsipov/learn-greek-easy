@@ -37,7 +37,7 @@ export const FeedbackPage: React.FC = () => {
 
       {error && (
         <div
-          className="bg-destructive/10 text-destructive rounded-md p-4"
+          className="rounded-md bg-destructive/10 p-4 text-destructive"
           data-testid="feedback-error"
         >
           {error}
