@@ -30,22 +30,22 @@ const Statistics: React.FC = () => {
       {/* Charts Grid */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Progress Over Time */}
-        <div className="bg-card rounded-lg border p-4">
+        <div className="rounded-lg border bg-card p-4">
           <ProgressLineChart height={280} />
         </div>
 
         {/* Accuracy Trend */}
-        <div className="bg-card rounded-lg border p-4">
+        <div className="rounded-lg border bg-card p-4">
           <AccuracyAreaChart height={280} />
         </div>
 
         {/* Deck Performance */}
-        <div className="bg-card rounded-lg border p-4">
+        <div className="rounded-lg border bg-card p-4">
           <DeckPerformanceChart height={320} maxDecks={6} />
         </div>
 
         {/* Stage Distribution */}
-        <div className="bg-card rounded-lg border p-4">
+        <div className="rounded-lg border bg-card p-4">
           <StageDistributionChart height={320} />
         </div>
       </div>

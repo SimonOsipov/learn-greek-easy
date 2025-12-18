@@ -64,7 +64,7 @@ export const FeedbackVoteButton: React.FC<FeedbackVoteButtonProps> = ({
       <Button
         variant="ghost"
         size="icon"
-        className={cn('h-8 w-8', userVote === 'down' && 'text-destructive bg-destructive/10')}
+        className={cn('h-8 w-8', userVote === 'down' && 'bg-destructive/10 text-destructive')}
         onClick={handleDownvote}
         disabled={isVoting}
         aria-label="Downvote"

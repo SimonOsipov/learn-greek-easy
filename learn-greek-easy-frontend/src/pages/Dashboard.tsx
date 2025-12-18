@@ -178,7 +178,7 @@ export const Dashboard: React.FC = () => {
             ))}
           </div>
         ) : analyticsError ? (
-          <div className="border-destructive/50 bg-destructive/10 text-destructive rounded-lg border p-4 text-center">
+          <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-center text-destructive">
             Failed to load metrics. Please try refreshing the page.
           </div>
         ) : metrics.length > 0 ? (

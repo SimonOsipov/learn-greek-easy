@@ -105,7 +105,7 @@ export function DeleteAccountDialog({ open, onOpenChange }: DeleteAccountDialogP
                 <DialogTitle className="text-red-600">Delete Account?</DialogTitle>
               </div>
               <DialogDescription className="space-y-3 pt-2">
-                <p className="text-foreground font-medium">This will permanently delete:</p>
+                <p className="font-medium text-foreground">This will permanently delete:</p>
                 <ul className="list-inside list-disc space-y-1 text-sm">
                   <li>Your account and all login credentials</li>
                   <li>All learning progress and review history</li>
@@ -154,7 +154,7 @@ export function DeleteAccountDialog({ open, onOpenChange }: DeleteAccountDialogP
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="hover:text-foreground absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                     >
                       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
@@ -187,7 +187,7 @@ export function DeleteAccountDialog({ open, onOpenChange }: DeleteAccountDialogP
                 <DialogTitle className="text-red-600">Final Confirmation</DialogTitle>
               </div>
               <DialogDescription className="space-y-4 pt-2">
-                <p className="text-foreground font-medium">
+                <p className="font-medium text-foreground">
                   Are you absolutely sure you want to delete your account?
                 </p>
                 <p className="text-sm">
