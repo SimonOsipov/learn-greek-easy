@@ -29,7 +29,7 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
 
   const navItems = [
     { path: '/', label: 'Dashboard' },
-    { path: '/decks', label: 'All Decks' },
+    { path: '/decks', label: 'Decks' },
     { path: '/statistics', label: 'Statistics' },
   ];
 

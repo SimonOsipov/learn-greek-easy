@@ -46,6 +46,16 @@ test.describe('Authenticated Pages Visual Tests', () => {
     await takeSnapshot(page, 'Profile Page', testInfo);
   });
 
+  test('Statistics Page', async ({ page }, testInfo) => {
+    await page.goto('/statistics');
+    await waitForPageReady(page);
+
+    // Wait for statistics content
+    await expect(page.getByTestId('statistics-page')).toBeVisible();
+    await page.waitForTimeout(1000); // Wait for charts to render
+    await takeSnapshot(page, 'Statistics Page', testInfo);
+  });
+
   test('Settings Page', async ({ page }, testInfo) => {
     await page.goto('/settings');
     await waitForPageReady(page);

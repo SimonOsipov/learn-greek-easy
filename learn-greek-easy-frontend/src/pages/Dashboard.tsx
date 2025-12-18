@@ -2,12 +2,6 @@ import React, { useEffect } from 'react';
 
 import { useNavigate } from 'react-router-dom';
 
-import {
-  ProgressLineChart,
-  AccuracyAreaChart,
-  DeckPerformanceChart,
-  StageDistributionChart,
-} from '@/components/charts';
 import { DeckCard } from '@/components/display/DeckCard';
 import { MetricCard } from '@/components/display/MetricCard';
 import { WelcomeSection } from '@/components/display/WelcomeSection';
@@ -203,34 +197,6 @@ export const Dashboard: React.FC = () => {
             No progress data yet. Start studying to see your metrics!
           </div>
         )}
-      </section>
-
-      <Separator className="my-6" />
-
-      {/* Progress Charts Section */}
-      <section>
-        <h2 className="mb-4 text-lg font-semibold text-text-primary">Analytics</h2>
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          {/* Progress Over Time */}
-          <div className="bg-card rounded-lg border p-4">
-            <ProgressLineChart height={280} />
-          </div>
-
-          {/* Accuracy Trend */}
-          <div className="bg-card rounded-lg border p-4">
-            <AccuracyAreaChart height={280} />
-          </div>
-
-          {/* Deck Performance */}
-          <div className="bg-card rounded-lg border p-4">
-            <DeckPerformanceChart height={320} maxDecks={6} />
-          </div>
-
-          {/* Stage Distribution */}
-          <div className="bg-card rounded-lg border p-4">
-            <StageDistributionChart height={320} />
-          </div>
-        </div>
       </section>
 
       <Separator className="my-6" />

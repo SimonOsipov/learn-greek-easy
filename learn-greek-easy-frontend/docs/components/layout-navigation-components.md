@@ -80,7 +80,7 @@ import { Route } from 'react-router-dom';
 **Navigation Items**:
 The sidebar includes these navigation links:
 - Dashboard (/) - Home icon
-- All Decks (/decks) - Layers icon
+- Decks (/decks) - Layers icon
 - Statistics (/statistics) - BarChart3 icon
 - Settings (/settings) - Settings icon
 - Profile (/profile) - User icon
@@ -184,7 +184,7 @@ import { Header } from '@/components/layout/Header';
       {isDesktop && (
         <nav>
           <Link to="/">Dashboard</Link>
-          <Link to="/decks">All Decks</Link>
+          <Link to="/decks">Decks</Link>
           <Link to="/statistics">Statistics</Link>
           <Link to="/settings">Settings</Link>
         </nav>
@@ -204,7 +204,7 @@ import { Header } from '@/components/layout/Header';
 
 **Navigation Items** (Desktop only):
 - Dashboard (/)
-- All Decks (/decks)
+- Decks (/decks)
 - Statistics (/statistics)
 - Settings (/settings)
 
