@@ -191,7 +191,7 @@ export const useDeckStore = create<DeckState>()(
 
           // Add level filter if specified
           if (filters.levels.length === 1) {
-            params.level = filters.levels[0].toLowerCase();
+            params.level = filters.levels[0];
           }
 
           // Add search filter
