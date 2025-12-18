@@ -31,7 +31,6 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
     { path: '/', label: 'Dashboard' },
     { path: '/decks', label: 'All Decks' },
     { path: '/statistics', label: 'Statistics' },
-    { path: '/settings', label: 'Settings' },
   ];
 
   const isActiveRoute = (path: string) => {
