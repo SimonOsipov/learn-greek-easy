@@ -22,7 +22,7 @@ export const AppLayout: React.FC = () => {
 
   const sidebarNavItems = [
     { path: '/', label: 'Dashboard', icon: Home },
-    { path: '/decks', label: 'All Decks', icon: Layers },
+    { path: '/decks', label: 'Decks', icon: Layers },
     { path: '/statistics', label: 'Statistics', icon: BarChart3 },
     { path: '/profile', label: 'Profile', icon: User },
   ];

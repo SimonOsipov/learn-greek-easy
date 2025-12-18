@@ -25,18 +25,10 @@ import { NotFound } from '@/pages/NotFound';
 import { Profile } from '@/pages/Profile';
 import { SessionSummaryPage } from '@/pages/SessionSummaryPage';
 import Settings from '@/pages/Settings';
+import Statistics from '@/pages/Statistics';
 import { Unauthorized } from '@/pages/Unauthorized';
 import { PostHogProvider } from '@/providers';
 import { useAppStore, selectIsReady } from '@/stores/appStore';
-
-// Temporary placeholder pages - replace with actual pages
-
-const StatisticsPage = () => (
-  <div>
-    <h1 className="mb-4 text-2xl font-semibold">Statistics</h1>
-    <p>Statistics will go here.</p>
-  </div>
-);
 
 // Admin placeholder page
 const AdminPanel = () => (
@@ -73,7 +65,7 @@ function AppContent() {
               <Route path="dashboard" element={<Navigate to="/" replace />} />
               <Route path="decks" element={<DecksPage />} />
               <Route path="decks/:id" element={<DeckDetailPage />} />
-              <Route path="statistics" element={<StatisticsPage />} />
+              <Route path="statistics" element={<Statistics />} />
               <Route path="stats" element={<Navigate to="/statistics" replace />} />
               <Route path="settings" element={<Settings />} />
               <Route path="profile" element={<Profile />} />

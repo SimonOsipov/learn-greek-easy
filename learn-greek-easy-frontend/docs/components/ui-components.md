@@ -235,7 +235,7 @@ import { NavigationMenu, NavigationMenuList, NavigationMenuItem, NavigationMenuL
     </NavigationMenuItem>
     <NavigationMenuItem>
       <NavigationMenuLink href="/decks">
-        All Decks
+        Decks
       </NavigationMenuLink>
     </NavigationMenuItem>
   </NavigationMenuList>
@@ -336,7 +336,7 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
   <SheetContent side="right">
     <nav className="space-y-4">
       <a href="/dashboard">Dashboard</a>
-      <a href="/decks">All Decks</a>
+      <a href="/decks">Decks</a>
       <a href="/statistics">Statistics</a>
       <a href="/settings">Settings</a>
     </nav>
