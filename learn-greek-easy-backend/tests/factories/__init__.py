@@ -49,6 +49,9 @@ from tests.factories.base import BaseFactory, unique_email, unique_token, utc_no
 # Content factories
 from tests.factories.content import CardFactory, DeckFactory
 
+# Feedback factories
+from tests.factories.feedback import FeedbackFactory, FeedbackVoteFactory
+
 # Progress factories
 from tests.factories.progress import (
     SM2_DEFAULT_EASINESS_FACTOR,
@@ -75,6 +78,9 @@ __all__ = [
     # Content
     "DeckFactory",
     "CardFactory",
+    # Feedback
+    "FeedbackFactory",
+    "FeedbackVoteFactory",
     # Progress
     "UserDeckProgressFactory",
     "CardStatisticsFactory",

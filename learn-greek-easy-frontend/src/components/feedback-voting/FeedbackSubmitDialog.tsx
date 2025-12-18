@@ -90,7 +90,11 @@ export const FeedbackSubmitDialog: React.FC<FeedbackSubmitDialogProps> = ({
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form
+            onSubmit={form.handleSubmit(onSubmit)}
+            className="space-y-4"
+            data-testid="feedback-form"
+          >
             <FormField
               control={form.control}
               name="category"
@@ -99,7 +103,7 @@ export const FeedbackSubmitDialog: React.FC<FeedbackSubmitDialogProps> = ({
                   <FormLabel>Category</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
-                      <SelectTrigger>
+                      <SelectTrigger data-testid="feedback-category-select">
                         <SelectValue placeholder="Select category" />
                       </SelectTrigger>
                     </FormControl>
@@ -123,7 +127,11 @@ export const FeedbackSubmitDialog: React.FC<FeedbackSubmitDialogProps> = ({
                 <FormItem>
                   <FormLabel>Title</FormLabel>
                   <FormControl>
-                    <Input placeholder="Brief summary of your feedback" {...field} />
+                    <Input
+                      placeholder="Brief summary of your feedback"
+                      data-testid="feedback-title-input"
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -140,6 +148,7 @@ export const FeedbackSubmitDialog: React.FC<FeedbackSubmitDialogProps> = ({
                     <Textarea
                       placeholder="Provide details about your feedback..."
                       className="min-h-[120px]"
+                      data-testid="feedback-description-input"
                       {...field}
                     />
                   </FormControl>
@@ -149,10 +158,15 @@ export const FeedbackSubmitDialog: React.FC<FeedbackSubmitDialogProps> = ({
             />
 
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                data-testid="feedback-cancel-button"
+              >
                 Cancel
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
+              <Button type="submit" disabled={isSubmitting} data-testid="feedback-submit-button">
                 {isSubmitting ? 'Submitting...' : 'Submit'}
               </Button>
             </DialogFooter>

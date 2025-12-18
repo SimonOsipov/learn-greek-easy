@@ -25,7 +25,7 @@ from collections.abc import Generator
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from tests.factories.base import BaseFactory
+from tests.factories.base import set_factory_session
 
 # =============================================================================
 # Factory Session Binding
@@ -47,9 +47,9 @@ def bind_factory_session(db_session: AsyncSession) -> Generator[None, None, None
     Yields:
         None: Allows the test to run.
     """
-    BaseFactory._session = db_session
+    set_factory_session(db_session)
     yield
-    BaseFactory._session = None
+    set_factory_session(None)
 
 
 # =============================================================================
@@ -169,6 +169,21 @@ def progress_url(api_base_url: str) -> str:
             assert response.status_code == 200
     """
     return f"{api_base_url}/progress"
+
+
+@pytest.fixture
+def feedback_url(api_base_url: str) -> str:
+    """Return the feedback endpoints base URL.
+
+    Returns:
+        str: The feedback URL ("/api/v1/feedback")
+
+    Example:
+        async def test_list_feedback(client, feedback_url, auth_headers):
+            response = await client.get(feedback_url, headers=auth_headers)
+            assert response.status_code == 200
+    """
+    return f"{api_base_url}/feedback"
 
 
 # =============================================================================
@@ -424,6 +439,7 @@ __all__ = [
     "reviews_url",
     "users_url",
     "progress_url",
+    "feedback_url",
     # Registration/Login fixtures
     "valid_registration_data",
     "valid_login_data",

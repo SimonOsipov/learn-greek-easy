@@ -28,14 +28,14 @@ export const FeedbackFilters: React.FC = () => {
   const hasActiveFilters = filters.category || filters.status;
 
   return (
-    <div className="flex flex-wrap items-center gap-4">
+    <div className="flex flex-wrap items-center gap-4" data-testid="feedback-filters">
       <Select
         value={filters.category || 'all'}
         onValueChange={(v) =>
           setFilters({ category: v === 'all' ? null : (v as FeedbackCategory) })
         }
       >
-        <SelectTrigger className="w-[180px]">
+        <SelectTrigger className="w-[180px]" data-testid="category-filter">
           <SelectValue placeholder="Category" />
         </SelectTrigger>
         <SelectContent>
@@ -52,7 +52,7 @@ export const FeedbackFilters: React.FC = () => {
         value={filters.status || 'all'}
         onValueChange={(v) => setFilters({ status: v === 'all' ? null : (v as FeedbackStatus) })}
       >
-        <SelectTrigger className="w-[180px]">
+        <SelectTrigger className="w-[180px]" data-testid="status-filter">
           <SelectValue placeholder="Status" />
         </SelectTrigger>
         <SelectContent>
@@ -73,7 +73,7 @@ export const FeedbackFilters: React.FC = () => {
           setFilters({ sort, order });
         }}
       >
-        <SelectTrigger className="w-[150px]">
+        <SelectTrigger className="w-[150px]" data-testid="sort-filter">
           <SelectValue placeholder="Sort by" />
         </SelectTrigger>
         <SelectContent>
@@ -85,7 +85,7 @@ export const FeedbackFilters: React.FC = () => {
       </Select>
 
       {hasActiveFilters && (
-        <Button variant="ghost" size="sm" onClick={clearFilters}>
+        <Button variant="ghost" size="sm" onClick={clearFilters} data-testid="clear-filters-button">
           <X className="mr-2 h-4 w-4" />
           Clear
         </Button>

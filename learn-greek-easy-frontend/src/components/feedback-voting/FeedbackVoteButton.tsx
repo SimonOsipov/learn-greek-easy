@@ -39,7 +39,7 @@ export const FeedbackVoteButton: React.FC<FeedbackVoteButtonProps> = ({
   };
 
   return (
-    <div className="flex flex-col items-center gap-1">
+    <div className="flex flex-col items-center gap-1" data-testid="vote-buttons">
       <Button
         variant="ghost"
         size="icon"
@@ -47,6 +47,7 @@ export const FeedbackVoteButton: React.FC<FeedbackVoteButtonProps> = ({
         onClick={handleUpvote}
         disabled={isVoting}
         aria-label="Upvote"
+        data-testid="upvote-button"
       >
         <ChevronUp className="h-5 w-5" />
       </Button>
@@ -56,6 +57,7 @@ export const FeedbackVoteButton: React.FC<FeedbackVoteButtonProps> = ({
           voteCount > 0 && 'text-primary',
           voteCount < 0 && 'text-destructive'
         )}
+        data-testid="vote-count"
       >
         {voteCount}
       </span>
@@ -66,6 +68,7 @@ export const FeedbackVoteButton: React.FC<FeedbackVoteButtonProps> = ({
         onClick={handleDownvote}
         disabled={isVoting}
         aria-label="Downvote"
+        data-testid="downvote-button"
       >
         <ChevronDown className="h-5 w-5" />
       </Button>

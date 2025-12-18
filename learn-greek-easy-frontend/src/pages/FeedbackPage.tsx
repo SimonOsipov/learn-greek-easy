@@ -17,15 +17,17 @@ export const FeedbackPage: React.FC = () => {
   }, [fetchFeedbackList]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-testid="feedback-page">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Feedback & Ideas</h1>
+          <h1 className="text-3xl font-bold" data-testid="feedback-page-title">
+            Feedback & Ideas
+          </h1>
           <p className="mt-2 text-muted-foreground">
             Share your ideas, report bugs, and vote on suggestions
           </p>
         </div>
-        <Button onClick={() => setIsSubmitDialogOpen(true)}>
+        <Button onClick={() => setIsSubmitDialogOpen(true)} data-testid="open-submit-dialog-button">
           <Plus className="mr-2 h-4 w-4" />
           Submit Feedback
         </Button>
@@ -33,7 +35,14 @@ export const FeedbackPage: React.FC = () => {
 
       <FeedbackFilters />
 
-      {error && <div className="bg-destructive/10 text-destructive rounded-md p-4">{error}</div>}
+      {error && (
+        <div
+          className="bg-destructive/10 text-destructive rounded-md p-4"
+          data-testid="feedback-error"
+        >
+          {error}
+        </div>
+      )}
 
       <FeedbackList />
 
