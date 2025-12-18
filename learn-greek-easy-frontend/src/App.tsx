@@ -18,6 +18,7 @@ import { Register } from '@/pages/auth/Register';
 import { Dashboard } from '@/pages/Dashboard';
 import { DeckDetailPage } from '@/pages/DeckDetailPage';
 import { DecksPage } from '@/pages/DecksPage';
+import { FeedbackPage } from '@/pages/FeedbackPage';
 import { FlashcardReviewPage } from '@/pages/FlashcardReviewPage';
 import { NotFound } from '@/pages/NotFound';
 import { Profile } from '@/pages/Profile';
@@ -66,6 +67,7 @@ function AppContent() {
               <Route path="stats" element={<Navigate to="/statistics" replace />} />
               <Route path="settings" element={<Settings />} />
               <Route path="profile" element={<Profile />} />
+              <Route path="feedback" element={<FeedbackPage />} />
               <Route path="activity-feed-test" element={<ActivityFeedTest />} />
             </Route>
             {/* Review page outside AppLayout for full-screen experience */}

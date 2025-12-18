@@ -180,3 +180,27 @@ export const CATEGORY_CONFIG: Record<FeedbackCategory, { label: string; icon: st
     icon: 'bug',
   },
 };
+
+// ============================================
+// Filter Constants for UI
+// ============================================
+
+/**
+ * Category options for dropdowns/filters
+ */
+export const FEEDBACK_CATEGORIES = [
+  { value: 'feature_request' as const, label: 'Feature Request' },
+  { value: 'bug_incorrect_data' as const, label: 'Bug / Incorrect Data' },
+] as const;
+
+/**
+ * Status options for dropdowns/filters
+ */
+export const FEEDBACK_STATUSES = [
+  { value: 'new' as const, label: 'New' },
+  { value: 'under_review' as const, label: 'Under Review' },
+  { value: 'planned' as const, label: 'Planned' },
+  { value: 'in_progress' as const, label: 'In Progress' },
+  { value: 'completed' as const, label: 'Completed' },
+  { value: 'cancelled' as const, label: 'Cancelled' },
+] as const;
