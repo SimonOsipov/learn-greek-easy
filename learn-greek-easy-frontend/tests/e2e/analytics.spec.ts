@@ -57,15 +57,20 @@ test.describe('Analytics Dashboard', () => {
     // Verify dashboard loaded
     await expect(page.getByRole('heading', { name: /dashboard/i })).toBeVisible();
 
-    // Look for widget metrics (flexible matching)
+    // Wait for "Your Progress" section to be visible
+    const progressSection = page.getByRole('heading', { name: /your progress/i });
+    await expect(progressSection).toBeVisible({ timeout: 10000 });
+
+    // Look for actual metric labels on Dashboard
+    // Dashboard has: Due Today, Current Streak, Mastered, Accuracy, Total Time
     const metricPatterns = [
-      /\d+.*day.*streak/i,
-      /\d+.*word/i,
-      /\d+%.*retention/i,
-      /\d+.*min/i,
-      /streak/i,
-      /learned/i,
-      /studied/i,
+      /due today/i,
+      /current streak/i,
+      /mastered/i,
+      /accuracy/i,
+      /total time/i,
+      /cards to review/i,
+      /words total/i,
     ];
 
     let foundMetrics = 0;
@@ -78,7 +83,7 @@ test.describe('Analytics Dashboard', () => {
       }
     }
 
-    // At least some metrics should be visible
+    // At least some metrics should be visible (Dashboard has 5 metrics)
     expect(foundMetrics).toBeGreaterThan(0);
   });
 
