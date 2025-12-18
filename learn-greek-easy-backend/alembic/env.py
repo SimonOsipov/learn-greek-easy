@@ -22,12 +22,17 @@ from src.db.models import (  # noqa: F401
     CardStatus,
     Deck,
     DeckLevel,
+    Feedback,
+    FeedbackCategory,
+    FeedbackStatus,
+    FeedbackVote,
     RefreshToken,
     Review,
     ReviewRating,
     User,
     UserDeckProgress,
     UserSettings,
+    VoteType,
 )
 
 # Alembic Config object
