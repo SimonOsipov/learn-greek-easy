@@ -64,9 +64,21 @@ export default {
             text: '#6b7280',
           },
         },
+        // Sidebar colors (shadcn/ui)
+        sidebar: {
+          DEFAULT: 'hsl(var(--sidebar-background))',
+          foreground: 'hsl(var(--sidebar-foreground))',
+          primary: 'hsl(var(--sidebar-primary))',
+          'primary-foreground': 'hsl(var(--sidebar-primary-foreground))',
+          accent: 'hsl(var(--sidebar-accent))',
+          'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
+          border: 'hsl(var(--sidebar-border))',
+          ring: 'hsl(var(--sidebar-ring))',
+        },
       },
       fontFamily: {
         sans: [
+          'Inter',
           '-apple-system',
           'BlinkMacSystemFont',
           '"Segoe UI"',
@@ -142,13 +154,12 @@ export default {
       },
       borderRadius: {
         'none': '0px',
-        'sm': '4px',
-        'DEFAULT': '8px',
-        'md': '8px',
-        'lg': '12px',
-        'xl': '16px',
-        '2xl': '20px',
-        '3xl': '24px',
+        'sm': 'calc(var(--radius) - 4px)',
+        'md': 'calc(var(--radius) - 2px)',
+        'lg': 'var(--radius)',
+        'xl': 'calc(var(--radius) + 4px)',
+        '2xl': 'calc(var(--radius) + 8px)',
+        '3xl': 'calc(var(--radius) + 12px)',
         'full': '9999px',
       },
       boxShadow: {
