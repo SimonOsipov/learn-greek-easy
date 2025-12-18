@@ -77,6 +77,31 @@ class ReviewRating(int, enum.Enum):
     PERFECT = 5  # Perfect response
 
 
+class FeedbackCategory(str, enum.Enum):
+    """Category of feedback submission."""
+
+    FEATURE_REQUEST = "feature_request"
+    BUG_INCORRECT_DATA = "bug_incorrect_data"
+
+
+class FeedbackStatus(str, enum.Enum):
+    """Status of feedback item (admin-managed)."""
+
+    NEW = "new"
+    UNDER_REVIEW = "under_review"
+    PLANNED = "planned"
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+    CANCELLED = "cancelled"
+
+
+class VoteType(str, enum.Enum):
+    """Type of vote on feedback."""
+
+    UP = "up"
+    DOWN = "down"
+
+
 # ============================================================================
 # User Models
 # ============================================================================
@@ -163,6 +188,15 @@ class User(Base, TimestampMixin):
     )
     reviews: Mapped[List["Review"]] = relationship(
         back_populates="user",
+        lazy="selectin",
+        cascade="all, delete-orphan",
+    )
+    feedback_items: Mapped[List["Feedback"]] = relationship(
+        back_populates="user",
+        lazy="selectin",
+        cascade="all, delete-orphan",
+    )
+    feedback_votes: Mapped[List["FeedbackVote"]] = relationship(
         lazy="selectin",
         cascade="all, delete-orphan",
     )
@@ -558,3 +592,113 @@ class Review(Base, TimestampMixin):
             f"<Review(id={self.id}, user_id={self.user_id}, "
             f"card_id={self.card_id}, quality={self.quality})>"
         )
+
+
+# ============================================================================
+# Feedback Models
+# ============================================================================
+
+
+class Feedback(Base, TimestampMixin):
+    """User-submitted feedback or bug report."""
+
+    __tablename__ = "feedback"
+
+    # Primary key
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True,
+        server_default=func.uuid_generate_v4(),
+    )
+
+    # Foreign key - author
+    user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
+    # Content
+    title: Mapped[str] = mapped_column(
+        String(255),
+        nullable=False,
+    )
+    description: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+    )
+
+    # Classification
+    category: Mapped[FeedbackCategory] = mapped_column(
+        nullable=False,
+        index=True,
+    )
+    status: Mapped[FeedbackStatus] = mapped_column(
+        nullable=False,
+        default=FeedbackStatus.NEW,
+        index=True,
+    )
+
+    # Denormalized vote count for efficient sorting
+    vote_count: Mapped[int] = mapped_column(
+        Integer,
+        default=0,
+        nullable=False,
+        index=True,
+    )
+
+    # Relationships
+    user: Mapped["User"] = relationship(
+        back_populates="feedback_items",
+        lazy="selectin",
+    )
+    votes: Mapped[List["FeedbackVote"]] = relationship(
+        back_populates="feedback",
+        lazy="selectin",
+        cascade="all, delete-orphan",
+    )
+
+    def __repr__(self) -> str:
+        return f"<Feedback(id={self.id}, title={self.title[:30]}, category={self.category})>"
+
+
+class FeedbackVote(Base, TimestampMixin):
+    """Vote on a feedback item (one per user per feedback)."""
+
+    __tablename__ = "feedback_votes"
+    __table_args__ = (UniqueConstraint("user_id", "feedback_id", name="uq_user_feedback_vote"),)
+
+    # Primary key
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True,
+        server_default=func.uuid_generate_v4(),
+    )
+
+    # Foreign keys
+    user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    feedback_id: Mapped[UUID] = mapped_column(
+        ForeignKey("feedback.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
+    # Vote type
+    vote_type: Mapped[VoteType] = mapped_column(
+        nullable=False,
+    )
+
+    # Relationships
+    feedback: Mapped["Feedback"] = relationship(
+        back_populates="votes",
+        lazy="selectin",
+    )
+    user: Mapped["User"] = relationship(
+        lazy="selectin",
+        overlaps="feedback_votes",
+    )
+
+    def __repr__(self) -> str:
+        return f"<FeedbackVote(user_id={self.user_id}, feedback_id={self.feedback_id}, type={self.vote_type})>"

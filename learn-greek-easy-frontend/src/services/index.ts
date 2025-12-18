@@ -94,3 +94,20 @@ export type {
   TodayStats,
   TrendsSummary,
 } from './progressAPI';
+
+// Feedback API
+export { feedbackAPI } from './feedbackAPI';
+export type {
+  CreateFeedbackRequest,
+  FeedbackCategory,
+  FeedbackFilters,
+  FeedbackItem,
+  FeedbackListParams,
+  FeedbackListResponse,
+  FeedbackSortField,
+  FeedbackStatus,
+  SortOrder,
+  VoteRequest,
+  VoteResponse,
+  VoteType,
+} from '@/types/feedback';

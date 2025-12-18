@@ -20,10 +20,13 @@ from src.db.models import (
     CardStatistics,
     Deck,
     DeckLevel,
+    Feedback,
+    FeedbackVote,
     Review,
     User,
     UserDeckProgress,
     UserSettings,
+    VoteType,
 )
 from src.services.seed_service import SeedService
 
@@ -199,7 +202,9 @@ class TestSeedServiceTruncation:
         await db_session.commit()
 
         assert result["success"] is True
-        assert len(result["truncated_tables"]) == 8
+        # 10 tables: reviews, card_statistics, user_deck_progress, feedback_votes,
+        # feedback, refresh_tokens, user_settings, cards, users, decks
+        assert len(result["truncated_tables"]) == 10
 
 
 # ============================================================================
@@ -361,3 +366,157 @@ class TestSeedServiceDataIntegrity:
 
             card = await db_session.scalar(select(Card).where(Card.id == review.card_id))
             assert card is not None, f"Card not found for review {review.id}"
+
+
+# ============================================================================
+# Feedback Seeding Tests
+# ============================================================================
+
+
+@pytest.mark.no_parallel
+class TestSeedServiceFeedback:
+    """Integration tests for feedback seeding with real database."""
+
+    @pytest.mark.asyncio
+    async def test_seed_creates_feedback_items(self, db_session: AsyncSession, enable_seeding):
+        """seed_all creates 8 feedback items."""
+        seed_service = SeedService(db_session)
+
+        await seed_service.seed_all()
+
+        # Verify 8 feedback items were created
+        feedback_count = await db_session.scalar(select(func.count(Feedback.id)))
+        assert feedback_count == 8
+
+    @pytest.mark.asyncio
+    async def test_seed_creates_votes(self, db_session: AsyncSession, enable_seeding):
+        """seed_all creates votes for feedback items."""
+        seed_service = SeedService(db_session)
+
+        await seed_service.seed_all()
+
+        # Verify votes were created
+        vote_count = await db_session.scalar(select(func.count(FeedbackVote.id)))
+        assert vote_count > 0
+
+        # Verify both upvotes and downvotes exist
+        upvote_count = await db_session.scalar(
+            select(func.count(FeedbackVote.id)).where(FeedbackVote.vote_type == VoteType.UP)
+        )
+        downvote_count = await db_session.scalar(
+            select(func.count(FeedbackVote.id)).where(FeedbackVote.vote_type == VoteType.DOWN)
+        )
+
+        assert upvote_count > 0, "Should have upvotes"
+        assert downvote_count > 0, "Should have downvotes"
+        assert downvote_count == 2, "Should have exactly 2 downvotes"
+
+    @pytest.mark.asyncio
+    async def test_vote_counts_match_actual_votes(self, db_session: AsyncSession, enable_seeding):
+        """CRITICAL: Verify denormalized vote_count matches actual votes."""
+        seed_service = SeedService(db_session)
+
+        await seed_service.seed_all()
+
+        # Get all feedback items
+        feedback_items = (await db_session.execute(select(Feedback))).scalars().all()
+
+        for feedback in feedback_items:
+            # Count actual votes for this feedback
+            upvotes = await db_session.scalar(
+                select(func.count(FeedbackVote.id)).where(
+                    FeedbackVote.feedback_id == feedback.id,
+                    FeedbackVote.vote_type == VoteType.UP,
+                )
+            )
+            downvotes = await db_session.scalar(
+                select(func.count(FeedbackVote.id)).where(
+                    FeedbackVote.feedback_id == feedback.id,
+                    FeedbackVote.vote_type == VoteType.DOWN,
+                )
+            )
+
+            expected_count = upvotes - downvotes
+            assert feedback.vote_count == expected_count, (
+                f"Feedback '{feedback.title}' has vote_count={feedback.vote_count} "
+                f"but expected {expected_count} (upvotes={upvotes}, downvotes={downvotes})"
+            )
+
+    @pytest.mark.asyncio
+    async def test_seed_creates_diverse_vote_scenarios(
+        self, db_session: AsyncSession, enable_seeding
+    ):
+        """Verify diverse vote scenarios: popular, controversial, new."""
+        seed_service = SeedService(db_session)
+
+        await seed_service.seed_all()
+
+        # Get feedback by title
+        dark_mode = await db_session.scalar(
+            select(Feedback).where(Feedback.title == "Add dark mode support")
+        )
+        gamification = await db_session.scalar(
+            select(Feedback).where(Feedback.title == "Add gamification features")
+        )
+        spaced_rep = await db_session.scalar(
+            select(Feedback).where(Feedback.title == "Add spaced repetition settings")
+        )
+        card_order = await db_session.scalar(
+            select(Feedback).where(Feedback.title == "Card order randomization broken")
+        )
+
+        # Dark mode should be popular (high vote count)
+        assert dark_mode is not None
+        assert dark_mode.vote_count == 3, f"Dark mode expected +3, got {dark_mode.vote_count}"
+
+        # Gamification should be controversial (mixed votes)
+        assert gamification is not None
+        assert (
+            gamification.vote_count == 1
+        ), f"Gamification expected +1, got {gamification.vote_count}"
+
+        # Spaced repetition should have no votes (new)
+        assert spaced_rep is not None
+        assert spaced_rep.vote_count == 0, f"Spaced rep expected 0, got {spaced_rep.vote_count}"
+
+        # Card order bug should be mixed (0 net)
+        assert card_order is not None
+        assert card_order.vote_count == 0, f"Card order expected 0, got {card_order.vote_count}"
+
+    @pytest.mark.asyncio
+    async def test_feedback_linked_to_valid_users(self, db_session: AsyncSession, enable_seeding):
+        """Feedback items are linked to valid users."""
+        seed_service = SeedService(db_session)
+
+        await seed_service.seed_all()
+
+        feedback_items = (await db_session.execute(select(Feedback))).scalars().all()
+
+        for feedback in feedback_items:
+            user = await db_session.scalar(select(User).where(User.id == feedback.user_id))
+            assert user is not None, f"User not found for feedback '{feedback.title}'"
+
+    @pytest.mark.asyncio
+    async def test_votes_linked_to_valid_users_and_feedback(
+        self, db_session: AsyncSession, enable_seeding
+    ):
+        """Votes are linked to valid users and feedback items."""
+        seed_service = SeedService(db_session)
+
+        await seed_service.seed_all()
+
+        votes = (await db_session.execute(select(FeedbackVote))).scalars().all()
+
+        for vote in votes:
+            user = await db_session.scalar(select(User).where(User.id == vote.user_id))
+            assert user is not None, f"User not found for vote {vote.id}"
+
+            feedback = await db_session.scalar(
+                select(Feedback).where(Feedback.id == vote.feedback_id)
+            )
+            assert feedback is not None, f"Feedback not found for vote {vote.id}"
+
+            # Verify user is not voting on their own feedback
+            assert (
+                vote.user_id != feedback.user_id
+            ), f"User {user.email} voted on their own feedback '{feedback.title}'"

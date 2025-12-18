@@ -20,6 +20,16 @@ from src.schemas.deck import (
     DeckWithProgressResponse,
 )
 
+# Feedback schemas
+from src.schemas.feedback import (
+    AuthorBriefResponse,
+    FeedbackCreate,
+    FeedbackListResponse,
+    FeedbackResponse,
+    VoteRequest,
+    VoteResponse,
+)
+
 # Progress schemas
 from src.schemas.progress import (  # Existing; Dashboard schemas; Deck Progress schemas; Learning Trends schemas; Achievements schemas
     Achievement,
@@ -152,4 +162,11 @@ __all__ = [
     "SeedRequest",
     "SeedResultResponse",
     "SeedStatusResponse",
+    # Feedback
+    "AuthorBriefResponse",
+    "FeedbackCreate",
+    "FeedbackListResponse",
+    "FeedbackResponse",
+    "VoteRequest",
+    "VoteResponse",
 ]
