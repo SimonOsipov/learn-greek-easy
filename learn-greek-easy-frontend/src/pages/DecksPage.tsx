@@ -28,11 +28,11 @@ export const DecksPage: React.FC = () => {
   const totalDecks = 6; // Mock value - in production, fetch from API
 
   return (
-    <div className="container mx-auto px-4 py-6 md:py-8">
+    <div className="space-y-6 pb-8">
       {/* Page Header */}
-      <div className="mb-6 md:mb-8">
-        <h1 className="text-2xl font-semibold text-gray-900 md:text-3xl">Available Decks</h1>
-        <p className="mt-2 text-sm text-gray-600 md:text-base">
+      <div>
+        <h1 className="text-2xl font-semibold text-text-primary md:text-3xl">Available Decks</h1>
+        <p className="mt-2 text-sm text-text-muted md:text-base">
           Choose a deck to start learning Greek vocabulary
         </p>
       </div>
