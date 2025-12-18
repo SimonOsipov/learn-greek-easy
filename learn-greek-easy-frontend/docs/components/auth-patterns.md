@@ -78,57 +78,6 @@ Authentication pages (login, register) use `PublicRoute` to prevent authenticate
 } />
 ```
 
-### Session Management Pattern
-
-Integrate `SessionWarningDialog` at the application root level to monitor session expiration:
-
-```tsx
-// AppLayout.tsx or App.tsx
-import { SessionWarningDialog } from '@/components/auth/SessionWarningDialog';
-import { useAuthStore } from '@/stores/authStore';
-import { useState, useEffect } from 'react';
-
-export function AppLayout({ children }) {
-  const { sessionExpiresAt, extendSession } = useAuthStore();
-  const [showWarning, setShowWarning] = useState(false);
-  const [remainingSeconds, setRemainingSeconds] = useState(0);
-
-  useEffect(() => {
-    // Check session expiration every second
-    const checkInterval = setInterval(() => {
-      if (!sessionExpiresAt) return;
-
-      const remaining = Math.floor((sessionExpiresAt - Date.now()) / 1000);
-      setRemainingSeconds(remaining);
-
-      // Show warning 5 minutes before expiration
-      if (remaining <= 300 && remaining > 0) {
-        setShowWarning(true);
-      } else if (remaining <= 0) {
-        setShowWarning(false);
-        // Auto-logout handled by auth store
-      }
-    }, 1000);
-
-    return () => clearInterval(checkInterval);
-  }, [sessionExpiresAt]);
-
-  return (
-    <>
-      {children}
-      <SessionWarningDialog
-        open={showWarning}
-        onExtendSession={() => {
-          extendSession();
-          setShowWarning(false);
-        }}
-        remainingSeconds={remainingSeconds}
-      />
-    </>
-  );
-}
-```
-
 ### Logout Flow Pattern
 
 Standard logout flow using `LogoutDialog` in user menu:
@@ -180,7 +129,6 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { PublicRoute } from '@/components/auth/PublicRoute';
-import { SessionWarningDialog } from '@/components/auth/SessionWarningDialog';
 
 function App() {
   return (
@@ -199,38 +147,7 @@ function App() {
           <Route path="decks" element={<Decks />} />
         </Route>
       </Routes>
-
-      {/* Step 3: Add session monitoring */}
-      <SessionManager />
     </BrowserRouter>
-  );
-}
-
-// SessionManager.tsx - Session monitoring
-function SessionManager() {
-  const { sessionExpiresAt, extendSession } = useAuthStore();
-  const [showWarning, setShowWarning] = useState(false);
-  const [remainingSeconds, setRemainingSeconds] = useState(0);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const remaining = Math.floor((sessionExpiresAt - Date.now()) / 1000);
-      setRemainingSeconds(remaining);
-      setShowWarning(remaining <= 300 && remaining > 0);
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [sessionExpiresAt]);
-
-  return (
-    <SessionWarningDialog
-      open={showWarning}
-      onExtendSession={() => {
-        extendSession();
-        setShowWarning(false);
-      }}
-      remainingSeconds={remainingSeconds}
-    />
   );
 }
 ```

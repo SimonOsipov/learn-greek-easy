@@ -221,43 +221,7 @@ export function WarningWithActionsExample() {
 }
 
 /**
- * Example 8: Non-dismissible AlertDialog (Session Expiry)
- */
-export function SessionExpiryExample() {
-  const [showExpiry, setShowExpiry] = useState(false);
-
-  const handleExtend = () => {
-    console.info('Session extended');
-    setShowExpiry(false);
-  };
-
-  const handleLogout = () => {
-    console.info('User logged out');
-    setShowExpiry(false);
-  };
-
-  return (
-    <>
-      <Button onClick={() => setShowExpiry(true)}>Simulate Session Expiry</Button>
-
-      <AlertDialog
-        open={showExpiry}
-        onOpenChange={setShowExpiry}
-        title="Session Expiring Soon"
-        description="Your session will expire in 2 minutes due to inactivity. Would you like to extend your session?"
-        variant="warning"
-        dismissible={false}
-        actions={[
-          { label: 'Extend Session', onClick: handleExtend, variant: 'default' },
-          { label: 'Logout', onClick: handleLogout, variant: 'outline' },
-        ]}
-      />
-    </>
-  );
-}
-
-/**
- * Example 9: Info AlertDialog
+ * Example 8: Info AlertDialog
  */
 export function InfoAlertExample() {
   const [showInfo, setShowInfo] = useState(false);
@@ -280,7 +244,7 @@ export function InfoAlertExample() {
 }
 
 /**
- * Example 10: ConfirmDialog with External Loading State
+ * Example 9: ConfirmDialog with External Loading State
  */
 export function ExternalLoadingExample() {
   const [showDialog, setShowDialog] = useState(false);
