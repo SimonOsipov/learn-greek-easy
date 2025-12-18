@@ -24,7 +24,7 @@ This guide has been split into category-based files for easier navigation. Each 
 ### Authentication & Security
 
 **[Auth Components](../../learn-greek-easy-frontend/docs/components/auth-components.md)** (894 lines)
-- ProtectedRoute, PublicRoute, RouteGuard, AuthLayout, LogoutDialog, SessionWarningDialog
+- ProtectedRoute, PublicRoute, RouteGuard, AuthLayout, LogoutDialog
 
 **[Auth Patterns](../../learn-greek-easy-frontend/docs/components/auth-patterns.md)** (301 lines)
 - Authentication UI patterns, form layouts, validation patterns

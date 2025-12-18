@@ -241,28 +241,28 @@ function ConnectionComponent() {
 }
 ```
 
-**Non-dismissible Alert (Session Expiry)**
+**Non-dismissible Alert (Critical Warning)**
 ```tsx
 import { AlertDialog } from '@/components/dialogs';
 
-function SessionMonitor() {
-  const [showExpiry, setShowExpiry] = useState(false);
+function CriticalWarning() {
+  const [showWarning, setShowWarning] = useState(false);
 
-  const handleExtend = () => {
-    extendSession();
-    setShowExpiry(false);
+  const handleAcknowledge = () => {
+    acknowledgeWarning();
+    setShowWarning(false);
   };
 
   return (
     <AlertDialog
-      open={showExpiry}
-      onOpenChange={setShowExpiry}
-      title="Session Expiring Soon"
-      description="Your session will expire in 2 minutes."
+      open={showWarning}
+      onOpenChange={setShowWarning}
+      title="Critical Warning"
+      description="This action cannot be undone. Please acknowledge to continue."
       variant="warning"
       dismissible={false}
       actions={[
-        { label: 'Extend Session', onClick: handleExtend }
+        { label: 'I Understand', onClick: handleAcknowledge }
       ]}
     />
   );
@@ -357,7 +357,6 @@ See `examples.tsx` for comprehensive usage examples including:
 
 - **Base Dialog**: `/src/components/ui/dialog.tsx` (shadcn/ui)
 - **LogoutDialog**: `/src/components/auth/LogoutDialog.tsx` (could be refactored)
-- **SessionWarningDialog**: `/src/components/auth/SessionWarningDialog.tsx` (custom timer logic)
 
 ---
 

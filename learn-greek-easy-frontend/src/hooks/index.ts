@@ -18,7 +18,6 @@ export { useTrackEvent } from './useTrackEvent';
 export type { AnalyticsEventName, EventProperties } from './useTrackEvent';
 
 // Utility hooks
-export { useActivityMonitor } from './useActivityMonitor';
 export { useKeyboardShortcuts } from './useKeyboardShortcuts';
 export { usePremiumAccess } from './usePremiumAccess';
 export { useToast } from './use-toast';

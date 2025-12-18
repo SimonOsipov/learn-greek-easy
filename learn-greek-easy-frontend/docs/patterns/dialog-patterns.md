@@ -93,7 +93,7 @@ const [open, setOpen] = useState(false);
 
 Prevent accidental dismissal for critical actions.
 
-**Pattern** (from SessionWarningDialog.tsx):
+**Pattern**:
 ```tsx
 <Dialog open={open} onOpenChange={() => {}}>
   <DialogContent onInteractOutside={(e) => e.preventDefault()}>
@@ -103,9 +103,9 @@ Prevent accidental dismissal for critical actions.
 ```
 
 **When to Use**:
-- Session expiration warnings
 - Critical confirmations
 - Multi-step processes
+- Destructive action confirmations
 
 ---
 
@@ -131,7 +131,7 @@ Standard dialog sizes for different content types:
 ### When to Use
 
 - **Confirmation Dialog**: Logout, delete, cancel operations
-- **Non-Dismissible Dialog**: Session warnings, critical errors
+- **Non-Dismissible Dialog**: Critical errors, destructive action confirmations
 - **Small Dialog**: Quick confirmations
 - **Medium Dialog**: Most confirmations and simple forms
 
@@ -149,7 +149,6 @@ Standard dialog sizes for different content types:
 
 - Dialog: `@/components/ui/dialog`
 - LogoutDialog: `/src/components/auth/LogoutDialog.tsx`
-- SessionWarningDialog: `/src/components/auth/SessionWarningDialog.tsx`
 
 ---
 

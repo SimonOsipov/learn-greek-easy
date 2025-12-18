@@ -6,13 +6,11 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { PublicRoute } from '@/components/auth/PublicRoute';
 import { RouteGuard } from '@/components/auth/RouteGuard';
-import { SessionWarningDialog } from '@/components/auth/SessionWarningDialog';
 import { ErrorBoundary } from '@/components/errors';
 import { AppLayout } from '@/components/layout';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { LayoutProvider } from '@/contexts/LayoutContext';
-import { useActivityMonitor } from '@/hooks/useActivityMonitor';
 import ActivityFeedTest from '@/pages/ActivityFeedTest';
 import { ForgotPassword } from '@/pages/auth/ForgotPassword';
 import { Login } from '@/pages/auth/Login';
@@ -39,7 +37,6 @@ const AdminPanel = () => (
 );
 
 function AppContent() {
-  const { showWarning, remainingSeconds, extendSession } = useActivityMonitor();
   const isAppReady = useAppStore(selectIsReady);
   const setReactHydrated = useAppStore((state) => state.setReactHydrated);
 
@@ -89,13 +86,6 @@ function AppContent() {
           <Route path="*" element={<NotFound />} />
         </Routes>
       </RouteGuard>
-
-      {/* Session warning dialog */}
-      <SessionWarningDialog
-        open={showWarning}
-        remainingSeconds={remainingSeconds}
-        onExtendSession={extendSession}
-      />
 
       <Toaster />
     </div>
