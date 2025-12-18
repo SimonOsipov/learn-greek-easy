@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { Home, Layers, BarChart3, Settings, User } from 'lucide-react';
+import { Home, Layers, BarChart3, User } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 
 import { cn } from '@/lib/utils';
@@ -20,7 +20,6 @@ const navItems: NavItem[] = [
   { id: 'home', label: 'Home', icon: Home, href: '/' },
   { id: 'decks', label: 'Decks', icon: Layers, href: '/decks' },
   { id: 'stats', label: 'Stats', icon: BarChart3, href: '/statistics' },
-  { id: 'settings', label: 'Settings', icon: Settings, href: '/settings' },
   { id: 'profile', label: 'Profile', icon: User, href: '/profile' },
 ];
 

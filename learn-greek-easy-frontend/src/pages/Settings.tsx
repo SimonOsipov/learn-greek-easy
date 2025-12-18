@@ -10,7 +10,7 @@ const Settings: React.FC = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="container mx-auto max-w-4xl px-4 py-6">
+    <div className="space-y-6">
       <div className="mb-6">
         <div className="mb-2 flex items-center gap-3">
           <Button

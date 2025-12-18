@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 
-import { Home, Layers, BarChart3, Settings, User } from 'lucide-react';
+import { Home, Layers, BarChart3, User } from 'lucide-react';
 import { Outlet, useLocation, Link } from 'react-router-dom';
 
 import { Sheet, SheetContent } from '@/components/ui/sheet';
@@ -24,7 +24,6 @@ export const AppLayout: React.FC = () => {
     { path: '/', label: 'Dashboard', icon: Home },
     { path: '/decks', label: 'All Decks', icon: Layers },
     { path: '/statistics', label: 'Statistics', icon: BarChart3 },
-    { path: '/settings', label: 'Settings', icon: Settings },
     { path: '/profile', label: 'Profile', icon: User },
   ];
 
