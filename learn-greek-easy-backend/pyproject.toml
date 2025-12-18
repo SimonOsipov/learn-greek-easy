@@ -270,6 +270,8 @@ omit = [
     # E2E test infrastructure (not production code)
     "src/services/seed_service.py",  # Test data seeding service
     "src/api/v1/test/*",  # Test API endpoints (seed, etc.)
+    # External integrations - tested by unit tests (99%+ coverage)
+    "src/core/posthog.py",  # PostHog analytics - 44 unit tests, 99.1% coverage
 ]
 
 
