@@ -70,6 +70,8 @@ def _log_dry_run_info(truncate_only: bool) -> None:
         logger.info("  - Create 60 Greek vocabulary cards (10 per deck)")
         logger.info("  - Create card statistics for learner user")
         logger.info("  - Create review history for learner user")
+        logger.info("  - Create 8 feedback items (5 feature requests, 3 bug reports)")
+        logger.info("  - Create votes (upvotes and downvotes) for feedback items")
     logger.info("")
     logger.info("All test users have password: TestPassword123!")
 
@@ -98,6 +100,31 @@ def _log_result(operation: str, result: dict[str, Any], duration: float) -> None
 
         logger.info(f"Decks created: {len(decks)}")
         logger.info(f"Cards created: {len(cards)}")
+
+        # Log feedback results
+        feedback_result = result.get("feedback", {})
+        feedback_items = feedback_result.get("feedback", [])
+        votes = feedback_result.get("votes", [])
+
+        logger.info(f"Feedback items created: {len(feedback_items)}")
+        if feedback_items:
+            # Count by category
+            feature_requests = sum(
+                1 for f in feedback_items if f.get("category") == "feature_request"
+            )
+            bug_reports = sum(
+                1 for f in feedback_items if f.get("category") == "bug_incorrect_data"
+            )
+            logger.info(f"  - Feature requests: {feature_requests}")
+            logger.info(f"  - Bug reports: {bug_reports}")
+
+        logger.info(f"Votes created: {len(votes)}")
+        if votes:
+            # Count upvotes and downvotes
+            upvotes = sum(1 for v in votes if v.get("type") == "up")
+            downvotes = sum(1 for v in votes if v.get("type") == "down")
+            logger.info(f"  - Upvotes: {upvotes}")
+            logger.info(f"  - Downvotes: {downvotes}")
 
         password = result.get("users", {}).get("password", "TestPassword123!")
         logger.info("")

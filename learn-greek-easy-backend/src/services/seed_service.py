@@ -555,30 +555,14 @@ class SeedService:
             return {"success": True, "feedback": [], "votes": []}
 
         feedback_data: list[FeedbackSeedData] = [
-            # Feature requests
+            # === POPULAR FEATURE REQUESTS (high upvotes) ===
             {
                 "title": "Add dark mode support",
                 "description": "It would be great to have a dark mode option "
                 "for studying at night. This would reduce eye strain.",
                 "category": FeedbackCategory.FEATURE_REQUEST,
                 "status": FeedbackStatus.PLANNED,
-                "user_idx": 0,
-            },
-            {
-                "title": "Add spaced repetition settings",
-                "description": "Allow users to customize the spaced repetition "
-                "algorithm parameters for their learning style.",
-                "category": FeedbackCategory.FEATURE_REQUEST,
-                "status": FeedbackStatus.NEW,
-                "user_idx": 0,
-            },
-            {
-                "title": "Export progress to PDF",
-                "description": "Would love to export my learning progress and "
-                "statistics to a PDF report for sharing.",
-                "category": FeedbackCategory.FEATURE_REQUEST,
-                "status": FeedbackStatus.UNDER_REVIEW,
-                "user_idx": 1,
+                "user_idx": 0,  # learner
             },
             {
                 "title": "Add pronunciation audio",
@@ -586,16 +570,43 @@ class SeedService:
                 "would greatly improve learning experience.",
                 "category": FeedbackCategory.FEATURE_REQUEST,
                 "status": FeedbackStatus.IN_PROGRESS,
-                "user_idx": 1,
+                "user_idx": 1,  # beginner
             },
-            # Bug reports
+            # === MODERATE INTEREST ===
+            {
+                "title": "Export progress to PDF",
+                "description": "Would love to export my learning progress and "
+                "statistics to a PDF report for sharing.",
+                "category": FeedbackCategory.FEATURE_REQUEST,
+                "status": FeedbackStatus.UNDER_REVIEW,
+                "user_idx": 1,  # beginner
+            },
+            # === CONTROVERSIAL (mixed upvotes and downvotes) ===
+            {
+                "title": "Add gamification features",
+                "description": "Add XP points, badges, and leaderboards to make "
+                "learning more engaging and competitive.",
+                "category": FeedbackCategory.FEATURE_REQUEST,
+                "status": FeedbackStatus.NEW,
+                "user_idx": 2,  # advanced
+            },
+            # === NEW/NO VOTES ===
+            {
+                "title": "Add spaced repetition settings",
+                "description": "Allow users to customize the spaced repetition "
+                "algorithm parameters for their learning style.",
+                "category": FeedbackCategory.FEATURE_REQUEST,
+                "status": FeedbackStatus.NEW,
+                "user_idx": 0,  # learner
+            },
+            # === BUG REPORTS ===
             {
                 "title": "Incorrect translation for 'efcharisto'",
                 "description": "The word 'efcharisto' shows as 'goodbye' but "
                 "it should be 'thank you' in the A1 vocabulary deck.",
                 "category": FeedbackCategory.BUG_INCORRECT_DATA,
                 "status": FeedbackStatus.NEW,
-                "user_idx": 0,
+                "user_idx": 0,  # learner
             },
             {
                 "title": "Missing accent in word display",
@@ -603,7 +614,15 @@ class SeedService:
                 "some Greek words in the flashcard display.",
                 "category": FeedbackCategory.BUG_INCORRECT_DATA,
                 "status": FeedbackStatus.COMPLETED,
-                "user_idx": 1,
+                "user_idx": 1,  # beginner
+            },
+            {
+                "title": "Card order randomization broken",
+                "description": "When shuffle mode is enabled, the cards still "
+                "appear in the same order every time.",
+                "category": FeedbackCategory.BUG_INCORRECT_DATA,
+                "status": FeedbackStatus.IN_PROGRESS,
+                "user_idx": 2,  # advanced
             },
         ]
 
@@ -631,46 +650,70 @@ class SeedService:
                 }
             )
 
-        # Add some votes
-        votes_created = []
-        if len(created_feedback) >= 2 and len(user_ids) >= 2:
-            # User 1 upvotes first 3 feedback items
-            for i in range(min(3, len(created_feedback))):
-                feedback_id = UUID(created_feedback[i]["id"])
-                vote = FeedbackVote(
-                    user_id=user_ids[1],
-                    feedback_id=feedback_id,
-                    vote_type=VoteType.UP,
-                )
-                self.db.add(vote)
-                votes_created.append({"feedback_id": str(feedback_id), "user_idx": 1, "type": "up"})
+        # Define vote patterns: (feedback_index, voter_idx, vote_type)
+        # Creates diverse scenarios: popular, controversial, new (no votes)
+        vote_patterns: list[tuple[int, int, VoteType]] = [
+            # Dark mode - POPULAR (3 upvotes) => vote_count = +3
+            (0, 1, VoteType.UP),  # beginner upvotes
+            (0, 2, VoteType.UP),  # advanced upvotes
+            (0, 3, VoteType.UP),  # admin upvotes
+            # Pronunciation audio - POPULAR (2 upvotes) => vote_count = +2
+            (1, 0, VoteType.UP),  # learner upvotes
+            (1, 2, VoteType.UP),  # advanced upvotes
+            # Export to PDF - MODERATE (1 upvote) => vote_count = +1
+            (2, 0, VoteType.UP),  # learner upvotes
+            # Gamification - CONTROVERSIAL (2 up, 1 down) => vote_count = +1
+            (3, 0, VoteType.UP),  # learner upvotes
+            (3, 1, VoteType.UP),  # beginner upvotes
+            (3, 3, VoteType.DOWN),  # admin downvotes
+            # Spaced repetition settings - NEW (no votes) => vote_count = 0
+            # (intentionally empty)
+            # Bug: Incorrect translation - SUPPORTED (2 upvotes) => vote_count = +2
+            (5, 1, VoteType.UP),  # beginner upvotes
+            (5, 2, VoteType.UP),  # advanced upvotes
+            # Bug: Missing accent - RESOLVED (1 upvote) => vote_count = +1
+            (6, 0, VoteType.UP),  # learner upvotes
+            # Bug: Card order - MIXED (1 up, 1 down) => vote_count = 0
+            (7, 0, VoteType.UP),  # learner upvotes
+            (7, 1, VoteType.DOWN),  # beginner downvotes
+        ]
 
-                # Update vote count
-                await self.db.execute(
-                    update(Feedback)
-                    .where(Feedback.id == feedback_id)
-                    .values(vote_count=Feedback.vote_count + 1)
-                )
+        votes_created: list[dict[str, Any]] = []
+        for feedback_idx, voter_idx, vote_type in vote_patterns:
+            if feedback_idx >= len(created_feedback):
+                continue
+            if voter_idx >= len(user_ids):
+                continue
 
-            # User 0 upvotes feedback from user 1
-            for i in range(len(created_feedback)):
-                if created_feedback[i]["user_id"] == str(user_ids[1]):
-                    feedback_id = UUID(created_feedback[i]["id"])
-                    vote = FeedbackVote(
-                        user_id=user_ids[0],
-                        feedback_id=feedback_id,
-                        vote_type=VoteType.UP,
-                    )
-                    self.db.add(vote)
-                    votes_created.append(
-                        {"feedback_id": str(feedback_id), "user_idx": 0, "type": "up"}
-                    )
+            feedback_id = UUID(created_feedback[feedback_idx]["id"])
+            feedback_user_idx = feedback_data[feedback_idx]["user_idx"]
 
-                    await self.db.execute(
-                        update(Feedback)
-                        .where(Feedback.id == feedback_id)
-                        .values(vote_count=Feedback.vote_count + 1)
-                    )
+            # Skip if voter is the feedback author
+            if voter_idx == feedback_user_idx:
+                continue
+
+            vote = FeedbackVote(
+                user_id=user_ids[voter_idx],
+                feedback_id=feedback_id,
+                vote_type=vote_type,
+            )
+            self.db.add(vote)
+
+            # Update vote_count - CRITICAL: use +1 for UP, -1 for DOWN
+            vote_delta = 1 if vote_type == VoteType.UP else -1
+            await self.db.execute(
+                update(Feedback)
+                .where(Feedback.id == feedback_id)
+                .values(vote_count=Feedback.vote_count + vote_delta)
+            )
+
+            votes_created.append(
+                {
+                    "feedback_id": str(feedback_id),
+                    "user_idx": voter_idx,
+                    "type": vote_type.value,
+                }
+            )
 
         await self.db.flush()
 

@@ -15,7 +15,7 @@ from uuid import uuid4
 
 import pytest
 
-from src.db.models import DeckLevel
+from src.db.models import DeckLevel, FeedbackCategory, VoteType
 from src.services.seed_service import SeedService
 
 # ============================================================================
@@ -485,3 +485,128 @@ class TestSeedServiceOrchestration:
         # Check that reviews were created
         assert result["reviews"]["success"] is True
         assert result["reviews"]["reviews_created"] > 0
+
+
+# ============================================================================
+# Feedback Seeding Tests
+# ============================================================================
+
+
+class TestSeedServiceFeedback:
+    """Tests for feedback seeding."""
+
+    @pytest.fixture
+    def mock_db_with_ids(self):
+        """Create mock database that assigns IDs to added objects."""
+        db = AsyncMock()
+
+        def track_add(obj):
+            # Assign a UUID to the object if it has an id attribute
+            if hasattr(obj, "id") and obj.id is None:
+                obj.id = uuid4()
+
+        db.add = MagicMock(side_effect=track_add)
+        db.flush = AsyncMock()
+        db.commit = AsyncMock()
+        db.execute = AsyncMock()
+
+        return db
+
+    @pytest.mark.asyncio
+    async def test_seed_feedback_blocked_in_production(
+        self, seed_service, mock_settings_cannot_seed
+    ):
+        """seed_feedback should raise RuntimeError in production."""
+        user_ids = [uuid4() for _ in range(4)]
+        with pytest.raises(RuntimeError) as exc_info:
+            await seed_service.seed_feedback(user_ids)
+
+        assert "Database seeding not allowed" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_creates_feedback_items(self, mock_db_with_ids, mock_settings_can_seed):
+        """Verify 8 feedback items are created."""
+        seed_service = SeedService(mock_db_with_ids)
+        user_ids = [uuid4() for _ in range(4)]
+
+        result = await seed_service.seed_feedback(user_ids)
+
+        assert result["success"] is True
+        assert len(result["feedback"]) == 8
+
+    @pytest.mark.asyncio
+    async def test_creates_feedback_with_both_categories(
+        self, mock_db_with_ids, mock_settings_can_seed
+    ):
+        """Verify feedback items include both feature requests and bug reports."""
+        seed_service = SeedService(mock_db_with_ids)
+        user_ids = [uuid4() for _ in range(4)]
+
+        result = await seed_service.seed_feedback(user_ids)
+
+        categories = [f["category"] for f in result["feedback"]]
+
+        # Should have both categories
+        assert FeedbackCategory.FEATURE_REQUEST.value in categories
+        assert FeedbackCategory.BUG_INCORRECT_DATA.value in categories
+
+        # Count by category: 5 feature requests, 3 bug reports
+        feature_count = categories.count(FeedbackCategory.FEATURE_REQUEST.value)
+        bug_count = categories.count(FeedbackCategory.BUG_INCORRECT_DATA.value)
+
+        assert feature_count == 5
+        assert bug_count == 3
+
+    @pytest.mark.asyncio
+    async def test_creates_feedback_with_various_statuses(
+        self, mock_db_with_ids, mock_settings_can_seed
+    ):
+        """Verify feedback items have various statuses."""
+        seed_service = SeedService(mock_db_with_ids)
+        user_ids = [uuid4() for _ in range(4)]
+
+        result = await seed_service.seed_feedback(user_ids)
+
+        statuses = [f["status"] for f in result["feedback"]]
+
+        # Should have multiple different statuses
+        unique_statuses = set(statuses)
+        assert len(unique_statuses) >= 3  # At least NEW, PLANNED, IN_PROGRESS
+
+    @pytest.mark.asyncio
+    async def test_creates_votes_with_upvotes_and_downvotes(
+        self, mock_db_with_ids, mock_settings_can_seed
+    ):
+        """Verify votes include both upvotes and downvotes."""
+        seed_service = SeedService(mock_db_with_ids)
+        user_ids = [uuid4() for _ in range(4)]
+
+        result = await seed_service.seed_feedback(user_ids)
+
+        votes = result["votes"]
+        vote_types = [v["type"] for v in votes]
+
+        # Should have both upvotes and downvotes
+        assert VoteType.UP.value in vote_types
+        assert VoteType.DOWN.value in vote_types
+
+        # Count by type
+        upvote_count = vote_types.count(VoteType.UP.value)
+        downvote_count = vote_types.count(VoteType.DOWN.value)
+
+        # Should have more upvotes than downvotes
+        assert upvote_count > downvote_count
+        # Should have exactly 2 downvotes (gamification + card order bug)
+        assert downvote_count == 2
+
+    @pytest.mark.asyncio
+    async def test_handles_insufficient_users(self, seed_service, mock_db, mock_settings_can_seed):
+        """Verify handling of insufficient users."""
+        # Less than 2 users should return empty result
+        user_ids = [uuid4()]
+
+        result = await seed_service.seed_feedback(user_ids)
+
+        assert result["success"] is True
+        assert result["feedback"] == []
+        assert result["votes"] == []
