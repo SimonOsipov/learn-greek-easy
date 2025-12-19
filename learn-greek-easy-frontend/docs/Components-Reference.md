@@ -50,8 +50,8 @@ This guide has been split into category-based files for easier navigation. Each 
 
 ### User Management
 
-**[Settings Components](../../learn-greek-easy-frontend/docs/components/settings-components.md)** (~978 lines)
-- Profile, ProfileHeader, PersonalInfoSection, StatsSection, PreferencesSection, SecuritySection, AccountSection, AppPreferencesSection, DangerZoneSection, ResetProgressDialog, DeleteAccountDialog
+**[Settings Components](../../learn-greek-easy-frontend/docs/components/settings-components.md)** (~884 lines)
+- Profile, ProfileHeader, PersonalInfoSection, StatsSection, PreferencesSection, SecuritySection, AccountSection, DangerZoneSection, ResetProgressDialog, DeleteAccountDialog
 
 ---
 

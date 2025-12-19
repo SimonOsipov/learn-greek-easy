@@ -1,19 +1,18 @@
 import React, { useState } from 'react';
 
-import { User, Settings, BarChart3, Shield, Menu, X } from 'lucide-react';
+import { User, Settings, Shield, Menu, X } from 'lucide-react';
 
 // Import section components
 import { PersonalInfoSection } from '@/components/profile/PersonalInfoSection';
 import { PreferencesSection } from '@/components/profile/PreferencesSection';
 import { ProfileHeader } from '@/components/profile/ProfileHeader';
 import { SecuritySection } from '@/components/profile/SecuritySection';
-import { StatsSection } from '@/components/profile/StatsSection';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 
-type ProfileSection = 'personal' | 'stats' | 'preferences' | 'security';
+type ProfileSection = 'personal' | 'preferences' | 'security';
 
 interface NavigationItem {
   id: ProfileSection;
@@ -33,7 +32,6 @@ export const Profile: React.FC = () => {
   // Navigation items configuration
   const navigationItems: NavigationItem[] = [
     { id: 'personal', label: 'Personal Info', icon: User },
-    { id: 'stats', label: 'Statistics', icon: BarChart3 },
     { id: 'preferences', label: 'Preferences', icon: Settings },
     { id: 'security', label: 'Security', icon: Shield },
   ];
@@ -42,8 +40,6 @@ export const Profile: React.FC = () => {
     switch (activeSection) {
       case 'personal':
         return <PersonalInfoSection user={user} />;
-      case 'stats':
-        return <StatsSection stats={user.stats} />;
       case 'preferences':
         return <PreferencesSection user={user} />;
       case 'security':
@@ -54,11 +50,11 @@ export const Profile: React.FC = () => {
   };
 
   return (
-    <div data-testid="profile-page" className="min-h-screen bg-gray-50">
+    <div data-testid="profile-page" className="min-h-screen bg-background">
       <div className="container mx-auto max-w-7xl px-4 py-6">
         {/* Page Header - Always visible */}
         <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-gray-900 md:text-3xl">Profile</h1>
+          <h1 className="text-2xl font-bold text-foreground md:text-3xl">Profile</h1>
           {/* Mobile menu toggle */}
           <Button
             variant="outline"
@@ -80,7 +76,7 @@ export const Profile: React.FC = () => {
               <ProfileHeader user={user} />
 
               {/* Navigation */}
-              <nav className="border-t border-gray-200 p-4">
+              <nav className="border-t border-border p-4">
                 <ul className="space-y-1">
                   {navigationItems.map((item) => {
                     const Icon = item.icon;
@@ -94,8 +90,8 @@ export const Profile: React.FC = () => {
                           className={cn(
                             'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
                             activeSection === item.id
-                              ? 'bg-blue-50 text-blue-700'
-                              : 'text-gray-700 hover:bg-gray-100'
+                              ? 'bg-primary/10 text-primary'
+                              : 'text-muted-foreground hover:bg-muted'
                           )}
                         >
                           <Icon className="h-4 w-4" />
@@ -106,33 +102,6 @@ export const Profile: React.FC = () => {
                   })}
                 </ul>
               </nav>
-
-              {/* Quick Stats */}
-              <div className="border-t border-gray-200 bg-gray-50 p-4">
-                <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-600">
-                  Quick Stats
-                </h3>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm">
-                    <span className="text-lg">🔥</span>
-                    <span className="font-medium text-gray-900">
-                      {user.stats.streak} day{user.stats.streak !== 1 ? 's' : ''} streak
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <span className="text-lg">📚</span>
-                    <span className="font-medium text-gray-900">
-                      {user.stats.wordsLearned} words learned
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <span className="text-lg">⭐</span>
-                    <span className="font-medium text-gray-900">
-                      {user.stats.totalXP.toLocaleString()} XP
-                    </span>
-                  </div>
-                </div>
-              </div>
             </Card>
           </aside>
 

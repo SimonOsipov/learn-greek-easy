@@ -72,6 +72,14 @@ export type {
 // Export feedback constants
 export { STATUS_CONFIG, CATEGORY_CONFIG } from './feedback';
 
+// Export notification types explicitly
+export type {
+  NotificationType,
+  Notification,
+  NotificationIconConfig,
+  NotificationsResponse,
+} from './notification';
+
 // Component prop types (to be expanded as components are built)
 export interface BaseComponentProps {
   className?: string;
