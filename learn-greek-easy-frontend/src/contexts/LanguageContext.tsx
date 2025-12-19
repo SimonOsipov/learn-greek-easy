@@ -9,6 +9,7 @@ import {
   type SupportedLanguage,
 } from '@/i18n';
 import { LANGUAGE_OPTIONS, type LanguageOption } from '@/i18n/types';
+import { registerInterfaceLanguage, trackLanguageSwitch } from '@/lib/analytics';
 import { api } from '@/services/api';
 import { useAuthStore } from '@/stores/authStore';
 
@@ -57,6 +58,15 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
     return DEFAULT_LANGUAGE;
   }, [i18n.language]);
+
+  /**
+   * Register current language with PostHog on initial load
+   */
+  useEffect(() => {
+    registerInterfaceLanguage(currentLanguage);
+    // Only run on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   /**
    * Sync language with user preference on login
@@ -120,14 +130,9 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           }
         }
 
-        // Step 3: Track analytics (placeholder for I18N-08)
-        // Will be implemented in I18N-08:
-        // trackLanguageSwitch({
-        //   from_language: previousLang,
-        //   to_language: lang,
-        //   source,
-        //   is_authenticated: isAuthenticated,
-        // });
+        // Step 3: Track analytics
+        registerInterfaceLanguage(lang);
+        trackLanguageSwitch(previousLang, lang, source, isAuthenticated);
 
         console.debug(
           `[LanguageContext] Language changed: ${previousLang} -> ${lang} (source: ${source})`
