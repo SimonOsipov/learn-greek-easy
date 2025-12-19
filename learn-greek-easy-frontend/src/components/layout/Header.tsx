@@ -1,9 +1,10 @@
 import React from 'react';
 
-import { Bell, Menu } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 
 import { LogoutDialog } from '@/components/auth/LogoutDialog';
+import { NotificationsDropdown } from '@/components/notifications';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
@@ -84,10 +85,7 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
           {/* Right side: Notifications and User Menu */}
           <div className="flex items-center space-x-3">
             {/* Notifications */}
-            <Button variant="ghost" size="icon" className="relative" aria-label="Notifications">
-              <Bell className="h-5 w-5 text-text-secondary" />
-              <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-warning" />
-            </Button>
+            <NotificationsDropdown />
 
             {/* User Menu */}
             <DropdownMenu>
