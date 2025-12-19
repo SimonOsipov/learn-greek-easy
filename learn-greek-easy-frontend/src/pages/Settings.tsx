@@ -3,7 +3,7 @@ import React from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-import { AccountSection, AppPreferencesSection, DangerZoneSection } from '@/components/settings';
+import { AccountSection, DangerZoneSection } from '@/components/settings';
 import { Button } from '@/components/ui/button';
 
 const Settings: React.FC = () => {
@@ -30,7 +30,6 @@ const Settings: React.FC = () => {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div className="space-y-6">
           <AccountSection />
-          <AppPreferencesSection />
         </div>
         <div className="space-y-6">
           <DangerZoneSection />
