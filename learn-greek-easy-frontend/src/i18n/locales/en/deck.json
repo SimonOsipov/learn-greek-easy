@@ -1,0 +1,64 @@
+{
+  "list": {
+    "title": "Available Decks",
+    "subtitle": "Choose a deck to start learning Greek vocabulary",
+    "errorLoading": "Error Loading Decks",
+    "tryAgain": "Try Again",
+    "noDecksFound": "No Decks Found",
+    "clearFilters": "Clear All Filters"
+  },
+  "filters": {
+    "searchPlaceholder": "Search decks by name...",
+    "level": "Level:",
+    "status": "Status:",
+    "allLevels": "All Levels",
+    "allStatuses": "All Statuses",
+    "notStarted": "Not Started",
+    "inProgress": "In Progress",
+    "completed": "Completed",
+    "premiumOnly": "Premium Only",
+    "clearAll": "Clear All",
+    "showing": "Showing {{count}} of {{total}} decks"
+  },
+  "levels": {
+    "a1": "A1 - Beginner",
+    "a2": "A2 - Elementary",
+    "b1": "B1 - Intermediate",
+    "b2": "B2 - Upper Intermediate",
+    "c1": "C1 - Advanced",
+    "c2": "C2 - Mastery"
+  },
+  "detail": {
+    "breadcrumb": "Decks",
+    "statistics": "Deck Statistics",
+    "totalCards": "Total Cards",
+    "estimatedTime": "Estimated Time",
+    "dueToday": "Due Today",
+    "masteryRate": "Mastery Rate",
+    "yourProgress": "Your Progress",
+    "complete": "Complete",
+    "premium": "Premium",
+    "createdBy": "Created by",
+    "updated": "Updated",
+    "premiumDeck": "Premium Deck",
+    "upgradeToPremium": "Upgrade to Premium",
+    "readyToStart": "Ready to Start Learning?",
+    "startReview": "Start Review",
+    "continueProgress": "Continue Your Progress",
+    "continueReview": "Continue Review",
+    "deckCompleted": "Deck Completed!",
+    "reviewDeck": "Review Deck",
+    "resetProgress": "Reset Progress",
+    "goBack": "Go Back",
+    "tryAgain": "Try Again",
+    "notFound": "Deck Not Found",
+    "browseAll": "Browse All Decks",
+    "cards": "cards",
+    "minutes": "min"
+  },
+  "card": {
+    "viewDetails": "View Details",
+    "cardsCount": "{{count}} cards",
+    "premium": "Premium"
+  }
+}

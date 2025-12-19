@@ -1,0 +1,50 @@
+{
+  "page": {
+    "title": "Settings",
+    "subtitle": "Manage your account and preferences."
+  },
+  "account": {
+    "title": "Account Settings",
+    "subtitle": "Manage your password and subscription",
+    "password": {
+      "title": "Password",
+      "description": "Change your password to keep your account secure",
+      "change": "Change Password",
+      "current": "Enter your current password",
+      "new": "New Password",
+      "confirm": "Confirm New Password",
+      "update": "Update Password",
+      "cancel": "Cancel",
+      "success": "Password updated",
+      "error": "Failed to update password"
+    },
+    "subscription": {
+      "title": "Subscription",
+      "currentPlan": "Current plan",
+      "premium": "Premium",
+      "free": "Free Plan",
+      "upgrade": "Upgrade to Premium",
+      "memberSince": "Member since"
+    }
+  },
+  "danger": {
+    "title": "Danger Zone",
+    "subtitle": "Irreversible actions that affect your account and data",
+    "resetProgress": {
+      "title": "Reset All Progress",
+      "description": "Clear all learning progress, review history, and statistics",
+      "button": "Reset Progress",
+      "confirm": "Are you sure you want to reset all your learning progress? This action cannot be undone.",
+      "success": "Progress has been reset",
+      "error": "Failed to reset progress"
+    },
+    "deleteAccount": {
+      "title": "Delete Account",
+      "description": "Permanently delete your account and all associated data",
+      "button": "Delete Account",
+      "confirm": "Are you sure you want to delete your account? This action is permanent and cannot be undone.",
+      "success": "Account deleted successfully",
+      "error": "Failed to delete account"
+    }
+  }
+}

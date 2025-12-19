@@ -1,0 +1,53 @@
+{
+  "page": {
+    "title": "Feedback & Ideas",
+    "subtitle": "Share your ideas, report bugs, and vote on suggestions",
+    "submitButton": "Submit Feedback"
+  },
+  "categories": {
+    "feature": "Feature Request",
+    "bug": "Bug Report",
+    "improvement": "Improvement",
+    "other": "Other"
+  },
+  "status": {
+    "pending": "Pending",
+    "underReview": "Under Review",
+    "planned": "Planned",
+    "inProgress": "In Progress",
+    "completed": "Completed",
+    "declined": "Declined"
+  },
+  "submit": {
+    "title": "Submit Feedback",
+    "category": "Category",
+    "titleField": "Title",
+    "titlePlaceholder": "Brief summary of your feedback",
+    "description": "Description",
+    "descriptionPlaceholder": "Provide details about your feedback...",
+    "cancel": "Cancel",
+    "submit": "Submit",
+    "submitting": "Submitting...",
+    "success": {
+      "title": "Feedback submitted",
+      "message": "Thank you for your feedback!"
+    },
+    "error": {
+      "title": "Submission failed",
+      "message": "Failed to submit feedback. Please try again."
+    }
+  },
+  "list": {
+    "empty": "No feedback yet",
+    "beFirst": "Be the first to share your ideas!",
+    "votes": "{{count}} vote",
+    "votes_plural": "{{count}} votes",
+    "comments": "{{count}} comment",
+    "comments_plural": "{{count}} comments"
+  },
+  "voting": {
+    "upvote": "Upvote",
+    "removeVote": "Remove vote",
+    "loginToVote": "Log in to vote"
+  }
+}

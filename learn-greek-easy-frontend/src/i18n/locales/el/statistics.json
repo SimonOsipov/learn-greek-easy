@@ -1,0 +1,42 @@
+{
+  "page": {
+    "title": "Statistics",
+    "subtitle": "Track your learning progress and achievements",
+    "loginRequired": "Please log in to view your statistics"
+  },
+  "tabs": {
+    "stats": "Your Learning Stats",
+    "analytics": "Learning Analytics",
+    "achievements": "Achievements"
+  },
+  "metrics": {
+    "dueToday": "Due Today",
+    "currentStreak": "Current Streak",
+    "mastered": "Mastered",
+    "accuracy": "Accuracy",
+    "totalTime": "Total Time",
+    "cardsReviewed": "Cards Reviewed",
+    "days": "days",
+    "cards": "cards"
+  },
+  "charts": {
+    "weeklyActivity": "Weekly Activity",
+    "progressOverTime": "Progress Over Time",
+    "accuracyByDeck": "Accuracy by Deck",
+    "ratingDistribution": "Rating Distribution"
+  },
+  "achievements": {
+    "title": "Your Achievements",
+    "locked": "Locked",
+    "unlocked": "Unlocked",
+    "progress": "{{current}} / {{total}}"
+  },
+  "empty": {
+    "noData": "No progress data yet",
+    "startLearning": "Start reviewing decks to see your statistics"
+  },
+  "error": {
+    "loadFailed": "Failed to load metrics",
+    "retry": "Retry"
+  }
+}

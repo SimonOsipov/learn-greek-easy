@@ -1,0 +1,69 @@
+{
+  "page": {
+    "title": "Profile",
+    "tabs": {
+      "personalInfo": "Personal Info",
+      "preferences": "Preferences",
+      "security": "Security"
+    }
+  },
+  "personalInfo": {
+    "title": "Personal Information",
+    "subtitle": "Update your personal details and profile picture",
+    "profilePicture": "Profile Picture",
+    "uploadPhoto": "Upload Photo",
+    "fullName": "Full Name",
+    "email": "Email Address",
+    "emailCannotChange": "Email address cannot be changed",
+    "cancel": "Cancel",
+    "saveChanges": "Save Changes",
+    "saving": "Saving...",
+    "success": "Profile updated successfully",
+    "error": "Failed to update profile"
+  },
+  "preferences": {
+    "title": "Learning Preferences",
+    "subtitle": "Customize your learning experience",
+    "language": {
+      "title": "Interface Language",
+      "description": "Choose your preferred language for the app interface"
+    },
+    "dailyGoal": {
+      "title": "Daily Learning Goal",
+      "unit": "minutes per day",
+      "light": "Light",
+      "moderate": "Moderate",
+      "regular": "Regular",
+      "intensive": "Intensive"
+    },
+    "notifications": {
+      "title": "Notifications",
+      "push": "Push Notifications",
+      "description": "Daily reminders, streak alerts"
+    },
+    "theme": {
+      "title": "Theme Preference",
+      "comingSoon": "Coming Soon",
+      "light": "Light",
+      "dark": "Dark",
+      "system": "System"
+    },
+    "saving": "Saving preferences...",
+    "success": "Preferences saved",
+    "error": "Failed to save preferences"
+  },
+  "security": {
+    "title": "Security Settings",
+    "subtitle": "Manage your account security",
+    "twoFactor": {
+      "title": "Two-Factor Authentication",
+      "description": "Add an extra layer of security to your account",
+      "comingSoon": "Coming Soon"
+    },
+    "sessions": {
+      "title": "Active Sessions",
+      "description": "Manage your logged-in devices",
+      "comingSoon": "Coming Soon"
+    }
+  }
+}

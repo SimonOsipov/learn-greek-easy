@@ -9,8 +9,22 @@ import {
   NAMESPACES,
   SUPPORTED_LANGUAGES,
 } from './constants';
+import elAuth from './locales/el/auth.json';
 import elCommon from './locales/el/common.json';
+import elDeck from './locales/el/deck.json';
+import elFeedback from './locales/el/feedback.json';
+import elProfile from './locales/el/profile.json';
+import elReview from './locales/el/review.json';
+import elSettings from './locales/el/settings.json';
+import elStatistics from './locales/el/statistics.json';
+import enAuth from './locales/en/auth.json';
 import enCommon from './locales/en/common.json';
+import enDeck from './locales/en/deck.json';
+import enFeedback from './locales/en/feedback.json';
+import enProfile from './locales/en/profile.json';
+import enReview from './locales/en/review.json';
+import enSettings from './locales/en/settings.json';
+import enStatistics from './locales/en/statistics.json';
 
 /**
  * Translation resources organized by language and namespace
@@ -18,9 +32,23 @@ import enCommon from './locales/en/common.json';
 const resources = {
   en: {
     common: enCommon,
+    auth: enAuth,
+    deck: enDeck,
+    review: enReview,
+    settings: enSettings,
+    profile: enProfile,
+    statistics: enStatistics,
+    feedback: enFeedback,
   },
   el: {
     common: elCommon,
+    auth: elAuth,
+    deck: elDeck,
+    review: elReview,
+    settings: elSettings,
+    profile: elProfile,
+    statistics: elStatistics,
+    feedback: elFeedback,
   },
 };
 

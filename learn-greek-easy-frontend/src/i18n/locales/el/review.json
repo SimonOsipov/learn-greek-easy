@@ -1,0 +1,55 @@
+{
+  "session": {
+    "backToDeck": "Back to Deck",
+    "error": "Error",
+    "retry": "Retry",
+    "noCardsDue": "No cards due",
+    "exitReview": "Exit Review",
+    "cardOf": "Card {{current}} of {{total}}",
+    "tapToFlip": "Tap to flip",
+    "flipCard": "Flip Card"
+  },
+  "ratings": {
+    "again": "Again",
+    "hard": "Hard",
+    "good": "Good",
+    "easy": "Easy",
+    "againDescription": "Complete blackout, wrong response",
+    "hardDescription": "Significant difficulty recalling",
+    "goodDescription": "Correct response with some hesitation",
+    "easyDescription": "Perfect response, no hesitation"
+  },
+  "summary": {
+    "title": "Session Complete!",
+    "cardsReviewed": "Cards Reviewed",
+    "noCardsReviewed": "No cards were reviewed in this session",
+    "accuracy": "Accuracy",
+    "timeSpent": "Time Spent",
+    "avgPerCard": "Avg Per Card",
+    "ratingBreakdown": "Rating Breakdown",
+    "progressMade": "Progress Made",
+    "movedToLearning": "cards moved to Learning",
+    "graduatedToReview": "cards graduated to Review",
+    "cardsMastered": "cards mastered!",
+    "needReview": "cards need review",
+    "backToDeck": "Back to Deck",
+    "reviewAgain": "Review Again",
+    "dashboard": "Dashboard",
+    "seconds": "s",
+    "minutes": "m"
+  },
+  "keyboard": {
+    "title": "Keyboard Shortcuts",
+    "reviewActions": "Review Actions",
+    "flipCard": "Flip flashcard",
+    "rateAgain": "Rate: Again (1)",
+    "rateHard": "Rate: Hard (2)",
+    "rateGood": "Rate: Good (3)",
+    "rateEasy": "Rate: Easy (4)",
+    "navigation": "Navigation",
+    "toggleHelp": "Show/hide keyboard shortcuts",
+    "closeOrExit": "Close help or exit review",
+    "spaceKey": "Space",
+    "escKey": "Esc"
+  }
+}
