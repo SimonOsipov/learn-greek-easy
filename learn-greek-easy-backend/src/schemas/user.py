@@ -7,10 +7,17 @@ This module contains schemas for:
 """
 
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Literal, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+
+# ============================================================================
+# Supported Languages
+# ============================================================================
+
+# Supported interface languages - extend as needed
+SupportedLanguage = Literal["en", "el"]
 
 # ============================================================================
 # User Schemas
@@ -83,6 +90,18 @@ class UserSettingsUpdate(BaseModel):
 
     daily_goal: Optional[int] = Field(None, ge=1, le=200)
     email_notifications: Optional[bool] = None
+    preferred_language: Optional[SupportedLanguage] = Field(
+        None,
+        description="ISO 639-1 language code for interface language",
+    )
+
+    @field_validator("preferred_language", mode="before")
+    @classmethod
+    def validate_language(cls, v: str | None) -> str | None:
+        """Allow None to clear the language preference."""
+        if v is None or v == "":
+            return None
+        return v
 
 
 class UserSettingsResponse(BaseModel):
@@ -94,8 +113,24 @@ class UserSettingsResponse(BaseModel):
     user_id: UUID
     daily_goal: int
     email_notifications: bool
+    preferred_language: Optional[str] = None
     created_at: datetime
     updated_at: datetime
+
+
+class UserWithSettingsUpdate(BaseModel):
+    """Schema for updating user profile AND settings in one request."""
+
+    # User fields
+    full_name: Optional[str] = Field(None, min_length=1, max_length=255)
+
+    # Settings fields (flattened for convenience)
+    daily_goal: Optional[int] = Field(None, ge=1, le=200)
+    email_notifications: Optional[bool] = None
+    preferred_language: Optional[SupportedLanguage] = Field(
+        None,
+        description="ISO 639-1 language code for interface language",
+    )
 
 
 # ============================================================================

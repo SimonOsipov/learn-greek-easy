@@ -79,6 +79,7 @@ from src.schemas.sm2 import (
     StudyQueueRequest,
 )
 from src.schemas.user import (
+    SupportedLanguage,
     TokenPayload,
     TokenRefresh,
     TokenResponse,
@@ -89,6 +90,7 @@ from src.schemas.user import (
     UserSettingsResponse,
     UserSettingsUpdate,
     UserUpdate,
+    UserWithSettingsUpdate,
 )
 
 __all__ = [
@@ -100,6 +102,8 @@ __all__ = [
     "UserProfileResponse",
     "UserSettingsUpdate",
     "UserSettingsResponse",
+    "UserWithSettingsUpdate",
+    "SupportedLanguage",
     "TokenResponse",
     "TokenRefresh",
     "TokenPayload",
