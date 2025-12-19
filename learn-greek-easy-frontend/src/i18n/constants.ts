@@ -2,7 +2,7 @@
  * Supported languages for the application interface.
  * Card content (Greek vocabulary) remains untranslated.
  */
-export const SUPPORTED_LANGUAGES = ['en', 'el'] as const;
+export const SUPPORTED_LANGUAGES = ['en', 'el', 'ru'] as const;
 export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number];
 
 export const DEFAULT_LANGUAGE: SupportedLanguage = 'en';
@@ -13,6 +13,7 @@ export const DEFAULT_LANGUAGE: SupportedLanguage = 'en';
 export const LANGUAGE_NAMES: Record<SupportedLanguage, string> = {
   en: 'English',
   el: 'Ελληνικά',
+  ru: 'Русский',
 };
 
 /**

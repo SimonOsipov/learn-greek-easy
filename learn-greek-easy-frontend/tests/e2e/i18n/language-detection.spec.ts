@@ -52,6 +52,27 @@ test.describe('Language Detection', () => {
     await context.close();
   });
 
+  test('should detect Russian browser language and show Russian UI', async ({ browser }) => {
+    const context = await browser.newContext({
+      locale: 'ru-RU',
+    });
+    const page = await context.newPage();
+
+    // Clear localStorage to ensure detection happens
+    await page.goto('/');
+    await page.evaluate(() => localStorage.removeItem('i18nextLng'));
+    await page.reload();
+
+    // Wait for page to load
+    await page.waitForLoadState('networkidle');
+
+    // Check for Russian text on login page using test-id
+    await expect(page.getByTestId('login-card')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByTestId('login-title')).toHaveText('С возвращением');
+
+    await context.close();
+  });
+
   test('should fallback to English for unsupported browser language (French)', async ({
     browser,
   }) => {

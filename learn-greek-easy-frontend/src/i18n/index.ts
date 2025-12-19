@@ -25,6 +25,14 @@ import enProfile from './locales/en/profile.json';
 import enReview from './locales/en/review.json';
 import enSettings from './locales/en/settings.json';
 import enStatistics from './locales/en/statistics.json';
+import ruAuth from './locales/ru/auth.json';
+import ruCommon from './locales/ru/common.json';
+import ruDeck from './locales/ru/deck.json';
+import ruFeedback from './locales/ru/feedback.json';
+import ruProfile from './locales/ru/profile.json';
+import ruReview from './locales/ru/review.json';
+import ruSettings from './locales/ru/settings.json';
+import ruStatistics from './locales/ru/statistics.json';
 
 /**
  * Translation resources organized by language and namespace
@@ -49,6 +57,16 @@ const resources = {
     profile: elProfile,
     statistics: elStatistics,
     feedback: elFeedback,
+  },
+  ru: {
+    common: ruCommon,
+    auth: ruAuth,
+    deck: ruDeck,
+    review: ruReview,
+    settings: ruSettings,
+    profile: ruProfile,
+    statistics: ruStatistics,
+    feedback: ruFeedback,
   },
 };
 

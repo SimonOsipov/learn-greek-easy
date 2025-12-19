@@ -36,12 +36,13 @@ test.describe('Language Switcher - Unauthenticated', () => {
     // Menu should be visible
     await expect(page.getByTestId('language-switcher-menu')).toBeVisible();
 
-    // Both language options should be available
+    // All three language options should be available
     await expect(page.getByTestId('language-option-en')).toBeVisible();
     await expect(page.getByTestId('language-option-el')).toBeVisible();
+    await expect(page.getByTestId('language-option-ru')).toBeVisible();
   });
 
-  test('should show English and Greek options with correct labels', async ({ page }) => {
+  test('should show English, Greek, and Russian options with correct labels', async ({ page }) => {
     await page.getByTestId('language-switcher-trigger').click();
 
     // Check for English option
@@ -53,6 +54,11 @@ test.describe('Language Switcher - Unauthenticated', () => {
     const greekOption = page.getByTestId('language-option-el');
     await expect(greekOption).toBeVisible();
     await expect(greekOption).toContainText('Ελληνικά');
+
+    // Check for Russian option
+    const russianOption = page.getByTestId('language-option-ru');
+    await expect(russianOption).toBeVisible();
+    await expect(russianOption).toContainText('Русский');
   });
 
   test('should switch UI to Greek when Greek is selected', async ({ page }) => {
@@ -80,6 +86,39 @@ test.describe('Language Switcher - Unauthenticated', () => {
     await expect(page.getByTestId('login-title')).toHaveText('Καλώς Ήρθατε');
 
     // Switch back to English
+    await page.getByTestId('language-switcher-trigger').click();
+    await page.getByTestId('language-option-en').click();
+    await page.waitForTimeout(500);
+
+    // Verify English using specific test-id
+    await expect(page.getByTestId('login-title')).toHaveText('Welcome Back');
+  });
+
+  test('should switch UI to Russian when Russian is selected', async ({ page }) => {
+    // Verify starting in English using specific test-id
+    await expect(page.getByTestId('login-title')).toHaveText('Welcome Back');
+
+    // Switch to Russian
+    await page.getByTestId('language-switcher-trigger').click();
+    await page.getByTestId('language-option-ru').click();
+
+    // Wait for language change
+    await page.waitForTimeout(500);
+
+    // Verify UI updated to Russian using specific test-id
+    await expect(page.getByTestId('login-title')).toHaveText('С возвращением');
+  });
+
+  test('should switch UI from Russian to English', async ({ page }) => {
+    // First switch to Russian
+    await page.getByTestId('language-switcher-trigger').click();
+    await page.getByTestId('language-option-ru').click();
+    await page.waitForTimeout(500);
+
+    // Verify Russian using specific test-id
+    await expect(page.getByTestId('login-title')).toHaveText('С возвращением');
+
+    // Switch to English
     await page.getByTestId('language-switcher-trigger').click();
     await page.getByTestId('language-option-en').click();
     await page.waitForTimeout(500);

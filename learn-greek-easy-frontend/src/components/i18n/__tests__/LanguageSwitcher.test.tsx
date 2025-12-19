@@ -32,8 +32,16 @@ vi.mock('@/contexts/LanguageContext', () => ({
     availableLanguages: [
       { code: 'en', name: 'English', nativeName: 'English', flag: '🇬🇧' },
       { code: 'el', name: 'Greek', nativeName: 'Ελληνικά', flag: '🇬🇷' },
+      { code: 'ru', name: 'Russian', nativeName: 'Русский', flag: '🇷🇺' },
     ],
-    getLanguageName: (code: string) => (code === 'en' ? 'English' : 'Ελληνικά'),
+    getLanguageName: (code: string) => {
+      const names: Record<string, string> = {
+        en: 'English',
+        el: 'Ελληνικά',
+        ru: 'Русский',
+      };
+      return names[code] || code;
+    },
   }),
 }));
 
@@ -126,6 +134,20 @@ describe('LanguageSwitcher', () => {
       });
     });
 
+    it('should show Russian option', async () => {
+      const user = userEvent.setup();
+      render(<LanguageSwitcher />);
+
+      const button = screen.getByTestId('language-switcher-trigger');
+      await user.click(button);
+
+      await waitFor(() => {
+        const russianOption = document.querySelector('[data-testid="language-option-ru"]');
+        expect(russianOption).toBeInTheDocument();
+        expect(russianOption).toHaveTextContent('Русский');
+      });
+    });
+
     it('should show flag emojis for options', async () => {
       const user = userEvent.setup();
       render(<LanguageSwitcher />);
@@ -138,6 +160,7 @@ describe('LanguageSwitcher', () => {
         expect(menu).toBeInTheDocument();
         expect(menu?.textContent).toContain('🇬🇧');
         expect(menu?.textContent).toContain('🇬🇷');
+        expect(menu?.textContent).toContain('🇷🇺');
       });
     });
 
@@ -195,6 +218,26 @@ describe('LanguageSwitcher', () => {
 
       expect(mockChangeLanguage).toHaveBeenCalledWith('en', 'header');
     });
+
+    it('should call changeLanguage when selecting Russian', async () => {
+      const user = userEvent.setup();
+      render(<LanguageSwitcher />);
+
+      const button = screen.getByTestId('language-switcher-trigger');
+      await user.click(button);
+
+      await waitFor(async () => {
+        const russianOption = document.querySelector('[data-testid="language-option-ru"]');
+        expect(russianOption).toBeInTheDocument();
+      });
+
+      const russianOption = document.querySelector(
+        '[data-testid="language-option-ru"]'
+      ) as HTMLElement;
+      await user.click(russianOption);
+
+      expect(mockChangeLanguage).toHaveBeenCalledWith('ru', 'header');
+    });
   });
 
   describe('Loading State', () => {
@@ -242,8 +285,16 @@ describe('LanguageSwitcher - Disabled State', () => {
         availableLanguages: [
           { code: 'en', name: 'English', nativeName: 'English', flag: '🇬🇧' },
           { code: 'el', name: 'Greek', nativeName: 'Ελληνικά', flag: '🇬🇷' },
+          { code: 'ru', name: 'Russian', nativeName: 'Русский', flag: '🇷🇺' },
         ],
-        getLanguageName: (code: string) => (code === 'en' ? 'English' : 'Ελληνικά'),
+        getLanguageName: (code: string) => {
+          const names: Record<string, string> = {
+            en: 'English',
+            el: 'Ελληνικά',
+            ru: 'Русский',
+          };
+          return names[code] || code;
+        },
       }),
     }));
 

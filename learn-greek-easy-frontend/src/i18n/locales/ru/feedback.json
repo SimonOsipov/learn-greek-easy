@@ -1,0 +1,66 @@
+{
+  "page": {
+    "title": "Обратная связь и идеи",
+    "subtitle": "Делитесь идеями, сообщайте об ошибках и голосуйте за предложения",
+    "submitButton": "Отправить отзыв"
+  },
+  "categories": {
+    "feature_request": "Запрос функции",
+    "bug_incorrect_data": "Ошибка / Неверные данные"
+  },
+  "status": {
+    "new": "Новый",
+    "under_review": "На рассмотрении",
+    "planned": "Запланировано",
+    "in_progress": "В работе",
+    "completed": "Выполнено",
+    "cancelled": "Отменено"
+  },
+  "submit": {
+    "title": "Отправить отзыв",
+    "category": "Категория",
+    "categoryPlaceholder": "Выберите категорию",
+    "titleField": "Заголовок",
+    "titlePlaceholder": "Краткое описание вашего отзыва",
+    "description": "Описание",
+    "descriptionPlaceholder": "Предоставьте подробности о вашем отзыве...",
+    "cancel": "Отмена",
+    "submit": "Отправить",
+    "submitting": "Отправка...",
+    "success": {
+      "title": "Отзыв отправлен",
+      "message": "Спасибо за ваш отзыв!"
+    },
+    "error": {
+      "title": "Ошибка",
+      "message": "Не удалось отправить отзыв. Пожалуйста, попробуйте снова."
+    }
+  },
+  "list": {
+    "empty": "Отзывы не найдены. Будьте первым, кто поделится идеями!",
+    "by": "от"
+  },
+  "pagination": {
+    "previous": "Назад",
+    "next": "Далее",
+    "pageInfo": "Страница {{page}} из {{totalPages}}"
+  },
+  "voting": {
+    "upvote": "За",
+    "downvote": "Против",
+    "removeVote": "Убрать голос",
+    "loginToVote": "Войдите, чтобы голосовать"
+  },
+  "filters": {
+    "category": "Категория",
+    "status": "Статус",
+    "sortBy": "Сортировать по",
+    "allCategories": "Все категории",
+    "allStatuses": "Все статусы",
+    "mostVotes": "Больше голосов",
+    "leastVotes": "Меньше голосов",
+    "newest": "Новейшие",
+    "oldest": "Старейшие",
+    "clear": "Очистить"
+  }
+}
