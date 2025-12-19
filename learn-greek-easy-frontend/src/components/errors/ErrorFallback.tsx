@@ -1,4 +1,5 @@
 import { AlertCircle, RefreshCw, Home } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -26,6 +27,8 @@ export interface ErrorFallbackProps {
  * ```
  */
 export function ErrorFallback({ error, onReset }: ErrorFallbackProps) {
+  const { t } = useTranslation('common');
+
   const handleGoHome = () => {
     window.location.href = '/';
   };
@@ -39,10 +42,8 @@ export function ErrorFallback({ error, onReset }: ErrorFallbackProps) {
       <div className="w-full max-w-md space-y-6">
         <div className="text-center">
           <AlertCircle className="mx-auto mb-4 h-16 w-16 text-red-500" aria-hidden="true" />
-          <h1 className="mb-2 text-2xl font-bold text-gray-900">Something went wrong</h1>
-          <p className="text-muted-foreground">
-            We're sorry, but something unexpected happened. Please try again.
-          </p>
+          <h1 className="mb-2 text-2xl font-bold text-gray-900">{t('error.somethingWrong')}</h1>
+          <p className="text-muted-foreground">{t('error.unexpectedError')}</p>
         </div>
 
         {/* Show error details in development mode */}
@@ -65,17 +66,15 @@ export function ErrorFallback({ error, onReset }: ErrorFallbackProps) {
         <div className="flex gap-3">
           <Button onClick={handleTryAgain} variant="outline" className="flex-1">
             <RefreshCw className="mr-2 h-4 w-4" />
-            Try Again
+            {t('errorPage.tryAgain')}
           </Button>
           <Button onClick={handleGoHome} className="flex-1">
             <Home className="mr-2 h-4 w-4" />
-            Go Home
+            {t('errorPage.goHome')}
           </Button>
         </div>
 
-        <p className="text-center text-xs text-muted-foreground">
-          If this problem persists, please contact support.
-        </p>
+        <p className="text-center text-xs text-muted-foreground">{t('error.persistsContact')}</p>
       </div>
     </div>
   );

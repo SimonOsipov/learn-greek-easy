@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 
 import { User, Settings, Shield, Menu, X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 // Import section components
 import { PersonalInfoSection } from '@/components/profile/PersonalInfoSection';
@@ -16,11 +17,12 @@ type ProfileSection = 'personal' | 'preferences' | 'security';
 
 interface NavigationItem {
   id: ProfileSection;
-  label: string;
+  labelKey: string;
   icon: typeof User;
 }
 
 export const Profile: React.FC = () => {
+  const { t } = useTranslation('profile');
   const { user } = useAuth();
   const [activeSection, setActiveSection] = useState<ProfileSection>('personal');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -31,9 +33,9 @@ export const Profile: React.FC = () => {
 
   // Navigation items configuration
   const navigationItems: NavigationItem[] = [
-    { id: 'personal', label: 'Personal Info', icon: User },
-    { id: 'preferences', label: 'Preferences', icon: Settings },
-    { id: 'security', label: 'Security', icon: Shield },
+    { id: 'personal', labelKey: 'page.tabs.personalInfo', icon: User },
+    { id: 'preferences', labelKey: 'page.tabs.preferences', icon: Settings },
+    { id: 'security', labelKey: 'page.tabs.security', icon: Shield },
   ];
 
   const renderSection = () => {
@@ -54,14 +56,14 @@ export const Profile: React.FC = () => {
       <div className="container mx-auto max-w-7xl px-4 py-6">
         {/* Page Header - Always visible */}
         <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-foreground md:text-3xl">Profile</h1>
+          <h1 className="text-2xl font-bold text-foreground md:text-3xl">{t('page.title')}</h1>
           {/* Mobile menu toggle */}
           <Button
             variant="outline"
             size="icon"
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
             className="md:hidden"
-            aria-label={isSidebarOpen ? 'Close menu' : 'Open menu'}
+            aria-label={isSidebarOpen ? t('page.closeMenu') : t('page.openMenu')}
           >
             {isSidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </Button>
@@ -95,7 +97,7 @@ export const Profile: React.FC = () => {
                           )}
                         >
                           <Icon className="h-4 w-4" />
-                          {item.label}
+                          {t(item.labelKey)}
                         </button>
                       </li>
                     );

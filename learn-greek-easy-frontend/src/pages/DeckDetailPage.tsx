@@ -13,6 +13,7 @@ import {
   MoreVertical,
   RotateCcw,
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 
 import { DeckBadge } from '@/components/decks/DeckBadge';
@@ -33,6 +34,7 @@ import { useDeckStore } from '@/stores/deckStore';
 import type { Deck, DeckStatus } from '@/types/deck';
 
 export const DeckDetailPage: React.FC = () => {
+  const { t } = useTranslation('deck');
   const { id: deckId } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
@@ -91,7 +93,7 @@ export const DeckDetailPage: React.FC = () => {
       >
         <Link to="/decks" className="flex items-center gap-1 transition-colors hover:text-gray-900">
           <ChevronLeft className="h-4 w-4" />
-          Decks
+          {t('detail.breadcrumb')}
         </Link>
         <span>/</span>
         <span className="truncate font-medium text-gray-900">{selectedDeck.titleGreek}</span>
@@ -152,15 +154,12 @@ interface DeckHeaderSectionProps {
 }
 
 const DeckHeaderSection: React.FC<DeckHeaderSectionProps> = ({ deck, isPremiumLocked }) => {
+  const { t } = useTranslation('deck');
   const { resetProgress } = useDeckStore();
   const [isResetting, setIsResetting] = useState(false);
 
   const handleResetProgress = async () => {
-    if (
-      !confirm(
-        'Are you sure you want to reset your progress for this deck? This action cannot be undone.'
-      )
-    ) {
+    if (!confirm(t('detail.resetConfirm'))) {
       return;
     }
 
@@ -212,7 +211,7 @@ const DeckHeaderSection: React.FC<DeckHeaderSectionProps> = ({ deck, isPremiumLo
                     className="text-red-600"
                   >
                     <RotateCcw className="mr-2 h-4 w-4" />
-                    {isResetting ? 'Resetting...' : 'Reset Progress'}
+                    {isResetting ? t('detail.resetting') : t('detail.resetProgress')}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -224,7 +223,7 @@ const DeckHeaderSection: React.FC<DeckHeaderSectionProps> = ({ deck, isPremiumLo
         {deck.isPremium && (
           <div className="mt-3">
             <span className="inline-flex items-center rounded-full bg-amber-100 px-3 py-1 text-sm font-medium text-amber-800">
-              Premium
+              {t('detail.premium')}
             </span>
           </div>
         )}
@@ -233,9 +232,9 @@ const DeckHeaderSection: React.FC<DeckHeaderSectionProps> = ({ deck, isPremiumLo
         <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-gray-600">
           <span className="capitalize">{deck.category}</span>
           <span>•</span>
-          <span>Created by {deck.createdBy}</span>
+          <span>{t('detail.createdBy', { author: deck.createdBy })}</span>
           <span>•</span>
-          <span>Updated {formatDate(deck.updatedAt)}</span>
+          <span>{t('detail.updated', { date: formatDate(deck.updatedAt) })}</span>
         </div>
       </CardHeader>
 
@@ -247,10 +246,10 @@ const DeckHeaderSection: React.FC<DeckHeaderSectionProps> = ({ deck, isPremiumLo
         {deck.progress && deck.progress.status !== 'not-started' && (
           <div className="mt-6">
             <div className="mb-2 flex items-center justify-between">
-              <span className="text-sm font-medium text-gray-700">Your Progress</span>
+              <span className="text-sm font-medium text-gray-700">{t('detail.yourProgress')}</span>
               <span className="text-sm text-gray-600">
-                {Math.round((deck.progress.cardsMastered / deck.progress.cardsTotal) * 100)}%
-                Complete
+                {Math.round((deck.progress.cardsMastered / deck.progress.cardsTotal) * 100)}%{' '}
+                {t('detail.complete')}
               </span>
             </div>
             <DeckProgressBar progress={deck.progress} showLegend={true} size="large" />
@@ -276,38 +275,39 @@ interface StatisticsSectionProps {
 }
 
 const StatisticsSection: React.FC<StatisticsSectionProps> = ({ deck }) => {
+  const { t } = useTranslation('deck');
   const { progress } = deck;
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg font-semibold">Deck Statistics</CardTitle>
+        <CardTitle className="text-lg font-semibold">{t('detail.statistics')}</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
           {/* Total Cards */}
           <StatCard
             icon={<BookOpen className="h-5 w-5 text-blue-500" />}
-            label="Total Cards"
+            label={t('detail.totalCards')}
             value={deck.cardCount}
-            subtext="flashcards"
+            subtext={t('detail.flashcards')}
           />
 
           {/* Estimated Time */}
           <StatCard
             icon={<Clock className="h-5 w-5 text-purple-500" />}
-            label="Estimated Time"
-            value={`${deck.estimatedTime}m`}
-            subtext="to complete"
+            label={t('detail.estimatedTime')}
+            value={`${deck.estimatedTime}${t('detail.minutes')}`}
+            subtext={t('detail.toComplete')}
           />
 
           {/* Due Today (ONLY if deck has actual progress) */}
           {progress && (progress.cardsMastered > 0 || progress.cardsLearning > 0) && (
             <StatCard
               icon={<Clock className="h-5 w-5 text-red-500" />}
-              label="Due Today"
+              label={t('detail.dueToday')}
               value={progress.dueToday}
-              subtext="cards to review"
+              subtext={t('detail.cardsToReview')}
             />
           )}
 
@@ -315,9 +315,12 @@ const StatisticsSection: React.FC<StatisticsSectionProps> = ({ deck }) => {
           {progress && progress.status !== 'not-started' && (
             <StatCard
               icon={<Target className="h-5 w-5 text-green-500" />}
-              label="Mastery Rate"
+              label={t('detail.masteryRate')}
               value={`${Math.round((progress.cardsMastered / progress.cardsTotal) * 100)}%`}
-              subtext={`${progress.cardsMastered}/${progress.cardsTotal} mastered`}
+              subtext={t('detail.mastered', {
+                count: progress.cardsMastered,
+                total: progress.cardsTotal,
+              })}
             />
           )}
         </div>
@@ -327,15 +330,15 @@ const StatisticsSection: React.FC<StatisticsSectionProps> = ({ deck }) => {
           <div className="mt-6 grid grid-cols-3 gap-4 border-t pt-4">
             <div className="text-center">
               <p className="text-2xl font-bold text-gray-400">{progress.cardsNew}</p>
-              <p className="mt-1 text-xs text-gray-600">New</p>
+              <p className="mt-1 text-xs text-gray-600">{t('detail.new')}</p>
             </div>
             <div className="text-center">
               <p className="text-2xl font-bold text-blue-500">{progress.cardsLearning}</p>
-              <p className="mt-1 text-xs text-gray-600">Learning</p>
+              <p className="mt-1 text-xs text-gray-600">{t('detail.learning')}</p>
             </div>
             <div className="text-center">
               <p className="text-2xl font-bold text-green-500">{progress.cardsMastered}</p>
-              <p className="mt-1 text-xs text-gray-600">Mastered</p>
+              <p className="mt-1 text-xs text-gray-600">{t('detail.masteredLabel')}</p>
             </div>
           </div>
         )}
@@ -343,7 +346,7 @@ const StatisticsSection: React.FC<StatisticsSectionProps> = ({ deck }) => {
         {/* Last Review Date (if reviewed) */}
         {progress?.lastStudied && (
           <div className="mt-4 border-t pt-4 text-center text-sm text-gray-600">
-            Last reviewed: {formatRelativeDate(progress.lastStudied)}
+            {t('detail.lastReviewed', { date: formatRelativeDate(progress.lastStudied) })}
           </div>
         )}
       </CardContent>
@@ -388,6 +391,7 @@ const ActionButtonsSection: React.FC<ActionButtonsSectionProps> = ({
   onContinue,
   onUpgrade,
 }) => {
+  const { t } = useTranslation('deck');
   const { reviewSession } = useDeckStore();
   const [isSimulating, setIsSimulating] = useState(false);
 
@@ -416,17 +420,18 @@ const ActionButtonsSection: React.FC<ActionButtonsSectionProps> = ({
         {isPremiumLocked && (
           <div className="py-8 text-center">
             <Lock className="mx-auto mb-4 h-12 w-12 text-amber-500" />
-            <h3 className="mb-2 text-lg font-semibold text-gray-900">Premium Deck</h3>
+            <h3 className="mb-2 text-lg font-semibold text-gray-900">
+              {t('detail.premiumLocked.title')}
+            </h3>
             <p className="mx-auto mb-6 max-w-md text-sm text-gray-600">
-              This deck is only available to premium members. Upgrade your account to access all
-              premium decks and advanced learning features.
+              {t('detail.premiumLocked.description')}
             </p>
             <Button
               size="lg"
               onClick={onUpgrade}
               className="bg-gradient-to-br from-amber-500 to-orange-600 text-white hover:from-amber-600 hover:to-orange-700"
             >
-              Upgrade to Premium
+              {t('detail.upgradeToPremium')}
             </Button>
           </div>
         )}
@@ -435,10 +440,12 @@ const ActionButtonsSection: React.FC<ActionButtonsSectionProps> = ({
         {!isPremiumLocked && deckStatus === 'not-started' && (
           <div className="py-8 text-center">
             <BookOpen className="mx-auto mb-4 h-12 w-12 text-blue-500" />
-            <h3 className="mb-2 text-lg font-semibold text-gray-900">Ready to Start Learning?</h3>
+            <h3 className="mb-2 text-lg font-semibold text-gray-900">{t('detail.readyToStart')}</h3>
             <p className="mx-auto mb-6 max-w-md text-sm text-gray-600">
-              This deck contains {deck.cardCount} flashcards. Estimated time to complete:{' '}
-              {deck.estimatedTime} minutes.
+              {t('detail.notStarted.description', {
+                count: deck.cardCount,
+                time: deck.estimatedTime,
+              })}
             </p>
             <Button
               data-testid="start-review-button"
@@ -446,7 +453,7 @@ const ActionButtonsSection: React.FC<ActionButtonsSectionProps> = ({
               onClick={onStartLearning}
               className="bg-gradient-to-br from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700"
             >
-              Start Review
+              {t('detail.startReview')}
             </Button>
           </div>
         )}
@@ -455,30 +462,32 @@ const ActionButtonsSection: React.FC<ActionButtonsSectionProps> = ({
         {!isPremiumLocked && deckStatus === 'in-progress' && (
           <div className="py-8 text-center">
             <TrendingUp className="mx-auto mb-4 h-12 w-12 text-green-500" />
-            <h3 className="mb-2 text-lg font-semibold text-gray-900">Continue Your Progress</h3>
+            <h3 className="mb-2 text-lg font-semibold text-gray-900">
+              {t('detail.continueProgress')}
+            </h3>
             <p className="mx-auto mb-2 max-w-md text-sm text-gray-600">
-              You have {deck.progress?.dueToday || 0} cards due for review today.
+              {t('detail.inProgress.cardsDue', { count: deck.progress?.dueToday || 0 })}
             </p>
-            <p className="mb-6 text-xs text-gray-500">Keep your streak going!</p>
+            <p className="mb-6 text-xs text-gray-500">{t('detail.inProgress.keepStreak')}</p>
             <Button
               data-testid="start-review-button"
               size="lg"
               onClick={onContinue}
               className="bg-gradient-to-br from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700"
             >
-              Continue Review
+              {t('detail.continueReview')}
             </Button>
 
             {/* Demo: Simulate Study Session Button */}
             <div className="mt-4 border-t pt-4">
-              <p className="mb-2 text-xs text-gray-500">Demo: Test progress tracking</p>
+              <p className="mb-2 text-xs text-gray-500">{t('detail.demo.title')}</p>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleSimulateSession}
                 disabled={isSimulating}
               >
-                {isSimulating ? 'Simulating...' : 'Simulate Study Session'}
+                {isSimulating ? t('detail.demo.simulating') : t('detail.demo.simulateSession')}
               </Button>
             </div>
           </div>
@@ -488,9 +497,11 @@ const ActionButtonsSection: React.FC<ActionButtonsSectionProps> = ({
         {!isPremiumLocked && deckStatus === 'completed' && (
           <div className="py-8 text-center">
             <Target className="mx-auto mb-4 h-12 w-12 text-purple-500" />
-            <h3 className="mb-2 text-lg font-semibold text-gray-900">Deck Completed!</h3>
+            <h3 className="mb-2 text-lg font-semibold text-gray-900">
+              {t('detail.deckCompleted')}
+            </h3>
             <p className="mx-auto mb-6 max-w-md text-sm text-gray-600">
-              Great job! You've mastered this deck. Continue reviewing to maintain your knowledge.
+              {t('detail.completed.description')}
             </p>
             <Button
               data-testid="start-review-button"
@@ -498,7 +509,7 @@ const ActionButtonsSection: React.FC<ActionButtonsSectionProps> = ({
               onClick={onContinue}
               className="bg-gradient-to-br from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700"
             >
-              Review Deck
+              {t('detail.reviewDeck')}
             </Button>
           </div>
         )}
@@ -580,26 +591,30 @@ interface ErrorStateProps {
 }
 
 const ErrorState: React.FC<ErrorStateProps> = ({ error, onRetry }) => {
+  const { t } = useTranslation('deck');
+
   return (
     <div className="container mx-auto max-w-4xl px-4 py-6 md:py-8">
       <Alert variant="destructive" className="mb-4">
         <AlertCircle className="h-4 w-4" />
-        <AlertTitle>Error Loading Deck</AlertTitle>
+        <AlertTitle>{t('detail.error.title')}</AlertTitle>
         <AlertDescription>{error}</AlertDescription>
       </Alert>
 
       <Card>
         <CardContent className="py-12 pt-6 text-center">
           <AlertCircle className="mx-auto mb-4 h-16 w-16 text-red-500" />
-          <h2 className="mb-2 text-xl font-semibold text-gray-900">Failed to Load Deck</h2>
+          <h2 className="mb-2 text-xl font-semibold text-gray-900">
+            {t('detail.error.failedToLoad')}
+          </h2>
           <p className="mx-auto mb-6 max-w-md text-sm text-gray-600">
-            We couldn't load the deck details. Please check your connection and try again.
+            {t('detail.error.description')}
           </p>
           <div className="flex justify-center gap-3">
             <Button variant="outline" onClick={() => window.history.back()}>
-              Go Back
+              {t('detail.goBack')}
             </Button>
-            <Button onClick={onRetry}>Try Again</Button>
+            <Button onClick={onRetry}>{t('detail.tryAgain')}</Button>
           </div>
         </CardContent>
       </Card>
@@ -609,6 +624,7 @@ const ErrorState: React.FC<ErrorStateProps> = ({ error, onRetry }) => {
 
 // Not Found State Component
 const NotFoundState: React.FC = () => {
+  const { t } = useTranslation('deck');
   const navigate = useNavigate();
 
   return (
@@ -616,11 +632,11 @@ const NotFoundState: React.FC = () => {
       <Card>
         <CardContent className="py-12 pt-6 text-center">
           <BookOpen className="mx-auto mb-4 h-16 w-16 text-gray-400" />
-          <h2 className="mb-2 text-xl font-semibold text-gray-900">Deck Not Found</h2>
+          <h2 className="mb-2 text-xl font-semibold text-gray-900">{t('detail.notFound')}</h2>
           <p className="mx-auto mb-6 max-w-md text-sm text-gray-600">
-            The deck you're looking for doesn't exist or has been removed.
+            {t('detail.notFoundDescription')}
           </p>
-          <Button onClick={() => navigate('/decks')}>Browse All Decks</Button>
+          <Button onClick={() => navigate('/decks')}>{t('detail.browseAll')}</Button>
         </CardContent>
       </Card>
     </div>

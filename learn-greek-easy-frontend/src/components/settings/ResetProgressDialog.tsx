@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import { AlertTriangle, ArrowLeft, Loader2, Check } from 'lucide-react';
+import { Trans, useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -21,6 +22,7 @@ interface ResetProgressDialogProps {
 }
 
 export function ResetProgressDialog({ open, onOpenChange }: ResetProgressDialogProps) {
+  const { t } = useTranslation('settings');
   const { toast } = useToast();
   const [step, setStep] = useState<1 | 2>(1);
   const [confirmText, setConfirmText] = useState('');
@@ -47,8 +49,8 @@ export function ResetProgressDialog({ open, onOpenChange }: ResetProgressDialogP
       localStorage.removeItem('learn-greek-easy:deck-progress');
 
       toast({
-        title: 'Progress reset successfully',
-        description: 'All your learning progress has been cleared.',
+        title: t('danger.resetProgress.success'),
+        description: t('danger.resetProgress.successDescription'),
       });
 
       handleClose();
@@ -59,8 +61,8 @@ export function ResetProgressDialog({ open, onOpenChange }: ResetProgressDialogP
       }, 1000);
     } catch (error) {
       toast({
-        title: 'Failed to reset progress',
-        description: error instanceof Error ? error.message : 'Please try again.',
+        title: t('danger.resetProgress.error'),
+        description: error instanceof Error ? error.message : t('common:error.tryAgain'),
         variant: 'destructive',
       });
       setIsResetting(false);
@@ -77,29 +79,33 @@ export function ResetProgressDialog({ open, onOpenChange }: ResetProgressDialogP
             <DialogHeader>
               <div className="flex items-center gap-2">
                 <AlertTriangle className="h-5 w-5 text-red-600" />
-                <DialogTitle className="text-red-600">Reset All Progress?</DialogTitle>
+                <DialogTitle className="text-red-600">
+                  {t('danger.resetProgress.dialogTitle')}
+                </DialogTitle>
               </div>
               <DialogDescription className="space-y-3 pt-2">
-                <p className="font-medium text-foreground">This will permanently delete:</p>
+                <p className="font-medium text-foreground">
+                  {t('danger.resetProgress.willDelete')}
+                </p>
                 <ul className="list-inside list-disc space-y-1 text-sm">
-                  <li>All deck progress and review history</li>
-                  <li>All learning statistics and analytics</li>
-                  <li>All spaced repetition data</li>
-                  <li>Study streaks and achievements</li>
+                  <li>{t('danger.resetProgress.deleteItems.deckProgress')}</li>
+                  <li>{t('danger.resetProgress.deleteItems.statistics')}</li>
+                  <li>{t('danger.resetProgress.deleteItems.spacedRepetition')}</li>
+                  <li>{t('danger.resetProgress.deleteItems.streaks')}</li>
                 </ul>
                 <p className="rounded-md bg-green-50 p-3 text-sm text-green-800 dark:bg-green-950 dark:text-green-200">
                   <Check className="mr-2 inline-block h-4 w-4" />
-                  Your account and settings will be preserved
+                  {t('danger.preserved')}
                 </p>
-                <p className="font-medium text-red-600">This action cannot be undone.</p>
+                <p className="font-medium text-red-600">{t('danger.cannotBeUndone')}</p>
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
               <Button variant="outline" onClick={handleClose}>
-                Cancel
+                {t('danger.cancel')}
               </Button>
               <Button variant="destructive" onClick={() => setStep(2)}>
-                Continue
+                {t('danger.continue')}
               </Button>
             </DialogFooter>
           </>
@@ -108,25 +114,33 @@ export function ResetProgressDialog({ open, onOpenChange }: ResetProgressDialogP
             <DialogHeader>
               <div className="flex items-center gap-2">
                 <AlertTriangle className="h-5 w-5 text-red-600" />
-                <DialogTitle className="text-red-600">Final Confirmation</DialogTitle>
+                <DialogTitle className="text-red-600">
+                  {t('danger.resetProgress.finalConfirmation')}
+                </DialogTitle>
               </div>
               <DialogDescription className="space-y-4 pt-2">
                 <p className="text-foreground">
-                  To confirm, type <span className="font-mono font-bold">RESET</span> below:
+                  <Trans
+                    i18nKey="danger.resetProgress.typeToConfirm"
+                    ns="settings"
+                    components={{ strong: <span className="font-mono font-bold" /> }}
+                  />
                 </p>
                 <div className="space-y-2">
-                  <Label htmlFor="confirm-reset">Confirmation Text</Label>
+                  <Label htmlFor="confirm-reset">
+                    {t('danger.resetProgress.confirmationText')}
+                  </Label>
                   <Input
                     id="confirm-reset"
                     value={confirmText}
                     onChange={(e) => setConfirmText(e.target.value)}
-                    placeholder="Type RESET"
+                    placeholder={t('danger.resetProgress.typeReset')}
                     className="font-mono"
                     disabled={isResetting}
                   />
                   {confirmText && !isConfirmValid && (
                     <p className="text-sm text-red-600">
-                      Must type "RESET" exactly (case-sensitive)
+                      {t('danger.resetProgress.mustTypeReset')}
                     </p>
                   )}
                 </div>
@@ -135,7 +149,7 @@ export function ResetProgressDialog({ open, onOpenChange }: ResetProgressDialogP
             <DialogFooter>
               <Button variant="ghost" onClick={() => setStep(1)} disabled={isResetting}>
                 <ArrowLeft className="mr-2 h-4 w-4" />
-                Back
+                {t('danger.back')}
               </Button>
               <Button
                 variant="destructive"
@@ -145,10 +159,10 @@ export function ResetProgressDialog({ open, onOpenChange }: ResetProgressDialogP
                 {isResetting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Resetting...
+                    {t('danger.resetProgress.resetting')}
                   </>
                 ) : (
-                  'Reset My Progress'
+                  t('danger.resetProgress.resetMyProgress')
                 )}
               </Button>
             </DialogFooter>

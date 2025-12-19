@@ -1,5 +1,7 @@
 import React from 'react';
 
+import { useTranslation } from 'react-i18next';
+
 import {
   ProgressLineChart,
   AccuracyAreaChart,
@@ -82,6 +84,7 @@ const StatisticsLoadingSkeleton: React.FC = () => (
  * All charts fetch their own data via hooks.
  */
 const Statistics: React.FC = () => {
+  const { t } = useTranslation('statistics');
   const { user, isLoading } = useAuth();
 
   // Show loading skeleton while user data is loading
@@ -90,10 +93,10 @@ const Statistics: React.FC = () => {
       <div className="space-y-6 pb-8" data-testid="statistics-page">
         {/* Page Header */}
         <div>
-          <h1 className="text-2xl font-semibold text-text-primary md:text-3xl">Statistics</h1>
-          <p className="mt-2 text-muted-foreground">
-            Track your learning progress and achievements.
-          </p>
+          <h1 className="text-2xl font-semibold text-text-primary md:text-3xl">
+            {t('page.title')}
+          </h1>
+          <p className="mt-2 text-muted-foreground">{t('page.subtitle')}</p>
         </div>
         <StatisticsLoadingSkeleton />
       </div>
@@ -106,14 +109,14 @@ const Statistics: React.FC = () => {
       <div className="space-y-6 pb-8" data-testid="statistics-page">
         {/* Page Header */}
         <div>
-          <h1 className="text-2xl font-semibold text-text-primary md:text-3xl">Statistics</h1>
-          <p className="mt-2 text-muted-foreground">
-            Track your learning progress and achievements.
-          </p>
+          <h1 className="text-2xl font-semibold text-text-primary md:text-3xl">
+            {t('page.title')}
+          </h1>
+          <p className="mt-2 text-muted-foreground">{t('page.subtitle')}</p>
         </div>
         <Card>
           <CardContent className="py-8 text-center">
-            <p className="text-muted-foreground">Please log in to view your statistics.</p>
+            <p className="text-muted-foreground">{t('page.loginRequired')}</p>
           </CardContent>
         </Card>
       </div>
@@ -128,14 +131,14 @@ const Statistics: React.FC = () => {
     <div className="space-y-6 pb-8" data-testid="statistics-page">
       {/* Page Header */}
       <div>
-        <h1 className="text-2xl font-semibold text-text-primary md:text-3xl">Statistics</h1>
-        <p className="mt-2 text-muted-foreground">Track your learning progress and achievements.</p>
+        <h1 className="text-2xl font-semibold text-text-primary md:text-3xl">{t('page.title')}</h1>
+        <p className="mt-2 text-muted-foreground">{t('page.subtitle')}</p>
       </div>
 
       {/* User Stats Section */}
       <section aria-labelledby="stats-heading">
         <h2 id="stats-heading" className="sr-only">
-          Your Learning Stats
+          {t('page.learningStats')}
         </h2>
         <StatsGrid
           streak={stats.streak}
@@ -153,7 +156,7 @@ const Statistics: React.FC = () => {
       {/* Analytics Charts Section */}
       <section aria-labelledby="analytics-heading">
         <h2 id="analytics-heading" className="mb-4 text-lg font-semibold text-foreground">
-          Learning Analytics
+          {t('page.learningAnalytics')}
         </h2>
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           {/* Progress Over Time */}
@@ -175,7 +178,7 @@ const Statistics: React.FC = () => {
       {/* Achievements Section */}
       <section aria-labelledby="achievements-heading">
         <h2 id="achievements-heading" className="sr-only">
-          Achievements
+          {t('achievements.title')}
         </h2>
         <AchievementsGrid achievements={achievements} />
       </section>

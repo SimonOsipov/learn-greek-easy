@@ -3,6 +3,7 @@
 import React from 'react';
 
 import { format } from 'date-fns';
+import { useTranslation } from 'react-i18next';
 import {
   AreaChart,
   Area,
@@ -46,6 +47,7 @@ interface CustomTooltipProps {
  */
 export const AccuracyAreaChart = React.forwardRef<HTMLDivElement, AccuracyAreaChartProps>(
   ({ height, className }, ref) => {
+    const { t } = useTranslation('statistics');
     const { progressData, loading, error } = useProgressData();
 
     const chartHeight = height || 300;
@@ -84,11 +86,11 @@ export const AccuracyAreaChart = React.forwardRef<HTMLDivElement, AccuracyAreaCh
         <ChartContainer
           ref={ref}
           className={className}
-          title="Accuracy Trend"
-          description="Your accuracy percentage over time"
+          title={t('charts.accuracyTrend.title')}
+          description={t('charts.accuracyTrend.description')}
           noData
         >
-          <div className="text-red-600">Error loading data: {error}</div>
+          <div className="text-red-600">{t('error.loadingData', { error })}</div>
         </ChartContainer>
       );
     }
@@ -99,8 +101,8 @@ export const AccuracyAreaChart = React.forwardRef<HTMLDivElement, AccuracyAreaCh
         <ChartContainer
           ref={ref}
           className={className}
-          title="Accuracy Trend"
-          description="Your accuracy percentage over time"
+          title={t('charts.accuracyTrend.title')}
+          description={t('charts.accuracyTrend.description')}
           loading
           height={chartHeight}
         >
@@ -115,8 +117,8 @@ export const AccuracyAreaChart = React.forwardRef<HTMLDivElement, AccuracyAreaCh
         <ChartContainer
           ref={ref}
           className={className}
-          title="Accuracy Trend"
-          description="Your accuracy percentage over time"
+          title={t('charts.accuracyTrend.title')}
+          description={t('charts.accuracyTrend.description')}
           noData
           height={chartHeight}
         >
@@ -129,8 +131,8 @@ export const AccuracyAreaChart = React.forwardRef<HTMLDivElement, AccuracyAreaCh
       <ChartContainer
         ref={ref}
         className={className}
-        title="Accuracy Trend"
-        description="Your accuracy percentage over time"
+        title={t('charts.accuracyTrend.title')}
+        description={t('charts.accuracyTrend.description')}
         height={chartHeight}
       >
         <ResponsiveContainer width="100%" height={chartHeight}>
@@ -161,7 +163,7 @@ export const AccuracyAreaChart = React.forwardRef<HTMLDivElement, AccuracyAreaCh
               stroke={chartColors.chart1}
               fill="url(#accuracyGradient)"
               isAnimationActive={false}
-              name="Accuracy"
+              name={t('charts.accuracyTrend.accuracy')}
             />
           </AreaChart>
         </ResponsiveContainer>

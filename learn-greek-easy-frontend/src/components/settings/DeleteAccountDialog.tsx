@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import { AlertTriangle, ArrowLeft, Loader2, Eye, EyeOff } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
@@ -24,6 +25,7 @@ interface DeleteAccountDialogProps {
 }
 
 export function DeleteAccountDialog({ open, onOpenChange }: DeleteAccountDialogProps) {
+  const { t } = useTranslation('settings');
   const navigate = useNavigate();
   const { toast } = useToast();
   const { logout } = useAuthStore();
@@ -50,7 +52,7 @@ export function DeleteAccountDialog({ open, onOpenChange }: DeleteAccountDialogP
 
     // Simple password validation (in real app, verify with backend)
     if (password.length < 6) {
-      setError('Please enter your password');
+      setError(t('danger.deleteAccount.pleaseEnterPassword'));
       return;
     }
 
@@ -61,7 +63,7 @@ export function DeleteAccountDialog({ open, onOpenChange }: DeleteAccountDialogP
 
   const handleDelete = async () => {
     if (!acknowledged) {
-      setError('You must acknowledge that this action cannot be undone');
+      setError(t('danger.deleteAccount.mustAcknowledge'));
       return;
     }
 
@@ -76,8 +78,8 @@ export function DeleteAccountDialog({ open, onOpenChange }: DeleteAccountDialogP
       localStorage.clear();
 
       toast({
-        title: 'Account deleted successfully',
-        description: 'Your account and all data have been permanently deleted.',
+        title: t('danger.deleteAccount.success'),
+        description: t('danger.deleteAccount.successDescription'),
       });
 
       // Logout and redirect
@@ -86,8 +88,8 @@ export function DeleteAccountDialog({ open, onOpenChange }: DeleteAccountDialogP
       navigate('/');
     } catch (error) {
       toast({
-        title: 'Failed to delete account',
-        description: error instanceof Error ? error.message : 'Please try again.',
+        title: t('danger.deleteAccount.error'),
+        description: error instanceof Error ? error.message : t('common:error.tryAgain'),
         variant: 'destructive',
       });
       setIsDeleting(false);
@@ -102,28 +104,32 @@ export function DeleteAccountDialog({ open, onOpenChange }: DeleteAccountDialogP
             <DialogHeader>
               <div className="flex items-center gap-2">
                 <AlertTriangle className="h-5 w-5 text-red-600" />
-                <DialogTitle className="text-red-600">Delete Account?</DialogTitle>
+                <DialogTitle className="text-red-600">
+                  {t('danger.deleteAccount.dialogTitle')}
+                </DialogTitle>
               </div>
               <DialogDescription className="space-y-3 pt-2">
-                <p className="font-medium text-foreground">This will permanently delete:</p>
+                <p className="font-medium text-foreground">
+                  {t('danger.deleteAccount.willDelete')}
+                </p>
                 <ul className="list-inside list-disc space-y-1 text-sm">
-                  <li>Your account and all login credentials</li>
-                  <li>All learning progress and review history</li>
-                  <li>All statistics, analytics, and achievements</li>
-                  <li>All deck data and flashcards</li>
-                  <li>All settings and preferences</li>
+                  <li>{t('danger.deleteAccount.deleteItems.account')}</li>
+                  <li>{t('danger.deleteAccount.deleteItems.progress')}</li>
+                  <li>{t('danger.deleteAccount.deleteItems.statistics')}</li>
+                  <li>{t('danger.deleteAccount.deleteItems.deckData')}</li>
+                  <li>{t('danger.deleteAccount.deleteItems.settings')}</li>
                 </ul>
                 <p className="font-medium text-red-600">
-                  This action cannot be undone. All data will be lost permanently.
+                  {t('danger.deleteAccount.permanentWarning')}
                 </p>
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
               <Button variant="outline" onClick={handleClose}>
-                Cancel
+                {t('danger.cancel')}
               </Button>
               <Button variant="destructive" onClick={() => setStep(2)}>
-                Continue
+                {t('danger.continue')}
               </Button>
             </DialogFooter>
           </>
@@ -132,12 +138,16 @@ export function DeleteAccountDialog({ open, onOpenChange }: DeleteAccountDialogP
             <DialogHeader>
               <div className="flex items-center gap-2">
                 <AlertTriangle className="h-5 w-5 text-red-600" />
-                <DialogTitle className="text-red-600">Verify Your Password</DialogTitle>
+                <DialogTitle className="text-red-600">
+                  {t('danger.deleteAccount.verifyPassword')}
+                </DialogTitle>
               </div>
               <DialogDescription className="space-y-4 pt-2">
-                <p className="text-foreground">Enter your current password to continue:</p>
+                <p className="text-foreground">{t('danger.deleteAccount.enterPassword')}</p>
                 <div className="space-y-2">
-                  <Label htmlFor="verify-password">Current Password</Label>
+                  <Label htmlFor="verify-password">
+                    {t('danger.deleteAccount.currentPassword')}
+                  </Label>
                   <div className="relative">
                     <Input
                       id="verify-password"
@@ -147,7 +157,7 @@ export function DeleteAccountDialog({ open, onOpenChange }: DeleteAccountDialogP
                         setPassword(e.target.value);
                         setError(null);
                       }}
-                      placeholder="Enter your password"
+                      placeholder={t('danger.deleteAccount.enterPasswordPlaceholder')}
                       disabled={isDeleting}
                       className={error ? 'border-red-500' : ''}
                     />
@@ -172,10 +182,10 @@ export function DeleteAccountDialog({ open, onOpenChange }: DeleteAccountDialogP
                 }}
               >
                 <ArrowLeft className="mr-2 h-4 w-4" />
-                Back
+                {t('danger.back')}
               </Button>
               <Button variant="destructive" onClick={handleVerifyPassword} disabled={!password}>
-                Verify Password
+                {t('danger.deleteAccount.verifyPasswordButton')}
               </Button>
             </DialogFooter>
           </>
@@ -184,15 +194,15 @@ export function DeleteAccountDialog({ open, onOpenChange }: DeleteAccountDialogP
             <DialogHeader>
               <div className="flex items-center gap-2">
                 <AlertTriangle className="h-5 w-5 text-red-600" />
-                <DialogTitle className="text-red-600">Final Confirmation</DialogTitle>
+                <DialogTitle className="text-red-600">
+                  {t('danger.deleteAccount.finalConfirmation')}
+                </DialogTitle>
               </div>
               <DialogDescription className="space-y-4 pt-2">
                 <p className="font-medium text-foreground">
-                  Are you absolutely sure you want to delete your account?
+                  {t('danger.deleteAccount.absolutelySure')}
                 </p>
-                <p className="text-sm">
-                  All your data will be permanently deleted and cannot be recovered.
-                </p>
+                <p className="text-sm">{t('danger.deleteAccount.dataNotRecoverable')}</p>
                 <div className="flex items-start space-x-2 rounded-md border border-red-200 bg-red-50 p-3 dark:border-red-900 dark:bg-red-950">
                   <Checkbox
                     id="acknowledge"
@@ -207,8 +217,7 @@ export function DeleteAccountDialog({ open, onOpenChange }: DeleteAccountDialogP
                     htmlFor="acknowledge"
                     className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                   >
-                    I understand this action cannot be undone and all my data will be permanently
-                    deleted
+                    {t('danger.deleteAccount.acknowledge')}
                   </label>
                 </div>
                 {error && <p className="text-sm text-red-600">{error}</p>}
@@ -224,7 +233,7 @@ export function DeleteAccountDialog({ open, onOpenChange }: DeleteAccountDialogP
                 disabled={isDeleting}
               >
                 <ArrowLeft className="mr-2 h-4 w-4" />
-                Back
+                {t('danger.back')}
               </Button>
               <Button
                 variant="destructive"
@@ -234,10 +243,10 @@ export function DeleteAccountDialog({ open, onOpenChange }: DeleteAccountDialogP
                 {isDeleting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Deleting...
+                    {t('danger.deleteAccount.deleting')}
                   </>
                 ) : (
-                  'Delete My Account'
+                  t('danger.deleteAccount.deleteMyAccount')
                 )}
               </Button>
             </DialogFooter>

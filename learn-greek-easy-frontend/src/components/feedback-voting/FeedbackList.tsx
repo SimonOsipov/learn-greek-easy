@@ -3,6 +3,7 @@
 import React from 'react';
 
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -11,6 +12,7 @@ import { useFeedbackStore } from '@/stores/feedbackStore';
 import { FeedbackCard } from './FeedbackCard';
 
 export const FeedbackList: React.FC = () => {
+  const { t } = useTranslation('feedback');
   const { feedbackList, isLoading, page, totalPages, setPage } = useFeedbackStore();
 
   if (isLoading) {
@@ -26,7 +28,7 @@ export const FeedbackList: React.FC = () => {
   if (feedbackList.length === 0) {
     return (
       <div className="py-12 text-center text-muted-foreground" data-testid="feedback-empty-state">
-        No feedback found. Be the first to share your ideas!
+        {t('list.empty')}
       </div>
     );
   }
@@ -50,10 +52,10 @@ export const FeedbackList: React.FC = () => {
             data-testid="pagination-prev"
           >
             <ChevronLeft className="mr-1 h-4 w-4" />
-            Previous
+            {t('pagination.previous')}
           </Button>
           <span className="text-sm text-muted-foreground" data-testid="pagination-info">
-            Page {page} of {totalPages}
+            {t('pagination.pageInfo', { page, totalPages })}
           </span>
           <Button
             variant="outline"
@@ -62,7 +64,7 @@ export const FeedbackList: React.FC = () => {
             disabled={page >= totalPages}
             data-testid="pagination-next"
           >
-            Next
+            {t('pagination.next')}
             <ChevronRight className="ml-1 h-4 w-4" />
           </Button>
         </div>

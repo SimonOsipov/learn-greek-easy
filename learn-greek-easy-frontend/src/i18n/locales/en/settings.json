@@ -1,0 +1,117 @@
+{
+  "page": {
+    "title": "Settings",
+    "subtitle": "Manage your account and preferences.",
+    "backToDashboard": "Back to dashboard"
+  },
+  "account": {
+    "title": "Account Settings",
+    "subtitle": "Manage your password and subscription",
+    "loggedInAs": "Logged in as",
+    "password": {
+      "title": "Password",
+      "description": "Change your password to keep your account secure",
+      "change": "Change Password",
+      "dialogTitle": "Change Password",
+      "dialogDescription": "Enter your current password and choose a new password",
+      "current": "Current Password",
+      "currentPlaceholder": "Enter your current password",
+      "new": "New Password",
+      "newPlaceholder": "Enter new password",
+      "confirm": "Confirm New Password",
+      "confirmPlaceholder": "Confirm new password",
+      "update": "Update Password",
+      "updating": "Updating...",
+      "cancel": "Cancel",
+      "success": "Password updated",
+      "successDescription": "Your password has been successfully changed.",
+      "error": "Failed to update password"
+    },
+    "subscription": {
+      "title": "Subscription",
+      "currentPlan": "Current plan",
+      "premium": "Premium",
+      "free": "Free Plan",
+      "upgrade": "Upgrade to Premium",
+      "upgradeTitle": "Premium upgrade",
+      "upgradeDescription": "Payment integration coming soon!",
+      "memberSince": "Member since {{date}}"
+    }
+  },
+  "language": {
+    "title": "Language",
+    "description": "Choose your preferred interface language. Card content will remain in Greek.",
+    "changing": "Changing language...",
+    "selectLabel": "Select language"
+  },
+  "danger": {
+    "title": "Danger Zone",
+    "subtitle": "Irreversible actions that affect your account and data",
+    "preserved": "Your account and settings will be preserved",
+    "cannotBeUndone": "This action cannot be undone.",
+    "back": "Back",
+    "cancel": "Cancel",
+    "continue": "Continue",
+    "resetProgress": {
+      "title": "Reset All Progress",
+      "description": "Clear all learning progress, review history, and statistics. Your account and settings will be preserved.",
+      "button": "Reset Progress",
+      "dialogTitle": "Reset All Progress?",
+      "willDelete": "This will permanently delete:",
+      "deleteItems": {
+        "deckProgress": "All deck progress and review history",
+        "statistics": "All learning statistics and analytics",
+        "spacedRepetition": "All spaced repetition data",
+        "streaks": "Study streaks and achievements"
+      },
+      "finalConfirmation": "Final Confirmation",
+      "typeToConfirm": "To confirm, type <strong>RESET</strong> below:",
+      "confirmationText": "Confirmation Text",
+      "typeReset": "Type RESET",
+      "mustTypeReset": "Must type \"RESET\" exactly (case-sensitive)",
+      "resetting": "Resetting...",
+      "resetMyProgress": "Reset My Progress",
+      "success": "Progress reset successfully",
+      "successDescription": "All your learning progress has been cleared.",
+      "error": "Failed to reset progress"
+    },
+    "deleteAccount": {
+      "title": "Delete Account",
+      "description": "Permanently delete your account and all associated data. This action cannot be undone.",
+      "button": "Delete Account",
+      "dialogTitle": "Delete Account?",
+      "willDelete": "This will permanently delete:",
+      "deleteItems": {
+        "account": "Your account and all login credentials",
+        "progress": "All learning progress and review history",
+        "statistics": "All statistics, analytics, and achievements",
+        "deckData": "All deck data and flashcards",
+        "settings": "All settings and preferences"
+      },
+      "permanentWarning": "This action cannot be undone. All data will be lost permanently.",
+      "verifyPassword": "Verify Your Password",
+      "enterPassword": "Enter your current password to continue:",
+      "currentPassword": "Current Password",
+      "enterPasswordPlaceholder": "Enter your password",
+      "pleaseEnterPassword": "Please enter your password",
+      "verifyPasswordButton": "Verify Password",
+      "finalConfirmation": "Final Confirmation",
+      "absolutelySure": "Are you absolutely sure you want to delete your account?",
+      "dataNotRecoverable": "All your data will be permanently deleted and cannot be recovered.",
+      "acknowledge": "I understand this action cannot be undone and all my data will be permanently deleted",
+      "mustAcknowledge": "You must acknowledge that this action cannot be undone",
+      "deleting": "Deleting...",
+      "deleteMyAccount": "Delete My Account",
+      "success": "Account deleted successfully",
+      "successDescription": "Your account and all data have been permanently deleted.",
+      "error": "Failed to delete account"
+    }
+  },
+  "validation": {
+    "currentPasswordRequired": "Current password is required",
+    "passwordMinLength": "Password must be at least 8 characters",
+    "newPasswordRequired": "New password is required",
+    "confirmPasswordRequired": "Please confirm your password",
+    "passwordsDoNotMatch": "Passwords do not match"
+  }
+}

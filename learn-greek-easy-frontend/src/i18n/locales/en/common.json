@@ -1,0 +1,123 @@
+{
+  "loading": "Loading...",
+  "error": {
+    "generic": "An error occurred",
+    "tryAgain": "Please try again",
+    "notFound": "Not found",
+    "unauthorized": "Unauthorized",
+    "forbidden": "Access denied",
+    "somethingWrong": "Something went wrong",
+    "unexpectedError": "We're sorry, but something unexpected happened. Please try again.",
+    "persistsContact": "If this problem persists, please contact support."
+  },
+  "notFoundPage": {
+    "code": "404",
+    "title": "Page Not Found",
+    "description": "The page you're looking for seems to have wandered off to Mount Olympus. Let's get you back on track!",
+    "goToDashboard": "Go to Dashboard",
+    "goBack": "Go Back"
+  },
+  "errorPage": {
+    "tryAgain": "Try Again",
+    "goHome": "Go Home"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "progress": {
+      "title": "Your Progress",
+      "error": "Failed to load metrics. Please try refreshing the page.",
+      "empty": "No progress data yet. Start studying to see your metrics!"
+    },
+    "metrics": {
+      "dueToday": "Due Today",
+      "currentStreak": "Current Streak",
+      "mastered": "Mastered",
+      "accuracy": "Accuracy",
+      "totalTime": "Total Time",
+      "cardsToReview": "cards to review",
+      "days": "days",
+      "wordsTotal": "words total",
+      "thisPeriod": "this period",
+      "tooltip": "Click to view {{label}} details"
+    },
+    "activeDecks": {
+      "title": "Active Decks",
+      "viewAll": "View all decks",
+      "empty": "No active decks yet.",
+      "browseDecks": "Browse available decks"
+    }
+  },
+  "welcome": {
+    "greeting": "Γεια σου, {{name}}!",
+    "cardsToReview": "You have <strong>{{count}} cards</strong> to review today.",
+    "cardsToReviewText": "You have {{count}} cards to review today.",
+    "encouragement": {
+      "incredible": "Incredible {{count}}-day streak!",
+      "great": "Great {{count}}-day streak going!",
+      "keepItUp": "{{count}} day streak - keep it up!",
+      "readyToStart": "Ready to start learning?"
+    },
+    "startReview": "Start Review Session"
+  },
+  "actions": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "close": "Close",
+    "confirm": "Confirm",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "update": "Update",
+    "submit": "Submit",
+    "retry": "Retry"
+  },
+  "navigation": {
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "home": "Home"
+  },
+  "search": {
+    "placeholder": "Search...",
+    "noResults": "No results found",
+    "filter": "Filter",
+    "sort": "Sort",
+    "clear": "Clear"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "home": "Home",
+    "decks": "Decks",
+    "stats": "Stats",
+    "statistics": "Statistics",
+    "feedback": "Feedback",
+    "profile": "Profile",
+    "settings": "Settings",
+    "logout": "Logout",
+    "help": "Help & Support",
+    "menu": "Menu",
+    "toggleMenu": "Toggle menu",
+    "userMenu": "User menu"
+  },
+  "language": {
+    "select": "Select language",
+    "current": "Current language",
+    "switchTo": "Switch to {{language}}"
+  },
+  "time": {
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "daysAgo": "{{count}} day ago",
+    "daysAgo_plural": "{{count}} days ago",
+    "hoursAgo": "{{count}} hour ago",
+    "hoursAgo_plural": "{{count}} hours ago",
+    "minutesAgo": "{{count}} minute ago",
+    "minutesAgo_plural": "{{count}} minutes ago",
+    "justNow": "Just now"
+  },
+  "pagination": {
+    "page": "Page {{current}} of {{total}}",
+    "showing": "Showing {{from}}-{{to}} of {{total}}",
+    "itemsPerPage": "Items per page"
+  }
+}

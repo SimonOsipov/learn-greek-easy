@@ -1,6 +1,7 @@
 import React from 'react';
 
 import { Crown, Shield } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -12,6 +13,8 @@ interface ProfileHeaderProps {
 }
 
 export const ProfileHeader: React.FC<ProfileHeaderProps> = ({ user, onAvatarClick }) => {
+  const { t, i18n } = useTranslation('profile');
+
   // Generate initials from user name
   const initials = user.name
     .split(' ')
@@ -27,24 +30,24 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({ user, onAvatarClic
         return (
           <Badge variant="destructive" className="flex items-center gap-1">
             <Shield className="h-3 w-3" />
-            Admin
+            {t('header.roles.admin')}
           </Badge>
         );
       case 'premium':
         return (
           <Badge className="flex items-center gap-1 bg-purple-600 hover:bg-purple-700">
             <Crown className="h-3 w-3" />
-            Premium
+            {t('header.roles.premium')}
           </Badge>
         );
       case 'free':
       default:
-        return <Badge variant="secondary">Free</Badge>;
+        return <Badge variant="secondary">{t('header.roles.free')}</Badge>;
     }
   };
 
   // Format member since date
-  const memberSince = new Date(user.stats.joinedDate).toLocaleDateString('en-US', {
+  const memberSince = new Date(user.stats.joinedDate).toLocaleDateString(i18n.language, {
     month: 'long',
     year: 'numeric',
   });
@@ -66,7 +69,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({ user, onAvatarClic
           </Avatar>
           {onAvatarClick && (
             <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
-              <span className="text-xs font-medium text-white">Change</span>
+              <span className="text-xs font-medium text-white">{t('header.change')}</span>
             </div>
           )}
         </button>
@@ -84,14 +87,14 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({ user, onAvatarClic
         <div className="w-full border-t border-gray-200 pt-4">
           <div className="flex items-center justify-center gap-4 text-sm text-gray-600">
             <div className="flex flex-col">
-              <span className="text-xs text-gray-500">Member Since</span>
+              <span className="text-xs text-gray-500">{t('header.memberSince')}</span>
               <span className="font-medium text-gray-900">{memberSince}</span>
             </div>
             {user.stats.lastActivity && (
               <div className="flex flex-col border-l border-gray-200 pl-4">
-                <span className="text-xs text-gray-500">Last Active</span>
+                <span className="text-xs text-gray-500">{t('header.lastActive')}</span>
                 <span className="font-medium text-gray-900">
-                  {new Date(user.stats.lastActivity).toLocaleDateString('en-US', {
+                  {new Date(user.stats.lastActivity).toLocaleDateString(i18n.language, {
                     month: 'short',
                     day: 'numeric',
                   })}

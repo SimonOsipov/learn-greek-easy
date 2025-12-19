@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from 'react';
 
 import { Search, X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,10 +19,10 @@ export interface DeckFiltersProps {
   filteredDecks: number;
 }
 
-const STATUS_OPTIONS: { value: DeckStatus; label: string }[] = [
-  { value: 'not-started', label: 'Not Started' },
-  { value: 'in-progress', label: 'In Progress' },
-  { value: 'completed', label: 'Completed' },
+const STATUS_OPTIONS: { value: DeckStatus; labelKey: string }[] = [
+  { value: 'not-started', labelKey: 'filters.notStarted' },
+  { value: 'in-progress', labelKey: 'filters.inProgress' },
+  { value: 'completed', labelKey: 'filters.completed' },
 ];
 
 export const DeckFilters: React.FC<DeckFiltersProps> = ({
@@ -31,6 +32,7 @@ export const DeckFilters: React.FC<DeckFiltersProps> = ({
   totalDecks,
   filteredDecks,
 }) => {
+  const { t } = useTranslation('deck');
   // Local state for search input (debounced before updating store)
   const [searchInput, setSearchInput] = useState(filters.search);
 
@@ -86,11 +88,11 @@ export const DeckFilters: React.FC<DeckFiltersProps> = ({
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
         <Input
           type="text"
-          placeholder="Search decks by name..."
+          placeholder={t('filters.searchPlaceholder')}
           value={searchInput}
           onChange={handleSearchChange}
           className="pl-10 pr-10"
-          aria-label="Search decks"
+          aria-label={t('filters.searchPlaceholder')}
         />
         {searchInput.length > 0 && (
           <button
@@ -110,7 +112,7 @@ export const DeckFilters: React.FC<DeckFiltersProps> = ({
       <div className="flex flex-col gap-3">
         {/* Row 1: Level Filters */}
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm font-medium text-gray-700">Level:</span>
+          <span className="text-sm font-medium text-gray-700">{t('filters.level')}</span>
           {CEFR_LEVEL_OPTIONS.map(({ value, color }) => (
             <Button
               key={value}
@@ -129,8 +131,8 @@ export const DeckFilters: React.FC<DeckFiltersProps> = ({
 
         {/* Row 2: Status Filters + Premium + Clear */}
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm font-medium text-gray-700">Status:</span>
-          {STATUS_OPTIONS.map(({ value, label }) => (
+          <span className="text-sm font-medium text-gray-700">{t('filters.status')}</span>
+          {STATUS_OPTIONS.map(({ value, labelKey }) => (
             <Button
               key={value}
               variant={filters.status.includes(value) ? 'default' : 'outline'}
@@ -138,7 +140,7 @@ export const DeckFilters: React.FC<DeckFiltersProps> = ({
               onClick={() => handleStatusToggle(value)}
               aria-pressed={filters.status.includes(value)}
             >
-              {label}
+              {t(labelKey)}
             </Button>
           ))}
 
@@ -150,7 +152,7 @@ export const DeckFilters: React.FC<DeckFiltersProps> = ({
             className={filters.showPremiumOnly ? 'bg-amber-500 text-white hover:bg-amber-600' : ''}
             aria-pressed={filters.showPremiumOnly}
           >
-            Premium Only
+            {t('filters.premiumOnly')}
           </Button>
 
           {/* Clear Filters Button */}
@@ -162,7 +164,7 @@ export const DeckFilters: React.FC<DeckFiltersProps> = ({
               className="ml-auto text-gray-600 hover:text-gray-900"
             >
               <X className="mr-1 h-4 w-4" />
-              Clear All ({activeFilterCount})
+              {t('filters.clearAll')} ({activeFilterCount})
             </Button>
           )}
         </div>
@@ -170,7 +172,7 @@ export const DeckFilters: React.FC<DeckFiltersProps> = ({
 
       {/* Results Counter */}
       <div className="text-sm text-gray-600">
-        Showing {filteredDecks} of {totalDecks} decks
+        {t('filters.showing', { count: filteredDecks, total: totalDecks })}
       </div>
     </div>
   );

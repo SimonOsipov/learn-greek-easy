@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Eye, EyeOff } from 'lucide-react';
 import { useForm } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 
@@ -31,32 +32,28 @@ import { useAuthStore } from '@/stores/authStore';
  * - Password: Required, minimum 8 characters
  * - ConfirmPassword: Required, must match password
  * - AcceptedTerms: Must be true
+ *
+ * Note: Error messages are translated at display time using t() function
  */
 const registerSchema = z
   .object({
-    name: z
-      .string()
-      .min(1, 'Name is required')
-      .min(2, 'Name must be at least 2 characters')
-      .max(50, 'Name must not exceed 50 characters'),
-    email: z.string().min(1, 'Email is required').email('Please enter a valid email address'),
-    password: z
-      .string()
-      .min(1, 'Password is required')
-      .min(8, 'Password must be at least 8 characters'),
-    confirmPassword: z.string().min(1, 'Please confirm your password'),
+    name: z.string().min(1, 'nameRequired').min(2, 'nameMinLength').max(50, 'nameMaxLength'),
+    email: z.string().min(1, 'emailRequired').email('emailInvalid'),
+    password: z.string().min(1, 'passwordRequired').min(8, 'passwordMinLength'),
+    confirmPassword: z.string().min(1, 'confirmPasswordRequired'),
     acceptedTerms: z.boolean().refine((val) => val === true, {
-      message: 'You must accept the terms and conditions',
+      message: 'termsRequired',
     }),
   })
   .refine((data) => data.password === data.confirmPassword, {
-    message: 'Passwords do not match',
+    message: 'passwordsMismatch',
     path: ['confirmPassword'],
   });
 
 type RegisterFormData = z.infer<typeof registerSchema>;
 
 export const Register: React.FC = () => {
+  const { t } = useTranslation('auth');
   const navigate = useNavigate();
   const { register: registerUser, isLoading } = useAuthStore();
   const [showPassword, setShowPassword] = useState(false);
@@ -99,11 +96,11 @@ export const Register: React.FC = () => {
   };
 
   const passwordStrength = calculatePasswordStrength(passwordValue);
-  const getStrengthText = () => {
+  const getStrengthText = (): string => {
     if (!passwordValue) return '';
-    if (passwordStrength < 33) return 'Weak';
-    if (passwordStrength < 66) return 'Fair';
-    return 'Strong';
+    if (passwordStrength < 33) return t('register.passwordStrength.weak');
+    if (passwordStrength < 66) return t('register.passwordStrength.fair');
+    return t('register.passwordStrength.strong');
   };
 
   /**
@@ -129,13 +126,19 @@ export const Register: React.FC = () => {
     } catch (err) {
       // Display API error at form level
       const errorMessage =
-        err instanceof Error ? err.message : 'Registration failed. Please try again.';
+        err instanceof Error ? err.message : t('register.errors.registrationFailed');
       setFormError(errorMessage);
     }
   };
 
   // Determine if form should be disabled
   const isFormDisabled = isLoading || isSubmitting;
+
+  // Helper to translate Zod error messages
+  const getErrorMessage = (errorKey: string | undefined): string | undefined => {
+    if (!errorKey) return undefined;
+    return t(`register.errors.${errorKey}`);
+  };
 
   return (
     <AuthLayout>
@@ -145,10 +148,10 @@ export const Register: React.FC = () => {
             <span className="text-4xl">📚</span>
           </div>
           <CardTitle className="text-2xl font-bold" data-testid="register-title">
-            Create your account
+            {t('register.title')}
           </CardTitle>
           <CardDescription data-testid="register-description">
-            Start your Greek learning journey today
+            {t('register.subtitle')}
           </CardDescription>
         </CardHeader>
 
@@ -166,12 +169,12 @@ export const Register: React.FC = () => {
 
             {/* Name field with validation */}
             <div className="space-y-2">
-              <Label htmlFor="name">Full Name</Label>
+              <Label htmlFor="name">{t('register.name')}</Label>
               <Input
                 id="name"
                 data-testid="name-input"
                 type="text"
-                placeholder="John Smith"
+                placeholder={t('register.namePlaceholder')}
                 autoComplete="name"
                 aria-invalid={errors.name ? 'true' : 'false'}
                 aria-describedby={errors.name ? 'name-error' : undefined}
@@ -180,19 +183,19 @@ export const Register: React.FC = () => {
               />
               {errors.name && (
                 <p id="name-error" className="mt-1 text-sm text-red-600" role="alert">
-                  {errors.name.message}
+                  {getErrorMessage(errors.name.message)}
                 </p>
               )}
             </div>
 
             {/* Email field with validation */}
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{t('register.email')}</Label>
               <Input
                 id="email"
                 data-testid="email-input"
                 type="email"
-                placeholder="your@email.com"
+                placeholder={t('register.emailPlaceholder')}
                 autoComplete="email"
                 aria-invalid={errors.email ? 'true' : 'false'}
                 aria-describedby={errors.email ? 'email-error' : undefined}
@@ -201,20 +204,20 @@ export const Register: React.FC = () => {
               />
               {errors.email && (
                 <p id="email-error" className="mt-1 text-sm text-red-600" role="alert">
-                  {errors.email.message}
+                  {getErrorMessage(errors.email.message)}
                 </p>
               )}
             </div>
 
             {/* Password field with validation and visibility toggle */}
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">{t('register.password')}</Label>
               <div className="relative">
                 <Input
                   id="password"
                   data-testid="password-input"
                   type={showPassword ? 'text' : 'password'}
-                  placeholder="Create a strong password"
+                  placeholder={t('register.passwordPlaceholder')}
                   autoComplete="new-password"
                   aria-invalid={errors.password ? 'true' : 'false'}
                   aria-describedby={errors.password ? 'password-error' : undefined}
@@ -228,21 +231,23 @@ export const Register: React.FC = () => {
                   className="absolute right-2 top-1/2 h-8 w-8 -translate-y-1/2"
                   onClick={() => setShowPassword(!showPassword)}
                   disabled={isFormDisabled}
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  aria-label={
+                    showPassword ? t('passwordVisibility.hide') : t('passwordVisibility.show')
+                  }
                 >
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </Button>
               </div>
               {errors.password && (
                 <p id="password-error" className="mt-1 text-sm text-red-600" role="alert">
-                  {errors.password.message}
+                  {getErrorMessage(errors.password.message)}
                 </p>
               )}
               {passwordValue && (
                 <div className="space-y-1">
                   <Progress value={passwordStrength} className="h-1.5" />
                   <p className="text-xs text-muted-foreground">
-                    Password strength:{' '}
+                    {t('register.passwordStrength.label')}{' '}
                     <span
                       className={`font-medium ${
                         passwordStrength < 33
@@ -261,13 +266,13 @@ export const Register: React.FC = () => {
 
             {/* Confirm Password field with validation and visibility toggle */}
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm Password</Label>
+              <Label htmlFor="confirmPassword">{t('register.confirmPassword')}</Label>
               <div className="relative">
                 <Input
                   id="confirmPassword"
                   data-testid="confirm-password-input"
                   type={showConfirmPassword ? 'text' : 'password'}
-                  placeholder="Confirm your password"
+                  placeholder={t('register.confirmPasswordPlaceholder')}
                   autoComplete="new-password"
                   aria-invalid={errors.confirmPassword ? 'true' : 'false'}
                   aria-describedby={errors.confirmPassword ? 'confirmPassword-error' : undefined}
@@ -281,14 +286,18 @@ export const Register: React.FC = () => {
                   className="absolute right-2 top-1/2 h-8 w-8 -translate-y-1/2"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   disabled={isFormDisabled}
-                  aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                  aria-label={
+                    showConfirmPassword
+                      ? t('passwordVisibility.hide')
+                      : t('passwordVisibility.show')
+                  }
                 >
                   {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </Button>
               </div>
               {errors.confirmPassword && (
                 <p id="confirmPassword-error" className="mt-1 text-sm text-red-600" role="alert">
-                  {errors.confirmPassword.message}
+                  {getErrorMessage(errors.confirmPassword.message)}
                 </p>
               )}
             </div>
@@ -311,15 +320,15 @@ export const Register: React.FC = () => {
                   {...register('acceptedTerms')}
                 />
                 <Label htmlFor="terms" className="cursor-pointer text-sm font-normal">
-                  I agree to the{' '}
+                  {t('register.acceptTerms')}{' '}
                   <Link to="/terms" className="text-primary hover:underline">
-                    terms and conditions
+                    {t('register.termsLink')}
                   </Link>
                 </Label>
               </div>
               {errors.acceptedTerms && (
                 <p id="terms-error" className="text-sm text-red-600" role="alert">
-                  {errors.acceptedTerms.message}
+                  {getErrorMessage(errors.acceptedTerms.message)}
                 </p>
               )}
             </div>
@@ -329,17 +338,17 @@ export const Register: React.FC = () => {
             <SubmitButton
               data-testid="register-submit"
               loading={isFormDisabled}
-              loadingText="Creating Account..."
+              loadingText={t('register.submitting')}
               className="w-full bg-gradient-to-br from-[#667eea] to-[#764ba2] text-white hover:opacity-90"
               size="lg"
             >
-              Create Account
+              {t('register.submit')}
             </SubmitButton>
 
             {/* OAuth Divider */}
             <div className="relative my-6 flex items-center">
               <div className="flex-grow border-t border-gray-300"></div>
-              <span className="px-4 text-sm text-gray-500">OR CONTINUE WITH</span>
+              <span className="px-4 text-sm text-gray-500">{t('register.orContinueWith')}</span>
               <div className="flex-grow border-t border-gray-300"></div>
             </div>
 
@@ -350,13 +359,13 @@ export const Register: React.FC = () => {
             />
 
             <p className="text-center text-sm text-muted-foreground">
-              Already have an account?{' '}
+              {t('register.hasAccount')}{' '}
               <Link
                 to="/login"
                 data-testid="login-link"
                 className="font-medium text-primary hover:underline"
               >
-                Sign in
+                {t('register.signIn')}
               </Link>
             </p>
           </CardFooter>

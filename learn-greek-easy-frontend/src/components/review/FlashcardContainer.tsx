@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 
+import { useTranslation } from 'react-i18next';
+
 import { cn } from '@/lib/utils';
 import { useReviewStore } from '@/stores/reviewStore';
 import type { CardReview } from '@/types/review';
@@ -16,6 +18,7 @@ interface FlashcardContainerProps {
 }
 
 export function FlashcardContainer({ card }: FlashcardContainerProps) {
+  const { t } = useTranslation('review');
   const { isCardFlipped, flipCard, activeSession, currentCardIndex } = useReviewStore();
   const [selectedTense, setSelectedTense] = useState<'present' | 'past' | 'future'>('present');
   const [srAnnouncement, setSrAnnouncement] = useState('');
@@ -28,17 +31,17 @@ export function FlashcardContainer({ card }: FlashcardContainerProps) {
   // Announce card flip to screen readers
   useEffect(() => {
     if (isCardFlipped) {
-      setSrAnnouncement('Answer revealed');
+      setSrAnnouncement(t('session.answerRevealed'));
     }
-  }, [isCardFlipped]);
+  }, [isCardFlipped, t]);
 
   // Announce card transition to screen readers
   useEffect(() => {
     if (activeSession) {
       const totalCards = activeSession.cards.length;
-      setSrAnnouncement(`Card ${currentCardIndex + 1} of ${totalCards}`);
+      setSrAnnouncement(t('session.cardOf', { current: currentCardIndex + 1, total: totalCards }));
     }
-  }, [card.id, activeSession, currentCardIndex]);
+  }, [card.id, activeSession, currentCardIndex, t]);
 
   return (
     <>

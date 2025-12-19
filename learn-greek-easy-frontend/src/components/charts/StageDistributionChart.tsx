@@ -2,6 +2,7 @@
 
 import React, { useMemo } from 'react';
 
+import { useTranslation } from 'react-i18next';
 import { PieChart, Pie, Cell, Legend, Tooltip, ResponsiveContainer } from 'recharts';
 
 import { ChartContainer, ChartTooltip } from '@/components/charts';
@@ -44,6 +45,7 @@ interface LegendEntry {
  */
 export const StageDistributionChart = React.forwardRef<HTMLDivElement, StageDistributionChartProps>(
   ({ height, className }, ref) => {
+    const { t } = useTranslation('statistics');
     const { data, loading, error } = useAnalytics();
 
     const chartHeight = height || 350;
@@ -55,37 +57,37 @@ export const StageDistributionChart = React.forwardRef<HTMLDivElement, StageDist
       const wordStatus = data.wordStatus;
       return [
         {
-          name: 'New',
+          name: t('charts.stageDistribution.stages.new'),
           value: wordStatus.new,
           percent: wordStatus.newPercent,
           original: 'new',
         },
         {
-          name: 'Learning',
+          name: t('charts.stageDistribution.stages.learning'),
           value: wordStatus.learning,
           percent: wordStatus.learningPercent,
           original: 'learning',
         },
         {
-          name: 'Review',
+          name: t('charts.stageDistribution.stages.review'),
           value: wordStatus.review,
           percent: wordStatus.reviewPercent,
           original: 'review',
         },
         {
-          name: 'Mastered',
+          name: t('charts.stageDistribution.stages.mastered'),
           value: wordStatus.mastered,
           percent: wordStatus.masteredPercent,
           original: 'mastered',
         },
         {
-          name: 'Relearning',
+          name: t('charts.stageDistribution.stages.relearning'),
           value: wordStatus.relearning,
           percent: wordStatus.relearningPercent,
           original: 'relearning',
         },
       ].filter((item) => item.value > 0);
-    }, [data?.wordStatus]);
+    }, [data?.wordStatus, t]);
 
     // Stage-specific colors
     const stageColors: Record<string, string> = {
@@ -128,11 +130,11 @@ export const StageDistributionChart = React.forwardRef<HTMLDivElement, StageDist
         <ChartContainer
           ref={ref}
           className={className}
-          title="Stage Distribution"
-          description="Distribution across learning stages"
+          title={t('charts.stageDistribution.title')}
+          description={t('charts.stageDistribution.description')}
           noData
         >
-          <div className="text-red-600">Error loading data: {error}</div>
+          <div className="text-red-600">{t('error.loadingData', { error })}</div>
         </ChartContainer>
       );
     }
@@ -143,8 +145,8 @@ export const StageDistributionChart = React.forwardRef<HTMLDivElement, StageDist
         <ChartContainer
           ref={ref}
           className={className}
-          title="Stage Distribution"
-          description="Distribution across learning stages"
+          title={t('charts.stageDistribution.title')}
+          description={t('charts.stageDistribution.description')}
           loading
           height={chartHeight}
         >
@@ -159,8 +161,8 @@ export const StageDistributionChart = React.forwardRef<HTMLDivElement, StageDist
         <ChartContainer
           ref={ref}
           className={className}
-          title="Stage Distribution"
-          description="Distribution across learning stages"
+          title={t('charts.stageDistribution.title')}
+          description={t('charts.stageDistribution.description')}
           noData
           height={chartHeight}
         >
@@ -173,8 +175,8 @@ export const StageDistributionChart = React.forwardRef<HTMLDivElement, StageDist
       <ChartContainer
         ref={ref}
         className={className}
-        title="Stage Distribution"
-        description="Distribution across learning stages"
+        title={t('charts.stageDistribution.title')}
+        description={t('charts.stageDistribution.description')}
         height={chartHeight}
       >
         <ResponsiveContainer width="100%" height={chartHeight}>

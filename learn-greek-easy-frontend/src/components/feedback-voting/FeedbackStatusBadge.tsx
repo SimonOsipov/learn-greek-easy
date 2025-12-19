@@ -2,19 +2,21 @@
 
 import React from 'react';
 
+import { useTranslation } from 'react-i18next';
+
 import { Badge } from '@/components/ui/badge';
 import type { FeedbackStatus } from '@/types/feedback';
 
 const statusConfig: Record<
   FeedbackStatus,
-  { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }
+  { variant: 'default' | 'secondary' | 'destructive' | 'outline' }
 > = {
-  new: { label: 'New', variant: 'default' },
-  under_review: { label: 'Under Review', variant: 'secondary' },
-  planned: { label: 'Planned', variant: 'outline' },
-  in_progress: { label: 'In Progress', variant: 'default' },
-  completed: { label: 'Completed', variant: 'secondary' },
-  cancelled: { label: 'Cancelled', variant: 'destructive' },
+  new: { variant: 'default' },
+  under_review: { variant: 'secondary' },
+  planned: { variant: 'outline' },
+  in_progress: { variant: 'default' },
+  completed: { variant: 'secondary' },
+  cancelled: { variant: 'destructive' },
 };
 
 interface FeedbackStatusBadgeProps {
@@ -22,6 +24,7 @@ interface FeedbackStatusBadgeProps {
 }
 
 export const FeedbackStatusBadge: React.FC<FeedbackStatusBadgeProps> = ({ status }) => {
+  const { t } = useTranslation('feedback');
   const config = statusConfig[status];
-  return <Badge variant={config.variant}>{config.label}</Badge>;
+  return <Badge variant={config.variant}>{t(`status.${status}`)}</Badge>;
 };

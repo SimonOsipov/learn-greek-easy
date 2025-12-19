@@ -3,6 +3,7 @@
 import React, { useEffect } from 'react';
 
 import { AlertCircle, BookOpen } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
 
 import { DeckFilters } from '@/components/decks/DeckFilters';
@@ -13,6 +14,7 @@ import { Card } from '@/components/ui/card';
 import { useDeckStore } from '@/stores/deckStore';
 
 export const DecksPage: React.FC = () => {
+  const { t } = useTranslation('deck');
   const { decks, filters, isLoading, error, fetchDecks, setFilters, clearFilters, clearError } =
     useDeckStore();
   const location = useLocation();
@@ -31,10 +33,13 @@ export const DecksPage: React.FC = () => {
     <div className="space-y-6 pb-8">
       {/* Page Header */}
       <div>
-        <h1 className="text-2xl font-semibold text-text-primary md:text-3xl">Available Decks</h1>
-        <p className="mt-2 text-sm text-text-muted md:text-base">
-          Choose a deck to start learning Greek vocabulary
-        </p>
+        <h1
+          className="text-2xl font-semibold text-text-primary md:text-3xl"
+          data-testid="decks-title"
+        >
+          {t('list.title')}
+        </h1>
+        <p className="mt-2 text-sm text-text-muted md:text-base">{t('list.subtitle')}</p>
       </div>
 
       {/* Filters */}
@@ -52,7 +57,7 @@ export const DecksPage: React.FC = () => {
           <div className="flex items-start gap-3">
             <AlertCircle className="h-5 w-5 flex-shrink-0 text-red-600" />
             <div className="flex-1">
-              <h3 className="font-medium text-red-900">Error Loading Decks</h3>
+              <h3 className="font-medium text-red-900">{t('list.errorLoading')}</h3>
               <p className="mt-1 text-sm text-red-700">{error}</p>
               <Button
                 variant="outline"
@@ -63,7 +68,7 @@ export const DecksPage: React.FC = () => {
                 }}
                 className="mt-3 border-red-300 text-red-700 hover:bg-red-100"
               >
-                Try Again
+                {t('list.tryAgain')}
               </Button>
             </div>
           </div>
@@ -80,10 +85,10 @@ export const DecksPage: React.FC = () => {
       {!isLoading && !error && decks.length === 0 && (
         <EmptyState
           icon={BookOpen}
-          title="No Decks Found"
-          description="No decks match your current filters. Try adjusting your search or clearing filters."
+          title={t('list.noDecksFound')}
+          description={t('list.noDecksDescription')}
           action={{
-            label: 'Clear All Filters',
+            label: t('list.clearFilters'),
             onClick: clearFilters,
             variant: 'secondary',
           }}

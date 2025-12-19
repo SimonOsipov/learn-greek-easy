@@ -4,6 +4,7 @@ This module provides HTTP endpoints for user authentication including
 registration, login, token refresh, and logout.
 """
 
+from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -23,6 +24,7 @@ from src.core.exceptions import (
 )
 from src.db.dependencies import get_db
 from src.db.models import User
+from src.repositories.user import UserSettingsRepository
 from src.schemas.user import (
     GoogleAuthRequest,
     LogoutAllResponse,
@@ -34,6 +36,7 @@ from src.schemas.user import (
     UserCreate,
     UserLogin,
     UserProfileResponse,
+    UserWithSettingsUpdate,
 )
 from src.services.auth_service import AuthService
 
@@ -785,4 +788,102 @@ async def get_me(
             }
         }
     """
+    return UserProfileResponse.model_validate(current_user)
+
+
+@router.patch(
+    "/me",
+    response_model=UserProfileResponse,
+    summary="Update current user profile and settings",
+    responses={
+        200: {
+            "description": "Profile updated successfully",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "id": "550e8400-e29b-41d4-a716-446655440000",
+                        "email": "user@example.com",
+                        "full_name": "John Doe Updated",
+                        "is_active": True,
+                        "is_superuser": False,
+                        "email_verified_at": None,
+                        "created_at": "2024-11-25T10:30:00Z",
+                        "updated_at": "2024-11-25T12:00:00Z",
+                        "settings": {
+                            "id": "660e8400-e29b-41d4-a716-446655440001",
+                            "user_id": "550e8400-e29b-41d4-a716-446655440000",
+                            "daily_goal": 30,
+                            "email_notifications": False,
+                            "preferred_language": "el",
+                            "created_at": "2024-11-25T10:30:00Z",
+                            "updated_at": "2024-11-25T12:00:00Z",
+                        },
+                    }
+                }
+            },
+        },
+        401: {"description": "Authentication required"},
+        422: {
+            "description": "Validation error (e.g., invalid language code)",
+        },
+    },
+)
+async def update_me(
+    update_data: UserWithSettingsUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> UserProfileResponse:
+    """Update the current user's profile and/or settings.
+
+    Supports partial updates - only provided fields are updated.
+    Can update user profile (full_name) and settings (daily_goal,
+    email_notifications, preferred_language) in a single request.
+
+    Args:
+        update_data: Fields to update (all optional)
+        current_user: The authenticated user (injected via dependency)
+        db: Database session (injected)
+
+    Returns:
+        UserProfileResponse with updated profile and settings
+
+    Raises:
+        HTTPException(401): If not authenticated
+        HTTPException(422): If validation fails (e.g., invalid language code)
+    """
+    settings_repo = UserSettingsRepository(db)
+
+    # Separate user fields from settings fields
+    user_fields: dict[str, Any] = {"full_name": update_data.full_name}
+    settings_fields: dict[str, Any] = {
+        "daily_goal": update_data.daily_goal,
+        "email_notifications": update_data.email_notifications,
+        "preferred_language": update_data.preferred_language,
+    }
+
+    # Filter out None values (only update provided fields)
+    user_updates: dict[str, Any] = {k: v for k, v in user_fields.items() if v is not None}
+    settings_updates: dict[str, Any] = {k: v for k, v in settings_fields.items() if v is not None}
+
+    # Update user if there are user field changes
+    if user_updates:
+        for field, value in user_updates.items():
+            setattr(current_user, field, value)
+        db.add(current_user)
+
+    # Update settings if there are settings field changes
+    if settings_updates:
+        settings = await settings_repo.get_by_user_id(current_user.id)
+        if settings:
+            for field, value in settings_updates.items():
+                setattr(settings, field, value)
+            db.add(settings)
+
+    await db.commit()
+
+    # Refresh to get updated timestamps
+    await db.refresh(current_user)
+    if current_user.settings:
+        await db.refresh(current_user.settings)
+
     return UserProfileResponse.model_validate(current_user)

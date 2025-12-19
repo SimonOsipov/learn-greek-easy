@@ -23,7 +23,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
       <div className="mb-4">
         <span className="text-4xl">🏛️</span>
       </div>
-      <CardTitle className="text-2xl font-bold">Καλώς ήρθατε!</CardTitle>
+      <CardTitle className="text-2xl font-bold">{t('auth:login.title')}</CardTitle>
       <CardDescription>Welcome back! Sign in to continue learning Greek</CardDescription>
     </CardHeader>
 

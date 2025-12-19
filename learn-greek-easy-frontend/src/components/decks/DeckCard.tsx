@@ -1,6 +1,7 @@
 import React from 'react';
 
 import { Lock, Crown } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -24,6 +25,7 @@ export const DeckCard: React.FC<DeckCardProps> = ({
   variant = 'grid',
   showStats = true,
 }) => {
+  const { t } = useTranslation('deck');
   const { titleGreek, title, level, category, cardCount, isPremium, progress, estimatedTime } =
     deck;
 
@@ -96,7 +98,7 @@ export const DeckCard: React.FC<DeckCardProps> = ({
           {isPremium && (
             <Badge className="inline-flex items-center gap-1 border-0 bg-gradient-to-r from-purple-500 to-purple-700 text-white">
               <Crown className="h-3 w-3" />
-              Premium
+              {t('card.premium')}
             </Badge>
           )}
         </div>
@@ -126,7 +128,9 @@ export const DeckCard: React.FC<DeckCardProps> = ({
                 }
                 showLegend={false}
               />
-              <p className="mt-1 text-xs text-gray-600">{completionPercent}% Complete</p>
+              <p className="mt-1 text-xs text-gray-600">
+                {completionPercent}% {t('detail.complete')}
+              </p>
             </div>
           )}
         </div>
@@ -139,19 +143,22 @@ export const DeckCard: React.FC<DeckCardProps> = ({
           >
             {/* Card Count */}
             <div>
-              <p className="text-xs text-gray-600">Cards</p>
+              <p className="text-xs text-gray-600">{t('detail.cards')}</p>
               <p className="text-sm font-semibold text-gray-900">{cardCount}</p>
             </div>
 
             {/* Estimated Time */}
             <div>
-              <p className="text-xs text-gray-600">Time</p>
-              <p className="text-sm font-semibold text-gray-900">{estimatedTime}m</p>
+              <p className="text-xs text-gray-600">{t('detail.estimatedTime')}</p>
+              <p className="text-sm font-semibold text-gray-900">
+                {estimatedTime}
+                {t('detail.minutes')}
+              </p>
             </div>
 
             {/* Completion or Mastery Rate */}
             <div>
-              <p className="text-xs text-gray-600">Mastery</p>
+              <p className="text-xs text-gray-600">{t('detail.masteryRate')}</p>
               <p className="text-sm font-semibold text-gray-900">{completionPercent}%</p>
             </div>
           </div>

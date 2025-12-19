@@ -70,12 +70,14 @@ class UserRepository(BaseRepository[User]):
         self,
         user_in: UserCreate,
         password_hash: str,
+        preferred_language: str | None = None,
     ) -> User:
         """Create user with default settings in one transaction.
 
         Args:
             user_in: User creation schema
             password_hash: Hashed password from security module
+            preferred_language: Optional ISO 639-1 language code (e.g., 'en', 'el')
 
         Returns:
             Created user with settings (not yet committed)
@@ -97,6 +99,7 @@ class UserRepository(BaseRepository[User]):
             user_id=db_user.id,
             daily_goal=20,
             email_notifications=True,
+            preferred_language=preferred_language,
         )
         self.db.add(db_settings)
         await self.db.flush()

@@ -3,6 +3,7 @@
 import React from 'react';
 
 import { formatDistanceToNow } from 'date-fns';
+import { useTranslation } from 'react-i18next';
 
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import type { FeedbackItem } from '@/types/feedback';
@@ -16,6 +17,8 @@ interface FeedbackCardProps {
 }
 
 export const FeedbackCard: React.FC<FeedbackCardProps> = ({ feedback }) => {
+  const { t } = useTranslation('feedback');
+
   return (
     <Card data-testid="feedback-card">
       <CardHeader className="flex flex-row items-start gap-4 space-y-0">
@@ -34,7 +37,7 @@ export const FeedbackCard: React.FC<FeedbackCardProps> = ({ feedback }) => {
           </div>
           <p className="text-sm text-muted-foreground" data-testid="feedback-meta">
             {formatDistanceToNow(new Date(feedback.created_at), { addSuffix: true })}
-            {feedback.author.full_name && ` by ${feedback.author.full_name}`}
+            {feedback.author.full_name && ` ${t('list.by')} ${feedback.author.full_name}`}
           </p>
         </div>
       </CardHeader>

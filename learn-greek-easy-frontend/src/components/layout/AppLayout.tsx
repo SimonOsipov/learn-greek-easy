@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 
 import { Home, Layers, BarChart3, User } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Outlet, useLocation, Link } from 'react-router-dom';
 
 import { Sheet, SheetContent } from '@/components/ui/sheet';
@@ -12,6 +13,7 @@ import { MobileNav } from './MobileNav';
 import { PageContainer } from './PageContainer';
 
 export const AppLayout: React.FC = () => {
+  const { t } = useTranslation('common');
   const location = useLocation();
   const { isMobile, isDesktop, isSidebarOpen, closeSidebar } = useLayoutContext();
 
@@ -21,10 +23,10 @@ export const AppLayout: React.FC = () => {
   }, [location.pathname, closeSidebar]);
 
   const sidebarNavItems = [
-    { path: '/', label: 'Dashboard', icon: Home },
-    { path: '/decks', label: 'Decks', icon: Layers },
-    { path: '/statistics', label: 'Statistics', icon: BarChart3 },
-    { path: '/profile', label: 'Profile', icon: User },
+    { path: '/', labelKey: 'nav.dashboard', icon: Home },
+    { path: '/decks', labelKey: 'nav.decks', icon: Layers },
+    { path: '/statistics', labelKey: 'nav.statistics', icon: BarChart3 },
+    { path: '/profile', labelKey: 'nav.profile', icon: User },
   ];
 
   const isActiveRoute = (path: string) => {
@@ -43,7 +45,7 @@ export const AppLayout: React.FC = () => {
             <div className="flex h-full flex-col">
               {/* Sidebar Header */}
               <div className="border-b border-border-gray p-6">
-                <h2 className="text-lg font-semibold">Menu</h2>
+                <h2 className="text-lg font-semibold">{t('nav.menu')}</h2>
               </div>
 
               {/* Sidebar Navigation */}
@@ -65,7 +67,7 @@ export const AppLayout: React.FC = () => {
                         )}
                       >
                         <Icon className="h-5 w-5" />
-                        <span className="font-medium">{item.label}</span>
+                        <span className="font-medium">{t(item.labelKey)}</span>
                       </Link>
                     );
                   })}

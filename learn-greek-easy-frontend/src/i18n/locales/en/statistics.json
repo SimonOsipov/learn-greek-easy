@@ -1,0 +1,94 @@
+{
+  "page": {
+    "title": "Statistics",
+    "subtitle": "Track your learning progress and achievements",
+    "loginRequired": "Please log in to view your statistics",
+    "learningStats": "Your Learning Stats",
+    "learningAnalytics": "Learning Analytics"
+  },
+  "stats": {
+    "currentStreak": "Current Streak",
+    "wordsLearned": "Words Learned",
+    "totalXP": "Total XP",
+    "day": "day",
+    "days": "days",
+    "wordsPerDay": "~{{count}} words per day average",
+    "level": "Level {{level}} - {{percent}}% to next level",
+    "streakMessages": {
+      "incredible": "Incredible! You're on fire!",
+      "amazing": "Amazing streak! Keep it up!",
+      "great": "Great job! One week strong!",
+      "nice": "Nice start! Keep going!",
+      "start": "Start your learning streak today!"
+    }
+  },
+  "level": {
+    "title": "Level {{level}}",
+    "xpProgress": "{{current}} / {{total}} XP",
+    "xpToNext": "{{xp}} XP to Level {{level}}",
+    "description": "Keep learning to earn more XP and level up! Each lesson, quiz, and review session contributes to your progress."
+  },
+  "achievements": {
+    "title": "Achievements",
+    "subtitle": "Unlock badges by completing challenges and reaching milestones",
+    "locked": "Locked",
+    "unlocked": "Unlocked",
+    "comingSoon": "More achievements coming soon! Keep learning to unlock special badges.",
+    "firstSteps": {
+      "name": "First Steps",
+      "description": "Learn 10 words"
+    },
+    "weekWarrior": {
+      "name": "Week Warrior",
+      "description": "Maintain a 7-day streak"
+    },
+    "centuryClub": {
+      "name": "Century Club",
+      "description": "Learn 100 words"
+    },
+    "fireKeeper": {
+      "name": "Fire Keeper",
+      "description": "Maintain a 30-day streak"
+    }
+  },
+  "timeline": {
+    "title": "Activity Timeline",
+    "joined": "Joined Learn Greek Easy",
+    "lastActive": "Last Active",
+    "daysAgo": "{{count}} day ago",
+    "daysAgo_plural": "{{count}} days ago"
+  },
+  "charts": {
+    "progressOverTime": {
+      "title": "Progress Over Time",
+      "description": "Word status progression trend",
+      "newCards": "New Cards",
+      "learningCards": "Learning Cards",
+      "masteredCards": "Mastered Cards"
+    },
+    "accuracyTrend": {
+      "title": "Accuracy Trend",
+      "description": "Your accuracy percentage over time",
+      "accuracy": "Accuracy"
+    },
+    "deckPerformance": {
+      "title": "Deck Performance",
+      "description": "Mastery percentage by deck"
+    },
+    "stageDistribution": {
+      "title": "Stage Distribution",
+      "description": "Distribution across learning stages",
+      "stages": {
+        "new": "New",
+        "learning": "Learning",
+        "review": "Review",
+        "mastered": "Mastered",
+        "relearning": "Relearning"
+      },
+      "cards": "{{count}} cards ({{percent}}%)"
+    }
+  },
+  "error": {
+    "loadingData": "Error loading data: {{error}}"
+  }
+}

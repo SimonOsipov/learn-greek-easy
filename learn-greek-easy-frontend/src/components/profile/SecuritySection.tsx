@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Shield, Lock, Key, Trash2, AlertTriangle, Smartphone, Loader2 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
 
 import { Button } from '@/components/ui/button';
@@ -21,30 +22,36 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 
-// Password validation schema
-const passwordSchema = z
-  .object({
-    currentPassword: z.string().min(1, 'Current password is required'),
-    newPassword: z
-      .string()
-      .min(8, 'Password must be at least 8 characters')
-      .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
-      .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
-      .regex(/[0-9]/, 'Password must contain at least one number'),
-    confirmPassword: z.string(),
-  })
-  .refine((data) => data.newPassword === data.confirmPassword, {
-    message: "Passwords don't match",
-    path: ['confirmPassword'],
-  });
+import type { TFunction } from 'i18next';
 
-type PasswordFormData = z.infer<typeof passwordSchema>;
+// Factory function to create schema with translations
+const createPasswordSchema = (t: TFunction) =>
+  z
+    .object({
+      currentPassword: z.string().min(1, t('security.validation.currentPasswordRequired')),
+      newPassword: z
+        .string()
+        .min(8, t('security.validation.passwordMinLength'))
+        .regex(/[A-Z]/, t('security.validation.passwordUppercase'))
+        .regex(/[a-z]/, t('security.validation.passwordLowercase'))
+        .regex(/[0-9]/, t('security.validation.passwordNumber')),
+      confirmPassword: z.string(),
+    })
+    .refine((data) => data.newPassword === data.confirmPassword, {
+      message: t('security.validation.passwordsDoNotMatch'),
+      path: ['confirmPassword'],
+    });
+
+type PasswordFormData = z.infer<ReturnType<typeof createPasswordSchema>>;
 
 export const SecuritySection: React.FC = () => {
+  const { t } = useTranslation('profile');
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState('');
+
+  const passwordSchema = createPasswordSchema(t);
 
   const {
     register,
@@ -66,14 +73,14 @@ export const SecuritySection: React.FC = () => {
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1500));
       toast({
-        title: 'Coming Soon',
-        description: 'Password change feature will be available in a future update!',
+        title: t('security.changePassword.comingSoon'),
+        description: t('security.changePassword.comingSoonDescription'),
       });
       reset();
     } catch (error) {
       toast({
-        title: 'Error',
-        description: 'Failed to change password. Please try again.',
+        title: t('security.changePassword.error'),
+        description: t('security.changePassword.errorDescription'),
         variant: 'destructive',
       });
     } finally {
@@ -84,17 +91,16 @@ export const SecuritySection: React.FC = () => {
   const handleAccountDeletion = async () => {
     if (deleteConfirmation.toLowerCase() !== 'delete') {
       toast({
-        title: 'Invalid confirmation',
-        description: 'Please type "DELETE" to confirm account deletion.',
+        title: t('security.dangerZone.invalidConfirmation'),
+        description: t('security.dangerZone.pleaseTypeDelete'),
         variant: 'destructive',
       });
       return;
     }
 
     toast({
-      title: 'Coming Soon',
-      description:
-        'Please contact support to delete your account. We want to make sure you understand all the implications first.',
+      title: t('security.dangerZone.comingSoon'),
+      description: t('security.dangerZone.contactSupport'),
     });
     setIsDeleteDialogOpen(false);
     setDeleteConfirmation('');
@@ -103,10 +109,8 @@ export const SecuritySection: React.FC = () => {
   return (
     <div className="p-6">
       <div className="mb-6">
-        <h2 className="text-xl font-bold text-gray-900">Security Settings</h2>
-        <p className="text-sm text-gray-600">
-          Manage your password and account security preferences
-        </p>
+        <h2 className="text-xl font-bold text-gray-900">{t('security.title')}</h2>
+        <p className="text-sm text-gray-600">{t('security.subtitle')}</p>
       </div>
 
       <Separator className="mb-6" />
@@ -117,22 +121,22 @@ export const SecuritySection: React.FC = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <Key className="h-5 w-5 text-blue-600" />
-              Change Password
+              {t('security.changePassword.title')}
             </CardTitle>
-            <CardDescription>Update your password to keep your account secure</CardDescription>
+            <CardDescription>{t('security.changePassword.description')}</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit(onPasswordSubmit)} className="space-y-4">
               {/* Current Password */}
               <div>
                 <Label htmlFor="currentPassword" className="mb-2 block text-sm font-medium">
-                  Current Password
+                  {t('security.changePassword.currentPassword')}
                 </Label>
                 <Input
                   id="currentPassword"
                   type="password"
                   {...register('currentPassword')}
-                  placeholder="Enter your current password"
+                  placeholder={t('security.changePassword.currentPasswordPlaceholder')}
                   className={errors.currentPassword ? 'border-red-500' : ''}
                 />
                 {errors.currentPassword && (
@@ -143,13 +147,13 @@ export const SecuritySection: React.FC = () => {
               {/* New Password */}
               <div>
                 <Label htmlFor="newPassword" className="mb-2 block text-sm font-medium">
-                  New Password
+                  {t('security.changePassword.newPassword')}
                 </Label>
                 <Input
                   id="newPassword"
                   type="password"
                   {...register('newPassword')}
-                  placeholder="Enter new password"
+                  placeholder={t('security.changePassword.newPasswordPlaceholder')}
                   className={errors.newPassword ? 'border-red-500' : ''}
                 />
                 {errors.newPassword && (
@@ -160,13 +164,13 @@ export const SecuritySection: React.FC = () => {
               {/* Confirm Password */}
               <div>
                 <Label htmlFor="confirmPassword" className="mb-2 block text-sm font-medium">
-                  Confirm New Password
+                  {t('security.changePassword.confirmPassword')}
                 </Label>
                 <Input
                   id="confirmPassword"
                   type="password"
                   {...register('confirmPassword')}
-                  placeholder="Confirm new password"
+                  placeholder={t('security.changePassword.confirmPasswordPlaceholder')}
                   className={errors.confirmPassword ? 'border-red-500' : ''}
                 />
                 {errors.confirmPassword && (
@@ -176,11 +180,13 @@ export const SecuritySection: React.FC = () => {
 
               {/* Password Requirements */}
               <div className="rounded-lg bg-blue-50 p-4">
-                <p className="mb-2 text-sm font-medium text-blue-900">Password Requirements:</p>
+                <p className="mb-2 text-sm font-medium text-blue-900">
+                  {t('security.changePassword.requirements')}
+                </p>
                 <ul className="space-y-1 text-sm text-blue-700">
-                  <li>• At least 8 characters long</li>
-                  <li>• Contains uppercase and lowercase letters</li>
-                  <li>• Contains at least one number</li>
+                  <li>• {t('security.changePassword.requirementLength')}</li>
+                  <li>• {t('security.changePassword.requirementCase')}</li>
+                  <li>• {t('security.changePassword.requirementNumber')}</li>
                 </ul>
               </div>
 
@@ -192,16 +198,16 @@ export const SecuritySection: React.FC = () => {
                   onClick={() => reset()}
                   disabled={!isDirty || isLoading}
                 >
-                  Cancel
+                  {t('security.changePassword.cancel')}
                 </Button>
                 <Button type="submit" disabled={!isDirty || isLoading}>
                   {isLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Updating...
+                      {t('security.changePassword.updating')}
                     </>
                   ) : (
-                    'Update Password'
+                    t('security.changePassword.update')
                   )}
                 </Button>
               </div>
@@ -214,12 +220,12 @@ export const SecuritySection: React.FC = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <Smartphone className="h-5 w-5 text-green-600" />
-              Two-Factor Authentication
+              {t('security.twoFactor.title')}
               <span className="ml-auto rounded-full bg-gray-200 px-2 py-1 text-xs font-medium text-gray-700">
-                Coming Soon
+                {t('security.twoFactor.comingSoon')}
               </span>
             </CardTitle>
-            <CardDescription>Add an extra layer of security to your account</CardDescription>
+            <CardDescription>{t('security.twoFactor.description')}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="rounded-lg border border-gray-200 p-4 opacity-50">
@@ -228,13 +234,13 @@ export const SecuritySection: React.FC = () => {
                   <Shield className="h-5 w-5 text-gray-600" />
                 </div>
                 <div className="flex-1">
-                  <p className="font-medium text-gray-900">Enable 2FA</p>
+                  <p className="font-medium text-gray-900">{t('security.twoFactor.enable2FA')}</p>
                   <p className="mt-1 text-sm text-gray-600">
-                    Protect your account with SMS or authenticator app verification
+                    {t('security.twoFactor.enable2FADescription')}
                   </p>
                 </div>
                 <Button disabled variant="outline" size="sm">
-                  Enable
+                  {t('security.twoFactor.enable')}
                 </Button>
               </div>
             </div>
@@ -246,18 +252,20 @@ export const SecuritySection: React.FC = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <Lock className="h-5 w-5 text-purple-600" />
-              Active Sessions
+              {t('security.sessions.title')}
             </CardTitle>
-            <CardDescription>View and manage where you're logged in</CardDescription>
+            <CardDescription>{t('security.sessions.description')}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
               <div className="flex items-start justify-between rounded-lg border border-gray-200 p-4">
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
-                    <p className="font-medium text-gray-900">Current Device</p>
+                    <p className="font-medium text-gray-900">
+                      {t('security.sessions.currentDevice')}
+                    </p>
                     <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
-                      Active Now
+                      {t('security.sessions.activeNow')}
                     </span>
                   </div>
                   <p className="mt-1 text-sm text-gray-600">
@@ -265,13 +273,12 @@ export const SecuritySection: React.FC = () => {
                     {navigator.userAgent.includes('Chrome') ? 'Chrome' : 'Unknown Browser'}
                   </p>
                   <p className="text-sm text-gray-500">
-                    Last active: {new Date().toLocaleString()}
+                    {t('security.sessions.lastActive')} {new Date().toLocaleString()}
                   </p>
                 </div>
               </div>
               <p className="text-sm text-gray-600">
-                Session management will be available in a future update. You'll be able to see all
-                active sessions and log out from other devices.
+                {t('security.sessions.comingSoonDescription')}
               </p>
             </div>
           </CardContent>
@@ -282,54 +289,53 @@ export const SecuritySection: React.FC = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base text-red-700">
               <AlertTriangle className="h-5 w-5" />
-              Danger Zone
+              {t('security.dangerZone.title')}
             </CardTitle>
-            <CardDescription>Irreversible actions that affect your account</CardDescription>
+            <CardDescription>{t('security.dangerZone.description')}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="rounded-lg border border-red-200 bg-red-50 p-4">
               <div className="mb-4">
-                <h4 className="mb-1 font-medium text-red-900">Delete Account</h4>
-                <p className="text-sm text-red-700">
-                  Permanently delete your account and all associated data. This action cannot be
-                  undone.
-                </p>
+                <h4 className="mb-1 font-medium text-red-900">
+                  {t('security.dangerZone.deleteAccount')}
+                </h4>
+                <p className="text-sm text-red-700">{t('security.dangerZone.deleteDescription')}</p>
               </div>
 
               <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
                 <DialogTrigger asChild>
                   <Button variant="destructive" size="sm" className="flex items-center gap-2">
                     <Trash2 className="h-4 w-4" />
-                    Delete Account
+                    {t('security.dangerZone.deleteAccount')}
                   </Button>
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
                     <DialogTitle className="flex items-center gap-2 text-red-700">
                       <AlertTriangle className="h-5 w-5" />
-                      Delete Account
+                      {t('security.dangerZone.deleteDialogTitle')}
                     </DialogTitle>
                     <DialogDescription>
-                      This action is permanent and cannot be undone. All your data will be deleted:
+                      {t('security.dangerZone.deleteDialogDescription')}
                     </DialogDescription>
                   </DialogHeader>
                   <div className="my-4">
                     <ul className="space-y-2 text-sm text-gray-700">
                       <li className="flex items-start gap-2">
                         <span className="text-red-600">•</span>
-                        <span>Your profile and personal information</span>
+                        <span>{t('security.dangerZone.deleteItems.profile')}</span>
                       </li>
                       <li className="flex items-start gap-2">
                         <span className="text-red-600">•</span>
-                        <span>All learning progress and statistics</span>
+                        <span>{t('security.dangerZone.deleteItems.progress')}</span>
                       </li>
                       <li className="flex items-start gap-2">
                         <span className="text-red-600">•</span>
-                        <span>Achievements and badges</span>
+                        <span>{t('security.dangerZone.deleteItems.achievements')}</span>
                       </li>
                       <li className="flex items-start gap-2">
                         <span className="text-red-600">•</span>
-                        <span>Saved lessons and favorites</span>
+                        <span>{t('security.dangerZone.deleteItems.favorites')}</span>
                       </li>
                     </ul>
                     <div className="mt-4">
@@ -337,7 +343,7 @@ export const SecuritySection: React.FC = () => {
                         htmlFor="deleteConfirmation"
                         className="mb-2 block text-sm font-medium"
                       >
-                        Type "DELETE" to confirm:
+                        {t('security.dangerZone.typeToConfirm')}
                       </Label>
                       <Input
                         id="deleteConfirmation"
@@ -357,14 +363,14 @@ export const SecuritySection: React.FC = () => {
                         setDeleteConfirmation('');
                       }}
                     >
-                      Cancel
+                      {t('security.dangerZone.cancel')}
                     </Button>
                     <Button
                       variant="destructive"
                       onClick={handleAccountDeletion}
                       disabled={deleteConfirmation.toLowerCase() !== 'delete'}
                     >
-                      Delete My Account
+                      {t('security.dangerZone.deleteMyAccount')}
                     </Button>
                   </DialogFooter>
                 </DialogContent>

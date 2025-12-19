@@ -30,7 +30,7 @@ test.describe('Playwright Setup Validation - Unauthenticated', () => {
     await expect(page).toHaveURL('/login');
     await expect(page.getByTestId('login-card')).toBeVisible();
     await expect(page.getByTestId('login-title')).toBeVisible();
-    await expect(page.getByTestId('login-title')).toHaveText('Καλώς ήρθατε!');
+    await expect(page.getByTestId('login-title')).toHaveText('Welcome Back');
   });
 
   test('should redirect to login when accessing protected route unauthenticated', async ({
@@ -46,6 +46,6 @@ test.describe('Playwright Setup Validation - Unauthenticated', () => {
     await expect(page).toHaveURL('/login');
     await expect(page.getByTestId('login-card')).toBeVisible();
     await expect(page.getByTestId('login-title')).toBeVisible();
-    await expect(page.getByTestId('login-title')).toHaveText('Καλώς ήρθατε!');
+    await expect(page.getByTestId('login-title')).toHaveText('Welcome Back');
   });
 });

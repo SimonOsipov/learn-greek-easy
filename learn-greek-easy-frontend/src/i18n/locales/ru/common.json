@@ -1,0 +1,123 @@
+{
+  "loading": "Загрузка...",
+  "error": {
+    "generic": "Произошла ошибка",
+    "tryAgain": "Пожалуйста, попробуйте снова",
+    "notFound": "Не найдено",
+    "unauthorized": "Не авторизован",
+    "forbidden": "Доступ запрещён",
+    "somethingWrong": "Что-то пошло не так",
+    "unexpectedError": "Извините, произошла непредвиденная ошибка. Пожалуйста, попробуйте снова.",
+    "persistsContact": "Если проблема сохраняется, пожалуйста, свяжитесь с поддержкой."
+  },
+  "notFoundPage": {
+    "code": "404",
+    "title": "Страница не найдена",
+    "description": "Страница, которую вы ищете, похоже, отправилась на гору Олимп. Давайте вернём вас на правильный путь!",
+    "goToDashboard": "Перейти на главную",
+    "goBack": "Назад"
+  },
+  "errorPage": {
+    "tryAgain": "Попробовать снова",
+    "goHome": "На главную"
+  },
+  "dashboard": {
+    "title": "Панель управления",
+    "progress": {
+      "title": "Ваш прогресс",
+      "error": "Не удалось загрузить метрики. Пожалуйста, обновите страницу.",
+      "empty": "Пока нет данных о прогрессе. Начните обучение, чтобы увидеть статистику!"
+    },
+    "metrics": {
+      "dueToday": "На сегодня",
+      "currentStreak": "Текущая серия",
+      "mastered": "Освоено",
+      "accuracy": "Точность",
+      "totalTime": "Общее время",
+      "cardsToReview": "карточек на повторение",
+      "days": "дней",
+      "wordsTotal": "слов всего",
+      "thisPeriod": "за этот период",
+      "tooltip": "Нажмите для просмотра подробностей {{label}}"
+    },
+    "activeDecks": {
+      "title": "Активные колоды",
+      "viewAll": "Все колоды",
+      "empty": "Пока нет активных колод.",
+      "browseDecks": "Просмотреть доступные колоды"
+    }
+  },
+  "welcome": {
+    "greeting": "Γεια σου, {{name}}!",
+    "cardsToReview": "У вас <strong>{{count}} карточек</strong> на повторение сегодня.",
+    "cardsToReviewText": "У вас {{count}} карточек на повторение сегодня.",
+    "encouragement": {
+      "incredible": "Невероятная серия {{count}} дней!",
+      "great": "Отличная серия {{count}} дней!",
+      "keepItUp": "Серия {{count}} дней - продолжайте!",
+      "readyToStart": "Готовы начать обучение?"
+    },
+    "startReview": "Начать повторение"
+  },
+  "actions": {
+    "save": "Сохранить",
+    "cancel": "Отмена",
+    "close": "Закрыть",
+    "confirm": "Подтвердить",
+    "delete": "Удалить",
+    "edit": "Редактировать",
+    "create": "Создать",
+    "update": "Обновить",
+    "submit": "Отправить",
+    "retry": "Повторить"
+  },
+  "navigation": {
+    "back": "Назад",
+    "next": "Далее",
+    "previous": "Назад",
+    "home": "Главная"
+  },
+  "search": {
+    "placeholder": "Поиск...",
+    "noResults": "Ничего не найдено",
+    "filter": "Фильтр",
+    "sort": "Сортировка",
+    "clear": "Очистить"
+  },
+  "nav": {
+    "dashboard": "Панель управления",
+    "home": "Главная",
+    "decks": "Колоды",
+    "stats": "Статистика",
+    "statistics": "Статистика",
+    "feedback": "Обратная связь",
+    "profile": "Профиль",
+    "settings": "Настройки",
+    "logout": "Выйти",
+    "help": "Помощь и поддержка",
+    "menu": "Меню",
+    "toggleMenu": "Переключить меню",
+    "userMenu": "Меню пользователя"
+  },
+  "language": {
+    "select": "Выбрать язык",
+    "current": "Текущий язык",
+    "switchTo": "Переключить на {{language}}"
+  },
+  "time": {
+    "today": "Сегодня",
+    "yesterday": "Вчера",
+    "daysAgo": "{{count}} день назад",
+    "daysAgo_plural": "{{count}} дней назад",
+    "hoursAgo": "{{count}} час назад",
+    "hoursAgo_plural": "{{count}} часов назад",
+    "minutesAgo": "{{count}} минуту назад",
+    "minutesAgo_plural": "{{count}} минут назад",
+    "justNow": "Только что"
+  },
+  "pagination": {
+    "page": "Страница {{current}} из {{total}}",
+    "showing": "Показаны {{from}}-{{to}} из {{total}}",
+    "itemsPerPage": "Элементов на странице"
+  }
+}

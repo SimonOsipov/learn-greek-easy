@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { format } from 'date-fns';
 import { Lock, Crown } from 'lucide-react';
 import { useForm } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
 
 import { PasswordField } from '@/components/forms/PasswordField';
@@ -22,25 +23,26 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useAuthStore } from '@/stores/authStore';
 
-// Password change validation schema
-const passwordChangeSchema = z
-  .object({
-    currentPassword: z
-      .string()
-      .min(1, 'Current password is required')
-      .min(8, 'Password must be at least 8 characters'),
-    newPassword: z
-      .string()
-      .min(1, 'New password is required')
-      .min(8, 'Password must be at least 8 characters'),
-    confirmPassword: z.string().min(1, 'Please confirm your password'),
-  })
-  .refine((data) => data.newPassword === data.confirmPassword, {
-    message: 'Passwords do not match',
-    path: ['confirmPassword'],
-  });
+// Password change validation schema - messages will be handled by t() at runtime
+const createPasswordChangeSchema = (t: (key: string) => string) =>
+  z
+    .object({
+      currentPassword: z
+        .string()
+        .min(1, t('validation.currentPasswordRequired'))
+        .min(8, t('validation.passwordMinLength')),
+      newPassword: z
+        .string()
+        .min(1, t('validation.newPasswordRequired'))
+        .min(8, t('validation.passwordMinLength')),
+      confirmPassword: z.string().min(1, t('validation.confirmPasswordRequired')),
+    })
+    .refine((data) => data.newPassword === data.confirmPassword, {
+      message: t('validation.passwordsDoNotMatch'),
+      path: ['confirmPassword'],
+    });
 
-type PasswordChangeFormData = z.infer<typeof passwordChangeSchema>;
+type PasswordChangeFormData = z.infer<ReturnType<typeof createPasswordChangeSchema>>;
 
 /**
  * AccountSection Component
@@ -53,12 +55,14 @@ type PasswordChangeFormData = z.infer<typeof passwordChangeSchema>;
  * Uses react-hook-form with Zod validation for forms.
  */
 export function AccountSection() {
+  const { t } = useTranslation('settings');
   const { user, updatePassword } = useAuthStore();
   const { toast } = useToast();
 
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
 
-  // Password change form
+  // Password change form with translated validation messages
+  const passwordChangeSchema = createPasswordChangeSchema(t);
   const {
     register: registerPassword,
     handleSubmit: handlePasswordSubmit,
@@ -79,15 +83,15 @@ export function AccountSection() {
       await updatePassword(data.currentPassword, data.newPassword);
 
       toast({
-        title: 'Password updated',
-        description: 'Your password has been successfully changed.',
+        title: t('account.password.success'),
+        description: t('account.password.successDescription'),
       });
 
       setPasswordDialogOpen(false);
       resetPasswordForm();
     } catch (error) {
       toast({
-        title: 'Failed to update password',
+        title: t('account.password.error'),
         description: error instanceof Error ? error.message : 'An error occurred',
         variant: 'destructive',
       });
@@ -102,9 +106,9 @@ export function AccountSection() {
     <>
       <Card>
         <CardHeader>
-          <CardTitle>Account Settings</CardTitle>
+          <CardTitle>{t('account.title')}</CardTitle>
           <CardDescription>
-            Manage your password and subscription. Logged in as{' '}
+            {t('account.subtitle')}. {t('account.loggedInAs')}{' '}
             <strong data-testid="user-email">{user.email}</strong>
           </CardDescription>
         </CardHeader>
@@ -113,12 +117,12 @@ export function AccountSection() {
           <div className="space-y-3">
             <div className="flex items-center gap-2">
               <Lock className="h-4 w-4 text-muted-foreground" />
-              <h3 className="font-medium">Password</h3>
+              <h3 className="font-medium">{t('account.password.title')}</h3>
             </div>
 
             <div className="rounded-lg bg-muted/50 p-4">
               <p className="mb-3 text-sm text-muted-foreground">
-                Change your password to keep your account secure
+                {t('account.password.description')}
               </p>
               <Button
                 data-testid="change-password-button"
@@ -126,7 +130,7 @@ export function AccountSection() {
                 size="sm"
                 onClick={() => setPasswordDialogOpen(true)}
               >
-                Change Password
+                {t('account.password.change')}
               </Button>
             </div>
           </div>
@@ -135,20 +139,22 @@ export function AccountSection() {
           <div className="space-y-3">
             <div className="flex items-center gap-2">
               <Crown className="h-4 w-4 text-muted-foreground" />
-              <h3 className="font-medium">Subscription</h3>
+              <h3 className="font-medium">{t('account.subscription.title')}</h3>
             </div>
 
             <div className="space-y-3 rounded-lg bg-muted/50 p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Current plan</p>
+                  <p className="text-sm text-muted-foreground">
+                    {t('account.subscription.currentPlan')}
+                  </p>
                   <div className="mt-1 flex items-center gap-2">
                     {user.role === 'premium' ? (
                       <Badge className="border-0 bg-gradient-to-r from-purple-500 to-purple-700 text-white">
-                        Premium
+                        {t('account.subscription.premium')}
                       </Badge>
                     ) : (
-                      <Badge variant="secondary">Free Plan</Badge>
+                      <Badge variant="secondary">{t('account.subscription.free')}</Badge>
                     )}
                   </div>
                 </div>
@@ -160,19 +166,21 @@ export function AccountSection() {
                     className="bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800"
                     onClick={() => {
                       toast({
-                        title: 'Premium upgrade',
-                        description: 'Payment integration coming soon!',
+                        title: t('account.subscription.upgradeTitle'),
+                        description: t('account.subscription.upgradeDescription'),
                       });
                     }}
                   >
-                    Upgrade to Premium
+                    {t('account.subscription.upgrade')}
                   </Button>
                 )}
               </div>
 
               <div className="border-t pt-3">
                 <p className="text-sm text-muted-foreground">
-                  Member since {format(new Date(user.createdAt), 'MMMM yyyy')}
+                  {t('account.subscription.memberSince', {
+                    date: format(new Date(user.createdAt), 'MMMM yyyy'),
+                  })}
                 </p>
               </div>
             </div>
@@ -184,10 +192,10 @@ export function AccountSection() {
       <Dialog open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen}>
         <DialogContent data-testid="password-dialog">
           <DialogHeader>
-            <DialogTitle data-testid="password-change-title">Change Password</DialogTitle>
-            <DialogDescription>
-              Enter your current password and choose a new password
-            </DialogDescription>
+            <DialogTitle data-testid="password-change-title">
+              {t('account.password.dialogTitle')}
+            </DialogTitle>
+            <DialogDescription>{t('account.password.dialogDescription')}</DialogDescription>
           </DialogHeader>
 
           <form
@@ -197,26 +205,26 @@ export function AccountSection() {
           >
             <PasswordField
               data-testid="current-password-input"
-              label="Current Password"
+              label={t('account.password.current')}
               name="currentPassword"
               value={watchPassword('currentPassword')}
               onChange={(value) =>
                 registerPassword('currentPassword').onChange({ target: { value } })
               }
               error={passwordErrors.currentPassword?.message}
-              placeholder="Enter your current password"
+              placeholder={t('account.password.currentPlaceholder')}
               required
               autoComplete="current-password"
             />
 
             <PasswordField
               data-testid="new-password-input"
-              label="New Password"
+              label={t('account.password.new')}
               name="newPassword"
               value={watchPassword('newPassword')}
               onChange={(value) => registerPassword('newPassword').onChange({ target: { value } })}
               error={passwordErrors.newPassword?.message}
-              placeholder="Enter new password"
+              placeholder={t('account.password.newPlaceholder')}
               required
               showStrength
               autoComplete="new-password"
@@ -224,14 +232,14 @@ export function AccountSection() {
 
             <PasswordField
               data-testid="confirm-password-input"
-              label="Confirm New Password"
+              label={t('account.password.confirm')}
               name="confirmPassword"
               value={watchPassword('confirmPassword')}
               onChange={(value) =>
                 registerPassword('confirmPassword').onChange({ target: { value } })
               }
               error={passwordErrors.confirmPassword?.message}
-              placeholder="Confirm new password"
+              placeholder={t('account.password.confirmPlaceholder')}
               required
               autoComplete="new-password"
             />
@@ -247,14 +255,14 @@ export function AccountSection() {
                 }}
                 disabled={isPasswordSubmitting}
               >
-                Cancel
+                {t('account.password.cancel')}
               </Button>
               <SubmitButton
                 data-testid="password-change-submit"
                 loading={isPasswordSubmitting}
-                loadingText="Updating..."
+                loadingText={t('account.password.updating')}
               >
-                Update Password
+                {t('account.password.update')}
               </SubmitButton>
             </DialogFooter>
           </form>

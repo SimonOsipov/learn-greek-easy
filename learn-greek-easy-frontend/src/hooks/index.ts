@@ -21,3 +21,7 @@ export type { AnalyticsEventName, EventProperties } from './useTrackEvent';
 export { useKeyboardShortcuts } from './useKeyboardShortcuts';
 export { usePremiumAccess } from './usePremiumAccess';
 export { useToast } from './use-toast';
+
+// i18n hooks
+export { useLanguage } from './useLanguage';
+export type { LanguageContextValue } from './useLanguage';
