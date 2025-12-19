@@ -5,22 +5,21 @@
     "submitButton": "Submit Feedback"
   },
   "categories": {
-    "feature": "Feature Request",
-    "bug": "Bug Report",
-    "improvement": "Improvement",
-    "other": "Other"
+    "feature_request": "Feature Request",
+    "bug_incorrect_data": "Bug / Incorrect Data"
   },
   "status": {
-    "pending": "Pending",
-    "underReview": "Under Review",
+    "new": "New",
+    "under_review": "Under Review",
     "planned": "Planned",
-    "inProgress": "In Progress",
+    "in_progress": "In Progress",
     "completed": "Completed",
-    "declined": "Declined"
+    "cancelled": "Cancelled"
   },
   "submit": {
     "title": "Submit Feedback",
     "category": "Category",
+    "categoryPlaceholder": "Select category",
     "titleField": "Title",
     "titlePlaceholder": "Brief summary of your feedback",
     "description": "Description",
@@ -33,21 +32,35 @@
       "message": "Thank you for your feedback!"
     },
     "error": {
-      "title": "Submission failed",
+      "title": "Error",
       "message": "Failed to submit feedback. Please try again."
     }
   },
   "list": {
-    "empty": "No feedback yet",
-    "beFirst": "Be the first to share your ideas!",
-    "votes": "{{count}} vote",
-    "votes_plural": "{{count}} votes",
-    "comments": "{{count}} comment",
-    "comments_plural": "{{count}} comments"
+    "empty": "No feedback found. Be the first to share your ideas!",
+    "by": "by"
+  },
+  "pagination": {
+    "previous": "Previous",
+    "next": "Next",
+    "pageInfo": "Page {{page}} of {{totalPages}}"
   },
   "voting": {
     "upvote": "Upvote",
+    "downvote": "Downvote",
     "removeVote": "Remove vote",
     "loginToVote": "Log in to vote"
+  },
+  "filters": {
+    "category": "Category",
+    "status": "Status",
+    "sortBy": "Sort by",
+    "allCategories": "All Categories",
+    "allStatuses": "All Statuses",
+    "mostVotes": "Most Votes",
+    "leastVotes": "Least Votes",
+    "newest": "Newest",
+    "oldest": "Oldest",
+    "clear": "Clear"
   }
 }

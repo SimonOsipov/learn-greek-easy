@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 
 import { LogOut } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
@@ -27,6 +28,7 @@ interface LogoutDialogProps {
  * Cleans up auth state and redirects to login page.
  */
 export const LogoutDialog: React.FC<LogoutDialogProps> = ({ trigger }) => {
+  const { t } = useTranslation('auth');
   const { logout } = useAuthStore();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -37,8 +39,8 @@ export const LogoutDialog: React.FC<LogoutDialogProps> = ({ trigger }) => {
     setOpen(false);
     navigate('/login');
     toast({
-      title: 'Logged out successfully',
-      description: 'Αντίο! See you next time! 👋',
+      title: t('logout.success.title'),
+      description: t('logout.success.description'),
     });
   };
 
@@ -48,21 +50,18 @@ export const LogoutDialog: React.FC<LogoutDialogProps> = ({ trigger }) => {
         {trigger || (
           <Button data-testid="logout-button" variant="ghost" className="w-full justify-start">
             <LogOut className="mr-2 h-4 w-4" />
-            Logout
+            {t('logout.button')}
           </Button>
         )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-md" data-testid="logout-dialog">
         <DialogHeader>
-          <DialogTitle>Logout Confirmation</DialogTitle>
-          <DialogDescription>
-            Are you sure you want to logout? You'll need to sign in again to access your learning
-            progress.
-          </DialogDescription>
+          <DialogTitle>{t('logout.title')}</DialogTitle>
+          <DialogDescription>{t('logout.description')}</DialogDescription>
         </DialogHeader>
         <DialogFooter className="gap-2 sm:justify-start">
           <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-            Cancel
+            {t('logout.cancel')}
           </Button>
           <Button
             type="button"
@@ -70,7 +69,7 @@ export const LogoutDialog: React.FC<LogoutDialogProps> = ({ trigger }) => {
             onClick={handleLogout}
             data-testid="logout-confirm-button"
           >
-            Yes, Logout
+            {t('logout.confirm')}
           </Button>
         </DialogFooter>
       </DialogContent>

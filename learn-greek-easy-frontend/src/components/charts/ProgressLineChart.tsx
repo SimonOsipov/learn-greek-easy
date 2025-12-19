@@ -3,6 +3,7 @@
 import React from 'react';
 
 import { format } from 'date-fns';
+import { useTranslation } from 'react-i18next';
 import {
   LineChart,
   Line,
@@ -47,6 +48,7 @@ interface CustomTooltipProps {
  */
 export const ProgressLineChart = React.forwardRef<HTMLDivElement, ProgressLineChartProps>(
   ({ height, className }, ref) => {
+    const { t } = useTranslation('statistics');
     const { progressData, loading, error } = useProgressData();
 
     const chartHeight = height || 300;
@@ -82,11 +84,11 @@ export const ProgressLineChart = React.forwardRef<HTMLDivElement, ProgressLineCh
         <ChartContainer
           ref={ref}
           className={className}
-          title="Progress Over Time"
-          description="Word status progression trend"
+          title={t('charts.progressOverTime.title')}
+          description={t('charts.progressOverTime.description')}
           noData
         >
-          <div className="text-red-600">Error loading data: {error}</div>
+          <div className="text-red-600">{t('error.loadingData', { error })}</div>
         </ChartContainer>
       );
     }
@@ -97,8 +99,8 @@ export const ProgressLineChart = React.forwardRef<HTMLDivElement, ProgressLineCh
         <ChartContainer
           ref={ref}
           className={className}
-          title="Progress Over Time"
-          description="Word status progression trend"
+          title={t('charts.progressOverTime.title')}
+          description={t('charts.progressOverTime.description')}
           loading
           height={chartHeight}
         >
@@ -113,8 +115,8 @@ export const ProgressLineChart = React.forwardRef<HTMLDivElement, ProgressLineCh
         <ChartContainer
           ref={ref}
           className={className}
-          title="Progress Over Time"
-          description="Word status progression trend"
+          title={t('charts.progressOverTime.title')}
+          description={t('charts.progressOverTime.description')}
           noData
           height={chartHeight}
         >
@@ -127,8 +129,8 @@ export const ProgressLineChart = React.forwardRef<HTMLDivElement, ProgressLineCh
       <ChartContainer
         ref={ref}
         className={className}
-        title="Progress Over Time"
-        description="Word status progression trend"
+        title={t('charts.progressOverTime.title')}
+        description={t('charts.progressOverTime.description')}
         height={chartHeight}
       >
         <ResponsiveContainer width="100%" height={chartHeight}>
@@ -151,7 +153,7 @@ export const ProgressLineChart = React.forwardRef<HTMLDivElement, ProgressLineCh
               type="monotone"
               dataKey="cardsNew"
               stroke={colorSchemes.progression[0]} // cyan
-              name="New Cards"
+              name={t('charts.progressOverTime.newCards')}
               strokeWidth={2}
               dot={false}
               isAnimationActive={false}
@@ -160,7 +162,7 @@ export const ProgressLineChart = React.forwardRef<HTMLDivElement, ProgressLineCh
               type="monotone"
               dataKey="cardsLearning"
               stroke={colorSchemes.progression[1]} // blue
-              name="Learning Cards"
+              name={t('charts.progressOverTime.learningCards')}
               strokeWidth={2}
               dot={false}
               isAnimationActive={false}
@@ -169,7 +171,7 @@ export const ProgressLineChart = React.forwardRef<HTMLDivElement, ProgressLineCh
               type="monotone"
               dataKey="cardsMastered"
               stroke={colorSchemes.progression[2]} // green
-              name="Mastered Cards"
+              name={t('charts.progressOverTime.masteredCards')}
               strokeWidth={2}
               dot={false}
               isAnimationActive={false}

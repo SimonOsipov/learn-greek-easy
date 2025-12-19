@@ -1,6 +1,7 @@
 import React from 'react';
 
 import { Award } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -24,13 +25,59 @@ export interface AchievementsGridProps {
   achievements: Achievement[];
   /** Optional CSS class name */
   className?: string;
-  /** Optional footer text */
+  /** Optional footer text (deprecated, use translations) */
   footerText?: string;
 }
 
 /**
+ * Achievement metadata with translation keys
+ */
+export interface AchievementConfig {
+  id: string;
+  icon: string;
+  nameKey: string;
+  descriptionKey: string;
+  checkUnlocked: (wordsLearned: number, streak: number) => boolean;
+}
+
+/**
+ * Achievement configurations with translation keys
+ */
+export const achievementConfigs: AchievementConfig[] = [
+  {
+    id: 'first-steps',
+    icon: '\uD83D\uDC63',
+    nameKey: 'achievements.firstSteps.name',
+    descriptionKey: 'achievements.firstSteps.description',
+    checkUnlocked: (wordsLearned) => wordsLearned >= 10,
+  },
+  {
+    id: 'week-warrior',
+    icon: '\u2694\uFE0F',
+    nameKey: 'achievements.weekWarrior.name',
+    descriptionKey: 'achievements.weekWarrior.description',
+    checkUnlocked: (_, streak) => streak >= 7,
+  },
+  {
+    id: 'century-club',
+    icon: '\uD83D\uDCAF',
+    nameKey: 'achievements.centuryClub.name',
+    descriptionKey: 'achievements.centuryClub.description',
+    checkUnlocked: (wordsLearned) => wordsLearned >= 100,
+  },
+  {
+    id: 'fire-keeper',
+    icon: '\uD83D\uDD25',
+    nameKey: 'achievements.fireKeeper.name',
+    descriptionKey: 'achievements.fireKeeper.description',
+    checkUnlocked: (_, streak) => streak >= 30,
+  },
+];
+
+/**
  * Default achievements that can be used when no custom achievements are provided.
  * These are based on streak and words learned milestones.
+ * @deprecated Use achievementConfigs with translations instead
  */
 export const getDefaultAchievements = (wordsLearned: number, streak: number): Achievement[] => [
   {
@@ -70,18 +117,18 @@ export const getDefaultAchievements = (wordsLearned: number, streak: number): Ac
 export const AchievementsGrid: React.FC<AchievementsGridProps> = ({
   achievements,
   className,
-  footerText = 'More achievements coming soon! Keep learning to unlock special badges.',
+  footerText,
 }) => {
+  const { t } = useTranslation('statistics');
+
   return (
     <Card className={cn(className)}>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Award className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-          Achievements
+          {t('achievements.title')}
         </CardTitle>
-        <CardDescription>
-          Unlock badges by completing challenges and reaching milestones
-        </CardDescription>
+        <CardDescription>{t('achievements.subtitle')}</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
@@ -102,19 +149,19 @@ export const AchievementsGrid: React.FC<AchievementsGridProps> = ({
                   variant="secondary"
                   className="mt-2 bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300"
                 >
-                  Unlocked
+                  {t('achievements.unlocked')}
                 </Badge>
               ) : (
                 <Badge variant="outline" className="mt-2 text-muted-foreground">
-                  Locked
+                  {t('achievements.locked')}
                 </Badge>
               )}
             </div>
           ))}
         </div>
-        {footerText && (
-          <p className="mt-6 text-center text-sm text-muted-foreground">{footerText}</p>
-        )}
+        <p className="mt-6 text-center text-sm text-muted-foreground">
+          {footerText || t('achievements.comingSoon')}
+        </p>
       </CardContent>
     </Card>
   );

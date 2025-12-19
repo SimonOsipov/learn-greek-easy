@@ -7,8 +7,51 @@
 // Unit tests should use mocked API calls, not real backend connections.
 // E2E tests (Playwright) handle their own API configuration.
 
-// Ensure localStorage exists BEFORE any other imports
-// This must run before Zustand stores are imported
+import React from 'react';
+
+import '@testing-library/jest-dom';
+import { cleanup } from '@testing-library/react';
+import i18n from 'i18next';
+import { initReactI18next } from 'react-i18next';
+import { afterEach, beforeAll, vi } from 'vitest';
+
+// Import all translation resources for test i18n setup
+import enAuth from '@/i18n/locales/en/auth.json';
+import enCommon from '@/i18n/locales/en/common.json';
+import enDeck from '@/i18n/locales/en/deck.json';
+import enFeedback from '@/i18n/locales/en/feedback.json';
+import enProfile from '@/i18n/locales/en/profile.json';
+import enReview from '@/i18n/locales/en/review.json';
+import enSettings from '@/i18n/locales/en/settings.json';
+import enStatistics from '@/i18n/locales/en/statistics.json';
+
+// Initialize i18n for tests with English translations
+i18n.use(initReactI18next).init({
+  resources: {
+    en: {
+      common: enCommon,
+      auth: enAuth,
+      deck: enDeck,
+      review: enReview,
+      settings: enSettings,
+      profile: enProfile,
+      statistics: enStatistics,
+      feedback: enFeedback,
+    },
+  },
+  lng: 'en', // Force English for tests
+  fallbackLng: 'en',
+  defaultNS: 'common',
+  ns: ['common', 'auth', 'deck', 'review', 'settings', 'profile', 'statistics', 'feedback'],
+  interpolation: {
+    escapeValue: false,
+  },
+  react: {
+    useSuspense: false,
+  },
+});
+
+// Ensure localStorage exists BEFORE any Zustand stores are imported
 // Always use our mock for consistent behavior across tests
 class LocalStorageMock implements Storage {
   private store: Map<string, string> = new Map();
@@ -53,12 +96,6 @@ if (typeof global !== 'undefined') {
   (global as any).localStorage = localStorageMock;
   (global as any).sessionStorage = sessionStorageMock;
 }
-
-import React from 'react';
-
-import '@testing-library/jest-dom';
-import { cleanup } from '@testing-library/react';
-import { afterEach, beforeAll, vi } from 'vitest';
 
 // Mock @react-oauth/google library
 // This prevents "Google OAuth components must be used within GoogleOAuthProvider" errors

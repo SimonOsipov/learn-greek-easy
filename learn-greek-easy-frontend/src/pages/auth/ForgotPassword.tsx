@@ -1,6 +1,7 @@
 import React from 'react';
 
 import { ArrowLeft, Lock } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 
 import { AuthLayout } from '@/components/auth/AuthLayout';
@@ -8,6 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 export const ForgotPassword: React.FC = () => {
+  const { t } = useTranslation('auth');
+
   return (
     <AuthLayout>
       <Card className="shadow-xl">
@@ -17,8 +20,8 @@ export const ForgotPassword: React.FC = () => {
               <Lock className="h-8 w-8 text-primary" />
             </div>
           </div>
-          <CardTitle className="text-2xl font-bold">Password Reset</CardTitle>
-          <CardDescription>This feature is coming in Phase 2</CardDescription>
+          <CardTitle className="text-2xl font-bold">{t('forgotPassword.title')}</CardTitle>
+          <CardDescription>{t('forgotPassword.description')}</CardDescription>
         </CardHeader>
 
         <CardContent className="space-y-4">
@@ -35,7 +38,7 @@ export const ForgotPassword: React.FC = () => {
             <Button asChild variant="outline" className="w-full">
               <Link to="/login">
                 <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to Login
+                {t('forgotPassword.backToLogin')}
               </Link>
             </Button>
           </div>

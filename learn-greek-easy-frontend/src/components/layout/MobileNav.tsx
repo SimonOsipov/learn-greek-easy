@@ -1,6 +1,7 @@
 import React from 'react';
 
 import { Home, Layers, BarChart3, User, MessageSquare } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Link, useLocation } from 'react-router-dom';
 
 import { cn } from '@/lib/utils';
@@ -11,20 +12,21 @@ interface MobileNavProps {
 
 interface NavItem {
   id: string;
-  label: string;
+  labelKey: string;
   icon: React.ComponentType<{ className?: string }>;
   href: string;
 }
 
 const navItems: NavItem[] = [
-  { id: 'home', label: 'Home', icon: Home, href: '/' },
-  { id: 'decks', label: 'Decks', icon: Layers, href: '/decks' },
-  { id: 'stats', label: 'Stats', icon: BarChart3, href: '/statistics' },
-  { id: 'feedback', label: 'Feedback', icon: MessageSquare, href: '/feedback' },
-  { id: 'profile', label: 'Profile', icon: User, href: '/profile' },
+  { id: 'home', labelKey: 'nav.home', icon: Home, href: '/' },
+  { id: 'decks', labelKey: 'nav.decks', icon: Layers, href: '/decks' },
+  { id: 'stats', labelKey: 'nav.stats', icon: BarChart3, href: '/statistics' },
+  { id: 'feedback', labelKey: 'nav.feedback', icon: MessageSquare, href: '/feedback' },
+  { id: 'profile', labelKey: 'nav.profile', icon: User, href: '/profile' },
 ];
 
 export const MobileNav: React.FC<MobileNavProps> = ({ className }) => {
+  const { t } = useTranslation('common');
   const location = useLocation();
 
   const isActive = (href: string) => {
@@ -42,6 +44,7 @@ export const MobileNav: React.FC<MobileNavProps> = ({ className }) => {
         {navItems.map((item) => {
           const Icon = item.icon;
           const active = isActive(item.href);
+          const label = t(item.labelKey);
 
           return (
             <Link
@@ -51,11 +54,11 @@ export const MobileNav: React.FC<MobileNavProps> = ({ className }) => {
                 'flex min-w-[64px] flex-col items-center px-3 py-2 transition-colors',
                 active ? 'text-primary' : 'text-text-muted hover:text-text-secondary'
               )}
-              aria-label={item.label}
+              aria-label={label}
               aria-current={active ? 'page' : undefined}
             >
               <Icon className="mb-1 h-5 w-5" />
-              <span className="text-xs font-medium">{item.label}</span>
+              <span className="text-xs font-medium">{label}</span>
             </Link>
           );
         })}

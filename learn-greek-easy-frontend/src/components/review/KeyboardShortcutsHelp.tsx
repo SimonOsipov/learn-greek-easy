@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next';
+
 import {
   Dialog,
   DialogContent,
@@ -35,42 +37,43 @@ function ShortcutItem({ keys, description }: ShortcutItemProps) {
 }
 
 export function KeyboardShortcutsHelp({ open, onOpenChange }: KeyboardShortcutsHelpProps) {
+  const { t } = useTranslation('review');
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Keyboard Shortcuts</DialogTitle>
-          <DialogDescription>
-            Use these keyboard shortcuts to navigate and review cards quickly.
-          </DialogDescription>
+          <DialogTitle>{t('keyboard.title')}</DialogTitle>
+          <DialogDescription>{t('keyboard.description')}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6">
           {/* Review Actions Section */}
           <div>
-            <h3 className="mb-3 text-sm font-semibold text-gray-900">Review Actions</h3>
+            <h3 className="mb-3 text-sm font-semibold text-gray-900">
+              {t('keyboard.reviewActions')}
+            </h3>
             <div className="space-y-1 border-l-2 border-blue-500 pl-4">
-              <ShortcutItem keys={['Space']} description="Flip flashcard" />
-              <ShortcutItem keys={['1']} description="Rate 'Again' (show again soon)" />
-              <ShortcutItem keys={['2']} description="Rate 'Hard' (reduced interval)" />
-              <ShortcutItem keys={['3']} description="Rate 'Good' (standard interval)" />
-              <ShortcutItem keys={['4']} description="Rate 'Easy' (longer interval)" />
+              <ShortcutItem keys={[t('keyboard.spaceKey')]} description={t('keyboard.flipCard')} />
+              <ShortcutItem keys={['1']} description={t('keyboard.rateAgain')} />
+              <ShortcutItem keys={['2']} description={t('keyboard.rateHard')} />
+              <ShortcutItem keys={['3']} description={t('keyboard.rateGood')} />
+              <ShortcutItem keys={['4']} description={t('keyboard.rateEasy')} />
             </div>
           </div>
 
           {/* Navigation Section */}
           <div>
-            <h3 className="mb-3 text-sm font-semibold text-gray-900">Navigation</h3>
+            <h3 className="mb-3 text-sm font-semibold text-gray-900">{t('keyboard.navigation')}</h3>
             <div className="space-y-1 border-l-2 border-purple-500 pl-4">
-              <ShortcutItem keys={['?']} description="Show/hide keyboard shortcuts" />
-              <ShortcutItem keys={['Esc']} description="Close help or exit review" />
+              <ShortcutItem keys={['?']} description={t('keyboard.toggleHelp')} />
+              <ShortcutItem keys={[t('keyboard.escKey')]} description={t('keyboard.closeOrExit')} />
             </div>
           </div>
 
           {/* Footer Tip */}
           <div className="rounded-lg bg-blue-50 p-3 text-sm text-blue-800">
-            <strong>Tip:</strong> You can use your keyboard to review cards without touching your
-            mouse!
+            <strong>{t('keyboard.tip')}</strong> {t('keyboard.tipMessage')}
           </div>
         </div>
       </DialogContent>

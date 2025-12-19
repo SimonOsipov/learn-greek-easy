@@ -2,6 +2,7 @@
 
 import React from 'react';
 
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 
 import { useTrackEvent } from '@/hooks/useTrackEvent';
@@ -15,6 +16,7 @@ export interface DecksGridProps {
 }
 
 export const DecksGrid: React.FC<DecksGridProps> = ({ decks, onDeckClick }) => {
+  const { t } = useTranslation('deck');
   const navigate = useNavigate();
   const { track } = useTrackEvent();
 
@@ -45,7 +47,7 @@ export const DecksGrid: React.FC<DecksGridProps> = ({ decks, onDeckClick }) => {
     <div
       className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3"
       role="list"
-      aria-label="Available decks"
+      aria-label={t('list.title')}
     >
       {decks.map((deck) => (
         <div key={deck.id} role="listitem">

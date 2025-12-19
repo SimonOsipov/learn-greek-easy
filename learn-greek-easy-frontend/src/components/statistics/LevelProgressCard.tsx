@@ -1,6 +1,7 @@
 import React from 'react';
 
 import { Star } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,6 +26,8 @@ export const LevelProgressCard: React.FC<LevelProgressCardProps> = ({
   xpPerLevel = 1000,
   className,
 }) => {
+  const { t } = useTranslation('statistics');
+
   // Calculate level from XP
   const level = Math.floor(totalXP / xpPerLevel) || 1;
   const currentLevelXP = totalXP % xpPerLevel;
@@ -38,23 +41,23 @@ export const LevelProgressCard: React.FC<LevelProgressCardProps> = ({
           <div>
             <CardTitle className="flex items-center gap-2">
               <Star className="h-5 w-5 text-yellow-500" />
-              Level {level}
+              {t('level.title', { level })}
             </CardTitle>
             <CardDescription>
-              {currentLevelXP.toLocaleString()} / {xpPerLevel.toLocaleString()} XP
+              {t('level.xpProgress', {
+                current: currentLevelXP.toLocaleString(),
+                total: xpPerLevel.toLocaleString(),
+              })}
             </CardDescription>
           </div>
           <Badge variant="secondary" className="text-lg">
-            {xpToNextLevel} XP to Level {level + 1}
+            {t('level.xpToNext', { xp: xpToNextLevel, level: level + 1 })}
           </Badge>
         </div>
       </CardHeader>
       <CardContent>
         <Progress value={progressPercent} className="h-3" />
-        <p className="mt-3 text-sm text-muted-foreground">
-          Keep learning to earn more XP and level up! Each lesson, quiz, and review session
-          contributes to your progress.
-        </p>
+        <p className="mt-3 text-sm text-muted-foreground">{t('level.description')}</p>
       </CardContent>
     </Card>
   );

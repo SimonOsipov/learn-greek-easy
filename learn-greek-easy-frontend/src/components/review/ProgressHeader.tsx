@@ -1,6 +1,9 @@
+import { useTranslation } from 'react-i18next';
+
 import { useReviewStore } from '@/stores/reviewStore';
 
 export function ProgressHeader() {
+  const { t } = useTranslation('review');
   const { progress, sessionStats } = useReviewStore();
   const { current, total } = progress;
   const percentage = total > 0 ? (current / total) * 100 : 0;
@@ -22,7 +25,8 @@ export function ProgressHeader() {
 
       {/* Progress text */}
       <div className="text-center text-sm text-gray-600">
-        Card {current + 1} of {total} • {minutesRemaining} min remaining
+        {t('session.cardOf', { current: current + 1, total })} •{' '}
+        {t('session.minRemaining', { minutes: minutesRemaining })}
       </div>
     </div>
   );

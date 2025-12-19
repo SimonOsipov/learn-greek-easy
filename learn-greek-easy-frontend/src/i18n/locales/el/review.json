@@ -4,10 +4,18 @@
     "error": "Error",
     "retry": "Retry",
     "noCardsDue": "No cards due",
+    "noCardsDueDescription": "You've reviewed all the cards in this deck! Come back later for more practice.",
     "exitReview": "Exit Review",
     "cardOf": "Card {{current}} of {{total}}",
     "tapToFlip": "Tap to flip",
-    "flipCard": "Flip Card"
+    "flipCard": "Flip Card",
+    "invalidDeckId": "Invalid deck ID. Please return to the dashboard.",
+    "goToDashboard": "Go to Dashboard",
+    "clickToReveal": "Click to reveal",
+    "flipCardAriaLabel": "Flip card to reveal translation",
+    "answerRevealed": "Answer revealed",
+    "minRemaining": "{{minutes}} min remaining",
+    "sessionEndedNoCards": "Session ended without reviewing any cards."
   },
   "ratings": {
     "again": "Again",
@@ -40,16 +48,19 @@
   },
   "keyboard": {
     "title": "Keyboard Shortcuts",
+    "description": "Use these keyboard shortcuts to navigate and review cards quickly.",
     "reviewActions": "Review Actions",
     "flipCard": "Flip flashcard",
-    "rateAgain": "Rate: Again (1)",
-    "rateHard": "Rate: Hard (2)",
-    "rateGood": "Rate: Good (3)",
-    "rateEasy": "Rate: Easy (4)",
+    "rateAgain": "Rate 'Again' (show again soon)",
+    "rateHard": "Rate 'Hard' (reduced interval)",
+    "rateGood": "Rate 'Good' (standard interval)",
+    "rateEasy": "Rate 'Easy' (longer interval)",
     "navigation": "Navigation",
     "toggleHelp": "Show/hide keyboard shortcuts",
     "closeOrExit": "Close help or exit review",
     "spaceKey": "Space",
-    "escKey": "Esc"
+    "escKey": "Esc",
+    "tip": "Tip:",
+    "tipMessage": "You can use your keyboard to review cards without touching your mouse!"
   }
 }

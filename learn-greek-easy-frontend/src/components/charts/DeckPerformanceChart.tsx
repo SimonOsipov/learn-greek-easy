@@ -2,6 +2,7 @@
 
 import React, { useMemo } from 'react';
 
+import { useTranslation } from 'react-i18next';
 import {
   BarChart,
   Bar,
@@ -40,6 +41,7 @@ interface CustomTooltipProps {
  */
 export const DeckPerformanceChart = React.forwardRef<HTMLDivElement, DeckPerformanceChartProps>(
   ({ height, maxDecks = 8, className }, ref) => {
+    const { t } = useTranslation('statistics');
     const { deckStats, loading, error } = useDeckPerformance();
 
     const chartHeight = height || 400;
@@ -81,11 +83,11 @@ export const DeckPerformanceChart = React.forwardRef<HTMLDivElement, DeckPerform
         <ChartContainer
           ref={ref}
           className={className}
-          title="Deck Performance"
-          description="Mastery percentage by deck"
+          title={t('charts.deckPerformance.title')}
+          description={t('charts.deckPerformance.description')}
           noData
         >
-          <div className="text-red-600">Error loading data: {error}</div>
+          <div className="text-red-600">{t('error.loadingData', { error })}</div>
         </ChartContainer>
       );
     }
@@ -96,8 +98,8 @@ export const DeckPerformanceChart = React.forwardRef<HTMLDivElement, DeckPerform
         <ChartContainer
           ref={ref}
           className={className}
-          title="Deck Performance"
-          description="Mastery percentage by deck"
+          title={t('charts.deckPerformance.title')}
+          description={t('charts.deckPerformance.description')}
           loading
           height={chartHeight}
         >
@@ -112,8 +114,8 @@ export const DeckPerformanceChart = React.forwardRef<HTMLDivElement, DeckPerform
         <ChartContainer
           ref={ref}
           className={className}
-          title="Deck Performance"
-          description="Mastery percentage by deck"
+          title={t('charts.deckPerformance.title')}
+          description={t('charts.deckPerformance.description')}
           noData
           height={chartHeight}
         >
@@ -126,8 +128,8 @@ export const DeckPerformanceChart = React.forwardRef<HTMLDivElement, DeckPerform
       <ChartContainer
         ref={ref}
         className={className}
-        title="Deck Performance"
-        description="Mastery percentage by deck"
+        title={t('charts.deckPerformance.title')}
+        description={t('charts.deckPerformance.description')}
         height={chartHeight}
       >
         <ResponsiveContainer width="100%" height={chartHeight}>

@@ -1,6 +1,7 @@
 import React from 'react';
 
 import { Menu } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Link, useLocation } from 'react-router-dom';
 
 import { LogoutDialog } from '@/components/auth/LogoutDialog';
@@ -26,14 +27,15 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({ className }) => {
+  const { t } = useTranslation('common');
   const location = useLocation();
   const { toggleSidebar, isDesktop } = useLayoutContext();
 
   const navItems = [
-    { path: '/', label: 'Dashboard' },
-    { path: '/decks', label: 'Decks' },
-    { path: '/statistics', label: 'Statistics' },
-    { path: '/feedback', label: 'Feedback' },
+    { path: '/', labelKey: 'nav.dashboard' },
+    { path: '/decks', labelKey: 'nav.decks' },
+    { path: '/statistics', labelKey: 'nav.statistics' },
+    { path: '/feedback', labelKey: 'nav.feedback' },
   ];
 
   const isActiveRoute = (path: string) => {
@@ -54,7 +56,7 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
                 size="icon"
                 onClick={toggleSidebar}
                 className="lg:hidden"
-                aria-label="Toggle menu"
+                aria-label={t('nav.toggleMenu')}
               >
                 <Menu className="h-5 w-5" />
               </Button>
@@ -77,7 +79,7 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
                     isActiveRoute(item.path) ? 'text-primary' : 'text-text-secondary'
                   )}
                 >
-                  {item.label}
+                  {t(item.labelKey)}
                 </Link>
               ))}
             </nav>
@@ -97,7 +99,7 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
                 <Button
                   variant="ghost"
                   className="relative h-9 w-9 rounded-full"
-                  aria-label="User menu"
+                  aria-label={t('nav.userMenu')}
                 >
                   <Avatar className="h-9 w-9">
                     <AvatarImage src="" alt="User" />
@@ -118,12 +120,12 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
-                  <Link to="/profile">Profile</Link>
+                  <Link to="/profile">{t('nav.profile')}</Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link to="/settings">Settings</Link>
+                  <Link to="/settings">{t('nav.settings')}</Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem>Help & Support</DropdownMenuItem>
+                <DropdownMenuItem>{t('nav.help')}</DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild onSelect={(e) => e.preventDefault()}>
                   <LogoutDialog />

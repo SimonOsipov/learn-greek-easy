@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next';
+
 import type { CardReview } from '@/types/review';
 
 import { KeyboardShortcutsTooltip } from './KeyboardShortcutsTooltip';
@@ -13,6 +15,8 @@ interface CardMainProps {
 }
 
 export function CardMain({ card, isFlipped, onFlip }: CardMainProps) {
+  const { t } = useTranslation('review');
+
   return (
     <div
       className="relative flex min-h-[280px] cursor-pointer flex-col justify-center px-8 py-12 text-center transition-colors hover:bg-gray-50/50"
@@ -25,7 +29,7 @@ export function CardMain({ card, isFlipped, onFlip }: CardMainProps) {
           onFlip();
         }
       }}
-      aria-label="Flip card to reveal translation"
+      aria-label={t('session.flipCardAriaLabel')}
     >
       <KeyboardShortcutsTooltip />
 
@@ -40,7 +44,7 @@ export function CardMain({ card, isFlipped, onFlip }: CardMainProps) {
 
       {!isFlipped && (
         <div className="absolute bottom-2 left-1/2 -translate-x-1/2 text-base text-gray-400">
-          Click to reveal
+          {t('session.clickToReveal')}
         </div>
       )}
     </div>

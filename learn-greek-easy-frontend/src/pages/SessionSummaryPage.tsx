@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 
 import { AlertCircle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate } from 'react-router-dom';
 
 import { SessionSummary } from '@/components/review/SessionSummary';
@@ -37,6 +38,7 @@ import { useReviewStore } from '@/stores/reviewStore';
  * - Dashboard: /dashboard
  */
 export function SessionSummaryPage() {
+  const { t } = useTranslation('review');
   const { deckId } = useParams<{ deckId: string }>();
   const navigate = useNavigate();
   const { sessionSummary, clearSessionSummary } = useReviewStore();
@@ -131,11 +133,11 @@ export function SessionSummaryPage() {
         <div className="container mx-auto max-w-3xl px-4">
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Error</AlertTitle>
-            <AlertDescription>Invalid deck ID. Please return to the dashboard.</AlertDescription>
+            <AlertTitle>{t('session.error')}</AlertTitle>
+            <AlertDescription>{t('session.invalidDeckId')}</AlertDescription>
           </Alert>
           <div className="mt-4">
-            <Button onClick={() => navigate('/')}>Go to Dashboard</Button>
+            <Button onClick={() => navigate('/')}>{t('session.goToDashboard')}</Button>
           </div>
         </div>
       </div>

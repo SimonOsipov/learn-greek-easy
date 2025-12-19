@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 
 import { DeckCard } from '@/components/display/DeckCard';
@@ -24,6 +25,7 @@ import type { Metric } from '@/types/dashboard';
  * Uses real backend API data via analyticsStore and deckStore.
  */
 export const Dashboard: React.FC = () => {
+  const { t } = useTranslation('common');
   const navigate = useNavigate();
 
   // Auth state
@@ -82,31 +84,31 @@ export const Dashboard: React.FC = () => {
     return [
       {
         id: '1',
-        label: 'Due Today',
+        label: t('dashboard.metrics.dueToday'),
         value: dueToday,
-        sublabel: 'cards to review',
+        sublabel: t('dashboard.metrics.cardsToReview'),
         color: 'primary',
         icon: '📚',
       },
       {
         id: '2',
-        label: 'Current Streak',
+        label: t('dashboard.metrics.currentStreak'),
         value: streak.currentStreak,
-        sublabel: 'days',
+        sublabel: t('dashboard.metrics.days'),
         color: 'orange',
         icon: '🔥',
       },
       {
         id: '3',
-        label: 'Mastered',
+        label: t('dashboard.metrics.mastered'),
         value: wordStatus.mastered,
-        sublabel: 'words total',
+        sublabel: t('dashboard.metrics.wordsTotal'),
         color: 'green',
         icon: '✅',
       },
       {
         id: '4',
-        label: 'Accuracy',
+        label: t('dashboard.metrics.accuracy'),
         value: `${Math.round(summary.averageAccuracy)}%`,
         sublabel: analyticsData.dateRange.label.toLowerCase(),
         color: 'blue',
@@ -114,9 +116,9 @@ export const Dashboard: React.FC = () => {
       },
       {
         id: '5',
-        label: 'Total Time',
+        label: t('dashboard.metrics.totalTime'),
         value: formatStudyTime(summary.totalTimeStudied),
-        sublabel: 'this period',
+        sublabel: t('dashboard.metrics.thisPeriod'),
         color: 'muted',
         icon: '⏱️',
       },
@@ -158,7 +160,9 @@ export const Dashboard: React.FC = () => {
   return (
     <div className="space-y-6 pb-8" data-testid="dashboard">
       {/* Page Title - visible for accessibility and E2E tests */}
-      <h1 className="text-2xl font-semibold text-text-primary md:text-3xl">Dashboard</h1>
+      <h1 className="text-2xl font-semibold text-text-primary md:text-3xl">
+        {t('dashboard.title')}
+      </h1>
 
       {/* Welcome Section */}
       <WelcomeSection
@@ -170,7 +174,9 @@ export const Dashboard: React.FC = () => {
 
       {/* Metrics Grid */}
       <section>
-        <h2 className="mb-4 text-lg font-semibold text-text-primary">Your Progress</h2>
+        <h2 className="mb-4 text-lg font-semibold text-text-primary">
+          {t('dashboard.progress.title')}
+        </h2>
         {isLoading ? (
           <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
             {[1, 2, 3, 4, 5].map((i) => (
@@ -179,7 +185,7 @@ export const Dashboard: React.FC = () => {
           </div>
         ) : analyticsError ? (
           <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-center text-destructive">
-            Failed to load metrics. Please try refreshing the page.
+            {t('dashboard.progress.error')}
           </div>
         ) : metrics.length > 0 ? (
           <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
@@ -187,14 +193,14 @@ export const Dashboard: React.FC = () => {
               <MetricCard
                 key={metric.id}
                 {...metric}
-                tooltip={`Click to view ${metric.label.toLowerCase()} details`}
+                tooltip={t('dashboard.metrics.tooltip', { label: metric.label.toLowerCase() })}
                 onClick={() => console.log(`Clicked metric: ${metric.label}`)}
               />
             ))}
           </div>
         ) : (
           <div className="rounded-lg border border-muted p-4 text-center text-muted-foreground">
-            No progress data yet. Start studying to see your metrics!
+            {t('dashboard.progress.empty')}
           </div>
         )}
       </section>
@@ -204,12 +210,14 @@ export const Dashboard: React.FC = () => {
       {/* Active Decks Section */}
       <section>
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-text-primary">Active Decks</h2>
+          <h2 className="text-lg font-semibold text-text-primary">
+            {t('dashboard.activeDecks.title')}
+          </h2>
           <button
             className="text-sm text-primary hover:underline"
             onClick={() => navigate('/decks')}
           >
-            View all decks →
+            {t('dashboard.activeDecks.viewAll')} →
           </button>
         </div>
         {decksLoading ? (
@@ -250,12 +258,12 @@ export const Dashboard: React.FC = () => {
           </div>
         ) : (
           <div className="rounded-lg border border-muted p-8 text-center">
-            <p className="text-muted-foreground">No active decks yet.</p>
+            <p className="text-muted-foreground">{t('dashboard.activeDecks.empty')}</p>
             <button
               className="mt-4 text-sm text-primary hover:underline"
               onClick={() => navigate('/decks')}
             >
-              Browse available decks →
+              {t('dashboard.activeDecks.browseDecks')} →
             </button>
           </div>
         )}

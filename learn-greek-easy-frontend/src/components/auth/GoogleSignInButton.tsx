@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 
 import { GoogleLogin, type CredentialResponse } from '@react-oauth/google';
+import { useTranslation } from 'react-i18next';
 
 import { useAuthStore } from '@/stores/authStore';
 
@@ -24,6 +25,7 @@ export const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({
   disabled = false,
   className = '',
 }) => {
+  const { t } = useTranslation('auth');
   const { loginWithGoogle, isLoading } = useAuthStore();
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
@@ -87,12 +89,12 @@ export const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({
                   d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                 ></path>
               </svg>
-              Signing in...
+              {t('oauth.signingIn')}
             </>
           ) : (
             <>
               <GoogleIcon />
-              Continue with Google
+              {t('oauth.google')}
             </>
           )}
         </button>

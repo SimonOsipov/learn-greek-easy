@@ -5,7 +5,59 @@
     "tryAgain": "Please try again",
     "notFound": "Not found",
     "unauthorized": "Unauthorized",
-    "forbidden": "Access denied"
+    "forbidden": "Access denied",
+    "somethingWrong": "Something went wrong",
+    "unexpectedError": "We're sorry, but something unexpected happened. Please try again.",
+    "persistsContact": "If this problem persists, please contact support."
+  },
+  "notFoundPage": {
+    "code": "404",
+    "title": "Page Not Found",
+    "description": "The page you're looking for seems to have wandered off to Mount Olympus. Let's get you back on track!",
+    "goToDashboard": "Go to Dashboard",
+    "goBack": "Go Back"
+  },
+  "errorPage": {
+    "tryAgain": "Try Again",
+    "goHome": "Go Home"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "progress": {
+      "title": "Your Progress",
+      "error": "Failed to load metrics. Please try refreshing the page.",
+      "empty": "No progress data yet. Start studying to see your metrics!"
+    },
+    "metrics": {
+      "dueToday": "Due Today",
+      "currentStreak": "Current Streak",
+      "mastered": "Mastered",
+      "accuracy": "Accuracy",
+      "totalTime": "Total Time",
+      "cardsToReview": "cards to review",
+      "days": "days",
+      "wordsTotal": "words total",
+      "thisPeriod": "this period",
+      "tooltip": "Click to view {{label}} details"
+    },
+    "activeDecks": {
+      "title": "Active Decks",
+      "viewAll": "View all decks",
+      "empty": "No active decks yet.",
+      "browseDecks": "Browse available decks"
+    }
+  },
+  "welcome": {
+    "greeting": "Γεια σου, {{name}}!",
+    "cardsToReview": "You have <strong>{{count}} cards</strong> to review today.",
+    "cardsToReviewText": "You have {{count}} cards to review today.",
+    "encouragement": {
+      "incredible": "Incredible {{count}}-day streak!",
+      "great": "Great {{count}}-day streak going!",
+      "keepItUp": "{{count}} day streak - keep it up!",
+      "readyToStart": "Ready to start learning?"
+    },
+    "startReview": "Start Review Session"
   },
   "actions": {
     "save": "Save",
@@ -34,13 +86,18 @@
   },
   "nav": {
     "dashboard": "Dashboard",
+    "home": "Home",
     "decks": "Decks",
+    "stats": "Stats",
     "statistics": "Statistics",
     "feedback": "Feedback",
     "profile": "Profile",
     "settings": "Settings",
     "logout": "Logout",
-    "help": "Help & Support"
+    "help": "Help & Support",
+    "menu": "Menu",
+    "toggleMenu": "Toggle menu",
+    "userMenu": "User menu"
   },
   "language": {
     "select": "Select language",

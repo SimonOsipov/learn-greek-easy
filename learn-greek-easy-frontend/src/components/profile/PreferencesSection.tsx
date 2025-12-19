@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 
 import { Globe, Bell, Clock, Palette, Check } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -26,6 +27,7 @@ function debounce<T extends (...args: any[]) => any>(
 }
 
 export const PreferencesSection: React.FC<PreferencesSectionProps> = ({ user }) => {
+  const { t, i18n } = useTranslation('profile');
   const updateProfile = useAuthStore((state) => state.updateProfile);
   const { toast } = useToast();
 
@@ -39,13 +41,13 @@ export const PreferencesSection: React.FC<PreferencesSectionProps> = ({ user }) 
       try {
         await updateProfile({ preferences: newPreferences });
         toast({
-          title: 'Preferences saved',
-          description: 'Your learning preferences have been updated.',
+          title: t('preferences.success'),
+          description: t('preferences.successDescription'),
         });
       } catch (error) {
         toast({
-          title: 'Error',
-          description: 'Failed to save preferences. Please try again.',
+          title: t('preferences.error'),
+          description: t('preferences.errorDescription'),
           variant: 'destructive',
         });
       } finally {
@@ -58,15 +60,18 @@ export const PreferencesSection: React.FC<PreferencesSectionProps> = ({ user }) 
     const newPreferences = { ...preferences, [key]: value };
     setPreferences(newPreferences);
     debouncedSaveRef.current(newPreferences);
+
+    // Change app language when language preference changes
+    if (key === 'language') {
+      i18n.changeLanguage(value);
+    }
   };
 
   return (
     <div className="p-6">
       <div className="mb-6">
-        <h2 className="text-xl font-bold text-gray-900">Learning Preferences</h2>
-        <p className="text-sm text-gray-600">
-          Customize your learning experience to match your goals
-        </p>
+        <h2 className="text-xl font-bold text-gray-900">{t('preferences.title')}</h2>
+        <p className="text-sm text-gray-600">{t('preferences.subtitle')}</p>
       </div>
 
       <Separator className="mb-6" />
@@ -77,9 +82,9 @@ export const PreferencesSection: React.FC<PreferencesSectionProps> = ({ user }) 
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <Globe className="h-5 w-5 text-blue-600" />
-              Interface Language
+              {t('preferences.language.title')}
             </CardTitle>
-            <CardDescription>Choose your preferred language for the app interface</CardDescription>
+            <CardDescription>{t('preferences.language.description')}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-3 gap-3">
@@ -93,7 +98,9 @@ export const PreferencesSection: React.FC<PreferencesSectionProps> = ({ user }) 
               >
                 <div className="flex items-center gap-2">
                   <span className="text-2xl">🇬🇧</span>
-                  <span className="font-medium text-gray-900">English</span>
+                  <span className="font-medium text-gray-900">
+                    {t('preferences.language.english')}
+                  </span>
                 </div>
                 {preferences.language === 'en' && <Check className="h-5 w-5 text-blue-600" />}
               </button>
@@ -107,7 +114,9 @@ export const PreferencesSection: React.FC<PreferencesSectionProps> = ({ user }) 
               >
                 <div className="flex items-center gap-2">
                   <span className="text-2xl">🇬🇷</span>
-                  <span className="font-medium text-gray-900">Ελληνικά</span>
+                  <span className="font-medium text-gray-900">
+                    {t('preferences.language.greek')}
+                  </span>
                 </div>
                 {preferences.language === 'el' && <Check className="h-5 w-5 text-blue-600" />}
               </button>
@@ -121,7 +130,9 @@ export const PreferencesSection: React.FC<PreferencesSectionProps> = ({ user }) 
               >
                 <div className="flex items-center gap-2">
                   <span className="text-2xl">🇷🇺</span>
-                  <span className="font-medium text-gray-900">Русский</span>
+                  <span className="font-medium text-gray-900">
+                    {t('preferences.language.russian')}
+                  </span>
                 </div>
                 {preferences.language === 'ru' && <Check className="h-5 w-5 text-blue-600" />}
               </button>
@@ -134,20 +145,24 @@ export const PreferencesSection: React.FC<PreferencesSectionProps> = ({ user }) 
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <Clock className="h-5 w-5 text-green-600" />
-              Daily Learning Goal
+              {t('preferences.dailyGoal.title')}
             </CardTitle>
-            <CardDescription>Set your target study time per day (5-120 minutes)</CardDescription>
+            <CardDescription>{t('preferences.dailyGoal.description')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
               <Label htmlFor="dailyGoal" className="text-base font-medium text-gray-900">
-                {preferences.dailyGoal} minutes per day
+                {t('preferences.dailyGoal.unit', { minutes: preferences.dailyGoal })}
               </Label>
               <div className="flex items-center gap-2 text-sm text-gray-600">
-                {preferences.dailyGoal < 15 && <span>Light</span>}
-                {preferences.dailyGoal >= 15 && preferences.dailyGoal < 30 && <span>Moderate</span>}
-                {preferences.dailyGoal >= 30 && preferences.dailyGoal < 60 && <span>Regular</span>}
-                {preferences.dailyGoal >= 60 && <span>Intensive</span>}
+                {preferences.dailyGoal < 15 && <span>{t('preferences.dailyGoal.light')}</span>}
+                {preferences.dailyGoal >= 15 && preferences.dailyGoal < 30 && (
+                  <span>{t('preferences.dailyGoal.moderate')}</span>
+                )}
+                {preferences.dailyGoal >= 30 && preferences.dailyGoal < 60 && (
+                  <span>{t('preferences.dailyGoal.regular')}</span>
+                )}
+                {preferences.dailyGoal >= 60 && <span>{t('preferences.dailyGoal.intensive')}</span>}
               </div>
             </div>
             <div className="space-y-2">
@@ -168,9 +183,7 @@ export const PreferencesSection: React.FC<PreferencesSectionProps> = ({ user }) 
                 <span>120 min</span>
               </div>
             </div>
-            <p className="text-sm text-gray-600">
-              We'll remind you to maintain your streak and help you reach your daily goal.
-            </p>
+            <p className="text-sm text-gray-600">{t('preferences.dailyGoal.reminder')}</p>
           </CardContent>
         </Card>
 
@@ -179,18 +192,16 @@ export const PreferencesSection: React.FC<PreferencesSectionProps> = ({ user }) 
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <Bell className="h-5 w-5 text-purple-600" />
-              Notifications
+              {t('preferences.notifications.title')}
             </CardTitle>
-            <CardDescription>
-              Manage how we keep you updated on your learning progress
-            </CardDescription>
+            <CardDescription>{t('preferences.notifications.description')}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between rounded-lg border border-gray-200 p-4">
               <div className="flex-1">
-                <p className="font-medium text-gray-900">Push Notifications</p>
+                <p className="font-medium text-gray-900">{t('preferences.notifications.push')}</p>
                 <p className="text-sm text-gray-600">
-                  Daily reminders, streak alerts, and achievement updates
+                  {t('preferences.notifications.pushDescription')}
                 </p>
               </div>
               <button
@@ -201,7 +212,9 @@ export const PreferencesSection: React.FC<PreferencesSectionProps> = ({ user }) 
                 role="switch"
                 aria-checked={preferences.notifications}
               >
-                <span className="sr-only">Enable notifications</span>
+                <span className="sr-only">
+                  {t('preferences.notifications.enableNotifications')}
+                </span>
                 <span
                   className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
                     preferences.notifications ? 'translate-x-6' : 'translate-x-1'
@@ -211,10 +224,11 @@ export const PreferencesSection: React.FC<PreferencesSectionProps> = ({ user }) 
             </div>
             {preferences.notifications && (
               <div className="mt-4 rounded-lg bg-purple-50 p-4">
-                <p className="text-sm font-medium text-purple-900">Notifications enabled! 🎉</p>
+                <p className="text-sm font-medium text-purple-900">
+                  {t('preferences.notifications.enabled')}
+                </p>
                 <p className="mt-1 text-sm text-purple-700">
-                  You'll receive daily reminders at your preferred time and alerts when you're about
-                  to lose your streak.
+                  {t('preferences.notifications.enabledDescription')}
                 </p>
               </div>
             )}
@@ -226,14 +240,12 @@ export const PreferencesSection: React.FC<PreferencesSectionProps> = ({ user }) 
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <Palette className="h-5 w-5 text-gray-600" />
-              Theme Preference
+              {t('preferences.theme.title')}
               <span className="ml-auto rounded-full bg-gray-200 px-2 py-1 text-xs font-medium text-gray-700">
-                Coming Soon
+                {t('preferences.theme.comingSoon')}
               </span>
             </CardTitle>
-            <CardDescription>
-              Switch between light and dark mode (available in a future update)
-            </CardDescription>
+            <CardDescription>{t('preferences.theme.description')}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-3 gap-3 opacity-50">
@@ -242,21 +254,27 @@ export const PreferencesSection: React.FC<PreferencesSectionProps> = ({ user }) 
                 className="flex flex-col items-center gap-2 rounded-lg border-2 border-gray-200 p-4"
               >
                 <div className="h-12 w-12 rounded-lg bg-white shadow-sm" />
-                <span className="text-sm font-medium text-gray-700">Light</span>
+                <span className="text-sm font-medium text-gray-700">
+                  {t('preferences.theme.light')}
+                </span>
               </button>
               <button
                 disabled
                 className="flex flex-col items-center gap-2 rounded-lg border-2 border-gray-200 p-4"
               >
                 <div className="h-12 w-12 rounded-lg bg-gray-900 shadow-sm" />
-                <span className="text-sm font-medium text-gray-700">Dark</span>
+                <span className="text-sm font-medium text-gray-700">
+                  {t('preferences.theme.dark')}
+                </span>
               </button>
               <button
                 disabled
                 className="flex flex-col items-center gap-2 rounded-lg border-2 border-gray-200 p-4"
               >
                 <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-white to-gray-900 shadow-sm" />
-                <span className="text-sm font-medium text-gray-700">Auto</span>
+                <span className="text-sm font-medium text-gray-700">
+                  {t('preferences.theme.auto')}
+                </span>
               </button>
             </div>
           </CardContent>
@@ -266,7 +284,7 @@ export const PreferencesSection: React.FC<PreferencesSectionProps> = ({ user }) 
         {isSaving && (
           <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
             <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600" />
-            Saving preferences...
+            {t('preferences.saving')}
           </div>
         )}
       </div>

@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 
 import { AlertCircle, ChevronLeft } from 'lucide-react';
 import posthog from 'posthog-js';
+import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate } from 'react-router-dom';
 
 import { FlashcardContainer } from '@/components/review/FlashcardContainer';
@@ -15,6 +16,7 @@ import { useDeckStore } from '@/stores/deckStore';
 import { useReviewStore } from '@/stores/reviewStore';
 
 export function FlashcardReviewPage() {
+  const { t } = useTranslation('review');
   const { deckId } = useParams<{ deckId: string }>();
   const navigate = useNavigate();
   const {
@@ -135,19 +137,19 @@ export function FlashcardReviewPage() {
             className="mb-4 text-white hover:bg-white/20"
           >
             <ChevronLeft className="mr-2 h-4 w-4" />
-            Back to Deck
+            {t('session.backToDeck')}
           </Button>
           <Alert variant="destructive" className="bg-white">
             <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Error</AlertTitle>
+            <AlertTitle>{t('session.error')}</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
           </Alert>
           <div className="mt-4 flex gap-3">
             <Button onClick={() => deckId && startSession(deckId)} variant="default">
-              Retry
+              {t('session.retry')}
             </Button>
             <Button onClick={() => navigate(`/decks/${deckId}`)} variant="secondary">
-              Back to Deck
+              {t('session.backToDeck')}
             </Button>
           </div>
         </div>
@@ -166,18 +168,16 @@ export function FlashcardReviewPage() {
             className="mb-4 text-white hover:bg-white/20"
           >
             <ChevronLeft className="mr-2 h-4 w-4" />
-            Back to Deck
+            {t('session.backToDeck')}
           </Button>
           <Alert className="bg-white">
             <AlertCircle className="h-4 w-4" />
-            <AlertTitle>No cards due</AlertTitle>
-            <AlertDescription>
-              You've reviewed all the cards in this deck! Come back later for more practice.
-            </AlertDescription>
+            <AlertTitle>{t('session.noCardsDue')}</AlertTitle>
+            <AlertDescription>{t('session.noCardsDueDescription')}</AlertDescription>
           </Alert>
           <div className="mt-4">
             <Button onClick={() => navigate(`/decks/${deckId}`)} variant="secondary">
-              Back to Deck
+              {t('session.backToDeck')}
             </Button>
           </div>
         </div>
@@ -195,7 +195,7 @@ export function FlashcardReviewPage() {
           className="text-white hover:bg-white/20"
         >
           <ChevronLeft className="mr-2 h-4 w-4" />
-          Exit Review
+          {t('session.exitReview')}
         </Button>
       </div>
       <FlashcardContainer card={currentCard} />

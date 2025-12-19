@@ -1,6 +1,7 @@
 import React from 'react';
 
 import { Calendar, Clock, TrendingUp } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
@@ -41,6 +42,7 @@ export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({
   lastActivity,
   className,
 }) => {
+  const { t } = useTranslation('statistics');
   const daysSinceJoining = getDaysAgo(joinedDate);
   const daysSinceLastActivity = lastActivity ? getDaysAgo(lastActivity) : null;
 
@@ -49,7 +51,7 @@ export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Clock className="h-5 w-5 text-muted-foreground" />
-          Activity Timeline
+          {t('timeline.title')}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -59,10 +61,10 @@ export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({
             <Calendar className="h-5 w-5 text-green-600 dark:text-green-400" />
           </div>
           <div className="flex-1">
-            <p className="font-medium text-foreground">Joined Learn Greek Easy</p>
+            <p className="font-medium text-foreground">{t('timeline.joined')}</p>
             <p className="text-sm text-muted-foreground">{formatDate(joinedDate)}</p>
             <p className="mt-1 text-xs text-muted-foreground">
-              {daysSinceJoining} {daysSinceJoining === 1 ? 'day' : 'days'} ago
+              {t('timeline.daysAgo', { count: daysSinceJoining })}
             </p>
           </div>
         </div>
@@ -74,10 +76,10 @@ export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({
               <TrendingUp className="h-5 w-5 text-blue-600 dark:text-blue-400" />
             </div>
             <div className="flex-1">
-              <p className="font-medium text-foreground">Last Active</p>
+              <p className="font-medium text-foreground">{t('timeline.lastActive')}</p>
               <p className="text-sm text-muted-foreground">{formatDate(lastActivity)}</p>
               <p className="mt-1 text-xs text-muted-foreground">
-                {daysSinceLastActivity} {daysSinceLastActivity === 1 ? 'day' : 'days'} ago
+                {t('timeline.daysAgo', { count: daysSinceLastActivity })}
               </p>
             </div>
           </div>

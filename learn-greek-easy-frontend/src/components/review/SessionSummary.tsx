@@ -1,4 +1,5 @@
 import { CheckCircle, TrendingUp, Clock, Target } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -43,19 +44,21 @@ export function SessionSummary({
   onReviewAgain,
   onDashboard,
 }: SessionSummaryProps) {
+  const { t } = useTranslation('review');
+
   // Edge case: no cards reviewed
   if (summary.cardsReviewed === 0) {
     return (
       <div className="mx-auto w-full max-w-3xl space-y-6 p-4">
         <Card className="bg-gray-50 text-center">
           <CardContent className="pb-6 pt-8">
-            <p className="mb-4 text-lg text-gray-700">Session ended without reviewing any cards.</p>
+            <p className="mb-4 text-lg text-gray-700">{t('session.sessionEndedNoCards')}</p>
             <Button
               size="lg"
               onClick={onBackToDeck}
               className="bg-gradient-to-br from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700"
             >
-              Back to Deck
+              {t('summary.backToDeck')}
             </Button>
           </CardContent>
         </Card>
@@ -78,7 +81,7 @@ export function SessionSummary({
       >
         <CardContent className="pb-4 pt-6 sm:pb-6 sm:pt-8">
           <CheckCircle className="mx-auto mb-3 h-12 w-12 text-green-500 sm:mb-4 sm:h-16 sm:w-16" />
-          <h2 className="mb-2 text-xl font-bold text-gray-900 sm:text-2xl">Session Complete!</h2>
+          <h2 className="mb-2 text-xl font-bold text-gray-900 sm:text-2xl">{t('summary.title')}</h2>
           <p className="text-base text-gray-700 sm:text-lg">{message}</p>
         </CardContent>
       </Card>
@@ -93,7 +96,7 @@ export function SessionSummary({
               aria-hidden="true"
             />
             <p className="text-2xl font-bold text-gray-900 sm:text-3xl">{summary.cardsReviewed}</p>
-            <p className="mt-1 text-xs text-gray-600 sm:text-sm">Cards Reviewed</p>
+            <p className="mt-1 text-xs text-gray-600 sm:text-sm">{t('summary.cardsReviewed')}</p>
           </CardContent>
         </Card>
 
@@ -105,7 +108,7 @@ export function SessionSummary({
               aria-hidden="true"
             />
             <p className={`text-2xl font-bold sm:text-3xl ${accuracyColor}`}>{summary.accuracy}%</p>
-            <p className="mt-1 text-xs text-gray-600 sm:text-sm">Accuracy</p>
+            <p className="mt-1 text-xs text-gray-600 sm:text-sm">{t('summary.accuracy')}</p>
           </CardContent>
         </Card>
 
@@ -119,7 +122,7 @@ export function SessionSummary({
             <p className="text-2xl font-bold text-gray-900 sm:text-3xl">
               {formatTime(summary.totalTime)}
             </p>
-            <p className="mt-1 text-xs text-gray-600 sm:text-sm">Time Spent</p>
+            <p className="mt-1 text-xs text-gray-600 sm:text-sm">{t('summary.timeSpent')}</p>
           </CardContent>
         </Card>
 
@@ -131,9 +134,10 @@ export function SessionSummary({
               aria-hidden="true"
             />
             <p className="text-2xl font-bold text-gray-900 sm:text-3xl">
-              {summary.averageTimePerCard}s
+              {summary.averageTimePerCard}
+              {t('summary.seconds')}
             </p>
-            <p className="mt-1 text-xs text-gray-600 sm:text-sm">Avg Per Card</p>
+            <p className="mt-1 text-xs text-gray-600 sm:text-sm">{t('summary.avgPerCard')}</p>
           </CardContent>
         </Card>
       </div>
@@ -141,7 +145,7 @@ export function SessionSummary({
       {/* 3. Rating Breakdown */}
       <Card>
         <CardHeader>
-          <CardTitle>Rating Breakdown</CardTitle>
+          <CardTitle>{t('summary.ratingBreakdown')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">
@@ -160,7 +164,7 @@ export function SessionSummary({
       {showTransitions && (
         <Card>
           <CardHeader>
-            <CardTitle>Progress Made</CardTitle>
+            <CardTitle>{t('summary.progressMade')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-2 text-sm">
@@ -169,8 +173,8 @@ export function SessionSummary({
                   <span className="mr-2" aria-hidden="true">
                     🆕
                   </span>
-                  <span className="font-semibold">{summary.transitions.newToLearning}</span> cards
-                  moved to Learning
+                  <span className="font-semibold">{summary.transitions.newToLearning}</span>{' '}
+                  {t('summary.movedToLearning')}
                 </p>
               )}
               {summary.transitions.learningToReview > 0 && (
@@ -179,7 +183,7 @@ export function SessionSummary({
                     📚
                   </span>
                   <span className="font-semibold">{summary.transitions.learningToReview}</span>{' '}
-                  cards graduated to Review
+                  {t('summary.graduatedToReview')}
                 </p>
               )}
               {summary.transitions.reviewToMastered > 0 && (
@@ -188,7 +192,7 @@ export function SessionSummary({
                     ✨
                   </span>
                   <span className="font-semibold">{summary.transitions.reviewToMastered}</span>{' '}
-                  cards mastered!
+                  {t('summary.cardsMastered')}
                 </p>
               )}
               {summary.transitions.toRelearning > 0 && (
@@ -196,8 +200,8 @@ export function SessionSummary({
                   <span className="mr-2" aria-hidden="true">
                     🔄
                   </span>
-                  <span className="font-semibold">{summary.transitions.toRelearning}</span> cards
-                  need review
+                  <span className="font-semibold">{summary.transitions.toRelearning}</span>{' '}
+                  {t('summary.needReview')}
                 </p>
               )}
             </div>
@@ -212,13 +216,13 @@ export function SessionSummary({
           onClick={onBackToDeck}
           className="flex-1 bg-gradient-to-br from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700"
         >
-          Back to Deck
+          {t('summary.backToDeck')}
         </Button>
         <Button size="lg" variant="outline" onClick={onReviewAgain} className="flex-1">
-          Review Again
+          {t('summary.reviewAgain')}
         </Button>
         <Button size="lg" variant="ghost" onClick={onDashboard} className="hidden sm:block">
-          Dashboard
+          {t('summary.dashboard')}
         </Button>
       </div>
     </div>

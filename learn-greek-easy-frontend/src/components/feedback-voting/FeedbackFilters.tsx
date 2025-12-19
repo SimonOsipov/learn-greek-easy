@@ -3,6 +3,7 @@
 import React from 'react';
 
 import { X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -23,6 +24,7 @@ import {
 } from '@/types/feedback';
 
 export const FeedbackFilters: React.FC = () => {
+  const { t } = useTranslation('feedback');
   const { filters, setFilters, clearFilters } = useFeedbackStore();
 
   const hasActiveFilters = filters.category || filters.status;
@@ -36,13 +38,13 @@ export const FeedbackFilters: React.FC = () => {
         }
       >
         <SelectTrigger className="w-[180px]" data-testid="category-filter">
-          <SelectValue placeholder="Category" />
+          <SelectValue placeholder={t('filters.category')} />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">All Categories</SelectItem>
+          <SelectItem value="all">{t('filters.allCategories')}</SelectItem>
           {FEEDBACK_CATEGORIES.map((cat) => (
             <SelectItem key={cat.value} value={cat.value}>
-              {cat.label}
+              {t(`categories.${cat.value}`)}
             </SelectItem>
           ))}
         </SelectContent>
@@ -53,13 +55,13 @@ export const FeedbackFilters: React.FC = () => {
         onValueChange={(v) => setFilters({ status: v === 'all' ? null : (v as FeedbackStatus) })}
       >
         <SelectTrigger className="w-[180px]" data-testid="status-filter">
-          <SelectValue placeholder="Status" />
+          <SelectValue placeholder={t('filters.status')} />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">All Statuses</SelectItem>
+          <SelectItem value="all">{t('filters.allStatuses')}</SelectItem>
           {FEEDBACK_STATUSES.map((status) => (
             <SelectItem key={status.value} value={status.value}>
-              {status.label}
+              {t(`status.${status.value}`)}
             </SelectItem>
           ))}
         </SelectContent>
@@ -74,20 +76,20 @@ export const FeedbackFilters: React.FC = () => {
         }}
       >
         <SelectTrigger className="w-[150px]" data-testid="sort-filter">
-          <SelectValue placeholder="Sort by" />
+          <SelectValue placeholder={t('filters.sortBy')} />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="votes-desc">Most Votes</SelectItem>
-          <SelectItem value="votes-asc">Least Votes</SelectItem>
-          <SelectItem value="created_at-desc">Newest</SelectItem>
-          <SelectItem value="created_at-asc">Oldest</SelectItem>
+          <SelectItem value="votes-desc">{t('filters.mostVotes')}</SelectItem>
+          <SelectItem value="votes-asc">{t('filters.leastVotes')}</SelectItem>
+          <SelectItem value="created_at-desc">{t('filters.newest')}</SelectItem>
+          <SelectItem value="created_at-asc">{t('filters.oldest')}</SelectItem>
         </SelectContent>
       </Select>
 
       {hasActiveFilters && (
         <Button variant="ghost" size="sm" onClick={clearFilters} data-testid="clear-filters-button">
           <X className="mr-2 h-4 w-4" />
-          Clear
+          {t('filters.clear')}
         </Button>
       )}
     </div>

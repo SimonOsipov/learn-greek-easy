@@ -1,10 +1,22 @@
 {
   "page": {
     "title": "Profile",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
     "tabs": {
       "personalInfo": "Personal Info",
       "preferences": "Preferences",
       "security": "Security"
+    }
+  },
+  "header": {
+    "change": "Change",
+    "memberSince": "Member Since",
+    "lastActive": "Last Active",
+    "roles": {
+      "admin": "Admin",
+      "premium": "Premium",
+      "free": "Free"
     }
   },
   "personalInfo": {
@@ -12,58 +24,137 @@
     "subtitle": "Update your personal details and profile picture",
     "profilePicture": "Profile Picture",
     "uploadPhoto": "Upload Photo",
+    "photoHint": "JPG, PNG or GIF. Max size 2MB. Recommended 400x400px.",
     "fullName": "Full Name",
+    "fullNamePlaceholder": "Enter your full name",
     "email": "Email Address",
-    "emailCannotChange": "Email address cannot be changed",
+    "emailCannotChange": "Email address cannot be changed. Contact support if you need assistance.",
     "cancel": "Cancel",
     "saveChanges": "Save Changes",
     "saving": "Saving...",
-    "success": "Profile updated successfully",
-    "error": "Failed to update profile"
+    "success": "Success!",
+    "successDescription": "Your profile has been updated successfully.",
+    "error": "Error",
+    "errorDescription": "Failed to update profile. Please try again.",
+    "comingSoon": "Coming Soon",
+    "avatarComingSoon": "Avatar upload feature will be available soon!",
+    "validation": {
+      "nameMin": "Name must be at least 2 characters",
+      "nameMax": "Name must be less than 50 characters",
+      "nameFormat": "Name can only contain letters, spaces, hyphens and apostrophes"
+    }
   },
   "preferences": {
     "title": "Learning Preferences",
-    "subtitle": "Customize your learning experience",
+    "subtitle": "Customize your learning experience to match your goals",
     "language": {
       "title": "Interface Language",
-      "description": "Choose your preferred language for the app interface"
+      "description": "Choose your preferred language for the app interface",
+      "english": "English",
+      "greek": "Ελληνικά",
+      "russian": "Русский"
     },
     "dailyGoal": {
       "title": "Daily Learning Goal",
-      "unit": "minutes per day",
+      "description": "Set your target study time per day (5-120 minutes)",
+      "unit": "{{minutes}} minutes per day",
       "light": "Light",
       "moderate": "Moderate",
       "regular": "Regular",
-      "intensive": "Intensive"
+      "intensive": "Intensive",
+      "reminder": "We'll remind you to maintain your streak and help you reach your daily goal."
     },
     "notifications": {
       "title": "Notifications",
+      "description": "Manage how we keep you updated on your learning progress",
       "push": "Push Notifications",
-      "description": "Daily reminders, streak alerts"
+      "pushDescription": "Daily reminders, streak alerts, and achievement updates",
+      "enableNotifications": "Enable notifications",
+      "enabled": "Notifications enabled!",
+      "enabledDescription": "You'll receive daily reminders at your preferred time and alerts when you're about to lose your streak."
     },
     "theme": {
       "title": "Theme Preference",
+      "description": "Switch between light and dark mode (available in a future update)",
       "comingSoon": "Coming Soon",
       "light": "Light",
       "dark": "Dark",
-      "system": "System"
+      "auto": "Auto"
     },
     "saving": "Saving preferences...",
     "success": "Preferences saved",
-    "error": "Failed to save preferences"
+    "successDescription": "Your learning preferences have been updated.",
+    "error": "Error",
+    "errorDescription": "Failed to save preferences. Please try again."
   },
   "security": {
     "title": "Security Settings",
-    "subtitle": "Manage your account security",
+    "subtitle": "Manage your password and account security preferences",
+    "changePassword": {
+      "title": "Change Password",
+      "description": "Update your password to keep your account secure",
+      "currentPassword": "Current Password",
+      "currentPasswordPlaceholder": "Enter your current password",
+      "newPassword": "New Password",
+      "newPasswordPlaceholder": "Enter new password",
+      "confirmPassword": "Confirm New Password",
+      "confirmPasswordPlaceholder": "Confirm new password",
+      "requirements": "Password Requirements:",
+      "requirementLength": "At least 8 characters long",
+      "requirementCase": "Contains uppercase and lowercase letters",
+      "requirementNumber": "Contains at least one number",
+      "cancel": "Cancel",
+      "update": "Update Password",
+      "updating": "Updating...",
+      "comingSoon": "Coming Soon",
+      "comingSoonDescription": "Password change feature will be available in a future update!",
+      "error": "Error",
+      "errorDescription": "Failed to change password. Please try again."
+    },
     "twoFactor": {
       "title": "Two-Factor Authentication",
       "description": "Add an extra layer of security to your account",
-      "comingSoon": "Coming Soon"
+      "comingSoon": "Coming Soon",
+      "enable": "Enable",
+      "enable2FA": "Enable 2FA",
+      "enable2FADescription": "Protect your account with SMS or authenticator app verification"
     },
     "sessions": {
       "title": "Active Sessions",
-      "description": "Manage your logged-in devices",
-      "comingSoon": "Coming Soon"
+      "description": "View and manage where you're logged in",
+      "currentDevice": "Current Device",
+      "activeNow": "Active Now",
+      "lastActive": "Last active:",
+      "comingSoonDescription": "Session management will be available in a future update. You'll be able to see all active sessions and log out from other devices."
+    },
+    "dangerZone": {
+      "title": "Danger Zone",
+      "description": "Irreversible actions that affect your account",
+      "deleteAccount": "Delete Account",
+      "deleteDescription": "Permanently delete your account and all associated data. This action cannot be undone.",
+      "deleteDialogTitle": "Delete Account",
+      "deleteDialogDescription": "This action is permanent and cannot be undone. All your data will be deleted:",
+      "deleteItems": {
+        "profile": "Your profile and personal information",
+        "progress": "All learning progress and statistics",
+        "achievements": "Achievements and badges",
+        "favorites": "Saved lessons and favorites"
+      },
+      "typeToConfirm": "Type \"DELETE\" to confirm:",
+      "cancel": "Cancel",
+      "deleteMyAccount": "Delete My Account",
+      "invalidConfirmation": "Invalid confirmation",
+      "pleaseTypeDelete": "Please type \"DELETE\" to confirm account deletion.",
+      "comingSoon": "Coming Soon",
+      "contactSupport": "Please contact support to delete your account. We want to make sure you understand all the implications first."
+    },
+    "validation": {
+      "currentPasswordRequired": "Current password is required",
+      "passwordMinLength": "Password must be at least 8 characters",
+      "passwordUppercase": "Password must contain at least one uppercase letter",
+      "passwordLowercase": "Password must contain at least one lowercase letter",
+      "passwordNumber": "Password must contain at least one number",
+      "passwordsDoNotMatch": "Passwords don't match"
     }
   }
 }

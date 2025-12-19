@@ -1,5 +1,7 @@
 import React from 'react';
 
+import { useTranslation } from 'react-i18next';
+
 import type { DeckProgress } from '@/types/deck';
 
 export interface DeckProgressBarProps {
@@ -15,6 +17,7 @@ export const DeckProgressBar: React.FC<DeckProgressBarProps> = ({
   showLegend = false,
   className = '',
 }) => {
+  const { t } = useTranslation('deck');
   const { cardsNew, cardsLearning, cardsMastered } = progress;
   const totalCards = cardsNew + cardsLearning + cardsMastered;
 
@@ -69,15 +72,21 @@ export const DeckProgressBar: React.FC<DeckProgressBarProps> = ({
         <div className="mt-2 flex gap-4 text-xs text-gray-600">
           <div className="flex items-center gap-1">
             <div className="h-3 w-3 rounded-full bg-gray-200" />
-            <span>{cardsNew} New</span>
+            <span>
+              {cardsNew} {t('detail.new')}
+            </span>
           </div>
           <div className="flex items-center gap-1">
             <div className="h-3 w-3 rounded-full bg-blue-500" />
-            <span>{cardsLearning} Learning</span>
+            <span>
+              {cardsLearning} {t('detail.learning')}
+            </span>
           </div>
           <div className="flex items-center gap-1">
             <div className="h-3 w-3 rounded-full bg-green-500" />
-            <span>{cardsMastered} Mastered</span>
+            <span>
+              {cardsMastered} {t('detail.masteredLabel')}
+            </span>
           </div>
         </div>
       )}

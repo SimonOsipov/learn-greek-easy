@@ -3,6 +3,7 @@
 import React from 'react';
 
 import { ChevronUp, ChevronDown } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -20,6 +21,7 @@ export const FeedbackVoteButton: React.FC<FeedbackVoteButtonProps> = ({
   voteCount,
   userVote,
 }) => {
+  const { t } = useTranslation('feedback');
   const { vote, removeVote, isVoting } = useFeedbackStore();
 
   const handleUpvote = async () => {
@@ -46,7 +48,7 @@ export const FeedbackVoteButton: React.FC<FeedbackVoteButtonProps> = ({
         className={cn('h-8 w-8', userVote === 'up' && 'bg-primary/10 text-primary')}
         onClick={handleUpvote}
         disabled={isVoting}
-        aria-label="Upvote"
+        aria-label={t('voting.upvote')}
         data-testid="upvote-button"
       >
         <ChevronUp className="h-5 w-5" />
@@ -67,7 +69,7 @@ export const FeedbackVoteButton: React.FC<FeedbackVoteButtonProps> = ({
         className={cn('h-8 w-8', userVote === 'down' && 'bg-destructive/10 text-destructive')}
         onClick={handleDownvote}
         disabled={isVoting}
-        aria-label="Downvote"
+        aria-label={t('voting.downvote')}
         data-testid="downvote-button"
       >
         <ChevronDown className="h-5 w-5" />

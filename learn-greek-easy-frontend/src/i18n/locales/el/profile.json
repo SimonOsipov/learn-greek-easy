@@ -1,69 +1,160 @@
 {
   "page": {
-    "title": "Profile",
+    "title": "Προφίλ",
+    "openMenu": "Άνοιγμα μενού",
+    "closeMenu": "Κλείσιμο μενού",
     "tabs": {
-      "personalInfo": "Personal Info",
-      "preferences": "Preferences",
-      "security": "Security"
+      "personalInfo": "Προσωπικά Στοιχεία",
+      "preferences": "Προτιμήσεις",
+      "security": "Ασφάλεια"
+    }
+  },
+  "header": {
+    "change": "Αλλαγή",
+    "memberSince": "Μέλος από",
+    "lastActive": "Τελευταία Δραστηριότητα",
+    "roles": {
+      "admin": "Διαχειριστής",
+      "premium": "Premium",
+      "free": "Δωρεάν"
     }
   },
   "personalInfo": {
-    "title": "Personal Information",
-    "subtitle": "Update your personal details and profile picture",
-    "profilePicture": "Profile Picture",
-    "uploadPhoto": "Upload Photo",
-    "fullName": "Full Name",
-    "email": "Email Address",
-    "emailCannotChange": "Email address cannot be changed",
-    "cancel": "Cancel",
-    "saveChanges": "Save Changes",
-    "saving": "Saving...",
-    "success": "Profile updated successfully",
-    "error": "Failed to update profile"
+    "title": "Προσωπικές Πληροφορίες",
+    "subtitle": "Ενημερώστε τα προσωπικά σας στοιχεία και την εικόνα προφίλ",
+    "profilePicture": "Εικόνα Προφίλ",
+    "uploadPhoto": "Ανέβασμα Φωτογραφίας",
+    "photoHint": "JPG, PNG ή GIF. Μέγιστο μέγεθος 2MB. Προτεινόμενο 400x400px.",
+    "fullName": "Ονοματεπώνυμο",
+    "fullNamePlaceholder": "Εισάγετε το ονοματεπώνυμό σας",
+    "email": "Διεύθυνση Email",
+    "emailCannotChange": "Η διεύθυνση email δεν μπορεί να αλλάξει. Επικοινωνήστε με την υποστήριξη αν χρειάζεστε βοήθεια.",
+    "cancel": "Ακύρωση",
+    "saveChanges": "Αποθήκευση Αλλαγών",
+    "saving": "Αποθήκευση...",
+    "success": "Επιτυχία!",
+    "successDescription": "Το προφίλ σας ενημερώθηκε επιτυχώς.",
+    "error": "Σφάλμα",
+    "errorDescription": "Αποτυχία ενημέρωσης προφίλ. Παρακαλώ δοκιμάστε ξανά.",
+    "comingSoon": "Σύντομα Διαθέσιμο",
+    "avatarComingSoon": "Η δυνατότητα ανεβάσματος avatar θα είναι διαθέσιμη σύντομα!",
+    "validation": {
+      "nameMin": "Το όνομα πρέπει να έχει τουλάχιστον 2 χαρακτήρες",
+      "nameMax": "Το όνομα πρέπει να έχει λιγότερους από 50 χαρακτήρες",
+      "nameFormat": "Το όνομα μπορεί να περιέχει μόνο γράμματα, κενά, παύλες και αποστρόφους"
+    }
   },
   "preferences": {
-    "title": "Learning Preferences",
-    "subtitle": "Customize your learning experience",
+    "title": "Προτιμήσεις Μάθησης",
+    "subtitle": "Προσαρμόστε την εμπειρία μάθησής σας στους στόχους σας",
     "language": {
-      "title": "Interface Language",
-      "description": "Choose your preferred language for the app interface"
+      "title": "Γλώσσα Διεπαφής",
+      "description": "Επιλέξτε τη γλώσσα προτίμησής σας για τη διεπαφή της εφαρμογής",
+      "english": "English",
+      "greek": "Ελληνικά",
+      "russian": "Русский"
     },
     "dailyGoal": {
-      "title": "Daily Learning Goal",
-      "unit": "minutes per day",
-      "light": "Light",
-      "moderate": "Moderate",
-      "regular": "Regular",
-      "intensive": "Intensive"
+      "title": "Ημερήσιος Στόχος Μάθησης",
+      "description": "Ορίστε τον στόχο χρόνου μελέτης ανά ημέρα (5-120 λεπτά)",
+      "unit": "{{minutes}} λεπτά την ημέρα",
+      "light": "Ελαφρύ",
+      "moderate": "Μέτριο",
+      "regular": "Κανονικό",
+      "intensive": "Εντατικό",
+      "reminder": "Θα σας υπενθυμίζουμε να διατηρείτε το σερί σας και να φτάνετε τον ημερήσιο στόχο σας."
     },
     "notifications": {
-      "title": "Notifications",
-      "push": "Push Notifications",
-      "description": "Daily reminders, streak alerts"
+      "title": "Ειδοποιήσεις",
+      "description": "Διαχειριστείτε πώς σας ενημερώνουμε για την πρόοδο μάθησής σας",
+      "push": "Push Ειδοποιήσεις",
+      "pushDescription": "Ημερήσιες υπενθυμίσεις, ειδοποιήσεις σερί και ενημερώσεις επιτευγμάτων",
+      "enableNotifications": "Ενεργοποίηση ειδοποιήσεων",
+      "enabled": "Οι ειδοποιήσεις ενεργοποιήθηκαν!",
+      "enabledDescription": "Θα λαμβάνετε ημερήσιες υπενθυμίσεις την ώρα της προτίμησής σας και ειδοποιήσεις όταν πρόκειται να χάσετε το σερί σας."
     },
     "theme": {
-      "title": "Theme Preference",
-      "comingSoon": "Coming Soon",
-      "light": "Light",
-      "dark": "Dark",
-      "system": "System"
+      "title": "Προτίμηση Θέματος",
+      "description": "Εναλλαγή μεταξύ φωτεινής και σκοτεινής λειτουργίας (διαθέσιμο σε μελλοντική ενημέρωση)",
+      "comingSoon": "Σύντομα Διαθέσιμο",
+      "light": "Φωτεινό",
+      "dark": "Σκοτεινό",
+      "auto": "Αυτόματο"
     },
-    "saving": "Saving preferences...",
-    "success": "Preferences saved",
-    "error": "Failed to save preferences"
+    "saving": "Αποθήκευση προτιμήσεων...",
+    "success": "Οι προτιμήσεις αποθηκεύτηκαν",
+    "successDescription": "Οι προτιμήσεις μάθησής σας ενημερώθηκαν.",
+    "error": "Σφάλμα",
+    "errorDescription": "Αποτυχία αποθήκευσης προτιμήσεων. Παρακαλώ δοκιμάστε ξανά."
   },
   "security": {
-    "title": "Security Settings",
-    "subtitle": "Manage your account security",
+    "title": "Ρυθμίσεις Ασφαλείας",
+    "subtitle": "Διαχειριστείτε τον κωδικό πρόσβασης και τις προτιμήσεις ασφαλείας του λογαριασμού σας",
+    "changePassword": {
+      "title": "Αλλαγή Κωδικού",
+      "description": "Ενημερώστε τον κωδικό σας για να διατηρήσετε τον λογαριασμό σας ασφαλή",
+      "currentPassword": "Τρέχων Κωδικός",
+      "currentPasswordPlaceholder": "Εισάγετε τον τρέχοντα κωδικό σας",
+      "newPassword": "Νέος Κωδικός",
+      "newPasswordPlaceholder": "Εισάγετε νέο κωδικό",
+      "confirmPassword": "Επιβεβαίωση Νέου Κωδικού",
+      "confirmPasswordPlaceholder": "Επιβεβαιώστε τον νέο κωδικό",
+      "requirements": "Απαιτήσεις Κωδικού:",
+      "requirementLength": "Τουλάχιστον 8 χαρακτήρες",
+      "requirementCase": "Περιέχει κεφαλαία και πεζά γράμματα",
+      "requirementNumber": "Περιέχει τουλάχιστον έναν αριθμό",
+      "cancel": "Ακύρωση",
+      "update": "Ενημέρωση Κωδικού",
+      "updating": "Ενημέρωση...",
+      "comingSoon": "Σύντομα Διαθέσιμο",
+      "comingSoonDescription": "Η δυνατότητα αλλαγής κωδικού θα είναι διαθέσιμη σε μελλοντική ενημέρωση!",
+      "error": "Σφάλμα",
+      "errorDescription": "Αποτυχία αλλαγής κωδικού. Παρακαλώ δοκιμάστε ξανά."
+    },
     "twoFactor": {
-      "title": "Two-Factor Authentication",
-      "description": "Add an extra layer of security to your account",
-      "comingSoon": "Coming Soon"
+      "title": "Έλεγχος Ταυτότητας Δύο Παραγόντων",
+      "description": "Προσθέστε ένα επιπλέον επίπεδο ασφάλειας στον λογαριασμό σας",
+      "comingSoon": "Σύντομα Διαθέσιμο",
+      "enable": "Ενεργοποίηση",
+      "enable2FA": "Ενεργοποίηση 2FA",
+      "enable2FADescription": "Προστατέψτε τον λογαριασμό σας με SMS ή εφαρμογή επαλήθευσης"
     },
     "sessions": {
-      "title": "Active Sessions",
-      "description": "Manage your logged-in devices",
-      "comingSoon": "Coming Soon"
+      "title": "Ενεργές Συνεδρίες",
+      "description": "Προβολή και διαχείριση συσκευών σύνδεσης",
+      "currentDevice": "Τρέχουσα Συσκευή",
+      "activeNow": "Ενεργή Τώρα",
+      "lastActive": "Τελευταία δραστηριότητα:",
+      "comingSoonDescription": "Η διαχείριση συνεδριών θα είναι διαθέσιμη σε μελλοντική ενημέρωση. Θα μπορείτε να δείτε όλες τις ενεργές συνεδρίες και να αποσυνδεθείτε από άλλες συσκευές."
+    },
+    "dangerZone": {
+      "title": "Επικίνδυνη Ζώνη",
+      "description": "Μη αναστρέψιμες ενέργειες που επηρεάζουν τον λογαριασμό σας",
+      "deleteAccount": "Διαγραφή Λογαριασμού",
+      "deleteDescription": "Διαγράψτε οριστικά τον λογαριασμό σας και όλα τα σχετικά δεδομένα. Αυτή η ενέργεια δεν μπορεί να αναιρεθεί.",
+      "deleteDialogTitle": "Διαγραφή Λογαριασμού",
+      "deleteDialogDescription": "Αυτή η ενέργεια είναι μόνιμη και δεν μπορεί να αναιρεθεί. Όλα τα δεδομένα σας θα διαγραφούν:",
+      "deleteItems": {
+        "profile": "Το προφίλ και οι προσωπικές σας πληροφορίες",
+        "progress": "Όλη η πρόοδος μάθησης και τα στατιστικά",
+        "achievements": "Επιτεύγματα και σήματα",
+        "favorites": "Αποθηκευμένα μαθήματα και αγαπημένα"
+      },
+      "typeToConfirm": "Πληκτρολογήστε \"DELETE\" για επιβεβαίωση:",
+      "cancel": "Ακύρωση",
+      "deleteMyAccount": "Διαγραφή Λογαριασμού μου",
+      "invalidConfirmation": "Μη έγκυρη επιβεβαίωση",
+      "pleaseTypeDelete": "Παρακαλώ πληκτρολογήστε \"DELETE\" για επιβεβαίωση διαγραφής λογαριασμού.",
+      "comingSoon": "Σύντομα Διαθέσιμο",
+      "contactSupport": "Παρακαλώ επικοινωνήστε με την υποστήριξη για διαγραφή του λογαριασμού σας. Θέλουμε να βεβαιωθούμε ότι κατανοείτε όλες τις συνέπειες."
+    },
+    "validation": {
+      "currentPasswordRequired": "Απαιτείται ο τρέχων κωδικός",
+      "passwordMinLength": "Ο κωδικός πρέπει να έχει τουλάχιστον 8 χαρακτήρες",
+      "passwordUppercase": "Ο κωδικός πρέπει να περιέχει τουλάχιστον ένα κεφαλαίο γράμμα",
+      "passwordLowercase": "Ο κωδικός πρέπει να περιέχει τουλάχιστον ένα πεζό γράμμα",
+      "passwordNumber": "Ο κωδικός πρέπει να περιέχει τουλάχιστον έναν αριθμό",
+      "passwordsDoNotMatch": "Οι κωδικοί δεν ταιριάζουν"
     }
   }
 }

@@ -4,6 +4,7 @@ import React from 'react';
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
 
 import { Button } from '@/components/ui/button';
@@ -52,6 +53,7 @@ export const FeedbackSubmitDialog: React.FC<FeedbackSubmitDialogProps> = ({
   open,
   onOpenChange,
 }) => {
+  const { t } = useTranslation('feedback');
   const { createFeedback, isSubmitting } = useFeedbackStore();
   const { toast } = useToast();
 
@@ -68,15 +70,15 @@ export const FeedbackSubmitDialog: React.FC<FeedbackSubmitDialogProps> = ({
     try {
       await createFeedback(data);
       toast({
-        title: 'Feedback submitted',
-        description: 'Thank you for your feedback!',
+        title: t('submit.success.title'),
+        description: t('submit.success.message'),
       });
       form.reset();
       onOpenChange(false);
     } catch {
       toast({
-        title: 'Error',
-        description: 'Failed to submit feedback. Please try again.',
+        title: t('submit.error.title'),
+        description: t('submit.error.message'),
         variant: 'destructive',
       });
     }
@@ -86,7 +88,7 @@ export const FeedbackSubmitDialog: React.FC<FeedbackSubmitDialogProps> = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Submit Feedback</DialogTitle>
+          <DialogTitle>{t('submit.title')}</DialogTitle>
         </DialogHeader>
 
         <Form {...form}>
@@ -100,17 +102,17 @@ export const FeedbackSubmitDialog: React.FC<FeedbackSubmitDialogProps> = ({
               name="category"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Category</FormLabel>
+                  <FormLabel>{t('submit.category')}</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger data-testid="feedback-category-select">
-                        <SelectValue placeholder="Select category" />
+                        <SelectValue placeholder={t('submit.categoryPlaceholder')} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
                       {FEEDBACK_CATEGORIES.map((cat) => (
                         <SelectItem key={cat.value} value={cat.value}>
-                          {cat.label}
+                          {t(`categories.${cat.value}`)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -125,10 +127,10 @@ export const FeedbackSubmitDialog: React.FC<FeedbackSubmitDialogProps> = ({
               name="title"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Title</FormLabel>
+                  <FormLabel>{t('submit.titleField')}</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="Brief summary of your feedback"
+                      placeholder={t('submit.titlePlaceholder')}
                       data-testid="feedback-title-input"
                       {...field}
                     />
@@ -143,10 +145,10 @@ export const FeedbackSubmitDialog: React.FC<FeedbackSubmitDialogProps> = ({
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Description</FormLabel>
+                  <FormLabel>{t('submit.description')}</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="Provide details about your feedback..."
+                      placeholder={t('submit.descriptionPlaceholder')}
                       className="min-h-[120px]"
                       data-testid="feedback-description-input"
                       {...field}
@@ -164,10 +166,10 @@ export const FeedbackSubmitDialog: React.FC<FeedbackSubmitDialogProps> = ({
                 onClick={() => onOpenChange(false)}
                 data-testid="feedback-cancel-button"
               >
-                Cancel
+                {t('submit.cancel')}
               </Button>
               <Button type="submit" disabled={isSubmitting} data-testid="feedback-submit-button">
-                {isSubmitting ? 'Submitting...' : 'Submit'}
+                {isSubmitting ? t('submit.submitting') : t('submit.submit')}
               </Button>
             </DialogFooter>
           </form>

@@ -1,5 +1,7 @@
 import React from 'react';
 
+import { useTranslation } from 'react-i18next';
+
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,6 +20,19 @@ const statusVariants = {
 };
 
 export const DeckCard: React.FC<DeckCardProps> = ({ deck, onContinue }) => {
+  const { t } = useTranslation('deck');
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'in-progress':
+        return t('card.status.inProgress');
+      case 'completed':
+        return t('card.status.completed');
+      default:
+        return t('card.status.notStarted');
+    }
+  };
+
   return (
     <Card className="group transition-all hover:border-primary">
       <CardHeader>
@@ -27,9 +42,7 @@ export const DeckCard: React.FC<DeckCardProps> = ({ deck, onContinue }) => {
             <CardDescription className="text-text-muted">{deck.description}</CardDescription>
           </div>
           <Badge className={statusVariants[deck.status ?? 'not-started']}>
-            {(deck.status ?? 'not-started')
-              .replace('-', ' ')
-              .replace(/\b\w/g, (l) => l.toUpperCase())}
+            {getStatusLabel(deck.status ?? 'not-started')}
           </Badge>
         </div>
       </CardHeader>
@@ -38,7 +51,7 @@ export const DeckCard: React.FC<DeckCardProps> = ({ deck, onContinue }) => {
         <div>
           <div className="mb-2 flex justify-between text-sm">
             <span className="text-text-muted">
-              {deck.progress.current} of {deck.progress.total} words
+              {t('card.progress', { current: deck.progress.current, total: deck.progress.total })}
             </span>
             <span className="font-medium">{deck.progress.percentage}%</span>
           </div>
@@ -52,13 +65,15 @@ export const DeckCard: React.FC<DeckCardProps> = ({ deck, onContinue }) => {
         {/* Stats Row */}
         <div className="flex gap-4 text-sm text-text-muted">
           <span className="flex items-center gap-1">
-            <span className="text-base">📚</span> {deck.stats.due} due
+            <span className="text-base">📚</span> {t('card.stats.due', { count: deck.stats.due })}
           </span>
           <span className="flex items-center gap-1">
-            <span className="text-base">✅</span> {deck.stats.mastered} mastered
+            <span className="text-base">✅</span>{' '}
+            {t('card.stats.mastered', { count: deck.stats.mastered })}
           </span>
           <span className="flex items-center gap-1">
-            <span className="text-base">📝</span> {deck.stats.learning} learning
+            <span className="text-base">📝</span>{' '}
+            {t('card.stats.learning', { count: deck.stats.learning })}
           </span>
         </div>
 
@@ -69,8 +84,8 @@ export const DeckCard: React.FC<DeckCardProps> = ({ deck, onContinue }) => {
           onClick={onContinue}
         >
           {(deck.status ?? 'not-started') === 'not-started'
-            ? 'Start Learning'
-            : 'Continue Learning'}
+            ? t('card.actions.startLearning')
+            : t('card.actions.continueLearning')}
         </Button>
       </CardContent>
     </Card>

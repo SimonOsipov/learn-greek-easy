@@ -5,6 +5,7 @@
     "errorLoading": "Error Loading Decks",
     "tryAgain": "Try Again",
     "noDecksFound": "No Decks Found",
+    "noDecksDescription": "No decks match your current filters. Try adjusting your search or clearing filters.",
     "clearFilters": "Clear All Filters"
   },
   "filters": {
@@ -38,8 +39,8 @@
     "yourProgress": "Your Progress",
     "complete": "Complete",
     "premium": "Premium",
-    "createdBy": "Created by",
-    "updated": "Updated",
+    "createdBy": "Created by {{author}}",
+    "updated": "Updated {{date}}",
     "premiumDeck": "Premium Deck",
     "upgradeToPremium": "Upgrade to Premium",
     "readyToStart": "Ready to Start Learning?",
@@ -49,16 +50,66 @@
     "deckCompleted": "Deck Completed!",
     "reviewDeck": "Review Deck",
     "resetProgress": "Reset Progress",
+    "resetting": "Resetting...",
+    "resetConfirm": "Are you sure you want to reset your progress for this deck? This action cannot be undone.",
     "goBack": "Go Back",
     "tryAgain": "Try Again",
     "notFound": "Deck Not Found",
+    "notFoundDescription": "The deck you're looking for doesn't exist or has been removed.",
     "browseAll": "Browse All Decks",
     "cards": "cards",
-    "minutes": "min"
+    "flashcards": "flashcards",
+    "minutes": "min",
+    "toComplete": "to complete",
+    "cardsToReview": "cards to review",
+    "mastered": "{{count}}/{{total}} mastered",
+    "new": "New",
+    "learning": "Learning",
+    "masteredLabel": "Mastered",
+    "lastReviewed": "Last reviewed: {{date}}",
+    "premiumLocked": {
+      "title": "Premium Deck",
+      "description": "This deck is only available to premium members. Upgrade your account to access all premium decks and advanced learning features."
+    },
+    "notStarted": {
+      "description": "This deck contains {{count}} flashcards. Estimated time to complete: {{time}} minutes."
+    },
+    "inProgress": {
+      "cardsDue": "You have {{count}} cards due for review today.",
+      "keepStreak": "Keep your streak going!"
+    },
+    "completed": {
+      "description": "Great job! You've mastered this deck. Continue reviewing to maintain your knowledge."
+    },
+    "error": {
+      "title": "Error Loading Deck",
+      "failedToLoad": "Failed to Load Deck",
+      "description": "We couldn't load the deck details. Please check your connection and try again."
+    },
+    "demo": {
+      "title": "Demo: Test progress tracking",
+      "simulateSession": "Simulate Study Session",
+      "simulating": "Simulating..."
+    }
   },
   "card": {
     "viewDetails": "View Details",
     "cardsCount": "{{count}} cards",
-    "premium": "Premium"
+    "premium": "Premium",
+    "progress": "{{current}} of {{total}} words",
+    "stats": {
+      "due": "{{count}} due",
+      "mastered": "{{count}} mastered",
+      "learning": "{{count}} learning"
+    },
+    "status": {
+      "notStarted": "Not Started",
+      "inProgress": "In Progress",
+      "completed": "Completed"
+    },
+    "actions": {
+      "startLearning": "Start Learning",
+      "continueLearning": "Continue Learning"
+    }
   }
 }
