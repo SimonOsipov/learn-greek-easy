@@ -27,6 +27,11 @@
       "memberSince": "Member since"
     }
   },
+  "language": {
+    "title": "Γλώσσα",
+    "description": "Επιλέξτε τη γλώσσα διεπαφής. Το περιεχόμενο των καρτών θα παραμείνει στα ελληνικά.",
+    "changing": "Αλλαγή γλώσσας..."
+  },
   "danger": {
     "title": "Danger Zone",
     "subtitle": "Irreversible actions that affect your account and data",

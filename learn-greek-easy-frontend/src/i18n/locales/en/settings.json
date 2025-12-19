@@ -27,6 +27,11 @@
       "memberSince": "Member since"
     }
   },
+  "language": {
+    "title": "Language",
+    "description": "Choose your preferred interface language. Card content will remain in Greek.",
+    "changing": "Changing language..."
+  },
   "danger": {
     "title": "Danger Zone",
     "subtitle": "Irreversible actions that affect your account and data",

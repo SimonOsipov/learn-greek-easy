@@ -4,6 +4,7 @@ import { Menu } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 
 import { LogoutDialog } from '@/components/auth/LogoutDialog';
+import { LanguageSwitcher } from '@/components/i18n';
 import { NotificationsDropdown } from '@/components/notifications';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -82,8 +83,11 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
             </nav>
           )}
 
-          {/* Right side: Notifications and User Menu */}
+          {/* Right side: Language, Notifications and User Menu */}
           <div className="flex items-center space-x-3">
+            {/* Language Switcher */}
+            <LanguageSwitcher variant="icon" />
+
             {/* Notifications */}
             <NotificationsDropdown />
 
