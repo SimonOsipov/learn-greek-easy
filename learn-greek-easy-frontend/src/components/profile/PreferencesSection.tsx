@@ -82,7 +82,7 @@ export const PreferencesSection: React.FC<PreferencesSectionProps> = ({ user }) 
             <CardDescription>Choose your preferred language for the app interface</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               <button
                 onClick={() => handlePreferenceChange('language', 'en')}
                 className={`flex items-center justify-between rounded-lg border-2 p-4 transition-all ${
@@ -110,6 +110,20 @@ export const PreferencesSection: React.FC<PreferencesSectionProps> = ({ user }) 
                   <span className="font-medium text-gray-900">Ελληνικά</span>
                 </div>
                 {preferences.language === 'el' && <Check className="h-5 w-5 text-blue-600" />}
+              </button>
+              <button
+                onClick={() => handlePreferenceChange('language', 'ru')}
+                className={`flex items-center justify-between rounded-lg border-2 p-4 transition-all ${
+                  preferences.language === 'ru'
+                    ? 'border-blue-600 bg-blue-50'
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl">🇷🇺</span>
+                  <span className="font-medium text-gray-900">Русский</span>
+                </div>
+                {preferences.language === 'ru' && <Check className="h-5 w-5 text-blue-600" />}
               </button>
             </div>
           </CardContent>
