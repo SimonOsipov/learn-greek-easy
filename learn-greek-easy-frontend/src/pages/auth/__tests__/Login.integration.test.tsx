@@ -104,7 +104,7 @@ describe('Login Flow Integration Tests', () => {
       render(<Login />);
 
       // Verify login form is rendered
-      expect(screen.getByText(/Καλώς ήρθατε!/i)).toBeInTheDocument();
+      expect(screen.getByTestId('login-title')).toHaveTextContent('Welcome Back');
 
       // Fill in valid credentials (from mockAuthAPI mockData)
       const emailInput = screen.getByLabelText(/email/i);

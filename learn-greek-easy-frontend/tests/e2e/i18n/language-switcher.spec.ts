@@ -56,8 +56,8 @@ test.describe('Language Switcher - Unauthenticated', () => {
   });
 
   test('should switch UI to Greek when Greek is selected', async ({ page }) => {
-    // Verify starting in English
-    await expect(page.getByText('Welcome Back')).toBeVisible();
+    // Verify starting in English using specific test-id
+    await expect(page.getByTestId('login-title')).toHaveText('Welcome Back');
 
     // Switch to Greek
     await page.getByTestId('language-switcher-trigger').click();
@@ -66,8 +66,8 @@ test.describe('Language Switcher - Unauthenticated', () => {
     // Wait for language change
     await page.waitForTimeout(500);
 
-    // Verify UI updated to Greek
-    await expect(page.getByText('Καλώς Ήρθατε')).toBeVisible();
+    // Verify UI updated to Greek using specific test-id
+    await expect(page.getByTestId('login-title')).toHaveText('Καλώς Ήρθατε');
   });
 
   test('should switch UI back to English when English is selected', async ({ page }) => {
@@ -76,16 +76,16 @@ test.describe('Language Switcher - Unauthenticated', () => {
     await page.getByTestId('language-option-el').click();
     await page.waitForTimeout(500);
 
-    // Verify Greek
-    await expect(page.getByText('Καλώς Ήρθατε')).toBeVisible();
+    // Verify Greek using specific test-id
+    await expect(page.getByTestId('login-title')).toHaveText('Καλώς Ήρθατε');
 
     // Switch back to English
     await page.getByTestId('language-switcher-trigger').click();
     await page.getByTestId('language-option-en').click();
     await page.waitForTimeout(500);
 
-    // Verify English
-    await expect(page.getByText('Welcome Back')).toBeVisible();
+    // Verify English using specific test-id
+    await expect(page.getByTestId('login-title')).toHaveText('Welcome Back');
   });
 
   test('should persist language choice in localStorage', async ({ page }) => {
@@ -107,10 +107,10 @@ test.describe('Language Switcher - Unauthenticated', () => {
 
     // Reload page
     await page.reload();
-    await page.waitForLoadState('domcontentloaded');
+    await page.waitForLoadState('networkidle');
 
-    // Should still be in Greek
-    await expect(page.getByText('Καλώς Ήρθατε')).toBeVisible();
+    // Should still be in Greek using specific test-id
+    await expect(page.getByTestId('login-title')).toHaveText('Καλώς Ήρθατε');
   });
 
   test('should mark current language as selected in dropdown', async ({ page }) => {
@@ -148,16 +148,16 @@ test.describe('Language Switcher - Authenticated', () => {
   });
 
   test('should switch language on authenticated pages', async ({ page }) => {
-    // Verify starting in English (Dashboard)
-    await expect(page.getByText('Dashboard')).toBeVisible();
+    // Verify starting in English (Dashboard) using specific test-id
+    await expect(page.getByTestId('dashboard-title')).toHaveText('Dashboard');
 
     // Switch to Greek
     await page.getByTestId('language-switcher-trigger').click();
     await page.getByTestId('language-option-el').click();
     await page.waitForTimeout(500);
 
-    // Verify dashboard is now in Greek
-    await expect(page.getByText(/Πίνακας Ελέγχου/i)).toBeVisible();
+    // Verify dashboard is now in Greek using specific test-id
+    await expect(page.getByTestId('dashboard-title')).toHaveText('Πίνακας Ελέγχου');
   });
 
   test('should maintain language when navigating between pages', async ({ page }) => {
@@ -170,15 +170,15 @@ test.describe('Language Switcher - Authenticated', () => {
     await page.goto('/decks');
     await page.waitForLoadState('networkidle');
 
-    // Decks page should be in Greek
-    await expect(page.getByText('Διαθέσιμες Τράπουλες')).toBeVisible();
+    // Decks page should be in Greek using specific test-id
+    await expect(page.getByTestId('decks-title')).toHaveText('Διαθέσιμες Τράπουλες');
 
     // Navigate to settings
     await page.goto('/settings');
     await page.waitForLoadState('networkidle');
 
-    // Settings should be in Greek
-    await expect(page.getByText('Ρυθμίσεις')).toBeVisible();
+    // Settings should be in Greek using specific test-id
+    await expect(page.getByTestId('settings-title')).toHaveText('Ρυθμίσεις');
   });
 });
 

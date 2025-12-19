@@ -24,7 +24,9 @@ const Settings: React.FC = () => {
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <h1 className="text-3xl font-bold">{t('page.title')}</h1>
+          <h1 className="text-3xl font-bold" data-testid="settings-title">
+            {t('page.title')}
+          </h1>
         </div>
         <p className="ml-12 mt-2 text-muted-foreground">{t('page.subtitle')}</p>
       </div>

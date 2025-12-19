@@ -33,7 +33,12 @@ export const DecksPage: React.FC = () => {
     <div className="space-y-6 pb-8">
       {/* Page Header */}
       <div>
-        <h1 className="text-2xl font-semibold text-text-primary md:text-3xl">{t('list.title')}</h1>
+        <h1
+          className="text-2xl font-semibold text-text-primary md:text-3xl"
+          data-testid="decks-title"
+        >
+          {t('list.title')}
+        </h1>
         <p className="mt-2 text-sm text-text-muted md:text-base">{t('list.subtitle')}</p>
       </div>
 

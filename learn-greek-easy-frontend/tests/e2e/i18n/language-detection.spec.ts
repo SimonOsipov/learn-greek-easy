@@ -21,12 +21,12 @@ test.describe('Language Detection', () => {
     await page.goto('/');
     await page.evaluate(() => localStorage.removeItem('i18nextLng'));
     await page.reload();
+    await page.waitForLoadState('networkidle');
 
-    // Check for English text - we should see "Dashboard" or login text
+    // Check for English text on login page
     // Since we're not authenticated, we'll see login page
-    await expect(
-      page.getByTestId('login-card').or(page.getByText('Welcome Back'))
-    ).toBeVisible({ timeout: 10000 });
+    await expect(page.getByTestId('login-card')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByTestId('login-title')).toHaveText('Welcome Back');
 
     await context.close();
   });
@@ -45,8 +45,9 @@ test.describe('Language Detection', () => {
     // Wait for page to load
     await page.waitForLoadState('networkidle');
 
-    // Check for Greek text on login page
-    await expect(page.getByText('Καλώς Ήρθατε')).toBeVisible({ timeout: 10000 });
+    // Check for Greek text on login page using test-id
+    await expect(page.getByTestId('login-card')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByTestId('login-title')).toHaveText('Καλώς Ήρθατε');
 
     await context.close();
   });
@@ -63,11 +64,11 @@ test.describe('Language Detection', () => {
     await page.goto('/');
     await page.evaluate(() => localStorage.removeItem('i18nextLng'));
     await page.reload();
+    await page.waitForLoadState('networkidle');
 
     // Should fallback to English
-    await expect(
-      page.getByTestId('login-card').or(page.getByText('Welcome Back'))
-    ).toBeVisible({ timeout: 10000 });
+    await expect(page.getByTestId('login-card')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByTestId('login-title')).toHaveText('Welcome Back');
 
     await context.close();
   });
@@ -84,11 +85,11 @@ test.describe('Language Detection', () => {
     await page.goto('/');
     await page.evaluate(() => localStorage.removeItem('i18nextLng'));
     await page.reload();
+    await page.waitForLoadState('networkidle');
 
     // Should fallback to English
-    await expect(
-      page.getByTestId('login-card').or(page.getByText('Welcome Back'))
-    ).toBeVisible({ timeout: 10000 });
+    await expect(page.getByTestId('login-card')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByTestId('login-title')).toHaveText('Welcome Back');
 
     await context.close();
   });
@@ -103,11 +104,11 @@ test.describe('Language Detection', () => {
     await page.goto('/');
     await page.evaluate(() => localStorage.removeItem('i18nextLng'));
     await page.reload();
+    await page.waitForLoadState('networkidle');
 
     // Should use English (base language)
-    await expect(
-      page.getByTestId('login-card').or(page.getByText('Welcome Back'))
-    ).toBeVisible({ timeout: 10000 });
+    await expect(page.getByTestId('login-card')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByTestId('login-title')).toHaveText('Welcome Back');
 
     await context.close();
   });
@@ -122,9 +123,11 @@ test.describe('Language Detection', () => {
     await page.goto('/');
     await page.evaluate(() => localStorage.removeItem('i18nextLng'));
     await page.reload();
+    await page.waitForLoadState('networkidle');
 
     // Should use Greek (base language)
-    await expect(page.getByText('Καλώς Ήρθατε')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByTestId('login-card')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByTestId('login-title')).toHaveText('Καλώς Ήρθατε');
 
     await context.close();
   });
@@ -143,11 +146,11 @@ test.describe('Language Priority', () => {
     await page.goto('/');
     await page.evaluate(() => localStorage.setItem('i18nextLng', 'en'));
     await page.reload();
+    await page.waitForLoadState('networkidle');
 
     // Should use English from localStorage despite Greek browser setting
-    await expect(
-      page.getByTestId('login-card').or(page.getByText('Welcome Back'))
-    ).toBeVisible({ timeout: 10000 });
+    await expect(page.getByTestId('login-card')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByTestId('login-title')).toHaveText('Welcome Back');
 
     await context.close();
   });
@@ -162,9 +165,11 @@ test.describe('Language Priority', () => {
     await page.goto('/');
     await page.evaluate(() => localStorage.removeItem('i18nextLng'));
     await page.reload();
+    await page.waitForLoadState('networkidle');
 
     // Should use Greek from browser
-    await expect(page.getByText('Καλώς Ήρθατε')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByTestId('login-card')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByTestId('login-title')).toHaveText('Καλώς Ήρθατε');
 
     await context.close();
   });

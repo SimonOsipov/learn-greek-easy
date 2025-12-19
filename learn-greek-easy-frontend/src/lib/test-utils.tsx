@@ -6,9 +6,12 @@
 import { ReactElement, ReactNode } from 'react';
 
 import { render, RenderOptions } from '@testing-library/react';
+import { I18nextProvider } from 'react-i18next';
 import { BrowserRouter } from 'react-router-dom';
 
 import { Toaster } from '@/components/ui/toaster';
+import { LanguageProvider } from '@/contexts/LanguageContext';
+import i18n from '@/i18n';
 
 // Custom render function that wraps components with providers
 interface CustomRenderOptions extends Omit<RenderOptions, 'wrapper'> {
@@ -32,10 +35,14 @@ export function renderWithProviders(
 
   function Wrapper({ children }: { children: ReactNode }) {
     return (
-      <BrowserRouter>
-        {children}
-        <Toaster />
-      </BrowserRouter>
+      <I18nextProvider i18n={i18n}>
+        <LanguageProvider>
+          <BrowserRouter>
+            {children}
+            <Toaster />
+          </BrowserRouter>
+        </LanguageProvider>
+      </I18nextProvider>
     );
   }
 
