@@ -41,7 +41,8 @@
   "language": {
     "title": "Language",
     "description": "Choose your preferred interface language. Card content will remain in Greek.",
-    "changing": "Changing language..."
+    "changing": "Changing language...",
+    "selectLabel": "Select language"
   },
   "danger": {
     "title": "Danger Zone",

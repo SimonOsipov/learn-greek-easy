@@ -53,7 +53,11 @@ export const LanguageSection: React.FC = () => {
       <CardContent>
         <div className="space-y-3">
           <Select value={currentLanguage} onValueChange={handleChange} disabled={isChanging}>
-            <SelectTrigger className="w-full sm:w-[280px]" data-testid="language-select-trigger">
+            <SelectTrigger
+              className="w-full sm:w-[280px]"
+              data-testid="language-select-trigger"
+              aria-label={t('language.selectLabel')}
+            >
               <SelectValue>
                 {currentLangOption && (
                   <span className="flex items-center gap-2">
