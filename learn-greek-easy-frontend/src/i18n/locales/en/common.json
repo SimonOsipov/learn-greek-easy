@@ -1,0 +1,66 @@
+{
+  "loading": "Loading...",
+  "error": {
+    "generic": "An error occurred",
+    "tryAgain": "Please try again",
+    "notFound": "Not found",
+    "unauthorized": "Unauthorized",
+    "forbidden": "Access denied"
+  },
+  "actions": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "close": "Close",
+    "confirm": "Confirm",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "update": "Update",
+    "submit": "Submit",
+    "retry": "Retry"
+  },
+  "navigation": {
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "home": "Home"
+  },
+  "search": {
+    "placeholder": "Search...",
+    "noResults": "No results found",
+    "filter": "Filter",
+    "sort": "Sort",
+    "clear": "Clear"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "decks": "Decks",
+    "statistics": "Statistics",
+    "feedback": "Feedback",
+    "profile": "Profile",
+    "settings": "Settings",
+    "logout": "Logout",
+    "help": "Help & Support"
+  },
+  "language": {
+    "select": "Select language",
+    "current": "Current language",
+    "switchTo": "Switch to {{language}}"
+  },
+  "time": {
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "daysAgo": "{{count}} day ago",
+    "daysAgo_plural": "{{count}} days ago",
+    "hoursAgo": "{{count}} hour ago",
+    "hoursAgo_plural": "{{count}} hours ago",
+    "minutesAgo": "{{count}} minute ago",
+    "minutesAgo_plural": "{{count}} minutes ago",
+    "justNow": "Just now"
+  },
+  "pagination": {
+    "page": "Page {{current}} of {{total}}",
+    "showing": "Showing {{from}}-{{to}} of {{total}}",
+    "itemsPerPage": "Items per page"
+  }
+}
