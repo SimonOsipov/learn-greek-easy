@@ -10,6 +10,7 @@ import { ErrorBoundary } from '@/components/errors';
 import { AppLayout } from '@/components/layout';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { LanguageProvider } from '@/contexts/LanguageContext';
 import { LayoutProvider } from '@/contexts/LayoutContext';
 import ActivityFeedTest from '@/pages/ActivityFeedTest';
 import { ForgotPassword } from '@/pages/auth/ForgotPassword';
@@ -103,9 +104,11 @@ function App() {
         <BrowserRouter>
           <PostHogProvider>
             <TooltipProvider>
-              <LayoutProvider>
-                <AppContent />
-              </LayoutProvider>
+              <LanguageProvider>
+                <LayoutProvider>
+                  <AppContent />
+                </LayoutProvider>
+              </LanguageProvider>
             </TooltipProvider>
           </PostHogProvider>
         </BrowserRouter>
