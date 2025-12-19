@@ -199,7 +199,7 @@ interface PreferencesSectionProps {
 }
 
 interface UserPreferences {
-  language: 'en' | 'el';
+  language: 'en' | 'el' | 'ru';
   dailyGoal: number; // minutes per day
   notifications: boolean;
   theme: 'light' | 'dark' | 'auto';
