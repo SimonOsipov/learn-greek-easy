@@ -35,6 +35,7 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
     { path: '/', labelKey: 'nav.dashboard' },
     { path: '/decks', labelKey: 'nav.decks' },
     { path: '/statistics', labelKey: 'nav.statistics' },
+    { path: '/achievements', labelKey: 'nav.achievements' },
     { path: '/feedback', labelKey: 'nav.feedback' },
   ];
 

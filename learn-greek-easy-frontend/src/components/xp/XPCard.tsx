@@ -32,9 +32,7 @@ export interface XPCardProps {
  * Get level color based on level tier
  * Levels 1-5: Blue, 6-10: Purple, 11-15: Gold
  */
-const getLevelColor = (
-  level: number
-): { bg: string; text: string; progress: string } => {
+const getLevelColor = (level: number): { bg: string; text: string; progress: string } => {
   if (level >= 11) {
     return {
       bg: 'bg-amber-100',
@@ -125,11 +123,7 @@ export const XPCard: React.FC<XPCardProps> = ({
   // Compact mode for sidebar/header
   if (compact) {
     return (
-      <div
-        className={cn('flex items-center gap-2', className)}
-        role="region"
-        aria-label="XP Stats"
-      >
+      <div className={cn('flex items-center gap-2', className)} role="region" aria-label="XP Stats">
         <div className={cn('rounded-full p-1.5', colors.bg)}>
           <Star className={cn('h-4 w-4', colors.text)} aria-hidden="true" />
         </div>
@@ -172,9 +166,7 @@ export const XPCard: React.FC<XPCardProps> = ({
 
             {/* XP count */}
             <div className="mt-2">
-              <span className="text-lg font-semibold text-gray-700">
-                {formatXP(totalXP)} XP
-              </span>
+              <span className="text-lg font-semibold text-gray-700">{formatXP(totalXP)} XP</span>
             </div>
 
             {/* Progress bar - hide "next level" info at max level */}

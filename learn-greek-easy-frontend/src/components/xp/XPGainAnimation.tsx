@@ -95,9 +95,7 @@ export const XPGainAnimation: React.FC<XPGainAnimationProps> = ({
             // Entry animation
             !prefersReducedMotion && !isExiting && 'animate-in slide-in-from-bottom-4',
             // Exit animation
-            !prefersReducedMotion &&
-              isExiting &&
-              'animate-out fade-out-0 slide-out-to-top-4',
+            !prefersReducedMotion && isExiting && 'animate-out fade-out-0 slide-out-to-top-4',
             // Reduced motion: simple opacity
             prefersReducedMotion && !isExiting && 'opacity-100',
             prefersReducedMotion && isExiting && 'opacity-0 transition-opacity duration-500'

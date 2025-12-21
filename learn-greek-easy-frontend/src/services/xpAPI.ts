@@ -111,17 +111,13 @@ export const xpAPI = {
    * Get newly unlocked achievements that haven't been shown to user
    */
   getUnnotifiedAchievements: async (): Promise<UnnotifiedAchievementsResponse> => {
-    return api.get<UnnotifiedAchievementsResponse>(
-      '/api/v1/xp/achievements/unnotified'
-    );
+    return api.get<UnnotifiedAchievementsResponse>('/api/v1/xp/achievements/unnotified');
   },
 
   /**
    * Mark achievements as notified (user has seen them)
    */
-  markAchievementsNotified: async (
-    achievementIds: string[]
-  ): Promise<MarkNotifiedResponse> => {
+  markAchievementsNotified: async (achievementIds: string[]): Promise<MarkNotifiedResponse> => {
     return api.post<MarkNotifiedResponse>('/api/v1/xp/achievements/notified', {
       achievement_ids: achievementIds,
     });

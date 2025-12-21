@@ -12,6 +12,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { LanguageProvider } from '@/contexts/LanguageContext';
 import { LayoutProvider } from '@/contexts/LayoutContext';
+import AchievementsPage from '@/pages/AchievementsPage';
 import ActivityFeedTest from '@/pages/ActivityFeedTest';
 import { ForgotPassword } from '@/pages/auth/ForgotPassword';
 import { Login } from '@/pages/auth/Login';
@@ -68,6 +69,7 @@ function AppContent() {
               <Route path="stats" element={<Navigate to="/statistics" replace />} />
               <Route path="settings" element={<Settings />} />
               <Route path="profile" element={<Profile />} />
+              <Route path="achievements" element={<AchievementsPage />} />
               <Route path="feedback" element={<FeedbackPage />} />
               <Route path="activity-feed-test" element={<ActivityFeedTest />} />
             </Route>

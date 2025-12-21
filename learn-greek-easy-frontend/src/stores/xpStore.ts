@@ -122,11 +122,7 @@ export const useXPStore = create<XPState>()(
         const state = get();
 
         // Check cache validity
-        if (
-          !forceRefresh &&
-          state.achievements &&
-          isCacheValid(state.lastAchievementsFetch)
-        ) {
+        if (!forceRefresh && state.achievements && isCacheValid(state.lastAchievementsFetch)) {
           console.log('[xpStore] Using cached achievements');
           return;
         }
@@ -144,8 +140,7 @@ export const useXPStore = create<XPState>()(
         } catch (error) {
           console.error('[xpStore] Failed to load achievements:', error);
           set({
-            error:
-              error instanceof Error ? error.message : 'Failed to load achievements',
+            error: error instanceof Error ? error.message : 'Failed to load achievements',
             loadingAchievements: false,
           });
         }
@@ -168,8 +163,7 @@ export const useXPStore = create<XPState>()(
         } catch (error) {
           console.error('[xpStore] Failed to load unnotified achievements:', error);
           set({
-            error:
-              error instanceof Error ? error.message : 'Failed to load notifications',
+            error: error instanceof Error ? error.message : 'Failed to load notifications',
             loadingUnnotified: false,
           });
         }
@@ -186,10 +180,9 @@ export const useXPStore = create<XPState>()(
           // Update local state - remove notified achievements
           const state = get();
           if (state.unnotifiedAchievements) {
-            const remainingAchievements =
-              state.unnotifiedAchievements.achievements.filter(
-                (a) => !achievementIds.includes(a.id)
-              );
+            const remainingAchievements = state.unnotifiedAchievements.achievements.filter(
+              (a) => !achievementIds.includes(a.id)
+            );
             set({
               unnotifiedAchievements: {
                 achievements: remainingAchievements,
@@ -244,11 +237,9 @@ export const useXPStore = create<XPState>()(
 // Selectors for optimized re-renders
 export const selectXPStats = (state: XPState) => state.xpStats;
 export const selectAchievements = (state: XPState) => state.achievements;
-export const selectUnnotifiedAchievements = (state: XPState) =>
-  state.unnotifiedAchievements;
+export const selectUnnotifiedAchievements = (state: XPState) => state.unnotifiedAchievements;
 export const selectIsLoadingStats = (state: XPState) => state.loadingStats;
-export const selectIsLoadingAchievements = (state: XPState) =>
-  state.loadingAchievements;
+export const selectIsLoadingAchievements = (state: XPState) => state.loadingAchievements;
 export const selectXPError = (state: XPState) => state.error;
 
 /**
