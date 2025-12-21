@@ -26,23 +26,25 @@ test.describe('Achievements Page', () => {
   });
 
   test('E2E-ACH-01: Achievements page displays correctly', async ({ page }) => {
-    // Verify page title
-    await expect(page.getByText('Achievements')).toBeVisible();
+    // Verify page title (use role selector to avoid matching nav link)
+    await expect(page.getByRole('heading', { name: 'Achievements', level: 1 })).toBeVisible();
 
-    // Verify stats section is visible (at least one stat card)
-    await expect(page.getByText('Unlocked')).toBeVisible();
-    await expect(page.getByText('Progress')).toBeVisible();
-    await expect(page.getByText('XP Earned')).toBeVisible();
+    // Verify stats section is visible - scope to stats section to avoid matching category headers
+    const statsSection = page.locator('section[aria-labelledby="achievements-stats-heading"]');
+    await expect(statsSection).toBeVisible();
+    await expect(statsSection.getByText('Unlocked')).toBeVisible();
+    await expect(statsSection.getByText('Progress')).toBeVisible();
+    await expect(statsSection.getByText('XP Earned')).toBeVisible();
   });
 
   test('E2E-ACH-02: Achievement categories are displayed', async ({ page }) => {
     // Wait for content to load
     await page.waitForTimeout(1000);
 
-    // Verify at least one category is visible
+    // Verify at least one category is visible using role selectors
     // Categories: Streak, Learning, Session, Accuracy, Cefr, Special
-    const streakCategory = page.getByText('Streak', { exact: false });
-    const learningCategory = page.getByText('Learning', { exact: false });
+    const streakCategory = page.getByRole('heading', { name: /Streak/i, level: 2 });
+    const learningCategory = page.getByRole('heading', { name: /Learning/i, level: 2 });
 
     // At least one category should be visible
     await expect(streakCategory.or(learningCategory)).toBeVisible({ timeout: 10000 });
@@ -90,22 +92,30 @@ test.describe('XP Stats Display', () => {
     // Wait for stats to load
     await expect(statsSection).toBeVisible({ timeout: 10000 });
 
-    // Verify unlocked stat is visible
-    await expect(page.getByText('Unlocked')).toBeVisible();
+    // Verify unlocked stat is visible (scoped to stats section)
+    await expect(statsSection.getByText('Unlocked')).toBeVisible();
   });
 
   test('E2E-ACH-07: Stats header shows progress percentage', async ({ page }) => {
-    // Verify progress percentage is visible
-    await expect(page.getByText('Progress')).toBeVisible();
+    // Scope to stats section to avoid matching other elements
+    const statsSection = page.locator('section[aria-labelledby="achievements-stats-heading"]');
+    await expect(statsSection).toBeVisible({ timeout: 10000 });
 
-    // Look for percentage display
-    const percentageText = page.getByText(/%/);
+    // Verify progress percentage is visible
+    await expect(statsSection.getByText('Progress')).toBeVisible();
+
+    // Look for percentage display within stats section
+    const percentageText = statsSection.getByText(/%/);
     await expect(percentageText.first()).toBeVisible({ timeout: 10000 });
   });
 
   test('E2E-ACH-08: Stats header shows XP earned', async ({ page }) => {
+    // Scope to stats section to avoid matching other elements
+    const statsSection = page.locator('section[aria-labelledby="achievements-stats-heading"]');
+    await expect(statsSection).toBeVisible({ timeout: 10000 });
+
     // Verify XP earned stat is visible
-    await expect(page.getByText('XP Earned')).toBeVisible();
+    await expect(statsSection.getByText('XP Earned')).toBeVisible();
   });
 });
 
@@ -262,20 +272,23 @@ test.describe('Achievement Categories Detail', () => {
 
   test('E2E-ACH-15: Streak achievements category is visible', async ({ page }) => {
     await page.waitForTimeout(1000);
-    const streakSection = page.getByText('Streak', { exact: false });
-    await expect(streakSection.first()).toBeVisible({ timeout: 10000 });
+    // Use role selector to target the h2 heading specifically
+    const streakHeading = page.getByRole('heading', { name: /Streak/i, level: 2 });
+    await expect(streakHeading).toBeVisible({ timeout: 10000 });
   });
 
   test('E2E-ACH-16: Learning achievements category is visible', async ({ page }) => {
     await page.waitForTimeout(1000);
-    const learningSection = page.getByText('Learning', { exact: false });
-    await expect(learningSection.first()).toBeVisible({ timeout: 10000 });
+    // Use role selector to target the h2 heading specifically
+    const learningHeading = page.getByRole('heading', { name: /Learning/i, level: 2 });
+    await expect(learningHeading).toBeVisible({ timeout: 10000 });
   });
 
   test('E2E-ACH-17: Session achievements category is visible', async ({ page }) => {
     await page.waitForTimeout(1000);
-    const sessionSection = page.getByText('Session', { exact: false });
-    await expect(sessionSection.first()).toBeVisible({ timeout: 10000 });
+    // Use role selector to target the h2 heading specifically
+    const sessionHeading = page.getByRole('heading', { name: /Session/i, level: 2 });
+    await expect(sessionHeading).toBeVisible({ timeout: 10000 });
   });
 
   test('E2E-ACH-18: Category shows unlocked/total count', async ({ page }) => {
