@@ -47,7 +47,7 @@ test.describe('Achievements Page', () => {
     const learningCategory = page.getByRole('heading', { name: /Learning/i, level: 2 });
 
     // At least one category should be visible
-    await expect(streakCategory.or(learningCategory)).toBeVisible({ timeout: 10000 });
+    await expect(streakCategory.or(learningCategory).first()).toBeVisible({ timeout: 10000 });
   });
 
   test('E2E-ACH-03: Achievement cards show progress', async ({ page }) => {
@@ -209,9 +209,13 @@ test.describe('XP Mid User (4100 XP, Level 7)', () => {
     await page.goto('/achievements');
     await expect(page.getByTestId('achievements-page')).toBeVisible({ timeout: 15000 });
 
+    // Scope to stats section to avoid matching other elements
+    const statsSection = page.locator('section[aria-labelledby="achievements-stats-heading"]');
+    await expect(statsSection).toBeVisible({ timeout: 10000 });
+
     // XP earned should be greater than 0 (sum of unlocked achievement rewards)
     // Mid user has 5 achievements with rewards: 50 + 100 + 10 + 100 + 25 = 285 XP
-    await expect(page.getByText('XP Earned')).toBeVisible();
+    await expect(statsSection.getByText('XP Earned')).toBeVisible();
   });
 });
 
@@ -231,11 +235,12 @@ test.describe('XP Max User (100000 XP, Level 15)', () => {
     await page.goto('/achievements');
     await expect(page.getByTestId('achievements-page')).toBeVisible({ timeout: 15000 });
 
-    // Wait for content to load
-    await page.waitForTimeout(1000);
+    // Scope to stats section to avoid matching other elements
+    const statsSection = page.locator('section[aria-labelledby="achievements-stats-heading"]');
+    await expect(statsSection).toBeVisible({ timeout: 10000 });
 
     // Max user should have 100% progress
-    await expect(page.getByText('100%')).toBeVisible({ timeout: 10000 });
+    await expect(statsSection.getByText('100%', { exact: true })).toBeVisible({ timeout: 10000 });
   });
 
   test('E2E-ACH-14: Max user unlocked count equals total', async ({ page }) => {
