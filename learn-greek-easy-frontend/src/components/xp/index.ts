@@ -10,3 +10,12 @@ export type { XPCardProps } from './XPCard';
 
 export { XPGainAnimation, useXPGainAnimation } from './XPGainAnimation';
 export type { XPGainAnimationProps } from './XPGainAnimation';
+
+// Notification components
+export { AchievementToast } from './AchievementToast';
+export type { AchievementToastProps } from './AchievementToast';
+
+export { LevelUpCelebration } from './LevelUpCelebration';
+export type { LevelUpCelebrationProps } from './LevelUpCelebration';
+
+export { AchievementNotificationManager } from './AchievementNotificationManager';

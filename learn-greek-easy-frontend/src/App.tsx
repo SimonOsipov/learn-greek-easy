@@ -10,6 +10,7 @@ import { ErrorBoundary } from '@/components/errors';
 import { AppLayout } from '@/components/layout';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { AchievementNotificationManager } from '@/components/xp';
 import { LanguageProvider } from '@/contexts/LanguageContext';
 import { LayoutProvider } from '@/contexts/LayoutContext';
 import AchievementsPage from '@/pages/AchievementsPage';
@@ -93,6 +94,7 @@ function AppContent() {
       </RouteGuard>
 
       <Toaster />
+      <AchievementNotificationManager />
     </div>
   );
 }
