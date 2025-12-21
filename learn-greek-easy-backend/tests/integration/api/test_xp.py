@@ -52,8 +52,8 @@ class TestXPStatsEndpoint:
     ):
         """User with XP should show correct level and progress."""
         # Create UserXP with some XP
-        await UserXPFactory.create_async(
-            db_session,
+        await UserXPFactory.create(
+            session=db_session,
             user_id=test_user.id,
             total_xp=500,
             current_level=3,
@@ -162,16 +162,16 @@ class TestUnnotifiedAchievementsEndpoint:
         db_session: AsyncSession,
     ):
         """Should return unnotified achievements."""
-        # Create an unnotified achievement
+        # Create an unnotified achievement using a real achievement ID
         from src.db.models import Achievement, AchievementCategory
 
-        # First ensure the achievement exists in DB
+        # Use streak_first_flame which is a real achievement in the definitions
         achievement = Achievement(
-            id="streak_3",
-            name="Getting Started",
-            description="Maintain a 3-day study streak",
+            id="streak_first_flame",
+            name="First Flame",
+            description="Maintain a 3-day streak",
             category=AchievementCategory.STREAK,
-            icon="flame",
+            icon="fire",
             threshold=3,
             xp_reward=50,
             sort_order=1,
@@ -179,10 +179,10 @@ class TestUnnotifiedAchievementsEndpoint:
         db_session.add(achievement)
         await db_session.flush()
 
-        await UserAchievementFactory.create_async(
-            db_session,
+        await UserAchievementFactory.create(
+            session=db_session,
             user_id=test_user.id,
-            achievement_id="streak_3",
+            achievement_id="streak_first_flame",
             notified=False,
         )
         await db_session.commit()
@@ -196,7 +196,7 @@ class TestUnnotifiedAchievementsEndpoint:
 
         assert data["count"] == 1
         assert len(data["achievements"]) == 1
-        assert data["achievements"][0]["id"] == "streak_3"
+        assert data["achievements"][0]["id"] == "streak_first_flame"
 
 
 @pytest.mark.integration
@@ -252,15 +252,16 @@ class TestMarkNotifiedEndpoint:
         db_session: AsyncSession,
     ):
         """Should mark achievements as notified."""
-        # Create an unnotified achievement
+        # Create an unnotified achievement using a real achievement ID
         from src.db.models import Achievement, AchievementCategory
 
+        # Use streak_warming_up which is a real 7-day streak achievement
         achievement = Achievement(
-            id="streak_7",
-            name="Week Warrior",
-            description="Maintain a 7-day study streak",
+            id="streak_warming_up",
+            name="Warming Up",
+            description="Maintain a 7-day streak",
             category=AchievementCategory.STREAK,
-            icon="medal",
+            icon="fire_double",
             threshold=7,
             xp_reward=100,
             sort_order=2,
@@ -268,10 +269,10 @@ class TestMarkNotifiedEndpoint:
         db_session.add(achievement)
         await db_session.flush()
 
-        await UserAchievementFactory.create_async(
-            db_session,
+        await UserAchievementFactory.create(
+            session=db_session,
             user_id=test_user.id,
-            achievement_id="streak_7",
+            achievement_id="streak_warming_up",
             notified=False,
         )
         await db_session.commit()
@@ -280,7 +281,7 @@ class TestMarkNotifiedEndpoint:
         response = await client.post(
             "/api/v1/xp/achievements/notified",
             headers=auth_headers,
-            json={"achievement_ids": ["streak_7"]},
+            json={"achievement_ids": ["streak_warming_up"]},
         )
         assert response.status_code == 200
         data = response.json()
