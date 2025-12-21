@@ -2,6 +2,7 @@ import React from 'react';
 
 import { Lock, Star } from 'lucide-react';
 
+import { AchievementIcon } from '@/components/achievements/AchievementIcon';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -58,14 +59,14 @@ export const AchievementCard: React.FC<AchievementCardProps> = ({ achievement, c
             {/* Achievement Icon */}
             <div
               className={cn(
-                'flex h-12 w-12 items-center justify-center rounded-lg text-2xl',
+                'flex h-12 w-12 items-center justify-center rounded-lg',
                 unlocked
-                  ? 'bg-purple-100 dark:bg-purple-800/50'
-                  : 'bg-gray-100 grayscale dark:bg-gray-800'
+                  ? 'bg-purple-100 text-purple-600 dark:bg-purple-800/50 dark:text-purple-300'
+                  : 'bg-gray-100 text-gray-500 grayscale dark:bg-gray-800 dark:text-gray-400'
               )}
               aria-hidden="true"
             >
-              {icon}
+              <AchievementIcon icon={icon} size={24} />
             </div>
 
             {/* Name and Description */}
