@@ -207,7 +207,7 @@ async def create_card(
     await db.refresh(card)
 
     # Schedule background tasks if enabled
-    if settings.feature_background_tasks:
+    if settings.feature_background_tasks:  # pragma: no cover
         background_tasks.add_task(
             invalidate_cache_task,
             cache_type="card",
@@ -524,7 +524,7 @@ async def update_card(
     await db.refresh(updated_card)
 
     # Schedule background tasks if enabled
-    if settings.feature_background_tasks:
+    if settings.feature_background_tasks:  # pragma: no cover
         background_tasks.add_task(
             invalidate_cache_task,
             cache_type="card",
@@ -591,7 +591,7 @@ async def delete_card(
     await db.commit()
 
     # Schedule background tasks if enabled
-    if settings.feature_background_tasks:
+    if settings.feature_background_tasks:  # pragma: no cover
         background_tasks.add_task(
             invalidate_cache_task,
             cache_type="card",

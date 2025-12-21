@@ -29,6 +29,7 @@ from src.api.v1.feedback import router as feedback_router
 from src.api.v1.progress import router as progress_router
 from src.api.v1.reviews import router as review_router
 from src.api.v1.study import router as study_router
+from src.api.v1.xp import router as xp_router
 
 # Create the main v1 router
 v1_router = APIRouter()
@@ -94,6 +95,15 @@ v1_router.include_router(
     feedback_router,
     prefix="/feedback",
     tags=["Feedback"],
+)
+
+# =============================================================================
+# XP & Achievements Routes
+# =============================================================================
+v1_router.include_router(
+    xp_router,
+    prefix="/xp",
+    tags=["XP & Achievements"],
 )
 
 # =============================================================================

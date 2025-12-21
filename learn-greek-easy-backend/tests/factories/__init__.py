@@ -16,6 +16,12 @@ Progress Factories:
     - CardStatisticsFactory: SM-2 algorithm statistics with state traits
     - ReviewFactory: Individual review records
 
+XP & Achievements Factories:
+    - UserXPFactory: User XP and level tracking
+    - XPTransactionFactory: XP transaction history
+    - AchievementFactory: Achievement definitions
+    - UserAchievementFactory: User's unlocked achievements
+
 Custom Providers:
     - GreekProvider: Faker provider for Greek vocabulary
 
@@ -65,6 +71,16 @@ from tests.factories.progress import (
 # Custom Faker providers
 from tests.factories.providers import GreekProvider
 
+# XP & Achievements factories
+from tests.factories.xp_achievements import (
+    XP_PER_LEVEL,
+    XP_REASONS,
+    AchievementFactory,
+    UserAchievementFactory,
+    UserXPFactory,
+    XPTransactionFactory,
+)
+
 __all__ = [
     # Base
     "BaseFactory",
@@ -85,10 +101,17 @@ __all__ = [
     "UserDeckProgressFactory",
     "CardStatisticsFactory",
     "ReviewFactory",
+    # XP & Achievements
+    "UserXPFactory",
+    "XPTransactionFactory",
+    "AchievementFactory",
+    "UserAchievementFactory",
     # Constants
     "SM2_DEFAULT_EASINESS_FACTOR",
     "SM2_MIN_EASINESS_FACTOR",
     "SM2_INTERVALS",
+    "XP_PER_LEVEL",
+    "XP_REASONS",
     # Providers
     "GreekProvider",
 ]

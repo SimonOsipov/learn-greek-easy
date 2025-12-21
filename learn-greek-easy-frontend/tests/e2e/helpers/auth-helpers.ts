@@ -60,6 +60,24 @@ export const SEED_USERS = {
     password: 'TestPassword123!',
     name: 'E2E Admin',
   } as TestUser,
+  // XP Boundary user - 99 XP, Level 1 (1 XP from level up)
+  XP_BOUNDARY: {
+    email: 'e2e_xp_boundary@test.com',
+    password: 'TestPassword123!',
+    name: 'E2E XP Boundary',
+  } as TestUser,
+  // XP Mid user - 4100 XP, Level 7, with 5 achievements
+  XP_MID: {
+    email: 'e2e_xp_mid@test.com',
+    password: 'TestPassword123!',
+    name: 'E2E XP Mid',
+  } as TestUser,
+  // XP Max user - 100000 XP, Level 15, with all achievements
+  XP_MAX: {
+    email: 'e2e_xp_max@test.com',
+    password: 'TestPassword123!',
+    name: 'E2E XP Max',
+  } as TestUser,
 };
 
 /**

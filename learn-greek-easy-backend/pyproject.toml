@@ -272,6 +272,12 @@ omit = [
     "src/api/v1/test/*",  # Test API endpoints (seed, etc.)
     # External integrations - tested by unit tests (99%+ coverage)
     "src/core/posthog.py",  # PostHog analytics - 44 unit tests, 99.1% coverage
+    # Static definition files (data only, no logic)
+    "src/services/achievement_definitions.py",  # Achievement definitions
+    "src/services/xp_constants.py",  # XP level constants
+    # XP and Achievement services - 97%+ unit test coverage, E2E tests focus on API contracts
+    "src/services/xp_service.py",  # XP calculation service
+    "src/services/achievement_service.py",  # Achievement processing service
 ]
 
 

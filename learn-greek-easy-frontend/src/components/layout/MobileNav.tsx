@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { Home, Layers, BarChart3, User, MessageSquare } from 'lucide-react';
+import { Home, Layers, BarChart3, User, Trophy } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation } from 'react-router-dom';
 
@@ -20,8 +20,8 @@ interface NavItem {
 const navItems: NavItem[] = [
   { id: 'home', labelKey: 'nav.home', icon: Home, href: '/' },
   { id: 'decks', labelKey: 'nav.decks', icon: Layers, href: '/decks' },
+  { id: 'achievements', labelKey: 'nav.achievements', icon: Trophy, href: '/achievements' },
   { id: 'stats', labelKey: 'nav.stats', icon: BarChart3, href: '/statistics' },
-  { id: 'feedback', labelKey: 'nav.feedback', icon: MessageSquare, href: '/feedback' },
   { id: 'profile', labelKey: 'nav.profile', icon: User, href: '/profile' },
 ];
 
