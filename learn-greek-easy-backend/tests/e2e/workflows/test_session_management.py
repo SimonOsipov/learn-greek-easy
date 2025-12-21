@@ -18,7 +18,7 @@ Run with:
 import pytest
 from httpx import AsyncClient
 
-from tests.e2e.conftest import E2ETestCase
+from tests.e2e.conftest import E2ETestCase, UserSession
 
 
 class TestSessionManagement(E2ETestCase):
@@ -450,3 +450,157 @@ class TestAuthenticationFlow(E2ETestCase):
         me_resp = await client.get("/api/v1/auth/me")
 
         assert me_resp.status_code == 401
+
+
+class TestProfileUpdate(E2ETestCase):
+    """E2E tests for profile update functionality (PATCH /api/v1/auth/me)."""
+
+    @pytest.mark.asyncio
+    @pytest.mark.e2e
+    async def test_update_full_name(
+        self, client: AsyncClient, fresh_user_session: "UserSession"
+    ) -> None:
+        """Test updating user's full name."""
+        new_name = "Updated Full Name"
+
+        response = await client.patch(
+            "/api/v1/auth/me",
+            json={"full_name": new_name},
+            headers=fresh_user_session.headers,
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["full_name"] == new_name
+
+        # Verify change persisted
+        me_resp = await client.get("/api/v1/auth/me", headers=fresh_user_session.headers)
+        assert me_resp.json()["full_name"] == new_name
+
+    @pytest.mark.asyncio
+    @pytest.mark.e2e
+    async def test_update_daily_goal(
+        self, client: AsyncClient, fresh_user_session: "UserSession"
+    ) -> None:
+        """Test updating daily goal setting."""
+        new_goal = 50
+
+        response = await client.patch(
+            "/api/v1/auth/me",
+            json={"daily_goal": new_goal},
+            headers=fresh_user_session.headers,
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["settings"]["daily_goal"] == new_goal
+
+    @pytest.mark.asyncio
+    @pytest.mark.e2e
+    async def test_update_email_notifications(
+        self, client: AsyncClient, fresh_user_session: "UserSession"
+    ) -> None:
+        """Test toggling email notifications setting."""
+        # First get current value
+        me_resp = await client.get("/api/v1/auth/me", headers=fresh_user_session.headers)
+        current_value = me_resp.json()["settings"]["email_notifications"]
+
+        # Toggle it
+        new_value = not current_value
+        response = await client.patch(
+            "/api/v1/auth/me",
+            json={"email_notifications": new_value},
+            headers=fresh_user_session.headers,
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["settings"]["email_notifications"] == new_value
+
+    @pytest.mark.asyncio
+    @pytest.mark.e2e
+    async def test_update_preferred_language(
+        self, client: AsyncClient, fresh_user_session: "UserSession"
+    ) -> None:
+        """Test updating preferred language setting."""
+        new_language = "el"  # Greek
+
+        response = await client.patch(
+            "/api/v1/auth/me",
+            json={"preferred_language": new_language},
+            headers=fresh_user_session.headers,
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["settings"]["preferred_language"] == new_language
+
+    @pytest.mark.asyncio
+    @pytest.mark.e2e
+    async def test_update_multiple_fields_at_once(
+        self, client: AsyncClient, fresh_user_session: "UserSession"
+    ) -> None:
+        """Test updating multiple fields in a single request."""
+        updates = {
+            "full_name": "Multi-Update User",
+            "daily_goal": 75,
+            "email_notifications": False,
+            "preferred_language": "el",  # Only "en" and "el" are supported
+        }
+
+        response = await client.patch(
+            "/api/v1/auth/me",
+            json=updates,
+            headers=fresh_user_session.headers,
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["full_name"] == updates["full_name"]
+        assert data["settings"]["daily_goal"] == updates["daily_goal"]
+        assert data["settings"]["email_notifications"] == updates["email_notifications"]
+        assert data["settings"]["preferred_language"] == updates["preferred_language"]
+
+    @pytest.mark.asyncio
+    @pytest.mark.e2e
+    async def test_update_profile_requires_authentication(self, client: AsyncClient) -> None:
+        """Test that PATCH /api/v1/auth/me requires authentication."""
+        response = await client.patch(
+            "/api/v1/auth/me",
+            json={"full_name": "Unauthorized Update"},
+        )
+
+        assert response.status_code == 401
+
+    @pytest.mark.asyncio
+    @pytest.mark.e2e
+    async def test_update_profile_response_structure(
+        self, client: AsyncClient, fresh_user_session: "UserSession"
+    ) -> None:
+        """Test that profile update response has correct structure."""
+        response = await client.patch(
+            "/api/v1/auth/me",
+            json={"full_name": "Structure Test User"},
+            headers=fresh_user_session.headers,
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+
+        # Verify user profile fields
+        assert "id" in data
+        assert "email" in data
+        assert "full_name" in data
+        assert "is_active" in data
+        assert "is_superuser" in data
+        assert "created_at" in data
+        assert "updated_at" in data
+
+        # Verify settings are included
+        assert "settings" in data
+        settings = data["settings"]
+        assert "id" in settings
+        assert "user_id" in settings
+        assert "daily_goal" in settings
+        assert "email_notifications" in settings
+        assert "preferred_language" in settings

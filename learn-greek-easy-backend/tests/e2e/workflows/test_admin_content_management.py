@@ -7,13 +7,17 @@ learning content (decks and cards), including:
 - Content propagation to users
 - Visibility control via activation/deactivation
 - Permission boundaries
+- Card 404 error handling
 
 Test Classes:
 - TestAdminDeckManagement: Deck CRUD operations by admin
 - TestAdminCardManagement: Card bulk operations
 - TestContentPropagation: Content visibility to regular users
 - TestPermissionBoundaries: Permission enforcement tests
+- TestCardNotFoundErrors: Card 404 error handling
 """
+
+from uuid import uuid4
 
 import pytest
 from httpx import AsyncClient
@@ -843,3 +847,62 @@ class TestAdminCardDeletion(E2ETestCase):
         remaining_card = list_after.json()["cards"][0]
         assert remaining_card["id"] == card_ids[2]
         assert remaining_card["front_text"] == "card_2"
+
+
+@pytest.mark.e2e
+class TestCardNotFoundErrors(E2ETestCase):
+    """E2E tests for card 404 error handling."""
+
+    @pytest.mark.asyncio
+    async def test_get_nonexistent_card_returns_404(
+        self,
+        client: AsyncClient,
+    ):
+        """Test that GET with non-existent card ID returns 404."""
+        fake_card_id = str(uuid4())
+
+        response = await client.get(f"/api/v1/cards/{fake_card_id}")
+
+        assert response.status_code == 404
+        data = response.json()
+        assert data["success"] is False
+        assert data["error"]["code"] == "NOT_FOUND"
+
+    @pytest.mark.asyncio
+    async def test_update_nonexistent_card_returns_404(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+    ):
+        """Test that PATCH with non-existent card ID returns 404."""
+        fake_card_id = str(uuid4())
+
+        response = await client.patch(
+            f"/api/v1/cards/{fake_card_id}",
+            json={"front_text": "Updated text"},
+            headers=superuser_auth_headers,
+        )
+
+        assert response.status_code == 404
+        data = response.json()
+        assert data["success"] is False
+        assert data["error"]["code"] == "NOT_FOUND"
+
+    @pytest.mark.asyncio
+    async def test_delete_nonexistent_card_returns_404(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+    ):
+        """Test that DELETE with non-existent card ID returns 404."""
+        fake_card_id = str(uuid4())
+
+        response = await client.delete(
+            f"/api/v1/cards/{fake_card_id}",
+            headers=superuser_auth_headers,
+        )
+
+        assert response.status_code == 404
+        data = response.json()
+        assert data["success"] is False
+        assert data["error"]["code"] == "NOT_FOUND"
