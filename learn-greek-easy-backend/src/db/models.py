@@ -4,6 +4,8 @@ This module contains all SQLAlchemy models for the application:
 - User management (User, UserSettings, RefreshToken)
 - Content (Deck, Card)
 - Progress tracking (UserDeckProgress, CardStatistics, Review)
+- Feedback (Feedback, FeedbackVote)
+- XP and Achievements (UserXP, XPTransaction, Achievement, UserAchievement)
 
 All models use:
 - UUID primary keys with server-side generation
@@ -102,6 +104,17 @@ class VoteType(str, enum.Enum):
     DOWN = "down"
 
 
+class AchievementCategory(str, enum.Enum):
+    """Category of achievement."""
+
+    STREAK = "streak"
+    LEARNING = "learning"
+    SESSION = "session"
+    ACCURACY = "accuracy"
+    CEFR = "cefr"
+    SPECIAL = "special"
+
+
 # ============================================================================
 # User Models
 # ============================================================================
@@ -197,6 +210,20 @@ class User(Base, TimestampMixin):
         cascade="all, delete-orphan",
     )
     feedback_votes: Mapped[List["FeedbackVote"]] = relationship(
+        lazy="selectin",
+        cascade="all, delete-orphan",
+    )
+    xp: Mapped["UserXP"] = relationship(
+        back_populates="user",
+        lazy="selectin",
+        cascade="all, delete-orphan",
+        uselist=False,  # One-to-one relationship
+    )
+    achievements: Mapped[List["UserAchievement"]] = relationship(
+        lazy="selectin",
+        cascade="all, delete-orphan",
+    )
+    xp_transactions: Mapped[List["XPTransaction"]] = relationship(
         lazy="selectin",
         cascade="all, delete-orphan",
     )
@@ -710,3 +737,218 @@ class FeedbackVote(Base, TimestampMixin):
 
     def __repr__(self) -> str:
         return f"<FeedbackVote(user_id={self.user_id}, feedback_id={self.feedback_id}, type={self.vote_type})>"
+
+
+# ============================================================================
+# XP & Achievement Models
+# ============================================================================
+
+
+class UserXP(Base, TimestampMixin):
+    """User XP and level tracking.
+
+    Stores total XP, current level, and tracks XP history.
+    """
+
+    __tablename__ = "user_xp"
+
+    # Primary key
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True,
+        server_default=func.uuid_generate_v4(),
+    )
+
+    # Foreign key
+    user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        unique=True,  # One-to-one relationship
+        nullable=False,
+        index=True,
+    )
+
+    # XP data
+    total_xp: Mapped[int] = mapped_column(
+        Integer,
+        default=0,
+        nullable=False,
+    )
+    current_level: Mapped[int] = mapped_column(
+        Integer,
+        default=1,
+        nullable=False,
+    )
+
+    # Track daily first review bonus
+    last_daily_bonus_date: Mapped[date | None] = mapped_column(
+        Date,
+        nullable=True,
+    )
+
+    # Relationship
+    user: Mapped["User"] = relationship(
+        back_populates="xp",
+        lazy="selectin",
+    )
+
+    def __repr__(self) -> str:
+        return f"<UserXP(user_id={self.user_id}, total_xp={self.total_xp}, level={self.current_level})>"
+
+
+class XPTransaction(Base, TimestampMixin):
+    """Record of XP earned for analytics and debugging.
+
+    Each XP earning event creates a transaction record.
+    """
+
+    __tablename__ = "xp_transactions"
+
+    # Primary key
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True,
+        server_default=func.uuid_generate_v4(),
+    )
+
+    # Foreign key
+    user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
+    # Transaction data
+    amount: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+    )
+    reason: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+    )  # e.g., "correct_answer", "daily_goal", "streak_bonus"
+    source_id: Mapped[UUID | None] = mapped_column(
+        nullable=True,
+    )  # Optional reference to review/card/etc
+
+    # Timestamp
+    earned_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        index=True,
+    )
+
+    # Relationship
+    user: Mapped["User"] = relationship(
+        lazy="selectin",
+        overlaps="xp_transactions",
+    )
+
+    def __repr__(self) -> str:
+        return (
+            f"<XPTransaction(user_id={self.user_id}, amount={self.amount}, reason={self.reason})>"
+        )
+
+
+class Achievement(Base, TimestampMixin):
+    """Achievement definition (static data).
+
+    Stores achievement metadata. Can be seeded or managed by admin.
+    """
+
+    __tablename__ = "achievements"
+
+    # Primary key - human-readable ID
+    id: Mapped[str] = mapped_column(
+        String(50),
+        primary_key=True,
+    )  # e.g., "streak_3", "learning_100"
+
+    # Achievement info
+    name: Mapped[str] = mapped_column(
+        String(100),
+        nullable=False,
+    )
+    description: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+    )
+    category: Mapped[AchievementCategory] = mapped_column(
+        nullable=False,
+        index=True,
+    )
+    icon: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+    )  # Emoji or icon identifier
+
+    # Requirements
+    threshold: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+    )
+    xp_reward: Mapped[int] = mapped_column(
+        Integer,
+        default=0,
+        nullable=False,
+    )
+
+    # Display order
+    sort_order: Mapped[int] = mapped_column(
+        Integer,
+        default=0,
+        nullable=False,
+    )
+
+    def __repr__(self) -> str:
+        return f"<Achievement(id={self.id}, name={self.name})>"
+
+
+class UserAchievement(Base, TimestampMixin):
+    """User's unlocked achievements.
+
+    Links users to achievements they've earned.
+    """
+
+    __tablename__ = "user_achievements"
+    __table_args__ = (UniqueConstraint("user_id", "achievement_id", name="uq_user_achievement"),)
+
+    # Primary key
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True,
+        server_default=func.uuid_generate_v4(),
+    )
+
+    # Foreign keys
+    user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    achievement_id: Mapped[str] = mapped_column(
+        ForeignKey("achievements.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
+    # Unlock data
+    unlocked_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+    notified: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        nullable=False,
+    )  # Track if user has been notified
+
+    # Relationships
+    achievement: Mapped["Achievement"] = relationship(
+        lazy="selectin",
+    )
+    user: Mapped["User"] = relationship(
+        lazy="selectin",
+        overlaps="achievements",
+    )
+
+    def __repr__(self) -> str:
+        return f"<UserAchievement(user_id={self.user_id}, achievement_id={self.achievement_id})>"

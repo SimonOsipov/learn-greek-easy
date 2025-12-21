@@ -16,6 +16,8 @@ from src.db.base import Base
 # CRITICAL: Import all models for Alembic to detect them
 # These imports are required for Alembic autogenerate to work properly
 from src.db.models import (  # noqa: F401
+    Achievement,
+    AchievementCategory,
     Card,
     CardDifficulty,
     CardStatistics,
@@ -30,9 +32,12 @@ from src.db.models import (  # noqa: F401
     Review,
     ReviewRating,
     User,
+    UserAchievement,
     UserDeckProgress,
     UserSettings,
+    UserXP,
     VoteType,
+    XPTransaction,
 )
 
 # Alembic Config object
