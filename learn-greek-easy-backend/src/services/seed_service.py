@@ -19,6 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.config import settings
 from src.core.security import hash_password
 from src.db.models import (
+    Achievement,
     Card,
     CardDifficulty,
     CardStatistics,
@@ -31,10 +32,14 @@ from src.db.models import (
     FeedbackVote,
     Review,
     User,
+    UserAchievement,
     UserDeckProgress,
     UserSettings,
+    UserXP,
     VoteType,
 )
+from src.services.achievement_definitions import ACHIEVEMENTS as ACHIEVEMENT_DEFS
+from src.services.xp_constants import get_level_from_xp
 
 
 class FeedbackSeedData(TypedDict):
@@ -61,6 +66,12 @@ class SeedService:
 
     # FK-safe truncation order (children first, then parents)
     TRUNCATION_ORDER = [
+        # XP & Achievement tables (children first)
+        "xp_transactions",
+        "user_achievements",
+        "user_xp",
+        "achievements",
+        # Existing tables
         "reviews",
         "card_statistics",
         "user_deck_progress",
@@ -724,6 +735,104 @@ class SeedService:
         }
 
     # =====================
+    # XP & Achievement Seeding
+    # =====================
+
+    async def seed_achievements(self) -> dict[str, Any]:
+        """Seed achievement definitions from code definitions.
+
+        Creates Achievement records in the database from the
+        ACHIEVEMENTS list in achievement_definitions.py.
+
+        Returns:
+            dict with 'achievements_created' count
+
+        Raises:
+            RuntimeError: If seeding not allowed
+        """
+        self._check_can_seed()
+
+        created = []
+        for i, ach_def in enumerate(ACHIEVEMENT_DEFS):
+            achievement = Achievement(
+                id=ach_def.id,
+                name=ach_def.name,
+                description=ach_def.description,
+                category=ach_def.category,
+                icon=ach_def.icon,
+                threshold=ach_def.threshold,
+                xp_reward=ach_def.xp_reward,
+                sort_order=i,
+            )
+            self.db.add(achievement)
+            created.append(ach_def.id)
+
+        await self.db.flush()
+
+        return {
+            "success": True,
+            "achievements_created": len(created),
+        }
+
+    async def seed_user_xp(
+        self,
+        user_id: UUID,
+        total_xp: int,
+        achievement_ids: list[str] | None = None,
+    ) -> dict[str, Any]:
+        """Seed XP and achievements for a user.
+
+        Creates UserXP record with specified XP and optionally
+        unlocks achievements for the user.
+
+        Args:
+            user_id: User to seed XP for
+            total_xp: Total XP to assign
+            achievement_ids: List of achievement IDs to unlock
+
+        Returns:
+            dict with XP and achievement info
+
+        Raises:
+            RuntimeError: If seeding not allowed
+        """
+        self._check_can_seed()
+
+        # Calculate level from XP
+        level = get_level_from_xp(total_xp)
+
+        # Create UserXP record
+        user_xp = UserXP(
+            user_id=user_id,
+            total_xp=total_xp,
+            current_level=level,
+        )
+        self.db.add(user_xp)
+
+        # Create user achievements if provided
+        achievements_unlocked = 0
+        if achievement_ids:
+            now = datetime.now(timezone.utc)
+            for ach_id in achievement_ids:
+                user_ach = UserAchievement(
+                    user_id=user_id,
+                    achievement_id=ach_id,
+                    unlocked_at=now,
+                    notified=True,  # Pre-notified for E2E tests
+                )
+                self.db.add(user_ach)
+                achievements_unlocked += 1
+
+        await self.db.flush()
+
+        return {
+            "success": True,
+            "total_xp": total_xp,
+            "level": level,
+            "achievements_unlocked": achievements_unlocked,
+        }
+
+    # =====================
     # Full Seed Orchestration
     # =====================
 
@@ -737,6 +846,8 @@ class SeedService:
         4. Create progress data for learner user
         5. Create review history for learner user
         6. Create feedback and votes
+        7. Create achievements and XP data
+        8. Create XP-specific test users
 
         Returns:
             dict with complete seeding summary
@@ -796,6 +907,101 @@ class SeedService:
         # Step 6: Create feedback and votes
         feedback_result = await self.seed_feedback(user_ids)
 
+        # Step 7: Seed achievement definitions
+        achievements_result = await self.seed_achievements()
+
+        # Step 8: Create XP-specific test users for E2E testing
+        now = datetime.now(timezone.utc)
+        xp_users_result: dict[str, Any] = {"success": True, "users": []}
+
+        # XP Boundary User - 99 XP (1 XP away from level 2)
+        xp_boundary_user = User(
+            email="e2e_xp_boundary@test.com",
+            full_name="E2E XP Boundary",
+            password_hash=self.password_hash,
+            is_superuser=False,
+            is_active=True,
+            email_verified_at=now,
+        )
+        self.db.add(xp_boundary_user)
+        await self.db.flush()
+        xp_boundary_settings = UserSettings(
+            user_id=xp_boundary_user.id,
+            daily_goal=20,
+            email_notifications=True,
+        )
+        self.db.add(xp_boundary_settings)
+        await self.seed_user_xp(xp_boundary_user.id, 99, [])
+        xp_users_result["users"].append(
+            {
+                "email": "e2e_xp_boundary@test.com",
+                "total_xp": 99,
+                "level": 1,
+            }
+        )
+
+        # XP Mid User - 4100 XP (Level 7) with some achievements
+        xp_mid_user = User(
+            email="e2e_xp_mid@test.com",
+            full_name="E2E XP Mid",
+            password_hash=self.password_hash,
+            is_superuser=False,
+            is_active=True,
+            email_verified_at=now,
+        )
+        self.db.add(xp_mid_user)
+        await self.db.flush()
+        xp_mid_settings = UserSettings(
+            user_id=xp_mid_user.id,
+            daily_goal=20,
+            email_notifications=True,
+        )
+        self.db.add(xp_mid_settings)
+        mid_achievements = [
+            "streak_first_flame",
+            "streak_warming_up",
+            "learning_first_word",
+            "learning_vocabulary_builder",
+            "session_quick_study",
+        ]
+        await self.seed_user_xp(xp_mid_user.id, 4100, mid_achievements)
+        xp_users_result["users"].append(
+            {
+                "email": "e2e_xp_mid@test.com",
+                "total_xp": 4100,
+                "level": 7,
+                "achievements": mid_achievements,
+            }
+        )
+
+        # XP Max User - 100000 XP (Level 15) with all achievements
+        xp_max_user = User(
+            email="e2e_xp_max@test.com",
+            full_name="E2E XP Max",
+            password_hash=self.password_hash,
+            is_superuser=False,
+            is_active=True,
+            email_verified_at=now,
+        )
+        self.db.add(xp_max_user)
+        await self.db.flush()
+        xp_max_settings = UserSettings(
+            user_id=xp_max_user.id,
+            daily_goal=20,
+            email_notifications=True,
+        )
+        self.db.add(xp_max_settings)
+        all_achievement_ids = [a.id for a in ACHIEVEMENT_DEFS]
+        await self.seed_user_xp(xp_max_user.id, 100000, all_achievement_ids)
+        xp_users_result["users"].append(
+            {
+                "email": "e2e_xp_max@test.com",
+                "total_xp": 100000,
+                "level": 15,
+                "achievements": all_achievement_ids,
+            }
+        )
+
         # Commit all changes
         await self.db.commit()
 
@@ -807,4 +1013,6 @@ class SeedService:
             "statistics": stats_result,
             "reviews": reviews_result,
             "feedback": feedback_result,
+            "achievements": achievements_result,
+            "xp_users": xp_users_result,
         }
