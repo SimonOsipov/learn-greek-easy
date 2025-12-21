@@ -31,7 +31,7 @@ def upgrade() -> None:
         "SPECIAL",
         name="achievementcategory",
     )
-    achievementcategory_enum.create(op.get_bind())
+    achievementcategory_enum.create(op.get_bind(), checkfirst=True)
 
     # Create user_xp table
     op.create_table(
