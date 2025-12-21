@@ -9,6 +9,7 @@ Create Date: 2025-12-21 10:16:00.000000
 from typing import Sequence, Union
 
 import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql
 
 from alembic import op
 
@@ -22,7 +23,8 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     """Add XP and achievements tables."""
     # Create achievementcategory enum type
-    achievementcategory_enum = sa.Enum(
+    # Use postgresql.ENUM with create_type=False to avoid duplication issues
+    achievementcategory_enum = postgresql.ENUM(
         "STREAK",
         "LEARNING",
         "SESSION",
@@ -30,6 +32,7 @@ def upgrade() -> None:
         "CEFR",
         "SPECIAL",
         name="achievementcategory",
+        create_type=False,  # We create it manually below
     )
     achievementcategory_enum.create(op.get_bind(), checkfirst=True)
 
@@ -189,4 +192,4 @@ def downgrade() -> None:
     op.drop_table("user_xp")
 
     # Drop enum type
-    sa.Enum(name="achievementcategory").drop(op.get_bind())
+    postgresql.ENUM(name="achievementcategory").drop(op.get_bind(), checkfirst=True)
