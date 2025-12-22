@@ -71,6 +71,8 @@ class SeedService:
         "user_achievements",
         "user_xp",
         "achievements",
+        # Notification tables
+        "notifications",
         # Existing tables
         "reviews",
         "card_statistics",

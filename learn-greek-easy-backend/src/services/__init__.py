@@ -7,6 +7,7 @@ business rules validation, and domain logic.
 
 from src.services.achievement_service import AchievementService
 from src.services.auth_service import AuthService
+from src.services.notification_service import NotificationService
 from src.services.progress_service import ProgressService
 from src.services.seed_service import SeedService
 from src.services.sm2_service import SM2Service
@@ -15,6 +16,7 @@ from src.services.xp_service import XPService
 __all__ = [
     "AchievementService",
     "AuthService",
+    "NotificationService",
     "ProgressService",
     "SeedService",
     "SM2Service",
