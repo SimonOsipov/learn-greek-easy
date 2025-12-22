@@ -4,19 +4,22 @@ This module provides HTTP endpoints for flashcard review operations,
 allowing users to submit card reviews and receive SM-2 algorithm results.
 """
 
+import logging
 from datetime import date
 from typing import Optional
 from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Query
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config import settings
 from src.core.dependencies import get_current_user
 from src.core.exceptions import CardNotFoundException
 from src.core.posthog import capture_event
+from src.core.redis import get_redis
 from src.db.dependencies import get_db
-from src.db.models import User
+from src.db.models import User, UserSettings
 from src.repositories.card import CardRepository
 from src.repositories.review import ReviewRepository
 from src.schemas.review import (
@@ -28,6 +31,8 @@ from src.schemas.review import (
 from src.schemas.sm2 import SM2BulkReviewResult, SM2ReviewResult
 from src.services.sm2_service import SM2Service
 from src.tasks.background import check_achievements_task, invalidate_cache_task, log_analytics_task
+
+logger = logging.getLogger(__name__)
 
 # Streak milestones to track
 STREAK_MILESTONES = [3, 7, 14, 30, 60, 90, 180, 365]
@@ -63,6 +68,75 @@ def _check_streak_milestone(
                 user_email=user_email,
             )
             break  # Only track highest milestone crossed
+
+
+async def _check_daily_goal_notification(
+    db: AsyncSession,
+    user_id: UUID,
+    reviews_before: int,
+) -> None:
+    """Check if daily goal was just completed and create notification.
+
+    Uses Redis to prevent duplicate notifications on same day.
+    Only triggers when user crosses the threshold (not on subsequent reviews).
+
+    Args:
+        db: Database session for notification creation
+        user_id: User's UUID
+        reviews_before: Number of reviews BEFORE the current review was processed
+    """
+    try:
+        # Get user's daily goal setting
+        result = await db.execute(select(UserSettings).where(UserSettings.user_id == user_id))
+        user_settings = result.scalar_one_or_none()
+        daily_goal = user_settings.daily_goal if user_settings else 20  # Default
+
+        # Check if we just crossed the threshold
+        # reviews_before < daily_goal AND reviews_after >= daily_goal
+        reviews_after = reviews_before + 1
+
+        if reviews_before >= daily_goal:
+            # Already completed goal before this review
+            return
+
+        if reviews_after < daily_goal:
+            # Still haven't reached goal
+            return
+
+        # We just crossed the threshold! Check Redis for duplicate prevention
+        redis = get_redis()
+        if redis:
+            cache_key = f"daily_goal_notified:{user_id}:{date.today().isoformat()}"
+
+            # Use SETNX (set if not exists) for atomic check-and-set
+            was_set = await redis.setnx(cache_key, "1")
+            if not was_set:
+                # Already notified today
+                return
+
+            # Set expiry (24 hours to be safe, will auto-cleanup)
+            await redis.expire(cache_key, 86400)
+
+        # Create notification (late import to avoid circular deps)
+        from src.services.notification_service import NotificationService
+
+        notification_service = NotificationService(db)
+        await notification_service.notify_daily_goal_complete(
+            user_id=user_id,
+            reviews_completed=reviews_after,
+        )
+
+        logger.info(
+            "Daily goal notification created",
+            extra={"user_id": str(user_id), "reviews": reviews_after},
+        )
+
+    except Exception as e:
+        logger.warning(
+            "Failed to check/create daily goal notification",
+            extra={"user_id": str(user_id), "error": str(e)},
+        )
+        # Don't fail the review if notification fails
 
 
 router = APIRouter(
@@ -259,6 +333,9 @@ async def submit_review(
     review_repo = ReviewRepository(db)
     previous_streak = await review_repo.get_streak(current_user.id)
 
+    # Get reviews count BEFORE processing (for daily goal detection)
+    reviews_before = await review_repo.count_reviews_today(current_user.id)
+
     # Process the review using SM2Service
     service = SM2Service(db)
     result = await service.process_review(
@@ -280,6 +357,13 @@ async def submit_review(
             new_streak=new_streak,
             previous_streak=previous_streak,
         )
+
+    # Check for daily goal completion notification
+    await _check_daily_goal_notification(
+        db=db,
+        user_id=current_user.id,
+        reviews_before=reviews_before,
+    )
 
     # Schedule background tasks if enabled
     if settings.feature_background_tasks:

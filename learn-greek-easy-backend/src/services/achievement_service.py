@@ -202,6 +202,29 @@ class AchievementService:
 
         await self.db.flush()
 
+        # Create achievement notification (late import to avoid circular deps)
+        try:
+            from src.services.notification_service import NotificationService
+
+            notification_service = NotificationService(self.db)
+            await notification_service.notify_achievement_unlocked(
+                user_id=user_id,
+                achievement_id=ach_def.id,
+                achievement_name=ach_def.name,
+                icon=ach_def.icon,
+                xp_reward=ach_def.xp_reward,
+            )
+        except Exception as e:
+            logger.warning(
+                "Failed to create achievement notification",
+                extra={
+                    "user_id": str(user_id),
+                    "achievement_id": ach_def.id,
+                    "error": str(e),
+                },
+            )
+            # Don't fail achievement unlock if notification fails
+
         logger.info(
             "Achievement unlocked",
             extra={

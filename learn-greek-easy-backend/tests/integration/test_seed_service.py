@@ -63,8 +63,9 @@ class TestSeedServiceIntegration:
         assert result["success"] is True
 
         # Verify users were created
+        # seed_users creates 4 base users + seed_all adds 3 XP test users = 7 total
         user_count = await db_session.scalar(select(func.count(User.id)))
-        assert user_count == 4
+        assert user_count == 7
 
         # Verify decks were created
         deck_count = await db_session.scalar(select(func.count(Deck.id)))
@@ -74,9 +75,9 @@ class TestSeedServiceIntegration:
         card_count = await db_session.scalar(select(func.count(Card.id)))
         assert card_count == 60
 
-        # Verify user settings were created
+        # Verify user settings were created (7 users = 7 settings)
         settings_count = await db_session.scalar(select(func.count(UserSettings.id)))
-        assert settings_count == 4
+        assert settings_count == 7
 
     @pytest.mark.asyncio
     async def test_seed_creates_correct_users(self, db_session: AsyncSession, enable_seeding):
@@ -202,9 +203,10 @@ class TestSeedServiceTruncation:
         await db_session.commit()
 
         assert result["success"] is True
-        # 10 tables: reviews, card_statistics, user_deck_progress, feedback_votes,
+        # 15 tables: xp_transactions, user_achievements, user_xp, achievements,
+        # notifications, reviews, card_statistics, user_deck_progress, feedback_votes,
         # feedback, refresh_tokens, user_settings, cards, users, decks
-        assert len(result["truncated_tables"]) == 10
+        assert len(result["truncated_tables"]) == 15
 
 
 # ============================================================================
