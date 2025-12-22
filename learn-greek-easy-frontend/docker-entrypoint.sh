@@ -9,14 +9,11 @@ echo "=== Frontend Container Starting ==="
 echo "PORT: $PORT"
 echo "BACKEND_URL: $BACKEND_URL"
 
-# Substitute environment variables in nginx config
-envsubst '${PORT} ${BACKEND_URL}' < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf
+# Validate Caddyfile syntax
+echo "Validating Caddyfile configuration..."
+caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
 
-# Test nginx configuration
-echo "Testing nginx configuration..."
-nginx -t
+echo "Starting Caddy on port $PORT with backend at $BACKEND_URL"
 
-echo "Starting nginx on port $PORT with backend at $BACKEND_URL"
-
-# Execute nginx
-exec nginx -g 'daemon off;'
+# Execute caddy
+exec caddy run --config /etc/caddy/Caddyfile --adapter caddyfile

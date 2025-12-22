@@ -35,20 +35,17 @@ COPY . .
 RUN npx vite build
 
 # Stage 2: Production stage
-FROM nginx:alpine
+FROM caddy:alpine
 
-# Install envsubst (part of gettext)
-RUN apk add --no-cache gettext
+# Copy built assets to Caddy's default path
+COPY --from=builder /app/dist /srv
 
-# Copy nginx config template (will be processed at runtime)
-COPY nginx.conf.template /etc/nginx/nginx.conf.template
+# Copy Caddyfile
+COPY Caddyfile /etc/caddy/Caddyfile
 
 # Copy entrypoint script
 COPY docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
-
-# Copy built assets from builder
-COPY --from=builder /app/dist /usr/share/nginx/html
 
 # Railway sets PORT env var at runtime, default to 80
 # Default for local Docker Compose; Railway overrides via environment variable
@@ -58,5 +55,5 @@ ENV BACKEND_URL=http://backend:8000
 # Note: No Docker HEALTHCHECK - Railway handles health checks via /health endpoint
 # Docker HEALTHCHECK uses build-time PORT value, not runtime, causing failures
 
-# Start nginx via entrypoint
+# Start caddy via entrypoint
 ENTRYPOINT ["/docker-entrypoint.sh"]
