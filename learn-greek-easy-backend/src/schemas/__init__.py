@@ -30,6 +30,15 @@ from src.schemas.feedback import (
     VoteResponse,
 )
 
+# Notification schemas
+from src.schemas.notification import (
+    ClearResponse,
+    MarkReadResponse,
+    NotificationListResponse,
+    NotificationResponse,
+    UnreadCountResponse,
+)
+
 # Progress schemas
 from src.schemas.progress import (  # Existing; Dashboard schemas; Deck Progress schemas; Learning Trends schemas; Achievements schemas
     Achievement,
@@ -173,4 +182,10 @@ __all__ = [
     "FeedbackResponse",
     "VoteRequest",
     "VoteResponse",
+    # Notification
+    "NotificationResponse",
+    "NotificationListResponse",
+    "UnreadCountResponse",
+    "MarkReadResponse",
+    "ClearResponse",
 ]
