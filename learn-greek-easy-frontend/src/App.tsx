@@ -8,6 +8,7 @@ import { PublicRoute } from '@/components/auth/PublicRoute';
 import { RouteGuard } from '@/components/auth/RouteGuard';
 import { ErrorBoundary } from '@/components/errors';
 import { AppLayout } from '@/components/layout';
+import { NotificationToastContainer } from '@/components/notifications';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { AchievementNotificationManager } from '@/components/xp';
@@ -96,6 +97,7 @@ function AppContent() {
 
       <Toaster />
       <AchievementNotificationManager />
+      <NotificationToastContainer />
     </div>
   );
 }

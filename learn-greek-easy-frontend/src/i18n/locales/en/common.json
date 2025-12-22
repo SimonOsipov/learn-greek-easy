@@ -129,6 +129,7 @@
     "clearAll": "Clear all",
     "loadMore": "Load more",
     "error": "Failed to load notifications",
-    "retry": "Retry"
+    "retry": "Retry",
+    "dismiss": "Dismiss notification"
   }
 }
