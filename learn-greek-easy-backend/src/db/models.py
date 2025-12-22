@@ -6,6 +6,7 @@ This module contains all SQLAlchemy models for the application:
 - Progress tracking (UserDeckProgress, CardStatistics, Review)
 - Feedback (Feedback, FeedbackVote)
 - XP and Achievements (UserXP, XPTransaction, Achievement, UserAchievement)
+- Notifications (Notification)
 
 All models use:
 - UUID primary keys with server-side generation
@@ -20,6 +21,7 @@ from typing import List
 from uuid import UUID
 
 from sqlalchemy import (
+    JSON,
     Boolean,
     Date,
     DateTime,
@@ -113,6 +115,17 @@ class AchievementCategory(str, enum.Enum):
     ACCURACY = "accuracy"
     CEFR = "cefr"
     SPECIAL = "special"
+
+
+class NotificationType(str, enum.Enum):
+    """Types of in-app notifications."""
+
+    ACHIEVEMENT_UNLOCKED = "achievement_unlocked"
+    DAILY_GOAL_COMPLETE = "daily_goal_complete"
+    LEVEL_UP = "level_up"
+    STREAK_AT_RISK = "streak_at_risk"
+    STREAK_LOST = "streak_lost"
+    WELCOME = "welcome"
 
 
 # ============================================================================
@@ -224,6 +237,10 @@ class User(Base, TimestampMixin):
         cascade="all, delete-orphan",
     )
     xp_transactions: Mapped[List["XPTransaction"]] = relationship(
+        lazy="selectin",
+        cascade="all, delete-orphan",
+    )
+    notifications: Mapped[List["Notification"]] = relationship(
         lazy="selectin",
         cascade="all, delete-orphan",
     )
@@ -952,3 +969,82 @@ class UserAchievement(Base, TimestampMixin):
 
     def __repr__(self) -> str:
         return f"<UserAchievement(user_id={self.user_id}, achievement_id={self.achievement_id})>"
+
+
+# ============================================================================
+# Notification Models
+# ============================================================================
+
+
+class Notification(Base, TimestampMixin):
+    """User notification record.
+
+    Stores in-app notifications for achievements, daily goals, level ups, etc.
+    """
+
+    __tablename__ = "notifications"
+
+    # Primary key
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True,
+        server_default=func.uuid_generate_v4(),
+    )
+
+    # Foreign key
+    user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
+    # Notification content
+    type: Mapped[NotificationType] = mapped_column(
+        nullable=False,
+        index=True,
+    )
+    title: Mapped[str] = mapped_column(
+        String(255),
+        nullable=False,
+    )
+    message: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+    )
+    icon: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+        default="info",
+    )
+
+    # Navigation
+    action_url: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True,
+    )
+
+    # Extra context data
+    extra_data: Mapped[dict | None] = mapped_column(
+        JSON,
+        nullable=True,
+    )  # Extra data: achievement_id, xp_amount, streak_days, etc.
+
+    # Status
+    read: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        nullable=False,
+        index=True,
+    )
+    read_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+    # Relationships
+    user: Mapped["User"] = relationship(
+        lazy="selectin",
+        overlaps="notifications",
+    )
+
+    def __repr__(self) -> str:
+        return f"<Notification(id={self.id}, type={self.type}, user_id={self.user_id})>"
