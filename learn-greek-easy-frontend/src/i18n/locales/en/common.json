@@ -120,5 +120,15 @@
     "page": "Page {{current}} of {{total}}",
     "showing": "Showing {{from}}-{{to}} of {{total}}",
     "itemsPerPage": "Items per page"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "new": "new",
+    "empty": "No notifications yet",
+    "markAllRead": "Mark all as read",
+    "clearAll": "Clear all",
+    "loadMore": "Load more",
+    "error": "Failed to load notifications",
+    "retry": "Retry"
   }
 }
