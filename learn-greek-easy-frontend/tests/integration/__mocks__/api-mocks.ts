@@ -43,6 +43,15 @@ export const mockAuthAPI = {
       updated_at: '2025-01-01T00:00:00Z',
       settings: { daily_goal: 20, email_notifications: true },
     }),
+    updateProfile: vi.fn().mockResolvedValue({
+      id: 'test-user-123',
+      email: 'demo@learngreekeasy.com',
+      full_name: 'Demo User',
+      is_superuser: false,
+      created_at: '2025-01-01T00:00:00Z',
+      updated_at: '2025-01-01T00:00:00Z',
+      settings: { daily_goal: 20, email_notifications: true },
+    }),
     logout: vi.fn().mockResolvedValue(undefined),
     register: vi.fn().mockResolvedValue({
       access_token: 'mock-access-token',

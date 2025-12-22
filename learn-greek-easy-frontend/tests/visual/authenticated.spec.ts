@@ -46,6 +46,46 @@ test.describe('Authenticated Pages Visual Tests', () => {
     await takeSnapshot(page, 'Profile Page', testInfo);
   });
 
+  test('Profile Page - Preferences Tab', async ({ page }, testInfo) => {
+    await page.goto('/profile');
+    await waitForPageReady(page);
+
+    // Wait for profile content
+    await expect(page.getByTestId('profile-page')).toBeVisible();
+
+    // Navigate to Preferences tab
+    await page.getByRole('button', { name: /preferences/i }).click();
+
+    // Wait for preferences section to load
+    await expect(page.getByTestId('preferences-section')).toBeVisible();
+    await page.waitForTimeout(500); // Allow any animations to complete
+
+    await takeSnapshot(page, 'Profile Page - Preferences Tab', testInfo);
+  });
+
+  test('Profile Page - Preferences Tab - Intensive Goal', async ({ page }, testInfo) => {
+    await page.goto('/profile');
+    await waitForPageReady(page);
+
+    // Wait for profile content
+    await expect(page.getByTestId('profile-page')).toBeVisible();
+
+    // Navigate to Preferences tab
+    await page.getByRole('button', { name: /preferences/i }).click();
+
+    // Wait for preferences section to load
+    await expect(page.getByTestId('preferences-section')).toBeVisible();
+
+    // Set slider to intensive value (90 minutes)
+    const slider = page.getByTestId('daily-goal-slider');
+    await slider.fill('90');
+
+    // Wait for UI to update
+    await page.waitForTimeout(500);
+
+    await takeSnapshot(page, 'Profile Page - Preferences Tab - Intensive Goal', testInfo);
+  });
+
   test('Statistics Page', async ({ page }, testInfo) => {
     await page.goto('/statistics');
     await waitForPageReady(page);
