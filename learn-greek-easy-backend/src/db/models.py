@@ -27,11 +27,13 @@ from sqlalchemy import (
     DateTime,
     Float,
     ForeignKey,
+    Index,
     Integer,
     String,
     Text,
     UniqueConstraint,
     func,
+    text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -983,6 +985,14 @@ class Notification(Base, TimestampMixin):
     """
 
     __tablename__ = "notifications"
+    __table_args__ = (
+        # Composite index for filtering user's unread notifications
+        Index("idx_notifications_user_read", "user_id", "read"),
+        # Composite index for fetching user's notifications sorted by creation date (newest first)
+        Index("idx_notifications_user_created", "user_id", text("created_at DESC")),
+        # Index for cleanup queries (delete old notifications)
+        Index("idx_notifications_created_at", "created_at"),
+    )
 
     # Primary key
     id: Mapped[UUID] = mapped_column(
