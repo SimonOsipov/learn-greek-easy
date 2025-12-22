@@ -92,10 +92,13 @@ test.describe('Notifications Dropdown Content', () => {
     // Wait for content to load
     await page.waitForTimeout(500);
 
-    // Verify all 5 seeded notification titles are visible
+    // Scope assertions to dropdown menu to avoid matching toasts/SR-only elements
+    const dropdownMenu = page.locator('[role="menu"]');
+
+    // Verify all 5 seeded notification titles are visible in dropdown
     const allTitles = [...SEEDED_NOTIFICATIONS.UNREAD, ...SEEDED_NOTIFICATIONS.READ];
     for (const title of allTitles) {
-      await expect(page.getByText(title)).toBeVisible({ timeout: 5000 });
+      await expect(dropdownMenu.getByText(title)).toBeVisible({ timeout: 5000 });
     }
   });
 
@@ -103,8 +106,11 @@ test.describe('Notifications Dropdown Content', () => {
     // Wait for content to load
     await page.waitForTimeout(500);
 
-    // Should show "3 new" in the header
-    await expect(page.getByText('3 new')).toBeVisible({ timeout: 5000 });
+    // Scope to dropdown menu to ensure we check the dropdown header badge
+    const dropdownMenu = page.locator('[role="menu"]');
+
+    // Should show "3 new" in the dropdown header
+    await expect(dropdownMenu.getByText('3 new')).toBeVisible({ timeout: 5000 });
   });
 });
 
@@ -157,8 +163,11 @@ test.describe('Notifications Actions (Fresh Login)', () => {
     // Wait for notifications to load
     await page.waitForTimeout(500);
 
+    // Scope assertions to dropdown menu to avoid matching toasts/SR-only elements
+    const dropdownMenu = page.locator('[role="menu"]');
+
     // Verify at least one notification title is visible before clearing
-    await expect(page.getByText(SEEDED_NOTIFICATIONS.UNREAD[0])).toBeVisible();
+    await expect(dropdownMenu.getByText(SEEDED_NOTIFICATIONS.UNREAD[0])).toBeVisible();
 
     // Click "Clear all" button
     const clearAllButton = page.locator('button[aria-label*="Clear all"]');
@@ -169,7 +178,7 @@ test.describe('Notifications Actions (Fresh Login)', () => {
     await page.waitForTimeout(1000);
 
     // Should show empty state
-    await expect(page.getByText('No notifications yet')).toBeVisible({ timeout: 5000 });
+    await expect(dropdownMenu.getByText('No notifications yet')).toBeVisible({ timeout: 5000 });
   });
 });
 
