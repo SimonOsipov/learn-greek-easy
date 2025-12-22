@@ -58,6 +58,9 @@ from tests.factories.content import CardFactory, DeckFactory
 # Feedback factories
 from tests.factories.feedback import FeedbackFactory, FeedbackVoteFactory
 
+# Notification factories
+from tests.factories.notification import NotificationFactory
+
 # Progress factories
 from tests.factories.progress import (
     SM2_DEFAULT_EASINESS_FACTOR,
@@ -106,6 +109,8 @@ __all__ = [
     "XPTransactionFactory",
     "AchievementFactory",
     "UserAchievementFactory",
+    # Notifications
+    "NotificationFactory",
     # Constants
     "SM2_DEFAULT_EASINESS_FACTOR",
     "SM2_MIN_EASINESS_FACTOR",
