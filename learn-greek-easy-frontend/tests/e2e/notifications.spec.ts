@@ -2,19 +2,35 @@
  * E2E Tests: Notifications System
  *
  * Tests the notification bell, dropdown, mark as read, and clear functionality.
- * Uses Playwright's storageState pattern for authentication.
+ * Uses deterministic seeded data (3 unread, 2 read notifications for e2e_learner).
  *
- * Test Organization:
- * - Notification bell visibility and badge
- * - Dropdown open/close behavior
- * - Mark as read (single and all)
- * - Clear all notifications
- * - Empty state handling
- * - Loading and error states
+ * Seeded Notifications (for e2e_learner@test.com):
+ * UNREAD (3):
+ *   1. "Achievement Unlocked: First Flame" (1h ago)
+ *   2. "Daily Goal Complete!" (3h ago)
+ *   3. "Level Up!" (1d ago)
+ * READ (2):
+ *   4. "Streak at Risk!" (2d ago)
+ *   5. "Welcome to Greekly!" (7d ago)
  */
 
 import { test, expect } from '@playwright/test';
 import { verifyAuthSucceeded, waitForAppReady, SEED_USERS, loginViaUI } from './helpers/auth-helpers';
+
+// Seeded notification titles for assertions
+const SEEDED_NOTIFICATIONS = {
+  UNREAD: [
+    'Achievement Unlocked: First Flame',
+    'Daily Goal Complete!',
+    'Level Up!',
+  ],
+  READ: [
+    'Streak at Risk!',
+    'Welcome to Greekly!',
+  ],
+  UNREAD_COUNT: 3,
+  TOTAL_COUNT: 5,
+};
 
 test.describe('Notifications Bell', () => {
   test.beforeEach(async ({ page }) => {
@@ -24,13 +40,20 @@ test.describe('Notifications Bell', () => {
   });
 
   test('E2E-NOTIF-01: Notification bell is visible in header', async ({ page }) => {
-    // Look for the notification bell button
     const bellButton = page.locator('button[aria-label*="Notification"]');
     await expect(bellButton).toBeVisible({ timeout: 10000 });
   });
 
-  test('E2E-NOTIF-02: Clicking bell opens notification dropdown', async ({ page }) => {
-    // Click the notification bell
+  test('E2E-NOTIF-02: Badge shows correct unread count (3)', async ({ page }) => {
+    const bellButton = page.locator('button[aria-label*="Notification"]');
+    await expect(bellButton).toBeVisible();
+
+    // Badge should show "3" for the seeded unread notifications
+    const badge = bellButton.locator('span').filter({ hasText: /^3$/ });
+    await expect(badge).toBeVisible({ timeout: 5000 });
+  });
+
+  test('E2E-NOTIF-03: Clicking bell opens notification dropdown', async ({ page }) => {
     const bellButton = page.locator('button[aria-label*="Notification"]');
     await bellButton.click();
 
@@ -38,18 +61,16 @@ test.describe('Notifications Bell', () => {
     await expect(page.getByText('Notifications', { exact: true })).toBeVisible({ timeout: 5000 });
   });
 
-  test('E2E-NOTIF-03: Clicking outside closes dropdown', async ({ page }) => {
-    // Open dropdown
+  test('E2E-NOTIF-04: Clicking outside closes dropdown', async ({ page }) => {
     const bellButton = page.locator('button[aria-label*="Notification"]');
     await bellButton.click();
     await expect(page.getByText('Notifications', { exact: true })).toBeVisible();
 
-    // Press escape to close (more reliable than clicking outside)
+    // Press escape to close
     await page.keyboard.press('Escape');
 
-    // Dropdown should close (wait a moment for animation)
+    // Dropdown should close
     await page.waitForTimeout(500);
-    // The dropdown content should not be visible
     const dropdownContent = page.locator('[role="menu"]');
     await expect(dropdownContent).not.toBeVisible({ timeout: 3000 });
   });
@@ -67,138 +88,116 @@ test.describe('Notifications Dropdown Content', () => {
     await expect(page.getByText('Notifications', { exact: true })).toBeVisible();
   });
 
-  test('E2E-NOTIF-04: Empty state shows "No notifications yet"', async ({ page }) => {
+  test('E2E-NOTIF-05: Dropdown shows all seeded notification titles', async ({ page }) => {
     // Wait for content to load
+    await page.waitForTimeout(500);
+
+    // Verify all 5 seeded notification titles are visible
+    const allTitles = [...SEEDED_NOTIFICATIONS.UNREAD, ...SEEDED_NOTIFICATIONS.READ];
+    for (const title of allTitles) {
+      await expect(page.getByText(title)).toBeVisible({ timeout: 5000 });
+    }
+  });
+
+  test('E2E-NOTIF-06: Header shows "3 new" indicator', async ({ page }) => {
+    // Wait for content to load
+    await page.waitForTimeout(500);
+
+    // Should show "3 new" in the header
+    await expect(page.getByText('3 new')).toBeVisible({ timeout: 5000 });
+  });
+});
+
+test.describe('Notifications Actions (Fresh Login)', () => {
+  test.use({ storageState: { cookies: [], origins: [] } });
+
+  test('E2E-NOTIF-07: Mark all as read clears unread badge', async ({ page }) => {
+    // Login as learner with seeded notifications
+    await loginViaUI(page, SEED_USERS.LEARNER);
+    await page.goto('/');
+    await waitForAppReady(page);
+
+    const bellButton = page.locator('button[aria-label*="Notification"]');
+    await expect(bellButton).toBeVisible();
+
+    // Verify badge shows "3" initially
+    const badge = bellButton.locator('span').filter({ hasText: /^3$/ });
+    await expect(badge).toBeVisible({ timeout: 5000 });
+
+    // Open dropdown
+    await bellButton.click();
+    await expect(page.getByText('Notifications', { exact: true })).toBeVisible();
+
+    // Click "Mark all as read" button
+    const markAllButton = page.locator('button[aria-label*="Mark all as read"]');
+    await expect(markAllButton).toBeVisible();
+    await markAllButton.click();
+
+    // Wait for API call to complete
     await page.waitForTimeout(1000);
 
-    // Check if there are notifications or empty state
-    const hasNotifications = await page.locator('[role="menu"]').getByRole('button').count() > 3;
+    // Badge should be gone
+    await expect(badge).not.toBeVisible({ timeout: 5000 });
 
-    if (!hasNotifications) {
-      // For a user with no notifications, should show empty state
-      await expect(page.getByText('No notifications yet')).toBeVisible({ timeout: 5000 });
-    }
+    // "new" indicator in header should be gone
+    const newBadge = page.locator('[role="menu"]').getByText(/\d+ new/);
+    await expect(newBadge).not.toBeVisible({ timeout: 5000 });
   });
 
-  test('E2E-NOTIF-05: Notification dropdown shows header', async ({ page }) => {
-    // Verify header is visible
-    await expect(page.getByText('Notifications', { exact: true })).toBeVisible();
-  });
-});
-
-test.describe('Notifications with Fresh Login', () => {
-  test.use({ storageState: { cookies: [], origins: [] } }); // Clear auth state
-
-  test('E2E-NOTIF-06: Mark all as read clears unread badge', async ({ page }) => {
-    // Login as learner who may have notifications
+  test('E2E-NOTIF-08: Clear all removes all notifications', async ({ page }) => {
+    // Login as learner with seeded notifications
     await loginViaUI(page, SEED_USERS.LEARNER);
     await page.goto('/');
     await waitForAppReady(page);
 
-    // Check for bell
-    const bellButton = page.locator('button[aria-label*="Notification"]');
-    await expect(bellButton).toBeVisible();
-
-    // Open dropdown
-    await bellButton.click();
-    await expect(page.getByText('Notifications', { exact: true })).toBeVisible();
-
-    // Wait for content to load
-    await page.waitForTimeout(500);
-
-    // Look for "Mark all as read" button (check icon)
-    const markAllButton = page.locator('button[aria-label*="Mark all as read"]');
-    const hasUnread = await markAllButton.isVisible().catch(() => false);
-
-    if (hasUnread) {
-      await markAllButton.click();
-
-      // Wait for API call to complete
-      await page.waitForTimeout(1000);
-
-      // Badge should be gone or "new" text should disappear
-      const newBadge = page.locator('[role="menu"]').getByText(/\d+ new/);
-      await expect(newBadge).not.toBeVisible({ timeout: 5000 });
-    }
-  });
-
-  test('E2E-NOTIF-07: Clear all removes all notifications', async ({ page }) => {
-    // Login as learner
-    await loginViaUI(page, SEED_USERS.LEARNER);
-    await page.goto('/');
-    await waitForAppReady(page);
-
-    // Open dropdown
     const bellButton = page.locator('button[aria-label*="Notification"]');
     await bellButton.click();
     await expect(page.getByText('Notifications', { exact: true })).toBeVisible();
 
-    // Wait for content to load
+    // Wait for notifications to load
     await page.waitForTimeout(500);
 
-    // Look for "Clear all" button (trash icon)
+    // Verify at least one notification title is visible before clearing
+    await expect(page.getByText(SEEDED_NOTIFICATIONS.UNREAD[0])).toBeVisible();
+
+    // Click "Clear all" button
     const clearAllButton = page.locator('button[aria-label*="Clear all"]');
-    const hasNotifications = await clearAllButton.isVisible().catch(() => false);
+    await expect(clearAllButton).toBeVisible();
+    await clearAllButton.click();
 
-    if (hasNotifications) {
-      await clearAllButton.click();
+    // Wait for API call
+    await page.waitForTimeout(1000);
 
-      // Wait for API call
-      await page.waitForTimeout(1000);
-
-      // Should show empty state
-      await expect(page.getByText('No notifications yet')).toBeVisible({ timeout: 5000 });
-    }
+    // Should show empty state
+    await expect(page.getByText('No notifications yet')).toBeVisible({ timeout: 5000 });
   });
 });
 
-test.describe('Notification Badge', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/');
-    await verifyAuthSucceeded(page, '/');
-    await waitForAppReady(page);
-  });
+test.describe('Notification Empty State', () => {
+  test.use({ storageState: { cookies: [], origins: [] } });
 
-  test('E2E-NOTIF-08: Notification badge shows count format', async ({ page }) => {
-    // Look for badge on bell button
+  test('E2E-NOTIF-09: User without notifications sees empty state', async ({ page }) => {
+    // Login as beginner who has no seeded notifications
+    await loginViaUI(page, SEED_USERS.BEGINNER);
+    await page.goto('/');
+    await waitForAppReady(page);
+
     const bellButton = page.locator('button[aria-label*="Notification"]');
     await expect(bellButton).toBeVisible();
 
-    // Check for badge element (span with count)
-    const badge = bellButton.locator('span').filter({ hasText: /\d+|\d\+/ });
-    const hasBadge = await badge.isVisible().catch(() => false);
-
-    // Test passes whether badge exists or not - we're just verifying structure
-    if (hasBadge) {
-      const badgeText = await badge.textContent();
-      // Badge should show a number or "9+"
-      expect(badgeText).toMatch(/^\d+$|^9\+$/);
-    }
-  });
-});
-
-test.describe('Notification Loading State', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/');
-    await verifyAuthSucceeded(page, '/');
-    await waitForAppReady(page);
-  });
-
-  test('E2E-NOTIF-09: Loading state shows spinner', async ({ page }) => {
-    // This test verifies that loading state exists in the component
-    // We can force a slow network to see it
-    await page.route('**/api/v1/notifications**', async (route) => {
-      await new Promise(resolve => setTimeout(resolve, 500));
-      await route.continue();
-    });
+    // Badge should NOT be visible (no unread notifications)
+    const badge = bellButton.locator('span').filter({ hasText: /^\d+$/ });
+    await expect(badge).not.toBeVisible();
 
     // Open dropdown
-    const bellButton = page.locator('button[aria-label*="Notification"]');
     await bellButton.click();
-
-    // Should briefly show loading spinner
-    // Loading might be too fast to catch, so we just verify the dropdown opened
     await expect(page.getByText('Notifications', { exact: true })).toBeVisible();
+
+    // Wait for content to load
+    await page.waitForTimeout(500);
+
+    // Should show empty state
+    await expect(page.getByText('No notifications yet')).toBeVisible({ timeout: 5000 });
   });
 });
 
@@ -210,14 +209,11 @@ test.describe('Notification Loading State', () => {
  * so we must set up error routes BEFORE logging in.
  */
 test.describe('Notification Error State (Fresh Login)', () => {
-  test.use({ storageState: { cookies: [], origins: [] } }); // Clear auth state
+  test.use({ storageState: { cookies: [], origins: [] } });
 
   test('E2E-NOTIF-10: Error state shows retry button', async ({ page }) => {
     // CRITICAL: Set up route intercept BEFORE authentication
-    // The pattern must include ** at the end to match query parameters
-    // e.g., /api/v1/notifications?limit=20&offset=0
     await page.route('**/api/v1/notifications**', (route) => {
-      // Only intercept GET requests to the list endpoint
       if (route.request().method() === 'GET') {
         route.fulfill({
           status: 500,
@@ -239,10 +235,7 @@ test.describe('Notification Error State (Fresh Login)', () => {
     await bellButton.click();
 
     // Should show error state with retry button
-    // The error message is: "Failed to load notifications" (from NotificationsDropdown.tsx line 114)
     await expect(page.getByText('Failed to load notifications')).toBeVisible({ timeout: 5000 });
-
-    // The retry button has aria-label="Retry" and text "Retry"
     await expect(page.getByRole('button', { name: /retry/i })).toBeVisible();
   });
 });

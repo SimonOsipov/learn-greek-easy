@@ -22,6 +22,8 @@ from src.db.models import (
     DeckLevel,
     Feedback,
     FeedbackVote,
+    Notification,
+    NotificationType,
     Review,
     User,
     UserDeckProgress,
@@ -522,3 +524,150 @@ class TestSeedServiceFeedback:
             assert (
                 vote.user_id != feedback.user_id
             ), f"User {user.email} voted on their own feedback '{feedback.title}'"
+
+
+# ============================================================================
+# Notification Seeding Tests
+# ============================================================================
+
+
+@pytest.mark.no_parallel
+class TestSeedServiceNotifications:
+    """Integration tests for notification seeding with real database."""
+
+    @pytest.mark.asyncio
+    async def test_seed_creates_notifications(self, db_session: AsyncSession, enable_seeding):
+        """seed_all creates notifications for learner user."""
+        seed_service = SeedService(db_session)
+
+        await seed_service.seed_all()
+
+        # Verify 5 notifications were created
+        notification_count = await db_session.scalar(select(func.count(Notification.id)))
+        assert notification_count == 5
+
+    @pytest.mark.asyncio
+    async def test_notifications_linked_to_learner(self, db_session: AsyncSession, enable_seeding):
+        """Notifications are linked to the learner user."""
+        seed_service = SeedService(db_session)
+
+        await seed_service.seed_all()
+
+        # Get learner user
+        learner = await db_session.scalar(select(User).where(User.email == "e2e_learner@test.com"))
+        assert learner is not None
+
+        # All notifications should belong to learner
+        notifications = (await db_session.execute(select(Notification))).scalars().all()
+
+        for n in notifications:
+            assert n.user_id == learner.id
+
+    @pytest.mark.asyncio
+    async def test_notifications_have_correct_read_status(
+        self, db_session: AsyncSession, enable_seeding
+    ):
+        """Verify 3 unread and 2 read notifications are created."""
+        seed_service = SeedService(db_session)
+
+        await seed_service.seed_all()
+
+        # Count unread
+        unread_count = await db_session.scalar(
+            select(func.count(Notification.id)).where(Notification.read == False)  # noqa: E712
+        )
+        assert unread_count == 3
+
+        # Count read
+        read_count = await db_session.scalar(
+            select(func.count(Notification.id)).where(Notification.read == True)  # noqa: E712
+        )
+        assert read_count == 2
+
+    @pytest.mark.asyncio
+    async def test_notifications_have_various_types(self, db_session: AsyncSession, enable_seeding):
+        """Verify notifications have various types."""
+        seed_service = SeedService(db_session)
+
+        await seed_service.seed_all()
+
+        notifications = (await db_session.execute(select(Notification))).scalars().all()
+
+        types = {n.type for n in notifications}
+
+        # Should have 5 different notification types
+        assert len(types) == 5
+        assert NotificationType.ACHIEVEMENT_UNLOCKED in types
+        assert NotificationType.DAILY_GOAL_COMPLETE in types
+        assert NotificationType.LEVEL_UP in types
+        assert NotificationType.STREAK_AT_RISK in types
+        assert NotificationType.WELCOME in types
+
+    @pytest.mark.asyncio
+    async def test_notifications_have_correct_titles(
+        self, db_session: AsyncSession, enable_seeding
+    ):
+        """Verify notifications have expected titles."""
+        seed_service = SeedService(db_session)
+
+        await seed_service.seed_all()
+
+        notifications = (await db_session.execute(select(Notification))).scalars().all()
+
+        titles = {n.title for n in notifications}
+
+        # Check for expected titles
+        expected_titles = {
+            "Achievement Unlocked: First Flame",
+            "Daily Goal Complete!",
+            "Level Up!",
+            "Streak at Risk!",
+            "Welcome to Greekly!",
+        }
+
+        assert titles == expected_titles
+
+    @pytest.mark.asyncio
+    async def test_notification_timestamps_are_in_past(
+        self, db_session: AsyncSession, enable_seeding
+    ):
+        """Verify notification timestamps are realistic (in the past)."""
+        seed_service = SeedService(db_session)
+
+        await seed_service.seed_all()
+
+        from datetime import datetime, timezone
+
+        now = datetime.now(timezone.utc)
+
+        notifications = (await db_session.execute(select(Notification))).scalars().all()
+
+        for n in notifications:
+            # All created_at should be in the past
+            assert n.created_at < now
+
+            # If read, read_at should also be in the past
+            if n.read and n.read_at:
+                assert n.read_at < now
+                # read_at should be after created_at
+                assert n.read_at > n.created_at
+
+    @pytest.mark.asyncio
+    async def test_truncation_clears_notifications(self, db_session: AsyncSession, enable_seeding):
+        """Verify truncation clears notifications table."""
+        seed_service = SeedService(db_session)
+
+        # First seed
+        await seed_service.seed_all()
+
+        # Verify notifications exist
+        count_before = await db_session.scalar(select(func.count(Notification.id)))
+        assert count_before == 5
+
+        # Truncate
+        await seed_service.truncate_tables()
+        await db_session.commit()
+
+        # Verify notifications are cleared
+        count_after = await db_session.scalar(select(func.count(Notification.id)))
+        assert count_after == 0
