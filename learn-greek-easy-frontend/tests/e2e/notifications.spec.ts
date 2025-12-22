@@ -202,29 +202,47 @@ test.describe('Notification Loading State', () => {
   });
 });
 
-test.describe('Notification Error State', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/');
-    await verifyAuthSucceeded(page, '/');
-    await waitForAppReady(page);
-  });
+/**
+ * Notification Error State Tests
+ *
+ * These tests require route interception BEFORE authentication.
+ * The NotificationContext fetches immediately when isAuthenticated=true,
+ * so we must set up error routes BEFORE logging in.
+ */
+test.describe('Notification Error State (Fresh Login)', () => {
+  test.use({ storageState: { cookies: [], origins: [] } }); // Clear auth state
 
   test('E2E-NOTIF-10: Error state shows retry button', async ({ page }) => {
-    // Force API error
-    await page.route('**/api/v1/notifications', (route) => {
-      route.fulfill({
-        status: 500,
-        contentType: 'application/json',
-        body: JSON.stringify({ detail: 'Internal server error' }),
-      });
+    // CRITICAL: Set up route intercept BEFORE authentication
+    // The pattern must include ** at the end to match query parameters
+    // e.g., /api/v1/notifications?limit=20&offset=0
+    await page.route('**/api/v1/notifications**', (route) => {
+      // Only intercept GET requests to the list endpoint
+      if (route.request().method() === 'GET') {
+        route.fulfill({
+          status: 500,
+          contentType: 'application/json',
+          body: JSON.stringify({ detail: 'Internal server error' }),
+        });
+      } else {
+        route.continue();
+      }
     });
 
-    // Open dropdown
+    // Now login - the intercepted route will catch the initial fetch
+    await loginViaUI(page, SEED_USERS.LEARNER);
+    await page.goto('/');
+    await waitForAppReady(page);
+
+    // Open dropdown - should already be in error state from failed initial fetch
     const bellButton = page.locator('button[aria-label*="Notification"]');
     await bellButton.click();
 
     // Should show error state with retry button
-    await expect(page.getByText(/Failed to load|error/i)).toBeVisible({ timeout: 5000 });
+    // The error message is: "Failed to load notifications" (from NotificationsDropdown.tsx line 114)
+    await expect(page.getByText('Failed to load notifications')).toBeVisible({ timeout: 5000 });
+
+    // The retry button has aria-label="Retry" and text "Retry"
     await expect(page.getByRole('button', { name: /retry/i })).toBeVisible();
   });
 });
