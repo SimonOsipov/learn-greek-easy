@@ -1,35 +1,74 @@
 import React from 'react';
 
 import { formatDistanceToNow } from 'date-fns';
-import { BookOpen, Flame, Info, Star, Trophy, type LucideIcon } from 'lucide-react';
+import { el } from 'date-fns/locale/el';
+import { ru } from 'date-fns/locale/ru';
+import {
+  ArrowUp,
+  CheckCircle,
+  Flame,
+  Hand,
+  HeartCrack,
+  Info,
+  Trophy,
+  type LucideIcon,
+} from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 
 import { cn } from '@/lib/utils';
-import type { Notification, NotificationType } from '@/types';
+import type { Notification, NotificationType } from '@/types/notification';
 
 /**
  * Icon and color configuration for each notification type
  */
 const notificationConfig: Record<NotificationType, { icon: LucideIcon; colorClass: string }> = {
-  streak_milestone: { icon: Flame, colorClass: 'text-warning' },
-  cards_due: { icon: BookOpen, colorClass: 'text-info' },
-  deck_completed: { icon: Trophy, colorClass: 'text-success' },
-  achievement: { icon: Star, colorClass: 'text-gradient-from' },
-  system: { icon: Info, colorClass: 'text-muted-foreground' },
+  achievement_unlocked: { icon: Trophy, colorClass: 'text-warning' },
+  daily_goal_complete: { icon: CheckCircle, colorClass: 'text-success' },
+  level_up: { icon: ArrowUp, colorClass: 'text-primary' },
+  streak_at_risk: { icon: Flame, colorClass: 'text-warning' },
+  streak_lost: { icon: HeartCrack, colorClass: 'text-destructive' },
+  welcome: { icon: Hand, colorClass: 'text-info' },
 };
+
+// Fallback for unknown types
+const defaultConfig = { icon: Info, colorClass: 'text-muted-foreground' };
 
 interface NotificationItemProps {
   notification: Notification;
   onClose?: () => void;
+  onMarkAsRead?: (id: string) => void;
 }
 
-export const NotificationItem: React.FC<NotificationItemProps> = ({ notification, onClose }) => {
+export const NotificationItem: React.FC<NotificationItemProps> = ({
+  notification,
+  onClose,
+  onMarkAsRead,
+}) => {
   const navigate = useNavigate();
-  const { icon: Icon, colorClass } = notificationConfig[notification.type];
+  const { i18n } = useTranslation();
+  const config = notificationConfig[notification.type] || defaultConfig;
+  const Icon = config.icon;
+
+  const getDateLocale = () => {
+    switch (i18n.language) {
+      case 'el':
+        return el;
+      case 'ru':
+        return ru;
+      default:
+        return undefined;
+    }
+  };
 
   const handleClick = () => {
-    if (notification.href) {
-      navigate(notification.href);
+    // Mark as read when clicked
+    if (!notification.read && onMarkAsRead) {
+      onMarkAsRead(notification.id);
+    }
+
+    if (notification.action_url) {
+      navigate(notification.action_url);
       onClose?.();
     }
   };
@@ -41,23 +80,25 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({ notification
     }
   };
 
-  const relativeTime = formatDistanceToNow(notification.timestamp, { addSuffix: true });
+  const relativeTime = formatDistanceToNow(new Date(notification.created_at), {
+    addSuffix: true,
+    locale: getDateLocale(),
+  });
 
   return (
     <div
       className={cn(
         'flex cursor-pointer items-start gap-3 rounded-md p-3 transition-colors hover:bg-accent',
-        !notification.read && 'bg-accent/50',
-        notification.href && 'cursor-pointer'
+        !notification.read && 'bg-accent/50'
       )}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
-      role={notification.href ? 'button' : undefined}
-      tabIndex={notification.href ? 0 : undefined}
-      aria-label={notification.href ? `${notification.title} - Click to view` : undefined}
+      role={notification.action_url ? 'button' : undefined}
+      tabIndex={notification.action_url ? 0 : undefined}
+      aria-label={notification.action_url ? `${notification.title} - Click to view` : undefined}
     >
       {/* Icon */}
-      <div className={cn('mt-0.5 flex-shrink-0', colorClass)}>
+      <div className={cn('mt-0.5 flex-shrink-0', config.colorClass)}>
         <Icon className="h-5 w-5" />
       </div>
 

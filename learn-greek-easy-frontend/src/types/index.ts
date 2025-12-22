@@ -77,8 +77,14 @@ export type {
   NotificationType,
   Notification,
   NotificationIconConfig,
-  NotificationsResponse,
+  NotificationListResponse,
+  UnreadCountResponse,
+  MarkReadResponse,
+  ClearResponse,
 } from './notification';
+
+// Export notification config
+export { NOTIFICATION_CONFIG } from './notification';
 
 // Component prop types (to be expanded as components are built)
 export interface BaseComponentProps {

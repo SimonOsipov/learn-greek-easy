@@ -30,6 +30,8 @@ from src.db.models import (
     FeedbackCategory,
     FeedbackStatus,
     FeedbackVote,
+    Notification,
+    NotificationType,
     Review,
     User,
     UserAchievement,
@@ -52,6 +54,20 @@ class FeedbackSeedData(TypedDict):
     user_idx: int
 
 
+class NotificationSeedData(TypedDict, total=False):
+    """Type definition for notification seed data items."""
+
+    type: NotificationType
+    title: str
+    message: str
+    icon: str
+    action_url: str
+    extra_data: dict[str, Any] | None
+    read: bool
+    read_at: datetime
+    created_at: datetime
+
+
 class SeedService:
     """Service for seeding E2E test database with deterministic data.
 
@@ -71,6 +87,8 @@ class SeedService:
         "user_achievements",
         "user_xp",
         "achievements",
+        # Notification tables
+        "notifications",
         # Existing tables
         "reviews",
         "card_statistics",
@@ -833,6 +851,118 @@ class SeedService:
         }
 
     # =====================
+    # Notification Seeding
+    # =====================
+
+    async def seed_notifications(self, user_id: UUID) -> dict[str, Any]:
+        """Create deterministic notifications for a test user.
+
+        Creates 5 notifications:
+        - 3 UNREAD: Achievement (1h ago), Daily Goal (3h ago), Level Up (1d ago)
+        - 2 READ: Streak at Risk (2d ago), Welcome (7d ago)
+
+        Args:
+            user_id: User to create notifications for
+
+        Returns:
+            dict with notifications summary
+
+        Raises:
+            RuntimeError: If seeding not allowed
+        """
+        self._check_can_seed()
+
+        now = datetime.now(timezone.utc)
+        created: list[dict[str, Any]] = []
+
+        notifications_data: list[NotificationSeedData] = [
+            # UNREAD (3)
+            {
+                "type": NotificationType.ACHIEVEMENT_UNLOCKED,
+                "title": "Achievement Unlocked: First Flame",
+                "message": "You earned 50 XP!",
+                "icon": "trophy",
+                "action_url": "/achievements",
+                "extra_data": {"achievement_id": "streak_first_flame", "xp_reward": 50},
+                "read": False,
+                "created_at": now - timedelta(hours=1),
+            },
+            {
+                "type": NotificationType.DAILY_GOAL_COMPLETE,
+                "title": "Daily Goal Complete!",
+                "message": "You reviewed 20 cards today. Great job!",
+                "icon": "check-circle",
+                "action_url": "/",
+                "extra_data": {"reviews_completed": 20},
+                "read": False,
+                "created_at": now - timedelta(hours=3),
+            },
+            {
+                "type": NotificationType.LEVEL_UP,
+                "title": "Level Up!",
+                "message": "You reached Level 3: Apprentice",
+                "icon": "arrow-up",
+                "action_url": "/profile",
+                "extra_data": {"new_level": 3, "level_name": "Apprentice"},
+                "read": False,
+                "created_at": now - timedelta(days=1),
+            },
+            # READ (2)
+            {
+                "type": NotificationType.STREAK_AT_RISK,
+                "title": "Streak at Risk!",
+                "message": "Study now to keep your 5-day streak going!",
+                "icon": "flame",
+                "action_url": "/decks",
+                "extra_data": {"streak_days": 5},
+                "read": True,
+                "read_at": now - timedelta(days=1, hours=12),
+                "created_at": now - timedelta(days=2),
+            },
+            {
+                "type": NotificationType.WELCOME,
+                "title": "Welcome to Greekly!",
+                "message": "Start your Greek learning journey today. Choose a deck to begin!",
+                "icon": "wave",
+                "action_url": "/decks",
+                "extra_data": None,
+                "read": True,
+                "read_at": now - timedelta(days=6),
+                "created_at": now - timedelta(days=7),
+            },
+        ]
+
+        for notif_data in notifications_data:
+            notification = Notification(
+                user_id=user_id,
+                type=notif_data["type"],
+                title=notif_data["title"],
+                message=notif_data["message"],
+                icon=notif_data["icon"],
+                action_url=notif_data["action_url"],
+                extra_data=notif_data["extra_data"],
+                read=notif_data["read"],
+                read_at=notif_data.get("read_at"),
+            )
+            notification.created_at = notif_data["created_at"]
+            self.db.add(notification)
+            created.append(
+                {
+                    "type": notif_data["type"].value,
+                    "title": notif_data["title"],
+                    "read": notif_data["read"],
+                }
+            )
+
+        await self.db.flush()
+
+        return {
+            "success": True,
+            "notifications_created": len(created),
+            "unread_count": sum(1 for n in created if not n["read"]),
+        }
+
+    # =====================
     # Full Seed Orchestration
     # =====================
 
@@ -845,9 +975,10 @@ class SeedService:
         3. Create decks and cards
         4. Create progress data for learner user
         5. Create review history for learner user
-        6. Create feedback and votes
-        7. Create achievements and XP data
-        8. Create XP-specific test users
+        6. Create notifications for learner user
+        7. Create feedback and votes
+        8. Create achievements and XP data
+        9. Create XP-specific test users
 
         Returns:
             dict with complete seeding summary
@@ -883,6 +1014,7 @@ class SeedService:
 
         stats_result: dict[str, Any] = {"success": True, "stats_created": 0}
         reviews_result: dict[str, Any] = {"success": True, "reviews_created": 0}
+        notifications_result: dict[str, Any] = {"success": True, "notifications_created": 0}
 
         if learner_id and a1_deck_id:
             # Create 60% progress on A1 deck for learner
@@ -904,13 +1036,17 @@ class SeedService:
                     review_count=5,
                 )
 
-        # Step 6: Create feedback and votes
+        # Step 6: Create notifications for learner user
+        if learner_id:
+            notifications_result = await self.seed_notifications(user_id=learner_id)
+
+        # Step 7: Create feedback and votes
         feedback_result = await self.seed_feedback(user_ids)
 
-        # Step 7: Seed achievement definitions
+        # Step 8: Seed achievement definitions
         achievements_result = await self.seed_achievements()
 
-        # Step 8: Create XP-specific test users for E2E testing
+        # Step 9: Create XP-specific test users for E2E testing
         now = datetime.now(timezone.utc)
         xp_users_result: dict[str, Any] = {"success": True, "users": []}
 
@@ -1012,6 +1148,7 @@ class SeedService:
             "content": content_result,
             "statistics": stats_result,
             "reviews": reviews_result,
+            "notifications": notifications_result,
             "feedback": feedback_result,
             "achievements": achievements_result,
             "xp_users": xp_users_result,

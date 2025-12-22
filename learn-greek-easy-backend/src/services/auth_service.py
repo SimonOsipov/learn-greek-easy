@@ -154,6 +154,9 @@ class AuthService:
             # Commit all changes atomically
             await self.db.commit()
 
+            # Create welcome notification for new user
+            await self._create_welcome_notification(user.id)
+
             # Refresh user to get all fields including timestamps
             await self.db.refresh(user)
 
@@ -336,55 +339,8 @@ class AuthService:
             client_id=settings.google_client_id,
         )
 
-        # Step 2: Find existing user by google_id
-        user = await self._get_user_by_google_id(google_user.google_id)
-
-        if user:
-            # User found by google_id - this is a returning Google user
-            logger.info(
-                "Google OAuth login - existing user",
-                extra={"user_id": str(user.id), "email": user.email},
-            )
-        else:
-            # No user with this google_id, check by email
-            user = await self._get_user_by_email(google_user.email)
-
-            if user:
-                # User exists with this email - attempt to link Google account
-                if user.google_id is not None and user.google_id != google_user.google_id:
-                    # Email linked to a DIFFERENT Google account - conflict
-                    logger.warning(
-                        "Google OAuth conflict - email linked to different Google account",
-                        extra={
-                            "email": google_user.email,
-                            "existing_google_id": user.google_id[:10] + "...",
-                            "new_google_id": google_user.google_id[:10] + "...",
-                        },
-                    )
-                    raise AccountLinkingConflictException()
-
-                # Link Google account to existing user
-                user.google_id = google_user.google_id
-
-                # Auto-verify email if Google says it's verified
-                if google_user.email_verified and user.email_verified_at is None:
-                    user.email_verified_at = datetime.utcnow()
-
-                # Update name if not set
-                if user.full_name is None and google_user.full_name:
-                    user.full_name = google_user.full_name
-
-                logger.info(
-                    "Google OAuth - linked to existing email account",
-                    extra={"user_id": str(user.id), "email": user.email},
-                )
-            else:
-                # No user exists - create new user
-                user = await self._create_google_user(google_user)
-                logger.info(
-                    "Google OAuth - new user created",
-                    extra={"user_id": str(user.id), "email": user.email},
-                )
+        # Step 2: Find or create user, returns (user, is_new_user)
+        user, is_new_user = await self._find_or_create_google_user(google_user)
 
         # Step 3: Validate user is active
         if not user.is_active:
@@ -421,6 +377,10 @@ class AuthService:
 
         # Commit all changes
         await self.db.commit()
+
+        # Create welcome notification for new Google OAuth users
+        if is_new_user:
+            await self._create_welcome_notification(user.id)
 
         # Calculate expiry in seconds
         expires_in = int((access_expires - datetime.utcnow()).total_seconds())
@@ -483,6 +443,97 @@ class AuthService:
         self.db.add(user_settings)
 
         return user
+
+    async def _find_or_create_google_user(self, google_user: GoogleUserInfo) -> Tuple[User, bool]:
+        """Find existing user or create new one for Google OAuth.
+
+        Handles the user lookup/creation logic for Google OAuth authentication.
+        Extracted to reduce complexity of authenticate_google.
+
+        Args:
+            google_user: Verified Google user information
+
+        Returns:
+            Tuple of (User, is_new_user) where is_new_user indicates if this
+            is a newly created user (for welcome notification).
+
+        Raises:
+            AccountLinkingConflictException: If email exists with different Google account
+        """
+        # Check by google_id first
+        user = await self._get_user_by_google_id(google_user.google_id)
+
+        if user:
+            # User found by google_id - this is a returning Google user
+            logger.info(
+                "Google OAuth login - existing user",
+                extra={"user_id": str(user.id), "email": user.email},
+            )
+            return user, False
+
+        # No user with this google_id, check by email
+        user = await self._get_user_by_email(google_user.email)
+
+        if user:
+            # User exists with this email - attempt to link Google account
+            if user.google_id is not None and user.google_id != google_user.google_id:
+                # Email linked to a DIFFERENT Google account - conflict
+                logger.warning(
+                    "Google OAuth conflict - email linked to different Google account",
+                    extra={
+                        "email": google_user.email,
+                        "existing_google_id": user.google_id[:10] + "...",
+                        "new_google_id": google_user.google_id[:10] + "...",
+                    },
+                )
+                raise AccountLinkingConflictException()
+
+            # Link Google account to existing user
+            user.google_id = google_user.google_id
+
+            # Auto-verify email if Google says it's verified
+            if google_user.email_verified and user.email_verified_at is None:
+                user.email_verified_at = datetime.utcnow()
+
+            # Update name if not set
+            if user.full_name is None and google_user.full_name:
+                user.full_name = google_user.full_name
+
+            logger.info(
+                "Google OAuth - linked to existing email account",
+                extra={"user_id": str(user.id), "email": user.email},
+            )
+            return user, False
+
+        # No user exists - create new user
+        user = await self._create_google_user(google_user)
+        logger.info(
+            "Google OAuth - new user created",
+            extra={"user_id": str(user.id), "email": user.email},
+        )
+        return user, True
+
+    async def _create_welcome_notification(self, user_id: UUID) -> None:
+        """Create welcome notification for a new user.
+
+        This is a helper method to keep the main authentication methods simpler.
+        Failures are logged but don't affect the parent operation.
+
+        Args:
+            user_id: The new user's UUID
+        """
+        try:
+            from src.services.notification_service import NotificationService
+
+            notification_service = NotificationService(self.db)
+            await notification_service.notify_welcome(user_id=user_id)
+            await self.db.commit()
+        except Exception as e:
+            logger.warning(
+                "Failed to create welcome notification",
+                extra={"user_id": str(user_id), "error": str(e)},
+            )
+            # Don't fail if notification fails
 
     async def refresh_access_token(
         self,

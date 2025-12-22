@@ -67,11 +67,13 @@ class TestAuthService:
                     assert token_response.expires_in > 0
 
                     mock_hash.assert_called_once_with(user_data.password)
-                    mock_db.commit.assert_called_once()
+                    # First commit: save user and settings
+                    # Second commit: save welcome notification (in _create_welcome_notification)
+                    assert mock_db.commit.call_count == 2
                     mock_db.refresh.assert_called_once()
-                    # Check that 2 objects were added: User, UserSettings
+                    # Check that 3 objects were added: User, UserSettings, Notification
                     # (RefreshToken is now stored in Redis, not PostgreSQL)
-                    assert mock_db.add.call_count == 2
+                    assert mock_db.add.call_count == 3
 
     @pytest.mark.asyncio
     async def test_register_user_email_already_exists(self):

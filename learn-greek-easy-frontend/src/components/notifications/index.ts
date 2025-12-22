@@ -1,3 +1,5 @@
-export { NotificationsDropdown } from './NotificationsDropdown';
 export { NotificationItem } from './NotificationItem';
-export { mockNotifications } from './mockNotifications';
+export { NotificationsDropdown } from './NotificationsDropdown';
+export { NotificationToast } from './NotificationToast';
+export type { NotificationToastProps } from './NotificationToast';
+export { NotificationToastContainer } from './NotificationToastContainer';

@@ -25,3 +25,6 @@ export { useToast } from './use-toast';
 // i18n hooks
 export { useLanguage } from './useLanguage';
 export type { LanguageContextValue } from './useLanguage';
+
+// Notification hooks
+export { useNotifications } from './useNotifications';

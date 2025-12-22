@@ -15,7 +15,7 @@ from uuid import uuid4
 
 import pytest
 
-from src.db.models import DeckLevel, FeedbackCategory, VoteType
+from src.db.models import DeckLevel, FeedbackCategory, NotificationType, VoteType
 from src.services.seed_service import SeedService
 
 # ============================================================================
@@ -610,3 +610,162 @@ class TestSeedServiceFeedback:
         assert result["success"] is True
         assert result["feedback"] == []
         assert result["votes"] == []
+
+
+# ============================================================================
+# Notification Seeding Tests
+# ============================================================================
+
+
+class TestSeedServiceNotifications:
+    """Tests for notification seeding."""
+
+    @pytest.fixture
+    def mock_db_with_ids(self):
+        """Create mock database that assigns IDs to added objects."""
+        db = AsyncMock()
+
+        def track_add(obj):
+            # Assign a UUID to the object if it has an id attribute
+            if hasattr(obj, "id") and obj.id is None:
+                obj.id = uuid4()
+
+        db.add = MagicMock(side_effect=track_add)
+        db.flush = AsyncMock()
+        db.commit = AsyncMock()
+        db.execute = AsyncMock()
+
+        return db
+
+    @pytest.mark.asyncio
+    async def test_seed_notifications_blocked_in_production(
+        self, seed_service, mock_settings_cannot_seed
+    ):
+        """seed_notifications should raise RuntimeError in production."""
+        with pytest.raises(RuntimeError) as exc_info:
+            await seed_service.seed_notifications(uuid4())
+
+        assert "Database seeding not allowed" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_creates_five_notifications(self, mock_db_with_ids, mock_settings_can_seed):
+        """Verify 5 notifications are created."""
+        seed_service = SeedService(mock_db_with_ids)
+        user_id = uuid4()
+
+        result = await seed_service.seed_notifications(user_id)
+
+        assert result["success"] is True
+        assert result["notifications_created"] == 5
+
+    @pytest.mark.asyncio
+    async def test_creates_three_unread_notifications(
+        self, mock_db_with_ids, mock_settings_can_seed
+    ):
+        """Verify 3 unread notifications are created."""
+        seed_service = SeedService(mock_db_with_ids)
+        user_id = uuid4()
+
+        result = await seed_service.seed_notifications(user_id)
+
+        assert result["unread_count"] == 3
+
+    @pytest.mark.asyncio
+    async def test_creates_notifications_with_various_types(
+        self, mock_db_with_ids, mock_settings_can_seed
+    ):
+        """Verify notifications have various types."""
+        seed_service = SeedService(mock_db_with_ids)
+
+        # Track what types are added
+        added_notifications = []
+        original_add = mock_db_with_ids.add.side_effect
+
+        def track_notifications(obj):
+            original_add(obj)
+            if hasattr(obj, "type") and hasattr(obj, "title") and hasattr(obj, "message"):
+                added_notifications.append(obj)
+
+        mock_db_with_ids.add = MagicMock(side_effect=track_notifications)
+
+        user_id = uuid4()
+        await seed_service.seed_notifications(user_id)
+
+        # Verify we have different notification types
+        types = [n.type for n in added_notifications]
+        unique_types = set(types)
+
+        # Should have at least 4 different types
+        assert len(unique_types) >= 4
+
+        # Verify specific expected types
+        assert NotificationType.ACHIEVEMENT_UNLOCKED in types
+        assert NotificationType.DAILY_GOAL_COMPLETE in types
+        assert NotificationType.LEVEL_UP in types
+        assert NotificationType.STREAK_AT_RISK in types
+        assert NotificationType.WELCOME in types
+
+    @pytest.mark.asyncio
+    async def test_notifications_have_correct_read_status(
+        self, mock_db_with_ids, mock_settings_can_seed
+    ):
+        """Verify notifications have correct read/unread status."""
+        seed_service = SeedService(mock_db_with_ids)
+
+        # Track notifications
+        added_notifications = []
+        original_add = mock_db_with_ids.add.side_effect
+
+        def track_notifications(obj):
+            original_add(obj)
+            if hasattr(obj, "type") and hasattr(obj, "title") and hasattr(obj, "read"):
+                added_notifications.append(obj)
+
+        mock_db_with_ids.add = MagicMock(side_effect=track_notifications)
+
+        user_id = uuid4()
+        await seed_service.seed_notifications(user_id)
+
+        # Count read vs unread
+        unread = [n for n in added_notifications if not n.read]
+        read = [n for n in added_notifications if n.read]
+
+        assert len(unread) == 3
+        assert len(read) == 2
+
+        # Verify read notifications have read_at set
+        for n in read:
+            assert n.read_at is not None
+
+        # Verify unread notifications don't have read_at set
+        for n in unread:
+            assert n.read_at is None
+
+    @pytest.mark.asyncio
+    async def test_notifications_have_required_fields(
+        self, mock_db_with_ids, mock_settings_can_seed
+    ):
+        """Verify notifications have all required fields populated."""
+        seed_service = SeedService(mock_db_with_ids)
+
+        # Track notifications
+        added_notifications = []
+        original_add = mock_db_with_ids.add.side_effect
+
+        def track_notifications(obj):
+            original_add(obj)
+            if hasattr(obj, "type") and hasattr(obj, "title") and hasattr(obj, "message"):
+                added_notifications.append(obj)
+
+        mock_db_with_ids.add = MagicMock(side_effect=track_notifications)
+
+        user_id = uuid4()
+        await seed_service.seed_notifications(user_id)
+
+        for n in added_notifications:
+            assert n.user_id == user_id
+            assert n.title is not None and len(n.title) > 0
+            assert n.message is not None and len(n.message) > 0
+            assert n.icon is not None
+            assert n.action_url is not None
+            assert n.created_at is not None

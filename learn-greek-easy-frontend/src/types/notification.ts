@@ -1,68 +1,83 @@
 // ============================================================================
-// Notification Types
+// Notification Types (Matching Backend API)
 // ============================================================================
 
 /**
- * Notification type categories
- * Used for icon/color selection and filtering
+ * Notification type categories matching backend enum
  */
 export type NotificationType =
-  | 'streak_milestone' // Streak achievements (fire icon, orange)
-  | 'deck_completed' // Finished a deck (trophy icon, green)
-  | 'cards_due' // Cards ready for review (book icon, blue)
-  | 'achievement' // General achievements (star icon, purple)
-  | 'system'; // System announcements (info icon, gray)
+  | 'achievement_unlocked'
+  | 'daily_goal_complete'
+  | 'level_up'
+  | 'streak_at_risk'
+  | 'streak_lost'
+  | 'welcome';
 
 /**
- * Single notification item
- *
- * @remarks
- * Structure designed to match future API response format.
- * For mock-up phase, `read` status is visual-only (no persistence).
+ * Single notification from API
  */
 export interface Notification {
-  /** Unique identifier */
   id: string;
-
-  /** Category for icon/color selection */
   type: NotificationType;
-
-  /** Main notification text (bold) */
   title: string;
-
-  /** Supporting details (muted text) */
   message: string;
-
-  /** When notification was created */
-  timestamp: Date;
-
-  /** Read status - affects visual styling */
+  icon: string;
+  action_url: string | null;
+  extra_data: Record<string, unknown> | null; // Context data
   read: boolean;
-
-  /** Optional: URL to navigate to when clicked */
-  href?: string;
+  read_at: string | null; // ISO timestamp
+  created_at: string; // ISO timestamp
 }
 
 /**
- * Notification icon configuration
- * Maps notification types to icons and colors
+ * API response for notification list
+ */
+export interface NotificationListResponse {
+  notifications: Notification[];
+  unread_count: number;
+  total_count: number;
+  has_more: boolean;
+}
+
+/**
+ * API response for unread count
+ */
+export interface UnreadCountResponse {
+  count: number;
+}
+
+/**
+ * API response for mark as read
+ */
+export interface MarkReadResponse {
+  success: boolean;
+  marked_count: number;
+}
+
+/**
+ * API response for clear operations
+ */
+export interface ClearResponse {
+  success: boolean;
+  deleted_count: number;
+}
+
+/**
+ * Icon configuration for notification types
  */
 export interface NotificationIconConfig {
-  /** Lucide icon name */
   icon: string;
-  /** Tailwind color class */
   colorClass: string;
 }
 
 /**
- * Future: API response structure for notifications endpoint
- *
- * @remarks
- * Kept here for reference during backend integration
+ * Notification type to icon/color mapping
  */
-export interface NotificationsResponse {
-  notifications: Notification[];
-  unreadCount: number;
-  /** Pagination cursor */
-  cursor?: string;
-}
+export const NOTIFICATION_CONFIG: Record<NotificationType, NotificationIconConfig> = {
+  achievement_unlocked: { icon: 'Trophy', colorClass: 'text-warning' },
+  daily_goal_complete: { icon: 'CheckCircle', colorClass: 'text-success' },
+  level_up: { icon: 'ArrowUp', colorClass: 'text-primary' },
+  streak_at_risk: { icon: 'Flame', colorClass: 'text-warning' },
+  streak_lost: { icon: 'HeartCrack', colorClass: 'text-destructive' },
+  welcome: { icon: 'Hand', colorClass: 'text-info' },
+};

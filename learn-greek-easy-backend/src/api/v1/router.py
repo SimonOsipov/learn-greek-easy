@@ -26,6 +26,7 @@ from src.api.v1.auth import router as auth_router
 from src.api.v1.cards import router as card_router
 from src.api.v1.decks import router as deck_router
 from src.api.v1.feedback import router as feedback_router
+from src.api.v1.notifications import router as notification_router
 from src.api.v1.progress import router as progress_router
 from src.api.v1.reviews import router as review_router
 from src.api.v1.study import router as study_router
@@ -104,6 +105,15 @@ v1_router.include_router(
     xp_router,
     prefix="/xp",
     tags=["XP & Achievements"],
+)
+
+# =============================================================================
+# Notification Routes
+# =============================================================================
+v1_router.include_router(
+    notification_router,
+    prefix="/notifications",
+    tags=["Notifications"],
 )
 
 # =============================================================================

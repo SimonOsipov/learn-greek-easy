@@ -125,6 +125,29 @@ class XPService:
 
         did_level_up = new_level > old_level
 
+        # Create level-up notification if leveled up (late import to avoid circular deps)
+        if did_level_up:
+            try:
+                from src.services.notification_service import NotificationService
+
+                notification_service = NotificationService(self.db)
+                level_def = get_level_definition(new_level)
+                await notification_service.notify_level_up(
+                    user_id=user_id,
+                    new_level=new_level,
+                    level_name=level_def.name_english,
+                )
+            except Exception as e:
+                logger.warning(
+                    "Failed to create level-up notification",
+                    extra={
+                        "user_id": str(user_id),
+                        "new_level": new_level,
+                        "error": str(e),
+                    },
+                )
+                # Don't fail XP award if notification fails
+
         logger.info(
             "XP awarded",
             extra={

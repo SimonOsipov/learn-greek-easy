@@ -28,6 +28,8 @@ from src.db.models import (  # noqa: F401
     FeedbackCategory,
     FeedbackStatus,
     FeedbackVote,
+    Notification,
+    NotificationType,
     RefreshToken,
     Review,
     ReviewRating,
