@@ -35,14 +35,14 @@ test.describe('Notifications Bell', () => {
     await bellButton.click();
 
     // Verify dropdown opens with "Notifications" header
-    await expect(page.getByText('Notifications')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Notifications', { exact: true })).toBeVisible({ timeout: 5000 });
   });
 
   test('E2E-NOTIF-03: Clicking outside closes dropdown', async ({ page }) => {
     // Open dropdown
     const bellButton = page.locator('button[aria-label*="Notification"]');
     await bellButton.click();
-    await expect(page.getByText('Notifications')).toBeVisible();
+    await expect(page.getByText('Notifications', { exact: true })).toBeVisible();
 
     // Press escape to close (more reliable than clicking outside)
     await page.keyboard.press('Escape');
@@ -64,7 +64,7 @@ test.describe('Notifications Dropdown Content', () => {
     // Open notification dropdown
     const bellButton = page.locator('button[aria-label*="Notification"]');
     await bellButton.click();
-    await expect(page.getByText('Notifications')).toBeVisible();
+    await expect(page.getByText('Notifications', { exact: true })).toBeVisible();
   });
 
   test('E2E-NOTIF-04: Empty state shows "No notifications yet"', async ({ page }) => {
@@ -82,7 +82,7 @@ test.describe('Notifications Dropdown Content', () => {
 
   test('E2E-NOTIF-05: Notification dropdown shows header', async ({ page }) => {
     // Verify header is visible
-    await expect(page.getByText('Notifications')).toBeVisible();
+    await expect(page.getByText('Notifications', { exact: true })).toBeVisible();
   });
 });
 
@@ -101,7 +101,7 @@ test.describe('Notifications with Fresh Login', () => {
 
     // Open dropdown
     await bellButton.click();
-    await expect(page.getByText('Notifications')).toBeVisible();
+    await expect(page.getByText('Notifications', { exact: true })).toBeVisible();
 
     // Wait for content to load
     await page.waitForTimeout(500);
@@ -131,7 +131,7 @@ test.describe('Notifications with Fresh Login', () => {
     // Open dropdown
     const bellButton = page.locator('button[aria-label*="Notification"]');
     await bellButton.click();
-    await expect(page.getByText('Notifications')).toBeVisible();
+    await expect(page.getByText('Notifications', { exact: true })).toBeVisible();
 
     // Wait for content to load
     await page.waitForTimeout(500);
@@ -198,7 +198,7 @@ test.describe('Notification Loading State', () => {
 
     // Should briefly show loading spinner
     // Loading might be too fast to catch, so we just verify the dropdown opened
-    await expect(page.getByText('Notifications')).toBeVisible();
+    await expect(page.getByText('Notifications', { exact: true })).toBeVisible();
   });
 });
 
