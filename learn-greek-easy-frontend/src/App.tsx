@@ -13,6 +13,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { AchievementNotificationManager } from '@/components/xp';
 import { LanguageProvider } from '@/contexts/LanguageContext';
 import { LayoutProvider } from '@/contexts/LayoutContext';
+import { NotificationProvider } from '@/contexts/NotificationContext';
 import AchievementsPage from '@/pages/AchievementsPage';
 import ActivityFeedTest from '@/pages/ActivityFeedTest';
 import { ForgotPassword } from '@/pages/auth/ForgotPassword';
@@ -110,7 +111,9 @@ function App() {
             <TooltipProvider>
               <LanguageProvider>
                 <LayoutProvider>
-                  <AppContent />
+                  <NotificationProvider>
+                    <AppContent />
+                  </NotificationProvider>
                 </LayoutProvider>
               </LanguageProvider>
             </TooltipProvider>

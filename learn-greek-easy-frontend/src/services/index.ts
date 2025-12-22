@@ -111,3 +111,6 @@ export type {
   VoteResponse,
   VoteType,
 } from '@/types/feedback';
+
+// Notification API
+export * as notificationAPI from './notificationAPI';
