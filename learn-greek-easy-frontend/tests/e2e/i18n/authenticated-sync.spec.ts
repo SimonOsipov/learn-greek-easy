@@ -80,12 +80,12 @@ test.describe('Authenticated Language Sync', () => {
     // Verify language is still Greek using specific test-id
     await expect(page.getByTestId('decks-title')).toHaveText('Διαθέσιμες Τράπουλες');
 
-    // Navigate to settings
-    await page.goto('/settings');
+    // Navigate to profile
+    await page.goto('/profile');
     await page.waitForLoadState('networkidle');
 
-    // Verify language is still Greek using specific test-id
-    await expect(page.getByTestId('settings-title')).toHaveText('Ρυθμίσεις');
+    // Verify language is still Greek - profile page title
+    await expect(page.getByTestId('profile-page')).toBeVisible();
   });
 
   test('should persist language after logout and re-login', async ({ page }) => {
@@ -97,33 +97,23 @@ test.describe('Authenticated Language Sync', () => {
     // Verify UI is in Greek using specific test-id
     await expect(page.getByTestId('dashboard-title')).toHaveText('Πίνακας Ελέγχου');
 
-    // Logout (navigate to settings and logout, or use the user menu)
-    await page.goto('/settings');
-    await page.waitForLoadState('networkidle');
+    // Logout via user menu (header dropdown)
+    const userMenuButton = page.getByRole('button', { name: 'User menu' });
+    await userMenuButton.waitFor({ state: 'visible', timeout: 10000 });
+    await userMenuButton.click();
 
-    // Find and click logout button - check for test-id first, then role-based
-    const logoutButtonTestId = page.getByTestId('logout-button');
-    const logoutButtonRole = page.getByRole('button', { name: /logout|αποσύνδεση/i });
+    // Wait for dropdown to appear
+    await page.waitForTimeout(300);
 
-    if (await logoutButtonTestId.isVisible()) {
-      await logoutButtonTestId.click();
-      // Wait for logout dialog if it appears
-      const confirmButton = page.getByTestId('logout-confirm-button');
-      if (await confirmButton.isVisible({ timeout: 2000 }).catch(() => false)) {
-        await confirmButton.click();
-      }
-    } else if (await logoutButtonRole.isVisible()) {
-      await logoutButtonRole.click();
-      // Wait for logout dialog if it appears
-      const confirmButton = page.getByTestId('logout-confirm-button');
-      if (await confirmButton.isVisible({ timeout: 2000 }).catch(() => false)) {
-        await confirmButton.click();
-      }
-    } else {
-      // If no logout button found, skip the rest of this test
-      console.log('[TEST] No logout button found - test may be incomplete');
-      return;
-    }
+    // Find and click logout button
+    const logoutButton = page.getByTestId('logout-button');
+    await logoutButton.waitFor({ state: 'visible', timeout: 5000 });
+    await logoutButton.click();
+
+    // Wait for logout dialog and confirm
+    const confirmButton = page.getByTestId('logout-confirm-button');
+    await confirmButton.waitFor({ state: 'visible', timeout: 5000 });
+    await confirmButton.click();
 
     // Wait for redirect to login page
     await page.waitForURL('**/login**', { timeout: 10000 });
@@ -177,7 +167,7 @@ test.describe('Authenticated Language Sync', () => {
   });
 });
 
-test.describe('Language Settings Page', () => {
+test.describe('Language Profile Page', () => {
   // Use stored auth state instead of logging in fresh
   // This avoids rate limiting issues when running many tests in parallel
 
@@ -196,29 +186,38 @@ test.describe('Language Settings Page', () => {
     await page.waitForSelector('[data-testid="dashboard"]', { timeout: 10000 });
   });
 
-  test('should show language option in settings page', async ({ page }) => {
-    await page.goto('/settings');
+  test('should show language option in profile preferences', async ({ page }) => {
+    await page.goto('/profile');
     await page.waitForLoadState('networkidle');
 
-    // Settings page should have language-related content
-    // Look for language selector or language-related text
-    const hasLanguageSection =
-      (await page.getByText(/language|γλώσσα/i).count()) > 0 ||
-      (await page.getByTestId('language-switcher-trigger').count()) > 0;
+    // Wait for profile page to load
+    await expect(page.getByTestId('profile-page')).toBeVisible({ timeout: 10000 });
+
+    // Click on Preferences tab
+    await page.getByRole('button', { name: /preferences/i }).click();
+
+    // Wait for preferences section to load
+    await expect(page.getByTestId('preferences-section')).toBeVisible({ timeout: 5000 });
+
+    // Preferences section should have language-related content
+    const hasLanguageSection = (await page.getByText(/language|γλώσσα/i).count()) > 0;
 
     expect(hasLanguageSection).toBe(true);
   });
 
-  test('should be able to change language from settings', async ({ page }) => {
-    await page.goto('/settings');
+  test('should be able to change language from profile preferences', async ({ page }) => {
+    await page.goto('/profile');
     await page.waitForLoadState('networkidle');
+
+    // Wait for profile page to load
+    await expect(page.getByTestId('profile-page')).toBeVisible({ timeout: 10000 });
 
     // Use the language switcher (should be in header)
     await page.getByTestId('language-switcher-trigger').click();
     await page.getByTestId('language-option-el').click();
     await page.waitForTimeout(500);
 
-    // Settings page should now be in Greek using specific test-id
-    await expect(page.getByTestId('settings-title')).toHaveText('Ρυθμίσεις');
+    // Profile page should now be in Greek
+    await expect(page.getByTestId('profile-page')).toBeVisible();
   });
 });

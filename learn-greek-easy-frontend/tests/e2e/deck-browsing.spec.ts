@@ -58,13 +58,6 @@ test.describe('Deck Browsing', () => {
     }
   });
 
-  test('should access settings page', async ({ page }) => {
-    await page.goto('/settings');
-
-    // Verify settings page loaded
-    await expect(page.getByRole('heading', { name: /settings/i })).toBeVisible();
-  });
-
   test('should access profile page', async ({ page }) => {
     await page.goto('/profile');
 

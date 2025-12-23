@@ -142,25 +142,6 @@ test.describe('Authenticated Pages - Multi-language Visual Tests', () => {
     await takeSnapshot(page, 'Decks Page - Greek', testInfo);
   });
 
-  test('Settings Page - English', async ({ page }, testInfo) => {
-    await page.evaluate(() => localStorage.setItem('i18nextLng', 'en'));
-    await page.goto('/settings');
-    await page.waitForLoadState('networkidle');
-    await waitForPageReady(page);
-    await page.waitForTimeout(500);
-
-    await takeSnapshot(page, 'Settings Page - English', testInfo);
-  });
-
-  test('Settings Page - Greek', async ({ page }, testInfo) => {
-    await page.evaluate(() => localStorage.setItem('i18nextLng', 'el'));
-    await page.goto('/settings');
-    await page.waitForLoadState('networkidle');
-    await waitForPageReady(page);
-    await page.waitForTimeout(500);
-
-    await takeSnapshot(page, 'Settings Page - Greek', testInfo);
-  });
 });
 
 test.describe('Navigation - Multi-language Visual Tests', () => {

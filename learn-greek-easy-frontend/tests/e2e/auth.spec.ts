@@ -82,7 +82,7 @@ test.describe('Unauthenticated - Login & Register Forms', () => {
     page,
   }) => {
     // Try to access protected routes
-    const protectedRoutes = ['/', '/decks', '/profile', '/settings'];
+    const protectedRoutes = ['/', '/decks', '/profile'];
 
     for (const route of protectedRoutes) {
       await page.goto(route);

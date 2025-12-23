@@ -161,7 +161,16 @@ test.describe('Keyboard Navigation - Protected Pages', () => {
   });
 
   test('Modals should trap focus', async ({ page }) => {
-    await page.goto('/settings');
+    await page.goto('/profile');
+
+    // Wait for profile page to load
+    await expect(page.getByTestId('profile-page')).toBeVisible({ timeout: 10000 });
+
+    // Click on Security tab
+    await page.getByRole('button', { name: /security/i }).click();
+
+    // Wait for security section to load
+    await expect(page.getByTestId('security-section')).toBeVisible({ timeout: 5000 });
 
     // Open modal
     await page.getByRole('button', { name: /delete account/i }).click();
@@ -184,7 +193,16 @@ test.describe('Keyboard Navigation - Protected Pages', () => {
   });
 
   test('Esc should close modals', async ({ page }) => {
-    await page.goto('/settings');
+    await page.goto('/profile');
+
+    // Wait for profile page to load
+    await expect(page.getByTestId('profile-page')).toBeVisible({ timeout: 10000 });
+
+    // Click on Security tab
+    await page.getByRole('button', { name: /security/i }).click();
+
+    // Wait for security section to load
+    await expect(page.getByTestId('security-section')).toBeVisible({ timeout: 5000 });
 
     // Open modal
     await page.getByRole('button', { name: /delete account/i }).click();

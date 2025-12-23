@@ -95,7 +95,7 @@ test.describe('PostHog Analytics Disabled in E2E', () => {
     await page.goto('/decks');
     await page.waitForLoadState('networkidle');
 
-    await page.goto('/settings');
+    await page.goto('/profile');
     await page.waitForLoadState('networkidle');
 
     // Wait for any delayed analytics
