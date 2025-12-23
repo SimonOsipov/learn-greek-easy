@@ -675,17 +675,26 @@ jobs:
         run: |
           # Clean stale coverage files from previous runs
           rm -f .coverage .coverage.*
+
           # Run tests in parallel with pytest-xdist
+          # Note: Do NOT generate reports here - each worker creates separate .coverage.X files
           poetry run pytest tests/ \
             -n auto \
             --dist loadscope \
             --cov=src \
-            --cov-report=xml:coverage.xml \
-            --cov-report=term-missing \
             --cov-branch \
-            --cov-fail-under=80 \
             -v \
             --tb=short
+
+          # Combine parallel coverage data from all workers
+          # This merges .coverage.1, .coverage.2, etc. into .coverage
+          poetry run coverage combine
+
+          # Generate reports from combined data
+          poetry run coverage report --fail-under=80
+          poetry run coverage xml -o coverage.xml
+          poetry run coverage html
+          poetry run coverage report --format=markdown >> $GITHUB_STEP_SUMMARY
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
