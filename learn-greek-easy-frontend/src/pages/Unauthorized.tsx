@@ -27,7 +27,7 @@ export const Unauthorized: React.FC = () => {
         </p>
         <div className="flex flex-col justify-center gap-4 sm:flex-row">
           {requiredRole === 'premium' && (
-            <Link to="/settings?tab=subscription">
+            <Link to="/profile">
               <Button className="w-full sm:w-auto">
                 <Crown className="mr-2 h-4 w-4" />
                 Upgrade to Premium
