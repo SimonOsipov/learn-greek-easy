@@ -82,7 +82,7 @@ def _log_dry_run_info(truncate_only: bool) -> None:
     logger.info("All test users have password: TestPassword123!")
 
 
-def _log_result(operation: str, result: dict[str, Any], duration: float) -> None:
+def _log_result(operation: str, result: dict[str, Any], duration: float) -> None:  # noqa: C901
     """Log the result of the seeding operation."""
     logger.info("")
     logger.info("=" * 60)
@@ -135,14 +135,14 @@ def _log_result(operation: str, result: dict[str, Any], duration: float) -> None
         # Log culture results
         culture_result = result.get("culture", {})
         culture_decks = culture_result.get("decks", [])
-        culture_questions = culture_result.get("questions", [])
+        culture_questions = culture_result.get("total_questions", 0)
 
         logger.info(f"Culture decks created: {len(culture_decks)}")
         if culture_decks:
             for deck in culture_decks:
                 logger.info(f"  - {deck.get('category', 'Unknown')}")
 
-        logger.info(f"Culture questions created: {len(culture_questions)}")
+        logger.info(f"Culture questions created: {culture_questions}")
 
         # Log culture statistics
         culture_stats_result = result.get("culture_statistics", {})
