@@ -3,3 +3,4 @@
  */
 
 export { registerInterfaceLanguage, trackLanguageSwitch } from './languageAnalytics';
+export { trackCultureLanguageChanged } from './cultureAnalytics';

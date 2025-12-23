@@ -6,5 +6,22 @@
     "timeRemaining": "{{seconds}}s remaining",
     "selectAnswer": "Select an answer to continue",
     "optionLabel": "Option {{letter}}: {{text}}"
+  },
+  "feedback": {
+    "correct": "Correct!",
+    "wrong": "Wrong!",
+    "correctAnswerWas": "The correct answer was:",
+    "optionWithLabel": "Option {{label}}: {{text}}",
+    "xpEarned": "+{{xp}} XP",
+    "nextQuestion": "Next Question",
+    "viewSummary": "View Summary",
+    "srCorrect": "Correct! You earned {{xp}} XP.",
+    "srWrong": "Wrong. The correct answer was {{label}}: {{answer}}. You earned {{xp}} XP."
+  },
+  "language": {
+    "selectLanguage": "Question Language",
+    "el": "Greek",
+    "en": "English",
+    "ru": "Russian"
   }
 }

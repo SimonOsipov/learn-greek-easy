@@ -28,3 +28,7 @@ export type { LanguageContextValue } from './useLanguage';
 
 // Notification hooks
 export { useNotifications } from './useNotifications';
+
+// Culture hooks
+export { useQuestionLanguage } from './useQuestionLanguage';
+export type { UseQuestionLanguageResult } from './useQuestionLanguage';

@@ -6,5 +6,22 @@
     "timeRemaining": "{{seconds}}с осталось",
     "selectAnswer": "Выберите ответ для продолжения",
     "optionLabel": "Вариант {{letter}}: {{text}}"
+  },
+  "feedback": {
+    "correct": "Правильно!",
+    "wrong": "Неправильно!",
+    "correctAnswerWas": "Правильный ответ был:",
+    "optionWithLabel": "Вариант {{label}}: {{text}}",
+    "xpEarned": "+{{xp}} XP",
+    "nextQuestion": "Следующий Вопрос",
+    "viewSummary": "Показать Итоги",
+    "srCorrect": "Правильно! Вы заработали {{xp}} XP.",
+    "srWrong": "Неправильно. Правильный ответ был {{label}}: {{answer}}. Вы заработали {{xp}} XP."
+  },
+  "language": {
+    "selectLanguage": "Язык Вопроса",
+    "el": "Греческий",
+    "en": "Английский",
+    "ru": "Русский"
   }
 }

@@ -6,5 +6,22 @@
     "timeRemaining": "{{seconds}}δ απομένουν",
     "selectAnswer": "Επιλέξτε μια απάντηση για να συνεχίσετε",
     "optionLabel": "Επιλογή {{letter}}: {{text}}"
+  },
+  "feedback": {
+    "correct": "Σωστά!",
+    "wrong": "Λάθος!",
+    "correctAnswerWas": "Η σωστή απάντηση ήταν:",
+    "optionWithLabel": "Επιλογή {{label}}: {{text}}",
+    "xpEarned": "+{{xp}} XP",
+    "nextQuestion": "Επόμενη Ερώτηση",
+    "viewSummary": "Προβολή Σύνοψης",
+    "srCorrect": "Σωστά! Κερδίσατε {{xp}} XP.",
+    "srWrong": "Λάθος. Η σωστή απάντηση ήταν {{label}}: {{answer}}. Κερδίσατε {{xp}} XP."
+  },
+  "language": {
+    "selectLanguage": "Γλώσσα Ερώτησης",
+    "el": "Ελληνικά",
+    "en": "Αγγλικά",
+    "ru": "Ρωσικά"
   }
 }
