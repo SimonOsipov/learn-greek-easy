@@ -150,6 +150,18 @@ class CultureDeckNotFoundException(NotFoundException):
         super().__init__(resource="CultureDeck", detail=detail)
 
 
+class CultureQuestionNotFoundException(NotFoundException):
+    """Culture question not found."""
+
+    def __init__(self, question_id: Optional[str] = None) -> None:
+        detail = (
+            f"Culture question with ID '{question_id}' not found"
+            if question_id
+            else "Culture question not found"
+        )
+        super().__init__(resource="CultureQuestion", detail=detail)
+
+
 # ============================================================================
 # Validation Exceptions
 # ============================================================================

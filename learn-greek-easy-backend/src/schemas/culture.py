@@ -211,3 +211,77 @@ class CultureSessionSummary(BaseModel):
     duration_seconds: int = Field(..., ge=0, description="Session duration")
     started_at: datetime = Field(..., description="Session start time")
     ended_at: datetime = Field(..., description="Session end time")
+
+
+# ============================================================================
+# Question Queue Schemas (SM-2 practice sessions)
+# ============================================================================
+
+
+class CultureQuestionQueueItem(BaseModel):
+    """A single question in the practice queue with SM-2 metadata."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID = Field(..., description="Question unique identifier")
+    question_text: dict[str, str] = Field(..., description="Multilingual question {el, en, ru}")
+    options: list[dict[str, str]] = Field(
+        ...,
+        min_length=4,
+        max_length=4,
+        description="Four answer options, each with {el, en, ru}",
+    )
+    image_url: Optional[str] = Field(None, description="Pre-signed S3 URL for question image")
+    order_index: int = Field(..., ge=0, description="Question order within deck")
+    is_new: bool = Field(..., description="True if user hasn't studied this question yet")
+    due_date: Optional[date] = Field(None, description="Next review date (null for new questions)")
+    status: str = Field(..., description="Card status: new, learning, review, mastered")
+
+
+class CultureQuestionQueue(BaseModel):
+    """Response for question queue endpoint (practice session)."""
+
+    deck_id: UUID = Field(..., description="Deck these questions belong to")
+    deck_name: dict[str, str] = Field(..., description="Multilingual deck name {el, en, ru}")
+    total_due: int = Field(..., ge=0, description="Number of due questions in queue")
+    total_new: int = Field(..., ge=0, description="Number of new questions in queue")
+    total_in_queue: int = Field(..., ge=0, description="Total questions in this queue")
+    questions: list[CultureQuestionQueueItem] = Field(..., description="Questions for practice")
+
+
+class CultureQuestionQueueRequest(BaseModel):
+    """Request parameters for fetching question queue."""
+
+    limit: int = Field(default=10, ge=1, le=50, description="Max questions to return")
+    include_new: bool = Field(default=True, description="Include new (unstudied) questions")
+    new_questions_limit: int = Field(
+        default=5, ge=0, le=20, description="Max new questions if include_new=True"
+    )
+
+
+# ============================================================================
+# SM-2 Answer Result Schema
+# ============================================================================
+
+
+class SM2QuestionResult(BaseModel):
+    """SM-2 algorithm result after processing an answer."""
+
+    success: bool = Field(..., description="Whether the SM-2 calculation succeeded")
+    question_id: UUID = Field(..., description="Question that was answered")
+    previous_status: str = Field(..., description="Status before this answer")
+    new_status: str = Field(..., description="Status after SM-2 calculation")
+    easiness_factor: float = Field(..., ge=1.3, description="Updated easiness factor")
+    interval: int = Field(..., ge=0, description="Days until next review")
+    repetitions: int = Field(..., ge=0, description="Consecutive successful repetitions")
+    next_review_date: date = Field(..., description="Calculated next review date")
+
+
+class CultureAnswerResponseWithSM2(BaseModel):
+    """Enhanced response schema for answer submission with SM-2 details."""
+
+    is_correct: bool = Field(..., description="Whether the answer was correct")
+    correct_option: int = Field(..., ge=1, le=4, description="The correct answer (1-4)")
+    xp_earned: int = Field(..., ge=0, description="XP awarded for this answer")
+    sm2_result: SM2QuestionResult = Field(..., description="SM-2 algorithm result")
+    message: Optional[str] = Field(None, description="Feedback message for UI")
