@@ -2181,7 +2181,7 @@ class SeedService:
     # Full Seed Orchestration
     # =====================
 
-    async def seed_all(self) -> dict[str, Any]:
+    async def seed_all(self) -> dict[str, Any]:  # noqa: C901
         """Execute full database seeding sequence.
 
         Orchestrates complete seeding:
