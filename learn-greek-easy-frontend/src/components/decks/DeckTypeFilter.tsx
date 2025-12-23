@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 
 import { BookOpen, GraduationCap, Layers } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
+import { trackDeckFilterChanged } from '@/lib/analytics';
 
 export type DeckType = 'all' | 'vocabulary' | 'culture';
 
@@ -25,6 +26,22 @@ const TYPE_OPTIONS: {
 export const DeckTypeFilter: React.FC<DeckTypeFilterProps> = ({ value, onChange }) => {
   const { t } = useTranslation('deck');
 
+  /**
+   * Handle deck type filter change.
+   * Tracks analytics event and calls onChange.
+   */
+  const handleTypeChange = useCallback(
+    (newType: DeckType) => {
+      if (newType === value) return;
+
+      // Track analytics event
+      trackDeckFilterChanged({ filter_type: newType });
+
+      onChange(newType);
+    },
+    [value, onChange]
+  );
+
   return (
     <div className="flex items-center gap-2">
       <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -36,7 +53,7 @@ export const DeckTypeFilter: React.FC<DeckTypeFilterProps> = ({ value, onChange 
             key={optValue}
             variant={value === optValue ? 'default' : 'ghost'}
             size="sm"
-            onClick={() => onChange(optValue)}
+            onClick={() => handleTypeChange(optValue)}
             className={`gap-1.5 ${value === optValue ? '' : 'text-gray-600 dark:text-gray-400'}`}
             aria-pressed={value === optValue}
           >

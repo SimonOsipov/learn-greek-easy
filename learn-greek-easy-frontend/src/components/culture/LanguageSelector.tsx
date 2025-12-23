@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import type { SupportedLanguage } from '@/i18n';
 import { LANGUAGE_OPTIONS } from '@/i18n/types';
+import { trackCultureLanguageChanged } from '@/lib/analytics';
 import { cn } from '@/lib/utils';
 
 /**
@@ -99,11 +100,14 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
 
   /**
    * Handle language selection.
-   * Persists to localStorage and calls onChange.
+   * Persists to localStorage, tracks analytics, and calls onChange.
    */
   const handleSelect = useCallback(
     (lang: SupportedLanguage) => {
       if (lang === value) return;
+
+      // Track analytics event
+      trackCultureLanguageChanged(value, lang);
 
       // Persist to localStorage
       try {
