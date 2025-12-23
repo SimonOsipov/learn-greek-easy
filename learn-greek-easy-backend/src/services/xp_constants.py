@@ -11,6 +11,10 @@ XP_SESSION_COMPLETE = 25
 XP_FIRST_REVIEW = 20  # First review of the day bonus
 XP_STREAK_MULTIPLIER = 10  # x streak_days
 
+# Culture-specific XP (same as flashcards for parity)
+XP_CULTURE_CORRECT = 10  # Same as XP_CORRECT_ANSWER
+XP_CULTURE_WRONG = 2  # Encouragement for wrong answers (MANDATORY)
+
 # Perfect recall threshold in seconds
 PERFECT_RECALL_THRESHOLD_SECONDS = 2
 

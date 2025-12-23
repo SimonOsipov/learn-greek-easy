@@ -1,6 +1,6 @@
 """CultureQuestionStats repository for SM-2 spaced repetition tracking."""
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import Optional
 from uuid import UUID
 
@@ -201,6 +201,30 @@ class CultureQuestionStatsRepository(BaseRepository[CultureQuestionStats]):
         result = await self.db.execute(query)
         count = result.scalar_one()
         return count > 0
+
+    async def count_answers_today(self, user_id: UUID) -> int:
+        """Count culture questions answered today.
+
+        Counts stats records where updated_at is today, indicating the user
+        answered the question today. This method is used for daily goal tracking.
+
+        Args:
+            user_id: User UUID
+
+        Returns:
+            Number of culture questions answered today
+
+        Use Case:
+            Daily goal tracking - culture answers count toward combined goal
+            with flashcard reviews
+        """
+        today_start = datetime.combine(date.today(), datetime.min.time())
+        query = select(func.count(CultureQuestionStats.id)).where(
+            CultureQuestionStats.user_id == user_id,
+            CultureQuestionStats.updated_at >= today_start,
+        )
+        result = await self.db.execute(query)
+        return result.scalar_one() or 0
 
 
 # ============================================================================
