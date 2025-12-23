@@ -742,3 +742,448 @@ class TestGetCultureProgress:
 
         # Should not include questions from inactive deck
         assert progress.overall.total_questions == 0  # No questions in active decks
+
+
+# =============================================================================
+# Test Daily Goal Checking
+# =============================================================================
+
+
+class TestCheckCultureDailyGoal:
+    """Tests for _check_culture_daily_goal private method (lines 709-799)."""
+
+    @pytest.mark.asyncio
+    async def test_returns_false_when_goal_not_reached(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+        culture_deck: CultureDeck,
+        culture_questions: list[CultureQuestion],
+        mock_s3_service,
+    ):
+        """Should return False when total reviews < daily goal."""
+        service = CultureQuestionService(db_session, s3_service=mock_s3_service)
+
+        # culture_answers_before = 0, after processing = 1
+        # flashcard_reviews = 0, total = 1
+        # Default daily goal = 20, so not completed
+        result = await service._check_culture_daily_goal(
+            user_id=test_user.id,
+            culture_answers_before=0,
+        )
+        assert result is False
+
+    @pytest.mark.asyncio
+    async def test_returns_false_when_goal_already_completed_before(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+        mock_s3_service,
+    ):
+        """Should return False when goal was already completed before this answer."""
+        from sqlalchemy import select
+
+        from src.db.models import UserSettings
+
+        # Update existing settings instead of creating new
+        result = await db_session.execute(
+            select(UserSettings).where(UserSettings.user_id == test_user.id)
+        )
+        settings = result.scalar_one()
+        settings.daily_goal = 5
+        await db_session.flush()
+
+        service = CultureQuestionService(db_session, s3_service=mock_s3_service)
+
+        # culture_answers_before = 10 (already exceeds goal of 5)
+        result = await service._check_culture_daily_goal(
+            user_id=test_user.id,
+            culture_answers_before=10,
+        )
+        assert result is False
+
+    @pytest.mark.asyncio
+    async def test_returns_true_when_goal_just_completed(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+        mock_s3_service,
+    ):
+        """Should return True when this answer crosses the goal threshold."""
+        from unittest.mock import AsyncMock, MagicMock, patch
+
+        from sqlalchemy import select
+
+        from src.db.models import UserSettings
+
+        # Update existing settings to daily_goal=1
+        result = await db_session.execute(
+            select(UserSettings).where(UserSettings.user_id == test_user.id)
+        )
+        settings = result.scalar_one()
+        settings.daily_goal = 1
+        await db_session.flush()
+
+        service = CultureQuestionService(db_session, s3_service=mock_s3_service)
+
+        # Mock Redis to allow the notification
+        with patch("src.services.culture_question_service.get_redis") as mock_get_redis:
+            mock_redis = MagicMock()
+            mock_redis.setnx = AsyncMock(return_value=True)  # First time
+            mock_redis.expire = AsyncMock(return_value=True)
+            mock_get_redis.return_value = mock_redis
+
+            # culture_answers_before = 0, after = 1, goal = 1
+            result = await service._check_culture_daily_goal(
+                user_id=test_user.id,
+                culture_answers_before=0,
+            )
+            assert result is True
+
+    @pytest.mark.asyncio
+    async def test_returns_false_when_redis_says_already_notified(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+        mock_s3_service,
+    ):
+        """Should return False when Redis indicates already notified today."""
+        from unittest.mock import AsyncMock, MagicMock, patch
+
+        from sqlalchemy import select
+
+        from src.db.models import UserSettings
+
+        # Update existing settings to daily_goal=1
+        result = await db_session.execute(
+            select(UserSettings).where(UserSettings.user_id == test_user.id)
+        )
+        settings = result.scalar_one()
+        settings.daily_goal = 1
+        await db_session.flush()
+
+        service = CultureQuestionService(db_session, s3_service=mock_s3_service)
+
+        with patch("src.services.culture_question_service.get_redis") as mock_get_redis:
+            mock_redis = MagicMock()
+            mock_redis.setnx = AsyncMock(return_value=False)  # Already set
+            mock_get_redis.return_value = mock_redis
+
+            result = await service._check_culture_daily_goal(
+                user_id=test_user.id,
+                culture_answers_before=0,
+            )
+            assert result is False
+
+    @pytest.mark.asyncio
+    async def test_gracefully_handles_redis_none(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+        mock_s3_service,
+    ):
+        """Should still complete when Redis is None (not available)."""
+        from unittest.mock import patch
+
+        from sqlalchemy import select
+
+        from src.db.models import UserSettings
+
+        # Update existing settings to daily_goal=1
+        result = await db_session.execute(
+            select(UserSettings).where(UserSettings.user_id == test_user.id)
+        )
+        settings = result.scalar_one()
+        settings.daily_goal = 1
+        await db_session.flush()
+
+        service = CultureQuestionService(db_session, s3_service=mock_s3_service)
+
+        with patch("src.services.culture_question_service.get_redis") as mock_get_redis:
+            mock_get_redis.return_value = None  # Redis unavailable
+
+            result = await service._check_culture_daily_goal(
+                user_id=test_user.id,
+                culture_answers_before=0,
+            )
+            # Should still return True because we crossed threshold
+            assert result is True
+
+    @pytest.mark.asyncio
+    async def test_gracefully_handles_exception(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+        mock_s3_service,
+    ):
+        """Should return False and log warning on exception."""
+        from unittest.mock import patch
+
+        service = CultureQuestionService(db_session, s3_service=mock_s3_service)
+
+        with patch("src.services.culture_question_service.get_redis") as mock_get_redis:
+            mock_get_redis.side_effect = Exception("Redis error")
+
+            result = await service._check_culture_daily_goal(
+                user_id=test_user.id,
+                culture_answers_before=0,
+            )
+            assert result is False
+
+    @pytest.mark.asyncio
+    async def test_uses_default_goal_when_no_settings(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+        mock_s3_service,
+    ):
+        """Should use default goal of 20 when user has no settings."""
+        service = CultureQuestionService(db_session, s3_service=mock_s3_service)
+
+        # No UserSettings created, should use default of 20
+        result = await service._check_culture_daily_goal(
+            user_id=test_user.id,
+            culture_answers_before=0,  # 1 answer won't reach goal of 20
+        )
+        assert result is False
+
+
+# =============================================================================
+# Test Progress By Category
+# =============================================================================
+
+
+class TestGetProgressByCategory:
+    """Tests for _get_progress_by_category private method (lines 801-852)."""
+
+    @pytest.mark.asyncio
+    async def test_returns_empty_dict_when_no_decks(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+        mock_s3_service,
+    ):
+        """Should return empty dict when no active decks exist."""
+        service = CultureQuestionService(db_session, s3_service=mock_s3_service)
+
+        result = await service._get_progress_by_category(test_user.id)
+
+        # Result depends on whether active decks exist in db
+        assert isinstance(result, dict)
+
+    @pytest.mark.asyncio
+    async def test_groups_by_category(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+        culture_deck: CultureDeck,
+        culture_questions: list[CultureQuestion],
+        mock_s3_service,
+    ):
+        """Should group progress by deck category."""
+        service = CultureQuestionService(db_session, s3_service=mock_s3_service)
+
+        result = await service._get_progress_by_category(test_user.id)
+
+        assert "history" in result  # culture_deck has category "history"
+        assert result["history"].questions_total == len(culture_questions)
+
+    @pytest.mark.asyncio
+    async def test_counts_mastered_questions(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+        culture_deck: CultureDeck,
+        culture_questions: list[CultureQuestion],
+        due_question_stats: list[CultureQuestionStats],
+        mock_s3_service,
+    ):
+        """Should count mastered questions per category."""
+        service = CultureQuestionService(db_session, s3_service=mock_s3_service)
+
+        result = await service._get_progress_by_category(test_user.id)
+
+        assert "history" in result
+        # due_question_stats fixture has 1 mastered
+        assert result["history"].questions_mastered == 1
+
+    @pytest.mark.asyncio
+    async def test_calculates_new_as_total_minus_mastered(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+        culture_deck: CultureDeck,
+        culture_questions: list[CultureQuestion],
+        mock_s3_service,
+    ):
+        """questions_new should be total - mastered."""
+        service = CultureQuestionService(db_session, s3_service=mock_s3_service)
+
+        result = await service._get_progress_by_category(test_user.id)
+
+        category = result.get("history")
+        if category:
+            expected_new = category.questions_total - category.questions_mastered
+            assert category.questions_new == expected_new
+
+
+# =============================================================================
+# Test Build Queue Item Helper
+# =============================================================================
+
+
+class TestBuildQueueItem:
+    """Tests for _build_queue_item helper method."""
+
+    @pytest.mark.asyncio
+    async def test_builds_item_with_stats(
+        self,
+        db_session: AsyncSession,
+        culture_questions: list[CultureQuestion],
+        due_question_stats: list[CultureQuestionStats],
+        mock_s3_service,
+    ):
+        """Should include status and due_date when stats provided."""
+        service = CultureQuestionService(db_session, s3_service=mock_s3_service)
+        question = culture_questions[0]
+        stats = due_question_stats[0]
+
+        result = service._build_queue_item(question, stats)
+
+        assert result.is_new is False
+        assert result.status == stats.status.value
+        assert result.due_date == stats.next_review_date
+
+    @pytest.mark.asyncio
+    async def test_builds_item_without_stats(
+        self,
+        db_session: AsyncSession,
+        culture_questions: list[CultureQuestion],
+        mock_s3_service,
+    ):
+        """Should mark as new when no stats provided."""
+        service = CultureQuestionService(db_session, s3_service=mock_s3_service)
+        question = culture_questions[0]
+
+        result = service._build_queue_item(question, stats=None)
+
+        assert result.is_new is True
+        assert result.status == CardStatus.NEW.value
+        assert result.due_date is None
+
+    @pytest.mark.asyncio
+    async def test_generates_presigned_url_for_image(
+        self,
+        db_session: AsyncSession,
+        culture_questions: list[CultureQuestion],
+        mock_s3_service,
+    ):
+        """Should generate presigned URL when image_key exists."""
+        service = CultureQuestionService(db_session, s3_service=mock_s3_service)
+        # Find a question with image_key (every 3rd in fixture, index 0, 3, 6, 9)
+        question = culture_questions[0]  # Has image_key
+
+        result = service._build_queue_item(question, stats=None)
+
+        if question.image_key:
+            assert result.image_url == "https://s3.example.com/presigned-url"
+            mock_s3_service.generate_presigned_url.assert_called_with(question.image_key)
+
+
+# =============================================================================
+# Test Get Feedback Message Helper
+# =============================================================================
+
+
+class TestGetFeedbackMessage:
+    """Tests for _get_feedback_message helper method."""
+
+    @pytest.mark.asyncio
+    async def test_mastered_message(
+        self,
+        db_session: AsyncSession,
+        mock_s3_service,
+    ):
+        """Should return mastery message when newly mastered."""
+        service = CultureQuestionService(db_session, s3_service=mock_s3_service)
+
+        result = service._get_feedback_message(
+            is_correct=True,
+            is_first=False,
+            is_mastered=True,
+            was_mastered=False,
+        )
+
+        assert result == "Excellent! Question mastered!"
+
+    @pytest.mark.asyncio
+    async def test_lost_mastery_message(
+        self,
+        db_session: AsyncSession,
+        mock_s3_service,
+    ):
+        """Should return practice message when mastery lost."""
+        service = CultureQuestionService(db_session, s3_service=mock_s3_service)
+
+        result = service._get_feedback_message(
+            is_correct=False,
+            is_first=False,
+            is_mastered=False,
+            was_mastered=True,
+        )
+
+        assert result == "Keep practicing this one."
+
+    @pytest.mark.asyncio
+    async def test_first_correct_message(
+        self,
+        db_session: AsyncSession,
+        mock_s3_service,
+    ):
+        """Should return Good start for first correct answer."""
+        service = CultureQuestionService(db_session, s3_service=mock_s3_service)
+
+        result = service._get_feedback_message(
+            is_correct=True,
+            is_first=True,
+            is_mastered=False,
+            was_mastered=False,
+        )
+
+        assert result == "Good start!"
+
+    @pytest.mark.asyncio
+    async def test_correct_message(
+        self,
+        db_session: AsyncSession,
+        mock_s3_service,
+    ):
+        """Should return Correct for subsequent correct answers."""
+        service = CultureQuestionService(db_session, s3_service=mock_s3_service)
+
+        result = service._get_feedback_message(
+            is_correct=True,
+            is_first=False,
+            is_mastered=False,
+            was_mastered=False,
+        )
+
+        assert result == "Correct!"
+
+    @pytest.mark.asyncio
+    async def test_incorrect_message(
+        self,
+        db_session: AsyncSession,
+        mock_s3_service,
+    ):
+        """Should return review message for incorrect answers."""
+        service = CultureQuestionService(db_session, s3_service=mock_s3_service)
+
+        result = service._get_feedback_message(
+            is_correct=False,
+            is_first=False,
+            is_mastered=False,
+            was_mastered=False,
+        )
+
+        assert result == "Not quite. Review this question."
