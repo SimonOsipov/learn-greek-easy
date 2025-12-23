@@ -120,35 +120,34 @@ test.describe('XP Stats Display', () => {
 });
 
 test.describe('Navigation to Achievements', () => {
-  test('E2E-ACH-09: Navigate to achievements from navigation', async ({ page }) => {
+  test('E2E-ACH-09: Navigate to achievements from Statistics dropdown', async ({ page }) => {
     // Start from dashboard
     await page.goto('/');
     await waitForAppReady(page);
 
-    // Look for achievements link in navigation (mobile or desktop)
-    const achievementsLink = page.getByRole('link', { name: /achievements/i }).first();
-    const isLinkVisible = await achievementsLink.isVisible().catch(() => false);
+    // Check viewport width to determine if we're on desktop
+    const viewportSize = page.viewportSize();
+    const isDesktop = viewportSize && viewportSize.width >= 1024;
 
-    if (isLinkVisible) {
-      await achievementsLink.click();
+    if (isDesktop) {
+      // Desktop: Click Statistics dropdown trigger
+      const statisticsDropdown = page.getByTestId('statistics-dropdown-trigger');
+      await expect(statisticsDropdown).toBeVisible({ timeout: 10000 });
+      await statisticsDropdown.click();
+
+      // Wait for dropdown to open and click Achievements
+      const achievementsMenuItem = page.getByRole('menuitem', { name: /achievements/i });
+      await expect(achievementsMenuItem).toBeVisible({ timeout: 5000 });
+      await achievementsMenuItem.click();
 
       // Verify navigation to achievements page
       await page.waitForURL(/\/achievements/);
       await expect(page.getByTestId('achievements-page')).toBeVisible({ timeout: 10000 });
     } else {
-      // Try mobile nav icon (Trophy icon)
-      const trophyIcon = page.locator('nav a[href="/achievements"]').first();
-      const hasTrophyLink = await trophyIcon.isVisible().catch(() => false);
-
-      if (hasTrophyLink) {
-        await trophyIcon.click();
-        await page.waitForURL(/\/achievements/);
-        await expect(page.getByTestId('achievements-page')).toBeVisible({ timeout: 10000 });
-      } else {
-        // Fall back to direct navigation
-        await page.goto('/achievements');
-        await expect(page.getByTestId('achievements-page')).toBeVisible({ timeout: 10000 });
-      }
+      // Mobile: Navigate directly to achievements (no direct link in bottom nav)
+      // The Stats icon in mobile nav links to /statistics, achievements is accessed via URL
+      await page.goto('/achievements');
+      await expect(page.getByTestId('achievements-page')).toBeVisible({ timeout: 10000 });
     }
   });
 });

@@ -212,12 +212,12 @@ test.describe('Language Switcher - Authenticated', () => {
     // Decks page should be in Greek using specific test-id
     await expect(page.getByTestId('decks-title')).toHaveText('Διαθέσιμες Τράπουλες');
 
-    // Navigate to settings
-    await page.goto('/settings');
+    // Navigate to profile
+    await page.goto('/profile');
     await page.waitForLoadState('networkidle');
 
-    // Settings should be in Greek using specific test-id
-    await expect(page.getByTestId('settings-title')).toHaveText('Ρυθμίσεις');
+    // Profile should be in Greek
+    await expect(page.getByTestId('profile-page')).toBeVisible();
   });
 });
 

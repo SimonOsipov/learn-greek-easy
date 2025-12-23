@@ -150,18 +150,6 @@ test.describe('Accessibility - Protected Pages', () => {
     expect(accessibilityScanResults.violations).toEqual([]);
   });
 
-  // ENABLED: Now uses seed data from E2E database seeding infrastructure (SEED-10)
-  test('Settings page should have no accessibility violations', async ({ page }) => {
-    await page.goto('/settings');
-
-    const accessibilityScanResults = await new AxeBuilder({ page })
-      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
-      .disableRules(['landmark-one-main', 'page-has-heading-one', 'region'])
-      .analyze();
-
-    expect(accessibilityScanResults.violations).toEqual([]);
-  });
-
   test('Review session should have no accessibility violations', async ({ page }) => {
     await page.goto('/decks');
 
@@ -194,10 +182,16 @@ test.describe('Accessibility - Protected Pages', () => {
   });
 
   test('Modals should have proper ARIA attributes', async ({ page }) => {
-    await page.goto('/settings');
+    await page.goto('/profile');
 
-    // Wait for page to load
-    await page.waitForSelector('h1, h2', { timeout: 10000 });
+    // Wait for profile page to load
+    await expect(page.getByTestId('profile-page')).toBeVisible({ timeout: 10000 });
+
+    // Click on Security tab to access delete account button
+    await page.getByRole('button', { name: /security/i }).click();
+
+    // Wait for security section to load
+    await expect(page.getByTestId('security-section')).toBeVisible({ timeout: 5000 });
 
     // Look for delete account button
     const deleteButton = page.getByRole('button', { name: /delete account/i });

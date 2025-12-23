@@ -82,7 +82,7 @@ test.describe('Unauthenticated - Login & Register Forms', () => {
     page,
   }) => {
     // Try to access protected routes
-    const protectedRoutes = ['/', '/decks', '/profile', '/settings'];
+    const protectedRoutes = ['/', '/decks', '/profile'];
 
     for (const route of protectedRoutes) {
       await page.goto(route);
@@ -194,8 +194,8 @@ test.describe('Authenticated - Protected Routes & Logout', () => {
     // Wait for page to be ready
     await page.waitForLoadState('domcontentloaded');
 
-    // Use exact aria-label selector for user menu button (from Header.tsx)
-    const userMenuButton = page.getByRole('button', { name: 'User menu' });
+    // Use data-testid selector for user menu button (from Header.tsx)
+    const userMenuButton = page.getByTestId('user-menu-trigger');
 
     // Wait for user menu button - this confirms Header has rendered
     await userMenuButton.waitFor({ state: 'visible', timeout: 10000 });

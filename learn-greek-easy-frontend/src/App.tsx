@@ -28,7 +28,6 @@ import { FlashcardReviewPage } from '@/pages/FlashcardReviewPage';
 import { NotFound } from '@/pages/NotFound';
 import { Profile } from '@/pages/Profile';
 import { SessionSummaryPage } from '@/pages/SessionSummaryPage';
-import Settings from '@/pages/Settings';
 import Statistics from '@/pages/Statistics';
 import { Unauthorized } from '@/pages/Unauthorized';
 import { PostHogProvider } from '@/providers';
@@ -70,7 +69,6 @@ function AppContent() {
               <Route path="decks/:id" element={<DeckDetailPage />} />
               <Route path="statistics" element={<Statistics />} />
               <Route path="stats" element={<Navigate to="/statistics" replace />} />
-              <Route path="settings" element={<Settings />} />
               <Route path="profile" element={<Profile />} />
               <Route path="achievements" element={<AchievementsPage />} />
               <Route path="feedback" element={<FeedbackPage />} />

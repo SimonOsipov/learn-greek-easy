@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { Home, Layers, BarChart3, User, Trophy } from 'lucide-react';
+import { Home, Layers, BarChart3, User, MessageSquare } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation } from 'react-router-dom';
 
@@ -15,13 +15,21 @@ interface NavItem {
   labelKey: string;
   icon: React.ComponentType<{ className?: string }>;
   href: string;
+  /** Additional paths that should also highlight this nav item */
+  additionalActivePaths?: string[];
 }
 
 const navItems: NavItem[] = [
   { id: 'home', labelKey: 'nav.home', icon: Home, href: '/' },
   { id: 'decks', labelKey: 'nav.decks', icon: Layers, href: '/decks' },
-  { id: 'achievements', labelKey: 'nav.achievements', icon: Trophy, href: '/achievements' },
-  { id: 'stats', labelKey: 'nav.stats', icon: BarChart3, href: '/statistics' },
+  {
+    id: 'stats',
+    labelKey: 'nav.stats',
+    icon: BarChart3,
+    href: '/statistics',
+    additionalActivePaths: ['/achievements'],
+  },
+  { id: 'feedback', labelKey: 'nav.feedback', icon: MessageSquare, href: '/feedback' },
   { id: 'profile', labelKey: 'nav.profile', icon: User, href: '/profile' },
 ];
 
@@ -29,8 +37,12 @@ export const MobileNav: React.FC<MobileNavProps> = ({ className }) => {
   const { t } = useTranslation('common');
   const location = useLocation();
 
-  const isActive = (href: string) => {
-    return location.pathname === href;
+  const isActive = (item: NavItem) => {
+    if (location.pathname === item.href) return true;
+    if (item.additionalActivePaths) {
+      return item.additionalActivePaths.includes(location.pathname);
+    }
+    return false;
   };
 
   return (
@@ -43,7 +55,7 @@ export const MobileNav: React.FC<MobileNavProps> = ({ className }) => {
       <div className="flex items-center justify-around py-2">
         {navItems.map((item) => {
           const Icon = item.icon;
-          const active = isActive(item.href);
+          const active = isActive(item);
           const label = t(item.labelKey);
 
           return (

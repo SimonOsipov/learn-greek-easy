@@ -96,12 +96,4 @@ test.describe('Authenticated Pages Visual Tests', () => {
     await takeSnapshot(page, 'Statistics Page', testInfo);
   });
 
-  test('Settings Page', async ({ page }, testInfo) => {
-    await page.goto('/settings');
-    await waitForPageReady(page);
-
-    // Wait for settings content
-    await expect(page.getByRole('heading', { name: /settings/i })).toBeVisible();
-    await takeSnapshot(page, 'Settings Page', testInfo);
-  });
 });

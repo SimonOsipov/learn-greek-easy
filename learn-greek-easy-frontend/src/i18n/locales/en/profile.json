@@ -106,10 +106,23 @@
       "cancel": "Cancel",
       "update": "Update Password",
       "updating": "Updating...",
-      "comingSoon": "Coming Soon",
-      "comingSoonDescription": "Password change feature will be available in a future update!",
+      "dialogTitle": "Change Password",
+      "dialogDescription": "Enter your current password and choose a new password",
+      "success": "Password updated",
+      "successDescription": "Your password has been successfully changed.",
       "error": "Error",
       "errorDescription": "Failed to change password. Please try again."
+    },
+    "subscription": {
+      "title": "Subscription",
+      "description": "Manage your subscription plan",
+      "currentPlan": "Current plan",
+      "premium": "Premium",
+      "free": "Free Plan",
+      "upgrade": "Upgrade to Premium",
+      "upgradeTitle": "Premium upgrade",
+      "upgradeDescription": "Payment integration coming soon!",
+      "memberSince": "Member since {{date}}"
     },
     "twoFactor": {
       "title": "Two-Factor Authentication",
@@ -130,23 +143,16 @@
     "dangerZone": {
       "title": "Danger Zone",
       "description": "Irreversible actions that affect your account",
-      "deleteAccount": "Delete Account",
-      "deleteDescription": "Permanently delete your account and all associated data. This action cannot be undone.",
-      "deleteDialogTitle": "Delete Account",
-      "deleteDialogDescription": "This action is permanent and cannot be undone. All your data will be deleted:",
-      "deleteItems": {
-        "profile": "Your profile and personal information",
-        "progress": "All learning progress and statistics",
-        "achievements": "Achievements and badges",
-        "favorites": "Saved lessons and favorites"
+      "resetProgress": {
+        "title": "Reset All Progress",
+        "description": "Clear all learning progress, review history, and statistics. Your account and settings will be preserved.",
+        "button": "Reset Progress"
       },
-      "typeToConfirm": "Type \"DELETE\" to confirm:",
-      "cancel": "Cancel",
-      "deleteMyAccount": "Delete My Account",
-      "invalidConfirmation": "Invalid confirmation",
-      "pleaseTypeDelete": "Please type \"DELETE\" to confirm account deletion.",
-      "comingSoon": "Coming Soon",
-      "contactSupport": "Please contact support to delete your account. We want to make sure you understand all the implications first."
+      "deleteAccount": {
+        "title": "Delete Account",
+        "description": "Permanently delete your account and all associated data. This action cannot be undone.",
+        "button": "Delete Account"
+      }
     },
     "validation": {
       "currentPasswordRequired": "Current password is required",

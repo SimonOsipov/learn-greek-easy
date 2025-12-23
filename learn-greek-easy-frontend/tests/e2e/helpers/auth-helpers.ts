@@ -280,9 +280,9 @@ export async function logoutViaAPI(page: Page): Promise<void> {
  * @param page - Playwright page object
  */
 export async function logout(page: Page): Promise<void> {
-  // Open profile dropdown
-  const profileButton = page.getByRole('button', { name: /profile|account|user|menu/i }).first();
-  await profileButton.click();
+  // Open user menu dropdown
+  const userMenuButton = page.getByTestId('user-menu-trigger');
+  await userMenuButton.click();
 
   // Click logout using test ID
   const logoutButton = page.getByTestId('logout-button');
