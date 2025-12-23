@@ -143,6 +143,11 @@ class CultureAnswerRequest(BaseModel):
 
     selected_option: int = Field(..., ge=1, le=4, description="Selected option (1-4)")
     time_taken: int = Field(..., ge=0, le=300, description="Time taken in seconds (max 5 min)")
+    language: str = Field(
+        default="en",
+        pattern=r"^(el|en|ru)$",
+        description="Language used for the question (el, en, ru)",
+    )
 
     @field_validator("selected_option")
     @classmethod
@@ -150,6 +155,14 @@ class CultureAnswerRequest(BaseModel):
         """Ensure option is within valid range."""
         if v < 1 or v > 4:
             raise ValueError("selected_option must be between 1 and 4")
+        return v
+
+    @field_validator("language")
+    @classmethod
+    def validate_language(cls, v: str) -> str:
+        """Ensure language is valid."""
+        if v not in ("el", "en", "ru"):
+            raise ValueError("language must be one of: el, en, ru")
         return v
 
 

@@ -16,9 +16,10 @@ Endpoints:
 from typing import Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.config import settings
 from src.core.dependencies import get_current_user, get_current_user_optional
 from src.db.dependencies import get_db
 from src.db.models import User
@@ -31,6 +32,7 @@ from src.schemas.culture import (
     CultureQuestionQueue,
 )
 from src.services import CultureDeckService, CultureQuestionService
+from src.tasks import check_culture_achievements_task, is_background_tasks_enabled
 
 router = APIRouter(
     # Note: prefix is set by parent router in v1/router.py
@@ -422,6 +424,7 @@ async def get_question_queue(
 async def submit_answer(
     question_id: UUID,
     request: CultureAnswerRequest,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> CultureAnswerResponseWithSM2:
@@ -429,10 +432,12 @@ async def submit_answer(
 
     Processes the answer through the SM-2 algorithm and updates the user's
     statistics for this question. Creates statistics on first answer.
+    Records answer history and queues achievement check in background.
 
     Args:
         question_id: UUID of the question being answered
-        request: Answer request with selected_option and time_taken
+        request: Answer request with selected_option, time_taken, and language
+        background_tasks: FastAPI background tasks for async operations
         db: Database session (injected)
         current_user: Authenticated user (injected)
 
@@ -445,16 +450,34 @@ async def submit_answer(
 
     Example:
         POST /api/v1/culture/questions/{question_id}/answer
-        {"selected_option": 2, "time_taken": 15}
+        {"selected_option": 2, "time_taken": 15, "language": "en"}
     """
     service = CultureQuestionService(db)
 
-    return await service.process_answer(
+    # Process the answer (includes recording to CultureAnswerHistory)
+    response = await service.process_answer(
         user_id=current_user.id,
         question_id=question_id,
         selected_option=request.selected_option,
         time_taken=request.time_taken,
+        language=request.language,
     )
+
+    # Queue achievement check in background
+    if is_background_tasks_enabled():
+        # Get deck category from the response context (we need to fetch it)
+        deck_category = await service.get_question_deck_category(question_id)
+        background_tasks.add_task(
+            check_culture_achievements_task,
+            user_id=current_user.id,
+            question_id=question_id,
+            is_correct=response.is_correct,
+            language=request.language,
+            deck_category=deck_category,
+            db_url=settings.database_url,
+        )
+
+    return response
 
 
 @router.get(

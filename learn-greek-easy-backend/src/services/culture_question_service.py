@@ -36,6 +36,7 @@ from src.core.redis import get_redis
 from src.core.sm2 import DEFAULT_EASINESS_FACTOR, calculate_next_review_date, calculate_sm2
 from src.db.models import (
     CardStatus,
+    CultureAnswerHistory,
     CultureDeck,
     CultureQuestion,
     CultureQuestionStats,
@@ -202,6 +203,7 @@ class CultureQuestionService:
         question_id: UUID,
         selected_option: int,
         time_taken: int,
+        language: str = "en",
     ) -> CultureAnswerResponseWithSM2:
         """Process answer submission with SM-2 algorithm and XP integration.
 
@@ -220,6 +222,7 @@ class CultureQuestionService:
             question_id: Question being answered
             selected_option: Selected answer option (1-4)
             time_taken: Time taken in seconds (0-300)
+            language: Language used for the question (el, en, ru)
 
         Returns:
             CultureAnswerResponseWithSM2 with correctness, SM-2 result, XP earned,
@@ -279,6 +282,31 @@ class CultureQuestionService:
         stats.status = sm2_result.new_status
 
         await self.db.flush()
+
+        # Step 6.5: Record answer in CultureAnswerHistory for achievements
+        deck_category = await self.get_question_deck_category(question_id)
+        answer_history = CultureAnswerHistory(
+            user_id=user_id,
+            question_id=question_id,
+            language=language,
+            is_correct=is_correct,
+            selected_option=selected_option,
+            time_taken_seconds=time_taken,
+            deck_category=deck_category,
+        )
+        self.db.add(answer_history)
+        await self.db.flush()
+
+        logger.debug(
+            "Recorded culture answer history",
+            extra={
+                "user_id": str(user_id),
+                "question_id": str(question_id),
+                "language": language,
+                "is_correct": is_correct,
+                "deck_category": deck_category,
+            },
+        )
 
         # Step 7: Award XP for the answer
         xp_earned = await self.xp_service.award_culture_answer_xp(
@@ -487,6 +515,31 @@ class CultureQuestionService:
             raise CultureQuestionNotFoundException(question_id=str(question_id))
 
         return question
+
+    async def get_question_deck_category(self, question_id: UUID) -> str:
+        """Get the deck category for a question.
+
+        Args:
+            question_id: Question UUID
+
+        Returns:
+            Category string (history, geography, politics, culture, traditions)
+
+        Raises:
+            CultureQuestionNotFoundException: If question doesn't exist
+        """
+        query = (
+            select(CultureDeck.category)
+            .join(CultureQuestion, CultureQuestion.deck_id == CultureDeck.id)
+            .where(CultureQuestion.id == question_id)
+        )
+        result = await self.db.execute(query)
+        category = result.scalar_one_or_none()
+
+        if not category:
+            raise CultureQuestionNotFoundException(question_id=str(question_id))
+
+        return category
 
     async def _get_due_questions(
         self,

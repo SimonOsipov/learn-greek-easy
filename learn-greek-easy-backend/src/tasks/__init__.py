@@ -39,6 +39,7 @@ Example usage for scheduler (in scheduler_main.py):
 from src.tasks.background import (
     ANALYTICS_EVENTS,
     check_achievements_task,
+    check_culture_achievements_task,
     invalidate_cache_task,
     is_background_tasks_enabled,
     log_analytics_task,
@@ -50,6 +51,7 @@ __all__ = [
     # Background tasks (API-side, fire-and-forget)
     "ANALYTICS_EVENTS",
     "check_achievements_task",
+    "check_culture_achievements_task",
     "invalidate_cache_task",
     "is_background_tasks_enabled",
     "log_analytics_task",

@@ -474,3 +474,388 @@ class TestLearningAchievements:
         assert len(newly_unlocked) >= 2
         assert any(a["id"] == "learning_first_word" for a in newly_unlocked)
         assert any(a["id"] == "learning_vocabulary_builder" for a in newly_unlocked)
+
+
+# ============================================================================
+# Culture Achievement Tests
+# ============================================================================
+
+
+@pytest.mark.unit
+class TestCultureAchievements:
+    """Tests for culture-specific achievement checking."""
+
+    @pytest.fixture
+    def mock_culture_stats(self):
+        """Mock culture statistics for testing."""
+        return {
+            "total_answered": 10,
+            "total_correct": 8,
+            "accuracy_percent": 80.0,
+            "current_streak": 5,
+            "history_mastered": False,
+            "geography_mastered": False,
+            "politics_mastered": False,
+            "culture_mastered": False,
+            "traditions_mastered": False,
+            "all_mastered": False,
+            "questions_in_greek": 3,
+            "questions_in_english": 5,
+            "questions_in_russian": 2,
+            "languages_used": {"el", "en"},
+        }
+
+    @pytest.mark.asyncio
+    async def test_native_speaker_achievement_at_50_greek(
+        self, mock_db_session, mock_culture_stats
+    ):
+        """Should unlock 'culture_native_speaker' at 50 questions in Greek."""
+        mock_culture_stats["questions_in_greek"] = 50
+        service = AchievementService(mock_db_session)
+
+        # Mock _get_culture_stats to return our test data
+        with patch.object(service, "_get_culture_stats", new_callable=AsyncMock) as mock_stats:
+            mock_stats.return_value = mock_culture_stats
+
+            # Mock _try_unlock_achievement to return an unlocked achievement
+            with patch.object(
+                service, "_try_unlock_achievement", new_callable=AsyncMock
+            ) as mock_unlock:
+                mock_unlock.return_value = True
+
+                await service.check_culture_achievements(
+                    user_id=uuid4(),
+                    question_id=uuid4(),
+                    is_correct=True,
+                    language="el",
+                    deck_category="history",
+                )
+
+                # Should have tried to unlock native_speaker
+                unlock_calls = mock_unlock.call_args_list
+                called_achievement_ids = [call[0][1].id for call in unlock_calls]
+                assert "culture_native_speaker" in called_achievement_ids
+
+    @pytest.mark.asyncio
+    async def test_native_speaker_not_unlocked_under_50_greek(
+        self, mock_db_session, mock_culture_stats
+    ):
+        """Should NOT unlock 'culture_native_speaker' with less than 50 Greek questions."""
+        mock_culture_stats["questions_in_greek"] = 49
+        service = AchievementService(mock_db_session)
+
+        with patch.object(service, "_get_culture_stats", new_callable=AsyncMock) as mock_stats:
+            mock_stats.return_value = mock_culture_stats
+
+            with patch.object(
+                service, "_try_unlock_achievement", new_callable=AsyncMock
+            ) as mock_unlock:
+                mock_unlock.return_value = True
+
+                await service.check_culture_achievements(
+                    user_id=uuid4(),
+                    question_id=uuid4(),
+                    is_correct=True,
+                    language="el",
+                    deck_category="history",
+                )
+
+                # Should NOT have tried to unlock native_speaker
+                unlock_calls = mock_unlock.call_args_list
+                called_achievement_ids = [call[0][1].id for call in unlock_calls]
+                assert "culture_native_speaker" not in called_achievement_ids
+
+    @pytest.mark.asyncio
+    async def test_polyglot_achievement_all_3_languages(self, mock_db_session, mock_culture_stats):
+        """Should unlock 'culture_polyglot_learner' when all 3 languages used."""
+        mock_culture_stats["languages_used"] = {"el", "en", "ru"}
+        service = AchievementService(mock_db_session)
+
+        with patch.object(service, "_get_culture_stats", new_callable=AsyncMock) as mock_stats:
+            mock_stats.return_value = mock_culture_stats
+
+            with patch.object(
+                service, "_try_unlock_achievement", new_callable=AsyncMock
+            ) as mock_unlock:
+                mock_unlock.return_value = True
+
+                await service.check_culture_achievements(
+                    user_id=uuid4(),
+                    question_id=uuid4(),
+                    is_correct=True,
+                    language="ru",
+                    deck_category="history",
+                )
+
+                unlock_calls = mock_unlock.call_args_list
+                called_achievement_ids = [call[0][1].id for call in unlock_calls]
+                assert "culture_polyglot_learner" in called_achievement_ids
+
+    @pytest.mark.asyncio
+    async def test_polyglot_not_unlocked_with_2_languages(
+        self, mock_db_session, mock_culture_stats
+    ):
+        """Should NOT unlock 'culture_polyglot_learner' with only 2 languages."""
+        mock_culture_stats["languages_used"] = {"el", "en"}  # Missing "ru"
+        service = AchievementService(mock_db_session)
+
+        with patch.object(service, "_get_culture_stats", new_callable=AsyncMock) as mock_stats:
+            mock_stats.return_value = mock_culture_stats
+
+            with patch.object(
+                service, "_try_unlock_achievement", new_callable=AsyncMock
+            ) as mock_unlock:
+                mock_unlock.return_value = True
+
+                await service.check_culture_achievements(
+                    user_id=uuid4(),
+                    question_id=uuid4(),
+                    is_correct=True,
+                    language="en",
+                    deck_category="history",
+                )
+
+                unlock_calls = mock_unlock.call_args_list
+                called_achievement_ids = [call[0][1].id for call in unlock_calls]
+                assert "culture_polyglot_learner" not in called_achievement_ids
+
+    @pytest.mark.asyncio
+    async def test_perfect_culture_score_at_10_streak(self, mock_db_session, mock_culture_stats):
+        """Should unlock 'perfect_culture_score' at 10 consecutive correct from history."""
+        mock_culture_stats["current_streak"] = 10
+        service = AchievementService(mock_db_session)
+
+        with patch.object(service, "_get_culture_stats", new_callable=AsyncMock) as mock_stats:
+            mock_stats.return_value = mock_culture_stats
+
+            with patch.object(
+                service, "_try_unlock_achievement", new_callable=AsyncMock
+            ) as mock_unlock:
+                mock_unlock.return_value = True
+
+                await service.check_culture_achievements(
+                    user_id=uuid4(),
+                    question_id=uuid4(),
+                    is_correct=True,
+                    language="en",
+                    deck_category="history",
+                )
+
+                unlock_calls = mock_unlock.call_args_list
+                called_achievement_ids = [call[0][1].id for call in unlock_calls]
+                assert "perfect_culture_score" in called_achievement_ids
+
+    @pytest.mark.asyncio
+    async def test_streak_not_unlocked_under_10(self, mock_db_session, mock_culture_stats):
+        """Should NOT unlock 'perfect_culture_score' with less than 10 streak."""
+        mock_culture_stats["current_streak"] = 9
+        service = AchievementService(mock_db_session)
+
+        with patch.object(service, "_get_culture_stats", new_callable=AsyncMock) as mock_stats:
+            mock_stats.return_value = mock_culture_stats
+
+            with patch.object(
+                service, "_try_unlock_achievement", new_callable=AsyncMock
+            ) as mock_unlock:
+                mock_unlock.return_value = True
+
+                await service.check_culture_achievements(
+                    user_id=uuid4(),
+                    question_id=uuid4(),
+                    is_correct=True,
+                    language="en",
+                    deck_category="history",
+                )
+
+                unlock_calls = mock_unlock.call_args_list
+                called_achievement_ids = [call[0][1].id for call in unlock_calls]
+                assert "perfect_culture_score" not in called_achievement_ids
+
+    @pytest.mark.asyncio
+    async def test_culture_curious_at_10_questions(self, mock_db_session, mock_culture_stats):
+        """Should unlock 'culture_curious' at 10 questions answered."""
+        mock_culture_stats["total_answered"] = 10
+        service = AchievementService(mock_db_session)
+
+        with patch.object(service, "_get_culture_stats", new_callable=AsyncMock) as mock_stats:
+            mock_stats.return_value = mock_culture_stats
+
+            with patch.object(
+                service, "_try_unlock_achievement", new_callable=AsyncMock
+            ) as mock_unlock:
+                mock_unlock.return_value = True
+
+                await service.check_culture_achievements(
+                    user_id=uuid4(),
+                    question_id=uuid4(),
+                    is_correct=True,
+                    language="en",
+                    deck_category="history",
+                )
+
+                unlock_calls = mock_unlock.call_args_list
+                called_achievement_ids = [call[0][1].id for call in unlock_calls]
+                assert "culture_curious" in called_achievement_ids
+
+    @pytest.mark.asyncio
+    async def test_culture_explorer_at_50_questions(self, mock_db_session, mock_culture_stats):
+        """Should unlock 'culture_explorer' at 50 questions answered."""
+        mock_culture_stats["total_answered"] = 50
+        service = AchievementService(mock_db_session)
+
+        with patch.object(service, "_get_culture_stats", new_callable=AsyncMock) as mock_stats:
+            mock_stats.return_value = mock_culture_stats
+
+            with patch.object(
+                service, "_try_unlock_achievement", new_callable=AsyncMock
+            ) as mock_unlock:
+                mock_unlock.return_value = True
+
+                await service.check_culture_achievements(
+                    user_id=uuid4(),
+                    question_id=uuid4(),
+                    is_correct=True,
+                    language="en",
+                    deck_category="history",
+                )
+
+                unlock_calls = mock_unlock.call_args_list
+                called_achievement_ids = [call[0][1].id for call in unlock_calls]
+                assert "culture_explorer" in called_achievement_ids
+
+    @pytest.mark.asyncio
+    async def test_sharp_mind_at_90_percent_accuracy(self, mock_db_session, mock_culture_stats):
+        """Should unlock 'culture_sharp_mind' at 90% accuracy with 20+ answers."""
+        mock_culture_stats["total_answered"] = 20
+        mock_culture_stats["accuracy_percent"] = 90.0
+        service = AchievementService(mock_db_session)
+
+        with patch.object(service, "_get_culture_stats", new_callable=AsyncMock) as mock_stats:
+            mock_stats.return_value = mock_culture_stats
+
+            with patch.object(
+                service, "_try_unlock_achievement", new_callable=AsyncMock
+            ) as mock_unlock:
+                mock_unlock.return_value = True
+
+                await service.check_culture_achievements(
+                    user_id=uuid4(),
+                    question_id=uuid4(),
+                    is_correct=True,
+                    language="en",
+                    deck_category="history",
+                )
+
+                unlock_calls = mock_unlock.call_args_list
+                called_achievement_ids = [call[0][1].id for call in unlock_calls]
+                assert "culture_sharp_mind" in called_achievement_ids
+
+    @pytest.mark.asyncio
+    async def test_sharp_mind_not_unlocked_low_answers(self, mock_db_session, mock_culture_stats):
+        """Should NOT unlock 'culture_sharp_mind' with less than 20 answers."""
+        mock_culture_stats["total_answered"] = 19
+        mock_culture_stats["accuracy_percent"] = 95.0  # High accuracy but low count
+        service = AchievementService(mock_db_session)
+
+        with patch.object(service, "_get_culture_stats", new_callable=AsyncMock) as mock_stats:
+            mock_stats.return_value = mock_culture_stats
+
+            with patch.object(
+                service, "_try_unlock_achievement", new_callable=AsyncMock
+            ) as mock_unlock:
+                mock_unlock.return_value = True
+
+                await service.check_culture_achievements(
+                    user_id=uuid4(),
+                    question_id=uuid4(),
+                    is_correct=True,
+                    language="en",
+                    deck_category="history",
+                )
+
+                unlock_calls = mock_unlock.call_args_list
+                called_achievement_ids = [call[0][1].id for call in unlock_calls]
+                assert "culture_sharp_mind" not in called_achievement_ids
+
+    @pytest.mark.asyncio
+    async def test_historian_when_history_mastered(self, mock_db_session, mock_culture_stats):
+        """Should unlock 'culture_historian' when history category is mastered."""
+        mock_culture_stats["history_mastered"] = True
+        service = AchievementService(mock_db_session)
+
+        with patch.object(service, "_get_culture_stats", new_callable=AsyncMock) as mock_stats:
+            mock_stats.return_value = mock_culture_stats
+
+            with patch.object(
+                service, "_try_unlock_achievement", new_callable=AsyncMock
+            ) as mock_unlock:
+                mock_unlock.return_value = True
+
+                await service.check_culture_achievements(
+                    user_id=uuid4(),
+                    question_id=uuid4(),
+                    is_correct=True,
+                    language="en",
+                    deck_category="history",
+                )
+
+                unlock_calls = mock_unlock.call_args_list
+                called_achievement_ids = [call[0][1].id for call in unlock_calls]
+                assert "culture_historian" in called_achievement_ids
+
+    @pytest.mark.asyncio
+    async def test_culture_champion_when_all_mastered(self, mock_db_session, mock_culture_stats):
+        """Should unlock 'culture_champion' when all categories mastered."""
+        mock_culture_stats["history_mastered"] = True
+        mock_culture_stats["geography_mastered"] = True
+        mock_culture_stats["politics_mastered"] = True
+        mock_culture_stats["culture_mastered"] = True
+        mock_culture_stats["traditions_mastered"] = True
+        mock_culture_stats["all_mastered"] = True
+        service = AchievementService(mock_db_session)
+
+        with patch.object(service, "_get_culture_stats", new_callable=AsyncMock) as mock_stats:
+            mock_stats.return_value = mock_culture_stats
+
+            with patch.object(
+                service, "_try_unlock_achievement", new_callable=AsyncMock
+            ) as mock_unlock:
+                mock_unlock.return_value = True
+
+                await service.check_culture_achievements(
+                    user_id=uuid4(),
+                    question_id=uuid4(),
+                    is_correct=True,
+                    language="en",
+                    deck_category="history",
+                )
+
+                unlock_calls = mock_unlock.call_args_list
+                called_achievement_ids = [call[0][1].id for call in unlock_calls]
+                assert "culture_champion" in called_achievement_ids
+
+    @pytest.mark.asyncio
+    async def test_no_duplicates_already_unlocked(self, mock_db_session, mock_culture_stats):
+        """Should not unlock already unlocked achievements."""
+        mock_culture_stats["total_answered"] = 10
+        service = AchievementService(mock_db_session)
+
+        with patch.object(service, "_get_culture_stats", new_callable=AsyncMock) as mock_stats:
+            mock_stats.return_value = mock_culture_stats
+
+            # Mock _try_unlock_achievement to return False (already unlocked)
+            with patch.object(
+                service, "_try_unlock_achievement", new_callable=AsyncMock
+            ) as mock_unlock:
+                mock_unlock.return_value = False
+
+                unlocked = await service.check_culture_achievements(
+                    user_id=uuid4(),
+                    question_id=uuid4(),
+                    is_correct=True,
+                    language="en",
+                    deck_category="history",
+                )
+
+                # Should return empty list when already unlocked
+                assert len(unlocked) == 0
