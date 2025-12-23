@@ -318,6 +318,37 @@ class Settings(BaseSettings):
     )
 
     # =========================================================================
+    # AWS S3 Configuration (for culture question images)
+    # =========================================================================
+    aws_access_key_id: Optional[str] = Field(
+        default=None,
+        description="AWS access key ID for S3 operations",
+    )
+    aws_secret_access_key: Optional[str] = Field(
+        default=None,
+        description="AWS secret access key for S3 operations",
+    )
+    aws_s3_bucket_name: Optional[str] = Field(
+        default=None,
+        description="S3 bucket name for culture question images",
+    )
+    aws_s3_region: str = Field(
+        default="eu-central-1",
+        description="AWS region for S3 bucket",
+    )
+    s3_presigned_url_expiry: int = Field(
+        default=3600,
+        description="Pre-signed URL expiry in seconds (default 1 hour)",
+    )
+
+    @property
+    def s3_configured(self) -> bool:
+        """Check if S3 is properly configured."""
+        return bool(
+            self.aws_access_key_id and self.aws_secret_access_key and self.aws_s3_bucket_name
+        )
+
+    # =========================================================================
     # PostHog Analytics
     # =========================================================================
     posthog_api_key: Optional[str] = Field(
