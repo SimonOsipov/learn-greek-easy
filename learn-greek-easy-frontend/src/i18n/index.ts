@@ -11,6 +11,7 @@ import {
 } from './constants';
 import elAuth from './locales/el/auth.json';
 import elCommon from './locales/el/common.json';
+import elCulture from './locales/el/culture.json';
 import elDeck from './locales/el/deck.json';
 import elFeedback from './locales/el/feedback.json';
 import elProfile from './locales/el/profile.json';
@@ -19,6 +20,7 @@ import elSettings from './locales/el/settings.json';
 import elStatistics from './locales/el/statistics.json';
 import enAuth from './locales/en/auth.json';
 import enCommon from './locales/en/common.json';
+import enCulture from './locales/en/culture.json';
 import enDeck from './locales/en/deck.json';
 import enFeedback from './locales/en/feedback.json';
 import enProfile from './locales/en/profile.json';
@@ -27,6 +29,7 @@ import enSettings from './locales/en/settings.json';
 import enStatistics from './locales/en/statistics.json';
 import ruAuth from './locales/ru/auth.json';
 import ruCommon from './locales/ru/common.json';
+import ruCulture from './locales/ru/culture.json';
 import ruDeck from './locales/ru/deck.json';
 import ruFeedback from './locales/ru/feedback.json';
 import ruProfile from './locales/ru/profile.json';
@@ -47,6 +50,7 @@ const resources = {
     profile: enProfile,
     statistics: enStatistics,
     feedback: enFeedback,
+    culture: enCulture,
   },
   el: {
     common: elCommon,
@@ -57,6 +61,7 @@ const resources = {
     profile: elProfile,
     statistics: elStatistics,
     feedback: elFeedback,
+    culture: elCulture,
   },
   ru: {
     common: ruCommon,
@@ -67,6 +72,7 @@ const resources = {
     profile: ruProfile,
     statistics: ruStatistics,
     feedback: ruFeedback,
+    culture: ruCulture,
   },
 };
 

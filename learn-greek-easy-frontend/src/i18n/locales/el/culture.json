@@ -1,0 +1,10 @@
+{
+  "mcq": {
+    "submitAnswer": "Υποβολή Απάντησης",
+    "keyboardHint": "Πατήστε 1-4 για επιλογή, Enter για υποβολή",
+    "questionOf": "Ερώτηση {{current}} από {{total}}",
+    "timeRemaining": "{{seconds}}δ απομένουν",
+    "selectAnswer": "Επιλέξτε μια απάντηση για να συνεχίσετε",
+    "optionLabel": "Επιλογή {{letter}}: {{text}}"
+  }
+}
