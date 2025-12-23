@@ -68,7 +68,7 @@ export const PreferencesSection: React.FC<PreferencesSectionProps> = ({ user }) 
   };
 
   return (
-    <div className="p-6">
+    <div className="p-6" data-testid="preferences-section">
       <div className="mb-6">
         <h2 className="text-xl font-bold text-gray-900">{t('preferences.title')}</h2>
         <p className="text-sm text-gray-600">{t('preferences.subtitle')}</p>
@@ -141,7 +141,7 @@ export const PreferencesSection: React.FC<PreferencesSectionProps> = ({ user }) 
         </Card>
 
         {/* Daily Goal */}
-        <Card>
+        <Card data-testid="daily-goal-card">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <Clock className="h-5 w-5 text-green-600" />
@@ -151,18 +151,32 @@ export const PreferencesSection: React.FC<PreferencesSectionProps> = ({ user }) 
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
-              <Label htmlFor="dailyGoal" className="text-base font-medium text-gray-900">
+              <Label
+                htmlFor="dailyGoal"
+                className="text-base font-medium text-gray-900"
+                data-testid="daily-goal-value"
+              >
                 {t('preferences.dailyGoal.unit', { minutes: preferences.dailyGoal })}
               </Label>
               <div className="flex items-center gap-2 text-sm text-gray-600">
-                {preferences.dailyGoal < 15 && <span>{t('preferences.dailyGoal.light')}</span>}
+                {preferences.dailyGoal < 15 && (
+                  <span data-testid="daily-goal-intensity">{t('preferences.dailyGoal.light')}</span>
+                )}
                 {preferences.dailyGoal >= 15 && preferences.dailyGoal < 30 && (
-                  <span>{t('preferences.dailyGoal.moderate')}</span>
+                  <span data-testid="daily-goal-intensity">
+                    {t('preferences.dailyGoal.moderate')}
+                  </span>
                 )}
                 {preferences.dailyGoal >= 30 && preferences.dailyGoal < 60 && (
-                  <span>{t('preferences.dailyGoal.regular')}</span>
+                  <span data-testid="daily-goal-intensity">
+                    {t('preferences.dailyGoal.regular')}
+                  </span>
                 )}
-                {preferences.dailyGoal >= 60 && <span>{t('preferences.dailyGoal.intensive')}</span>}
+                {preferences.dailyGoal >= 60 && (
+                  <span data-testid="daily-goal-intensity">
+                    {t('preferences.dailyGoal.intensive')}
+                  </span>
+                )}
               </div>
             </div>
             <div className="space-y-2">
@@ -175,6 +189,7 @@ export const PreferencesSection: React.FC<PreferencesSectionProps> = ({ user }) 
                 value={preferences.dailyGoal}
                 onChange={(e) => handlePreferenceChange('dailyGoal', Number(e.target.value))}
                 className="w-full accent-green-600"
+                data-testid="daily-goal-slider"
               />
               <div className="flex justify-between text-xs text-gray-500">
                 <span>5 min</span>
@@ -282,7 +297,10 @@ export const PreferencesSection: React.FC<PreferencesSectionProps> = ({ user }) 
 
         {/* Save Status Indicator */}
         {isSaving && (
-          <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
+          <div
+            className="flex items-center justify-center gap-2 text-sm text-gray-600"
+            data-testid="preferences-saving"
+          >
             <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600" />
             {t('preferences.saving')}
           </div>
