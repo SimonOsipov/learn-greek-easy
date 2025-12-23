@@ -1,0 +1,91 @@
+:{$PORT:80}
+
+root * /srv
+encode gzip
+
+# Logging for debugging
+log {
+    output stdout
+    format json
+    level INFO
+}
+
+# Health check
+handle /health {
+    respond "healthy" 200
+}
+
+# API proxy to backend (no resolver config needed!)
+handle /api/* {
+    reverse_proxy {$BACKEND_URL:http://backend:8000} {
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+        header_up X-Forwarded-Host {host}
+        transport http {
+            read_timeout 120s
+            write_timeout 120s
+        }
+    }
+}
+
+handle /docs {
+    reverse_proxy {$BACKEND_URL:http://backend:8000} {
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+}
+
+handle /docs/* {
+    reverse_proxy {$BACKEND_URL:http://backend:8000} {
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+}
+
+handle /redoc {
+    reverse_proxy {$BACKEND_URL:http://backend:8000} {
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+}
+
+handle /redoc/* {
+    reverse_proxy {$BACKEND_URL:http://backend:8000} {
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+}
+
+handle /openapi.json {
+    reverse_proxy {$BACKEND_URL:http://backend:8000} {
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+}
+
+# Static assets with long-term caching
+@static path *.js *.css *.png *.jpg *.jpeg *.gif *.ico *.svg *.woff *.woff2 *.ttf *.eot
+handle @static {
+    header Cache-Control "public, max-age=31536000, immutable"
+    file_server
+}
+
+# SPA fallback - serve index.html for all other routes
+handle {
+    try_files {path} /index.html
+    file_server
+}
+
+# Security headers (applied globally)
+header {
+    X-Frame-Options "SAMEORIGIN"
+    X-Content-Type-Options "nosniff"
+    X-XSS-Protection "1; mode=block"
+    Referrer-Policy "no-referrer-when-downgrade"
+}
