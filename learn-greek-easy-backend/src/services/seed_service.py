@@ -24,6 +24,9 @@ from src.db.models import (
     CardDifficulty,
     CardStatistics,
     CardStatus,
+    CultureDeck,
+    CultureQuestion,
+    CultureQuestionStats,
     Deck,
     DeckLevel,
     Feedback,
@@ -89,6 +92,10 @@ class SeedService:
         "achievements",
         # Notification tables
         "notifications",
+        # Culture tables (children first)
+        "culture_question_stats",
+        "culture_questions",
+        "culture_decks",
         # Existing tables
         "reviews",
         "card_statistics",
@@ -178,6 +185,1050 @@ class SeedService:
             ("φαινομενολογία", "phenomenology", "Philosophy branch"),
             ("οντολογία", "ontology", "Study of being"),
             ("αισθητική", "aesthetics", "Beauty philosophy"),
+        ],
+    }
+
+    # Culture categories with multilingual deck definitions
+    CULTURE_DECKS = {
+        "history": {
+            "name": {
+                "el": "Ιστορία της Ελλάδας",
+                "en": "Greek History",
+                "ru": "История Греции",
+            },
+            "description": {
+                "el": "Ερωτήσεις για την ελληνική ιστορία",
+                "en": "Questions about Greek history",
+                "ru": "Вопросы по истории Греции",
+            },
+            "icon": "book-open",
+            "color_accent": "#8B4513",
+        },
+        "geography": {
+            "name": {
+                "el": "Γεωγραφία της Ελλάδας",
+                "en": "Greek Geography",
+                "ru": "География Греции",
+            },
+            "description": {
+                "el": "Ερωτήσεις για την ελληνική γεωγραφία",
+                "en": "Questions about Greek geography",
+                "ru": "Вопросы по географии Греции",
+            },
+            "icon": "map",
+            "color_accent": "#228B22",
+        },
+        "politics": {
+            "name": {
+                "el": "Πολιτικό Σύστημα",
+                "en": "Political System",
+                "ru": "Политическая система",
+            },
+            "description": {
+                "el": "Ερωτήσεις για το πολιτικό σύστημα",
+                "en": "Questions about the political system",
+                "ru": "Вопросы о политической системе",
+            },
+            "icon": "landmark",
+            "color_accent": "#4169E1",
+        },
+        "culture": {
+            "name": {
+                "el": "Ελληνικός Πολιτισμός",
+                "en": "Greek Culture",
+                "ru": "Греческая культура",
+            },
+            "description": {
+                "el": "Ερωτήσεις για τον ελληνικό πολιτισμό",
+                "en": "Questions about Greek culture",
+                "ru": "Вопросы о греческой культуре",
+            },
+            "icon": "palette",
+            "color_accent": "#9932CC",
+        },
+        "traditions": {
+            "name": {
+                "el": "Παραδόσεις και Έθιμα",
+                "en": "Traditions and Customs",
+                "ru": "Традиции и обычаи",
+            },
+            "description": {
+                "el": "Ερωτήσεις για ελληνικές παραδόσεις",
+                "en": "Questions about Greek traditions",
+                "ru": "Вопросы о греческих традициях",
+            },
+            "icon": "star",
+            "color_accent": "#DAA520",
+        },
+    }
+
+    # Culture questions by category - 10 questions each (50 total)
+    CULTURE_QUESTIONS: dict[str, list[dict[str, Any]]] = {
+        "history": [
+            {
+                "question_text": {
+                    "el": "Ποιος ήταν ο πρώτος βασιλιάς της σύγχρονης Ελλάδας;",
+                    "en": "Who was the first king of modern Greece?",
+                    "ru": "Кто был первым королем современной Греции?",
+                },
+                "options": [
+                    {"el": "Όθων", "en": "Otto", "ru": "Оттон"},
+                    {"el": "Γεώργιος Α'", "en": "George I", "ru": "Георг I"},
+                    {"el": "Κωνσταντίνος Α'", "en": "Constantine I", "ru": "Константин I"},
+                    {"el": "Παύλος", "en": "Paul", "ru": "Павел"},
+                ],
+                "correct_option": 1,
+            },
+            {
+                "question_text": {
+                    "el": "Πότε ξεκίνησε η Ελληνική Επανάσταση;",
+                    "en": "When did the Greek Revolution begin?",
+                    "ru": "Когда началась Греческая революция?",
+                },
+                "options": [
+                    {"el": "1821", "en": "1821", "ru": "1821"},
+                    {"el": "1832", "en": "1832", "ru": "1832"},
+                    {"el": "1800", "en": "1800", "ru": "1800"},
+                    {"el": "1912", "en": "1912", "ru": "1912"},
+                ],
+                "correct_option": 1,
+            },
+            {
+                "question_text": {
+                    "el": "Πότε έγινε η Ελλάδα μέλος της Ευρωπαϊκής Ένωσης;",
+                    "en": "When did Greece join the European Union?",
+                    "ru": "Когда Греция вступила в Европейский Союз?",
+                },
+                "options": [
+                    {"el": "1981", "en": "1981", "ru": "1981"},
+                    {"el": "1974", "en": "1974", "ru": "1974"},
+                    {"el": "1992", "en": "1992", "ru": "1992"},
+                    {"el": "2001", "en": "2001", "ru": "2001"},
+                ],
+                "correct_option": 1,
+            },
+            {
+                "question_text": {
+                    "el": "Ποιος ήταν ο εθνικός ήρωας της Ελληνικής Επανάστασης;",
+                    "en": "Who was the national hero of the Greek Revolution?",
+                    "ru": "Кто был национальным героем Греческой революции?",
+                },
+                "options": [
+                    {
+                        "el": "Θεόδωρος Κολοκοτρώνης",
+                        "en": "Theodoros Kolokotronis",
+                        "ru": "Теодорос Колокотронис",
+                    },
+                    {
+                        "el": "Ελευθέριος Βενιζέλος",
+                        "en": "Eleftherios Venizelos",
+                        "ru": "Элефтериос Венизелос",
+                    },
+                    {
+                        "el": "Ιωάννης Καποδίστριας",
+                        "en": "Ioannis Kapodistrias",
+                        "ru": "Иоаннис Каподистрия",
+                    },
+                    {
+                        "el": "Αλέξανδρος Υψηλάντης",
+                        "en": "Alexandros Ypsilantis",
+                        "ru": "Александрос Ипсилантис",
+                    },
+                ],
+                "correct_option": 1,
+            },
+            {
+                "question_text": {
+                    "el": "Πότε καταργήθηκε η μοναρχία στην Ελλάδα;",
+                    "en": "When was the monarchy abolished in Greece?",
+                    "ru": "Когда была упразднена монархия в Греции?",
+                },
+                "options": [
+                    {"el": "1974", "en": "1974", "ru": "1974"},
+                    {"el": "1967", "en": "1967", "ru": "1967"},
+                    {"el": "1981", "en": "1981", "ru": "1981"},
+                    {"el": "1946", "en": "1946", "ru": "1946"},
+                ],
+                "correct_option": 1,
+            },
+            {
+                "question_text": {
+                    "el": "Ποιος ήταν ο πρώτος κυβερνήτης της Ελλάδας;",
+                    "en": "Who was the first governor of Greece?",
+                    "ru": "Кто был первым правителем Греции?",
+                },
+                "options": [
+                    {
+                        "el": "Ιωάννης Καποδίστριας",
+                        "en": "Ioannis Kapodistrias",
+                        "ru": "Иоаннис Каподистрия",
+                    },
+                    {"el": "Όθων", "en": "Otto", "ru": "Оттон"},
+                    {
+                        "el": "Θεόδωρος Κολοκοτρώνης",
+                        "en": "Theodoros Kolokotronis",
+                        "ru": "Теодорос Колокотронис",
+                    },
+                    {
+                        "el": "Αλέξανδρος Μαυροκορδάτος",
+                        "en": "Alexandros Mavrokordatos",
+                        "ru": "Александрос Маврокордатос",
+                    },
+                ],
+                "correct_option": 1,
+            },
+            {
+                "question_text": {
+                    "el": "Πότε ανακηρύχθηκε η ανεξαρτησία της Ελλάδας;",
+                    "en": "When was Greece's independence declared?",
+                    "ru": "Когда была провозглашена независимость Греции?",
+                },
+                "options": [
+                    {"el": "1822", "en": "1822", "ru": "1822"},
+                    {"el": "1821", "en": "1821", "ru": "1821"},
+                    {"el": "1830", "en": "1830", "ru": "1830"},
+                    {"el": "1832", "en": "1832", "ru": "1832"},
+                ],
+                "correct_option": 1,
+            },
+            {
+                "question_text": {
+                    "el": "Ποιος Έλληνας πολιτικός θεωρείται ο ιδρυτής του σύγχρονου ελληνικού κράτους;",
+                    "en": "Which Greek politician is considered the founder of the modern Greek state?",
+                    "ru": "Какой греческий политик считается основателем современного греческого государства?",
+                },
+                "options": [
+                    {
+                        "el": "Ελευθέριος Βενιζέλος",
+                        "en": "Eleftherios Venizelos",
+                        "ru": "Элефтериос Венизелос",
+                    },
+                    {
+                        "el": "Ιωάννης Καποδίστριας",
+                        "en": "Ioannis Kapodistrias",
+                        "ru": "Иоаннис Каподистрия",
+                    },
+                    {
+                        "el": "Κωνσταντίνος Καραμανλής",
+                        "en": "Konstantinos Karamanlis",
+                        "ru": "Константинос Караманлис",
+                    },
+                    {
+                        "el": "Ανδρέας Παπανδρέου",
+                        "en": "Andreas Papandreou",
+                        "ru": "Андреас Папандреу",
+                    },
+                ],
+                "correct_option": 1,
+            },
+            {
+                "question_text": {
+                    "el": "Πόσα χρόνια διήρκεσε η Οθωμανική κυριαρχία στην Ελλάδα;",
+                    "en": "How many years did Ottoman rule last in Greece?",
+                    "ru": "Сколько лет длилось османское владычество в Греции?",
+                },
+                "options": [
+                    {"el": "Περίπου 400", "en": "About 400", "ru": "Около 400"},
+                    {"el": "Περίπου 200", "en": "About 200", "ru": "Около 200"},
+                    {"el": "Περίπου 500", "en": "About 500", "ru": "Около 500"},
+                    {"el": "Περίπου 300", "en": "About 300", "ru": "Около 300"},
+                ],
+                "correct_option": 1,
+            },
+            {
+                "question_text": {
+                    "el": "Ποιο ήταν το σύνθημα της Ελληνικής Επανάστασης;",
+                    "en": "What was the motto of the Greek Revolution?",
+                    "ru": "Каким был девиз Греческой революции?",
+                },
+                "options": [
+                    {
+                        "el": "Ελευθερία ή Θάνατος",
+                        "en": "Freedom or Death",
+                        "ru": "Свобода или смерть",
+                    },
+                    {"el": "Ένωση και Δύναμη", "en": "Unity and Strength", "ru": "Единство и сила"},
+                    {"el": "Νίκη ή Θάνατος", "en": "Victory or Death", "ru": "Победа или смерть"},
+                    {"el": "Ζήτω η Ελλάς", "en": "Long Live Greece", "ru": "Да здравствует Греция"},
+                ],
+                "correct_option": 1,
+            },
+        ],
+        "geography": [
+            {
+                "question_text": {
+                    "el": "Ποια είναι η πρωτεύουσα της Ελλάδας;",
+                    "en": "What is the capital of Greece?",
+                    "ru": "Какая столица Греции?",
+                },
+                "options": [
+                    {"el": "Αθήνα", "en": "Athens", "ru": "Афины"},
+                    {"el": "Θεσσαλονίκη", "en": "Thessaloniki", "ru": "Салоники"},
+                    {"el": "Πάτρα", "en": "Patras", "ru": "Патры"},
+                    {"el": "Ηράκλειο", "en": "Heraklion", "ru": "Ираклион"},
+                ],
+                "correct_option": 1,
+            },
+            {
+                "question_text": {
+                    "el": "Ποιο είναι το μεγαλύτερο νησί της Ελλάδας;",
+                    "en": "What is the largest island of Greece?",
+                    "ru": "Какой самый большой остров Греции?",
+                },
+                "options": [
+                    {"el": "Κρήτη", "en": "Crete", "ru": "Крит"},
+                    {"el": "Εύβοια", "en": "Euboea", "ru": "Эвбея"},
+                    {"el": "Ρόδος", "en": "Rhodes", "ru": "Родос"},
+                    {"el": "Λέσβος", "en": "Lesbos", "ru": "Лесбос"},
+                ],
+                "correct_option": 1,
+            },
+            {
+                "question_text": {
+                    "el": "Ποιο είναι το ψηλότερο βουνό της Ελλάδας;",
+                    "en": "What is the highest mountain in Greece?",
+                    "ru": "Какая самая высокая гора в Греции?",
+                },
+                "options": [
+                    {"el": "Όλυμπος", "en": "Olympus", "ru": "Олимп"},
+                    {"el": "Παρνασσός", "en": "Parnassus", "ru": "Парнас"},
+                    {"el": "Πίνδος", "en": "Pindus", "ru": "Пинд"},
+                    {"el": "Ταΰγετος", "en": "Taygetus", "ru": "Тайгет"},
+                ],
+                "correct_option": 1,
+            },
+            {
+                "question_text": {
+                    "el": "Πόσες περιφέρειες έχει η Ελλάδα;",
+                    "en": "How many regions does Greece have?",
+                    "ru": "Сколько регионов в Греции?",
+                },
+                "options": [
+                    {"el": "13", "en": "13", "ru": "13"},
+                    {"el": "10", "en": "10", "ru": "10"},
+                    {"el": "15", "en": "15", "ru": "15"},
+                    {"el": "12", "en": "12", "ru": "12"},
+                ],
+                "correct_option": 1,
+            },
+            {
+                "question_text": {
+                    "el": "Ποια θάλασσα βρέχει τη δυτική Ελλάδα;",
+                    "en": "Which sea borders western Greece?",
+                    "ru": "Какое море омывает западную Грецию?",
+                },
+                "options": [
+                    {"el": "Ιόνιο Πέλαγος", "en": "Ionian Sea", "ru": "Ионическое море"},
+                    {"el": "Αιγαίο Πέλαγος", "en": "Aegean Sea", "ru": "Эгейское море"},
+                    {
+                        "el": "Μεσόγειος Θάλασσα",
+                        "en": "Mediterranean Sea",
+                        "ru": "Средиземное море",
+                    },
+                    {"el": "Μαύρη Θάλασσα", "en": "Black Sea", "ru": "Чёрное море"},
+                ],
+                "correct_option": 1,
+            },
+            {
+                "question_text": {
+                    "el": "Ποια είναι η δεύτερη μεγαλύτερη πόλη της Ελλάδας;",
+                    "en": "What is the second largest city in Greece?",
+                    "ru": "Какой второй по величине город в Греции?",
+                },
+                "options": [
+                    {"el": "Θεσσαλονίκη", "en": "Thessaloniki", "ru": "Салоники"},
+                    {"el": "Πάτρα", "en": "Patras", "ru": "Патры"},
+                    {"el": "Ηράκλειο", "en": "Heraklion", "ru": "Ираклион"},
+                    {"el": "Λάρισα", "en": "Larissa", "ru": "Лариса"},
+                ],
+                "correct_option": 1,
+            },
+            {
+                "question_text": {
+                    "el": "Με πόσες χώρες συνορεύει η Ελλάδα;",
+                    "en": "How many countries does Greece border?",
+                    "ru": "С какими странами граничит Греция?",
+                },
+                "options": [
+                    {"el": "4", "en": "4", "ru": "4"},
+                    {"el": "3", "en": "3", "ru": "3"},
+                    {"el": "5", "en": "5", "ru": "5"},
+                    {"el": "2", "en": "2", "ru": "2"},
+                ],
+                "correct_option": 1,
+            },
+            {
+                "question_text": {
+                    "el": "Περίπου πόσα νησιά έχει η Ελλάδα;",
+                    "en": "Approximately how many islands does Greece have?",
+                    "ru": "Приблизительно сколько островов в Греции?",
+                },
+                "options": [
+                    {"el": "6000", "en": "6000", "ru": "6000"},
+                    {"el": "3000", "en": "3000", "ru": "3000"},
+                    {"el": "1000", "en": "1000", "ru": "1000"},
+                    {"el": "500", "en": "500", "ru": "500"},
+                ],
+                "correct_option": 1,
+            },
+            {
+                "question_text": {
+                    "el": "Ποιος ποταμός είναι ο μακρύτερος στην Ελλάδα;",
+                    "en": "Which river is the longest in Greece?",
+                    "ru": "Какая река самая длинная в Греции?",
+                },
+                "options": [
+                    {"el": "Αλιάκμονας", "en": "Aliakmonas", "ru": "Альякмонас"},
+                    {"el": "Αξιός", "en": "Axios", "ru": "Аксьос"},
+                    {"el": "Πηνειός", "en": "Pinios", "ru": "Пиньос"},
+                    {"el": "Αχελώος", "en": "Acheloos", "ru": "Ахелоос"},
+                ],
+                "correct_option": 1,
+            },
+            {
+                "question_text": {
+                    "el": "Ποια περιοχή της Ελλάδας είναι γνωστή ως η γη των θεών;",
+                    "en": "Which region of Greece is known as the land of the gods?",
+                    "ru": "Какой регион Греции известен как земля богов?",
+                },
+                "options": [
+                    {
+                        "el": "Μακεδονία (Όλυμπος)",
+                        "en": "Macedonia (Olympus)",
+                        "ru": "Македония (Олимп)",
+                    },
+                    {"el": "Πελοπόννησος", "en": "Peloponnese", "ru": "Пелопоннес"},
+                    {"el": "Κρήτη", "en": "Crete", "ru": "Крит"},
+                    {"el": "Αττική", "en": "Attica", "ru": "Аттика"},
+                ],
+                "correct_option": 1,
+            },
+        ],
+        "politics": [
+            {
+                "question_text": {
+                    "el": "Ποιο είναι το πολίτευμα της Ελλάδας;",
+                    "en": "What is the form of government in Greece?",
+                    "ru": "Какая форма правления в Греции?",
+                },
+                "options": [
+                    {
+                        "el": "Προεδρευόμενη Κοινοβουλευτική Δημοκρατία",
+                        "en": "Parliamentary Republic",
+                        "ru": "Парламентская республика",
+                    },
+                    {
+                        "el": "Συνταγματική Μοναρχία",
+                        "en": "Constitutional Monarchy",
+                        "ru": "Конституционная монархия",
+                    },
+                    {
+                        "el": "Προεδρική Δημοκρατία",
+                        "en": "Presidential Republic",
+                        "ru": "Президентская республика",
+                    },
+                    {"el": "Ομοσπονδία", "en": "Federation", "ru": "Федерация"},
+                ],
+                "correct_option": 1,
+            },
+            {
+                "question_text": {
+                    "el": "Πόσα χρόνια διαρκεί η θητεία του Προέδρου της Δημοκρατίας;",
+                    "en": "How many years is the term of the President of the Republic?",
+                    "ru": "Сколько лет длится срок полномочий Президента Республики?",
+                },
+                "options": [
+                    {"el": "5", "en": "5", "ru": "5"},
+                    {"el": "4", "en": "4", "ru": "4"},
+                    {"el": "6", "en": "6", "ru": "6"},
+                    {"el": "7", "en": "7", "ru": "7"},
+                ],
+                "correct_option": 1,
+            },
+            {
+                "question_text": {
+                    "el": "Πόσους βουλευτές έχει η Ελληνική Βουλή;",
+                    "en": "How many members does the Greek Parliament have?",
+                    "ru": "Сколько депутатов в греческом парламенте?",
+                },
+                "options": [
+                    {"el": "300", "en": "300", "ru": "300"},
+                    {"el": "250", "en": "250", "ru": "250"},
+                    {"el": "350", "en": "350", "ru": "350"},
+                    {"el": "200", "en": "200", "ru": "200"},
+                ],
+                "correct_option": 1,
+            },
+            {
+                "question_text": {
+                    "el": "Ποιος εκλέγει τον Πρόεδρο της Δημοκρατίας;",
+                    "en": "Who elects the President of the Republic?",
+                    "ru": "Кто избирает Президента Республики?",
+                },
+                "options": [
+                    {
+                        "el": "Η Βουλή των Ελλήνων",
+                        "en": "The Hellenic Parliament",
+                        "ru": "Парламент Греции",
+                    },
+                    {
+                        "el": "Ο λαός με άμεση ψηφοφορία",
+                        "en": "The people by direct vote",
+                        "ru": "Народ прямым голосованием",
+                    },
+                    {"el": "Ο Πρωθυπουργός", "en": "The Prime Minister", "ru": "Премьер-министр"},
+                    {
+                        "el": "Το Υπουργικό Συμβούλιο",
+                        "en": "The Cabinet",
+                        "ru": "Кабинет министров",
+                    },
+                ],
+                "correct_option": 1,
+            },
+            {
+                "question_text": {
+                    "el": "Κάθε πόσα χρόνια γίνονται εκλογές για τη Βουλή;",
+                    "en": "How often are parliamentary elections held?",
+                    "ru": "Как часто проводятся парламентские выборы?",
+                },
+                "options": [
+                    {"el": "4", "en": "4", "ru": "4"},
+                    {"el": "3", "en": "3", "ru": "3"},
+                    {"el": "5", "en": "5", "ru": "5"},
+                    {"el": "6", "en": "6", "ru": "6"},
+                ],
+                "correct_option": 1,
+            },
+            {
+                "question_text": {
+                    "el": "Ποιο είναι το ανώτατο δικαστήριο στην Ελλάδα;",
+                    "en": "What is the highest court in Greece?",
+                    "ru": "Какой высший суд в Греции?",
+                },
+                "options": [
+                    {
+                        "el": "Άρειος Πάγος",
+                        "en": "Areios Pagos (Supreme Court)",
+                        "ru": "Ареопаг (Верховный суд)",
+                    },
+                    {
+                        "el": "Συμβούλιο της Επικρατείας",
+                        "en": "Council of State",
+                        "ru": "Государственный совет",
+                    },
+                    {"el": "Ελεγκτικό Συνέδριο", "en": "Court of Audit", "ru": "Счётная палата"},
+                    {
+                        "el": "Ανώτατο Ειδικό Δικαστήριο",
+                        "en": "Supreme Special Court",
+                        "ru": "Специальный Верховный суд",
+                    },
+                ],
+                "correct_option": 1,
+            },
+            {
+                "question_text": {
+                    "el": "Ποιο είναι το ελάχιστο ποσοστό για είσοδο στη Βουλή;",
+                    "en": "What is the minimum percentage to enter Parliament?",
+                    "ru": "Какой минимальный процент для прохождения в парламент?",
+                },
+                "options": [
+                    {"el": "3%", "en": "3%", "ru": "3%"},
+                    {"el": "5%", "en": "5%", "ru": "5%"},
+                    {"el": "4%", "en": "4%", "ru": "4%"},
+                    {"el": "2%", "en": "2%", "ru": "2%"},
+                ],
+                "correct_option": 1,
+            },
+            {
+                "question_text": {
+                    "el": "Από ποια ηλικία έχει κανείς δικαίωμα ψήφου στην Ελλάδα;",
+                    "en": "From what age can one vote in Greece?",
+                    "ru": "С какого возраста можно голосовать в Греции?",
+                },
+                "options": [
+                    {"el": "17", "en": "17", "ru": "17"},
+                    {"el": "18", "en": "18", "ru": "18"},
+                    {"el": "21", "en": "21", "ru": "21"},
+                    {"el": "16", "en": "16", "ru": "16"},
+                ],
+                "correct_option": 1,
+            },
+            {
+                "question_text": {
+                    "el": "Ποια είναι η εθνική εορτή της Ελλάδας;",
+                    "en": "What is the national day of Greece?",
+                    "ru": "Какой национальный праздник Греции?",
+                },
+                "options": [
+                    {"el": "25 Μαρτίου", "en": "March 25", "ru": "25 марта"},
+                    {"el": "28 Οκτωβρίου", "en": "October 28", "ru": "28 октября"},
+                    {"el": "17 Νοεμβρίου", "en": "November 17", "ru": "17 ноября"},
+                    {"el": "15 Αυγούστου", "en": "August 15", "ru": "15 августа"},
+                ],
+                "correct_option": 1,
+            },
+            {
+                "question_text": {
+                    "el": "Τι είναι η Βουλή των Ελλήνων;",
+                    "en": "What is the Hellenic Parliament?",
+                    "ru": "Что такое Парламент Греции?",
+                },
+                "options": [
+                    {
+                        "el": "Το νομοθετικό σώμα της χώρας",
+                        "en": "The legislative body of the country",
+                        "ru": "Законодательный орган страны",
+                    },
+                    {
+                        "el": "Το δικαστικό σώμα της χώρας",
+                        "en": "The judicial body of the country",
+                        "ru": "Судебный орган страны",
+                    },
+                    {
+                        "el": "Η κυβέρνηση της χώρας",
+                        "en": "The government of the country",
+                        "ru": "Правительство страны",
+                    },
+                    {
+                        "el": "Το στρατιωτικό συμβούλιο",
+                        "en": "The military council",
+                        "ru": "Военный совет",
+                    },
+                ],
+                "correct_option": 1,
+            },
+        ],
+        "culture": [
+            {
+                "question_text": {
+                    "el": "Ποιος έγραψε την Οδύσσεια;",
+                    "en": "Who wrote the Odyssey?",
+                    "ru": "Кто написал Одиссею?",
+                },
+                "options": [
+                    {"el": "Όμηρος", "en": "Homer", "ru": "Гомер"},
+                    {"el": "Σοφοκλής", "en": "Sophocles", "ru": "Софокл"},
+                    {"el": "Πλάτων", "en": "Plato", "ru": "Платон"},
+                    {"el": "Αριστοτέλης", "en": "Aristotle", "ru": "Аристотель"},
+                ],
+                "correct_option": 1,
+            },
+            {
+                "question_text": {
+                    "el": "Ποιος είναι ο εθνικός ύμνος της Ελλάδας;",
+                    "en": "What is the national anthem of Greece?",
+                    "ru": "Какой национальный гимн Греции?",
+                },
+                "options": [
+                    {
+                        "el": "Ύμνος εις την Ελευθερίαν",
+                        "en": "Hymn to Liberty",
+                        "ru": "Гимн Свободе",
+                    },
+                    {
+                        "el": "Η Ελλάς ποτέ δεν πεθαίνει",
+                        "en": "Greece Never Dies",
+                        "ru": "Греция никогда не умрёт",
+                    },
+                    {"el": "Δόξα και Τιμή", "en": "Glory and Honor", "ru": "Слава и честь"},
+                    {
+                        "el": "Μακεδονία Ξακουστή",
+                        "en": "Famous Macedonia",
+                        "ru": "Славная Македония",
+                    },
+                ],
+                "correct_option": 1,
+            },
+            {
+                "question_text": {
+                    "el": "Ποιος Έλληνας ποιητής κέρδισε το Νόμπελ Λογοτεχνίας;",
+                    "en": "Which Greek poet won the Nobel Prize in Literature?",
+                    "ru": "Какой греческий поэт получил Нобелевскую премию по литературе?",
+                },
+                "options": [
+                    {"el": "Γιώργος Σεφέρης", "en": "George Seferis", "ru": "Йоргос Сеферис"},
+                    {
+                        "el": "Κωνσταντίνος Καβάφης",
+                        "en": "Constantine Cavafy",
+                        "ru": "Константинос Кавафис",
+                    },
+                    {"el": "Οδυσσέας Ελύτης", "en": "Odysseas Elytis", "ru": "Одиссеас Элитис"},
+                    {
+                        "el": "Νίκος Καζαντζάκης",
+                        "en": "Nikos Kazantzakis",
+                        "ru": "Никос Казандзакис",
+                    },
+                ],
+                "correct_option": 1,
+            },
+            {
+                "question_text": {
+                    "el": "Ποιο είναι το πιο διάσημο αρχαιοελληνικό θέατρο;",
+                    "en": "What is the most famous ancient Greek theater?",
+                    "ru": "Какой самый известный древнегреческий театр?",
+                },
+                "options": [
+                    {
+                        "el": "Θέατρο Επιδαύρου",
+                        "en": "Theatre of Epidaurus",
+                        "ru": "Театр Эпидавра",
+                    },
+                    {
+                        "el": "Ηρώδειο",
+                        "en": "Odeon of Herodes Atticus",
+                        "ru": "Одеон Герода Аттика",
+                    },
+                    {"el": "Θέατρο Διονύσου", "en": "Theatre of Dionysus", "ru": "Театр Диониса"},
+                    {
+                        "el": "Αρχαίο Θέατρο Δελφών",
+                        "en": "Ancient Theatre of Delphi",
+                        "ru": "Древний театр Дельф",
+                    },
+                ],
+                "correct_option": 1,
+            },
+            {
+                "question_text": {
+                    "el": "Ποιο είναι το εθνικό χορευτικό στυλ της Ελλάδας;",
+                    "en": "What is the national dance style of Greece?",
+                    "ru": "Какой национальный танцевальный стиль Греции?",
+                },
+                "options": [
+                    {"el": "Συρτάκι", "en": "Sirtaki", "ru": "Сиртаки"},
+                    {"el": "Καλαματιανός", "en": "Kalamatianos", "ru": "Каламатьянос"},
+                    {"el": "Χασάπικο", "en": "Hasapiko", "ru": "Хасапико"},
+                    {"el": "Τσάμικο", "en": "Tsamiko", "ru": "Цамико"},
+                ],
+                "correct_option": 1,
+            },
+            {
+                "question_text": {
+                    "el": "Ποιο αρχαίο ελληνικό μνημείο είναι σύμβολο της Αθήνας;",
+                    "en": "Which ancient Greek monument is a symbol of Athens?",
+                    "ru": "Какой древнегреческий памятник является символом Афин?",
+                },
+                "options": [
+                    {"el": "Παρθενώνας", "en": "Parthenon", "ru": "Парфенон"},
+                    {
+                        "el": "Ναός του Ολυμπίου Διός",
+                        "en": "Temple of Olympian Zeus",
+                        "ru": "Храм Зевса Олимпийского",
+                    },
+                    {"el": "Αρχαία Αγορά", "en": "Ancient Agora", "ru": "Древняя Агора"},
+                    {"el": "Ερεχθείο", "en": "Erechtheion", "ru": "Эрехтейон"},
+                ],
+                "correct_option": 1,
+            },
+            {
+                "question_text": {
+                    "el": "Ποια είναι η επίσημη θρησκεία της Ελλάδας;",
+                    "en": "What is the official religion of Greece?",
+                    "ru": "Какая официальная религия Греции?",
+                },
+                "options": [
+                    {
+                        "el": "Ελληνική Ορθόδοξη Χριστιανική",
+                        "en": "Greek Orthodox Christian",
+                        "ru": "Греческое православие",
+                    },
+                    {"el": "Ρωμαιοκαθολική", "en": "Roman Catholic", "ru": "Римско-католическая"},
+                    {"el": "Προτεσταντική", "en": "Protestant", "ru": "Протестантизм"},
+                    {
+                        "el": "Δεν υπάρχει επίσημη θρησκεία",
+                        "en": "No official religion",
+                        "ru": "Нет официальной религии",
+                    },
+                ],
+                "correct_option": 1,
+            },
+            {
+                "question_text": {
+                    "el": "Ποια είναι η διάσημη ελληνική μουσική που συνδέεται με το ρεμπέτικο;",
+                    "en": "What is the famous Greek music associated with rebetiko?",
+                    "ru": "Какая известная греческая музыка связана с ребетико?",
+                },
+                "options": [
+                    {"el": "Λαϊκή μουσική", "en": "Folk music", "ru": "Народная музыка"},
+                    {"el": "Κλασική μουσική", "en": "Classical music", "ru": "Классическая музыка"},
+                    {
+                        "el": "Βυζαντινή μουσική",
+                        "en": "Byzantine music",
+                        "ru": "Византийская музыка",
+                    },
+                    {
+                        "el": "Δημοτική μουσική",
+                        "en": "Traditional music",
+                        "ru": "Традиционная музыка",
+                    },
+                ],
+                "correct_option": 1,
+            },
+            {
+                "question_text": {
+                    "el": "Ποιος Έλληνας σκηνοθέτης κέρδισε το Όσκαρ καλύτερης ταινίας;",
+                    "en": "Which Greek director won the Oscar for Best Picture?",
+                    "ru": "Какой греческий режиссёр получил Оскар за лучший фильм?",
+                },
+                "options": [
+                    {"el": "Γιώργος Λάνθιμος", "en": "Yorgos Lanthimos", "ru": "Йоргос Лантимос"},
+                    {"el": "Κώστας Γαβράς", "en": "Costa-Gavras", "ru": "Коста-Гаврас"},
+                    {
+                        "el": "Θεόδωρος Αγγελόπουλος",
+                        "en": "Theo Angelopoulos",
+                        "ru": "Тео Ангелопулос",
+                    },
+                    {
+                        "el": "Μιχάλης Κακογιάννης",
+                        "en": "Michael Cacoyannis",
+                        "ru": "Михалис Какояннис",
+                    },
+                ],
+                "correct_option": 1,
+            },
+            {
+                "question_text": {
+                    "el": "Ποιο είναι το εθνικό ποτό της Ελλάδας;",
+                    "en": "What is the national drink of Greece?",
+                    "ru": "Какой национальный напиток Греции?",
+                },
+                "options": [
+                    {"el": "Ούζο", "en": "Ouzo", "ru": "Узо"},
+                    {"el": "Τσίπουρο", "en": "Tsipouro", "ru": "Ципуро"},
+                    {"el": "Ρετσίνα", "en": "Retsina", "ru": "Рецина"},
+                    {"el": "Μεταξά", "en": "Metaxa", "ru": "Метакса"},
+                ],
+                "correct_option": 1,
+            },
+        ],
+        "traditions": [
+            {
+                "question_text": {
+                    "el": "Πότε γιορτάζεται το Πάσχα στην Ελλάδα;",
+                    "en": "When is Easter celebrated in Greece?",
+                    "ru": "Когда празднуется Пасха в Греции?",
+                },
+                "options": [
+                    {
+                        "el": "Σύμφωνα με το Ορθόδοξο ημερολόγιο",
+                        "en": "According to the Orthodox calendar",
+                        "ru": "По православному календарю",
+                    },
+                    {
+                        "el": "Σύμφωνα με το Δυτικό ημερολόγιο",
+                        "en": "According to the Western calendar",
+                        "ru": "По западному календарю",
+                    },
+                    {"el": "Πάντα τον Μάρτιο", "en": "Always in March", "ru": "Всегда в марте"},
+                    {"el": "Πάντα τον Απρίλιο", "en": "Always in April", "ru": "Всегда в апреле"},
+                ],
+                "correct_option": 1,
+            },
+            {
+                "question_text": {
+                    "el": "Ποιο είναι το παραδοσιακό φαγητό του Πάσχα στην Ελλάδα;",
+                    "en": "What is the traditional Easter food in Greece?",
+                    "ru": "Какое традиционное пасхальное блюдо в Греции?",
+                },
+                "options": [
+                    {
+                        "el": "Αρνί και κόκκινα αυγά",
+                        "en": "Lamb and red eggs",
+                        "ru": "Ягнёнок и красные яйца",
+                    },
+                    {"el": "Γαλοπούλα", "en": "Turkey", "ru": "Индейка"},
+                    {"el": "Ψάρι", "en": "Fish", "ru": "Рыба"},
+                    {"el": "Χοιρινό", "en": "Pork", "ru": "Свинина"},
+                ],
+                "correct_option": 1,
+            },
+            {
+                "question_text": {
+                    "el": "Τι γιορτάζεται στις 28 Οκτωβρίου;",
+                    "en": "What is celebrated on October 28?",
+                    "ru": "Что отмечается 28 октября?",
+                },
+                "options": [
+                    {
+                        "el": "Η επέτειος του ΟΧΙ",
+                        "en": "Oxi Day Anniversary",
+                        "ru": "Годовщина дня Охи",
+                    },
+                    {
+                        "el": "Η Ελληνική Επανάσταση",
+                        "en": "Greek Revolution",
+                        "ru": "Греческая революция",
+                    },
+                    {
+                        "el": "Η απελευθέρωση της Αθήνας",
+                        "en": "Liberation of Athens",
+                        "ru": "Освобождение Афин",
+                    },
+                    {
+                        "el": "Η ίδρυση της Δημοκρατίας",
+                        "en": "Founding of the Republic",
+                        "ru": "Основание республики",
+                    },
+                ],
+                "correct_option": 1,
+            },
+            {
+                "question_text": {
+                    "el": "Ποιο είναι το παραδοσιακό ελληνικό γλυκό για τον γάμο;",
+                    "en": "What is the traditional Greek wedding sweet?",
+                    "ru": "Какой традиционный греческий свадебный десерт?",
+                },
+                "options": [
+                    {
+                        "el": "Κουφέτα",
+                        "en": "Jordan almonds (Koufeta)",
+                        "ru": "Миндаль в сахаре (Куфета)",
+                    },
+                    {"el": "Μπακλαβάς", "en": "Baklava", "ru": "Пахлава"},
+                    {"el": "Γαλακτομπούρεκο", "en": "Galaktoboureko", "ru": "Галактобуреко"},
+                    {"el": "Λουκουμάδες", "en": "Loukoumades", "ru": "Лукумадес"},
+                ],
+                "correct_option": 1,
+            },
+            {
+                "question_text": {
+                    "el": "Τι παράδοση υπάρχει την Πρωτοχρονιά στην Ελλάδα;",
+                    "en": "What tradition exists on New Year's Day in Greece?",
+                    "ru": "Какая традиция существует в Новый год в Греции?",
+                },
+                "options": [
+                    {
+                        "el": "Κόβουμε τη βασιλόπιτα",
+                        "en": "Cutting the Vasilopita",
+                        "ru": "Разрезание Василопиты",
+                    },
+                    {"el": "Ανάβουμε κεριά", "en": "Lighting candles", "ru": "Зажигание свечей"},
+                    {"el": "Τρώμε σταφύλια", "en": "Eating grapes", "ru": "Едим виноград"},
+                    {"el": "Πετάμε πιάτα", "en": "Throwing plates", "ru": "Бросание тарелок"},
+                ],
+                "correct_option": 1,
+            },
+            {
+                "question_text": {
+                    "el": "Ποια είναι η γιορτή του Αγίου Βασιλείου;",
+                    "en": "When is Saint Basil's Day?",
+                    "ru": "Когда празднуется день Святого Василия?",
+                },
+                "options": [
+                    {"el": "1 Ιανουαρίου", "en": "January 1", "ru": "1 января"},
+                    {"el": "25 Δεκεμβρίου", "en": "December 25", "ru": "25 декабря"},
+                    {"el": "6 Ιανουαρίου", "en": "January 6", "ru": "6 января"},
+                    {"el": "7 Ιανουαρίου", "en": "January 7", "ru": "7 января"},
+                ],
+                "correct_option": 1,
+            },
+            {
+                "question_text": {
+                    "el": "Τι γιορτάζεται στα Θεοφάνεια (6 Ιανουαρίου);",
+                    "en": "What is celebrated on Epiphany (January 6)?",
+                    "ru": "Что отмечается на Богоявление (6 января)?",
+                },
+                "options": [
+                    {
+                        "el": "Η βάπτιση του Ιησού Χριστού",
+                        "en": "The baptism of Jesus Christ",
+                        "ru": "Крещение Иисуса Христа",
+                    },
+                    {
+                        "el": "Η γέννηση του Ιησού",
+                        "en": "The birth of Jesus",
+                        "ru": "Рождение Иисуса",
+                    },
+                    {"el": "Η Ανάσταση", "en": "The Resurrection", "ru": "Воскресение"},
+                    {"el": "Η Μεταμόρφωση", "en": "The Transfiguration", "ru": "Преображение"},
+                ],
+                "correct_option": 1,
+            },
+            {
+                "question_text": {
+                    "el": "Ποιο είναι το έθιμο με τον σταυρό στα Θεοφάνεια;",
+                    "en": "What is the cross custom on Epiphany?",
+                    "ru": "Какой обычай с крестом на Богоявление?",
+                },
+                "options": [
+                    {
+                        "el": "Ρίχνεται στη θάλασσα και τον βρίσκει κολυμβητής",
+                        "en": "Thrown into the sea and retrieved by a swimmer",
+                        "ru": "Бросается в море и достаётся пловцом",
+                    },
+                    {
+                        "el": "Φυλάσσεται στην εκκλησία",
+                        "en": "Kept in the church",
+                        "ru": "Хранится в церкви",
+                    },
+                    {
+                        "el": "Καίγεται σε τελετή",
+                        "en": "Burned in a ceremony",
+                        "ru": "Сжигается в церемонии",
+                    },
+                    {
+                        "el": "Δίνεται σε νεόνυμφους",
+                        "en": "Given to newlyweds",
+                        "ru": "Дарится молодожёнам",
+                    },
+                ],
+                "correct_option": 1,
+            },
+            {
+                "question_text": {
+                    "el": "Ποια είναι η παραδοσιακή ελληνική μέρα ονομαστικής εορτής;",
+                    "en": "What is the traditional Greek name day celebration?",
+                    "ru": "Что такое традиционный греческий День именин?",
+                },
+                "options": [
+                    {
+                        "el": "Γιορτάζεται αντί για γενέθλια",
+                        "en": "Celebrated instead of birthdays",
+                        "ru": "Отмечается вместо дня рождения",
+                    },
+                    {
+                        "el": "Γιορτάζεται μαζί με τα γενέθλια",
+                        "en": "Celebrated together with birthdays",
+                        "ru": "Отмечается вместе с днём рождения",
+                    },
+                    {"el": "Δεν γιορτάζεται", "en": "Not celebrated", "ru": "Не отмечается"},
+                    {
+                        "el": "Γιορτάζεται μόνο για παιδιά",
+                        "en": "Celebrated only for children",
+                        "ru": "Отмечается только для детей",
+                    },
+                ],
+                "correct_option": 1,
+            },
+            {
+                "question_text": {
+                    "el": "Ποιο είναι το έθιμο με τα πυροτεχνήματα στη Χίο;",
+                    "en": "What is the fireworks custom in Chios?",
+                    "ru": "Какой обычай с фейерверками на Хиосе?",
+                },
+                "options": [
+                    {
+                        "el": "Ρουκετοπόλεμος ανάμεσα σε εκκλησίες το Πάσχα",
+                        "en": "Rocket war between churches on Easter",
+                        "ru": "Война ракетами между церквями на Пасху",
+                    },
+                    {
+                        "el": "Πυροτεχνήματα στη θάλασσα",
+                        "en": "Fireworks at sea",
+                        "ru": "Фейерверки на море",
+                    },
+                    {
+                        "el": "Πυροτεχνήματα στα βουνά",
+                        "en": "Fireworks in the mountains",
+                        "ru": "Фейерверки в горах",
+                    },
+                    {
+                        "el": "Πυροτεχνήματα την Πρωτοχρονιά",
+                        "en": "New Year fireworks",
+                        "ru": "Новогодние фейерверки",
+                    },
+                ],
+                "correct_option": 1,
+            },
         ],
     }
 
@@ -753,6 +1804,170 @@ class SeedService:
         }
 
     # =====================
+    # Culture Seeding
+    # =====================
+
+    async def seed_culture_decks_and_questions(self) -> dict[str, Any]:
+        """Create culture decks with questions for E2E tests.
+
+        Creates:
+        - 5 culture decks (History, Geography, Politics, Culture, Traditions)
+        - 10 questions per deck (50 total)
+        - All content in 3 languages (el, en, ru)
+
+        Returns:
+            dict with 'decks' and 'questions' counts
+
+        Raises:
+            RuntimeError: If seeding not allowed
+        """
+        self._check_can_seed()
+
+        created_decks = []
+        total_questions = 0
+
+        for category, deck_data in self.CULTURE_DECKS.items():
+            deck = CultureDeck(
+                name=deck_data["name"],
+                description=deck_data["description"],
+                icon=deck_data["icon"],
+                color_accent=deck_data["color_accent"],
+                category=category,
+                is_active=True,
+            )
+            self.db.add(deck)
+            await self.db.flush()
+
+            # Create questions for this deck
+            questions_data = self.CULTURE_QUESTIONS.get(category, [])
+            for i, q_data in enumerate(questions_data):
+                question = CultureQuestion(
+                    deck_id=deck.id,
+                    question_text=q_data["question_text"],
+                    option_a=q_data["options"][0],
+                    option_b=q_data["options"][1],
+                    option_c=q_data["options"][2],
+                    option_d=q_data["options"][3],
+                    correct_option=q_data["correct_option"],
+                    image_key=q_data.get("image_key"),
+                    order_index=i,
+                )
+                self.db.add(question)
+                total_questions += 1
+
+            # Extract English name for return value
+            name_translations = deck_data["name"]
+            name_en = (
+                name_translations["en"]
+                if isinstance(name_translations, dict)
+                else str(name_translations)
+            )
+
+            created_decks.append(
+                {
+                    "id": str(deck.id),
+                    "name": name_en,
+                    "category": category,
+                    "question_count": len(questions_data),
+                }
+            )
+
+        await self.db.flush()
+
+        return {
+            "success": True,
+            "decks": created_decks,
+            "total_questions": total_questions,
+        }
+
+    async def seed_culture_question_statistics(
+        self,
+        user_id: UUID,
+        deck_id: UUID,
+        progress_percent: int = 50,
+    ) -> dict[str, Any]:
+        """Create culture question statistics for a user's deck progress.
+
+        Similar to seed_card_statistics but for culture questions.
+        Generates SM-2 spaced repetition data simulating realistic progress.
+
+        Args:
+            user_id: User to create statistics for
+            deck_id: Culture deck to create statistics for
+            progress_percent: 0-100, how much of deck is "learned"
+
+        Returns:
+            dict with statistics summary
+
+        Raises:
+            RuntimeError: If seeding not allowed
+        """
+        self._check_can_seed()
+
+        # Get questions for the deck
+        result = await self.db.execute(
+            select(CultureQuestion.id)
+            .where(CultureQuestion.deck_id == deck_id)
+            .order_by(CultureQuestion.order_index)
+        )
+        question_ids = [row[0] for row in result.fetchall()]
+
+        if not question_ids:
+            return {"success": True, "stats_created": 0}
+
+        total_questions = len(question_ids)
+        mastered_count = int(total_questions * progress_percent / 100)
+        learning_count = min(3, total_questions - mastered_count)
+
+        stats_created = 0
+        today = date.today()
+
+        for i, question_id in enumerate(question_ids):
+            if i < mastered_count:
+                # Mastered questions
+                status = CardStatus.MASTERED
+                easiness_factor = 2.5
+                interval = 30
+                repetitions = 5
+                next_review = today + timedelta(days=interval)
+            elif i < mastered_count + learning_count:
+                # Learning questions
+                status = CardStatus.LEARNING
+                easiness_factor = 2.5
+                interval = 1
+                repetitions = 1
+                next_review = today + timedelta(days=1)
+            else:
+                # New questions
+                status = CardStatus.NEW
+                easiness_factor = 2.5
+                interval = 0
+                repetitions = 0
+                next_review = today
+
+            stat = CultureQuestionStats(
+                user_id=user_id,
+                question_id=question_id,
+                status=status,
+                easiness_factor=easiness_factor,
+                interval=interval,
+                repetitions=repetitions,
+                next_review_date=next_review,
+            )
+            self.db.add(stat)
+            stats_created += 1
+
+        await self.db.flush()
+
+        return {
+            "success": True,
+            "stats_created": stats_created,
+            "mastered": mastered_count,
+            "learning": learning_count,
+            "new": total_questions - mastered_count - learning_count,
+        }
+
+    # =====================
     # XP & Achievement Seeding
     # =====================
 
@@ -979,6 +2194,8 @@ class SeedService:
         7. Create feedback and votes
         8. Create achievements and XP data
         9. Create XP-specific test users
+        10. Create culture decks and questions
+        11. Create culture progress for learner and advanced users
 
         Returns:
             dict with complete seeding summary
@@ -1138,6 +2355,49 @@ class SeedService:
             }
         )
 
+        # Step 10: Create culture decks and questions
+        culture_result = await self.seed_culture_decks_and_questions()
+
+        # Step 11: Create culture progress for learner and advanced users
+        culture_stats_result: dict[str, Any] = {"success": True, "stats_created": 0}
+        advanced_culture_stats: list[dict[str, Any]] = []
+
+        if culture_result.get("decks"):
+            # Create 60% progress on History deck for learner user
+            history_deck = next(
+                (d for d in culture_result["decks"] if d["category"] == "history"),
+                None,
+            )
+            if learner_id and history_deck:
+                culture_stats_result = await self.seed_culture_question_statistics(
+                    user_id=learner_id,
+                    deck_id=UUID(history_deck["id"]),
+                    progress_percent=60,
+                )
+
+            # Advanced user gets 80% progress on all culture decks
+            advanced_id = next(
+                (
+                    UUID(u["id"])
+                    for u in users_result["users"]
+                    if u["email"] == "e2e_advanced@test.com"
+                ),
+                None,
+            )
+            if advanced_id:
+                for deck in culture_result.get("decks", []):
+                    advanced_stats = await self.seed_culture_question_statistics(
+                        user_id=advanced_id,
+                        deck_id=UUID(deck["id"]),
+                        progress_percent=80,
+                    )
+                    advanced_culture_stats.append(
+                        {
+                            "deck": deck["name"],
+                            "stats_created": advanced_stats.get("stats_created", 0),
+                        }
+                    )
+
         # Commit all changes
         await self.db.commit()
 
@@ -1152,4 +2412,7 @@ class SeedService:
             "feedback": feedback_result,
             "achievements": achievements_result,
             "xp_users": xp_users_result,
+            "culture": culture_result,
+            "culture_statistics": culture_stats_result,
+            "culture_advanced_stats": advanced_culture_stats,
         }

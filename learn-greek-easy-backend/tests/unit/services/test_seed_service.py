@@ -173,6 +173,13 @@ class TestSeedServiceTruncation:
         # cards depends on decks
         assert order.index("cards") < order.index("decks")
 
+        # culture_question_stats depends on users and culture_questions
+        assert order.index("culture_question_stats") < order.index("users")
+        assert order.index("culture_question_stats") < order.index("culture_questions")
+
+        # culture_questions depends on culture_decks
+        assert order.index("culture_questions") < order.index("culture_decks")
+
     @pytest.mark.asyncio
     async def test_truncate_returns_table_list(self, seed_service, mock_db, mock_settings_can_seed):
         """Verify truncate_tables returns list of truncated tables."""
@@ -769,3 +776,291 @@ class TestSeedServiceNotifications:
             assert n.icon is not None
             assert n.action_url is not None
             assert n.created_at is not None
+
+
+# ============================================================================
+# Culture Seeding Tests
+# ============================================================================
+
+
+class TestSeedServiceCulture:
+    """Tests for culture deck and question seeding."""
+
+    @pytest.fixture
+    def mock_db_with_ids(self):
+        """Create mock database that assigns IDs to added objects."""
+        db = AsyncMock()
+
+        def track_add(obj):
+            # Assign a UUID to the object if it has an id attribute
+            if hasattr(obj, "id") and obj.id is None:
+                obj.id = uuid4()
+
+        db.add = MagicMock(side_effect=track_add)
+        db.flush = AsyncMock()
+        db.commit = AsyncMock()
+        db.execute = AsyncMock()
+
+        return db
+
+    @pytest.mark.asyncio
+    async def test_seed_culture_blocked_in_production(
+        self, seed_service, mock_settings_cannot_seed
+    ):
+        """seed_culture_decks_and_questions should raise RuntimeError in production."""
+        with pytest.raises(RuntimeError) as exc_info:
+            await seed_service.seed_culture_decks_and_questions()
+
+        assert "Database seeding not allowed" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_seed_culture_statistics_blocked_in_production(
+        self, seed_service, mock_settings_cannot_seed
+    ):
+        """seed_culture_question_statistics should raise RuntimeError in production."""
+        with pytest.raises(RuntimeError) as exc_info:
+            await seed_service.seed_culture_question_statistics(
+                user_id=uuid4(), deck_id=uuid4(), progress_percent=50
+            )
+
+        assert "Database seeding not allowed" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_creates_five_culture_decks(self, mock_db_with_ids, mock_settings_can_seed):
+        """Verify 5 culture decks are created."""
+        seed_service = SeedService(mock_db_with_ids)
+
+        result = await seed_service.seed_culture_decks_and_questions()
+
+        assert result["success"] is True
+        assert len(result["decks"]) == 5
+
+        # Check all categories
+        categories = [d["category"] for d in result["decks"]]
+        assert "history" in categories
+        assert "geography" in categories
+        assert "politics" in categories
+        assert "culture" in categories
+        assert "traditions" in categories
+
+    @pytest.mark.asyncio
+    async def test_each_culture_deck_has_ten_questions(
+        self, mock_db_with_ids, mock_settings_can_seed
+    ):
+        """Verify 10 questions per culture deck."""
+        seed_service = SeedService(mock_db_with_ids)
+
+        result = await seed_service.seed_culture_decks_and_questions()
+
+        for deck in result["decks"]:
+            assert deck["question_count"] == 10
+
+        assert result["total_questions"] == 50  # 5 decks * 10 questions
+
+    @pytest.mark.asyncio
+    async def test_culture_questions_have_trilingual_content(
+        self, mock_db_with_ids, mock_settings_can_seed
+    ):
+        """Verify culture questions have el, en, ru translations."""
+        seed_service = SeedService(mock_db_with_ids)
+
+        # Track added questions
+        added_questions = []
+        original_add = mock_db_with_ids.add.side_effect
+
+        def track_questions(obj):
+            original_add(obj)
+            if hasattr(obj, "question_text") and hasattr(obj, "option_a"):
+                added_questions.append(obj)
+
+        mock_db_with_ids.add = MagicMock(side_effect=track_questions)
+
+        await seed_service.seed_culture_decks_and_questions()
+
+        for q in added_questions:
+            # Check question text has all 3 languages
+            assert "el" in q.question_text
+            assert "en" in q.question_text
+            assert "ru" in q.question_text
+
+            # Check options have all 3 languages
+            for option in [q.option_a, q.option_b, q.option_c, q.option_d]:
+                if option:  # option_d may be None
+                    assert "el" in option
+                    assert "en" in option
+                    assert "ru" in option
+
+    def test_culture_questions_constant_has_correct_structure(self, seed_service):
+        """Verify CULTURE_QUESTIONS constant has correct structure."""
+        # Check all categories exist
+        for category in ["history", "geography", "politics", "culture", "traditions"]:
+            assert category in SeedService.CULTURE_QUESTIONS
+
+            questions = SeedService.CULTURE_QUESTIONS[category]
+            assert len(questions) == 10
+
+            for q_data in questions:
+                # Check required fields
+                assert "question_text" in q_data
+                assert "options" in q_data
+                assert "correct_option" in q_data
+
+                # Check question has translations
+                assert "el" in q_data["question_text"]
+                assert "en" in q_data["question_text"]
+                assert "ru" in q_data["question_text"]
+
+                # Check options (answers) have translations
+                assert len(q_data["options"]) >= 2  # At least 2 options
+                for option in q_data["options"]:
+                    assert "el" in option
+                    assert "en" in option
+                    assert "ru" in option
+
+                # Check correct_option is valid (1-based index)
+                assert 1 <= q_data["correct_option"] <= len(q_data["options"])
+
+    def test_culture_decks_constant_has_correct_structure(self, seed_service):
+        """Verify CULTURE_DECKS constant has correct structure."""
+        assert len(SeedService.CULTURE_DECKS) == 5
+
+        # CULTURE_DECKS is a dict with category as key
+        for category, deck_data in SeedService.CULTURE_DECKS.items():
+            assert category in ["history", "geography", "politics", "culture", "traditions"]
+            assert "name" in deck_data
+            assert "description" in deck_data
+
+            # Check name has translations
+            assert "el" in deck_data["name"]
+            assert "en" in deck_data["name"]
+            assert "ru" in deck_data["name"]
+
+            # Check description has translations
+            assert "el" in deck_data["description"]
+            assert "en" in deck_data["description"]
+            assert "ru" in deck_data["description"]
+
+
+class TestSeedServiceCultureStatistics:
+    """Tests for culture question statistics seeding."""
+
+    @pytest.fixture
+    def mock_db_with_ids(self):
+        """Create mock database that assigns IDs and returns question IDs."""
+        db = AsyncMock()
+
+        def track_add(obj):
+            # Assign a UUID to the object if it has an id attribute
+            if hasattr(obj, "id") and obj.id is None:
+                obj.id = uuid4()
+
+        db.add = MagicMock(side_effect=track_add)
+        db.flush = AsyncMock()
+        db.commit = AsyncMock()
+
+        # Mock execute for queries
+        question_ids = [uuid4() for _ in range(10)]
+        mock_result = MagicMock()
+        mock_result.fetchall.return_value = [(qid,) for qid in question_ids]
+        db.execute = AsyncMock(return_value=mock_result)
+
+        return db
+
+    @pytest.mark.asyncio
+    async def test_creates_statistics_for_all_questions(
+        self, mock_db_with_ids, mock_settings_can_seed
+    ):
+        """Verify statistics are created for each question in deck."""
+        seed_service = SeedService(mock_db_with_ids)
+
+        result = await seed_service.seed_culture_question_statistics(
+            user_id=uuid4(), deck_id=uuid4(), progress_percent=50
+        )
+
+        assert result["success"] is True
+        assert result["stats_created"] == 10
+
+    @pytest.mark.asyncio
+    async def test_progress_distribution_sixty_percent(
+        self, mock_db_with_ids, mock_settings_can_seed
+    ):
+        """Verify status distribution matches 60% progress."""
+        seed_service = SeedService(mock_db_with_ids)
+
+        result = await seed_service.seed_culture_question_statistics(
+            user_id=uuid4(), deck_id=uuid4(), progress_percent=60
+        )
+
+        # 60% of 10 = 6 mastered
+        assert result["mastered"] == 6
+        # Up to 3 learning
+        assert result["learning"] == 3
+        # Remainder are new
+        assert result["new"] == 1
+
+    @pytest.mark.asyncio
+    async def test_progress_distribution_eighty_percent(
+        self, mock_db_with_ids, mock_settings_can_seed
+    ):
+        """Verify status distribution matches 80% progress."""
+        seed_service = SeedService(mock_db_with_ids)
+
+        result = await seed_service.seed_culture_question_statistics(
+            user_id=uuid4(), deck_id=uuid4(), progress_percent=80
+        )
+
+        # 80% of 10 = 8 mastered
+        assert result["mastered"] == 8
+        # Remaining 2 cards: up to 3 learning (but only 2 remaining)
+        # Learning = min(3, 10 - 8) = min(3, 2) = 2
+        assert result["learning"] == 2
+        # Remainder = 10 - 8 - 2 = 0
+        assert result["new"] == 0
+
+    @pytest.mark.asyncio
+    async def test_handles_empty_deck(self, mock_db_with_ids, mock_settings_can_seed):
+        """Verify handling of deck with no questions."""
+        # Override mock to return empty
+        mock_result = MagicMock()
+        mock_result.fetchall.return_value = []
+        mock_db_with_ids.execute = AsyncMock(return_value=mock_result)
+
+        seed_service = SeedService(mock_db_with_ids)
+
+        result = await seed_service.seed_culture_question_statistics(
+            user_id=uuid4(), deck_id=uuid4(), progress_percent=50
+        )
+
+        assert result["success"] is True
+        assert result["stats_created"] == 0
+
+    @pytest.mark.asyncio
+    async def test_mastered_questions_have_high_stats(
+        self, mock_db_with_ids, mock_settings_can_seed
+    ):
+        """Verify mastered questions have appropriate SM-2 stats."""
+        seed_service = SeedService(mock_db_with_ids)
+
+        # Track added statistics
+        added_stats = []
+        original_add = mock_db_with_ids.add.side_effect
+
+        def track_stats(obj):
+            original_add(obj)
+            if hasattr(obj, "times_correct") and hasattr(obj, "times_incorrect"):
+                added_stats.append(obj)
+
+        mock_db_with_ids.add = MagicMock(side_effect=track_stats)
+
+        await seed_service.seed_culture_question_statistics(
+            user_id=uuid4(), deck_id=uuid4(), progress_percent=100
+        )
+
+        # All should be mastered with high stats
+        for stat in added_stats:
+            # Mastered questions should have been reviewed multiple times
+            assert stat.times_correct >= 3
+            # Higher ease factor
+            assert stat.ease_factor >= 2.5
+            # Higher interval
+            assert stat.interval >= 7

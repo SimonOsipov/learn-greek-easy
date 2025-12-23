@@ -278,3 +278,38 @@ async def seed_content(
         duration_ms=duration_ms,
         results=result,
     )
+
+
+@router.post(
+    "/culture",
+    response_model=SeedResultResponse,
+    summary="Seed culture decks and questions only",
+    description="Create culture decks and questions without users or progress. "
+    "Creates 5 culture decks with 10 Greek culture questions each.",
+    dependencies=[Depends(verify_seed_access)],
+)
+async def seed_culture(
+    db: AsyncSession = Depends(get_db),
+) -> SeedResultResponse:
+    """Create culture decks and questions without users or progress.
+
+    Creates:
+    - 5 culture decks (History, Geography, Politics, Culture, Traditions)
+    - 50 questions total (10 trilingual questions per deck: el, en, ru)
+
+    Returns:
+        SeedResultResponse with culture content creation results and timing
+    """
+    start_time = perf_counter()
+    service = SeedService(db)
+    result = await service.seed_culture_decks_and_questions()
+    await db.commit()
+    duration_ms = (perf_counter() - start_time) * 1000
+
+    return SeedResultResponse(
+        success=True,
+        operation="culture",
+        timestamp=datetime.now(timezone.utc),
+        duration_ms=duration_ms,
+        results=result,
+    )
