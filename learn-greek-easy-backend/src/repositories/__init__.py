@@ -2,6 +2,8 @@
 
 from src.repositories.base import BaseRepository
 from src.repositories.card import CardRepository
+from src.repositories.culture_deck import CultureDeckRepository
+from src.repositories.culture_question_stats import CultureQuestionStatsRepository
 from src.repositories.deck import DeckRepository
 from src.repositories.feedback import FeedbackRepository
 from src.repositories.notification import NotificationRepository
@@ -31,4 +33,7 @@ __all__ = [
     "FeedbackRepository",
     # Notification
     "NotificationRepository",
+    # Culture
+    "CultureDeckRepository",
+    "CultureQuestionStatsRepository",
 ]
