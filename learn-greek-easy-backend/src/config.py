@@ -318,24 +318,64 @@ class Settings(BaseSettings):
     )
 
     # =========================================================================
-    # AWS S3 Configuration (for culture question images)
+    # S3-Compatible Storage Configuration (Railway Buckets / AWS S3)
     # =========================================================================
+    # Railway provides: BUCKET, ACCESS_KEY_ID, SECRET_ACCESS_KEY, REGION, ENDPOINT
+    # AWS S3 uses: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_S3_BUCKET_NAME, AWS_S3_REGION
+    # We support both naming conventions with aliases
+
+    # Access credentials (Railway: ACCESS_KEY_ID, AWS: AWS_ACCESS_KEY_ID)
+    s3_access_key_id: Optional[str] = Field(
+        default=None,
+        alias="ACCESS_KEY_ID",
+        description="S3 access key ID (Railway: ACCESS_KEY_ID, AWS: set directly)",
+    )
     aws_access_key_id: Optional[str] = Field(
         default=None,
-        description="AWS access key ID for S3 operations",
+        description="AWS access key ID (fallback if s3_access_key_id not set)",
+    )
+
+    # Secret key (Railway: SECRET_ACCESS_KEY, AWS: AWS_SECRET_ACCESS_KEY)
+    s3_secret_access_key: Optional[str] = Field(
+        default=None,
+        alias="SECRET_ACCESS_KEY",
+        description="S3 secret access key (Railway: SECRET_ACCESS_KEY, AWS: set directly)",
     )
     aws_secret_access_key: Optional[str] = Field(
         default=None,
-        description="AWS secret access key for S3 operations",
+        description="AWS secret access key (fallback if s3_secret_access_key not set)",
+    )
+
+    # Bucket name (Railway: BUCKET, AWS: AWS_S3_BUCKET_NAME)
+    s3_bucket_name: Optional[str] = Field(
+        default=None,
+        alias="BUCKET",
+        description="S3 bucket name (Railway: BUCKET, AWS: set directly)",
     )
     aws_s3_bucket_name: Optional[str] = Field(
         default=None,
-        description="S3 bucket name for culture question images",
+        description="AWS S3 bucket name (fallback if s3_bucket_name not set)",
+    )
+
+    # Region (Railway: REGION, AWS: AWS_S3_REGION)
+    s3_region: Optional[str] = Field(
+        default=None,
+        alias="REGION",
+        description="S3 region (Railway: REGION, AWS: set directly)",
     )
     aws_s3_region: str = Field(
         default="eu-central-1",
-        description="AWS region for S3 bucket",
+        description="AWS S3 region (fallback if s3_region not set)",
     )
+
+    # Endpoint URL (Railway: ENDPOINT, AWS: not needed - uses default)
+    s3_endpoint_url: Optional[str] = Field(
+        default=None,
+        alias="ENDPOINT",
+        description="S3 endpoint URL (Railway: https://storage.railway.app, AWS: None)",
+    )
+
+    # Pre-signed URL expiry
     s3_presigned_url_expiry: int = Field(
         default=3600,
         description="Pre-signed URL expiry in seconds (default 1 hour)",
@@ -345,8 +385,35 @@ class Settings(BaseSettings):
     def s3_configured(self) -> bool:
         """Check if S3 is properly configured."""
         return bool(
-            self.aws_access_key_id and self.aws_secret_access_key and self.aws_s3_bucket_name
+            self.effective_s3_access_key_id
+            and self.effective_s3_secret_access_key
+            and self.effective_s3_bucket_name
         )
+
+    @property
+    def effective_s3_access_key_id(self) -> Optional[str]:
+        """Get effective S3 access key (Railway or AWS)."""
+        return self.s3_access_key_id or self.aws_access_key_id
+
+    @property
+    def effective_s3_secret_access_key(self) -> Optional[str]:
+        """Get effective S3 secret key (Railway or AWS)."""
+        return self.s3_secret_access_key or self.aws_secret_access_key
+
+    @property
+    def effective_s3_bucket_name(self) -> Optional[str]:
+        """Get effective S3 bucket name (Railway or AWS)."""
+        return self.s3_bucket_name or self.aws_s3_bucket_name
+
+    @property
+    def effective_s3_region(self) -> str:
+        """Get effective S3 region (Railway or AWS)."""
+        return self.s3_region or self.aws_s3_region
+
+    @property
+    def effective_s3_endpoint_url(self) -> Optional[str]:
+        """Get effective S3 endpoint URL (Railway or None for AWS)."""
+        return self.s3_endpoint_url
 
     # =========================================================================
     # PostHog Analytics

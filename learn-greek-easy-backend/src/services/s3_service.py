@@ -4,10 +4,19 @@ This service provides:
 - Pre-signed URL generation for GET operations
 - Graceful handling of missing/invalid images
 - Configurable URL expiry (default 1 hour)
+- Support for Railway Buckets and AWS S3
 
 The service is designed to fail gracefully - if S3 is unavailable or
 an image doesn't exist, it returns None rather than raising exceptions.
 This allows questions to remain usable without images.
+
+Railway Buckets Configuration:
+    Railway automatically provides: BUCKET, ACCESS_KEY_ID, SECRET_ACCESS_KEY, REGION, ENDPOINT
+    Endpoint: https://storage.railway.app
+
+AWS S3 Configuration:
+    Set: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_S3_BUCKET_NAME, AWS_S3_REGION
+    No endpoint needed (uses AWS default)
 
 """
 
@@ -47,11 +56,12 @@ class S3Service:
 
         if not settings.s3_configured:
             logger.warning(
-                "S3 not configured - AWS credentials or bucket name missing",
+                "S3 not configured - credentials or bucket name missing",
                 extra={
-                    "has_access_key": bool(settings.aws_access_key_id),
-                    "has_secret_key": bool(settings.aws_secret_access_key),
-                    "has_bucket": bool(settings.aws_s3_bucket_name),
+                    "has_access_key": bool(settings.effective_s3_access_key_id),
+                    "has_secret_key": bool(settings.effective_s3_secret_access_key),
+                    "has_bucket": bool(settings.effective_s3_bucket_name),
+                    "has_endpoint": bool(settings.effective_s3_endpoint_url),
                 },
             )
             return None
@@ -61,18 +71,28 @@ class S3Service:
                 signature_version="s3v4",
                 retries={"max_attempts": 3, "mode": "standard"},
             )
-            self._client = boto3.client(
-                "s3",
-                aws_access_key_id=settings.aws_access_key_id,
-                aws_secret_access_key=settings.aws_secret_access_key,
-                region_name=settings.aws_s3_region,
-                config=config,
-            )
+
+            # Build client kwargs - endpoint_url is optional (Railway needs it, AWS doesn't)
+            client_kwargs = {
+                "aws_access_key_id": settings.effective_s3_access_key_id,
+                "aws_secret_access_key": settings.effective_s3_secret_access_key,
+                "region_name": settings.effective_s3_region,
+                "config": config,
+            }
+
+            # Add endpoint URL if configured (Railway Buckets use custom endpoint)
+            if settings.effective_s3_endpoint_url:
+                client_kwargs["endpoint_url"] = settings.effective_s3_endpoint_url
+
+            self._client = boto3.client("s3", **client_kwargs)
+
             logger.info(
                 "S3 client initialized",
                 extra={
-                    "region": settings.aws_s3_region,
-                    "bucket": settings.aws_s3_bucket_name,
+                    "region": settings.effective_s3_region,
+                    "bucket": settings.effective_s3_bucket_name,
+                    "endpoint": settings.effective_s3_endpoint_url or "AWS default",
+                    "provider": "Railway" if settings.effective_s3_endpoint_url else "AWS",
                 },
             )
             return self._client
@@ -123,7 +143,7 @@ class S3Service:
             url: str = client.generate_presigned_url(
                 "get_object",
                 Params={
-                    "Bucket": settings.aws_s3_bucket_name,
+                    "Bucket": settings.effective_s3_bucket_name,
                     "Key": image_key,
                 },
                 ExpiresIn=expiry,
@@ -164,7 +184,7 @@ class S3Service:
 
         try:
             client.head_object(
-                Bucket=settings.aws_s3_bucket_name,
+                Bucket=settings.effective_s3_bucket_name,
                 Key=image_key,
             )
             return True

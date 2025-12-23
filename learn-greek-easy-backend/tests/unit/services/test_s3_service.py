@@ -6,6 +6,8 @@ Tests cover:
 - Object existence checking
 - Error handling for various AWS exceptions
 - Singleton pattern for get_s3_service()
+- Railway Buckets support (custom endpoint URL)
+- AWS S3 support (no custom endpoint)
 
 """
 
@@ -21,12 +23,34 @@ from botocore.exceptions import BotoCoreError, ClientError
 
 @pytest.fixture
 def mock_settings_configured():
-    """Settings with S3 configured."""
+    """Settings with S3 configured (AWS mode - no custom endpoint)."""
     with patch("src.services.s3_service.settings") as mock:
+        # Legacy AWS fields (for backwards compatibility)
         mock.aws_access_key_id = "test-key-id"
         mock.aws_secret_access_key = "test-secret"
         mock.aws_s3_bucket_name = "test-bucket"
         mock.aws_s3_region = "eu-central-1"
+        # New effective_* properties
+        mock.effective_s3_access_key_id = "test-key-id"
+        mock.effective_s3_secret_access_key = "test-secret"
+        mock.effective_s3_bucket_name = "test-bucket"
+        mock.effective_s3_region = "eu-central-1"
+        mock.effective_s3_endpoint_url = None  # AWS mode - no custom endpoint
+        mock.s3_presigned_url_expiry = 3600
+        mock.s3_configured = True
+        yield mock
+
+
+@pytest.fixture
+def mock_settings_railway():
+    """Settings with Railway Buckets configured (custom endpoint)."""
+    with patch("src.services.s3_service.settings") as mock:
+        # Railway provides these via environment variables
+        mock.effective_s3_access_key_id = "railway-key-id"
+        mock.effective_s3_secret_access_key = "railway-secret"
+        mock.effective_s3_bucket_name = "railway-bucket"
+        mock.effective_s3_region = "auto"
+        mock.effective_s3_endpoint_url = "https://storage.railway.app"
         mock.s3_presigned_url_expiry = 3600
         mock.s3_configured = True
         yield mock
@@ -39,6 +63,10 @@ def mock_settings_not_configured():
         mock.aws_access_key_id = None
         mock.aws_secret_access_key = None
         mock.aws_s3_bucket_name = None
+        mock.effective_s3_access_key_id = None
+        mock.effective_s3_secret_access_key = None
+        mock.effective_s3_bucket_name = None
+        mock.effective_s3_endpoint_url = None
         mock.s3_configured = False
         yield mock
 
@@ -354,3 +382,71 @@ class TestServicesModuleExports:
         from src.services import get_s3_service
 
         assert callable(get_s3_service)
+
+
+# ============================================================================
+# Railway Buckets Support Tests
+# ============================================================================
+
+
+class TestRailwayBucketsSupport:
+    """Tests for Railway Buckets S3-compatible storage support."""
+
+    def test_railway_client_uses_custom_endpoint(self, mock_settings_railway, mock_boto3_client):
+        """Test that Railway configuration passes custom endpoint_url to boto3."""
+        from src.services.s3_service import S3Service
+
+        mock_client = MagicMock()
+        mock_client.generate_presigned_url.return_value = "https://storage.railway.app/url"
+        mock_boto3_client.return_value = mock_client
+
+        service = S3Service()
+        service.generate_presigned_url("culture/image.jpg")
+
+        # Verify boto3.client was called with endpoint_url
+        mock_boto3_client.assert_called_once()
+        call_kwargs = mock_boto3_client.call_args[1]
+        assert call_kwargs["endpoint_url"] == "https://storage.railway.app"
+        assert call_kwargs["aws_access_key_id"] == "railway-key-id"
+        assert call_kwargs["aws_secret_access_key"] == "railway-secret"
+        assert call_kwargs["region_name"] == "auto"
+
+    def test_railway_presigned_url_uses_correct_bucket(
+        self, mock_settings_railway, mock_boto3_client
+    ):
+        """Test that Railway bucket name is used in presigned URL generation."""
+        from src.services.s3_service import S3Service
+
+        mock_client = MagicMock()
+        mock_client.generate_presigned_url.return_value = "https://url"
+        mock_boto3_client.return_value = mock_client
+
+        service = S3Service()
+        service.generate_presigned_url("culture/image.jpg")
+
+        mock_client.generate_presigned_url.assert_called_once_with(
+            "get_object",
+            Params={
+                "Bucket": "railway-bucket",
+                "Key": "culture/image.jpg",
+            },
+            ExpiresIn=3600,
+        )
+
+    def test_aws_client_no_endpoint_url(self, mock_settings_configured, mock_boto3_client):
+        """Test that AWS configuration does NOT pass endpoint_url to boto3."""
+        from src.services.s3_service import S3Service
+
+        mock_client = MagicMock()
+        mock_client.generate_presigned_url.return_value = "https://url"
+        mock_boto3_client.return_value = mock_client
+
+        service = S3Service()
+        service.generate_presigned_url("culture/image.jpg")
+
+        # Verify boto3.client was called WITHOUT endpoint_url
+        mock_boto3_client.assert_called_once()
+        call_kwargs = mock_boto3_client.call_args[1]
+        assert "endpoint_url" not in call_kwargs
+        assert call_kwargs["aws_access_key_id"] == "test-key-id"
+        assert call_kwargs["region_name"] == "eu-central-1"
