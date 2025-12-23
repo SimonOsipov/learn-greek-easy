@@ -1,6 +1,6 @@
 // /src/components/decks/DeckFilters.tsx
 
-import React, { useState, useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 
 import { Search, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -11,12 +11,16 @@ import { CEFR_LEVEL_OPTIONS } from '@/lib/cefrColors';
 import { debounce } from '@/lib/utils';
 import type { DeckFilters as DeckFiltersType, DeckLevel, DeckStatus } from '@/types/deck';
 
+import { DeckTypeFilter, type DeckType } from './DeckTypeFilter';
+
 export interface DeckFiltersProps {
   filters: DeckFiltersType;
   onChange: (filters: Partial<DeckFiltersType>) => void;
   onClear: () => void;
   totalDecks: number;
   filteredDecks: number;
+  deckType: DeckType;
+  onDeckTypeChange: (type: DeckType) => void;
 }
 
 const STATUS_OPTIONS: { value: DeckStatus; labelKey: string }[] = [
@@ -31,6 +35,8 @@ export const DeckFilters: React.FC<DeckFiltersProps> = ({
   onClear,
   totalDecks,
   filteredDecks,
+  deckType,
+  onDeckTypeChange,
 }) => {
   const { t } = useTranslation('deck');
   // Local state for search input (debounced before updating store)
@@ -110,6 +116,11 @@ export const DeckFilters: React.FC<DeckFiltersProps> = ({
 
       {/* Filter Buttons - Stacked Layout */}
       <div className="flex flex-col gap-3">
+        {/* Row 0: Deck Type Filter */}
+        <div className="flex flex-wrap items-center gap-2">
+          <DeckTypeFilter value={deckType} onChange={onDeckTypeChange} />
+        </div>
+
         {/* Row 1: Level Filters */}
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-sm font-medium text-gray-700">{t('filters.level')}</span>

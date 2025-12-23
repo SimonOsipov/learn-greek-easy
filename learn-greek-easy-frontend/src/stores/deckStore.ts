@@ -10,24 +10,33 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 
+import type { DeckType } from '@/components/decks/DeckTypeFilter';
 import { deckAPI } from '@/services/deckAPI';
-import type { DeckResponse, DeckDetailResponse } from '@/services/deckAPI';
+import type { DeckDetailResponse, DeckResponse } from '@/services/deckAPI';
 import { progressAPI } from '@/services/progressAPI';
 import type { DeckProgressSummary } from '@/services/progressAPI';
 import { studyAPI } from '@/services/studyAPI';
 import { useAuthStore } from '@/stores/authStore';
-import type { Deck, DeckProgress, DeckFilters } from '@/types/deck';
+import type { Deck, DeckFilters, DeckProgress } from '@/types/deck';
+
+/**
+ * Extended filter state including deck type
+ */
+export interface DeckStoreFilters extends DeckFilters {
+  deckType: DeckType;
+}
 
 /**
  * Default filter state
  * Resets on each session to prevent stale filter preferences
  */
-const DEFAULT_FILTERS: DeckFilters = {
+const DEFAULT_FILTERS: DeckStoreFilters = {
   search: '', // Empty search = show all
   levels: [], // Empty = show all levels (A1, A2, B1, B2)
   categories: [], // Empty = show all categories
   status: [], // Empty = show all statuses (not-started, in-progress, completed)
   showPremiumOnly: false, // Default to showing both free and premium decks
+  deckType: 'all', // Empty = show all deck types (vocabulary, culture)
 };
 
 /**
@@ -126,7 +135,7 @@ interface DeckState {
   selectedDeck: Deck | null;
 
   /** Active filter settings */
-  filters: DeckFilters;
+  filters: DeckStoreFilters;
 
   /** Loading state for async operations */
   isLoading: boolean;
@@ -144,7 +153,7 @@ interface DeckState {
   clearSelection: () => void;
 
   /** Update filter settings (partial update) */
-  setFilters: (filters: Partial<DeckFilters>) => void;
+  setFilters: (filters: Partial<DeckStoreFilters>) => void;
 
   /** Reset all filters to default state */
   clearFilters: () => void;
@@ -226,6 +235,17 @@ export const useDeckStore = create<DeckState>()(
             decks = decks.filter((deck) =>
               filters.status.includes(deck.progress?.status ?? 'not-started')
             );
+          }
+
+          // Apply deck type filter client-side
+          if (filters.deckType !== 'all') {
+            decks = decks.filter((deck) => {
+              if (filters.deckType === 'culture') {
+                return deck.category === 'culture';
+              }
+              // vocabulary - show all non-culture decks
+              return deck.category !== 'culture';
+            });
           }
 
           set({
@@ -314,7 +334,7 @@ export const useDeckStore = create<DeckState>()(
       /**
        * Update filters and automatically re-fetch decks
        */
-      setFilters: (newFilters: Partial<DeckFilters>) => {
+      setFilters: (newFilters: Partial<DeckStoreFilters>) => {
         const { filters, fetchDecks } = get();
 
         // Merge new filters with existing

@@ -1,8 +1,9 @@
 import React from 'react';
 
-import { Lock, Crown } from 'lucide-react';
+import { Crown, Lock } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import { CultureBadge, type CultureCategory } from '@/components/culture';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import type { Deck } from '@/types/deck';
@@ -16,6 +17,8 @@ export interface DeckCardProps {
   showProgress?: boolean;
   variant?: 'grid' | 'list';
   showStats?: boolean;
+  isCultureDeck?: boolean;
+  cultureCategory?: CultureCategory;
 }
 
 export const DeckCard: React.FC<DeckCardProps> = ({
@@ -24,6 +27,8 @@ export const DeckCard: React.FC<DeckCardProps> = ({
   showProgress = true,
   variant = 'grid',
   showStats = true,
+  isCultureDeck = false,
+  cultureCategory,
 }) => {
   const { t } = useTranslation('deck');
   const { titleGreek, title, level, category, cardCount, isPremium, progress, estimatedTime } =
@@ -103,10 +108,19 @@ export const DeckCard: React.FC<DeckCardProps> = ({
           )}
         </div>
 
-        {/* Category Tag */}
-        <div className="mt-2">
-          <span className="text-xs capitalize text-gray-600">{category}</span>
-        </div>
+        {/* Culture Badge - shown for culture decks */}
+        {isCultureDeck && (
+          <div className="mt-2">
+            <CultureBadge category={cultureCategory} showLabel={true} />
+          </div>
+        )}
+
+        {/* Category Tag - hide for culture decks since they have their own badge */}
+        {!isCultureDeck && (
+          <div className="mt-2">
+            <span className="text-xs capitalize text-gray-600">{category}</span>
+          </div>
+        )}
       </CardHeader>
 
       <CardContent

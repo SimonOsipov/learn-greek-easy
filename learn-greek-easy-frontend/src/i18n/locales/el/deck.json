@@ -12,6 +12,10 @@
     "searchPlaceholder": "Αναζήτηση τραπουλών με όνομα...",
     "level": "Επίπεδο:",
     "status": "Κατάσταση:",
+    "deckType": "Τύπος:",
+    "typeAll": "Όλα",
+    "typeVocabulary": "Λεξιλόγιο",
+    "typeCulture": "Πολιτισμός",
     "allLevels": "Όλα τα Επίπεδα",
     "allStatuses": "Όλες οι Καταστάσεις",
     "notStarted": "Δεν Ξεκίνησε",
@@ -20,6 +24,16 @@
     "premiumOnly": "Μόνο Premium",
     "clearAll": "Καθαρισμός Όλων",
     "showing": "Εμφάνιση {{count}} από {{total}} τράπουλες"
+  },
+  "culture": {
+    "badge": "Πολιτισμός",
+    "categories": {
+      "history": "Ιστορία",
+      "geography": "Γεωγραφία",
+      "politics": "Πολιτική",
+      "culture": "Πολιτισμός",
+      "traditions": "Παραδόσεις"
+    }
   },
   "levels": {
     "a1": "A1 - Αρχάριος",

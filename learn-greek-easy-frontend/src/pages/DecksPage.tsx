@@ -8,7 +8,8 @@ import { useLocation } from 'react-router-dom';
 
 import { DeckFilters } from '@/components/decks/DeckFilters';
 import { DecksGrid } from '@/components/decks/DecksGrid';
-import { EmptyState, CardSkeleton } from '@/components/feedback';
+import type { DeckType } from '@/components/decks/DeckTypeFilter';
+import { CardSkeleton, EmptyState } from '@/components/feedback';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useDeckStore } from '@/stores/deckStore';
@@ -49,6 +50,8 @@ export const DecksPage: React.FC = () => {
         onClear={clearFilters}
         totalDecks={totalDecks}
         filteredDecks={decks.length}
+        deckType={filters.deckType}
+        onDeckTypeChange={(type: DeckType) => setFilters({ deckType: type })}
       />
 
       {/* Error State */}

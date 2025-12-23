@@ -13,3 +13,7 @@ export type { DecksGridProps } from './DecksGrid';
 
 export { DeckFilters } from './DeckFilters';
 export type { DeckFiltersProps } from './DeckFilters';
+
+// New exports for culture deck support (CULTURE-07)
+export { DeckTypeFilter } from './DeckTypeFilter';
+export type { DeckType, DeckTypeFilterProps } from './DeckTypeFilter';

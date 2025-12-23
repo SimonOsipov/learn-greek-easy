@@ -12,6 +12,10 @@
     "searchPlaceholder": "Search decks by name...",
     "level": "Level:",
     "status": "Status:",
+    "deckType": "Type:",
+    "typeAll": "All",
+    "typeVocabulary": "Vocabulary",
+    "typeCulture": "Culture",
     "allLevels": "All Levels",
     "allStatuses": "All Statuses",
     "notStarted": "Not Started",
@@ -20,6 +24,16 @@
     "premiumOnly": "Premium Only",
     "clearAll": "Clear All",
     "showing": "Showing {{count}} of {{total}} decks"
+  },
+  "culture": {
+    "badge": "Culture",
+    "categories": {
+      "history": "History",
+      "geography": "Geography",
+      "politics": "Politics",
+      "culture": "Culture",
+      "traditions": "Traditions"
+    }
   },
   "levels": {
     "a1": "A1 - Beginner",
