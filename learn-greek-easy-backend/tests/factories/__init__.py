@@ -22,6 +22,12 @@ XP & Achievements Factories:
     - AchievementFactory: Achievement definitions
     - UserAchievementFactory: User's unlocked achievements
 
+Culture Factories:
+    - CultureDeckFactory: Culture exam decks
+    - CultureQuestionFactory: Multiple-choice culture questions
+    - CultureQuestionStatsFactory: SM-2 stats for culture questions
+    - CultureAnswerHistoryFactory: Answer history for analytics
+
 Custom Providers:
     - GreekProvider: Faker provider for Greek vocabulary
 
@@ -54,6 +60,14 @@ from tests.factories.base import BaseFactory, unique_email, unique_token, utc_no
 
 # Content factories
 from tests.factories.content import CardFactory, DeckFactory
+
+# Culture factories
+from tests.factories.culture import (
+    CultureAnswerHistoryFactory,
+    CultureDeckFactory,
+    CultureQuestionFactory,
+    CultureQuestionStatsFactory,
+)
 
 # Feedback factories
 from tests.factories.feedback import FeedbackFactory, FeedbackVoteFactory
@@ -111,6 +125,11 @@ __all__ = [
     "UserAchievementFactory",
     # Notifications
     "NotificationFactory",
+    # Culture
+    "CultureDeckFactory",
+    "CultureQuestionFactory",
+    "CultureQuestionStatsFactory",
+    "CultureAnswerHistoryFactory",
     # Constants
     "SM2_DEFAULT_EASINESS_FACTOR",
     "SM2_MIN_EASINESS_FACTOR",
