@@ -98,7 +98,7 @@ test.describe('Authenticated Language Sync', () => {
     await expect(page.getByTestId('dashboard-title')).toHaveText('Πίνακας Ελέγχου');
 
     // Logout via user menu (header dropdown)
-    const userMenuButton = page.getByRole('button', { name: 'User menu' });
+    const userMenuButton = page.getByTestId('user-menu-trigger');
     await userMenuButton.waitFor({ state: 'visible', timeout: 10000 });
     await userMenuButton.click();
 

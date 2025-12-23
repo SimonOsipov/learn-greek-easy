@@ -153,6 +153,7 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
                   variant="ghost"
                   className="relative h-9 w-9 rounded-full"
                   aria-label={t('nav.userMenu')}
+                  data-testid="user-menu-trigger"
                 >
                   <Avatar className="h-9 w-9">
                     <AvatarImage src="" alt="User" />
