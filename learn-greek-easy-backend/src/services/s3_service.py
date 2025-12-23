@@ -72,19 +72,24 @@ class S3Service:
                 retries={"max_attempts": 3, "mode": "standard"},
             )
 
-            # Build client kwargs - endpoint_url is optional (Railway needs it, AWS doesn't)
-            client_kwargs = {
-                "aws_access_key_id": settings.effective_s3_access_key_id,
-                "aws_secret_access_key": settings.effective_s3_secret_access_key,
-                "region_name": settings.effective_s3_region,
-                "config": config,
-            }
-
-            # Add endpoint URL if configured (Railway Buckets use custom endpoint)
+            # Create S3 client - endpoint_url is optional (Railway needs it, AWS doesn't)
             if settings.effective_s3_endpoint_url:
-                client_kwargs["endpoint_url"] = settings.effective_s3_endpoint_url
-
-            self._client = boto3.client("s3", **client_kwargs)
+                self._client = boto3.client(
+                    "s3",
+                    aws_access_key_id=settings.effective_s3_access_key_id,
+                    aws_secret_access_key=settings.effective_s3_secret_access_key,
+                    region_name=settings.effective_s3_region,
+                    config=config,
+                    endpoint_url=settings.effective_s3_endpoint_url,
+                )
+            else:
+                self._client = boto3.client(
+                    "s3",
+                    aws_access_key_id=settings.effective_s3_access_key_id,
+                    aws_secret_access_key=settings.effective_s3_secret_access_key,
+                    region_name=settings.effective_s3_region,
+                    config=config,
+                )
 
             logger.info(
                 "S3 client initialized",
@@ -140,10 +145,12 @@ class S3Service:
         expiry = expiry_seconds or settings.s3_presigned_url_expiry
 
         try:
+            bucket_name = settings.effective_s3_bucket_name
+            assert bucket_name is not None  # Guaranteed by _get_client() check
             url: str = client.generate_presigned_url(
                 "get_object",
                 Params={
-                    "Bucket": settings.effective_s3_bucket_name,
+                    "Bucket": bucket_name,
                     "Key": image_key,
                 },
                 ExpiresIn=expiry,
@@ -183,8 +190,10 @@ class S3Service:
             return False
 
         try:
+            bucket_name = settings.effective_s3_bucket_name
+            assert bucket_name is not None  # Guaranteed by s3_configured check
             client.head_object(
-                Bucket=settings.effective_s3_bucket_name,
+                Bucket=bucket_name,
                 Key=image_key,
             )
             return True
