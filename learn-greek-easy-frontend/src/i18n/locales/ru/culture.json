@@ -23,5 +23,45 @@
     "el": "Греческий",
     "en": "Английский",
     "ru": "Русский"
+  },
+  "practice": {
+    "exit": "Выход",
+    "exitTitle": "Выйти из практики?",
+    "exitConfirm": "Ваш прогресс будет сохранен, но вы выйдете из текущей сессии. Вы уверены, что хотите выйти?",
+    "backToDecks": "Назад к колодам",
+    "error": "Ошибка",
+    "noQuestions": "Нет вопросов",
+    "noQuestionsDescription": "Для этой колоды нет доступных вопросов.",
+    "xpEarned": "XP: {{xp}}",
+    "accuracy": "{{accuracy}}% точность",
+    "recovery": {
+      "title": "Продолжить практику?",
+      "description": "У вас есть незавершенная сессия практики. Хотите продолжить с того места, где остановились?",
+      "startNew": "Начать заново",
+      "resume": "Продолжить сессию"
+    }
+  },
+  "summary": {
+    "practiceComplete": "Практика завершена",
+    "accuracyPercent": "{{accuracy}}% точность",
+    "earned": "заработано",
+    "questionsAnswered": "Вопросы",
+    "correct": "Правильно",
+    "incorrect": "Неправильно",
+    "timeSpent": "Время",
+    "questionBreakdown": "Разбор вопросов",
+    "yourAnswer": "Ваш ответ",
+    "correctAnswer": "Правильный ответ",
+    "backToDecks": "Назад к колодам",
+    "practiceAgain": "Практиковать снова",
+    "error": "Ошибка",
+    "invalidDeckId": "Неверный идентификатор колоды",
+    "goToDecks": "Перейти к колодам",
+    "performance": {
+      "excellent": "Отлично!",
+      "good": "Хорошая работа!",
+      "keepPracticing": "Продолжайте практиковаться!",
+      "needsWork": "Продолжайте стараться!"
+    }
   }
 }

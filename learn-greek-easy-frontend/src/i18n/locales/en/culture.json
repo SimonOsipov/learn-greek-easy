@@ -23,5 +23,45 @@
     "el": "Greek",
     "en": "English",
     "ru": "Russian"
+  },
+  "practice": {
+    "exit": "Exit",
+    "exitTitle": "Exit Practice?",
+    "exitConfirm": "Your progress will be saved, but you will exit the current session. Are you sure you want to exit?",
+    "backToDecks": "Back to Decks",
+    "error": "Error",
+    "noQuestions": "No Questions",
+    "noQuestionsDescription": "No questions available for this deck.",
+    "xpEarned": "XP: {{xp}}",
+    "accuracy": "{{accuracy}}% accuracy",
+    "recovery": {
+      "title": "Resume Practice?",
+      "description": "You have an unfinished practice session. Would you like to continue where you left off?",
+      "startNew": "Start New",
+      "resume": "Resume Session"
+    }
+  },
+  "summary": {
+    "practiceComplete": "Practice Complete",
+    "accuracyPercent": "{{accuracy}}% accuracy",
+    "earned": "earned",
+    "questionsAnswered": "Questions",
+    "correct": "Correct",
+    "incorrect": "Incorrect",
+    "timeSpent": "Time Spent",
+    "questionBreakdown": "Question Breakdown",
+    "yourAnswer": "Your answer",
+    "correctAnswer": "Correct answer",
+    "backToDecks": "Back to Decks",
+    "practiceAgain": "Practice Again",
+    "error": "Error",
+    "invalidDeckId": "Invalid deck ID",
+    "goToDecks": "Go to Decks",
+    "performance": {
+      "excellent": "Excellent!",
+      "good": "Good job!",
+      "keepPracticing": "Keep practicing!",
+      "needsWork": "Keep trying!"
+    }
   }
 }

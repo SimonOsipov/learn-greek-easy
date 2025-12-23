@@ -20,6 +20,8 @@ import ActivityFeedTest from '@/pages/ActivityFeedTest';
 import { ForgotPassword } from '@/pages/auth/ForgotPassword';
 import { Login } from '@/pages/auth/Login';
 import { Register } from '@/pages/auth/Register';
+import { CulturePracticePage } from '@/pages/culture/CulturePracticePage';
+import { CultureSessionSummaryPage } from '@/pages/culture/CultureSessionSummaryPage';
 import { Dashboard } from '@/pages/Dashboard';
 import { DeckDetailPage } from '@/pages/DeckDetailPage';
 import { DecksPage } from '@/pages/DecksPage';
@@ -78,6 +80,9 @@ function AppContent() {
             <Route path="decks/:deckId/review" element={<FlashcardReviewPage />} />
             {/* Session summary page outside AppLayout for full-screen experience */}
             <Route path="decks/:deckId/summary" element={<SessionSummaryPage />} />
+            {/* Culture practice pages outside AppLayout for full-screen immersive experience */}
+            <Route path="culture/:deckId/practice" element={<CulturePracticePage />} />
+            <Route path="culture/:deckId/summary" element={<CultureSessionSummaryPage />} />
           </Route>
 
           {/* Admin Routes - require admin role */}

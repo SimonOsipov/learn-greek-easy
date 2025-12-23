@@ -13,6 +13,11 @@ export type AnalyticsEventName =
   | 'study_session_completed'
   | 'study_session_abandoned'
   | 'card_reviewed'
+  // Culture practice session events
+  | 'culture_session_started'
+  | 'culture_session_completed'
+  | 'culture_session_abandoned'
+  | 'culture_question_answered'
   // Engagement events
   | 'deck_selected'
   | 'streak_achieved'
@@ -81,6 +86,43 @@ export interface CardMasteredProperties extends BaseEventProperties {
   card_id: string;
   reviews_to_master: number;
   days_to_master: number;
+}
+
+// Culture practice session event properties
+export interface CultureSessionStartedProperties extends BaseEventProperties {
+  deck_id: string;
+  deck_name: string;
+  category: string;
+  question_count: number;
+  language: string;
+  session_id: string;
+}
+
+export interface CultureSessionCompletedProperties extends BaseEventProperties {
+  deck_id: string;
+  session_id: string;
+  questions_total: number;
+  questions_correct: number;
+  accuracy: number;
+  duration_sec: number;
+  xp_earned: number;
+}
+
+export interface CultureSessionAbandonedProperties extends BaseEventProperties {
+  deck_id: string;
+  session_id: string;
+  questions_answered: number;
+  duration_sec: number;
+}
+
+export interface CultureQuestionAnsweredProperties extends BaseEventProperties {
+  deck_id: string;
+  session_id: string;
+  question_id: string;
+  selected_option: number;
+  is_correct: boolean;
+  time_ms: number;
+  xp_earned: number;
 }
 
 // Generic properties type for flexibility
