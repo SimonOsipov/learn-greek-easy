@@ -677,7 +677,7 @@ jobs:
           rm -f .coverage .coverage.*
 
           # Run tests in parallel with pytest-xdist
-          # Note: Do NOT generate reports here - each worker creates separate .coverage.X files
+          # pytest-cov automatically combines coverage from all workers into .coverage
           poetry run pytest tests/ \
             -n auto \
             --dist loadscope \
@@ -686,11 +686,7 @@ jobs:
             -v \
             --tb=short
 
-          # Combine parallel coverage data from all workers
-          # This merges .coverage.1, .coverage.2, etc. into .coverage
-          poetry run coverage combine
-
-          # Generate reports from combined data
+          # Generate reports from the already-combined .coverage file
           poetry run coverage report --fail-under=80
           poetry run coverage xml -o coverage.xml
           poetry run coverage html
