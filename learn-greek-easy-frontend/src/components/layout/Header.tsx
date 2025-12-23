@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { Menu } from 'lucide-react';
+import { Menu, ChevronDown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation } from 'react-router-dom';
 
@@ -22,6 +22,17 @@ import { cn } from '@/lib/utils';
 
 import { PageContainer } from './PageContainer';
 
+interface NavChild {
+  path: string;
+  labelKey: string;
+}
+
+interface NavItem {
+  path: string;
+  labelKey: string;
+  children?: NavChild[];
+}
+
 interface HeaderProps {
   className?: string;
 }
@@ -31,16 +42,27 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
   const location = useLocation();
   const { toggleSidebar, isDesktop } = useLayoutContext();
 
-  const navItems = [
+  const navItems: NavItem[] = [
     { path: '/', labelKey: 'nav.dashboard' },
     { path: '/decks', labelKey: 'nav.decks' },
-    { path: '/statistics', labelKey: 'nav.statistics' },
-    { path: '/achievements', labelKey: 'nav.achievements' },
+    {
+      path: '/statistics',
+      labelKey: 'nav.statistics',
+      children: [
+        { path: '/statistics', labelKey: 'nav.generalProgress' },
+        { path: '/achievements', labelKey: 'nav.achievements' },
+      ],
+    },
     { path: '/feedback', labelKey: 'nav.feedback' },
   ];
 
   const isActiveRoute = (path: string) => {
     return location.pathname === path;
+  };
+
+  const isActiveParent = (item: NavItem) => {
+    if (!item.children) return false;
+    return item.children.some((child) => location.pathname === child.path);
   };
 
   return (
@@ -71,18 +93,48 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
           {/* Desktop Navigation */}
           {isDesktop && (
             <nav className="hidden items-center space-x-6 lg:flex">
-              {navItems.map((item) => (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  className={cn(
-                    'text-sm font-medium transition-colors hover:text-primary',
-                    isActiveRoute(item.path) ? 'text-primary' : 'text-text-secondary'
-                  )}
-                >
-                  {t(item.labelKey)}
-                </Link>
-              ))}
+              {navItems.map((item) =>
+                item.children ? (
+                  <DropdownMenu key={item.path}>
+                    <DropdownMenuTrigger
+                      className={cn(
+                        'flex items-center gap-1 text-sm font-medium transition-colors hover:text-primary focus:outline-none',
+                        isActiveParent(item) ? 'text-primary' : 'text-text-secondary'
+                      )}
+                      data-testid="statistics-dropdown-trigger"
+                    >
+                      {t(item.labelKey)}
+                      <ChevronDown className="h-4 w-4" />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start">
+                      {item.children.map((child) => (
+                        <DropdownMenuItem key={child.path} asChild>
+                          <Link
+                            to={child.path}
+                            className={cn(
+                              'w-full',
+                              isActiveRoute(child.path) ? 'text-primary' : ''
+                            )}
+                          >
+                            {t(child.labelKey)}
+                          </Link>
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    className={cn(
+                      'text-sm font-medium transition-colors hover:text-primary',
+                      isActiveRoute(item.path) ? 'text-primary' : 'text-text-secondary'
+                    )}
+                  >
+                    {t(item.labelKey)}
+                  </Link>
+                )
+              )}
             </nav>
           )}
 

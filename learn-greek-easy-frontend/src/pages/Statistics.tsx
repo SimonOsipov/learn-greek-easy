@@ -8,13 +8,7 @@ import {
   DeckPerformanceChart,
   StageDistributionChart,
 } from '@/components/charts';
-import {
-  StatsGrid,
-  LevelProgressCard,
-  AchievementsGrid,
-  getDefaultAchievements,
-  ActivityTimeline,
-} from '@/components/statistics';
+import { StatsGrid, LevelProgressCard, ActivityTimeline } from '@/components/statistics';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -125,7 +119,6 @@ const Statistics: React.FC = () => {
 
   // Extract stats from user
   const { stats } = user;
-  const achievements = getDefaultAchievements(stats.wordsLearned, stats.streak);
 
   return (
     <div className="space-y-6 pb-8" data-testid="statistics-page">
@@ -171,16 +164,6 @@ const Statistics: React.FC = () => {
           {/* Stage Distribution */}
           <StageDistributionChart height={320} />
         </div>
-      </section>
-
-      <Separator />
-
-      {/* Achievements Section */}
-      <section aria-labelledby="achievements-heading">
-        <h2 id="achievements-heading" className="sr-only">
-          {t('achievements.title')}
-        </h2>
-        <AchievementsGrid achievements={achievements} />
       </section>
 
       {/* Activity Timeline */}
