@@ -11,6 +11,7 @@ Achievement Categories:
 - ACCURACY: Accuracy-based achievements
 - CEFR: CEFR level completion
 - SPECIAL: Special/misc achievements
+- CULTURE: Culture exam achievements (milestones, accuracy, category mastery, language)
 """
 
 from dataclasses import dataclass
@@ -54,6 +55,17 @@ class AchievementMetric(str, Enum):
     DAILY_GOAL_STREAK = "daily_goal_streak"
     DAILY_GOAL_EXCEEDED = "daily_goal_exceeded"
 
+    # Culture exam metrics
+    CULTURE_QUESTIONS_ANSWERED = "culture_questions_answered"
+    CULTURE_CONSECUTIVE_CORRECT = "culture_consecutive_correct"
+    CULTURE_ACCURACY = "culture_accuracy"
+    CULTURE_HISTORY_MASTERED = "culture_history_mastered"
+    CULTURE_GEOGRAPHY_MASTERED = "culture_geography_mastered"
+    CULTURE_POLITICS_MASTERED = "culture_politics_mastered"
+    CULTURE_ALL_MASTERED = "culture_all_mastered"
+    CULTURE_GREEK_QUESTIONS = "culture_greek_questions"
+    CULTURE_LANGUAGES_USED = "culture_languages_used"
+
 
 @dataclass(frozen=True)
 class AchievementDef:
@@ -83,7 +95,7 @@ class AchievementDef:
 
 
 # ============================================================================
-# Achievement Definitions (35+ achievements)
+# Achievement Definitions (47 achievements)
 # ============================================================================
 
 ACHIEVEMENTS: list[AchievementDef] = [
@@ -477,6 +489,143 @@ ACHIEVEMENTS: list[AchievementDef] = [
         200,
         100,
         "Double your daily goal",
+    ),
+    # === CULTURE ACHIEVEMENTS (12) ===
+    # Milestones (4)
+    AchievementDef(
+        "culture_curious",
+        "Culture Curious",
+        "Answer 10 culture questions",
+        AchievementCategory.CULTURE,
+        "compass",
+        AchievementMetric.CULTURE_QUESTIONS_ANSWERED,
+        10,
+        25,
+        "Answer your first 10 culture questions",
+    ),
+    AchievementDef(
+        "culture_explorer",
+        "Culture Explorer",
+        "Answer 50 culture questions",
+        AchievementCategory.CULTURE,
+        "map",
+        AchievementMetric.CULTURE_QUESTIONS_ANSWERED,
+        50,
+        75,
+        "Answer 50 culture questions",
+    ),
+    AchievementDef(
+        "culture_scholar",
+        "Culture Scholar",
+        "Answer 100 culture questions",
+        AchievementCategory.CULTURE,
+        "scroll",
+        AchievementMetric.CULTURE_QUESTIONS_ANSWERED,
+        100,
+        150,
+        "Answer 100 culture questions",
+    ),
+    AchievementDef(
+        "culture_master",
+        "Culture Master",
+        "Answer 500 culture questions",
+        AchievementCategory.CULTURE,
+        "university",
+        AchievementMetric.CULTURE_QUESTIONS_ANSWERED,
+        500,
+        500,
+        "Answer 500 culture questions",
+    ),
+    # Accuracy (2)
+    AchievementDef(
+        "perfect_culture_score",
+        "Perfect Culture Score",
+        "10 consecutive correct culture answers",
+        AchievementCategory.CULTURE,
+        "bullseye",
+        AchievementMetric.CULTURE_CONSECUTIVE_CORRECT,
+        10,
+        50,
+        "Answer 10 culture questions correctly in a row",
+    ),
+    AchievementDef(
+        "culture_sharp_mind",
+        "Culture Sharp Mind",
+        "90% accuracy in culture exams",
+        AchievementCategory.CULTURE,
+        "brain_sparkle",
+        AchievementMetric.CULTURE_ACCURACY,
+        90,
+        100,
+        "Maintain 90% accuracy in culture questions",
+    ),
+    # Category Mastery (4)
+    AchievementDef(
+        "culture_historian",
+        "Historian",
+        "Master all history questions",
+        AchievementCategory.CULTURE,
+        "hourglass",
+        AchievementMetric.CULTURE_HISTORY_MASTERED,
+        1,
+        200,
+        "Master all Greek history questions",
+    ),
+    AchievementDef(
+        "culture_geographer",
+        "Geographer",
+        "Master all geography questions",
+        AchievementCategory.CULTURE,
+        "globe",
+        AchievementMetric.CULTURE_GEOGRAPHY_MASTERED,
+        1,
+        200,
+        "Master all Greek geography questions",
+    ),
+    AchievementDef(
+        "culture_civic_expert",
+        "Civic Expert",
+        "Master all politics questions",
+        AchievementCategory.CULTURE,
+        "landmark",
+        AchievementMetric.CULTURE_POLITICS_MASTERED,
+        1,
+        200,
+        "Master all Greek politics questions",
+    ),
+    AchievementDef(
+        "culture_champion",
+        "Culture Champion",
+        "Master all culture categories",
+        AchievementCategory.CULTURE,
+        "trophy_gold",
+        AchievementMetric.CULTURE_ALL_MASTERED,
+        1,
+        1000,
+        "Master all culture question categories",
+    ),
+    # Language (2)
+    AchievementDef(
+        "culture_native_speaker",
+        "Native Speaker",
+        "Answer 50 questions in Greek",
+        AchievementCategory.CULTURE,
+        "flag_greece",
+        AchievementMetric.CULTURE_GREEK_QUESTIONS,
+        50,
+        100,
+        "Answer 50 culture questions in Greek",
+    ),
+    AchievementDef(
+        "culture_polyglot_learner",
+        "Polyglot Learner",
+        "Use 3 different languages",
+        AchievementCategory.CULTURE,
+        "languages",
+        AchievementMetric.CULTURE_LANGUAGES_USED,
+        3,
+        50,
+        "Answer questions in 3 different languages",
     ),
 ]
 

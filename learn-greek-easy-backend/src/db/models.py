@@ -118,6 +118,7 @@ class AchievementCategory(str, enum.Enum):
     ACCURACY = "accuracy"
     CEFR = "cefr"
     SPECIAL = "special"
+    CULTURE = "culture"
 
 
 class NotificationType(str, enum.Enum):
