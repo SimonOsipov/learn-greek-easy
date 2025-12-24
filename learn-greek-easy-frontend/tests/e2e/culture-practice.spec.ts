@@ -14,9 +14,9 @@ test.describe('Culture Practice Session', () => {
   test('CULTURE-10.1: Navigate to culture practice page', async ({ page }) => {
     // Login
     await page.goto('/login');
-    await page.fill('[name="email"]', 'e2e_learner@test.com');
-    await page.fill('[name="password"]', 'TestPassword123!');
-    await page.click('button[type="submit"]');
+    await page.getByTestId('email-input').fill('e2e_learner@test.com');
+    await page.getByTestId('password-input').fill('TestPassword123!');
+    await page.getByTestId('login-submit').click();
 
     // Wait for dashboard
     await page.waitForURL('/');
@@ -36,9 +36,9 @@ test.describe('Culture Practice Session', () => {
   test('CULTURE-10.2: Exit button shows confirmation dialog', async ({ page }) => {
     // Login
     await page.goto('/login');
-    await page.fill('[name="email"]', 'e2e_learner@test.com');
-    await page.fill('[name="password"]', 'TestPassword123!');
-    await page.click('button[type="submit"]');
+    await page.getByTestId('email-input').fill('e2e_learner@test.com');
+    await page.getByTestId('password-input').fill('TestPassword123!');
+    await page.getByTestId('login-submit').click();
 
     // Navigate to culture practice
     await page.goto('/culture/test-deck-id/practice');
@@ -64,9 +64,9 @@ test.describe('Culture Practice Session', () => {
   test('CULTURE-10.3: Session progress is tracked correctly', async ({ page }) => {
     // Login
     await page.goto('/login');
-    await page.fill('[name="email"]', 'e2e_learner@test.com');
-    await page.fill('[name="password"]', 'TestPassword123!');
-    await page.click('button[type="submit"]');
+    await page.getByTestId('email-input').fill('e2e_learner@test.com');
+    await page.getByTestId('password-input').fill('TestPassword123!');
+    await page.getByTestId('login-submit').click();
 
     // Navigate to culture practice
     await page.goto('/culture/test-deck-id/practice');
@@ -85,9 +85,9 @@ test.describe('Culture Practice Session', () => {
   test('CULTURE-10.4: Language selector works', async ({ page }) => {
     // Login
     await page.goto('/login');
-    await page.fill('[name="email"]', 'e2e_learner@test.com');
-    await page.fill('[name="password"]', 'TestPassword123!');
-    await page.click('button[type="submit"]');
+    await page.getByTestId('email-input').fill('e2e_learner@test.com');
+    await page.getByTestId('password-input').fill('TestPassword123!');
+    await page.getByTestId('login-submit').click();
 
     // Navigate to culture practice
     await page.goto('/culture/test-deck-id/practice');
@@ -112,9 +112,9 @@ test.describe('Culture Practice Session', () => {
   test('CULTURE-10.5: Session summary displays correctly', async ({ page }) => {
     // Navigate directly to summary page (with mocked session)
     await page.goto('/login');
-    await page.fill('[name="email"]', 'e2e_learner@test.com');
-    await page.fill('[name="password"]', 'TestPassword123!');
-    await page.click('button[type="submit"]');
+    await page.getByTestId('email-input').fill('e2e_learner@test.com');
+    await page.getByTestId('password-input').fill('TestPassword123!');
+    await page.getByTestId('login-submit').click();
 
     // Navigate to summary (will redirect if no session)
     await page.goto('/culture/test-deck-id/summary');
@@ -131,9 +131,9 @@ test.describe('Culture Practice Session', () => {
   test('CULTURE-10.6: MCQ component renders question correctly', async ({ page }) => {
     // Login
     await page.goto('/login');
-    await page.fill('[name="email"]', 'e2e_learner@test.com');
-    await page.fill('[name="password"]', 'TestPassword123!');
-    await page.click('button[type="submit"]');
+    await page.getByTestId('email-input').fill('e2e_learner@test.com');
+    await page.getByTestId('password-input').fill('TestPassword123!');
+    await page.getByTestId('login-submit').click();
 
     // Navigate to culture practice
     await page.goto('/culture/test-deck-id/practice');
@@ -161,9 +161,9 @@ test.describe('Culture Practice Session', () => {
   test('CULTURE-10.7: Answer selection enables submit button', async ({ page }) => {
     // Login
     await page.goto('/login');
-    await page.fill('[name="email"]', 'e2e_learner@test.com');
-    await page.fill('[name="password"]', 'TestPassword123!');
-    await page.click('button[type="submit"]');
+    await page.getByTestId('email-input').fill('e2e_learner@test.com');
+    await page.getByTestId('password-input').fill('TestPassword123!');
+    await page.getByTestId('login-submit').click();
 
     // Navigate to culture practice
     await page.goto('/culture/test-deck-id/practice');
@@ -194,9 +194,9 @@ test.describe('Culture Practice Session', () => {
   test('CULTURE-10.8: Keyboard shortcuts work (1-4 to select)', async ({ page }) => {
     // Login
     await page.goto('/login');
-    await page.fill('[name="email"]', 'e2e_learner@test.com');
-    await page.fill('[name="password"]', 'TestPassword123!');
-    await page.click('button[type="submit"]');
+    await page.getByTestId('email-input').fill('e2e_learner@test.com');
+    await page.getByTestId('password-input').fill('TestPassword123!');
+    await page.getByTestId('login-submit').click();
 
     // Navigate to culture practice
     await page.goto('/culture/test-deck-id/practice');
@@ -223,9 +223,9 @@ test.describe('Culture Practice Session', () => {
   test('CULTURE-10.9: Session recovery dialog appears for unfinished session', async ({ page }) => {
     // Login
     await page.goto('/login');
-    await page.fill('[name="email"]', 'e2e_learner@test.com');
-    await page.fill('[name="password"]', 'TestPassword123!');
-    await page.click('button[type="submit"]');
+    await page.getByTestId('email-input').fill('e2e_learner@test.com');
+    await page.getByTestId('password-input').fill('TestPassword123!');
+    await page.getByTestId('login-submit').click();
 
     // Set up mock session in sessionStorage
     await page.evaluate(() => {
@@ -308,9 +308,9 @@ test.describe('Culture Practice Session', () => {
   test('CULTURE-10.10: Back to decks navigation works from summary', async ({ page }) => {
     // Login
     await page.goto('/login');
-    await page.fill('[name="email"]', 'e2e_learner@test.com');
-    await page.fill('[name="password"]', 'TestPassword123!');
-    await page.click('button[type="submit"]');
+    await page.getByTestId('email-input').fill('e2e_learner@test.com');
+    await page.getByTestId('password-input').fill('TestPassword123!');
+    await page.getByTestId('login-submit').click();
 
     // Navigate to decks first
     await page.goto('/decks');
@@ -331,9 +331,9 @@ test.describe('Culture Practice Session - Full Flow', () => {
   test('CULTURE-10.11: Complete practice session flow (integration)', async ({ page }) => {
     // Login
     await page.goto('/login');
-    await page.fill('[name="email"]', 'e2e_learner@test.com');
-    await page.fill('[name="password"]', 'TestPassword123!');
-    await page.click('button[type="submit"]');
+    await page.getByTestId('email-input').fill('e2e_learner@test.com');
+    await page.getByTestId('password-input').fill('TestPassword123!');
+    await page.getByTestId('login-submit').click();
 
     // Wait for dashboard
     await page.waitForURL('/');
