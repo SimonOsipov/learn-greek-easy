@@ -9,7 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { adminAPI, ContentStatsResponse, DeckStats } from '@/services';
+import { adminAPI } from '@/services/adminAPI';
+import type { ContentStatsResponse, DeckStats } from '@/services/adminAPI';
 
 /**
  * CEFR level order for sorting decks
