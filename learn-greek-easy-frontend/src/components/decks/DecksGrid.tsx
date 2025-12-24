@@ -40,7 +40,13 @@ export const DecksGrid: React.FC<DecksGridProps> = ({ decks, onDeckClick }) => {
       onDeckClick(deckId);
     } else {
       // Default behavior: navigate to deck detail page
-      navigate(`/decks/${deckId}`);
+      // Culture decks go to /culture/decks/:id, vocabulary decks go to /decks/:id
+      const isCultureDeck = deck?.category === 'culture';
+      if (isCultureDeck) {
+        navigate(`/culture/decks/${deckId}`);
+      } else {
+        navigate(`/decks/${deckId}`);
+      }
     }
   };
 

@@ -29,7 +29,7 @@ export const DeckProgressBar: React.FC<DeckProgressBarProps> = ({
   const height = size === 'large' ? 'h-3' : 'h-2';
 
   return (
-    <div className={className}>
+    <div className={className} data-testid="deck-progress">
       {/* Progress Bar */}
       <div
         className={`w-full ${height} flex overflow-hidden rounded-full bg-gray-200`}

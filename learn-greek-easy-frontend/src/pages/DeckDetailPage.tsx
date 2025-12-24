@@ -84,7 +84,7 @@ export const DeckDetailPage: React.FC = () => {
   const deckStatus = selectedDeck.progress?.status || 'not-started';
 
   return (
-    <div className="container mx-auto max-w-4xl px-4 py-6 md:py-8">
+    <div data-testid="deck-detail" className="container mx-auto max-w-4xl px-4 py-6 md:py-8">
       {/* Breadcrumb Navigation */}
       <nav
         data-testid="breadcrumb"

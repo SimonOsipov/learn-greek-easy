@@ -1,4 +1,10 @@
 {
+  "deck": {
+    "culture": "Culture",
+    "questions": "Questions",
+    "multipleChoice": "Multiple Choice",
+    "practiceDescription": "Test your knowledge with {{count}} multiple-choice questions about Greek culture and history."
+  },
   "mcq": {
     "submitAnswer": "Submit Answer",
     "keyboardHint": "Press 1-4 to select, Enter to submit",
@@ -25,6 +31,10 @@
     "ru": "Russian"
   },
   "practice": {
+    "readyToStart": "Ready to Start?",
+    "continueProgress": "Continue Your Progress",
+    "startPractice": "Start Practice",
+    "continuePractice": "Continue Practice",
     "exit": "Exit",
     "exitTitle": "Exit Practice?",
     "exitConfirm": "Your progress will be saved, but you will exit the current session. Are you sure you want to exit?",
