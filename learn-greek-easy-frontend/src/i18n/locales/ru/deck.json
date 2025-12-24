@@ -12,6 +12,10 @@
     "searchPlaceholder": "Поиск колод по названию...",
     "level": "Уровень:",
     "status": "Статус:",
+    "deckType": "Тип:",
+    "typeAll": "Все",
+    "typeVocabulary": "Словарь",
+    "typeCulture": "Культура",
     "allLevels": "Все уровни",
     "allStatuses": "Все статусы",
     "notStarted": "Не начато",
@@ -20,6 +24,16 @@
     "premiumOnly": "Только премиум",
     "clearAll": "Сбросить всё",
     "showing": "Показано {{count}} из {{total}} колод"
+  },
+  "culture": {
+    "badge": "Культура",
+    "categories": {
+      "history": "История",
+      "geography": "География",
+      "politics": "Политика",
+      "culture": "Культура",
+      "traditions": "Традиции"
+    }
   },
   "levels": {
     "a1": "A1 - Начальный",

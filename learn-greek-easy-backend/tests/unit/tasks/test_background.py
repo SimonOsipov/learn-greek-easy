@@ -59,6 +59,7 @@ class TestModuleImports:
             # Background tasks (API-side)
             "ANALYTICS_EVENTS",
             "check_achievements_task",
+            "check_culture_achievements_task",
             "invalidate_cache_task",
             "is_background_tasks_enabled",
             "log_analytics_task",

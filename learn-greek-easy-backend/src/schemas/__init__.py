@@ -1,6 +1,5 @@
 """Pydantic schemas for API request/response validation."""
 
-# User schemas
 # Card schemas
 from src.schemas.card import (
     CardCreate,
@@ -9,6 +8,23 @@ from src.schemas.card import (
     CardStudyResultResponse,
     CardUpdate,
     CardWithStatisticsResponse,
+)
+
+# Culture schemas
+from src.schemas.culture import (
+    CultureAnswerRequest,
+    CultureAnswerResponse,
+    CultureDeckDetailResponse,
+    CultureDeckListResponse,
+    CultureDeckProgress,
+    CultureDeckResponse,
+    CultureOverallProgress,
+    CultureProgressResponse,
+    CultureQuestionListResponse,
+    CultureQuestionResponse,
+    CultureQuestionStatsResponse,
+    CultureSessionSummary,
+    MultilingualText,
 )
 
 # Deck schemas
@@ -188,4 +204,18 @@ __all__ = [
     "UnreadCountResponse",
     "MarkReadResponse",
     "ClearResponse",
+    # Culture
+    "MultilingualText",
+    "CultureDeckProgress",
+    "CultureDeckResponse",
+    "CultureDeckDetailResponse",
+    "CultureDeckListResponse",
+    "CultureQuestionResponse",
+    "CultureQuestionListResponse",
+    "CultureQuestionStatsResponse",
+    "CultureAnswerRequest",
+    "CultureAnswerResponse",
+    "CultureOverallProgress",
+    "CultureProgressResponse",
+    "CultureSessionSummary",
 ]

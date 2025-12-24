@@ -1,0 +1,77 @@
+{
+  "deck": {
+    "culture": "Culture",
+    "questions": "Questions",
+    "multipleChoice": "Multiple Choice",
+    "practiceDescription": "Test your knowledge with {{count}} multiple-choice questions about Greek culture and history."
+  },
+  "mcq": {
+    "submitAnswer": "Submit Answer",
+    "keyboardHint": "Press 1-4 to select, Enter to submit",
+    "questionOf": "Question {{current}} of {{total}}",
+    "timeRemaining": "{{seconds}}s remaining",
+    "selectAnswer": "Select an answer to continue",
+    "optionLabel": "Option {{letter}}: {{text}}"
+  },
+  "feedback": {
+    "correct": "Correct!",
+    "wrong": "Wrong!",
+    "correctAnswerWas": "The correct answer was:",
+    "optionWithLabel": "Option {{label}}: {{text}}",
+    "xpEarned": "+{{xp}} XP",
+    "nextQuestion": "Next Question",
+    "viewSummary": "View Summary",
+    "srCorrect": "Correct! You earned {{xp}} XP.",
+    "srWrong": "Wrong. The correct answer was {{label}}: {{answer}}. You earned {{xp}} XP."
+  },
+  "language": {
+    "selectLanguage": "Question Language",
+    "el": "Greek",
+    "en": "English",
+    "ru": "Russian"
+  },
+  "practice": {
+    "readyToStart": "Ready to Start?",
+    "continueProgress": "Continue Your Progress",
+    "startPractice": "Start Practice",
+    "continuePractice": "Continue Practice",
+    "exit": "Exit",
+    "exitTitle": "Exit Practice?",
+    "exitConfirm": "Your progress will be saved, but you will exit the current session. Are you sure you want to exit?",
+    "backToDecks": "Back to Decks",
+    "error": "Error",
+    "noQuestions": "No Questions",
+    "noQuestionsDescription": "No questions available for this deck.",
+    "xpEarned": "XP: {{xp}}",
+    "accuracy": "{{accuracy}}% accuracy",
+    "recovery": {
+      "title": "Resume Practice?",
+      "description": "You have an unfinished practice session. Would you like to continue where you left off?",
+      "startNew": "Start New",
+      "resume": "Resume Session"
+    }
+  },
+  "summary": {
+    "practiceComplete": "Practice Complete",
+    "accuracyPercent": "{{accuracy}}% accuracy",
+    "earned": "earned",
+    "questionsAnswered": "Questions",
+    "correct": "Correct",
+    "incorrect": "Incorrect",
+    "timeSpent": "Time Spent",
+    "questionBreakdown": "Question Breakdown",
+    "yourAnswer": "Your answer",
+    "correctAnswer": "Correct answer",
+    "backToDecks": "Back to Decks",
+    "practiceAgain": "Practice Again",
+    "error": "Error",
+    "invalidDeckId": "Invalid deck ID",
+    "goToDecks": "Go to Decks",
+    "performance": {
+      "excellent": "Excellent!",
+      "good": "Good job!",
+      "keepPracticing": "Keep practicing!",
+      "needsWork": "Keep trying!"
+    }
+  }
+}

@@ -7,6 +7,7 @@ This module contains all SQLAlchemy models for the application:
 - Feedback (Feedback, FeedbackVote)
 - XP and Achievements (UserXP, XPTransaction, Achievement, UserAchievement)
 - Notifications (Notification)
+- Culture Exam (CultureDeck, CultureQuestion, CultureQuestionStats, CultureAnswerHistory)
 
 All models use:
 - UUID primary keys with server-side generation
@@ -117,6 +118,7 @@ class AchievementCategory(str, enum.Enum):
     ACCURACY = "accuracy"
     CEFR = "cefr"
     SPECIAL = "special"
+    CULTURE = "culture"
 
 
 class NotificationType(str, enum.Enum):
@@ -1058,3 +1060,324 @@ class Notification(Base, TimestampMixin):
 
     def __repr__(self) -> str:
         return f"<Notification(id={self.id}, type={self.type}, user_id={self.user_id})>"
+
+
+# ============================================================================
+# Culture Exam Models
+# ============================================================================
+
+
+class CultureDeck(Base, TimestampMixin):
+    """Culture exam deck (e.g., Greek History, Geography, Politics).
+
+    Stores multilingual content for deck name and description.
+    """
+
+    __tablename__ = "culture_decks"
+
+    # Primary key
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True,
+        server_default=func.uuid_generate_v4(),
+    )
+
+    # Deck information (multilingual JSON: {"el": "...", "en": "...", "ru": "..."})
+    name: Mapped[dict] = mapped_column(
+        JSON,
+        nullable=False,
+        comment="Multilingual deck name: {el, en, ru}",
+    )
+    description: Mapped[dict] = mapped_column(
+        JSON,
+        nullable=False,
+        comment="Multilingual deck description: {el, en, ru}",
+    )
+
+    # Display properties
+    icon: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+        comment="Icon identifier (e.g., emoji or icon name)",
+    )
+    color_accent: Mapped[str] = mapped_column(
+        String(7),
+        nullable=False,
+        comment="Hex color code for deck accent (e.g., #4CAF50)",
+    )
+
+    # Classification
+    category: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+        index=True,
+        comment="Category: history, geography, politics, culture, etc.",
+    )
+
+    # Status
+    is_active: Mapped[bool] = mapped_column(
+        Boolean,
+        default=True,
+        nullable=False,
+        index=True,
+    )
+
+    # Display order
+    order_index: Mapped[int] = mapped_column(
+        Integer,
+        default=0,
+        nullable=False,
+        comment="Display order within category",
+    )
+
+    # Relationships
+    questions: Mapped[List["CultureQuestion"]] = relationship(
+        back_populates="deck",
+        lazy="selectin",
+        cascade="all, delete-orphan",
+    )
+
+    def __repr__(self) -> str:
+        return f"<CultureDeck(id={self.id}, category={self.category})>"
+
+
+class CultureQuestion(Base, TimestampMixin):
+    """Culture exam multiple-choice question.
+
+    Stores multilingual question text and answer options.
+    """
+
+    __tablename__ = "culture_questions"
+
+    # Primary key
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True,
+        server_default=func.uuid_generate_v4(),
+    )
+
+    # Foreign key
+    deck_id: Mapped[UUID] = mapped_column(
+        ForeignKey("culture_decks.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
+    # Question text (multilingual JSON)
+    question_text: Mapped[dict] = mapped_column(
+        JSON,
+        nullable=False,
+        comment="Multilingual question text: {el, en, ru}",
+    )
+
+    # Answer options (multilingual JSON)
+    option_a: Mapped[dict] = mapped_column(
+        JSON,
+        nullable=False,
+        comment="Option A: {el, en, ru}",
+    )
+    option_b: Mapped[dict] = mapped_column(
+        JSON,
+        nullable=False,
+        comment="Option B: {el, en, ru}",
+    )
+    option_c: Mapped[dict] = mapped_column(
+        JSON,
+        nullable=False,
+        comment="Option C: {el, en, ru}",
+    )
+    option_d: Mapped[dict] = mapped_column(
+        JSON,
+        nullable=False,
+        comment="Option D: {el, en, ru}",
+    )
+
+    # Correct answer (1=A, 2=B, 3=C, 4=D)
+    correct_option: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        comment="Correct option: 1=A, 2=B, 3=C, 4=D",
+    )
+
+    # Optional image reference
+    image_key: Mapped[str | None] = mapped_column(
+        String(500),
+        nullable=True,
+        comment="S3 key for question image (optional)",
+    )
+
+    # Display order
+    order_index: Mapped[int] = mapped_column(
+        Integer,
+        default=0,
+        nullable=False,
+        comment="Display order within deck",
+    )
+
+    # Relationships
+    deck: Mapped["CultureDeck"] = relationship(
+        back_populates="questions",
+        lazy="selectin",
+    )
+    statistics: Mapped[List["CultureQuestionStats"]] = relationship(
+        back_populates="question",
+        lazy="selectin",
+        cascade="all, delete-orphan",
+    )
+    answer_history: Mapped[List["CultureAnswerHistory"]] = relationship(
+        back_populates="question",
+        lazy="selectin",
+        cascade="all, delete-orphan",
+    )
+
+    def __repr__(self) -> str:
+        return f"<CultureQuestion(id={self.id}, deck_id={self.deck_id})>"
+
+
+class CultureQuestionStats(Base, TimestampMixin):
+    """SM-2 spaced repetition statistics for culture questions.
+
+    Tracks user progress on individual culture questions.
+    """
+
+    __tablename__ = "culture_question_stats"
+    __table_args__ = (UniqueConstraint("user_id", "question_id", name="uq_user_culture_question"),)
+
+    # Primary key
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True,
+        server_default=func.uuid_generate_v4(),
+    )
+
+    # Foreign keys
+    user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    question_id: Mapped[UUID] = mapped_column(
+        ForeignKey("culture_questions.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
+    # SM-2 Algorithm fields
+    easiness_factor: Mapped[float] = mapped_column(
+        Float,
+        default=2.5,
+        nullable=False,
+    )
+    interval: Mapped[int] = mapped_column(
+        Integer,
+        default=0,
+        nullable=False,
+    )
+    repetitions: Mapped[int] = mapped_column(
+        Integer,
+        default=0,
+        nullable=False,
+    )
+
+    # Scheduling
+    next_review_date: Mapped[date] = mapped_column(
+        Date,
+        nullable=False,
+        index=True,
+        server_default=func.current_date(),
+    )
+
+    # Status
+    status: Mapped[CardStatus] = mapped_column(
+        nullable=False,
+        default=CardStatus.NEW,
+        index=True,
+    )
+
+    # Relationships
+    user: Mapped["User"] = relationship(
+        lazy="selectin",
+    )
+    question: Mapped["CultureQuestion"] = relationship(
+        back_populates="statistics",
+        lazy="selectin",
+    )
+
+    def __repr__(self) -> str:
+        return (
+            f"<CultureQuestionStats(user_id={self.user_id}, "
+            f"question_id={self.question_id}, status={self.status})>"
+        )
+
+
+class CultureAnswerHistory(Base, TimestampMixin):
+    """History of culture question answers for analytics and achievements.
+
+    Tracks each answer with language used, enabling:
+    - Language diversity achievements (answer in all 3 languages)
+    - Consecutive streak tracking per category
+    - Analytics on language preferences
+    """
+
+    __tablename__ = "culture_answer_history"
+
+    # Primary key
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True,
+        server_default=func.uuid_generate_v4(),
+    )
+
+    # Foreign keys
+    user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    question_id: Mapped[UUID] = mapped_column(
+        ForeignKey("culture_questions.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
+    # Answer details
+    language: Mapped[str] = mapped_column(
+        String(2),
+        nullable=False,
+        index=True,
+        comment="Language used: el, en, ru",
+    )
+    is_correct: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        index=True,
+    )
+    selected_option: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        comment="Selected option: 1=A, 2=B, 3=C, 4=D",
+    )
+    time_taken_seconds: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        comment="Time taken to answer in seconds",
+    )
+
+    # Denormalized for efficient queries
+    deck_category: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+        index=True,
+        comment="Deck category for streak queries",
+    )
+
+    # Relationships
+    user: Mapped["User"] = relationship(
+        lazy="selectin",
+    )
+    question: Mapped["CultureQuestion"] = relationship(
+        back_populates="answer_history",
+        lazy="selectin",
+    )
+
+    def __repr__(self) -> str:
+        return (
+            f"<CultureAnswerHistory(user_id={self.user_id}, "
+            f"question_id={self.question_id}, correct={self.is_correct})>"
+        )

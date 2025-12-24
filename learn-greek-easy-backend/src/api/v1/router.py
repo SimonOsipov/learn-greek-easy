@@ -24,6 +24,7 @@ from fastapi import APIRouter
 
 from src.api.v1.auth import router as auth_router
 from src.api.v1.cards import router as card_router
+from src.api.v1.culture import router as culture_router
 from src.api.v1.decks import router as deck_router
 from src.api.v1.feedback import router as feedback_router
 from src.api.v1.notifications import router as notification_router
@@ -114,6 +115,15 @@ v1_router.include_router(
     notification_router,
     prefix="/notifications",
     tags=["Notifications"],
+)
+
+# =============================================================================
+# Culture Routes
+# =============================================================================
+v1_router.include_router(
+    culture_router,
+    prefix="/culture",
+    tags=["Culture"],
 )
 
 # =============================================================================

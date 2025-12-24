@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.db.models import UserXP, XPTransaction
 from src.services.xp_constants import (
     XP_CORRECT_ANSWER,
+    XP_CULTURE_WRONG,
     XP_DAILY_GOAL,
     XP_FIRST_REVIEW,
     XP_PERFECT_ANSWER,
@@ -296,3 +297,32 @@ class XPService:
             xp_for_next_level=needed,
             progress_percentage=round(progress_percent, 1),
         )
+
+    async def award_culture_answer_xp(
+        self,
+        user_id: UUID,
+        is_correct: bool,
+        is_perfect: bool = False,
+        source_id: Optional[UUID] = None,
+    ) -> int:
+        """Award XP for culture question answer.
+
+        Culture questions use the same XP system as flashcards for parity:
+        - Correct answer: 10 XP (or 15 XP for perfect/fast response)
+        - Wrong answer: 2 XP (MANDATORY - encouragement for attempts)
+
+        Args:
+            user_id: User's UUID
+            is_correct: Whether the answer was correct
+            is_perfect: Whether response time was < 2 seconds
+            source_id: Culture question ID
+
+        Returns:
+            XP amount awarded
+        """
+        if is_correct:
+            return await self.award_correct_answer_xp(user_id, is_perfect, source_id=source_id)
+        else:
+            # Award encouragement XP for wrong answers (MANDATORY per architecture)
+            await self.award_xp(user_id, XP_CULTURE_WRONG, "culture_attempt", source_id)
+            return XP_CULTURE_WRONG

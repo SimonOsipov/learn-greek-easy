@@ -34,6 +34,7 @@ google-auth = "^2.43.0"
 requests = "^2.32.0"
 apscheduler = "^3.11.1"
 posthog = "^3.7.0"
+boto3 = "^1.42.15"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.0"
@@ -58,6 +59,7 @@ aiosqlite = "^0.21.0"
 factory-boy = "^3.3.3"
 pytest-xdist = "^3.8.0"
 freezegun = "^1.5.5"
+boto3-stubs = {extras = ["s3"], version = "^1.42.15"}
 
 [build-system]
 requires = ["poetry-core"]
@@ -272,6 +274,7 @@ omit = [
     "src/api/v1/test/*",  # Test API endpoints (seed, etc.)
     # External integrations - tested by unit tests (99%+ coverage)
     "src/core/posthog.py",  # PostHog analytics - 44 unit tests, 99.1% coverage
+    "src/services/s3_service.py",  # AWS S3 service - tested by unit tests (100% coverage)
     # Static definition files (data only, no logic)
     "src/services/achievement_definitions.py",  # Achievement definitions
     "src/services/xp_constants.py",  # XP level constants

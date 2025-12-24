@@ -10,24 +10,35 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 
+import type { DeckType } from '@/components/decks/DeckTypeFilter';
+import { cultureDeckAPI } from '@/services/cultureDeckAPI';
+import type { CultureDeckResponse } from '@/services/cultureDeckAPI';
 import { deckAPI } from '@/services/deckAPI';
-import type { DeckResponse, DeckDetailResponse } from '@/services/deckAPI';
+import type { DeckDetailResponse, DeckResponse } from '@/services/deckAPI';
 import { progressAPI } from '@/services/progressAPI';
 import type { DeckProgressSummary } from '@/services/progressAPI';
 import { studyAPI } from '@/services/studyAPI';
 import { useAuthStore } from '@/stores/authStore';
-import type { Deck, DeckProgress, DeckFilters } from '@/types/deck';
+import type { Deck, DeckFilters, DeckProgress } from '@/types/deck';
+
+/**
+ * Extended filter state including deck type
+ */
+export interface DeckStoreFilters extends DeckFilters {
+  deckType: DeckType;
+}
 
 /**
  * Default filter state
  * Resets on each session to prevent stale filter preferences
  */
-const DEFAULT_FILTERS: DeckFilters = {
+const DEFAULT_FILTERS: DeckStoreFilters = {
   search: '', // Empty search = show all
   levels: [], // Empty = show all levels (A1, A2, B1, B2)
   categories: [], // Empty = show all categories
   status: [], // Empty = show all statuses (not-started, in-progress, completed)
   showPremiumOnly: false, // Default to showing both free and premium decks
+  deckType: 'all', // Empty = show all deck types (vocabulary, culture)
 };
 
 /**
@@ -116,6 +127,63 @@ const transformDeckDetailResponse = (
 };
 
 /**
+ * Transform culture deck response to frontend Deck type
+ */
+const transformCultureDeckResponse = (deck: CultureDeckResponse): Deck => {
+  // Determine status from progress data
+  let status: 'not-started' | 'in-progress' | 'completed' = 'not-started';
+  if (deck.progress) {
+    if (deck.progress.questions_mastered >= deck.progress.questions_total) {
+      status = 'completed';
+    } else if (deck.progress.questions_mastered > 0 || deck.progress.questions_learning > 0) {
+      status = 'in-progress';
+    }
+  }
+
+  // Get total questions from progress data or deck response
+  const totalCards = deck.progress?.questions_total ?? deck.question_count ?? 0;
+
+  // Build progress object matching DeckProgress interface
+  const progress: DeckProgress | undefined = deck.progress
+    ? {
+        deckId: deck.id,
+        status,
+        cardsTotal: deck.progress.questions_total,
+        cardsNew: deck.progress.questions_new,
+        cardsLearning: deck.progress.questions_learning,
+        cardsReview: 0, // Culture decks don't have review concept yet
+        cardsMastered: deck.progress.questions_mastered,
+        dueToday: 0, // Culture decks don't have spaced repetition yet
+        streak: 0,
+        lastStudied: undefined,
+        totalTimeSpent: 0,
+        accuracy:
+          deck.progress.questions_total > 0
+            ? Math.round((deck.progress.questions_mastered / deck.progress.questions_total) * 100)
+            : 0,
+      }
+    : undefined;
+
+  return {
+    id: deck.id,
+    title: deck.name.en,
+    titleGreek: deck.name.el,
+    description: deck.description.en,
+    level: 'A1', // Culture decks don't have CEFR levels
+    category: 'culture', // KEY: Set category to 'culture'
+    cardCount: totalCards,
+    estimatedTime: Math.ceil(totalCards * 0.5), // Estimate 30 seconds per question
+    isPremium: false,
+    tags: [deck.category], // Use culture category as tag (history, geography, etc.)
+    thumbnail: `/images/culture/${deck.category}.jpg`,
+    createdBy: 'Learn Greek Easy',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    progress,
+  };
+};
+
+/**
  * Deck Store State Interface
  */
 interface DeckState {
@@ -126,7 +194,7 @@ interface DeckState {
   selectedDeck: Deck | null;
 
   /** Active filter settings */
-  filters: DeckFilters;
+  filters: DeckStoreFilters;
 
   /** Loading state for async operations */
   isLoading: boolean;
@@ -144,7 +212,7 @@ interface DeckState {
   clearSelection: () => void;
 
   /** Update filter settings (partial update) */
-  setFilters: (filters: Partial<DeckFilters>) => void;
+  setFilters: (filters: Partial<DeckStoreFilters>) => void;
 
   /** Reset all filters to default state */
   clearFilters: () => void;
@@ -199,9 +267,10 @@ export const useDeckStore = create<DeckState>()(
             params.search = filters.search;
           }
 
-          // Fetch decks and progress in parallel
-          const [deckResponse, progressResponse] = await Promise.all([
+          // Fetch vocabulary decks, culture decks, and progress in parallel
+          const [deckResponse, cultureResponse, progressResponse] = await Promise.all([
             deckAPI.getList(params),
+            cultureDeckAPI.getList().catch(() => ({ decks: [], total: 0 })), // Graceful fallback if culture API fails
             progressAPI.getDeckProgressList({ page: 1, page_size: 50 }),
           ]);
 
@@ -211,10 +280,18 @@ export const useDeckStore = create<DeckState>()(
             progressMap.set(progress.deck_id, progress);
           }
 
-          // Transform and merge deck data with progress
-          let decks = deckResponse.decks.map((deck) =>
+          // Transform vocabulary decks with progress
+          const vocabDecks = deckResponse.decks.map((deck) =>
             transformDeckResponse(deck, progressMap.get(deck.id))
           );
+
+          // Transform culture decks (they have their own progress structure)
+          const cultureDecks = cultureResponse.decks.map((deck) =>
+            transformCultureDeckResponse(deck)
+          );
+
+          // Merge both deck types
+          let decks = [...vocabDecks, ...cultureDecks];
 
           // Apply client-side filters for multiple levels
           if (filters.levels.length > 1) {
@@ -226,6 +303,17 @@ export const useDeckStore = create<DeckState>()(
             decks = decks.filter((deck) =>
               filters.status.includes(deck.progress?.status ?? 'not-started')
             );
+          }
+
+          // Apply deck type filter client-side
+          if (filters.deckType !== 'all') {
+            decks = decks.filter((deck) => {
+              if (filters.deckType === 'culture') {
+                return deck.category === 'culture';
+              }
+              // vocabulary - show all non-culture decks
+              return deck.category !== 'culture';
+            });
           }
 
           set({
@@ -314,7 +402,7 @@ export const useDeckStore = create<DeckState>()(
       /**
        * Update filters and automatically re-fetch decks
        */
-      setFilters: (newFilters: Partial<DeckFilters>) => {
+      setFilters: (newFilters: Partial<DeckStoreFilters>) => {
         const { filters, fetchDecks } = get();
 
         // Merge new filters with existing

@@ -72,11 +72,17 @@ def _log_dry_run_info(truncate_only: bool) -> None:
         logger.info("  - Create review history for learner user")
         logger.info("  - Create 8 feedback items (5 feature requests, 3 bug reports)")
         logger.info("  - Create votes (upvotes and downvotes) for feedback items")
+        logger.info(
+            "  - Create 5 culture decks (History, Geography, Politics, Culture, Traditions)"
+        )
+        logger.info("  - Create 50 Greek culture questions (10 per deck, trilingual: el/en/ru)")
+        logger.info("  - Create culture question statistics for learner user (60% History)")
+        logger.info("  - Create culture question statistics for advanced user (80% all decks)")
     logger.info("")
     logger.info("All test users have password: TestPassword123!")
 
 
-def _log_result(operation: str, result: dict[str, Any], duration: float) -> None:
+def _log_result(operation: str, result: dict[str, Any], duration: float) -> None:  # noqa: C901
     """Log the result of the seeding operation."""
     logger.info("")
     logger.info("=" * 60)
@@ -125,6 +131,31 @@ def _log_result(operation: str, result: dict[str, Any], duration: float) -> None
             downvotes = sum(1 for v in votes if v.get("type") == "down")
             logger.info(f"  - Upvotes: {upvotes}")
             logger.info(f"  - Downvotes: {downvotes}")
+
+        # Log culture results
+        culture_result = result.get("culture", {})
+        culture_decks = culture_result.get("decks", [])
+        culture_questions = culture_result.get("total_questions", 0)
+
+        logger.info(f"Culture decks created: {len(culture_decks)}")
+        if culture_decks:
+            for deck in culture_decks:
+                logger.info(f"  - {deck.get('category', 'Unknown')}")
+
+        logger.info(f"Culture questions created: {culture_questions}")
+
+        # Log culture statistics
+        culture_stats_result = result.get("culture_statistics", {})
+        learner_stats = culture_stats_result.get("stats_created", 0)
+        advanced_culture_stats = result.get("advanced_culture_statistics", [])
+        advanced_total = sum(s.get("stats_created", 0) for s in advanced_culture_stats)
+
+        if learner_stats or advanced_total:
+            logger.info("Culture question statistics created:")
+            if learner_stats:
+                logger.info(f"  - Learner (60% History): {learner_stats} stats")
+            if advanced_total:
+                logger.info(f"  - Advanced (80% all decks): {advanced_total} stats")
 
         password = result.get("users", {}).get("password", "TestPassword123!")
         logger.info("")

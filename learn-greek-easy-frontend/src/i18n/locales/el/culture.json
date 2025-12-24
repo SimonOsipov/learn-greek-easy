@@ -1,0 +1,67 @@
+{
+  "mcq": {
+    "submitAnswer": "Υποβολη Απαντησης",
+    "keyboardHint": "Πατηστε 1-4 για επιλογη, Enter για υποβολη",
+    "questionOf": "Ερωτηση {{current}} απο {{total}}",
+    "timeRemaining": "{{seconds}}δ απομενουν",
+    "selectAnswer": "Επιλεξτε μια απαντηση για να συνεχισετε",
+    "optionLabel": "Επιλογη {{letter}}: {{text}}"
+  },
+  "feedback": {
+    "correct": "Σωστα!",
+    "wrong": "Λαθος!",
+    "correctAnswerWas": "Η σωστη απαντηση ηταν:",
+    "optionWithLabel": "Επιλογη {{label}}: {{text}}",
+    "xpEarned": "+{{xp}} XP",
+    "nextQuestion": "Επομενη Ερωτηση",
+    "viewSummary": "Προβολη Συνοψης",
+    "srCorrect": "Σωστα! Κερδισατε {{xp}} XP.",
+    "srWrong": "Λαθος. Η σωστη απαντηση ηταν {{label}}: {{answer}}. Κερδισατε {{xp}} XP."
+  },
+  "language": {
+    "selectLanguage": "Γλωσσα Ερωτησης",
+    "el": "Ελληνικα",
+    "en": "Αγγλικα",
+    "ru": "Ρωσικα"
+  },
+  "practice": {
+    "exit": "Εξοδος",
+    "exitTitle": "Εξοδος απο την Εξασκηση;",
+    "exitConfirm": "Η προοδος σας θα αποθηκευτει, αλλα θα εξελθετε απο την τρεχουσα συνεδρια. Ειστε σιγουροι οτι θελετε να εξελθετε;",
+    "backToDecks": "Πισω στις Δεσμες",
+    "error": "Σφαλμα",
+    "noQuestions": "Δεν Υπαρχουν Ερωτησεις",
+    "noQuestionsDescription": "Δεν υπαρχουν διαθεσιμες ερωτησεις για αυτη τη δεσμη.",
+    "xpEarned": "XP: {{xp}}",
+    "accuracy": "{{accuracy}}% ακριβεια",
+    "recovery": {
+      "title": "Συνεχεια Εξασκησης;",
+      "description": "Εχετε μια ημιτελη συνεδρια εξασκησης. Θελετε να συνεχισετε απο εκει που σταματησατε;",
+      "startNew": "Νεα Εναρξη",
+      "resume": "Συνεχεια Συνεδριας"
+    }
+  },
+  "summary": {
+    "practiceComplete": "Εξασκηση Ολοκληρωθηκε",
+    "accuracyPercent": "{{accuracy}}% ακριβεια",
+    "earned": "κερδηθηκαν",
+    "questionsAnswered": "Ερωτησεις",
+    "correct": "Σωστες",
+    "incorrect": "Λαθος",
+    "timeSpent": "Χρονος",
+    "questionBreakdown": "Αναλυση Ερωτησεων",
+    "yourAnswer": "Η απαντηση σας",
+    "correctAnswer": "Σωστη απαντηση",
+    "backToDecks": "Πισω στις Δεσμες",
+    "practiceAgain": "Εξασκηση Ξανα",
+    "error": "Σφαλμα",
+    "invalidDeckId": "Μη εγκυρο αναγνωριστικο δεσμης",
+    "goToDecks": "Μεταβαση στις Δεσμες",
+    "performance": {
+      "excellent": "Εξαιρετικα!",
+      "good": "Πολυ καλα!",
+      "keepPracticing": "Συνεχιστε την εξασκηση!",
+      "needsWork": "Συνεχιστε να προσπαθειτε!"
+    }
+  }
+}

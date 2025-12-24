@@ -1,0 +1,67 @@
+{
+  "mcq": {
+    "submitAnswer": "Отправить Ответ",
+    "keyboardHint": "Нажмите 1-4 для выбора, Enter для отправки",
+    "questionOf": "Вопрос {{current}} из {{total}}",
+    "timeRemaining": "{{seconds}}с осталось",
+    "selectAnswer": "Выберите ответ для продолжения",
+    "optionLabel": "Вариант {{letter}}: {{text}}"
+  },
+  "feedback": {
+    "correct": "Правильно!",
+    "wrong": "Неправильно!",
+    "correctAnswerWas": "Правильный ответ был:",
+    "optionWithLabel": "Вариант {{label}}: {{text}}",
+    "xpEarned": "+{{xp}} XP",
+    "nextQuestion": "Следующий Вопрос",
+    "viewSummary": "Показать Итоги",
+    "srCorrect": "Правильно! Вы заработали {{xp}} XP.",
+    "srWrong": "Неправильно. Правильный ответ был {{label}}: {{answer}}. Вы заработали {{xp}} XP."
+  },
+  "language": {
+    "selectLanguage": "Язык Вопроса",
+    "el": "Греческий",
+    "en": "Английский",
+    "ru": "Русский"
+  },
+  "practice": {
+    "exit": "Выход",
+    "exitTitle": "Выйти из практики?",
+    "exitConfirm": "Ваш прогресс будет сохранен, но вы выйдете из текущей сессии. Вы уверены, что хотите выйти?",
+    "backToDecks": "Назад к колодам",
+    "error": "Ошибка",
+    "noQuestions": "Нет вопросов",
+    "noQuestionsDescription": "Для этой колоды нет доступных вопросов.",
+    "xpEarned": "XP: {{xp}}",
+    "accuracy": "{{accuracy}}% точность",
+    "recovery": {
+      "title": "Продолжить практику?",
+      "description": "У вас есть незавершенная сессия практики. Хотите продолжить с того места, где остановились?",
+      "startNew": "Начать заново",
+      "resume": "Продолжить сессию"
+    }
+  },
+  "summary": {
+    "practiceComplete": "Практика завершена",
+    "accuracyPercent": "{{accuracy}}% точность",
+    "earned": "заработано",
+    "questionsAnswered": "Вопросы",
+    "correct": "Правильно",
+    "incorrect": "Неправильно",
+    "timeSpent": "Время",
+    "questionBreakdown": "Разбор вопросов",
+    "yourAnswer": "Ваш ответ",
+    "correctAnswer": "Правильный ответ",
+    "backToDecks": "Назад к колодам",
+    "practiceAgain": "Практиковать снова",
+    "error": "Ошибка",
+    "invalidDeckId": "Неверный идентификатор колоды",
+    "goToDecks": "Перейти к колодам",
+    "performance": {
+      "excellent": "Отлично!",
+      "good": "Хорошая работа!",
+      "keepPracticing": "Продолжайте практиковаться!",
+      "needsWork": "Продолжайте стараться!"
+    }
+  }
+}

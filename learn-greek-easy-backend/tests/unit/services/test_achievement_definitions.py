@@ -24,9 +24,9 @@ from src.services.achievement_definitions import (
 class TestAchievementCount:
     """Tests for achievement count requirements."""
 
-    def test_achievement_count_minimum_35(self):
-        """Should have at least 35 achievements defined."""
-        assert len(ACHIEVEMENTS) >= 35, f"Expected 35+ achievements, got {len(ACHIEVEMENTS)}"
+    def test_achievement_count_minimum_47(self):
+        """Should have at least 47 achievements defined (35 original + 12 culture)."""
+        assert len(ACHIEVEMENTS) >= 47, f"Expected 47+ achievements, got {len(ACHIEVEMENTS)}"
 
     def test_streak_achievements_count(self):
         """Should have 7 streak achievements."""
@@ -329,3 +329,116 @@ class TestSpecificAchievements:
             ach = get_achievement_by_id(ach_id)
             assert ach is not None, f"CEFR achievement {ach_id} not found"
             assert ach.category == AchievementCategory.CEFR
+
+
+@pytest.mark.unit
+class TestCultureAchievements:
+    """Tests for culture exam achievements."""
+
+    def test_culture_achievements_count(self):
+        """Should have exactly 12 culture achievements."""
+        culture_achievements = get_achievements_by_category(AchievementCategory.CULTURE)
+        assert (
+            len(culture_achievements) == 12
+        ), f"Expected 12 culture achievements, got {len(culture_achievements)}"
+
+    def test_culture_milestone_achievements_exist(self):
+        """Culture milestone achievements should exist with correct thresholds."""
+        milestones = [
+            ("culture_curious", 10, 25),
+            ("culture_explorer", 50, 75),
+            ("culture_scholar", 100, 150),
+            ("culture_master", 500, 500),
+        ]
+        for ach_id, threshold, xp_reward in milestones:
+            ach = get_achievement_by_id(ach_id)
+            assert ach is not None, f"Culture milestone {ach_id} not found"
+            assert ach.category == AchievementCategory.CULTURE
+            assert ach.threshold == threshold, f"{ach_id} threshold mismatch"
+            assert ach.xp_reward == xp_reward, f"{ach_id} XP reward mismatch"
+            assert ach.metric == AchievementMetric.CULTURE_QUESTIONS_ANSWERED
+
+    def test_culture_accuracy_achievements_exist(self):
+        """Culture accuracy achievements should exist."""
+        accuracy_achievements = [
+            ("perfect_culture_score", AchievementMetric.CULTURE_CONSECUTIVE_CORRECT, 10, 50),
+            ("culture_sharp_mind", AchievementMetric.CULTURE_ACCURACY, 90, 100),
+        ]
+        for ach_id, metric, threshold, xp_reward in accuracy_achievements:
+            ach = get_achievement_by_id(ach_id)
+            assert ach is not None, f"Culture accuracy achievement {ach_id} not found"
+            assert ach.category == AchievementCategory.CULTURE
+            assert ach.metric == metric
+            assert ach.threshold == threshold
+            assert ach.xp_reward == xp_reward
+
+    def test_culture_category_mastery_achievements_exist(self):
+        """Culture category mastery achievements should exist."""
+        mastery_achievements = [
+            ("culture_historian", AchievementMetric.CULTURE_HISTORY_MASTERED, 200),
+            ("culture_geographer", AchievementMetric.CULTURE_GEOGRAPHY_MASTERED, 200),
+            ("culture_civic_expert", AchievementMetric.CULTURE_POLITICS_MASTERED, 200),
+            ("culture_champion", AchievementMetric.CULTURE_ALL_MASTERED, 1000),
+        ]
+        for ach_id, metric, xp_reward in mastery_achievements:
+            ach = get_achievement_by_id(ach_id)
+            assert ach is not None, f"Culture mastery achievement {ach_id} not found"
+            assert ach.category == AchievementCategory.CULTURE
+            assert ach.metric == metric
+            assert ach.threshold == 1  # All mastery achievements have threshold of 1
+            assert ach.xp_reward == xp_reward
+
+    def test_culture_champion_has_highest_reward(self):
+        """Culture Champion should have the highest XP reward among culture achievements."""
+        culture_achievements = get_achievements_by_category(AchievementCategory.CULTURE)
+        culture_champion = get_achievement_by_id("culture_champion")
+        assert culture_champion is not None
+
+        for ach in culture_achievements:
+            assert (
+                culture_champion.xp_reward >= ach.xp_reward
+            ), f"{ach.id} has higher XP than culture_champion"
+
+        # Specifically, culture_champion should have 1000 XP
+        assert culture_champion.xp_reward == 1000
+
+    def test_culture_language_achievements_exist(self):
+        """Culture language achievements should exist."""
+        language_achievements = [
+            ("culture_native_speaker", AchievementMetric.CULTURE_GREEK_QUESTIONS, 50, 100),
+            ("culture_polyglot_learner", AchievementMetric.CULTURE_LANGUAGES_USED, 3, 50),
+        ]
+        for ach_id, metric, threshold, xp_reward in language_achievements:
+            ach = get_achievement_by_id(ach_id)
+            assert ach is not None, f"Culture language achievement {ach_id} not found"
+            assert ach.category == AchievementCategory.CULTURE
+            assert ach.metric == metric
+            assert ach.threshold == threshold
+            assert ach.xp_reward == xp_reward
+
+    def test_culture_metrics_unique_and_valid(self):
+        """All culture achievements should use valid culture metrics."""
+        culture_metrics = {
+            AchievementMetric.CULTURE_QUESTIONS_ANSWERED,
+            AchievementMetric.CULTURE_CONSECUTIVE_CORRECT,
+            AchievementMetric.CULTURE_ACCURACY,
+            AchievementMetric.CULTURE_HISTORY_MASTERED,
+            AchievementMetric.CULTURE_GEOGRAPHY_MASTERED,
+            AchievementMetric.CULTURE_POLITICS_MASTERED,
+            AchievementMetric.CULTURE_ALL_MASTERED,
+            AchievementMetric.CULTURE_GREEK_QUESTIONS,
+            AchievementMetric.CULTURE_LANGUAGES_USED,
+        }
+
+        culture_achievements = get_achievements_by_category(AchievementCategory.CULTURE)
+        for ach in culture_achievements:
+            assert ach.metric in culture_metrics, f"{ach.id} uses non-culture metric {ach.metric}"
+
+    def test_total_achievement_count_increased(self):
+        """Total achievement count should be 47 (35 original + 12 culture)."""
+        assert len(ACHIEVEMENTS) == 47, f"Expected 47 achievements, got {len(ACHIEVEMENTS)}"
+
+    def test_culture_category_exists_in_enum(self):
+        """CULTURE should be a valid AchievementCategory."""
+        assert hasattr(AchievementCategory, "CULTURE")
+        assert AchievementCategory.CULTURE.value == "culture"

@@ -343,3 +343,90 @@ async def recalculate_progress_task(
         # Always dispose of the engine to clean up connections
         if engine is not None:
             await engine.dispose()
+
+
+async def check_culture_achievements_task(
+    user_id: UUID,
+    question_id: UUID,
+    is_correct: bool,
+    language: str,
+    deck_category: str,
+    db_url: str,
+) -> None:
+    """Check culture achievements in background after answer submission.
+
+    This task runs asynchronously after the culture answer response is sent.
+    It checks all 12 culture achievement types and logs any new unlocks.
+
+    The task creates its own database connection to avoid issues with
+    connection sharing across async contexts.
+
+    Args:
+        user_id: User who answered
+        question_id: Question that was answered
+        is_correct: Whether answer was correct
+        language: Language used (el, en, ru)
+        deck_category: Category of the deck
+        db_url: Database connection URL
+    """
+    if not is_background_tasks_enabled():
+        logger.debug("Background tasks disabled, skipping check_culture_achievements_task")
+        return
+
+    logger.info(
+        "Starting culture achievement check",
+        extra={
+            "user_id": str(user_id),
+            "question_id": str(question_id),
+            "is_correct": is_correct,
+            "language": language,
+            "deck_category": deck_category,
+            "task": "check_culture_achievements",
+        },
+    )
+
+    engine = None
+    try:
+        # Create dedicated engine for this background task
+        engine = create_async_engine(db_url, pool_pre_ping=True)
+        async_session_factory = async_sessionmaker(
+            engine, class_=AsyncSession, expire_on_commit=False
+        )
+
+        async with async_session_factory() as session:
+            from src.services.achievement_service import AchievementService
+
+            service = AchievementService(session)
+            unlocked = await service.check_culture_achievements(
+                user_id=user_id,
+                question_id=question_id,
+                is_correct=is_correct,
+                language=language,
+                deck_category=deck_category,
+            )
+
+            if unlocked:
+                await session.commit()
+                logger.info(
+                    "Culture achievements unlocked",
+                    extra={
+                        "user_id": str(user_id),
+                        "unlocked_count": len(unlocked),
+                        "achievement_ids": [a["id"] for a in unlocked],
+                    },
+                )
+            else:
+                logger.debug(
+                    "No culture achievements unlocked",
+                    extra={"user_id": str(user_id)},
+                )
+
+    except Exception as e:
+        logger.error(
+            "Culture achievement check failed",
+            extra={"user_id": str(user_id), "error": str(e)},
+            exc_info=True,
+        )
+    finally:
+        if engine is not None:
+            await engine.dispose()

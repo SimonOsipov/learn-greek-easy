@@ -18,6 +18,9 @@ from src.core.security import verify_password
 from src.db.models import (
     Card,
     CardStatistics,
+    CultureDeck,
+    CultureQuestion,
+    CultureQuestionStats,
     Deck,
     DeckLevel,
     Feedback,
@@ -205,10 +208,11 @@ class TestSeedServiceTruncation:
         await db_session.commit()
 
         assert result["success"] is True
-        # 15 tables: xp_transactions, user_achievements, user_xp, achievements,
-        # notifications, reviews, card_statistics, user_deck_progress, feedback_votes,
+        # 18 tables: xp_transactions, user_achievements, user_xp, achievements,
+        # notifications, culture_question_stats, culture_questions, culture_decks,
+        # reviews, card_statistics, user_deck_progress, feedback_votes,
         # feedback, refresh_tokens, user_settings, cards, users, decks
-        assert len(result["truncated_tables"]) == 15
+        assert len(result["truncated_tables"]) == 18
 
 
 # ============================================================================
@@ -671,3 +675,253 @@ class TestSeedServiceNotifications:
         # Verify notifications are cleared
         count_after = await db_session.scalar(select(func.count(Notification.id)))
         assert count_after == 0
+
+
+# ============================================================================
+# Culture Seeding Tests
+# ============================================================================
+
+
+@pytest.mark.no_parallel
+class TestSeedServiceCulture:
+    """Integration tests for culture seeding with real database."""
+
+    @pytest.mark.asyncio
+    async def test_seed_creates_culture_decks(self, db_session: AsyncSession, enable_seeding):
+        """seed_all creates 5 culture decks."""
+        seed_service = SeedService(db_session)
+
+        await seed_service.seed_all()
+
+        # Verify 5 culture decks were created
+        deck_count = await db_session.scalar(select(func.count(CultureDeck.id)))
+        assert deck_count == 5
+
+    @pytest.mark.asyncio
+    async def test_seed_creates_culture_questions(self, db_session: AsyncSession, enable_seeding):
+        """seed_all creates 50 culture questions (10 per deck)."""
+        seed_service = SeedService(db_session)
+
+        await seed_service.seed_all()
+
+        # Verify 50 culture questions were created
+        question_count = await db_session.scalar(select(func.count(CultureQuestion.id)))
+        assert question_count == 50
+
+    @pytest.mark.asyncio
+    async def test_culture_decks_have_correct_categories(
+        self, db_session: AsyncSession, enable_seeding
+    ):
+        """Verify all 5 culture categories are created."""
+        seed_service = SeedService(db_session)
+
+        await seed_service.seed_all()
+
+        decks = (await db_session.execute(select(CultureDeck))).scalars().all()
+
+        categories = {d.category for d in decks}
+        assert categories == {"history", "geography", "politics", "culture", "traditions"}
+
+    @pytest.mark.asyncio
+    async def test_culture_decks_have_trilingual_names(
+        self, db_session: AsyncSession, enable_seeding
+    ):
+        """Verify culture decks have el, en, ru translations."""
+        seed_service = SeedService(db_session)
+
+        await seed_service.seed_all()
+
+        decks = (await db_session.execute(select(CultureDeck))).scalars().all()
+
+        for deck in decks:
+            # Name should have all 3 languages
+            assert "el" in deck.name, f"Deck {deck.category} missing 'el' in name"
+            assert "en" in deck.name, f"Deck {deck.category} missing 'en' in name"
+            assert "ru" in deck.name, f"Deck {deck.category} missing 'ru' in name"
+
+            # Description should have all 3 languages
+            assert "el" in deck.description, f"Deck {deck.category} missing 'el' in description"
+            assert "en" in deck.description, f"Deck {deck.category} missing 'en' in description"
+            assert "ru" in deck.description, f"Deck {deck.category} missing 'ru' in description"
+
+    @pytest.mark.asyncio
+    async def test_culture_questions_have_trilingual_content(
+        self, db_session: AsyncSession, enable_seeding
+    ):
+        """Verify culture questions have el, en, ru translations."""
+        seed_service = SeedService(db_session)
+
+        await seed_service.seed_all()
+
+        questions = (await db_session.execute(select(CultureQuestion).limit(10))).scalars().all()
+
+        for q in questions:
+            # Question text should have all 3 languages
+            assert "el" in q.question_text, "Question missing 'el' translation"
+            assert "en" in q.question_text, "Question missing 'en' translation"
+            assert "ru" in q.question_text, "Question missing 'ru' translation"
+
+            # Options should have all 3 languages
+            for option in [q.option_a, q.option_b, q.option_c, q.option_d]:
+                if option:  # option_d may be None
+                    assert "el" in option, "Option missing 'el' translation"
+                    assert "en" in option, "Option missing 'en' translation"
+                    assert "ru" in option, "Option missing 'ru' translation"
+
+    @pytest.mark.asyncio
+    async def test_culture_questions_linked_to_decks(
+        self, db_session: AsyncSession, enable_seeding
+    ):
+        """Verify all culture questions are linked to valid decks."""
+        seed_service = SeedService(db_session)
+
+        await seed_service.seed_all()
+
+        questions = (await db_session.execute(select(CultureQuestion))).scalars().all()
+
+        for q in questions:
+            deck = await db_session.scalar(select(CultureDeck).where(CultureDeck.id == q.deck_id))
+            assert deck is not None, f"Culture deck not found for question {q.id}"
+
+    @pytest.mark.asyncio
+    async def test_each_deck_has_ten_questions(self, db_session: AsyncSession, enable_seeding):
+        """Verify each culture deck has exactly 10 questions."""
+        seed_service = SeedService(db_session)
+
+        await seed_service.seed_all()
+
+        decks = (await db_session.execute(select(CultureDeck))).scalars().all()
+
+        for deck in decks:
+            question_count = await db_session.scalar(
+                select(func.count(CultureQuestion.id)).where(CultureQuestion.deck_id == deck.id)
+            )
+            assert (
+                question_count == 10
+            ), f"Deck {deck.category} has {question_count} questions, expected 10"
+
+
+@pytest.mark.no_parallel
+class TestSeedServiceCultureStatistics:
+    """Integration tests for culture question statistics seeding with real database."""
+
+    @pytest.mark.asyncio
+    async def test_seed_creates_learner_culture_stats(
+        self, db_session: AsyncSession, enable_seeding
+    ):
+        """seed_all creates culture statistics for learner user (60% History)."""
+        seed_service = SeedService(db_session)
+
+        await seed_service.seed_all()
+
+        # Get learner user
+        learner = await db_session.scalar(select(User).where(User.email == "e2e_learner@test.com"))
+        assert learner is not None
+
+        # Verify learner has culture stats
+        learner_stats_count = await db_session.scalar(
+            select(func.count(CultureQuestionStats.id)).where(
+                CultureQuestionStats.user_id == learner.id
+            )
+        )
+        # Learner should have stats for history deck (10 questions * 60% = 6 stats)
+        assert learner_stats_count > 0
+
+    @pytest.mark.asyncio
+    async def test_seed_creates_advanced_culture_stats(
+        self, db_session: AsyncSession, enable_seeding
+    ):
+        """seed_all creates culture statistics for advanced user (80% all decks)."""
+        seed_service = SeedService(db_session)
+
+        await seed_service.seed_all()
+
+        # Get advanced user
+        advanced = await db_session.scalar(
+            select(User).where(User.email == "e2e_advanced@test.com")
+        )
+        assert advanced is not None
+
+        # Verify advanced has culture stats for all decks
+        advanced_stats_count = await db_session.scalar(
+            select(func.count(CultureQuestionStats.id)).where(
+                CultureQuestionStats.user_id == advanced.id
+            )
+        )
+        # Advanced should have stats for all 5 decks (50 questions * 80% = 40+ stats)
+        assert advanced_stats_count >= 40
+
+    @pytest.mark.asyncio
+    async def test_culture_stats_linked_to_valid_users_and_questions(
+        self, db_session: AsyncSession, enable_seeding
+    ):
+        """Culture statistics are linked to valid users and questions."""
+        seed_service = SeedService(db_session)
+
+        await seed_service.seed_all()
+
+        stats = (await db_session.execute(select(CultureQuestionStats))).scalars().all()
+
+        for stat in stats:
+            user = await db_session.scalar(select(User).where(User.id == stat.user_id))
+            assert user is not None, f"User not found for culture stat {stat.id}"
+
+            question = await db_session.scalar(
+                select(CultureQuestion).where(CultureQuestion.id == stat.question_id)
+            )
+            assert question is not None, f"Question not found for culture stat {stat.id}"
+
+    @pytest.mark.asyncio
+    async def test_truncation_clears_culture_tables(self, db_session: AsyncSession, enable_seeding):
+        """Verify truncation clears culture tables."""
+        seed_service = SeedService(db_session)
+
+        # First seed
+        await seed_service.seed_all()
+
+        # Verify culture data exists
+        deck_count_before = await db_session.scalar(select(func.count(CultureDeck.id)))
+        question_count_before = await db_session.scalar(select(func.count(CultureQuestion.id)))
+        stats_count_before = await db_session.scalar(select(func.count(CultureQuestionStats.id)))
+
+        assert deck_count_before == 5
+        assert question_count_before == 50
+        assert stats_count_before > 0
+
+        # Truncate
+        await seed_service.truncate_tables()
+        await db_session.commit()
+
+        # Verify culture tables are cleared
+        deck_count_after = await db_session.scalar(select(func.count(CultureDeck.id)))
+        question_count_after = await db_session.scalar(select(func.count(CultureQuestion.id)))
+        stats_count_after = await db_session.scalar(select(func.count(CultureQuestionStats.id)))
+
+        assert deck_count_after == 0
+        assert question_count_after == 0
+        assert stats_count_after == 0
+
+
+@pytest.mark.no_parallel
+class TestSeedServiceCultureTruncationOrder:
+    """Tests for culture table truncation order with real database."""
+
+    @pytest.mark.asyncio
+    async def test_truncation_order_is_fk_safe_for_culture(
+        self, db_session: AsyncSession, enable_seeding
+    ):
+        """Verify culture truncation doesn't violate FK constraints."""
+        seed_service = SeedService(db_session)
+
+        # Seed data with FK relationships
+        await seed_service.seed_all()
+
+        # Truncation should not raise FK constraint errors
+        result = await seed_service.truncate_tables()
+        await db_session.commit()
+
+        assert result["success"] is True
+        # Verify culture tables are in the truncation order
+        assert "culture_question_stats" in result["truncated_tables"]
+        assert "culture_questions" in result["truncated_tables"]
+        assert "culture_decks" in result["truncated_tables"]

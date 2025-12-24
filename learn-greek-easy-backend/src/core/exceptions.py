@@ -140,6 +140,28 @@ class CardNotFoundException(NotFoundException):
         super().__init__(resource="Card", detail=detail)
 
 
+class CultureDeckNotFoundException(NotFoundException):
+    """Culture deck not found."""
+
+    def __init__(self, deck_id: Optional[str] = None) -> None:
+        detail = (
+            f"Culture deck with ID '{deck_id}' not found" if deck_id else "Culture deck not found"
+        )
+        super().__init__(resource="CultureDeck", detail=detail)
+
+
+class CultureQuestionNotFoundException(NotFoundException):
+    """Culture question not found."""
+
+    def __init__(self, question_id: Optional[str] = None) -> None:
+        detail = (
+            f"Culture question with ID '{question_id}' not found"
+            if question_id
+            else "Culture question not found"
+        )
+        super().__init__(resource="CultureQuestion", detail=detail)
+
+
 # ============================================================================
 # Validation Exceptions
 # ============================================================================

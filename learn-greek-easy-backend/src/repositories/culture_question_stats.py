@@ -1,0 +1,234 @@
+"""CultureQuestionStats repository for SM-2 spaced repetition tracking."""
+
+from datetime import date, datetime
+from typing import Optional
+from uuid import UUID
+
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from src.db.models import CardStatus, CultureQuestion, CultureQuestionStats
+from src.repositories.base import BaseRepository
+
+
+class CultureQuestionStatsRepository(BaseRepository[CultureQuestionStats]):
+    """Repository for CultureQuestionStats model with progress tracking.
+
+    Provides database operations for culture question SM-2 statistics:
+    - Get user stats for a question
+    - Count questions by status
+    - Get due questions for review
+    - Calculate progress statistics
+    """
+
+    def __init__(self, db: AsyncSession):
+        """Initialize the CultureQuestionStats repository.
+
+        Args:
+            db: Async database session for persistence operations
+        """
+        super().__init__(CultureQuestionStats, db)
+
+    async def get_by_user_and_question(
+        self,
+        user_id: UUID,
+        question_id: UUID,
+    ) -> Optional[CultureQuestionStats]:
+        """Get statistics for a specific user-question pair.
+
+        Args:
+            user_id: User UUID
+            question_id: Question UUID
+
+        Returns:
+            CultureQuestionStats if exists, None otherwise
+
+        Use Case:
+            Check if user has attempted a question before
+        """
+        query = select(CultureQuestionStats).where(
+            CultureQuestionStats.user_id == user_id,
+            CultureQuestionStats.question_id == question_id,
+        )
+        result = await self.db.execute(query)
+        return result.scalar_one_or_none()
+
+    async def count_by_status_for_deck(
+        self,
+        user_id: UUID,
+        deck_id: UUID,
+    ) -> dict[str, int]:
+        """Count questions by SM-2 status for a specific deck.
+
+        Args:
+            user_id: User UUID
+            deck_id: Deck UUID
+
+        Returns:
+            Dict with counts: {new, learning, review, mastered}
+
+        Use Case:
+            Deck progress breakdown for UI
+        """
+        # Get all questions in the deck
+        total_questions_query = select(func.count(CultureQuestion.id)).where(
+            CultureQuestion.deck_id == deck_id
+        )
+        total_result = await self.db.execute(total_questions_query)
+        total_questions = total_result.scalar_one()
+
+        # Get counts by status for this user
+        status_query = (
+            select(
+                CultureQuestionStats.status,
+                func.count(CultureQuestionStats.id).label("count"),
+            )
+            .join(CultureQuestion, CultureQuestionStats.question_id == CultureQuestion.id)
+            .where(
+                CultureQuestionStats.user_id == user_id,
+                CultureQuestion.deck_id == deck_id,
+            )
+            .group_by(CultureQuestionStats.status)
+        )
+        status_result = await self.db.execute(status_query)
+        status_counts: dict[str, int] = {}
+        for row in status_result:
+            status_counts[row.status.value] = row.count  # type: ignore[assignment]
+
+        # Calculate counts
+        learning_count: int = status_counts.get(CardStatus.LEARNING.value, 0)
+        review_count: int = status_counts.get(CardStatus.REVIEW.value, 0)
+        mastered_count: int = status_counts.get(CardStatus.MASTERED.value, 0)
+        in_progress_count: int = learning_count + review_count + mastered_count
+        new_count: int = total_questions - in_progress_count
+
+        return {
+            "new": new_count,
+            "learning": learning_count,
+            "review": review_count,
+            "mastered": mastered_count,
+        }
+
+    async def get_deck_progress(
+        self,
+        user_id: UUID,
+        deck_id: UUID,
+    ) -> dict[str, int]:
+        """Get progress statistics for a culture deck.
+
+        Args:
+            user_id: User UUID
+            deck_id: Deck UUID
+
+        Returns:
+            Dict with: {questions_total, questions_mastered, questions_learning, questions_new}
+
+        Use Case:
+            Deck progress display in deck list
+        """
+        counts = await self.count_by_status_for_deck(user_id, deck_id)
+
+        # Get total questions in deck
+        total_query = select(func.count(CultureQuestion.id)).where(
+            CultureQuestion.deck_id == deck_id
+        )
+        total_result = await self.db.execute(total_query)
+        total = total_result.scalar_one()
+
+        return {
+            "questions_total": total,
+            "questions_mastered": counts.get("mastered", 0),
+            "questions_learning": counts.get("learning", 0) + counts.get("review", 0),
+            "questions_new": counts.get("new", 0),
+        }
+
+    async def get_last_practiced_at(
+        self,
+        user_id: UUID,
+        deck_id: UUID,
+    ) -> Optional[datetime]:
+        """Get the last practice timestamp for a deck.
+
+        Args:
+            user_id: User UUID
+            deck_id: Deck UUID
+
+        Returns:
+            Last updated_at timestamp from user's question stats for this deck
+
+        Use Case:
+            Show "last practiced" in deck list
+        """
+        query = (
+            select(CultureQuestionStats.updated_at)
+            .join(CultureQuestion, CultureQuestionStats.question_id == CultureQuestion.id)
+            .where(
+                CultureQuestionStats.user_id == user_id,
+                CultureQuestion.deck_id == deck_id,
+            )
+            .order_by(CultureQuestionStats.updated_at.desc())
+            .limit(1)
+        )
+        result = await self.db.execute(query)
+        timestamp = result.scalar_one_or_none()
+        return timestamp
+
+    async def has_user_started_deck(
+        self,
+        user_id: UUID,
+        deck_id: UUID,
+    ) -> bool:
+        """Check if user has any stats for questions in this deck.
+
+        Args:
+            user_id: User UUID
+            deck_id: Deck UUID
+
+        Returns:
+            True if user has at least one question stat for this deck
+
+        Use Case:
+            Determine if deck should show progress vs "Start"
+        """
+        query = (
+            select(func.count(CultureQuestionStats.id))
+            .join(CultureQuestion, CultureQuestionStats.question_id == CultureQuestion.id)
+            .where(
+                CultureQuestionStats.user_id == user_id,
+                CultureQuestion.deck_id == deck_id,
+            )
+        )
+        result = await self.db.execute(query)
+        count = result.scalar_one()
+        return count > 0
+
+    async def count_answers_today(self, user_id: UUID) -> int:
+        """Count culture questions answered today.
+
+        Counts stats records where updated_at is today, indicating the user
+        answered the question today. This method is used for daily goal tracking.
+
+        Args:
+            user_id: User UUID
+
+        Returns:
+            Number of culture questions answered today
+
+        Use Case:
+            Daily goal tracking - culture answers count toward combined goal
+            with flashcard reviews
+        """
+        today_start = datetime.combine(date.today(), datetime.min.time())
+        query = select(func.count(CultureQuestionStats.id)).where(
+            CultureQuestionStats.user_id == user_id,
+            CultureQuestionStats.updated_at >= today_start,
+        )
+        result = await self.db.execute(query)
+        return result.scalar_one() or 0
+
+
+# ============================================================================
+# Module Exports
+# ============================================================================
+
+__all__ = ["CultureQuestionStatsRepository"]
