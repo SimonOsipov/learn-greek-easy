@@ -17,6 +17,7 @@ import { LayoutProvider } from '@/contexts/LayoutContext';
 import { NotificationProvider } from '@/contexts/NotificationContext';
 import AchievementsPage from '@/pages/AchievementsPage';
 import ActivityFeedTest from '@/pages/ActivityFeedTest';
+import AdminPage from '@/pages/AdminPage';
 import { ForgotPassword } from '@/pages/auth/ForgotPassword';
 import { Login } from '@/pages/auth/Login';
 import { Register } from '@/pages/auth/Register';
@@ -35,14 +36,6 @@ import Statistics from '@/pages/Statistics';
 import { Unauthorized } from '@/pages/Unauthorized';
 import { PostHogProvider } from '@/providers';
 import { useAppStore, selectIsReady } from '@/stores/appStore';
-
-// Admin placeholder page
-const AdminPanel = () => (
-  <div>
-    <h1 className="mb-4 text-2xl font-semibold">Admin Panel</h1>
-    <p>Admin features will go here.</p>
-  </div>
-);
 
 function AppContent() {
   const isAppReady = useAppStore(selectIsReady);
@@ -93,7 +86,7 @@ function AppContent() {
           {/* Admin Routes - require admin role */}
           <Route element={<ProtectedRoute requiredRole="admin" />}>
             <Route path="/admin" element={<AppLayout />}>
-              <Route index element={<AdminPanel />} />
+              <Route index element={<AdminPage />} />
             </Route>
           </Route>
 

@@ -124,3 +124,7 @@ export type {
   CultureDeckResponse,
   LocalizedText,
 } from './cultureDeckAPI';
+
+// Admin API
+export { adminAPI } from './adminAPI';
+export type { ContentStatsResponse, DeckStats } from './adminAPI';
