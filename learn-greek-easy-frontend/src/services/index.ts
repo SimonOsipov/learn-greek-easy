@@ -3,8 +3,15 @@
 /**
  * API Services Index
  *
- * Central export point for all API services.
- * Import from here for cleaner imports across the application.
+ * Re-exports all API services for package/external consumption.
+ *
+ * INTERNAL CODE PATTERN:
+ * Import directly from individual API files for reliability:
+ *   import { deckAPI } from '@/services/deckAPI';
+ *   import type { DeckResponse } from '@/services/deckAPI';
+ *
+ * Do NOT import through this barrel file in application code:
+ *   import { deckAPI } from '@/services';  // Avoid
  */
 
 // Base API client and utilities
@@ -124,3 +131,7 @@ export type {
   CultureDeckResponse,
   LocalizedText,
 } from './cultureDeckAPI';
+
+// Admin API
+export { adminAPI } from './adminAPI';
+export type { ContentStatsResponse, DeckStats } from './adminAPI';

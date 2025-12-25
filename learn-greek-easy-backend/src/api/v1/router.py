@@ -22,6 +22,7 @@ Adding new feature routers:
 
 from fastapi import APIRouter
 
+from src.api.v1.admin import router as admin_router
 from src.api.v1.auth import router as auth_router
 from src.api.v1.cards import router as card_router
 from src.api.v1.culture import router as culture_router
@@ -124,6 +125,15 @@ v1_router.include_router(
     culture_router,
     prefix="/culture",
     tags=["Culture"],
+)
+
+# =============================================================================
+# Admin Routes
+# =============================================================================
+v1_router.include_router(
+    admin_router,
+    prefix="/admin",
+    tags=["Admin"],
 )
 
 # =============================================================================
