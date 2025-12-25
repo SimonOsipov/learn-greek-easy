@@ -37,7 +37,7 @@ export const FeedbackFilters: React.FC = () => {
           setFilters({ category: v === 'all' ? null : (v as FeedbackCategory) })
         }
       >
-        <SelectTrigger className="w-[180px]" data-testid="category-filter">
+        <SelectTrigger className="w-[260px]" data-testid="category-filter">
           <SelectValue placeholder={t('filters.category')} />
         </SelectTrigger>
         <SelectContent>
@@ -54,7 +54,7 @@ export const FeedbackFilters: React.FC = () => {
         value={filters.status || 'all'}
         onValueChange={(v) => setFilters({ status: v === 'all' ? null : (v as FeedbackStatus) })}
       >
-        <SelectTrigger className="w-[180px]" data-testid="status-filter">
+        <SelectTrigger className="w-[200px]" data-testid="status-filter">
           <SelectValue placeholder={t('filters.status')} />
         </SelectTrigger>
         <SelectContent>
@@ -75,7 +75,7 @@ export const FeedbackFilters: React.FC = () => {
           setFilters({ sort, order });
         }}
       >
-        <SelectTrigger className="w-[150px]" data-testid="sort-filter">
+        <SelectTrigger className="w-[200px]" data-testid="sort-filter">
           <SelectValue placeholder={t('filters.sortBy')} />
         </SelectTrigger>
         <SelectContent>
