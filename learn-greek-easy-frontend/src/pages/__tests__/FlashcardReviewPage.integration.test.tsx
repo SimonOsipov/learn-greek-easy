@@ -154,76 +154,72 @@ vi.mock('@/services/progressAPI', () => ({
 
 vi.mock('@/services/studyAPI', () => {
   // Define mock data inline since vi.mock is hoisted
+  // Uses correct backend field names: front_text, back_text, due_date, is_new
   const studyQueueCards = [
     {
       card_id: 'card-1',
-      greek_word: 'Γειά σου',
-      english_translation: 'Hello',
+      front_text: 'Γειά σου',
+      back_text: 'Hello',
       pronunciation: 'ya soo',
       example_sentence: 'Γειά σου, πώς είσαι;',
-      example_translation: 'Hello, how are you?',
       status: 'new',
       difficulty: 'easy',
       easiness_factor: 2.5,
       interval: 0,
-      repetitions: 0,
-      next_review_date: null,
+      is_new: true,
+      due_date: null,
     },
     {
       card_id: 'card-2',
-      greek_word: 'Καλημέρα',
-      english_translation: 'Good morning',
+      front_text: 'Καλημέρα',
+      back_text: 'Good morning',
       pronunciation: 'kah-lee-MEH-rah',
       example_sentence: 'Καλημέρα, τι κάνεις;',
-      example_translation: 'Good morning, how are you doing?',
       status: 'new',
       difficulty: 'easy',
       easiness_factor: 2.5,
       interval: 0,
-      repetitions: 0,
-      next_review_date: null,
+      is_new: true,
+      due_date: null,
     },
     {
       card_id: 'card-3',
-      greek_word: 'Ευχαριστώ',
-      english_translation: 'Thank you',
+      front_text: 'Ευχαριστώ',
+      back_text: 'Thank you',
       pronunciation: 'ef-ha-ree-STO',
       example_sentence: 'Ευχαριστώ πολύ!',
-      example_translation: 'Thank you very much!',
       status: 'learning',
       difficulty: 'medium',
       easiness_factor: 2.3,
       interval: 1,
-      repetitions: 1,
-      next_review_date: '2025-01-08',
+      is_new: false,
+      due_date: '2025-01-08',
     },
     {
       card_id: 'card-4',
-      greek_word: 'Παρακαλώ',
-      english_translation: "You're welcome / Please",
+      front_text: 'Παρακαλώ',
+      back_text: "You're welcome / Please",
       pronunciation: 'pah-rah-kah-LO',
       example_sentence: 'Παρακαλώ, κάθισε.',
-      example_translation: 'Please, sit down.',
       status: 'review',
       difficulty: 'medium',
       easiness_factor: 2.4,
       interval: 3,
-      repetitions: 2,
-      next_review_date: '2025-01-08',
+      is_new: false,
+      due_date: '2025-01-08',
     },
     {
       card_id: 'card-5',
-      greek_word: 'Ναι',
-      english_translation: 'Yes',
+      front_text: 'Ναι',
+      back_text: 'Yes',
       pronunciation: 'neh',
       example_sentence: 'Ναι, είμαι καλά.',
-      example_translation: 'Yes, I am fine.',
       status: 'mastered',
       difficulty: 'easy',
       easiness_factor: 2.6,
       interval: 7,
-      repetitions: 5,
-      next_review_date: '2025-01-15',
+      is_new: false,
+      due_date: '2025-01-15',
     },
   ];
 
@@ -382,13 +378,18 @@ describe('FlashcardReviewPage - Session Initialization', () => {
       expect(screen.getByText(currentCard.word)).toBeInTheDocument();
     }
 
-    // Answer should NOT be visible initially
+    // Answer should NOT be visible initially (hidden with opacity-0)
+    // The Translation component renders text with opacity-0 when not flipped
     if (currentCard?.translation) {
       const translationElements = screen.queryAllByText(currentCard.translation);
-      // Translation might appear in hidden sections, so check it's not in the main card area
-      expect(
-        translationElements.length === 0 || !translationElements[0].closest('[role="button"]')
-      ).toBeTruthy();
+      // Translation is in DOM but should be hidden (opacity-0)
+      if (translationElements.length > 0) {
+        const translationInCard = translationElements.find((el) => el.closest('[role="button"]'));
+        if (translationInCard) {
+          // Check it's hidden via opacity-0 class
+          expect(translationInCard.className).toContain('opacity-0');
+        }
+      }
     }
   });
 
