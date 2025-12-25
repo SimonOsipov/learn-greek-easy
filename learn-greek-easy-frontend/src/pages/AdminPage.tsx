@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 
 import { AlertCircle, Database, Layers, RefreshCw } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -88,24 +89,25 @@ interface ErrorStateProps {
   message: string;
   onRetry: () => void;
   isRetrying: boolean;
+  t: (key: string) => string;
 }
 
-const ErrorState: React.FC<ErrorStateProps> = ({ message, onRetry, isRetrying }) => (
+const ErrorState: React.FC<ErrorStateProps> = ({ message, onRetry, isRetrying, t }) => (
   <Alert variant="destructive">
     <AlertCircle className="h-4 w-4" />
-    <AlertTitle>Error loading admin statistics</AlertTitle>
+    <AlertTitle>{t('errors.loadingStats')}</AlertTitle>
     <AlertDescription className="mt-2">
       <p className="mb-3">{message}</p>
       <Button variant="outline" size="sm" onClick={onRetry} disabled={isRetrying}>
         {isRetrying ? (
           <>
             <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-            Retrying...
+            {t('actions.retrying')}
           </>
         ) : (
           <>
             <RefreshCw className="mr-2 h-4 w-4" />
-            Retry
+            {t('actions.retry')}
           </>
         )}
       </Button>
@@ -120,10 +122,11 @@ interface SummaryCardProps {
   title: string;
   value: number;
   icon: React.ReactNode;
+  testId?: string;
 }
 
-const SummaryCard: React.FC<SummaryCardProps> = ({ title, value, icon }) => (
-  <Card>
+const SummaryCard: React.FC<SummaryCardProps> = ({ title, value, icon, testId }) => (
+  <Card data-testid={testId}>
     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
       <CardTitle className="text-sm font-medium">{title}</CardTitle>
       {icon}
@@ -139,16 +142,17 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ title, value, icon }) => (
  */
 interface DeckListItemProps {
   deck: DeckStats;
+  t: (key: string, options?: { count: number }) => string;
 }
 
-const DeckListItem: React.FC<DeckListItemProps> = ({ deck }) => (
+const DeckListItem: React.FC<DeckListItemProps> = ({ deck, t }) => (
   <div className="flex items-center justify-between rounded-lg border p-4 transition-colors hover:bg-muted/50">
     <div className="flex items-center gap-3">
       <Badge variant={getLevelBadgeVariant(deck.level)}>{deck.level}</Badge>
       <span className="font-medium">{deck.name}</span>
     </div>
     <span className="text-sm text-muted-foreground">
-      {deck.card_count} {deck.card_count === 1 ? 'card' : 'cards'}
+      {t('deck.cardCount', { count: deck.card_count })}
     </span>
   </div>
 );
@@ -178,6 +182,7 @@ function sortDecksByLevel(decks: DeckStats[]): DeckStats[] {
  * Requires superuser authentication.
  */
 const AdminPage: React.FC = () => {
+  const { t } = useTranslation('admin');
   const [stats, setStats] = useState<ContentStatsResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -189,7 +194,7 @@ const AdminPage: React.FC = () => {
       const data = await adminAPI.getContentStats();
       setStats(data);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to load statistics';
+      const message = err instanceof Error ? err.message : t('errors.failed');
       setError(message);
     } finally {
       setIsLoading(false);
@@ -199,6 +204,7 @@ const AdminPage: React.FC = () => {
 
   useEffect(() => {
     fetchStats();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleRetry = () => {
@@ -213,8 +219,15 @@ const AdminPage: React.FC = () => {
       <div className="space-y-6 pb-8" data-testid="admin-page">
         {/* Page Header */}
         <div>
-          <h1 className="text-2xl font-semibold text-text-primary md:text-3xl">Admin Dashboard</h1>
-          <p className="mt-2 text-muted-foreground">Manage content and view statistics</p>
+          <h1
+            className="text-2xl font-semibold text-text-primary md:text-3xl"
+            data-testid="admin-title"
+          >
+            {t('page.title')}
+          </h1>
+          <p className="mt-2 text-muted-foreground" data-testid="admin-subtitle">
+            {t('page.subtitle')}
+          </p>
         </div>
         <AdminLoadingSkeleton />
       </div>
@@ -227,10 +240,17 @@ const AdminPage: React.FC = () => {
       <div className="space-y-6 pb-8" data-testid="admin-page">
         {/* Page Header */}
         <div>
-          <h1 className="text-2xl font-semibold text-text-primary md:text-3xl">Admin Dashboard</h1>
-          <p className="mt-2 text-muted-foreground">Manage content and view statistics</p>
+          <h1
+            className="text-2xl font-semibold text-text-primary md:text-3xl"
+            data-testid="admin-title"
+          >
+            {t('page.title')}
+          </h1>
+          <p className="mt-2 text-muted-foreground" data-testid="admin-subtitle">
+            {t('page.subtitle')}
+          </p>
         </div>
-        <ErrorState message={error} onRetry={handleRetry} isRetrying={isRetrying} />
+        <ErrorState message={error} onRetry={handleRetry} isRetrying={isRetrying} t={t} />
       </div>
     );
   }
@@ -241,12 +261,19 @@ const AdminPage: React.FC = () => {
       <div className="space-y-6 pb-8" data-testid="admin-page">
         {/* Page Header */}
         <div>
-          <h1 className="text-2xl font-semibold text-text-primary md:text-3xl">Admin Dashboard</h1>
-          <p className="mt-2 text-muted-foreground">Manage content and view statistics</p>
+          <h1
+            className="text-2xl font-semibold text-text-primary md:text-3xl"
+            data-testid="admin-title"
+          >
+            {t('page.title')}
+          </h1>
+          <p className="mt-2 text-muted-foreground" data-testid="admin-subtitle">
+            {t('page.subtitle')}
+          </p>
         </div>
         <Card>
           <CardContent className="py-8 text-center">
-            <p className="text-muted-foreground">No statistics available</p>
+            <p className="text-muted-foreground">{t('states.noStats')}</p>
           </CardContent>
         </Card>
       </div>
@@ -259,25 +286,34 @@ const AdminPage: React.FC = () => {
     <div className="space-y-6 pb-8" data-testid="admin-page">
       {/* Page Header */}
       <div>
-        <h1 className="text-2xl font-semibold text-text-primary md:text-3xl">Admin Dashboard</h1>
-        <p className="mt-2 text-muted-foreground">Manage content and view statistics</p>
+        <h1
+          className="text-2xl font-semibold text-text-primary md:text-3xl"
+          data-testid="admin-title"
+        >
+          {t('page.title')}
+        </h1>
+        <p className="mt-2 text-muted-foreground" data-testid="admin-subtitle">
+          {t('page.subtitle')}
+        </p>
       </div>
 
       {/* Summary Cards */}
       <section aria-labelledby="summary-heading">
         <h2 id="summary-heading" className="sr-only">
-          Content Summary
+          {t('sections.contentSummary')}
         </h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <SummaryCard
-            title="Total Decks"
+            title={t('stats.totalDecks')}
             value={stats.total_decks}
             icon={<Layers className="h-5 w-5 text-muted-foreground" />}
+            testId="total-decks-card"
           />
           <SummaryCard
-            title="Total Cards"
+            title={t('stats.totalCards')}
             value={stats.total_cards}
             icon={<Database className="h-5 w-5 text-muted-foreground" />}
+            testId="total-cards-card"
           />
         </div>
       </section>
@@ -286,16 +322,20 @@ const AdminPage: React.FC = () => {
       <section aria-labelledby="decks-heading">
         <Card>
           <CardHeader>
-            <CardTitle id="decks-heading">Decks by Level</CardTitle>
-            <CardDescription>All active decks sorted by CEFR level (A1 to C2)</CardDescription>
+            <CardTitle id="decks-heading" data-testid="decks-by-level-title">
+              {t('sections.decksByLevel')}
+            </CardTitle>
+            <CardDescription data-testid="decks-by-level-description">
+              {t('sections.decksByLevelDescription')}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             {sortedDecks.length === 0 ? (
-              <p className="py-4 text-center text-muted-foreground">No decks available</p>
+              <p className="py-4 text-center text-muted-foreground">{t('states.noDecks')}</p>
             ) : (
               <div className="space-y-3">
                 {sortedDecks.map((deck) => (
-                  <DeckListItem key={deck.id} deck={deck} />
+                  <DeckListItem key={deck.id} deck={deck} t={t} />
                 ))}
               </div>
             )}

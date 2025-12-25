@@ -1,0 +1,31 @@
+{
+  "page": {
+    "title": "Admin Dashboard",
+    "subtitle": "Manage content and view statistics"
+  },
+  "sections": {
+    "contentSummary": "Content Summary",
+    "decksByLevel": "Decks by Level",
+    "decksByLevelDescription": "All active decks sorted by CEFR level (A1 to C2)"
+  },
+  "stats": {
+    "totalDecks": "Total Decks",
+    "totalCards": "Total Cards"
+  },
+  "deck": {
+    "cardCount_one": "{{count}} card",
+    "cardCount_other": "{{count}} cards"
+  },
+  "errors": {
+    "loadingStats": "Error loading admin statistics",
+    "failed": "Failed to load statistics"
+  },
+  "actions": {
+    "retry": "Retry",
+    "retrying": "Retrying..."
+  },
+  "states": {
+    "noStats": "No statistics available",
+    "noDecks": "No decks available"
+  }
+}
