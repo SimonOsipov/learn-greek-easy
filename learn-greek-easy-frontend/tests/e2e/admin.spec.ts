@@ -123,9 +123,9 @@ test.describe('Admin Panel - Superuser', () => {
     await page.waitForLoadState('networkidle');
     await expect(page.getByTestId('admin-page')).toBeVisible({ timeout: 15000 });
 
-    // Should display "Decks by Level" heading
+    // Should display "Decks by Level" title (CardTitle renders as div, not heading)
     await expect(
-      page.getByRole('heading', { name: /Decks by Level/i })
+      page.getByText('Decks by Level')
     ).toBeVisible({ timeout: 10000 });
 
     // Should display deck list description
