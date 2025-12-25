@@ -108,6 +108,7 @@ test.describe('Admin Panel - i18n Translations', () => {
     // Switch to Greek
     await page.getByTestId('language-switcher-trigger').click();
     await page.getByTestId('language-option-el').click();
+    await page.waitForTimeout(500);
 
     // Should immediately display Greek (no refresh needed)
     await expect(page.getByTestId('admin-title')).toHaveText('Πίνακας Διαχείρισης');
@@ -115,6 +116,7 @@ test.describe('Admin Panel - i18n Translations', () => {
     // Switch to Russian
     await page.getByTestId('language-switcher-trigger').click();
     await page.getByTestId('language-option-ru').click();
+    await page.waitForTimeout(500);
 
     // Should immediately display Russian
     await expect(page.getByTestId('admin-title')).toHaveText('Панель администратора');
@@ -122,6 +124,7 @@ test.describe('Admin Panel - i18n Translations', () => {
     // Switch back to English
     await page.getByTestId('language-switcher-trigger').click();
     await page.getByTestId('language-option-en').click();
+    await page.waitForTimeout(500);
 
     // Should immediately display English
     await expect(page.getByTestId('admin-title')).toHaveText('Admin Dashboard');
