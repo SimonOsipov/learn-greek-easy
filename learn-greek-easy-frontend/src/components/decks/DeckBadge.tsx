@@ -4,12 +4,13 @@ import { useTranslation } from 'react-i18next';
 
 import { Badge } from '@/components/ui/badge';
 import { getCEFRColor, getCEFRLabel, getCEFRTextColor } from '@/lib/cefrColors';
-import type { DeckLevel, DeckStatus } from '@/types/deck';
+import type { DeckCategory, DeckLevel, DeckStatus } from '@/types/deck';
 
 export interface DeckBadgeProps {
-  type: 'level' | 'status';
+  type: 'level' | 'status' | 'category';
   level?: DeckLevel;
   status?: DeckStatus;
+  category?: DeckCategory;
   className?: string;
 }
 
@@ -31,7 +32,34 @@ const STATUS_CONFIG = {
   },
 } as const;
 
-export const DeckBadge: React.FC<DeckBadgeProps> = ({ type, level, status, className = '' }) => {
+const CATEGORY_CONFIG: Record<
+  Exclude<DeckCategory, 'culture'>,
+  { labelKey: string; bgColor: string; textColor: string }
+> = {
+  vocabulary: {
+    labelKey: 'card.categories.vocabulary',
+    bgColor: 'bg-cyan-100',
+    textColor: 'text-cyan-700',
+  },
+  grammar: {
+    labelKey: 'card.categories.grammar',
+    bgColor: 'bg-orange-100',
+    textColor: 'text-orange-700',
+  },
+  phrases: {
+    labelKey: 'card.categories.phrases',
+    bgColor: 'bg-teal-100',
+    textColor: 'text-teal-700',
+  },
+};
+
+export const DeckBadge: React.FC<DeckBadgeProps> = ({
+  type,
+  level,
+  status,
+  category,
+  className = '',
+}) => {
   const { t } = useTranslation('deck');
 
   if (type === 'level' && level) {
@@ -58,6 +86,21 @@ export const DeckBadge: React.FC<DeckBadgeProps> = ({ type, level, status, class
         aria-label={`Status: ${statusLabel}`}
       >
         {statusLabel}
+      </Badge>
+    );
+  }
+
+  if (type === 'category' && category && category !== 'culture') {
+    const config = CATEGORY_CONFIG[category];
+    const categoryLabel = t(config.labelKey);
+    return (
+      <Badge
+        variant="outline"
+        className={`${config.bgColor} ${config.textColor} rounded px-2 py-1 text-xs ${className}`}
+        aria-label={`Category: ${categoryLabel}`}
+        data-testid="deck-category-badge"
+      >
+        {categoryLabel}
       </Badge>
     );
   }

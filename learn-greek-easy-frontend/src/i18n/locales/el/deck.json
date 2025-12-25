@@ -124,6 +124,11 @@
     "actions": {
       "startLearning": "Έναρξη Μάθησης",
       "continueLearning": "Συνέχεια Μάθησης"
+    },
+    "categories": {
+      "vocabulary": "Λεξιλόγιο",
+      "grammar": "Γραμματική",
+      "phrases": "Φράσεις"
     }
   }
 }
