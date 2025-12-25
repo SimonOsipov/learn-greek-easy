@@ -9,6 +9,7 @@ import {
   NAMESPACES,
   SUPPORTED_LANGUAGES,
 } from './constants';
+import elAdmin from './locales/el/admin.json';
 import elAuth from './locales/el/auth.json';
 import elCommon from './locales/el/common.json';
 import elCulture from './locales/el/culture.json';
@@ -18,6 +19,7 @@ import elProfile from './locales/el/profile.json';
 import elReview from './locales/el/review.json';
 import elSettings from './locales/el/settings.json';
 import elStatistics from './locales/el/statistics.json';
+import enAdmin from './locales/en/admin.json';
 import enAuth from './locales/en/auth.json';
 import enCommon from './locales/en/common.json';
 import enCulture from './locales/en/culture.json';
@@ -27,6 +29,7 @@ import enProfile from './locales/en/profile.json';
 import enReview from './locales/en/review.json';
 import enSettings from './locales/en/settings.json';
 import enStatistics from './locales/en/statistics.json';
+import ruAdmin from './locales/ru/admin.json';
 import ruAuth from './locales/ru/auth.json';
 import ruCommon from './locales/ru/common.json';
 import ruCulture from './locales/ru/culture.json';
@@ -51,6 +54,7 @@ const resources = {
     statistics: enStatistics,
     feedback: enFeedback,
     culture: enCulture,
+    admin: enAdmin,
   },
   el: {
     common: elCommon,
@@ -62,6 +66,7 @@ const resources = {
     statistics: elStatistics,
     feedback: elFeedback,
     culture: elCulture,
+    admin: elAdmin,
   },
   ru: {
     common: ruCommon,
@@ -73,6 +78,7 @@ const resources = {
     statistics: ruStatistics,
     feedback: ruFeedback,
     culture: ruCulture,
+    admin: ruAdmin,
   },
 };
 

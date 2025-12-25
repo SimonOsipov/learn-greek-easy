@@ -1,0 +1,33 @@
+{
+  "page": {
+    "title": "Панель администратора",
+    "subtitle": "Управление контентом и просмотр статистики"
+  },
+  "sections": {
+    "contentSummary": "Сводка контента",
+    "decksByLevel": "Колоды по уровням",
+    "decksByLevelDescription": "Все активные колоды, отсортированные по уровню CEFR (от A1 до C2)"
+  },
+  "stats": {
+    "totalDecks": "Всего колод",
+    "totalCards": "Всего карточек"
+  },
+  "deck": {
+    "cardCount_one": "{{count}} карточка",
+    "cardCount_few": "{{count}} карточки",
+    "cardCount_many": "{{count}} карточек",
+    "cardCount_other": "{{count}} карточек"
+  },
+  "errors": {
+    "loadingStats": "Ошибка загрузки статистики администратора",
+    "failed": "Не удалось загрузить статистику"
+  },
+  "actions": {
+    "retry": "Повторить",
+    "retrying": "Повторная попытка..."
+  },
+  "states": {
+    "noStats": "Статистика недоступна",
+    "noDecks": "Колоды недоступны"
+  }
+}
