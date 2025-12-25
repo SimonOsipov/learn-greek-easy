@@ -91,25 +91,54 @@ const mapRatingToAnalytics = (rating: ReviewRating): 1 | 2 | 3 | 4 => {
 
 /**
  * Transform backend study queue card to frontend CardReview type
+ *
+ * Backend StudyQueueCard fields:
+ * - front_text, back_text (NOT greek_word, english_translation)
+ * - due_date (NOT next_review_date)
+ * - is_new (boolean)
+ * - No repetitions field in StudyQueueCard
  */
 const transformStudyQueueCard = (card: StudyQueueCard, deckId: string): CardReview => ({
   id: card.card_id,
   deckId,
-  front: card.greek_word,
-  back: card.english_translation,
+  // Map backend field names to frontend field names
+  front: card.front_text,
+  back: card.back_text,
+  // Also add word/translation aliases for CardMain component compatibility
+  word: card.front_text,
+  translation: card.back_text,
   pronunciation: card.pronunciation || '',
   example: card.example_sentence || '',
-  exampleTranslation: card.example_translation || '',
+  exampleTranslation: '', // Not available in StudyQueueCard
   notes: '',
   status: card.status as 'new' | 'learning' | 'review' | 'mastered',
   difficulty: card.difficulty as 'easy' | 'medium' | 'hard',
+  // Spaced repetition data
+  srData: {
+    cardId: card.card_id,
+    deckId,
+    interval: card.interval,
+    easeFactor: card.easiness_factor,
+    repetitions: 0, // Not available in StudyQueueCard
+    state: card.is_new ? 'new' : (card.status as 'new' | 'learning' | 'review' | 'mastered'),
+    step: 0,
+    dueDate: card.due_date ? new Date(card.due_date) : null,
+    lastReviewed: null,
+    reviewCount: 0,
+    successCount: 0,
+    failureCount: 0,
+    successRate: 0,
+  },
+  // Legacy fields for backward compatibility
   easeFactor: card.easiness_factor,
   interval: card.interval,
-  repetitions: card.repetitions,
-  nextReviewDate: card.next_review_date ? new Date(card.next_review_date) : new Date(),
+  repetitions: 0, // Not available in StudyQueueCard
+  nextReviewDate: card.due_date ? new Date(card.due_date) : new Date(),
   lastReviewDate: undefined,
-  reviewCount: card.repetitions,
+  reviewCount: 0,
   correctCount: 0,
+  timesReviewed: 0,
+  successRate: 0,
   averageTime: 0,
 });
 
