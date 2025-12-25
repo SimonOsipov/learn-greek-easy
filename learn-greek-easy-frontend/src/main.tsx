@@ -1,3 +1,6 @@
+// Sentry initialization - MUST be first import
+import './instrument';
+
 // Font imports - Inter for shadcn/ui Vega preset
 import '@fontsource/inter/400.css';
 import '@fontsource/inter/500.css';

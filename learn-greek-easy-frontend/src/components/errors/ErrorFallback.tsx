@@ -1,4 +1,5 @@
-import { AlertCircle, RefreshCw, Home } from 'lucide-react';
+import * as Sentry from '@sentry/react';
+import { AlertCircle, RefreshCw, Home, MessageSquare } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -12,6 +13,8 @@ export interface ErrorFallbackProps {
   error: Error | null;
   /** Callback to reset the error boundary */
   onReset?: () => void;
+  /** Sentry event ID for user feedback */
+  eventId?: string;
 }
 
 /**
@@ -26,7 +29,7 @@ export interface ErrorFallbackProps {
  * />
  * ```
  */
-export function ErrorFallback({ error, onReset }: ErrorFallbackProps) {
+export function ErrorFallback({ error, onReset, eventId }: ErrorFallbackProps) {
   const { t } = useTranslation('common');
 
   const handleGoHome = () => {
@@ -35,6 +38,13 @@ export function ErrorFallback({ error, onReset }: ErrorFallbackProps) {
 
   const handleTryAgain = () => {
     onReset?.();
+  };
+
+  const handleReportIssue = () => {
+    // Open Sentry's user feedback dialog if we have an eventId
+    if (eventId) {
+      Sentry.showReportDialog({ eventId });
+    }
   };
 
   return (
@@ -63,15 +73,24 @@ export function ErrorFallback({ error, onReset }: ErrorFallbackProps) {
           </Alert>
         )}
 
-        <div className="flex gap-3">
-          <Button onClick={handleTryAgain} variant="outline" className="flex-1">
-            <RefreshCw className="mr-2 h-4 w-4" />
-            {t('errorPage.tryAgain')}
-          </Button>
-          <Button onClick={handleGoHome} className="flex-1">
-            <Home className="mr-2 h-4 w-4" />
-            {t('errorPage.goHome')}
-          </Button>
+        <div className="flex flex-col gap-3">
+          <div className="flex gap-3">
+            <Button onClick={handleTryAgain} variant="outline" className="flex-1">
+              <RefreshCw className="mr-2 h-4 w-4" />
+              {t('errorPage.tryAgain')}
+            </Button>
+            <Button onClick={handleGoHome} className="flex-1">
+              <Home className="mr-2 h-4 w-4" />
+              {t('errorPage.goHome')}
+            </Button>
+          </div>
+          {/* Show report button only in production when Sentry eventId is available */}
+          {eventId && import.meta.env.PROD && (
+            <Button onClick={handleReportIssue} variant="secondary" className="w-full">
+              <MessageSquare className="mr-2 h-4 w-4" />
+              {t('error.reportIssue', 'Report Issue')}
+            </Button>
+          )}
         </div>
 
         <p className="text-center text-xs text-muted-foreground">{t('error.persistsContact')}</p>

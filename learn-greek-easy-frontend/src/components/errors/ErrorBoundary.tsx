@@ -1,5 +1,7 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 
+import * as Sentry from '@sentry/react';
+
 import { ErrorFallback } from './ErrorFallback';
 
 /**
@@ -22,6 +24,8 @@ interface ErrorBoundaryState {
   hasError: boolean;
   /** The caught error, if any */
   error: Error | null;
+  /** Sentry event ID for user feedback */
+  eventId: string | null;
 }
 
 /**
@@ -51,34 +55,53 @@ interface ErrorBoundaryState {
 export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   constructor(props: ErrorBoundaryProps) {
     super(props);
-    this.state = { hasError: false, error: null };
+    this.state = { hasError: false, error: null, eventId: null };
   }
 
   /**
    * Update state so the next render will show the fallback UI
    */
   static getDerivedStateFromError(error: Error): ErrorBoundaryState {
-    return { hasError: true, error };
+    return { hasError: true, error, eventId: null };
   }
 
   /**
-   * Log the error to an error reporting service
+   * Log the error to Sentry and optionally call custom error handler
    */
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('ErrorBoundary caught an error:', error, errorInfo);
+    // Log to console in development
+    if (import.meta.env.DEV) {
+      console.error('ErrorBoundary caught an error:', error, errorInfo);
+    }
+
+    // Report to Sentry with React component stack context
+    Sentry.withScope((scope) => {
+      // Add React-specific context
+      scope.setContext('react', {
+        componentStack: errorInfo.componentStack,
+      });
+
+      // Tag the error as coming from error boundary
+      scope.setTag('error.boundary', 'true');
+      scope.setTag('error.handled', 'true');
+
+      // Set error level
+      scope.setLevel('error');
+
+      // Capture the exception and store eventId for user feedback
+      const eventId = Sentry.captureException(error);
+      this.setState({ eventId });
+    });
 
     // Call optional error handler
     this.props.onError?.(error, errorInfo);
-
-    // In production, you would log to an error tracking service like Sentry
-    // Example: Sentry.captureException(error, { contexts: { react: errorInfo } });
   }
 
   /**
    * Reset error state to allow retry
    */
   handleReset = () => {
-    this.setState({ hasError: false, error: null });
+    this.setState({ hasError: false, error: null, eventId: null });
   };
 
   render() {
@@ -88,8 +111,14 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
         return this.props.fallback;
       }
 
-      // Otherwise, use default ErrorFallback component
-      return <ErrorFallback error={this.state.error} onReset={this.handleReset} />;
+      // Otherwise, use default ErrorFallback component with Sentry eventId
+      return (
+        <ErrorFallback
+          error={this.state.error}
+          onReset={this.handleReset}
+          eventId={this.state.eventId ?? undefined}
+        />
+      );
     }
 
     // No error, render children normally
