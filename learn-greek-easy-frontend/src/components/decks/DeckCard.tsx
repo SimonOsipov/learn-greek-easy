@@ -94,7 +94,7 @@ export const DeckCard: React.FC<DeckCardProps> = ({
           {/* Level Badge and Lock Icon */}
           <div className="flex flex-shrink-0 items-center gap-2">
             {isLocked && <Lock className="h-4 w-4 text-amber-500" aria-label="Premium locked" />}
-            <DeckBadge type="level" level={level} />
+            {!isCultureDeck && <DeckBadge type="level" level={level} />}
           </div>
         </div>
 
@@ -116,9 +116,9 @@ export const DeckCard: React.FC<DeckCardProps> = ({
         )}
 
         {/* Category Tag - hide for culture decks since they have their own badge */}
-        {!isCultureDeck && (
+        {!isCultureDeck && category !== 'culture' && (
           <div className="mt-2">
-            <span className="text-xs capitalize text-gray-600">{category}</span>
+            <DeckBadge type="category" category={category} />
           </div>
         )}
       </CardHeader>

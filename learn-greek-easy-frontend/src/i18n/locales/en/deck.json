@@ -124,6 +124,11 @@
     "actions": {
       "startLearning": "Start Learning",
       "continueLearning": "Continue Learning"
+    },
+    "categories": {
+      "vocabulary": "Vocabulary",
+      "grammar": "Grammar",
+      "phrases": "Phrases"
     }
   }
 }

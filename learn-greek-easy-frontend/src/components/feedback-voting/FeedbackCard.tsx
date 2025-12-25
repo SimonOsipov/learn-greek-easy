@@ -3,6 +3,8 @@
 import React from 'react';
 
 import { formatDistanceToNow } from 'date-fns';
+import { el } from 'date-fns/locale/el';
+import { ru } from 'date-fns/locale/ru';
 import { useTranslation } from 'react-i18next';
 
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -17,7 +19,18 @@ interface FeedbackCardProps {
 }
 
 export const FeedbackCard: React.FC<FeedbackCardProps> = ({ feedback }) => {
-  const { t } = useTranslation('feedback');
+  const { t, i18n } = useTranslation('feedback');
+
+  const getDateLocale = () => {
+    switch (i18n.language) {
+      case 'el':
+        return el;
+      case 'ru':
+        return ru;
+      default:
+        return undefined;
+    }
+  };
 
   return (
     <Card data-testid="feedback-card">
@@ -36,7 +49,10 @@ export const FeedbackCard: React.FC<FeedbackCardProps> = ({ feedback }) => {
             <FeedbackStatusBadge status={feedback.status} />
           </div>
           <p className="text-sm text-muted-foreground" data-testid="feedback-meta">
-            {formatDistanceToNow(new Date(feedback.created_at), { addSuffix: true })}
+            {formatDistanceToNow(new Date(feedback.created_at), {
+              addSuffix: true,
+              locale: getDateLocale(),
+            })}
             {feedback.author.full_name && ` ${t('list.by')} ${feedback.author.full_name}`}
           </p>
         </div>

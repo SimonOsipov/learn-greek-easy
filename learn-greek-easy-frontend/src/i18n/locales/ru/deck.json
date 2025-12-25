@@ -124,6 +124,11 @@
     "actions": {
       "startLearning": "Начать обучение",
       "continueLearning": "Продолжить обучение"
+    },
+    "categories": {
+      "vocabulary": "Словарь",
+      "grammar": "Грамматика",
+      "phrases": "Фразы"
     }
   }
 }
