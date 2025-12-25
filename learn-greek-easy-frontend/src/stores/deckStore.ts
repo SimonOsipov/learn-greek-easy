@@ -460,11 +460,9 @@ export const useDeckStore = create<DeckState>()(
             );
           }
 
-          // Initialize cards for study in the backend
+          // Initialize all cards in the deck for study in the backend
           // This creates card_statistics entries for the user
-          await studyAPI.initializeCards({
-            deck_id: deckId,
-          });
+          await studyAPI.initializeDeck(deckId);
 
           set({ isLoading: false, error: null });
 

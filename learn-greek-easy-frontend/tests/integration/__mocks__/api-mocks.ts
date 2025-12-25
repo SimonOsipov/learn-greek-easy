@@ -251,6 +251,7 @@ export const mockStudyAPI = {
       cards: mockStudyQueueCards,
     }),
     initializeCards: vi.fn().mockResolvedValue({ initialized_count: 10 }),
+    initializeDeck: vi.fn().mockResolvedValue({ initialized_count: 10 }),
   },
 };
 
