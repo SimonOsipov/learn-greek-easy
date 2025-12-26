@@ -1,3 +1,37 @@
+/**
+ * Structured logger for the application using loglevel.
+ *
+ * Features:
+ * - Leveled logging (trace, debug, info, warn, error)
+ * - Timestamps on all log messages
+ * - Environment-aware log levels (debug in dev, warn in prod)
+ * - Sentry integration in production (errors captured, warnings as breadcrumbs)
+ *
+ * @example
+ * // Default import (recommended)
+ * import log from '@/lib/logger';
+ *
+ * log.debug('Debugging info', { data });
+ * log.info('User action completed');
+ * log.warn('Deprecated feature used');
+ * log.error('Failed to fetch', error);
+ *
+ * @example
+ * // Named imports for convenience
+ * import { info, error } from '@/lib/logger';
+ *
+ * info('Component mounted');
+ * error('API call failed', err);
+ *
+ * @example
+ * // Runtime level adjustment (dev only)
+ * log.setLevel('trace'); // Show all logs
+ * log.setLevel('error'); // Only errors
+ *
+ * @see https://github.com/pimterry/loglevel
+ * @module lib/logger
+ */
+
 import * as Sentry from '@sentry/react';
 import log from 'loglevel';
 
