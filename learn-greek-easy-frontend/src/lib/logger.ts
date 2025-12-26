@@ -1,18 +1,48 @@
+import * as Sentry from '@sentry/react';
 import log from 'loglevel';
 
 // Store original factory before modification
 const originalFactory = log.methodFactory;
 
-// Add timestamp prefix via methodFactory
+// Add timestamp prefix and Sentry integration via methodFactory
 log.methodFactory = function (
   methodName: string,
   logLevel: log.LogLevelNumbers,
   loggerName: string | symbol
 ) {
   const rawMethod = originalFactory(methodName, logLevel, loggerName);
+
   return function (...args: unknown[]) {
     const timestamp = new Date().toISOString();
+
+    // Call original method with timestamp (existing behavior)
     rawMethod(`[${timestamp}]`, ...args);
+
+    // Send to Sentry in production
+    if (import.meta.env.PROD) {
+      const message = args
+        .map((arg) => (typeof arg === 'object' ? JSON.stringify(arg) : String(arg)))
+        .join(' ');
+
+      if (methodName === 'error') {
+        // Capture errors as Sentry events
+        Sentry.captureMessage(message, 'error');
+      } else if (methodName === 'warn') {
+        // Add warnings as breadcrumbs
+        Sentry.addBreadcrumb({
+          category: 'console',
+          message,
+          level: 'warning',
+        });
+      } else if (methodName === 'info') {
+        // Add info logs as breadcrumbs for context
+        Sentry.addBreadcrumb({
+          category: 'console',
+          message,
+          level: 'info',
+        });
+      }
+    }
   };
 };
 
