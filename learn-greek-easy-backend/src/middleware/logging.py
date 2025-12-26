@@ -16,6 +16,8 @@ from typing import Callable
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from src.core.sentry import set_request_context
+
 logger = logging.getLogger(__name__)
 
 
@@ -74,6 +76,9 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 
         # Store in request state for access by handlers
         request.state.request_id = request_id
+
+        # Set Sentry request context for correlation
+        set_request_context(request_id, request.url.path)
 
         # Log request start
         start_time = time.perf_counter()

@@ -35,6 +35,7 @@ requests = "^2.32.0"
 apscheduler = "^3.11.1"
 posthog = "^3.7.0"
 boto3 = "^1.42.15"
+sentry-sdk = { version = "^2.48", extras = ["fastapi", "sqlalchemy"] }
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.0"
@@ -178,6 +179,7 @@ markers = [
     "db: Database-related tests",
     "sm2: SM-2 spaced repetition algorithm tests",
     "posthog: PostHog analytics integration tests",
+    "sentry: Sentry error tracking integration tests",
     "progress: Progress API service tests",
     "achievements: Achievement system tests",
     "no_parallel: Tests that cannot run in parallel (sequential only)",
@@ -274,6 +276,7 @@ omit = [
     "src/api/v1/test/*",  # Test API endpoints (seed, etc.)
     # External integrations - tested by unit tests (99%+ coverage)
     "src/core/posthog.py",  # PostHog analytics - 44 unit tests, 99.1% coverage
+    "src/core/sentry.py",   # Sentry SDK - 57 unit tests, external integration
     "src/services/s3_service.py",  # AWS S3 service - tested by unit tests (100% coverage)
     # Static definition files (data only, no logic)
     "src/services/achievement_definitions.py",  # Achievement definitions

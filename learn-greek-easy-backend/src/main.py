@@ -20,6 +20,12 @@ from src.core.exceptions import BaseAPIException
 from src.core.logging import setup_logging
 from src.core.posthog import init_posthog, shutdown_posthog
 from src.core.redis import close_redis, init_redis
+from src.core.sentry import (
+    capture_exception_if_needed,
+    init_sentry,
+    is_sentry_enabled,
+    shutdown_sentry,
+)
 from src.db import close_db, init_db
 from src.middleware import (
     AuthLoggingMiddleware,
@@ -56,6 +62,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Initialize PostHog analytics
     init_posthog()
 
+    # Initialize Sentry error tracking
+    init_sentry()
+
     # Auto-seed on deploy (local dev only)
     if settings.seed_on_deploy and settings.can_seed_database():
         logger.info("SEED_ON_DEPLOY enabled, auto-seeding database...")
@@ -82,6 +91,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     # Shutdown
     logger.info("Shutting down Learn Greek Easy API")
+
+    # Shutdown Sentry (flush events before closing connections)
+    shutdown_sentry()
 
     # Shutdown PostHog analytics (flush events before closing connections)
     shutdown_posthog()
@@ -160,6 +172,8 @@ async def base_api_exception_handler(
     exc: BaseAPIException,
 ) -> JSONResponse:
     """Handle custom API exceptions."""
+    request_id = getattr(request.state, "request_id", "unknown")
+
     logger.error(
         f"API Exception: {exc.error_code}",
         extra={
@@ -167,8 +181,27 @@ async def base_api_exception_handler(
             "detail": exc.detail,
             "path": request.url.path,
             "method": request.method,
+            "request_id": request_id,
         },
     )
+
+    # Only capture 5xx errors to Sentry (not 4xx client errors)
+    if exc.status_code >= 500:
+        user_email = getattr(request.state, "user_email", None)
+        capture_exception_if_needed(
+            exc,
+            user_email=user_email,
+            extra={
+                "request_id": request_id,
+                "error_code": exc.error_code,
+                "path": request.url.path,
+                "method": request.method,
+            },
+        )
+
+    # Merge existing headers with X-Request-ID
+    headers = dict(exc.headers) if exc.headers else {}
+    headers.setdefault("X-Request-ID", request_id)
 
     return JSONResponse(
         status_code=exc.status_code,
@@ -178,9 +211,10 @@ async def base_api_exception_handler(
                 "code": exc.error_code,
                 "message": exc.detail,
                 "extra": exc.extra,
+                "request_id": request_id,
             },
         },
-        headers=exc.headers,
+        headers=headers,
     )
 
 
@@ -267,9 +301,24 @@ async def generic_exception_handler(
     exc: Exception,
 ) -> JSONResponse:
     """Handle unhandled exceptions."""
+    request_id = getattr(request.state, "request_id", "unknown")
+
     logger.exception(
         "Unhandled exception",
         extra={
+            "request_id": request_id,
+            "path": request.url.path,
+            "method": request.method,
+        },
+    )
+
+    # Capture to Sentry with request context
+    user_email = getattr(request.state, "user_email", None)
+    capture_exception_if_needed(
+        exc,
+        user_email=user_email,
+        extra={
+            "request_id": request_id,
             "path": request.url.path,
             "method": request.method,
         },
@@ -282,8 +331,10 @@ async def generic_exception_handler(
             "error": {
                 "code": "INTERNAL_SERVER_ERROR",
                 "message": "An unexpected error occurred",
+                "request_id": request_id,
             },
         },
+        headers={"X-Request-ID": request_id},
     )
 
 
@@ -369,6 +420,36 @@ if settings.debug:
                 "background_tasks": settings.feature_background_tasks,
             },
         }
+
+    @app.post("/debug/sentry-test")
+    async def trigger_sentry_test(request: Request) -> dict:
+        """Trigger a test exception to verify Sentry integration.
+
+        Returns information about whether the exception was captured.
+        """
+        try:
+            raise ValueError("This is a test exception for Sentry verification")
+        except Exception as exc:
+            request_id = getattr(request.state, "request_id", "test")
+            event_id = capture_exception_if_needed(
+                exc,
+                extra={
+                    "request_id": request_id,
+                    "test": True,
+                    "endpoint": "/debug/sentry-test",
+                },
+            )
+            return {
+                "success": True,
+                "sentry_enabled": is_sentry_enabled(),
+                "event_captured": event_id is not None,
+                "event_id": event_id,
+                "message": (
+                    "Test exception sent to Sentry"
+                    if event_id
+                    else "Sentry not enabled or capture failed"
+                ),
+            }
 
 
 # Include health check routes (not versioned - available at /health*)

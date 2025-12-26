@@ -19,7 +19,7 @@ Usage:
 
 from typing import Optional
 
-from fastapi import Depends
+from fastapi import Depends, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -33,6 +33,7 @@ from src.core.exceptions import (
     UserNotFoundException,
 )
 from src.core.security import verify_token
+from src.core.sentry import set_user_context
 from src.db.dependencies import get_db
 from src.db.models import User
 
@@ -42,6 +43,7 @@ security_scheme = HTTPBearer(auto_error=False)
 
 
 async def get_current_user(
+    request: Request,
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(security_scheme),
     db: AsyncSession = Depends(get_db),
 ) -> User:
@@ -99,6 +101,16 @@ async def get_current_user(
     if not user.is_active:
         raise UnauthorizedException(detail="User account has been deactivated.")
 
+    # Set Sentry user context for error tracking
+    set_user_context(
+        user_id=str(user.id),
+        email=user.email,
+        username=user.full_name,
+    )
+
+    # Store user email in request state for exception handlers
+    request.state.user_email = user.email
+
     return user
 
 
@@ -135,6 +147,7 @@ async def get_current_superuser(
 
 
 async def get_current_user_optional(
+    request: Request,
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(security_scheme),
     db: AsyncSession = Depends(get_db),
 ) -> Optional[User]:
@@ -185,6 +198,16 @@ async def get_current_user_optional(
     # User not found or inactive - treat as anonymous
     if user is None or not user.is_active:
         return None
+
+    # Set Sentry user context for error tracking
+    set_user_context(
+        user_id=str(user.id),
+        email=user.email,
+        username=user.full_name,
+    )
+
+    # Store user email in request state for exception handlers
+    request.state.user_email = user.email
 
     return user
 
