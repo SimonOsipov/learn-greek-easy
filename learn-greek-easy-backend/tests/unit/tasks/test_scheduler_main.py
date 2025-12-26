@@ -8,6 +8,11 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from loguru import logger
 
+# Import scheduler_main at module level to ensure setup_logging() runs
+# BEFORE any test fixtures add their handlers. This prevents test pollution
+# where setup_logging() removes the fixture's log capture handler.
+import src.scheduler_main as scheduler_main_module  # noqa: E402
+
 
 @pytest.fixture
 def loguru_caplog():
@@ -15,13 +20,22 @@ def loguru_caplog():
 
     Yields:
         StringIO: A StringIO object containing captured log messages.
+
+    Note:
+        The teardown handles ValueError gracefully because scheduler_main.main()
+        calls setup_logging() which removes ALL handlers including this one.
+        This prevents test pollution when tests run in different orders.
     """
     output = StringIO()
     handler_id = logger.add(output, format="{level} {message}", level="DEBUG")
     try:
         yield output
     finally:
-        logger.remove(handler_id)
+        try:
+            logger.remove(handler_id)
+        except ValueError:
+            # Handler was already removed by setup_logging() in scheduler_main
+            pass
 
 
 class TestSchedulerMainImports:
@@ -54,8 +68,6 @@ class TestHandleShutdown:
 
     def test_handle_shutdown_sets_event(self):
         """Test that handle_shutdown sets the shutdown_event."""
-        import src.scheduler_main as scheduler_main_module
-
         # Reset the shutdown event
         scheduler_main_module.shutdown_event = asyncio.Event()
         assert not scheduler_main_module.shutdown_event.is_set()
@@ -68,8 +80,6 @@ class TestHandleShutdown:
 
     def test_handle_shutdown_logs_signal_name(self, loguru_caplog):
         """Test that handle_shutdown logs the signal name."""
-        import src.scheduler_main as scheduler_main_module
-
         # Reset the shutdown event
         scheduler_main_module.shutdown_event = asyncio.Event()
 
@@ -81,8 +91,6 @@ class TestHandleShutdown:
 
     def test_handle_shutdown_with_sigterm(self, loguru_caplog):
         """Test handle_shutdown with SIGTERM signal."""
-        import src.scheduler_main as scheduler_main_module
-
         # Reset the shutdown event
         scheduler_main_module.shutdown_event = asyncio.Event()
 
@@ -98,8 +106,6 @@ class TestMainFeatureFlag:
     @pytest.mark.asyncio
     async def test_main_exits_when_feature_disabled(self, loguru_caplog):
         """Test that main() exits early when feature flag is disabled."""
-        import src.scheduler_main as scheduler_main_module
-
         # Reset the shutdown event
         scheduler_main_module.shutdown_event = asyncio.Event()
 
@@ -122,8 +128,6 @@ class TestMainFeatureFlag:
     @pytest.mark.asyncio
     async def test_main_continues_when_feature_enabled(self):
         """Test that main() continues when feature flag is enabled."""
-        import src.scheduler_main as scheduler_main_module
-
         # Create a new event that we can control
         test_event = asyncio.Event()
         scheduler_main_module.shutdown_event = test_event
@@ -169,8 +173,6 @@ class TestMainInitialization:
     @pytest.mark.asyncio
     async def test_main_initializes_redis(self):
         """Test that main() initializes Redis connection."""
-        import src.scheduler_main as scheduler_main_module
-
         test_event = asyncio.Event()
         scheduler_main_module.shutdown_event = test_event
 
@@ -206,8 +208,6 @@ class TestMainInitialization:
     @pytest.mark.asyncio
     async def test_main_starts_scheduler(self):
         """Test that main() starts the scheduler."""
-        import src.scheduler_main as scheduler_main_module
-
         test_event = asyncio.Event()
         scheduler_main_module.shutdown_event = test_event
 
@@ -241,8 +241,6 @@ class TestMainInitialization:
     @pytest.mark.asyncio
     async def test_main_logs_registered_jobs(self, loguru_caplog):
         """Test that main() logs registered jobs on startup."""
-        import src.scheduler_main as scheduler_main_module
-
         test_event = asyncio.Event()
         scheduler_main_module.shutdown_event = test_event
 
@@ -288,8 +286,6 @@ class TestMainSchedulerFailure:
     @pytest.mark.asyncio
     async def test_main_exits_when_scheduler_not_running(self, loguru_caplog):
         """Test that main() exits when scheduler fails to start."""
-        import src.scheduler_main as scheduler_main_module
-
         test_event = asyncio.Event()
         scheduler_main_module.shutdown_event = test_event
 
@@ -317,8 +313,6 @@ class TestMainSchedulerFailure:
     @pytest.mark.asyncio
     async def test_main_exits_when_scheduler_is_none(self, loguru_caplog):
         """Test that main() exits when get_scheduler returns None."""
-        import src.scheduler_main as scheduler_main_module
-
         test_event = asyncio.Event()
         scheduler_main_module.shutdown_event = test_event
 
@@ -348,8 +342,6 @@ class TestMainCleanup:
     @pytest.mark.asyncio
     async def test_main_cleanup_on_shutdown(self):
         """Test that main() performs cleanup on shutdown."""
-        import src.scheduler_main as scheduler_main_module
-
         test_event = asyncio.Event()
         scheduler_main_module.shutdown_event = test_event
 
@@ -387,8 +379,6 @@ class TestMainCleanup:
     @pytest.mark.asyncio
     async def test_main_cleanup_on_exception(self):
         """Test that main() performs cleanup even when exception occurs."""
-        import src.scheduler_main as scheduler_main_module
-
         test_event = asyncio.Event()
         scheduler_main_module.shutdown_event = test_event
 
@@ -416,8 +406,6 @@ class TestMainCleanup:
     @pytest.mark.asyncio
     async def test_main_cleanup_logs_messages(self, loguru_caplog):
         """Test that main() logs cleanup messages."""
-        import src.scheduler_main as scheduler_main_module
-
         test_event = asyncio.Event()
         scheduler_main_module.shutdown_event = test_event
 
@@ -458,8 +446,6 @@ class TestMainSignalHandlers:
     @pytest.mark.asyncio
     async def test_main_registers_signal_handlers(self):
         """Test that main() registers SIGTERM and SIGINT handlers."""
-        import src.scheduler_main as scheduler_main_module
-
         test_event = asyncio.Event()
         scheduler_main_module.shutdown_event = test_event
 
@@ -507,8 +493,6 @@ class TestShutdownEventGlobal:
 
     def test_shutdown_event_initially_not_set(self):
         """Test that shutdown_event is not initially set."""
-        import src.scheduler_main as scheduler_main_module
-
         # Create fresh event
         scheduler_main_module.shutdown_event = asyncio.Event()
         assert not scheduler_main_module.shutdown_event.is_set()
