@@ -218,6 +218,41 @@ curl http://localhost:8000/health/ready
 
 ---
 
+## Sentry Error Tracking
+
+### Configuration
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SENTRY_DSN` | None | Sentry DSN (disabled if not set) |
+| `SENTRY_ENVIRONMENT` | "development" | Environment tag |
+| `SENTRY_TRACES_SAMPLE_RATE` | 0.1 | Performance trace sampling |
+| `SENTRY_PROFILES_SAMPLE_RATE` | 0.1 | Profiling sample rate |
+| `SENTRY_SEND_DEFAULT_PII` | False | Include PII in events |
+| `SENTRY_DEBUG` | False | Enable SDK debug logging |
+
+### Test User Filtering
+
+Sentry automatically filters test users matching:
+- Email starting with `e2e_` or `test_`
+- Email containing `@test.`
+
+### Debug Testing
+
+```bash
+# Trigger a test exception (debug mode only)
+curl -X POST http://localhost:8000/debug/sentry-test
+```
+
+### Error Capture
+
+- Unhandled exceptions (500): Automatically captured
+- BaseAPIException (5xx): Captured
+- 4xx errors: Not captured (expected behavior)
+- Test user errors: Filtered
+
+---
+
 ## Environment Variables
 
 ### Setup
