@@ -6,6 +6,8 @@
  */
 import * as Sentry from '@sentry/react';
 
+import log from '@/lib/logger';
+
 // Only initialize Sentry in production
 if (import.meta.env.PROD && import.meta.env.VITE_SENTRY_DSN) {
   Sentry.init({
@@ -58,9 +60,9 @@ if (import.meta.env.PROD && import.meta.env.VITE_SENTRY_DSN) {
   });
 
   // Log that Sentry is initialized (visible in browser console)
-  console.info('[Sentry] Initialized for production');
+  log.info('[Sentry] Initialized for production');
 } else if (import.meta.env.DEV) {
-  console.info('[Sentry] Skipped - development environment');
+  log.info('[Sentry] Skipped - development environment');
 }
 
 export default Sentry;

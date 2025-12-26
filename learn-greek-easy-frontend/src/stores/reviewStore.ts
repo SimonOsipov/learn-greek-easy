@@ -11,6 +11,7 @@ import posthog from 'posthog-js';
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 
+import log from '@/lib/logger';
 import { reviewAPI } from '@/services/reviewAPI';
 import { studyAPI } from '@/services/studyAPI';
 import type { StudyQueueCard } from '@/services/studyAPI';
@@ -299,12 +300,12 @@ export const useReviewStore = create<ReviewState>()(
         const { activeSession, isCardFlipped } = get();
 
         if (!activeSession) {
-          console.warn('No active session. Cannot flip card.');
+          log.warn('No active session. Cannot flip card.');
           return;
         }
 
         if (isCardFlipped) {
-          console.warn('Card already flipped.');
+          log.warn('Card already flipped.');
           return;
         }
 
@@ -403,7 +404,7 @@ export const useReviewStore = create<ReviewState>()(
         } catch (error) {
           // Check if this is an expected "session cleared" error
           if (error instanceof Error && error.message === 'No active review session found') {
-            console.debug('rateCard: Session cleared during async operation, ignoring');
+            log.debug('rateCard: Session cleared during async operation, ignoring');
             set({ isLoading: false });
             return;
           }
@@ -427,7 +428,7 @@ export const useReviewStore = create<ReviewState>()(
         const { activeSession, currentCardIndex, sessionStats } = get();
 
         if (!activeSession) {
-          console.warn('No active session to pause');
+          log.warn('No active session to pause');
           return;
         }
 
@@ -683,10 +684,10 @@ export function recoverActiveSession(): boolean {
       canRate: false,
     });
 
-    console.log('Session recovered from crash:', session.sessionId);
+    log.info('Session recovered from crash:', session.sessionId);
     return true;
   } catch (error) {
-    console.error('Failed to recover session:', error);
+    log.error('Failed to recover session:', error);
     sessionStorage.removeItem('learn-greek-easy:active-session');
     return false;
   }

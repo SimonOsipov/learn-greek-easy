@@ -12,6 +12,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import log from '@/lib/logger';
 import { cn } from '@/lib/utils';
 
 export interface ConfirmDialogProps {
@@ -108,7 +109,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
       setIsOpen(false);
     } catch (error) {
       // Error should be handled by caller
-      console.error('ConfirmDialog: Error during confirmation:', error);
+      log.error('ConfirmDialog: Error during confirmation:', error);
     } finally {
       setInternalLoading(false);
     }

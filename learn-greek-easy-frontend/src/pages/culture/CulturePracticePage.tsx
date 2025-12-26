@@ -37,6 +37,7 @@ import {
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useTrackEvent } from '@/hooks/useTrackEvent';
+import log from '@/lib/logger';
 import { useCultureSessionStore } from '@/stores/cultureSessionStore';
 import type {
   CultureQuestionResponse,
@@ -235,7 +236,7 @@ export function CulturePracticePage() {
 
       startSession(deckId, 'Greek History', 'history', mockQuestions, config);
     } catch (err) {
-      console.error('Failed to initialize session:', err);
+      log.error('Failed to initialize session:', err);
     }
   }, [deckId, startSession]);
 
@@ -288,7 +289,7 @@ export function CulturePracticePage() {
           // Silent failure
         }
       } catch (err) {
-        console.error('Failed to submit answer:', err);
+        log.error('Failed to submit answer:', err);
       } finally {
         setIsSubmitting(false);
       }

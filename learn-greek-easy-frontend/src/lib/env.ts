@@ -2,6 +2,8 @@
  * Environment variable utilities
  */
 
+import log from './logger';
+
 /**
  * Get an environment variable with type safety
  */
@@ -65,8 +67,7 @@ export function getEnvironment(): 'development' | 'staging' | 'production' {
  */
 export function devLog(...args: unknown[]): void {
   if (isEnvironment('development') && getEnvBoolean('VITE_ENABLE_DEBUG_MODE')) {
-    // eslint-disable-next-line no-console
-    console.log('[DEV]', ...args);
+    log.debug('[DEV]', ...args);
   }
 }
 
@@ -75,7 +76,7 @@ export function devLog(...args: unknown[]): void {
  */
 export function devWarn(...args: unknown[]): void {
   if (isEnvironment('development')) {
-    console.warn('[DEV WARNING]', ...args);
+    log.warn('[DEV WARNING]', ...args);
   }
 }
 
@@ -83,7 +84,7 @@ export function devWarn(...args: unknown[]): void {
  * Error with context
  */
 export function devError(message: string, error?: unknown): void {
-  console.error(`[ERROR] ${message}`, error);
+  log.error(`[ERROR] ${message}`, error);
 
   // In production, you might want to send to error tracking service
   if (isEnvironment('production') && import.meta.env.VITE_SENTRY_DSN) {

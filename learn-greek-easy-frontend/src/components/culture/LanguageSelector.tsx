@@ -13,6 +13,7 @@ import {
 import type { SupportedLanguage } from '@/i18n';
 import { LANGUAGE_OPTIONS } from '@/i18n/types';
 import { trackCultureLanguageChanged } from '@/lib/analytics';
+import log from '@/lib/logger';
 import { cn } from '@/lib/utils';
 
 /**
@@ -113,7 +114,7 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
       try {
         localStorage.setItem(CULTURE_LANGUAGE_KEY, lang);
       } catch {
-        console.warn('[LanguageSelector] Could not save to localStorage');
+        log.warn('[LanguageSelector] Could not save to localStorage');
       }
 
       onChange(lang);

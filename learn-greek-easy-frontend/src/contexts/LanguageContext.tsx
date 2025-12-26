@@ -10,6 +10,7 @@ import {
 } from '@/i18n';
 import { LANGUAGE_OPTIONS, type LanguageOption } from '@/i18n/types';
 import { registerInterfaceLanguage, trackLanguageSwitch } from '@/lib/analytics';
+import log from '@/lib/logger';
 import { api } from '@/services/api';
 import { useAuthStore } from '@/stores/authStore';
 
@@ -101,7 +102,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     async (lang: SupportedLanguage, source: 'header' | 'settings' = 'header') => {
       // Validate language
       if (!SUPPORTED_LANGUAGES.includes(lang)) {
-        console.warn(`[LanguageContext] Unsupported language: ${lang}`);
+        log.warn(`[LanguageContext] Unsupported language: ${lang}`);
         return;
       }
 
@@ -125,7 +126,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             });
           } catch (apiError) {
             // Log but don't fail - local change still succeeded
-            console.error('[LanguageContext] Failed to sync language to backend:', apiError);
+            log.error('[LanguageContext] Failed to sync language to backend:', apiError);
             // Note: We could optionally show a toast here
           }
         }
@@ -134,17 +135,17 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         registerInterfaceLanguage(lang);
         trackLanguageSwitch(previousLang, lang, source, isAuthenticated);
 
-        console.debug(
+        log.debug(
           `[LanguageContext] Language changed: ${previousLang} -> ${lang} (source: ${source})`
         );
       } catch (error) {
-        console.error('[LanguageContext] Failed to change language:', error);
+        log.error('[LanguageContext] Failed to change language:', error);
 
         // Revert on failure
         try {
           await i18n.changeLanguage(previousLang);
         } catch (revertError) {
-          console.error('[LanguageContext] Failed to revert language:', revertError);
+          log.error('[LanguageContext] Failed to revert language:', revertError);
         }
 
         throw error;

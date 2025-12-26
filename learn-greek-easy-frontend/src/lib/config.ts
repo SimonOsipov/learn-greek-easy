@@ -2,6 +2,8 @@
  * Application configuration loaded from environment variables
  */
 
+import log from './logger';
+
 // Parse boolean environment variables
 const parseBoolean = (value: string | undefined): boolean => {
   return value === 'true';
@@ -54,18 +56,15 @@ if (isProduction) {
   const missingFields = requiredFields.filter((field) => !field.value).map((field) => field.key);
 
   if (missingFields.length > 0) {
-    console.error(`Missing required configuration fields: ${missingFields.join(', ')}`);
+    log.error(`Missing required configuration fields: ${missingFields.join(', ')}`);
   }
 }
 
 // Debug logging
 if (isDebugMode) {
-  // eslint-disable-next-line no-console
-  console.log('App Configuration:', config);
-  // eslint-disable-next-line no-console
-  console.log('Environment:', config.appEnv);
-  // eslint-disable-next-line no-console
-  console.log('Feature Flags:', config.features);
+  log.debug('App Configuration:', config);
+  log.debug('Environment:', config.appEnv);
+  log.debug('Feature Flags:', config.features);
 }
 
 // Export a function to get config values with type safety

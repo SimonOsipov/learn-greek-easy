@@ -24,6 +24,7 @@ import enProfile from '@/i18n/locales/en/profile.json';
 import enReview from '@/i18n/locales/en/review.json';
 import enSettings from '@/i18n/locales/en/settings.json';
 import enStatistics from '@/i18n/locales/en/statistics.json';
+import log from '@/lib/logger';
 
 // Initialize i18n for tests with English translations
 i18n.use(initReactI18next).init({
@@ -169,7 +170,7 @@ beforeAll(() => {
     // Ignore expected session cleanup errors - these occur when async operations
     // complete after the session has been cleared (race condition during test cleanup)
     if (event.reason?.message === 'No active review session found') {
-      console.debug('Test cleanup: Expected session error suppressed');
+      log.debug('Test cleanup: Expected session error suppressed');
       event.preventDefault();
       return;
     }

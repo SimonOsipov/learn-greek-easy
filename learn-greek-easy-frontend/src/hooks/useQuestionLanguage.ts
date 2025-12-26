@@ -3,6 +3,7 @@ import { useState, useCallback, useRef } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { SUPPORTED_LANGUAGES, type SupportedLanguage } from '@/i18n';
 import { trackCultureLanguageChanged } from '@/lib/analytics/cultureAnalytics';
+import log from '@/lib/logger';
 
 /**
  * localStorage key for persisting culture question language preference.
@@ -36,7 +37,7 @@ function getStoredLanguage(): SupportedLanguage | null {
     }
   } catch {
     // localStorage may be unavailable (e.g., private browsing)
-    console.warn('[useQuestionLanguage] Could not read from localStorage');
+    log.warn('[useQuestionLanguage] Could not read from localStorage');
   }
   return null;
 }
@@ -93,7 +94,7 @@ export function useQuestionLanguage(): UseQuestionLanguageResult {
     (lang: SupportedLanguage) => {
       // Validate language
       if (!SUPPORTED_LANGUAGES.includes(lang)) {
-        console.warn(`[useQuestionLanguage] Unsupported language: ${lang}`);
+        log.warn(`[useQuestionLanguage] Unsupported language: ${lang}`);
         return;
       }
 
@@ -112,7 +113,7 @@ export function useQuestionLanguage(): UseQuestionLanguageResult {
       try {
         localStorage.setItem(CULTURE_LANGUAGE_KEY, lang);
       } catch {
-        console.warn('[useQuestionLanguage] Could not save to localStorage');
+        log.warn('[useQuestionLanguage] Could not save to localStorage');
       }
 
       // Track analytics
@@ -130,7 +131,7 @@ export function useQuestionLanguage(): UseQuestionLanguageResult {
     try {
       localStorage.removeItem(CULTURE_LANGUAGE_KEY);
     } catch {
-      console.warn('[useQuestionLanguage] Could not remove from localStorage');
+      log.warn('[useQuestionLanguage] Could not remove from localStorage');
     }
 
     // Reset to current app language

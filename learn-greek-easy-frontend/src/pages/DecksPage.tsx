@@ -12,6 +12,7 @@ import type { DeckType } from '@/components/decks/DeckTypeFilter';
 import { CardSkeleton, EmptyState } from '@/components/feedback';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import log from '@/lib/logger';
 import { useDeckStore } from '@/stores/deckStore';
 
 export const DecksPage: React.FC = () => {
@@ -23,7 +24,7 @@ export const DecksPage: React.FC = () => {
   // Fetch decks on mount and when navigating back from detail page
   useEffect(() => {
     fetchDecks().catch((err) => {
-      console.error('Failed to fetch decks:', err);
+      log.error('Failed to fetch decks:', err);
     });
   }, [fetchDecks, location.key]); // location.key changes on navigation
 

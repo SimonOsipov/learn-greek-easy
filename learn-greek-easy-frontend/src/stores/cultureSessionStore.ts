@@ -8,6 +8,7 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 
+import log from '@/lib/logger';
 import { useAuthStore } from '@/stores/authStore';
 import type {
   CultureQuestionResponse,
@@ -90,7 +91,7 @@ function saveToSessionStorage(session: CultureSession): void {
     };
     sessionStorage.setItem(CULTURE_SESSION_STORAGE_KEY, JSON.stringify(recoveryData));
   } catch (error) {
-    console.warn('Failed to save culture session to sessionStorage:', error);
+    log.warn('Failed to save culture session to sessionStorage:', error);
   }
 }
 
@@ -101,7 +102,7 @@ function clearSessionStorage(): void {
   try {
     sessionStorage.removeItem(CULTURE_SESSION_STORAGE_KEY);
   } catch (error) {
-    console.warn('Failed to clear culture session from sessionStorage:', error);
+    log.warn('Failed to clear culture session from sessionStorage:', error);
   }
 }
 
@@ -117,7 +118,7 @@ function loadFromSessionStorage(): CultureSessionRecoveryData | null {
 
     // Check version compatibility
     if (recoveryData.version !== CULTURE_SESSION_RECOVERY_VERSION) {
-      console.warn('Culture session recovery data version mismatch, discarding');
+      log.warn('Culture session recovery data version mismatch, discarding');
       clearSessionStorage();
       return null;
     }
@@ -129,7 +130,7 @@ function loadFromSessionStorage(): CultureSessionRecoveryData | null {
 
     // Sessions older than 24 hours are not recoverable
     if (hoursSinceSave > 24) {
-      console.warn('Culture session recovery data too old, discarding');
+      log.warn('Culture session recovery data too old, discarding');
       clearSessionStorage();
       return null;
     }
@@ -142,7 +143,7 @@ function loadFromSessionStorage(): CultureSessionRecoveryData | null {
 
     return recoveryData;
   } catch (error) {
-    console.warn('Failed to load culture session from sessionStorage:', error);
+    log.warn('Failed to load culture session from sessionStorage:', error);
     clearSessionStorage();
     return null;
   }
@@ -235,13 +236,13 @@ export const useCultureSessionStore = create<CultureSessionState>()(
       answerQuestion: (selectedOption: number, answerResponse: CultureAnswerResponse) => {
         const { session } = get();
         if (!session || session.status !== 'active') {
-          console.warn('No active session to answer question');
+          log.warn('No active session to answer question');
           return;
         }
 
         const currentQuestion = session.questions[session.currentIndex];
         if (!currentQuestion) {
-          console.warn('No current question');
+          log.warn('No current question');
           return;
         }
 
@@ -294,7 +295,7 @@ export const useCultureSessionStore = create<CultureSessionState>()(
       nextQuestion: () => {
         const { session } = get();
         if (!session || session.status !== 'active') {
-          console.warn('No active session');
+          log.warn('No active session');
           return;
         }
 
@@ -339,7 +340,7 @@ export const useCultureSessionStore = create<CultureSessionState>()(
       pauseSession: () => {
         const { session } = get();
         if (!session || session.status !== 'active') {
-          console.warn('No active session to pause');
+          log.warn('No active session to pause');
           return;
         }
 
@@ -359,7 +360,7 @@ export const useCultureSessionStore = create<CultureSessionState>()(
       resumeSession: () => {
         const { session } = get();
         if (!session || session.status !== 'paused') {
-          console.warn('No paused session to resume');
+          log.warn('No paused session to resume');
           return;
         }
 
@@ -525,7 +526,7 @@ export const useCultureSessionStore = create<CultureSessionState>()(
         // Verify user matches
         const { user } = useAuthStore.getState();
         if (!user || user.id !== session.userId) {
-          console.warn('User mismatch, cannot recover session');
+          log.warn('User mismatch, cannot recover session');
           clearSessionStorage();
           set({ hasRecoverableSession: false });
           return false;
@@ -566,7 +567,7 @@ export const useCultureSessionStore = create<CultureSessionState>()(
         // Save updated session
         saveToSessionStorage(recoveredSession);
 
-        console.log('Culture session recovered:', session.sessionId);
+        log.info('Culture session recovered:', session.sessionId);
         return true;
       },
 

@@ -13,6 +13,7 @@ import { useState } from 'react';
 import { Trash2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import log from '@/lib/logger';
 
 import { AlertDialog, ConfirmDialog } from './index';
 
@@ -25,7 +26,7 @@ export function LogoutExample() {
   const handleLogout = async () => {
     // Simulate API call
     await new Promise((resolve) => setTimeout(resolve, 1000));
-    console.info('User logged out');
+    log.info('User logged out');
   };
 
   return (
@@ -55,7 +56,7 @@ export function DeleteDeckExample() {
   const handleDelete = async () => {
     // Simulate API call
     await new Promise((resolve) => setTimeout(resolve, 1500));
-    console.info('Deck deleted');
+    log.info('Deck deleted');
   };
 
   return (
@@ -83,7 +84,7 @@ export function DeleteDeckExample() {
  */
 export function CancelReviewExample() {
   const handleCancelReview = () => {
-    console.info('Review session cancelled');
+    log.info('Review session cancelled');
   };
 
   return (
@@ -105,11 +106,11 @@ export function UnsavedChangesExample() {
   const [showDialog, setShowDialog] = useState(false);
 
   const handleDiscard = () => {
-    console.info('Changes discarded');
+    log.info('Changes discarded');
   };
 
   const handleCancel = () => {
-    console.info('User chose to keep editing');
+    log.info('User chose to keep editing');
   };
 
   return (
@@ -192,12 +193,12 @@ export function WarningWithActionsExample() {
   const [showWarning, setShowWarning] = useState(false);
 
   const handleRetry = () => {
-    console.info('Retrying action');
+    log.info('Retrying action');
     setShowWarning(false);
   };
 
   const handleCancel = () => {
-    console.info('Action cancelled');
+    log.info('Action cancelled');
     setShowWarning(false);
   };
 

@@ -13,6 +13,7 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 
+import log from '@/lib/logger';
 import { xpAPI } from '@/services/xpAPI';
 import type {
   XPStatsResponse,
@@ -90,7 +91,7 @@ export const useXPStore = create<XPState>()(
 
         // Check cache validity (skip if cache valid and not forcing refresh)
         if (!forceRefresh && state.xpStats && isCacheValid(state.lastStatsFetch)) {
-          console.log('[xpStore] Using cached XP stats');
+          log.debug('[xpStore] Using cached XP stats');
           return;
         }
 
@@ -106,7 +107,7 @@ export const useXPStore = create<XPState>()(
             lastStatsFetch: Date.now(),
           });
         } catch (error) {
-          console.error('[xpStore] Failed to load XP stats:', error);
+          log.error('[xpStore] Failed to load XP stats:', error);
           set({
             error: error instanceof Error ? error.message : 'Failed to load XP stats',
             loadingStats: false,
@@ -123,7 +124,7 @@ export const useXPStore = create<XPState>()(
 
         // Check cache validity
         if (!forceRefresh && state.achievements && isCacheValid(state.lastAchievementsFetch)) {
-          console.log('[xpStore] Using cached achievements');
+          log.debug('[xpStore] Using cached achievements');
           return;
         }
 
@@ -138,7 +139,7 @@ export const useXPStore = create<XPState>()(
             lastAchievementsFetch: Date.now(),
           });
         } catch (error) {
-          console.error('[xpStore] Failed to load achievements:', error);
+          log.error('[xpStore] Failed to load achievements:', error);
           set({
             error: error instanceof Error ? error.message : 'Failed to load achievements',
             loadingAchievements: false,
@@ -161,7 +162,7 @@ export const useXPStore = create<XPState>()(
             loadingUnnotified: false,
           });
         } catch (error) {
-          console.error('[xpStore] Failed to load unnotified achievements:', error);
+          log.error('[xpStore] Failed to load unnotified achievements:', error);
           set({
             error: error instanceof Error ? error.message : 'Failed to load notifications',
             loadingUnnotified: false,
@@ -191,7 +192,7 @@ export const useXPStore = create<XPState>()(
             });
           }
         } catch (error) {
-          console.error('[xpStore] Failed to mark achievements notified:', error);
+          log.error('[xpStore] Failed to mark achievements notified:', error);
           // Non-blocking error - don't set error state
         }
       },

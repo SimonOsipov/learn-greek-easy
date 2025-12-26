@@ -162,12 +162,7 @@ export default [
       'import/no-unused-modules': 'warn',
 
       // General rules
-      'no-console': [
-        'warn',
-        {
-          allow: ['warn', 'error', 'info'],
-        },
-      ],
+      'no-console': 'error',
       'no-debugger': 'error',
       'no-alert': 'warn',
       'prefer-const': 'error',

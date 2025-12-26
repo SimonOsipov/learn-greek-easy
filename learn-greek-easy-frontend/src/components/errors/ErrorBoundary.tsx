@@ -2,6 +2,8 @@ import { Component, type ErrorInfo, type ReactNode } from 'react';
 
 import * as Sentry from '@sentry/react';
 
+import log from '@/lib/logger';
+
 import { ErrorFallback } from './ErrorFallback';
 
 /**
@@ -71,7 +73,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     // Log to console in development
     if (import.meta.env.DEV) {
-      console.error('ErrorBoundary caught an error:', error, errorInfo);
+      log.error('ErrorBoundary caught an error:', error, errorInfo);
     }
 
     // Report to Sentry with React component stack context

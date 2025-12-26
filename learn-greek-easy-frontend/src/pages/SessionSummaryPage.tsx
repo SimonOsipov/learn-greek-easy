@@ -9,6 +9,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useTrackEvent } from '@/hooks/useTrackEvent';
+import log from '@/lib/logger';
 import { useReviewStore } from '@/stores/reviewStore';
 
 /**
@@ -50,7 +51,7 @@ export function SessionSummaryPage() {
   // Redirect if no summary available
   useEffect(() => {
     if (!sessionSummary) {
-      console.warn('No session summary available, redirecting to deck');
+      log.warn('No session summary available, redirecting to deck');
       navigate(`/decks/${deckId}`, { replace: true });
     }
   }, [sessionSummary, deckId, navigate]);

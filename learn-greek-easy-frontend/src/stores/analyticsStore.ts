@@ -53,6 +53,7 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 
+import log from '@/lib/logger';
 import { progressAPI } from '@/services/progressAPI';
 import type {
   DashboardStatsResponse,
@@ -304,7 +305,7 @@ const updateAnalyticsSnapshot = async (
 ): Promise<void> => {
   // No-op: Backend analytics are derived from review data
   // Cache invalidation happens in the store method
-  console.log('[analyticsStore] Snapshot invalidation requested - cache will refresh on next load');
+  log.debug('[analyticsStore] Snapshot invalidation requested - cache will refresh on next load');
 };
 
 /**
@@ -338,7 +339,7 @@ export const useAnalyticsStore = create<AnalyticsState>()(
           state.dateRange === targetRange &&
           isCacheValid(state.lastFetch)
         ) {
-          console.log('[analyticsStore] Using cached data');
+          log.debug('[analyticsStore] Using cached data');
           return;
         }
 
@@ -355,7 +356,7 @@ export const useAnalyticsStore = create<AnalyticsState>()(
             lastFetch: Date.now(),
           });
         } catch (error) {
-          console.error('[analyticsStore] Failed to load analytics:', error);
+          log.error('[analyticsStore] Failed to load analytics:', error);
           set({
             error: error instanceof Error ? error.message : 'Failed to load analytics',
             loading: false,
@@ -391,7 +392,7 @@ export const useAnalyticsStore = create<AnalyticsState>()(
         const userId = state.dashboardData?.userId;
 
         if (!userId) {
-          console.warn('[analyticsStore] No userId available for refresh');
+          log.warn('[analyticsStore] No userId available for refresh');
           return;
         }
 
@@ -407,7 +408,7 @@ export const useAnalyticsStore = create<AnalyticsState>()(
             lastFetch: Date.now(),
           });
         } catch (error) {
-          console.error('[analyticsStore] Failed to refresh analytics:', error);
+          log.error('[analyticsStore] Failed to refresh analytics:', error);
           set({
             error: error instanceof Error ? error.message : 'Failed to refresh analytics',
             refreshing: false,
@@ -426,9 +427,9 @@ export const useAnalyticsStore = create<AnalyticsState>()(
           // Invalidate cache to force refresh on next load
           set({ lastFetch: null });
 
-          console.log('[analyticsStore] Analytics snapshot updated');
+          log.debug('[analyticsStore] Analytics snapshot updated');
         } catch (error) {
-          console.error('[analyticsStore] Failed to update snapshot:', error);
+          log.error('[analyticsStore] Failed to update snapshot:', error);
           // Non-blocking error - don't set error state
         }
       },
