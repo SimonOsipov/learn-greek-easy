@@ -194,11 +194,9 @@ class TestStartupSeeding:
                                         async with lifespan(mock_app):
                                             pass
 
-                                        # Verify completion was logged
+                                        # Verify completion was logged (loguru uses kwargs, not extra={})
                                         mock_logger.info.assert_any_call(
                                             "Auto-seed completed",
-                                            extra={
-                                                "users_created": 2,
-                                                "decks_created": 3,
-                                            },
+                                            users_created=2,
+                                            decks_created=3,
                                         )
