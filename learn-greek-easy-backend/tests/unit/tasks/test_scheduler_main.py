@@ -18,24 +18,27 @@ import src.scheduler_main as scheduler_main_module  # noqa: E402
 def loguru_caplog():
     """Capture loguru logs to a StringIO for test assertions.
 
+    This fixture patches setup_logging() to prevent it from removing the
+    test's capture handler. Without this patch, setup_logging() calls
+    logger.remove() which removes ALL handlers including our StringIO,
+    causing logs to go to stderr instead of being captured.
+
     Yields:
         StringIO: A StringIO object containing captured log messages.
-
-    Note:
-        The teardown handles ValueError gracefully because scheduler_main.main()
-        calls setup_logging() which removes ALL handlers including this one.
-        This prevents test pollution when tests run in different orders.
     """
     output = StringIO()
-    handler_id = logger.add(output, format="{level} {message}", level="DEBUG")
-    try:
-        yield output
-    finally:
+
+    # Patch setup_logging to prevent it from removing our capture handler
+    with patch.object(scheduler_main_module, "setup_logging"):
+        handler_id = logger.add(output, format="{level} {message}", level="DEBUG")
         try:
-            logger.remove(handler_id)
-        except ValueError:
-            # Handler was already removed by setup_logging() in scheduler_main
-            pass
+            yield output
+        finally:
+            try:
+                logger.remove(handler_id)
+            except ValueError:
+                # Handler was already removed (shouldn't happen with patch, but safe)
+                pass
 
 
 class TestSchedulerMainImports:
