@@ -9,6 +9,7 @@ import { WelcomeSection } from '@/components/display/WelcomeSection';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAnalytics } from '@/hooks/useAnalytics';
+import log from '@/lib/logger';
 import { useAuthStore } from '@/stores/authStore';
 import { useDeckStore } from '@/stores/deckStore';
 import type { Metric } from '@/types/dashboard';
@@ -46,7 +47,7 @@ export const Dashboard: React.FC = () => {
   // Fetch decks on mount
   useEffect(() => {
     fetchDecks().catch((error) => {
-      console.error('Failed to fetch decks:', error);
+      log.error('Failed to fetch decks:', error);
     });
   }, [fetchDecks]);
 
@@ -197,7 +198,7 @@ export const Dashboard: React.FC = () => {
                 key={metric.id}
                 {...metric}
                 tooltip={t('dashboard.metrics.tooltip', { label: metric.label.toLowerCase() })}
-                onClick={() => console.log(`Clicked metric: ${metric.label}`)}
+                onClick={() => log.debug(`Clicked metric: ${metric.label}`)}
               />
             ))}
           </div>

@@ -8,6 +8,7 @@ import React, {
   useState,
 } from 'react';
 
+import log from '@/lib/logger';
 import * as notificationAPI from '@/services/notificationAPI';
 import { useAuthStore } from '@/stores/authStore';
 import type { Notification } from '@/types/notification';
@@ -134,7 +135,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         setUnreadCount(count);
       }
     } catch (err) {
-      console.error('Failed to refresh unread count:', err);
+      log.error('Failed to refresh unread count:', err);
     }
   }, [isAuthenticated, unreadCount, fetchNotifications]);
 
@@ -147,7 +148,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       );
       setUnreadCount((prev) => Math.max(0, prev - 1));
     } catch (err) {
-      console.error('Failed to mark as read:', err);
+      log.error('Failed to mark as read:', err);
     }
   }, []);
 
@@ -159,7 +160,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       setNotifications((prev) => prev.map((n) => ({ ...n, read: true, read_at: now })));
       setUnreadCount(0);
     } catch (err) {
-      console.error('Failed to mark all as read:', err);
+      log.error('Failed to mark all as read:', err);
     }
   }, []);
 
@@ -174,7 +175,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
           setUnreadCount((prev) => Math.max(0, prev - 1));
         }
       } catch (err) {
-        console.error('Failed to delete notification:', err);
+        log.error('Failed to delete notification:', err);
       }
     },
     [notifications]
@@ -189,7 +190,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       setHasMore(false);
       setOffset(0);
     } catch (err) {
-      console.error('Failed to clear notifications:', err);
+      log.error('Failed to clear notifications:', err);
     }
   }, []);
 

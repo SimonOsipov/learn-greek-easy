@@ -34,6 +34,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Skeleton } from '@/components/ui/skeleton';
 import { useTrackEvent } from '@/hooks/useTrackEvent';
 import type { SupportedLanguage } from '@/i18n';
+import log from '@/lib/logger';
 import { cn } from '@/lib/utils';
 import { useCultureSessionStore } from '@/stores/cultureSessionStore';
 
@@ -109,7 +110,7 @@ export function CultureSessionSummaryPage() {
   // Redirect if no summary available
   useEffect(() => {
     if (!summary) {
-      console.warn('No culture session summary available, redirecting to decks');
+      log.warn('No culture session summary available, redirecting to decks');
       navigate('/decks', { replace: true });
     }
   }, [summary, navigate]);
