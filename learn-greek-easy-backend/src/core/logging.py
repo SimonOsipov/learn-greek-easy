@@ -1,123 +1,141 @@
-"""Logging configuration with structured JSON output."""
+"""Loguru-based logging configuration for the application."""
 
-import json
+import inspect
 import logging
-import logging.handlers
 import sys
-from pathlib import Path
-from typing import Any, Dict
+from typing import TYPE_CHECKING
+
+from loguru import logger
+
+if TYPE_CHECKING:
+    from loguru import Logger
 
 from src.config import settings
 
 
-class JSONFormatter(logging.Formatter):
-    """Format logs as JSON for structured logging."""
+class InterceptHandler(logging.Handler):
+    """Intercept standard library logging and route to loguru.
 
-    def format(self, record: logging.LogRecord) -> str:
-        """Format log record as JSON."""
-        log_data: Dict[str, Any] = {
-            "timestamp": self.formatTime(record, self.datefmt),
-            "level": record.levelname,
-            "logger": record.name,
-            "message": record.getMessage(),
-            "module": record.module,
-            "function": record.funcName,
-            "line": record.lineno,
-        }
+    This handler captures all logs from the standard logging module
+    and routes them through loguru for consistent formatting and output.
+    Third-party libraries (uvicorn, sqlalchemy, etc.) will automatically
+    have their logs formatted by loguru.
+    """
 
-        # Add exception info if present
-        if record.exc_info:
-            log_data["exception"] = self.formatException(record.exc_info)
+    def emit(self, record: logging.LogRecord) -> None:
+        """Emit a log record by routing it to loguru.
 
-        # Add extra fields if present
-        if hasattr(record, "extra"):
-            log_data["extra"] = record.extra
+        Args:
+            record: The log record from standard library logging.
+        """
+        # Get corresponding loguru level if it exists
+        try:
+            level: str | int = logger.level(record.levelname).name
+        except ValueError:
+            level = record.levelno
 
-        return json.dumps(log_data)
+        # Find caller from where originated the logged message
+        frame, depth = inspect.currentframe(), 0
+        while frame:
+            filename = frame.f_code.co_filename
+            is_logging = filename == logging.__file__
+            is_frozen = "importlib" in filename and "_bootstrap" in filename
+            if depth > 0 and not (is_logging or is_frozen):
+                break
+            frame = frame.f_back
+            depth += 1
+
+        logger.opt(depth=depth, exception=record.exc_info).log(level, record.getMessage())
 
 
-class ColoredFormatter(logging.Formatter):
-    """Colored formatter for development console output."""
+def intercept_standard_logging(loggers: list[str] | None = None) -> None:
+    """Install InterceptHandler to route stdlib logging through loguru.
 
-    COLORS = {
-        "DEBUG": "\033[36m",  # Cyan
-        "INFO": "\033[32m",  # Green
-        "WARNING": "\033[33m",  # Yellow
-        "ERROR": "\033[31m",  # Red
-        "CRITICAL": "\033[35m",  # Magenta
-    }
-    RESET = "\033[0m"
+    This function configures the standard library logging module to route
+    all log messages through loguru. This ensures consistent log formatting
+    across the application and third-party libraries.
 
-    def format(self, record: logging.LogRecord) -> str:
-        """Format with colors."""
-        log_color = self.COLORS.get(record.levelname, self.RESET)
-        record.levelname = f"{log_color}{record.levelname}{self.RESET}"
-        return super().format(record)
+    Args:
+        loggers: List of logger names to intercept. If None, intercepts
+                 the root logger (which captures all logging).
+
+    Example:
+        >>> intercept_standard_logging()  # Intercept all
+        >>> intercept_standard_logging(["uvicorn", "sqlalchemy"])  # Specific
+    """
+    if loggers is None:
+        loggers = [""]  # Root logger - captures all
+
+    for logger_name in loggers:
+        stdlib_logger = logging.getLogger(logger_name)
+        stdlib_logger.handlers = [InterceptHandler()]
+        stdlib_logger.setLevel(logging.DEBUG)  # Let loguru handle filtering
+        if logger_name:
+            stdlib_logger.propagate = False
 
 
 def setup_logging() -> None:
-    """Configure application logging."""
-    # Create logs directory
-    log_dir = Path(settings.log_file).parent
-    log_dir.mkdir(parents=True, exist_ok=True)
+    """Configure loguru based on environment.
 
-    # Root logger
-    logger = logging.getLogger()
-    logger.setLevel(settings.log_level.upper())
+    Production: JSON format for structured log parsing (Railway, etc.)
+    Development: Colorized human-readable format for console debugging
 
-    # Remove existing handlers
-    logger.handlers = []
+    Uses settings.log_level for filtering and settings.is_production
+    for format selection.
+    """
+    # Remove default handler to avoid duplicate logs
+    logger.remove()
 
-    # Console handler
-    console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setLevel(settings.log_level.upper())
-
-    if settings.log_format == "json":
-        console_handler.setFormatter(JSONFormatter())
-    else:
-        formatter = ColoredFormatter(
-            "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-            datefmt="%Y-%m-%d %H:%M:%S",
+    if settings.is_production:
+        # JSON format for production (Railway log parsing)
+        # serialize=True outputs each log as a JSON object with all metadata
+        logger.add(
+            sys.stdout,
+            serialize=True,
+            level=settings.log_level.upper(),
         )
-        console_handler.setFormatter(formatter)
+    else:
+        # Colorized format for development
+        # Human-readable with timestamps, levels, source location, and colored output
+        logger.add(
+            sys.stderr,
+            format=(
+                "<green>{time:YYYY-MM-DD HH:mm:ss}</green> | "
+                "<level>{level: <8}</level> | "
+                "<cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - "
+                "<level>{message}</level>"
+            ),
+            level=settings.log_level.upper(),
+            colorize=True,
+        )
 
-    logger.addHandler(console_handler)
-
-    # File handler with rotation
-    file_handler = logging.handlers.RotatingFileHandler(
-        settings.log_file,
-        maxBytes=settings.log_max_bytes,
-        backupCount=settings.log_backup_count,
-    )
-    file_handler.setLevel(logging.INFO)
-    file_handler.setFormatter(JSONFormatter())
-    logger.addHandler(file_handler)
-
-    # Error file handler
-    error_file_handler = logging.handlers.RotatingFileHandler(
-        settings.log_file.replace(".log", "_error.log"),
-        maxBytes=settings.log_max_bytes,
-        backupCount=settings.log_backup_count,
-    )
-    error_file_handler.setLevel(logging.ERROR)
-    error_file_handler.setFormatter(JSONFormatter())
-    logger.addHandler(error_file_handler)
-
-    # Third-party library log levels
-    logging.getLogger("uvicorn").setLevel(logging.INFO)
-    logging.getLogger("fastapi").setLevel(logging.INFO)
-    logging.getLogger("sqlalchemy").setLevel(logging.WARNING)
+    # Intercept standard library logging to route through loguru
+    # This ensures uvicorn, sqlalchemy, and other libraries use loguru formatting
+    intercept_standard_logging()
 
     logger.info(
         "Logging configured",
-        extra={
-            "level": settings.log_level,
-            "format": settings.log_format,
-            "file": settings.log_file,
-        },
+        level=settings.log_level,
+        production=settings.is_production,
+        format="json" if settings.is_production else "colorized",
     )
 
 
-def get_logger(name: str) -> logging.Logger:
-    """Get a logger instance."""
-    return logging.getLogger(name)
+def get_logger(name: str | None = None) -> "Logger":
+    """Get a contextualized logger instance.
+
+    Args:
+        name: Optional name to bind to the logger for context.
+              Typically __name__ of the calling module.
+
+    Returns:
+        A loguru logger instance, optionally with name context bound.
+
+    Example:
+        >>> from src.core.logging import get_logger
+        >>> logger = get_logger(__name__)
+        >>> logger.info("Processing request", user_id=123)
+    """
+    if name:
+        return logger.bind(name=name)
+    return logger

@@ -2,9 +2,43 @@
 
 import asyncio
 import signal
+from io import StringIO
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from loguru import logger
+
+# Import scheduler_main at module level to ensure setup_logging() runs
+# BEFORE any test fixtures add their handlers. This prevents test pollution
+# where setup_logging() removes the fixture's log capture handler.
+import src.scheduler_main as scheduler_main_module  # noqa: E402
+
+
+@pytest.fixture
+def loguru_caplog():
+    """Capture loguru logs to a StringIO for test assertions.
+
+    This fixture patches setup_logging() to prevent it from removing the
+    test's capture handler. Without this patch, setup_logging() calls
+    logger.remove() which removes ALL handlers including our StringIO,
+    causing logs to go to stderr instead of being captured.
+
+    Yields:
+        StringIO: A StringIO object containing captured log messages.
+    """
+    output = StringIO()
+
+    # Patch setup_logging to prevent it from removing our capture handler
+    with patch.object(scheduler_main_module, "setup_logging"):
+        handler_id = logger.add(output, format="{level} {message}", level="DEBUG")
+        try:
+            yield output
+        finally:
+            try:
+                logger.remove(handler_id)
+            except ValueError:
+                # Handler was already removed (shouldn't happen with patch, but safe)
+                pass
 
 
 class TestSchedulerMainImports:
@@ -37,8 +71,6 @@ class TestHandleShutdown:
 
     def test_handle_shutdown_sets_event(self):
         """Test that handle_shutdown sets the shutdown_event."""
-        import src.scheduler_main as scheduler_main_module
-
         # Reset the shutdown event
         scheduler_main_module.shutdown_event = asyncio.Event()
         assert not scheduler_main_module.shutdown_event.is_set()
@@ -49,40 +81,34 @@ class TestHandleShutdown:
         # Event should be set
         assert scheduler_main_module.shutdown_event.is_set()
 
-    def test_handle_shutdown_logs_signal_name(self, caplog):
+    def test_handle_shutdown_logs_signal_name(self, loguru_caplog):
         """Test that handle_shutdown logs the signal name."""
-        import src.scheduler_main as scheduler_main_module
-
         # Reset the shutdown event
         scheduler_main_module.shutdown_event = asyncio.Event()
 
-        with caplog.at_level("INFO"):
-            scheduler_main_module.handle_shutdown(signal.SIGINT, None)
+        scheduler_main_module.handle_shutdown(signal.SIGINT, None)
 
-        assert "SIGINT" in caplog.text
-        assert "graceful shutdown" in caplog.text.lower()
+        log_output = loguru_caplog.getvalue()
+        assert "SIGINT" in log_output
+        assert "graceful shutdown" in log_output.lower()
 
-    def test_handle_shutdown_with_sigterm(self, caplog):
+    def test_handle_shutdown_with_sigterm(self, loguru_caplog):
         """Test handle_shutdown with SIGTERM signal."""
-        import src.scheduler_main as scheduler_main_module
-
         # Reset the shutdown event
         scheduler_main_module.shutdown_event = asyncio.Event()
 
-        with caplog.at_level("INFO"):
-            scheduler_main_module.handle_shutdown(signal.SIGTERM, None)
+        scheduler_main_module.handle_shutdown(signal.SIGTERM, None)
 
-        assert "SIGTERM" in caplog.text
+        log_output = loguru_caplog.getvalue()
+        assert "SIGTERM" in log_output
 
 
 class TestMainFeatureFlag:
     """Test main() behavior with feature flag."""
 
     @pytest.mark.asyncio
-    async def test_main_exits_when_feature_disabled(self, caplog):
+    async def test_main_exits_when_feature_disabled(self, loguru_caplog):
         """Test that main() exits early when feature flag is disabled."""
-        import src.scheduler_main as scheduler_main_module
-
         # Reset the shutdown event
         scheduler_main_module.shutdown_event = asyncio.Event()
 
@@ -93,20 +119,18 @@ class TestMainFeatureFlag:
             with patch.object(
                 scheduler_main_module, "init_redis", new_callable=AsyncMock
             ) as mock_init_redis:
-                with caplog.at_level("WARNING"):
-                    await scheduler_main_module.main()
+                await scheduler_main_module.main()
 
                 # Redis should NOT be initialized when feature is disabled
                 mock_init_redis.assert_not_called()
 
-        assert "Background tasks disabled" in caplog.text
-        assert "FEATURE_BACKGROUND_TASKS=false" in caplog.text
+        log_output = loguru_caplog.getvalue()
+        assert "Background tasks disabled" in log_output
+        assert "FEATURE_BACKGROUND_TASKS=false" in log_output
 
     @pytest.mark.asyncio
     async def test_main_continues_when_feature_enabled(self):
         """Test that main() continues when feature flag is enabled."""
-        import src.scheduler_main as scheduler_main_module
-
         # Create a new event that we can control
         test_event = asyncio.Event()
         scheduler_main_module.shutdown_event = test_event
@@ -152,8 +176,6 @@ class TestMainInitialization:
     @pytest.mark.asyncio
     async def test_main_initializes_redis(self):
         """Test that main() initializes Redis connection."""
-        import src.scheduler_main as scheduler_main_module
-
         test_event = asyncio.Event()
         scheduler_main_module.shutdown_event = test_event
 
@@ -189,8 +211,6 @@ class TestMainInitialization:
     @pytest.mark.asyncio
     async def test_main_starts_scheduler(self):
         """Test that main() starts the scheduler."""
-        import src.scheduler_main as scheduler_main_module
-
         test_event = asyncio.Event()
         scheduler_main_module.shutdown_event = test_event
 
@@ -222,10 +242,8 @@ class TestMainInitialization:
                                 mock_setup.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_main_logs_registered_jobs(self, caplog):
+    async def test_main_logs_registered_jobs(self, loguru_caplog):
         """Test that main() logs registered jobs on startup."""
-        import src.scheduler_main as scheduler_main_module
-
         test_event = asyncio.Event()
         scheduler_main_module.shutdown_event = test_event
 
@@ -255,24 +273,22 @@ class TestMainInitialization:
                                     await asyncio.sleep(0.01)
                                     test_event.set()
 
-                                with caplog.at_level("INFO"):
-                                    await asyncio.gather(
-                                        scheduler_main_module.main(),
-                                        trigger_shutdown(),
-                                    )
+                                await asyncio.gather(
+                                    scheduler_main_module.main(),
+                                    trigger_shutdown(),
+                                )
 
-                                assert "test_job" in caplog.text
-                                assert "Test Job" in caplog.text
+                                log_output = loguru_caplog.getvalue()
+                                assert "test_job" in log_output
+                                assert "Test Job" in log_output
 
 
 class TestMainSchedulerFailure:
     """Test main() behavior when scheduler fails to start."""
 
     @pytest.mark.asyncio
-    async def test_main_exits_when_scheduler_not_running(self, caplog):
+    async def test_main_exits_when_scheduler_not_running(self, loguru_caplog):
         """Test that main() exits when scheduler fails to start."""
-        import src.scheduler_main as scheduler_main_module
-
         test_event = asyncio.Event()
         scheduler_main_module.shutdown_event = test_event
 
@@ -292,16 +308,14 @@ class TestMainSchedulerFailure:
                                 mock_scheduler.running = False
                                 mock_get_scheduler.return_value = mock_scheduler
 
-                                with caplog.at_level("ERROR"):
-                                    await scheduler_main_module.main()
+                                await scheduler_main_module.main()
 
-                                assert "Scheduler failed to start" in caplog.text
+                                log_output = loguru_caplog.getvalue()
+                                assert "Scheduler failed to start" in log_output
 
     @pytest.mark.asyncio
-    async def test_main_exits_when_scheduler_is_none(self, caplog):
+    async def test_main_exits_when_scheduler_is_none(self, loguru_caplog):
         """Test that main() exits when get_scheduler returns None."""
-        import src.scheduler_main as scheduler_main_module
-
         test_event = asyncio.Event()
         scheduler_main_module.shutdown_event = test_event
 
@@ -319,10 +333,10 @@ class TestMainSchedulerFailure:
                                 # Scheduler is None
                                 mock_get_scheduler.return_value = None
 
-                                with caplog.at_level("ERROR"):
-                                    await scheduler_main_module.main()
+                                await scheduler_main_module.main()
 
-                                assert "Scheduler failed to start" in caplog.text
+                                log_output = loguru_caplog.getvalue()
+                                assert "Scheduler failed to start" in log_output
 
 
 class TestMainCleanup:
@@ -331,8 +345,6 @@ class TestMainCleanup:
     @pytest.mark.asyncio
     async def test_main_cleanup_on_shutdown(self):
         """Test that main() performs cleanup on shutdown."""
-        import src.scheduler_main as scheduler_main_module
-
         test_event = asyncio.Event()
         scheduler_main_module.shutdown_event = test_event
 
@@ -370,8 +382,6 @@ class TestMainCleanup:
     @pytest.mark.asyncio
     async def test_main_cleanup_on_exception(self):
         """Test that main() performs cleanup even when exception occurs."""
-        import src.scheduler_main as scheduler_main_module
-
         test_event = asyncio.Event()
         scheduler_main_module.shutdown_event = test_event
 
@@ -397,10 +407,8 @@ class TestMainCleanup:
                         mock_close_redis.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_main_cleanup_logs_messages(self, caplog):
+    async def test_main_cleanup_logs_messages(self, loguru_caplog):
         """Test that main() logs cleanup messages."""
-        import src.scheduler_main as scheduler_main_module
-
         test_event = asyncio.Event()
         scheduler_main_module.shutdown_event = test_event
 
@@ -424,15 +432,15 @@ class TestMainCleanup:
                                     await asyncio.sleep(0.01)
                                     test_event.set()
 
-                                with caplog.at_level("INFO"):
-                                    await asyncio.gather(
-                                        scheduler_main_module.main(),
-                                        trigger_shutdown(),
-                                    )
+                                await asyncio.gather(
+                                    scheduler_main_module.main(),
+                                    trigger_shutdown(),
+                                )
 
-                                assert "Shutting down scheduler" in caplog.text
-                                assert "Closing Redis connection" in caplog.text
-                                assert "Scheduler service stopped" in caplog.text
+                                log_output = loguru_caplog.getvalue()
+                                assert "Shutting down scheduler" in log_output
+                                assert "Closing Redis connection" in log_output
+                                assert "Scheduler service stopped" in log_output
 
 
 class TestMainSignalHandlers:
@@ -441,8 +449,6 @@ class TestMainSignalHandlers:
     @pytest.mark.asyncio
     async def test_main_registers_signal_handlers(self):
         """Test that main() registers SIGTERM and SIGINT handlers."""
-        import src.scheduler_main as scheduler_main_module
-
         test_event = asyncio.Event()
         scheduler_main_module.shutdown_event = test_event
 
@@ -490,8 +496,6 @@ class TestShutdownEventGlobal:
 
     def test_shutdown_event_initially_not_set(self):
         """Test that shutdown_event is not initially set."""
-        import src.scheduler_main as scheduler_main_module
-
         # Create fresh event
         scheduler_main_module.shutdown_event = asyncio.Event()
         assert not scheduler_main_module.shutdown_event.is_set()

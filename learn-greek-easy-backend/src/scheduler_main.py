@@ -15,22 +15,19 @@ Railway Configuration:
 """
 
 import asyncio
-import logging
 import signal
 import sys
 from types import FrameType
 from typing import Optional
 
 from src.config import settings
+from src.core.logging import get_logger, setup_logging
 from src.core.redis import close_redis, init_redis
 from src.tasks.scheduler import get_scheduler, setup_scheduler, shutdown_scheduler
 
-# Configure logging
-logging.basicConfig(
-    level=getattr(logging, settings.log_level.upper()),
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-)
-logger = logging.getLogger(__name__)
+# Configure logging with loguru
+setup_logging()
+logger = get_logger(__name__)
 
 # Global shutdown event
 shutdown_event = asyncio.Event()

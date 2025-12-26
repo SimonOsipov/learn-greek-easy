@@ -501,3 +501,51 @@ def reset_test_state() -> Generator[None, None, None]:
     # Setup: nothing to do yet
     yield
     # Teardown: nothing to do yet (database cleanup handled by db_session)
+
+
+# =============================================================================
+# Loguru Integration Fixtures
+# =============================================================================
+
+
+@pytest.fixture
+def caplog_loguru(
+    caplog: pytest.LogCaptureFixture,
+) -> Generator[pytest.LogCaptureFixture, None, None]:
+    """Capture loguru logs via stdlib caplog.
+
+    This fixture ensures that loguru logs are routed through stdlib logging,
+    allowing pytest's caplog fixture to capture them.
+
+    This is needed because loguru doesn't integrate with caplog by default.
+    The InterceptHandler routes loguru logs to stdlib, and this fixture
+    ensures that interception is properly configured for tests.
+
+    Args:
+        caplog: The pytest log capture fixture.
+
+    Yields:
+        LogCaptureFixture: The caplog fixture with loguru integration.
+    """
+    import logging
+
+    from loguru import logger
+
+    # Ensure loguru logs are routed to stdlib logging for caplog to capture
+    class PropagateHandler(logging.Handler):
+        """Handler that propagates log records to logging.info for caplog."""
+
+        def emit(self, record: logging.LogRecord) -> None:
+            logging.getLogger(record.name).handle(record)
+
+    # Add a handler to loguru that routes to stdlib
+    handler_id = logger.add(
+        PropagateHandler(),
+        format="{message}",
+        level="DEBUG",
+    )
+
+    try:
+        yield caplog
+    finally:
+        logger.remove(handler_id)
