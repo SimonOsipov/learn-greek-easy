@@ -265,6 +265,18 @@ class Settings(BaseSettings):
     sentry_dsn: Optional[str] = Field(default=None, description="Sentry DSN")
     sentry_environment: str = Field(default="development", description="Sentry environment")
     sentry_traces_sample_rate: float = Field(default=0.1, description="Sentry trace sample rate")
+    sentry_profiles_sample_rate: float = Field(
+        default=0.1,
+        description="Sentry profiling sample rate (requires tracing enabled)",
+    )
+    sentry_send_default_pii: bool = Field(
+        default=False,
+        description="Include PII (emails, IPs) in Sentry events",
+    )
+    sentry_debug: bool = Field(
+        default=False,
+        description="Enable Sentry SDK debug logging",
+    )
 
     # =========================================================================
     # Frontend Integration
@@ -467,6 +479,11 @@ class Settings(BaseSettings):
     def is_testing(self) -> bool:
         """Check if running tests."""
         return self.app_env == "testing" or self.testing
+
+    @property
+    def sentry_enabled(self) -> bool:
+        """Check if Sentry is configured and should be enabled."""
+        return bool(self.sentry_dsn) and not self.is_testing
 
     @property
     def google_oauth_configured(self) -> bool:
