@@ -1187,3 +1187,86 @@ class TestGetFeedbackMessage:
         )
 
         assert result == "Not quite. Review this question."
+
+
+# =============================================================================
+# Test Answer History Recording
+# =============================================================================
+
+
+class TestProcessAnswerHistory:
+    """Tests for answer history recording in process_answer."""
+
+    @pytest.mark.asyncio
+    async def test_process_answer_records_answer_history(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+        culture_deck: CultureDeck,
+        culture_questions: list[CultureQuestion],
+        mock_s3_service,
+    ):
+        """Should create CultureAnswerHistory record on answer."""
+        service = CultureQuestionService(db_session, s3_service=mock_s3_service)
+        question = culture_questions[0]
+
+        await service.process_answer(
+            user_id=test_user.id,
+            question_id=question.id,
+            selected_option=1,
+            time_taken=10,
+            language="en",
+        )
+
+        # Verify history was created
+        from sqlalchemy import select
+
+        from src.db.models import CultureAnswerHistory
+
+        result = await db_session.execute(
+            select(CultureAnswerHistory).where(
+                CultureAnswerHistory.user_id == test_user.id,
+                CultureAnswerHistory.question_id == question.id,
+            )
+        )
+        history = result.scalar_one()
+        assert history.is_correct is True
+        assert history.selected_option == 1
+        assert history.language == "en"
+
+
+# =============================================================================
+# Test Get Question Deck Category
+# =============================================================================
+
+
+class TestGetQuestionDeckCategory:
+    """Tests for get_question_deck_category method."""
+
+    @pytest.mark.asyncio
+    async def test_get_question_deck_category_returns_category(
+        self,
+        db_session: AsyncSession,
+        culture_deck: CultureDeck,
+        culture_questions: list[CultureQuestion],
+        mock_s3_service,
+    ):
+        """Should return deck category for a question."""
+        service = CultureQuestionService(db_session, s3_service=mock_s3_service)
+        question = culture_questions[0]
+
+        category = await service.get_question_deck_category(question.id)
+
+        assert category == culture_deck.category
+
+    @pytest.mark.asyncio
+    async def test_get_question_deck_category_raises_for_invalid_question(
+        self,
+        db_session: AsyncSession,
+        mock_s3_service,
+    ):
+        """Should raise CultureQuestionNotFoundException for invalid question."""
+        service = CultureQuestionService(db_session, s3_service=mock_s3_service)
+
+        with pytest.raises(CultureQuestionNotFoundException):
+            await service.get_question_deck_category(uuid4())

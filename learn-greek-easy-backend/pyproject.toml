@@ -276,6 +276,7 @@ omit = [
     "src/api/v1/test/*",  # Test API endpoints (seed, etc.)
     # External integrations - tested by unit tests (99%+ coverage)
     "src/core/posthog.py",  # PostHog analytics - 44 unit tests, 99.1% coverage
+    "src/core/sentry.py",   # Sentry SDK - 57 unit tests, external integration
     "src/services/s3_service.py",  # AWS S3 service - tested by unit tests (100% coverage)
     # Static definition files (data only, no logic)
     "src/services/achievement_definitions.py",  # Achievement definitions
