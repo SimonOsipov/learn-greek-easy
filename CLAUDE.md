@@ -220,36 +220,21 @@ curl http://localhost:8000/health/ready
 
 ## Sentry Error Tracking
 
-### Configuration
+Set `SENTRY_DSN` env var to enable. Test users (`e2e_*`, `test_*`, `@test.`) are auto-filtered.
+Captures: 500 errors, unhandled exceptions. Does NOT capture: 4xx errors.
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `SENTRY_DSN` | None | Sentry DSN (disabled if not set) |
-| `SENTRY_ENVIRONMENT` | "development" | Environment tag |
-| `SENTRY_TRACES_SAMPLE_RATE` | 0.1 | Performance trace sampling |
-| `SENTRY_PROFILES_SAMPLE_RATE` | 0.1 | Profiling sample rate |
-| `SENTRY_SEND_DEFAULT_PII` | False | Include PII in events |
-| `SENTRY_DEBUG` | False | Enable SDK debug logging |
+---
 
-### Test User Filtering
+## Structured Logging
 
-Sentry automatically filters test users matching:
-- Email starting with `e2e_` or `test_`
-- Email containing `@test.`
+| Component | Library | Location |
+|-----------|---------|----------|
+| Backend | Loguru | `src/core/logging.py` |
+| Frontend | loglevel | `src/lib/logger.ts` |
 
-### Debug Testing
+**Usage**: `from loguru import logger` (backend) or `import log from '@/lib/logger'` (frontend)
 
-```bash
-# Trigger a test exception (debug mode only)
-curl -X POST http://localhost:8000/debug/sentry-test
-```
-
-### Error Capture
-
-- Unhandled exceptions (500): Automatically captured
-- BaseAPIException (5xx): Captured
-- 4xx errors: Not captured (expected behavior)
-- Test user errors: Filtered
+**NEVER log**: Passwords, JWT tokens, API keys, emails, PII.
 
 ---
 
@@ -458,128 +443,12 @@ Set `SEED_ON_DEPLOY=true` to automatically seed the database when the applicatio
 
 ## Bug Research Workflow
 
-**CRITICAL**: When investigating bugs or unexpected behavior, DO NOT GUESS. Use this workflow to observe actual behavior with Playwright MCP.
+**DO NOT GUESS** - Use Playwright MCP to observe actual behavior.
 
-### Why This Matters
-
-- **No guessing**: Observe actual behavior instead of assuming
-- **Reproducible**: Same seeded data ensures consistent reproduction
-- **Visual proof**: Screenshots document the issue
-- **Faster debugging**: See exactly what users see
-
-### Step 1: Start Dev Environment
-
-```bash
-# Start full stack with docker-compose
-cd /Users/samosipov/Downloads/learn-greek-easy && docker-compose -f docker-compose.dev.yml up -d
-
-# Verify services are running
-docker-compose -f docker-compose.dev.yml ps
-
-# Check backend is healthy
-curl http://localhost:8000/health
-
-# Check frontend is running
-curl http://localhost:5173
-```
-
-### Step 2: Seed Test Data
-
-```bash
-# Check seeding is enabled
-curl http://localhost:8000/api/v1/test/seed/status
-
-# Full seed (truncate + create all test data)
-curl -X POST http://localhost:8000/api/v1/test/seed/all
-
-# Or use CLI
-cd /Users/samosipov/Downloads/learn-greek-easy/learn-greek-easy-backend && \
-TEST_SEED_ENABLED=true /Users/samosipov/.local/bin/poetry run python scripts/seed_e2e_data.py
-```
-
-**Test Users Available After Seeding**:
-| Email | Password | Role |
-|-------|----------|------|
-| e2e_learner@test.com | TestPassword123! | Regular user with progress |
-| e2e_beginner@test.com | TestPassword123! | New user, no progress |
-| e2e_advanced@test.com | TestPassword123! | Advanced user |
-| e2e_admin@test.com | TestPassword123! | Admin user |
-
-### Step 3: Use Playwright MCP to Investigate
-
-Use MCP Playwright tools to visually verify and investigate:
-
-```yaml
-# Navigate to the page with the issue
-mcp__playwright__browser_navigate:
-  url: "http://localhost:5173"
-
-# Take a snapshot to see the current state (better than screenshot for actions)
-mcp__playwright__browser_snapshot
-
-# Take a screenshot for documentation
-mcp__playwright__browser_take_screenshot:
-  filename: "bug-investigation.png"
-
-# Interact with elements to reproduce the bug
-mcp__playwright__browser_click:
-  element: "Login button"
-  ref: "[ref from snapshot]"
-
-# Fill forms
-mcp__playwright__browser_type:
-  element: "Email input"
-  ref: "[ref from snapshot]"
-  text: "e2e_learner@test.com"
-
-# Check console for errors
-mcp__playwright__browser_console_messages:
-  onlyErrors: true
-
-# Check network requests
-mcp__playwright__browser_network_requests
-```
-
-### Step 4: Document Findings
-
-After investigation, document:
-1. **Actual behavior observed** (with screenshots)
-2. **Expected behavior** (from task/PRD)
-3. **Steps to reproduce** (with Playwright commands used)
-4. **Console errors** (if any)
-5. **Network failures** (if any)
-6. **Root cause identified** (if found)
-
-### Common Investigation Patterns
-
-| Scenario | Playwright Tools to Use |
-|----------|------------------------|
-| UI not rendering | `browser_snapshot` + `browser_take_screenshot` |
-| Button not working | `browser_click` + `browser_console_messages` |
-| Form submission fails | `browser_type` + `browser_network_requests` |
-| Navigation broken | `browser_navigate` + `browser_snapshot` |
-| Error state display | `browser_snapshot` + `browser_take_screenshot` |
-| Auth issues | Login flow + `browser_network_requests` |
-
-### Full Investigation Example
-
-```bash
-# 1. Start environment
-docker-compose -f docker-compose.dev.yml up -d
-
-# 2. Seed data
-curl -X POST http://localhost:8000/api/v1/test/seed/all
-
-# 3. Use Playwright MCP tools:
-# - Navigate to http://localhost:5173
-# - Take snapshot to see page structure
-# - Click on elements to reproduce bug
-# - Take screenshot for documentation
-# - Check console for errors
-# - Check network requests for API failures
-
-# 4. Document findings in task description
-```
+1. Start dev environment: `docker-compose -f docker-compose.dev.yml up -d`
+2. Seed test data: `curl -X POST http://localhost:8000/api/v1/test/seed/all`
+3. Use Playwright MCP: `browser_navigate` → `browser_snapshot` → `browser_click` → `browser_console_messages`
+4. Document: actual behavior, expected behavior, console errors, network failures
 
 ---
 
@@ -599,109 +468,12 @@ curl -X POST http://localhost:8000/api/v1/test/seed/all
 
 ---
 
-## Git Workflow for Tasks
-
-**CRITICAL**: All task implementations must follow this workflow:
-
-### 1. Create Feature Branch
-```bash
-# Before starting any task
-git checkout main
-git pull origin main
-git checkout -b feature/[task-id]-short-description
-
-# Examples:
-git checkout -b feature/task-140-response-formatting
-git checkout -b fix/task-141-api-versioning
-```
-
-### 2. Implement and Commit
-```bash
-# Make changes, then commit
-git add .
-git commit -m "[task-id] Description of changes"
-
-# Example:
-git commit -m "[task-140] Add response formatting utilities"
-```
-
-### 3. Push and Create PR
-```bash
-# Push branch
-git push -u origin feature/[task-id]-short-description
-
-# Create PR using GitHub CLI
-gh pr create --title "[task-id] Feature description" --body "## Summary
-- Description of changes
-
-## Test Plan
-- How to verify
-
-🤖 Generated with [Claude Code](https://claude.com/claude-code)"
-```
-
-### 4. Add PR Link to Task
-After creating PR, update task description in Vibe Kanban with the PR link.
-
-### Branch Naming Convention
-
-| Type | Pattern | Example |
-|------|---------|---------|
-| Feature | `feature/[task-id]-description` | `feature/task-140-response-formatting` |
-| Bug Fix | `fix/[task-id]-description` | `fix/task-141-validation-error` |
-| Refactor | `refactor/[task-id]-description` | `refactor/task-142-cleanup` |
-
-### Task Completion Rules
-
-- **Executor**: Creates branch, implements, creates PR, adds PR link to notes
-- **Executor**: Leaves status as "In Progress" after PR creation
-- **QA Agent**: Verifies implementation, marks task as "Done"
-- **Only QA can mark tasks as Done!**
-
----
-
 ## Pre-commit Hooks
 
-### First-Time Setup
+Setup: `./scripts/setup-hooks.sh` or `pip install pre-commit && pre-commit install`
 
-```bash
-# Option 1: Use setup script (recommended)
-./scripts/setup-hooks.sh
-
-# Option 2: Manual setup
-pip install pre-commit  # or: brew install pre-commit
-pre-commit install
-```
-
-### Daily Usage
-
-Pre-commit hooks run automatically on `git commit`. No action needed!
-
-```bash
-# If hooks fail:
-# 1. Auto-fixed files are already staged
-# 2. Review changes: git diff
-# 3. Stage and commit again: git add . && git commit
-
-# Manual commands
-pre-commit run                    # Run on staged files only
-pre-commit run --all-files        # Run on entire codebase
-pre-commit run black --all-files  # Run specific hook
-pre-commit autoupdate             # Update hook versions
-
-# Skip hooks (emergency only!)
-git commit --no-verify -m "message"
-```
-
-### Troubleshooting
-
-| Issue | Solution |
-|-------|----------|
-| "pre-commit: command not found" | Run: `pip install pre-commit` |
-| Hook fails but CI passes | Run: `pre-commit autoupdate` |
-| "npm: command not found" in hook | Ensure Node.js is installed |
-| MyPy missing dependencies | Run: `cd learn-greek-easy-backend && poetry install` |
-| Want to skip hooks once | Use: `git commit --no-verify` |
+Hooks run automatically on `git commit`. If hooks fail, stage fixed files and commit again.
+Skip hooks (emergency): `git commit --no-verify`
 
 ---
 
@@ -762,258 +534,22 @@ gh pr edit 123 --remove-label "visual-test"
 
 ---
 
-## Railway Production Backend Privacy
+## Railway
 
-**CRITICAL**: In production, the backend service should NOT have a public domain. It should only be accessible via Railway's private network through the frontend nginx proxy.
+### Production Backend Privacy
 
-### Network Architecture
+Production backend has NO public domain - only accessible via frontend nginx proxy (`http://backend:8000`).
+CORS: `CORS_ORIGINS=https://learn-greek-frontend.up.railway.app`
 
-| Environment | Frontend Access | Backend Access |
-|-------------|-----------------|----------------|
-| **Production** | Public (https://learn-greek-frontend.up.railway.app) | Private (http://backend:8000 - internal only) |
-| **Preview/Dev** | Public | Public (for testing) |
+See **[docs/railway-backend-privacy.md](docs/railway-backend-privacy.md)** for setup.
 
-### Security Benefits
-
-1. Eliminates direct backend access in production
-2. Reduces attack surface (backend not publicly discoverable)
-3. Enforces gateway pattern (all requests via frontend)
-4. CORS defense-in-depth
-
-### CORS Configuration
-
-Backend CORS must be configured to allow only the production frontend:
-
-**Environment Variable (Production Backend)**:
-```bash
-CORS_ORIGINS=https://learn-greek-frontend.up.railway.app
-```
-
-This is configured in `.railway/variables.json` under the `production` section.
-
-### Implementation Guide
-
-For detailed steps on removing the backend public domain and configuring production security, see:
-
-**[docs/railway-backend-privacy.md](docs/railway-backend-privacy.md)**
-
-Key steps:
-1. Update backend `CORS_ORIGINS` environment variable in Railway
-2. Remove backend public domain via Railway Dashboard (Settings → Public Networking → Remove Domain)
-3. Verify frontend can reach backend via private network (`http://backend:8000`)
-4. Test that direct backend access fails (connection refused)
-
-### Verification
-
-After implementing backend privacy:
-
-```bash
-# Frontend health check should work
-curl https://learn-greek-frontend.up.railway.app/api/health
-
-# Direct backend access should fail
-curl https://learn-greek-backend.up.railway.app/health
-# Expected: Connection refused or 404
-```
-
----
-
-## Railway PR Preview Environments
-
-Railway PR preview environments allow testing changes in isolated environments before merging.
-
-### Configuration Files
-
-| File | Purpose |
-|------|---------|
-| `railway.json` | Root project configuration |
-| `learn-greek-easy-backend/railway.json` | Backend service config |
-| `learn-greek-easy-frontend/railway.json` | Frontend service config |
-| `.railway/variables.json` | Environment variable templates |
-| `scripts/railway-preview.sh` | CLI helper script |
-
-### GitHub Secrets Required
-
-Configure the following secrets in GitHub repository settings:
-
-| Secret | Description | How to Generate |
-|--------|-------------|-----------------|
-| `RAILWAY_TOKEN` | Railway API token for CI/CD | Railway Dashboard > Account Settings > Tokens > Create Token |
-| `PREVIEW_JWT_SECRET` | JWT secret for preview environments | `openssl rand -hex 32` |
-
-### Setting Up Railway Token
-
-1. Go to [Railway Dashboard](https://railway.app/dashboard)
-2. Click on your profile icon (top right)
-3. Select **Account Settings**
-4. Navigate to **Tokens** section
-5. Click **Create Token**
-6. Name it (e.g., "GitHub Actions PR Preview")
-7. Copy the token and add to GitHub Secrets
-
-### Setting Up GitHub Secrets
-
-1. Go to GitHub repository > **Settings** > **Secrets and variables** > **Actions**
-2. Click **New repository secret**
-3. Add `RAILWAY_TOKEN` with the token from Railway
-4. Add `PREVIEW_JWT_SECRET` with: `openssl rand -hex 32`
-
-### Manual Preview Environment Management
-
-Use the helper script for manual environment management:
-
-```bash
-# Create a preview environment for PR #123
-./scripts/railway-preview.sh 123 create
-
-# Deploy to the preview environment
-./scripts/railway-preview.sh 123 deploy
-
-# Destroy the preview environment
-./scripts/railway-preview.sh 123 destroy
-```
-
-### Railway MCP Tools
-
-You can also use Railway MCP tools for environment management:
-
-```bash
-# Create environment
-mcp__railway-mcp-server__create-environment
-
-# List services
-mcp__railway-mcp-server__list-services
-
-# Set variables
-mcp__railway-mcp-server__set-variables
-
-# View logs
-mcp__railway-mcp-server__get-logs
-```
-
-**Note**: Railway MCP does not support delete/destroy operations. Use the Railway CLI or Dashboard for cleanup.
-
----
-
-## PR Preview Deployments
-
-PR preview deployments provide automatic testing and deployment for every pull request. This section covers the deployed workflow and how to use it.
-
-### Overview
-
-Every pull request automatically receives a preview deployment on Railway's dev environment. This includes:
-- Full stack deployment (frontend, backend, database, Redis)
-- Automated testing (health, performance, visual, accessibility)
-- PR comment with deployment URLs and test results
-
-### Workflow
-
-```
-PR Opened/Updated --> CI Tests --> Deploy to Dev Environment --> Run Tests --> Report Results
-PR Closed/Merged --> Auto-stop Services (environment preserved for stable URLs)
-```
-
-### Preview URLs
-
-The dev environment uses stable URLs (for OAuth callback compatibility):
+### PR Preview Environments
 
 | Service | URL |
 |---------|-----|
 | Frontend | https://frontend-dev-8db9.up.railway.app |
 | Backend | https://backend-dev-bc44.up.railway.app |
-| API Docs | https://backend-dev-bc44.up.railway.app/docs |
 
-### Test Results
+**GitHub Secrets**: `RAILWAY_TOKEN`, `PREVIEW_JWT_SECRET`
 
-| Test | Purpose | Threshold |
-|------|---------|-----------|
-| Health Check | Verify deployment works | All endpoints 200 |
-| Lighthouse (Desktop) | Performance metrics | Score >= 80 |
-| Lighthouse (Mobile) | Mobile performance | Score >= 70 |
-| Visual Regression | UI change detection | Review in Chromatic |
-| Accessibility | WCAG 2.1 AA compliance | No critical/serious violations |
-
-### Skipping Preview Deployment
-
-Documentation-only changes (`.md` files, `docs/` folder) skip preview automatically.
-
-### Manual Scripts
-
-```bash
-# Run health checks manually
-./scripts/preview-health-check.sh <FRONTEND_URL> <BACKEND_URL> [MAX_RETRIES] [RETRY_INTERVAL]
-
-# Example
-./scripts/preview-health-check.sh https://frontend-dev-8db9.up.railway.app https://backend-dev-bc44.up.railway.app 30 10
-
-# Run API smoke tests
-./scripts/preview-api-smoke.sh <BACKEND_URL>
-
-# Example
-./scripts/preview-api-smoke.sh https://backend-dev-bc44.up.railway.app
-
-# Manual environment management (legacy per-PR environments)
-./scripts/railway-preview.sh <PR_NUMBER> create|deploy|destroy
-```
-
-For comprehensive documentation, see [docs/pr-preview-deployments.md](docs/pr-preview-deployments.md).
-
-<!-- VIBE KANBAN MCP GUIDELINES START -->
-
-## Vibe Kanban Task Management
-
-This project uses **Vibe Kanban MCP** for task management.
-
-### Project ID
-
-```
-cb892c2b-4a17-4402-83f2-8f6cb086468b
-```
-
-### Quick Reference
-
-```bash
-# List all tasks
-mcp__vibe_kanban__list_tasks:
-  project_id: "cb892c2b-4a17-4402-83f2-8f6cb086468b"
-
-# Create a task
-mcp__vibe_kanban__create_task:
-  project_id: "cb892c2b-4a17-4402-83f2-8f6cb086468b"
-  title: "Task title"
-  description: "Full specification including acceptance criteria and implementation plan"
-
-# Get task details
-mcp__vibe_kanban__get_task:
-  task_id: "[task-uuid]"
-
-# Update task status
-mcp__vibe_kanban__update_task:
-  task_id: "[task-uuid]"
-  status: "inprogress"  # todo, inprogress, inreview, done, cancelled
-```
-
-### Task Status Flow
-
-```
-todo → inprogress → inreview → done
-```
-
-| Status | When to Use |
-|--------|-------------|
-| `todo` | Task created, not started |
-| `inprogress` | Actively being worked on |
-| `inreview` | PR created, awaiting review |
-| `done` | Completed and verified (QA only) |
-| `cancelled` | No longer needed |
-
-### Key Differences from Backlog.md
-
-- **No document storage** - PRDs and architecture go in task descriptions
-- **No separate plan field** - Implementation plan is part of description
-- **No notes field** - All updates appended to description
-- **Simpler status** - Uses `todo/inprogress/inreview/done/cancelled`
-
-For full agent workflow instructions, see `~/.claude/CLAUDE.md`.
-
-<!-- VIBE KANBAN MCP GUIDELINES END -->
+See **[docs/pr-preview-deployments.md](docs/pr-preview-deployments.md)** for full documentation.
