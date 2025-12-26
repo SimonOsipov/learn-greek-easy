@@ -1,6 +1,5 @@
 """FastAPI application entry point."""
 
-import logging
 import os
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -17,7 +16,7 @@ from src.api.health import router as health_router
 from src.api.v1 import v1_router
 from src.config import settings
 from src.core.exceptions import BaseAPIException
-from src.core.logging import setup_logging
+from src.core.logging import get_logger, setup_logging
 from src.core.posthog import init_posthog, shutdown_posthog
 from src.core.redis import close_redis, init_redis
 from src.core.sentry import (
@@ -36,21 +35,23 @@ from src.middleware import (
 
 # Setup logging
 setup_logging()
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifespan manager."""
     # Startup
-    logger.info("Starting Learn Greek Easy API", extra={"version": settings.app_version})
+    logger.info("Starting Learn Greek Easy API", version=settings.app_version)
 
     # Validate CORS configuration
     cors_warnings = settings.validate_cors_for_production()
     for warning in cors_warnings:
         logger.warning(
-            f"CORS configuration warning: {warning}",
-            extra={"category": "security", "config": "cors"},
+            "CORS configuration warning: {warning}",
+            warning=warning,
+            category="security",
+            config="cors",
         )
 
     # Initialize database connection
@@ -78,13 +79,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
                 result = await service.seed_all()
                 logger.info(
                     "Auto-seed completed",
-                    extra={
-                        "users_created": len(result.get("users", {}).get("users", [])),
-                        "decks_created": len(result.get("content", {}).get("decks", [])),
-                    },
+                    users_created=len(result.get("users", {}).get("users", [])),
+                    decks_created=len(result.get("content", {}).get("decks", [])),
                 )
         except Exception as e:
-            logger.error(f"Auto-seed failed: {e}", exc_info=True)
+            logger.exception("Auto-seed failed: {error}", error=str(e))
             # Don't fail startup on seed error
 
     yield
@@ -175,14 +174,12 @@ async def base_api_exception_handler(
     request_id = getattr(request.state, "request_id", "unknown")
 
     logger.error(
-        f"API Exception: {exc.error_code}",
-        extra={
-            "error_code": exc.error_code,
-            "detail": exc.detail,
-            "path": request.url.path,
-            "method": request.method,
-            "request_id": request_id,
-        },
+        "API Exception: {error_code}",
+        error_code=exc.error_code,
+        detail=exc.detail,
+        path=request.url.path,
+        method=request.method,
+        request_id=request_id,
     )
 
     # Only capture 5xx errors to Sentry (not 4xx client errors)
@@ -248,11 +245,9 @@ async def validation_exception_handler(
     """Handle Pydantic validation errors."""
     logger.warning(
         "Validation error",
-        extra={
-            "errors": exc.errors(),
-            "path": request.url.path,
-            "method": request.method,
-        },
+        errors=exc.errors(),
+        path=request.url.path,
+        method=request.method,
     )
 
     return JSONResponse(
@@ -275,12 +270,11 @@ async def http_exception_handler(
 ) -> JSONResponse:
     """Handle HTTP exceptions."""
     logger.error(
-        f"HTTP {exc.status_code} error",
-        extra={
-            "detail": exc.detail,
-            "path": request.url.path,
-            "method": request.method,
-        },
+        "HTTP {status_code} error",
+        status_code=exc.status_code,
+        detail=exc.detail,
+        path=request.url.path,
+        method=request.method,
     )
 
     return JSONResponse(
@@ -305,11 +299,9 @@ async def generic_exception_handler(
 
     logger.exception(
         "Unhandled exception",
-        extra={
-            "request_id": request_id,
-            "path": request.url.path,
-            "method": request.method,
-        },
+        request_id=request_id,
+        path=request.url.path,
+        method=request.method,
     )
 
     # Capture to Sentry with request context
