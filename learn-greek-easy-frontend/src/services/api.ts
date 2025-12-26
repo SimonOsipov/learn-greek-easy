@@ -101,9 +101,22 @@ export function clearAuthTokens(): void {
 }
 
 /**
- * Attempt to refresh the access token
+ * Singleton promise for token refresh operation.
+ * Prevents race conditions when multiple requests trigger refresh simultaneously.
+ *
+ * When multiple concurrent requests receive 401 errors, they all attempt to refresh
+ * the token. With token rotation (refresh tokens are single-use), only the first
+ * refresh succeeds - subsequent attempts fail because the old refresh token was
+ * already rotated. This mutex ensures only ONE refresh request is made, and all
+ * waiting requests share the result.
  */
-async function refreshAccessToken(): Promise<string | null> {
+let refreshPromise: Promise<string | null> | null = null;
+
+/**
+ * Internal function that performs the actual token refresh.
+ * Called only by refreshAccessToken() to ensure single execution.
+ */
+async function performTokenRefresh(): Promise<string | null> {
   const { refreshToken } = getAuthTokens();
 
   if (!refreshToken) {
@@ -131,6 +144,32 @@ async function refreshAccessToken(): Promise<string | null> {
   } catch {
     clearAuthTokens();
     return null;
+  }
+}
+
+/**
+ * Attempt to refresh the access token.
+ * Uses a singleton pattern to prevent race conditions when multiple
+ * concurrent requests receive 401 errors simultaneously.
+ *
+ * If a refresh is already in progress, subsequent calls will wait for
+ * that refresh to complete rather than starting a new one.
+ */
+async function refreshAccessToken(): Promise<string | null> {
+  // If a refresh is already in progress, wait for it
+  if (refreshPromise) {
+    return refreshPromise;
+  }
+
+  // Start a new refresh operation
+  refreshPromise = performTokenRefresh();
+
+  try {
+    const result = await refreshPromise;
+    return result;
+  } finally {
+    // Clear the promise so future refreshes can occur
+    refreshPromise = null;
   }
 }
 
@@ -346,4 +385,20 @@ export function buildQueryString(params: Record<string, unknown>): string {
 
   const queryString = searchParams.toString();
   return queryString ? `?${queryString}` : '';
+}
+
+/**
+ * Reset refresh promise state - FOR TESTING ONLY.
+ * This allows tests to reset the module state between test runs.
+ */
+export function _resetRefreshState_forTesting(): void {
+  refreshPromise = null;
+}
+
+/**
+ * Get the current refresh promise - FOR TESTING ONLY.
+ * This allows tests to verify the mutex behavior.
+ */
+export function _getRefreshPromise_forTesting(): Promise<string | null> | null {
+  return refreshPromise;
 }
