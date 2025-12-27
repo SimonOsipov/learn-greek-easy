@@ -1270,3 +1270,384 @@ class TestGetQuestionDeckCategory:
 
         with pytest.raises(CultureQuestionNotFoundException):
             await service.get_question_deck_category(uuid4())
+
+
+# =============================================================================
+# Test CRUD Methods (Admin Operations)
+# =============================================================================
+
+
+class TestCreateQuestion:
+    """Tests for create_question method (lines 889-926)."""
+
+    @pytest.mark.asyncio
+    async def test_create_question_success(
+        self,
+        db_session: AsyncSession,
+        culture_deck: CultureDeck,
+        mock_s3_service,
+    ):
+        """Should successfully create a question."""
+        from src.schemas.culture import CultureQuestionCreate, MultilingualText
+
+        service = CultureQuestionService(db_session, s3_service=mock_s3_service)
+
+        question_data = CultureQuestionCreate(
+            deck_id=culture_deck.id,
+            question_text=MultilingualText(
+                el="Ερώτηση τεστ?",
+                en="Test question?",
+                ru="Тестовый вопрос?",
+            ),
+            option_a=MultilingualText(el="Α", en="A", ru="А"),
+            option_b=MultilingualText(el="Β", en="B", ru="Б"),
+            option_c=MultilingualText(el="Γ", en="C", ru="В"),
+            option_d=MultilingualText(el="Δ", en="D", ru="Г"),
+            correct_option=1,
+            order_index=0,
+        )
+
+        result = await service.create_question(question_data)
+
+        assert result.deck_id == culture_deck.id
+        assert result.correct_option == 1
+        assert result.question_text["en"] == "Test question?"
+        assert result.order_index == 0
+
+    @pytest.mark.asyncio
+    async def test_create_question_with_image_key(
+        self,
+        db_session: AsyncSession,
+        culture_deck: CultureDeck,
+        mock_s3_service,
+    ):
+        """Should create question with image_key."""
+        from src.schemas.culture import CultureQuestionCreate, MultilingualText
+
+        service = CultureQuestionService(db_session, s3_service=mock_s3_service)
+
+        question_data = CultureQuestionCreate(
+            deck_id=culture_deck.id,
+            question_text=MultilingualText(
+                el="Ερώτηση εικόνας?",
+                en="Image question?",
+                ru="Вопрос с изображением?",
+            ),
+            option_a=MultilingualText(el="Α", en="A", ru="А"),
+            option_b=MultilingualText(el="Β", en="B", ru="Б"),
+            option_c=MultilingualText(el="Γ", en="C", ru="В"),
+            option_d=MultilingualText(el="Δ", en="D", ru="Г"),
+            correct_option=2,
+            image_key="images/test.jpg",
+            order_index=1,
+        )
+
+        result = await service.create_question(question_data)
+
+        assert result.image_key == "images/test.jpg"
+
+    @pytest.mark.asyncio
+    async def test_create_question_deck_not_found(
+        self,
+        db_session: AsyncSession,
+        mock_s3_service,
+    ):
+        """Should raise CultureDeckNotFoundException when deck doesn't exist."""
+        from src.schemas.culture import CultureQuestionCreate, MultilingualText
+
+        service = CultureQuestionService(db_session, s3_service=mock_s3_service)
+
+        question_data = CultureQuestionCreate(
+            deck_id=uuid4(),  # Non-existent deck
+            question_text=MultilingualText(
+                el="Ερώτηση?",
+                en="Question?",
+                ru="Вопрос?",
+            ),
+            option_a=MultilingualText(el="Α", en="A", ru="А"),
+            option_b=MultilingualText(el="Β", en="B", ru="Б"),
+            option_c=MultilingualText(el="Γ", en="C", ru="В"),
+            option_d=MultilingualText(el="Δ", en="D", ru="Г"),
+            correct_option=1,
+        )
+
+        with pytest.raises(CultureDeckNotFoundException):
+            await service.create_question(question_data)
+
+
+class TestBulkCreateQuestions:
+    """Tests for bulk_create_questions method (lines 948-989)."""
+
+    @pytest.mark.asyncio
+    async def test_bulk_create_questions_success(
+        self,
+        db_session: AsyncSession,
+        culture_deck: CultureDeck,
+        mock_s3_service,
+    ):
+        """Should successfully create multiple questions."""
+        from src.schemas.culture import (
+            CultureQuestionBulkCreateRequest,
+            CultureQuestionBulkItem,
+            MultilingualText,
+        )
+
+        service = CultureQuestionService(db_session, s3_service=mock_s3_service)
+
+        request = CultureQuestionBulkCreateRequest(
+            deck_id=culture_deck.id,
+            questions=[
+                CultureQuestionBulkItem(
+                    question_text=MultilingualText(
+                        el="Ερώτηση 1?",
+                        en="Question 1?",
+                        ru="Вопрос 1?",
+                    ),
+                    option_a=MultilingualText(el="Α1", en="A1", ru="А1"),
+                    option_b=MultilingualText(el="Β1", en="B1", ru="Б1"),
+                    option_c=MultilingualText(el="Γ1", en="C1", ru="В1"),
+                    option_d=MultilingualText(el="Δ1", en="D1", ru="Г1"),
+                    correct_option=1,
+                    order_index=0,
+                ),
+                CultureQuestionBulkItem(
+                    question_text=MultilingualText(
+                        el="Ερώτηση 2?",
+                        en="Question 2?",
+                        ru="Вопрос 2?",
+                    ),
+                    option_a=MultilingualText(el="Α2", en="A2", ru="А2"),
+                    option_b=MultilingualText(el="Β2", en="B2", ru="Б2"),
+                    option_c=MultilingualText(el="Γ2", en="C2", ru="В2"),
+                    option_d=MultilingualText(el="Δ2", en="D2", ru="Г2"),
+                    correct_option=2,
+                    order_index=1,
+                ),
+            ],
+        )
+
+        result = await service.bulk_create_questions(request)
+
+        assert result.deck_id == culture_deck.id
+        assert result.created_count == 2
+        assert len(result.questions) == 2
+        assert result.questions[0].question_text["en"] == "Question 1?"
+        assert result.questions[1].question_text["en"] == "Question 2?"
+
+    @pytest.mark.asyncio
+    async def test_bulk_create_questions_single_question(
+        self,
+        db_session: AsyncSession,
+        culture_deck: CultureDeck,
+        mock_s3_service,
+    ):
+        """Should successfully create a single question via bulk endpoint."""
+        from src.schemas.culture import (
+            CultureQuestionBulkCreateRequest,
+            CultureQuestionBulkItem,
+            MultilingualText,
+        )
+
+        service = CultureQuestionService(db_session, s3_service=mock_s3_service)
+
+        request = CultureQuestionBulkCreateRequest(
+            deck_id=culture_deck.id,
+            questions=[
+                CultureQuestionBulkItem(
+                    question_text=MultilingualText(
+                        el="Μοναδική ερώτηση?",
+                        en="Single question?",
+                        ru="Единственный вопрос?",
+                    ),
+                    option_a=MultilingualText(el="Α", en="A", ru="А"),
+                    option_b=MultilingualText(el="Β", en="B", ru="Б"),
+                    option_c=MultilingualText(el="Γ", en="C", ru="В"),
+                    option_d=MultilingualText(el="Δ", en="D", ru="Г"),
+                    correct_option=3,
+                ),
+            ],
+        )
+
+        result = await service.bulk_create_questions(request)
+
+        assert result.created_count == 1
+
+    @pytest.mark.asyncio
+    async def test_bulk_create_questions_deck_not_found(
+        self,
+        db_session: AsyncSession,
+        mock_s3_service,
+    ):
+        """Should raise CultureDeckNotFoundException when deck doesn't exist."""
+        from src.schemas.culture import (
+            CultureQuestionBulkCreateRequest,
+            CultureQuestionBulkItem,
+            MultilingualText,
+        )
+
+        service = CultureQuestionService(db_session, s3_service=mock_s3_service)
+
+        request = CultureQuestionBulkCreateRequest(
+            deck_id=uuid4(),  # Non-existent deck
+            questions=[
+                CultureQuestionBulkItem(
+                    question_text=MultilingualText(
+                        el="Ερώτηση?",
+                        en="Question?",
+                        ru="Вопрос?",
+                    ),
+                    option_a=MultilingualText(el="Α", en="A", ru="А"),
+                    option_b=MultilingualText(el="Β", en="B", ru="Б"),
+                    option_c=MultilingualText(el="Γ", en="C", ru="В"),
+                    option_d=MultilingualText(el="Δ", en="D", ru="Г"),
+                    correct_option=1,
+                ),
+            ],
+        )
+
+        with pytest.raises(CultureDeckNotFoundException):
+            await service.bulk_create_questions(request)
+
+
+class TestUpdateQuestion:
+    """Tests for update_question method (lines 1023-1048)."""
+
+    @pytest.mark.asyncio
+    async def test_update_question_success(
+        self,
+        db_session: AsyncSession,
+        culture_deck: CultureDeck,
+        culture_questions: list[CultureQuestion],
+        mock_s3_service,
+    ):
+        """Should successfully update a question."""
+        from src.schemas.culture import CultureQuestionUpdate, MultilingualText
+
+        service = CultureQuestionService(db_session, s3_service=mock_s3_service)
+        question = culture_questions[0]
+
+        update_data = CultureQuestionUpdate(
+            question_text=MultilingualText(
+                el="Ενημερωμένη ερώτηση?",
+                en="Updated question?",
+                ru="Обновленный вопрос?",
+            ),
+            correct_option=4,
+        )
+
+        result = await service.update_question(question.id, update_data)
+
+        assert result.id == question.id
+        assert result.question_text["en"] == "Updated question?"
+        assert result.correct_option == 4
+
+    @pytest.mark.asyncio
+    async def test_update_question_partial_update(
+        self,
+        db_session: AsyncSession,
+        culture_deck: CultureDeck,
+        culture_questions: list[CultureQuestion],
+        mock_s3_service,
+    ):
+        """Should update only specified fields."""
+        from src.schemas.culture import CultureQuestionUpdate
+
+        service = CultureQuestionService(db_session, s3_service=mock_s3_service)
+        question = culture_questions[0]
+        original_question_text = question.question_text
+
+        update_data = CultureQuestionUpdate(
+            correct_option=3,
+            order_index=99,
+        )
+
+        result = await service.update_question(question.id, update_data)
+
+        assert result.correct_option == 3
+        assert result.order_index == 99
+        # Original question text should be unchanged
+        assert result.question_text == original_question_text
+
+    @pytest.mark.asyncio
+    async def test_update_question_image_key(
+        self,
+        db_session: AsyncSession,
+        culture_deck: CultureDeck,
+        culture_questions: list[CultureQuestion],
+        mock_s3_service,
+    ):
+        """Should update image_key."""
+        from src.schemas.culture import CultureQuestionUpdate
+
+        service = CultureQuestionService(db_session, s3_service=mock_s3_service)
+        question = culture_questions[0]
+
+        update_data = CultureQuestionUpdate(
+            image_key="images/new_image.png",
+        )
+
+        result = await service.update_question(question.id, update_data)
+
+        assert result.image_key == "images/new_image.png"
+
+    @pytest.mark.asyncio
+    async def test_update_question_not_found(
+        self,
+        db_session: AsyncSession,
+        mock_s3_service,
+    ):
+        """Should raise CultureQuestionNotFoundException when question doesn't exist."""
+        from src.schemas.culture import CultureQuestionUpdate
+
+        service = CultureQuestionService(db_session, s3_service=mock_s3_service)
+
+        update_data = CultureQuestionUpdate(
+            correct_option=2,
+        )
+
+        with pytest.raises(CultureQuestionNotFoundException):
+            await service.update_question(uuid4(), update_data)
+
+
+class TestDeleteQuestion:
+    """Tests for delete_question method (lines 1069-1076)."""
+
+    @pytest.mark.asyncio
+    async def test_delete_question_success(
+        self,
+        db_session: AsyncSession,
+        culture_deck: CultureDeck,
+        culture_questions: list[CultureQuestion],
+        mock_s3_service,
+    ):
+        """Should successfully delete a question."""
+        from sqlalchemy import select
+
+        service = CultureQuestionService(db_session, s3_service=mock_s3_service)
+        question = culture_questions[0]
+        question_id = question.id
+
+        # Delete the question
+        await service.delete_question(question_id)
+
+        # Flush to ensure deletion is processed
+        await db_session.flush()
+
+        # Verify deletion
+        result = await db_session.execute(
+            select(CultureQuestion).where(CultureQuestion.id == question_id)
+        )
+        deleted_question = result.scalar_one_or_none()
+        assert deleted_question is None
+
+    @pytest.mark.asyncio
+    async def test_delete_question_not_found(
+        self,
+        db_session: AsyncSession,
+        mock_s3_service,
+    ):
+        """Should raise CultureQuestionNotFoundException when question doesn't exist."""
+        service = CultureQuestionService(db_session, s3_service=mock_s3_service)
+
+        with pytest.raises(CultureQuestionNotFoundException):
+            await service.delete_question(uuid4())

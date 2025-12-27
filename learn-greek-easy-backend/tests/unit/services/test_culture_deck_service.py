@@ -396,3 +396,290 @@ class TestCultureDeckServiceProgressHelper:
             assert result.questions_learning == 10
             assert result.questions_new == 15
             assert result.last_practiced_at == last_practiced
+
+
+# =============================================================================
+# Test CRUD Methods (Admin Operations)
+# =============================================================================
+
+
+class TestCreateDeck:
+    """Tests for create_deck method (lines 300-330)."""
+
+    @pytest.mark.asyncio
+    async def test_create_deck_success(self, mock_db_session: MagicMock):
+        """Should successfully create a deck."""
+        from src.schemas.culture import CultureDeckCreate, MultilingualText
+
+        service = CultureDeckService(mock_db_session)
+
+        deck_data = CultureDeckCreate(
+            name=MultilingualText(
+                el="Νέα τράπουλα",
+                en="New deck",
+                ru="Новая колода",
+            ),
+            description=MultilingualText(
+                el="Περιγραφή",
+                en="Description",
+                ru="Описание",
+            ),
+            icon="book",
+            color_accent="#4F46E5",
+            category="history",
+            order_index=0,
+        )
+
+        mock_deck = MagicMock()
+        mock_deck.id = uuid4()
+        mock_deck.name = {"el": "Νέα τράπουλα", "en": "New deck", "ru": "Новая колода"}
+        mock_deck.description = {"el": "Περιγραφή", "en": "Description", "ru": "Описание"}
+        mock_deck.icon = "book"
+        mock_deck.color_accent = "#4F46E5"
+        mock_deck.category = "history"
+        mock_deck.is_active = True
+        mock_deck.created_at = datetime(2024, 1, 1)
+        mock_deck.updated_at = datetime(2024, 1, 1)
+
+        with patch.object(service.deck_repo, "create", new_callable=AsyncMock) as mock_create:
+            mock_create.return_value = mock_deck
+
+            result = await service.create_deck(deck_data)
+
+            assert isinstance(result, CultureDeckDetailResponse)
+            assert result.id == mock_deck.id
+            assert result.name == mock_deck.name
+            assert result.description == mock_deck.description
+            assert result.icon == "book"
+            assert result.color_accent == "#4F46E5"
+            assert result.category == "history"
+            assert result.question_count == 0  # New deck has no questions
+            assert result.is_active is True
+
+    @pytest.mark.asyncio
+    async def test_create_deck_with_custom_order_index(self, mock_db_session: MagicMock):
+        """Should create deck with specified order_index."""
+        from src.schemas.culture import CultureDeckCreate, MultilingualText
+
+        service = CultureDeckService(mock_db_session)
+
+        deck_data = CultureDeckCreate(
+            name=MultilingualText(el="Test", en="Test", ru="Test"),
+            description=MultilingualText(el="Desc", en="Desc", ru="Desc"),
+            icon="test",
+            color_accent="#000000",
+            category="culture",
+            order_index=10,
+        )
+
+        mock_deck = MagicMock()
+        mock_deck.id = uuid4()
+        mock_deck.name = {"el": "Test", "en": "Test", "ru": "Test"}
+        mock_deck.description = {"el": "Desc", "en": "Desc", "ru": "Desc"}
+        mock_deck.icon = "test"
+        mock_deck.color_accent = "#000000"
+        mock_deck.category = "culture"
+        mock_deck.is_active = True
+        mock_deck.created_at = datetime(2024, 1, 1)
+        mock_deck.updated_at = datetime(2024, 1, 1)
+
+        with patch.object(service.deck_repo, "create", new_callable=AsyncMock) as mock_create:
+            mock_create.return_value = mock_deck
+
+            await service.create_deck(deck_data)
+
+            # Verify create was called with correct order_index
+            call_args = mock_create.call_args[0][0]
+            assert call_args["order_index"] == 10
+
+
+class TestUpdateDeck:
+    """Tests for update_deck method (lines 372-396)."""
+
+    @pytest.mark.asyncio
+    async def test_update_deck_success(self, mock_db_session: MagicMock):
+        """Should successfully update a deck."""
+        from src.schemas.culture import CultureDeckUpdate, MultilingualText
+
+        service = CultureDeckService(mock_db_session)
+        deck_id = uuid4()
+
+        update_data = CultureDeckUpdate(
+            name=MultilingualText(
+                el="Ενημερωμένο όνομα",
+                en="Updated name",
+                ru="Обновленное имя",
+            ),
+            icon="new-icon",
+        )
+
+        mock_deck = MagicMock()
+        mock_deck.id = deck_id
+        mock_deck.name = {"el": "Old", "en": "Old", "ru": "Old"}
+        mock_deck.description = {"el": "Desc", "en": "Desc", "ru": "Desc"}
+        mock_deck.icon = "old-icon"
+        mock_deck.is_active = True
+
+        mock_updated_deck = MagicMock()
+        mock_updated_deck.id = deck_id
+        mock_updated_deck.name = {
+            "el": "Ενημερωμένο όνομα",
+            "en": "Updated name",
+            "ru": "Обновленное имя",
+        }
+        mock_updated_deck.icon = "new-icon"
+
+        with (
+            patch.object(service.deck_repo, "get", new_callable=AsyncMock) as mock_get,
+            patch.object(service.deck_repo, "update", new_callable=AsyncMock) as mock_update,
+        ):
+            mock_get.return_value = mock_deck
+            mock_update.return_value = mock_updated_deck
+
+            result = await service.update_deck(deck_id, update_data)
+
+            assert result.id == deck_id
+            assert result.name == mock_updated_deck.name
+            assert result.icon == "new-icon"
+            mock_get.assert_awaited_once_with(deck_id)
+            mock_update.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_update_deck_partial_update(self, mock_db_session: MagicMock):
+        """Should update only specified fields."""
+        from src.schemas.culture import CultureDeckUpdate
+
+        service = CultureDeckService(mock_db_session)
+        deck_id = uuid4()
+
+        update_data = CultureDeckUpdate(
+            color_accent="#FF0000",
+        )
+
+        mock_deck = MagicMock()
+        mock_deck.id = deck_id
+        mock_deck.is_active = True
+
+        mock_updated_deck = MagicMock()
+        mock_updated_deck.id = deck_id
+        mock_updated_deck.color_accent = "#FF0000"
+
+        with (
+            patch.object(service.deck_repo, "get", new_callable=AsyncMock) as mock_get,
+            patch.object(service.deck_repo, "update", new_callable=AsyncMock) as mock_update,
+        ):
+            mock_get.return_value = mock_deck
+            mock_update.return_value = mock_updated_deck
+
+            await service.update_deck(deck_id, update_data)
+
+            # Verify update was called with only color_accent
+            call_args = mock_update.call_args[0][1]
+            assert "color_accent" in call_args
+            assert call_args["color_accent"] == "#FF0000"
+
+    @pytest.mark.asyncio
+    async def test_update_deck_can_update_inactive_deck(self, mock_db_session: MagicMock):
+        """Should allow updating inactive decks (admin privilege)."""
+        from src.schemas.culture import CultureDeckUpdate
+
+        service = CultureDeckService(mock_db_session)
+        deck_id = uuid4()
+
+        update_data = CultureDeckUpdate(
+            is_active=True,  # Reactivate deck
+        )
+
+        mock_deck = MagicMock()
+        mock_deck.id = deck_id
+        mock_deck.is_active = False  # Inactive deck
+
+        mock_updated_deck = MagicMock()
+        mock_updated_deck.id = deck_id
+        mock_updated_deck.is_active = True
+
+        with (
+            patch.object(service.deck_repo, "get", new_callable=AsyncMock) as mock_get,
+            patch.object(service.deck_repo, "update", new_callable=AsyncMock) as mock_update,
+        ):
+            mock_get.return_value = mock_deck
+            mock_update.return_value = mock_updated_deck
+
+            result = await service.update_deck(deck_id, update_data)
+
+            assert result.is_active is True
+
+    @pytest.mark.asyncio
+    async def test_update_deck_not_found(self, mock_db_session: MagicMock):
+        """Should raise CultureDeckNotFoundException when deck doesn't exist."""
+        from src.core.exceptions import CultureDeckNotFoundException
+        from src.schemas.culture import CultureDeckUpdate
+
+        service = CultureDeckService(mock_db_session)
+        deck_id = uuid4()
+
+        update_data = CultureDeckUpdate(
+            icon="new-icon",
+        )
+
+        with patch.object(service.deck_repo, "get", new_callable=AsyncMock) as mock_get:
+            mock_get.return_value = None
+
+            with pytest.raises(CultureDeckNotFoundException):
+                await service.update_deck(deck_id, update_data)
+
+
+class TestSoftDeleteDeck:
+    """Tests for soft_delete_deck method (lines 418-425)."""
+
+    @pytest.mark.asyncio
+    async def test_soft_delete_deck_success(self, mock_db_session: MagicMock):
+        """Should successfully soft delete a deck."""
+        service = CultureDeckService(mock_db_session)
+        deck_id = uuid4()
+
+        mock_deck = MagicMock()
+        mock_deck.id = deck_id
+        mock_deck.is_active = True
+
+        with patch.object(service.deck_repo, "get", new_callable=AsyncMock) as mock_get:
+            mock_get.return_value = mock_deck
+
+            await service.soft_delete_deck(deck_id)
+
+            # Verify is_active was set to False
+            assert mock_deck.is_active is False
+            mock_get.assert_awaited_once_with(deck_id)
+
+    @pytest.mark.asyncio
+    async def test_soft_delete_deck_idempotent(self, mock_db_session: MagicMock):
+        """Should allow deleting already-inactive deck (idempotent)."""
+        service = CultureDeckService(mock_db_session)
+        deck_id = uuid4()
+
+        mock_deck = MagicMock()
+        mock_deck.id = deck_id
+        mock_deck.is_active = False  # Already inactive
+
+        with patch.object(service.deck_repo, "get", new_callable=AsyncMock) as mock_get:
+            mock_get.return_value = mock_deck
+
+            # Should not raise error
+            await service.soft_delete_deck(deck_id)
+
+            # Verify is_active remains False
+            assert mock_deck.is_active is False
+
+    @pytest.mark.asyncio
+    async def test_soft_delete_deck_not_found(self, mock_db_session: MagicMock):
+        """Should raise CultureDeckNotFoundException when deck doesn't exist."""
+        from src.core.exceptions import CultureDeckNotFoundException
+
+        service = CultureDeckService(mock_db_session)
+        deck_id = uuid4()
+
+        with patch.object(service.deck_repo, "get", new_callable=AsyncMock) as mock_get:
+            mock_get.return_value = None
+
+            with pytest.raises(CultureDeckNotFoundException):
+                await service.soft_delete_deck(deck_id)
