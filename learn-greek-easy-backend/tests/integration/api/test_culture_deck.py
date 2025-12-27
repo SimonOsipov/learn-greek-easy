@@ -6,6 +6,7 @@ This module tests:
 - GET /api/v1/culture/categories - Get available categories
 
 All tests use real database connections via the db_session fixture.
+All read endpoints require authentication.
 """
 
 from uuid import uuid4
@@ -122,9 +123,18 @@ class TestListCultureDecksEndpoint:
     """Test suite for GET /api/v1/culture/decks endpoint."""
 
     @pytest.mark.asyncio
-    async def test_list_decks_empty(self, client: AsyncClient):
-        """Test empty database returns empty list."""
+    async def test_list_decks_unauthenticated_returns_401(self, client: AsyncClient):
+        """Test unauthenticated request returns 401."""
         response = await client.get("/api/v1/culture/decks")
+
+        assert response.status_code == 401
+        data = response.json()
+        assert data["success"] is False
+
+    @pytest.mark.asyncio
+    async def test_list_decks_empty(self, client: AsyncClient, auth_headers: dict):
+        """Test empty database returns empty list."""
+        response = await client.get("/api/v1/culture/decks", headers=auth_headers)
 
         assert response.status_code == 200
         data = response.json()
@@ -133,12 +143,12 @@ class TestListCultureDecksEndpoint:
 
     @pytest.mark.asyncio
     async def test_list_decks_with_data(
-        self, client: AsyncClient, culture_deck_with_questions: tuple
+        self, client: AsyncClient, auth_headers: dict, culture_deck_with_questions: tuple
     ):
         """Test returns culture decks when data exists."""
         deck, questions = culture_deck_with_questions
 
-        response = await client.get("/api/v1/culture/decks")
+        response = await client.get("/api/v1/culture/decks", headers=auth_headers)
 
         assert response.status_code == 200
         data = response.json()
@@ -149,10 +159,14 @@ class TestListCultureDecksEndpoint:
 
     @pytest.mark.asyncio
     async def test_list_decks_excludes_inactive(
-        self, client: AsyncClient, culture_deck: CultureDeck, inactive_culture_deck: CultureDeck
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        culture_deck: CultureDeck,
+        inactive_culture_deck: CultureDeck,
     ):
         """Test inactive decks are not included in list."""
-        response = await client.get("/api/v1/culture/decks")
+        response = await client.get("/api/v1/culture/decks", headers=auth_headers)
 
         assert response.status_code == 200
         data = response.json()
@@ -162,10 +176,10 @@ class TestListCultureDecksEndpoint:
 
     @pytest.mark.asyncio
     async def test_list_decks_filter_by_category(
-        self, client: AsyncClient, multiple_culture_decks: list[CultureDeck]
+        self, client: AsyncClient, auth_headers: dict, multiple_culture_decks: list[CultureDeck]
     ):
         """Test filtering by category."""
-        response = await client.get("/api/v1/culture/decks?category=history")
+        response = await client.get("/api/v1/culture/decks?category=history", headers=auth_headers)
 
         assert response.status_code == 200
         data = response.json()
@@ -174,11 +188,13 @@ class TestListCultureDecksEndpoint:
 
     @pytest.mark.asyncio
     async def test_list_decks_pagination(
-        self, client: AsyncClient, multiple_culture_decks: list[CultureDeck]
+        self, client: AsyncClient, auth_headers: dict, multiple_culture_decks: list[CultureDeck]
     ):
         """Test pagination parameters."""
         # First page
-        response = await client.get("/api/v1/culture/decks?page=1&page_size=2")
+        response = await client.get(
+            "/api/v1/culture/decks?page=1&page_size=2", headers=auth_headers
+        )
 
         assert response.status_code == 200
         data = response.json()
@@ -186,7 +202,9 @@ class TestListCultureDecksEndpoint:
         assert len(data["decks"]) == 2
 
         # Second page
-        response2 = await client.get("/api/v1/culture/decks?page=2&page_size=2")
+        response2 = await client.get(
+            "/api/v1/culture/decks?page=2&page_size=2", headers=auth_headers
+        )
         data2 = response2.json()
         assert len(data2["decks"]) == 2
 
@@ -196,9 +214,11 @@ class TestListCultureDecksEndpoint:
         assert page1_ids.isdisjoint(page2_ids)
 
     @pytest.mark.asyncio
-    async def test_list_decks_response_format(self, client: AsyncClient, culture_deck: CultureDeck):
+    async def test_list_decks_response_format(
+        self, client: AsyncClient, auth_headers: dict, culture_deck: CultureDeck
+    ):
         """Test response includes required fields."""
-        response = await client.get("/api/v1/culture/decks")
+        response = await client.get("/api/v1/culture/decks", headers=auth_headers)
 
         assert response.status_code == 200
         data = response.json()
@@ -220,27 +240,30 @@ class TestListCultureDecksEndpoint:
             assert field in deck, f"Missing field: {field}"
 
     @pytest.mark.asyncio
-    async def test_list_decks_anonymous_no_progress(
-        self, client: AsyncClient, culture_deck: CultureDeck
+    async def test_list_decks_user_no_progress(
+        self, client: AsyncClient, auth_headers: dict, culture_deck: CultureDeck
     ):
-        """Test anonymous user receives no progress data."""
-        response = await client.get("/api/v1/culture/decks")
+        """Test user who hasn't started deck receives no progress data."""
+        response = await client.get("/api/v1/culture/decks", headers=auth_headers)
 
         assert response.status_code == 200
         data = response.json()
+        # Progress is None because user hasn't started the deck
         assert data["decks"][0]["progress"] is None
 
     @pytest.mark.asyncio
-    async def test_list_decks_invalid_pagination_returns_422(self, client: AsyncClient):
+    async def test_list_decks_invalid_pagination_returns_422(
+        self, client: AsyncClient, auth_headers: dict
+    ):
         """Test invalid pagination returns 422."""
-        response = await client.get("/api/v1/culture/decks?page=0")
+        response = await client.get("/api/v1/culture/decks?page=0", headers=auth_headers)
 
         assert response.status_code == 422
 
     @pytest.mark.asyncio
-    async def test_list_decks_page_size_limit(self, client: AsyncClient):
+    async def test_list_decks_page_size_limit(self, client: AsyncClient, auth_headers: dict):
         """Test page_size over 100 returns 422."""
-        response = await client.get("/api/v1/culture/decks?page_size=101")
+        response = await client.get("/api/v1/culture/decks?page_size=101", headers=auth_headers)
 
         assert response.status_code == 422
 
@@ -254,11 +277,24 @@ class TestGetCultureDeckEndpoint:
     """Test suite for GET /api/v1/culture/decks/{deck_id} endpoint."""
 
     @pytest.mark.asyncio
-    async def test_get_deck_success(self, client: AsyncClient, culture_deck_with_questions: tuple):
+    async def test_get_deck_unauthenticated_returns_401(
+        self, client: AsyncClient, culture_deck: CultureDeck
+    ):
+        """Test unauthenticated request returns 401."""
+        response = await client.get(f"/api/v1/culture/decks/{culture_deck.id}")
+
+        assert response.status_code == 401
+        data = response.json()
+        assert data["success"] is False
+
+    @pytest.mark.asyncio
+    async def test_get_deck_success(
+        self, client: AsyncClient, auth_headers: dict, culture_deck_with_questions: tuple
+    ):
         """Test successfully retrieving a deck."""
         deck, questions = culture_deck_with_questions
 
-        response = await client.get(f"/api/v1/culture/decks/{deck.id}")
+        response = await client.get(f"/api/v1/culture/decks/{deck.id}", headers=auth_headers)
 
         assert response.status_code == 200
         data = response.json()
@@ -271,11 +307,13 @@ class TestGetCultureDeckEndpoint:
         assert "updated_at" in data
 
     @pytest.mark.asyncio
-    async def test_get_deck_not_found(self, client: AsyncClient):
+    async def test_get_deck_not_found(self, client: AsyncClient, auth_headers: dict):
         """Test 404 for non-existent deck."""
         non_existent_id = uuid4()
 
-        response = await client.get(f"/api/v1/culture/decks/{non_existent_id}")
+        response = await client.get(
+            f"/api/v1/culture/decks/{non_existent_id}", headers=auth_headers
+        )
 
         assert response.status_code == 404
         data = response.json()
@@ -284,10 +322,12 @@ class TestGetCultureDeckEndpoint:
 
     @pytest.mark.asyncio
     async def test_get_inactive_deck_returns_404(
-        self, client: AsyncClient, inactive_culture_deck: CultureDeck
+        self, client: AsyncClient, auth_headers: dict, inactive_culture_deck: CultureDeck
     ):
         """Test inactive deck returns 404."""
-        response = await client.get(f"/api/v1/culture/decks/{inactive_culture_deck.id}")
+        response = await client.get(
+            f"/api/v1/culture/decks/{inactive_culture_deck.id}", headers=auth_headers
+        )
 
         assert response.status_code == 404
         data = response.json()
@@ -295,16 +335,20 @@ class TestGetCultureDeckEndpoint:
         assert data["error"]["code"] == "NOT_FOUND"
 
     @pytest.mark.asyncio
-    async def test_get_deck_invalid_uuid(self, client: AsyncClient):
+    async def test_get_deck_invalid_uuid(self, client: AsyncClient, auth_headers: dict):
         """Test invalid UUID returns 422."""
-        response = await client.get("/api/v1/culture/decks/not-a-uuid")
+        response = await client.get("/api/v1/culture/decks/not-a-uuid", headers=auth_headers)
 
         assert response.status_code == 422
 
     @pytest.mark.asyncio
-    async def test_get_deck_response_format(self, client: AsyncClient, culture_deck: CultureDeck):
+    async def test_get_deck_response_format(
+        self, client: AsyncClient, auth_headers: dict, culture_deck: CultureDeck
+    ):
         """Test response includes all required fields."""
-        response = await client.get(f"/api/v1/culture/decks/{culture_deck.id}")
+        response = await client.get(
+            f"/api/v1/culture/decks/{culture_deck.id}", headers=auth_headers
+        )
 
         assert response.status_code == 200
         data = response.json()
@@ -335,9 +379,18 @@ class TestGetCategoriesEndpoint:
     """Test suite for GET /api/v1/culture/categories endpoint."""
 
     @pytest.mark.asyncio
-    async def test_get_categories_empty(self, client: AsyncClient):
-        """Test empty database returns empty list."""
+    async def test_get_categories_unauthenticated_returns_401(self, client: AsyncClient):
+        """Test unauthenticated request returns 401."""
         response = await client.get("/api/v1/culture/categories")
+
+        assert response.status_code == 401
+        data = response.json()
+        assert data["success"] is False
+
+    @pytest.mark.asyncio
+    async def test_get_categories_empty(self, client: AsyncClient, auth_headers: dict):
+        """Test empty database returns empty list."""
+        response = await client.get("/api/v1/culture/categories", headers=auth_headers)
 
         assert response.status_code == 200
         data = response.json()
@@ -345,10 +398,10 @@ class TestGetCategoriesEndpoint:
 
     @pytest.mark.asyncio
     async def test_get_categories_with_data(
-        self, client: AsyncClient, multiple_culture_decks: list[CultureDeck]
+        self, client: AsyncClient, auth_headers: dict, multiple_culture_decks: list[CultureDeck]
     ):
         """Test returns unique categories."""
-        response = await client.get("/api/v1/culture/categories")
+        response = await client.get("/api/v1/culture/categories", headers=auth_headers)
 
         assert response.status_code == 200
         data = response.json()
@@ -361,11 +414,15 @@ class TestGetCategoriesEndpoint:
 
     @pytest.mark.asyncio
     async def test_get_categories_excludes_inactive(
-        self, client: AsyncClient, culture_deck: CultureDeck, inactive_culture_deck: CultureDeck
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        culture_deck: CultureDeck,
+        inactive_culture_deck: CultureDeck,
     ):
         """Test only categories from active decks are returned."""
         # Both decks have category "history"
-        response = await client.get("/api/v1/culture/categories")
+        response = await client.get("/api/v1/culture/categories", headers=auth_headers)
 
         assert response.status_code == 200
         data = response.json()
@@ -407,3 +464,40 @@ class TestAuthenticatedCultureDeckAccess:
         assert response.status_code == 200
         data = response.json()
         assert data["id"] == str(culture_deck.id)
+
+    @pytest.mark.asyncio
+    async def test_get_categories_authenticated_user(
+        self, client: AsyncClient, auth_headers: dict, culture_deck: CultureDeck
+    ):
+        """Test authenticated user can get categories."""
+        response = await client.get("/api/v1/culture/categories", headers=auth_headers)
+
+        assert response.status_code == 200
+        data = response.json()
+        assert "history" in data
+
+    @pytest.mark.asyncio
+    async def test_auth_flow_for_culture_deck_endpoints(
+        self, client: AsyncClient, auth_headers: dict, culture_deck: CultureDeck
+    ):
+        """Test that all culture deck read endpoints require authentication."""
+        # All these endpoints should return 401 without auth
+        unauthenticated_endpoints = [
+            "/api/v1/culture/decks",
+            f"/api/v1/culture/decks/{culture_deck.id}",
+            "/api/v1/culture/categories",
+        ]
+
+        for endpoint in unauthenticated_endpoints:
+            response = await client.get(endpoint)
+            assert (
+                response.status_code == 401
+            ), f"Expected 401 for {endpoint}, got {response.status_code}"
+
+        # All these endpoints should succeed with auth
+        for endpoint in unauthenticated_endpoints:
+            response = await client.get(endpoint, headers=auth_headers)
+            assert response.status_code in (
+                200,
+                404,
+            ), f"Expected 200/404 for {endpoint}, got {response.status_code}"

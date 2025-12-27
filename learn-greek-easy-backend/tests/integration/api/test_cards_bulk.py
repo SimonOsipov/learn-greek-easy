@@ -532,8 +532,8 @@ class TestBulkCreateCardsEndpoint:
         created_data = create_response.json()
         card_id = created_data["cards"][0]["id"]
 
-        # Verify card can be retrieved
-        get_response = await client.get(f"/api/v1/cards/{card_id}")
+        # Verify card can be retrieved (requires auth now)
+        get_response = await client.get(f"/api/v1/cards/{card_id}", headers=superuser_auth_headers)
 
         assert get_response.status_code == 200
         retrieved_card = get_response.json()

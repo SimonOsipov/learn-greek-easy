@@ -11,7 +11,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, Query, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config import settings
-from src.core.dependencies import get_current_superuser
+from src.core.dependencies import get_current_superuser, get_current_user
 from src.core.exceptions import DeckNotFoundException
 from src.db.dependencies import get_db
 from src.db.models import DeckLevel, User
@@ -74,10 +74,11 @@ async def list_decks(
         default=None, description="Filter by CEFR level (A1, A2, B1, B2, C1, C2)"
     ),
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> DeckListResponse:
     """List all active decks with pagination and optional filtering.
 
-    This is a public endpoint that returns only active decks.
+    Requires authentication. Returns only active decks.
     Use the level parameter to filter by CEFR proficiency level.
 
     Args:
@@ -85,6 +86,7 @@ async def list_decks(
         page_size: Number of items per page (1-100)
         level: Optional CEFR level filter
         db: Database session (injected)
+        current_user: Authenticated user (injected)
 
     Returns:
         DeckListResponse with total count and paginated deck list
@@ -214,17 +216,19 @@ async def search_decks(
     page: int = Query(default=1, ge=1, description="Page number (starting from 1)"),
     page_size: int = Query(default=20, ge=1, le=50, description="Items per page (max 50)"),
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> DeckSearchResponse:
     """Search decks by name or description.
 
-    Performs case-insensitive partial matching on deck names and descriptions.
-    Only active decks are included in search results.
+    Requires authentication. Performs case-insensitive partial matching on
+    deck names and descriptions. Only active decks are included in search results.
 
     Args:
         q: Search query (required, 1-100 characters)
         page: Page number starting from 1
         page_size: Number of items per page (1-50)
         db: Database session (injected)
+        current_user: Authenticated user (injected)
 
     Returns:
         DeckSearchResponse with total count, pagination info, query, and matching decks
@@ -279,15 +283,17 @@ async def search_decks(
 async def get_deck(
     deck_id: UUID,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> DeckDetailResponse:
     """Get a specific deck by ID with card count.
 
-    This is a public endpoint that returns deck details including
+    Requires authentication. Returns deck details including
     the number of cards. Inactive decks return 404.
 
     Args:
         deck_id: UUID of the deck to retrieve
         db: Database session (injected)
+        current_user: Authenticated user (injected)
 
     Returns:
         DeckDetailResponse with deck details and card count

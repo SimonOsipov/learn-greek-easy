@@ -8,6 +8,8 @@ covering:
 - Pagination
 - Response structure validation
 
+All card search endpoints now require authentication.
+
 Run with:
     pytest tests/e2e/scenarios/test_card_search.py -v
 """
@@ -25,12 +27,15 @@ class TestCardSearchBasic(E2ETestCase):
 
     @pytest.mark.asyncio
     @pytest.mark.e2e
-    async def test_card_search_returns_results(self, client: AsyncClient) -> None:
+    async def test_card_search_returns_results(
+        self, client: AsyncClient, auth_headers: dict[str, str]
+    ) -> None:
         """Test that search returns results for existing term."""
         # Search for common Greek word
         response = await client.get(
             "/api/v1/cards/search",
             params={"q": "hello"},
+            headers=auth_headers,
         )
 
         assert response.status_code == 200
@@ -41,11 +46,14 @@ class TestCardSearchBasic(E2ETestCase):
 
     @pytest.mark.asyncio
     @pytest.mark.e2e
-    async def test_card_search_response_structure(self, client: AsyncClient) -> None:
+    async def test_card_search_response_structure(
+        self, client: AsyncClient, auth_headers: dict[str, str]
+    ) -> None:
         """Test that response has correct structure."""
         response = await client.get(
             "/api/v1/cards/search",
             params={"q": "test"},
+            headers=auth_headers,
         )
 
         assert response.status_code == 200
@@ -61,12 +69,15 @@ class TestCardSearchBasic(E2ETestCase):
 
     @pytest.mark.asyncio
     @pytest.mark.e2e
-    async def test_card_search_no_results(self, client: AsyncClient) -> None:
+    async def test_card_search_no_results(
+        self, client: AsyncClient, auth_headers: dict[str, str]
+    ) -> None:
         """Test search with term that doesn't match any cards."""
         # Use a string unlikely to match any cards
         response = await client.get(
             "/api/v1/cards/search",
             params={"q": "xyznonexistent12345"},
+            headers=auth_headers,
         )
 
         assert response.status_code == 200
@@ -76,18 +87,22 @@ class TestCardSearchBasic(E2ETestCase):
 
     @pytest.mark.asyncio
     @pytest.mark.e2e
-    async def test_card_search_case_insensitive(self, client: AsyncClient) -> None:
+    async def test_card_search_case_insensitive(
+        self, client: AsyncClient, auth_headers: dict[str, str]
+    ) -> None:
         """Test that search is case insensitive."""
         # Search with uppercase
         response_upper = await client.get(
             "/api/v1/cards/search",
             params={"q": "HELLO"},
+            headers=auth_headers,
         )
 
         # Search with lowercase
         response_lower = await client.get(
             "/api/v1/cards/search",
             params={"q": "hello"},
+            headers=auth_headers,
         )
 
         assert response_upper.status_code == 200
@@ -98,62 +113,87 @@ class TestCardSearchBasic(E2ETestCase):
         data_lower = response_lower.json()
         assert data_upper["total"] == data_lower["total"]
 
+    @pytest.mark.asyncio
+    @pytest.mark.e2e
+    async def test_card_search_unauthenticated_returns_401(self, client: AsyncClient) -> None:
+        """Test that unauthenticated request returns 401."""
+        response = await client.get(
+            "/api/v1/cards/search",
+            params={"q": "hello"},
+        )
+
+        assert response.status_code == 401
+
 
 class TestCardSearchValidation(E2ETestCase):
     """E2E tests for card search query validation."""
 
     @pytest.mark.asyncio
     @pytest.mark.e2e
-    async def test_card_search_missing_query_returns_422(self, client: AsyncClient) -> None:
+    async def test_card_search_missing_query_returns_422(
+        self, client: AsyncClient, auth_headers: dict[str, str]
+    ) -> None:
         """Test that missing query parameter returns 422."""
-        response = await client.get("/api/v1/cards/search")
+        response = await client.get("/api/v1/cards/search", headers=auth_headers)
 
         assert response.status_code == 422
 
     @pytest.mark.asyncio
     @pytest.mark.e2e
-    async def test_card_search_empty_query_returns_422(self, client: AsyncClient) -> None:
+    async def test_card_search_empty_query_returns_422(
+        self, client: AsyncClient, auth_headers: dict[str, str]
+    ) -> None:
         """Test that empty query returns 422."""
         response = await client.get(
             "/api/v1/cards/search",
             params={"q": ""},
+            headers=auth_headers,
         )
 
         assert response.status_code == 422
 
     @pytest.mark.asyncio
     @pytest.mark.e2e
-    async def test_card_search_query_too_long_returns_422(self, client: AsyncClient) -> None:
+    async def test_card_search_query_too_long_returns_422(
+        self, client: AsyncClient, auth_headers: dict[str, str]
+    ) -> None:
         """Test that query > 100 chars returns 422."""
         long_query = "a" * 101
 
         response = await client.get(
             "/api/v1/cards/search",
             params={"q": long_query},
+            headers=auth_headers,
         )
 
         assert response.status_code == 422
 
     @pytest.mark.asyncio
     @pytest.mark.e2e
-    async def test_card_search_query_exactly_100_chars_accepted(self, client: AsyncClient) -> None:
+    async def test_card_search_query_exactly_100_chars_accepted(
+        self, client: AsyncClient, auth_headers: dict[str, str]
+    ) -> None:
         """Test that query with exactly 100 chars is accepted."""
         query_100 = "a" * 100
 
         response = await client.get(
             "/api/v1/cards/search",
             params={"q": query_100},
+            headers=auth_headers,
         )
 
         assert response.status_code == 200
 
     @pytest.mark.asyncio
     @pytest.mark.e2e
-    async def test_card_search_single_char_query_accepted(self, client: AsyncClient) -> None:
+    async def test_card_search_single_char_query_accepted(
+        self, client: AsyncClient, auth_headers: dict[str, str]
+    ) -> None:
         """Test that single character query is accepted."""
         response = await client.get(
             "/api/v1/cards/search",
             params={"q": "a"},
+            headers=auth_headers,
         )
 
         assert response.status_code == 200
@@ -184,13 +224,16 @@ class TestCardSearchDeckFilter(E2ETestCase):
 
     @pytest.mark.asyncio
     @pytest.mark.e2e
-    async def test_card_search_nonexistent_deck_returns_404(self, client: AsyncClient) -> None:
+    async def test_card_search_nonexistent_deck_returns_404(
+        self, client: AsyncClient, auth_headers: dict[str, str]
+    ) -> None:
         """Test search with non-existent deck_id returns 404."""
         fake_deck_id = str(uuid4())
 
         response = await client.get(
             "/api/v1/cards/search",
             params={"q": "hello", "deck_id": fake_deck_id},
+            headers=auth_headers,
         )
 
         assert response.status_code == 404
@@ -198,12 +241,13 @@ class TestCardSearchDeckFilter(E2ETestCase):
     @pytest.mark.asyncio
     @pytest.mark.e2e
     async def test_card_search_invalid_deck_id_format_returns_422(
-        self, client: AsyncClient
+        self, client: AsyncClient, auth_headers: dict[str, str]
     ) -> None:
         """Test search with invalid deck_id format returns 422."""
         response = await client.get(
             "/api/v1/cards/search",
             params={"q": "hello", "deck_id": "not-a-uuid"},
+            headers=auth_headers,
         )
 
         assert response.status_code == 422
@@ -214,11 +258,14 @@ class TestCardSearchPagination(E2ETestCase):
 
     @pytest.mark.asyncio
     @pytest.mark.e2e
-    async def test_card_search_default_pagination(self, client: AsyncClient) -> None:
+    async def test_card_search_default_pagination(
+        self, client: AsyncClient, auth_headers: dict[str, str]
+    ) -> None:
         """Test default pagination values."""
         response = await client.get(
             "/api/v1/cards/search",
             params={"q": "hello"},
+            headers=auth_headers,
         )
 
         assert response.status_code == 200
@@ -228,11 +275,14 @@ class TestCardSearchPagination(E2ETestCase):
 
     @pytest.mark.asyncio
     @pytest.mark.e2e
-    async def test_card_search_custom_page_size(self, client: AsyncClient) -> None:
+    async def test_card_search_custom_page_size(
+        self, client: AsyncClient, auth_headers: dict[str, str]
+    ) -> None:
         """Test custom page_size parameter."""
         response = await client.get(
             "/api/v1/cards/search",
             params={"q": "hello", "page_size": 10},
+            headers=auth_headers,
         )
 
         assert response.status_code == 200
@@ -241,11 +291,14 @@ class TestCardSearchPagination(E2ETestCase):
 
     @pytest.mark.asyncio
     @pytest.mark.e2e
-    async def test_card_search_page_parameter(self, client: AsyncClient) -> None:
+    async def test_card_search_page_parameter(
+        self, client: AsyncClient, auth_headers: dict[str, str]
+    ) -> None:
         """Test page parameter."""
         response = await client.get(
             "/api/v1/cards/search",
             params={"q": "hello", "page": 2},
+            headers=auth_headers,
         )
 
         assert response.status_code == 200
@@ -254,22 +307,28 @@ class TestCardSearchPagination(E2ETestCase):
 
     @pytest.mark.asyncio
     @pytest.mark.e2e
-    async def test_card_search_page_zero_returns_422(self, client: AsyncClient) -> None:
+    async def test_card_search_page_zero_returns_422(
+        self, client: AsyncClient, auth_headers: dict[str, str]
+    ) -> None:
         """Test that page=0 returns 422."""
         response = await client.get(
             "/api/v1/cards/search",
             params={"q": "hello", "page": 0},
+            headers=auth_headers,
         )
 
         assert response.status_code == 422
 
     @pytest.mark.asyncio
     @pytest.mark.e2e
-    async def test_card_search_page_size_exceeds_max_returns_422(self, client: AsyncClient) -> None:
+    async def test_card_search_page_size_exceeds_max_returns_422(
+        self, client: AsyncClient, auth_headers: dict[str, str]
+    ) -> None:
         """Test that page_size > 50 returns 422."""
         response = await client.get(
             "/api/v1/cards/search",
             params={"q": "hello", "page_size": 100},
+            headers=auth_headers,
         )
 
         assert response.status_code == 422
@@ -320,11 +379,14 @@ class TestCardSearchResponseFormat(E2ETestCase):
 
     @pytest.mark.asyncio
     @pytest.mark.e2e
-    async def test_card_search_response_is_json(self, client: AsyncClient) -> None:
+    async def test_card_search_response_is_json(
+        self, client: AsyncClient, auth_headers: dict[str, str]
+    ) -> None:
         """Test that response is JSON formatted."""
         response = await client.get(
             "/api/v1/cards/search",
             params={"q": "hello"},
+            headers=auth_headers,
         )
 
         assert response.status_code == 200

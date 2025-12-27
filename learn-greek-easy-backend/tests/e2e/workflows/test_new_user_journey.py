@@ -420,46 +420,40 @@ class TestFirstReviewMetrics(E2ETestCase):
 
 @pytest.mark.e2e
 class TestDeckAccessPatterns(E2ETestCase):
-    """Test deck access patterns for public vs authenticated-only endpoints.
+    """Test deck access patterns for authenticated vs unauthenticated endpoints.
 
-    Note: Deck list and detail endpoints are public (no auth required).
-    Only administrative actions (create, update, delete) require authentication.
+    Note: All deck read endpoints now require authentication.
+    This is by design to ensure user progress can be tracked.
     """
 
     @pytest.mark.asyncio
-    async def test_public_can_browse_decks(
+    async def test_unauthenticated_browse_decks_returns_401(
         self,
         client: AsyncClient,
         db_session: AsyncSession,
     ):
-        """Test: Public (unauthenticated) users can browse available decks.
+        """Test: Unauthenticated users cannot browse decks.
 
-        The deck list endpoint is intentionally public to allow users
-        to see available content before registering.
+        Deck list endpoint requires authentication for user tracking.
         """
-        # Create a deck for testing (deck variable unused but needed for DB setup)
+        # Create a deck for testing
         await DeckFactory.create(
             session=db_session,
-            name="Public Deck",
+            name="Auth Required Deck",
             is_active=True,
         )
 
-        # No auth headers - public access
+        # No auth headers - should fail
         response = await client.get("/api/v1/decks")
-        assert response.status_code == 200
-        data = response.json()
-        assert "decks" in data
-        # Should include our active deck
-        deck_names = [d["name"] for d in data["decks"]]
-        assert "Public Deck" in deck_names
+        assert response.status_code == 401
 
     @pytest.mark.asyncio
-    async def test_public_can_view_deck_detail(
+    async def test_unauthenticated_view_deck_returns_401(
         self,
         client: AsyncClient,
         db_session: AsyncSession,
     ):
-        """Test: Public users can view specific deck details."""
+        """Test: Unauthenticated users cannot view deck details."""
         # Create a deck
         deck = await DeckFactory.create(
             session=db_session,
@@ -467,10 +461,9 @@ class TestDeckAccessPatterns(E2ETestCase):
             is_active=True,
         )
 
-        # No auth headers - public access
+        # No auth headers - should fail
         response = await client.get(f"/api/v1/decks/{deck.id}")
-        assert response.status_code == 200
-        assert response.json()["name"] == "Test Deck"
+        assert response.status_code == 401
 
     @pytest.mark.asyncio
     async def test_study_endpoints_require_authentication(
@@ -555,9 +548,10 @@ class TestDeckAccessPatterns(E2ETestCase):
     async def test_inactive_deck_not_visible(
         self,
         client: AsyncClient,
+        auth_headers: dict,
         db_session: AsyncSession,
     ):
-        """Test: Inactive decks are not visible to regular users."""
+        """Test: Inactive decks are not visible to authenticated users."""
         # Create inactive deck
         inactive_deck = await DeckFactory.create(
             session=db_session,
@@ -565,9 +559,10 @@ class TestDeckAccessPatterns(E2ETestCase):
             is_active=False,
         )
 
-        # Inactive deck should return 404 on direct access (even for public)
+        # Inactive deck should return 404 on direct access (requires auth)
         detail_response = await client.get(
             f"/api/v1/decks/{inactive_deck.id}",
+            headers=auth_headers,
         )
         # Should be 404 for inactive decks
         assert detail_response.status_code == 404
