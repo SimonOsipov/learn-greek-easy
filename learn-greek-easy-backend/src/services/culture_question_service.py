@@ -10,6 +10,7 @@ Key Features:
 - Progress tracking across categories
 - Pre-signed S3 URL generation for images
 - XP integration with daily goal tracking
+- Admin CRUD operations for questions (create, bulk create, update, delete)
 
 Example Usage:
     async with get_db_session() as db:
@@ -20,6 +21,10 @@ Example Usage:
             limit=10,
         )
         print(f"Queue has {queue.total_in_queue} questions")
+
+        # Admin operations
+        question = await service.create_question(question_data)
+        response = await service.bulk_create_questions(deck_id, questions)
 """
 
 import logging
@@ -42,6 +47,7 @@ from src.db.models import (
     CultureQuestionStats,
     UserSettings,
 )
+from src.repositories import CultureQuestionRepository
 from src.repositories.culture_question_stats import CultureQuestionStatsRepository
 from src.repositories.review import ReviewRepository
 from src.schemas.culture import (
@@ -49,8 +55,13 @@ from src.schemas.culture import (
     CultureDeckProgress,
     CultureOverallProgress,
     CultureProgressResponse,
+    CultureQuestionAdminResponse,
+    CultureQuestionBulkCreateRequest,
+    CultureQuestionBulkCreateResponse,
+    CultureQuestionCreate,
     CultureQuestionQueue,
     CultureQuestionQueueItem,
+    CultureQuestionUpdate,
     SM2QuestionResult,
 )
 from src.services.s3_service import S3Service, get_s3_service
@@ -89,6 +100,7 @@ class CultureQuestionService:
         self.xp_service = XPService(db)
         self.stats_repo = CultureQuestionStatsRepository(db)
         self.review_repo = ReviewRepository(db)
+        self.question_repo = CultureQuestionRepository(db)
 
     # =========================================================================
     # Question Queue Methods
@@ -850,6 +862,234 @@ class CultureQuestionService:
             )
 
         return progress
+
+    # =========================================================================
+    # Admin CRUD Methods
+    # =========================================================================
+
+    async def create_question(
+        self,
+        question_data: CultureQuestionCreate,
+    ) -> CultureQuestionAdminResponse:
+        """Create a new culture question.
+
+        Args:
+            question_data: Question creation data with multilingual fields
+
+        Returns:
+            CultureQuestionAdminResponse with created question details
+
+        Raises:
+            CultureDeckNotFoundException: If deck doesn't exist
+
+        Note:
+            - Requires superuser privileges (enforced in router)
+            - Transaction commit must be done by caller
+        """
+        logger.info(
+            "Creating culture question",
+            extra={
+                "deck_id": str(question_data.deck_id),
+                "correct_option": question_data.correct_option,
+            },
+        )
+
+        # Validate deck exists
+        deck = await self._get_deck_or_none(question_data.deck_id)
+        if deck is None:
+            raise CultureDeckNotFoundException(deck_id=str(question_data.deck_id))
+
+        # Convert Pydantic model to dict, converting MultilingualText to dict
+        question_dict = {
+            "deck_id": question_data.deck_id,
+            "question_text": question_data.question_text.model_dump(),
+            "option_a": question_data.option_a.model_dump(),
+            "option_b": question_data.option_b.model_dump(),
+            "option_c": question_data.option_c.model_dump(),
+            "option_d": question_data.option_d.model_dump(),
+            "correct_option": question_data.correct_option,
+            "image_key": question_data.image_key,
+            "order_index": question_data.order_index,
+        }
+
+        # Create question using repository
+        question = await self.question_repo.create(question_dict)
+
+        logger.info(
+            "Culture question created",
+            extra={
+                "question_id": str(question.id),
+                "deck_id": str(question.deck_id),
+            },
+        )
+
+        return CultureQuestionAdminResponse.model_validate(question)
+
+    async def bulk_create_questions(
+        self,
+        request: CultureQuestionBulkCreateRequest,
+    ) -> CultureQuestionBulkCreateResponse:
+        """Create multiple questions in one transaction.
+
+        Args:
+            request: Bulk create request with deck_id and questions array
+
+        Returns:
+            CultureQuestionBulkCreateResponse with created questions
+
+        Raises:
+            CultureDeckNotFoundException: If deck doesn't exist
+
+        Note:
+            - Requires superuser privileges (enforced in router)
+            - All-or-nothing: if any question fails, entire request is rejected
+            - Limit: 1-100 questions per request
+        """
+        logger.info(
+            "Bulk creating culture questions",
+            extra={
+                "deck_id": str(request.deck_id),
+                "question_count": len(request.questions),
+            },
+        )
+
+        # Validate deck exists
+        deck = await self._get_deck_or_none(request.deck_id)
+        if deck is None:
+            raise CultureDeckNotFoundException(deck_id=str(request.deck_id))
+
+        # Convert questions to dict format
+        questions_data = []
+        for q in request.questions:
+            questions_data.append(
+                {
+                    "deck_id": request.deck_id,
+                    "question_text": q.question_text.model_dump(),
+                    "option_a": q.option_a.model_dump(),
+                    "option_b": q.option_b.model_dump(),
+                    "option_c": q.option_c.model_dump(),
+                    "option_d": q.option_d.model_dump(),
+                    "correct_option": q.correct_option,
+                    "image_key": q.image_key,
+                    "order_index": q.order_index,
+                }
+            )
+
+        # Bulk create using repository
+        created_questions = await self.question_repo.bulk_create(questions_data)
+
+        logger.info(
+            "Culture questions bulk created",
+            extra={
+                "deck_id": str(request.deck_id),
+                "created_count": len(created_questions),
+            },
+        )
+
+        return CultureQuestionBulkCreateResponse(
+            deck_id=request.deck_id,
+            created_count=len(created_questions),
+            questions=[CultureQuestionAdminResponse.model_validate(q) for q in created_questions],
+        )
+
+    async def update_question(
+        self,
+        question_id: UUID,
+        question_data: CultureQuestionUpdate,
+    ) -> CultureQuestion:
+        """Update an existing culture question.
+
+        Args:
+            question_id: UUID of question to update
+            question_data: Fields to update (all optional)
+
+        Returns:
+            Updated CultureQuestion SQLAlchemy model (not committed)
+
+        Raises:
+            CultureQuestionNotFoundException: If question doesn't exist
+
+        Note:
+            - Requires superuser privileges (enforced in router)
+            - deck_id cannot be changed
+            - Caller must commit and refresh
+        """
+        logger.debug(
+            "Updating culture question",
+            extra={"question_id": str(question_id)},
+        )
+
+        # Get existing question
+        question = await self.question_repo.get(question_id)
+        if question is None:
+            raise CultureQuestionNotFoundException(question_id=str(question_id))
+
+        # Build update dict, converting MultilingualText to dict
+        update_dict = {}
+        for field, value in question_data.model_dump(exclude_unset=True).items():
+            if field in ("question_text", "option_a", "option_b", "option_c", "option_d"):
+                if value is not None:
+                    # Already a dict from model_dump
+                    update_dict[field] = value
+            else:
+                update_dict[field] = value
+
+        # Update question using repository
+        updated_question = await self.question_repo.update(question, update_dict)
+
+        logger.info(
+            "Culture question updated",
+            extra={
+                "question_id": str(question_id),
+                "updated_fields": list(update_dict.keys()),
+            },
+        )
+
+        return updated_question
+
+    async def delete_question(self, question_id: UUID) -> None:
+        """Hard delete a culture question.
+
+        Args:
+            question_id: UUID of question to delete
+
+        Raises:
+            CultureQuestionNotFoundException: If question doesn't exist
+
+        Note:
+            - Requires superuser privileges (enforced in router)
+            - HARD DELETE: permanently removes question and all statistics
+        """
+        logger.debug(
+            "Deleting culture question",
+            extra={"question_id": str(question_id)},
+        )
+
+        # Get existing question
+        question = await self.question_repo.get(question_id)
+        if question is None:
+            raise CultureQuestionNotFoundException(question_id=str(question_id))
+
+        # Hard delete the question
+        await self.question_repo.delete(question)
+
+        logger.info(
+            "Culture question deleted",
+            extra={"question_id": str(question_id)},
+        )
+
+    async def _get_deck_or_none(self, deck_id: UUID) -> Optional[CultureDeck]:
+        """Get deck by ID without raising exception.
+
+        Args:
+            deck_id: Deck UUID
+
+        Returns:
+            CultureDeck if found, None otherwise
+        """
+        query = select(CultureDeck).where(CultureDeck.id == deck_id)
+        result = await self.db.execute(query)
+        return result.scalar_one_or_none()
 
 
 # ============================================================================

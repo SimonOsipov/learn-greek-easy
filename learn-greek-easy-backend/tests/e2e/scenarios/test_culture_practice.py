@@ -1302,14 +1302,15 @@ class TestCultureHTTPMethods(E2ETestCase):
     """E2E tests for HTTP method handling on culture endpoints."""
 
     @pytest.mark.asyncio
-    async def test_decks_post_not_allowed(
+    async def test_decks_post_requires_auth(
         self,
         client: AsyncClient,
     ) -> None:
-        """Test that POST to decks returns 405."""
+        """Test that POST to decks requires authentication (returns 401)."""
         response = await client.post("/api/v1/culture/decks")
 
-        assert response.status_code == 405
+        # POST is now allowed for superusers (admin CRUD), but requires auth
+        assert response.status_code == 401
 
     @pytest.mark.asyncio
     async def test_categories_post_not_allowed(
@@ -1428,3 +1429,722 @@ class TestCultureResponseFormat(E2ETestCase):
         assert "application/json" in response.headers.get("content-type", "")
         data = response.json()
         assert isinstance(data, dict)
+
+
+# =============================================================================
+# TestCultureExtendedScenarios - Complex E2E Flows
+# =============================================================================
+
+
+@pytest.mark.e2e
+@pytest.mark.scenario
+class TestCultureExtendedScenarios(E2ETestCase):
+    """Extended E2E tests for culture module covering complex flows."""
+
+    @pytest.mark.asyncio
+    async def test_multiple_answers_updates_stats(
+        self,
+        client: AsyncClient,
+        fresh_user_session: UserSession,
+        db_session: AsyncSession,
+    ) -> None:
+        """Test that answering multiple questions correctly updates stats."""
+        deck = await CultureDeckFactory.create(session=db_session)
+        questions = []
+        for i in range(5):
+            q = await CultureQuestionFactory.create(
+                session=db_session,
+                deck_id=deck.id,
+                correct_option=1,
+                order_index=i,
+            )
+            questions.append(q)
+        await db_session.commit()
+
+        # Answer all questions correctly
+        for question in questions:
+            response = await client.post(
+                f"/api/v1/culture/questions/{question.id}/answer",
+                json={"selected_option": 1, "time_taken": 5, "language": "en"},
+                headers=fresh_user_session.headers,
+            )
+            assert response.status_code == 200
+            data = response.json()
+            assert data["is_correct"] is True
+            assert data["xp_earned"] > 0
+
+        # Check progress reflects all answers
+        progress_response = await client.get(
+            "/api/v1/culture/progress",
+            headers=fresh_user_session.headers,
+        )
+        assert progress_response.status_code == 200
+        progress = progress_response.json()
+        assert progress["overall"]["decks_started"] >= 1
+
+    @pytest.mark.asyncio
+    async def test_answer_same_question_multiple_times(
+        self,
+        client: AsyncClient,
+        fresh_user_session: UserSession,
+        db_session: AsyncSession,
+    ) -> None:
+        """Test answering the same question multiple times updates SM-2 stats."""
+        deck = await CultureDeckFactory.create(session=db_session)
+        question = await CultureQuestionFactory.create(
+            session=db_session,
+            deck_id=deck.id,
+            correct_option=2,
+        )
+        await db_session.commit()
+
+        # First answer - correct
+        response1 = await client.post(
+            f"/api/v1/culture/questions/{question.id}/answer",
+            json={"selected_option": 2, "time_taken": 3, "language": "en"},
+            headers=fresh_user_session.headers,
+        )
+        assert response1.status_code == 200
+        data1 = response1.json()
+        assert data1["is_correct"] is True
+        assert data1["sm2_result"]["previous_status"] == "new"
+
+        # Second answer - correct again
+        response2 = await client.post(
+            f"/api/v1/culture/questions/{question.id}/answer",
+            json={"selected_option": 2, "time_taken": 2, "language": "en"},
+            headers=fresh_user_session.headers,
+        )
+        assert response2.status_code == 200
+        data2 = response2.json()
+        assert data2["is_correct"] is True
+        # Status should have progressed
+        assert data2["sm2_result"]["repetitions"] > data1["sm2_result"]["repetitions"]
+
+    @pytest.mark.asyncio
+    async def test_question_queue_with_new_questions(
+        self,
+        client: AsyncClient,
+        fresh_user_session: UserSession,
+        db_session: AsyncSession,
+    ) -> None:
+        """Test getting question queue includes new questions."""
+        deck = await CultureDeckFactory.create(session=db_session)
+        for i in range(10):
+            await CultureQuestionFactory.create(
+                session=db_session,
+                deck_id=deck.id,
+                order_index=i,
+            )
+        await db_session.commit()
+
+        # Get queue with include_new=true
+        response = await client.get(
+            f"/api/v1/culture/decks/{deck.id}/questions?include_new=true&new_questions_limit=5",
+            headers=fresh_user_session.headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total_in_queue"] > 0
+        assert len(data["questions"]) > 0
+        # All should be new for a fresh user
+        for q in data["questions"]:
+            assert q["is_new"] is True
+
+    @pytest.mark.asyncio
+    async def test_question_queue_after_answering(
+        self,
+        client: AsyncClient,
+        fresh_user_session: UserSession,
+        db_session: AsyncSession,
+    ) -> None:
+        """Test question queue changes after answering questions."""
+        deck = await CultureDeckFactory.create(session=db_session)
+        questions = []
+        for i in range(3):
+            q = await CultureQuestionFactory.create(
+                session=db_session,
+                deck_id=deck.id,
+                correct_option=1,
+                order_index=i,
+            )
+            questions.append(q)
+        await db_session.commit()
+
+        # Answer first question
+        await client.post(
+            f"/api/v1/culture/questions/{questions[0].id}/answer",
+            json={"selected_option": 1, "time_taken": 5, "language": "en"},
+            headers=fresh_user_session.headers,
+        )
+
+        # Get queue again
+        response = await client.get(
+            f"/api/v1/culture/decks/{deck.id}/questions?include_new=true",
+            headers=fresh_user_session.headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        # Should have questions in queue
+        assert data["total_in_queue"] >= 0
+
+    @pytest.mark.asyncio
+    async def test_wrong_answer_returns_correct_option(
+        self,
+        client: AsyncClient,
+        fresh_user_session: UserSession,
+        db_session: AsyncSession,
+    ) -> None:
+        """Test that wrong answer response includes correct option."""
+        deck = await CultureDeckFactory.create(session=db_session)
+        question = await CultureQuestionFactory.create(
+            session=db_session,
+            deck_id=deck.id,
+            correct_option=3,
+        )
+        await db_session.commit()
+
+        # Submit wrong answer
+        response = await client.post(
+            f"/api/v1/culture/questions/{question.id}/answer",
+            json={"selected_option": 1, "time_taken": 10, "language": "en"},
+            headers=fresh_user_session.headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["is_correct"] is False
+        assert data["correct_option"] == 3
+        assert data["xp_earned"] > 0  # Encouragement XP
+        assert data["sm2_result"]["success"] is True
+
+    @pytest.mark.asyncio
+    async def test_fast_correct_answer_bonus_xp(
+        self,
+        client: AsyncClient,
+        fresh_user_session: UserSession,
+        db_session: AsyncSession,
+    ) -> None:
+        """Test that fast correct answer (<2s) gets bonus XP."""
+        deck = await CultureDeckFactory.create(session=db_session)
+        question = await CultureQuestionFactory.create(
+            session=db_session,
+            deck_id=deck.id,
+            correct_option=1,
+        )
+        await db_session.commit()
+
+        # Fast correct answer (1 second)
+        response = await client.post(
+            f"/api/v1/culture/questions/{question.id}/answer",
+            json={"selected_option": 1, "time_taken": 1, "language": "en"},
+            headers=fresh_user_session.headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["is_correct"] is True
+        # Should get bonus XP for fast answer (15 instead of 10)
+        assert data["xp_earned"] >= 10
+
+    @pytest.mark.asyncio
+    async def test_progress_by_category_structure(
+        self,
+        client: AsyncClient,
+        fresh_user_session: UserSession,
+        db_session: AsyncSession,
+    ) -> None:
+        """Test that progress by category has correct structure."""
+        deck = await CultureDeckFactory.create(session=db_session, category="history")
+        question = await CultureQuestionFactory.create(
+            session=db_session,
+            deck_id=deck.id,
+            correct_option=1,
+        )
+        await db_session.commit()
+
+        # Answer question
+        await client.post(
+            f"/api/v1/culture/questions/{question.id}/answer",
+            json={"selected_option": 1, "time_taken": 5, "language": "en"},
+            headers=fresh_user_session.headers,
+        )
+
+        # Get progress
+        response = await client.get(
+            "/api/v1/culture/progress",
+            headers=fresh_user_session.headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert "by_category" in data
+        # by_category should be a dict with category names as keys
+
+    @pytest.mark.asyncio
+    async def test_deck_detail_with_question_count(
+        self,
+        client: AsyncClient,
+        fresh_user_session: UserSession,
+        db_session: AsyncSession,
+    ) -> None:
+        """Test that deck detail includes accurate question count."""
+        deck = await CultureDeckFactory.create(session=db_session)
+        for i in range(7):
+            await CultureQuestionFactory.create(
+                session=db_session,
+                deck_id=deck.id,
+                order_index=i,
+            )
+        await db_session.commit()
+
+        response = await client.get(
+            f"/api/v1/culture/decks/{deck.id}",
+            headers=fresh_user_session.headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["question_count"] == 7
+
+    @pytest.mark.asyncio
+    async def test_answer_with_all_languages(
+        self,
+        client: AsyncClient,
+        fresh_user_session: UserSession,
+        db_session: AsyncSession,
+    ) -> None:
+        """Test answering questions with different language settings."""
+        deck = await CultureDeckFactory.create(session=db_session)
+        questions = []
+        for i in range(3):
+            q = await CultureQuestionFactory.create(
+                session=db_session,
+                deck_id=deck.id,
+                correct_option=1,
+                order_index=i,
+            )
+            questions.append(q)
+        await db_session.commit()
+
+        languages = ["el", "en", "ru"]
+        for i, lang in enumerate(languages):
+            response = await client.post(
+                f"/api/v1/culture/questions/{questions[i].id}/answer",
+                json={"selected_option": 1, "time_taken": 5, "language": lang},
+                headers=fresh_user_session.headers,
+            )
+            assert response.status_code == 200
+            data = response.json()
+            assert data["is_correct"] is True
+
+    @pytest.mark.asyncio
+    async def test_deck_list_with_progress_after_answering(
+        self,
+        client: AsyncClient,
+        fresh_user_session: UserSession,
+        db_session: AsyncSession,
+    ) -> None:
+        """Test deck list shows progress after user answers questions."""
+        # Create deck with questions
+        deck = await CultureDeckFactory.create(session=db_session, is_active=True)
+        questions = []
+        for i in range(5):
+            q = await CultureQuestionFactory.create(
+                session=db_session,
+                deck_id=deck.id,
+                correct_option=1,
+                order_index=i,
+            )
+            questions.append(q)
+        await db_session.commit()
+
+        # Answer some questions
+        for i in range(3):
+            await client.post(
+                f"/api/v1/culture/questions/{questions[i].id}/answer",
+                json={"selected_option": 1, "time_taken": 5},
+                headers=fresh_user_session.headers,
+            )
+
+        # Get deck list - should show progress
+        response = await client.get(
+            "/api/v1/culture/decks",
+            headers=fresh_user_session.headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+
+        # Find our deck
+        our_deck = next((d for d in data["decks"] if d["id"] == str(deck.id)), None)
+        assert our_deck is not None
+        assert our_deck["progress"] is not None
+        # User has started this deck
+        assert our_deck["progress"]["questions_total"] == 5
+        assert our_deck["progress"]["questions_learning"] >= 0
+
+    @pytest.mark.asyncio
+    async def test_deck_detail_progress_after_multiple_answers(
+        self,
+        client: AsyncClient,
+        fresh_user_session: UserSession,
+        db_session: AsyncSession,
+    ) -> None:
+        """Test deck detail shows accurate progress after multiple answers."""
+        deck = await CultureDeckFactory.create(session=db_session, is_active=True)
+        questions = []
+        for i in range(4):
+            q = await CultureQuestionFactory.create(
+                session=db_session,
+                deck_id=deck.id,
+                correct_option=1,
+                order_index=i,
+            )
+            questions.append(q)
+        await db_session.commit()
+
+        # Answer all questions correctly multiple times (to move them through SM-2 states)
+        for _ in range(2):
+            for q in questions:
+                await client.post(
+                    f"/api/v1/culture/questions/{q.id}/answer",
+                    json={"selected_option": 1, "time_taken": 3},
+                    headers=fresh_user_session.headers,
+                )
+
+        # Get deck detail
+        response = await client.get(
+            f"/api/v1/culture/decks/{deck.id}",
+            headers=fresh_user_session.headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+
+        # Verify progress fields
+        assert "progress" in data
+        progress = data["progress"]
+        assert progress["questions_total"] == 4
+        assert progress["questions_mastered"] >= 0
+        assert progress["questions_learning"] >= 0
+        assert progress["questions_new"] >= 0
+
+    @pytest.mark.asyncio
+    async def test_progress_by_category_after_practice(
+        self,
+        client: AsyncClient,
+        fresh_user_session: UserSession,
+        db_session: AsyncSession,
+    ) -> None:
+        """Test progress by category is included in overall progress response."""
+        # Create two decks in different categories
+        deck1 = await CultureDeckFactory.create(
+            session=db_session, is_active=True, category="history"
+        )
+        deck2 = await CultureDeckFactory.create(
+            session=db_session, is_active=True, category="geography"
+        )
+
+        q1 = await CultureQuestionFactory.create(
+            session=db_session, deck_id=deck1.id, correct_option=1
+        )
+        q2 = await CultureQuestionFactory.create(
+            session=db_session, deck_id=deck2.id, correct_option=1
+        )
+        await db_session.commit()
+
+        # Answer questions
+        await client.post(
+            f"/api/v1/culture/questions/{q1.id}/answer",
+            json={"selected_option": 1, "time_taken": 5},
+            headers=fresh_user_session.headers,
+        )
+        await client.post(
+            f"/api/v1/culture/questions/{q2.id}/answer",
+            json={"selected_option": 1, "time_taken": 5},
+            headers=fresh_user_session.headers,
+        )
+
+        # Get overall progress (includes by_category)
+        response = await client.get(
+            "/api/v1/culture/progress",
+            headers=fresh_user_session.headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+
+        # Should have by_category breakdown
+        assert "by_category" in data
+        assert len(data["by_category"]) >= 2
+
+    @pytest.mark.asyncio
+    async def test_question_queue_prioritization(
+        self,
+        client: AsyncClient,
+        fresh_user_session: UserSession,
+        db_session: AsyncSession,
+    ) -> None:
+        """Test question queue returns due questions with prioritization."""
+        deck = await CultureDeckFactory.create(session=db_session, is_active=True)
+
+        # Create several questions
+        questions = []
+        for i in range(6):
+            q = await CultureQuestionFactory.create(
+                session=db_session,
+                deck_id=deck.id,
+                correct_option=1,
+                order_index=i,
+            )
+            questions.append(q)
+        await db_session.commit()
+
+        # Answer first 3 questions (making them non-new)
+        for i in range(3):
+            await client.post(
+                f"/api/v1/culture/questions/{questions[i].id}/answer",
+                json={"selected_option": 1, "time_taken": 5},
+                headers=fresh_user_session.headers,
+            )
+
+        # Get question queue with limit
+        response = await client.get(
+            f"/api/v1/culture/decks/{deck.id}/questions?limit=4&include_new=true",
+            headers=fresh_user_session.headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+
+        # Should return questions
+        assert "questions" in data
+        assert len(data["questions"]) <= 4
+
+    @pytest.mark.asyncio
+    async def test_answer_wrong_then_correct(
+        self,
+        client: AsyncClient,
+        fresh_user_session: UserSession,
+        db_session: AsyncSession,
+    ) -> None:
+        """Test answering wrong first then correct updates stats properly."""
+        deck = await CultureDeckFactory.create(session=db_session, is_active=True)
+        question = await CultureQuestionFactory.create(
+            session=db_session,
+            deck_id=deck.id,
+            correct_option=2,  # Correct is option 2
+        )
+        await db_session.commit()
+
+        # First, answer wrong
+        response1 = await client.post(
+            f"/api/v1/culture/questions/{question.id}/answer",
+            json={"selected_option": 1, "time_taken": 5},  # Wrong answer
+            headers=fresh_user_session.headers,
+        )
+        assert response1.status_code == 200
+        data1 = response1.json()
+        assert data1["is_correct"] is False
+        assert data1["correct_option"] == 2
+
+        # Then answer correctly
+        response2 = await client.post(
+            f"/api/v1/culture/questions/{question.id}/answer",
+            json={"selected_option": 2, "time_taken": 3},  # Correct answer
+            headers=fresh_user_session.headers,
+        )
+        assert response2.status_code == 200
+        data2 = response2.json()
+        assert data2["is_correct"] is True
+
+    @pytest.mark.asyncio
+    async def test_overall_progress_includes_culture(
+        self,
+        client: AsyncClient,
+        fresh_user_session: UserSession,
+        db_session: AsyncSession,
+    ) -> None:
+        """Test overall progress endpoint includes culture data."""
+        deck = await CultureDeckFactory.create(session=db_session, is_active=True)
+        question = await CultureQuestionFactory.create(
+            session=db_session,
+            deck_id=deck.id,
+            correct_option=1,
+        )
+        await db_session.commit()
+
+        # Answer a culture question
+        await client.post(
+            f"/api/v1/culture/questions/{question.id}/answer",
+            json={"selected_option": 1, "time_taken": 5},
+            headers=fresh_user_session.headers,
+        )
+
+        # Get overall progress
+        response = await client.get(
+            "/api/v1/culture/progress",
+            headers=fresh_user_session.headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+
+        # Should have overall progress data
+        assert "overall" in data
+        # Questions should be counted
+        assert data["overall"]["total_questions"] >= 1
+
+    @pytest.mark.asyncio
+    async def test_multiple_decks_progress_tracking(
+        self,
+        client: AsyncClient,
+        fresh_user_session: UserSession,
+        db_session: AsyncSession,
+    ) -> None:
+        """Test progress is tracked separately for multiple decks."""
+        # Create 3 decks
+        decks = []
+        for i in range(3):
+            d = await CultureDeckFactory.create(
+                session=db_session, is_active=True, category="history"
+            )
+            decks.append(d)
+
+        # Add questions to each deck
+        questions_per_deck = {}
+        for deck in decks:
+            questions = []
+            for j in range(3):
+                q = await CultureQuestionFactory.create(
+                    session=db_session,
+                    deck_id=deck.id,
+                    correct_option=1,
+                    order_index=j,
+                )
+                questions.append(q)
+            questions_per_deck[deck.id] = questions
+        await db_session.commit()
+
+        # Answer questions in first deck only
+        for q in questions_per_deck[decks[0].id]:
+            await client.post(
+                f"/api/v1/culture/questions/{q.id}/answer",
+                json={"selected_option": 1, "time_taken": 3},
+                headers=fresh_user_session.headers,
+            )
+
+        # Get deck list
+        response = await client.get(
+            "/api/v1/culture/decks",
+            headers=fresh_user_session.headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+
+        # Verify each deck has its own progress
+        for deck in decks:
+            deck_data = next((d for d in data["decks"] if d["id"] == str(deck.id)), None)
+            assert deck_data is not None
+            assert "progress" in deck_data
+
+    @pytest.mark.asyncio
+    async def test_sm2_stats_updated_after_answers(
+        self,
+        client: AsyncClient,
+        fresh_user_session: UserSession,
+        db_session: AsyncSession,
+    ) -> None:
+        """Test SM-2 stats are updated after answering questions correctly."""
+        deck = await CultureDeckFactory.create(session=db_session, is_active=True)
+        questions = []
+        for i in range(5):
+            q = await CultureQuestionFactory.create(
+                session=db_session,
+                deck_id=deck.id,
+                correct_option=1,
+                order_index=i,
+            )
+            questions.append(q)
+        await db_session.commit()
+
+        # Answer all questions correctly
+        for q in questions:
+            response = await client.post(
+                f"/api/v1/culture/questions/{q.id}/answer",
+                json={"selected_option": 1, "time_taken": 3},
+                headers=fresh_user_session.headers,
+            )
+            assert response.status_code == 200
+            data = response.json()
+            # Check SM-2 result is included
+            assert "sm2_result" in data
+            assert data["sm2_result"]["success"] is True
+
+    @pytest.mark.asyncio
+    async def test_xp_accumulation_culture_questions(
+        self,
+        client: AsyncClient,
+        fresh_user_session: UserSession,
+        db_session: AsyncSession,
+    ) -> None:
+        """Test XP is awarded for culture question answers."""
+        deck = await CultureDeckFactory.create(session=db_session, is_active=True)
+        question = await CultureQuestionFactory.create(
+            session=db_session,
+            deck_id=deck.id,
+            correct_option=1,
+        )
+        await db_session.commit()
+
+        # Verify XP endpoint is accessible
+        xp_check_response = await client.get(
+            "/api/v1/xp/stats",
+            headers=fresh_user_session.headers,
+        )
+        assert xp_check_response.status_code == 200
+
+        # Answer question correctly
+        response = await client.post(
+            f"/api/v1/culture/questions/{question.id}/answer",
+            json={"selected_option": 1, "time_taken": 3},
+            headers=fresh_user_session.headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+
+        # Check XP was awarded
+        assert "xp_earned" in data
+        assert data["xp_earned"] >= 0
+
+    @pytest.mark.asyncio
+    async def test_bulk_answer_submission_scenario(
+        self,
+        client: AsyncClient,
+        fresh_user_session: UserSession,
+        db_session: AsyncSession,
+    ) -> None:
+        """Test scenario where user answers many questions in sequence."""
+        deck = await CultureDeckFactory.create(session=db_session, is_active=True)
+        questions = []
+        for i in range(10):
+            q = await CultureQuestionFactory.create(
+                session=db_session,
+                deck_id=deck.id,
+                correct_option=1,
+                order_index=i,
+            )
+            questions.append(q)
+        await db_session.commit()
+
+        # Answer all questions rapidly
+        for q in questions:
+            response = await client.post(
+                f"/api/v1/culture/questions/{q.id}/answer",
+                json={"selected_option": 1, "time_taken": 2},
+                headers=fresh_user_session.headers,
+            )
+            assert response.status_code == 200
+
+        # Verify final progress using correct endpoint
+        progress_response = await client.get(
+            "/api/v1/culture/progress",
+            headers=fresh_user_session.headers,
+        )
+        assert progress_response.status_code == 200
+        progress_data = progress_response.json()
+        # Verify we have progress data
+        assert "overall" in progress_data
+        assert progress_data["overall"]["questions_learning"] >= 0

@@ -302,3 +302,156 @@ class CultureAnswerResponseWithSM2(BaseModel):
         default=False,
         description="True if this answer completed the user's daily goal",
     )
+
+
+# ============================================================================
+# Culture Deck CRUD Schemas (Admin)
+# ============================================================================
+
+
+class CultureDeckCreate(BaseModel):
+    """Schema for creating a new culture deck (admin only)."""
+
+    name: MultilingualText = Field(..., description="Multilingual deck name {el, en, ru}")
+    description: MultilingualText = Field(
+        ..., description="Multilingual deck description {el, en, ru}"
+    )
+    icon: str = Field(..., max_length=50, description="Icon identifier (e.g., 'book-open', 'map')")
+    color_accent: str = Field(
+        ..., pattern=r"^#[0-9A-Fa-f]{6}$", description="Hex color (e.g., '#4F46E5')"
+    )
+    category: str = Field(
+        ...,
+        max_length=50,
+        description="Category: history, geography, politics, culture, traditions",
+    )
+    order_index: int = Field(default=0, ge=0, description="Display order within category")
+
+
+class CultureDeckUpdate(BaseModel):
+    """Schema for updating a culture deck (admin only). All fields optional."""
+
+    name: Optional[MultilingualText] = Field(
+        None, description="Multilingual deck name {el, en, ru}"
+    )
+    description: Optional[MultilingualText] = Field(
+        None, description="Multilingual deck description {el, en, ru}"
+    )
+    icon: Optional[str] = Field(
+        None, max_length=50, description="Icon identifier (e.g., 'book-open', 'map')"
+    )
+    color_accent: Optional[str] = Field(
+        None, pattern=r"^#[0-9A-Fa-f]{6}$", description="Hex color (e.g., '#4F46E5')"
+    )
+    category: Optional[str] = Field(
+        None,
+        max_length=50,
+        description="Category: history, geography, politics, culture, traditions",
+    )
+    order_index: Optional[int] = Field(None, ge=0, description="Display order within category")
+    is_active: Optional[bool] = Field(None, description="Whether deck is active")
+
+
+# ============================================================================
+# Culture Question CRUD Schemas (Admin)
+# ============================================================================
+
+
+class CultureQuestionCreate(BaseModel):
+    """Schema for creating a new culture question (admin only)."""
+
+    deck_id: UUID = Field(..., description="Deck UUID this question belongs to")
+    question_text: MultilingualText = Field(
+        ..., description="Multilingual question text {el, en, ru}"
+    )
+    option_a: MultilingualText = Field(..., description="Option A: {el, en, ru}")
+    option_b: MultilingualText = Field(..., description="Option B: {el, en, ru}")
+    option_c: MultilingualText = Field(..., description="Option C: {el, en, ru}")
+    option_d: MultilingualText = Field(..., description="Option D: {el, en, ru}")
+    correct_option: int = Field(..., ge=1, le=4, description="Correct answer (1=A, 2=B, 3=C, 4=D)")
+    image_key: Optional[str] = Field(
+        None, max_length=500, description="S3 key for question image (optional)"
+    )
+    order_index: int = Field(default=0, ge=0, description="Display order within deck")
+
+
+class CultureQuestionUpdate(BaseModel):
+    """Schema for updating a culture question (admin only). All fields optional."""
+
+    question_text: Optional[MultilingualText] = Field(
+        None, description="Multilingual question text {el, en, ru}"
+    )
+    option_a: Optional[MultilingualText] = Field(None, description="Option A: {el, en, ru}")
+    option_b: Optional[MultilingualText] = Field(None, description="Option B: {el, en, ru}")
+    option_c: Optional[MultilingualText] = Field(None, description="Option C: {el, en, ru}")
+    option_d: Optional[MultilingualText] = Field(None, description="Option D: {el, en, ru}")
+    correct_option: Optional[int] = Field(
+        None, ge=1, le=4, description="Correct answer (1=A, 2=B, 3=C, 4=D)"
+    )
+    image_key: Optional[str] = Field(
+        None, max_length=500, description="S3 key for question image (optional)"
+    )
+    order_index: Optional[int] = Field(None, ge=0, description="Display order within deck")
+
+
+class CultureQuestionAdminResponse(BaseModel):
+    """Admin response schema for culture question (includes correct_option)."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID = Field(..., description="Question unique identifier")
+    deck_id: UUID = Field(..., description="Deck UUID")
+    question_text: dict[str, str] = Field(..., description="Multilingual question {el, en, ru}")
+    option_a: dict[str, str] = Field(..., description="Option A: {el, en, ru}")
+    option_b: dict[str, str] = Field(..., description="Option B: {el, en, ru}")
+    option_c: dict[str, str] = Field(..., description="Option C: {el, en, ru}")
+    option_d: dict[str, str] = Field(..., description="Option D: {el, en, ru}")
+    correct_option: int = Field(..., ge=1, le=4, description="Correct answer (1=A, 2=B, 3=C, 4=D)")
+    image_key: Optional[str] = Field(None, description="S3 key for question image")
+    order_index: int = Field(..., ge=0, description="Display order within deck")
+    created_at: datetime = Field(..., description="Creation timestamp")
+    updated_at: datetime = Field(..., description="Last update timestamp")
+
+
+# ============================================================================
+# Bulk Question Create Schemas
+# ============================================================================
+
+
+class CultureQuestionBulkItem(BaseModel):
+    """Single question in bulk create (without deck_id)."""
+
+    question_text: MultilingualText = Field(
+        ..., description="Multilingual question text {el, en, ru}"
+    )
+    option_a: MultilingualText = Field(..., description="Option A: {el, en, ru}")
+    option_b: MultilingualText = Field(..., description="Option B: {el, en, ru}")
+    option_c: MultilingualText = Field(..., description="Option C: {el, en, ru}")
+    option_d: MultilingualText = Field(..., description="Option D: {el, en, ru}")
+    correct_option: int = Field(..., ge=1, le=4, description="Correct answer (1=A, 2=B, 3=C, 4=D)")
+    image_key: Optional[str] = Field(
+        None, max_length=500, description="S3 key for question image (optional)"
+    )
+    order_index: int = Field(default=0, ge=0, description="Display order within deck")
+
+
+class CultureQuestionBulkCreateRequest(BaseModel):
+    """Request body for bulk question creation."""
+
+    deck_id: UUID = Field(..., description="Deck UUID to add questions to")
+    questions: list[CultureQuestionBulkItem] = Field(
+        ...,
+        min_length=1,
+        max_length=100,
+        description="Array of questions to create (1-100)",
+    )
+
+
+class CultureQuestionBulkCreateResponse(BaseModel):
+    """Response for bulk question creation."""
+
+    deck_id: UUID = Field(..., description="Deck UUID")
+    created_count: int = Field(..., ge=0, description="Number of questions created")
+    questions: list[CultureQuestionAdminResponse] = Field(
+        ..., description="List of created questions"
+    )
