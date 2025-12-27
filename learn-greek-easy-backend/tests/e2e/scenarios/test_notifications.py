@@ -571,3 +571,238 @@ class TestNotificationCreationViaAchievement(E2ETestCase):
         assert len(achievement_notifs) == 1
         notif = achievement_notifs[0]
         assert notif["action_url"] == "/achievements"
+
+
+# =============================================================================
+# TestNotificationExtendedScenarios
+# =============================================================================
+
+
+@pytest.mark.e2e
+@pytest.mark.scenario
+class TestNotificationExtendedScenarios(E2ETestCase):
+    """Extended E2E tests for notification edge cases and coverage."""
+
+    @pytest.mark.asyncio
+    async def test_unread_count_endpoint(
+        self,
+        client: AsyncClient,
+        fresh_user_session: UserSession,
+        db_session: AsyncSession,
+    ) -> None:
+        """Test the dedicated unread count endpoint."""
+        # Create additional unread notifications
+        for i in range(3):
+            await NotificationFactory.create(
+                session=db_session,
+                user_id=fresh_user_session.user.id,
+                title=f"Unread {i}",
+                read=False,
+            )
+        await db_session.commit()
+
+        response = await client.get(
+            "/api/v1/notifications/unread-count",
+            headers=fresh_user_session.headers,
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        # 3 new + 1 welcome = 4 unread
+        assert data["count"] >= 4
+
+    @pytest.mark.asyncio
+    async def test_list_with_pagination_has_more(
+        self,
+        client: AsyncClient,
+        fresh_user_session: UserSession,
+        db_session: AsyncSession,
+    ) -> None:
+        """Test that has_more is true when more notifications exist."""
+        # Create 5 notifications (+1 welcome = 6)
+        for i in range(5):
+            await NotificationFactory.create(
+                session=db_session,
+                user_id=fresh_user_session.user.id,
+                title=f"Notification {i}",
+            )
+        await db_session.commit()
+
+        # Get first page with limit 2
+        response = await client.get(
+            "/api/v1/notifications?limit=2&offset=0",
+            headers=fresh_user_session.headers,
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data["notifications"]) == 2
+        assert data["has_more"] is True
+
+    @pytest.mark.asyncio
+    async def test_list_include_read_false(
+        self,
+        client: AsyncClient,
+        fresh_user_session: UserSession,
+        db_session: AsyncSession,
+    ) -> None:
+        """Test filtering to only unread notifications."""
+        # Create read notification
+        await NotificationFactory.create(
+            session=db_session,
+            user_id=fresh_user_session.user.id,
+            title="Read notification",
+            read=True,
+        )
+        # Create unread notification
+        await NotificationFactory.create(
+            session=db_session,
+            user_id=fresh_user_session.user.id,
+            title="Unread notification",
+            read=False,
+        )
+        await db_session.commit()
+
+        # Only get unread
+        response = await client.get(
+            "/api/v1/notifications?include_read=false",
+            headers=fresh_user_session.headers,
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        # Should only have unread notifications
+        for notif in data["notifications"]:
+            assert notif["read"] is False
+
+    @pytest.mark.asyncio
+    async def test_mark_single_as_read_extended(
+        self,
+        client: AsyncClient,
+        fresh_user_session: UserSession,
+        db_session: AsyncSession,
+    ) -> None:
+        """Test marking a single notification as read and verify listing."""
+        notification = await NotificationFactory.create(
+            session=db_session,
+            user_id=fresh_user_session.user.id,
+            title="To be marked read",
+            read=False,
+        )
+        await db_session.commit()
+
+        # Use PUT as the API requires
+        response = await client.put(
+            f"/api/v1/notifications/{notification.id}/read",
+            headers=fresh_user_session.headers,
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert data["marked_count"] == 1
+
+        # Verify it appears as read in listing
+        list_response = await client.get(
+            "/api/v1/notifications",
+            headers=fresh_user_session.headers,
+        )
+        notif_data = next(
+            (n for n in list_response.json()["notifications"] if n["id"] == str(notification.id)),
+            None,
+        )
+        assert notif_data is not None
+        assert notif_data["read"] is True
+
+    @pytest.mark.asyncio
+    async def test_mark_all_as_read_extended(
+        self,
+        client: AsyncClient,
+        fresh_user_session: UserSession,
+        db_session: AsyncSession,
+    ) -> None:
+        """Test marking all notifications as read and verify unread count."""
+        # Create several unread notifications
+        for i in range(3):
+            await NotificationFactory.create(
+                session=db_session,
+                user_id=fresh_user_session.user.id,
+                title=f"Unread {i}",
+                read=False,
+            )
+        await db_session.commit()
+
+        # Use PUT as the API requires
+        response = await client.put(
+            "/api/v1/notifications/read-all",
+            headers=fresh_user_session.headers,
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert data["marked_count"] >= 3
+
+        # Verify unread count is now 0
+        count_response = await client.get(
+            "/api/v1/notifications/unread-count",
+            headers=fresh_user_session.headers,
+        )
+        assert count_response.json()["count"] == 0
+
+    @pytest.mark.asyncio
+    async def test_delete_nonexistent_notification(
+        self,
+        client: AsyncClient,
+        fresh_user_session: UserSession,
+    ) -> None:
+        """Test deleting a non-existent notification returns 404."""
+        from uuid import uuid4
+
+        fake_id = uuid4()
+        response = await client.delete(
+            f"/api/v1/notifications/{fake_id}",
+            headers=fresh_user_session.headers,
+        )
+
+        assert response.status_code == 404
+
+    @pytest.mark.asyncio
+    async def test_notification_response_structure(
+        self,
+        client: AsyncClient,
+        fresh_user_session: UserSession,
+        db_session: AsyncSession,
+    ) -> None:
+        """Test that notification response has all expected fields."""
+        notification = await NotificationFactory.create(
+            session=db_session,
+            user_id=fresh_user_session.user.id,
+            title="Test notification",
+            message="Test message",
+            icon="bell",
+            action_url="/test",
+        )
+        await db_session.commit()
+
+        response = await client.get(
+            "/api/v1/notifications",
+            headers=fresh_user_session.headers,
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+
+        # Find our notification
+        our_notif = next(
+            (n for n in data["notifications"] if n["id"] == str(notification.id)), None
+        )
+        assert our_notif is not None
+        assert "id" in our_notif
+        assert "type" in our_notif
+        assert "title" in our_notif
+        assert "message" in our_notif
+        assert "icon" in our_notif
+        assert "action_url" in our_notif
+        assert "read" in our_notif
+        assert "created_at" in our_notif
