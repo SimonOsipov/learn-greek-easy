@@ -813,12 +813,13 @@ jobs:
           REDIS_URL: redis://localhost:6379/0
           TEST_SEED_ENABLED: "true"
         run: |
-          # Run E2E tests with coverage
+          # Run E2E tests with coverage (no fail threshold - full coverage checked in Backend Tests job)
           poetry run pytest tests/e2e/ \
             -m e2e \
             --cov=src \
             --cov-report=xml:e2e-coverage.xml \
             --cov-report=term-missing \
+            --cov-fail-under=0 \
             -v \
             --tb=short
 
