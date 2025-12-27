@@ -1,6 +1,7 @@
 """Authentication dependencies for FastAPI routes.
 
 This module provides dependency injection functions for authentication:
+- get_validated_user_id: Lightweight token validation without DB access
 - get_current_user: Main auth dependency that validates token and loads user
 - get_current_superuser: Admin-only dependency requiring is_superuser=True
 - get_current_user_optional: Optional auth for mixed authenticated/anonymous endpoints
@@ -17,6 +18,7 @@ Usage:
         return await get_all_users()
 """
 
+import uuid
 from typing import Optional
 
 from fastapi import Depends, Request
@@ -42,37 +44,29 @@ from src.db.models import User
 security_scheme = HTTPBearer(auto_error=False)
 
 
-async def get_current_user(
-    request: Request,
+async def get_validated_user_id(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(security_scheme),
-    db: AsyncSession = Depends(get_db),
-) -> User:
-    """Get the current authenticated user from the JWT token.
+) -> uuid.UUID:
+    """Validate JWT token and return user ID without DB access.
 
-    This is the main authentication dependency. It:
-    1. Extracts the Bearer token from the Authorization header
-    2. Validates the JWT token (signature, expiration, type)
-    3. Loads the user from the database with their settings
-    4. Verifies the user is active
+    This is a lightweight auth check that validates the token structure
+    and signature without loading the user from database. Use this for
+    early-exit auth failures to avoid creating unnecessary DB sessions.
+
+    Note: This dependency relies on FastAPI's observed left-to-right execution
+    order when used alongside other dependencies. While not guaranteed by the
+    framework, this behavior has been stable and the primary token refresh fix
+    (AUTH-03/04) prevents most expired tokens from reaching the backend anyway.
 
     Args:
         credentials: HTTP Authorization credentials from Bearer token
-        db: Database session (injected)
 
     Returns:
-        User: The authenticated user with settings loaded
+        UUID: The user ID extracted from the token
 
     Raises:
-        UnauthorizedException (401): If no token provided, token expired,
-            token invalid, or user is inactive
-        UserNotFoundException (404): If user no longer exists in database
-
-    Example:
-        @router.get("/me")
-        async def get_me(current_user: User = Depends(get_current_user)):
-            return UserProfileResponse.model_validate(current_user)
+        UnauthorizedException: If no token provided or token invalid/expired
     """
-    # Check if credentials were provided
     if not credentials:
         raise UnauthorizedException(
             detail="Authentication required. Please provide a valid access token."
@@ -80,14 +74,42 @@ async def get_current_user(
 
     token = credentials.credentials
 
-    # Verify the JWT token
     try:
         user_id = verify_token(token, token_type="access")
+        return user_id
     except TokenExpiredException:
         raise UnauthorizedException(detail="Access token has expired. Please refresh your token.")
     except TokenInvalidException as e:
         raise UnauthorizedException(detail=f"Invalid access token: {e.detail}")
 
+
+async def get_current_user(
+    request: Request,
+    user_id: uuid.UUID = Depends(get_validated_user_id),
+    db: AsyncSession = Depends(get_db),
+) -> User:
+    """Get the current authenticated user from the JWT token.
+
+    This dependency uses get_validated_user_id for early token validation,
+    ensuring DB sessions are only created for valid tokens.
+
+    Args:
+        request: The HTTP request (for storing user context)
+        user_id: Pre-validated user ID from token
+        db: Database session (only created after token validation)
+
+    Returns:
+        User: The authenticated user with settings loaded
+
+    Raises:
+        UnauthorizedException: If user is inactive
+        UserNotFoundException: If user no longer exists in database
+
+    Example:
+        @router.get("/me")
+        async def get_me(current_user: User = Depends(get_current_user)):
+            return UserProfileResponse.model_validate(current_user)
+    """
     # Load user from database with settings
     stmt = select(User).options(selectinload(User.settings)).where(User.id == user_id)
     result = await db.execute(stmt)
@@ -220,5 +242,6 @@ __all__ = [
     "get_current_user",
     "get_current_superuser",
     "get_current_user_optional",
+    "get_validated_user_id",
     "security_scheme",
 ]

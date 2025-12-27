@@ -3,6 +3,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 
 import log from '@/lib/logger';
+import { shouldRefreshToken } from '@/lib/tokenUtils';
 import { APIRequestError } from '@/services/api';
 import { authAPI, clearAuthTokens } from '@/services/authAPI';
 import type { User, RegisterData, AuthError } from '@/types/auth';
@@ -453,7 +454,7 @@ export const useAuthStore = create<AuthState>()(
 
       // Check auth on app load
       checkAuth: async (options?: { signal?: AbortSignal }) => {
-        const { token } = get();
+        const { token, refreshToken: storedRefreshToken } = get();
         const signal = options?.signal;
 
         // Check session storage if not remember me
@@ -463,6 +464,29 @@ export const useAuthStore = create<AuthState>()(
         if (!activeToken) {
           set({ isAuthenticated: false });
           return;
+        }
+
+        // PROACTIVE REFRESH: If token is expired/expiring, refresh before verifying
+        // This prevents 401s when the app loads after being idle
+        if (shouldRefreshToken(activeToken) && storedRefreshToken) {
+          log.debug('Token expiring on app load, proactively refreshing');
+          try {
+            await get().refreshSession();
+            log.debug('Proactive refresh on app load successful');
+            // After refresh, continue with the new token from store
+          } catch (error) {
+            // Refresh failed - clear auth and return
+            log.warn('Proactive refresh on app load failed', { error });
+            clearAuthTokens();
+            set({
+              user: null,
+              token: null,
+              refreshToken: null,
+              isAuthenticated: false,
+              isLoading: false,
+            });
+            return;
+          }
         }
 
         set({ isLoading: true });
