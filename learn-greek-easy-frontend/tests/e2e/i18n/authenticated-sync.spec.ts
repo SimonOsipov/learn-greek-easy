@@ -27,10 +27,10 @@ test.describe('Authenticated Language Sync', () => {
 
   test('should sync language preference to backend on change', async ({ page }) => {
     // Set up a promise to capture the API request when it's made
-    // The actual endpoint is PATCH /api/v1/users/me with preferred_language in body
+    // The actual endpoint is PATCH /api/v1/auth/me with preferred_language in body
     const apiRequestPromise = page.waitForRequest(
       request =>
-        request.url().includes('/api/v1/users/me') &&
+        request.url().includes('/api/v1/auth/me') &&
         !request.url().includes('/preferences') &&
         request.method() === 'PATCH',
       { timeout: 10000 }
@@ -141,7 +141,7 @@ test.describe('Authenticated Language Sync', () => {
   test('should handle API errors gracefully', async ({ page }) => {
     // Simulate API failure for the user update endpoint
     // Note: Only intercept PATCH requests (language sync), not GET (profile fetch)
-    await page.route('**/api/v1/users/me', async (route, request) => {
+    await page.route('**/api/v1/auth/me', async (route, request) => {
       if (request.method() === 'PATCH') {
         await route.fulfill({
           status: 500,

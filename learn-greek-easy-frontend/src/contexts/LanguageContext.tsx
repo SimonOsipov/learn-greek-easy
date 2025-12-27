@@ -121,7 +121,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         // Step 2: If authenticated, sync preference to backend
         if (isAuthenticated) {
           try {
-            await api.patch('/api/v1/users/me', {
+            await api.patch('/api/v1/auth/me', {
               preferred_language: lang,
             });
           } catch (apiError) {
