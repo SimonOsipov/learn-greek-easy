@@ -763,3 +763,352 @@ class TestCultureDeckProgress(E2ETestCase):
 
         assert len(data["decks"]) <= 2
         assert data["total"] >= 5
+
+
+# =============================================================================
+# Extended Admin E2E Tests for Coverage
+# =============================================================================
+
+
+@pytest.mark.e2e
+@pytest.mark.scenario
+class TestCultureAdminExtended(E2ETestCase):
+    """Extended E2E tests for admin CRUD to increase coverage."""
+
+    @pytest.mark.asyncio
+    async def test_update_deck_all_fields(
+        self,
+        client: AsyncClient,
+        admin_session: UserSession,
+        db_session: AsyncSession,
+    ) -> None:
+        """Test updating all deck fields at once."""
+        deck = await CultureDeckFactory.create(session=db_session)
+        await db_session.commit()
+
+        update_data = {
+            "name": {
+                "el": "Νέο Όνομα",
+                "en": "New Name",
+                "ru": "Новое имя",
+            },
+            "description": {
+                "el": "Νέα Περιγραφή",
+                "en": "New Description",
+                "ru": "Новое описание",
+            },
+            "icon": "star",
+            "color_accent": "#FF5733",
+            "category": "traditions",
+        }
+
+        response = await client.patch(
+            f"/api/v1/culture/decks/{deck.id}",
+            json=update_data,
+            headers=admin_session.headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["icon"] == "star"
+        assert data["color_accent"] == "#FF5733"
+
+    @pytest.mark.asyncio
+    async def test_create_multiple_questions_same_deck(
+        self,
+        client: AsyncClient,
+        admin_session: UserSession,
+        db_session: AsyncSession,
+    ) -> None:
+        """Test creating multiple questions in the same deck."""
+        deck = await CultureDeckFactory.create(session=db_session)
+        await db_session.commit()
+
+        for i in range(3):
+            question_data = {
+                "deck_id": str(deck.id),
+                "question_text": {
+                    "el": f"Ερώτηση {i}",
+                    "en": f"Question {i}",
+                    "ru": f"Вопрос {i}",
+                },
+                "option_a": {"el": "A", "en": "A", "ru": "A"},
+                "option_b": {"el": "B", "en": "B", "ru": "B"},
+                "option_c": {"el": "C", "en": "C", "ru": "C"},
+                "option_d": {"el": "D", "en": "D", "ru": "D"},
+                "correct_option": (i % 4) + 1,
+                "order_index": i,
+            }
+
+            response = await client.post(
+                "/api/v1/culture/questions",
+                json=question_data,
+                headers=admin_session.headers,
+            )
+            assert response.status_code == 201
+
+    @pytest.mark.asyncio
+    async def test_bulk_create_with_order_indices(
+        self,
+        client: AsyncClient,
+        admin_session: UserSession,
+        db_session: AsyncSession,
+    ) -> None:
+        """Test bulk creating questions with specific order indices."""
+        deck = await CultureDeckFactory.create(session=db_session)
+        await db_session.commit()
+
+        bulk_data = {
+            "deck_id": str(deck.id),
+            "questions": [
+                {
+                    "question_text": {"el": f"Q{i}", "en": f"Q{i}", "ru": f"Q{i}"},
+                    "option_a": {"el": "A", "en": "A", "ru": "A"},
+                    "option_b": {"el": "B", "en": "B", "ru": "B"},
+                    "option_c": {"el": "C", "en": "C", "ru": "C"},
+                    "option_d": {"el": "D", "en": "D", "ru": "D"},
+                    "correct_option": 1,
+                    "order_index": i * 10,  # Non-sequential indices
+                }
+                for i in range(5)
+            ],
+        }
+
+        response = await client.post(
+            "/api/v1/culture/questions/bulk",
+            json=bulk_data,
+            headers=admin_session.headers,
+        )
+        assert response.status_code == 201
+        data = response.json()
+        assert data["created_count"] == 5
+
+    @pytest.mark.asyncio
+    async def test_update_question_order(
+        self,
+        client: AsyncClient,
+        admin_session: UserSession,
+        db_session: AsyncSession,
+    ) -> None:
+        """Test updating question order index."""
+        deck = await CultureDeckFactory.create(session=db_session)
+        question = await CultureQuestionFactory.create(
+            session=db_session, deck_id=deck.id, order_index=1
+        )
+        await db_session.commit()
+
+        response = await client.patch(
+            f"/api/v1/culture/questions/{question.id}",
+            json={"order_index": 100},
+            headers=admin_session.headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["order_index"] == 100
+
+    @pytest.mark.asyncio
+    async def test_update_question_correct_option(
+        self,
+        client: AsyncClient,
+        admin_session: UserSession,
+        db_session: AsyncSession,
+    ) -> None:
+        """Test updating question correct option."""
+        deck = await CultureDeckFactory.create(session=db_session)
+        question = await CultureQuestionFactory.create(
+            session=db_session, deck_id=deck.id, correct_option=1
+        )
+        await db_session.commit()
+
+        response = await client.patch(
+            f"/api/v1/culture/questions/{question.id}",
+            json={"correct_option": 3},
+            headers=admin_session.headers,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["correct_option"] == 3
+
+    @pytest.mark.asyncio
+    async def test_delete_question_then_verify_deck_count(
+        self,
+        client: AsyncClient,
+        admin_session: UserSession,
+        db_session: AsyncSession,
+        fresh_user_session: UserSession,
+    ) -> None:
+        """Test deleting a question and verifying deck question count updates."""
+        deck = await CultureDeckFactory.create(session=db_session, is_active=True)
+        questions = []
+        for i in range(3):
+            q = await CultureQuestionFactory.create(session=db_session, deck_id=deck.id)
+            questions.append(q)
+        await db_session.commit()
+
+        # Get deck before delete
+        before_response = await client.get(
+            f"/api/v1/culture/decks/{deck.id}",
+            headers=fresh_user_session.headers,
+        )
+        before_count = before_response.json()["question_count"]
+
+        # Delete one question
+        delete_response = await client.delete(
+            f"/api/v1/culture/questions/{questions[0].id}",
+            headers=admin_session.headers,
+        )
+        assert delete_response.status_code == 204
+
+        # Verify count decreased
+        after_response = await client.get(
+            f"/api/v1/culture/decks/{deck.id}",
+            headers=fresh_user_session.headers,
+        )
+        after_count = after_response.json()["question_count"]
+        assert after_count == before_count - 1
+
+    @pytest.mark.asyncio
+    async def test_deck_with_multiple_categories(
+        self,
+        client: AsyncClient,
+        admin_session: UserSession,
+    ) -> None:
+        """Test creating decks in different categories."""
+        categories = ["history", "geography", "politics", "culture", "traditions"]
+
+        for category in categories:
+            deck_data = {
+                "name": {
+                    "el": f"Deck {category}",
+                    "en": f"Deck {category}",
+                    "ru": f"Deck {category}",
+                },
+                "description": {"el": "Desc", "en": "Desc", "ru": "Desc"},
+                "icon": "book",
+                "color_accent": "#123456",
+                "category": category,
+            }
+
+            response = await client.post(
+                "/api/v1/culture/decks",
+                json=deck_data,
+                headers=admin_session.headers,
+            )
+            assert response.status_code == 201
+            assert response.json()["category"] == category
+
+    @pytest.mark.asyncio
+    async def test_list_decks_after_creating_many(
+        self,
+        client: AsyncClient,
+        admin_session: UserSession,
+        fresh_user_session: UserSession,
+    ) -> None:
+        """Test listing decks after creating several."""
+        # Create 5 decks
+        for i in range(5):
+            deck_data = {
+                "name": {"el": f"List Deck {i}", "en": f"List Deck {i}", "ru": f"List Deck {i}"},
+                "description": {"el": "Desc", "en": "Desc", "ru": "Desc"},
+                "icon": "star",
+                "color_accent": "#ABCDEF",
+                "category": "history",
+            }
+            await client.post(
+                "/api/v1/culture/decks",
+                json=deck_data,
+                headers=admin_session.headers,
+            )
+
+        # List them as regular user
+        response = await client.get(
+            "/api/v1/culture/decks",
+            headers=fresh_user_session.headers,
+        )
+        assert response.status_code == 200
+        assert response.json()["total"] >= 5
+
+    @pytest.mark.asyncio
+    async def test_update_deck_partial_name(
+        self,
+        client: AsyncClient,
+        admin_session: UserSession,
+        db_session: AsyncSession,
+    ) -> None:
+        """Test partially updating deck name in one language."""
+        deck = await CultureDeckFactory.create(session=db_session)
+        await db_session.commit()
+
+        # Update only the description
+        response = await client.patch(
+            f"/api/v1/culture/decks/{deck.id}",
+            json={"description": {"el": "Νέα", "en": "New", "ru": "Новый"}},
+            headers=admin_session.headers,
+        )
+        assert response.status_code == 200
+
+    @pytest.mark.asyncio
+    async def test_delete_then_recreate_deck(
+        self,
+        client: AsyncClient,
+        admin_session: UserSession,
+        db_session: AsyncSession,
+    ) -> None:
+        """Test that we can delete a deck and create a new one with same category."""
+        deck = await CultureDeckFactory.create(
+            session=db_session, is_active=True, category="history"
+        )
+        await db_session.commit()
+        original_id = str(deck.id)
+
+        # Delete original deck
+        delete_response = await client.delete(
+            f"/api/v1/culture/decks/{original_id}",
+            headers=admin_session.headers,
+        )
+        assert delete_response.status_code == 204
+
+        # Create new deck with same category
+        new_deck_data = {
+            "name": {"el": "New History", "en": "New History", "ru": "Новая история"},
+            "description": {"el": "Desc", "en": "Desc", "ru": "Desc"},
+            "icon": "clock",
+            "color_accent": "#112233",
+            "category": "history",
+        }
+        create_response = await client.post(
+            "/api/v1/culture/decks",
+            json=new_deck_data,
+            headers=admin_session.headers,
+        )
+        assert create_response.status_code == 201
+        assert create_response.json()["id"] != original_id
+
+    @pytest.mark.asyncio
+    async def test_question_with_all_correct_options(
+        self,
+        client: AsyncClient,
+        admin_session: UserSession,
+        db_session: AsyncSession,
+    ) -> None:
+        """Test creating questions with each correct option (1-4)."""
+        deck = await CultureDeckFactory.create(session=db_session)
+        await db_session.commit()
+
+        for option in [1, 2, 3, 4]:
+            question_data = {
+                "deck_id": str(deck.id),
+                "question_text": {"el": f"Q{option}", "en": f"Q{option}", "ru": f"Q{option}"},
+                "option_a": {"el": "A", "en": "A", "ru": "A"},
+                "option_b": {"el": "B", "en": "B", "ru": "B"},
+                "option_c": {"el": "C", "en": "C", "ru": "C"},
+                "option_d": {"el": "D", "en": "D", "ru": "D"},
+                "correct_option": option,
+            }
+
+            response = await client.post(
+                "/api/v1/culture/questions",
+                json=question_data,
+                headers=admin_session.headers,
+            )
+            assert response.status_code == 201
+            assert response.json()["correct_option"] == option
