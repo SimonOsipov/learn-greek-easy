@@ -11,6 +11,9 @@
  * - Type-safe request methods
  */
 
+import log from '@/lib/logger';
+import { shouldRefreshToken } from '@/lib/tokenUtils';
+
 // API base URL - relative URL for nginx proxy in production, or VITE_API_URL for dev
 const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
@@ -213,7 +216,25 @@ async function request<T>(
 
   // Add auth token if not skipped
   if (!skipAuth) {
-    const { accessToken } = getAuthTokens();
+    let { accessToken } = getAuthTokens();
+
+    // PROACTIVE REFRESH: Check if token is expired or expiring soon
+    // This is the key fix - refresh BEFORE the request, not after 401
+    if (accessToken && shouldRefreshToken(accessToken)) {
+      log.debug('Token expiring soon, proactively refreshing');
+      const newToken = await refreshAccessToken();
+      if (newToken) {
+        accessToken = newToken;
+        log.debug('Proactive token refresh successful');
+      } else {
+        // Refresh failed - clear tokens and let request proceed without auth
+        // The 401 handler will trigger login redirect
+        log.warn('Proactive token refresh failed, clearing auth');
+        clearAuthTokens();
+        accessToken = null;
+      }
+    }
+
     if (accessToken) {
       headers['Authorization'] = `Bearer ${accessToken}`;
     }
@@ -251,8 +272,10 @@ async function request<T>(
 
     clearTimeout(timeoutId);
 
-    // Handle 401 - try token refresh
+    // Handle 401 - This should be RARE after proactive refresh
+    // If we get here, something is actually wrong (revoked token, security issue)
     if (response.status === 401 && !skipAuth) {
+      log.warn('Received 401 despite proactive refresh - token may have been revoked');
       const newToken = await refreshAccessToken();
 
       if (newToken) {

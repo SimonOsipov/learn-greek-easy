@@ -197,12 +197,29 @@ describe('Token Refresh Mutex', () => {
     it('should allow new refresh after previous one completes', async () => {
       let refreshCallCount = 0;
 
+      // Helper to create a mock JWT token that won't trigger proactive refresh
+      // (valid for 20 minutes, so proactive refresh threshold of 5 min won't apply)
+      function createValidToken(id: string): string {
+        const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+        const payload = btoa(
+          JSON.stringify({
+            sub: 'user-123',
+            exp: Math.floor(Date.now() / 1000) + 1200, // 20 minutes from now
+            id: id,
+          })
+        );
+        return `${header}.${payload}.mock_signature`;
+      }
+
+      const token1 = createValidToken('1');
+      const token2 = createValidToken('2');
+
       // Setup auth storage
       localStorage.setItem(
         'auth-storage',
         JSON.stringify({
           state: {
-            token: 'token-1',
+            token: token1,
             refreshToken: 'refresh-1',
           },
         })
@@ -218,19 +235,19 @@ describe('Token Refresh Mutex', () => {
             ok: true,
             json: () =>
               Promise.resolve({
-                access_token: `new-token-${newTokenNum}`,
+                access_token: newTokenNum === 1 ? token2 : createValidToken(`${newTokenNum + 1}`),
                 refresh_token: `new-refresh-${newTokenNum}`,
               }),
           });
         }
 
-        // First request with each token returns 401
-        if (authHeader === 'Bearer token-1' || authHeader === 'Bearer new-token-1') {
+        // First request with each token returns 401 (simulating backend invalidation)
+        if (authHeader === `Bearer ${token1}` || authHeader === `Bearer ${token2}`) {
           return Promise.resolve({
             ok: false,
             status: 401,
             statusText: 'Unauthorized',
-            json: () => Promise.resolve({ detail: 'Token expired' }),
+            json: () => Promise.resolve({ detail: 'Token revoked by server' }),
           });
         }
 
@@ -241,16 +258,16 @@ describe('Token Refresh Mutex', () => {
         });
       });
 
-      // First refresh cycle
+      // First refresh cycle (401 handler will trigger refresh since token is valid but server rejects)
       await api.get('/api/v1/test1').catch(() => null);
       expect(refreshCallCount).toBe(1);
 
-      // Update storage to simulate next expiration
+      // Update storage to simulate having the second token
       localStorage.setItem(
         'auth-storage',
         JSON.stringify({
           state: {
-            token: 'new-token-1',
+            token: token2,
             refreshToken: 'new-refresh-1',
           },
         })
@@ -453,6 +470,240 @@ describe('Token Refresh Mutex', () => {
       // All requests should succeed eventually
       const successCount = results.filter((r) => r?.success === true).length;
       expect(successCount).toBe(3);
+    });
+  });
+
+  describe('Proactive Token Refresh', () => {
+    // Helper to create a mock JWT token
+    function createMockToken(payload: Record<string, unknown>): string {
+      const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+      const body = btoa(JSON.stringify(payload));
+      const signature = 'mock_signature';
+      return `${header}.${body}.${signature}`;
+    }
+
+    it('refreshes token before request if expiring within 5 minutes', async () => {
+      // Setup: token expiring in 2 minutes (within 5-minute buffer)
+      const expiringToken = createMockToken({
+        sub: 'user-123',
+        exp: Math.floor(Date.now() / 1000) + 120, // 2 minutes from now
+      });
+
+      localStorage.setItem(
+        'auth-storage',
+        JSON.stringify({
+          state: {
+            token: expiringToken,
+            refreshToken: 'valid-refresh-token',
+          },
+        })
+      );
+
+      let refreshCalled = false;
+
+      global.fetch = vi.fn().mockImplementation((url: string) => {
+        if (url.includes('/auth/refresh')) {
+          refreshCalled = true;
+          return Promise.resolve({
+            ok: true,
+            json: () =>
+              Promise.resolve({
+                access_token: 'new-fresh-token',
+                refresh_token: 'new-refresh-token',
+              }),
+          });
+        }
+
+        // The actual API request should use the new token
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ data: 'success' }),
+        });
+      });
+
+      await api.get('/api/v1/test');
+
+      // Refresh should have been called BEFORE the main request
+      expect(refreshCalled).toBe(true);
+      expect(fetch).toHaveBeenCalledTimes(2);
+      // First call should be refresh
+      expect((fetch as ReturnType<typeof vi.fn>).mock.calls[0][0]).toContain('/auth/refresh');
+      // Second call should be the actual request
+      expect((fetch as ReturnType<typeof vi.fn>).mock.calls[1][0]).toContain('/api/v1/test');
+    });
+
+    it('does not refresh token if not expiring soon (more than 5 minutes remaining)', async () => {
+      // Setup: token valid for 20 more minutes
+      const validToken = createMockToken({
+        sub: 'user-123',
+        exp: Math.floor(Date.now() / 1000) + 1200, // 20 minutes from now
+      });
+
+      localStorage.setItem(
+        'auth-storage',
+        JSON.stringify({
+          state: {
+            token: validToken,
+            refreshToken: 'valid-refresh-token',
+          },
+        })
+      );
+
+      global.fetch = vi.fn().mockImplementation((url: string) => {
+        if (url.includes('/auth/refresh')) {
+          throw new Error('Refresh should not be called for fresh token');
+        }
+
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ data: 'success' }),
+        });
+      });
+
+      await api.get('/api/v1/test');
+
+      // Only the actual request should be made, no refresh
+      expect(fetch).toHaveBeenCalledTimes(1);
+      expect((fetch as ReturnType<typeof vi.fn>).mock.calls[0][0]).toContain('/api/v1/test');
+    });
+
+    it('clears auth and continues if proactive refresh fails', async () => {
+      // Setup: token expiring soon
+      const expiringToken = createMockToken({
+        sub: 'user-123',
+        exp: Math.floor(Date.now() / 1000) + 60, // 1 minute from now
+      });
+
+      localStorage.setItem(
+        'auth-storage',
+        JSON.stringify({
+          state: {
+            token: expiringToken,
+            refreshToken: 'invalid-refresh-token',
+          },
+        })
+      );
+
+      global.fetch = vi.fn().mockImplementation((url: string) => {
+        if (url.includes('/auth/refresh')) {
+          // Refresh fails
+          return Promise.resolve({
+            ok: false,
+            status: 401,
+            json: () => Promise.resolve({ detail: 'Invalid refresh token' }),
+          });
+        }
+
+        // Request proceeds without auth (no token after failed refresh)
+        return Promise.resolve({
+          ok: false,
+          status: 401,
+          statusText: 'Unauthorized',
+          json: () => Promise.resolve({ detail: 'Unauthorized' }),
+        });
+      });
+
+      // Request should throw 401 error
+      const result = await api.get('/api/v1/test').catch((e) => e);
+
+      expect(result.status).toBe(401);
+      // Auth should be cleared
+      expect(localStorage.getItem('auth-storage')).toBeNull();
+    });
+
+    it('shares refresh between concurrent requests (mutex behavior with proactive refresh)', async () => {
+      let refreshCount = 0;
+
+      // Setup: token expiring soon
+      const expiringToken = createMockToken({
+        sub: 'user-123',
+        exp: Math.floor(Date.now() / 1000) + 60, // 1 minute from now
+      });
+
+      localStorage.setItem(
+        'auth-storage',
+        JSON.stringify({
+          state: {
+            token: expiringToken,
+            refreshToken: 'valid-refresh-token',
+          },
+        })
+      );
+
+      global.fetch = vi.fn().mockImplementation((url: string) => {
+        if (url.includes('/auth/refresh')) {
+          refreshCount++;
+          return new Promise((resolve) => {
+            setTimeout(() => {
+              resolve({
+                ok: true,
+                json: () =>
+                  Promise.resolve({
+                    access_token: 'new-fresh-token',
+                    refresh_token: 'new-refresh-token',
+                  }),
+              });
+            }, 50); // Delay to allow concurrent requests to pile up
+          });
+        }
+
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ data: 'success' }),
+        });
+      });
+
+      // Trigger 3 concurrent requests - all should see expiring token
+      await Promise.all([
+        api.get('/api/v1/endpoint1'),
+        api.get('/api/v1/endpoint2'),
+        api.get('/api/v1/endpoint3'),
+      ]);
+
+      // Only ONE refresh should have been made despite 3 concurrent requests
+      expect(refreshCount).toBe(1);
+    });
+
+    it('does not attempt proactive refresh when skipAuth is true', async () => {
+      // Setup: token expiring soon
+      const expiringToken = createMockToken({
+        sub: 'user-123',
+        exp: Math.floor(Date.now() / 1000) + 60, // 1 minute from now
+      });
+
+      localStorage.setItem(
+        'auth-storage',
+        JSON.stringify({
+          state: {
+            token: expiringToken,
+            refreshToken: 'valid-refresh-token',
+          },
+        })
+      );
+
+      global.fetch = vi.fn().mockImplementation((url: string) => {
+        if (url.includes('/auth/refresh')) {
+          throw new Error('Refresh should not be called when skipAuth is true');
+        }
+
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ data: 'success' }),
+        });
+      });
+
+      // Request with skipAuth: true
+      await api.get('/api/v1/public-endpoint', { skipAuth: true });
+
+      // Only the actual request should be made, no refresh
+      expect(fetch).toHaveBeenCalledTimes(1);
+      expect((fetch as ReturnType<typeof vi.fn>).mock.calls[0][0]).toContain(
+        '/api/v1/public-endpoint'
+      );
     });
   });
 });
