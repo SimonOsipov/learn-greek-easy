@@ -1302,14 +1302,15 @@ class TestCultureHTTPMethods(E2ETestCase):
     """E2E tests for HTTP method handling on culture endpoints."""
 
     @pytest.mark.asyncio
-    async def test_decks_post_not_allowed(
+    async def test_decks_post_requires_auth(
         self,
         client: AsyncClient,
     ) -> None:
-        """Test that POST to decks returns 405."""
+        """Test that POST to decks requires authentication (returns 401)."""
         response = await client.post("/api/v1/culture/decks")
 
-        assert response.status_code == 405
+        # POST is now allowed for superusers (admin CRUD), but requires auth
+        assert response.status_code == 401
 
     @pytest.mark.asyncio
     async def test_categories_post_not_allowed(

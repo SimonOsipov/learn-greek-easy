@@ -4,11 +4,17 @@ This service provides:
 1. List culture decks with optional filtering
 2. Get deck details with question count
 3. Progress tracking for authenticated users
+4. Admin CRUD operations (create, update, soft delete)
 
 Example Usage:
     async with get_db_session() as db:
         service = CultureDeckService(db)
         decks = await service.list_decks(user_id=user.id)
+
+        # Admin operations
+        deck = await service.create_deck(deck_data)
+        updated = await service.update_deck(deck_id, update_data)
+        await service.soft_delete_deck(deck_id)
 """
 
 import logging
@@ -20,10 +26,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.core.exceptions import CultureDeckNotFoundException
 from src.repositories import CultureDeckRepository, CultureQuestionStatsRepository
 from src.schemas.culture import (
+    CultureDeckCreate,
     CultureDeckDetailResponse,
     CultureDeckListResponse,
     CultureDeckProgress,
     CultureDeckResponse,
+    CultureDeckUpdate,
 )
 
 if TYPE_CHECKING:
@@ -268,6 +276,156 @@ class CultureDeckService:
             extra={"count": len(categories)},
         )
         return categories
+
+    # =========================================================================
+    # Admin CRUD Methods
+    # =========================================================================
+
+    async def create_deck(
+        self,
+        deck_data: CultureDeckCreate,
+    ) -> CultureDeckDetailResponse:
+        """Create a new culture deck.
+
+        Args:
+            deck_data: Deck creation data with multilingual fields
+
+        Returns:
+            CultureDeckDetailResponse with created deck details
+
+        Note:
+            - Requires superuser privileges (enforced in router)
+            - Transaction commit must be done by caller
+        """
+        logger.info(
+            "Creating culture deck",
+            extra={
+                "category": deck_data.category,
+                "icon": deck_data.icon,
+            },
+        )
+
+        # Convert Pydantic model to dict, then MultilingualText to dict
+        deck_dict = {
+            "name": deck_data.name.model_dump(),
+            "description": deck_data.description.model_dump(),
+            "icon": deck_data.icon,
+            "color_accent": deck_data.color_accent,
+            "category": deck_data.category,
+            "order_index": deck_data.order_index,
+            "is_active": True,
+        }
+
+        # Create deck using repository
+        deck = await self.deck_repo.create(deck_dict)
+
+        logger.info(
+            "Culture deck created",
+            extra={
+                "deck_id": str(deck.id),
+                "category": deck.category,
+            },
+        )
+
+        return CultureDeckDetailResponse(
+            id=deck.id,
+            name=deck.name,
+            description=deck.description,
+            icon=deck.icon,
+            color_accent=deck.color_accent,
+            category=deck.category,
+            question_count=0,  # New deck has no questions
+            progress=None,
+            is_active=deck.is_active,
+            created_at=deck.created_at,
+            updated_at=deck.updated_at,
+        )
+
+    async def update_deck(
+        self,
+        deck_id: UUID,
+        deck_data: CultureDeckUpdate,
+    ) -> "CultureDeck":
+        """Update an existing culture deck.
+
+        Args:
+            deck_id: UUID of deck to update
+            deck_data: Fields to update (all optional)
+
+        Returns:
+            Updated CultureDeck SQLAlchemy model (not committed)
+
+        Raises:
+            CultureDeckNotFoundException: If deck doesn't exist
+
+        Note:
+            - Requires superuser privileges (enforced in router)
+            - Can update inactive decks (admin privilege)
+            - Caller must commit and refresh
+        """
+        logger.debug(
+            "Updating culture deck",
+            extra={"deck_id": str(deck_id)},
+        )
+
+        # Get existing deck (don't filter by is_active)
+        deck = await self.deck_repo.get(deck_id)
+        if deck is None:
+            raise CultureDeckNotFoundException(deck_id=str(deck_id))
+
+        # Build update dict, converting MultilingualText to dict
+        update_dict = {}
+        for field, value in deck_data.model_dump(exclude_unset=True).items():
+            if field in ("name", "description") and value is not None:
+                # MultilingualText needs to be converted to dict
+                update_dict[field] = value
+            else:
+                update_dict[field] = value
+
+        # Update deck using repository
+        updated_deck = await self.deck_repo.update(deck, update_dict)
+
+        logger.info(
+            "Culture deck updated",
+            extra={
+                "deck_id": str(deck_id),
+                "updated_fields": list(update_dict.keys()),
+            },
+        )
+
+        return updated_deck
+
+    async def soft_delete_deck(self, deck_id: UUID) -> None:
+        """Soft delete a culture deck by setting is_active to False.
+
+        Args:
+            deck_id: UUID of deck to delete
+
+        Raises:
+            CultureDeckNotFoundException: If deck doesn't exist
+
+        Note:
+            - Requires superuser privileges (enforced in router)
+            - Idempotent: deleting already-inactive deck is allowed
+            - Does NOT physically delete - preserves data
+        """
+        logger.debug(
+            "Soft deleting culture deck",
+            extra={"deck_id": str(deck_id)},
+        )
+
+        # Get existing deck (don't filter by is_active)
+        deck = await self.deck_repo.get(deck_id)
+        if deck is None:
+            raise CultureDeckNotFoundException(deck_id=str(deck_id))
+
+        # Soft delete by setting is_active to False
+        deck.is_active = False
+
+        logger.info(
+            "Culture deck soft deleted",
+            extra={"deck_id": str(deck_id)},
+        )
 
 
 # ============================================================================

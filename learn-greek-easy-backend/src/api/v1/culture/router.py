@@ -11,25 +11,41 @@ Endpoints:
 - POST /culture/questions/{question_id}/answer - Submit answer with SM-2
 - GET /culture/progress - Get overall culture learning progress
 - GET /culture/categories - Get available categories
+
+Admin Endpoints (superuser only):
+- POST /culture/decks - Create a new culture deck
+- PATCH /culture/decks/{deck_id} - Update a culture deck
+- DELETE /culture/decks/{deck_id} - Soft delete a culture deck
+- POST /culture/questions - Create a single question
+- POST /culture/questions/bulk - Bulk create questions
+- PATCH /culture/questions/{question_id} - Update a question
+- DELETE /culture/questions/{question_id} - Delete a question
 """
 
 from typing import Optional
 from uuid import UUID
 
-from fastapi import APIRouter, BackgroundTasks, Depends, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, Query, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config import settings
-from src.core.dependencies import get_current_user
+from src.core.dependencies import get_current_superuser, get_current_user
 from src.db.dependencies import get_db
 from src.db.models import User
 from src.schemas.culture import (
     CultureAnswerRequest,
     CultureAnswerResponseWithSM2,
+    CultureDeckCreate,
     CultureDeckDetailResponse,
     CultureDeckListResponse,
+    CultureDeckUpdate,
     CultureProgressResponse,
+    CultureQuestionAdminResponse,
+    CultureQuestionBulkCreateRequest,
+    CultureQuestionBulkCreateResponse,
+    CultureQuestionCreate,
     CultureQuestionQueue,
+    CultureQuestionUpdate,
 )
 from src.services import CultureDeckService, CultureQuestionService
 from src.tasks import check_culture_achievements_task, is_background_tasks_enabled
@@ -545,3 +561,425 @@ async def get_culture_progress(
     service = CultureQuestionService(db)
 
     return await service.get_culture_progress(user_id=current_user.id)
+
+
+# ============================================================================
+# Admin CRUD Endpoints (Superuser Only)
+# ============================================================================
+
+
+@router.post(
+    "/decks",
+    response_model=CultureDeckDetailResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create a new culture deck",
+    description="""
+    Create a new culture deck.
+
+    **Authentication**: Required (Superuser only)
+
+    **Required fields**:
+    - name: Multilingual deck name {el, en, ru}
+    - description: Multilingual description {el, en, ru}
+    - icon: Icon identifier (e.g., 'book-open')
+    - color_accent: Hex color (e.g., '#4F46E5')
+    - category: history, geography, politics, culture, traditions
+    """,
+    responses={
+        201: {"description": "Culture deck created successfully"},
+        401: {"description": "Not authenticated"},
+        403: {"description": "Not authorized (requires superuser)"},
+        422: {"description": "Validation error"},
+    },
+)
+async def create_culture_deck(
+    deck_data: CultureDeckCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> CultureDeckDetailResponse:
+    """Create a new culture deck.
+
+    Requires superuser privileges.
+
+    Args:
+        deck_data: Deck creation data with multilingual fields
+        db: Database session (injected)
+        current_user: Authenticated superuser (injected)
+
+    Returns:
+        CultureDeckDetailResponse with created deck details
+
+    Example:
+        POST /api/v1/culture/decks
+        {
+            "name": {"el": "...", "en": "Greek History", "ru": "..."},
+            "description": {"el": "...", "en": "...", "ru": "..."},
+            "icon": "book-open",
+            "color_accent": "#4F46E5",
+            "category": "history"
+        }
+    """
+    service = CultureDeckService(db)
+    deck = await service.create_deck(deck_data)
+
+    # Commit the transaction
+    await db.commit()
+
+    return deck
+
+
+@router.patch(
+    "/decks/{deck_id}",
+    response_model=CultureDeckDetailResponse,
+    summary="Update a culture deck",
+    description="""
+    Update an existing culture deck. All fields are optional.
+
+    **Authentication**: Required (Superuser only)
+    """,
+    responses={
+        200: {"description": "Culture deck updated successfully"},
+        401: {"description": "Not authenticated"},
+        403: {"description": "Not authorized (requires superuser)"},
+        404: {"description": "Culture deck not found"},
+        422: {"description": "Validation error"},
+    },
+)
+async def update_culture_deck(
+    deck_id: UUID,
+    deck_data: CultureDeckUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> CultureDeckDetailResponse:
+    """Update an existing culture deck.
+
+    Requires superuser privileges. Only provided fields will be updated.
+
+    Args:
+        deck_id: UUID of the deck to update
+        deck_data: Fields to update (all optional)
+        db: Database session (injected)
+        current_user: Authenticated superuser (injected)
+
+    Returns:
+        CultureDeckDetailResponse with updated deck details
+
+    Raises:
+        404: If deck doesn't exist
+
+    Example:
+        PATCH /api/v1/culture/decks/{deck_id}
+        {"category": "geography"}
+    """
+    service = CultureDeckService(db)
+    updated_deck = await service.update_deck(deck_id, deck_data)
+
+    # Commit the transaction and refresh
+    await db.commit()
+    await db.refresh(updated_deck)
+
+    # Get question count for response
+    question_count = await service.deck_repo.count_questions(deck_id)
+
+    return CultureDeckDetailResponse(
+        id=updated_deck.id,
+        name=updated_deck.name,
+        description=updated_deck.description,
+        icon=updated_deck.icon,
+        color_accent=updated_deck.color_accent,
+        category=updated_deck.category,
+        question_count=question_count,
+        progress=None,
+        is_active=updated_deck.is_active,
+        created_at=updated_deck.created_at,
+        updated_at=updated_deck.updated_at,
+    )
+
+
+@router.delete(
+    "/decks/{deck_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Soft delete a culture deck",
+    description="""
+    Soft delete a culture deck by setting is_active to False.
+
+    **Authentication**: Required (Superuser only)
+
+    Note: This does NOT physically delete the deck. Data is preserved.
+    """,
+    responses={
+        204: {"description": "Culture deck deleted successfully"},
+        401: {"description": "Not authenticated"},
+        403: {"description": "Not authorized (requires superuser)"},
+        404: {"description": "Culture deck not found"},
+    },
+)
+async def delete_culture_deck(
+    deck_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> Response:
+    """Soft delete a culture deck.
+
+    Requires superuser privileges. Sets is_active=False.
+    Idempotent: deleting already-inactive deck is allowed.
+
+    Args:
+        deck_id: UUID of the deck to delete
+        db: Database session (injected)
+        current_user: Authenticated superuser (injected)
+
+    Returns:
+        Empty response with 204 status
+
+    Raises:
+        404: If deck doesn't exist
+
+    Example:
+        DELETE /api/v1/culture/decks/{deck_id}
+    """
+    service = CultureDeckService(db)
+    await service.soft_delete_deck(deck_id)
+
+    # Commit the transaction
+    await db.commit()
+
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post(
+    "/questions",
+    response_model=CultureQuestionAdminResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create a single culture question",
+    description="""
+    Create a new culture question in a deck.
+
+    **Authentication**: Required (Superuser only)
+
+    **Required fields**:
+    - deck_id: UUID of the deck
+    - question_text: Multilingual question {el, en, ru}
+    - option_a through option_d: Multilingual options {el, en, ru}
+    - correct_option: 1=A, 2=B, 3=C, 4=D
+    """,
+    responses={
+        201: {"description": "Culture question created successfully"},
+        401: {"description": "Not authenticated"},
+        403: {"description": "Not authorized (requires superuser)"},
+        404: {"description": "Deck not found"},
+        422: {"description": "Validation error"},
+    },
+)
+async def create_culture_question(
+    question_data: CultureQuestionCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> CultureQuestionAdminResponse:
+    """Create a new culture question.
+
+    Requires superuser privileges.
+
+    Args:
+        question_data: Question creation data with multilingual fields
+        db: Database session (injected)
+        current_user: Authenticated superuser (injected)
+
+    Returns:
+        CultureQuestionAdminResponse with created question details
+
+    Raises:
+        404: If deck doesn't exist
+
+    Example:
+        POST /api/v1/culture/questions
+        {
+            "deck_id": "...",
+            "question_text": {"el": "...", "en": "Who was...", "ru": "..."},
+            "option_a": {"el": "...", "en": "Option A", "ru": "..."},
+            ...
+            "correct_option": 2
+        }
+    """
+    service = CultureQuestionService(db)
+    question = await service.create_question(question_data)
+
+    # Commit the transaction
+    await db.commit()
+
+    return question
+
+
+@router.post(
+    "/questions/bulk",
+    response_model=CultureQuestionBulkCreateResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Bulk create culture questions",
+    description="""
+    Create multiple culture questions in one request.
+
+    **Authentication**: Required (Superuser only)
+
+    **Limits**: 1-100 questions per request
+
+    **Transactional**: If any question fails validation, entire request is rejected.
+    """,
+    responses={
+        201: {"description": "Questions created successfully"},
+        401: {"description": "Not authenticated"},
+        403: {"description": "Not authorized (requires superuser)"},
+        404: {"description": "Deck not found"},
+        422: {"description": "Validation error (empty array, >100 questions, invalid data)"},
+    },
+)
+async def bulk_create_culture_questions(
+    request: CultureQuestionBulkCreateRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> CultureQuestionBulkCreateResponse:
+    """Create multiple culture questions in one request.
+
+    Requires superuser privileges. All-or-nothing semantics.
+
+    Args:
+        request: Deck ID and array of questions to create
+        db: Database session (injected)
+        current_user: Authenticated superuser (injected)
+
+    Returns:
+        CultureQuestionBulkCreateResponse with created questions
+
+    Raises:
+        404: If deck doesn't exist
+        422: If validation fails
+
+    Example:
+        POST /api/v1/culture/questions/bulk
+        {
+            "deck_id": "...",
+            "questions": [
+                {"question_text": {...}, "option_a": {...}, ..., "correct_option": 1},
+                {"question_text": {...}, "option_a": {...}, ..., "correct_option": 3}
+            ]
+        }
+    """
+    service = CultureQuestionService(db)
+    response = await service.bulk_create_questions(request)
+
+    # Commit the transaction
+    await db.commit()
+
+    # Refresh all questions to get generated fields
+    for question in response.questions:
+        # Note: questions are already Pydantic models, no refresh needed
+        pass
+
+    return response
+
+
+@router.patch(
+    "/questions/{question_id}",
+    response_model=CultureQuestionAdminResponse,
+    summary="Update a culture question",
+    description="""
+    Update an existing culture question. All fields are optional.
+
+    **Authentication**: Required (Superuser only)
+
+    Note: deck_id cannot be changed.
+    """,
+    responses={
+        200: {"description": "Question updated successfully"},
+        401: {"description": "Not authenticated"},
+        403: {"description": "Not authorized (requires superuser)"},
+        404: {"description": "Question not found"},
+        422: {"description": "Validation error"},
+    },
+)
+async def update_culture_question(
+    question_id: UUID,
+    question_data: CultureQuestionUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> CultureQuestionAdminResponse:
+    """Update an existing culture question.
+
+    Requires superuser privileges. Only provided fields will be updated.
+
+    Args:
+        question_id: UUID of the question to update
+        question_data: Fields to update (all optional)
+        db: Database session (injected)
+        current_user: Authenticated superuser (injected)
+
+    Returns:
+        CultureQuestionAdminResponse with updated question details
+
+    Raises:
+        404: If question doesn't exist
+
+    Example:
+        PATCH /api/v1/culture/questions/{question_id}
+        {"correct_option": 3}
+    """
+    service = CultureQuestionService(db)
+    updated_question = await service.update_question(question_id, question_data)
+
+    # Commit the transaction and refresh
+    await db.commit()
+    await db.refresh(updated_question)
+
+    return CultureQuestionAdminResponse.model_validate(updated_question)
+
+
+@router.delete(
+    "/questions/{question_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete a culture question",
+    description="""
+    Hard delete a culture question.
+
+    **Authentication**: Required (Superuser only)
+
+    **WARNING**: This is a HARD DELETE. The question and all associated
+    statistics will be permanently removed.
+    """,
+    responses={
+        204: {"description": "Question deleted successfully"},
+        401: {"description": "Not authenticated"},
+        403: {"description": "Not authorized (requires superuser)"},
+        404: {"description": "Question not found"},
+    },
+)
+async def delete_culture_question(
+    question_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> Response:
+    """Hard delete a culture question.
+
+    Requires superuser privileges.
+
+    WARNING: Permanently removes question and all associated statistics.
+
+    Args:
+        question_id: UUID of the question to delete
+        db: Database session (injected)
+        current_user: Authenticated superuser (injected)
+
+    Returns:
+        Empty response with 204 status
+
+    Raises:
+        404: If question doesn't exist
+
+    Example:
+        DELETE /api/v1/culture/questions/{question_id}
+    """
+    service = CultureQuestionService(db)
+    await service.delete_question(question_id)
+
+    # Commit the transaction
+    await db.commit()
+
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
