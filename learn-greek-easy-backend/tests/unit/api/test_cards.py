@@ -2,6 +2,7 @@
 
 This module contains unit tests for the card router endpoints.
 Tests verify endpoint behavior, response formats, and error handling.
+All read endpoints require authentication.
 """
 
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -45,7 +46,19 @@ class TestListCardsUnit:
         return cards
 
     @pytest.mark.asyncio
-    async def test_list_cards_success(self, client: AsyncClient, mock_deck, mock_cards):
+    async def test_list_cards_unauthenticated_returns_401(self, client: AsyncClient):
+        """Test that unauthenticated request returns 401."""
+        deck_id = uuid4()
+        response = await client.get(f"/api/v1/cards?deck_id={deck_id}")
+
+        assert response.status_code == 401
+        data = response.json()
+        assert data["success"] is False
+
+    @pytest.mark.asyncio
+    async def test_list_cards_success(
+        self, client: AsyncClient, auth_headers: dict, mock_deck, mock_cards
+    ):
         """Test successful card listing."""
         with (
             patch("src.api.v1.cards.DeckRepository") as MockDeckRepo,
@@ -61,7 +74,9 @@ class TestListCardsUnit:
             mock_card_repo.count_by_deck.return_value = 3
             MockCardRepo.return_value = mock_card_repo
 
-            response = await client.get(f"/api/v1/cards?deck_id={mock_deck.id}")
+            response = await client.get(
+                f"/api/v1/cards?deck_id={mock_deck.id}", headers=auth_headers
+            )
 
             assert response.status_code == 200
             data = response.json()
@@ -72,7 +87,7 @@ class TestListCardsUnit:
             assert len(data["cards"]) == 3
 
     @pytest.mark.asyncio
-    async def test_list_cards_empty_deck(self, client: AsyncClient, mock_deck):
+    async def test_list_cards_empty_deck(self, client: AsyncClient, auth_headers: dict, mock_deck):
         """Test listing cards from empty deck."""
         with (
             patch("src.api.v1.cards.DeckRepository") as MockDeckRepo,
@@ -87,7 +102,9 @@ class TestListCardsUnit:
             mock_card_repo.count_by_deck.return_value = 0
             MockCardRepo.return_value = mock_card_repo
 
-            response = await client.get(f"/api/v1/cards?deck_id={mock_deck.id}")
+            response = await client.get(
+                f"/api/v1/cards?deck_id={mock_deck.id}", headers=auth_headers
+            )
 
             assert response.status_code == 200
             data = response.json()
@@ -95,7 +112,7 @@ class TestListCardsUnit:
             assert data["cards"] == []
 
     @pytest.mark.asyncio
-    async def test_list_cards_deck_not_found(self, client: AsyncClient):
+    async def test_list_cards_deck_not_found(self, client: AsyncClient, auth_headers: dict):
         """Test 404 response when deck doesn't exist."""
         with patch("src.api.v1.cards.DeckRepository") as MockDeckRepo:
             mock_deck_repo = AsyncMock()
@@ -103,12 +120,14 @@ class TestListCardsUnit:
             MockDeckRepo.return_value = mock_deck_repo
 
             non_existent_id = uuid4()
-            response = await client.get(f"/api/v1/cards?deck_id={non_existent_id}")
+            response = await client.get(
+                f"/api/v1/cards?deck_id={non_existent_id}", headers=auth_headers
+            )
 
             assert response.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_list_cards_inactive_deck(self, client: AsyncClient):
+    async def test_list_cards_inactive_deck(self, client: AsyncClient, auth_headers: dict):
         """Test 404 response for inactive deck."""
         with patch("src.api.v1.cards.DeckRepository") as MockDeckRepo:
             inactive_deck = MagicMock(spec=Deck)
@@ -119,69 +138,81 @@ class TestListCardsUnit:
             mock_deck_repo.get.return_value = inactive_deck
             MockDeckRepo.return_value = mock_deck_repo
 
-            response = await client.get(f"/api/v1/cards?deck_id={inactive_deck.id}")
+            response = await client.get(
+                f"/api/v1/cards?deck_id={inactive_deck.id}", headers=auth_headers
+            )
 
             assert response.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_list_cards_missing_deck_id(self, client: AsyncClient):
+    async def test_list_cards_missing_deck_id(self, client: AsyncClient, auth_headers: dict):
         """Test 422 response when deck_id is missing."""
-        response = await client.get("/api/v1/cards")
+        response = await client.get("/api/v1/cards", headers=auth_headers)
 
         assert response.status_code == 422
         data = response.json()
         assert data["error"]["code"] == "VALIDATION_ERROR"
 
     @pytest.mark.asyncio
-    async def test_list_cards_invalid_deck_id_format(self, client: AsyncClient):
+    async def test_list_cards_invalid_deck_id_format(self, client: AsyncClient, auth_headers: dict):
         """Test 422 response for invalid UUID format."""
-        response = await client.get("/api/v1/cards?deck_id=not-a-uuid")
+        response = await client.get("/api/v1/cards?deck_id=not-a-uuid", headers=auth_headers)
 
         assert response.status_code == 422
 
     @pytest.mark.asyncio
-    async def test_list_cards_invalid_page_zero(self, client: AsyncClient):
+    async def test_list_cards_invalid_page_zero(self, client: AsyncClient, auth_headers: dict):
         """Test 422 response when page is 0."""
         deck_id = uuid4()
-        response = await client.get(f"/api/v1/cards?deck_id={deck_id}&page=0")
+        response = await client.get(f"/api/v1/cards?deck_id={deck_id}&page=0", headers=auth_headers)
 
         assert response.status_code == 422
 
     @pytest.mark.asyncio
-    async def test_list_cards_invalid_page_negative(self, client: AsyncClient):
+    async def test_list_cards_invalid_page_negative(self, client: AsyncClient, auth_headers: dict):
         """Test 422 response when page is negative."""
         deck_id = uuid4()
-        response = await client.get(f"/api/v1/cards?deck_id={deck_id}&page=-1")
+        response = await client.get(
+            f"/api/v1/cards?deck_id={deck_id}&page=-1", headers=auth_headers
+        )
 
         assert response.status_code == 422
 
     @pytest.mark.asyncio
-    async def test_list_cards_invalid_page_size_zero(self, client: AsyncClient):
+    async def test_list_cards_invalid_page_size_zero(self, client: AsyncClient, auth_headers: dict):
         """Test 422 response when page_size is 0."""
         deck_id = uuid4()
-        response = await client.get(f"/api/v1/cards?deck_id={deck_id}&page_size=0")
+        response = await client.get(
+            f"/api/v1/cards?deck_id={deck_id}&page_size=0", headers=auth_headers
+        )
 
         assert response.status_code == 422
 
     @pytest.mark.asyncio
-    async def test_list_cards_invalid_page_size_over_limit(self, client: AsyncClient):
+    async def test_list_cards_invalid_page_size_over_limit(
+        self, client: AsyncClient, auth_headers: dict
+    ):
         """Test 422 response when page_size exceeds 100."""
         deck_id = uuid4()
-        response = await client.get(f"/api/v1/cards?deck_id={deck_id}&page_size=101")
+        response = await client.get(
+            f"/api/v1/cards?deck_id={deck_id}&page_size=101", headers=auth_headers
+        )
 
         assert response.status_code == 422
 
     @pytest.mark.asyncio
-    async def test_list_cards_invalid_difficulty(self, client: AsyncClient):
+    async def test_list_cards_invalid_difficulty(self, client: AsyncClient, auth_headers: dict):
         """Test 422 response for invalid difficulty value."""
         deck_id = uuid4()
-        response = await client.get(f"/api/v1/cards?deck_id={deck_id}&difficulty=invalid")
+        response = await client.get(
+            f"/api/v1/cards?deck_id={deck_id}&difficulty=invalid", headers=auth_headers
+        )
 
         assert response.status_code == 422
 
     @pytest.mark.asyncio
     async def test_list_cards_with_difficulty_filter(
-        self, client: AsyncClient, mock_deck, mock_cards
+        self, client: AsyncClient, auth_headers: dict, mock_deck, mock_cards
     ):
         """Test filtering cards by difficulty."""
         with (
@@ -197,7 +228,9 @@ class TestListCardsUnit:
             mock_card_repo.get_by_difficulty.return_value = mock_cards[:1]
             MockCardRepo.return_value = mock_card_repo
 
-            response = await client.get(f"/api/v1/cards?deck_id={mock_deck.id}&difficulty=easy")
+            response = await client.get(
+                f"/api/v1/cards?deck_id={mock_deck.id}&difficulty=easy", headers=auth_headers
+            )
 
             assert response.status_code == 200
             data = response.json()
@@ -207,7 +240,9 @@ class TestListCardsUnit:
             )
 
     @pytest.mark.asyncio
-    async def test_list_cards_pagination(self, client: AsyncClient, mock_deck, mock_cards):
+    async def test_list_cards_pagination(
+        self, client: AsyncClient, auth_headers: dict, mock_deck, mock_cards
+    ):
         """Test pagination parameters are passed correctly."""
         with (
             patch("src.api.v1.cards.DeckRepository") as MockDeckRepo,
@@ -222,7 +257,9 @@ class TestListCardsUnit:
             mock_card_repo.count_by_deck.return_value = 3
             MockCardRepo.return_value = mock_card_repo
 
-            response = await client.get(f"/api/v1/cards?deck_id={mock_deck.id}&page=2&page_size=2")
+            response = await client.get(
+                f"/api/v1/cards?deck_id={mock_deck.id}&page=2&page_size=2", headers=auth_headers
+            )
 
             assert response.status_code == 200
             data = response.json()
@@ -237,7 +274,7 @@ class TestListCardsResponseFormat:
     """Tests for CardListResponse schema compliance."""
 
     @pytest.mark.asyncio
-    async def test_response_contains_required_fields(self, client: AsyncClient):
+    async def test_response_contains_required_fields(self, client: AsyncClient, auth_headers: dict):
         """Test response contains all required fields."""
         mock_deck = MagicMock(spec=Deck)
         mock_deck.id = uuid4()
@@ -256,7 +293,9 @@ class TestListCardsResponseFormat:
             mock_card_repo.count_by_deck.return_value = 0
             MockCardRepo.return_value = mock_card_repo
 
-            response = await client.get(f"/api/v1/cards?deck_id={mock_deck.id}")
+            response = await client.get(
+                f"/api/v1/cards?deck_id={mock_deck.id}", headers=auth_headers
+            )
 
             assert response.status_code == 200
             data = response.json()
@@ -295,20 +334,33 @@ class TestGetCardUnit:
         return card
 
     @pytest.mark.asyncio
-    async def test_get_card_calls_repository_with_card_id(self, client: AsyncClient, mock_card):
+    async def test_get_card_unauthenticated_returns_401(self, client: AsyncClient):
+        """Test that unauthenticated request returns 401."""
+        card_id = uuid4()
+
+        response = await client.get(f"/api/v1/cards/{card_id}")
+
+        assert response.status_code == 401
+        data = response.json()
+        assert data["success"] is False
+
+    @pytest.mark.asyncio
+    async def test_get_card_calls_repository_with_card_id(
+        self, client: AsyncClient, auth_headers: dict, mock_card
+    ):
         """Test that get_card calls repository.get with correct card_id."""
         with patch("src.api.v1.cards.CardRepository") as MockCardRepo:
             mock_card_repo = AsyncMock()
             mock_card_repo.get.return_value = mock_card
             MockCardRepo.return_value = mock_card_repo
 
-            response = await client.get(f"/api/v1/cards/{mock_card.id}")
+            response = await client.get(f"/api/v1/cards/{mock_card.id}", headers=auth_headers)
 
             assert response.status_code == 200
             mock_card_repo.get.assert_called_once_with(mock_card.id)
 
     @pytest.mark.asyncio
-    async def test_get_card_not_found_returns_404(self, client: AsyncClient):
+    async def test_get_card_not_found_returns_404(self, client: AsyncClient, auth_headers: dict):
         """Test 404 response when card doesn't exist."""
         with patch("src.api.v1.cards.CardRepository") as MockCardRepo:
             mock_card_repo = AsyncMock()
@@ -316,26 +368,28 @@ class TestGetCardUnit:
             MockCardRepo.return_value = mock_card_repo
 
             non_existent_id = uuid4()
-            response = await client.get(f"/api/v1/cards/{non_existent_id}")
+            response = await client.get(f"/api/v1/cards/{non_existent_id}", headers=auth_headers)
 
             assert response.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_get_card_invalid_uuid_returns_422(self, client: AsyncClient):
+    async def test_get_card_invalid_uuid_returns_422(self, client: AsyncClient, auth_headers: dict):
         """Test 422 response for invalid UUID format."""
-        response = await client.get("/api/v1/cards/not-a-uuid")
+        response = await client.get("/api/v1/cards/not-a-uuid", headers=auth_headers)
 
         assert response.status_code == 422
 
     @pytest.mark.asyncio
-    async def test_get_card_response_format(self, client: AsyncClient, mock_card):
+    async def test_get_card_response_format(
+        self, client: AsyncClient, auth_headers: dict, mock_card
+    ):
         """Test that response matches CardResponse schema."""
         with patch("src.api.v1.cards.CardRepository") as MockCardRepo:
             mock_card_repo = AsyncMock()
             mock_card_repo.get.return_value = mock_card
             MockCardRepo.return_value = mock_card_repo
 
-            response = await client.get(f"/api/v1/cards/{mock_card.id}")
+            response = await client.get(f"/api/v1/cards/{mock_card.id}", headers=auth_headers)
 
             assert response.status_code == 200
             data = response.json()
@@ -374,7 +428,18 @@ class TestSearchCardsUnit:
         return cards
 
     @pytest.mark.asyncio
-    async def test_search_cards_calls_repository_with_query(self, client: AsyncClient, mock_cards):
+    async def test_search_cards_unauthenticated_returns_401(self, client: AsyncClient):
+        """Test that unauthenticated request returns 401."""
+        response = await client.get("/api/v1/cards/search?q=morning")
+
+        assert response.status_code == 401
+        data = response.json()
+        assert data["success"] is False
+
+    @pytest.mark.asyncio
+    async def test_search_cards_calls_repository_with_query(
+        self, client: AsyncClient, auth_headers: dict, mock_cards
+    ):
         """Test that search calls repository with correct parameters."""
         with patch("src.api.v1.cards.CardRepository") as MockCardRepo:
             mock_card_repo = AsyncMock()
@@ -382,7 +447,7 @@ class TestSearchCardsUnit:
             mock_card_repo.count_search.return_value = 3
             MockCardRepo.return_value = mock_card_repo
 
-            response = await client.get("/api/v1/cards/search?q=morning")
+            response = await client.get("/api/v1/cards/search?q=morning", headers=auth_headers)
 
             assert response.status_code == 200
             mock_card_repo.search.assert_called_once()
@@ -390,7 +455,9 @@ class TestSearchCardsUnit:
             assert call_kwargs["query_text"] == "morning"
 
     @pytest.mark.asyncio
-    async def test_search_cards_with_deck_filter(self, client: AsyncClient, mock_cards):
+    async def test_search_cards_with_deck_filter(
+        self, client: AsyncClient, auth_headers: dict, mock_cards
+    ):
         """Test that search with deck_id calls repository correctly."""
         deck_id = uuid4()
         mock_deck = MagicMock(spec=Deck)
@@ -409,7 +476,9 @@ class TestSearchCardsUnit:
             mock_card_repo.count_search.return_value = 1
             MockCardRepo.return_value = mock_card_repo
 
-            response = await client.get(f"/api/v1/cards/search?q=morning&deck_id={deck_id}")
+            response = await client.get(
+                f"/api/v1/cards/search?q=morning&deck_id={deck_id}", headers=auth_headers
+            )
 
             assert response.status_code == 200
             mock_card_repo.search.assert_called_once()
@@ -417,9 +486,11 @@ class TestSearchCardsUnit:
             assert call_kwargs["deck_id"] == deck_id
 
     @pytest.mark.asyncio
-    async def test_search_cards_missing_query_returns_422(self, client: AsyncClient):
+    async def test_search_cards_missing_query_returns_422(
+        self, client: AsyncClient, auth_headers: dict
+    ):
         """Test that missing q parameter returns 422."""
-        response = await client.get("/api/v1/cards/search")
+        response = await client.get("/api/v1/cards/search", headers=auth_headers)
 
         assert response.status_code == 422
         data = response.json()
@@ -427,24 +498,30 @@ class TestSearchCardsUnit:
         assert data["error"]["code"] == "VALIDATION_ERROR"
 
     @pytest.mark.asyncio
-    async def test_search_cards_empty_query_returns_422(self, client: AsyncClient):
+    async def test_search_cards_empty_query_returns_422(
+        self, client: AsyncClient, auth_headers: dict
+    ):
         """Test that empty q parameter returns 422."""
-        response = await client.get("/api/v1/cards/search?q=")
+        response = await client.get("/api/v1/cards/search?q=", headers=auth_headers)
 
         assert response.status_code == 422
         data = response.json()
         assert data["success"] is False
 
     @pytest.mark.asyncio
-    async def test_search_cards_query_too_long_returns_422(self, client: AsyncClient):
+    async def test_search_cards_query_too_long_returns_422(
+        self, client: AsyncClient, auth_headers: dict
+    ):
         """Test that query exceeding 100 characters returns 422."""
         long_query = "a" * 101
-        response = await client.get(f"/api/v1/cards/search?q={long_query}")
+        response = await client.get(f"/api/v1/cards/search?q={long_query}", headers=auth_headers)
 
         assert response.status_code == 422
 
     @pytest.mark.asyncio
-    async def test_search_cards_deck_not_found_returns_404(self, client: AsyncClient):
+    async def test_search_cards_deck_not_found_returns_404(
+        self, client: AsyncClient, auth_headers: dict
+    ):
         """Test 404 when deck_id doesn't exist."""
         with patch("src.api.v1.cards.DeckRepository") as MockDeckRepo:
             mock_deck_repo = AsyncMock()
@@ -452,13 +529,16 @@ class TestSearchCardsUnit:
             MockDeckRepo.return_value = mock_deck_repo
 
             non_existent_id = uuid4()
-            response = await client.get(f"/api/v1/cards/search?q=morning&deck_id={non_existent_id}")
+            response = await client.get(
+                f"/api/v1/cards/search?q=morning&deck_id={non_existent_id}",
+                headers=auth_headers,
+            )
 
             assert response.status_code == 404
 
     @pytest.mark.asyncio
     async def test_search_cards_returns_correct_response_structure(
-        self, client: AsyncClient, mock_cards
+        self, client: AsyncClient, auth_headers: dict, mock_cards
     ):
         """Test that response has correct structure."""
         with patch("src.api.v1.cards.CardRepository") as MockCardRepo:
@@ -467,7 +547,7 @@ class TestSearchCardsUnit:
             mock_card_repo.count_search.return_value = 3
             MockCardRepo.return_value = mock_card_repo
 
-            response = await client.get("/api/v1/cards/search?q=morning")
+            response = await client.get("/api/v1/cards/search?q=morning", headers=auth_headers)
 
             assert response.status_code == 200
             data = response.json()
@@ -482,7 +562,9 @@ class TestSearchCardsUnit:
             assert data["page_size"] == 20  # Default
 
     @pytest.mark.asyncio
-    async def test_search_cards_pagination(self, client: AsyncClient, mock_cards):
+    async def test_search_cards_pagination(
+        self, client: AsyncClient, auth_headers: dict, mock_cards
+    ):
         """Test that pagination parameters are passed correctly."""
         with patch("src.api.v1.cards.CardRepository") as MockCardRepo:
             mock_card_repo = AsyncMock()
@@ -490,7 +572,9 @@ class TestSearchCardsUnit:
             mock_card_repo.count_search.return_value = 3
             MockCardRepo.return_value = mock_card_repo
 
-            response = await client.get("/api/v1/cards/search?q=morning&page=2&page_size=2")
+            response = await client.get(
+                "/api/v1/cards/search?q=morning&page=2&page_size=2", headers=auth_headers
+            )
 
             assert response.status_code == 200
             data = response.json()

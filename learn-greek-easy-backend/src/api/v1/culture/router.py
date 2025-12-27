@@ -20,7 +20,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config import settings
-from src.core.dependencies import get_current_user, get_current_user_optional
+from src.core.dependencies import get_current_user
 from src.db.dependencies import get_db
 from src.db.models import User
 from src.schemas.culture import (
@@ -101,20 +101,18 @@ async def list_culture_decks(
         description="Filter by category (history, geography, politics, culture, traditions)",
     ),
     db: AsyncSession = Depends(get_db),
-    current_user: Optional[User] = Depends(get_current_user_optional),
+    current_user: User = Depends(get_current_user),
 ) -> CultureDeckListResponse:
     """List all active culture decks with pagination and optional filtering.
 
-    This endpoint supports both authenticated and anonymous access:
-    - Authenticated users receive personalized progress for each deck
-    - Anonymous users receive deck information without progress
+    Requires authentication. Returns personalized progress for each deck.
 
     Args:
         page: Page number starting from 1
         page_size: Number of items per page (1-100)
         category: Optional category filter
         db: Database session (injected)
-        current_user: Optional authenticated user (injected)
+        current_user: Authenticated user (injected)
 
     Returns:
         CultureDeckListResponse with total count and paginated deck list
@@ -123,7 +121,7 @@ async def list_culture_decks(
         GET /api/v1/culture/decks?page=1&page_size=10&category=history
     """
     service = CultureDeckService(db)
-    user_id = current_user.id if current_user else None
+    user_id = current_user.id
 
     return await service.list_decks(
         page=page,
@@ -201,17 +199,16 @@ async def list_culture_decks(
 async def get_culture_deck(
     deck_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: Optional[User] = Depends(get_current_user_optional),
+    current_user: User = Depends(get_current_user),
 ) -> CultureDeckDetailResponse:
     """Get a specific culture deck by ID with question count.
 
-    This endpoint supports both authenticated and anonymous access.
-    Inactive decks return 404.
+    Requires authentication. Inactive decks return 404.
 
     Args:
         deck_id: UUID of the deck to retrieve
         db: Database session (injected)
-        current_user: Optional authenticated user (injected)
+        current_user: Authenticated user (injected)
 
     Returns:
         CultureDeckDetailResponse with deck details
@@ -223,7 +220,7 @@ async def get_culture_deck(
         GET /api/v1/culture/decks/550e8400-e29b-41d4-a716-446655440000
     """
     service = CultureDeckService(db)
-    user_id = current_user.id if current_user else None
+    user_id = current_user.id
 
     return await service.get_deck(
         deck_id=deck_id,
@@ -255,13 +252,15 @@ async def get_culture_deck(
 )
 async def get_categories(
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> list[str]:
     """Get all available culture deck categories.
 
-    Returns categories that have at least one active deck.
+    Requires authentication. Returns categories that have at least one active deck.
 
     Args:
         db: Database session (injected)
+        current_user: Authenticated user (injected)
 
     Returns:
         List of unique category names

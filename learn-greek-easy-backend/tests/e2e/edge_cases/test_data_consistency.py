@@ -57,10 +57,10 @@ class TestDataConsistency(E2ETestCase):
         deck_id = deck_data["id"]
 
         # Step 2: Verify initial deck has no cards
-        deck_detail = await client.get(f"/api/v1/decks/{deck_id}")
+        deck_detail = await client.get(f"/api/v1/decks/{deck_id}", headers=headers)
         assert deck_detail.status_code == 200
         # Check card count via cards API
-        cards_response = await client.get(f"/api/v1/cards?deck_id={deck_id}")
+        cards_response = await client.get(f"/api/v1/cards?deck_id={deck_id}", headers=headers)
         assert cards_response.status_code == 200
         assert cards_response.json()["total"] == 0
 
@@ -82,7 +82,7 @@ class TestDataConsistency(E2ETestCase):
         assert bulk_response.json()["created_count"] == 5
 
         # Step 4: Verify via API
-        cards_list = await client.get(f"/api/v1/cards?deck_id={deck_id}")
+        cards_list = await client.get(f"/api/v1/cards?deck_id={deck_id}", headers=headers)
         assert cards_list.status_code == 200
         assert cards_list.json()["total"] == 5
 
@@ -109,7 +109,7 @@ class TestDataConsistency(E2ETestCase):
             assert single_response.status_code == 201
 
         # Step 7: Verify count after additions
-        cards_list = await client.get(f"/api/v1/cards?deck_id={deck_id}")
+        cards_list = await client.get(f"/api/v1/cards?deck_id={deck_id}", headers=headers)
         assert cards_list.json()["total"] == 7
 
         result = await db_session.execute(
@@ -126,7 +126,7 @@ class TestDataConsistency(E2ETestCase):
         assert delete_response.status_code == 204
 
         # Step 9: Verify count after deletion
-        cards_list = await client.get(f"/api/v1/cards?deck_id={deck_id}")
+        cards_list = await client.get(f"/api/v1/cards?deck_id={deck_id}", headers=headers)
         assert cards_list.json()["total"] == 6
 
         # Step 10: Final database verification
@@ -447,7 +447,7 @@ class TestDataConsistency(E2ETestCase):
         assert delete_response.status_code == 204
 
         # Step 6: API should return 404 (deck inactive)
-        get_response = await client.get(f"/api/v1/decks/{deck_id}")
+        get_response = await client.get(f"/api/v1/decks/{deck_id}", headers=admin_headers)
         assert get_response.status_code == 404
 
         # Step 7: For true cascade testing, perform hard delete

@@ -62,8 +62,8 @@ class TestAdminDeckManagement(E2ETestCase):
         assert deck["name"] == deck_data["name"]
         assert deck["is_active"] is True
 
-        # Step 2: VERIFY deck appears in public listing
-        list_response = await client.get("/api/v1/decks")
+        # Step 2: VERIFY deck appears in listing (now requires auth)
+        list_response = await client.get("/api/v1/decks", headers=auth_headers)
         assert list_response.status_code == 200
         deck_ids = [d["id"] for d in list_response.json()["decks"]]
         assert deck_id in deck_ids, "Created deck should be visible in listing"
@@ -85,7 +85,7 @@ class TestAdminDeckManagement(E2ETestCase):
         assert updated_deck["level"] == "B1"
 
         # Step 4: VERIFY update persisted
-        get_response = await client.get(f"/api/v1/decks/{deck_id}")
+        get_response = await client.get(f"/api/v1/decks/{deck_id}", headers=auth_headers)
         assert get_response.status_code == 200
         assert get_response.json()["name"] == update_data["name"]
         assert get_response.json()["description"] == update_data["description"]
@@ -97,12 +97,12 @@ class TestAdminDeckManagement(E2ETestCase):
         )
         assert delete_response.status_code == 204
 
-        # Step 6: VERIFY deck no longer visible to public
-        final_get = await client.get(f"/api/v1/decks/{deck_id}")
+        # Step 6: VERIFY deck no longer visible (returns 404 for deleted)
+        final_get = await client.get(f"/api/v1/decks/{deck_id}", headers=auth_headers)
         assert final_get.status_code == 404
 
         # Step 7: VERIFY deck not in listings
-        final_list = await client.get("/api/v1/decks")
+        final_list = await client.get("/api/v1/decks", headers=auth_headers)
         final_deck_ids = [d["id"] for d in final_list.json()["decks"]]
         assert deck_id not in final_deck_ids, "Deleted deck should not appear in listing"
 
@@ -128,8 +128,8 @@ class TestAdminDeckManagement(E2ETestCase):
         assert deck_response.status_code == 201
         deck_id = deck_response.json()["id"]
 
-        # Step 2: Verify deck visible in public listing
-        list_before = await client.get("/api/v1/decks")
+        # Step 2: Verify deck visible in listing (now requires auth)
+        list_before = await client.get("/api/v1/decks", headers=superuser_auth_headers)
         deck_ids_before = [d["id"] for d in list_before.json()["decks"]]
         assert deck_id in deck_ids_before
 
@@ -142,17 +142,19 @@ class TestAdminDeckManagement(E2ETestCase):
         assert deactivate_response.status_code == 200
         assert deactivate_response.json()["is_active"] is False
 
-        # Step 4: Verify deck NOT visible in public listing
-        list_after = await client.get("/api/v1/decks")
+        # Step 4: Verify deck NOT visible in listing
+        list_after = await client.get("/api/v1/decks", headers=superuser_auth_headers)
         deck_ids_after = [d["id"] for d in list_after.json()["decks"]]
         assert deck_id not in deck_ids_after
 
         # Step 5: Verify direct GET returns 404 for inactive deck
-        direct_get = await client.get(f"/api/v1/decks/{deck_id}")
+        direct_get = await client.get(f"/api/v1/decks/{deck_id}", headers=superuser_auth_headers)
         assert direct_get.status_code == 404
 
         # Step 6: Verify deck not in search results
-        search_result = await client.get("/api/v1/decks/search?q=Visibility")
+        search_result = await client.get(
+            "/api/v1/decks/search?q=Visibility", headers=superuser_auth_headers
+        )
         search_ids = [d["id"] for d in search_result.json()["decks"]]
         assert deck_id not in search_ids
 
@@ -173,12 +175,12 @@ class TestAdminDeckManagement(E2ETestCase):
         assert reactivate_response.status_code == 200
 
         # Step 9: Verify deck visible again
-        final_list = await client.get("/api/v1/decks")
+        final_list = await client.get("/api/v1/decks", headers=superuser_auth_headers)
         final_deck_ids = [d["id"] for d in final_list.json()["decks"]]
         assert deck_id in final_deck_ids
 
         # Step 10: Verify update persisted after reactivation
-        final_get = await client.get(f"/api/v1/decks/{deck_id}")
+        final_get = await client.get(f"/api/v1/decks/{deck_id}", headers=superuser_auth_headers)
         assert final_get.status_code == 200
         assert final_get.json()["name"] == "Updated While Inactive"
 
@@ -252,21 +254,27 @@ class TestAdminCardManagement(E2ETestCase):
         assert len(bulk_result["cards"]) == 10
 
         # Step 3: Verify card count on deck
-        deck_get = await client.get(f"/api/v1/decks/{deck_id}")
+        deck_get = await client.get(f"/api/v1/decks/{deck_id}", headers=superuser_auth_headers)
         assert deck_get.status_code == 200
         assert deck_get.json()["card_count"] == 10
 
         # Step 4: Verify all cards accessible via list endpoint
-        cards_list = await client.get(f"/api/v1/cards?deck_id={deck_id}")
+        cards_list = await client.get(
+            f"/api/v1/cards?deck_id={deck_id}", headers=superuser_auth_headers
+        )
         assert cards_list.status_code == 200
         assert cards_list.json()["total"] == 10
 
         # Step 5: Verify difficulty filter works
-        easy_cards = await client.get(f"/api/v1/cards?deck_id={deck_id}&difficulty=easy")
+        easy_cards = await client.get(
+            f"/api/v1/cards?deck_id={deck_id}&difficulty=easy", headers=superuser_auth_headers
+        )
         assert easy_cards.status_code == 200
         assert easy_cards.json()["total"] == 3  # ena, dio, tria
 
-        hard_cards = await client.get(f"/api/v1/cards?deck_id={deck_id}&difficulty=hard")
+        hard_cards = await client.get(
+            f"/api/v1/cards?deck_id={deck_id}&difficulty=hard", headers=superuser_auth_headers
+        )
         assert hard_cards.status_code == 200
         assert hard_cards.json()["total"] == 3  # okto, ennea, deka
 
@@ -361,7 +369,9 @@ class TestAdminCardManagement(E2ETestCase):
         assert mixed_response.status_code == 422
 
         # Verify NO cards were created (all-or-nothing)
-        verify_list = await client.get(f"/api/v1/cards?deck_id={deck2_id}")
+        verify_list = await client.get(
+            f"/api/v1/cards?deck_id={deck2_id}", headers=superuser_auth_headers
+        )
         assert verify_list.json()["total"] == 0
 
 
@@ -391,8 +401,8 @@ class TestContentPropagation(E2ETestCase):
         assert deck_response.status_code == 201
         deck_id = deck_response.json()["id"]
 
-        # Step 2: Regular user can see the deck immediately
-        user_decks = await client.get("/api/v1/decks")
+        # Step 2: Regular user can see the deck immediately (requires auth)
+        user_decks = await client.get("/api/v1/decks", headers=auth_headers)
         assert user_decks.status_code == 200
         user_deck_ids = [d["id"] for d in user_decks.json()["decks"]]
         assert deck_id in user_deck_ids, "User should see newly created deck"
@@ -411,8 +421,8 @@ class TestContentPropagation(E2ETestCase):
         assert card_response.status_code == 201
         card_id = card_response.json()["id"]
 
-        # Step 4: Regular user can see the card immediately
-        user_cards = await client.get(f"/api/v1/cards?deck_id={deck_id}")
+        # Step 4: Regular user can see the card immediately (requires auth)
+        user_cards = await client.get(f"/api/v1/cards?deck_id={deck_id}", headers=auth_headers)
         assert user_cards.status_code == 200
         assert user_cards.json()["total"] == 1
         assert user_cards.json()["cards"][0]["front_text"] == "kalimera"
@@ -425,8 +435,8 @@ class TestContentPropagation(E2ETestCase):
         )
         assert update_response.status_code == 200
 
-        # Step 6: Regular user sees updated content immediately
-        user_card = await client.get(f"/api/v1/cards/{card_id}")
+        # Step 6: Regular user sees updated content immediately (requires auth)
+        user_card = await client.get(f"/api/v1/cards/{card_id}", headers=auth_headers)
         assert user_card.status_code == 200
         assert user_card.json()["back_text"] == "good morning (greeting)"
 
@@ -668,7 +678,7 @@ class TestAdminCardDeletion(E2ETestCase):
         card_id = card_response.json()["id"]
 
         # Step 3: Verify card exists
-        get_before = await client.get(f"/api/v1/cards/{card_id}")
+        get_before = await client.get(f"/api/v1/cards/{card_id}", headers=superuser_auth_headers)
         assert get_before.status_code == 200
         assert get_before.json()["front_text"] == "to_be_deleted"
 
@@ -680,11 +690,11 @@ class TestAdminCardDeletion(E2ETestCase):
         assert delete_response.status_code == 204
 
         # Step 5: Verify card no longer exists
-        get_after = await client.get(f"/api/v1/cards/{card_id}")
+        get_after = await client.get(f"/api/v1/cards/{card_id}", headers=superuser_auth_headers)
         assert get_after.status_code == 404
 
         # Step 6: Verify deck card count is 0
-        deck_get = await client.get(f"/api/v1/decks/{deck_id}")
+        deck_get = await client.get(f"/api/v1/decks/{deck_id}", headers=superuser_auth_headers)
         assert deck_get.status_code == 200
         assert deck_get.json()["card_count"] == 0
 
@@ -754,7 +764,7 @@ class TestAdminCardDeletion(E2ETestCase):
         assert delete_response.status_code == 403
 
         # Step 3: Verify card still exists
-        get_response = await client.get(f"/api/v1/cards/{card_id}")
+        get_response = await client.get(f"/api/v1/cards/{card_id}", headers=superuser_auth_headers)
         assert get_response.status_code == 200
         assert get_response.json()["front_text"] == "protected_card"
 
@@ -790,7 +800,7 @@ class TestAdminCardDeletion(E2ETestCase):
         assert delete_response.status_code == 401
 
         # Step 3: Verify card still exists
-        get_response = await client.get(f"/api/v1/cards/{card_id}")
+        get_response = await client.get(f"/api/v1/cards/{card_id}", headers=superuser_auth_headers)
         assert get_response.status_code == 200
 
     @pytest.mark.asyncio
@@ -828,7 +838,9 @@ class TestAdminCardDeletion(E2ETestCase):
             card_ids.append(card_response.json()["id"])
 
         # Step 3: Verify 3 cards exist
-        list_before = await client.get(f"/api/v1/cards?deck_id={deck_id}")
+        list_before = await client.get(
+            f"/api/v1/cards?deck_id={deck_id}", headers=superuser_auth_headers
+        )
         assert list_before.json()["total"] == 3
 
         # Step 4: Delete 2 cards
@@ -840,7 +852,9 @@ class TestAdminCardDeletion(E2ETestCase):
             assert delete_response.status_code == 204
 
         # Step 5: Verify only 1 card remains
-        list_after = await client.get(f"/api/v1/cards?deck_id={deck_id}")
+        list_after = await client.get(
+            f"/api/v1/cards?deck_id={deck_id}", headers=superuser_auth_headers
+        )
         assert list_after.json()["total"] == 1
 
         # Step 6: Verify the remaining card is the last one
@@ -857,11 +871,12 @@ class TestCardNotFoundErrors(E2ETestCase):
     async def test_get_nonexistent_card_returns_404(
         self,
         client: AsyncClient,
+        auth_headers: dict,
     ):
         """Test that GET with non-existent card ID returns 404."""
         fake_card_id = str(uuid4())
 
-        response = await client.get(f"/api/v1/cards/{fake_card_id}")
+        response = await client.get(f"/api/v1/cards/{fake_card_id}", headers=auth_headers)
 
         assert response.status_code == 404
         data = response.json()

@@ -11,7 +11,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, Query, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config import settings
-from src.core.dependencies import get_current_superuser
+from src.core.dependencies import get_current_superuser, get_current_user
 from src.core.exceptions import CardNotFoundException, DeckNotFoundException
 from src.db.dependencies import get_db
 from src.db.models import CardDifficulty, User
@@ -82,10 +82,11 @@ async def list_cards(
     page: int = Query(default=1, ge=1, description="Page number (starting from 1)"),
     page_size: int = Query(default=50, ge=1, le=100, description="Items per page (max 100)"),
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> CardListResponse:
     """List cards for a specific deck with pagination and optional filtering.
 
-    This is a public endpoint that returns cards for active decks.
+    Requires authentication. Returns cards for active decks.
     Use the difficulty parameter to filter by card difficulty level.
 
     Args:
@@ -94,6 +95,7 @@ async def list_cards(
         page: Page number starting from 1
         page_size: Number of items per page (1-100)
         db: Database session (injected)
+        current_user: Authenticated user (injected)
 
     Returns:
         CardListResponse with total count, pagination info, and card list
@@ -343,12 +345,13 @@ async def search_cards(
     page: int = Query(default=1, ge=1, description="Page number (starting from 1)"),
     page_size: int = Query(default=20, ge=1, le=50, description="Items per page (max 50)"),
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> CardSearchResponse:
     """Search cards by text content.
 
-    Performs case-insensitive partial matching on card text fields
-    (front_text, back_text, example_sentence). Optionally filter by deck
-    to narrow results.
+    Requires authentication. Performs case-insensitive partial matching on
+    card text fields (front_text, back_text, example_sentence). Optionally
+    filter by deck to narrow results.
 
     Args:
         q: Search query string (min 1 char, max 100 chars)
@@ -356,6 +359,7 @@ async def search_cards(
         page: Page number starting from 1
         page_size: Number of items per page (1-50)
         db: Database session (injected)
+        current_user: Authenticated user (injected)
 
     Returns:
         CardSearchResponse with total count, pagination info, and matching cards
@@ -425,14 +429,16 @@ async def search_cards(
 async def get_card(
     card_id: UUID,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> CardResponse:
     """Get a specific card by ID.
 
-    This is a public endpoint that returns full card details.
+    Requires authentication. Returns full card details.
 
     Args:
         card_id: UUID of the card to retrieve
         db: Database session (injected)
+        current_user: Authenticated user (injected)
 
     Returns:
         CardResponse with card details

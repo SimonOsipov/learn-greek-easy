@@ -1,10 +1,10 @@
 """Integration tests for deck API endpoints.
 
 This module provides comprehensive tests for the deck endpoints including:
-- GET /api/v1/decks - List active decks with pagination and filtering
+- GET /api/v1/decks - List active decks with pagination and filtering (auth required)
 - POST /api/v1/decks - Create a new deck (admin only)
-- GET /api/v1/decks/search - Search decks by name or description
-- GET /api/v1/decks/{deck_id} - Get single deck with card count
+- GET /api/v1/decks/search - Search decks by name or description (auth required)
+- GET /api/v1/decks/{deck_id} - Get single deck with card count (auth required)
 - PATCH /api/v1/decks/{deck_id} - Update a deck (admin only)
 - DELETE /api/v1/decks/{deck_id} - Soft delete a deck (admin only)
 """
@@ -22,9 +22,18 @@ class TestListDecksEndpoint:
     """Test suite for GET /api/v1/decks endpoint."""
 
     @pytest.mark.asyncio
-    async def test_list_decks_empty(self, client: AsyncClient):
-        """Test empty database returns empty list."""
+    async def test_list_decks_unauthenticated_returns_401(self, client: AsyncClient):
+        """Test unauthenticated request returns 401."""
         response = await client.get("/api/v1/decks")
+
+        assert response.status_code == 401
+        data = response.json()
+        assert data["success"] is False
+
+    @pytest.mark.asyncio
+    async def test_list_decks_empty(self, client: AsyncClient, auth_headers: dict):
+        """Test empty database returns empty list."""
+        response = await client.get("/api/v1/decks", headers=auth_headers)
 
         assert response.status_code == 200
         data = response.json()
@@ -35,10 +44,10 @@ class TestListDecksEndpoint:
 
     @pytest.mark.asyncio
     async def test_list_decks_with_data(
-        self, client: AsyncClient, multi_level_decks: MultiLevelDecks
+        self, client: AsyncClient, auth_headers: dict, multi_level_decks: MultiLevelDecks
     ):
         """Test returns decks when data exists."""
-        response = await client.get("/api/v1/decks")
+        response = await client.get("/api/v1/decks", headers=auth_headers)
 
         assert response.status_code == 200
         data = response.json()
@@ -47,10 +56,10 @@ class TestListDecksEndpoint:
 
     @pytest.mark.asyncio
     async def test_list_decks_pagination_first_page(
-        self, client: AsyncClient, multi_level_decks: MultiLevelDecks
+        self, client: AsyncClient, auth_headers: dict, multi_level_decks: MultiLevelDecks
     ):
         """Test first page of pagination."""
-        response = await client.get("/api/v1/decks?page=1&page_size=2")
+        response = await client.get("/api/v1/decks?page=1&page_size=2", headers=auth_headers)
 
         assert response.status_code == 200
         data = response.json()
@@ -61,15 +70,15 @@ class TestListDecksEndpoint:
 
     @pytest.mark.asyncio
     async def test_list_decks_pagination_second_page(
-        self, client: AsyncClient, multi_level_decks: MultiLevelDecks
+        self, client: AsyncClient, auth_headers: dict, multi_level_decks: MultiLevelDecks
     ):
         """Test second page returns different decks."""
         # Get first page
-        response_page1 = await client.get("/api/v1/decks?page=1&page_size=2")
+        response_page1 = await client.get("/api/v1/decks?page=1&page_size=2", headers=auth_headers)
         data_page1 = response_page1.json()
 
         # Get second page
-        response_page2 = await client.get("/api/v1/decks?page=2&page_size=2")
+        response_page2 = await client.get("/api/v1/decks?page=2&page_size=2", headers=auth_headers)
         data_page2 = response_page2.json()
 
         assert response_page2.status_code == 200
@@ -83,10 +92,10 @@ class TestListDecksEndpoint:
 
     @pytest.mark.asyncio
     async def test_list_decks_default_pagination(
-        self, client: AsyncClient, deck_with_cards: DeckWithCards
+        self, client: AsyncClient, auth_headers: dict, deck_with_cards: DeckWithCards
     ):
         """Test default pagination values (page=1, page_size=20)."""
-        response = await client.get("/api/v1/decks")
+        response = await client.get("/api/v1/decks", headers=auth_headers)
 
         assert response.status_code == 200
         data = response.json()
@@ -95,10 +104,10 @@ class TestListDecksEndpoint:
 
     @pytest.mark.asyncio
     async def test_list_decks_filter_by_level(
-        self, client: AsyncClient, multi_level_decks: MultiLevelDecks
+        self, client: AsyncClient, auth_headers: dict, multi_level_decks: MultiLevelDecks
     ):
         """Test level filter returns only matching decks."""
-        response = await client.get("/api/v1/decks?level=A1")
+        response = await client.get("/api/v1/decks?level=A1", headers=auth_headers)
 
         assert response.status_code == 200
         data = response.json()
@@ -108,13 +117,13 @@ class TestListDecksEndpoint:
 
     @pytest.mark.asyncio
     async def test_list_decks_filter_all_levels(
-        self, client: AsyncClient, multi_level_decks: MultiLevelDecks
+        self, client: AsyncClient, auth_headers: dict, multi_level_decks: MultiLevelDecks
     ):
         """Test filtering by each CEFR level works."""
         levels = ["A1", "A2", "B1"]
 
         for level in levels:
-            response = await client.get(f"/api/v1/decks?level={level}")
+            response = await client.get(f"/api/v1/decks?level={level}", headers=auth_headers)
 
             assert response.status_code == 200
             data = response.json()
@@ -123,10 +132,14 @@ class TestListDecksEndpoint:
 
     @pytest.mark.asyncio
     async def test_list_decks_excludes_inactive(
-        self, client: AsyncClient, inactive_deck: Deck, deck_with_cards: DeckWithCards
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        inactive_deck: Deck,
+        deck_with_cards: DeckWithCards,
     ):
         """Test inactive decks are not returned."""
-        response = await client.get("/api/v1/decks")
+        response = await client.get("/api/v1/decks", headers=auth_headers)
 
         assert response.status_code == 200
         data = response.json()
@@ -134,9 +147,11 @@ class TestListDecksEndpoint:
         assert str(inactive_deck.id) not in deck_ids
 
     @pytest.mark.asyncio
-    async def test_list_decks_invalid_page_returns_422(self, client: AsyncClient):
+    async def test_list_decks_invalid_page_returns_422(
+        self, client: AsyncClient, auth_headers: dict
+    ):
         """Test page=0 returns 422."""
-        response = await client.get("/api/v1/decks?page=0")
+        response = await client.get("/api/v1/decks?page=0", headers=auth_headers)
 
         assert response.status_code == 422
         data = response.json()
@@ -144,36 +159,44 @@ class TestListDecksEndpoint:
         assert data["error"]["code"] == "VALIDATION_ERROR"
 
     @pytest.mark.asyncio
-    async def test_list_decks_negative_page_returns_422(self, client: AsyncClient):
+    async def test_list_decks_negative_page_returns_422(
+        self, client: AsyncClient, auth_headers: dict
+    ):
         """Test negative page returns 422."""
-        response = await client.get("/api/v1/decks?page=-1")
+        response = await client.get("/api/v1/decks?page=-1", headers=auth_headers)
 
         assert response.status_code == 422
         data = response.json()
         assert data["success"] is False
 
     @pytest.mark.asyncio
-    async def test_list_decks_invalid_page_size_zero_returns_422(self, client: AsyncClient):
+    async def test_list_decks_invalid_page_size_zero_returns_422(
+        self, client: AsyncClient, auth_headers: dict
+    ):
         """Test page_size=0 returns 422."""
-        response = await client.get("/api/v1/decks?page_size=0")
+        response = await client.get("/api/v1/decks?page_size=0", headers=auth_headers)
 
         assert response.status_code == 422
         data = response.json()
         assert data["success"] is False
 
     @pytest.mark.asyncio
-    async def test_list_decks_invalid_page_size_over_100_returns_422(self, client: AsyncClient):
+    async def test_list_decks_invalid_page_size_over_100_returns_422(
+        self, client: AsyncClient, auth_headers: dict
+    ):
         """Test page_size > 100 returns 422."""
-        response = await client.get("/api/v1/decks?page_size=101")
+        response = await client.get("/api/v1/decks?page_size=101", headers=auth_headers)
 
         assert response.status_code == 422
         data = response.json()
         assert data["success"] is False
 
     @pytest.mark.asyncio
-    async def test_list_decks_invalid_level_returns_422(self, client: AsyncClient):
+    async def test_list_decks_invalid_level_returns_422(
+        self, client: AsyncClient, auth_headers: dict
+    ):
         """Test invalid level filter returns 422."""
-        response = await client.get("/api/v1/decks?level=INVALID")
+        response = await client.get("/api/v1/decks?level=INVALID", headers=auth_headers)
 
         assert response.status_code == 422
         data = response.json()
@@ -182,10 +205,10 @@ class TestListDecksEndpoint:
 
     @pytest.mark.asyncio
     async def test_list_decks_response_fields(
-        self, client: AsyncClient, deck_with_cards: DeckWithCards
+        self, client: AsyncClient, auth_headers: dict, deck_with_cards: DeckWithCards
     ):
         """Test response includes total, page, page_size, decks."""
-        response = await client.get("/api/v1/decks")
+        response = await client.get("/api/v1/decks", headers=auth_headers)
 
         assert response.status_code == 200
         data = response.json()
@@ -200,10 +223,10 @@ class TestListDecksEndpoint:
 
     @pytest.mark.asyncio
     async def test_list_decks_deck_object_fields(
-        self, client: AsyncClient, deck_with_cards: DeckWithCards
+        self, client: AsyncClient, auth_headers: dict, deck_with_cards: DeckWithCards
     ):
         """Test each deck object has all required fields."""
-        response = await client.get("/api/v1/decks")
+        response = await client.get("/api/v1/decks", headers=auth_headers)
 
         assert response.status_code == 200
         data = response.json()
@@ -224,11 +247,11 @@ class TestListDecksEndpoint:
 
     @pytest.mark.asyncio
     async def test_list_decks_total_count_accurate(
-        self, client: AsyncClient, multi_level_decks: MultiLevelDecks
+        self, client: AsyncClient, auth_headers: dict, multi_level_decks: MultiLevelDecks
     ):
         """Test total count matches actual number of decks."""
         # With small page size to verify total is separate from returned count
-        response = await client.get("/api/v1/decks?page_size=1")
+        response = await client.get("/api/v1/decks?page_size=1", headers=auth_headers)
 
         assert response.status_code == 200
         data = response.json()
@@ -446,7 +469,7 @@ class TestCreateDeckEndpoint:
 
     @pytest.mark.asyncio
     async def test_created_deck_is_persisted(
-        self, client: AsyncClient, superuser_auth_headers: dict
+        self, client: AsyncClient, superuser_auth_headers: dict, auth_headers: dict
     ):
         """Test created deck can be retrieved via GET endpoint."""
         deck_data = {
@@ -465,8 +488,8 @@ class TestCreateDeckEndpoint:
         created_deck = create_response.json()
         deck_id = created_deck["id"]
 
-        # Retrieve deck
-        get_response = await client.get(f"/api/v1/decks/{deck_id}")
+        # Retrieve deck (now requires auth)
+        get_response = await client.get(f"/api/v1/decks/{deck_id}", headers=auth_headers)
         assert get_response.status_code == 200
 
         retrieved_deck = get_response.json()
@@ -481,10 +504,21 @@ class TestSearchDecksEndpoint:
     """Test suite for GET /api/v1/decks/search endpoint."""
 
     @pytest.mark.asyncio
-    async def test_search_decks_success(self, client: AsyncClient, deck_with_cards: DeckWithCards):
+    async def test_search_decks_unauthenticated_returns_401(self, client: AsyncClient):
+        """Test unauthenticated request returns 401."""
+        response = await client.get("/api/v1/decks/search?q=Greek")
+
+        assert response.status_code == 401
+        data = response.json()
+        assert data["success"] is False
+
+    @pytest.mark.asyncio
+    async def test_search_decks_success(
+        self, client: AsyncClient, auth_headers: dict, deck_with_cards: DeckWithCards
+    ):
         """Test successful search returns matching decks."""
         # Search for part of deck name (deck_with_cards creates "Greek A1 Vocabulary")
-        response = await client.get("/api/v1/decks/search?q=Greek")
+        response = await client.get("/api/v1/decks/search?q=Greek", headers=auth_headers)
 
         assert response.status_code == 200
         data = response.json()
@@ -498,13 +532,13 @@ class TestSearchDecksEndpoint:
 
     @pytest.mark.asyncio
     async def test_search_decks_case_insensitive(
-        self, client: AsyncClient, deck_with_cards: DeckWithCards
+        self, client: AsyncClient, auth_headers: dict, deck_with_cards: DeckWithCards
     ):
         """Test search is case-insensitive."""
         # Search with different cases
-        response_lower = await client.get("/api/v1/decks/search?q=greek")
-        response_upper = await client.get("/api/v1/decks/search?q=GREEK")
-        response_mixed = await client.get("/api/v1/decks/search?q=GrEeK")
+        response_lower = await client.get("/api/v1/decks/search?q=greek", headers=auth_headers)
+        response_upper = await client.get("/api/v1/decks/search?q=GREEK", headers=auth_headers)
+        response_mixed = await client.get("/api/v1/decks/search?q=GrEeK", headers=auth_headers)
 
         assert response_lower.status_code == 200
         assert response_upper.status_code == 200
@@ -516,11 +550,11 @@ class TestSearchDecksEndpoint:
 
     @pytest.mark.asyncio
     async def test_search_decks_partial_match_name(
-        self, client: AsyncClient, deck_with_cards: DeckWithCards
+        self, client: AsyncClient, auth_headers: dict, deck_with_cards: DeckWithCards
     ):
         """Test search matches partial text in name."""
         # Search for partial word "Vocab" should match "Vocabulary"
-        response = await client.get("/api/v1/decks/search?q=Vocab")
+        response = await client.get("/api/v1/decks/search?q=Vocab", headers=auth_headers)
 
         assert response.status_code == 200
         data = response.json()
@@ -531,11 +565,11 @@ class TestSearchDecksEndpoint:
 
     @pytest.mark.asyncio
     async def test_search_decks_partial_match_description(
-        self, client: AsyncClient, deck_with_cards: DeckWithCards
+        self, client: AsyncClient, auth_headers: dict, deck_with_cards: DeckWithCards
     ):
         """Test search matches partial text in description."""
         # Deck fixture description contains "beginner" or "Essential"
-        response = await client.get("/api/v1/decks/search?q=beginner")
+        response = await client.get("/api/v1/decks/search?q=beginner", headers=auth_headers)
 
         assert response.status_code == 200
         data = response.json()
@@ -544,12 +578,14 @@ class TestSearchDecksEndpoint:
 
     @pytest.mark.asyncio
     async def test_search_decks_pagination(
-        self, client: AsyncClient, multi_level_decks: MultiLevelDecks
+        self, client: AsyncClient, auth_headers: dict, multi_level_decks: MultiLevelDecks
     ):
         """Test pagination works for search results."""
         # multi_level_decks creates 3 decks named "Greek A1/A2/B1 Vocabulary"
         # First page with page_size=1
-        response_page1 = await client.get("/api/v1/decks/search?q=Greek&page=1&page_size=1")
+        response_page1 = await client.get(
+            "/api/v1/decks/search?q=Greek&page=1&page_size=1", headers=auth_headers
+        )
 
         assert response_page1.status_code == 200
         data_page1 = response_page1.json()
@@ -559,7 +595,9 @@ class TestSearchDecksEndpoint:
         assert data_page1["total"] >= 3  # At least 3 decks match "Greek"
 
         # Second page
-        response_page2 = await client.get("/api/v1/decks/search?q=Greek&page=2&page_size=1")
+        response_page2 = await client.get(
+            "/api/v1/decks/search?q=Greek&page=2&page_size=1", headers=auth_headers
+        )
 
         assert response_page2.status_code == 200
         data_page2 = response_page2.json()
@@ -570,9 +608,11 @@ class TestSearchDecksEndpoint:
         assert data_page1["decks"][0]["id"] != data_page2["decks"][0]["id"]
 
     @pytest.mark.asyncio
-    async def test_search_decks_missing_query_returns_422(self, client: AsyncClient):
+    async def test_search_decks_missing_query_returns_422(
+        self, client: AsyncClient, auth_headers: dict
+    ):
         """Test missing q parameter returns 422."""
-        response = await client.get("/api/v1/decks/search")
+        response = await client.get("/api/v1/decks/search", headers=auth_headers)
 
         assert response.status_code == 422
         data = response.json()
@@ -580,9 +620,11 @@ class TestSearchDecksEndpoint:
         assert data["error"]["code"] == "VALIDATION_ERROR"
 
     @pytest.mark.asyncio
-    async def test_search_decks_empty_query_returns_422(self, client: AsyncClient):
+    async def test_search_decks_empty_query_returns_422(
+        self, client: AsyncClient, auth_headers: dict
+    ):
         """Test empty q parameter returns 422."""
-        response = await client.get("/api/v1/decks/search?q=")
+        response = await client.get("/api/v1/decks/search?q=", headers=auth_headers)
 
         assert response.status_code == 422
         data = response.json()
@@ -590,10 +632,12 @@ class TestSearchDecksEndpoint:
         assert data["error"]["code"] == "VALIDATION_ERROR"
 
     @pytest.mark.asyncio
-    async def test_search_decks_query_too_long_returns_422(self, client: AsyncClient):
+    async def test_search_decks_query_too_long_returns_422(
+        self, client: AsyncClient, auth_headers: dict
+    ):
         """Test query exceeding 100 characters returns 422."""
         long_query = "a" * 101
-        response = await client.get(f"/api/v1/decks/search?q={long_query}")
+        response = await client.get(f"/api/v1/decks/search?q={long_query}", headers=auth_headers)
 
         assert response.status_code == 422
         data = response.json()
@@ -602,11 +646,15 @@ class TestSearchDecksEndpoint:
 
     @pytest.mark.asyncio
     async def test_search_decks_excludes_inactive(
-        self, client: AsyncClient, inactive_deck: Deck, deck_with_cards: DeckWithCards
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        inactive_deck: Deck,
+        deck_with_cards: DeckWithCards,
     ):
         """Test inactive decks are not returned in search."""
         # inactive_deck has name "Archived Deck"
-        response = await client.get("/api/v1/decks/search?q=Archived")
+        response = await client.get("/api/v1/decks/search?q=Archived", headers=auth_headers)
 
         assert response.status_code == 200
         data = response.json()
@@ -616,10 +664,12 @@ class TestSearchDecksEndpoint:
 
     @pytest.mark.asyncio
     async def test_search_decks_no_results(
-        self, client: AsyncClient, deck_with_cards: DeckWithCards
+        self, client: AsyncClient, auth_headers: dict, deck_with_cards: DeckWithCards
     ):
         """Test search with no matching decks returns empty list."""
-        response = await client.get("/api/v1/decks/search?q=xyznonexistent123")
+        response = await client.get(
+            "/api/v1/decks/search?q=xyznonexistent123", headers=auth_headers
+        )
 
         assert response.status_code == 200
         data = response.json()
@@ -629,11 +679,11 @@ class TestSearchDecksEndpoint:
 
     @pytest.mark.asyncio
     async def test_search_decks_response_includes_query(
-        self, client: AsyncClient, deck_with_cards: DeckWithCards
+        self, client: AsyncClient, auth_headers: dict, deck_with_cards: DeckWithCards
     ):
         """Test response includes the search query that was used."""
         search_term = "vocabulary"
-        response = await client.get(f"/api/v1/decks/search?q={search_term}")
+        response = await client.get(f"/api/v1/decks/search?q={search_term}", headers=auth_headers)
 
         assert response.status_code == 200
         data = response.json()
@@ -641,10 +691,12 @@ class TestSearchDecksEndpoint:
 
     @pytest.mark.asyncio
     async def test_search_decks_response_includes_total_count(
-        self, client: AsyncClient, multi_level_decks: MultiLevelDecks
+        self, client: AsyncClient, auth_headers: dict, multi_level_decks: MultiLevelDecks
     ):
         """Test response includes total count for pagination."""
-        response = await client.get("/api/v1/decks/search?q=Greek&page_size=1")
+        response = await client.get(
+            "/api/v1/decks/search?q=Greek&page_size=1", headers=auth_headers
+        )
 
         assert response.status_code == 200
         data = response.json()
@@ -654,10 +706,10 @@ class TestSearchDecksEndpoint:
 
     @pytest.mark.asyncio
     async def test_search_decks_default_pagination(
-        self, client: AsyncClient, deck_with_cards: DeckWithCards
+        self, client: AsyncClient, auth_headers: dict, deck_with_cards: DeckWithCards
     ):
         """Test default pagination values (page=1, page_size=20)."""
-        response = await client.get("/api/v1/decks/search?q=Greek")
+        response = await client.get("/api/v1/decks/search?q=Greek", headers=auth_headers)
 
         assert response.status_code == 200
         data = response.json()
@@ -666,10 +718,10 @@ class TestSearchDecksEndpoint:
 
     @pytest.mark.asyncio
     async def test_search_decks_response_deck_fields(
-        self, client: AsyncClient, deck_with_cards: DeckWithCards
+        self, client: AsyncClient, auth_headers: dict, deck_with_cards: DeckWithCards
     ):
         """Test that deck objects in response have all required fields."""
-        response = await client.get("/api/v1/decks/search?q=Greek")
+        response = await client.get("/api/v1/decks/search?q=Greek", headers=auth_headers)
 
         assert response.status_code == 200
         data = response.json()
@@ -694,12 +746,27 @@ class TestGetDeckEndpoint:
     """Test suite for GET /api/v1/decks/{deck_id} endpoint."""
 
     @pytest.mark.asyncio
-    async def test_get_deck_success(self, client: AsyncClient, deck_with_cards: DeckWithCards):
+    async def test_get_deck_unauthenticated_returns_401(
+        self, client: AsyncClient, deck_with_cards: DeckWithCards
+    ):
+        """Test unauthenticated request returns 401."""
+        deck = deck_with_cards.deck
+
+        response = await client.get(f"/api/v1/decks/{deck.id}")
+
+        assert response.status_code == 401
+        data = response.json()
+        assert data["success"] is False
+
+    @pytest.mark.asyncio
+    async def test_get_deck_success(
+        self, client: AsyncClient, auth_headers: dict, deck_with_cards: DeckWithCards
+    ):
         """Test successful retrieval of a deck with card count."""
         deck = deck_with_cards.deck
         expected_card_count = len(deck_with_cards.cards)
 
-        response = await client.get(f"/api/v1/decks/{deck.id}")
+        response = await client.get(f"/api/v1/decks/{deck.id}", headers=auth_headers)
 
         assert response.status_code == 200
         data = response.json()
@@ -713,11 +780,11 @@ class TestGetDeckEndpoint:
         assert "updated_at" in data
 
     @pytest.mark.asyncio
-    async def test_get_deck_not_found(self, client: AsyncClient):
+    async def test_get_deck_not_found(self, client: AsyncClient, auth_headers: dict):
         """Test 404 for non-existent deck."""
         non_existent_id = uuid4()
 
-        response = await client.get(f"/api/v1/decks/{non_existent_id}")
+        response = await client.get(f"/api/v1/decks/{non_existent_id}", headers=auth_headers)
 
         assert response.status_code == 404
         data = response.json()
@@ -727,9 +794,11 @@ class TestGetDeckEndpoint:
         assert "not found" in data["error"]["message"].lower()
 
     @pytest.mark.asyncio
-    async def test_get_inactive_deck_returns_404(self, client: AsyncClient, inactive_deck: Deck):
+    async def test_get_inactive_deck_returns_404(
+        self, client: AsyncClient, auth_headers: dict, inactive_deck: Deck
+    ):
         """Test that inactive decks return 404."""
-        response = await client.get(f"/api/v1/decks/{inactive_deck.id}")
+        response = await client.get(f"/api/v1/decks/{inactive_deck.id}", headers=auth_headers)
 
         assert response.status_code == 404
         data = response.json()
@@ -738,9 +807,9 @@ class TestGetDeckEndpoint:
         assert "not found" in data["error"]["message"].lower()
 
     @pytest.mark.asyncio
-    async def test_get_deck_invalid_uuid(self, client: AsyncClient):
+    async def test_get_deck_invalid_uuid(self, client: AsyncClient, auth_headers: dict):
         """Test 422 for invalid UUID format."""
-        response = await client.get("/api/v1/decks/not-a-valid-uuid")
+        response = await client.get("/api/v1/decks/not-a-valid-uuid", headers=auth_headers)
 
         assert response.status_code == 422
         data = response.json()
@@ -749,9 +818,11 @@ class TestGetDeckEndpoint:
         assert data["error"]["code"] == "VALIDATION_ERROR"
 
     @pytest.mark.asyncio
-    async def test_get_empty_deck_card_count_zero(self, client: AsyncClient, empty_deck: Deck):
+    async def test_get_empty_deck_card_count_zero(
+        self, client: AsyncClient, auth_headers: dict, empty_deck: Deck
+    ):
         """Test that empty deck returns card_count of 0."""
-        response = await client.get(f"/api/v1/decks/{empty_deck.id}")
+        response = await client.get(f"/api/v1/decks/{empty_deck.id}", headers=auth_headers)
 
         assert response.status_code == 200
         data = response.json()
@@ -761,12 +832,12 @@ class TestGetDeckEndpoint:
 
     @pytest.mark.asyncio
     async def test_get_deck_includes_all_fields(
-        self, client: AsyncClient, deck_with_cards: DeckWithCards
+        self, client: AsyncClient, auth_headers: dict, deck_with_cards: DeckWithCards
     ):
         """Test that response includes all required fields."""
         deck = deck_with_cards.deck
 
-        response = await client.get(f"/api/v1/decks/{deck.id}")
+        response = await client.get(f"/api/v1/decks/{deck.id}", headers=auth_headers)
 
         assert response.status_code == 200
         data = response.json()
@@ -1088,7 +1159,11 @@ class TestDeleteDeckEndpoint:
 
     @pytest.mark.asyncio
     async def test_delete_deck_soft_deletes(
-        self, client: AsyncClient, superuser_auth_headers: dict, empty_deck: Deck
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        auth_headers: dict,
+        empty_deck: Deck,
     ):
         """Test that delete performs soft delete (sets is_active=False)."""
         deck_id = empty_deck.id
@@ -1100,8 +1175,8 @@ class TestDeleteDeckEndpoint:
         )
         assert response.status_code == 204
 
-        # Try to get the deck via public endpoint - should return 404
-        get_response = await client.get(f"/api/v1/decks/{deck_id}")
+        # Try to get the deck via authenticated endpoint - should return 404
+        get_response = await client.get(f"/api/v1/decks/{deck_id}", headers=auth_headers)
         assert get_response.status_code == 404
 
     @pytest.mark.asyncio
@@ -1197,14 +1272,18 @@ class TestDeleteDeckEndpoint:
 
     @pytest.mark.asyncio
     async def test_deleted_deck_not_visible_in_list(
-        self, client: AsyncClient, superuser_auth_headers: dict, deck_with_cards: DeckWithCards
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        auth_headers: dict,
+        deck_with_cards: DeckWithCards,
     ):
         """Test that deleted deck is not visible in the list endpoint."""
         deck = deck_with_cards.deck
         deck_id = str(deck.id)
 
         # Verify deck is in list before deletion
-        list_response_before = await client.get("/api/v1/decks")
+        list_response_before = await client.get("/api/v1/decks", headers=auth_headers)
         deck_ids_before = [d["id"] for d in list_response_before.json()["decks"]]
         assert deck_id in deck_ids_before
 
@@ -1216,20 +1295,26 @@ class TestDeleteDeckEndpoint:
         assert delete_response.status_code == 204
 
         # Verify deck is NOT in list after deletion
-        list_response_after = await client.get("/api/v1/decks")
+        list_response_after = await client.get("/api/v1/decks", headers=auth_headers)
         deck_ids_after = [d["id"] for d in list_response_after.json()["decks"]]
         assert deck_id not in deck_ids_after
 
     @pytest.mark.asyncio
     async def test_deleted_deck_not_visible_in_search(
-        self, client: AsyncClient, superuser_auth_headers: dict, deck_with_cards: DeckWithCards
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        auth_headers: dict,
+        deck_with_cards: DeckWithCards,
     ):
         """Test that deleted deck is not visible in search results."""
         deck = deck_with_cards.deck
         deck_id = str(deck.id)
 
         # Verify deck is in search results before deletion
-        search_response_before = await client.get("/api/v1/decks/search?q=Greek")
+        search_response_before = await client.get(
+            "/api/v1/decks/search?q=Greek", headers=auth_headers
+        )
         deck_ids_before = [d["id"] for d in search_response_before.json()["decks"]]
         assert deck_id in deck_ids_before
 
@@ -1241,13 +1326,19 @@ class TestDeleteDeckEndpoint:
         assert delete_response.status_code == 204
 
         # Verify deck is NOT in search results after deletion
-        search_response_after = await client.get("/api/v1/decks/search?q=Greek")
+        search_response_after = await client.get(
+            "/api/v1/decks/search?q=Greek", headers=auth_headers
+        )
         deck_ids_after = [d["id"] for d in search_response_after.json()["decks"]]
         assert deck_id not in deck_ids_after
 
     @pytest.mark.asyncio
     async def test_deleted_deck_returns_404_on_get(
-        self, client: AsyncClient, superuser_auth_headers: dict, empty_deck: Deck
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        auth_headers: dict,
+        empty_deck: Deck,
     ):
         """Test that deleted deck returns 404 on direct GET."""
         deck_id = empty_deck.id
@@ -1260,7 +1351,7 @@ class TestDeleteDeckEndpoint:
         assert delete_response.status_code == 204
 
         # Try to GET the deleted deck - should return 404
-        get_response = await client.get(f"/api/v1/decks/{deck_id}")
+        get_response = await client.get(f"/api/v1/decks/{deck_id}", headers=auth_headers)
         assert get_response.status_code == 404
         data = get_response.json()
         assert data["success"] is False
@@ -1271,7 +1362,9 @@ class TestDeckCRUDFlow:
     """Integration tests for complete deck CRUD operations."""
 
     @pytest.mark.asyncio
-    async def test_full_deck_lifecycle(self, client: AsyncClient, superuser_auth_headers: dict):
+    async def test_full_deck_lifecycle(
+        self, client: AsyncClient, superuser_auth_headers: dict, auth_headers: dict
+    ):
         """Test complete create-read-update-delete flow."""
         # 1. CREATE
         create_data = {
@@ -1288,8 +1381,8 @@ class TestDeckCRUDFlow:
         created_deck = create_response.json()
         deck_id = created_deck["id"]
 
-        # 2. READ
-        get_response = await client.get(f"/api/v1/decks/{deck_id}")
+        # 2. READ (now requires auth)
+        get_response = await client.get(f"/api/v1/decks/{deck_id}", headers=auth_headers)
         assert get_response.status_code == 200
         fetched_deck = get_response.json()
         assert fetched_deck["name"] == create_data["name"]
@@ -1315,7 +1408,7 @@ class TestDeckCRUDFlow:
         assert updated_deck["level"] == update_data["level"]
 
         # Verify update persisted
-        verify_response = await client.get(f"/api/v1/decks/{deck_id}")
+        verify_response = await client.get(f"/api/v1/decks/{deck_id}", headers=auth_headers)
         assert verify_response.status_code == 200
         assert verify_response.json()["name"] == update_data["name"]
 
@@ -1327,12 +1420,12 @@ class TestDeckCRUDFlow:
         assert delete_response.status_code == 204
 
         # 5. VERIFY DELETION
-        final_get_response = await client.get(f"/api/v1/decks/{deck_id}")
+        final_get_response = await client.get(f"/api/v1/decks/{deck_id}", headers=auth_headers)
         assert final_get_response.status_code == 404
 
     @pytest.mark.asyncio
     async def test_deck_appears_in_list_after_creation(
-        self, client: AsyncClient, superuser_auth_headers: dict
+        self, client: AsyncClient, superuser_auth_headers: dict, auth_headers: dict
     ):
         """Test newly created deck appears in list and search."""
         # Create a uniquely named deck
@@ -1352,21 +1445,23 @@ class TestDeckCRUDFlow:
         assert create_response.status_code == 201
         deck_id = create_response.json()["id"]
 
-        # Check it appears in list
-        list_response = await client.get("/api/v1/decks")
+        # Check it appears in list (now requires auth)
+        list_response = await client.get("/api/v1/decks", headers=auth_headers)
         assert list_response.status_code == 200
         deck_ids = [d["id"] for d in list_response.json()["decks"]]
         assert deck_id in deck_ids
 
-        # Check it appears in search by unique name
-        search_response = await client.get(f"/api/v1/decks/search?q={unique_name[:10]}")
+        # Check it appears in search by unique name (now requires auth)
+        search_response = await client.get(
+            f"/api/v1/decks/search?q={unique_name[:10]}", headers=auth_headers
+        )
         assert search_response.status_code == 200
         search_deck_ids = [d["id"] for d in search_response.json()["decks"]]
         assert deck_id in search_deck_ids
 
     @pytest.mark.asyncio
     async def test_updated_deck_reflects_changes_in_list(
-        self, client: AsyncClient, superuser_auth_headers: dict
+        self, client: AsyncClient, superuser_auth_headers: dict, auth_headers: dict
     ):
         """Test updates are reflected when fetching deck from list."""
         # Create deck
@@ -1395,8 +1490,8 @@ class TestDeckCRUDFlow:
         )
         assert update_response.status_code == 200
 
-        # Verify changes in list
-        list_response = await client.get("/api/v1/decks?level=C2")
+        # Verify changes in list (now requires auth)
+        list_response = await client.get("/api/v1/decks?level=C2", headers=auth_headers)
         assert list_response.status_code == 200
         decks = list_response.json()["decks"]
         matching = [d for d in decks if d["id"] == deck_id]
@@ -1443,12 +1538,22 @@ class TestDeckCRUDFlow:
         unauth_delete = await client.delete(f"/api/v1/decks/{deck_id}")
         assert unauth_delete.status_code == 401
 
-        # 6. Public endpoints work without auth
+        # 6. Read endpoints now require auth
         get_response = await client.get(f"/api/v1/decks/{deck_id}")
-        assert get_response.status_code == 200
+        assert get_response.status_code == 401
 
         list_response = await client.get("/api/v1/decks")
-        assert list_response.status_code == 200
+        assert list_response.status_code == 401
 
         search_response = await client.get("/api/v1/decks/search?q=Auth")
+        assert search_response.status_code == 401
+
+        # 7. Regular user can read with auth
+        get_response = await client.get(f"/api/v1/decks/{deck_id}", headers=auth_headers)
+        assert get_response.status_code == 200
+
+        list_response = await client.get("/api/v1/decks", headers=auth_headers)
+        assert list_response.status_code == 200
+
+        search_response = await client.get("/api/v1/decks/search?q=Auth", headers=auth_headers)
         assert search_response.status_code == 200

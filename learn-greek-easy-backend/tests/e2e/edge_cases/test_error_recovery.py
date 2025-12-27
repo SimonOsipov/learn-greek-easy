@@ -1049,11 +1049,13 @@ class TestDeckValidationEdgeCases(E2ETestCase):
     async def test_deck_search_empty_query_returns_422(
         self,
         client: AsyncClient,
+        auth_headers: dict[str, str],
     ) -> None:
         """Test: Empty search query returns 422."""
         response = await client.get(
             "/api/v1/decks/search",
             params={"q": ""},
+            headers=auth_headers,
         )
 
         assert response.status_code == 422
@@ -1064,9 +1066,10 @@ class TestDeckValidationEdgeCases(E2ETestCase):
     async def test_deck_search_missing_query_returns_422(
         self,
         client: AsyncClient,
+        auth_headers: dict[str, str],
     ) -> None:
         """Test: Missing search query returns 422."""
-        response = await client.get("/api/v1/decks/search")
+        response = await client.get("/api/v1/decks/search", headers=auth_headers)
 
         assert response.status_code == 422
 
@@ -1076,9 +1079,10 @@ class TestDeckValidationEdgeCases(E2ETestCase):
     async def test_deck_invalid_uuid_returns_422(
         self,
         client: AsyncClient,
+        auth_headers: dict[str, str],
     ) -> None:
         """Test: Invalid UUID format in deck ID returns 422."""
-        response = await client.get("/api/v1/decks/not-a-valid-uuid")
+        response = await client.get("/api/v1/decks/not-a-valid-uuid", headers=auth_headers)
 
         assert response.status_code == 422
 
@@ -1088,11 +1092,12 @@ class TestDeckValidationEdgeCases(E2ETestCase):
     async def test_deck_nonexistent_uuid_returns_404(
         self,
         client: AsyncClient,
+        auth_headers: dict[str, str],
     ) -> None:
         """Test: Non-existent deck UUID returns 404."""
         fake_deck_id = str(uuid.uuid4())
 
-        response = await client.get(f"/api/v1/decks/{fake_deck_id}")
+        response = await client.get(f"/api/v1/decks/{fake_deck_id}", headers=auth_headers)
 
         assert response.status_code == 404
 

@@ -40,9 +40,10 @@ class TestCultureDecksList(E2ETestCase):
     async def test_list_decks_empty(
         self,
         client: AsyncClient,
+        auth_headers: dict[str, str],
     ) -> None:
         """Test listing decks when no decks exist returns empty list."""
-        response = await client.get("/api/v1/culture/decks")
+        response = await client.get("/api/v1/culture/decks", headers=auth_headers)
 
         assert response.status_code == 200
         data = response.json()
@@ -53,6 +54,7 @@ class TestCultureDecksList(E2ETestCase):
     async def test_list_decks_response_structure(
         self,
         client: AsyncClient,
+        auth_headers: dict[str, str],
         db_session: AsyncSession,
     ) -> None:
         """Test that deck list response has correct structure."""
@@ -60,7 +62,7 @@ class TestCultureDecksList(E2ETestCase):
         await CultureDeckFactory.create(session=db_session)
         await db_session.commit()
 
-        response = await client.get("/api/v1/culture/decks")
+        response = await client.get("/api/v1/culture/decks", headers=auth_headers)
 
         assert response.status_code == 200
         data = response.json()
@@ -91,6 +93,7 @@ class TestCultureDecksList(E2ETestCase):
     async def test_list_decks_pagination(
         self,
         client: AsyncClient,
+        auth_headers: dict[str, str],
         db_session: AsyncSession,
     ) -> None:
         """Test pagination parameters work correctly."""
@@ -103,19 +106,25 @@ class TestCultureDecksList(E2ETestCase):
         await db_session.commit()
 
         # First page: page=1, page_size=2
-        response = await client.get("/api/v1/culture/decks?page=1&page_size=2")
+        response = await client.get(
+            "/api/v1/culture/decks?page=1&page_size=2", headers=auth_headers
+        )
         assert response.status_code == 200
         data = response.json()
         assert len(data["decks"]) == 2
         assert data["total"] == 5
 
         # Second page: page=2, page_size=2
-        response = await client.get("/api/v1/culture/decks?page=2&page_size=2")
+        response = await client.get(
+            "/api/v1/culture/decks?page=2&page_size=2", headers=auth_headers
+        )
         data = response.json()
         assert len(data["decks"]) == 2
 
         # Third page: page=3, page_size=2
-        response = await client.get("/api/v1/culture/decks?page=3&page_size=2")
+        response = await client.get(
+            "/api/v1/culture/decks?page=3&page_size=2", headers=auth_headers
+        )
         data = response.json()
         assert len(data["decks"]) == 1  # Only 1 remaining
 
@@ -123,6 +132,7 @@ class TestCultureDecksList(E2ETestCase):
     async def test_list_decks_filter_by_category(
         self,
         client: AsyncClient,
+        auth_headers: dict[str, str],
         db_session: AsyncSession,
     ) -> None:
         """Test filtering decks by category."""
@@ -133,14 +143,16 @@ class TestCultureDecksList(E2ETestCase):
         await db_session.commit()
 
         # Filter by history
-        response = await client.get("/api/v1/culture/decks?category=history")
+        response = await client.get("/api/v1/culture/decks?category=history", headers=auth_headers)
         assert response.status_code == 200
         data = response.json()
         assert data["total"] == 1
         assert all(d["category"] == "history" for d in data["decks"])
 
         # Filter by geography
-        response = await client.get("/api/v1/culture/decks?category=geography")
+        response = await client.get(
+            "/api/v1/culture/decks?category=geography", headers=auth_headers
+        )
         data = response.json()
         assert data["total"] == 1
         assert all(d["category"] == "geography" for d in data["decks"])
@@ -149,6 +161,7 @@ class TestCultureDecksList(E2ETestCase):
     async def test_list_decks_excludes_inactive(
         self,
         client: AsyncClient,
+        auth_headers: dict[str, str],
         db_session: AsyncSession,
     ) -> None:
         """Test that inactive decks are not returned."""
@@ -157,28 +170,24 @@ class TestCultureDecksList(E2ETestCase):
         await CultureDeckFactory.create(session=db_session, inactive=True)
         await db_session.commit()
 
-        response = await client.get("/api/v1/culture/decks")
+        response = await client.get("/api/v1/culture/decks", headers=auth_headers)
         assert response.status_code == 200
         data = response.json()
         # Only active deck should be returned
         assert data["total"] == 1
 
     @pytest.mark.asyncio
-    async def test_list_decks_unauthenticated_no_progress(
+    async def test_list_decks_unauthenticated_returns_401(
         self,
         client: AsyncClient,
         db_session: AsyncSession,
     ) -> None:
-        """Test that unauthenticated users don't see progress data."""
+        """Test that unauthenticated users get 401."""
         await CultureDeckFactory.create(session=db_session)
         await db_session.commit()
 
         response = await client.get("/api/v1/culture/decks")
-        assert response.status_code == 200
-        data = response.json()
-
-        # Progress should be None for unauthenticated users
-        assert data["decks"][0]["progress"] is None
+        assert response.status_code == 401
 
     @pytest.mark.asyncio
     async def test_list_decks_authenticated_with_progress(
@@ -219,13 +228,14 @@ class TestCultureDecksList(E2ETestCase):
     async def test_list_decks_multilingual_content(
         self,
         client: AsyncClient,
+        auth_headers: dict[str, str],
         db_session: AsyncSession,
     ) -> None:
         """Test that decks include multilingual name and description."""
         await CultureDeckFactory.create(session=db_session)
         await db_session.commit()
 
-        response = await client.get("/api/v1/culture/decks")
+        response = await client.get("/api/v1/culture/decks", headers=auth_headers)
         assert response.status_code == 200
         data = response.json()
 
@@ -254,13 +264,14 @@ class TestCultureDeckDetail(E2ETestCase):
     async def test_get_deck_success(
         self,
         client: AsyncClient,
+        auth_headers: dict[str, str],
         db_session: AsyncSession,
     ) -> None:
         """Test getting a deck by ID returns correct data."""
         deck = await CultureDeckFactory.create(session=db_session)
         await db_session.commit()
 
-        response = await client.get(f"/api/v1/culture/decks/{deck.id}")
+        response = await client.get(f"/api/v1/culture/decks/{deck.id}", headers=auth_headers)
 
         assert response.status_code == 200
         data = response.json()
@@ -272,13 +283,14 @@ class TestCultureDeckDetail(E2ETestCase):
     async def test_get_deck_response_structure(
         self,
         client: AsyncClient,
+        auth_headers: dict[str, str],
         db_session: AsyncSession,
     ) -> None:
         """Test that deck detail response has correct structure."""
         deck = await CultureDeckFactory.create(session=db_session)
         await db_session.commit()
 
-        response = await client.get(f"/api/v1/culture/decks/{deck.id}")
+        response = await client.get(f"/api/v1/culture/decks/{deck.id}", headers=auth_headers)
 
         assert response.status_code == 200
         data = response.json()
@@ -304,10 +316,11 @@ class TestCultureDeckDetail(E2ETestCase):
     async def test_get_deck_not_found(
         self,
         client: AsyncClient,
+        auth_headers: dict[str, str],
     ) -> None:
         """Test getting a non-existent deck returns 404."""
         fake_id = uuid4()
-        response = await client.get(f"/api/v1/culture/decks/{fake_id}")
+        response = await client.get(f"/api/v1/culture/decks/{fake_id}", headers=auth_headers)
 
         assert response.status_code == 404
 
@@ -315,9 +328,10 @@ class TestCultureDeckDetail(E2ETestCase):
     async def test_get_deck_invalid_uuid(
         self,
         client: AsyncClient,
+        auth_headers: dict[str, str],
     ) -> None:
         """Test getting deck with invalid UUID returns 422."""
-        response = await client.get("/api/v1/culture/decks/not-a-uuid")
+        response = await client.get("/api/v1/culture/decks/not-a-uuid", headers=auth_headers)
 
         assert response.status_code == 422
 
@@ -325,13 +339,14 @@ class TestCultureDeckDetail(E2ETestCase):
     async def test_get_inactive_deck_returns_404(
         self,
         client: AsyncClient,
+        auth_headers: dict[str, str],
         db_session: AsyncSession,
     ) -> None:
         """Test that inactive decks return 404."""
         deck = await CultureDeckFactory.create(session=db_session, inactive=True)
         await db_session.commit()
 
-        response = await client.get(f"/api/v1/culture/decks/{deck.id}")
+        response = await client.get(f"/api/v1/culture/decks/{deck.id}", headers=auth_headers)
 
         assert response.status_code == 404
 
@@ -378,9 +393,10 @@ class TestCultureCategories(E2ETestCase):
     async def test_get_categories_empty(
         self,
         client: AsyncClient,
+        auth_headers: dict[str, str],
     ) -> None:
         """Test getting categories when no decks exist returns empty list."""
-        response = await client.get("/api/v1/culture/categories")
+        response = await client.get("/api/v1/culture/categories", headers=auth_headers)
 
         assert response.status_code == 200
         data = response.json()
@@ -390,6 +406,7 @@ class TestCultureCategories(E2ETestCase):
     async def test_get_categories_returns_list(
         self,
         client: AsyncClient,
+        auth_headers: dict[str, str],
         db_session: AsyncSession,
     ) -> None:
         """Test that categories endpoint returns list of strings."""
@@ -399,7 +416,7 @@ class TestCultureCategories(E2ETestCase):
         await CultureDeckFactory.create(session=db_session, politics=True)
         await db_session.commit()
 
-        response = await client.get("/api/v1/culture/categories")
+        response = await client.get("/api/v1/culture/categories", headers=auth_headers)
 
         assert response.status_code == 200
         data = response.json()
@@ -413,6 +430,7 @@ class TestCultureCategories(E2ETestCase):
     async def test_get_categories_unique(
         self,
         client: AsyncClient,
+        auth_headers: dict[str, str],
         db_session: AsyncSession,
     ) -> None:
         """Test that categories are unique (no duplicates)."""
@@ -421,7 +439,7 @@ class TestCultureCategories(E2ETestCase):
         await CultureDeckFactory.create(session=db_session)  # history
         await db_session.commit()
 
-        response = await client.get("/api/v1/culture/categories")
+        response = await client.get("/api/v1/culture/categories", headers=auth_headers)
 
         assert response.status_code == 200
         data = response.json()
@@ -432,6 +450,7 @@ class TestCultureCategories(E2ETestCase):
     async def test_get_categories_excludes_inactive_decks(
         self,
         client: AsyncClient,
+        auth_headers: dict[str, str],
         db_session: AsyncSession,
     ) -> None:
         """Test that categories from inactive decks are not returned."""
@@ -439,7 +458,7 @@ class TestCultureCategories(E2ETestCase):
         await CultureDeckFactory.create(session=db_session, geography=True, inactive=True)
         await db_session.commit()
 
-        response = await client.get("/api/v1/culture/categories")
+        response = await client.get("/api/v1/culture/categories", headers=auth_headers)
 
         assert response.status_code == 200
         data = response.json()
@@ -1346,9 +1365,10 @@ class TestCultureResponseFormat(E2ETestCase):
     async def test_decks_response_is_json(
         self,
         client: AsyncClient,
+        auth_headers: dict[str, str],
     ) -> None:
         """Test that decks response is JSON formatted."""
-        response = await client.get("/api/v1/culture/decks")
+        response = await client.get("/api/v1/culture/decks", headers=auth_headers)
 
         assert response.status_code == 200
         assert "application/json" in response.headers.get("content-type", "")
@@ -1359,9 +1379,10 @@ class TestCultureResponseFormat(E2ETestCase):
     async def test_categories_response_is_json(
         self,
         client: AsyncClient,
+        auth_headers: dict[str, str],
     ) -> None:
         """Test that categories response is JSON formatted."""
-        response = await client.get("/api/v1/culture/categories")
+        response = await client.get("/api/v1/culture/categories", headers=auth_headers)
 
         assert response.status_code == 200
         assert "application/json" in response.headers.get("content-type", "")
