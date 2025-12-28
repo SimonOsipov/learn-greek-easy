@@ -267,6 +267,136 @@ class TestBulkReviewSubmission(E2ETestCase):
 
         assert response.status_code == 401
 
+    @pytest.mark.asyncio
+    async def test_bulk_review_with_minimum_quality(
+        self,
+        client: AsyncClient,
+        populated_study_environment: StudyEnvironment,
+    ) -> None:
+        """Test bulk review with quality 0 (complete blackout)."""
+        env = populated_study_environment
+
+        reviews = [
+            {
+                "card_id": str(env.cards[0].id),
+                "quality": 0,  # Minimum quality
+                "time_taken": 30,
+            },
+        ]
+
+        response = await client.post(
+            "/api/v1/reviews/bulk",
+            json={
+                "deck_id": str(env.deck.id),
+                "session_id": f"min-quality-{uuid4().hex[:8]}",
+                "reviews": reviews,
+            },
+            headers=env.headers,
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["successful"] == 1
+        # Quality 0 should reset the card
+        assert data["results"][0]["quality"] == 0
+
+    @pytest.mark.asyncio
+    async def test_bulk_review_with_maximum_quality(
+        self,
+        client: AsyncClient,
+        populated_study_environment: StudyEnvironment,
+    ) -> None:
+        """Test bulk review with quality 5 (perfect response)."""
+        env = populated_study_environment
+
+        reviews = [
+            {
+                "card_id": str(env.cards[0].id),
+                "quality": 5,  # Maximum quality
+                "time_taken": 2,
+            },
+        ]
+
+        response = await client.post(
+            "/api/v1/reviews/bulk",
+            json={
+                "deck_id": str(env.deck.id),
+                "session_id": f"max-quality-{uuid4().hex[:8]}",
+                "reviews": reviews,
+            },
+            headers=env.headers,
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["successful"] == 1
+        assert data["results"][0]["quality"] == 5
+
+    @pytest.mark.asyncio
+    async def test_bulk_review_repeated_card(
+        self,
+        client: AsyncClient,
+        populated_study_environment: StudyEnvironment,
+    ) -> None:
+        """Test bulk review with same card reviewed multiple times."""
+        env = populated_study_environment
+        card_id = str(env.cards[0].id)
+
+        # Review the same card multiple times in one batch
+        reviews = [
+            {"card_id": card_id, "quality": 3, "time_taken": 5},
+            {"card_id": card_id, "quality": 4, "time_taken": 3},
+            {"card_id": card_id, "quality": 5, "time_taken": 2},
+        ]
+
+        response = await client.post(
+            "/api/v1/reviews/bulk",
+            json={
+                "deck_id": str(env.deck.id),
+                "session_id": f"repeated-card-{uuid4().hex[:8]}",
+                "reviews": reviews,
+            },
+            headers=env.headers,
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        # All should process (may or may not succeed depending on implementation)
+        assert data["total_submitted"] == 3
+
+    @pytest.mark.asyncio
+    async def test_bulk_review_large_batch(
+        self,
+        client: AsyncClient,
+        populated_study_environment: StudyEnvironment,
+    ) -> None:
+        """Test bulk review with larger batch of reviews."""
+        env = populated_study_environment
+
+        # Use all available cards (up to 10)
+        reviews = [
+            {
+                "card_id": str(env.cards[i % len(env.cards)].id),
+                "quality": (i % 6),  # Quality 0-5
+                "time_taken": 5 + i,
+            }
+            for i in range(min(10, len(env.cards) * 2))
+        ]
+
+        response = await client.post(
+            "/api/v1/reviews/bulk",
+            json={
+                "deck_id": str(env.deck.id),
+                "session_id": f"large-batch-{uuid4().hex[:8]}",
+                "reviews": reviews,
+            },
+            headers=env.headers,
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total_submitted"] == len(reviews)
+
 
 # =============================================================================
 # Test Review History with Filtering

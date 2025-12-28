@@ -768,6 +768,23 @@ class TestNotificationExtendedScenarios(E2ETestCase):
         assert response.status_code == 404
 
     @pytest.mark.asyncio
+    async def test_mark_nonexistent_notification_read_returns_404(
+        self,
+        client: AsyncClient,
+        fresh_user_session: UserSession,
+    ) -> None:
+        """Test marking a non-existent notification as read returns 404."""
+        from uuid import uuid4
+
+        fake_id = uuid4()
+        response = await client.put(
+            f"/api/v1/notifications/{fake_id}/read",
+            headers=fresh_user_session.headers,
+        )
+
+        assert response.status_code == 404
+
+    @pytest.mark.asyncio
     async def test_notification_response_structure(
         self,
         client: AsyncClient,

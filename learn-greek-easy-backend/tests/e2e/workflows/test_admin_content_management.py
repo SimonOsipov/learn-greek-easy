@@ -864,6 +864,201 @@ class TestAdminCardDeletion(E2ETestCase):
 
 
 @pytest.mark.e2e
+class TestAdminStatsEndpoint(E2ETestCase):
+    """E2E tests for admin stats endpoint (GET /api/v1/admin/stats)."""
+
+    @pytest.mark.asyncio
+    async def test_admin_stats_returns_deck_and_card_counts(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+    ):
+        """Test admin stats endpoint returns total deck and card counts."""
+        # Step 1: Create a deck
+        deck_response = await client.post(
+            "/api/v1/decks",
+            json={"name": "Stats Test Deck", "level": "A1"},
+            headers=superuser_auth_headers,
+        )
+        assert deck_response.status_code == 201
+        deck_id = deck_response.json()["id"]
+
+        # Step 2: Create cards in the deck
+        for i in range(5):
+            card_response = await client.post(
+                "/api/v1/cards",
+                json={
+                    "deck_id": deck_id,
+                    "front_text": f"stats_word_{i}",
+                    "back_text": f"stats_translation_{i}",
+                    "difficulty": "easy",
+                },
+                headers=superuser_auth_headers,
+            )
+            assert card_response.status_code == 201
+
+        # Step 3: Get admin stats
+        stats_response = await client.get(
+            "/api/v1/admin/stats",
+            headers=superuser_auth_headers,
+        )
+
+        assert stats_response.status_code == 200
+        data = stats_response.json()
+
+        # Verify response structure
+        assert "total_decks" in data
+        assert "total_cards" in data
+        assert "decks" in data
+
+        # Verify counts are positive (at least our created data)
+        assert data["total_decks"] >= 1
+        assert data["total_cards"] >= 5
+
+        # Verify decks list contains our deck
+        deck_ids = [d["id"] for d in data["decks"]]
+        assert deck_id in deck_ids
+
+    @pytest.mark.asyncio
+    async def test_admin_stats_deck_item_structure(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+    ):
+        """Test each deck in stats has correct structure."""
+        # Create a deck first
+        deck_response = await client.post(
+            "/api/v1/decks",
+            json={"name": "Structure Test Deck", "level": "B1"},
+            headers=superuser_auth_headers,
+        )
+        deck_id = deck_response.json()["id"]
+
+        # Get stats
+        stats_response = await client.get(
+            "/api/v1/admin/stats",
+            headers=superuser_auth_headers,
+        )
+
+        assert stats_response.status_code == 200
+        data = stats_response.json()
+
+        # Find our deck in the list
+        our_deck = next((d for d in data["decks"] if d["id"] == deck_id), None)
+        assert our_deck is not None
+
+        # Verify deck structure
+        assert "id" in our_deck
+        assert "name" in our_deck
+        assert "level" in our_deck
+        assert "card_count" in our_deck
+        assert our_deck["name"] == "Structure Test Deck"
+        assert our_deck["level"] == "B1"
+
+    @pytest.mark.asyncio
+    async def test_admin_stats_non_superuser_returns_403(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+    ):
+        """Test regular user cannot access admin stats."""
+        response = await client.get(
+            "/api/v1/admin/stats",
+            headers=auth_headers,
+        )
+
+        assert response.status_code == 403
+
+    @pytest.mark.asyncio
+    async def test_admin_stats_unauthenticated_returns_401(
+        self,
+        client: AsyncClient,
+    ):
+        """Test unauthenticated request to admin stats returns 401."""
+        response = await client.get("/api/v1/admin/stats")
+
+        assert response.status_code == 401
+
+    @pytest.mark.asyncio
+    async def test_admin_stats_card_counts_accurate(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+    ):
+        """Test that card counts per deck are accurate."""
+        # Create deck with specific number of cards
+        deck_response = await client.post(
+            "/api/v1/decks",
+            json={"name": "Count Accuracy Test", "level": "A2"},
+            headers=superuser_auth_headers,
+        )
+        deck_id = deck_response.json()["id"]
+
+        # Create exactly 7 cards
+        expected_count = 7
+        for i in range(expected_count):
+            await client.post(
+                "/api/v1/cards",
+                json={
+                    "deck_id": deck_id,
+                    "front_text": f"accuracy_{i}",
+                    "back_text": f"translation_{i}",
+                    "difficulty": "medium",
+                },
+                headers=superuser_auth_headers,
+            )
+
+        # Get stats and verify count
+        stats_response = await client.get(
+            "/api/v1/admin/stats",
+            headers=superuser_auth_headers,
+        )
+
+        data = stats_response.json()
+        our_deck = next((d for d in data["decks"] if d["id"] == deck_id), None)
+        assert our_deck is not None
+        assert our_deck["card_count"] == expected_count
+
+    @pytest.mark.asyncio
+    async def test_admin_stats_excludes_inactive_decks(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+    ):
+        """Test that inactive decks are excluded from admin stats."""
+        # Create a deck
+        deck_response = await client.post(
+            "/api/v1/decks",
+            json={"name": "Inactive Test Deck", "level": "C1"},
+            headers=superuser_auth_headers,
+        )
+        deck_id = deck_response.json()["id"]
+
+        # Verify deck is in stats
+        stats_before = await client.get(
+            "/api/v1/admin/stats",
+            headers=superuser_auth_headers,
+        )
+        deck_ids_before = [d["id"] for d in stats_before.json()["decks"]]
+        assert deck_id in deck_ids_before
+
+        # Deactivate the deck
+        await client.patch(
+            f"/api/v1/decks/{deck_id}",
+            json={"is_active": False},
+            headers=superuser_auth_headers,
+        )
+
+        # Verify deck is NOT in stats (inactive)
+        stats_after = await client.get(
+            "/api/v1/admin/stats",
+            headers=superuser_auth_headers,
+        )
+        deck_ids_after = [d["id"] for d in stats_after.json()["decks"]]
+        assert deck_id not in deck_ids_after
+
+
+@pytest.mark.e2e
 class TestCardNotFoundErrors(E2ETestCase):
     """E2E tests for card 404 error handling."""
 
