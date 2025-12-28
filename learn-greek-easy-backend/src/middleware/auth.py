@@ -8,19 +8,23 @@ This middleware logs all requests to authentication endpoints for:
 
 Note: This middleware is passive and does not authenticate requests.
 Authentication is handled by FastAPI dependencies (get_current_user).
+
+This middleware uses pure ASGI pattern (not BaseHTTPMiddleware) to avoid
+response streaming issues that can cause 502 errors with reverse proxies.
+See: https://www.starlette.io/middleware/#pure-asgi-middleware
 """
 
 import logging
 import time
-from typing import Callable, Optional
+from typing import Optional
 
-from fastapi import Request, Response
-from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
+from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 logger = logging.getLogger(__name__)
 
 
-class AuthLoggingMiddleware(BaseHTTPMiddleware):
+class AuthLoggingMiddleware:
     """Middleware for logging authentication endpoint requests.
 
     Logs all requests to /api/v1/auth/* endpoints with:
@@ -57,34 +61,50 @@ class AuthLoggingMiddleware(BaseHTTPMiddleware):
         "/api/v1/auth/logout-all",
     ]
 
-    async def dispatch(
-        self,
-        request: Request,
-        call_next: Callable,
-    ) -> Response:
+    def __init__(self, app: ASGIApp) -> None:
+        """Initialize the middleware.
+
+        Args:
+            app: The ASGI application to wrap.
+        """
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         """Process request and log auth endpoint access.
 
         Args:
-            request: The incoming HTTP request.
-            call_next: The next middleware/handler in the chain.
-
-        Returns:
-            The HTTP response from the endpoint.
+            scope: The ASGI scope dictionary.
+            receive: The ASGI receive callable.
+            send: The ASGI send callable.
         """
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        request = Request(scope, receive, send)
+        path = request.url.path
+
+        # Skip non-auth paths
+        if not self._should_log(path):
+            await self.app(scope, receive, send)
+            return
+
         # Start timing
         start_time = time.perf_counter()
+        status_code: int = 500  # Default in case of error
 
-        # Process the request
-        response: Response = await call_next(request)
+        async def send_wrapper(message: Message) -> None:
+            nonlocal status_code
+            if message["type"] == "http.response.start":
+                status_code = message["status"]
+            await send(message)
 
-        # Calculate duration
+        # Process request
+        await self.app(scope, receive, send_wrapper)
+
+        # Calculate duration and log
         duration_ms = (time.perf_counter() - start_time) * 1000
-
-        # Log auth endpoint requests
-        if self._should_log(request.url.path):
-            self._log_request(request, response, duration_ms)
-
-        return response
+        self._log_request(request, status_code, duration_ms)
 
     def _should_log(self, path: str) -> bool:
         """Determine if the request path should be logged.
@@ -132,7 +152,7 @@ class AuthLoggingMiddleware(BaseHTTPMiddleware):
     def _log_request(
         self,
         request: Request,
-        response: Response,
+        status_code: int,
         duration_ms: float,
     ) -> None:
         """Log the authentication request details.
@@ -146,13 +166,12 @@ class AuthLoggingMiddleware(BaseHTTPMiddleware):
 
         Args:
             request: The HTTP request.
-            response: The HTTP response.
+            status_code: The HTTP response status code.
             duration_ms: Request processing time in milliseconds.
         """
         client_ip = self._get_client_ip(request)
         path = request.url.path
         method = request.method
-        status_code = response.status_code
 
         # Determine log level based on status code
         if status_code >= 500:
