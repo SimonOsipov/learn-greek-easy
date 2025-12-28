@@ -128,7 +128,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   // Refresh unread count only (for polling)
   const refreshUnreadCount = useCallback(async () => {
-    if (!hasHydrated || !isAuthenticated) return;
+    if (!hasHydrated || !isAuthenticated || !authInitialized) return;
 
     try {
       const count = await notificationAPI.fetchUnreadCount();
@@ -141,7 +141,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     } catch (err) {
       log.error('Failed to refresh unread count:', err);
     }
-  }, [hasHydrated, isAuthenticated, unreadCount, fetchNotifications]);
+  }, [hasHydrated, isAuthenticated, authInitialized, unreadCount, fetchNotifications]);
 
   // Mark single notification as read
   const markAsRead = useCallback(async (id: string) => {

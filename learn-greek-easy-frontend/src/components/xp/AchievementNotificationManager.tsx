@@ -3,6 +3,7 @@ import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { AnimatePresence } from 'framer-motion';
 
 import type { UnnotifiedAchievementResponse } from '@/services/xpAPI';
+import { useAppStore } from '@/stores/appStore';
 import { useAuthStore, useHasHydrated } from '@/stores/authStore';
 import { useXPStore, selectXPStats, selectUnnotifiedAchievements } from '@/stores/xpStore';
 
@@ -42,6 +43,7 @@ export const AchievementNotificationManager: React.FC = () => {
   // Auth state
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const hasHydrated = useHasHydrated();
+  const authInitialized = useAppStore((state) => state.authInitialized);
 
   // XP store
   const xpStats = useXPStore(selectXPStats);
@@ -81,7 +83,14 @@ export const AchievementNotificationManager: React.FC = () => {
    * Check for level-up
    */
   useEffect(() => {
-    if (!hasHydrated || !isAuthenticated || !xpStats || hasCheckedLevelUp.current) return;
+    if (
+      !hasHydrated ||
+      !isAuthenticated ||
+      !authInitialized ||
+      !xpStats ||
+      hasCheckedLevelUp.current
+    )
+      return;
 
     const currentLevel = xpStats.current_level;
     const lastKnownLevel = getLastKnownLevel();
@@ -104,13 +113,13 @@ export const AchievementNotificationManager: React.FC = () => {
     // Save current level
     saveCurrentLevel(currentLevel);
     hasCheckedLevelUp.current = true;
-  }, [hasHydrated, isAuthenticated, xpStats, getLastKnownLevel, saveCurrentLevel]);
+  }, [hasHydrated, isAuthenticated, authInitialized, xpStats, getLastKnownLevel, saveCurrentLevel]);
 
   /**
    * Poll for unnotified achievements
    */
   useEffect(() => {
-    if (!hasHydrated || !isAuthenticated) return;
+    if (!hasHydrated || !isAuthenticated || !authInitialized) return;
 
     // Initial load
     loadXPStats();
@@ -123,7 +132,7 @@ export const AchievementNotificationManager: React.FC = () => {
     }, POLL_INTERVAL);
 
     return () => clearInterval(pollInterval);
-  }, [hasHydrated, isAuthenticated, loadUnnotifiedAchievements, loadXPStats]);
+  }, [hasHydrated, isAuthenticated, authInitialized, loadUnnotifiedAchievements, loadXPStats]);
 
   /**
    * Queue new achievements when they arrive
@@ -186,8 +195,8 @@ export const AchievementNotificationManager: React.FC = () => {
     setCurrentNotification(null);
   }, [currentNotification, markAchievementsNotified, saveCurrentLevel]);
 
-  // Don't render anything if not hydrated or not authenticated
-  if (!hasHydrated || !isAuthenticated) return null;
+  // Don't render anything if not hydrated, not authenticated, or auth not validated
+  if (!hasHydrated || !isAuthenticated || !authInitialized) return null;
 
   return (
     <>
