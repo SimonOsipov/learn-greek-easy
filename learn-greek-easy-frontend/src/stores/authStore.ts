@@ -19,6 +19,7 @@ interface AuthState {
   isLoading: boolean;
   error: AuthError | null;
   rememberMe: boolean;
+  _hasHydrated: boolean;
 
   // Actions
   login: (email: string, password: string, remember?: boolean) => Promise<void>;
@@ -43,6 +44,7 @@ export const useAuthStore = create<AuthState>()(
       isLoading: false,
       error: null,
       rememberMe: false,
+      _hasHydrated: false,
 
       // Login action
       login: async (email: string, password: string, remember = false) => {
@@ -584,6 +586,17 @@ export const useAuthStore = create<AuthState>()(
               isAuthenticated: state.isAuthenticated,
             } as Partial<AuthState>)
           : ({} as Partial<AuthState>),
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          state._hasHydrated = true;
+        }
+      },
     }
   )
 );
+
+/**
+ * Hook to check if the auth store has finished hydrating from localStorage.
+ * Use this to prevent API calls before hydration is complete.
+ */
+export const useHasHydrated = () => useAuthStore((state) => state._hasHydrated);

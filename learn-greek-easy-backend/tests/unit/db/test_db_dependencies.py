@@ -5,11 +5,13 @@ Tests cover:
 - get_db_transactional() lifecycle management
 - Session commit, rollback, and close behavior
 - Error handling during database operations
+- Exception logging levels (SQLAlchemyError at ERROR, others at DEBUG)
 """
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from sqlalchemy.exc import SQLAlchemyError
 
 # ============================================================================
 # Test Fixtures
@@ -160,7 +162,7 @@ class TestGetDb:
 
     @pytest.mark.asyncio
     async def test_get_db_logs_on_rollback(self, mock_session, mock_session_factory):
-        """Test that get_db logs error on rollback."""
+        """Test that get_db logs on rollback (DEBUG for non-DB exceptions)."""
         from src.db.dependencies import get_db
 
         with patch("src.db.dependencies.get_session_factory", return_value=mock_session_factory):
@@ -171,8 +173,10 @@ class TestGetDb:
                 with pytest.raises(ValueError):
                     await gen.athrow(ValueError("Test error"))
 
-                # Check that rollback was logged
-                mock_logger.error.assert_called()
+                # Check that rollback was logged at DEBUG level (non-DB exceptions)
+                mock_logger.debug.assert_called()
+                debug_calls = [str(call) for call in mock_logger.debug.call_args_list]
+                assert any("rolled back" in call.lower() for call in debug_calls)
 
     @pytest.mark.asyncio
     async def test_get_db_logs_on_close(self, mock_session, mock_session_factory):
@@ -388,3 +392,106 @@ class TestDependencyEdgeCases:
             assert s1 == session1
             assert s2 == session2
             assert s1 != s2
+
+
+# ============================================================================
+# Exception Logging Level Tests
+# ============================================================================
+
+
+class TestExceptionLoggingLevels:
+    """Tests for exception logging levels in database dependencies."""
+
+    @pytest.mark.asyncio
+    async def test_get_db_logs_sqlalchemy_error_at_error_level(
+        self, mock_session, mock_session_factory
+    ):
+        """Test that SQLAlchemyError is logged at ERROR level."""
+        from src.db.dependencies import get_db
+
+        with patch("src.db.dependencies.get_session_factory", return_value=mock_session_factory):
+            with patch("src.db.dependencies.logger") as mock_logger:
+                gen = get_db()
+                await gen.__anext__()
+
+                # Throw a SQLAlchemyError
+                with pytest.raises(SQLAlchemyError):
+                    await gen.athrow(SQLAlchemyError("Database connection failed"))
+
+                # Should log at ERROR level
+                mock_logger.error.assert_called()
+                error_calls = [str(call) for call in mock_logger.error.call_args_list]
+                assert any("SQLAlchemy" in call for call in error_calls)
+                # Should NOT log at DEBUG for this exception
+                debug_calls = [str(call) for call in mock_logger.debug.call_args_list]
+                assert not any("rolled back" in call.lower() for call in debug_calls)
+
+    @pytest.mark.asyncio
+    async def test_get_db_logs_non_db_exception_at_debug_level(
+        self, mock_session, mock_session_factory
+    ):
+        """Test that non-database exceptions are logged at DEBUG level."""
+        from src.db.dependencies import get_db
+
+        with patch("src.db.dependencies.get_session_factory", return_value=mock_session_factory):
+            with patch("src.db.dependencies.logger") as mock_logger:
+                gen = get_db()
+                await gen.__anext__()
+
+                # Throw a regular ValueError (not SQLAlchemyError)
+                with pytest.raises(ValueError):
+                    await gen.athrow(ValueError("Validation failed"))
+
+                # Should log at DEBUG level
+                mock_logger.debug.assert_called()
+                debug_calls = [str(call) for call in mock_logger.debug.call_args_list]
+                assert any("rolled back" in call.lower() for call in debug_calls)
+                # Error should only be called for session creation, not for this exception
+                # (The error method should NOT be called with "rolled back" for ValueError)
+                error_calls = [str(call) for call in mock_logger.error.call_args_list]
+                assert not any("rolled back" in call.lower() for call in error_calls)
+
+    @pytest.mark.asyncio
+    async def test_get_db_transactional_logs_sqlalchemy_error_at_error_level(
+        self, mock_session, mock_session_factory
+    ):
+        """Test that get_db_transactional logs SQLAlchemyError at ERROR level."""
+        from src.db.dependencies import get_db_transactional
+
+        with patch("src.db.dependencies.get_session_factory", return_value=mock_session_factory):
+            with patch("src.db.dependencies.logger") as mock_logger:
+                gen = get_db_transactional()
+                await gen.__anext__()
+
+                # Throw a SQLAlchemyError
+                with pytest.raises(SQLAlchemyError):
+                    await gen.athrow(SQLAlchemyError("Transaction failed"))
+
+                # Should log at ERROR level
+                mock_logger.error.assert_called()
+                error_calls = [str(call) for call in mock_logger.error.call_args_list]
+                assert any("SQLAlchemy" in call for call in error_calls)
+
+    @pytest.mark.asyncio
+    async def test_get_db_transactional_logs_non_db_exception_at_debug_level(
+        self, mock_session, mock_session_factory
+    ):
+        """Test that get_db_transactional logs non-DB exceptions at DEBUG level."""
+        from src.db.dependencies import get_db_transactional
+
+        with patch("src.db.dependencies.get_session_factory", return_value=mock_session_factory):
+            with patch("src.db.dependencies.logger") as mock_logger:
+                gen = get_db_transactional()
+                await gen.__anext__()
+
+                # Throw a regular RuntimeError (not SQLAlchemyError)
+                with pytest.raises(RuntimeError):
+                    await gen.athrow(RuntimeError("Business logic error"))
+
+                # Should log at DEBUG level
+                mock_logger.debug.assert_called()
+                debug_calls = [str(call) for call in mock_logger.debug.call_args_list]
+                assert any("rolled back" in call.lower() for call in debug_calls)
+                # Error should NOT be called for this exception
+                error_calls = [str(call) for call in mock_logger.error.call_args_list]
+                assert not any("rolled back" in call.lower() for call in error_calls)
