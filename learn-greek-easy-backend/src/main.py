@@ -269,13 +269,23 @@ async def http_exception_handler(
     exc: StarletteHTTPException,
 ) -> JSONResponse:
     """Handle HTTP exceptions."""
-    logger.error(
-        "HTTP {status_code} error",
-        status_code=exc.status_code,
-        detail=exc.detail,
-        path=request.url.path,
-        method=request.method,
-    )
+    # Log 4xx at WARNING (client errors), 5xx at ERROR (server errors)
+    if exc.status_code >= 500:
+        logger.error(
+            "HTTP {status_code} error",
+            status_code=exc.status_code,
+            detail=exc.detail,
+            path=request.url.path,
+            method=request.method,
+        )
+    else:
+        logger.warning(
+            "HTTP {status_code} error",
+            status_code=exc.status_code,
+            detail=exc.detail,
+            path=request.url.path,
+            method=request.method,
+        )
 
     return JSONResponse(
         status_code=exc.status_code,

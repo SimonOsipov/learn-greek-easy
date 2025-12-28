@@ -10,7 +10,7 @@ import React, {
 
 import log from '@/lib/logger';
 import * as notificationAPI from '@/services/notificationAPI';
-import { useAuthStore } from '@/stores/authStore';
+import { useAuthStore, useHasHydrated } from '@/stores/authStore';
 import type { Notification } from '@/types/notification';
 
 interface NotificationContextValue {
@@ -55,6 +55,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   // Get auth state from store
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const hasHydrated = useHasHydrated();
 
   // Toast management
   const showToast = useCallback((notification: Notification) => {
@@ -72,8 +73,8 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   // Fetch notifications
   const fetchNotifications = useCallback(
     async (reset = false) => {
-      // Don't fetch if not authenticated or already fetching
-      if (!isAuthenticated || isFetchingRef.current) return;
+      // Don't fetch if not hydrated, not authenticated, or already fetching
+      if (!hasHydrated || !isAuthenticated || isFetchingRef.current) return;
 
       try {
         isFetchingRef.current = true;
@@ -113,7 +114,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         isFetchingRef.current = false;
       }
     },
-    [isAuthenticated, offset, showToast]
+    [hasHydrated, isAuthenticated, offset, showToast]
   );
 
   // Load more notifications
@@ -124,7 +125,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   // Refresh unread count only (for polling)
   const refreshUnreadCount = useCallback(async () => {
-    if (!isAuthenticated) return;
+    if (!hasHydrated || !isAuthenticated) return;
 
     try {
       const count = await notificationAPI.fetchUnreadCount();
@@ -137,7 +138,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     } catch (err) {
       log.error('Failed to refresh unread count:', err);
     }
-  }, [isAuthenticated, unreadCount, fetchNotifications]);
+  }, [hasHydrated, isAuthenticated, unreadCount, fetchNotifications]);
 
   // Mark single notification as read
   const markAsRead = useCallback(async (id: string) => {
@@ -194,11 +195,11 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
   }, []);
 
-  // Initial fetch when authenticated
+  // Initial fetch when authenticated and hydrated
   useEffect(() => {
-    if (isAuthenticated) {
+    if (hasHydrated && isAuthenticated) {
       fetchNotifications(true);
-    } else {
+    } else if (!isAuthenticated) {
       // Reset state when logged out
       setNotifications([]);
       setUnreadCount(0);
@@ -208,21 +209,21 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       previousUnreadCountRef.current = 0;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated]); // Intentionally only depend on isAuthenticated
+  }, [hasHydrated, isAuthenticated]); // Depend on both hydration and auth state
 
   // Polling for new notifications - use ref to avoid recreating interval
   const refreshUnreadCountRef = useRef(refreshUnreadCount);
   refreshUnreadCountRef.current = refreshUnreadCount;
 
   useEffect(() => {
-    if (!isAuthenticated) return;
+    if (!hasHydrated || !isAuthenticated) return;
 
     const interval = setInterval(() => {
       refreshUnreadCountRef.current();
     }, POLLING_INTERVAL);
 
     return () => clearInterval(interval);
-  }, [isAuthenticated]); // Only depend on isAuthenticated for stable interval
+  }, [hasHydrated, isAuthenticated]); // Depend on both hydration and auth for stable interval
 
   const value = useMemo<NotificationContextValue>(
     () => ({

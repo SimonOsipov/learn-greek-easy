@@ -3,6 +3,7 @@
 import logging
 from typing import AsyncGenerator
 
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.db.session import get_session_factory
@@ -40,10 +41,17 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
             await session.commit()
             logger.debug("Database session committed")
 
-        except Exception as e:
-            # Rollback on any exception
+        except SQLAlchemyError as e:
+            # Rollback on database errors - these are real issues
             await session.rollback()
-            logger.error(f"Database session rolled back: {e}")
+            logger.error(f"Database session rolled back due to SQLAlchemy error: {e}")
+            raise
+
+        except Exception as e:
+            # Rollback on other exceptions - log at DEBUG to avoid Sentry noise
+            # (these are often expected errors like validation failures)
+            await session.rollback()
+            logger.debug(f"Database session rolled back: {e}")
             raise
 
         finally:
@@ -70,8 +78,18 @@ async def get_db_transactional() -> AsyncGenerator[AsyncSession, None]:
     async with factory() as session:
         try:
             yield session
-        except Exception:
+
+        except SQLAlchemyError as e:
+            # Rollback on database errors - these are real issues
             await session.rollback()
+            logger.error(f"Transactional session rolled back due to SQLAlchemy error: {e}")
             raise
+
+        except Exception as e:
+            # Rollback on other exceptions - log at DEBUG to avoid Sentry noise
+            await session.rollback()
+            logger.debug(f"Transactional session rolled back: {e}")
+            raise
+
         finally:
             await session.close()
