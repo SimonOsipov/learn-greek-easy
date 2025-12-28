@@ -5,7 +5,13 @@
 
 export type CultureLanguage = 'el' | 'en' | 'ru';
 
-export type CultureCategory = 'history' | 'geography' | 'politics' | 'culture' | 'traditions';
+export type CultureCategory =
+  | 'history'
+  | 'geography'
+  | 'politics'
+  | 'culture'
+  | 'traditions'
+  | 'practical';
 
 export interface MultilingualText {
   el: string;

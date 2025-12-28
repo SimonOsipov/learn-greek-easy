@@ -1,11 +1,17 @@
 import React from 'react';
 
-import { BookOpen, Heart, Landmark, Map, Sparkles } from 'lucide-react';
+import { BookOpen, Briefcase, Heart, Landmark, Map, Sparkles } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Badge } from '@/components/ui/badge';
 
-export type CultureCategory = 'history' | 'geography' | 'politics' | 'culture' | 'traditions';
+export type CultureCategory =
+  | 'history'
+  | 'geography'
+  | 'politics'
+  | 'culture'
+  | 'traditions'
+  | 'practical';
 
 export interface CultureBadgeProps {
   category?: CultureCategory;
@@ -63,6 +69,14 @@ const CATEGORY_CONFIG: Record<
     darkBgColor: 'dark:bg-purple-900',
     darkTextColor: 'dark:text-purple-200',
     labelKey: 'culture.categories.traditions',
+  },
+  practical: {
+    icon: Briefcase,
+    bgColor: 'bg-orange-100',
+    textColor: 'text-orange-800',
+    darkBgColor: 'dark:bg-orange-900',
+    darkTextColor: 'dark:text-orange-200',
+    labelKey: 'culture.categories.practical',
   },
 };
 
