@@ -1,0 +1,191 @@
+# Deployment Guide
+
+## Overview
+
+This project uses GitHub Actions for sequential deployments to ensure Backend is healthy before Frontend starts. Railway's native auto-deploy is **disabled** to prevent parallel deployment conflicts.
+
+## Environments
+
+| Environment | Trigger | Workflow | URLs |
+|-------------|---------|----------|------|
+| Production | Push to `main` | `deploy-production.yml` | [Frontend](https://learn-greek-frontend.up.railway.app), [Backend](https://backend-production-7429.up.railway.app) |
+| Dev (PR Preview) | PR opened/sync | `preview.yml` | [Frontend](https://frontend-dev-8db9.up.railway.app), [Backend](https://backend-dev-bc44.up.railway.app) |
+
+## How Deployments Work
+
+### Sequential Deploy Process
+
+1. **Backend deploys first** - Uses `railway up --ci` which waits for health check
+2. **Frontend deploys second** - Only starts after Backend is confirmed healthy
+3. **Post-deploy verification** - Health checks confirm both services are responding
+
+### Why Sequential?
+
+Railway's native GitHub integration deploys services in parallel, which can cause:
+- Frontend starting before Backend is ready
+- 502 errors during deployment window
+- Users seeing errors while Backend initializes
+
+### The `--ci` Flag
+
+The `--ci` flag makes `railway up` wait for the deployment to complete AND pass health checks before returning. This provides:
+- Guaranteed Backend is healthy before Frontend starts
+- Failed Backend deploy prevents Frontend deploy (fail-fast)
+- Clear logs showing deployment progress
+- No need for manual sleep/wait between deployments
+
+## Manual Deployment
+
+If you need to deploy manually (e.g., GitHub Actions is down):
+
+### Prerequisites
+
+- Railway CLI installed: `npm install -g @railway/cli`
+- Railway authentication: `railway login` or set `RAILWAY_TOKEN` env var
+
+### Deploy Commands
+
+```bash
+# Link to project and environment
+railway link --project <project-id> --environment production
+
+# Deploy Backend first (wait for health)
+cd learn-greek-easy-backend
+railway up --ci --service Backend
+
+# Deploy Frontend after Backend is healthy
+cd ../learn-greek-easy-frontend
+railway up --ci --service Frontend
+```
+
+### Deploy Specific Commit
+
+```bash
+git checkout <commit-sha>
+
+# Deploy Backend
+cd learn-greek-easy-backend
+railway up --ci --service Backend
+
+# Deploy Frontend
+cd ../learn-greek-easy-frontend
+railway up --ci --service Frontend
+```
+
+## Rollback Procedure
+
+### Option 1: Redeploy Previous Commit
+
+```bash
+# Find previous good commit
+git log --oneline -10
+
+# Checkout and deploy
+git checkout <good-commit-sha>
+railway up --ci --service Backend
+railway up --ci --service Frontend
+```
+
+### Option 2: Railway Dashboard Rollback
+
+1. Go to Railway Dashboard > Service > Deployments
+2. Find the previous successful deployment
+3. Click "Redeploy" on that deployment
+4. Repeat for the other service (Backend first, then Frontend)
+
+### Option 3: Revert and Push
+
+```bash
+git revert HEAD
+git push origin main
+# GitHub Actions will automatically deploy the revert
+```
+
+## Troubleshooting
+
+### Deployment Stuck
+
+If `railway up --ci` hangs for more than 10 minutes:
+
+1. Check Railway dashboard for deployment status
+2. Check service logs for errors
+3. Cancel with Ctrl+C and check health endpoint manually:
+   ```bash
+   curl https://backend-production-7429.up.railway.app/health
+   curl https://backend-production-7429.up.railway.app/health/ready
+   ```
+4. If service is healthy but CLI hung, deployment likely succeeded
+
+### Health Check Failing
+
+If deployment completes but health check fails:
+
+1. Check `/health` and `/health/ready` endpoints directly
+2. Review service logs in Railway dashboard
+3. Verify database connectivity (check Postgres service)
+4. Check environment variables are set correctly
+5. Verify Redis is running (used for caching)
+
+### Concurrent Deploy Conflict
+
+If both Railway auto-deploy and GitHub Actions try to deploy:
+
+1. Cancel one deployment in Railway dashboard
+2. Verify auto-deploy is disabled for the service (see Configuration below)
+3. Re-run GitHub Actions workflow if needed
+
+### GitHub Actions Workflow Failed
+
+1. Check the workflow run logs in GitHub Actions
+2. Common issues:
+   - `RAILWAY_API_TOKEN` secret missing or expired
+   - Railway CLI container pull failed (retry usually works)
+   - Timeout exceeded (increase `timeout-minutes` if needed)
+
+## Configuration
+
+### GitHub Secrets Required
+
+| Secret | Description |
+|--------|-------------|
+| `RAILWAY_API_TOKEN` | Railway project token (generate in Railway dashboard) |
+| `RAILWAY_PROJECT_ID` | Railway project ID (from project settings) |
+| `RAILWAY_WORKSPACE_ID` | Railway workspace ID (from workspace settings) |
+
+### Railway Auto-Deploy Status
+
+**IMPORTANT**: Auto-deploy must be DISABLED for GitHub Actions sequential deploy to work correctly.
+
+| Service | Production | Dev |
+|---------|------------|-----|
+| Backend | DISABLED | DISABLED |
+| Frontend | DISABLED | DISABLED |
+| Postgres | Manual | Manual |
+| Redis | Manual | Manual |
+
+### How to Disable Auto-Deploy
+
+1. Go to Railway Dashboard > Project > Environment
+2. Select the service (Backend or Frontend)
+3. Click Settings tab
+4. Find "Source" or "Deployment" section
+5. Disable "Auto Deploy" / "Deploy on Push" toggle
+6. Save changes
+
+## Workflow Files
+
+| File | Purpose |
+|------|---------|
+| `.github/workflows/deploy-production.yml` | Production deployment on push to main |
+| `.github/workflows/preview.yml` | PR preview deployment |
+| `.github/workflows/preview-cleanup.yml` | Cleanup on PR close |
+| `.github/workflows/test.yml` | CI tests (reusable) |
+
+## Health Endpoints
+
+| Endpoint | Purpose |
+|----------|---------|
+| `/health` | Basic liveness check |
+| `/health/ready` | Readiness check (includes DB connectivity) |
+| `/health/live` | Kubernetes-style liveness probe |
+| `/docs` | API documentation (Swagger UI) |
