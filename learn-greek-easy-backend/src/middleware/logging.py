@@ -7,20 +7,25 @@ This middleware provides structured logging of all HTTP requests with:
 - Configurable path exclusions
 - Status code-based log levels
 - Sensitive data redaction
+
+This middleware uses pure ASGI pattern (not BaseHTTPMiddleware) to avoid
+response streaming issues that can cause 502 errors with reverse proxies.
+See: https://www.starlette.io/middleware/#pure-asgi-middleware
 """
 
 import time
 import uuid
-from typing import Any, Callable
+from typing import Any
 
-from fastapi import Request, Response
 from loguru import logger
-from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.datastructures import MutableHeaders
+from starlette.requests import Request
+from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from src.core.sentry import set_request_context
 
 
-class RequestLoggingMiddleware(BaseHTTPMiddleware):
+class RequestLoggingMiddleware:
     """Middleware for logging all HTTP requests with timing and request IDs.
 
     Features:
@@ -74,6 +79,14 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 
     REDACTED: str = "[REDACTED]"
 
+    def __init__(self, app: ASGIApp) -> None:
+        """Initialize the middleware.
+
+        Args:
+            app: The ASGI application to wrap.
+        """
+        self.app = app
+
     def _redact_headers(self, headers: dict[str, str]) -> dict[str, str]:
         """Redact sensitive headers.
 
@@ -117,33 +130,53 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
                 result[key] = value
         return result
 
-    async def dispatch(
-        self,
-        request: Request,
-        call_next: Callable,
-    ) -> Response:
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         """Process request and log details.
 
         Args:
-            request: The incoming HTTP request.
-            call_next: The next middleware/handler in the chain.
-
-        Returns:
-            The HTTP response from the endpoint.
+            scope: The ASGI scope dictionary.
+            receive: The ASGI receive callable.
+            send: The ASGI send callable.
         """
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        request = Request(scope, receive, send)
+
         # Skip excluded paths
         if self._should_skip(request.url.path):
-            skip_response: Response = await call_next(request)
-            return skip_response
+            await self.app(scope, receive, send)
+            return
 
         # Generate request ID
         request_id = str(uuid.uuid4())[:8]  # Short ID for readability
 
-        # Store in request state for access by handlers
+        # Initialize scope state if needed and store request_id
+        scope.setdefault("state", {})
+        scope["state"]["request_id"] = request_id
+
+        # Also set on request.state for compatibility with handlers
         request.state.request_id = request_id
 
         # Set Sentry request context for correlation
         set_request_context(request_id, request.url.path)
+
+        # Track response status
+        status_code: int = 500  # Default in case of error
+        response_started = False
+
+        async def send_wrapper(message: Message) -> None:
+            nonlocal status_code, response_started
+            if message["type"] == "http.response.start":
+                response_started = True
+                status_code = message["status"]
+                # Add X-Request-ID header (only if not already present)
+                headers = MutableHeaders(raw=list(message.get("headers", [])))
+                if "X-Request-ID" not in headers:
+                    headers.append("X-Request-ID", request_id)
+                    message = {**message, "headers": headers.raw}
+            await send(message)
 
         # Use contextualize to automatically include request_id in all logs
         with logger.contextualize(request_id=request_id):
@@ -162,7 +195,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 
             # Process request
             try:
-                response: Response = await call_next(request)
+                await self.app(scope, receive, send_wrapper)
             except Exception as e:
                 # Log unhandled exceptions
                 duration_ms = (time.perf_counter() - start_time) * 1000
@@ -178,21 +211,16 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
             # Calculate duration
             duration_ms = (time.perf_counter() - start_time) * 1000
 
-            # Add request ID to response headers
-            response.headers["X-Request-ID"] = request_id
-
             # Log response
-            log_level = self._get_log_level_name(response.status_code)
+            log_level = self._get_log_level_name(status_code)
             logger.log(
                 log_level,
                 "Request completed",
                 method=request.method,
                 path=request.url.path,
-                status_code=response.status_code,
+                status_code=status_code,
                 duration_ms=round(duration_ms, 2),
             )
-
-            return response
 
     def _should_skip(self, path: str) -> bool:
         """Check if path should be excluded from logging.

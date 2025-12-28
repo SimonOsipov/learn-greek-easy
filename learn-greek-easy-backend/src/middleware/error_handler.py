@@ -11,22 +11,25 @@ by those handlers. This middleware ensures:
 2. Errors are logged with full context including request ID
 3. Debug information is included only in development mode
 4. Request ID is always included in error responses
+
+Note: This middleware uses pure ASGI pattern (not BaseHTTPMiddleware) to avoid
+response streaming issues that can cause 502 errors with reverse proxies.
+See: https://www.starlette.io/middleware/#pure-asgi-middleware
 """
 
 import logging
 import traceback
-from typing import Callable
 
-from fastapi import Request, Response
 from fastapi.responses import JSONResponse
-from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 from src.config import settings
 
 logger = logging.getLogger(__name__)
 
 
-class ErrorHandlingMiddleware(BaseHTTPMiddleware):
+class ErrorHandlingMiddleware:
     """Middleware for catching and formatting unhandled errors.
 
     This middleware complements FastAPI exception handlers by providing
@@ -76,25 +79,32 @@ class ErrorHandlingMiddleware(BaseHTTPMiddleware):
         }
     """
 
-    async def dispatch(
-        self,
-        request: Request,
-        call_next: Callable,
-    ) -> Response:
+    def __init__(self, app: ASGIApp) -> None:
+        """Initialize the middleware.
+
+        Args:
+            app: The ASGI application to wrap.
+        """
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         """Process request with error catching.
 
         Args:
-            request: The incoming HTTP request.
-            call_next: The next middleware/handler in the chain.
-
-        Returns:
-            Either the normal response or a formatted error response.
+            scope: The ASGI scope dictionary.
+            receive: The ASGI receive callable.
+            send: The ASGI send callable.
         """
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
         try:
-            response: Response = await call_next(request)
-            return response
+            await self.app(scope, receive, send)
         except Exception as exc:
-            return self._handle_exception(request, exc)
+            request = Request(scope, receive, send)
+            response = self._handle_exception(request, exc)
+            await response(scope, receive, send)
 
     def _handle_exception(self, request: Request, exc: Exception) -> JSONResponse:
         """Handle an exception and return formatted error response.
@@ -107,7 +117,9 @@ class ErrorHandlingMiddleware(BaseHTTPMiddleware):
             A JSONResponse with consistent error format.
         """
         # Get request ID if available (set by RequestLoggingMiddleware)
-        request_id = getattr(request.state, "request_id", "unknown")
+        # Check scope state first (pure ASGI pattern), then request.state
+        state = request.scope.get("state", {})
+        request_id = state.get("request_id") or getattr(request.state, "request_id", "unknown")
 
         # Log the error with full context
         logger.exception(

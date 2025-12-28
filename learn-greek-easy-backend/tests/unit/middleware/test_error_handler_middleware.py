@@ -493,12 +493,14 @@ class TestHandleExceptionHelper:
 
     @pytest.fixture
     def mock_request(self):
-        """Create mock request."""
+        """Create mock request with ASGI scope."""
         request = MagicMock(spec=Request)
         request.method = "GET"
         request.url.path = "/test/path"
         request.query_params = None
         request.state.request_id = "test-req-id"
+        # Pure ASGI middleware accesses request.scope for state
+        request.scope = {"state": {"request_id": "test-req-id"}}
         return request
 
     def test_handle_exception_returns_json_response(self, middleware, mock_request):

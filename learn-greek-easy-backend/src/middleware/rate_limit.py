@@ -17,6 +17,10 @@ Rate Limit Headers:
 - X-RateLimit-Remaining: Requests remaining in current window
 - X-RateLimit-Reset: Unix timestamp when window resets
 
+This middleware uses pure ASGI pattern (not BaseHTTPMiddleware) to avoid
+response streaming issues that can cause 502 errors with reverse proxies.
+See: https://www.starlette.io/middleware/#pure-asgi-middleware
+
 Usage:
     from src.middleware.rate_limit import RateLimitingMiddleware
 
@@ -31,11 +35,12 @@ Example Response Headers:
 import logging
 import time
 from dataclasses import dataclass
-from typing import Callable, Tuple
+from typing import Tuple
 
-from fastapi import Request, Response
 from fastapi.responses import JSONResponse
-from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.datastructures import MutableHeaders
+from starlette.requests import Request
+from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from src.config import settings
 from src.core.redis import get_redis
@@ -58,7 +63,7 @@ class RateLimitConfig:
     key_prefix: str = "ratelimit"
 
 
-class RateLimitingMiddleware(BaseHTTPMiddleware):
+class RateLimitingMiddleware:
     """Middleware for rate limiting API requests.
 
     Uses Redis Sorted Sets to implement a sliding window rate limiting
@@ -102,32 +107,38 @@ class RateLimitingMiddleware(BaseHTTPMiddleware):
         "/openapi.json",
     ]
 
-    async def dispatch(
-        self,
-        request: Request,
-        call_next: Callable,
-    ) -> Response:
+    def __init__(self, app: ASGIApp) -> None:
+        """Initialize the middleware.
+
+        Args:
+            app: The ASGI application to wrap.
+        """
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         """Process request with rate limiting.
 
         Args:
-            request: The incoming HTTP request.
-            call_next: The next middleware/handler in the chain.
-
-        Returns:
-            Either the normal response with rate limit headers,
-            or a 429 response if rate limit is exceeded.
+            scope: The ASGI scope dictionary.
+            receive: The ASGI receive callable.
+            send: The ASGI send callable.
         """
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
         # Skip if rate limiting is disabled or in test mode
         if not settings.feature_rate_limiting or settings.is_testing:
-            response: Response = await call_next(request)
-            return response
+            await self.app(scope, receive, send)
+            return
 
+        request = Request(scope, receive, send)
         path = request.url.path
 
         # Skip exempt paths
         if self._is_exempt(path):
-            response = await call_next(request)
-            return response
+            await self.app(scope, receive, send)
+            return
 
         # Get rate limit configuration for this path
         rate_config = self._get_rate_config(path)
@@ -142,8 +153,10 @@ class RateLimitingMiddleware(BaseHTTPMiddleware):
         )
 
         if not allowed:
-            # Rate limit exceeded
-            request_id = getattr(request.state, "request_id", "unknown")
+            # Rate limit exceeded - return 429 directly
+            # Get request_id from scope state (set by RequestLoggingMiddleware)
+            state = scope.get("state", {})
+            request_id = state.get("request_id") or getattr(request.state, "request_id", "unknown")
 
             logger.warning(
                 "Rate limit exceeded",
@@ -156,17 +169,22 @@ class RateLimitingMiddleware(BaseHTTPMiddleware):
                 },
             )
 
-            return self._rate_limit_response(rate_config, reset_at, request_id)
+            response = self._rate_limit_response(rate_config, reset_at, request_id)
+            await response(scope, receive, send)
+            return
+
+        # Add rate limit headers to successful response
+        async def send_wrapper(message: Message) -> None:
+            if message["type"] == "http.response.start":
+                headers = MutableHeaders(raw=list(message.get("headers", [])))
+                headers.append("X-RateLimit-Limit", str(rate_config.limit))
+                headers.append("X-RateLimit-Remaining", str(max(0, remaining)))
+                headers.append("X-RateLimit-Reset", str(int(reset_at)))
+                message = {**message, "headers": headers.raw}
+            await send(message)
 
         # Process request normally
-        response = await call_next(request)
-
-        # Add rate limit headers to response
-        response.headers["X-RateLimit-Limit"] = str(rate_config.limit)
-        response.headers["X-RateLimit-Remaining"] = str(max(0, remaining))
-        response.headers["X-RateLimit-Reset"] = str(int(reset_at))
-
-        return response
+        await self.app(scope, receive, send_wrapper)
 
     def _is_exempt(self, path: str) -> bool:
         """Check if path is exempt from rate limiting.
