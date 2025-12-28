@@ -1,3 +1,9 @@
+# Local Development Caddyfile
+# Use this for testing the production Caddy setup locally with docker-compose.yml
+# The regular Caddyfile uses dynamic DNS which only works on Railway
+#
+# This file is automatically mounted by docker-compose.yml
+
 :{$PORT:80}
 
 root * /srv
@@ -15,24 +21,13 @@ handle /health {
     respond "healthy" 200
 }
 
-# API proxy to backend with dynamic DNS resolution for Railway
-# Uses dynamic A record lookup with 30s refresh to handle backend IP changes
+# API proxy to backend (static upstream for local Docker network)
 handle /api/* {
-    reverse_proxy {
-        dynamic a {$BACKEND_HOST:backend.railway.internal} {$BACKEND_PORT:8080} {
-            refresh 30s
-        }
-
-        # Passive health checks (active health checks don't work with dynamic upstreams)
-        fail_duration 30s
-        max_fails 3
-        unhealthy_status 502 503 504
-
+    reverse_proxy backend:8000 {
         header_up X-Real-IP {remote_host}
         header_up X-Forwarded-For {remote_host}
         header_up X-Forwarded-Proto {scheme}
         header_up X-Forwarded-Host {host}
-
         transport http {
             read_timeout 120s
             write_timeout 120s
@@ -41,15 +36,7 @@ handle /api/* {
 }
 
 handle /docs {
-    reverse_proxy {
-        dynamic a {$BACKEND_HOST:backend.railway.internal} {$BACKEND_PORT:8080} {
-            refresh 30s
-        }
-
-        fail_duration 30s
-        max_fails 3
-        unhealthy_status 502 503 504
-
+    reverse_proxy backend:8000 {
         header_up X-Real-IP {remote_host}
         header_up X-Forwarded-For {remote_host}
         header_up X-Forwarded-Proto {scheme}
@@ -57,15 +44,7 @@ handle /docs {
 }
 
 handle /docs/* {
-    reverse_proxy {
-        dynamic a {$BACKEND_HOST:backend.railway.internal} {$BACKEND_PORT:8080} {
-            refresh 30s
-        }
-
-        fail_duration 30s
-        max_fails 3
-        unhealthy_status 502 503 504
-
+    reverse_proxy backend:8000 {
         header_up X-Real-IP {remote_host}
         header_up X-Forwarded-For {remote_host}
         header_up X-Forwarded-Proto {scheme}
@@ -73,15 +52,7 @@ handle /docs/* {
 }
 
 handle /redoc {
-    reverse_proxy {
-        dynamic a {$BACKEND_HOST:backend.railway.internal} {$BACKEND_PORT:8080} {
-            refresh 30s
-        }
-
-        fail_duration 30s
-        max_fails 3
-        unhealthy_status 502 503 504
-
+    reverse_proxy backend:8000 {
         header_up X-Real-IP {remote_host}
         header_up X-Forwarded-For {remote_host}
         header_up X-Forwarded-Proto {scheme}
@@ -89,15 +60,7 @@ handle /redoc {
 }
 
 handle /redoc/* {
-    reverse_proxy {
-        dynamic a {$BACKEND_HOST:backend.railway.internal} {$BACKEND_PORT:8080} {
-            refresh 30s
-        }
-
-        fail_duration 30s
-        max_fails 3
-        unhealthy_status 502 503 504
-
+    reverse_proxy backend:8000 {
         header_up X-Real-IP {remote_host}
         header_up X-Forwarded-For {remote_host}
         header_up X-Forwarded-Proto {scheme}
@@ -105,15 +68,7 @@ handle /redoc/* {
 }
 
 handle /openapi.json {
-    reverse_proxy {
-        dynamic a {$BACKEND_HOST:backend.railway.internal} {$BACKEND_PORT:8080} {
-            refresh 30s
-        }
-
-        fail_duration 30s
-        max_fails 3
-        unhealthy_status 502 503 504
-
+    reverse_proxy backend:8000 {
         header_up X-Real-IP {remote_host}
         header_up X-Forwarded-For {remote_host}
         header_up X-Forwarded-Proto {scheme}
