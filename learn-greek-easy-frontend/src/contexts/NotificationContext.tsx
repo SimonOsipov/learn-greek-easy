@@ -10,6 +10,7 @@ import React, {
 
 import log from '@/lib/logger';
 import * as notificationAPI from '@/services/notificationAPI';
+import { useAppStore } from '@/stores/appStore';
 import { useAuthStore, useHasHydrated } from '@/stores/authStore';
 import type { Notification } from '@/types/notification';
 
@@ -56,6 +57,8 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   // Get auth state from store
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const hasHydrated = useHasHydrated();
+  // Wait for auth to be validated with backend before making API calls
+  const authInitialized = useAppStore((state) => state.authInitialized);
 
   // Toast management
   const showToast = useCallback((notification: Notification) => {
@@ -195,9 +198,9 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
   }, []);
 
-  // Initial fetch when authenticated and hydrated
+  // Initial fetch when authenticated, hydrated, and auth validated with backend
   useEffect(() => {
-    if (hasHydrated && isAuthenticated) {
+    if (hasHydrated && isAuthenticated && authInitialized) {
       fetchNotifications(true);
     } else if (!isAuthenticated) {
       // Reset state when logged out
@@ -209,21 +212,21 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       previousUnreadCountRef.current = 0;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasHydrated, isAuthenticated]); // Depend on both hydration and auth state
+  }, [hasHydrated, isAuthenticated, authInitialized]); // Depend on hydration, auth state, and auth validation
 
   // Polling for new notifications - use ref to avoid recreating interval
   const refreshUnreadCountRef = useRef(refreshUnreadCount);
   refreshUnreadCountRef.current = refreshUnreadCount;
 
   useEffect(() => {
-    if (!hasHydrated || !isAuthenticated) return;
+    if (!hasHydrated || !isAuthenticated || !authInitialized) return;
 
     const interval = setInterval(() => {
       refreshUnreadCountRef.current();
     }, POLLING_INTERVAL);
 
     return () => clearInterval(interval);
-  }, [hasHydrated, isAuthenticated]); // Depend on both hydration and auth for stable interval
+  }, [hasHydrated, isAuthenticated, authInitialized]); // Depend on hydration, auth, and auth validation for stable interval
 
   const value = useMemo<NotificationContextValue>(
     () => ({

@@ -94,11 +94,12 @@ function AppContent() {
           <Route path="/unauthorized" element={<Unauthorized />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
+        {/* Achievement manager inside RouteGuard to wait for auth validation */}
+        <AchievementNotificationManager />
+        <NotificationToastContainer />
       </RouteGuard>
 
       <Toaster />
-      <AchievementNotificationManager />
-      <NotificationToastContainer />
     </div>
   );
 }
