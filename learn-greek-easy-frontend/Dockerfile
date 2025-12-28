@@ -50,7 +50,10 @@ RUN chmod +x /docker-entrypoint.sh
 # Railway sets PORT env var at runtime, default to 80
 # Default for local Docker Compose; Railway overrides via environment variable
 ENV PORT=80
-ENV BACKEND_URL=http://backend:8000
+# Dynamic DNS resolution for backend (Railway uses backend.railway.internal:8080)
+# For local development, override with BACKEND_HOST=backend BACKEND_PORT=8000
+ENV BACKEND_HOST=backend.railway.internal
+ENV BACKEND_PORT=8080
 
 # Note: No Docker HEALTHCHECK - Railway handles health checks via /health endpoint
 # Docker HEALTHCHECK uses build-time PORT value, not runtime, causing failures

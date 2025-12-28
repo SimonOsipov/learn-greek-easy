@@ -14,6 +14,12 @@ services:
       - "80:80"
     environment:
       - NODE_ENV=production
+      # Override backend settings for local Docker network (not Railway)
+      - BACKEND_HOST=backend
+      - BACKEND_PORT=8000
+    volumes:
+      # Use dev Caddyfile for local development (static upstream instead of dynamic DNS)
+      - ./learn-greek-easy-frontend/Caddyfile.dev:/etc/caddy/Caddyfile:ro
     depends_on:
       backend:
         condition: service_healthy
