@@ -243,10 +243,12 @@ jobs:
           echo "Files to deploy:"
           ls -la
 
-          # Deploy using railway up - this uploads local code
-          echo "Starting railway up for Backend..."
-          railway up --detach --service Backend
-          echo "Backend deployment initiated successfully"
+          # Deploy using railway up with --ci flag
+          # --ci waits for deployment to succeed or fail (includes health check)
+          echo "Starting railway up for Backend (waiting for health check)..."
+          railway up --ci --service Backend
+          echo "Backend deployment completed successfully"
+        timeout-minutes: 10
 
       - name: Deploy Frontend
         env:
@@ -266,15 +268,12 @@ jobs:
           echo "Files to deploy:"
           ls -la
 
-          # Deploy using railway up - this uploads local code
-          echo "Starting railway up for Frontend..."
-          railway up --detach --service Frontend
-          echo "Frontend deployment initiated successfully"
-
-      - name: Wait for deployments to start
-        run: |
-          echo "Waiting 15 seconds for deployments to initialize..."
-          sleep 15
+          # Deploy using railway up with --ci flag
+          # --ci waits for deployment to succeed or fail (includes health check)
+          echo "Starting railway up for Frontend (waiting for health check)..."
+          railway up --ci --service Frontend
+          echo "Frontend deployment completed successfully"
+        timeout-minutes: 10
 
       - name: Get deployment URLs
         id: urls

@@ -73,8 +73,18 @@ Required prod vars: `JWT_SECRET_KEY` (min 32 chars), `POSTGRES_PASSWORD`, `CORS_
 | DB connection refused | `docker ps --filter "name=learn-greek-postgres"` |
 | Port 5433 vs 5432 | Dev uses 5433, prod uses 5432 |
 
+## Deployment
+
+**Production**: Automatic on push to `main` via GitHub Actions (`deploy-production.yml`)
+**Dev/Preview**: Automatic on PR via GitHub Actions (`preview.yml`)
+
+Manual deploy: See [docs/deployment-guide.md](docs/deployment-guide.md)
+
+**Important**: Railway auto-deploy is DISABLED. All deploys go through GitHub Actions for sequential Backend -> Frontend deployment.
+
 ## Documentation
 
+- [Deployment Guide](docs/deployment-guide.md) - Sequential deploy, rollback, troubleshooting
 - [E2E Seeding](docs/e2e-seeding.md) - Test data seeding infrastructure
 - [CI/CD Labels](docs/ci-cd-labels.md) - PR labels for test control
 - [Docker Reference](docs/docker-reference.md) - Container names, ports, commands

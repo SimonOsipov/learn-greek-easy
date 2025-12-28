@@ -1,0 +1,230 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      skip_health_check:
+        description: 'Skip post-deploy health check'
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false  # Never cancel in-progress prod deploys
+
+env:
+  # Production environment URLs
+  PROD_FRONTEND_URL: https://learn-greek-frontend.up.railway.app
+  PROD_BACKEND_URL: https://backend-production-7429.up.railway.app
+
+permissions:
+  contents: read
+  deployments: write
+
+jobs:
+  # =============================================================================
+  # JOB 1: Pre-Deploy Validation
+  # Purpose: Ensure we're deploying from main branch with valid commit
+  # =============================================================================
+  pre-deploy-check:
+    name: Pre-Deploy Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Verify deployment source
+        run: |
+          echo "=== Pre-Deploy Validation ==="
+          echo "Branch: ${{ github.ref }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "Actor: ${{ github.actor }}"
+          echo "Event: ${{ github.event_name }}"
+
+          if [ "${{ github.ref }}" != "refs/heads/main" ]; then
+            echo "WARNING: Production deploys should be from main branch"
+            echo "Current ref: ${{ github.ref }}"
+          fi
+
+  # =============================================================================
+  # JOB 2: Deploy Backend
+  # Purpose: Deploy backend service and wait for health check
+  # =============================================================================
+  deploy-backend:
+    name: Deploy Backend
+    needs: pre-deploy-check
+    runs-on: ubuntu-latest
+    container: ghcr.io/railwayapp/cli:latest
+    environment:
+      name: production
+      url: ${{ env.PROD_BACKEND_URL }}
+    outputs:
+      deployment_id: ${{ steps.deploy.outputs.deployment_id }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Show deployment context
+        run: |
+          echo "=== Production Backend Deployment ==="
+          echo "Commit: ${{ github.sha }}"
+          echo "Short SHA: $(echo ${{ github.sha }} | cut -c1-7)"
+          echo "Railway CLI Version:"
+          railway --version
+
+      - name: Link to production environment
+        env:
+          RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
+        run: |
+          railway link \
+            --project ${{ secrets.RAILWAY_PROJECT_ID }} \
+            --environment production \
+            --workspace ${{ secrets.RAILWAY_WORKSPACE_ID }}
+
+      - name: Deploy Backend (wait for health)
+        id: deploy
+        env:
+          RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
+        run: |
+          cd learn-greek-easy-backend
+          echo "Starting production Backend deployment..."
+          echo "This will wait for the deployment to complete and pass health checks."
+
+          # Deploy with --ci flag to wait for health check
+          railway up --ci --service Backend
+
+          echo "Backend deployment completed successfully!"
+          echo "deployment_id=$(date +%s)" >> $GITHUB_OUTPUT
+        timeout-minutes: 10
+
+  # =============================================================================
+  # JOB 3: Deploy Frontend
+  # Purpose: Deploy frontend service after backend is healthy
+  # =============================================================================
+  deploy-frontend:
+    name: Deploy Frontend
+    needs: deploy-backend  # Sequential dependency - waits for backend
+    runs-on: ubuntu-latest
+    container: ghcr.io/railwayapp/cli:latest
+    environment:
+      name: production
+      url: ${{ env.PROD_FRONTEND_URL }}
+    outputs:
+      deployment_id: ${{ steps.deploy.outputs.deployment_id }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Show deployment context
+        run: |
+          echo "=== Production Frontend Deployment ==="
+          echo "Commit: ${{ github.sha }}"
+          echo "Backend deployment completed - proceeding with Frontend"
+          echo "Railway CLI Version:"
+          railway --version
+
+      - name: Link to production environment
+        env:
+          RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
+        run: |
+          railway link \
+            --project ${{ secrets.RAILWAY_PROJECT_ID }} \
+            --environment production \
+            --workspace ${{ secrets.RAILWAY_WORKSPACE_ID }}
+
+      - name: Deploy Frontend (wait for health)
+        id: deploy
+        env:
+          RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
+        run: |
+          cd learn-greek-easy-frontend
+          echo "Starting production Frontend deployment..."
+          echo "This will wait for the deployment to complete and pass health checks."
+
+          # Deploy with --ci flag to wait for health check
+          railway up --ci --service Frontend
+
+          echo "Frontend deployment completed successfully!"
+          echo "deployment_id=$(date +%s)" >> $GITHUB_OUTPUT
+        timeout-minutes: 10
+
+  # =============================================================================
+  # JOB 4: Post-Deploy Health Check
+  # Purpose: Verify both services are responding correctly
+  # =============================================================================
+  post-deploy-health:
+    name: Post-Deploy Health Check
+    needs: deploy-frontend
+    if: ${{ !inputs.skip_health_check }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Wait for DNS propagation
+        run: |
+          echo "Waiting 10 seconds for DNS propagation..."
+          sleep 10
+
+      - name: Run Health Checks
+        run: |
+          echo "=== Post-Deploy Health Verification ==="
+
+          # Backend health check
+          echo "Checking Backend health..."
+          BACKEND_HEALTH=$(curl -sf "${{ env.PROD_BACKEND_URL }}/health" || echo "FAILED")
+          echo "Backend /health: $BACKEND_HEALTH"
+
+          BACKEND_READY=$(curl -sf "${{ env.PROD_BACKEND_URL }}/health/ready" || echo "FAILED")
+          echo "Backend /health/ready: $BACKEND_READY"
+
+          # Frontend health check
+          echo "Checking Frontend health..."
+          FRONTEND_STATUS=$(curl -sf -o /dev/null -w "%{http_code}" "${{ env.PROD_FRONTEND_URL }}" || echo "000")
+          echo "Frontend HTTP status: $FRONTEND_STATUS"
+
+          # Verify results
+          if [ "$BACKEND_HEALTH" = "FAILED" ] || [ "$BACKEND_READY" = "FAILED" ]; then
+            echo "ERROR: Backend health check failed!"
+            exit 1
+          fi
+
+          if [ "$FRONTEND_STATUS" != "200" ]; then
+            echo "ERROR: Frontend health check failed! Status: $FRONTEND_STATUS"
+            exit 1
+          fi
+
+          echo "All health checks passed!"
+
+  # =============================================================================
+  # JOB 5: Deployment Summary
+  # Purpose: Report deployment status
+  # =============================================================================
+  summary:
+    name: Deployment Summary
+    needs: [deploy-backend, deploy-frontend, post-deploy-health]
+    if: always()
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Generate Summary
+        run: |
+          echo "## Production Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Component | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Backend | ${{ needs.deploy-backend.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Frontend | ${{ needs.deploy-frontend.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Health Check | ${{ needs.post-deploy-health.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit**: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**URLs**:" >> $GITHUB_STEP_SUMMARY
+          echo "- Frontend: ${{ env.PROD_FRONTEND_URL }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Backend: ${{ env.PROD_BACKEND_URL }}" >> $GITHUB_STEP_SUMMARY
