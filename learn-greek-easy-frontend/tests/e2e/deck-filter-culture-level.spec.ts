@@ -26,7 +26,7 @@ test.describe('Deck Filter - Culture/Level Interaction', () => {
   test.describe('Level Filter Disabled for Culture', () => {
     test('should disable level buttons when Culture deck type is selected', async ({ page }) => {
       // Find the Culture type button
-      const cultureButton = page.getByRole('button', { name: /culture/i });
+      const cultureButton = page.getByRole('button', { name: 'Culture', exact: true });
       await expect(cultureButton).toBeVisible();
 
       // Click Culture to filter
@@ -47,7 +47,7 @@ test.describe('Deck Filter - Culture/Level Interaction', () => {
 
     test('should enable level buttons when All deck type is selected', async ({ page }) => {
       // Ensure we start with "All" selected
-      const allButton = page.getByRole('button', { name: /^all$/i });
+      const allButton = page.getByRole('button', { name: 'All', exact: true });
       await expect(allButton).toBeVisible();
 
       // Verify level buttons are enabled
@@ -60,7 +60,7 @@ test.describe('Deck Filter - Culture/Level Interaction', () => {
 
     test('should enable level buttons when Vocabulary deck type is selected', async ({ page }) => {
       // Click Vocabulary type filter
-      const vocabButton = page.getByRole('button', { name: /vocabulary/i });
+      const vocabButton = page.getByRole('button', { name: 'Vocabulary', exact: true });
       await expect(vocabButton).toBeVisible();
       await vocabButton.click();
       await page.waitForTimeout(500);
@@ -86,7 +86,7 @@ test.describe('Deck Filter - Culture/Level Interaction', () => {
       await expect(a1Button).toHaveAttribute('aria-pressed', 'true');
 
       // Now switch to Culture
-      const cultureButton = page.getByRole('button', { name: /culture/i });
+      const cultureButton = page.getByRole('button', { name: 'Culture', exact: true });
       await cultureButton.click();
       await page.waitForTimeout(500);
 
@@ -111,7 +111,7 @@ test.describe('Deck Filter - Culture/Level Interaction', () => {
       await expect(b1Button).toHaveAttribute('aria-pressed', 'true');
 
       // Switch to Culture
-      const cultureButton = page.getByRole('button', { name: /culture/i });
+      const cultureButton = page.getByRole('button', { name: 'Culture', exact: true });
       await cultureButton.click();
       await page.waitForTimeout(500);
 
@@ -126,7 +126,7 @@ test.describe('Deck Filter - Culture/Level Interaction', () => {
   test.describe('Level Filters Restored After Culture', () => {
     test('should allow level selection after switching from Culture to Vocabulary', async ({ page }) => {
       // First switch to Culture
-      const cultureButton = page.getByRole('button', { name: /culture/i });
+      const cultureButton = page.getByRole('button', { name: 'Culture', exact: true });
       await cultureButton.click();
       await page.waitForTimeout(500);
 
@@ -135,7 +135,7 @@ test.describe('Deck Filter - Culture/Level Interaction', () => {
       await expect(a1Button).toBeDisabled();
 
       // Switch to Vocabulary
-      const vocabButton = page.getByRole('button', { name: /vocabulary/i });
+      const vocabButton = page.getByRole('button', { name: 'Vocabulary', exact: true });
       await vocabButton.click();
       await page.waitForTimeout(500);
 
@@ -150,12 +150,12 @@ test.describe('Deck Filter - Culture/Level Interaction', () => {
 
     test('should allow level selection after switching from Culture to All', async ({ page }) => {
       // Switch to Culture first
-      const cultureButton = page.getByRole('button', { name: /culture/i });
+      const cultureButton = page.getByRole('button', { name: 'Culture', exact: true });
       await cultureButton.click();
       await page.waitForTimeout(500);
 
       // Switch to All
-      const allButton = page.getByRole('button', { name: /^all$/i });
+      const allButton = page.getByRole('button', { name: 'All', exact: true });
       await allButton.click();
       await page.waitForTimeout(500);
 
@@ -180,7 +180,7 @@ test.describe('Deck Filter - Culture/Level Interaction', () => {
       await expect(levelLabel).toHaveClass(/text-gray-700/);
 
       // Switch to Culture
-      const cultureButton = page.getByRole('button', { name: /culture/i });
+      const cultureButton = page.getByRole('button', { name: 'Culture', exact: true });
       await cultureButton.click();
       await page.waitForTimeout(500);
 
@@ -190,7 +190,7 @@ test.describe('Deck Filter - Culture/Level Interaction', () => {
 
     test('should show tooltip on disabled level buttons', async ({ page }) => {
       // Switch to Culture
-      const cultureButton = page.getByRole('button', { name: /culture/i });
+      const cultureButton = page.getByRole('button', { name: 'Culture', exact: true });
       await cultureButton.click();
       await page.waitForTimeout(500);
 
@@ -213,7 +213,7 @@ test.describe('Deck Filter - Culture/Level Interaction', () => {
         await page.waitForTimeout(500);
 
         // Switch to Culture
-        const cultureButton = page.getByRole('button', { name: /culture/i });
+        const cultureButton = page.getByRole('button', { name: 'Culture', exact: true });
         await cultureButton.click();
         await page.waitForTimeout(500);
 
@@ -224,7 +224,7 @@ test.describe('Deck Filter - Culture/Level Interaction', () => {
 
     test('should not prevent other filter operations when level is disabled', async ({ page }) => {
       // Switch to Culture
-      const cultureButton = page.getByRole('button', { name: /culture/i });
+      const cultureButton = page.getByRole('button', { name: 'Culture', exact: true });
       await cultureButton.click();
       await page.waitForTimeout(500);
 
@@ -253,7 +253,7 @@ test.describe('Deck Filter - Culture/Level Interaction', () => {
   test.describe('Regression Prevention', () => {
     test('should not allow clicking disabled level buttons', async ({ page }) => {
       // Switch to Culture
-      const cultureButton = page.getByRole('button', { name: /culture/i });
+      const cultureButton = page.getByRole('button', { name: 'Culture', exact: true });
       await cultureButton.click();
       await page.waitForTimeout(500);
 
@@ -269,9 +269,9 @@ test.describe('Deck Filter - Culture/Level Interaction', () => {
     });
 
     test('should correctly toggle between deck types multiple times', async ({ page }) => {
-      const allButton = page.getByRole('button', { name: /^all$/i });
-      const cultureButton = page.getByRole('button', { name: /culture/i });
-      const vocabButton = page.getByRole('button', { name: /vocabulary/i });
+      const allButton = page.getByRole('button', { name: 'All', exact: true });
+      const cultureButton = page.getByRole('button', { name: 'Culture', exact: true });
+      const vocabButton = page.getByRole('button', { name: 'Vocabulary', exact: true });
       const a1Button = page.getByRole('button', { name: /^A1$/i });
 
       // All -> Culture
