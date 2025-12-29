@@ -87,6 +87,10 @@ export const DeckFilters: React.FC<DeckFiltersProps> = ({
     (filters.showPremiumOnly ? 1 : 0) +
     (filters.search.length > 0 ? 1 : 0);
 
+  // Level filter is disabled when culture deck type is selected
+  // Culture decks don't have CEFR levels
+  const isLevelFilterDisabled = deckType === 'culture';
+
   return (
     <div className="mb-6 space-y-4">
       {/* Search Input */}
@@ -123,17 +127,24 @@ export const DeckFilters: React.FC<DeckFiltersProps> = ({
 
         {/* Row 1: Level Filters */}
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm font-medium text-gray-700">{t('filters.level')}</span>
+          <span
+            className={`text-sm font-medium ${isLevelFilterDisabled ? 'text-gray-400' : 'text-gray-700'}`}
+            title={isLevelFilterDisabled ? t('filters.levelDisabledForCulture') : undefined}
+          >
+            {t('filters.level')}
+          </span>
           {CEFR_LEVEL_OPTIONS.map(({ value, color }) => (
             <Button
               key={value}
               variant={filters.levels.includes(value) ? 'default' : 'outline'}
               size="sm"
               onClick={() => handleLevelToggle(value)}
+              disabled={isLevelFilterDisabled}
               className={
                 filters.levels.includes(value) ? `${color} text-white hover:opacity-90` : ''
               }
               aria-pressed={filters.levels.includes(value)}
+              title={isLevelFilterDisabled ? t('filters.levelDisabledForCulture') : undefined}
             >
               {value}
             </Button>

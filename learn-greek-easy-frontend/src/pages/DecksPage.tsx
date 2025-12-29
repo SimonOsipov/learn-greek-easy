@@ -17,8 +17,17 @@ import { useDeckStore } from '@/stores/deckStore';
 
 export const DecksPage: React.FC = () => {
   const { t } = useTranslation('deck');
-  const { decks, filters, isLoading, error, fetchDecks, setFilters, clearFilters, clearError } =
-    useDeckStore();
+  const {
+    decks,
+    totalDecks,
+    filters,
+    isLoading,
+    error,
+    fetchDecks,
+    setFilters,
+    clearFilters,
+    clearError,
+  } = useDeckStore();
   const location = useLocation();
 
   // Fetch decks on mount and when navigating back from detail page
@@ -27,9 +36,6 @@ export const DecksPage: React.FC = () => {
       log.error('Failed to fetch decks:', err);
     });
   }, [fetchDecks, location.key]); // location.key changes on navigation
-
-  // Calculate total decks (would come from API in real implementation)
-  const totalDecks = 6; // Mock value - in production, fetch from API
 
   return (
     <div className="space-y-6 pb-8">
