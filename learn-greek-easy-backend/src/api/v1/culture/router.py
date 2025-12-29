@@ -480,15 +480,14 @@ async def submit_answer(
 
     # Queue achievement check in background
     if is_background_tasks_enabled():
-        # Get deck category from the response context (we need to fetch it)
-        deck_category = await service.get_question_deck_category(question_id)
+        # Use deck_category from response (already fetched in process_answer)
         background_tasks.add_task(
             check_culture_achievements_task,
             user_id=current_user.id,
             question_id=question_id,
             is_correct=response.is_correct,
             language=request.language,
-            deck_category=deck_category,
+            deck_category=response.deck_category,
             db_url=settings.database_url,
         )
 

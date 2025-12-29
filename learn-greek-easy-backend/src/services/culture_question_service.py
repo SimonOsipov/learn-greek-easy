@@ -252,8 +252,8 @@ class CultureQuestionService:
         # Step 1: Get culture answers count BEFORE processing (for daily goal check)
         culture_answers_before = await self.stats_repo.count_answers_today(user_id)
 
-        # Step 2: Get question
-        question = await self._get_question(question_id)
+        # Step 2: Get question with deck category in single JOIN query
+        question, deck_category = await self._get_question_with_deck_category(question_id)
 
         # Step 3: Determine correctness
         is_correct = selected_option == question.correct_option
@@ -294,10 +294,8 @@ class CultureQuestionService:
         stats.next_review_date = next_review
         stats.status = sm2_result.new_status
 
-        await self.db.flush()
-
         # Step 6.5: Record answer in CultureAnswerHistory for achievements
-        deck_category = await self.get_question_deck_category(question_id)
+        # Note: deck_category was already fetched with question in Step 2
         answer_history = CultureAnswerHistory(
             user_id=user_id,
             question_id=question_id,
@@ -308,7 +306,7 @@ class CultureQuestionService:
             deck_category=deck_category,
         )
         self.db.add(answer_history)
-        await self.db.flush()
+        # Note: No flush needed here - will be committed at the end of process_answer
 
         logger.debug(
             "Recorded culture answer history",
@@ -380,6 +378,7 @@ class CultureQuestionService:
             ),
             message=message,
             daily_goal_completed=daily_goal_completed,
+            deck_category=deck_category,
         )
 
     # =========================================================================
@@ -528,6 +527,36 @@ class CultureQuestionService:
             raise CultureQuestionNotFoundException(question_id=str(question_id))
 
         return question
+
+    async def _get_question_with_deck_category(
+        self, question_id: UUID
+    ) -> tuple[CultureQuestion, str]:
+        """Get question with its deck category in a single JOIN query.
+
+        This method optimizes the common pattern of fetching a question and
+        then needing its deck category for achievements or history tracking.
+
+        Args:
+            question_id: Question UUID to retrieve
+
+        Returns:
+            Tuple of (CultureQuestion, deck_category string)
+
+        Raises:
+            CultureQuestionNotFoundException: If question doesn't exist
+        """
+        query = (
+            select(CultureQuestion, CultureDeck.category)
+            .join(CultureDeck, CultureQuestion.deck_id == CultureDeck.id)
+            .where(CultureQuestion.id == question_id)
+        )
+        result = await self.db.execute(query)
+        row = result.one_or_none()
+
+        if not row:
+            raise CultureQuestionNotFoundException(question_id=str(question_id))
+
+        return row[0], row[1]
 
     async def get_question_deck_category(self, question_id: UUID) -> str:
         """Get the deck category for a question.

@@ -55,9 +55,13 @@ class XPService:
             db: Async database session
         """
         self.db = db
+        # Request-scoped cache to avoid duplicate DB queries within same request
+        self._user_xp_cache: dict[UUID, UserXP] = {}
 
     async def get_or_create_user_xp(self, user_id: UUID) -> UserXP:
         """Get user's XP record, creating if needed.
+
+        Uses request-scoped cache to avoid duplicate DB queries within same request.
 
         Args:
             user_id: The user's UUID
@@ -65,6 +69,10 @@ class XPService:
         Returns:
             The UserXP record for the user
         """
+        # Check cache first to avoid duplicate queries within same request
+        if user_id in self._user_xp_cache:
+            return self._user_xp_cache[user_id]
+
         result = await self.db.execute(select(UserXP).where(UserXP.user_id == user_id))
         user_xp = result.scalar_one_or_none()
 
@@ -77,6 +85,8 @@ class XPService:
             self.db.add(user_xp)
             await self.db.flush()
 
+        # Cache the result for future calls in this request
+        self._user_xp_cache[user_id] = user_xp
         return user_xp
 
     async def award_xp(

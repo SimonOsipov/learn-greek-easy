@@ -307,6 +307,10 @@ class CultureAnswerResponseWithSM2(BaseModel):
         default=False,
         description="True if this answer completed the user's daily goal",
     )
+    deck_category: str = Field(
+        ...,
+        description="Deck category for achievement tracking (history, geography, politics, culture, traditions, practical)",
+    )
 
 
 # ============================================================================
