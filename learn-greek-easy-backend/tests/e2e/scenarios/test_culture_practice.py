@@ -532,6 +532,7 @@ class TestCultureQuestionQueue(E2ETestCase):
         required_fields = [
             "deck_id",
             "deck_name",
+            "category",
             "total_due",
             "total_new",
             "total_in_queue",
@@ -539,6 +540,9 @@ class TestCultureQuestionQueue(E2ETestCase):
         ]
         for field in required_fields:
             assert field in data, f"Missing field: {field}"
+
+        # Verify category is a string
+        assert isinstance(data["category"], str)
 
     @pytest.mark.asyncio
     async def test_question_queue_question_structure(

@@ -256,6 +256,11 @@ class CultureQuestionQueue(BaseModel):
 
     deck_id: UUID = Field(..., description="Deck these questions belong to")
     deck_name: dict[str, str] = Field(..., description="Multilingual deck name {el, en, ru}")
+    category: str = Field(
+        ...,
+        max_length=50,
+        description="Deck category: history, geography, politics, culture, traditions, practical",
+    )
     total_due: int = Field(..., ge=0, description="Number of due questions in queue")
     total_new: int = Field(..., ge=0, description="Number of new questions in queue")
     total_in_queue: int = Field(..., ge=0, description="Total questions in this queue")
