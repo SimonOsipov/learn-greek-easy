@@ -31,8 +31,7 @@ export const DeckCard: React.FC<DeckCardProps> = ({
   cultureCategory,
 }) => {
   const { t } = useTranslation('deck');
-  const { titleGreek, title, level, category, cardCount, isPremium, progress, estimatedTime } =
-    deck;
+  const { titleGreek, title, level, category, cardCount, isPremium, progress } = deck;
 
   // Calculate completion percentage
   const completionPercent = progress
@@ -153,21 +152,12 @@ export const DeckCard: React.FC<DeckCardProps> = ({
         {showStats && (
           <div
             data-testid="deck-card-stats"
-            className="grid grid-cols-3 gap-2 border-t pt-3 text-center"
+            className="grid grid-cols-2 gap-2 border-t pt-3 text-center"
           >
             {/* Card Count */}
             <div>
               <p className="text-xs text-gray-600">{t('detail.cards')}</p>
               <p className="text-sm font-semibold text-gray-900">{cardCount}</p>
-            </div>
-
-            {/* Estimated Time */}
-            <div>
-              <p className="text-xs text-gray-600">{t('detail.estimatedTime')}</p>
-              <p className="text-sm font-semibold text-gray-900">
-                {estimatedTime}
-                {t('detail.minutes')}
-              </p>
             </div>
 
             {/* Completion or Mastery Rate */}

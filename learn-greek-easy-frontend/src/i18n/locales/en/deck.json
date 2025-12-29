@@ -23,7 +23,8 @@
     "completed": "Completed",
     "premiumOnly": "Premium Only",
     "clearAll": "Clear All",
-    "showing": "Showing {{count}} of {{total}} decks"
+    "showing": "Showing {{count}} of {{total}} decks",
+    "levelDisabledForCulture": "Level filter is not available for Culture decks"
   },
   "culture": {
     "badge": "Culture",
@@ -32,7 +33,8 @@
       "geography": "Geography",
       "politics": "Politics",
       "culture": "Culture",
-      "traditions": "Traditions"
+      "traditions": "Traditions",
+      "practical": "Practical"
     }
   },
   "levels": {
@@ -47,7 +49,6 @@
     "breadcrumb": "Decks",
     "statistics": "Deck Statistics",
     "totalCards": "Total Cards",
-    "estimatedTime": "Estimated Time",
     "dueToday": "Due Today",
     "masteryRate": "Mastery Rate",
     "yourProgress": "Your Progress",
@@ -73,8 +74,6 @@
     "browseAll": "Browse All Decks",
     "cards": "cards",
     "flashcards": "flashcards",
-    "minutes": "min",
-    "toComplete": "to complete",
     "cardsToReview": "cards to review",
     "mastered": "{{count}}/{{total}} mastered",
     "new": "New",
@@ -86,7 +85,7 @@
       "description": "This deck is only available to premium members. Upgrade your account to access all premium decks and advanced learning features."
     },
     "notStarted": {
-      "description": "This deck contains {{count}} flashcards. Estimated time to complete: {{time}} minutes."
+      "description": "This deck contains {{count}} flashcards. Start learning to track your progress."
     },
     "inProgress": {
       "cardsDue": "You have {{count}} cards due for review today.",

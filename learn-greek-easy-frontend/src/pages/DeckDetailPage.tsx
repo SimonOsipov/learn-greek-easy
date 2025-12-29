@@ -13,6 +13,7 @@ import {
   MoreVertical,
   RotateCcw,
 } from 'lucide-react';
+// Note: Clock is still used for "Due Today" stat
 import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 
@@ -285,21 +286,13 @@ const StatisticsSection: React.FC<StatisticsSectionProps> = ({ deck }) => {
         <CardTitle className="text-lg font-semibold">{t('detail.statistics')}</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
           {/* Total Cards */}
           <StatCard
             icon={<BookOpen className="h-5 w-5 text-blue-500" />}
             label={t('detail.totalCards')}
             value={deck.cardCount}
             subtext={t('detail.flashcards')}
-          />
-
-          {/* Estimated Time */}
-          <StatCard
-            icon={<Clock className="h-5 w-5 text-purple-500" />}
-            label={t('detail.estimatedTime')}
-            value={`${deck.estimatedTime}${t('detail.minutes')}`}
-            subtext={t('detail.toComplete')}
           />
 
           {/* Due Today (ONLY if deck has actual progress) */}
@@ -445,7 +438,6 @@ const ActionButtonsSection: React.FC<ActionButtonsSectionProps> = ({
             <p className="mx-auto mb-6 max-w-md text-sm text-gray-600">
               {t('detail.notStarted.description', {
                 count: deck.cardCount,
-                time: deck.estimatedTime,
               })}
             </p>
             <Button

@@ -191,6 +191,9 @@ interface DeckState {
   /** All available decks (fetched from API) */
   decks: Deck[];
 
+  /** Total number of decks before filtering (for display purposes) */
+  totalDecks: number;
+
   /** Currently selected deck for detail view */
   selectedDeck: Deck | null;
 
@@ -233,6 +236,7 @@ export const useDeckStore = create<DeckState>()(
     (set, get) => ({
       // Initial state
       decks: [],
+      totalDecks: 0,
       selectedDeck: null,
       filters: DEFAULT_FILTERS,
       isLoading: false,
@@ -294,6 +298,9 @@ export const useDeckStore = create<DeckState>()(
           // Merge both deck types
           let decks = [...vocabDecks, ...cultureDecks];
 
+          // Store total count before filtering for display purposes
+          const totalDecks = decks.length;
+
           // Apply client-side filters for multiple levels
           if (filters.levels.length > 1) {
             decks = decks.filter((deck) => filters.levels.includes(deck.level));
@@ -319,6 +326,7 @@ export const useDeckStore = create<DeckState>()(
 
           set({
             decks,
+            totalDecks,
             isLoading: false,
             error: null,
           });
@@ -330,6 +338,7 @@ export const useDeckStore = create<DeckState>()(
             isLoading: false,
             error: errorMessage,
             decks: [],
+            totalDecks: 0,
           });
 
           throw error;
@@ -407,10 +416,19 @@ export const useDeckStore = create<DeckState>()(
         const { filters, fetchDecks } = get();
 
         // Merge new filters with existing
-        const updatedFilters = {
+        let updatedFilters = {
           ...filters,
           ...newFilters,
         };
+
+        // Clear level filters when switching to culture deck type
+        // Culture decks don't have CEFR levels (A1, A2, B1, B2)
+        if (newFilters.deckType === 'culture') {
+          updatedFilters = {
+            ...updatedFilters,
+            levels: [],
+          };
+        }
 
         set({ filters: updatedFilters });
 

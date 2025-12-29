@@ -9,7 +9,7 @@
 
 import React, { useEffect, useState } from 'react';
 
-import { ChevronLeft, BookOpen, Clock, Target, AlertCircle, Play } from 'lucide-react';
+import { ChevronLeft, BookOpen, Target, AlertCircle, Play } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 
@@ -194,21 +194,13 @@ export function CultureDeckDetailPage() {
             <CardTitle className="text-lg font-semibold">{t('deck:detail.statistics')}</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-2">
               {/* Total Questions */}
               <StatCard
                 icon={<BookOpen className="h-5 w-5 text-blue-500" />}
                 label={t('culture:deck.questions')}
                 value={deck.question_count}
                 subtext={t('culture:deck.multipleChoice')}
-              />
-
-              {/* Estimated Time */}
-              <StatCard
-                icon={<Clock className="h-5 w-5 text-purple-500" />}
-                label={t('deck:detail.estimatedTime')}
-                value={`${Math.ceil(deck.question_count * 0.5)}${t('deck:detail.minutes')}`}
-                subtext={t('deck:detail.toComplete')}
               />
 
               {/* Mastery Rate (if started) */}
