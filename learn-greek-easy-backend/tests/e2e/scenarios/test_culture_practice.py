@@ -13,6 +13,7 @@ Run with:
     pytest tests/e2e/scenarios/test_culture_practice.py -v
 """
 
+import asyncio
 from uuid import uuid4
 
 import pytest
@@ -25,6 +26,24 @@ from tests.factories.culture import (
     CultureQuestionFactory,
     CultureQuestionStatsFactory,
 )
+
+# =============================================================================
+# Helper Functions
+# =============================================================================
+
+
+async def wait_for_background_processing(delay: float = 0.5) -> None:
+    """Wait for background tasks to complete processing.
+
+    After PERF-03, SM-2 calculations and progress updates happen in background
+    tasks. This helper provides a delay to allow background tasks to complete
+    before checking state that depends on them.
+
+    Args:
+        delay: Seconds to wait. Default 0.5s is typically sufficient.
+    """
+    await asyncio.sleep(delay)
+
 
 # =============================================================================
 # TestCultureDecksList - GET /api/v1/culture/decks
@@ -804,31 +823,17 @@ class TestCultureAnswerSubmission(E2ETestCase):
         assert response.status_code == 200
         data = response.json()
 
-        # Required fields
+        # Required fields for CultureAnswerResponseFast schema
+        # Note: sm2_result removed in PERF-03 (background processing)
         required_fields = [
             "is_correct",
             "correct_option",
             "xp_earned",
-            "sm2_result",
             "message",
             "deck_category",
         ]
         for field in required_fields:
             assert field in data, f"Missing field: {field}"
-
-        # SM2 result structure
-        sm2_fields = [
-            "success",
-            "question_id",
-            "previous_status",
-            "new_status",
-            "easiness_factor",
-            "interval",
-            "repetitions",
-            "next_review_date",
-        ]
-        for field in sm2_fields:
-            assert field in data["sm2_result"], f"Missing SM2 field: {field}"
 
     @pytest.mark.asyncio
     async def test_submit_answer_question_not_found(
@@ -956,13 +961,21 @@ class TestCultureAnswerSubmission(E2ETestCase):
         assert data["xp_earned"] >= 0
 
     @pytest.mark.asyncio
+    @pytest.mark.skip(
+        reason="SM-2 processing moved to background in PERF-03 - immediate state transitions via API response no longer available"
+    )
     async def test_submit_answer_sm2_updates_status(
         self,
         client: AsyncClient,
         fresh_user_session: UserSession,
         db_session: AsyncSession,
     ) -> None:
-        """Test that SM-2 algorithm updates question status."""
+        """Test that SM-2 algorithm updates question status.
+
+        NOTE: This test was skipped in PERF-03 because SM-2 processing now
+        happens in background tasks. The API response (CultureAnswerResponseFast)
+        no longer includes sm2_result. SM-2 updates are eventually consistent.
+        """
         deck = await CultureDeckFactory.create(session=db_session)
         question = await CultureQuestionFactory.create(
             session=db_session,
@@ -1493,7 +1506,11 @@ class TestCultureExtendedScenarios(E2ETestCase):
         fresh_user_session: UserSession,
         db_session: AsyncSession,
     ) -> None:
-        """Test answering the same question multiple times updates SM-2 stats."""
+        """Test answering the same question multiple times works correctly.
+
+        Note: SM-2 stats assertions removed in PERF-03 as sm2_result
+        is no longer included in the fast response schema.
+        """
         deck = await CultureDeckFactory.create(session=db_session)
         question = await CultureQuestionFactory.create(
             session=db_session,
@@ -1511,7 +1528,6 @@ class TestCultureExtendedScenarios(E2ETestCase):
         assert response1.status_code == 200
         data1 = response1.json()
         assert data1["is_correct"] is True
-        assert data1["sm2_result"]["previous_status"] == "new"
 
         # Second answer - correct again
         response2 = await client.post(
@@ -1522,8 +1538,7 @@ class TestCultureExtendedScenarios(E2ETestCase):
         assert response2.status_code == 200
         data2 = response2.json()
         assert data2["is_correct"] is True
-        # Status should have progressed
-        assert data2["sm2_result"]["repetitions"] > data1["sm2_result"]["repetitions"]
+        # Note: SM-2 repetition tracking removed - processing happens in background
 
     @pytest.mark.asyncio
     async def test_question_queue_with_new_questions(
@@ -1619,7 +1634,7 @@ class TestCultureExtendedScenarios(E2ETestCase):
         assert data["is_correct"] is False
         assert data["correct_option"] == 3
         assert data["xp_earned"] > 0  # Encouragement XP
-        assert data["sm2_result"]["success"] is True
+        # Note: sm2_result assertion removed in PERF-03 (background processing)
 
     @pytest.mark.asyncio
     async def test_fast_correct_answer_bonus_xp(
@@ -1767,6 +1782,9 @@ class TestCultureExtendedScenarios(E2ETestCase):
                 headers=fresh_user_session.headers,
             )
 
+        # Wait for background processing (PERF-03: SM-2 updates are async)
+        await wait_for_background_processing()
+
         # Get deck list - should show progress
         response = await client.get(
             "/api/v1/culture/decks",
@@ -1811,6 +1829,9 @@ class TestCultureExtendedScenarios(E2ETestCase):
                     json={"selected_option": 1, "time_taken": 3},
                     headers=fresh_user_session.headers,
                 )
+
+        # Wait for background processing (PERF-03: SM-2 updates are async)
+        await wait_for_background_processing()
 
         # Get deck detail
         response = await client.get(
@@ -2051,7 +2072,12 @@ class TestCultureExtendedScenarios(E2ETestCase):
         fresh_user_session: UserSession,
         db_session: AsyncSession,
     ) -> None:
-        """Test SM-2 stats are updated after answering questions correctly."""
+        """Test that answering questions correctly returns expected response.
+
+        Note: sm2_result assertions removed in PERF-03 because SM-2 processing
+        now happens in background tasks. The API returns CultureAnswerResponseFast
+        which does not include sm2_result.
+        """
         deck = await CultureDeckFactory.create(session=db_session, is_active=True)
         questions = []
         for i in range(5):
@@ -2073,9 +2099,9 @@ class TestCultureExtendedScenarios(E2ETestCase):
             )
             assert response.status_code == 200
             data = response.json()
-            # Check SM-2 result is included
-            assert "sm2_result" in data
-            assert data["sm2_result"]["success"] is True
+            # Verify basic response structure (sm2_result removed in PERF-03)
+            assert data["is_correct"] is True
+            assert "xp_earned" in data
 
     @pytest.mark.asyncio
     async def test_xp_accumulation_culture_questions(
