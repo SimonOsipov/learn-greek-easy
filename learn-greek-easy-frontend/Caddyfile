@@ -16,11 +16,20 @@ handle /health {
 }
 
 # API proxy to backend with dynamic DNS resolution for Railway
-# Uses dynamic A record lookup with 5s refresh to handle backend IP changes
+# Uses dynamic A record lookup with 1s refresh to handle backend IP changes
 handle /api/* {
     reverse_proxy {
         dynamic a {$BACKEND_HOST:backend.railway.internal} {$BACKEND_PORT:8080} {
-            refresh 5s
+            refresh 1s
+        }
+
+        # Buffer request body to prevent streaming race condition
+        # Ensures entire POST body is read before selecting upstream
+        request_buffers 1MB
+
+        # Allow retries for mutating methods (default is GET only)
+        lb_retry_match {
+            method POST PUT PATCH DELETE
         }
 
         # Load balancer retries - user never sees 502 from stale IPs
@@ -41,6 +50,8 @@ handle /api/* {
         transport http {
             read_timeout 120s
             write_timeout 120s
+            keepalive 30s
+            keepalive_idle_conns 10
         }
     }
 }
