@@ -37,7 +37,9 @@ import {
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useTrackEvent } from '@/hooks/useTrackEvent';
+import i18n from '@/i18n';
 import log from '@/lib/logger';
+import { cultureDeckAPI, type LocalizedText } from '@/services/cultureDeckAPI';
 import { useCultureSessionStore } from '@/stores/cultureSessionStore';
 import type {
   CultureQuestionResponse,
@@ -207,34 +209,39 @@ export function CulturePracticePage() {
     if (!deckId) return;
 
     try {
-      // Fetch deck info and questions from API
-      // TODO: Replace with actual API calls when backend is ready
-      // For now, we'll use mock data for demonstration
-      const mockQuestions: CultureQuestionResponse[] = [
-        {
-          id: '1',
-          question_text: {
-            el: 'Ποια ειναι η πρωτευουσα της Ελλαδας;',
-            en: 'What is the capital of Greece?',
-            ru: 'Какая столица Греции?',
-          },
-          options: [
-            { el: 'Θεσσαλονικη', en: 'Thessaloniki', ru: 'Салоники' },
-            { el: 'Αθηνα', en: 'Athens', ru: 'Афины' },
-            { el: 'Πατρα', en: 'Patras', ru: 'Патры' },
-            { el: 'Ηρακλειο', en: 'Heraklion', ru: 'Ираклион' },
-          ],
-          image_url: null,
-          order_index: 0,
-        },
-      ];
+      // Fetch questions from backend API
+      const queue = await cultureDeckAPI.getQuestionQueue(deckId, {
+        limit: 50,
+        include_new: true,
+        new_questions_limit: 20,
+      });
+
+      if (queue.questions.length === 0) {
+        // Handle empty queue - user has no due questions
+        log.info('No questions due for review');
+        return;
+      }
+
+      // Map backend response to frontend format
+      const questions: CultureQuestionResponse[] = queue.questions.map((q) => ({
+        id: q.id,
+        question_text: q.question_text,
+        options: q.options,
+        image_url: q.image_url,
+        order_index: q.order_index,
+      }));
 
       const config: CultureSessionConfig = {
         ...DEFAULT_SESSION_CONFIG,
-        questionCount: mockQuestions.length,
+        questionCount: questions.length,
       };
 
-      startSession(deckId, 'Greek History', 'history', mockQuestions, config);
+      // Get deck name in current language (fallback to 'en')
+      const lang = (i18n.language as keyof LocalizedText) || 'en';
+      const deckName = queue.deck_name[lang] || queue.deck_name.en;
+
+      // Use real deck name and category from API
+      startSession(deckId, deckName, queue.category, questions, config);
     } catch (err) {
       log.error('Failed to initialize session:', err);
     }
@@ -250,43 +257,50 @@ export function CulturePracticePage() {
       setIsSubmitting(true);
 
       try {
-        // Calculate time taken
+        // Calculate time taken (in milliseconds)
         const startedAt = currentQuestion.startedAt
           ? new Date(currentQuestion.startedAt).getTime()
           : Date.now();
-        const timeTaken = Date.now() - startedAt;
+        const timeTakenMs = Date.now() - startedAt;
 
-        // Submit answer to backend
-        // TODO: Replace with actual API call when backend is ready
-        const mockResponse: CultureAnswerResponse = {
-          is_correct: selectedOption === 2, // Mock: option 2 is correct
-          correct_option: 2,
-          xp_earned: selectedOption === 2 ? 10 : 2,
+        // Submit answer to backend API
+        // IMPORTANT: Convert milliseconds to seconds for API
+        const response = await cultureDeckAPI.submitAnswer(currentQuestion.question.id, {
+          selected_option: selectedOption,
+          time_taken: Math.round(timeTakenMs / 1000), // Convert ms to seconds
+          language: session.config.language,
+        });
+
+        // Map backend response to frontend format
+        const answerResponse: CultureAnswerResponse = {
+          is_correct: response.is_correct,
+          correct_option: response.correct_option,
+          xp_earned: response.xp_earned,
           new_stats: {
-            easiness_factor: 2.5,
-            interval: 1,
-            repetitions: 1,
-            next_review_date: new Date().toISOString(),
-            status: 'learning',
+            easiness_factor: response.sm2_result.easiness_factor,
+            interval: response.sm2_result.interval,
+            repetitions: response.sm2_result.repetitions,
+            next_review_date: response.sm2_result.next_review_date,
+            status: response.sm2_result.new_status as 'learning' | 'review' | 'mastered',
           },
         };
 
-        setLastAnswerResponse(mockResponse);
-        answerQuestion(selectedOption, mockResponse);
+        setLastAnswerResponse(answerResponse);
+        answerQuestion(selectedOption, answerResponse);
 
-        // Track answer event
+        // Track answer event (keep milliseconds for analytics)
         try {
           track('culture_question_answered', {
             deck_id: session.deckId,
             session_id: session.sessionId,
             question_id: currentQuestion.question.id,
             selected_option: selectedOption,
-            is_correct: mockResponse.is_correct,
-            time_ms: timeTaken,
-            xp_earned: mockResponse.xp_earned,
+            is_correct: response.is_correct,
+            time_ms: timeTakenMs,
+            xp_earned: response.xp_earned,
           });
         } catch {
-          // Silent failure
+          // Silent failure for analytics
         }
       } catch (err) {
         log.error('Failed to submit answer:', err);
