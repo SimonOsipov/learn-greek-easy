@@ -1490,6 +1490,9 @@ class TestCultureExtendedScenarios(E2ETestCase):
             assert data["is_correct"] is True
             assert data["xp_earned"] > 0
 
+        # Wait for background processing (PERF-03: SM-2 updates are async)
+        await wait_for_background_processing()
+
         # Check progress reflects all answers
         progress_response = await client.get(
             "/api/v1/culture/progress",
@@ -1783,7 +1786,7 @@ class TestCultureExtendedScenarios(E2ETestCase):
             )
 
         # Wait for background processing (PERF-03: SM-2 updates are async)
-        await wait_for_background_processing()
+        await wait_for_background_processing(delay=1.0)
 
         # Get deck list - should show progress
         response = await client.get(
@@ -1831,7 +1834,7 @@ class TestCultureExtendedScenarios(E2ETestCase):
                 )
 
         # Wait for background processing (PERF-03: SM-2 updates are async)
-        await wait_for_background_processing()
+        await wait_for_background_processing(delay=1.0)
 
         # Get deck detail
         response = await client.get(

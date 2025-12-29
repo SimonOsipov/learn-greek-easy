@@ -435,7 +435,12 @@ class TestSubmitAnswerEndpoint:
         culture_deck: CultureDeck,
         culture_questions: list[CultureQuestion],
     ):
-        """Full flow: submit answer -> verify stats updated."""
+        """Full flow: submit answer -> verify response structure.
+
+        Note: SM-2 result assertions removed in PERF-03 because SM-2 processing
+        now happens in background tasks. The API returns CultureAnswerResponseFast
+        which does not include sm2_result.
+        """
         question = culture_questions[0]
 
         response = await client.post(
@@ -447,23 +452,18 @@ class TestSubmitAnswerEndpoint:
         assert response.status_code == 200
         data = response.json()
 
-        # Check response structure
+        # Check response structure (CultureAnswerResponseFast schema)
         assert "is_correct" in data
         assert "correct_option" in data
         assert "xp_earned" in data
-        assert "sm2_result" in data
         assert "message" in data
+        assert "deck_category" in data
 
-        # Check SM2 result
-        sm2 = data["sm2_result"]
-        assert sm2["success"] is True
-        assert sm2["question_id"] == str(question.id)
-        assert sm2["previous_status"] == "new"
-        assert sm2["new_status"] in ["new", "learning", "review"]
-        assert "easiness_factor" in sm2
-        assert "interval" in sm2
-        assert "repetitions" in sm2
-        assert "next_review_date" in sm2
+        # Verify correct answer
+        assert data["is_correct"] is True
+        assert data["correct_option"] == 1
+        assert data["xp_earned"] >= 0
+        assert isinstance(data["message"], str)
 
     @pytest.mark.asyncio
     async def test_submit_answer_invalid_option_below_range(
