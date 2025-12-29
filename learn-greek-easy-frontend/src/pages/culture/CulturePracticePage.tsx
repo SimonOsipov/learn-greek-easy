@@ -271,19 +271,8 @@ export function CulturePracticePage() {
           language: session.config.language,
         });
 
-        // Map backend response to frontend format
-        const answerResponse: CultureAnswerResponse = {
-          is_correct: response.is_correct,
-          correct_option: response.correct_option,
-          xp_earned: response.xp_earned,
-          new_stats: {
-            easiness_factor: response.sm2_result.easiness_factor,
-            interval: response.sm2_result.interval,
-            repetitions: response.sm2_result.repetitions,
-            next_review_date: response.sm2_result.next_review_date,
-            status: response.sm2_result.new_status as 'learning' | 'review' | 'mastered',
-          },
-        };
+        // Use backend response directly - types are now aligned
+        const answerResponse: CultureAnswerResponse = response;
 
         setLastAnswerResponse(answerResponse);
         answerQuestion(selectedOption, answerResponse);
