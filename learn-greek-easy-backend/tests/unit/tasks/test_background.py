@@ -23,6 +23,7 @@ class TestModuleImports:
             invalidate_cache_task,
             is_background_tasks_enabled,
             log_analytics_task,
+            process_answer_side_effects_task,
             recalculate_progress_task,
         )
 
@@ -30,6 +31,7 @@ class TestModuleImports:
         assert callable(invalidate_cache_task)
         assert callable(is_background_tasks_enabled)
         assert callable(log_analytics_task)
+        assert callable(process_answer_side_effects_task)
         assert callable(recalculate_progress_task)
         assert isinstance(ANALYTICS_EVENTS, dict)
 
@@ -41,6 +43,7 @@ class TestModuleImports:
             invalidate_cache_task,
             is_background_tasks_enabled,
             log_analytics_task,
+            process_answer_side_effects_task,
             recalculate_progress_task,
         )
 
@@ -48,6 +51,7 @@ class TestModuleImports:
         assert callable(invalidate_cache_task)
         assert callable(is_background_tasks_enabled)
         assert callable(log_analytics_task)
+        assert callable(process_answer_side_effects_task)
         assert callable(recalculate_progress_task)
         assert isinstance(ANALYTICS_EVENTS, dict)
 
@@ -63,6 +67,7 @@ class TestModuleImports:
             "invalidate_cache_task",
             "is_background_tasks_enabled",
             "log_analytics_task",
+            "process_answer_side_effects_task",
             "recalculate_progress_task",
             # Scheduler (dedicated service)
             "get_scheduler",
