@@ -235,7 +235,7 @@ test.describe('Deck Filter - Culture/Level Interaction', () => {
         await page.waitForTimeout(800); // Wait for debounced search
 
         // Page should still be functional
-        await expect(page.getByRole('heading', { name: /decks/i })).toBeVisible();
+        await expect(page.getByTestId('decks-title')).toBeVisible();
       }
 
       // Should still be able to use status filter
@@ -245,7 +245,7 @@ test.describe('Deck Filter - Culture/Level Interaction', () => {
         await page.waitForTimeout(500);
 
         // Page should still be functional
-        await expect(page.getByRole('heading', { name: /decks/i })).toBeVisible();
+        await expect(page.getByTestId('decks-title')).toBeVisible();
       }
     });
   });
