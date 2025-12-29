@@ -447,6 +447,9 @@ async def submit_answer(
 
     This reduces perceived latency by ~83% (134ms -> 23ms).
 
+    When background tasks are disabled (e.g., in E2E tests), uses synchronous
+    processing to ensure stats are created immediately.
+
     Args:
         question_id: UUID of the question being answered
         request: Answer request with selected_option, time_taken, and language
@@ -467,17 +470,17 @@ async def submit_answer(
     """
     service = CultureQuestionService(db)
 
-    # Fast path: Single query, immediate response
-    response, context = await service.process_answer_fast(
-        user_id=current_user.id,
-        question_id=question_id,
-        selected_option=request.selected_option,
-        time_taken=request.time_taken,
-        language=request.language,
-    )
-
-    # Queue comprehensive background task for all deferred operations
     if is_background_tasks_enabled():
+        # Production: Fast path + background processing
+        response, context = await service.process_answer_fast(
+            user_id=current_user.id,
+            question_id=question_id,
+            selected_option=request.selected_option,
+            time_taken=request.time_taken,
+            language=request.language,
+        )
+
+        # Queue comprehensive background task for all deferred operations
         background_tasks.add_task(
             process_culture_answer_full_async,
             user_id=current_user.id,
@@ -491,7 +494,24 @@ async def submit_answer(
             db_url=settings.database_url,
         )
 
-    return response
+        return response
+    else:
+        # Testing/fallback: Synchronous processing (stats created immediately)
+        full_response = await service.process_answer(
+            user_id=current_user.id,
+            question_id=question_id,
+            selected_option=request.selected_option,
+            time_taken=request.time_taken,
+            language=request.language,
+        )
+
+        return CultureAnswerResponseFast(
+            is_correct=full_response.is_correct,
+            correct_option=full_response.correct_option,
+            xp_earned=full_response.xp_earned,
+            message=full_response.message,
+            deck_category=full_response.deck_category,
+        )
 
 
 @router.get(

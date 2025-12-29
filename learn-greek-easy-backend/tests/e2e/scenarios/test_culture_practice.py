@@ -13,7 +13,6 @@ Run with:
     pytest tests/e2e/scenarios/test_culture_practice.py -v
 """
 
-import asyncio
 from uuid import uuid4
 
 import pytest
@@ -26,24 +25,6 @@ from tests.factories.culture import (
     CultureQuestionFactory,
     CultureQuestionStatsFactory,
 )
-
-# =============================================================================
-# Helper Functions
-# =============================================================================
-
-
-async def wait_for_background_processing(delay: float = 0.5) -> None:
-    """Wait for background tasks to complete processing.
-
-    After PERF-03, SM-2 calculations and progress updates happen in background
-    tasks. This helper provides a delay to allow background tasks to complete
-    before checking state that depends on them.
-
-    Args:
-        delay: Seconds to wait. Default 0.5s is typically sufficient.
-    """
-    await asyncio.sleep(delay)
-
 
 # =============================================================================
 # TestCultureDecksList - GET /api/v1/culture/decks
@@ -1490,9 +1471,6 @@ class TestCultureExtendedScenarios(E2ETestCase):
             assert data["is_correct"] is True
             assert data["xp_earned"] > 0
 
-        # Wait for background processing (PERF-03: SM-2 updates are async)
-        await wait_for_background_processing()
-
         # Check progress reflects all answers
         progress_response = await client.get(
             "/api/v1/culture/progress",
@@ -1785,9 +1763,6 @@ class TestCultureExtendedScenarios(E2ETestCase):
                 headers=fresh_user_session.headers,
             )
 
-        # Wait for background processing (PERF-03: SM-2 updates are async)
-        await wait_for_background_processing(delay=1.0)
-
         # Get deck list - should show progress
         response = await client.get(
             "/api/v1/culture/decks",
@@ -1832,9 +1807,6 @@ class TestCultureExtendedScenarios(E2ETestCase):
                     json={"selected_option": 1, "time_taken": 3},
                     headers=fresh_user_session.headers,
                 )
-
-        # Wait for background processing (PERF-03: SM-2 updates are async)
-        await wait_for_background_processing(delay=1.0)
 
         # Get deck detail
         response = await client.get(
