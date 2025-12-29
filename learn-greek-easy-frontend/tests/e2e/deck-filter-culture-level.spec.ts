@@ -239,7 +239,7 @@ test.describe('Deck Filter - Culture/Level Interaction', () => {
       }
 
       // Should still be able to use status filter
-      const completedButton = page.getByRole('button', { name: /completed/i }).first();
+      const completedButton = page.getByRole('button', { name: 'Completed', exact: true });
       if (await completedButton.isVisible().catch(() => false)) {
         await completedButton.click();
         await page.waitForTimeout(500);
