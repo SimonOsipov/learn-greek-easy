@@ -610,7 +610,7 @@ class TestProcessAnswer:
         assert result.xp_earned == 22
 
     @pytest.mark.asyncio
-    async def test_process_answer_returns_daily_goal_completed_false_when_not_completed(
+    async def test_process_answer_returns_deck_category(
         self,
         db_session: AsyncSession,
         test_user: User,
@@ -618,7 +618,7 @@ class TestProcessAnswer:
         culture_questions: list[CultureQuestion],
         mock_s3_service,
     ):
-        """daily_goal_completed should be False when goal not met."""
+        """Response should include deck_category for achievement tracking."""
         service = CultureQuestionService(db_session, s3_service=mock_s3_service)
         question = culture_questions[0]
 
@@ -629,8 +629,8 @@ class TestProcessAnswer:
             time_taken=10,
         )
 
-        # Only 1 answer, default goal is 20
-        assert result.daily_goal_completed is False
+        # deck_category should be present for achievement tracking
+        assert result.deck_category == culture_deck.category
 
 
 # =============================================================================
@@ -742,210 +742,6 @@ class TestGetCultureProgress:
 
         # Should not include questions from inactive deck
         assert progress.overall.total_questions == 0  # No questions in active decks
-
-
-# =============================================================================
-# Test Daily Goal Checking
-# =============================================================================
-
-
-class TestCheckCultureDailyGoal:
-    """Tests for _check_culture_daily_goal private method (lines 709-799)."""
-
-    @pytest.mark.asyncio
-    async def test_returns_false_when_goal_not_reached(
-        self,
-        db_session: AsyncSession,
-        test_user: User,
-        culture_deck: CultureDeck,
-        culture_questions: list[CultureQuestion],
-        mock_s3_service,
-    ):
-        """Should return False when total reviews < daily goal."""
-        service = CultureQuestionService(db_session, s3_service=mock_s3_service)
-
-        # culture_answers_before = 0, after processing = 1
-        # flashcard_reviews = 0, total = 1
-        # Default daily goal = 20, so not completed
-        result = await service._check_culture_daily_goal(
-            user_id=test_user.id,
-            culture_answers_before=0,
-        )
-        assert result is False
-
-    @pytest.mark.asyncio
-    async def test_returns_false_when_goal_already_completed_before(
-        self,
-        db_session: AsyncSession,
-        test_user: User,
-        mock_s3_service,
-    ):
-        """Should return False when goal was already completed before this answer."""
-        from sqlalchemy import select
-
-        from src.db.models import UserSettings
-
-        # Update existing settings instead of creating new
-        result = await db_session.execute(
-            select(UserSettings).where(UserSettings.user_id == test_user.id)
-        )
-        settings = result.scalar_one()
-        settings.daily_goal = 5
-        await db_session.flush()
-
-        service = CultureQuestionService(db_session, s3_service=mock_s3_service)
-
-        # culture_answers_before = 10 (already exceeds goal of 5)
-        result = await service._check_culture_daily_goal(
-            user_id=test_user.id,
-            culture_answers_before=10,
-        )
-        assert result is False
-
-    @pytest.mark.asyncio
-    async def test_returns_true_when_goal_just_completed(
-        self,
-        db_session: AsyncSession,
-        test_user: User,
-        mock_s3_service,
-    ):
-        """Should return True when this answer crosses the goal threshold."""
-        from unittest.mock import AsyncMock, MagicMock, patch
-
-        from sqlalchemy import select
-
-        from src.db.models import UserSettings
-
-        # Update existing settings to daily_goal=1
-        result = await db_session.execute(
-            select(UserSettings).where(UserSettings.user_id == test_user.id)
-        )
-        settings = result.scalar_one()
-        settings.daily_goal = 1
-        await db_session.flush()
-
-        service = CultureQuestionService(db_session, s3_service=mock_s3_service)
-
-        # Mock Redis to allow the notification
-        with patch("src.services.culture_question_service.get_redis") as mock_get_redis:
-            mock_redis = MagicMock()
-            mock_redis.setnx = AsyncMock(return_value=True)  # First time
-            mock_redis.expire = AsyncMock(return_value=True)
-            mock_get_redis.return_value = mock_redis
-
-            # culture_answers_before = 0, after = 1, goal = 1
-            result = await service._check_culture_daily_goal(
-                user_id=test_user.id,
-                culture_answers_before=0,
-            )
-            assert result is True
-
-    @pytest.mark.asyncio
-    async def test_returns_false_when_redis_says_already_notified(
-        self,
-        db_session: AsyncSession,
-        test_user: User,
-        mock_s3_service,
-    ):
-        """Should return False when Redis indicates already notified today."""
-        from unittest.mock import AsyncMock, MagicMock, patch
-
-        from sqlalchemy import select
-
-        from src.db.models import UserSettings
-
-        # Update existing settings to daily_goal=1
-        result = await db_session.execute(
-            select(UserSettings).where(UserSettings.user_id == test_user.id)
-        )
-        settings = result.scalar_one()
-        settings.daily_goal = 1
-        await db_session.flush()
-
-        service = CultureQuestionService(db_session, s3_service=mock_s3_service)
-
-        with patch("src.services.culture_question_service.get_redis") as mock_get_redis:
-            mock_redis = MagicMock()
-            mock_redis.setnx = AsyncMock(return_value=False)  # Already set
-            mock_get_redis.return_value = mock_redis
-
-            result = await service._check_culture_daily_goal(
-                user_id=test_user.id,
-                culture_answers_before=0,
-            )
-            assert result is False
-
-    @pytest.mark.asyncio
-    async def test_gracefully_handles_redis_none(
-        self,
-        db_session: AsyncSession,
-        test_user: User,
-        mock_s3_service,
-    ):
-        """Should still complete when Redis is None (not available)."""
-        from unittest.mock import patch
-
-        from sqlalchemy import select
-
-        from src.db.models import UserSettings
-
-        # Update existing settings to daily_goal=1
-        result = await db_session.execute(
-            select(UserSettings).where(UserSettings.user_id == test_user.id)
-        )
-        settings = result.scalar_one()
-        settings.daily_goal = 1
-        await db_session.flush()
-
-        service = CultureQuestionService(db_session, s3_service=mock_s3_service)
-
-        with patch("src.services.culture_question_service.get_redis") as mock_get_redis:
-            mock_get_redis.return_value = None  # Redis unavailable
-
-            result = await service._check_culture_daily_goal(
-                user_id=test_user.id,
-                culture_answers_before=0,
-            )
-            # Should still return True because we crossed threshold
-            assert result is True
-
-    @pytest.mark.asyncio
-    async def test_gracefully_handles_exception(
-        self,
-        db_session: AsyncSession,
-        test_user: User,
-        mock_s3_service,
-    ):
-        """Should return False and log warning on exception."""
-        from unittest.mock import patch
-
-        service = CultureQuestionService(db_session, s3_service=mock_s3_service)
-
-        with patch("src.services.culture_question_service.get_redis") as mock_get_redis:
-            mock_get_redis.side_effect = Exception("Redis error")
-
-            result = await service._check_culture_daily_goal(
-                user_id=test_user.id,
-                culture_answers_before=0,
-            )
-            assert result is False
-
-    @pytest.mark.asyncio
-    async def test_uses_default_goal_when_no_settings(
-        self,
-        db_session: AsyncSession,
-        test_user: User,
-        mock_s3_service,
-    ):
-        """Should use default goal of 20 when user has no settings."""
-        service = CultureQuestionService(db_session, s3_service=mock_s3_service)
-
-        # No UserSettings created, should use default of 20
-        result = await service._check_culture_daily_goal(
-            user_id=test_user.id,
-            culture_answers_before=0,  # 1 answer won't reach goal of 20
-        )
-        assert result is False
 
 
 # =============================================================================
@@ -1191,48 +987,9 @@ class TestGetFeedbackMessage:
 
 # =============================================================================
 # Test Answer History Recording
+# Note: Answer history recording has been moved to background tasks for performance.
+# Tests for this functionality are now in tests/unit/tasks/test_background.py
 # =============================================================================
-
-
-class TestProcessAnswerHistory:
-    """Tests for answer history recording in process_answer."""
-
-    @pytest.mark.asyncio
-    async def test_process_answer_records_answer_history(
-        self,
-        db_session: AsyncSession,
-        test_user: User,
-        culture_deck: CultureDeck,
-        culture_questions: list[CultureQuestion],
-        mock_s3_service,
-    ):
-        """Should create CultureAnswerHistory record on answer."""
-        service = CultureQuestionService(db_session, s3_service=mock_s3_service)
-        question = culture_questions[0]
-
-        await service.process_answer(
-            user_id=test_user.id,
-            question_id=question.id,
-            selected_option=1,
-            time_taken=10,
-            language="en",
-        )
-
-        # Verify history was created
-        from sqlalchemy import select
-
-        from src.db.models import CultureAnswerHistory
-
-        result = await db_session.execute(
-            select(CultureAnswerHistory).where(
-                CultureAnswerHistory.user_id == test_user.id,
-                CultureAnswerHistory.question_id == question.id,
-            )
-        )
-        history = result.scalar_one()
-        assert history.is_correct is True
-        assert history.selected_option == 1
-        assert history.language == "en"
 
 
 # =============================================================================

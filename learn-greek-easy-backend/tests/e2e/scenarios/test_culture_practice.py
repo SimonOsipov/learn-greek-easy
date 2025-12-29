@@ -811,7 +811,7 @@ class TestCultureAnswerSubmission(E2ETestCase):
             "xp_earned",
             "sm2_result",
             "message",
-            "daily_goal_completed",
+            "deck_category",
         ]
         for field in required_fields:
             assert field in data, f"Missing field: {field}"

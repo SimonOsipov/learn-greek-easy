@@ -43,6 +43,7 @@ from src.tasks.background import (
     invalidate_cache_task,
     is_background_tasks_enabled,
     log_analytics_task,
+    process_answer_side_effects_task,
     recalculate_progress_task,
 )
 from src.tasks.scheduler import get_scheduler, setup_scheduler, shutdown_scheduler
@@ -55,6 +56,7 @@ __all__ = [
     "invalidate_cache_task",
     "is_background_tasks_enabled",
     "log_analytics_task",
+    "process_answer_side_effects_task",
     "recalculate_progress_task",
     # Scheduler (dedicated service)
     "get_scheduler",

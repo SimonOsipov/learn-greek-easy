@@ -345,6 +345,216 @@ async def recalculate_progress_task(
             await engine.dispose()
 
 
+async def process_answer_side_effects_task(
+    user_id: UUID,
+    question_id: UUID,
+    language: str,
+    is_correct: bool,
+    selected_option: int,
+    time_taken_seconds: int,
+    deck_category: str,
+    culture_answers_before: int,
+    db_url: str,
+) -> None:
+    """Process non-critical side effects in background after culture answer submission.
+
+    This task runs asynchronously after the culture answer response is sent.
+    It handles:
+    1. Record answer history to CultureAnswerHistory
+    2. Check daily goal completion and create notification
+    3. Award daily goal XP bonus if completed
+
+    The task creates its own database connection to avoid issues with
+    connection sharing across async contexts.
+
+    Args:
+        user_id: User who answered
+        question_id: Question that was answered
+        language: Language used (el, en, ru)
+        is_correct: Whether answer was correct
+        selected_option: Selected option (1-4)
+        time_taken_seconds: Time taken in seconds
+        deck_category: Category of the deck
+        culture_answers_before: Culture answers count before this answer
+        db_url: Database connection URL
+    """
+    if not is_background_tasks_enabled():
+        logger.debug("Background tasks disabled, skipping process_answer_side_effects_task")
+        return
+
+    logger.info(
+        "Starting answer side effects processing",
+        extra={
+            "user_id": str(user_id),
+            "question_id": str(question_id),
+            "is_correct": is_correct,
+            "task": "process_answer_side_effects",
+        },
+    )
+
+    engine = None
+    try:
+        # Create dedicated engine for this background task
+        engine = create_async_engine(db_url, pool_pre_ping=True)
+        async_session_factory = async_sessionmaker(
+            engine, class_=AsyncSession, expire_on_commit=False
+        )
+
+        async with async_session_factory() as session:
+            # Step 1: Record answer history
+            from src.db.models import CultureAnswerHistory
+
+            answer_history = CultureAnswerHistory(
+                user_id=user_id,
+                question_id=question_id,
+                language=language,
+                is_correct=is_correct,
+                selected_option=selected_option,
+                time_taken_seconds=time_taken_seconds,
+                deck_category=deck_category,
+            )
+            session.add(answer_history)
+
+            logger.debug(
+                "Recorded culture answer history in background",
+                extra={
+                    "user_id": str(user_id),
+                    "question_id": str(question_id),
+                    "is_correct": is_correct,
+                },
+            )
+
+            # Step 2: Check daily goal completion and notify
+            await _check_and_notify_daily_goal(
+                session=session,
+                user_id=user_id,
+                culture_answers_before=culture_answers_before,
+            )
+
+            await session.commit()
+
+        logger.info(
+            "Answer side effects processed successfully",
+            extra={
+                "user_id": str(user_id),
+                "question_id": str(question_id),
+            },
+        )
+
+    except Exception as e:
+        logger.error(
+            "Answer side effects processing failed",
+            extra={"user_id": str(user_id), "error": str(e)},
+            exc_info=True,
+        )
+    finally:
+        if engine is not None:
+            await engine.dispose()
+
+
+async def _check_and_notify_daily_goal(
+    session: AsyncSession,
+    user_id: UUID,
+    culture_answers_before: int,
+) -> bool:
+    """Check if daily goal was completed and send notification if so.
+
+    Uses Redis SETNX for duplicate notification prevention.
+
+    Args:
+        session: Database session
+        user_id: User's UUID
+        culture_answers_before: Culture answers count BEFORE this answer
+
+    Returns:
+        True if daily goal was just completed, False otherwise
+    """
+    from datetime import date
+
+    from sqlalchemy import select
+
+    from src.core.redis import get_redis
+    from src.db.models import UserSettings
+    from src.repositories.review import ReviewRepository
+    from src.services.notification_service import NotificationService
+    from src.services.xp_service import XPService
+
+    try:
+        # Get user's daily goal setting
+        result = await session.execute(select(UserSettings).where(UserSettings.user_id == user_id))
+        user_settings = result.scalar_one_or_none()
+        daily_goal = user_settings.daily_goal if user_settings else 20  # Default
+
+        # Get flashcard reviews today
+        review_repo = ReviewRepository(session)
+        flashcard_reviews = await review_repo.count_reviews_today(user_id)
+
+        # Calculate total reviews (flashcards + culture answers)
+        culture_answers_after = culture_answers_before + 1  # Include current answer
+        total_reviews_after = flashcard_reviews + culture_answers_after
+        total_reviews_before = flashcard_reviews + culture_answers_before
+
+        # Check if we just crossed the threshold
+        if total_reviews_before >= daily_goal:
+            # Already completed goal before this answer
+            return False
+
+        if total_reviews_after < daily_goal:
+            # Still haven't reached goal
+            return False
+
+        # We just crossed the threshold! Check Redis for duplicate prevention
+        redis = get_redis()
+        if redis:
+            cache_key = f"daily_goal_notified:{user_id}:{date.today().isoformat()}"
+
+            # Use SETNX (set if not exists) for atomic check-and-set
+            was_set = await redis.setnx(cache_key, "1")
+            if not was_set:
+                # Already notified today
+                logger.debug(
+                    "Daily goal notification already sent",
+                    extra={"user_id": str(user_id)},
+                )
+                return False
+
+            # Set expiry (24 hours to be safe, will auto-cleanup)
+            await redis.expire(cache_key, 86400)
+
+        # Create notification
+        notification_service = NotificationService(session)
+        await notification_service.notify_daily_goal_complete(
+            user_id=user_id,
+            reviews_completed=total_reviews_after,
+        )
+
+        # Award daily goal XP bonus
+        xp_service = XPService(session)
+        await xp_service.award_daily_goal_xp(user_id)
+
+        logger.info(
+            "Daily goal completed via culture answer (background)",
+            extra={
+                "user_id": str(user_id),
+                "total_reviews": total_reviews_after,
+                "daily_goal": daily_goal,
+            },
+        )
+
+        return True
+
+    except Exception as e:
+        # Log error but don't fail the background task
+        logger.warning(
+            "Failed to check daily goal in background",
+            extra={
+                "user_id": str(user_id),
+                "error": str(e),
+            },
+        )
+        return False
+
+
 async def check_culture_achievements_task(
     user_id: UUID,
     question_id: UUID,

@@ -48,7 +48,11 @@ from src.schemas.culture import (
     CultureQuestionUpdate,
 )
 from src.services import CultureDeckService, CultureQuestionService
-from src.tasks import check_culture_achievements_task, is_background_tasks_enabled
+from src.tasks import (
+    check_culture_achievements_task,
+    is_background_tasks_enabled,
+    process_answer_side_effects_task,
+)
 
 router = APIRouter(
     # Note: prefix is set by parent router in v1/router.py
@@ -447,7 +451,8 @@ async def submit_answer(
 
     Processes the answer through the SM-2 algorithm and updates the user's
     statistics for this question. Creates statistics on first answer.
-    Records answer history and queues achievement check in background.
+    Non-critical operations (answer history, daily goal check) are queued
+    in background tasks for faster response times.
 
     Args:
         question_id: UUID of the question being answered
@@ -469,7 +474,10 @@ async def submit_answer(
     """
     service = CultureQuestionService(db)
 
-    # Process the answer (includes recording to CultureAnswerHistory)
+    # Get culture answers count BEFORE processing (for daily goal check in background)
+    culture_answers_before = await service.stats_repo.count_answers_today(current_user.id)
+
+    # Process the answer (critical path: SM-2 calculation, XP award, stats update)
     response = await service.process_answer(
         user_id=current_user.id,
         question_id=question_id,
@@ -478,9 +486,23 @@ async def submit_answer(
         language=request.language,
     )
 
-    # Queue achievement check in background
+    # Queue background tasks for non-critical operations
     if is_background_tasks_enabled():
-        # Use deck_category from response (already fetched in process_answer)
+        # Task 1: Process answer side effects (history recording, daily goal check)
+        background_tasks.add_task(
+            process_answer_side_effects_task,
+            user_id=current_user.id,
+            question_id=question_id,
+            language=request.language,
+            is_correct=response.is_correct,
+            selected_option=request.selected_option,
+            time_taken_seconds=request.time_taken,
+            deck_category=response.deck_category,
+            culture_answers_before=culture_answers_before,
+            db_url=settings.database_url,
+        )
+
+        # Task 2: Check achievements
         background_tasks.add_task(
             check_culture_achievements_task,
             user_id=current_user.id,

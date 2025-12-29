@@ -303,10 +303,6 @@ class CultureAnswerResponseWithSM2(BaseModel):
     xp_earned: int = Field(..., ge=0, description="XP awarded for this answer")
     sm2_result: SM2QuestionResult = Field(..., description="SM-2 algorithm result")
     message: Optional[str] = Field(None, description="Feedback message for UI")
-    daily_goal_completed: bool = Field(
-        default=False,
-        description="True if this answer completed the user's daily goal",
-    )
     deck_category: str = Field(
         ...,
         description="Deck category for achievement tracking (history, geography, politics, culture, traditions, practical)",
