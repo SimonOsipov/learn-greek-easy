@@ -153,8 +153,8 @@ test.describe('Accessibility - Protected Pages', () => {
   test('Review session should have no accessibility violations', async ({ page }) => {
     await page.goto('/decks');
 
-    // Wait for page to load
-    await page.waitForSelector('h1, h2', { timeout: 10000 });
+    // Wait for decks page React content to load (not LCP shell)
+    await expect(page.locator('[data-testid="decks-title"]')).toBeVisible({ timeout: 10000 });
 
     // Look for Greek vocabulary deck
     const deckHeading = page.getByRole('heading', { name: /greek.*vocabulary/i });
