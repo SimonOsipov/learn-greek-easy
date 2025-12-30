@@ -89,6 +89,34 @@ function getApiBaseUrl(): string {
 }
 
 /**
+ * Wait for the application to be fully loaded and ready for interaction.
+ *
+ * This handles three scenarios:
+ * 1. Fast (local): Loading never appears - we fall through after short timeout
+ * 2. Normal: Loading appears quickly - we wait for it to disappear
+ * 3. Slow (CI): Loading appears after a delay - waitFor catches it within timeout
+ *
+ * @param page - Playwright page object
+ * @param timeout - Maximum time to wait (default: 30000ms for CI environments)
+ */
+export async function waitForAppFullyLoaded(page: Page, timeout = 30000): Promise<void> {
+  // Step 1: Wait for React to hydrate and auth check to complete
+  await page.waitForSelector('[data-app-ready="true"]', {
+    timeout,
+    state: 'attached'
+  });
+
+  // Step 2: Wait for PageLoader Suspense fallback to resolve (if visible)
+  const pageLoader = page.locator('[data-testid="page-loader"]');
+  try {
+    await pageLoader.waitFor({ state: 'visible', timeout: 1000 });
+    await pageLoader.waitFor({ state: 'hidden', timeout: 15000 });
+  } catch {
+    // PageLoader never appeared (fast load) - fine
+  }
+}
+
+/**
  * Login via UI with robust error handling
  *
  * Use this for:
@@ -106,6 +134,9 @@ export async function loginViaUI(
 ): Promise<void> {
   // Navigate to login page
   await page.goto('/login');
+
+  // Wait for app to be fully loaded before interacting
+  await waitForAppFullyLoaded(page);
 
   // Wait for login form to be ready
   await page.waitForSelector('[data-testid="login-card"]', { timeout: 10000 });

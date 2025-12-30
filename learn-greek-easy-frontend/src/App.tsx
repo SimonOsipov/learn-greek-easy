@@ -1,12 +1,13 @@
-import { useEffect } from 'react';
+import { Suspense, useEffect } from 'react';
 
-import { GoogleOAuthProvider } from '@react-oauth/google';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 
+import { AuthRoutesWrapper } from '@/components/auth/AuthRoutesWrapper';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { PublicRoute } from '@/components/auth/PublicRoute';
 import { RouteGuard } from '@/components/auth/RouteGuard';
-import { ErrorBoundary } from '@/components/errors';
+import { ChunkErrorBoundary, ErrorBoundary } from '@/components/errors';
+import { PageLoader } from '@/components/feedback';
 import { AppLayout } from '@/components/layout';
 import { NotificationToastContainer } from '@/components/notifications';
 import { Toaster } from '@/components/ui/toaster';
@@ -15,27 +16,90 @@ import { AchievementNotificationManager } from '@/components/xp';
 import { LanguageProvider } from '@/contexts/LanguageContext';
 import { LayoutProvider } from '@/contexts/LayoutContext';
 import { NotificationProvider } from '@/contexts/NotificationContext';
-import AchievementsPage from '@/pages/AchievementsPage';
-import ActivityFeedTest from '@/pages/ActivityFeedTest';
-import AdminPage from '@/pages/AdminPage';
-import { ForgotPassword } from '@/pages/auth/ForgotPassword';
-import { Login } from '@/pages/auth/Login';
-import { Register } from '@/pages/auth/Register';
-import { CultureDeckDetailPage } from '@/pages/culture/CultureDeckDetailPage';
-import { CulturePracticePage } from '@/pages/culture/CulturePracticePage';
-import { CultureSessionSummaryPage } from '@/pages/culture/CultureSessionSummaryPage';
-import { Dashboard } from '@/pages/Dashboard';
-import { DeckDetailPage } from '@/pages/DeckDetailPage';
-import { DecksPage } from '@/pages/DecksPage';
-import { FeedbackPage } from '@/pages/FeedbackPage';
-import { FlashcardReviewPage } from '@/pages/FlashcardReviewPage';
-import { NotFound } from '@/pages/NotFound';
-import { Profile } from '@/pages/Profile';
-import { SessionSummaryPage } from '@/pages/SessionSummaryPage';
-import Statistics from '@/pages/Statistics';
-import { Unauthorized } from '@/pages/Unauthorized';
+import { lazyWithRetry } from '@/lib/lazyWithRetry';
 import { PostHogProvider } from '@/providers';
 import { useAppStore, selectIsReady } from '@/stores/appStore';
+
+// ============================================================================
+// LAZY-LOADED PAGE COMPONENTS
+// ============================================================================
+// All page components are loaded dynamically to enable route-level code splitting.
+// This reduces the initial bundle size and improves Time to Interactive (TTI).
+//
+// Named exports require the .then(m => ({ default: m.ExportName })) pattern.
+// Default exports can use the simpler direct import syntax.
+// ============================================================================
+
+// Auth pages (wrapped with AuthRoutesWrapper for Google OAuth)
+const Login = lazyWithRetry(() => import('@/pages/auth/Login').then((m) => ({ default: m.Login })));
+const Register = lazyWithRetry(() =>
+  import('@/pages/auth/Register').then((m) => ({ default: m.Register }))
+);
+const ForgotPassword = lazyWithRetry(() =>
+  import('@/pages/auth/ForgotPassword').then((m) => ({ default: m.ForgotPassword }))
+);
+
+// Main dashboard and navigation pages
+const Dashboard = lazyWithRetry(() =>
+  import('@/pages/Dashboard').then((m) => ({ default: m.Dashboard }))
+);
+const DecksPage = lazyWithRetry(() =>
+  import('@/pages/DecksPage').then((m) => ({ default: m.DecksPage }))
+);
+const DeckDetailPage = lazyWithRetry(() =>
+  import('@/pages/DeckDetailPage').then((m) => ({ default: m.DeckDetailPage }))
+);
+
+// User pages
+const Profile = lazyWithRetry(() =>
+  import('@/pages/Profile').then((m) => ({ default: m.Profile }))
+);
+const FeedbackPage = lazyWithRetry(() =>
+  import('@/pages/FeedbackPage').then((m) => ({ default: m.FeedbackPage }))
+);
+
+// Review/practice pages (full-screen experience)
+const FlashcardReviewPage = lazyWithRetry(() =>
+  import('@/pages/FlashcardReviewPage').then((m) => ({ default: m.FlashcardReviewPage }))
+);
+const SessionSummaryPage = lazyWithRetry(() =>
+  import('@/pages/SessionSummaryPage').then((m) => ({ default: m.SessionSummaryPage }))
+);
+
+// Culture deck pages
+const CultureDeckDetailPage = lazyWithRetry(() =>
+  import('@/pages/culture/CultureDeckDetailPage').then((m) => ({
+    default: m.CultureDeckDetailPage,
+  }))
+);
+const CulturePracticePage = lazyWithRetry(() =>
+  import('@/pages/culture/CulturePracticePage').then((m) => ({ default: m.CulturePracticePage }))
+);
+const CultureSessionSummaryPage = lazyWithRetry(() =>
+  import('@/pages/culture/CultureSessionSummaryPage').then((m) => ({
+    default: m.CultureSessionSummaryPage,
+  }))
+);
+
+// Statistics page (loads recharts chunk)
+const Statistics = lazyWithRetry(() => import('@/pages/Statistics'));
+
+// Achievements page
+const AchievementsPage = lazyWithRetry(() => import('@/pages/AchievementsPage'));
+
+// Admin page (requires admin role)
+const AdminPage = lazyWithRetry(() => import('@/pages/AdminPage'));
+
+// Dev/test pages
+const ActivityFeedTest = lazyWithRetry(() => import('@/pages/ActivityFeedTest'));
+
+// Error pages
+const NotFound = lazyWithRetry(() =>
+  import('@/pages/NotFound').then((m) => ({ default: m.NotFound }))
+);
+const Unauthorized = lazyWithRetry(() =>
+  import('@/pages/Unauthorized').then((m) => ({ default: m.Unauthorized }))
+);
 
 function AppContent() {
   const isAppReady = useAppStore(selectIsReady);
@@ -48,52 +112,63 @@ function AppContent() {
   return (
     <div data-app-ready={isAppReady}>
       <RouteGuard>
-        <Routes>
-          {/* Public Routes - redirect to dashboard if authenticated */}
-          <Route element={<PublicRoute />}>
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
-          </Route>
+        <ChunkErrorBoundary>
+          <Suspense fallback={<PageLoader />}>
+            <Routes>
+              {/* Public Routes - redirect to dashboard if authenticated */}
+              {/* Wrapped with AuthRoutesWrapper to provide Google OAuth only where needed */}
+              <Route
+                element={
+                  <AuthRoutesWrapper>
+                    <PublicRoute />
+                  </AuthRoutesWrapper>
+                }
+              >
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
+              </Route>
 
-          {/* Protected Routes - require authentication */}
-          <Route element={<ProtectedRoute />}>
-            <Route path="/" element={<AppLayout />}>
-              <Route index element={<Dashboard />} />
-              <Route path="dashboard" element={<Navigate to="/" replace />} />
-              <Route path="decks" element={<DecksPage />} />
-              <Route path="decks/:id" element={<DeckDetailPage />} />
-              <Route path="statistics" element={<Statistics />} />
-              <Route path="stats" element={<Navigate to="/statistics" replace />} />
-              <Route path="profile" element={<Profile />} />
-              <Route path="achievements" element={<AchievementsPage />} />
-              <Route path="feedback" element={<FeedbackPage />} />
-              <Route path="activity-feed-test" element={<ActivityFeedTest />} />
-            </Route>
-            {/* Review page outside AppLayout for full-screen experience */}
-            <Route path="decks/:deckId/review" element={<FlashcardReviewPage />} />
-            {/* Session summary page outside AppLayout for full-screen experience */}
-            <Route path="decks/:deckId/summary" element={<SessionSummaryPage />} />
-            {/* Culture deck detail page inside AppLayout */}
-            <Route path="culture/decks/:id" element={<AppLayout />}>
-              <Route index element={<CultureDeckDetailPage />} />
-            </Route>
-            {/* Culture practice pages outside AppLayout for full-screen immersive experience */}
-            <Route path="culture/:deckId/practice" element={<CulturePracticePage />} />
-            <Route path="culture/:deckId/summary" element={<CultureSessionSummaryPage />} />
-          </Route>
+              {/* Protected Routes - require authentication */}
+              <Route element={<ProtectedRoute />}>
+                <Route path="/" element={<AppLayout />}>
+                  <Route index element={<Dashboard />} />
+                  <Route path="dashboard" element={<Navigate to="/" replace />} />
+                  <Route path="decks" element={<DecksPage />} />
+                  <Route path="decks/:id" element={<DeckDetailPage />} />
+                  <Route path="statistics" element={<Statistics />} />
+                  <Route path="stats" element={<Navigate to="/statistics" replace />} />
+                  <Route path="profile" element={<Profile />} />
+                  <Route path="achievements" element={<AchievementsPage />} />
+                  <Route path="feedback" element={<FeedbackPage />} />
+                  <Route path="activity-feed-test" element={<ActivityFeedTest />} />
+                </Route>
+                {/* Review page outside AppLayout for full-screen experience */}
+                <Route path="decks/:deckId/review" element={<FlashcardReviewPage />} />
+                {/* Session summary page outside AppLayout for full-screen experience */}
+                <Route path="decks/:deckId/summary" element={<SessionSummaryPage />} />
+                {/* Culture deck detail page inside AppLayout */}
+                <Route path="culture/decks/:id" element={<AppLayout />}>
+                  <Route index element={<CultureDeckDetailPage />} />
+                </Route>
+                {/* Culture practice pages outside AppLayout for full-screen immersive experience */}
+                <Route path="culture/:deckId/practice" element={<CulturePracticePage />} />
+                <Route path="culture/:deckId/summary" element={<CultureSessionSummaryPage />} />
+              </Route>
 
-          {/* Admin Routes - require admin role */}
-          <Route element={<ProtectedRoute requiredRole="admin" />}>
-            <Route path="/admin" element={<AppLayout />}>
-              <Route index element={<AdminPage />} />
-            </Route>
-          </Route>
+              {/* Admin Routes - require admin role */}
+              <Route element={<ProtectedRoute requiredRole="admin" />}>
+                <Route path="/admin" element={<AppLayout />}>
+                  <Route index element={<AdminPage />} />
+                </Route>
+              </Route>
 
-          {/* Error Pages */}
-          <Route path="/unauthorized" element={<Unauthorized />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+              {/* Error Pages */}
+              <Route path="/unauthorized" element={<Unauthorized />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Suspense>
+        </ChunkErrorBoundary>
         {/* Achievement manager inside RouteGuard to wait for auth validation */}
         <AchievementNotificationManager />
         <NotificationToastContainer />
@@ -105,25 +180,21 @@ function AppContent() {
 }
 
 function App() {
-  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
-
   return (
     <ErrorBoundary>
-      <GoogleOAuthProvider clientId={googleClientId}>
-        <BrowserRouter>
-          <PostHogProvider>
-            <TooltipProvider>
-              <LanguageProvider>
-                <LayoutProvider>
-                  <NotificationProvider>
-                    <AppContent />
-                  </NotificationProvider>
-                </LayoutProvider>
-              </LanguageProvider>
-            </TooltipProvider>
-          </PostHogProvider>
-        </BrowserRouter>
-      </GoogleOAuthProvider>
+      <BrowserRouter>
+        <PostHogProvider>
+          <TooltipProvider>
+            <LanguageProvider>
+              <LayoutProvider>
+                <NotificationProvider>
+                  <AppContent />
+                </NotificationProvider>
+              </LayoutProvider>
+            </LanguageProvider>
+          </TooltipProvider>
+        </PostHogProvider>
+      </BrowserRouter>
     </ErrorBoundary>
   );
 }

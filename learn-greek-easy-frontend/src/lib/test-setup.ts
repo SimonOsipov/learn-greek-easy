@@ -16,8 +16,10 @@ import { initReactI18next } from 'react-i18next';
 import { afterEach, beforeAll, vi } from 'vitest';
 
 // Import all translation resources for test i18n setup
+import enAdmin from '@/i18n/locales/en/admin.json';
 import enAuth from '@/i18n/locales/en/auth.json';
 import enCommon from '@/i18n/locales/en/common.json';
+import enCulture from '@/i18n/locales/en/culture.json';
 import enDeck from '@/i18n/locales/en/deck.json';
 import enFeedback from '@/i18n/locales/en/feedback.json';
 import enProfile from '@/i18n/locales/en/profile.json';
@@ -38,12 +40,25 @@ i18n.use(initReactI18next).init({
       profile: enProfile,
       statistics: enStatistics,
       feedback: enFeedback,
+      culture: enCulture,
+      admin: enAdmin,
     },
   },
   lng: 'en', // Force English for tests
   fallbackLng: 'en',
   defaultNS: 'common',
-  ns: ['common', 'auth', 'deck', 'review', 'settings', 'profile', 'statistics', 'feedback'],
+  ns: [
+    'common',
+    'auth',
+    'deck',
+    'review',
+    'settings',
+    'profile',
+    'statistics',
+    'feedback',
+    'culture',
+    'admin',
+  ],
   interpolation: {
     escapeValue: false,
   },

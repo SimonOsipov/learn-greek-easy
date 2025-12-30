@@ -26,9 +26,19 @@ export const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({
   disabled = false,
   className = '',
 }) => {
+  // Hooks must be called unconditionally (React Rules of Hooks)
   const { t } = useTranslation('auth');
   const { loginWithGoogle, isLoading } = useAuthStore();
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+
+  // Check if Google OAuth is configured via environment variable
+  // If not configured, don't render - the button would be non-functional anyway
+  const isGoogleOAuthConfigured = !!import.meta.env.VITE_GOOGLE_CLIENT_ID;
+
+  // Early return after hooks - safe because hooks are already called unconditionally above
+  if (!isGoogleOAuthConfigured) {
+    return null;
+  }
 
   const handleGoogleSuccess = async (credentialResponse: CredentialResponse) => {
     if (!credentialResponse.credential) {

@@ -3,3 +3,5 @@ export type { ErrorBoundaryProps } from './ErrorBoundary';
 
 export { ErrorFallback } from './ErrorFallback';
 export type { ErrorFallbackProps } from './ErrorFallback';
+
+export { ChunkErrorBoundary } from './ChunkErrorBoundary';

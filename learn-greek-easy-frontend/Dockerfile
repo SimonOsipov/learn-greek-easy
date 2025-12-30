@@ -1,5 +1,6 @@
 # Stage 1: Build stage
-FROM node:18-alpine AS builder
+# Node.js 20+ required for Vite 7.x (crypto.hash function)
+FROM node:20-alpine AS builder
 
 # Set working directory
 WORKDIR /app

@@ -26,6 +26,9 @@ test.describe('Keyboard Navigation - Public Pages', () => {
 
     await page.goto('/login');
 
+    // Wait for React login form to hydrate (not LCP shell)
+    await expect(page.getByTestId('login-card')).toBeVisible({ timeout: 10000 });
+
     // Get all focusable elements to verify minimum count
     const focusableElements = await page
       .locator('button, input, a, [tabindex]:not([tabindex="-1"])')
@@ -218,8 +221,8 @@ test.describe('Keyboard Navigation - Protected Pages', () => {
   test('Arrow keys should work in review session', async ({ page }) => {
     await page.goto('/decks');
 
-    // Wait for page to load
-    await page.waitForSelector('h1, h2', { timeout: 10000 });
+    // Wait for decks page React content to load (not LCP shell)
+    await expect(page.locator('[data-testid="decks-title"]')).toBeVisible({ timeout: 10000 });
 
     // Look for Greek vocabulary deck
     const deckHeading = page.getByRole('heading', { name: /greek.*vocabulary/i });

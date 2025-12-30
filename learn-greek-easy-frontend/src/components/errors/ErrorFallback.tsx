@@ -1,9 +1,9 @@
-import * as Sentry from '@sentry/react';
 import { AlertCircle, RefreshCw, Home, MessageSquare } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { getSentry, isSentryLoaded } from '@/lib/sentry-queue';
 
 /**
  * Props for the ErrorFallback component
@@ -41,9 +41,10 @@ export function ErrorFallback({ error, onReset, eventId }: ErrorFallbackProps) {
   };
 
   const handleReportIssue = () => {
-    // Open Sentry's user feedback dialog if we have an eventId
-    if (eventId) {
-      Sentry.showReportDialog({ eventId });
+    // Open Sentry's user feedback dialog if we have an eventId and Sentry is loaded
+    if (eventId && isSentryLoaded()) {
+      const Sentry = getSentry();
+      Sentry?.showReportDialog({ eventId });
     }
   };
 
@@ -84,8 +85,8 @@ export function ErrorFallback({ error, onReset, eventId }: ErrorFallbackProps) {
               {t('errorPage.goHome')}
             </Button>
           </div>
-          {/* Show report button only in production when Sentry eventId is available */}
-          {eventId && import.meta.env.PROD && (
+          {/* Show report button only in production when Sentry eventId is available and Sentry is loaded */}
+          {eventId && import.meta.env.PROD && isSentryLoaded() && (
             <Button onClick={handleReportIssue} variant="secondary" className="w-full">
               <MessageSquare className="mr-2 h-4 w-4" />
               {t('error.reportIssue', 'Report Issue')}

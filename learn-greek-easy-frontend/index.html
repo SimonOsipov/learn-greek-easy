@@ -2,6 +2,11 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <!-- Preconnect hints for external origins -->
+    <link rel="preconnect" href="https://accounts.google.com" crossorigin />
+    <link rel="dns-prefetch" href="https://accounts.google.com" />
+    <link rel="preconnect" href="https://us.i.posthog.com" crossorigin />
+    <link rel="preconnect" href="https://ingest.us.sentry.io" crossorigin />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Learn Greek easily with interactive flashcards and spaced repetition for naturalization exam preparation" />
@@ -10,7 +15,44 @@
     <title>Learn Greek Easy - Master Greek for Your Naturalization Exam</title>
   </head>
   <body>
+    <!-- LCP shell outside root with id for JS targeting -->
+    <div id="lcp-shell" class="lcp-shell">
+      <style>
+        .lcp-shell {
+          display: flex;
+          min-height: 100vh;
+          align-items: center;
+          justify-content: center;
+          background: linear-gradient(to bottom right, #eff6ff, #fff, #faf5ff);
+          padding: 1rem;
+        }
+        .lcp-shell.hidden { display: none !important; }
+        .lcp-card {
+          width: 100%;
+          max-width: 28rem;
+          background: white;
+          border-radius: 0.625rem;
+          box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1);
+          padding: 2rem;
+          text-align: center;
+        }
+        .lcp-icon { font-size: 2.5rem; margin-bottom: 1rem; }
+        .lcp-title {
+          font-size: 1.5rem;
+          font-weight: 700;
+          font-family: 'Inter', system-ui, sans-serif;
+          color: #1f2937;
+        }
+      </style>
+      <div class="lcp-card">
+        <div class="lcp-icon" aria-hidden="true">&#127963;</div>
+        <h1 class="lcp-title">Welcome Back</h1>
+      </div>
+    </div>
+
+    <!-- React root - starts empty -->
     <div id="root"></div>
+
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

@@ -1,8 +1,7 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 
-import * as Sentry from '@sentry/react';
-
 import log from '@/lib/logger';
+import { getSentry, isSentryLoaded, queueException } from '@/lib/sentry-queue';
 
 import { ErrorFallback } from './ErrorFallback';
 
@@ -77,23 +76,36 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     }
 
     // Report to Sentry with React component stack context
-    Sentry.withScope((scope) => {
-      // Add React-specific context
-      scope.setContext('react', {
+    // Use queue-based approach to handle pre-init errors
+    if (isSentryLoaded()) {
+      const Sentry = getSentry();
+      if (Sentry) {
+        Sentry.withScope((scope) => {
+          // Add React-specific context
+          scope.setContext('react', {
+            componentStack: errorInfo.componentStack,
+          });
+
+          // Tag the error as coming from error boundary
+          scope.setTag('error.boundary', 'true');
+          scope.setTag('error.handled', 'true');
+
+          // Set error level
+          scope.setLevel('error');
+
+          // Capture the exception and store eventId for user feedback
+          const eventId = Sentry.captureException(error);
+          this.setState({ eventId });
+        });
+      }
+    } else {
+      // Queue for later capture if Sentry isn't loaded yet
+      queueException(error, {
         componentStack: errorInfo.componentStack,
+        errorBoundary: true,
+        handled: true,
       });
-
-      // Tag the error as coming from error boundary
-      scope.setTag('error.boundary', 'true');
-      scope.setTag('error.handled', 'true');
-
-      // Set error level
-      scope.setLevel('error');
-
-      // Capture the exception and store eventId for user feedback
-      const eventId = Sentry.captureException(error);
-      this.setState({ eventId });
-    });
+    }
 
     // Call optional error handler
     this.props.onError?.(error, errorInfo);
