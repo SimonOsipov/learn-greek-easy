@@ -76,7 +76,22 @@ async function authenticateAndSave(
   // Navigate to login page
   await page.goto('/login');
 
-  // Wait for login form to be ready
+  // Step 1: Wait for React to hydrate and auth check to complete
+  await page.waitForSelector('[data-app-ready="true"]', {
+    timeout: 30000,
+    state: 'attached'
+  });
+
+  // Step 2: Wait for PageLoader Suspense fallback to resolve (if visible)
+  const pageLoader = page.locator('[data-testid="page-loader"]');
+  try {
+    await pageLoader.waitFor({ state: 'visible', timeout: 1000 });
+    await pageLoader.waitFor({ state: 'hidden', timeout: 15000 });
+  } catch {
+    // PageLoader never appeared (fast load) - fine
+  }
+
+  // Step 3: Wait for the actual login form
   await page.waitForSelector('[data-testid="login-card"]', { timeout: 15000 });
 
   // Fill login form

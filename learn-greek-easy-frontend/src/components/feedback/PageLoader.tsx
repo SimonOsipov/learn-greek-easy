@@ -37,6 +37,7 @@ export function PageLoader({ variant = 'default', text = 'Loading...' }: PageLoa
   if (variant === 'minimal') {
     return (
       <div
+        data-testid="page-loader"
         className="flex items-center justify-center p-8"
         role="status"
         aria-busy="true"
@@ -50,6 +51,7 @@ export function PageLoader({ variant = 'default', text = 'Loading...' }: PageLoa
   if (variant === 'skeleton') {
     return (
       <div
+        data-testid="page-loader"
         className="min-h-screen bg-background p-6"
         role="status"
         aria-busy="true"
@@ -78,6 +80,7 @@ export function PageLoader({ variant = 'default', text = 'Loading...' }: PageLoa
   // Default variant - full page centered loader
   return (
     <div
+      data-testid="page-loader"
       className="flex min-h-screen items-center justify-center bg-background"
       role="status"
       aria-busy="true"

@@ -15,8 +15,8 @@
     <title>Learn Greek Easy - Master Greek for Your Naturalization Exam</title>
   </head>
   <body>
-    <div id="root">
-      <!-- Static LCP shell - shown before React hydrates -->
+    <!-- LCP shell outside root with id for JS targeting -->
+    <div id="lcp-shell" class="lcp-shell">
       <style>
         .lcp-shell {
           display: flex;
@@ -26,6 +26,7 @@
           background: linear-gradient(to bottom right, #eff6ff, #fff, #faf5ff);
           padding: 1rem;
         }
+        .lcp-shell.hidden { display: none !important; }
         .lcp-card {
           width: 100%;
           max-width: 28rem;
@@ -43,13 +44,15 @@
           color: #1f2937;
         }
       </style>
-      <div class="lcp-shell">
-        <div class="lcp-card">
-          <div class="lcp-icon" aria-hidden="true">&#127963;</div>
-          <h1 class="lcp-title">Welcome Back</h1>
-        </div>
+      <div class="lcp-card">
+        <div class="lcp-icon" aria-hidden="true">&#127963;</div>
+        <h1 class="lcp-title">Welcome Back</h1>
       </div>
     </div>
+
+    <!-- React root - starts empty -->
+    <div id="root"></div>
+
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

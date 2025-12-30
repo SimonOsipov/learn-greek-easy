@@ -14,6 +14,12 @@ import { initSentryAsync } from '@/lib/sentry-queue';
 
 import App from './App.tsx';
 
+// Hide LCP shell when React takes over
+const lcpShell = document.getElementById('lcp-shell');
+if (lcpShell) {
+  lcpShell.classList.add('hidden');
+}
+
 // Render React app first for faster LCP
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
