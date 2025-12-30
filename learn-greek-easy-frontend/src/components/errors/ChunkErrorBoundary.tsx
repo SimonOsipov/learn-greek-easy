@@ -21,6 +21,7 @@ interface ChunkErrorBoundaryState {
   error: Error | null;
   retryCount: number;
   isRetrying: boolean;
+  isChunkError: boolean;
 }
 
 /**
@@ -56,11 +57,20 @@ export class ChunkErrorBoundary extends Component<
       error: null,
       retryCount: 0,
       isRetrying: false,
+      isChunkError: false,
     };
   }
 
   static getDerivedStateFromError(error: Error): Partial<ChunkErrorBoundaryState> {
-    return { hasError: true, error };
+    // Determine if this is a chunk loading error
+    const message = error.message.toLowerCase();
+    const isChunkError =
+      message.includes('loading chunk') ||
+      message.includes('dynamically imported module') ||
+      message.includes('failed to fetch') ||
+      error.name === 'ChunkLoadError';
+
+    return { hasError: true, error, isChunkError };
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
@@ -143,11 +153,17 @@ export class ChunkErrorBoundary extends Component<
   };
 
   render() {
-    const { hasError, error, retryCount, isRetrying } = this.state;
+    const { hasError, error, retryCount, isRetrying, isChunkError } = this.state;
     const { children, maxRetries = 3 } = this.props;
 
     if (!hasError) {
       return children;
+    }
+
+    // If this is NOT a chunk error and NOT a version mismatch, re-throw
+    // to let the parent ErrorBoundary handle it appropriately
+    if (!isChunkError && !this.isVersionMismatch(error!)) {
+      throw error;
     }
 
     const isVersionMismatch = error && this.isVersionMismatch(error);

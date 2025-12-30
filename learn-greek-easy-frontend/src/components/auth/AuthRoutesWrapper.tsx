@@ -21,12 +21,10 @@ interface AuthRoutesWrapperProps {
  * ```
  */
 export function AuthRoutesWrapper({ children }: AuthRoutesWrapperProps) {
-  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
-
-  // If no client ID, render children without provider
-  if (!googleClientId) {
-    return <>{children}</>;
-  }
+  // Always provide GoogleOAuthProvider - even without a valid client ID.
+  // The provider can exist with invalid clientId - it just won't load the Google script.
+  // This prevents "must be used within GoogleOAuthProvider" errors.
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || 'not-configured';
 
   return <GoogleOAuthProvider clientId={googleClientId}>{children}</GoogleOAuthProvider>;
 }
