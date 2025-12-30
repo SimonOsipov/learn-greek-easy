@@ -303,10 +303,30 @@ class CultureAnswerResponseWithSM2(BaseModel):
     xp_earned: int = Field(..., ge=0, description="XP awarded for this answer")
     sm2_result: SM2QuestionResult = Field(..., description="SM-2 algorithm result")
     message: Optional[str] = Field(None, description="Feedback message for UI")
-    daily_goal_completed: bool = Field(
-        default=False,
-        description="True if this answer completed the user's daily goal",
+    deck_category: str = Field(
+        ...,
+        description="Deck category for achievement tracking (history, geography, politics, culture, traditions, practical)",
     )
+
+
+class CultureAnswerResponseFast(BaseModel):
+    """Fast response - returns immediately before SM-2 processing.
+
+    This schema is used for the early response pattern where we return
+    to the client immediately with basic information while deferring
+    SM-2 calculations, XP awards, and achievement checks to background tasks.
+
+    The xp_earned is an optimistic estimate based on constants, not actual
+    DB state. The sm2_result field is intentionally omitted as it requires
+    DB queries that are deferred to background processing.
+    """
+
+    is_correct: bool = Field(..., description="Whether the answer was correct")
+    correct_option: int = Field(..., ge=1, le=4, description="The correct answer (1-4)")
+    xp_earned: int = Field(..., ge=0, description="XP awarded (calculated, not persisted yet)")
+    message: Optional[str] = Field(None, description="Feedback message for UI")
+    deck_category: str = Field(..., description="Deck category for achievement tracking")
+    # Note: sm2_result intentionally omitted - not available in fast path
 
 
 # ============================================================================

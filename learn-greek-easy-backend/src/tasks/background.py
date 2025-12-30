@@ -345,6 +345,443 @@ async def recalculate_progress_task(
             await engine.dispose()
 
 
+async def process_answer_side_effects_task(
+    user_id: UUID,
+    question_id: UUID,
+    language: str,
+    is_correct: bool,
+    selected_option: int,
+    time_taken_seconds: int,
+    deck_category: str,
+    culture_answers_before: int,
+    db_url: str,
+) -> None:
+    """Process non-critical side effects in background after culture answer submission.
+
+    This task runs asynchronously after the culture answer response is sent.
+    It handles:
+    1. Record answer history to CultureAnswerHistory
+    2. Check daily goal completion and create notification
+    3. Award daily goal XP bonus if completed
+
+    The task creates its own database connection to avoid issues with
+    connection sharing across async contexts.
+
+    Args:
+        user_id: User who answered
+        question_id: Question that was answered
+        language: Language used (el, en, ru)
+        is_correct: Whether answer was correct
+        selected_option: Selected option (1-4)
+        time_taken_seconds: Time taken in seconds
+        deck_category: Category of the deck
+        culture_answers_before: Culture answers count before this answer
+        db_url: Database connection URL
+    """
+    if not is_background_tasks_enabled():
+        logger.debug("Background tasks disabled, skipping process_answer_side_effects_task")
+        return
+
+    logger.info(
+        "Starting answer side effects processing",
+        extra={
+            "user_id": str(user_id),
+            "question_id": str(question_id),
+            "is_correct": is_correct,
+            "task": "process_answer_side_effects",
+        },
+    )
+
+    engine = None
+    try:
+        # Create dedicated engine for this background task
+        engine = create_async_engine(db_url, pool_pre_ping=True)
+        async_session_factory = async_sessionmaker(
+            engine, class_=AsyncSession, expire_on_commit=False
+        )
+
+        async with async_session_factory() as session:
+            # Step 1: Record answer history
+            from src.db.models import CultureAnswerHistory
+
+            answer_history = CultureAnswerHistory(
+                user_id=user_id,
+                question_id=question_id,
+                language=language,
+                is_correct=is_correct,
+                selected_option=selected_option,
+                time_taken_seconds=time_taken_seconds,
+                deck_category=deck_category,
+            )
+            session.add(answer_history)
+
+            logger.debug(
+                "Recorded culture answer history in background",
+                extra={
+                    "user_id": str(user_id),
+                    "question_id": str(question_id),
+                    "is_correct": is_correct,
+                },
+            )
+
+            # Step 2: Check daily goal completion and notify
+            await _check_and_notify_daily_goal(
+                session=session,
+                user_id=user_id,
+                culture_answers_before=culture_answers_before,
+            )
+
+            await session.commit()
+
+        logger.info(
+            "Answer side effects processed successfully",
+            extra={
+                "user_id": str(user_id),
+                "question_id": str(question_id),
+            },
+        )
+
+    except Exception as e:
+        logger.error(
+            "Answer side effects processing failed",
+            extra={"user_id": str(user_id), "error": str(e)},
+            exc_info=True,
+        )
+    finally:
+        if engine is not None:
+            await engine.dispose()
+
+
+async def _check_and_notify_daily_goal(
+    session: AsyncSession,
+    user_id: UUID,
+    culture_answers_before: int,
+) -> bool:
+    """Check if daily goal was completed and send notification if so.
+
+    Uses Redis SETNX for duplicate notification prevention.
+
+    Args:
+        session: Database session
+        user_id: User's UUID
+        culture_answers_before: Culture answers count BEFORE this answer
+
+    Returns:
+        True if daily goal was just completed, False otherwise
+    """
+    from datetime import date
+
+    from sqlalchemy import select
+
+    from src.core.redis import get_redis
+    from src.db.models import UserSettings
+    from src.repositories.review import ReviewRepository
+    from src.services.notification_service import NotificationService
+    from src.services.xp_service import XPService
+
+    try:
+        # Get user's daily goal setting
+        result = await session.execute(select(UserSettings).where(UserSettings.user_id == user_id))
+        user_settings = result.scalar_one_or_none()
+        daily_goal = user_settings.daily_goal if user_settings else 20  # Default
+
+        # Get flashcard reviews today
+        review_repo = ReviewRepository(session)
+        flashcard_reviews = await review_repo.count_reviews_today(user_id)
+
+        # Calculate total reviews (flashcards + culture answers)
+        culture_answers_after = culture_answers_before + 1  # Include current answer
+        total_reviews_after = flashcard_reviews + culture_answers_after
+        total_reviews_before = flashcard_reviews + culture_answers_before
+
+        # Check if we just crossed the threshold
+        if total_reviews_before >= daily_goal:
+            # Already completed goal before this answer
+            return False
+
+        if total_reviews_after < daily_goal:
+            # Still haven't reached goal
+            return False
+
+        # We just crossed the threshold! Check Redis for duplicate prevention
+        redis = get_redis()
+        if redis:
+            cache_key = f"daily_goal_notified:{user_id}:{date.today().isoformat()}"
+
+            # Use SETNX (set if not exists) for atomic check-and-set
+            was_set = await redis.setnx(cache_key, "1")
+            if not was_set:
+                # Already notified today
+                logger.debug(
+                    "Daily goal notification already sent",
+                    extra={"user_id": str(user_id)},
+                )
+                return False
+
+            # Set expiry (24 hours to be safe, will auto-cleanup)
+            await redis.expire(cache_key, 86400)
+
+        # Create notification
+        notification_service = NotificationService(session)
+        await notification_service.notify_daily_goal_complete(
+            user_id=user_id,
+            reviews_completed=total_reviews_after,
+        )
+
+        # Award daily goal XP bonus
+        xp_service = XPService(session)
+        await xp_service.award_daily_goal_xp(user_id)
+
+        logger.info(
+            "Daily goal completed via culture answer (background)",
+            extra={
+                "user_id": str(user_id),
+                "total_reviews": total_reviews_after,
+                "daily_goal": daily_goal,
+            },
+        )
+
+        return True
+
+    except Exception as e:
+        # Log error but don't fail the background task
+        logger.warning(
+            "Failed to check daily goal in background",
+            extra={
+                "user_id": str(user_id),
+                "error": str(e),
+            },
+        )
+        return False
+
+
+async def process_culture_answer_full_async(
+    user_id: UUID,
+    question_id: UUID,
+    selected_option: int,
+    time_taken: int,
+    language: str,
+    is_correct: bool,
+    is_perfect: bool,
+    deck_category: str,
+    db_url: str,
+) -> None:
+    """Process all deferred operations for culture answer submission.
+
+    This comprehensive background task handles ALL operations that were deferred
+    from the fast response path for answer submission:
+
+    1. Get/create stats record (CultureQuestionStats)
+    2. Calculate SM-2 algorithm
+    3. Update stats in DB
+    4. Record answer history (CultureAnswerHistory)
+    5. Award XP via XPService.award_culture_answer_xp()
+    6. Award first review bonus via XPService.award_first_review_bonus()
+    7. Check daily goal via _check_and_notify_daily_goal()
+    8. Check achievements via AchievementService.check_culture_achievements()
+
+    The task creates its own database connection to avoid issues with
+    connection sharing across async contexts.
+
+    Args:
+        user_id: User who answered
+        question_id: Question that was answered
+        selected_option: Selected option (1-4)
+        time_taken: Time taken in seconds
+        language: Language used (el, en, ru)
+        is_correct: Whether answer was correct
+        is_perfect: Whether answer was fast (< 2 seconds)
+        deck_category: Category of the deck
+        db_url: Database connection URL
+    """
+    if not is_background_tasks_enabled():
+        logger.debug("Background tasks disabled, skipping process_culture_answer_full_async")
+        return
+
+    logger.info(
+        "Starting full culture answer processing",
+        extra={
+            "user_id": str(user_id),
+            "question_id": str(question_id),
+            "is_correct": is_correct,
+            "task": "process_culture_answer_full",
+        },
+    )
+
+    start_time = datetime.now(timezone.utc)
+    engine = None
+
+    try:
+        # Create dedicated engine for this background task
+        engine = create_async_engine(db_url, pool_pre_ping=True)
+        async_session_factory = async_sessionmaker(
+            engine, class_=AsyncSession, expire_on_commit=False
+        )
+
+        async with async_session_factory() as session:
+            # Import here to avoid circular imports
+            from datetime import date as date_type
+
+            from sqlalchemy import select
+
+            from src.core.sm2 import (
+                DEFAULT_EASINESS_FACTOR,
+                calculate_next_review_date,
+                calculate_sm2,
+            )
+            from src.db.models import CardStatus, CultureAnswerHistory, CultureQuestionStats
+            from src.repositories.culture_question_stats import CultureQuestionStatsRepository
+            from src.services.achievement_service import AchievementService
+            from src.services.xp_service import XPService
+
+            # Step 1: Get or create stats
+            query = select(CultureQuestionStats).where(
+                CultureQuestionStats.user_id == user_id,
+                CultureQuestionStats.question_id == question_id,
+            )
+            result = await session.execute(query)
+            stats = result.scalar_one_or_none()
+
+            if not stats:
+                stats = CultureQuestionStats(
+                    user_id=user_id,
+                    question_id=question_id,
+                    easiness_factor=DEFAULT_EASINESS_FACTOR,
+                    interval=0,
+                    repetitions=0,
+                    next_review_date=date_type.today(),
+                    status=CardStatus.NEW,
+                )
+                session.add(stats)
+                await session.flush()
+
+            previous_status = stats.status
+
+            # Step 2: Calculate SM-2
+            quality = 3 if is_correct else 1  # SM-2: 3=Good, 1=Again
+            sm2_result = calculate_sm2(
+                current_ef=stats.easiness_factor,
+                current_interval=stats.interval,
+                current_repetitions=stats.repetitions,
+                quality=quality,
+            )
+
+            next_review = calculate_next_review_date(sm2_result.new_interval)
+
+            # Step 3: Update stats in DB
+            stats.easiness_factor = sm2_result.new_easiness_factor
+            stats.interval = sm2_result.new_interval
+            stats.repetitions = sm2_result.new_repetitions
+            stats.next_review_date = next_review
+            stats.status = sm2_result.new_status
+
+            logger.debug(
+                "SM-2 calculation complete in background",
+                extra={
+                    "user_id": str(user_id),
+                    "question_id": str(question_id),
+                    "previous_status": previous_status.value,
+                    "new_status": sm2_result.new_status.value,
+                    "next_review_date": str(next_review),
+                },
+            )
+
+            # Step 4: Record answer history
+            answer_history = CultureAnswerHistory(
+                user_id=user_id,
+                question_id=question_id,
+                language=language,
+                is_correct=is_correct,
+                selected_option=selected_option,
+                time_taken_seconds=time_taken,
+                deck_category=deck_category,
+            )
+            session.add(answer_history)
+
+            # Step 5: Award XP for the answer
+            xp_service = XPService(session)
+            xp_earned = await xp_service.award_culture_answer_xp(
+                user_id=user_id,
+                is_correct=is_correct,
+                is_perfect=is_perfect,
+                source_id=question_id,
+            )
+
+            # Step 6: Award first review bonus (once per day - service handles dedup)
+            first_review_bonus = await xp_service.award_first_review_bonus(user_id)
+            total_xp = xp_earned + first_review_bonus
+
+            logger.debug(
+                "XP awarded in background",
+                extra={
+                    "user_id": str(user_id),
+                    "xp_earned": xp_earned,
+                    "first_review_bonus": first_review_bonus,
+                    "total_xp": total_xp,
+                },
+            )
+
+            # Step 7: Check daily goal completion and notify
+            stats_repo = CultureQuestionStatsRepository(session)
+            # Get culture answers count (minus 1 since we already added one)
+            culture_answers_before = await stats_repo.count_answers_today(user_id) - 1
+            if culture_answers_before < 0:
+                culture_answers_before = 0
+
+            await _check_and_notify_daily_goal(
+                session=session,
+                user_id=user_id,
+                culture_answers_before=culture_answers_before,
+            )
+
+            # Step 8: Check achievements
+            achievement_service = AchievementService(session)
+            unlocked = await achievement_service.check_culture_achievements(
+                user_id=user_id,
+                question_id=question_id,
+                is_correct=is_correct,
+                language=language,
+                deck_category=deck_category,
+            )
+
+            if unlocked:
+                logger.info(
+                    "Achievements unlocked in background",
+                    extra={
+                        "user_id": str(user_id),
+                        "unlocked_count": len(unlocked),
+                        "achievement_ids": [a["id"] for a in unlocked],
+                    },
+                )
+
+            # Commit all changes
+            await session.commit()
+
+        duration_ms = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
+        logger.info(
+            "Full culture answer processing complete",
+            extra={
+                "user_id": str(user_id),
+                "question_id": str(question_id),
+                "is_correct": is_correct,
+                "total_xp": total_xp,
+                "previous_status": previous_status.value,
+                "new_status": sm2_result.new_status.value,
+                "duration_ms": duration_ms,
+            },
+        )
+
+    except Exception as e:
+        logger.error(
+            "Full culture answer processing failed",
+            extra={"user_id": str(user_id), "question_id": str(question_id), "error": str(e)},
+            exc_info=True,
+        )
+    finally:
+        if engine is not None:
+            await engine.dispose()
+
+
 async def check_culture_achievements_task(
     user_id: UUID,
     question_id: UUID,

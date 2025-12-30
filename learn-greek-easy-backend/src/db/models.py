@@ -1213,18 +1213,20 @@ class CultureQuestion(Base, TimestampMixin):
     )
 
     # Relationships
+    # Note: lazy="raise" prevents N+1 queries by forcing explicit loading.
+    # Use selectinload() or joinedload() when you actually need these relationships.
     deck: Mapped["CultureDeck"] = relationship(
         back_populates="questions",
-        lazy="selectin",
+        lazy="raise",
     )
     statistics: Mapped[List["CultureQuestionStats"]] = relationship(
         back_populates="question",
-        lazy="selectin",
+        lazy="raise",
         cascade="all, delete-orphan",
     )
     answer_history: Mapped[List["CultureAnswerHistory"]] = relationship(
         back_populates="question",
-        lazy="selectin",
+        lazy="raise",
         cascade="all, delete-orphan",
     )
 
