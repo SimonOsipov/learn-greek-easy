@@ -8,19 +8,25 @@
  * - Translation keys return expected values
  * - Language switching works correctly
  *
- * Note: Greek and Russian resources are lazy-loaded on demand for better LCP.
- * Tests must load these resources before testing them.
+ * Note: Uses async initI18n() which pre-loads resources based on detected language.
+ * Additional languages are loaded via loadLanguageResources() for comprehensive testing.
  */
 
 import { describe, it, expect, beforeEach, beforeAll } from 'vitest';
 
 import { SUPPORTED_LANGUAGES, DEFAULT_LANGUAGE, NAMESPACES } from '../constants';
 import i18n from '../index';
+import { initI18n, resetI18nInit } from '../init';
 import { loadLanguageResources } from '../lazy-resources';
 
 describe('i18n configuration', () => {
-  // Load all language resources before running tests
+  // Initialize i18n and load all language resources before running tests
   beforeAll(async () => {
+    // Reset init state for clean test environment
+    resetI18nInit();
+    // Initialize i18n (this will detect English from test environment)
+    await initI18n();
+    // Load remaining languages for comprehensive testing
     await loadLanguageResources('el');
     await loadLanguageResources('ru');
   });
