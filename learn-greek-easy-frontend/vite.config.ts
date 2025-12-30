@@ -91,22 +91,44 @@ export default defineConfig(({ mode }) => {
       // Rollup options for code splitting
       rollupOptions: {
         output: {
-          // Manual chunks for better caching
+          // Manual chunks for better caching and code splitting
           manualChunks: {
-            // React core
-            'react-vendor': ['react', 'react-dom'],
+            // React core - always needed
+            'react-vendor': ['react', 'react-dom', 'react-router-dom'],
 
-            // UI components from Radix UI
-            'ui-vendor': [
+            // UI components from Radix UI - split by usage patterns
+            'ui-core': [
+              '@radix-ui/react-slot',
+              '@radix-ui/react-tooltip',
+              '@radix-ui/react-toast',
+            ],
+            'ui-forms': [
+              '@radix-ui/react-checkbox',
+              '@radix-ui/react-label',
+              '@radix-ui/react-select',
+              '@radix-ui/react-slider',
+            ],
+            'ui-layout': [
               '@radix-ui/react-avatar',
               '@radix-ui/react-dialog',
               '@radix-ui/react-dropdown-menu',
               '@radix-ui/react-navigation-menu',
               '@radix-ui/react-progress',
+              '@radix-ui/react-scroll-area',
               '@radix-ui/react-separator',
-              '@radix-ui/react-toast',
-              '@radix-ui/react-tooltip',
             ],
+
+            // Form handling - only loaded by pages with forms
+            'forms': ['react-hook-form', '@hookform/resolvers', 'zod'],
+
+            // Charts - only loaded by Statistics page
+            'charts': ['recharts'],
+
+            // i18n - always needed
+            'i18n': ['i18next', 'react-i18next', 'i18next-browser-languagedetector'],
+
+            // Error tracking - always needed
+            'sentry': ['@sentry/react'],
 
             // Utilities
             'utils': ['clsx', 'tailwind-merge', 'class-variance-authority'],
