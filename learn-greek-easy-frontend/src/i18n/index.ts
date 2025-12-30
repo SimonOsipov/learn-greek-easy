@@ -9,16 +9,9 @@ import {
   NAMESPACES,
   SUPPORTED_LANGUAGES,
 } from './constants';
-import elAdmin from './locales/el/admin.json';
-import elAuth from './locales/el/auth.json';
-import elCommon from './locales/el/common.json';
-import elCulture from './locales/el/culture.json';
-import elDeck from './locales/el/deck.json';
-import elFeedback from './locales/el/feedback.json';
-import elProfile from './locales/el/profile.json';
-import elReview from './locales/el/review.json';
-import elSettings from './locales/el/settings.json';
-import elStatistics from './locales/el/statistics.json';
+// Only English resources are loaded synchronously (default language)
+// Greek and Russian resources are loaded on-demand via lazy-resources.ts
+// This reduces the initial bundle by ~89KB for faster LCP
 import enAdmin from './locales/en/admin.json';
 import enAuth from './locales/en/auth.json';
 import enCommon from './locales/en/common.json';
@@ -29,19 +22,11 @@ import enProfile from './locales/en/profile.json';
 import enReview from './locales/en/review.json';
 import enSettings from './locales/en/settings.json';
 import enStatistics from './locales/en/statistics.json';
-import ruAdmin from './locales/ru/admin.json';
-import ruAuth from './locales/ru/auth.json';
-import ruCommon from './locales/ru/common.json';
-import ruCulture from './locales/ru/culture.json';
-import ruDeck from './locales/ru/deck.json';
-import ruFeedback from './locales/ru/feedback.json';
-import ruProfile from './locales/ru/profile.json';
-import ruReview from './locales/ru/review.json';
-import ruSettings from './locales/ru/settings.json';
-import ruStatistics from './locales/ru/statistics.json';
 
 /**
- * Translation resources organized by language and namespace
+ * Translation resources - only English loaded synchronously.
+ * Greek (el) and Russian (ru) are loaded on-demand when the user
+ * switches language via loadLanguageResources() in lazy-resources.ts.
  */
 const resources = {
   en: {
@@ -55,30 +40,6 @@ const resources = {
     feedback: enFeedback,
     culture: enCulture,
     admin: enAdmin,
-  },
-  el: {
-    common: elCommon,
-    auth: elAuth,
-    deck: elDeck,
-    review: elReview,
-    settings: elSettings,
-    profile: elProfile,
-    statistics: elStatistics,
-    feedback: elFeedback,
-    culture: elCulture,
-    admin: elAdmin,
-  },
-  ru: {
-    common: ruCommon,
-    auth: ruAuth,
-    deck: ruDeck,
-    review: ruReview,
-    settings: ruSettings,
-    profile: ruProfile,
-    statistics: ruStatistics,
-    feedback: ruFeedback,
-    culture: ruCulture,
-    admin: ruAdmin,
   },
 };
 

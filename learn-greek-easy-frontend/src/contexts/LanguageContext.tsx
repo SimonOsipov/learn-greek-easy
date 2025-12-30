@@ -8,6 +8,7 @@ import {
   LANGUAGE_NAMES,
   type SupportedLanguage,
 } from '@/i18n';
+import { loadLanguageResources } from '@/i18n/lazy-resources';
 import { LANGUAGE_OPTIONS, type LanguageOption } from '@/i18n/types';
 import { registerInterfaceLanguage, trackLanguageSwitch } from '@/lib/analytics';
 import log from '@/lib/logger';
@@ -88,7 +89,15 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       userPreferredLang.preferred_language !== currentLanguage
     ) {
       // User's DB preference takes precedence - sync i18next to it
-      i18n.changeLanguage(userPreferredLang.preferred_language);
+      // Load resources first for non-English languages
+      const syncLanguage = async () => {
+        const targetLang = userPreferredLang.preferred_language!;
+        if (targetLang !== 'en') {
+          await loadLanguageResources(targetLang);
+        }
+        i18n.changeLanguage(targetLang);
+      };
+      syncLanguage();
     }
   }, [isAuthenticated, user, currentLanguage, i18n]);
 
@@ -115,10 +124,16 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       setIsChanging(true);
 
       try {
-        // Step 1: Change language in i18next (also updates localStorage via detector)
+        // Step 1: Load language resources on demand (for non-English languages)
+        // This ensures resources are available before switching
+        if (lang !== 'en') {
+          await loadLanguageResources(lang);
+        }
+
+        // Step 2: Change language in i18next (also updates localStorage via detector)
         await i18n.changeLanguage(lang);
 
-        // Step 2: If authenticated, sync preference to backend
+        // Step 3: If authenticated, sync preference to backend
         if (isAuthenticated) {
           try {
             await api.patch('/api/v1/auth/me', {
@@ -131,7 +146,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           }
         }
 
-        // Step 3: Track analytics
+        // Step 4: Track analytics
         registerInterfaceLanguage(lang);
         trackLanguageSwitch(previousLang, lang, source, isAuthenticated);
 

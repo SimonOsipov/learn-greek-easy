@@ -7,6 +7,9 @@
  * - Environment-aware log levels (debug in dev, warn in prod)
  * - Sentry integration in production (errors captured, warnings as breadcrumbs)
  *
+ * Note: Sentry is loaded asynchronously for better LCP. Logs before Sentry
+ * initializes are queued and flushed once Sentry is ready.
+ *
  * @example
  * // Default import (recommended)
  * import log from '@/lib/logger';
@@ -32,8 +35,9 @@
  * @module lib/logger
  */
 
-import * as Sentry from '@sentry/react';
 import log from 'loglevel';
+
+import { queueBreadcrumb, queueMessage } from './sentry-queue';
 
 // Store original factory before modification
 const originalFactory = log.methodFactory;
@@ -52,7 +56,8 @@ log.methodFactory = function (
     // Call original method with timestamp (existing behavior)
     rawMethod(`[${timestamp}]`, ...args);
 
-    // Send to Sentry in production
+    // Send to Sentry queue in production
+    // Queue handles both pre-init and post-init scenarios
     if (import.meta.env.PROD) {
       const message = args
         .map((arg) => (typeof arg === 'object' ? JSON.stringify(arg) : String(arg)))
@@ -60,17 +65,17 @@ log.methodFactory = function (
 
       if (methodName === 'error') {
         // Capture errors as Sentry events
-        Sentry.captureMessage(message, 'error');
+        queueMessage(message, 'error');
       } else if (methodName === 'warn') {
         // Add warnings as breadcrumbs
-        Sentry.addBreadcrumb({
+        queueBreadcrumb({
           category: 'console',
           message,
           level: 'warning',
         });
       } else if (methodName === 'info') {
         // Add info logs as breadcrumbs for context
-        Sentry.addBreadcrumb({
+        queueBreadcrumb({
           category: 'console',
           message,
           level: 'info',

@@ -4,17 +4,27 @@
  * Tests for i18n initialization, language resources, and translation functionality.
  * These tests verify that:
  * - i18next is configured correctly with fallback language
- * - All supported languages have resources loaded
+ * - All supported languages have resources loaded (after lazy loading)
  * - Translation keys return expected values
  * - Language switching works correctly
+ *
+ * Note: Greek and Russian resources are lazy-loaded on demand for better LCP.
+ * Tests must load these resources before testing them.
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, beforeAll } from 'vitest';
 
-import i18n from '../index';
 import { SUPPORTED_LANGUAGES, DEFAULT_LANGUAGE, NAMESPACES } from '../constants';
+import i18n from '../index';
+import { loadLanguageResources } from '../lazy-resources';
 
 describe('i18n configuration', () => {
+  // Load all language resources before running tests
+  beforeAll(async () => {
+    await loadLanguageResources('el');
+    await loadLanguageResources('ru');
+  });
+
   beforeEach(async () => {
     // Reset to default language before each test
     await i18n.changeLanguage(DEFAULT_LANGUAGE);

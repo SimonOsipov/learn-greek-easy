@@ -1,10 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import * as Sentry from '@sentry/react';
 
-// Mock Sentry before importing logger
-vi.mock('@sentry/react', () => ({
-  captureMessage: vi.fn(),
-  addBreadcrumb: vi.fn(),
+import * as sentryQueue from '../sentry-queue';
+
+// Mock sentry-queue before importing logger
+vi.mock('../sentry-queue', () => ({
+  queueMessage: vi.fn(),
+  queueBreadcrumb: vi.fn(),
 }));
 
 // Mock console methods to suppress output during tests
@@ -106,41 +107,41 @@ describe('logger', () => {
 
   describe('Sentry integration', () => {
     describe('in development mode (import.meta.env.PROD = false)', () => {
-      it('should not call Sentry.captureMessage for error logs', async () => {
+      it('should not call queueMessage for error logs', async () => {
         const { default: log } = await import('../logger');
         log.setLevel('trace');
         log.error('Test error message');
-        expect(Sentry.captureMessage).not.toHaveBeenCalled();
+        expect(sentryQueue.queueMessage).not.toHaveBeenCalled();
       });
 
-      it('should not call Sentry.addBreadcrumb for warn logs', async () => {
+      it('should not call queueBreadcrumb for warn logs', async () => {
         const { default: log } = await import('../logger');
         log.setLevel('trace');
         log.warn('Test warning message');
-        expect(Sentry.addBreadcrumb).not.toHaveBeenCalled();
+        expect(sentryQueue.queueBreadcrumb).not.toHaveBeenCalled();
       });
 
-      it('should not call Sentry.addBreadcrumb for info logs', async () => {
+      it('should not call queueBreadcrumb for info logs', async () => {
         const { default: log } = await import('../logger');
         log.setLevel('trace');
         log.info('Test info message');
-        expect(Sentry.addBreadcrumb).not.toHaveBeenCalled();
+        expect(sentryQueue.queueBreadcrumb).not.toHaveBeenCalled();
       });
 
-      it('should not call any Sentry methods for debug logs', async () => {
+      it('should not call any Sentry queue methods for debug logs', async () => {
         const { default: log } = await import('../logger');
         log.setLevel('trace');
         log.debug('Test debug message');
-        expect(Sentry.captureMessage).not.toHaveBeenCalled();
-        expect(Sentry.addBreadcrumb).not.toHaveBeenCalled();
+        expect(sentryQueue.queueMessage).not.toHaveBeenCalled();
+        expect(sentryQueue.queueBreadcrumb).not.toHaveBeenCalled();
       });
 
-      it('should not call any Sentry methods for trace logs', async () => {
+      it('should not call any Sentry queue methods for trace logs', async () => {
         const { default: log } = await import('../logger');
         log.setLevel('trace');
         log.trace('Test trace message');
-        expect(Sentry.captureMessage).not.toHaveBeenCalled();
-        expect(Sentry.addBreadcrumb).not.toHaveBeenCalled();
+        expect(sentryQueue.queueMessage).not.toHaveBeenCalled();
+        expect(sentryQueue.queueBreadcrumb).not.toHaveBeenCalled();
       });
     });
 
@@ -194,7 +195,7 @@ describe('logger Sentry integration in production mode', () => {
     vi.clearAllMocks();
     // Note: We cannot directly modify import.meta.env.PROD in Vitest
     // as it's read at module load time. These tests verify the code structure
-    // and that the Sentry mock is properly set up.
+    // and that the Sentry queue mock is properly set up.
   });
 
   afterEach(() => {
@@ -202,18 +203,18 @@ describe('logger Sentry integration in production mode', () => {
     vi.unstubAllEnvs();
   });
 
-  it('should have Sentry mock properly configured', () => {
-    expect(vi.isMockFunction(Sentry.captureMessage)).toBe(true);
-    expect(vi.isMockFunction(Sentry.addBreadcrumb)).toBe(true);
+  it('should have Sentry queue mock properly configured', () => {
+    expect(vi.isMockFunction(sentryQueue.queueMessage)).toBe(true);
+    expect(vi.isMockFunction(sentryQueue.queueBreadcrumb)).toBe(true);
   });
 
-  it('should export Sentry functions that can be called', () => {
+  it('should export Sentry queue functions that can be called', () => {
     // Verify the mock functions can be called
-    Sentry.captureMessage('test', 'error');
-    expect(Sentry.captureMessage).toHaveBeenCalledWith('test', 'error');
+    sentryQueue.queueMessage('test', 'error');
+    expect(sentryQueue.queueMessage).toHaveBeenCalledWith('test', 'error');
 
-    Sentry.addBreadcrumb({ category: 'test', message: 'msg', level: 'info' });
-    expect(Sentry.addBreadcrumb).toHaveBeenCalledWith({
+    sentryQueue.queueBreadcrumb({ category: 'test', message: 'msg', level: 'info' });
+    expect(sentryQueue.queueBreadcrumb).toHaveBeenCalledWith({
       category: 'test',
       message: 'msg',
       level: 'info',
