@@ -1,5 +1,17 @@
 # Learn Greek Easy
 
+## Quality Over Speed (CRITICAL)
+
+**Thoroughness and correctness are valued far more than speed.** When researching, executing, verifying, or debugging:
+
+- **Research deeply** before providing answers. A wrong answer implemented is worse than taking extra time to find the right one.
+- **Verify assumptions** by checking actual code, running tests, using Playwright to observe real behavior.
+- **Never guess** - if unsure, investigate further or ask clarifying questions.
+- **Double-check findings** before reporting conclusions.
+- **Incomplete is better than incorrect** - say "I need to investigate more" rather than giving a potentially wrong answer.
+
+---
+
 ## Commands
 
 **Poetry** (always from backend dir with full path):
