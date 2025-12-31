@@ -115,6 +115,7 @@ export interface SpacedRepetitionData {
  */
 export interface CardReview extends Card {
   srData: SpacedRepetitionData;
+  isEarlyPractice?: boolean; // Flag for early practice cards (not yet due)
 }
 
 /**
