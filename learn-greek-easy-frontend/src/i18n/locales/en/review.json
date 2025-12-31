@@ -15,7 +15,12 @@
     "flipCardAriaLabel": "Flip card to reveal translation",
     "answerRevealed": "Answer revealed",
     "minRemaining": "{{minutes}} min remaining",
-    "sessionEndedNoCards": "Session ended without reviewing any cards."
+    "sessionEndedNoCards": "Session ended without reviewing any cards.",
+    "earlyPractice": {
+      "badge": "Early Practice",
+      "tooltip": "Practicing before due date - great dedication!",
+      "dueLabel": "Due: {{date}}"
+    }
   },
   "ratings": {
     "again": "Again",
