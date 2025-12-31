@@ -612,6 +612,198 @@ async def test_get_due_cards(db_session: AsyncSession, sample_user, sample_deck,
 
 
 @pytest.mark.asyncio
+async def test_get_early_practice_cards(
+    db_session: AsyncSession, sample_user, sample_deck, sample_cards
+):
+    """Test getting cards for early practice (not yet due)."""
+    repo = CardStatisticsRepository(db_session)
+
+    # Create statistics for cards with different due dates
+    from src.db.models import CardStatistics
+
+    # Due today (should NOT be returned - not "early")
+    stat_due_today = CardStatistics(
+        user_id=sample_user.id,
+        card_id=sample_cards[0].id,
+        easiness_factor=2.5,
+        interval=1,
+        repetitions=1,
+        next_review_date=date.today(),
+        status=CardStatus.LEARNING,
+    )
+    # Due tomorrow (should be returned)
+    stat_due_tomorrow = CardStatistics(
+        user_id=sample_user.id,
+        card_id=sample_cards[1].id,
+        easiness_factor=2.5,
+        interval=3,
+        repetitions=2,
+        next_review_date=date.today() + timedelta(days=1),
+        status=CardStatus.REVIEW,
+    )
+    # Due in 5 days (should be returned)
+    stat_due_later = CardStatistics(
+        user_id=sample_user.id,
+        card_id=sample_cards[2].id,
+        easiness_factor=2.5,
+        interval=5,
+        repetitions=3,
+        next_review_date=date.today() + timedelta(days=5),
+        status=CardStatus.LEARNING,
+    )
+    db_session.add(stat_due_today)
+    db_session.add(stat_due_tomorrow)
+    db_session.add(stat_due_later)
+    await db_session.commit()
+
+    early_cards = await repo.get_early_practice_cards(sample_user.id, deck_id=sample_deck.id)
+
+    # Should return only future cards
+    assert len(early_cards) == 2
+    # All returned cards should have future due dates
+    assert all(stat.next_review_date > date.today() for stat in early_cards)
+    # Should be ordered by next_review_date (closest first)
+    assert early_cards[0].next_review_date <= early_cards[1].next_review_date
+
+
+@pytest.mark.asyncio
+async def test_get_early_practice_cards_excludes_new_and_mastered(
+    db_session: AsyncSession, sample_user, sample_deck, sample_cards
+):
+    """Test that early practice excludes NEW and MASTERED status cards."""
+    repo = CardStatisticsRepository(db_session)
+
+    from src.db.models import CardStatistics
+
+    # NEW status (should NOT be returned)
+    stat_new = CardStatistics(
+        user_id=sample_user.id,
+        card_id=sample_cards[0].id,
+        easiness_factor=2.5,
+        interval=0,
+        repetitions=0,
+        next_review_date=date.today() + timedelta(days=1),
+        status=CardStatus.NEW,
+    )
+    # MASTERED status (should NOT be returned)
+    stat_mastered = CardStatistics(
+        user_id=sample_user.id,
+        card_id=sample_cards[1].id,
+        easiness_factor=2.8,
+        interval=30,
+        repetitions=10,
+        next_review_date=date.today() + timedelta(days=30),
+        status=CardStatus.MASTERED,
+    )
+    # LEARNING status (should be returned)
+    stat_learning = CardStatistics(
+        user_id=sample_user.id,
+        card_id=sample_cards[2].id,
+        easiness_factor=2.5,
+        interval=3,
+        repetitions=2,
+        next_review_date=date.today() + timedelta(days=3),
+        status=CardStatus.LEARNING,
+    )
+    db_session.add(stat_new)
+    db_session.add(stat_mastered)
+    db_session.add(stat_learning)
+    await db_session.commit()
+
+    early_cards = await repo.get_early_practice_cards(sample_user.id, deck_id=sample_deck.id)
+
+    # Should only return LEARNING card
+    assert len(early_cards) == 1
+    assert early_cards[0].status == CardStatus.LEARNING
+
+
+@pytest.mark.asyncio
+async def test_get_early_practice_cards_respects_limit(
+    db_session: AsyncSession, sample_user, sample_deck, sample_cards
+):
+    """Test that limit parameter is respected."""
+    repo = CardStatisticsRepository(db_session)
+
+    from src.db.models import CardStatistics
+
+    # Create 3 cards all due in future
+    for i, card in enumerate(sample_cards):
+        stat = CardStatistics(
+            user_id=sample_user.id,
+            card_id=card.id,
+            easiness_factor=2.5,
+            interval=i + 1,
+            repetitions=i + 1,
+            next_review_date=date.today() + timedelta(days=i + 1),
+            status=CardStatus.REVIEW,
+        )
+        db_session.add(stat)
+    await db_session.commit()
+
+    # Request only 2 cards
+    early_cards = await repo.get_early_practice_cards(
+        sample_user.id, deck_id=sample_deck.id, limit=2
+    )
+
+    assert len(early_cards) == 2
+
+
+@pytest.mark.asyncio
+async def test_get_early_practice_cards_no_deck_filter(
+    db_session: AsyncSession, sample_user, sample_deck, sample_cards
+):
+    """Test getting early practice cards without deck filter."""
+    repo = CardStatisticsRepository(db_session)
+
+    from src.db.models import CardStatistics
+
+    stat = CardStatistics(
+        user_id=sample_user.id,
+        card_id=sample_cards[0].id,
+        easiness_factor=2.5,
+        interval=2,
+        repetitions=1,
+        next_review_date=date.today() + timedelta(days=2),
+        status=CardStatus.LEARNING,
+    )
+    db_session.add(stat)
+    await db_session.commit()
+
+    # Call without deck_id filter
+    early_cards = await repo.get_early_practice_cards(sample_user.id)
+
+    assert len(early_cards) == 1
+    assert early_cards[0].next_review_date > date.today()
+
+
+@pytest.mark.asyncio
+async def test_get_early_practice_cards_empty_result(
+    db_session: AsyncSession, sample_user, sample_deck, sample_cards
+):
+    """Test that empty list is returned when no early practice cards exist."""
+    repo = CardStatisticsRepository(db_session)
+
+    from src.db.models import CardStatistics
+
+    # Create only a card due today (not early)
+    stat = CardStatistics(
+        user_id=sample_user.id,
+        card_id=sample_cards[0].id,
+        easiness_factor=2.5,
+        interval=1,
+        repetitions=1,
+        next_review_date=date.today(),
+        status=CardStatus.LEARNING,
+    )
+    db_session.add(stat)
+    await db_session.commit()
+
+    early_cards = await repo.get_early_practice_cards(sample_user.id, deck_id=sample_deck.id)
+
+    assert early_cards == []
+
+
+@pytest.mark.asyncio
 async def test_get_by_status(db_session: AsyncSession, sample_user, sample_card_statistics):
     """Test filtering cards by status."""
     repo = CardStatisticsRepository(db_session)
