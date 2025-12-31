@@ -9,7 +9,6 @@ import { RouteGuard } from '@/components/auth/RouteGuard';
 import { ChunkErrorBoundary, ErrorBoundary } from '@/components/errors';
 import { PageLoader } from '@/components/feedback';
 import { AppLayout } from '@/components/layout';
-import { NotificationToastContainer } from '@/components/notifications';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { AchievementNotificationManager } from '@/components/xp';
@@ -171,7 +170,6 @@ function AppContent() {
         </ChunkErrorBoundary>
         {/* Achievement manager inside RouteGuard to wait for auth validation */}
         <AchievementNotificationManager />
-        <NotificationToastContainer />
       </RouteGuard>
 
       <Toaster />

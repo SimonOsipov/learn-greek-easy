@@ -58,9 +58,9 @@ export const Dashboard: React.FC = () => {
       (d) => (d.progress?.cardsReview ?? 0) > 0 || d.progress?.status === 'in-progress'
     );
     if (deckWithDue) {
-      navigate(`/review/${deckWithDue.id}`);
+      navigate(`/decks/${deckWithDue.id}/review`);
     } else if (decks.length > 0) {
-      navigate(`/review/${decks[0].id}`);
+      navigate(`/decks/${decks[0].id}/review`);
     } else {
       navigate('/decks');
     }
@@ -68,7 +68,7 @@ export const Dashboard: React.FC = () => {
 
   // Navigate to deck study
   const handleContinueDeck = (deckId: string) => {
-    navigate(`/review/${deckId}`);
+    navigate(`/decks/${deckId}/review`);
   };
 
   // Build metrics from analytics data

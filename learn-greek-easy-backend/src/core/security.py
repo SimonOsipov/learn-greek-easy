@@ -312,7 +312,7 @@ def create_access_token(user_id: UUID) -> tuple[str, datetime]:
         None: This function does not raise exceptions.
 
     Security Notes:
-        - Token expires after jwt_access_token_expire_minutes (default: 30)
+        - Token expires after jwt_access_token_expire_minutes (default: 720 = 12 hours)
         - Contains user_id in "sub" claim for identification
         - Includes "type": "access" to prevent token confusion attacks
         - Uses HS256 algorithm with shared secret
