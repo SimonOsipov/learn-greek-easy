@@ -32,8 +32,8 @@ class TestAuthEndpoints:
         assert "access_token" in data
         assert "refresh_token" in data
         assert data["token_type"] == "bearer"
-        # Allow 1-2 seconds variance for timing
-        assert 1798 <= data["expires_in"] <= 1800
+        # Allow 1-2 seconds variance for timing (12 hours = 43200 seconds)
+        assert 43198 <= data["expires_in"] <= 43200
 
         # Verify user created in database
         result = await db_session.execute(select(User).where(User.email == user_data["email"]))
@@ -175,8 +175,8 @@ class TestAuthEndpoints:
         assert "access_token" in data
         assert "refresh_token" in data
         assert data["token_type"] == "bearer"
-        # Allow 1-2 seconds variance for timing
-        assert 1798 <= data["expires_in"] <= 1800
+        # Allow 1-2 seconds variance for timing (12 hours = 43200 seconds)
+        assert 43198 <= data["expires_in"] <= 43200
 
     @pytest.mark.asyncio
     async def test_login_invalid_email(self, client: AsyncClient):
