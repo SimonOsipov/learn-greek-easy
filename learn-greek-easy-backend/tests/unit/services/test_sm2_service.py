@@ -15,7 +15,7 @@ Acceptance Criteria tested:
 - AC #5: Invalid input handling tested
 """
 
-from datetime import date
+from datetime import date, timedelta
 from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
@@ -537,6 +537,216 @@ class TestGetStudyQueue:
 
         with pytest.raises(DeckNotFoundException):
             await service.get_study_queue(user_id=uuid4(), request=request)
+
+    @pytest.mark.asyncio
+    async def test_get_study_queue_includes_early_practice_when_requested(
+        self, mock_db_session, mock_deck, mock_card
+    ):
+        """Early practice cards are included when include_early_practice=True."""
+        service = SM2Service(mock_db_session)
+
+        # Create mock early practice stats
+        early_stats = MagicMock()
+        early_stats.status = CardStatus.REVIEW
+        early_stats.next_review_date = date.today() + timedelta(days=3)
+        early_stats.easiness_factor = 2.5
+        early_stats.interval = 6
+        early_stats.card = mock_card
+
+        service.deck_repo.get = AsyncMock(return_value=mock_deck)
+        service.stats_repo.get_due_cards = AsyncMock(return_value=[])
+        service.stats_repo.get_new_cards_for_deck = AsyncMock(return_value=[])
+        service.stats_repo.get_early_practice_cards = AsyncMock(return_value=[early_stats])
+
+        request = StudyQueueRequest(
+            deck_id=mock_deck.id,
+            limit=20,
+            include_new=False,
+            include_early_practice=True,
+            early_practice_limit=10,
+        )
+
+        result = await service.get_study_queue(user_id=uuid4(), request=request)
+
+        assert result.total_early_practice == 1
+        assert result.total_in_queue == 1
+        assert len(result.cards) == 1
+        assert result.cards[0].is_early_practice is True
+        assert result.cards[0].is_new is False
+
+    @pytest.mark.asyncio
+    async def test_get_study_queue_excludes_early_practice_by_default(
+        self, mock_db_session, mock_deck, mock_card
+    ):
+        """Early practice cards are excluded when include_early_practice=False."""
+        service = SM2Service(mock_db_session)
+
+        service.deck_repo.get = AsyncMock(return_value=mock_deck)
+        service.stats_repo.get_due_cards = AsyncMock(return_value=[])
+        service.stats_repo.get_new_cards_for_deck = AsyncMock(return_value=[])
+        service.stats_repo.get_early_practice_cards = AsyncMock(return_value=[])
+
+        request = StudyQueueRequest(
+            deck_id=mock_deck.id,
+            limit=20,
+            include_new=False,
+            include_early_practice=False,
+        )
+
+        result = await service.get_study_queue(user_id=uuid4(), request=request)
+
+        # get_early_practice_cards should NOT be called
+        service.stats_repo.get_early_practice_cards.assert_not_awaited()
+        assert result.total_early_practice == 0
+
+    @pytest.mark.asyncio
+    async def test_get_study_queue_early_practice_respects_limit(self, mock_db_session, mock_deck):
+        """Early practice respects early_practice_limit parameter."""
+        service = SM2Service(mock_db_session)
+
+        # Create 5 mock early practice cards
+        early_stats_list = []
+        for i in range(5):
+            stats = MagicMock()
+            stats.status = CardStatus.REVIEW
+            stats.next_review_date = date.today() + timedelta(days=i + 1)
+            stats.easiness_factor = 2.5
+            stats.interval = 6
+            card = MagicMock(spec=Card)
+            card.id = uuid4()
+            card.front_text = f"Card {i}"
+            card.back_text = f"Back {i}"
+            card.example_sentence = None
+            card.pronunciation = None
+            card.difficulty = CardDifficulty.EASY
+            stats.card = card
+            early_stats_list.append(stats)
+
+        service.deck_repo.get = AsyncMock(return_value=mock_deck)
+        service.stats_repo.get_due_cards = AsyncMock(return_value=[])
+        service.stats_repo.get_new_cards_for_deck = AsyncMock(return_value=[])
+        # Return only 3 (respecting limit passed to repository)
+        service.stats_repo.get_early_practice_cards = AsyncMock(return_value=early_stats_list[:3])
+
+        request = StudyQueueRequest(
+            deck_id=mock_deck.id,
+            limit=20,
+            include_new=False,
+            include_early_practice=True,
+            early_practice_limit=3,
+        )
+
+        result = await service.get_study_queue(user_id=uuid4(), request=request)
+
+        # Verify limit was passed correctly
+        call_kwargs = service.stats_repo.get_early_practice_cards.call_args.kwargs
+        assert call_kwargs["limit"] == 3
+        assert result.total_early_practice == 3
+
+    @pytest.mark.asyncio
+    async def test_get_study_queue_priority_order(self, mock_db_session, mock_deck):
+        """Queue maintains order: due cards, new cards, early practice cards."""
+        service = SM2Service(mock_db_session)
+
+        # Due card
+        due_card = MagicMock(spec=Card)
+        due_card.id = uuid4()
+        due_card.front_text = "Due"
+        due_card.back_text = "Due Back"
+        due_card.example_sentence = None
+        due_card.pronunciation = None
+        due_card.difficulty = CardDifficulty.EASY
+
+        due_stats = MagicMock()
+        due_stats.status = CardStatus.REVIEW
+        due_stats.next_review_date = date.today()
+        due_stats.easiness_factor = 2.5
+        due_stats.interval = 6
+        due_stats.card = due_card
+
+        # New card
+        new_card = MagicMock(spec=Card)
+        new_card.id = uuid4()
+        new_card.front_text = "New"
+        new_card.back_text = "New Back"
+        new_card.example_sentence = None
+        new_card.pronunciation = None
+        new_card.difficulty = CardDifficulty.EASY
+
+        # Early practice card
+        early_card = MagicMock(spec=Card)
+        early_card.id = uuid4()
+        early_card.front_text = "Early"
+        early_card.back_text = "Early Back"
+        early_card.example_sentence = None
+        early_card.pronunciation = None
+        early_card.difficulty = CardDifficulty.EASY
+
+        early_stats = MagicMock()
+        early_stats.status = CardStatus.LEARNING
+        early_stats.next_review_date = date.today() + timedelta(days=2)
+        early_stats.easiness_factor = 2.5
+        early_stats.interval = 3
+        early_stats.card = early_card
+
+        service.deck_repo.get = AsyncMock(return_value=mock_deck)
+        service.stats_repo.get_due_cards = AsyncMock(return_value=[due_stats])
+        service.stats_repo.get_new_cards_for_deck = AsyncMock(return_value=[new_card])
+        service.stats_repo.get_early_practice_cards = AsyncMock(return_value=[early_stats])
+
+        request = StudyQueueRequest(
+            deck_id=mock_deck.id,
+            limit=20,
+            include_new=True,
+            new_cards_limit=10,
+            include_early_practice=True,
+            early_practice_limit=10,
+        )
+
+        result = await service.get_study_queue(user_id=uuid4(), request=request)
+
+        assert len(result.cards) == 3
+        # First: due card (not new, not early practice)
+        assert result.cards[0].front_text == "Due"
+        assert result.cards[0].is_new is False
+        assert result.cards[0].is_early_practice is False
+        # Second: new card
+        assert result.cards[1].front_text == "New"
+        assert result.cards[1].is_new is True
+        assert result.cards[1].is_early_practice is False
+        # Third: early practice card
+        assert result.cards[2].front_text == "Early"
+        assert result.cards[2].is_new is False
+        assert result.cards[2].is_early_practice is True
+
+    @pytest.mark.asyncio
+    async def test_get_study_queue_due_cards_not_early_practice(
+        self, mock_db_session, mock_deck, mock_card
+    ):
+        """Due cards explicitly have is_early_practice=False."""
+        service = SM2Service(mock_db_session)
+
+        due_stats = MagicMock()
+        due_stats.status = CardStatus.REVIEW
+        due_stats.next_review_date = date.today()
+        due_stats.easiness_factor = 2.5
+        due_stats.interval = 6
+        due_stats.card = mock_card
+
+        service.deck_repo.get = AsyncMock(return_value=mock_deck)
+        service.stats_repo.get_due_cards = AsyncMock(return_value=[due_stats])
+        service.stats_repo.get_new_cards_for_deck = AsyncMock(return_value=[])
+
+        request = StudyQueueRequest(
+            deck_id=mock_deck.id,
+            limit=20,
+            include_new=False,
+            include_early_practice=False,
+        )
+
+        result = await service.get_study_queue(user_id=uuid4(), request=request)
+
+        assert result.cards[0].is_early_practice is False
 
 
 @pytest.mark.unit
