@@ -606,8 +606,8 @@ class TestProcessAnswer:
             time_taken=10,
         )
 
-        # XP integration: 2 XP for wrong answer + 20 XP first review bonus = 22 XP
-        assert result.xp_earned == 22
+        # XP integration: 2 XP for wrong answer (no first review bonus for wrong answers)
+        assert result.xp_earned == 2
 
     @pytest.mark.asyncio
     async def test_process_answer_returns_deck_category(
@@ -1469,8 +1469,8 @@ class TestProcessAnswerFast:
 
         assert response.is_correct is False
         assert response.correct_option == 1
-        # XP should include base wrong (2) + first review bonus (20) = 22
-        assert response.xp_earned == 22
+        # XP should be base wrong (2) only - no first review bonus for wrong answers
+        assert response.xp_earned == 2
         assert response.message == "Not quite. Review this question."
         assert response.deck_category == culture_deck.category
 

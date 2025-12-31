@@ -407,15 +407,16 @@ class CultureQuestionService:
         )
 
         # Step 3: Calculate XP from constants (NO DB query)
-        # This is an optimistic estimate - includes first review bonus
+        # This is an optimistic estimate - includes first review bonus for correct answers only
         if is_correct:
             base_xp = XP_PERFECT_ANSWER if is_perfect else XP_CORRECT_ANSWER
         else:
             base_xp = XP_CULTURE_WRONG
 
-        # Optimistically include first review bonus
+        # Optimistically include first review bonus for correct answers only
+        # Wrong answers don't get the first review bonus
         # The background task will handle deduplication
-        estimated_xp = base_xp + XP_FIRST_REVIEW
+        estimated_xp = base_xp + XP_FIRST_REVIEW if is_correct else base_xp
 
         # Step 4: Generate feedback message (no DB needed)
         # For fast path, we don't know previous status, so use simplified logic
