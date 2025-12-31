@@ -26,7 +26,7 @@ case $ACTION in
     railway variables set DEBUG=false --environment "${ENV_NAME}"
     railway variables set LOG_LEVEL=INFO --environment "${ENV_NAME}"
     railway variables set JWT_ALGORITHM=HS256 --environment "${ENV_NAME}"
-    railway variables set ACCESS_TOKEN_EXPIRE_MINUTES=30 --environment "${ENV_NAME}"
+    railway variables set ACCESS_TOKEN_EXPIRE_MINUTES=720 --environment "${ENV_NAME}"
     railway variables set API_V1_PREFIX=/api/v1 --environment "${ENV_NAME}"
 
     echo "Preview environment ${ENV_NAME} created successfully!"

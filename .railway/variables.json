@@ -4,7 +4,7 @@
     "DEBUG": "false",
     "LOG_LEVEL": "INFO",
     "JWT_ALGORITHM": "HS256",
-    "ACCESS_TOKEN_EXPIRE_MINUTES": "30",
+    "ACCESS_TOKEN_EXPIRE_MINUTES": "720",
     "API_V1_PREFIX": "/api/v1",
     "CORS_ORIGINS": "https://learn-greek-frontend.up.railway.app"
   },
@@ -13,7 +13,7 @@
     "DEBUG": "true",
     "LOG_LEVEL": "DEBUG",
     "JWT_ALGORITHM": "HS256",
-    "ACCESS_TOKEN_EXPIRE_MINUTES": "30",
+    "ACCESS_TOKEN_EXPIRE_MINUTES": "720",
     "API_V1_PREFIX": "/api/v1"
   }
 }

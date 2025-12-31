@@ -118,7 +118,7 @@ class Settings(BaseSettings):
     )
     jwt_algorithm: str = Field(default="HS256", description="JWT algorithm")
     jwt_access_token_expire_minutes: int = Field(
-        default=30,
+        default=720,
         description="JWT access token expiry (minutes)",
     )
     jwt_refresh_token_expire_days: int = Field(
