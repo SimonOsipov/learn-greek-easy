@@ -339,6 +339,7 @@ class SM2Service:
                 "deck_id": str(request.deck_id) if request.deck_id else "all",
                 "limit": request.limit,
                 "include_new": request.include_new,
+                "include_early_practice": request.include_early_practice,
             },
         )
 
@@ -379,6 +380,27 @@ class SM2Service:
                     },
                 )
 
+        # Get early practice cards if requested
+        early_practice_cards: list["CardStatistics"] = []
+        if request.include_early_practice:
+            current_count = len(due_cards) + len(new_cards)
+            remaining_slots = request.limit - current_count
+            if remaining_slots > 0:
+                ep_limit = min(request.early_practice_limit, remaining_slots)
+                early_practice_cards = await self.stats_repo.get_early_practice_cards(
+                    user_id=user_id,
+                    deck_id=request.deck_id,
+                    limit=ep_limit,
+                )
+
+                logger.debug(
+                    "Added early practice cards to queue",
+                    extra={
+                        "user_id": str(user_id),
+                        "early_practice_count": len(early_practice_cards),
+                    },
+                )
+
         # Build queue cards list
         queue_cards: list[StudyQueueCard] = []
 
@@ -395,6 +417,7 @@ class SM2Service:
                     difficulty=card.difficulty,
                     status=stats.status,
                     is_new=False,
+                    is_early_practice=False,
                     due_date=stats.next_review_date,
                     easiness_factor=stats.easiness_factor,
                     interval=stats.interval,
@@ -413,9 +436,30 @@ class SM2Service:
                     difficulty=card.difficulty,
                     status=CardStatus.NEW,
                     is_new=True,
+                    is_early_practice=False,
                     due_date=None,
                     easiness_factor=None,
                     interval=None,
+                )
+            )
+
+        # Add early practice cards (not due yet, but requested for practice)
+        for stats in early_practice_cards:
+            card = stats.card  # Eager loaded
+            queue_cards.append(
+                StudyQueueCard(
+                    card_id=card.id,
+                    front_text=card.front_text,
+                    back_text=card.back_text,
+                    example_sentence=card.example_sentence,
+                    pronunciation=card.pronunciation,
+                    difficulty=card.difficulty,
+                    status=stats.status,
+                    is_new=False,
+                    is_early_practice=True,
+                    due_date=stats.next_review_date,
+                    easiness_factor=stats.easiness_factor,
+                    interval=stats.interval,
                 )
             )
 
@@ -426,6 +470,7 @@ class SM2Service:
                 "deck_id": str(request.deck_id) if request.deck_id else "all",
                 "total_due": len(due_cards),
                 "total_new": len(new_cards),
+                "total_early_practice": len(early_practice_cards),
                 "total_in_queue": len(queue_cards),
             },
         )
@@ -437,6 +482,7 @@ class SM2Service:
             deck_name=deck_name,
             total_due=len(due_cards),
             total_new=len(new_cards),
+            total_early_practice=len(early_practice_cards),
             total_in_queue=len(queue_cards),
             cards=queue_cards,
         )

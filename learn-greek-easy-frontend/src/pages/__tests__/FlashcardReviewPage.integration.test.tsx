@@ -154,7 +154,7 @@ vi.mock('@/services/progressAPI', () => ({
 
 vi.mock('@/services/studyAPI', () => {
   // Define mock data inline since vi.mock is hoisted
-  // Uses correct backend field names: front_text, back_text, due_date, is_new
+  // Uses correct backend field names: front_text, back_text, due_date, is_new, is_early_practice
   const studyQueueCards = [
     {
       card_id: 'card-1',
@@ -167,6 +167,7 @@ vi.mock('@/services/studyAPI', () => {
       easiness_factor: 2.5,
       interval: 0,
       is_new: true,
+      is_early_practice: false,
       due_date: null,
     },
     {
@@ -180,6 +181,7 @@ vi.mock('@/services/studyAPI', () => {
       easiness_factor: 2.5,
       interval: 0,
       is_new: true,
+      is_early_practice: false,
       due_date: null,
     },
     {
@@ -193,6 +195,7 @@ vi.mock('@/services/studyAPI', () => {
       easiness_factor: 2.3,
       interval: 1,
       is_new: false,
+      is_early_practice: false,
       due_date: '2025-01-08',
     },
     {
@@ -206,6 +209,7 @@ vi.mock('@/services/studyAPI', () => {
       easiness_factor: 2.4,
       interval: 3,
       is_new: false,
+      is_early_practice: false,
       due_date: '2025-01-08',
     },
     {
@@ -219,33 +223,43 @@ vi.mock('@/services/studyAPI', () => {
       easiness_factor: 2.6,
       interval: 7,
       is_new: false,
+      is_early_practice: false,
       due_date: '2025-01-15',
     },
   ];
 
   return {
     studyAPI: {
-      getQueue: vi.fn().mockImplementation(({ deck_id }: { deck_id: string }) => {
-        if (deck_id === 'invalid-deck-id-12345' || deck_id === 'invalid-deck-999') {
+      getDeckQueue: vi.fn().mockImplementation((deckId: string) => {
+        if (deckId === 'invalid-deck-id-12345' || deckId === 'invalid-deck-999') {
           return Promise.reject(new Error('Deck not found'));
         }
-        if (!deck_id) {
+        if (!deckId) {
           return Promise.reject(new Error('Deck ID is required'));
         }
         return Promise.resolve({
-          deck_id,
-          total_due: studyQueueCards.length,
-          new_count: 2,
-          learning_count: 1,
-          review_count: 2,
+          deck_id: deckId,
+          deck_name: 'A1 Basics',
+          total_due: 3,
+          total_new: 2,
+          total_early_practice: 0,
+          total_in_queue: studyQueueCards.length,
           cards: studyQueueCards,
         });
       }),
-      getDeckQueue: vi.fn().mockResolvedValue({
-        deck_id: 'deck-a1-basics',
-        cards: studyQueueCards,
+      getQueue: vi.fn().mockImplementation(() => {
+        return Promise.resolve({
+          deck_id: 'deck-a1-basics',
+          deck_name: 'A1 Basics',
+          total_due: 3,
+          total_new: 2,
+          total_early_practice: 0,
+          total_in_queue: studyQueueCards.length,
+          cards: studyQueueCards,
+        });
       }),
       initializeCards: vi.fn().mockResolvedValue({ initialized_count: 10 }),
+      initializeDeck: vi.fn().mockResolvedValue({ initialized_count: 10 }),
     },
   };
 });

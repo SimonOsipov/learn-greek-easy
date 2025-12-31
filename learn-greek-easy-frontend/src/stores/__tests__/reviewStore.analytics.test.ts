@@ -28,6 +28,7 @@ vi.mock('@/services/reviewAPI', () => ({
 vi.mock('@/services/studyAPI', () => ({
   studyAPI: {
     getQueue: vi.fn(),
+    getDeckQueue: vi.fn(),
   },
 }));
 
@@ -42,31 +43,31 @@ describe('reviewStore analytics', () => {
   const mockStudyQueueCards: StudyQueueCard[] = [
     {
       card_id: 'card-1',
-      greek_word: 'Hello',
-      english_translation: 'Γειά σου',
+      front_text: 'Hello',
+      back_text: 'Γειά σου',
       pronunciation: 'yia sou',
       example_sentence: 'Hello, how are you?',
-      example_translation: 'Γειά σου, πώς είσαι;',
       status: 'new',
       difficulty: 'easy',
       easiness_factor: 2.5,
       interval: 0,
-      repetitions: 0,
-      next_review_date: null,
+      is_new: true,
+      is_early_practice: false,
+      due_date: null,
     },
     {
       card_id: 'card-2',
-      greek_word: 'Goodbye',
-      english_translation: 'Αντίο',
+      front_text: 'Goodbye',
+      back_text: 'Αντίο',
       pronunciation: 'adio',
       example_sentence: 'Goodbye, see you later',
-      example_translation: 'Αντίο, τα λέμε αργότερα',
       status: 'learning',
       difficulty: 'medium',
       easiness_factor: 2.3,
       interval: 1,
-      repetitions: 1,
-      next_review_date: new Date().toISOString(),
+      is_new: false,
+      is_early_practice: false,
+      due_date: new Date().toISOString(),
     },
   ];
 
@@ -125,11 +126,14 @@ describe('reviewStore analytics', () => {
     });
 
     // Mock study API to return test cards
-    vi.mocked(studyAPI.getQueue).mockResolvedValue({
+    vi.mocked(studyAPI.getDeckQueue).mockResolvedValue({
+      deck_id: mockDeckId,
+      deck_name: 'Test Deck',
       cards: mockStudyQueueCards,
       total_due: 2,
-      new_count: 1,
-      review_count: 1,
+      total_new: 1,
+      total_early_practice: 0,
+      total_in_queue: 2,
     });
 
     // Mock review API submit

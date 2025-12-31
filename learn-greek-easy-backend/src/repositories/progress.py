@@ -246,6 +246,53 @@ class CardStatisticsRepository(BaseRepository[CardStatistics]):
         result = await self.db.execute(query)
         return list(result.scalars().all())
 
+    async def get_early_practice_cards(
+        self,
+        user_id: UUID,
+        deck_id: UUID | None = None,
+        *,
+        limit: int = 10,
+    ) -> list[CardStatistics]:
+        """Get cards not yet due for early practice.
+
+        Returns cards that have been studied before but aren't due yet,
+        allowing users to practice ahead of schedule.
+
+        Args:
+            user_id: User UUID
+            deck_id: Optional deck filter
+            limit: Max cards to return
+
+        Returns:
+            List of card statistics with card and deck info loaded
+
+        Use Case:
+            Flexible study - practice cards before they're due
+
+        Performance:
+            Uses next_review_date index, eager loads relationships
+        """
+        query = select(CardStatistics).where(CardStatistics.user_id == user_id)
+
+        # Filter for future cards (not yet due)
+        query = query.where(CardStatistics.next_review_date > date.today())
+
+        # Only include cards in active learning phases
+        query = query.where(CardStatistics.status.in_([CardStatus.LEARNING, CardStatus.REVIEW]))
+
+        # Apply deck filter if specified (join before limit)
+        if deck_id is not None:
+            query = query.join(Card).where(Card.deck_id == deck_id)
+
+        # Eager load relationships
+        query = query.options(selectinload(CardStatistics.card).selectinload(Card.deck))
+
+        # Order by next review date (closest first) and limit
+        query = query.order_by(CardStatistics.next_review_date).limit(limit)
+
+        result = await self.db.execute(query)
+        return list(result.scalars().all())
+
     async def get_by_status(
         self,
         user_id: UUID,

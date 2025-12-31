@@ -114,6 +114,7 @@ const transformStudyQueueCard = (card: StudyQueueCard, deckId: string): CardRevi
   notes: '',
   status: card.status as 'new' | 'learning' | 'review' | 'mastered',
   difficulty: card.difficulty as 'easy' | 'medium' | 'hard',
+  isEarlyPractice: card.is_early_practice, // Preserve early practice flag from backend
   // Spaced repetition data
   srData: {
     cardId: card.card_id,
@@ -229,15 +230,17 @@ export const useReviewStore = create<ReviewState>()(
             ? { ...DEFAULT_QUEUE_CONFIG, maxNewCards: maxCards, maxReviewCards: maxCards }
             : DEFAULT_QUEUE_CONFIG;
 
-          // Fetch study queue from backend
-          const queue = await studyAPI.getQueue({
-            deck_id: deckId,
+          // Fetch study queue from backend (with early practice for flexible studying)
+          const queue = await studyAPI.getDeckQueue(deckId, {
             limit: config.maxNewCards || 20,
+            include_new: true,
+            include_early_practice: true,
+            early_practice_limit: 10,
           });
 
           // Check if there are cards to review
           if (queue.cards.length === 0) {
-            throw new Error('No cards due for review. Come back later!');
+            throw new Error('No cards available for study. Add some cards to this deck first!');
           }
 
           // Transform cards to frontend format

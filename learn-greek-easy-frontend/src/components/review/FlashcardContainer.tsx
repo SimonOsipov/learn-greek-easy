@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react';
 
+import { Clock } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { useReviewStore } from '@/stores/reviewStore';
 import type { CardReview } from '@/types/review';
@@ -59,6 +62,31 @@ export function FlashcardContainer({ card }: FlashcardContainerProps) {
         )}
       >
         <ProgressHeader />
+
+        {/* Early Practice Indicator */}
+        {card.isEarlyPractice && (
+          <div className="-mt-2 mb-2 flex justify-center">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Badge variant="secondary" className="bg-amber-100 text-amber-800">
+                  <Clock className="mr-1 h-3 w-3" />
+                  {t('session.earlyPractice.badge')}
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{t('session.earlyPractice.tooltip')}</p>
+                {card.srData?.dueDate && (
+                  <p className="text-xs text-muted-foreground">
+                    {t('session.earlyPractice.dueLabel', {
+                      date: new Date(card.srData.dueDate).toLocaleDateString(),
+                    })}
+                  </p>
+                )}
+              </TooltipContent>
+            </Tooltip>
+          </div>
+        )}
+
         <CardMain card={card} isFlipped={isCardFlipped} onFlip={flipCard} />
         <RatingButtons />
 

@@ -186,6 +186,10 @@ class StudyQueueCard(BaseModel):
         ...,
         description="True if card has never been reviewed",
     )
+    is_early_practice: bool = Field(
+        default=False,
+        description="True if card is being practiced before its due date",
+    )
     due_date: Optional[date] = Field(
         default=None,
         description="Scheduled review date (None for new cards)",
@@ -224,6 +228,11 @@ class StudyQueue(BaseModel):
         ge=0,
         description="Number of new cards available",
     )
+    total_early_practice: int = Field(
+        default=0,
+        ge=0,
+        description="Number of early practice cards in queue",
+    )
     total_in_queue: int = Field(
         ...,
         ge=0,
@@ -231,7 +240,7 @@ class StudyQueue(BaseModel):
     )
     cards: list[StudyQueueCard] = Field(
         default_factory=list,
-        description="Cards to study (due cards first, then new)",
+        description="Cards to study (due cards first, then new, then early practice)",
     )
 
 
@@ -257,6 +266,16 @@ class StudyQueueRequest(BaseModel):
         ge=0,
         le=50,
         description="Maximum new cards to include",
+    )
+    include_early_practice: bool = Field(
+        default=False,
+        description="Include cards not yet due as 'early practice'",
+    )
+    early_practice_limit: int = Field(
+        default=10,
+        ge=0,
+        le=50,
+        description="Maximum early practice cards to include",
     )
 
 

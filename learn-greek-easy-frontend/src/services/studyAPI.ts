@@ -32,6 +32,7 @@ export interface StudyQueueCard {
   difficulty: string;
   status: CardStatus;
   is_new: boolean;
+  is_early_practice: boolean;
   due_date: string | null;
   easiness_factor: number;
   interval: number;
@@ -45,6 +46,7 @@ export interface StudyQueue {
   deck_name: string;
   total_due: number;
   total_new: number;
+  total_early_practice: number;
   total_in_queue: number;
   cards: StudyQueueCard[];
 }
@@ -89,6 +91,8 @@ export interface StudyQueueParams {
   limit?: number;
   include_new?: boolean;
   new_cards_limit?: number;
+  include_early_practice?: boolean;
+  early_practice_limit?: number;
 }
 
 /**
@@ -112,6 +116,8 @@ export const studyAPI = {
       limit: params.limit || 20,
       include_new: params.include_new !== false,
       new_cards_limit: params.new_cards_limit || 10,
+      include_early_practice: params.include_early_practice,
+      early_practice_limit: params.early_practice_limit,
     });
     return api.get<StudyQueue>(`/api/v1/study/queue${queryString}`);
   },
@@ -124,6 +130,8 @@ export const studyAPI = {
       limit: params.limit || 20,
       include_new: params.include_new !== false,
       new_cards_limit: params.new_cards_limit || 10,
+      include_early_practice: params.include_early_practice,
+      early_practice_limit: params.early_practice_limit,
     });
     return api.get<StudyQueue>(`/api/v1/study/queue/${deckId}${queryString}`);
   },

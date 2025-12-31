@@ -161,53 +161,67 @@ vi.mock('@/services/progressAPI', () => ({
 }));
 
 vi.mock('@/services/studyAPI', () => {
+  // Uses correct backend field names: front_text, back_text, due_date, is_new, is_early_practice
   const studyQueueCards = [
     {
       card_id: 'card-1',
-      greek_word: 'Kalimera',
-      english_translation: 'Good morning',
+      front_text: 'Kalimera',
+      back_text: 'Good morning',
       pronunciation: 'kah-lee-MEH-rah',
-      example_sentence: 'Kalimera, ti kanis;',
-      example_translation: 'Good morning, how are you doing?',
+      example_sentence: 'Kalimera, ti kanis?',
       status: 'new',
       difficulty: 'easy',
       easiness_factor: 2.5,
       interval: 0,
-      repetitions: 0,
-      next_review_date: null,
+      is_new: true,
+      is_early_practice: false,
+      due_date: null,
     },
     {
       card_id: 'card-2',
-      greek_word: 'Efharisto',
-      english_translation: 'Thank you',
+      front_text: 'Efharisto',
+      back_text: 'Thank you',
       pronunciation: 'ef-ha-ree-STO',
       example_sentence: 'Efharisto poli!',
-      example_translation: 'Thank you very much!',
       status: 'learning',
       difficulty: 'medium',
       easiness_factor: 2.3,
       interval: 1,
-      repetitions: 1,
-      next_review_date: '2025-01-08',
+      is_new: false,
+      is_early_practice: false,
+      due_date: '2025-01-08',
     },
   ];
 
   return {
     studyAPI: {
-      getQueue: vi.fn().mockImplementation(({ deck_id }: { deck_id: string }) => {
-        if (!deck_id) {
+      getDeckQueue: vi.fn().mockImplementation((deckId: string) => {
+        if (!deckId) {
           return Promise.reject(new Error('Deck ID is required'));
         }
         return Promise.resolve({
-          deck_id,
-          total_due: studyQueueCards.length,
-          new_count: 1,
-          learning_count: 1,
-          review_count: 0,
+          deck_id: deckId,
+          deck_name: 'A1 Basics',
+          total_due: 2,
+          total_new: 1,
+          total_early_practice: 0,
+          total_in_queue: studyQueueCards.length,
+          cards: studyQueueCards,
+        });
+      }),
+      getQueue: vi.fn().mockImplementation(() => {
+        return Promise.resolve({
+          deck_id: 'deck-a1-basics',
+          deck_name: 'A1 Basics',
+          total_due: 2,
+          total_new: 1,
+          total_early_practice: 0,
+          total_in_queue: studyQueueCards.length,
           cards: studyQueueCards,
         });
       }),
       initializeCards: vi.fn().mockResolvedValue({ initialized_count: 10 }),
+      initializeDeck: vi.fn().mockResolvedValue({ initialized_count: 10 }),
     },
   };
 });
@@ -522,12 +536,13 @@ describe('FlashcardReviewPage - Analytics Tracking', () => {
     const { studyAPI } = await import('@/services/studyAPI');
 
     // Make the API return an empty queue (no cards due)
-    vi.mocked(studyAPI.getQueue).mockResolvedValueOnce({
+    vi.mocked(studyAPI.getDeckQueue).mockResolvedValueOnce({
       deck_id: 'deck-a1-basics',
+      deck_name: 'A1 Basics',
       total_due: 0,
-      new_count: 0,
-      learning_count: 0,
-      review_count: 0,
+      total_new: 0,
+      total_early_practice: 0,
+      total_in_queue: 0,
       cards: [], // Empty cards array
     });
 

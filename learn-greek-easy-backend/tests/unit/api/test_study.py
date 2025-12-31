@@ -354,6 +354,90 @@ class TestGetStudyQueueUnit:
             assert data["total_in_queue"] == 0
             assert data["cards"] == []
 
+    @pytest.mark.asyncio
+    async def test_get_study_queue_with_early_practice_params(
+        self, client: AsyncClient, auth_headers: dict
+    ):
+        """Test that early practice parameters are passed to service."""
+        all_decks_id = UUID("00000000-0000-0000-0000-000000000000")
+
+        mock_queue = StudyQueue(
+            deck_id=all_decks_id,
+            deck_name="All Decks",
+            total_due=2,
+            total_new=1,
+            total_early_practice=3,
+            total_in_queue=6,
+            cards=[],
+        )
+
+        with patch("src.api.v1.study.SM2Service") as mock_class:
+            mock_service = AsyncMock()
+            mock_service.get_study_queue.return_value = mock_queue
+            mock_class.return_value = mock_service
+
+            response = await client.get(
+                "/api/v1/study/queue?include_early_practice=true&early_practice_limit=15",
+                headers=auth_headers,
+            )
+
+            assert response.status_code == 200
+
+            # Verify service was called with correct request parameters
+            mock_service.get_study_queue.assert_called_once()
+            call_args = mock_service.get_study_queue.call_args
+            request = call_args[0][1]  # Second positional argument is request
+            assert request.include_early_practice is True
+            assert request.early_practice_limit == 15
+
+    @pytest.mark.asyncio
+    async def test_get_study_queue_early_practice_default_values(
+        self, client: AsyncClient, auth_headers: dict
+    ):
+        """Test that early practice parameters have correct defaults."""
+        all_decks_id = UUID("00000000-0000-0000-0000-000000000000")
+
+        mock_queue = StudyQueue(
+            deck_id=all_decks_id,
+            deck_name="All Decks",
+            total_due=0,
+            total_new=0,
+            total_early_practice=0,
+            total_in_queue=0,
+            cards=[],
+        )
+
+        with patch("src.api.v1.study.SM2Service") as mock_class:
+            mock_service = AsyncMock()
+            mock_service.get_study_queue.return_value = mock_queue
+            mock_class.return_value = mock_service
+
+            response = await client.get("/api/v1/study/queue", headers=auth_headers)
+
+            assert response.status_code == 200
+
+            # Verify defaults
+            mock_service.get_study_queue.assert_called_once()
+            call_args = mock_service.get_study_queue.call_args
+            request = call_args[0][1]
+            assert request.include_early_practice is False  # Default
+            assert request.early_practice_limit == 10  # Default
+
+    @pytest.mark.asyncio
+    async def test_get_study_queue_invalid_early_practice_limit_returns_422(
+        self, client: AsyncClient, auth_headers: dict
+    ):
+        """Test that early_practice_limit > 50 returns 422."""
+        response = await client.get(
+            "/api/v1/study/queue?early_practice_limit=51",
+            headers=auth_headers,
+        )
+
+        assert response.status_code == 422
+        data = response.json()
+        assert data["success"] is False
+        assert data["error"]["code"] == "VALIDATION_ERROR"
+
 
 class TestGetDeckStudyQueueUnit:
     """Unit tests for GET /api/v1/study/queue/{deck_id} endpoint."""
@@ -486,6 +570,59 @@ class TestGetDeckStudyQueueUnit:
             assert request.limit == 15
             assert request.include_new is True
             assert request.new_cards_limit == 8
+
+    @pytest.mark.asyncio
+    async def test_get_deck_study_queue_with_early_practice_params(
+        self, client: AsyncClient, auth_headers: dict
+    ):
+        """Test that early practice parameters are passed to service for deck queue."""
+        deck_id = uuid4()
+
+        mock_queue = StudyQueue(
+            deck_id=deck_id,
+            deck_name="Greek Basics",
+            total_due=2,
+            total_new=1,
+            total_early_practice=3,
+            total_in_queue=6,
+            cards=[],
+        )
+
+        with patch("src.api.v1.study.SM2Service") as mock_class:
+            mock_service = AsyncMock()
+            mock_service.get_study_queue.return_value = mock_queue
+            mock_class.return_value = mock_service
+
+            response = await client.get(
+                f"/api/v1/study/queue/{deck_id}?include_early_practice=true&early_practice_limit=20",
+                headers=auth_headers,
+            )
+
+            assert response.status_code == 200
+
+            # Verify service was called with correct parameters
+            mock_service.get_study_queue.assert_called_once()
+            call_args = mock_service.get_study_queue.call_args
+            request = call_args[0][1]
+            assert request.deck_id == deck_id
+            assert request.include_early_practice is True
+            assert request.early_practice_limit == 20
+
+    @pytest.mark.asyncio
+    async def test_get_deck_study_queue_invalid_early_practice_limit_returns_422(
+        self, client: AsyncClient, auth_headers: dict
+    ):
+        """Test that early_practice_limit > 50 returns 422 for deck queue."""
+        deck_id = uuid4()
+        response = await client.get(
+            f"/api/v1/study/queue/{deck_id}?early_practice_limit=51",
+            headers=auth_headers,
+        )
+
+        assert response.status_code == 422
+        data = response.json()
+        assert data["success"] is False
+        assert data["error"]["code"] == "VALIDATION_ERROR"
 
 
 class TestInitializeCardsUnit:
