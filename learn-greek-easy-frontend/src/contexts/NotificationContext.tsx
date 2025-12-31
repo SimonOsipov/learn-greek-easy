@@ -30,18 +30,12 @@ interface NotificationContextValue {
   deleteNotification: (id: string) => Promise<void>;
   clearAll: () => Promise<void>;
   refreshUnreadCount: () => Promise<void>;
-
-  // Toast management
-  activeToasts: Notification[];
-  showToast: (notification: Notification) => void;
-  dismissToast: (id: string) => void;
 }
 
 const NotificationContext = createContext<NotificationContextValue | undefined>(undefined);
 
 const POLLING_INTERVAL = 60000; // 60 seconds
 const PAGE_SIZE = 20;
-const MAX_TOASTS = 3;
 
 export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -50,7 +44,6 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [error, setError] = useState<Error | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const [offset, setOffset] = useState(0);
-  const [activeToasts, setActiveToasts] = useState<Notification[]>([]);
   const previousUnreadCountRef = useRef(0);
   const isFetchingRef = useRef(false);
 
@@ -59,19 +52,6 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const hasHydrated = useHasHydrated();
   // Wait for auth to be validated with backend before making API calls
   const authInitialized = useAppStore((state) => state.authInitialized);
-
-  // Toast management
-  const showToast = useCallback((notification: Notification) => {
-    setActiveToasts((prev) => {
-      if (prev.some((t) => t.id === notification.id)) return prev;
-      const newToasts = [...prev, notification];
-      return newToasts.slice(-MAX_TOASTS); // Keep only last MAX_TOASTS
-    });
-  }, []);
-
-  const dismissToast = useCallback((id: string) => {
-    setActiveToasts((prev) => prev.filter((t) => t.id !== id));
-  }, []);
 
   // Fetch notifications
   const fetchNotifications = useCallback(
@@ -101,14 +81,6 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         setUnreadCount(response.unread_count);
         setHasMore(response.has_more);
 
-        // Show toast for new notifications
-        if (reset && response.unread_count > previousUnreadCountRef.current) {
-          const newCount = response.unread_count - previousUnreadCountRef.current;
-          const newNotifications = response.notifications
-            .filter((n) => !n.read)
-            .slice(0, Math.min(newCount, MAX_TOASTS));
-          newNotifications.forEach((n) => showToast(n));
-        }
         previousUnreadCountRef.current = response.unread_count;
       } catch (err) {
         setError(err instanceof Error ? err : new Error('Failed to fetch notifications'));
@@ -117,7 +89,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         isFetchingRef.current = false;
       }
     },
-    [hasHydrated, isAuthenticated, offset, showToast]
+    [hasHydrated, isAuthenticated, offset]
   );
 
   // Load more notifications
@@ -208,7 +180,6 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       setUnreadCount(0);
       setHasMore(false);
       setOffset(0);
-      setActiveToasts([]);
       previousUnreadCountRef.current = 0;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -242,9 +213,6 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       deleteNotification,
       clearAll,
       refreshUnreadCount,
-      activeToasts,
-      showToast,
-      dismissToast,
     }),
     [
       notifications,
@@ -259,9 +227,6 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       deleteNotification,
       clearAll,
       refreshUnreadCount,
-      activeToasts,
-      showToast,
-      dismissToast,
     ]
   );
 
