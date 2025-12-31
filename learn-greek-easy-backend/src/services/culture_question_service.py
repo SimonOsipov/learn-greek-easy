@@ -299,9 +299,10 @@ class CultureQuestionService:
             source_id=question_id,
         )
 
-        # Step 7: Award first review of day bonus (once per day)
-        first_review_bonus = await self.xp_service.award_first_review_bonus(user_id)
-        xp_earned += first_review_bonus
+        # Step 7: Award first review of day bonus (once per day) - only for correct answers
+        if is_correct:
+            first_review_bonus = await self.xp_service.award_first_review_bonus(user_id)
+            xp_earned += first_review_bonus
 
         # Note: Daily goal check/notification moved to background task
 
