@@ -92,6 +92,16 @@ async def get_study_queue(
         le=50,
         description="Maximum number of new cards to include",
     ),
+    include_early_practice: bool = Query(
+        default=False,
+        description="Include cards not yet due as 'early practice' for extra study",
+    ),
+    early_practice_limit: int = Query(
+        default=10,
+        ge=0,
+        le=50,
+        description="Maximum number of early practice cards to include",
+    ),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> StudyQueue:
@@ -101,6 +111,7 @@ async def get_study_queue(
     1. Due cards (past their next_review_date) - ordered oldest first
     2. Cards due today - ordered by next_review_date
     3. New cards (if include_new=True) - up to new_cards_limit
+    4. Early practice cards (if include_early_practice=True) - up to early_practice_limit
 
     The queue respects the total limit parameter, filling with due cards
     first before adding new cards.
@@ -109,6 +120,8 @@ async def get_study_queue(
         limit: Maximum cards to return (1-100, default 20)
         include_new: Whether to include unstudied cards (default True)
         new_cards_limit: Maximum new cards to include (0-50, default 10)
+        include_early_practice: Whether to include cards not yet due (default False)
+        early_practice_limit: Maximum early practice cards to include (0-50, default 10)
         db: Database session (injected)
         current_user: Authenticated user (injected)
 
@@ -116,7 +129,7 @@ async def get_study_queue(
         StudyQueue with deck info, counts, and list of cards to study
 
     Example:
-        GET /api/v1/study/queue?limit=10&include_new=true&new_cards_limit=5
+        GET /api/v1/study/queue?limit=10&include_new=true&new_cards_limit=5&include_early_practice=true
     """
     service = SM2Service(db)
     request = StudyQueueRequest(
@@ -124,6 +137,8 @@ async def get_study_queue(
         limit=limit,
         include_new=include_new,
         new_cards_limit=new_cards_limit,
+        include_early_practice=include_early_practice,
+        early_practice_limit=early_practice_limit,
     )
     return await service.get_study_queue(current_user.id, request)
 
@@ -186,6 +201,16 @@ async def get_deck_study_queue(
         le=50,
         description="Maximum number of new cards to include",
     ),
+    include_early_practice: bool = Query(
+        default=False,
+        description="Include cards not yet due as 'early practice' for extra study",
+    ),
+    early_practice_limit: int = Query(
+        default=10,
+        ge=0,
+        le=50,
+        description="Maximum number of early practice cards to include",
+    ),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> StudyQueue:
@@ -196,6 +221,7 @@ async def get_deck_study_queue(
     1. Due cards (past their next_review_date) - ordered oldest first
     2. Cards due today - ordered by next_review_date
     3. New cards (if include_new=True) - up to new_cards_limit
+    4. Early practice cards (if include_early_practice=True) - up to early_practice_limit
 
     The queue respects the total limit parameter, filling with due cards
     first before adding new cards.
@@ -205,6 +231,8 @@ async def get_deck_study_queue(
         limit: Maximum cards to return (1-100, default 20)
         include_new: Whether to include unstudied cards (default True)
         new_cards_limit: Maximum new cards to include (0-50, default 10)
+        include_early_practice: Whether to include cards not yet due (default False)
+        early_practice_limit: Maximum early practice cards to include (0-50, default 10)
         db: Database session (injected)
         current_user: Authenticated user (injected)
 
@@ -215,7 +243,7 @@ async def get_deck_study_queue(
         DeckNotFoundException (404): If deck doesn't exist or is inactive
 
     Example:
-        GET /api/v1/study/queue/660e8400-e29b-41d4-a716-446655440001?limit=10
+        GET /api/v1/study/queue/660e8400-e29b-41d4-a716-446655440001?limit=10&include_early_practice=true
     """
     service = SM2Service(db)
     request = StudyQueueRequest(
@@ -223,6 +251,8 @@ async def get_deck_study_queue(
         limit=limit,
         include_new=include_new,
         new_cards_limit=new_cards_limit,
+        include_early_practice=include_early_practice,
+        early_practice_limit=early_practice_limit,
     )
     return await service.get_study_queue(current_user.id, request)
 
