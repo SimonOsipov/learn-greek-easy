@@ -58,9 +58,21 @@ export const Dashboard: React.FC = () => {
       (d) => (d.progress?.cardsReview ?? 0) > 0 || d.progress?.status === 'in-progress'
     );
     if (deckWithDue) {
-      navigate(`/decks/${deckWithDue.id}/review`);
+      // Culture decks go to /culture/{id}/practice, vocabulary decks go to /decks/{id}/review
+      const isCultureDeck = deckWithDue.category === 'culture';
+      if (isCultureDeck) {
+        navigate(`/culture/${deckWithDue.id}/practice`);
+      } else {
+        navigate(`/decks/${deckWithDue.id}/review`);
+      }
     } else if (decks.length > 0) {
-      navigate(`/decks/${decks[0].id}/review`);
+      const firstDeck = decks[0];
+      const isCultureDeck = firstDeck.category === 'culture';
+      if (isCultureDeck) {
+        navigate(`/culture/${firstDeck.id}/practice`);
+      } else {
+        navigate(`/decks/${firstDeck.id}/review`);
+      }
     } else {
       navigate('/decks');
     }
@@ -68,7 +80,14 @@ export const Dashboard: React.FC = () => {
 
   // Navigate to deck study
   const handleContinueDeck = (deckId: string) => {
-    navigate(`/decks/${deckId}/review`);
+    const deck = decks.find((d) => d.id === deckId);
+    // Culture decks go to /culture/{id}/practice, vocabulary decks go to /decks/{id}/review
+    const isCultureDeck = deck?.category === 'culture';
+    if (isCultureDeck) {
+      navigate(`/culture/${deckId}/practice`);
+    } else {
+      navigate(`/decks/${deckId}/review`);
+    }
   };
 
   // Build metrics from analytics data
