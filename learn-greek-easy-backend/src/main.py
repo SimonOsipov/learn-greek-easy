@@ -8,7 +8,6 @@ from typing import AsyncGenerator, Sequence
 from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
@@ -129,22 +128,9 @@ app.add_middleware(
     expose_headers=settings.cors_expose_headers,
 )
 
-# Trusted host middleware (production only)
-# NOTE: Railway handles host security at the edge, but we keep this for defense-in-depth
-# The allowed hosts include Railway's public and internal domains
-if settings.is_production:
-    app.add_middleware(
-        TrustedHostMiddleware,
-        allowed_hosts=[
-            # Railway public domains (frontend and backend)
-            "*.up.railway.app",
-            # Railway internal service-to-service routing
-            "backend.railway.internal",
-            "*.railway.internal",
-            # Railway internal health checks (uses Host: localhost)
-            "localhost",
-        ],
-    )
+# NOTE: TrustedHostMiddleware removed - Railway handles host security at the edge,
+# and internal health checks use unpredictable Host headers that cause 400 errors.
+# For private services (not exposed to internet), this middleware is unnecessary.
 
 # Auth logging middleware for security monitoring
 app.add_middleware(AuthLoggingMiddleware)
