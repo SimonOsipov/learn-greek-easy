@@ -141,6 +141,8 @@ if settings.is_production:
             # Railway internal service-to-service routing
             "backend.railway.internal",
             "*.railway.internal",
+            # Railway internal health checks (uses Host: localhost)
+            "localhost",
         ],
     )
 
