@@ -16,7 +16,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 
-import { AlertCircle, ChevronLeft, Loader2 } from 'lucide-react';
+import { AlertCircle, ChevronLeft } from 'lucide-react';
 import posthog from 'posthog-js';
 import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -540,16 +540,6 @@ export function CulturePracticePage() {
             />
           )}
         </div>
-
-        {/* Loading overlay */}
-        {isSubmitting && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-            <div className="flex items-center gap-2 rounded-lg bg-white px-6 py-4">
-              <Loader2 className="h-5 w-5 animate-spin" />
-              <span>{t('common:loading', 'Loading...')}</span>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Exit confirmation dialog */}

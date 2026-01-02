@@ -110,29 +110,15 @@ export interface CultureAnswerRequest {
 }
 
 /**
- * SM2 algorithm result for spaced repetition
- */
-export interface SM2QuestionResult {
-  success: boolean;
-  question_id: string;
-  previous_status: string;
-  new_status: string;
-  easiness_factor: number;
-  interval: number;
-  repetitions: number;
-  next_review_date: string; // Format: YYYY-MM-DD
-}
-
-/**
  * Response from submitting an answer
+ * Matches backend schema: CultureAnswerResponseFast
  */
 export interface CultureAnswerResponse {
   is_correct: boolean;
   correct_option: number;
   xp_earned: number;
-  sm2_result: SM2QuestionResult;
   message?: string;
-  daily_goal_completed: boolean;
+  deck_category: string;
 }
 
 // ============================================

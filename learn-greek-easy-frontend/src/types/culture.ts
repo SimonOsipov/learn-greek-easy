@@ -69,13 +69,12 @@ export interface SM2QuestionResult {
 
 /**
  * Response from submitting an answer
- * Matches backend schema: CultureAnswerResponse
+ * Matches backend schema: CultureAnswerResponseFast
  */
 export interface CultureAnswerResponse {
   is_correct: boolean;
   correct_option: number;
   xp_earned: number;
-  sm2_result: SM2QuestionResult;
   message?: string;
-  daily_goal_completed: boolean;
+  deck_category: string;
 }
