@@ -1,14 +1,18 @@
 """FastAPI dependencies for database access."""
 
+import logging
 from typing import AsyncGenerator
 
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.logging import get_logger
 from src.db.session import get_session_factory
 
-logger = get_logger(__name__)
+# Note: Using stdlib logging here to avoid circular import.
+# src.core.logging triggers src.core.__init__.py which imports
+# src.core.dependencies which imports this module.
+# Logs are still routed to loguru via InterceptHandler.
+logger = logging.getLogger(__name__)
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:

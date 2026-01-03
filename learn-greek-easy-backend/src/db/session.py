@@ -1,5 +1,6 @@
 """Database session management with async SQLAlchemy 2.0."""
 
+import logging
 from typing import AsyncGenerator
 
 from sqlalchemy import text
@@ -12,9 +13,12 @@ from sqlalchemy.ext.asyncio import (
 from sqlalchemy.pool import NullPool
 
 from src.config import settings
-from src.core.logging import get_logger
 
-logger = get_logger(__name__)
+# Note: Using stdlib logging here to avoid circular import.
+# src.core.logging triggers src.core.__init__.py which imports
+# src.core.dependencies which imports src.db.dependencies.
+# Logs are still routed to loguru via InterceptHandler.
+logger = logging.getLogger(__name__)
 
 
 # Global engine instance (initialized on app startup)
