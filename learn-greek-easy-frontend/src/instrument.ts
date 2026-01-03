@@ -36,25 +36,72 @@ if (import.meta.env.PROD && import.meta.env.VITE_SENTRY_DSN) {
     // Don't send PII by default
     sendDefaultPii: false,
 
-    // Filter out noisy errors
+    // Filter out noisy errors that are never actionable
     ignoreErrors: [
-      // Browser extensions
+      // Browser extensions - never actionable
       /^chrome-extension:\/\//,
       /^moz-extension:\/\//,
-      // Network errors that are expected
-      'Network request failed',
-      'Failed to fetch',
-      'Load failed',
-      // User-initiated navigation
+      // User-initiated abort - expected behavior
       'AbortError',
+      // ResizeObserver - browser quirk, not actionable
+      'ResizeObserver loop limit exceeded',
+      'ResizeObserver loop completed with undelivered notifications',
     ],
 
-    // Before sending, add extra context
-    beforeSend(event) {
-      // Don't send events in development (extra safety)
+    // Intelligent filtering based on network state
+    beforeSend(event, hint) {
+      // Don't send events in development
       if (import.meta.env.DEV) {
         return null;
       }
+
+      const originalException = hint?.originalException;
+      const errorMessage =
+        originalException instanceof Error
+          ? originalException.message
+          : String(originalException || '');
+      const errorName = originalException instanceof Error ? originalException.name : '';
+
+      // Brave browser workaround - navigator.onLine always returns false
+      const isBraveBrowser = (navigator as unknown as { brave?: unknown }).brave !== undefined;
+      const isOffline = !isBraveBrowser && typeof navigator !== 'undefined' && !navigator.onLine;
+
+      // Network error patterns
+      const networkErrorPatterns = [
+        'Failed to fetch',
+        'Network request failed',
+        'Load failed',
+        'NetworkError when attempting to fetch resource',
+        'The Internet connection appears to be offline',
+        'net::ERR_INTERNET_DISCONNECTED',
+        'net::ERR_NETWORK_CHANGED',
+      ];
+
+      const isNetworkError = networkErrorPatterns.some((pattern) => errorMessage.includes(pattern));
+
+      // Chunk errors - let through (ChunkErrorBoundary handles UI)
+      const isChunkError =
+        errorMessage.toLowerCase().includes('loading chunk') ||
+        errorMessage.toLowerCase().includes('dynamically imported module') ||
+        errorName === 'ChunkLoadError';
+
+      // Only filter network errors when user is DEFINITELY offline
+      // When online but network fails, it's likely a backend issue worth tracking
+      if (isNetworkError && isOffline && !isChunkError) {
+        return null;
+      }
+
+      // Add network context for debugging
+      if (isNetworkError || isChunkError) {
+        event.contexts = event.contexts || {};
+        event.contexts.network = {
+          online: !isOffline,
+          effectiveType:
+            (navigator as unknown as { connection?: { effectiveType?: string } }).connection
+              ?.effectiveType || 'unknown',
+        };
+      }
+
       return event;
     },
   });
