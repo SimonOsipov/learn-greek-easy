@@ -218,7 +218,7 @@ class TestInitializeCardsForUser:
         db_session: AsyncSession,
         test_user: User,
         deck_with_cards: DeckWithCards,
-        caplog: pytest.LogCaptureFixture,
+        caplog_loguru: pytest.LogCaptureFixture,
     ):
         """AC #7: Proper logging for audit trail."""
         service = SM2Service(db_session)
@@ -230,14 +230,14 @@ class TestInitializeCardsForUser:
             card_ids=[card.id for card in cards],
         )
 
-        with caplog.at_level(logging.INFO):
+        with caplog_loguru.at_level(logging.INFO):
             await service.initialize_cards_for_user(
                 user_id=test_user.id,
                 request=request,
             )
 
         # Verify logging occurred
-        assert any("Cards initialized" in record.message for record in caplog.records)
+        assert any("Cards initialized" in record.message for record in caplog_loguru.records)
 
     @pytest.mark.asyncio
     async def test_initialize_cards_invalid_deck_raises(
