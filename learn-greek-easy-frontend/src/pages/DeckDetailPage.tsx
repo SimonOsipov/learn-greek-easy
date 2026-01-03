@@ -7,11 +7,11 @@ import {
   Lock,
   BookOpen,
   Clock,
-  Target,
   TrendingUp,
   AlertCircle,
   MoreVertical,
   RotateCcw,
+  CheckCircle,
 } from 'lucide-react';
 // Note: Clock is still used for "Due Today" stat
 import { useTranslation } from 'react-i18next';
@@ -305,19 +305,6 @@ const StatisticsSection: React.FC<StatisticsSectionProps> = ({ deck }) => {
               subtext={t('detail.cardsToReview')}
             />
           )}
-
-          {/* Mastery Rate (if started) */}
-          {progress && progress.status !== 'not-started' && (
-            <StatCard
-              icon={<Target className="h-5 w-5 text-green-500" />}
-              label={t('detail.masteryRate')}
-              value={`${Math.round((progress.cardsMastered / progress.cardsTotal) * 100)}%`}
-              subtext={t('detail.mastered', {
-                count: progress.cardsMastered,
-                total: progress.cardsTotal,
-              })}
-            />
-          )}
         </div>
 
         {/* Card Distribution (if started) */}
@@ -493,7 +480,7 @@ const ActionButtonsSection: React.FC<ActionButtonsSectionProps> = ({
         {/* Completed State */}
         {!isPremiumLocked && deckStatus === 'completed' && (
           <div className="py-8 text-center">
-            <Target className="mx-auto mb-4 h-12 w-12 text-purple-500" />
+            <CheckCircle className="mx-auto mb-4 h-12 w-12 text-purple-500" />
             <h3 className="mb-2 text-lg font-semibold text-gray-900">
               {t('detail.deckCompleted')}
             </h3>
