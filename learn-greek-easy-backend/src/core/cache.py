@@ -19,16 +19,16 @@ NOTE: If Redis is unavailable, all cache operations gracefully degrade
 import asyncio
 import functools
 import json
-import logging
 from typing import Any, Awaitable, Callable, Optional, TypeVar, Union, cast
 from uuid import UUID
 
 from redis.asyncio import Redis
 
 from src.config import settings
+from src.core.logging import get_logger
 from src.core.redis import get_redis
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # Type variable for generic return types
 T = TypeVar("T")

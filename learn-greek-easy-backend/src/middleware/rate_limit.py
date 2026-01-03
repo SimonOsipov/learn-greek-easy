@@ -32,7 +32,6 @@ Example Response Headers:
     X-RateLimit-Reset: 1701867700
 """
 
-import logging
 import time
 from dataclasses import dataclass
 from typing import Tuple
@@ -43,9 +42,10 @@ from starlette.requests import Request
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from src.config import settings
+from src.core.logging import get_logger
 from src.core.redis import get_redis
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 @dataclass

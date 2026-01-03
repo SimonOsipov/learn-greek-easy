@@ -20,7 +20,6 @@ AWS S3 Configuration:
 
 """
 
-import logging
 from typing import TYPE_CHECKING, Optional
 
 import boto3
@@ -28,11 +27,12 @@ from botocore.config import Config
 from botocore.exceptions import BotoCoreError, ClientError
 
 from src.config import settings
+from src.core.logging import get_logger
 
 if TYPE_CHECKING:
     from mypy_boto3_s3 import S3Client
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class S3Service:

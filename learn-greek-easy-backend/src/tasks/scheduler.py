@@ -37,7 +37,6 @@ Usage:
             shutdown_scheduler()
 """
 
-import logging
 from typing import Optional
 
 from apscheduler.events import EVENT_JOB_ERROR, EVENT_JOB_EXECUTED, JobExecutionEvent
@@ -45,8 +44,9 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 
 from src.config import settings
+from src.core.logging import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # Global scheduler instance
 _scheduler: Optional[AsyncIOScheduler] = None

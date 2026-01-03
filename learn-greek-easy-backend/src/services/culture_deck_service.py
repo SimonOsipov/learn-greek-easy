@@ -17,13 +17,13 @@ Example Usage:
         await service.soft_delete_deck(deck_id)
 """
 
-import logging
 from typing import TYPE_CHECKING, Optional
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.exceptions import CultureDeckNotFoundException
+from src.core.logging import get_logger
 from src.repositories import CultureDeckRepository, CultureQuestionStatsRepository
 from src.schemas.culture import (
     CultureDeckCreate,
@@ -37,7 +37,7 @@ from src.schemas.culture import (
 if TYPE_CHECKING:
     from src.db.models import CultureDeck
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class CultureDeckService:

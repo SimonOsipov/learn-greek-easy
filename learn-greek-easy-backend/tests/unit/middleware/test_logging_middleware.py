@@ -23,14 +23,13 @@ from src.middleware.logging import RequestLoggingMiddleware
 
 @contextmanager
 def mock_logger_contextualize():
-    """Mock logger.contextualize as a context manager."""
-    with patch("src.middleware.logging.logger") as mock_logger:
-        # Create a proper context manager mock for contextualize
-        mock_ctx = MagicMock()
-        mock_ctx.__enter__ = MagicMock(return_value=None)
-        mock_ctx.__exit__ = MagicMock(return_value=False)
-        mock_logger.contextualize.return_value = mock_ctx
-        yield mock_logger
+    """Mock logger and bind_log_context/clear_log_context functions."""
+    with (
+        patch("src.middleware.logging.logger") as mock_logger,
+        patch("src.middleware.logging.bind_log_context") as mock_bind,
+        patch("src.middleware.logging.clear_log_context") as mock_clear,
+    ):
+        yield mock_logger, mock_bind, mock_clear
 
 
 class TestRequestIdGeneration:
@@ -168,7 +167,7 @@ class TestPathExclusion:
 
     def test_excludes_health_live_from_logging(self, client: TestClient):
         """Test that /health/live is excluded from logging."""
-        with mock_logger_contextualize() as mock_logger:
+        with mock_logger_contextualize() as (mock_logger, _, _):
             response = client.get("/health/live")
 
             assert response.status_code == 200
@@ -177,7 +176,7 @@ class TestPathExclusion:
 
     def test_includes_health_in_logging(self, client: TestClient):
         """Test that /health is NOT excluded from logging."""
-        with mock_logger_contextualize() as mock_logger:
+        with mock_logger_contextualize() as (mock_logger, _, _):
             response = client.get("/health")
 
             assert response.status_code == 200
@@ -186,7 +185,7 @@ class TestPathExclusion:
 
     def test_includes_health_ready_in_logging(self, client: TestClient):
         """Test that /health/ready is NOT excluded from logging."""
-        with mock_logger_contextualize() as mock_logger:
+        with mock_logger_contextualize() as (mock_logger, _, _):
             response = client.get("/health/ready")
 
             assert response.status_code == 200
@@ -195,7 +194,7 @@ class TestPathExclusion:
 
     def test_excludes_docs_from_logging(self, client: TestClient):
         """Test that /docs is excluded from logging."""
-        with mock_logger_contextualize() as mock_logger:
+        with mock_logger_contextualize() as (mock_logger, _, _):
             response = client.get("/docs")
 
             assert response.status_code == 200
@@ -210,7 +209,7 @@ class TestPathExclusion:
 
     def test_excludes_redoc_from_logging(self, client: TestClient):
         """Test that /redoc is excluded from logging."""
-        with mock_logger_contextualize() as mock_logger:
+        with mock_logger_contextualize() as (mock_logger, _, _):
             response = client.get("/redoc")
 
             assert response.status_code == 200
@@ -219,7 +218,7 @@ class TestPathExclusion:
 
     def test_excludes_openapi_json_from_logging(self, client: TestClient):
         """Test that /openapi.json is excluded from logging."""
-        with mock_logger_contextualize() as mock_logger:
+        with mock_logger_contextualize() as (mock_logger, _, _):
             response = client.get("/openapi.json")
 
             assert response.status_code == 200
@@ -228,7 +227,7 @@ class TestPathExclusion:
 
     def test_excludes_favicon_from_logging(self, client: TestClient):
         """Test that /favicon.ico is excluded from logging."""
-        with mock_logger_contextualize() as mock_logger:
+        with mock_logger_contextualize() as (mock_logger, _, _):
             response = client.get("/favicon.ico")
 
             assert response.status_code == 200
@@ -237,7 +236,7 @@ class TestPathExclusion:
 
     def test_includes_api_endpoints_in_logging(self, client: TestClient):
         """Test that API endpoints are NOT excluded from logging."""
-        with mock_logger_contextualize() as mock_logger:
+        with mock_logger_contextualize() as (mock_logger, _, _):
             response = client.get("/api/v1/test")
 
             assert response.status_code == 200
@@ -297,7 +296,7 @@ class TestLogContent:
 
     def test_logs_request_started(self, client: TestClient):
         """Test that request start is logged."""
-        with mock_logger_contextualize() as mock_logger:
+        with mock_logger_contextualize() as (mock_logger, _, _):
             client.get("/api/v1/test")
 
             # Find the "Request started" call
@@ -310,7 +309,7 @@ class TestLogContent:
 
     def test_logs_request_completed(self, client: TestClient):
         """Test that request completion is logged."""
-        with mock_logger_contextualize() as mock_logger:
+        with mock_logger_contextualize() as (mock_logger, _, _):
             client.get("/api/v1/test")
 
             # Find the "Request completed" call via logger.log
@@ -320,7 +319,7 @@ class TestLogContent:
 
     def test_log_contains_method(self, client: TestClient):
         """Test that logs contain HTTP method."""
-        with mock_logger_contextualize() as mock_logger:
+        with mock_logger_contextualize() as (mock_logger, _, _):
             client.get("/api/v1/test")
 
             started_call = mock_logger.info.call_args
@@ -331,7 +330,7 @@ class TestLogContent:
 
     def test_log_contains_post_method(self, client: TestClient):
         """Test that logs contain POST method for POST requests."""
-        with mock_logger_contextualize() as mock_logger:
+        with mock_logger_contextualize() as (mock_logger, _, _):
             client.post("/api/v1/data")
 
             started_call = mock_logger.info.call_args
@@ -339,7 +338,7 @@ class TestLogContent:
 
     def test_log_contains_path(self, client: TestClient):
         """Test that logs contain request path."""
-        with mock_logger_contextualize() as mock_logger:
+        with mock_logger_contextualize() as (mock_logger, _, _):
             client.get("/api/v1/test")
 
             started_call = mock_logger.info.call_args
@@ -350,7 +349,7 @@ class TestLogContent:
 
     def test_log_contains_query_params(self, client: TestClient):
         """Test that logs contain query parameters."""
-        with mock_logger_contextualize() as mock_logger:
+        with mock_logger_contextualize() as (mock_logger, _, _):
             client.get("/api/v1/test?page=1&limit=10")
 
             started_call = mock_logger.info.call_args
@@ -360,7 +359,7 @@ class TestLogContent:
 
     def test_log_contains_null_query_when_empty(self, client: TestClient):
         """Test that query is None when no query params."""
-        with mock_logger_contextualize() as mock_logger:
+        with mock_logger_contextualize() as (mock_logger, _, _):
             client.get("/api/v1/test")
 
             started_call = mock_logger.info.call_args
@@ -368,7 +367,7 @@ class TestLogContent:
 
     def test_log_contains_status_code(self, client: TestClient):
         """Test that completed log contains status code."""
-        with mock_logger_contextualize() as mock_logger:
+        with mock_logger_contextualize() as (mock_logger, _, _):
             client.get("/api/v1/test")
 
             completed_call = mock_logger.log.call_args
@@ -376,7 +375,7 @@ class TestLogContent:
 
     def test_log_contains_duration_ms(self, client: TestClient):
         """Test that completed log contains duration in milliseconds."""
-        with mock_logger_contextualize() as mock_logger:
+        with mock_logger_contextualize() as (mock_logger, _, _):
             client.get("/api/v1/test")
 
             completed_call = mock_logger.log.call_args
@@ -386,7 +385,7 @@ class TestLogContent:
 
     def test_log_contains_user_agent(self, client: TestClient):
         """Test that started log contains user agent."""
-        with mock_logger_contextualize() as mock_logger:
+        with mock_logger_contextualize() as (mock_logger, _, _):
             client.get("/api/v1/test", headers={"User-Agent": "TestAgent/1.0"})
 
             started_call = mock_logger.info.call_args
@@ -415,7 +414,7 @@ class TestClientIPExtraction:
 
     def test_extracts_ip_from_x_forwarded_for_single(self, client: TestClient):
         """Test IP extraction from X-Forwarded-For with single IP."""
-        with mock_logger_contextualize() as mock_logger:
+        with mock_logger_contextualize() as (mock_logger, _, _):
             client.get(
                 "/api/v1/test",
                 headers={"X-Forwarded-For": "203.0.113.50"},
@@ -426,7 +425,7 @@ class TestClientIPExtraction:
 
     def test_extracts_first_ip_from_x_forwarded_for_chain(self, client: TestClient):
         """Test IP extraction from X-Forwarded-For with multiple IPs."""
-        with mock_logger_contextualize() as mock_logger:
+        with mock_logger_contextualize() as (mock_logger, _, _):
             client.get(
                 "/api/v1/test",
                 headers={"X-Forwarded-For": "203.0.113.50, 70.41.3.18, 192.0.2.1"},
@@ -437,7 +436,7 @@ class TestClientIPExtraction:
 
     def test_extracts_ip_from_x_real_ip(self, client: TestClient):
         """Test IP extraction from X-Real-IP header."""
-        with mock_logger_contextualize() as mock_logger:
+        with mock_logger_contextualize() as (mock_logger, _, _):
             client.get(
                 "/api/v1/test",
                 headers={"X-Real-IP": "10.0.0.1"},
@@ -448,7 +447,7 @@ class TestClientIPExtraction:
 
     def test_x_forwarded_for_takes_precedence_over_x_real_ip(self, client: TestClient):
         """Test that X-Forwarded-For takes precedence over X-Real-IP."""
-        with mock_logger_contextualize() as mock_logger:
+        with mock_logger_contextualize() as (mock_logger, _, _):
             client.get(
                 "/api/v1/test",
                 headers={
@@ -462,7 +461,7 @@ class TestClientIPExtraction:
 
     def test_extracts_ip_from_direct_connection(self, client: TestClient):
         """Test IP extraction from direct connection."""
-        with mock_logger_contextualize() as mock_logger:
+        with mock_logger_contextualize() as (mock_logger, _, _):
             client.get("/api/v1/test")
 
             started_call = mock_logger.info.call_args
@@ -471,7 +470,7 @@ class TestClientIPExtraction:
 
     def test_strips_whitespace_from_forwarded_for(self, client: TestClient):
         """Test that whitespace is stripped from X-Forwarded-For IPs."""
-        with mock_logger_contextualize() as mock_logger:
+        with mock_logger_contextualize() as (mock_logger, _, _):
             client.get(
                 "/api/v1/test",
                 headers={"X-Forwarded-For": "  203.0.113.50  , 198.51.100.178"},
@@ -602,7 +601,7 @@ class TestLogLevel:
 
     def test_logs_info_for_200_responses(self, client: TestClient):
         """Test that 200 responses are logged as INFO."""
-        with mock_logger_contextualize() as mock_logger:
+        with mock_logger_contextualize() as (mock_logger, _, _):
             client.get("/api/v1/success")
 
             completed_call = mock_logger.log.call_args
@@ -610,7 +609,7 @@ class TestLogLevel:
 
     def test_logs_info_for_201_responses(self, client: TestClient):
         """Test that 201 responses are logged as INFO."""
-        with mock_logger_contextualize() as mock_logger:
+        with mock_logger_contextualize() as (mock_logger, _, _):
             client.get("/api/v1/created")
 
             completed_call = mock_logger.log.call_args
@@ -618,7 +617,7 @@ class TestLogLevel:
 
     def test_logs_info_for_302_responses(self, client: TestClient):
         """Test that 302 redirects are logged as INFO."""
-        with mock_logger_contextualize() as mock_logger:
+        with mock_logger_contextualize() as (mock_logger, _, _):
             client.get("/api/v1/redirect", follow_redirects=False)
 
             completed_call = mock_logger.log.call_args
@@ -626,7 +625,7 @@ class TestLogLevel:
 
     def test_logs_warning_for_400_responses(self, client: TestClient):
         """Test that 400 responses are logged as WARNING."""
-        with mock_logger_contextualize() as mock_logger:
+        with mock_logger_contextualize() as (mock_logger, _, _):
             client.get("/api/v1/bad-request")
 
             completed_call = mock_logger.log.call_args
@@ -634,7 +633,7 @@ class TestLogLevel:
 
     def test_logs_warning_for_401_responses(self, client: TestClient):
         """Test that 401 responses are logged as WARNING."""
-        with mock_logger_contextualize() as mock_logger:
+        with mock_logger_contextualize() as (mock_logger, _, _):
             client.get("/api/v1/unauthorized")
 
             completed_call = mock_logger.log.call_args
@@ -642,7 +641,7 @@ class TestLogLevel:
 
     def test_logs_warning_for_403_responses(self, client: TestClient):
         """Test that 403 responses are logged as WARNING."""
-        with mock_logger_contextualize() as mock_logger:
+        with mock_logger_contextualize() as (mock_logger, _, _):
             client.get("/api/v1/forbidden")
 
             completed_call = mock_logger.log.call_args
@@ -650,7 +649,7 @@ class TestLogLevel:
 
     def test_logs_warning_for_404_responses(self, client: TestClient):
         """Test that 404 responses are logged as WARNING."""
-        with mock_logger_contextualize() as mock_logger:
+        with mock_logger_contextualize() as (mock_logger, _, _):
             client.get("/api/v1/not-found")
 
             completed_call = mock_logger.log.call_args
@@ -658,7 +657,7 @@ class TestLogLevel:
 
     def test_logs_warning_for_422_responses(self, client: TestClient):
         """Test that 422 responses are logged as WARNING."""
-        with mock_logger_contextualize() as mock_logger:
+        with mock_logger_contextualize() as (mock_logger, _, _):
             client.get("/api/v1/unprocessable")
 
             completed_call = mock_logger.log.call_args
@@ -666,7 +665,7 @@ class TestLogLevel:
 
     def test_logs_warning_for_429_responses(self, client: TestClient):
         """Test that 429 responses are logged as WARNING."""
-        with mock_logger_contextualize() as mock_logger:
+        with mock_logger_contextualize() as (mock_logger, _, _):
             client.get("/api/v1/too-many-requests")
 
             completed_call = mock_logger.log.call_args
@@ -674,7 +673,7 @@ class TestLogLevel:
 
     def test_logs_error_for_500_responses(self, client: TestClient):
         """Test that 500 responses are logged as ERROR."""
-        with mock_logger_contextualize() as mock_logger:
+        with mock_logger_contextualize() as (mock_logger, _, _):
             client.get("/api/v1/server-error")
 
             completed_call = mock_logger.log.call_args
@@ -682,7 +681,7 @@ class TestLogLevel:
 
     def test_logs_error_for_502_responses(self, client: TestClient):
         """Test that 502 responses are logged as ERROR."""
-        with mock_logger_contextualize() as mock_logger:
+        with mock_logger_contextualize() as (mock_logger, _, _):
             client.get("/api/v1/bad-gateway")
 
             completed_call = mock_logger.log.call_args
@@ -690,7 +689,7 @@ class TestLogLevel:
 
     def test_logs_error_for_503_responses(self, client: TestClient):
         """Test that 503 responses are logged as ERROR."""
-        with mock_logger_contextualize() as mock_logger:
+        with mock_logger_contextualize() as (mock_logger, _, _):
             client.get("/api/v1/service-unavailable")
 
             completed_call = mock_logger.log.call_args
@@ -758,7 +757,7 @@ class TestRequestTiming:
 
     def test_duration_is_positive(self, client: TestClient):
         """Test that duration is a positive number."""
-        with mock_logger_contextualize() as mock_logger:
+        with mock_logger_contextualize() as (mock_logger, _, _):
             client.get("/api/v1/fast")
 
             completed_call = mock_logger.log.call_args
@@ -767,7 +766,7 @@ class TestRequestTiming:
 
     def test_duration_is_rounded(self, client: TestClient):
         """Test that duration is rounded to 2 decimal places."""
-        with mock_logger_contextualize() as mock_logger:
+        with mock_logger_contextualize() as (mock_logger, _, _):
             client.get("/api/v1/fast")
 
             completed_call = mock_logger.log.call_args
@@ -779,7 +778,7 @@ class TestRequestTiming:
 
     def test_slow_endpoint_has_higher_duration(self, client: TestClient):
         """Test that slow endpoint has higher duration than fast."""
-        with mock_logger_contextualize() as mock_logger:
+        with mock_logger_contextualize() as (mock_logger, _, _):
             client.get("/api/v1/slow")
             slow_call = mock_logger.log.call_args
             slow_duration = slow_call.kwargs["duration_ms"]
@@ -817,7 +816,7 @@ class TestExceptionHandling:
 
     def test_logs_exception_with_error_message(self, client: TestClient):
         """Test that exceptions are logged with error message."""
-        with mock_logger_contextualize() as mock_logger:
+        with mock_logger_contextualize() as (mock_logger, _, _):
             client.get("/api/v1/error")
 
             # Should have logged the exception
@@ -827,7 +826,7 @@ class TestExceptionHandling:
 
     def test_logs_exception_with_duration(self, client: TestClient):
         """Test that exceptions are logged with duration."""
-        with mock_logger_contextualize() as mock_logger:
+        with mock_logger_contextualize() as (mock_logger, _, _):
             client.get("/api/v1/error")
 
             exception_call = mock_logger.exception.call_args
@@ -836,7 +835,7 @@ class TestExceptionHandling:
 
     def test_logs_exception_message(self, client: TestClient):
         """Test that correct exception message is logged."""
-        with mock_logger_contextualize() as mock_logger:
+        with mock_logger_contextualize() as (mock_logger, _, _):
             client.get("/api/v1/error")
 
             exception_call = mock_logger.exception.call_args
@@ -885,7 +884,7 @@ class TestMiddlewareIntegration:
 
     def test_multiple_requests_logged_independently(self, client: TestClient):
         """Test that multiple requests are logged independently."""
-        with mock_logger_contextualize() as mock_logger:
+        with mock_logger_contextualize() as (mock_logger, _, _):
             client.get("/api/v1/test")
             client.post("/api/v1/data")
 
@@ -1170,8 +1169,8 @@ class TestBodyRedaction:
         assert redacted == body
 
 
-class TestContextualize:
-    """Tests for logger.contextualize usage."""
+class TestLogContext:
+    """Tests for bind_log_context/clear_log_context usage."""
 
     @pytest.fixture
     def app(self) -> FastAPI:
@@ -1190,17 +1189,19 @@ class TestContextualize:
         """Create test client."""
         return TestClient(app)
 
-    def test_contextualize_called_with_request_id(self, client: TestClient):
-        """Test that logger.contextualize is called with request_id."""
-        with mock_logger_contextualize() as mock_logger:
+    def test_bind_log_context_called_with_request_id(self, client: TestClient):
+        """Test that bind_log_context is called with request_id."""
+        with mock_logger_contextualize() as (mock_logger, mock_bind, mock_clear):
             response = client.get("/api/v1/test")
             request_id = response.headers["X-Request-ID"]
 
-            # Verify contextualize was called with the request_id
-            mock_logger.contextualize.assert_called_once_with(request_id=request_id)
+            # Verify bind_log_context was called with the request_id
+            mock_bind.assert_called_once_with(request_id=request_id)
+            # Verify clear_log_context was called in finally block
+            mock_clear.assert_called_once()
 
-    def test_contextualize_not_called_for_excluded_paths(self, client: TestClient):
-        """Test that logger.contextualize is not called for excluded paths."""
+    def test_bind_log_context_not_called_for_excluded_paths(self, client: TestClient):
+        """Test that bind_log_context is not called for excluded paths."""
         app = FastAPI()
         app.add_middleware(RequestLoggingMiddleware)
 
@@ -1210,8 +1211,9 @@ class TestContextualize:
 
         test_client = TestClient(app)
 
-        with mock_logger_contextualize() as mock_logger:
+        with mock_logger_contextualize() as (mock_logger, mock_bind, mock_clear):
             test_client.get("/health/live")
 
-            # Contextualize should NOT be called for excluded paths
-            mock_logger.contextualize.assert_not_called()
+            # bind_log_context should NOT be called for excluded paths
+            mock_bind.assert_not_called()
+            mock_clear.assert_not_called()

@@ -8,6 +8,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.db.session import get_session_factory
 
+# Note: Using stdlib logging here to avoid circular import.
+# src.core.logging triggers src.core.__init__.py which imports
+# src.core.dependencies which imports this module.
+# Logs are still routed to loguru via InterceptHandler.
 logger = logging.getLogger(__name__)
 
 

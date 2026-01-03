@@ -22,7 +22,6 @@ Example Usage:
         print(f"Next review: {result.next_review_date}")
 """
 
-import logging
 from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 from uuid import UUID
@@ -31,6 +30,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.exceptions import DeckNotFoundException
+from src.core.logging import get_logger
 from src.core.posthog import capture_event
 from src.core.sm2 import calculate_next_review_date, calculate_sm2
 from src.db.models import Card, CardStatus, Review
@@ -54,7 +54,7 @@ from src.schemas.sm2 import (
     StudyQueueRequest,
 )
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class SM2Service:

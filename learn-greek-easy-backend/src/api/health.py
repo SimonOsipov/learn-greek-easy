@@ -4,14 +4,13 @@ This module provides health check endpoints for monitoring and
 Kubernetes probes (liveness and readiness).
 """
 
-import logging
-
 from fastapi import APIRouter, Response
 
+from src.core.logging import get_logger
 from src.schemas.health import HealthResponse, LivenessResponse, ReadinessResponse
 from src.services.health_service import get_health_status, get_liveness_status, get_readiness_status
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 router = APIRouter(tags=["Health"])
 

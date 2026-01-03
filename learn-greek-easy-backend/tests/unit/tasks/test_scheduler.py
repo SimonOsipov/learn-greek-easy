@@ -198,29 +198,29 @@ class TestGetScheduler:
 class TestJobListener:
     """Test job execution listener."""
 
-    def test_logs_successful_job(self, caplog):
+    def test_logs_successful_job(self, caplog_loguru):
         """Test that successful job execution is logged."""
         mock_event = MagicMock()
         mock_event.job_id = "test_job"
         mock_event.exception = None
 
-        with caplog.at_level("INFO"):
+        with caplog_loguru.at_level("INFO"):
             job_listener(mock_event)
 
-        assert "test_job" in caplog.text
-        assert "completed successfully" in caplog.text
+        assert "test_job" in caplog_loguru.text
+        assert "completed successfully" in caplog_loguru.text
 
-    def test_logs_failed_job(self, caplog):
+    def test_logs_failed_job(self, caplog_loguru):
         """Test that failed job execution is logged as error."""
         mock_event = MagicMock()
         mock_event.job_id = "test_job"
         mock_event.exception = ValueError("Test error")
 
-        with caplog.at_level("ERROR"):
+        with caplog_loguru.at_level("ERROR"):
             job_listener(mock_event)
 
-        assert "test_job" in caplog.text
-        assert "failed" in caplog.text
+        assert "test_job" in caplog_loguru.text
+        assert "failed" in caplog_loguru.text
 
 
 class TestScheduledTaskStubs:
@@ -245,7 +245,7 @@ class TestScheduledTaskStubs:
         assert asyncio.iscoroutinefunction(stats_aggregate_task)
 
     @pytest.mark.asyncio
-    async def test_streak_reset_task_runs_without_error(self, caplog):
+    async def test_streak_reset_task_runs_without_error(self, caplog_loguru):
         """Test that streak_reset_task runs without error (with mocked DB)."""
         from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -267,13 +267,13 @@ class TestScheduledTaskStubs:
                 mock_result.fetchall.return_value = []
                 mock_session.execute.return_value = mock_result
 
-                with caplog.at_level("INFO"):
+                with caplog_loguru.at_level("INFO"):
                     await streak_reset_task()
 
-        assert "streak reset" in caplog.text.lower()
+        assert "streak reset" in caplog_loguru.text.lower()
 
     @pytest.mark.asyncio
-    async def test_session_cleanup_task_runs_without_error(self, caplog):
+    async def test_session_cleanup_task_runs_without_error(self, caplog_loguru):
         """Test that session_cleanup_task runs without error (with mocked Redis)."""
         from unittest.mock import AsyncMock, patch
 
@@ -285,7 +285,7 @@ class TestScheduledTaskStubs:
                     # Return None to trigger the "Redis not available" branch
                     mock_get_redis.return_value = None
 
-                    with caplog.at_level("INFO"):
+                    with caplog_loguru.at_level("INFO"):
                         await session_cleanup_task()
 
                     # Verify Redis functions were called
@@ -293,10 +293,10 @@ class TestScheduledTaskStubs:
                     mock_get_redis.assert_called_once()
                     mock_close.assert_called_once()
 
-        assert "session cleanup" in caplog.text.lower()
+        assert "session cleanup" in caplog_loguru.text.lower()
 
     @pytest.mark.asyncio
-    async def test_stats_aggregate_task_runs_without_error(self, caplog):
+    async def test_stats_aggregate_task_runs_without_error(self, caplog_loguru):
         """Test that stats_aggregate_task runs without error (with mocked DB)."""
         from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -321,10 +321,10 @@ class TestScheduledTaskStubs:
                 mastery_result.fetchall.return_value = []
                 mock_session.execute.side_effect = [review_result, mastery_result]
 
-                with caplog.at_level("INFO"):
+                with caplog_loguru.at_level("INFO"):
                     await stats_aggregate_task()
 
-        assert "stats aggregation" in caplog.text.lower()
+        assert "stats aggregation" in caplog_loguru.text.lower()
 
 
 class TestEventListenerRegistration:

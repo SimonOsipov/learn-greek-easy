@@ -1,6 +1,5 @@
 """XP Service for managing user experience points."""
 
-import logging
 from datetime import date
 from typing import Optional, TypedDict
 from uuid import UUID
@@ -8,6 +7,7 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.logging import get_logger
 from src.db.models import UserXP, XPTransaction
 from src.services.xp_constants import (
     XP_CORRECT_ANSWER,
@@ -22,7 +22,7 @@ from src.services.xp_constants import (
     get_xp_progress_in_level,
 )
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class XPAwardResult(TypedDict):

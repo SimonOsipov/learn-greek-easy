@@ -27,7 +27,6 @@ Example Usage:
         response = await service.bulk_create_questions(deck_id, questions)
 """
 
-import logging
 from datetime import date
 from typing import Optional
 from uuid import UUID
@@ -37,6 +36,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from src.core.exceptions import CultureDeckNotFoundException, CultureQuestionNotFoundException
+from src.core.logging import get_logger
 from src.core.sm2 import DEFAULT_EASINESS_FACTOR, calculate_next_review_date, calculate_sm2
 from src.db.models import CardStatus, CultureDeck, CultureQuestion, CultureQuestionStats
 from src.repositories import CultureQuestionRepository
@@ -66,7 +66,7 @@ from src.services.xp_constants import (
 )
 from src.services.xp_service import XPService
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class CultureQuestionService:

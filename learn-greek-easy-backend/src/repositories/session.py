@@ -12,7 +12,6 @@ If Redis is unavailable, session operations will fail gracefully.
 """
 
 import json
-import logging
 from datetime import datetime
 from typing import Any, Optional
 from uuid import UUID
@@ -20,9 +19,10 @@ from uuid import UUID
 from redis.asyncio import Redis
 
 from src.config import settings
+from src.core.logging import get_logger
 from src.core.redis import get_redis
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class SessionRepository:

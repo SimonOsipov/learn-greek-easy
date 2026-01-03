@@ -14,7 +14,6 @@ Usage:
         return response
 """
 
-import logging
 from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID
@@ -22,8 +21,9 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from src.config import settings
+from src.core.logging import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 def is_background_tasks_enabled() -> bool:

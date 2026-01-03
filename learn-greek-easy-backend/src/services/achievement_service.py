@@ -8,13 +8,13 @@ This service handles:
 - Culture exam achievement checking
 """
 
-import logging
 from typing import Optional, TypedDict
 from uuid import UUID
 
 from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.logging import get_logger
 from src.db.models import (
     Achievement,
     CardStatistics,
@@ -35,7 +35,7 @@ from src.services.achievement_definitions import (
 )
 from src.services.xp_service import XPService
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class UnlockedAchievement(TypedDict):

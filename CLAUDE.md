@@ -102,3 +102,4 @@ Manual deploy: See [docs/deployment-guide.md](docs/deployment-guide.md)
 - [Docker Reference](docs/docker-reference.md) - Container names, ports, commands
 - [Railway Backend Privacy](docs/railway-backend-privacy.md) - Production setup
 - [PR Preview Deployments](docs/pr-preview-deployments.md) - Preview environments
+- [Logging](learn-greek-easy-backend/docs/logging.md) - Logging architecture and best practices

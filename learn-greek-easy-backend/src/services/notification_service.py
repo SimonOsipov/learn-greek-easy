@@ -1,15 +1,15 @@
 """Notification Service for managing user notifications."""
 
-import logging
 from typing import Optional
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.logging import get_logger
 from src.db.models import Notification, NotificationType
 from src.repositories.notification import NotificationRepository
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class NotificationService:

@@ -1,7 +1,6 @@
 """Health check service with component health verification."""
 
 import asyncio
-import logging
 import os
 import time
 from datetime import datetime, timezone
@@ -11,6 +10,7 @@ import psutil
 from sqlalchemy import text
 
 from src.config import settings
+from src.core.logging import get_logger
 from src.core.redis import check_redis_health
 from src.db.session import get_session_factory
 from src.schemas.health import (
@@ -25,7 +25,7 @@ from src.schemas.health import (
     ReadinessResponse,
 )
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # Track application start time
 _start_time: float = time.time()

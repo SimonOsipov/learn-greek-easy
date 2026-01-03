@@ -26,15 +26,15 @@ Example:
     )
 """
 
-import logging
 import re
 from typing import Any, Dict, Optional
 
 import posthog
 
 from src.config import settings
+from src.core.logging import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # Global PostHog client state
 _posthog_initialized: bool = False

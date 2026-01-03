@@ -200,7 +200,7 @@ class TestLoginFunctionality:
             mock_db.commit.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_login_logs_success(self, caplog):
+    async def test_login_logs_success(self, caplog_loguru):
         """Test successful login is logged."""
         # Arrange
         mock_db = AsyncMock()
@@ -241,15 +241,15 @@ class TestLoginFunctionality:
                     )
 
                     # Act
-                    with caplog.at_level(logging.INFO):
+                    with caplog_loguru.at_level(logging.INFO):
                         await service.login_user(login_data, client_ip)
 
                     # Assert - check log message exists
                     # Note: user_id, email, and ip are in extra dict, not in message text
-                    assert "Successful login" in caplog.text
+                    assert "Successful login" in caplog_loguru.text
 
     @pytest.mark.asyncio
-    async def test_login_logs_failure_user_not_found(self, caplog):
+    async def test_login_logs_failure_user_not_found(self, caplog_loguru):
         """Test failed login (user not found) is logged."""
         # Arrange
         mock_db = AsyncMock()
@@ -264,16 +264,16 @@ class TestLoginFunctionality:
         mock_db.execute = AsyncMock(return_value=mock_result)
 
         # Act
-        with caplog.at_level(logging.WARNING):
+        with caplog_loguru.at_level(logging.WARNING):
             with pytest.raises(InvalidCredentialsException):
                 await service.login_user(login_data, client_ip)
 
         # Assert - check log message exists
         # Note: email and ip are in extra dict, not in message text
-        assert "Failed login attempt - user not found" in caplog.text
+        assert "Failed login attempt - user not found" in caplog_loguru.text
 
     @pytest.mark.asyncio
-    async def test_login_logs_failure_wrong_password(self, caplog):
+    async def test_login_logs_failure_wrong_password(self, caplog_loguru):
         """Test failed login (wrong password) is logged."""
         # Arrange
         mock_db = AsyncMock()
@@ -299,16 +299,16 @@ class TestLoginFunctionality:
             mock_verify.return_value = False
 
             # Act
-            with caplog.at_level(logging.WARNING):
+            with caplog_loguru.at_level(logging.WARNING):
                 with pytest.raises(InvalidCredentialsException):
                     await service.login_user(login_data, client_ip)
 
             # Assert - check log message exists
             # Note: user_id and ip are in extra dict, not in message text
-            assert "Failed login attempt - invalid password" in caplog.text
+            assert "Failed login attempt - invalid password" in caplog_loguru.text
 
     @pytest.mark.asyncio
-    async def test_login_logs_failure_inactive_account(self, caplog):
+    async def test_login_logs_failure_inactive_account(self, caplog_loguru):
         """Test failed login (inactive account) is logged."""
         # Arrange
         mock_db = AsyncMock()
@@ -334,13 +334,13 @@ class TestLoginFunctionality:
             mock_verify.return_value = True
 
             # Act
-            with caplog.at_level(logging.WARNING):
+            with caplog_loguru.at_level(logging.WARNING):
                 with pytest.raises(InvalidCredentialsException):
                     await service.login_user(login_data, client_ip)
 
             # Assert - check log message exists
             # Note: user_id and ip are in extra dict, not in message text
-            assert "Failed login attempt - inactive account" in caplog.text
+            assert "Failed login attempt - inactive account" in caplog_loguru.text
 
     @pytest.mark.asyncio
     async def test_login_without_client_ip(self):

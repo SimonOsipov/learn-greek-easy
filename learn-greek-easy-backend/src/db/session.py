@@ -14,6 +14,10 @@ from sqlalchemy.pool import NullPool
 
 from src.config import settings
 
+# Note: Using stdlib logging here to avoid circular import.
+# src.core.logging triggers src.core.__init__.py which imports
+# src.core.dependencies which imports src.db.dependencies.
+# Logs are still routed to loguru via InterceptHandler.
 logger = logging.getLogger(__name__)
 
 

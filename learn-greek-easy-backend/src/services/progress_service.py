@@ -14,7 +14,6 @@ Example Usage:
         print(f"Cards mastered: {stats.overview.total_cards_mastered}")
 """
 
-import logging
 import math
 from datetime import date, timedelta
 from typing import Optional
@@ -23,6 +22,7 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.exceptions import DeckNotFoundException, NotFoundException
+from src.core.logging import get_logger
 from src.repositories import (
     CardRepository,
     CardStatisticsRepository,
@@ -51,7 +51,7 @@ from src.schemas.progress import (
 )
 from src.services.achievements import ACHIEVEMENTS, AchievementType
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class ProgressService:

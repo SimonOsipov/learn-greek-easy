@@ -30,7 +30,6 @@ Exit codes:
 
 import argparse
 import asyncio
-import logging
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -41,14 +40,11 @@ backend_dir = Path(__file__).parent.parent
 sys.path.insert(0, str(backend_dir))
 
 from src.config import settings  # noqa: E402
+from src.core.logging import get_logger, setup_logging  # noqa: E402
 
-# Setup logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
-logger = logging.getLogger(__name__)
+# Setup logging using the application's logging configuration
+setup_logging()
+logger = get_logger(__name__)
 
 
 def _log_dry_run_info(truncate_only: bool) -> None:
@@ -286,8 +282,9 @@ Environment Variables:
 if __name__ == "__main__":
     args = parse_args()
 
-    if args.verbose:
-        logging.getLogger().setLevel(logging.DEBUG)
+    # Note: Verbose logging is controlled by LOG_LEVEL environment variable
+    # when using loguru. The --verbose flag is kept for backward compatibility
+    # but the actual level is set in setup_logging() via settings.log_level
 
     exit_code = asyncio.run(main(dry_run=args.dry_run, truncate_only=args.truncate_only))
     sys.exit(exit_code)
