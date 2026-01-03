@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { GoogleLogin, type CredentialResponse } from '@react-oauth/google';
 import { useTranslation } from 'react-i18next';
 
-import log from '@/lib/logger';
+import { reportAPIError } from '@/lib/errorReporting';
 import { useAuthStore } from '@/stores/authStore';
 
 interface GoogleSignInButtonProps {
@@ -62,7 +62,7 @@ export const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({
   };
 
   const handleGoogleError = () => {
-    log.error('Google OAuth error');
+    reportAPIError(new Error('Google OAuth error'), { operation: 'googleSignIn' });
     onError?.('Google sign-in was cancelled or failed. Please try again.');
   };
 

@@ -53,6 +53,7 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 
+import { reportAPIError } from '@/lib/errorReporting';
 import log from '@/lib/logger';
 import { progressAPI } from '@/services/progressAPI';
 import type {
@@ -356,7 +357,7 @@ export const useAnalyticsStore = create<AnalyticsState>()(
             lastFetch: Date.now(),
           });
         } catch (error) {
-          log.error('[analyticsStore] Failed to load analytics:', error);
+          reportAPIError(error, { operation: 'loadAnalytics', endpoint: '/progress/dashboard' });
           set({
             error: error instanceof Error ? error.message : 'Failed to load analytics',
             loading: false,
@@ -408,7 +409,7 @@ export const useAnalyticsStore = create<AnalyticsState>()(
             lastFetch: Date.now(),
           });
         } catch (error) {
-          log.error('[analyticsStore] Failed to refresh analytics:', error);
+          reportAPIError(error, { operation: 'refreshAnalytics', endpoint: '/progress/dashboard' });
           set({
             error: error instanceof Error ? error.message : 'Failed to refresh analytics',
             refreshing: false,
@@ -429,7 +430,7 @@ export const useAnalyticsStore = create<AnalyticsState>()(
 
           log.debug('[analyticsStore] Analytics snapshot updated');
         } catch (error) {
-          log.error('[analyticsStore] Failed to update snapshot:', error);
+          reportAPIError(error, { operation: 'updateSnapshot' });
           // Non-blocking error - don't set error state
         }
       },

@@ -4,7 +4,7 @@ import posthog from 'posthog-js';
 import { PostHogProvider as PHProvider } from 'posthog-js/react';
 
 import { SUPPORTED_LANGUAGES, DEFAULT_LANGUAGE, type SupportedLanguage } from '@/i18n';
-import log from '@/lib/logger';
+import { reportAPIError } from '@/lib/errorReporting';
 import { isTestUser, shouldInitializePostHog } from '@/utils/analytics';
 
 /**
@@ -88,7 +88,7 @@ export function PostHogProvider({ children }: PostHogProviderProps) {
         },
       });
     } catch (error) {
-      log.error('[PostHog] Failed to initialize:', error);
+      reportAPIError(error, { operation: 'initializePostHog' });
       // Continue without PostHog - graceful degradation
     }
   }, []);

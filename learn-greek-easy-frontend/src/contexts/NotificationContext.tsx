@@ -8,7 +8,7 @@ import React, {
   useState,
 } from 'react';
 
-import log from '@/lib/logger';
+import { reportAPIError } from '@/lib/errorReporting';
 import * as notificationAPI from '@/services/notificationAPI';
 import { useAppStore } from '@/stores/appStore';
 import { useAuthStore, useHasHydrated } from '@/stores/authStore';
@@ -111,7 +111,10 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         setUnreadCount(count);
       }
     } catch (err) {
-      log.error('Failed to refresh unread count:', err);
+      reportAPIError(err, {
+        operation: 'refreshUnreadCount',
+        endpoint: '/notifications/unread-count',
+      });
     }
   }, [hasHydrated, isAuthenticated, authInitialized, unreadCount, fetchNotifications]);
 
@@ -124,7 +127,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       );
       setUnreadCount((prev) => Math.max(0, prev - 1));
     } catch (err) {
-      log.error('Failed to mark as read:', err);
+      reportAPIError(err, { operation: 'markAsRead', endpoint: `/notifications/${id}/read` });
     }
   }, []);
 
@@ -136,7 +139,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       setNotifications((prev) => prev.map((n) => ({ ...n, read: true, read_at: now })));
       setUnreadCount(0);
     } catch (err) {
-      log.error('Failed to mark all as read:', err);
+      reportAPIError(err, { operation: 'markAllAsRead', endpoint: '/notifications/read-all' });
     }
   }, []);
 
@@ -151,7 +154,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
           setUnreadCount((prev) => Math.max(0, prev - 1));
         }
       } catch (err) {
-        log.error('Failed to delete notification:', err);
+        reportAPIError(err, { operation: 'deleteNotification', endpoint: `/notifications/${id}` });
       }
     },
     [notifications]
@@ -166,7 +169,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       setHasMore(false);
       setOffset(0);
     } catch (err) {
-      log.error('Failed to clear notifications:', err);
+      reportAPIError(err, { operation: 'clearAllNotifications', endpoint: '/notifications/clear' });
     }
   }, []);
 

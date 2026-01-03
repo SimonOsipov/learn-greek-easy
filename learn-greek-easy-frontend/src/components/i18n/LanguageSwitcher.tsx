@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { type SupportedLanguage } from '@/i18n';
-import log from '@/lib/logger';
+import { reportAPIError } from '@/lib/errorReporting';
 import { cn } from '@/lib/utils';
 
 interface LanguageSwitcherProps {
@@ -57,9 +57,8 @@ export const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({
     try {
       await changeLanguage(langCode, 'header');
     } catch (error) {
-      // Error is handled in context via console.error
-      // Could show a toast here for user feedback if desired
-      log.error('[LanguageSwitcher] Language change failed:', error);
+      // Error is handled in context, report to Sentry for visibility
+      reportAPIError(error, { operation: 'languageSwitcherChange', targetLanguage: langCode });
     }
   };
 

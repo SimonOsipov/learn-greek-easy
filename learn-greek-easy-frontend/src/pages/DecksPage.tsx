@@ -12,7 +12,7 @@ import type { DeckType } from '@/components/decks/DeckTypeFilter';
 import { CardSkeleton, EmptyState } from '@/components/feedback';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import log from '@/lib/logger';
+import { reportAPIError } from '@/lib/errorReporting';
 import { useDeckStore } from '@/stores/deckStore';
 
 export const DecksPage: React.FC = () => {
@@ -33,7 +33,7 @@ export const DecksPage: React.FC = () => {
   // Fetch decks on mount and when navigating back from detail page
   useEffect(() => {
     fetchDecks().catch((err) => {
-      log.error('Failed to fetch decks:', err);
+      reportAPIError(err, { operation: 'fetchDecks', endpoint: '/decks' });
     });
   }, [fetchDecks, location.key]); // location.key changes on navigation
 

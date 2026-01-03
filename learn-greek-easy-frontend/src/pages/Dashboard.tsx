@@ -9,6 +9,7 @@ import { WelcomeSection } from '@/components/display/WelcomeSection';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAnalytics } from '@/hooks/useAnalytics';
+import { reportAPIError } from '@/lib/errorReporting';
 import log from '@/lib/logger';
 import { useAuthStore } from '@/stores/authStore';
 import { useDeckStore } from '@/stores/deckStore';
@@ -47,7 +48,7 @@ export const Dashboard: React.FC = () => {
   // Fetch decks on mount
   useEffect(() => {
     fetchDecks().catch((error) => {
-      log.error('Failed to fetch decks:', error);
+      reportAPIError(error, { operation: 'fetchDecks', endpoint: '/decks' });
     });
   }, [fetchDecks]);
 
