@@ -142,7 +142,7 @@ class CultureAnswerRequest(BaseModel):
     """Request schema for submitting an answer."""
 
     selected_option: int = Field(..., ge=1, le=4, description="Selected option (1-4)")
-    time_taken: int = Field(..., ge=0, le=300, description="Time taken in seconds (max 5 min)")
+    time_taken: int = Field(..., ge=0, description="Time taken in seconds")
     language: str = Field(
         default="en",
         pattern=r"^(el|en|ru)$",

@@ -24,7 +24,7 @@ class ReviewSubmit(BaseModel):
 
     card_id: UUID
     quality: int = Field(..., ge=0, le=5)
-    time_taken: int = Field(..., ge=0, le=300)  # Max 5 minutes (300 seconds)
+    time_taken: int = Field(..., ge=0, description="Time taken in seconds")
 
     @field_validator("quality")
     @classmethod

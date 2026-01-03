@@ -73,11 +73,13 @@ class TestCultureAnswerRequest:
             CultureAnswerRequest(selected_option=5, time_taken=10)
         assert "less than or equal to 4" in str(exc_info.value)
 
-    def test_time_taken_max(self):
-        """Test time taken exceeds maximum."""
-        with pytest.raises(ValidationError) as exc_info:
-            CultureAnswerRequest(selected_option=1, time_taken=301)
-        assert "less than or equal to 300" in str(exc_info.value)
+    def test_time_taken_accepts_large_values(self):
+        """Test time taken accepts values over 300 seconds (no upper limit)."""
+        answer = CultureAnswerRequest(selected_option=1, time_taken=600)
+        assert answer.time_taken == 600
+
+        answer2 = CultureAnswerRequest(selected_option=1, time_taken=3600)  # 1 hour
+        assert answer2.time_taken == 3600
 
     def test_time_taken_negative(self):
         """Test negative time taken rejected."""
