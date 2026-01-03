@@ -700,26 +700,26 @@ class TestSingleReviewSM2(E2ETestCase):
         assert response.status_code == 422
 
     @pytest.mark.asyncio
-    async def test_review_invalid_time_taken_rejected(
+    async def test_review_large_time_taken_accepted(
         self,
         client: AsyncClient,
         populated_study_environment: StudyEnvironment,
     ) -> None:
-        """Test that invalid time_taken values are rejected."""
+        """Test that large time_taken values are accepted (no upper limit)."""
         env = populated_study_environment
 
-        # time_taken must be 0-300
+        # time_taken has no upper limit (ge=0 only)
         response = await client.post(
             "/api/v1/reviews",
             json={
                 "card_id": str(env.cards[0].id),
                 "quality": 4,
-                "time_taken": 301,  # Invalid (> 300)
+                "time_taken": 600,  # Large value - now accepted
             },
             headers=env.headers,
         )
 
-        assert response.status_code == 422
+        assert response.status_code == 200
 
 
 # =============================================================================

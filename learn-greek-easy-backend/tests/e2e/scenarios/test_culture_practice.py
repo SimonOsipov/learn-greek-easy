@@ -1017,23 +1017,23 @@ class TestCultureAnswerSubmission(E2ETestCase):
         assert response.status_code == 200
 
     @pytest.mark.asyncio
-    async def test_submit_answer_time_taken_over_max(
+    async def test_submit_answer_time_taken_large_value_accepted(
         self,
         client: AsyncClient,
         fresh_user_session: UserSession,
         db_session: AsyncSession,
     ) -> None:
-        """Test that time_taken over max (>300) returns 422."""
+        """Test that large time_taken values are accepted (no upper limit)."""
         deck = await CultureDeckFactory.create(session=db_session)
         question = await CultureQuestionFactory.create(session=db_session, deck_id=deck.id)
         await db_session.commit()
 
         response = await client.post(
             f"/api/v1/culture/questions/{question.id}/answer",
-            json={"selected_option": 1, "time_taken": 301, "language": "en"},
+            json={"selected_option": 1, "time_taken": 600, "language": "en"},
             headers=fresh_user_session.headers,
         )
-        assert response.status_code == 422
+        assert response.status_code == 200
 
     @pytest.mark.asyncio
     async def test_submit_answer_greek_language(

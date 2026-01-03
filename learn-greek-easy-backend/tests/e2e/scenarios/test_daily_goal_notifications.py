@@ -402,12 +402,12 @@ class TestReviewEdgeCases(E2ETestCase):
         assert response.status_code == 422
 
     @pytest.mark.asyncio
-    async def test_review_invalid_time_taken_returns_422(
+    async def test_review_large_time_taken_accepted(
         self,
         client: AsyncClient,
         populated_study_environment: StudyEnvironment,
     ) -> None:
-        """Test that invalid time_taken value returns 422."""
+        """Test that large time_taken values are accepted (no upper limit)."""
         env = populated_study_environment
 
         response = await client.post(
@@ -415,11 +415,11 @@ class TestReviewEdgeCases(E2ETestCase):
             json={
                 "card_id": str(env.cards[0].id),
                 "quality": 4,
-                "time_taken": 301,  # Invalid - max is 300
+                "time_taken": 600,  # Large value - now accepted
             },
             headers=env.headers,
         )
-        assert response.status_code == 422
+        assert response.status_code == 200
 
     @pytest.mark.asyncio
     async def test_review_without_auth_returns_401(
