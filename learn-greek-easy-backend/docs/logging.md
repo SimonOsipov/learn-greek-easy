@@ -240,3 +240,179 @@ logger = get_logger(__name__)
 ```
 
 **Note**: If the file also uses `logging.ERROR` or other constants, keep the `import logging` but still switch to `get_logger` for the logger instance.
+
+---
+
+# Frontend Logging
+
+This section describes the logging infrastructure for the Learn Greek Easy frontend.
+
+## Overview
+
+The frontend uses [loglevel](https://github.com/pimterry/loglevel) for structured logging with Sentry Logs integration. Logs are sent to Sentry for centralized observability alongside the backend.
+
+### Key Features
+
+- **Consistent logging** via the default `log` export
+- **Environment-aware log levels** (debug in dev, warn in prod)
+- **Sentry Logs integration** for searchable logs in Sentry
+- **Dual approach for errors**: Sentry Logs + Sentry Issues for alerting
+- **Deferred Sentry loading** for better LCP performance
+
+## Quick Start
+
+```typescript
+// Default import (recommended)
+import log from '@/lib/logger';
+
+// Basic logging
+log.debug('Debugging info', { data });
+log.info('User action completed');
+log.warn('Deprecated feature used');
+log.error('Failed to fetch', error);
+
+// Named imports for convenience
+import { info, error } from '@/lib/logger';
+
+info('Component mounted');
+error('API call failed', err);
+```
+
+## Log Level Mapping
+
+### Development Mode
+
+| Log Method | Console Output | Sentry |
+|------------|----------------|--------|
+| `trace()` | Yes | No |
+| `debug()` | Yes | No |
+| `info()` | Yes | No |
+| `warn()` | Yes | No |
+| `error()` | Yes | No |
+
+### Production Mode
+
+| Log Method | Console Output | Sentry Logs | Sentry Issues | Breadcrumbs |
+|------------|----------------|-------------|---------------|-------------|
+| `trace()` | Yes | No | No | No |
+| `debug()` | Yes | No | No | No |
+| `info()` | Yes | Yes | No | Yes |
+| `warn()` | Yes | Yes | No | Yes |
+| `error()` | Yes | Yes | Yes (alert) | Yes |
+
+### Dual Approach for Errors
+
+Errors use a dual approach:
+1. **Sentry Logs**: For searching and correlation with other logs
+2. **Sentry Issues**: For alerting and tracking (creates actionable tickets)
+3. **Breadcrumbs**: For context in error reports
+
+This ensures errors are both searchable in logs AND trigger alerts.
+
+## Module Structure
+
+### `src/lib/logger.ts`
+
+Main logger configuration using loglevel with custom method factory.
+
+### `src/lib/sentry-queue.ts`
+
+Handles deferred Sentry initialization for better performance:
+
+| Function | Description |
+|----------|-------------|
+| `queueException(error, context)` | Queue an exception for Sentry capture |
+| `queueMessage(message, level)` | Queue a message for Sentry capture |
+| `queueBreadcrumb(breadcrumb)` | Queue a breadcrumb for Sentry |
+| `queueLog(level, message)` | Queue a log for Sentry Logs |
+| `initSentryAsync()` | Initialize Sentry and flush queued items |
+| `isSentryLoaded()` | Check if Sentry is ready |
+
+### `src/instrument.ts`
+
+Sentry SDK initialization with `enableLogs: true` for Sentry Logs support.
+
+## Best Practices
+
+### DO
+
+```typescript
+// Use the logger from @/lib/logger
+import log from '@/lib/logger';
+
+// Use appropriate log levels
+log.debug('Detailed trace info');
+log.info('Normal operation');
+log.warn('Something unexpected but handled');
+log.error('Something failed');
+
+// Include useful context
+log.info('User action', { action: 'login', userId: user.id });
+
+// Log errors with details
+log.error('API call failed', { endpoint, status, error: err.message });
+```
+
+### DON'T
+
+```typescript
+// Don't use console directly (bypasses Sentry integration)
+console.log('Debug info');  // Wrong!
+console.error('Error');     // Wrong!
+
+// Don't log sensitive data
+log.info('Login', { password });  // Never log passwords!
+log.info('Auth', { token });      // Never log tokens!
+log.info('User', { email });      // Never log PII!
+
+// Don't use verbose logging in production-critical paths
+// (info and above are sent to Sentry)
+log.info('Loop iteration', { i });  // Wrong! Too verbose
+```
+
+## Runtime Level Adjustment
+
+In development, you can adjust the log level:
+
+```typescript
+import log from '@/lib/logger';
+
+log.setLevel('trace'); // Show all logs
+log.setLevel('error'); // Only errors
+log.setLevel('silent'); // Disable all logs
+```
+
+## Debugging
+
+### Check Current Log Level
+
+```typescript
+import log from '@/lib/logger';
+
+console.log('Current level:', log.getLevel());
+// 0 = trace, 1 = debug, 2 = info, 3 = warn, 4 = error, 5 = silent
+```
+
+### View Logs in Sentry
+
+1. Go to Sentry dashboard
+2. Navigate to "Logs" section
+3. Filter by environment, level, or search log messages
+4. Logs from frontend will have `environment: 'production'`
+
+### Correlating Frontend and Backend Logs
+
+Both frontend and backend logs go to the same Sentry project. You can:
+1. Search by timestamp to find related logs
+2. Use Sentry's trace context (when available) to correlate requests
+3. Filter by environment to separate frontend/backend logs
+
+## Deferred Loading
+
+Sentry is loaded asynchronously after React's first paint to improve LCP performance:
+
+1. **Before Sentry loads**: Logs are queued in memory (max 50 items)
+2. **After Sentry loads**: Queued items are flushed to Sentry
+3. **Runtime**: Logs are sent to Sentry immediately
+
+This ensures no logs are lost during the pre-Sentry window while keeping initial load fast.

@@ -16,12 +16,17 @@
 import type * as SentryType from '@sentry/react';
 
 /**
+ * Log levels supported by Sentry.logger API
+ */
+type SentryLogLevel = 'trace' | 'debug' | 'info' | 'warn' | 'error' | 'fatal';
+
+/**
  * Queued item structure for deferred Sentry capture
  */
 type QueuedItem = {
-  type: 'exception' | 'message' | 'breadcrumb';
+  type: 'exception' | 'message' | 'breadcrumb' | 'log';
   data: unknown;
-  level?: SentryType.SeverityLevel;
+  level?: SentryType.SeverityLevel | SentryLogLevel;
   context?: Record<string, unknown>;
   timestamp: number;
 };
@@ -121,6 +126,33 @@ export function queueBreadcrumb(breadcrumb: {
 }
 
 /**
+ * Queue a log message for Sentry Logs.
+ *
+ * Uses the Sentry.logger API to send structured logs to Sentry Logs.
+ * Logs are searchable and can be correlated with errors.
+ *
+ * @param level - Log level ('trace', 'debug', 'info', 'warn', 'error', or 'fatal')
+ * @param message - The log message
+ */
+export function queueLog(level: SentryLogLevel, message: string): void {
+  if (sentryLoaded && Sentry) {
+    // Use Sentry.logger API for structured logging
+    Sentry.logger[level](message);
+    return;
+  }
+
+  if (queue.length >= MAX_QUEUE_SIZE) {
+    queue.shift();
+  }
+  queue.push({
+    type: 'log',
+    data: message,
+    level,
+    timestamp: Date.now(),
+  });
+}
+
+/**
  * Check if Sentry is loaded and initialized.
  *
  * @returns true if Sentry is ready for use
@@ -184,6 +216,10 @@ export async function initSentryAsync(): Promise<void> {
           level: SentryType.SeverityLevel;
         };
         Sentry.addBreadcrumb(breadcrumb);
+      } else if (item.type === 'log') {
+        // Flush to Sentry.logger API
+        const logLevel = item.level as SentryLogLevel;
+        Sentry.logger[logLevel](item.data as string);
       }
     }
 
