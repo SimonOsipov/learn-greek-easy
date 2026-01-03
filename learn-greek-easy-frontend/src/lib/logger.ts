@@ -37,7 +37,7 @@
 
 import log from 'loglevel';
 
-import { queueBreadcrumb, queueMessage } from './sentry-queue';
+import { queueBreadcrumb, queueLog, queueMessage } from './sentry-queue';
 
 // Store original factory before modification
 const originalFactory = log.methodFactory;
@@ -64,23 +64,35 @@ log.methodFactory = function (
         .join(' ');
 
       if (methodName === 'error') {
-        // Capture errors as Sentry events
+        // DUAL APPROACH: Send to Sentry Logs AND create Issue
+        // 1. Send to Sentry Logs for searching/correlation
+        queueLog('error', message);
+        // 2. Create Sentry Issue for alerting/tracking (existing behavior)
         queueMessage(message, 'error');
+        // 3. Add as breadcrumb for error context
+        queueBreadcrumb({
+          category: 'console',
+          message,
+          level: 'error',
+        });
       } else if (methodName === 'warn') {
-        // Add warnings as breadcrumbs
+        // Send to Sentry Logs + breadcrumb
+        queueLog('warn', message);
         queueBreadcrumb({
           category: 'console',
           message,
           level: 'warning',
         });
       } else if (methodName === 'info') {
-        // Add info logs as breadcrumbs for context
+        // Send to Sentry Logs + breadcrumb
+        queueLog('info', message);
         queueBreadcrumb({
           category: 'console',
           message,
           level: 'info',
         });
       }
+      // debug/trace: no Sentry in production (local console only)
     }
   };
 };

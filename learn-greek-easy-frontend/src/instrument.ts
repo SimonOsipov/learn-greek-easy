@@ -22,6 +22,9 @@ if (import.meta.env.PROD && import.meta.env.VITE_SENTRY_DSN) {
       Sentry.browserTracingIntegration(),
     ],
 
+    // Enable Sentry Logs for centralized log aggregation
+    enableLogs: true,
+
     // Performance monitoring sample rate
     // Capture 20% of transactions in production (adjust based on traffic)
     tracesSampleRate: 0.2,
