@@ -57,8 +57,8 @@ class TestSentryModuleIntegration:
             call_kwargs = mock_sentry_sdk.init.call_args.kwargs
             integrations = call_kwargs["integrations"]
 
-            # Should have 4 integrations: Starlette, FastAPI, SQLAlchemy, Redis
-            assert len(integrations) == 4
+            # Should have 5 integrations: Starlette, FastAPI, SQLAlchemy, Redis, Loguru
+            assert len(integrations) == 5
 
     @patch("src.core.sentry.sentry_sdk")
     def test_event_filtering_in_before_send(self, mock_sentry_sdk):

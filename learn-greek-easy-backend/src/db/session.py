@@ -1,6 +1,5 @@
 """Database session management with async SQLAlchemy 2.0."""
 
-import logging
 from typing import AsyncGenerator
 
 from sqlalchemy import text
@@ -13,8 +12,9 @@ from sqlalchemy.ext.asyncio import (
 from sqlalchemy.pool import NullPool
 
 from src.config import settings
+from src.core.logging import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 # Global engine instance (initialized on app startup)

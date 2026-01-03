@@ -1,14 +1,14 @@
 """FastAPI dependencies for database access."""
 
-import logging
 from typing import AsyncGenerator
 
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.logging import get_logger
 from src.db.session import get_session_factory
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:

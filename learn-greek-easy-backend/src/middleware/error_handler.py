@@ -17,7 +17,6 @@ response streaming issues that can cause 502 errors with reverse proxies.
 See: https://www.starlette.io/middleware/#pure-asgi-middleware
 """
 
-import logging
 import traceback
 
 from fastapi.responses import JSONResponse
@@ -25,8 +24,9 @@ from starlette.requests import Request
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 from src.config import settings
+from src.core.logging import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class ErrorHandlingMiddleware:

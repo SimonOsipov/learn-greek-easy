@@ -9,7 +9,6 @@ Tasks:
 - stats_aggregate_task: Daily at 4 AM UTC - Aggregate user statistics for analytics
 """
 
-import logging
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING
 
@@ -17,11 +16,12 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from src.config import settings
+from src.core.logging import get_logger
 
 if TYPE_CHECKING:
     from redis.asyncio import Redis
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 async def streak_reset_task() -> None:

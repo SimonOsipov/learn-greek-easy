@@ -9,7 +9,6 @@ Session Storage Strategy:
     - Legacy tokens (without jti claim) are rejected - users must re-login
 """
 
-import logging
 from datetime import datetime
 from typing import List, Optional, Tuple
 from uuid import UUID
@@ -28,6 +27,7 @@ from src.core.exceptions import (
     TokenInvalidException,
     UserNotFoundException,
 )
+from src.core.logging import get_logger
 from src.core.security import (
     create_access_token,
     create_refresh_token,
@@ -40,7 +40,7 @@ from src.db.models import User, UserSettings
 from src.repositories.session import SessionRepository
 from src.schemas.user import GoogleUserInfo, TokenResponse, UserCreate, UserLogin
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class AuthService:

@@ -34,6 +34,7 @@ from src.core.exceptions import (
     UnauthorizedException,
     UserNotFoundException,
 )
+from src.core.logging import bind_log_context
 from src.core.security import verify_token
 from src.core.sentry import set_user_context
 from src.db.dependencies import get_db
@@ -129,6 +130,9 @@ async def get_current_user(
         email=user.email,
         username=user.full_name,
     )
+
+    # Bind user context for logging - all subsequent logs will include user_id
+    bind_log_context(user_id=str(user.id))
 
     # Store user email in request state for exception handlers
     request.state.user_email = user.email
@@ -227,6 +231,9 @@ async def get_current_user_optional(
         email=user.email,
         username=user.full_name,
     )
+
+    # Bind user context for logging - all subsequent logs will include user_id
+    bind_log_context(user_id=str(user.id))
 
     # Store user email in request state for exception handlers
     request.state.user_email = user.email

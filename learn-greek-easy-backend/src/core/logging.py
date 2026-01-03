@@ -1,9 +1,24 @@
-"""Loguru-based logging configuration for the application."""
+"""Loguru-based logging configuration for the application.
+
+This module provides:
+- Consistent logging across the application using loguru
+- Context propagation for request-scoped data (request_id, user_id)
+- Automatic routing of stdlib logging to loguru
+- JSON format for production, colorized format for development
+- Integration with Sentry Logs for centralized observability
+
+Example:
+    >>> from src.core.logging import get_logger, bind_log_context
+    >>> logger = get_logger(__name__)
+    >>> bind_log_context(request_id="abc123", user_id="user-456")
+    >>> logger.info("Processing request")  # Includes request_id and user_id
+"""
 
 import inspect
 import logging
 import sys
-from typing import TYPE_CHECKING
+from contextvars import ContextVar
+from typing import TYPE_CHECKING, Any
 
 from loguru import logger
 
@@ -11,6 +26,46 @@ if TYPE_CHECKING:
     from loguru import Logger
 
 from src.config import settings
+
+# Request-scoped logging context using contextvars
+# This ensures context is properly propagated through async operations
+_log_context: ContextVar[dict[str, Any]] = ContextVar("log_context", default={})
+
+
+def bind_log_context(**kwargs: Any) -> None:
+    """Bind context that appears in all logs for this request.
+
+    Context is automatically propagated through async operations
+    within the same request scope via Python's contextvars.
+
+    Args:
+        **kwargs: Key-value pairs to add to logging context
+
+    Example:
+        >>> bind_log_context(request_id="abc123", user_id="user-456")
+        >>> logger.info("Processing")  # Logs include request_id and user_id
+    """
+    ctx = _log_context.get().copy()
+    ctx.update(kwargs)
+    _log_context.set(ctx)
+
+
+def clear_log_context() -> None:
+    """Clear context at end of request.
+
+    Should be called in middleware cleanup to prevent context leakage
+    between requests.
+    """
+    _log_context.set({})
+
+
+def get_log_context() -> dict[str, Any]:
+    """Get current logging context.
+
+    Returns:
+        Dictionary of current context values
+    """
+    return _log_context.get().copy()
 
 
 class InterceptHandler(logging.Handler):
@@ -124,18 +179,25 @@ def setup_logging() -> None:
 def get_logger(name: str | None = None) -> "Logger":
     """Get a contextualized logger instance.
 
+    Returns a logger that automatically includes any context bound via
+    bind_log_context(). This ensures request_id, user_id, and other
+    context values appear in all logs without explicit passing.
+
     Args:
         name: Optional name to bind to the logger for context.
               Typically __name__ of the calling module.
 
     Returns:
-        A loguru logger instance, optionally with name context bound.
+        A loguru logger instance with automatic context injection.
+        All logs will include any context bound via bind_log_context().
 
     Example:
-        >>> from src.core.logging import get_logger
+        >>> from src.core.logging import get_logger, bind_log_context
         >>> logger = get_logger(__name__)
+        >>> bind_log_context(request_id="abc123")
         >>> logger.info("Processing request", user_id=123)
+        # Log includes: name, request_id (from context), user_id (explicit)
     """
-    if name:
-        return logger.bind(name=name)
-    return logger
+    base = logger.bind(name=name) if name else logger
+    # Patch to inject context from contextvars into every log record
+    return base.patch(lambda record: record["extra"].update(_log_context.get()))

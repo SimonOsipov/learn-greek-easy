@@ -18,20 +18,21 @@ Example:
     capture_exception_if_needed(exc, user_email=user.email)
 """
 
-import logging
 import os
 import re
 from typing import Any, Dict, Optional
 
 import sentry_sdk
 from sentry_sdk.integrations.fastapi import FastApiIntegration
+from sentry_sdk.integrations.loguru import LoggingLevels, LoguruIntegration
 from sentry_sdk.integrations.redis import RedisIntegration
 from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
 from sentry_sdk.integrations.starlette import StarletteIntegration
 
 from src.config import settings
+from src.core.logging import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # Global Sentry state
 _sentry_initialized: bool = False
@@ -154,6 +155,8 @@ def init_sentry() -> None:
             dsn=settings.sentry_dsn,
             environment=settings.sentry_environment,
             release=release,
+            # Enable Sentry Logs for centralized log observability
+            enable_logs=True,
             # Performance monitoring
             traces_sample_rate=settings.sentry_traces_sample_rate,
             profiles_sample_rate=settings.sentry_profiles_sample_rate,
@@ -170,6 +173,11 @@ def init_sentry() -> None:
                 FastApiIntegration(transaction_style="endpoint"),
                 SqlalchemyIntegration(),
                 RedisIntegration(),
+                LoguruIntegration(
+                    sentry_logs_level=LoggingLevels.INFO.value,  # INFO+ to Sentry Logs
+                    level=LoggingLevels.INFO.value,  # INFO+ as breadcrumbs
+                    event_level=LoggingLevels.ERROR.value,  # ERROR+ creates events
+                ),
             ],
             # Additional settings
             attach_stacktrace=True,

@@ -22,6 +22,7 @@ from starlette.datastructures import MutableHeaders
 from starlette.requests import Request
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
+from src.core.logging import bind_log_context, clear_log_context
 from src.core.sentry import set_request_context
 
 
@@ -178,8 +179,10 @@ class RequestLoggingMiddleware:
                     message = {**message, "headers": headers.raw}
             await send(message)
 
-        # Use contextualize to automatically include request_id in all logs
-        with logger.contextualize(request_id=request_id):
+        # Bind request context for all logs in this request
+        # Using contextvars ensures proper propagation through async operations
+        bind_log_context(request_id=request_id)
+        try:
             # Log request start
             start_time = time.perf_counter()
             client_ip = self._get_client_ip(request)
@@ -221,6 +224,9 @@ class RequestLoggingMiddleware:
                 status_code=status_code,
                 duration_ms=round(duration_ms, 2),
             )
+        finally:
+            # Clear context at end of request to prevent leakage
+            clear_log_context()
 
     def _should_skip(self, path: str) -> bool:
         """Check if path should be excluded from logging.

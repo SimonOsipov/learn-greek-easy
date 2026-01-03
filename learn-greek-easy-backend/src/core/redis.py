@@ -1,15 +1,15 @@
 """Redis client management with connection pooling."""
 
 import asyncio
-import logging
 from typing import Optional, Tuple
 
 from redis.asyncio import ConnectionPool, Redis
 from redis.exceptions import ConnectionError, TimeoutError
 
 from src.config import settings
+from src.core.logging import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # Global Redis client instance
 _redis_client: Optional[Redis] = None
