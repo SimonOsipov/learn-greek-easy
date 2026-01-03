@@ -38,6 +38,7 @@ import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useTrackEvent } from '@/hooks/useTrackEvent';
 import i18n from '@/i18n';
+import { reportAPIError } from '@/lib/errorReporting';
 import log from '@/lib/logger';
 import { cultureDeckAPI, type LocalizedText } from '@/services/cultureDeckAPI';
 import { useCultureSessionStore } from '@/stores/cultureSessionStore';
@@ -243,7 +244,7 @@ export function CulturePracticePage() {
       // Use real deck name and category from API
       startSession(deckId, deckName, queue.category, questions, config);
     } catch (err) {
-      log.error('Failed to initialize session:', err);
+      reportAPIError(err, { operation: 'initializeSession', endpoint: `/culture/${deckId}/queue` });
     }
   }, [deckId, startSession]);
 
@@ -292,7 +293,10 @@ export function CulturePracticePage() {
           // Silent failure for analytics
         }
       } catch (err) {
-        log.error('Failed to submit answer:', err);
+        reportAPIError(err, {
+          operation: 'submitAnswer',
+          endpoint: `/culture/questions/${currentQuestion.question.id}/answer`,
+        });
       } finally {
         setIsSubmitting(false);
       }

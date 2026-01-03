@@ -29,6 +29,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Skeleton } from '@/components/ui/skeleton';
+import { reportAPIError } from '@/lib/errorReporting';
 import { formatRelativeDate } from '@/lib/helpers';
 import log from '@/lib/logger';
 import { useAuthStore } from '@/stores/authStore';
@@ -49,7 +50,7 @@ export const DeckDetailPage: React.FC = () => {
   useEffect(() => {
     if (deckId) {
       selectDeck(deckId).catch((err) => {
-        log.error('Failed to load deck:', err);
+        reportAPIError(err, { operation: 'loadDeck', endpoint: `/decks/${deckId}` });
       });
     }
 
@@ -134,7 +135,7 @@ const handleStartLearning = async (
     // Navigate to review session
     navigate(`/decks/${deckId}/review`);
   } catch (error) {
-    log.error('Failed to start learning:', error);
+    reportAPIError(error, { operation: 'startLearning', endpoint: `/decks/${deckId}/initialize` });
     // Error is handled by store
   }
 };
@@ -170,7 +171,7 @@ const DeckHeaderSection: React.FC<DeckHeaderSectionProps> = ({ deck, isPremiumLo
       await resetProgress(deck.id);
       log.info('Progress reset successfully');
     } catch (error) {
-      log.error('Failed to reset progress:', error);
+      reportAPIError(error, { operation: 'resetProgress', endpoint: `/decks/${deck.id}/progress` });
     } finally {
       setIsResetting(false);
     }
@@ -401,7 +402,10 @@ const ActionButtonsSection: React.FC<ActionButtonsSectionProps> = ({
       // Show success toast/notification (optional)
       log.info('Study session simulated successfully!');
     } catch (error) {
-      log.error('Failed to simulate session:', error);
+      reportAPIError(error, {
+        operation: 'simulateSession',
+        endpoint: `/decks/${deck.id}/session`,
+      });
     } finally {
       setIsSimulating(false);
     }

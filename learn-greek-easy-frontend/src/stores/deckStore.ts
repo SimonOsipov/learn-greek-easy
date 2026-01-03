@@ -11,7 +11,7 @@ import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 
 import type { DeckType } from '@/components/decks/DeckTypeFilter';
-import log from '@/lib/logger';
+import { reportAPIError } from '@/lib/errorReporting';
 import { cultureDeckAPI } from '@/services/cultureDeckAPI';
 import type { CultureDeckResponse } from '@/services/cultureDeckAPI';
 import { deckAPI } from '@/services/deckAPI';
@@ -434,7 +434,7 @@ export const useDeckStore = create<DeckState>()(
 
         // Automatically re-fetch with new filters
         fetchDecks().catch((error) => {
-          log.error('Error fetching decks after filter change:', error);
+          reportAPIError(error, { operation: 'fetchDecksAfterFilterChange', endpoint: '/decks' });
         });
       },
 
@@ -448,7 +448,7 @@ export const useDeckStore = create<DeckState>()(
 
         // Re-fetch with default filters
         fetchDecks().catch((error) => {
-          log.error('Error fetching decks after clearing filters:', error);
+          reportAPIError(error, { operation: 'fetchDecksAfterClearFilters', endpoint: '/decks' });
         });
       },
 

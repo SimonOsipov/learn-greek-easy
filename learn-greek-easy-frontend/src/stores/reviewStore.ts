@@ -11,6 +11,7 @@ import posthog from 'posthog-js';
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 
+import { reportAPIError } from '@/lib/errorReporting';
 import log from '@/lib/logger';
 import { reviewAPI } from '@/services/reviewAPI';
 import { studyAPI } from '@/services/studyAPI';
@@ -690,7 +691,7 @@ export function recoverActiveSession(): boolean {
     log.info('Session recovered from crash:', session.sessionId);
     return true;
   } catch (error) {
-    log.error('Failed to recover session:', error);
+    reportAPIError(error, { operation: 'recoverActiveSession' });
     sessionStorage.removeItem('learn-greek-easy:active-session');
     return false;
   }

@@ -11,6 +11,7 @@ import {
 import { loadLanguageResources } from '@/i18n/lazy-resources';
 import { LANGUAGE_OPTIONS, type LanguageOption } from '@/i18n/types';
 import { registerInterfaceLanguage, trackLanguageSwitch } from '@/lib/analytics';
+import { reportAPIError } from '@/lib/errorReporting';
 import log from '@/lib/logger';
 import { api } from '@/services/api';
 import { useAuthStore } from '@/stores/authStore';
@@ -140,8 +141,11 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
               preferred_language: lang,
             });
           } catch (apiError) {
-            // Log but don't fail - local change still succeeded
-            log.error('[LanguageContext] Failed to sync language to backend:', apiError);
+            // Report but don't fail - local change still succeeded
+            reportAPIError(apiError, {
+              operation: 'syncLanguageToBackend',
+              endpoint: '/api/v1/auth/me',
+            });
             // Note: We could optionally show a toast here
           }
         }
@@ -154,13 +158,16 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           `[LanguageContext] Language changed: ${previousLang} -> ${lang} (source: ${source})`
         );
       } catch (error) {
-        log.error('[LanguageContext] Failed to change language:', error);
+        reportAPIError(error, { operation: 'changeLanguage', targetLanguage: lang, source });
 
         // Revert on failure
         try {
           await i18n.changeLanguage(previousLang);
         } catch (revertError) {
-          log.error('[LanguageContext] Failed to revert language:', revertError);
+          reportAPIError(revertError, {
+            operation: 'revertLanguage',
+            targetLanguage: previousLang,
+          });
         }
 
         throw error;

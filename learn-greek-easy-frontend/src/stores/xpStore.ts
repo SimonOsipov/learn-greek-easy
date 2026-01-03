@@ -13,6 +13,7 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 
+import { reportAPIError } from '@/lib/errorReporting';
 import log from '@/lib/logger';
 import { xpAPI } from '@/services/xpAPI';
 import type {
@@ -107,7 +108,7 @@ export const useXPStore = create<XPState>()(
             lastStatsFetch: Date.now(),
           });
         } catch (error) {
-          log.error('[xpStore] Failed to load XP stats:', error);
+          reportAPIError(error, { operation: 'loadXPStats', endpoint: '/xp/stats' });
           set({
             error: error instanceof Error ? error.message : 'Failed to load XP stats',
             loadingStats: false,
@@ -139,7 +140,7 @@ export const useXPStore = create<XPState>()(
             lastAchievementsFetch: Date.now(),
           });
         } catch (error) {
-          log.error('[xpStore] Failed to load achievements:', error);
+          reportAPIError(error, { operation: 'loadAchievements', endpoint: '/xp/achievements' });
           set({
             error: error instanceof Error ? error.message : 'Failed to load achievements',
             loadingAchievements: false,
@@ -162,7 +163,10 @@ export const useXPStore = create<XPState>()(
             loadingUnnotified: false,
           });
         } catch (error) {
-          log.error('[xpStore] Failed to load unnotified achievements:', error);
+          reportAPIError(error, {
+            operation: 'loadUnnotifiedAchievements',
+            endpoint: '/xp/achievements/unnotified',
+          });
           set({
             error: error instanceof Error ? error.message : 'Failed to load notifications',
             loadingUnnotified: false,
@@ -192,7 +196,10 @@ export const useXPStore = create<XPState>()(
             });
           }
         } catch (error) {
-          log.error('[xpStore] Failed to mark achievements notified:', error);
+          reportAPIError(error, {
+            operation: 'markAchievementsNotified',
+            endpoint: '/xp/achievements/notified',
+          });
           // Non-blocking error - don't set error state
         }
       },

@@ -2,6 +2,7 @@ import posthog from 'posthog-js';
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 
+import { reportAPIError } from '@/lib/errorReporting';
 import log from '@/lib/logger';
 import { shouldRefreshToken } from '@/lib/tokenUtils';
 import { APIRequestError } from '@/services/api';
@@ -305,7 +306,7 @@ export const useAuthStore = create<AuthState>()(
           try {
             await authAPI.logout(storedRefreshToken);
           } catch (error) {
-            log.error('Logout error:', error);
+            reportAPIError(error, { operation: 'logout', endpoint: '/auth/logout' });
           }
         }
 
