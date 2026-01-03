@@ -559,22 +559,22 @@ class TestSubmitAnswerEndpoint:
         assert response.status_code == 200
 
     @pytest.mark.asyncio
-    async def test_submit_answer_time_taken_over_max(
+    async def test_submit_answer_time_taken_large_value_accepted(
         self,
         client: AsyncClient,
         auth_headers: dict,
         culture_questions: list[CultureQuestion],
     ):
-        """time_taken over 300 should return 422."""
+        """Large time_taken values are accepted (no upper limit)."""
         question = culture_questions[0]
 
         response = await client.post(
             f"/api/v1/culture/questions/{question.id}/answer",
             headers=auth_headers,
-            json={"selected_option": 1, "time_taken": 301},
+            json={"selected_option": 1, "time_taken": 600},
         )
 
-        assert response.status_code == 422
+        assert response.status_code == 200
 
     @pytest.mark.asyncio
     async def test_submit_answer_returns_message(
