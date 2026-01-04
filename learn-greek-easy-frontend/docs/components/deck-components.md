@@ -58,7 +58,7 @@ import { MOCK_DECKS } from '@/services/mockDeckData';
 - Tier-based color-coded level badge (A1/A2: green, B1/B2: blue, C1/C2: red)
 - Premium indicator with lock icon for locked decks
 - Segmented progress bar showing new/learning/mastered cards
-- Stats grid with card count, estimated time, mastery percentage
+- Stats grid with card count and progress percentage
 - Gold border on hover for premium unlocked decks
 - 70% opacity for locked premium decks
 - Keyboard accessible (Enter/Space to activate)
@@ -71,7 +71,7 @@ import { MOCK_DECKS } from '@/services/mockDeckData';
 | onClick | () => void | undefined | Handler called when card is clicked (disabled if locked) |
 | showProgress | boolean | true | Whether to display progress bar and completion percentage |
 | variant | 'grid' \| 'list' | 'grid' | Display mode for different layouts |
-| showStats | boolean | true | Whether to display stats row (cards/time/mastery) |
+| showStats | boolean | true | Whether to display stats row (cards/progress) |
 
 **Variants**:
 - **Grid** (default): Vertical layout optimized for card grids, compact stats
@@ -397,7 +397,7 @@ navigate(`/decks/${deckId}`);
 - Premium access validation with upgrade CTA for locked decks
 - Context-aware action buttons (Start Learning, Continue, Upgrade)
 - Deck status detection (not-started, in-progress, completed)
-- Detailed statistics grid (cards, time, mastery, accuracy)
+- Detailed statistics grid (cards, due today)
 - Card distribution visualization (new/learning/mastered)
 - Segmented progress bar with legend
 - Breadcrumb navigation (Decks > Deck Name)
@@ -414,7 +414,7 @@ navigate(`/decks/${deckId}`);
 - `Button` - Action buttons with gradients
 - `Skeleton` - Loading placeholders
 - `Alert` - Error messages
-- Lucide icons: `ChevronLeft`, `Lock`, `BookOpen`, `Clock`, `Target`, `TrendingUp`, `AlertCircle`
+- Lucide icons: `ChevronLeft`, `Lock`, `BookOpen`, `Clock`, `TrendingUp`, `AlertCircle`, `CheckCircle`
 
 **State Management**:
 - `useDeckStore().selectDeck(deckId)` - Fetch deck by ID

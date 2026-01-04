@@ -160,9 +160,9 @@ export const DeckCard: React.FC<DeckCardProps> = ({
               <p className="text-sm font-semibold text-gray-900">{cardCount}</p>
             </div>
 
-            {/* Completion or Mastery Rate */}
+            {/* Completion or Progress */}
             <div>
-              <p className="text-xs text-gray-600">{t('detail.masteryRate')}</p>
+              <p className="text-xs text-gray-600">{t('detail.progress')}</p>
               <p className="text-sm font-semibold text-gray-900">{completionPercent}%</p>
             </div>
           </div>

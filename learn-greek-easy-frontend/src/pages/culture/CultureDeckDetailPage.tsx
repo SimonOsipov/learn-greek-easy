@@ -9,7 +9,7 @@
 
 import React, { useEffect, useState } from 'react';
 
-import { ChevronLeft, BookOpen, Target, AlertCircle, Play } from 'lucide-react';
+import { ChevronLeft, BookOpen, AlertCircle, Play } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 
@@ -194,7 +194,7 @@ export function CultureDeckDetailPage() {
             <CardTitle className="text-lg font-semibold">{t('deck:detail.statistics')}</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 gap-4 md:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4">
               {/* Total Questions */}
               <StatCard
                 icon={<BookOpen className="h-5 w-5 text-blue-500" />}
@@ -202,19 +202,6 @@ export function CultureDeckDetailPage() {
                 value={deck.question_count}
                 subtext={t('culture:deck.multipleChoice')}
               />
-
-              {/* Mastery Rate (if started) */}
-              {progress && progress.status !== 'not-started' && (
-                <StatCard
-                  icon={<Target className="h-5 w-5 text-green-500" />}
-                  label={t('deck:detail.masteryRate')}
-                  value={`${Math.round((progress.cardsMastered / progress.cardsTotal) * 100)}%`}
-                  subtext={t('deck:detail.mastered', {
-                    count: progress.cardsMastered,
-                    total: progress.cardsTotal,
-                  })}
-                />
-              )}
             </div>
 
             {/* Question Distribution (if started) */}
