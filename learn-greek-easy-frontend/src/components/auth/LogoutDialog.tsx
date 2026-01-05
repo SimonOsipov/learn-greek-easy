@@ -33,15 +33,21 @@ export const LogoutDialog: React.FC<LogoutDialogProps> = ({ trigger }) => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  const handleLogout = () => {
-    logout();
-    setOpen(false);
-    navigate('/login');
-    toast({
-      title: t('logout.success.title'),
-      description: t('logout.success.description'),
-    });
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      await logout();
+      setOpen(false);
+      navigate('/login');
+      toast({
+        title: t('logout.success.title'),
+        description: t('logout.success.description'),
+      });
+    } finally {
+      setIsLoggingOut(false);
+    }
   };
 
   return (
@@ -67,9 +73,10 @@ export const LogoutDialog: React.FC<LogoutDialogProps> = ({ trigger }) => {
             type="button"
             variant="destructive"
             onClick={handleLogout}
+            disabled={isLoggingOut}
             data-testid="logout-confirm-button"
           >
-            {t('logout.confirm')}
+            {isLoggingOut ? t('logout.loggingOut', 'Logging out...') : t('logout.confirm')}
           </Button>
         </DialogFooter>
       </DialogContent>

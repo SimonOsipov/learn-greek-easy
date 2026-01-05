@@ -33,6 +33,11 @@ export const config: AppConfig = {
     debugMode: parseBoolean(import.meta.env.VITE_ENABLE_DEBUG_MODE),
     analytics: parseBoolean(import.meta.env.VITE_ENABLE_ANALYTICS),
   },
+  retry: {
+    maxRetries: parseNumber(import.meta.env.VITE_API_RETRY_MAX, 3),
+    baseDelayMs: parseNumber(import.meta.env.VITE_API_RETRY_BASE_DELAY, 1000),
+    maxDelayMs: parseNumber(import.meta.env.VITE_API_RETRY_MAX_DELAY, 10000),
+  },
 };
 
 // Development environment check

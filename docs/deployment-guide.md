@@ -16,8 +16,43 @@ This project uses GitHub Actions for sequential deployments to ensure Backend is
 ### Sequential Deploy Process
 
 1. **Backend deploys first** - Uses `railway up --ci` which waits for health check
-2. **Frontend deploys second** - Only starts after Backend is confirmed healthy
-3. **Post-deploy verification** - Health checks confirm both services are responding
+2. **Backend warm-up** - Sends warmup requests to trigger DNS refresh and initialize pools
+3. **Frontend deploys third** - Only starts after Backend is warmed up
+4. **Post-deploy verification** - Health checks confirm both services are responding
+
+### Backend Warm-up Step
+
+After the backend deploys, a warm-up step runs before the frontend deployment begins. This step serves several important purposes:
+
+**Why warm-up is needed:**
+
+1. **Caddy DNS refresh** - After deployment, Caddy's DNS cache may still point to the old container IP for ~1 second. The first request can fail with a 502 error. Warm-up requests absorb this "sacrificial" failure and trigger DNS refresh.
+
+2. **Connection pool initialization** - Database and Redis connection pools are lazily initialized. Warm-up requests ensure connections are established before real user traffic arrives.
+
+3. **Lazy module loading** - Some Python modules and dependencies are loaded on first use. Warm-up triggers this initialization.
+
+4. **Cache warming** - Initial requests populate any application-level caches.
+
+**The warm-up script (`scripts/backend-warmup.sh`):**
+
+```bash
+# Usage
+./scripts/backend-warmup.sh <BACKEND_URL> [WARMUP_REQUESTS] [RETRY_DELAY]
+
+# Parameters
+#   BACKEND_URL      - The backend URL (required)
+#   WARMUP_REQUESTS  - Number of warmup requests per endpoint (default: 10)
+#   RETRY_DELAY      - Seconds between health check retries (default: 3)
+
+# Example
+./scripts/backend-warmup.sh "https://backend-production-7429.up.railway.app" 10 3
+```
+
+The script performs three phases:
+1. **Wait for ready** - Polls `/health/ready` until backend responds (max 20 attempts)
+2. **Send warmup requests** - Makes multiple requests to `/health`, `/health/live`, `/health/ready`, `/version`, and `/api/v1/status`
+3. **Final verification** - Confirms backend is still healthy after warmup
 
 ### Why Sequential?
 
@@ -180,6 +215,14 @@ If both Railway auto-deploy and GitHub Actions try to deploy:
 | `.github/workflows/preview.yml` | PR preview deployment |
 | `.github/workflows/preview-cleanup.yml` | Cleanup on PR close |
 | `.github/workflows/test.yml` | CI tests (reusable) |
+
+## Scripts
+
+| Script | Purpose |
+|--------|---------|
+| `scripts/backend-warmup.sh` | Warm up backend after deploy (DNS refresh, pool init) |
+| `scripts/preview-health-check.sh` | Health check for preview environments |
+| `scripts/preview-api-smoke.sh` | API smoke tests for preview environments |
 
 ## Health Endpoints
 

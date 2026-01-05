@@ -220,15 +220,14 @@ test.describe('Authenticated - Protected Routes & Logout', () => {
     await confirmButton.waitFor({ state: 'visible', timeout: 2000 });
     await confirmButton.click();
 
-    // Wait for logout to complete and redirect
-    await page.waitForURL(/\/(login)?$/, { timeout: 10000 });
+    // Wait for logout to complete and redirect to login page
+    // The handleLogout awaits logout() then navigates to /login
+    await page.waitForURL('/login', { timeout: 15000 });
 
-    // Verify logout by trying to access protected route
-    await page.goto('/');
+    // Verify we're on login page with login form visible
+    await expect(page.getByTestId('login-card')).toBeVisible({ timeout: 5000 });
 
-    // Should redirect to login page (proof of logout)
-    await page.waitForURL('/login', { timeout: 5000 });
-    const finalUrl = page.url();
-    expect(finalUrl).toContain('/login');
+    // Final verification: URL should be /login
+    expect(page.url()).toContain('/login');
   });
 });

@@ -12,6 +12,14 @@
  */
 
 import log from '@/lib/logger';
+import {
+  type RetryConfig,
+  DEFAULT_RETRY_CONFIG,
+  isRetryableStatusCode,
+  calculateBackoffDelay,
+  sleep,
+  logRetryAttempt,
+} from '@/lib/retryUtils';
 import { shouldRefreshToken } from '@/lib/tokenUtils';
 
 // API base URL - relative URL for nginx proxy in production, or VITE_API_URL for dev
@@ -188,10 +196,17 @@ interface RequestOptions {
   timeout?: number;
   /** AbortSignal for request cancellation */
   signal?: AbortSignal;
+  /**
+   * Retry configuration for transient errors.
+   * - undefined: Use default retry config (3 retries with exponential backoff)
+   * - false: Disable retries entirely
+   * - Partial<RetryConfig>: Override specific retry settings
+   */
+  retry?: Partial<RetryConfig> | false;
 }
 
 /**
- * Make an authenticated API request
+ * Make an authenticated API request with retry support for transient errors.
  */
 async function request<T>(
   method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
@@ -204,6 +219,7 @@ async function request<T>(
     headers: customHeaders = {},
     timeout = 30000,
     signal: externalSignal,
+    retry: retryOption,
   } = options;
 
   const url = `${API_BASE_URL}${path}`;
@@ -240,124 +256,186 @@ async function request<T>(
     }
   }
 
-  // Create abort controller for timeout
-  const timeoutController = new AbortController();
-  const timeoutId = setTimeout(() => timeoutController.abort(), timeout);
+  // Determine retry configuration
+  const retryConfig: RetryConfig | null =
+    retryOption === false
+      ? null
+      : {
+          ...DEFAULT_RETRY_CONFIG,
+          ...(retryOption || {}),
+        };
 
-  // Combine external signal with timeout signal if both exist
-  // Use AbortSignal.any() if available (modern browsers), otherwise prioritize external signal
-  let combinedSignal: AbortSignal;
-  if (externalSignal && typeof AbortSignal.any === 'function') {
-    combinedSignal = AbortSignal.any([externalSignal, timeoutController.signal]);
-  } else if (externalSignal) {
-    // Fallback for older browsers: prefer external signal, but also listen to timeout
-    combinedSignal = externalSignal;
-    // Set up manual abort on timeout if external signal is used
-    const handleTimeout = () => {
-      // External signal will be aborted by caller if needed
-      // We can't easily combine signals in older browsers, so timeout is handled separately
-    };
-    timeoutController.signal.addEventListener('abort', handleTimeout);
-  } else {
-    combinedSignal = timeoutController.signal;
-  }
+  // Track retry attempts for transient errors
+  let lastError: Error | null = null;
+  const maxAttempts = retryConfig ? retryConfig.maxRetries + 1 : 1; // +1 for initial request
 
-  try {
-    const response = await fetch(url, {
-      method,
-      headers,
-      body: body ? JSON.stringify(body) : undefined,
-      signal: combinedSignal,
-    });
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    // Create fresh abort controller for each attempt
+    const timeoutController = new AbortController();
+    const timeoutId = setTimeout(() => timeoutController.abort(), timeout);
 
-    clearTimeout(timeoutId);
+    // Combine external signal with timeout signal if both exist
+    // Use AbortSignal.any() if available (modern browsers), otherwise prioritize external signal
+    let combinedSignal: AbortSignal;
+    if (externalSignal && typeof AbortSignal.any === 'function') {
+      combinedSignal = AbortSignal.any([externalSignal, timeoutController.signal]);
+    } else if (externalSignal) {
+      // Fallback for older browsers: prefer external signal, but also listen to timeout
+      combinedSignal = externalSignal;
+      // Set up manual abort on timeout if external signal is used
+      const handleTimeout = () => {
+        // External signal will be aborted by caller if needed
+        // We can't easily combine signals in older browsers, so timeout is handled separately
+      };
+      timeoutController.signal.addEventListener('abort', handleTimeout);
+    } else {
+      combinedSignal = timeoutController.signal;
+    }
 
-    // Handle 401 - This should be RARE after proactive refresh
-    // If we get here, something is actually wrong (revoked token, security issue)
-    if (response.status === 401 && !skipAuth) {
-      log.warn('Received 401 despite proactive refresh - token may have been revoked');
-      const newToken = await refreshAccessToken();
+    try {
+      const response = await fetch(url, {
+        method,
+        headers,
+        body: body ? JSON.stringify(body) : undefined,
+        signal: combinedSignal,
+      });
 
-      if (newToken) {
-        // Retry with new token
-        headers['Authorization'] = `Bearer ${newToken}`;
-        const retryResponse = await fetch(url, {
-          method,
-          headers,
-          body: body ? JSON.stringify(body) : undefined,
+      clearTimeout(timeoutId);
+
+      // Check for retryable transient errors (502, 503, 504)
+      if (
+        retryConfig &&
+        isRetryableStatusCode(response.status, retryConfig.retryOnStatusCodes) &&
+        attempt < retryConfig.maxRetries
+      ) {
+        const delay = calculateBackoffDelay(
+          attempt,
+          retryConfig.baseDelayMs,
+          retryConfig.maxDelayMs
+        );
+        logRetryAttempt(attempt + 1, retryConfig.maxRetries, response.status, delay, url);
+        await sleep(delay);
+        continue; // Retry the request
+      }
+
+      // Handle 401 - This should be RARE after proactive refresh
+      // If we get here, something is actually wrong (revoked token, security issue)
+      if (response.status === 401 && !skipAuth) {
+        log.warn('Received 401 despite proactive refresh - token may have been revoked');
+        const newToken = await refreshAccessToken();
+
+        if (newToken) {
+          // Retry with new token
+          headers['Authorization'] = `Bearer ${newToken}`;
+          const retryResponse = await fetch(url, {
+            method,
+            headers,
+            body: body ? JSON.stringify(body) : undefined,
+          });
+
+          if (!retryResponse.ok) {
+            const errorData = await retryResponse.json().catch(() => ({}));
+            throw new APIRequestError({
+              status: retryResponse.status,
+              statusText: retryResponse.statusText,
+              message: errorData.detail || `Request failed with status ${retryResponse.status}`,
+              detail: errorData.detail,
+            });
+          }
+
+          // Return response (handle 204 No Content)
+          if (retryResponse.status === 204) {
+            return undefined as T;
+          }
+          return retryResponse.json();
+        }
+
+        // Token refresh failed
+        throw new APIRequestError({
+          status: 401,
+          statusText: 'Unauthorized',
+          message: 'Session expired. Please log in again.',
         });
+      }
 
-        if (!retryResponse.ok) {
-          const errorData = await retryResponse.json().catch(() => ({}));
+      // Handle other errors (non-retryable)
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new APIRequestError({
+          status: response.status,
+          statusText: response.statusText,
+          message: errorData.detail || `Request failed with status ${response.status}`,
+          detail: errorData.detail,
+        });
+      }
+
+      // Return response (handle 204 No Content)
+      if (response.status === 204) {
+        return undefined as T;
+      }
+
+      return response.json();
+    } catch (error) {
+      clearTimeout(timeoutId);
+
+      // Check if this is a network error (fetch threw) and we should retry
+      if (
+        retryConfig &&
+        attempt < retryConfig.maxRetries &&
+        error instanceof Error &&
+        error.name !== 'AbortError' &&
+        !(error instanceof APIRequestError)
+      ) {
+        // Network error - retry with backoff
+        const delay = calculateBackoffDelay(
+          attempt,
+          retryConfig.baseDelayMs,
+          retryConfig.maxDelayMs
+        );
+        logRetryAttempt(attempt + 1, retryConfig.maxRetries, 0, delay, url);
+        lastError = error;
+        await sleep(delay);
+        continue; // Retry the request
+      }
+
+      if (error instanceof APIRequestError) {
+        throw error;
+      }
+
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') {
           throw new APIRequestError({
-            status: retryResponse.status,
-            statusText: retryResponse.statusText,
-            message: errorData.detail || `Request failed with status ${retryResponse.status}`,
-            detail: errorData.detail,
+            status: 408,
+            statusText: 'Request Timeout',
+            message: 'Request timed out. Please try again.',
           });
         }
 
-        // Return response (handle 204 No Content)
-        if (retryResponse.status === 204) {
-          return undefined as T;
-        }
-        return retryResponse.json();
-      }
-
-      // Token refresh failed
-      throw new APIRequestError({
-        status: 401,
-        statusText: 'Unauthorized',
-        message: 'Session expired. Please log in again.',
-      });
-    }
-
-    // Handle other errors
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new APIRequestError({
-        status: response.status,
-        statusText: response.statusText,
-        message: errorData.detail || `Request failed with status ${response.status}`,
-        detail: errorData.detail,
-      });
-    }
-
-    // Return response (handle 204 No Content)
-    if (response.status === 204) {
-      return undefined as T;
-    }
-
-    return response.json();
-  } catch (error) {
-    clearTimeout(timeoutId);
-
-    if (error instanceof APIRequestError) {
-      throw error;
-    }
-
-    if (error instanceof Error) {
-      if (error.name === 'AbortError') {
         throw new APIRequestError({
-          status: 408,
-          statusText: 'Request Timeout',
-          message: 'Request timed out. Please try again.',
+          status: 0,
+          statusText: 'Network Error',
+          message: error.message || 'Network error. Please check your connection.',
         });
       }
 
       throw new APIRequestError({
         status: 0,
-        statusText: 'Network Error',
-        message: error.message || 'Network error. Please check your connection.',
+        statusText: 'Unknown Error',
+        message: 'An unexpected error occurred.',
       });
     }
+  }
 
-    throw new APIRequestError({
+  // If we've exhausted all retries, throw the last error
+  // This should not normally be reached due to the throw in the catch block above
+  throw (
+    lastError ||
+    new APIRequestError({
       status: 0,
       statusText: 'Unknown Error',
-      message: 'An unexpected error occurred.',
-    });
-  }
+      message: 'Request failed after maximum retries.',
+    })
+  );
 }
 
 /**

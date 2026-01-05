@@ -1,13 +1,13 @@
 // src/services/__tests__/api.test.ts
 
 /**
- * Token Refresh Race Condition Tests
+ * API Client Tests
  *
- * These tests verify that when multiple concurrent requests receive 401 errors,
- * only ONE refresh request is made to the server, and all waiting requests
- * receive the same refreshed token.
+ * Tests for the API client covering:
+ * 1. Token Refresh Race Condition handling (mutex pattern)
+ * 2. Transient error retry behavior (502, 503, 504)
  *
- * Background:
+ * Token Refresh Background:
  * The backend uses token rotation for security - refresh tokens are single-use.
  * When a refresh token is used, it's deleted and a new one is issued. This means
  * if multiple requests try to refresh concurrently with the same refresh token,
@@ -17,10 +17,28 @@
  * 1. Only ONE refresh request is made when multiple 401s occur simultaneously
  * 2. All waiting requests receive the same result from the single refresh
  * 3. After the refresh completes, new refreshes can occur normally
+ *
+ * Retry Behavior:
+ * Transient errors (502, 503, 504) are automatically retried with exponential backoff.
+ * This helps recover from temporary server issues like:
+ * - Cold starts in Railway
+ * - Temporary network issues
+ * - Load balancer timeouts during deployment
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { api, _resetRefreshState_forTesting, _getRefreshPromise_forTesting } from '../api';
+
+// Mock the sleep function for retry tests to avoid slow tests
+vi.mock('@/lib/retryUtils', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/retryUtils')>();
+  return {
+    ...actual,
+    // Keep original sleep for unit tests in retryUtils.test.ts
+    // but override in api.test.ts to speed up integration tests
+    sleep: vi.fn().mockImplementation(() => Promise.resolve()),
+  };
+});
 
 describe('Token Refresh Mutex', () => {
   const originalFetch = global.fetch;
@@ -704,6 +722,388 @@ describe('Token Refresh Mutex', () => {
       expect((fetch as ReturnType<typeof vi.fn>).mock.calls[0][0]).toContain(
         '/api/v1/public-endpoint'
       );
+    });
+  });
+});
+
+describe('Transient Error Retry', () => {
+  const originalFetch = global.fetch;
+
+  beforeEach(() => {
+    // Reset module state
+    _resetRefreshState_forTesting();
+
+    // Clear storage
+    localStorage.clear();
+    sessionStorage.clear();
+  });
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+    vi.restoreAllMocks();
+    localStorage.clear();
+    sessionStorage.clear();
+  });
+
+  describe('retry on transient errors', () => {
+    it('should retry on 502 and succeed on retry', async () => {
+      let callCount = 0;
+
+      global.fetch = vi.fn().mockImplementation(() => {
+        callCount++;
+        if (callCount === 1) {
+          return Promise.resolve({
+            ok: false,
+            status: 502,
+            statusText: 'Bad Gateway',
+            json: () => Promise.resolve({ detail: 'Bad Gateway' }),
+          });
+        }
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ data: 'success' }),
+        });
+      });
+
+      const result = await api.get('/api/v1/test', { skipAuth: true });
+
+      expect(callCount).toBe(2);
+      expect(result).toEqual({ data: 'success' });
+    });
+
+    it('should retry on 503 and succeed on retry', async () => {
+      let callCount = 0;
+
+      global.fetch = vi.fn().mockImplementation(() => {
+        callCount++;
+        if (callCount === 1) {
+          return Promise.resolve({
+            ok: false,
+            status: 503,
+            statusText: 'Service Unavailable',
+            json: () => Promise.resolve({ detail: 'Service Unavailable' }),
+          });
+        }
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ data: 'success' }),
+        });
+      });
+
+      const result = await api.get('/api/v1/test', { skipAuth: true });
+
+      expect(callCount).toBe(2);
+      expect(result).toEqual({ data: 'success' });
+    });
+
+    it('should retry on 504 and succeed on retry', async () => {
+      let callCount = 0;
+
+      global.fetch = vi.fn().mockImplementation(() => {
+        callCount++;
+        if (callCount === 1) {
+          return Promise.resolve({
+            ok: false,
+            status: 504,
+            statusText: 'Gateway Timeout',
+            json: () => Promise.resolve({ detail: 'Gateway Timeout' }),
+          });
+        }
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ data: 'success' }),
+        });
+      });
+
+      const result = await api.get('/api/v1/test', { skipAuth: true });
+
+      expect(callCount).toBe(2);
+      expect(result).toEqual({ data: 'success' });
+    });
+
+    it('should throw error after max retries exhausted', async () => {
+      global.fetch = vi.fn().mockImplementation(() => {
+        return Promise.resolve({
+          ok: false,
+          status: 503,
+          statusText: 'Service Unavailable',
+          json: () => Promise.resolve({ detail: 'Service Unavailable' }),
+        });
+      });
+
+      await expect(api.get('/api/v1/test', { skipAuth: true })).rejects.toMatchObject({
+        status: 503,
+        statusText: 'Service Unavailable',
+      });
+
+      // Initial request + 3 retries = 4 total calls
+      expect(fetch).toHaveBeenCalledTimes(4);
+    });
+
+    it('should retry multiple times if errors persist', async () => {
+      let callCount = 0;
+
+      global.fetch = vi.fn().mockImplementation(() => {
+        callCount++;
+        if (callCount <= 2) {
+          return Promise.resolve({
+            ok: false,
+            status: 502,
+            statusText: 'Bad Gateway',
+            json: () => Promise.resolve({ detail: 'Bad Gateway' }),
+          });
+        }
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ data: 'success after 3 attempts' }),
+        });
+      });
+
+      const result = await api.get('/api/v1/test', { skipAuth: true });
+
+      expect(callCount).toBe(3);
+      expect(result).toEqual({ data: 'success after 3 attempts' });
+    });
+  });
+
+  describe('no retry on non-transient errors', () => {
+    it('should not retry on 400 Bad Request', async () => {
+      global.fetch = vi.fn().mockImplementation(() => {
+        return Promise.resolve({
+          ok: false,
+          status: 400,
+          statusText: 'Bad Request',
+          json: () => Promise.resolve({ detail: 'Bad Request' }),
+        });
+      });
+
+      await expect(api.get('/api/v1/test', { skipAuth: true })).rejects.toMatchObject({
+        status: 400,
+      });
+
+      expect(fetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('should not retry on 404 Not Found', async () => {
+      global.fetch = vi.fn().mockImplementation(() => {
+        return Promise.resolve({
+          ok: false,
+          status: 404,
+          statusText: 'Not Found',
+          json: () => Promise.resolve({ detail: 'Not Found' }),
+        });
+      });
+
+      await expect(api.get('/api/v1/test', { skipAuth: true })).rejects.toMatchObject({
+        status: 404,
+      });
+
+      expect(fetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('should not retry on 500 Internal Server Error', async () => {
+      global.fetch = vi.fn().mockImplementation(() => {
+        return Promise.resolve({
+          ok: false,
+          status: 500,
+          statusText: 'Internal Server Error',
+          json: () => Promise.resolve({ detail: 'Internal Server Error' }),
+        });
+      });
+
+      await expect(api.get('/api/v1/test', { skipAuth: true })).rejects.toMatchObject({
+        status: 500,
+      });
+
+      expect(fetch).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('retry configuration options', () => {
+    it('should respect retry: false option (disable retries)', async () => {
+      global.fetch = vi.fn().mockImplementation(() => {
+        return Promise.resolve({
+          ok: false,
+          status: 503,
+          statusText: 'Service Unavailable',
+          json: () => Promise.resolve({ detail: 'Service Unavailable' }),
+        });
+      });
+
+      await expect(api.get('/api/v1/test', { skipAuth: true, retry: false })).rejects.toMatchObject(
+        {
+          status: 503,
+        }
+      );
+
+      // Should only make one request (no retries)
+      expect(fetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('should respect custom maxRetries option', async () => {
+      global.fetch = vi.fn().mockImplementation(() => {
+        return Promise.resolve({
+          ok: false,
+          status: 502,
+          statusText: 'Bad Gateway',
+          json: () => Promise.resolve({ detail: 'Bad Gateway' }),
+        });
+      });
+
+      await expect(
+        api.get('/api/v1/test', {
+          skipAuth: true,
+          retry: { maxRetries: 1 },
+        })
+      ).rejects.toMatchObject({
+        status: 502,
+      });
+
+      // Initial request + 1 retry = 2 total calls
+      expect(fetch).toHaveBeenCalledTimes(2);
+    });
+
+    it('should respect maxRetries: 0 (no retries)', async () => {
+      global.fetch = vi.fn().mockImplementation(() => {
+        return Promise.resolve({
+          ok: false,
+          status: 503,
+          statusText: 'Service Unavailable',
+          json: () => Promise.resolve({ detail: 'Service Unavailable' }),
+        });
+      });
+
+      await expect(
+        api.get('/api/v1/test', {
+          skipAuth: true,
+          retry: { maxRetries: 0 },
+        })
+      ).rejects.toMatchObject({
+        status: 503,
+      });
+
+      expect(fetch).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('retry with POST requests', () => {
+    it('should retry POST request on 503', async () => {
+      let callCount = 0;
+      const requestBody = { name: 'test' };
+
+      global.fetch = vi.fn().mockImplementation((_url: string, options?: RequestInit) => {
+        callCount++;
+
+        // Verify body is sent on retry
+        if (options?.body) {
+          const body = JSON.parse(options.body as string);
+          expect(body).toEqual(requestBody);
+        }
+
+        if (callCount === 1) {
+          return Promise.resolve({
+            ok: false,
+            status: 503,
+            statusText: 'Service Unavailable',
+            json: () => Promise.resolve({ detail: 'Service Unavailable' }),
+          });
+        }
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ id: 1, name: 'test' }),
+        });
+      });
+
+      const result = await api.post('/api/v1/items', requestBody, { skipAuth: true });
+
+      expect(callCount).toBe(2);
+      expect(result).toEqual({ id: 1, name: 'test' });
+    });
+  });
+
+  describe('retry on network errors', () => {
+    it('should retry on network error (fetch throws)', async () => {
+      let callCount = 0;
+
+      global.fetch = vi.fn().mockImplementation(() => {
+        callCount++;
+        if (callCount === 1) {
+          return Promise.reject(new TypeError('Failed to fetch'));
+        }
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ data: 'success' }),
+        });
+      });
+
+      const result = await api.get('/api/v1/test', { skipAuth: true });
+
+      expect(callCount).toBe(2);
+      expect(result).toEqual({ data: 'success' });
+    });
+
+    it('should throw after max retries for network errors', async () => {
+      global.fetch = vi.fn().mockImplementation(() => {
+        return Promise.reject(new TypeError('Failed to fetch'));
+      });
+
+      await expect(api.get('/api/v1/test', { skipAuth: true })).rejects.toMatchObject({
+        status: 0,
+        statusText: 'Network Error',
+      });
+
+      // Initial request + 3 retries = 4 total calls
+      expect(fetch).toHaveBeenCalledTimes(4);
+    });
+  });
+
+  describe('retry does not interfere with 401 handling', () => {
+    it('should not retry 401 errors (handled by token refresh)', async () => {
+      // Setup: no refresh token to force 401 failure
+      localStorage.setItem(
+        'auth-storage',
+        JSON.stringify({
+          state: {
+            token: 'expired-token',
+            // No refreshToken - refresh will fail
+          },
+        })
+      );
+
+      global.fetch = vi.fn().mockImplementation((url: string) => {
+        if (url.includes('/auth/refresh')) {
+          return Promise.resolve({
+            ok: true,
+            json: () =>
+              Promise.resolve({
+                access_token: 'new-token',
+                refresh_token: 'new-refresh',
+              }),
+          });
+        }
+        return Promise.resolve({
+          ok: false,
+          status: 401,
+          statusText: 'Unauthorized',
+          json: () => Promise.resolve({ detail: 'Token expired' }),
+        });
+      });
+
+      await expect(api.get('/api/v1/test')).rejects.toMatchObject({
+        status: 401,
+      });
+
+      // 401 should not trigger retry loop - it has its own handling
+      // Calls: initial request (401) -> refresh attempt -> retry with new token (401)
+      const fetchCalls = (fetch as ReturnType<typeof vi.fn>).mock.calls;
+      const apiCalls = fetchCalls.filter((call) => !call[0].includes('/auth/refresh'));
+      expect(apiCalls.length).toBeLessThanOrEqual(2);
     });
   });
 });

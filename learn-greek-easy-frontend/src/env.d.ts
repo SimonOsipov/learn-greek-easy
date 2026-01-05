@@ -19,6 +19,11 @@ interface ImportMetaEnv {
   readonly VITE_ENABLE_DEBUG_MODE: string;
   readonly VITE_ENABLE_ANALYTICS: string;
 
+  // API Retry Configuration (Optional)
+  readonly VITE_API_RETRY_MAX?: string;
+  readonly VITE_API_RETRY_BASE_DELAY?: string;
+  readonly VITE_API_RETRY_MAX_DELAY?: string;
+
   // Development Settings (Optional)
   readonly VITE_PORT?: string;
   readonly VITE_HOST?: string;
@@ -61,6 +66,11 @@ declare global {
       devTools: boolean;
       debugMode: boolean;
       analytics: boolean;
+    };
+    retry: {
+      maxRetries: number;
+      baseDelayMs: number;
+      maxDelayMs: number;
     };
   }
 }

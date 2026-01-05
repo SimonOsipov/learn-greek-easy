@@ -309,6 +309,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Warm up Backend
+        run: |
+          BACKEND_URL="https://${{ env.DEV_BACKEND_URL }}"
+          echo "=== Warming up Backend at $BACKEND_URL ==="
+          chmod +x scripts/backend-warmup.sh
+          ./scripts/backend-warmup.sh "$BACKEND_URL" 5 2
+
       - name: Run Health Checks
         id: health
         run: |

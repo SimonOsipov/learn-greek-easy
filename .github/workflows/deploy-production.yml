@@ -102,12 +102,32 @@ jobs:
         timeout-minutes: 10
 
   # =============================================================================
-  # JOB 3: Deploy Frontend
-  # Purpose: Deploy frontend service after backend is healthy
+  # JOB 3: Warm-up Backend
+  # Purpose: Warm up backend to trigger Caddy DNS refresh and initialize pools
+  # This "sacrificial" request absorbs the first potential 502 and ensures
+  # routing is refreshed before frontend deploys
+  # =============================================================================
+  warmup-backend:
+    name: Warm-up Backend
+    needs: deploy-backend
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run warmup script
+        run: |
+          chmod +x scripts/backend-warmup.sh
+          ./scripts/backend-warmup.sh "${{ env.PROD_BACKEND_URL }}" 10 3
+
+  # =============================================================================
+  # JOB 4: Deploy Frontend
+  # Purpose: Deploy frontend service after backend is warmed up
   # =============================================================================
   deploy-frontend:
     name: Deploy Frontend
-    needs: deploy-backend  # Sequential dependency - waits for backend
+    needs: warmup-backend  # Sequential dependency - waits for backend warmup
     runs-on: ubuntu-latest
     container: ghcr.io/railwayapp/cli:latest
     environment:
@@ -124,7 +144,7 @@ jobs:
         run: |
           echo "=== Production Frontend Deployment ==="
           echo "Commit: ${{ github.sha }}"
-          echo "Backend deployment completed - proceeding with Frontend"
+          echo "Backend deployment completed and warmed up - proceeding with Frontend"
           echo "Railway CLI Version:"
           railway --version
 
@@ -154,7 +174,7 @@ jobs:
         timeout-minutes: 10
 
   # =============================================================================
-  # JOB 4: Post-Deploy Health Check
+  # JOB 5: Post-Deploy Health Check
   # Purpose: Verify both services are responding correctly
   # =============================================================================
   post-deploy-health:
@@ -203,12 +223,12 @@ jobs:
           echo "All health checks passed!"
 
   # =============================================================================
-  # JOB 5: Deployment Summary
+  # JOB 6: Deployment Summary
   # Purpose: Report deployment status
   # =============================================================================
   summary:
     name: Deployment Summary
-    needs: [deploy-backend, deploy-frontend, post-deploy-health]
+    needs: [deploy-backend, warmup-backend, deploy-frontend, post-deploy-health]
     if: always()
     runs-on: ubuntu-latest
 
@@ -220,6 +240,7 @@ jobs:
           echo "| Component | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|-----------|--------|" >> $GITHUB_STEP_SUMMARY
           echo "| Backend | ${{ needs.deploy-backend.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Backend Warmup | ${{ needs.warmup-backend.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Frontend | ${{ needs.deploy-frontend.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Health Check | ${{ needs.post-deploy-health.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
