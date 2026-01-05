@@ -43,7 +43,7 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
   const { toggleSidebar, isDesktop } = useLayoutContext();
 
   const navItems: NavItem[] = [
-    { path: '/', labelKey: 'nav.dashboard' },
+    { path: '/dashboard', labelKey: 'nav.dashboard' },
     { path: '/decks', labelKey: 'nav.decks' },
     {
       path: '/statistics',
@@ -85,7 +85,7 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
               </Button>
             )}
 
-            <Link to="/" className="flex items-center space-x-2">
+            <Link to="/dashboard" className="flex items-center space-x-2">
               <h1 className="text-xl font-semibold text-text-primary">Learn Greek Easy</h1>
             </Link>
           </div>

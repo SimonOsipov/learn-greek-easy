@@ -18,7 +18,7 @@ export const NotFound: React.FC = () => {
         <h2 className="mb-4 text-2xl font-semibold text-gray-700">Ωχ! {t('notFoundPage.title')}</h2>
         <p className="mb-8 text-gray-600">{t('notFoundPage.description')}</p>
         <div className="flex flex-col justify-center gap-4 sm:flex-row">
-          <Link to="/">
+          <Link to="/dashboard">
             <Button className="w-full sm:w-auto">
               <Home className="mr-2 h-4 w-4" />
               {t('notFoundPage.goToDashboard')}

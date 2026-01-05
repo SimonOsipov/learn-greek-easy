@@ -122,7 +122,7 @@ export const Register: React.FC = () => {
         ageConfirmation: true, // We assume users are 18+ if they can access the form
       });
       // Success - navigate to dashboard
-      navigate('/');
+      navigate('/dashboard');
     } catch (err) {
       // Display API error at form level
       const errorMessage =
@@ -354,7 +354,7 @@ export const Register: React.FC = () => {
 
             <GoogleSignInButton
               disabled={isFormDisabled}
-              onSuccess={() => navigate('/')}
+              onSuccess={() => navigate('/dashboard')}
               onError={(error) => setFormError(error)}
             />
 

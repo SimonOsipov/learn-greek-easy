@@ -3,6 +3,7 @@ import { Suspense, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 
 import { AuthRoutesWrapper } from '@/components/auth/AuthRoutesWrapper';
+import { LandingRoute } from '@/components/auth/LandingRoute';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { PublicRoute } from '@/components/auth/PublicRoute';
 import { RouteGuard } from '@/components/auth/RouteGuard';
@@ -100,6 +101,9 @@ const Unauthorized = lazyWithRetry(() =>
   import('@/pages/Unauthorized').then((m) => ({ default: m.Unauthorized }))
 );
 
+// Landing page (public)
+const LandingPage = lazyWithRetry(() => import('@/pages/LandingPage'));
+
 function AppContent() {
   const isAppReady = useAppStore(selectIsReady);
   const setReactHydrated = useAppStore((state) => state.setReactHydrated);
@@ -114,6 +118,16 @@ function AppContent() {
         <ChunkErrorBoundary>
           <Suspense fallback={<PageLoader />}>
             <Routes>
+              {/* Landing Page - public, redirects authenticated users to dashboard */}
+              <Route
+                path="/"
+                element={
+                  <LandingRoute>
+                    <LandingPage />
+                  </LandingRoute>
+                }
+              />
+
               {/* Public Routes - redirect to dashboard if authenticated */}
               {/* Wrapped with AuthRoutesWrapper to provide Google OAuth only where needed */}
               <Route
@@ -130,29 +144,40 @@ function AppContent() {
 
               {/* Protected Routes - require authentication */}
               <Route element={<ProtectedRoute />}>
-                <Route path="/" element={<AppLayout />}>
+                <Route path="/dashboard" element={<AppLayout />}>
                   <Route index element={<Dashboard />} />
-                  <Route path="dashboard" element={<Navigate to="/" replace />} />
-                  <Route path="decks" element={<DecksPage />} />
-                  <Route path="decks/:id" element={<DeckDetailPage />} />
-                  <Route path="statistics" element={<Statistics />} />
-                  <Route path="stats" element={<Navigate to="/statistics" replace />} />
-                  <Route path="profile" element={<Profile />} />
-                  <Route path="achievements" element={<AchievementsPage />} />
-                  <Route path="feedback" element={<FeedbackPage />} />
-                  <Route path="activity-feed-test" element={<ActivityFeedTest />} />
+                </Route>
+                <Route path="/decks" element={<AppLayout />}>
+                  <Route index element={<DecksPage />} />
+                  <Route path=":id" element={<DeckDetailPage />} />
+                </Route>
+                <Route path="/statistics" element={<AppLayout />}>
+                  <Route index element={<Statistics />} />
+                </Route>
+                <Route path="/stats" element={<Navigate to="/statistics" replace />} />
+                <Route path="/profile" element={<AppLayout />}>
+                  <Route index element={<Profile />} />
+                </Route>
+                <Route path="/achievements" element={<AppLayout />}>
+                  <Route index element={<AchievementsPage />} />
+                </Route>
+                <Route path="/feedback" element={<AppLayout />}>
+                  <Route index element={<FeedbackPage />} />
+                </Route>
+                <Route path="/activity-feed-test" element={<AppLayout />}>
+                  <Route index element={<ActivityFeedTest />} />
                 </Route>
                 {/* Review page outside AppLayout for full-screen experience */}
-                <Route path="decks/:deckId/review" element={<FlashcardReviewPage />} />
+                <Route path="/decks/:deckId/review" element={<FlashcardReviewPage />} />
                 {/* Session summary page outside AppLayout for full-screen experience */}
-                <Route path="decks/:deckId/summary" element={<SessionSummaryPage />} />
+                <Route path="/decks/:deckId/summary" element={<SessionSummaryPage />} />
                 {/* Culture deck detail page inside AppLayout */}
-                <Route path="culture/decks/:id" element={<AppLayout />}>
+                <Route path="/culture/decks/:id" element={<AppLayout />}>
                   <Route index element={<CultureDeckDetailPage />} />
                 </Route>
                 {/* Culture practice pages outside AppLayout for full-screen immersive experience */}
-                <Route path="culture/:deckId/practice" element={<CulturePracticePage />} />
-                <Route path="culture/:deckId/summary" element={<CultureSessionSummaryPage />} />
+                <Route path="/culture/:deckId/practice" element={<CulturePracticePage />} />
+                <Route path="/culture/:deckId/summary" element={<CultureSessionSummaryPage />} />
               </Route>
 
               {/* Admin Routes - require admin role */}
