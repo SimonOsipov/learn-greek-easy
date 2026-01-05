@@ -7,6 +7,7 @@ import './index.css';
 
 import { StrictMode } from 'react';
 
+import { HelmetProvider } from '@dr.pogodin/react-helmet';
 import { createRoot } from 'react-dom/client';
 
 import { initI18n } from '@/i18n/init';
@@ -35,7 +36,9 @@ async function bootstrap() {
   // Render React app
   createRoot(document.getElementById('root')!).render(
     <StrictMode>
-      <App />
+      <HelmetProvider>
+        <App />
+      </HelmetProvider>
     </StrictMode>
   );
 
