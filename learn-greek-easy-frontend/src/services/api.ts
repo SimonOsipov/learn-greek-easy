@@ -13,7 +13,7 @@
 
 import log from '@/lib/logger';
 import {
-  RetryConfig,
+  type RetryConfig,
   DEFAULT_RETRY_CONFIG,
   isRetryableStatusCode,
   calculateBackoffDelay,
