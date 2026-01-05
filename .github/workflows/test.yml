@@ -789,7 +789,24 @@ jobs:
           # Start the app in background to test seed endpoint
           poetry run uvicorn src.main:app --host 0.0.0.0 --port 8000 &
           APP_PID=$!
-          sleep 5
+
+          # Wait for backend to be ready (same pattern as other health checks)
+          echo "Waiting for backend to be ready..."
+          for i in {1..30}; do
+            if curl -s http://localhost:8000/health/ready > /dev/null 2>&1; then
+              echo "Backend is ready!"
+              break
+            fi
+            echo "Attempt $i/30: Backend not ready yet, waiting..."
+            sleep 2
+          done
+
+          # Final readiness check
+          if ! curl -sf http://localhost:8000/health/ready > /dev/null 2>&1; then
+            echo "ERROR: Backend failed to start"
+            kill $APP_PID 2>/dev/null || true
+            exit 1
+          fi
 
           # Check seed status endpoint
           RESPONSE=$(curl -s http://localhost:8000/api/v1/test/seed/status)
