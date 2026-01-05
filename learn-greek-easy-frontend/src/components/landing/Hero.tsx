@@ -1,9 +1,7 @@
 import { ArrowRight } from 'lucide-react';
 
+import heroImage from '@/assets/landing/cyprus-hero.webp';
 import { Button } from '@/components/ui/button';
-
-// Placeholder path - will be created in LANDING-04
-const cyprusHeroPlaceholder = '/assets/landing/cyprus-hero.webp';
 
 const Hero = () => {
   return (
@@ -14,8 +12,11 @@ const Hero = () => {
       {/* Full-screen background image */}
       <div className="absolute inset-0">
         <img
-          src={cyprusHeroPlaceholder}
+          src={heroImage}
           alt="Ancient Greek ruins overlooking the Mediterranean Sea in Cyprus"
+          width={1920}
+          height={1080}
+          loading="eager"
           className="h-full w-full object-cover"
         />
         {/* Dark overlay for text readability */}

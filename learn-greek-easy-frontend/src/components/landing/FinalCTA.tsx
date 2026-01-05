@@ -1,9 +1,7 @@
 import { ArrowRight, BookOpen } from 'lucide-react';
 
+import ctaImage from '@/assets/landing/limassol-cta.webp';
 import { Button } from '@/components/ui/button';
-
-// Placeholder path - will be created in LANDING-04
-const limassolCtaPlaceholder = '/assets/landing/limassol-cta.webp';
 
 const FinalCTA = () => {
   return (
@@ -12,9 +10,13 @@ const FinalCTA = () => {
       className="relative flex min-h-[500px] items-center overflow-hidden py-24 md:py-32"
     >
       {/* Background Image */}
-      <div
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-        style={{ backgroundImage: `url(${limassolCtaPlaceholder})` }}
+      <img
+        src={ctaImage}
+        alt="Limassol cityscape with Mediterranean Sea"
+        width={1920}
+        height={1080}
+        loading="lazy"
+        className="absolute inset-0 h-full w-full object-cover"
       />
 
       {/* Dark Overlay */}
