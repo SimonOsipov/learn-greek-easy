@@ -82,7 +82,7 @@ const SocialProof = () => {
 
           {/* Stats preview */}
           <div
-            className="mt-12 grid animate-fade-up grid-cols-3 gap-6 opacity-0"
+            className="mt-12 grid grid-cols-3 gap-6 motion-safe:animate-fade-up motion-safe:opacity-0"
             style={{ animationDelay: '0.2s' }}
           >
             <div className="text-center">

@@ -28,17 +28,17 @@ const FAQ = () => {
       <div className="container mx-auto px-6">
         {/* Section header */}
         <div className="mx-auto mb-12 max-w-2xl text-center">
-          <p className="mb-3 animate-fade-up text-sm font-medium text-primary opacity-0">
+          <p className="mb-3 text-sm font-medium text-primary motion-safe:animate-fade-up motion-safe:opacity-0">
             {t('faq.label')}
           </p>
           <h2
-            className="mb-3 animate-fade-up text-2xl font-bold opacity-0 md:text-4xl"
+            className="mb-3 text-2xl font-bold motion-safe:animate-fade-up motion-safe:opacity-0 md:text-4xl"
             style={{ animationDelay: '0.1s' }}
           >
             {t('faq.title')}
           </h2>
           <p
-            className="animate-fade-up text-lg text-muted-foreground opacity-0"
+            className="text-lg text-muted-foreground motion-safe:animate-fade-up motion-safe:opacity-0"
             style={{ animationDelay: '0.2s' }}
           >
             {t('faq.subtitle')}
@@ -46,7 +46,10 @@ const FAQ = () => {
         </div>
 
         {/* FAQ Accordion */}
-        <div className="animate-fade-up opacity-0" style={{ animationDelay: '0.3s' }}>
+        <div
+          className="motion-safe:animate-fade-up motion-safe:opacity-0"
+          style={{ animationDelay: '0.3s' }}
+        >
           <Accordion type="single" collapsible className="space-y-4">
             {faqKeys.map((key, index) => (
               <AccordionItem
@@ -68,7 +71,7 @@ const FAQ = () => {
 
         {/* Contact CTA */}
         <p
-          className="mt-10 animate-fade-up text-center text-muted-foreground opacity-0"
+          className="mt-10 text-center text-muted-foreground motion-safe:animate-fade-up motion-safe:opacity-0"
           style={{ animationDelay: '0.4s' }}
         >
           {t('faq.contactPrompt')}{' '}

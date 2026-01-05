@@ -42,7 +42,7 @@ test.describe('Token Refresh Flow', () => {
     });
 
     // Try to access protected page
-    await page.goto('/');
+    await page.goto('/dashboard');
     await page.waitForTimeout(3000);
 
     // Should be redirected to login (401 correctly handled)

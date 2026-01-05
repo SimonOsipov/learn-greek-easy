@@ -7,13 +7,13 @@ import { test, expect } from '@playwright/test';
 // Tests that require authentication (default - uses learner storageState from config)
 test.describe('Playwright Setup Validation - Authenticated', () => {
   test('should load homepage', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/dashboard');
     await expect(page).toHaveTitle(/Learn Greek Easy/i);
   });
 
   test('should access dashboard when authenticated', async ({ page }) => {
-    await page.goto('/');
-    await expect(page).toHaveURL('/');
+    await page.goto('/dashboard');
+    await expect(page).toHaveURL('/dashboard');
     await expect(page.getByRole('heading', { name: /your progress/i })).toBeVisible();
     await expect(page.getByRole('heading', { name: /active decks/i })).toBeVisible();
   });
@@ -37,7 +37,7 @@ test.describe('Playwright Setup Validation - Unauthenticated', () => {
     page,
   }) => {
     // Navigate to protected route - should redirect to login since no auth
-    await page.goto('/');
+    await page.goto('/dashboard');
 
     // Should redirect to login
     await page.waitForURL('/login', { timeout: 10000 });

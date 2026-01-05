@@ -102,7 +102,7 @@ const Features = () => {
   const VocabularyMockup = () => (
     <MockupWrapper>
       <div className="mb-4 flex items-center justify-between">
-        <span className="rounded-full bg-blue-100 px-3 py-1.5 text-xs font-semibold text-blue-600">
+        <span className="rounded-full bg-blue-100 px-3 py-1.5 text-xs font-semibold text-blue-700">
           {t('features.mockups.finance')}
         </span>
         <span className="text-xs text-muted-foreground">
@@ -213,7 +213,7 @@ const Features = () => {
   const BasicVocabularyMockup = () => (
     <MockupWrapper>
       <div className="mb-4 flex items-center justify-between">
-        <span className="rounded-full bg-green-100 px-3 py-1.5 text-xs font-semibold text-green-600">
+        <span className="rounded-full bg-green-100 px-3 py-1.5 text-xs font-semibold text-green-700">
           {t('features.mockups.basics')}
         </span>
         <span className="text-xs text-muted-foreground">
@@ -252,7 +252,7 @@ const Features = () => {
   const NounGrammarMockup = () => (
     <MockupWrapper>
       <div className="mb-3 flex items-center justify-between">
-        <span className="rounded-full bg-purple-100 px-3 py-1 text-xs font-semibold text-purple-600">
+        <span className="rounded-full bg-purple-100 px-3 py-1 text-xs font-semibold text-purple-700">
           {t('features.mockups.nouns')}
         </span>
         <span className="text-xs text-muted-foreground">{t('features.mockups.cases')}</span>
@@ -291,7 +291,7 @@ const Features = () => {
   const VerbGrammarMockup = () => (
     <MockupWrapper>
       <div className="mb-3 flex items-center justify-between">
-        <span className="rounded-full bg-orange-100 px-3 py-1 text-xs font-semibold text-orange-600">
+        <span className="rounded-full bg-orange-100 px-3 py-1 text-xs font-semibold text-orange-700">
           {t('features.mockups.verbs')}
         </span>
         <span className="text-xs text-muted-foreground">{t('features.mockups.present')}</span>
@@ -330,7 +330,7 @@ const Features = () => {
   const VerbTensesMockup = () => (
     <MockupWrapper>
       <div className="mb-3 flex items-center justify-between">
-        <span className="rounded-full bg-teal-100 px-3 py-1 text-xs font-semibold text-teal-600">
+        <span className="rounded-full bg-teal-100 px-3 py-1 text-xs font-semibold text-teal-700">
           {t('features.mockups.tenses')}
         </span>
         <span className="text-xs text-muted-foreground">grafo</span>
@@ -406,7 +406,7 @@ const Features = () => {
   const CustomCardsMockup = () => (
     <MockupWrapper>
       <div className="mb-4 flex items-center justify-between">
-        <span className="rounded-full bg-indigo-100 px-3 py-1.5 text-xs font-semibold text-indigo-600">
+        <span className="rounded-full bg-indigo-100 px-3 py-1.5 text-xs font-semibold text-indigo-700">
           {t('features.mockups.myDecks')}
         </span>
         <span className="text-xs text-muted-foreground">
@@ -486,17 +486,17 @@ const Features = () => {
       <div className="container mx-auto px-6">
         {/* Section header */}
         <div className="mx-auto mb-10 max-w-2xl text-center">
-          <p className="mb-3 animate-fade-up text-sm font-medium text-primary opacity-0">
+          <p className="mb-3 text-sm font-medium text-primary motion-safe:animate-fade-up motion-safe:opacity-0">
             {t('features.label')}
           </p>
           <h2
-            className="mb-3 animate-fade-up text-2xl font-bold opacity-0 md:text-4xl"
+            className="mb-3 text-2xl font-bold motion-safe:animate-fade-up motion-safe:opacity-0 md:text-4xl"
             style={{ animationDelay: '0.1s' }}
           >
             {t('features.title')}
           </h2>
           <p
-            className="animate-fade-up text-lg text-muted-foreground opacity-0"
+            className="text-lg text-muted-foreground motion-safe:animate-fade-up motion-safe:opacity-0"
             style={{ animationDelay: '0.2s' }}
           >
             {t('features.subtitle')}
@@ -506,7 +506,7 @@ const Features = () => {
         {/* Feature grid */}
         <div className="grid gap-6 md:grid-cols-3">
           {features.map((feature, index) => (
-            <div key={index} className="flex flex-col">
+            <div key={index} className="flex flex-col" data-testid="feature-card">
               {/* Feature content */}
               <div className="mb-4 h-[160px]">
                 <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary">

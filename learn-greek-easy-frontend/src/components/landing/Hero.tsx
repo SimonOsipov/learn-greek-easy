@@ -32,7 +32,7 @@ const Hero = () => {
         <div className="mx-auto max-w-6xl text-center">
           {/* Badge */}
           <div
-            className="mb-8 inline-flex animate-fade-up items-center gap-2 rounded-full border border-primary/20 bg-background/90 px-5 py-2.5 opacity-0 backdrop-blur-sm"
+            className="mb-8 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-background/90 px-5 py-2.5 backdrop-blur-sm motion-safe:animate-fade-up motion-safe:opacity-0"
             style={{ animationDelay: '0.1s' }}
           >
             <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-primary" />
@@ -41,7 +41,7 @@ const Hero = () => {
 
           {/* Headline */}
           <h1
-            className="mb-10 animate-fade-up text-balance text-6xl font-bold leading-[1.05] tracking-tight text-foreground opacity-0 sm:text-7xl md:text-8xl lg:text-9xl"
+            className="mb-10 text-balance text-6xl font-bold leading-[1.05] tracking-tight text-foreground motion-safe:animate-fade-up motion-safe:opacity-0 sm:text-7xl md:text-8xl lg:text-9xl"
             style={{ animationDelay: '0.2s' }}
             data-testid="hero-title"
           >
@@ -50,7 +50,7 @@ const Hero = () => {
 
           {/* Subheadline */}
           <p
-            className="mx-auto mb-14 max-w-4xl animate-fade-up text-balance text-2xl leading-relaxed text-foreground/90 opacity-0 md:text-3xl lg:text-4xl"
+            className="mx-auto mb-14 max-w-4xl text-balance text-2xl leading-relaxed text-foreground/90 motion-safe:animate-fade-up motion-safe:opacity-0 md:text-3xl lg:text-4xl"
             style={{ animationDelay: '0.3s' }}
             data-testid="hero-subtitle"
           >
@@ -59,7 +59,7 @@ const Hero = () => {
 
           {/* CTAs */}
           <div
-            className="flex animate-fade-up flex-col items-center justify-center gap-4 opacity-0 sm:flex-row"
+            className="flex flex-col items-center justify-center gap-4 motion-safe:animate-fade-up motion-safe:opacity-0 sm:flex-row"
             style={{ animationDelay: '0.4s' }}
           >
             <Button
@@ -78,7 +78,7 @@ const Hero = () => {
 
           {/* Social proof hint */}
           <p
-            className="mt-14 animate-fade-up text-lg text-foreground/80 opacity-0"
+            className="mt-14 text-lg text-foreground/80 motion-safe:animate-fade-up motion-safe:opacity-0"
             style={{ animationDelay: '0.5s' }}
           >
             {t('hero.socialProof')}

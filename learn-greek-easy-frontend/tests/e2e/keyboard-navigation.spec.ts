@@ -87,9 +87,12 @@ test.describe('Keyboard Navigation - Public Pages', () => {
     const hasError = (await page.locator('[role="alert"]').count()) > 0;
 
     // Form submission was attempted (not blocked)
-    expect(currentUrl === '/' || currentUrl.endsWith('/') || currentUrl.includes('/login')).toBe(
-      true
-    );
+    expect(
+      currentUrl === '/' ||
+        currentUrl.endsWith('/') ||
+        currentUrl.includes('/login') ||
+        currentUrl.includes('/dashboard')
+    ).toBe(true);
   });
 
   test('Focus visible styles should be present', async ({ page }) => {
@@ -159,7 +162,7 @@ test.describe('Keyboard Navigation - Protected Pages', () => {
     test.skip(browserName === 'webkit', 'Webkit has different tab focus behavior');
 
     // Navigate to dashboard - storageState handles auth
-    await page.goto('/');
+    await page.goto('/dashboard');
 
     // CRITICAL: Verify we're authenticated and not redirected to login
     const currentUrl = page.url();

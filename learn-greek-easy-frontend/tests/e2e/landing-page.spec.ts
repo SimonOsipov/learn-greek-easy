@@ -353,9 +353,9 @@ test.describe('Landing Page - FAQ Interactions', () => {
     await page.getByTestId('faq-section').scrollIntoViewIfNeeded();
     await page.waitForTimeout(500);
 
-    // Get the first FAQ item trigger
+    // Get the first FAQ item trigger (AccordionTrigger renders as button)
     const firstFaqItem = page.getByTestId('faq-item').first();
-    const trigger = firstFaqItem.locator('[data-radix-collection-item]');
+    const trigger = firstFaqItem.locator('button');
 
     // Click to expand
     await trigger.click();
