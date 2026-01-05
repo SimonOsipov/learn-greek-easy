@@ -9,7 +9,7 @@
 
 import React, { useEffect, useState } from 'react';
 
-import { ChevronLeft, BookOpen, AlertCircle, Play } from 'lucide-react';
+import { ChevronLeft, BookOpen, AlertCircle, Play, TrendingUp } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 
@@ -185,6 +185,31 @@ export function CultureDeckDetailPage() {
                 <DeckProgressBar progress={progress} showLegend={true} size="large" />
               </div>
             )}
+
+            {/* Action Button */}
+            <div className="mt-6">
+              {progress && progress.status !== 'not-started' ? (
+                <Button
+                  data-testid="start-practice-button"
+                  size="lg"
+                  onClick={handleStartPractice}
+                  className="w-full bg-gradient-to-br from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700"
+                >
+                  <TrendingUp className="mr-2 h-5 w-5" />
+                  {t('culture:practice.continuePractice')}
+                </Button>
+              ) : (
+                <Button
+                  data-testid="start-practice-button"
+                  size="lg"
+                  onClick={handleStartPractice}
+                  className="w-full bg-gradient-to-br from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700"
+                >
+                  <Play className="mr-2 h-5 w-5" />
+                  {t('culture:practice.startPractice')}
+                </Button>
+              )}
+            </div>
           </CardContent>
         </Card>
 
@@ -221,36 +246,6 @@ export function CultureDeckDetailPage() {
                 </div>
               </div>
             )}
-          </CardContent>
-        </Card>
-
-        {/* Action Buttons Section */}
-        <Card>
-          <CardContent className="pt-6">
-            <div className="py-8 text-center">
-              <Play className="mx-auto mb-4 h-12 w-12 text-purple-500" />
-              <h3 className="mb-2 text-lg font-semibold text-gray-900">
-                {progress && progress.status !== 'not-started'
-                  ? t('culture:practice.continueProgress')
-                  : t('culture:practice.readyToStart')}
-              </h3>
-              <p className="mx-auto mb-6 max-w-md text-sm text-gray-600">
-                {t('culture:deck.practiceDescription', {
-                  count: deck.question_count,
-                })}
-              </p>
-              <Button
-                data-testid="start-practice-button"
-                size="lg"
-                onClick={handleStartPractice}
-                className="bg-gradient-to-br from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700"
-              >
-                <Play className="mr-2 h-5 w-5" />
-                {progress && progress.status !== 'not-started'
-                  ? t('culture:practice.continuePractice')
-                  : t('culture:practice.startPractice')}
-              </Button>
-            </div>
           </CardContent>
         </Card>
       </div>

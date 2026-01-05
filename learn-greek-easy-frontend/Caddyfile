@@ -185,4 +185,6 @@ header {
     X-Content-Type-Options "nosniff"
     X-XSS-Protection "1; mode=block"
     Referrer-Policy "no-referrer-when-downgrade"
+    # Required for Sentry browser profiling
+    Document-Policy "js-profiling"
 }
