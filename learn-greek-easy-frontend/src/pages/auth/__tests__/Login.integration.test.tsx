@@ -139,7 +139,7 @@ describe('Login Flow Integration Tests', () => {
 
       // Verify navigation to dashboard
       await waitFor(() => {
-        expect(mockNavigate).toHaveBeenCalledWith('/', { replace: true });
+        expect(mockNavigate).toHaveBeenCalledWith('/dashboard', { replace: true });
       });
     });
 
