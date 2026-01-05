@@ -362,7 +362,7 @@ test.describe('Landing Page - FAQ Interactions', () => {
     await page.waitForTimeout(300);
 
     // Verify content is visible (accordion content)
-    const content = firstFaqItem.locator('[data-state="open"]');
+    const content = firstFaqItem.locator('[role="region"][data-state="open"]');
     await expect(content).toBeVisible();
   });
 });

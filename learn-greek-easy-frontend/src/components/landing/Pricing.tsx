@@ -74,17 +74,17 @@ const Pricing = () => {
       <div className="container mx-auto px-6">
         {/* Section header */}
         <div className="mx-auto mb-12 max-w-2xl text-center">
-          <p className="mb-3 text-sm font-medium text-primary motion-safe:animate-fade-up motion-safe:opacity-0">
+          <p className="mb-3 text-sm font-medium text-primary motion-safe:animate-fade-up">
             {t('pricing.label')}
           </p>
           <h2
-            className="mb-3 text-2xl font-bold motion-safe:animate-fade-up motion-safe:opacity-0 md:text-4xl"
+            className="mb-3 text-2xl font-bold motion-safe:animate-fade-up md:text-4xl"
             style={{ animationDelay: '0.1s' }}
           >
             {t('pricing.title')}
           </h2>
           <p
-            className="text-lg text-muted-foreground motion-safe:animate-fade-up motion-safe:opacity-0"
+            className="text-lg text-muted-foreground motion-safe:animate-fade-up"
             style={{ animationDelay: '0.2s' }}
           >
             {t('pricing.subtitle')}
@@ -99,7 +99,7 @@ const Pricing = () => {
               <div
                 key={index}
                 data-testid="pricing-card"
-                className={`relative flex flex-col rounded-2xl border p-6 transition-all duration-300 motion-safe:animate-fade-up motion-safe:opacity-0 ${
+                className={`relative flex flex-col rounded-2xl border p-6 transition-all duration-300 motion-safe:animate-fade-up ${
                   plan.popular
                     ? 'scale-[1.02] border-primary bg-primary/5 shadow-lg'
                     : plan.highlight
@@ -180,7 +180,7 @@ const Pricing = () => {
 
         {/* Trust note */}
         <p
-          className="mt-10 text-center text-sm text-muted-foreground motion-safe:animate-fade-up motion-safe:opacity-0"
+          className="mt-10 text-center text-sm text-muted-foreground motion-safe:animate-fade-up"
           style={{ animationDelay: '0.6s' }}
         >
           {t('pricing.guarantee')}

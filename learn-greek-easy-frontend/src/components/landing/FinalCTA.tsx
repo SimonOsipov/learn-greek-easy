@@ -28,21 +28,21 @@ const FinalCTA = () => {
       <div className="container relative z-10 mx-auto px-6">
         <div className="mx-auto max-w-2xl text-center">
           <h2
-            className="mb-6 text-3xl font-bold text-background motion-safe:animate-fade-up motion-safe:opacity-0 md:text-4xl lg:text-5xl"
+            className="mb-6 text-3xl font-bold text-background motion-safe:animate-fade-up md:text-4xl lg:text-5xl"
             style={{ animationDelay: '0.1s' }}
           >
             {t('finalCta.title')}
           </h2>
 
           <p
-            className="mb-10 text-lg text-background/80 motion-safe:animate-fade-up motion-safe:opacity-0"
+            className="mb-10 text-lg text-background/80 motion-safe:animate-fade-up"
             style={{ animationDelay: '0.2s' }}
           >
             {t('finalCta.subtitle')}
           </p>
 
           <div
-            className="flex flex-col items-center justify-center gap-4 motion-safe:animate-fade-up motion-safe:opacity-0 sm:flex-row"
+            className="flex flex-col items-center justify-center gap-4 motion-safe:animate-fade-up sm:flex-row"
             style={{ animationDelay: '0.3s' }}
           >
             <Button
