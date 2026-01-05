@@ -53,6 +53,7 @@ const FAQ = () => {
                 key={index}
                 value={`item-${index}`}
                 className="rounded-xl border border-border/50 bg-card px-6 transition-shadow data-[state=open]:shadow-md"
+                data-testid="faq-item"
               >
                 <AccordionTrigger className="py-5 text-left font-semibold text-foreground hover:no-underline">
                   {t(`faq.items.${key}.question`)}

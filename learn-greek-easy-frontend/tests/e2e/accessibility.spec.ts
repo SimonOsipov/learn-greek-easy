@@ -114,6 +114,38 @@ test.describe('Accessibility - Public Pages', () => {
 
     expect(contrastViolations).toEqual([]);
   });
+
+  test('Landing page should have no accessibility violations', async ({ page }) => {
+    await page.goto('/');
+
+    // Wait for landing page to load
+    await expect(page.getByTestId('landing-page')).toBeVisible({ timeout: 10000 });
+
+    const accessibilityScanResults = await new AxeBuilder({ page })
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+      .disableRules(['landmark-one-main', 'page-has-heading-one', 'region'])
+      .analyze();
+
+    expect(accessibilityScanResults.violations).toEqual([]);
+  });
+
+  test('Landing page color contrast should meet WCAG AA', async ({ page }) => {
+    await page.goto('/');
+
+    // Wait for landing page to load
+    await expect(page.getByTestId('landing-page')).toBeVisible({ timeout: 10000 });
+
+    const accessibilityScanResults = await new AxeBuilder({ page })
+      .withTags(['wcag2aa'])
+      .disableRules(['landmark-one-main', 'page-has-heading-one', 'region'])
+      .analyze();
+
+    const contrastViolations = accessibilityScanResults.violations.filter((v) =>
+      v.id.includes('color-contrast')
+    );
+
+    expect(contrastViolations).toEqual([]);
+  });
 });
 
 /**

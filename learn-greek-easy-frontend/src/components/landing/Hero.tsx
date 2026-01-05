@@ -1,5 +1,6 @@
 import { ArrowRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 
 import heroImage from '@/assets/landing/cyprus-hero.webp';
 import { Button } from '@/components/ui/button';
@@ -42,6 +43,7 @@ const Hero = () => {
           <h1
             className="mb-10 animate-fade-up text-balance text-6xl font-bold leading-[1.05] tracking-tight text-foreground opacity-0 sm:text-7xl md:text-8xl lg:text-9xl"
             style={{ animationDelay: '0.2s' }}
+            data-testid="hero-title"
           >
             {t('hero.title')} <span className="text-primary">{t('hero.titleHighlight')}</span>
           </h1>
@@ -50,6 +52,7 @@ const Hero = () => {
           <p
             className="mx-auto mb-14 max-w-4xl animate-fade-up text-balance text-2xl leading-relaxed text-foreground/90 opacity-0 md:text-3xl lg:text-4xl"
             style={{ animationDelay: '0.3s' }}
+            data-testid="hero-subtitle"
           >
             {t('hero.subtitle')}
           </p>
@@ -59,9 +62,17 @@ const Hero = () => {
             className="flex animate-fade-up flex-col items-center justify-center gap-4 opacity-0 sm:flex-row"
             style={{ animationDelay: '0.4s' }}
           >
-            <Button variant="hero" size="xl" className="group">
-              {t('hero.cta')}
-              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+            <Button
+              variant="hero"
+              size="xl"
+              className="group"
+              data-testid="hero-cta-button"
+              asChild
+            >
+              <Link to="/register">
+                {t('hero.cta')}
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+              </Link>
             </Button>
           </div>
 

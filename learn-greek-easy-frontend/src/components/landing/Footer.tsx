@@ -4,7 +4,7 @@ const Footer = () => {
   const { t } = useTranslation('landing');
 
   return (
-    <footer data-testid="footer-section" className="border-t border-border/50 py-12">
+    <footer data-testid="landing-footer" className="border-t border-border/50 py-12">
       <div className="container mx-auto px-6">
         <div className="flex flex-col items-center justify-between gap-6 md:flex-row">
           {/* Logo */}
@@ -16,7 +16,7 @@ const Footer = () => {
           </div>
 
           {/* Links */}
-          <nav className="flex items-center gap-8">
+          <nav className="flex items-center gap-8" data-testid="footer-links">
             <a
               href="#"
               className="text-sm text-muted-foreground transition-colors hover:text-foreground"

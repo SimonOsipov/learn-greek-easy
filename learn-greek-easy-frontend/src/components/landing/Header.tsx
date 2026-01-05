@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
 
@@ -7,7 +8,7 @@ const Header = () => {
 
   return (
     <header
-      data-testid="header-section"
+      data-testid="landing-header"
       className="fixed left-0 right-0 top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-lg"
     >
       <div className="flex h-16 w-full items-center justify-between px-6">
@@ -18,7 +19,7 @@ const Header = () => {
           <span className="text-lg font-semibold text-foreground">{t('header.brandName')}</span>
         </div>
 
-        <nav className="hidden items-center gap-8 md:flex">
+        <nav className="hidden items-center gap-8 md:flex" data-testid="landing-nav">
           <a
             href="#features"
             className="text-lg text-muted-foreground transition-colors hover:text-foreground"
@@ -40,10 +41,17 @@ const Header = () => {
         </nav>
 
         <div className="flex items-center gap-3">
-          <Button variant="ghost" className="hidden text-lg sm:inline-flex">
-            {t('header.cta.login')}
+          <Button
+            variant="ghost"
+            className="hidden text-lg sm:inline-flex"
+            data-testid="landing-login-button"
+            asChild
+          >
+            <Link to="/login">{t('header.cta.login')}</Link>
           </Button>
-          <Button className="text-lg">{t('header.cta.getStarted')}</Button>
+          <Button className="text-lg" data-testid="landing-get-started-button" asChild>
+            <Link to="/register">{t('header.cta.getStarted')}</Link>
+          </Button>
         </div>
       </div>
     </header>

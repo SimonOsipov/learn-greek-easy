@@ -98,6 +98,7 @@ const Pricing = () => {
             return (
               <div
                 key={index}
+                data-testid="pricing-card"
                 className={`relative flex animate-fade-up flex-col rounded-2xl border p-6 opacity-0 transition-all duration-300 ${
                   plan.popular
                     ? 'scale-[1.02] border-primary bg-primary/5 shadow-lg'
@@ -168,6 +169,7 @@ const Pricing = () => {
                   className={`h-11 w-full font-semibold ${
                     plan.highlight ? 'border-0 bg-amber-500 text-white hover:bg-amber-600' : ''
                   }`}
+                  data-testid="pricing-cta"
                 >
                   {t(plan.ctaKey)}
                 </Button>
