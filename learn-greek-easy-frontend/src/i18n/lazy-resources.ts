@@ -31,19 +31,31 @@ export function isLanguageLoaded(lang: SupportedLanguage): boolean {
  * @returns Promise that resolves when all Greek resources are loaded
  */
 async function loadGreekResources(): Promise<void> {
-  const [admin, auth, common, culture, deck, feedback, profile, review, settings, statistics] =
-    await Promise.all([
-      import('./locales/el/admin.json'),
-      import('./locales/el/auth.json'),
-      import('./locales/el/common.json'),
-      import('./locales/el/culture.json'),
-      import('./locales/el/deck.json'),
-      import('./locales/el/feedback.json'),
-      import('./locales/el/profile.json'),
-      import('./locales/el/review.json'),
-      import('./locales/el/settings.json'),
-      import('./locales/el/statistics.json'),
-    ]);
+  const [
+    admin,
+    auth,
+    common,
+    culture,
+    deck,
+    feedback,
+    landing,
+    profile,
+    review,
+    settings,
+    statistics,
+  ] = await Promise.all([
+    import('./locales/el/admin.json'),
+    import('./locales/el/auth.json'),
+    import('./locales/el/common.json'),
+    import('./locales/el/culture.json'),
+    import('./locales/el/deck.json'),
+    import('./locales/el/feedback.json'),
+    import('./locales/el/landing.json'),
+    import('./locales/el/profile.json'),
+    import('./locales/el/review.json'),
+    import('./locales/el/settings.json'),
+    import('./locales/el/statistics.json'),
+  ]);
 
   i18n.addResourceBundle('el', 'admin', admin.default, true, true);
   i18n.addResourceBundle('el', 'auth', auth.default, true, true);
@@ -51,6 +63,7 @@ async function loadGreekResources(): Promise<void> {
   i18n.addResourceBundle('el', 'culture', culture.default, true, true);
   i18n.addResourceBundle('el', 'deck', deck.default, true, true);
   i18n.addResourceBundle('el', 'feedback', feedback.default, true, true);
+  i18n.addResourceBundle('el', 'landing', landing.default, true, true);
   i18n.addResourceBundle('el', 'profile', profile.default, true, true);
   i18n.addResourceBundle('el', 'review', review.default, true, true);
   i18n.addResourceBundle('el', 'settings', settings.default, true, true);
@@ -63,19 +76,31 @@ async function loadGreekResources(): Promise<void> {
  * @returns Promise that resolves when all Russian resources are loaded
  */
 async function loadRussianResources(): Promise<void> {
-  const [admin, auth, common, culture, deck, feedback, profile, review, settings, statistics] =
-    await Promise.all([
-      import('./locales/ru/admin.json'),
-      import('./locales/ru/auth.json'),
-      import('./locales/ru/common.json'),
-      import('./locales/ru/culture.json'),
-      import('./locales/ru/deck.json'),
-      import('./locales/ru/feedback.json'),
-      import('./locales/ru/profile.json'),
-      import('./locales/ru/review.json'),
-      import('./locales/ru/settings.json'),
-      import('./locales/ru/statistics.json'),
-    ]);
+  const [
+    admin,
+    auth,
+    common,
+    culture,
+    deck,
+    feedback,
+    landing,
+    profile,
+    review,
+    settings,
+    statistics,
+  ] = await Promise.all([
+    import('./locales/ru/admin.json'),
+    import('./locales/ru/auth.json'),
+    import('./locales/ru/common.json'),
+    import('./locales/ru/culture.json'),
+    import('./locales/ru/deck.json'),
+    import('./locales/ru/feedback.json'),
+    import('./locales/ru/landing.json'),
+    import('./locales/ru/profile.json'),
+    import('./locales/ru/review.json'),
+    import('./locales/ru/settings.json'),
+    import('./locales/ru/statistics.json'),
+  ]);
 
   i18n.addResourceBundle('ru', 'admin', admin.default, true, true);
   i18n.addResourceBundle('ru', 'auth', auth.default, true, true);
@@ -83,6 +108,7 @@ async function loadRussianResources(): Promise<void> {
   i18n.addResourceBundle('ru', 'culture', culture.default, true, true);
   i18n.addResourceBundle('ru', 'deck', deck.default, true, true);
   i18n.addResourceBundle('ru', 'feedback', feedback.default, true, true);
+  i18n.addResourceBundle('ru', 'landing', landing.default, true, true);
   i18n.addResourceBundle('ru', 'profile', profile.default, true, true);
   i18n.addResourceBundle('ru', 'review', review.default, true, true);
   i18n.addResourceBundle('ru', 'settings', settings.default, true, true);

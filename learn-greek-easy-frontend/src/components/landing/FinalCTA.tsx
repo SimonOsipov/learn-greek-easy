@@ -1,9 +1,12 @@
 import { ArrowRight, BookOpen } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 import ctaImage from '@/assets/landing/limassol-cta.webp';
 import { Button } from '@/components/ui/button';
 
 const FinalCTA = () => {
+  const { t } = useTranslation('landing');
+
   return (
     <section
       data-testid="final-cta-section"
@@ -12,7 +15,7 @@ const FinalCTA = () => {
       {/* Background Image */}
       <img
         src={ctaImage}
-        alt="Limassol cityscape with Mediterranean Sea"
+        alt={t('finalCta.imageAlt')}
         width={1920}
         height={1080}
         loading="lazy"
@@ -28,14 +31,14 @@ const FinalCTA = () => {
             className="mb-6 animate-fade-up text-3xl font-bold text-background opacity-0 md:text-4xl lg:text-5xl"
             style={{ animationDelay: '0.1s' }}
           >
-            Your citizenship journey starts with the right foundation
+            {t('finalCta.title')}
           </h2>
 
           <p
             className="mb-10 animate-fade-up text-lg text-background/80 opacity-0"
             style={{ animationDelay: '0.2s' }}
           >
-            Stop wasting time with scattered resources. Get a structured path to Greek fluency.
+            {t('finalCta.subtitle')}
           </p>
 
           <div
@@ -46,7 +49,7 @@ const FinalCTA = () => {
               size="xl"
               className="group bg-background text-foreground shadow-lg hover:bg-background/90"
             >
-              Start Free Trial
+              {t('finalCta.primaryCta')}
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
             </Button>
             <Button
@@ -55,7 +58,7 @@ const FinalCTA = () => {
               className="border border-background/20 text-background hover:bg-background/10"
             >
               <BookOpen className="h-4 w-4" />
-              View Lesson Preview
+              {t('finalCta.secondaryCta')}
             </Button>
           </div>
         </div>

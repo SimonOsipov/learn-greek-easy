@@ -1,0 +1,293 @@
+{
+  "header": {
+    "brandName": "Greekly",
+    "nav": {
+      "features": "Features",
+      "pricing": "Pricing",
+      "aboutUs": "About Us"
+    },
+    "cta": {
+      "login": "Log In",
+      "getStarted": "Get Started"
+    }
+  },
+  "hero": {
+    "badge": "Now in Beta",
+    "title": "Your Greek Practice",
+    "titleHighlight": "Companion",
+    "subtitle": "One place to practice reading, listening, and speaking - the perfect support alongside your books and lessons.",
+    "cta": "Start Learning Free",
+    "socialProof": "Join 500+ learners preparing for their Greek citizenship exam",
+    "heroImageAlt": "Ancient Greek ruins overlooking the Mediterranean Sea in Cyprus"
+  },
+  "features": {
+    "label": "DESIGNED FOR SUCCESS",
+    "title": "Everything you need to pass",
+    "subtitle": "A complete toolkit built specifically for Greek citizenship exam preparation",
+    "cards": {
+      "basicVocabulary": {
+        "title": "Basic Vocabulary Cards",
+        "description": "Start with essential Greek words and phrases. Build your foundation with everyday vocabulary from greetings to numbers."
+      },
+      "themedVocabulary": {
+        "title": "Themed Vocabulary Cards",
+        "description": "From A2 foundations to specialized topics - master words for real estate, medical visits, banking, and everyday conversations."
+      },
+      "customCards": {
+        "title": "Custom Cards & Decks",
+        "description": "Create your own flashcards and organize them into custom decks. Learn the words that matter most to you."
+      },
+      "nounForms": {
+        "title": "Noun Forms & Cases",
+        "description": "Master articles, plural/singular forms, and noun cases like accusative and genitive - essential for speaking correctly."
+      },
+      "verbConjugations": {
+        "title": "Verb Conjugations",
+        "description": "Practice verb forms across tenses and persons. From present to past, master how Greek verbs change."
+      },
+      "verbTenses": {
+        "title": "Verb Tenses",
+        "description": "Learn past, present, and future forms of verbs. See how the same verb changes across different time contexts."
+      },
+      "realNews": {
+        "title": "Real News Practice",
+        "description": "Learn from actual Greek TV broadcasts and newspaper articles. Immerse yourself in authentic content to sharpen comprehension."
+      },
+      "audioDialogs": {
+        "title": "Real Audio Dialogs",
+        "description": "Practice with authentic conversations - ordering coffee, visiting the doctor, talking to your landlord. No synthetic textbook scripts."
+      },
+      "historyCulture": {
+        "title": "History & Culture Questions",
+        "description": "Prepare for the citizenship exam history and culture section with curated questions about Greek heritage and traditions."
+      }
+    },
+    "mockups": {
+      "tapToReveal": "tap to reveal",
+      "again": "Again",
+      "gotIt": "Got it!",
+      "transcript": "Transcript",
+      "quizMe": "Quiz Me",
+      "nextQuestion": "Next Question",
+      "nextNoun": "Next Noun",
+      "showPastTense": "Show Past Tense",
+      "nextVerb": "Next Verb",
+      "readArticle": "Read Article",
+      "watchClip": "Watch Clip",
+      "createNewDeck": "Create new deck",
+      "addNewCard": "Add New Card",
+      "cardOf": "Card {{current}} of {{total}}",
+      "questionOf": "Question {{current}}/{{total}}",
+      "decksCount": "{{count}} decks",
+      "cardsCount": "{{count}} cards",
+      "dialog": "Dialog",
+      "singular": "Singular",
+      "plural": "Plural",
+      "accusative": "Accusative",
+      "genitive": "Genitive",
+      "present": "Present",
+      "pastSimple": "Past (simple)",
+      "future": "Future",
+      "iSpeak": "I speak",
+      "youSpeak": "you speak",
+      "heSheSpeak": "he/she speaks",
+      "weSpeak": "we speak",
+      "toSpeak": "to speak",
+      "toWrite": "to write",
+      "theFriendMasc": "the friend (masc.)",
+      "atThePharmacy": "At the Pharmacy",
+      "today": "Today",
+      "history": "History",
+      "basics": "Basics",
+      "finance": "Finance",
+      "nouns": "Nouns",
+      "verbs": "Verbs",
+      "tenses": "Tenses",
+      "cases": "Cases",
+      "myDecks": "My Decks",
+      "greetings": "Greetings",
+      "a1Level": "A1 Level",
+      "a2Level": "A2 Level",
+      "taxAuthority": "Tax Authority",
+      "workVocabulary": "Work Vocabulary",
+      "restaurantPhrases": "Restaurant Phrases",
+      "progress80": "80%",
+      "progress65": "65%",
+      "independenceQuestion": "When did Greece gain independence from the Ottoman Empire?",
+      "newsHeadline": "The government announced new measures for the economy, focusing on support for small businesses.",
+      "pharmacyDialog": "\"Kalimera, thelo kati gia ton ponokefalo...\""
+    }
+  },
+  "pricing": {
+    "label": "SIMPLE PRICING",
+    "title": "Choose your path to fluency",
+    "subtitle": "Start free, upgrade when you're ready",
+    "guarantee": "All plans include a 14-day money-back guarantee. No questions asked.",
+    "badges": {
+      "mostPopular": "Most Popular",
+      "limited": "Limited"
+    },
+    "plans": {
+      "free": {
+        "name": "Free",
+        "price": "0 EUR",
+        "period": "forever",
+        "description": "Get started with the basics",
+        "cta": "Start Free",
+        "features": [
+          "Basic vocabulary cards (A1 level)",
+          "Limited daily practice sessions",
+          "Progress tracking",
+          "Community access"
+        ]
+      },
+      "monthly": {
+        "name": "Monthly Premium",
+        "price": "29 EUR",
+        "period": "/month",
+        "description": "Full access, billed monthly",
+        "cta": "Go Premium",
+        "features": [
+          "All vocabulary themes (A1-B2)",
+          "Unlimited practice sessions",
+          "Verb conjugations & noun cases",
+          "Real news & audio dialogs",
+          "History & culture questions",
+          "Priority support"
+        ]
+      },
+      "yearly": {
+        "name": "Yearly Premium",
+        "price": "200 EUR",
+        "period": "/year",
+        "description": "Save 148 EUR vs monthly",
+        "cta": "Save with Yearly",
+        "features": [
+          "Everything in Monthly Premium",
+          "2+ months free",
+          "Early access to new features",
+          "Offline mode (coming soon)",
+          "Certificate upon completion"
+        ]
+      },
+      "founders": {
+        "name": "Founders Edition",
+        "price": "250 EUR",
+        "period": "one-time",
+        "description": "Lifetime access, forever",
+        "cta": "Become a Founder",
+        "features": [
+          "Everything in Premium, forever",
+          "Lifetime updates included",
+          "Founders badge on profile",
+          "Direct input on new features",
+          "Exclusive founders community",
+          "Support our mission"
+        ]
+      }
+    }
+  },
+  "faq": {
+    "label": "COMMON QUESTIONS",
+    "title": "Frequently Asked Questions",
+    "subtitle": "Everything you need to know about Greekly and the citizenship exam",
+    "contactPrompt": "Still have questions?",
+    "contactLink": "Contact us",
+    "items": {
+      "exam": {
+        "question": "What is the Greek citizenship language exam?",
+        "answer": "The Greek citizenship language exam tests your ability to communicate in Greek at a B1 or B2 level (depending on your application category). It includes reading comprehension, writing, listening, and speaking sections. You will need to demonstrate that you can handle everyday situations, understand main points of clear texts, and express yourself on familiar topics."
+      },
+      "level": {
+        "question": "What level of Greek do I need to pass?",
+        "answer": "Most applicants need to demonstrate B1 level proficiency, which means you can understand the main points of clear standard input on familiar matters. Some categories may require B2 level. Greekly covers vocabulary and grammar from A1 through B2 to ensure you are fully prepared."
+      },
+      "difference": {
+        "question": "How is Greekly different from other language apps?",
+        "answer": "Greekly is built specifically for the Greek citizenship exam. Unlike general language apps, we focus on the vocabulary, grammar, and cultural knowledge you will actually be tested on. Our content includes themed vocabulary for real-life situations (banking, medical visits, bureaucracy), history and culture questions, and authentic audio from Greek media."
+      },
+      "customCards": {
+        "question": "Can I create my own flashcards?",
+        "answer": "Yes! With our Custom Cards & Decks feature, you can create your own flashcards and organize them into personalized decks. This is perfect for words you encounter in daily life, terms from your specific profession, or areas where you need extra practice."
+      },
+      "prepTime": {
+        "question": "How long does it take to prepare for the exam?",
+        "answer": "Preparation time varies based on your starting level. If you are starting from zero, plan for 6-12 months of consistent study. If you already have some Greek knowledge, 3-6 months of focused practice may be sufficient. We recommend 20-30 minutes of daily practice for best results."
+      },
+      "freePlan": {
+        "question": "What is included in the Free plan?",
+        "answer": "The Free plan includes access to basic A1 vocabulary cards, limited daily practice sessions, progress tracking, and community access. It is a great way to get started and see if Greekly is right for you before upgrading to Premium."
+      },
+      "monthlyVsYearly": {
+        "question": "What is the difference between Monthly and Yearly Premium?",
+        "answer": "Both plans include full access to all features: complete vocabulary from A1-B2, unlimited practice, all grammar exercises, real news and audio content, and history/culture questions. The Yearly plan saves you 148 EUR compared to paying monthly (equivalent to getting 2+ months free) and includes early access to new features."
+      },
+      "foundersEdition": {
+        "question": "What is the Founders Edition?",
+        "answer": "The Founders Edition is a one-time payment of 250 EUR that gives you lifetime access to Greekly, including all future updates and features. You will also get a Founders badge, direct input on new features, and access to our exclusive founders community. It is perfect for those who want to support our mission while securing permanent access."
+      },
+      "refundPolicy": {
+        "question": "What is your refund policy?",
+        "answer": "We offer a 14-day money-back guarantee on all paid plans, no questions asked. If Greekly is not the right fit for you, simply contact us within 14 days of your purchase for a full refund. For the Founders Edition, the same 14-day guarantee applies."
+      },
+      "offline": {
+        "question": "Can I use Greekly offline?",
+        "answer": "Offline mode is coming soon for Yearly Premium and Founders Edition members. This will allow you to download vocabulary decks and practice without an internet connection - perfect for studying on your commute or when traveling."
+      }
+    }
+  },
+  "socialProof": {
+    "goToQuote": "Go to quote {{number}}",
+    "stats": {
+      "activeLearners": "Active Learners",
+      "flashcards": "Flashcards",
+      "levelCoverage": "Level Coverage"
+    },
+    "quotes": {
+      "founder": {
+        "text": "Built by someone actively preparing for the same exam you are taking. I understand the journey because I am on it too.",
+        "author": "Greekly Founder",
+        "role": "Greek Citizenship Applicant"
+      },
+      "mariaK": {
+        "text": "The themed vocabulary cards are exactly what I needed. Real-world topics like banking and medical visits prepared me for actual conversations.",
+        "author": "Maria K.",
+        "role": "Passed B1 Exam"
+      },
+      "dimitrisP": {
+        "text": "Finally, an app that focuses on what matters for the citizenship exam. The history questions are spot-on.",
+        "author": "Dimitris P.",
+        "role": "Citizenship Applicant"
+      },
+      "annaS": {
+        "text": "The audio dialogs with real Greek speakers made such a difference. I can now understand everyday conversations.",
+        "author": "Anna S.",
+        "role": "Learning Greek"
+      },
+      "georgeM": {
+        "text": "Custom decks let me focus on my weak points. I created a deck just for verb conjugations and it helped tremendously.",
+        "author": "George M.",
+        "role": "B2 Student"
+      }
+    }
+  },
+  "finalCta": {
+    "title": "Your citizenship journey starts with the right foundation",
+    "subtitle": "Stop wasting time with scattered resources. Get a structured path to Greek fluency.",
+    "primaryCta": "Start Free Trial",
+    "secondaryCta": "View Lesson Preview",
+    "imageAlt": "Limassol cityscape with Mediterranean Sea"
+  },
+  "footer": {
+    "brandName": "Greekly",
+    "nav": {
+      "about": "About",
+      "pricing": "Pricing",
+      "contact": "Contact",
+      "privacy": "Privacy"
+    },
+    "language": "English",
+    "languageCode": "EN",
+    "copyright": "{{year}} Greekly. Made with care for future Greek citizens."
+  }
+}

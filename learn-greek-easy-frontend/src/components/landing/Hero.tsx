@@ -1,9 +1,12 @@
 import { ArrowRight } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 import heroImage from '@/assets/landing/cyprus-hero.webp';
 import { Button } from '@/components/ui/button';
 
 const Hero = () => {
+  const { t } = useTranslation('landing');
+
   return (
     <section
       data-testid="hero-section"
@@ -13,7 +16,7 @@ const Hero = () => {
       <div className="absolute inset-0">
         <img
           src={heroImage}
-          alt="Ancient Greek ruins overlooking the Mediterranean Sea in Cyprus"
+          alt={t('hero.heroImageAlt')}
           width={1920}
           height={1080}
           loading="eager"
@@ -32,7 +35,7 @@ const Hero = () => {
             style={{ animationDelay: '0.1s' }}
           >
             <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-primary" />
-            <span className="text-base font-medium text-primary">Now in Beta</span>
+            <span className="text-base font-medium text-primary">{t('hero.badge')}</span>
           </div>
 
           {/* Headline */}
@@ -40,7 +43,7 @@ const Hero = () => {
             className="mb-10 animate-fade-up text-balance text-6xl font-bold leading-[1.05] tracking-tight text-foreground opacity-0 sm:text-7xl md:text-8xl lg:text-9xl"
             style={{ animationDelay: '0.2s' }}
           >
-            Your Greek Practice <span className="text-primary">Companion</span>
+            {t('hero.title')} <span className="text-primary">{t('hero.titleHighlight')}</span>
           </h1>
 
           {/* Subheadline */}
@@ -48,8 +51,7 @@ const Hero = () => {
             className="mx-auto mb-14 max-w-4xl animate-fade-up text-balance text-2xl leading-relaxed text-foreground/90 opacity-0 md:text-3xl lg:text-4xl"
             style={{ animationDelay: '0.3s' }}
           >
-            One place to practice reading, listening, and speaking - the perfect support alongside
-            your books and lessons.
+            {t('hero.subtitle')}
           </p>
 
           {/* CTAs */}
@@ -58,7 +60,7 @@ const Hero = () => {
             style={{ animationDelay: '0.4s' }}
           >
             <Button variant="hero" size="xl" className="group">
-              Start Learning Free
+              {t('hero.cta')}
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
             </Button>
           </div>
@@ -68,7 +70,7 @@ const Hero = () => {
             className="mt-14 animate-fade-up text-lg text-foreground/80 opacity-0"
             style={{ animationDelay: '0.5s' }}
           >
-            Join 500+ learners preparing for their Greek citizenship exam
+            {t('hero.socialProof')}
           </p>
         </div>
       </div>

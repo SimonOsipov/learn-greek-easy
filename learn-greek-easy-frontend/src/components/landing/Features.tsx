@@ -14,86 +14,80 @@ import {
   Tv,
   Volume2,
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface Feature {
   icon: ReactNode;
-  title: string;
-  description: string;
+  titleKey: string;
+  descriptionKey: string;
   mockup: string;
   comingSoon: boolean;
 }
 
 const Features = () => {
+  const { t } = useTranslation('landing');
+
   const features: Feature[] = [
     {
       icon: <GraduationCap className="h-8 w-8" />,
-      title: 'Basic Vocabulary Cards',
-      description:
-        'Start with essential Greek words and phrases. Build your foundation with everyday vocabulary from greetings to numbers.',
+      titleKey: 'features.cards.basicVocabulary.title',
+      descriptionKey: 'features.cards.basicVocabulary.description',
       mockup: 'basicVocabulary',
       comingSoon: false,
     },
     {
       icon: <BookOpen className="h-8 w-8" />,
-      title: 'Themed Vocabulary Cards',
-      description:
-        'From A2 foundations to specialized topics - master words for real estate, medical visits, banking, and everyday conversations.',
+      titleKey: 'features.cards.themedVocabulary.title',
+      descriptionKey: 'features.cards.themedVocabulary.description',
       mockup: 'vocabulary',
       comingSoon: false,
     },
     {
       icon: <Layers className="h-8 w-8" />,
-      title: 'Custom Cards & Decks',
-      description:
-        'Create your own flashcards and organize them into custom decks. Learn the words that matter most to you.',
+      titleKey: 'features.cards.customCards.title',
+      descriptionKey: 'features.cards.customCards.description',
       mockup: 'customCards',
       comingSoon: false,
     },
     {
       icon: <Languages className="h-8 w-8" />,
-      title: 'Noun Forms & Cases',
-      description:
-        'Master articles, plural/singular forms, and noun cases like accusative and genitive - essential for speaking correctly.',
+      titleKey: 'features.cards.nounForms.title',
+      descriptionKey: 'features.cards.nounForms.description',
       mockup: 'nounGrammar',
       comingSoon: false,
     },
     {
       icon: <Languages className="h-8 w-8" />,
-      title: 'Verb Conjugations',
-      description:
-        'Practice verb forms across tenses and persons. From present to past, master how Greek verbs change.',
+      titleKey: 'features.cards.verbConjugations.title',
+      descriptionKey: 'features.cards.verbConjugations.description',
       mockup: 'verbGrammar',
       comingSoon: false,
     },
     {
       icon: <Languages className="h-8 w-8" />,
-      title: 'Verb Tenses',
-      description:
-        'Learn past, present, and future forms of verbs. See how the same verb changes across different time contexts.',
+      titleKey: 'features.cards.verbTenses.title',
+      descriptionKey: 'features.cards.verbTenses.description',
       mockup: 'verbTenses',
       comingSoon: false,
     },
     {
       icon: <Newspaper className="h-8 w-8" />,
-      title: 'Real News Practice',
-      description:
-        'Learn from actual Greek TV broadcasts and newspaper articles. Immerse yourself in authentic content to sharpen comprehension.',
+      titleKey: 'features.cards.realNews.title',
+      descriptionKey: 'features.cards.realNews.description',
       mockup: 'news',
       comingSoon: false,
     },
     {
       icon: <Headphones className="h-8 w-8" />,
-      title: 'Real Audio Dialogs',
-      description:
-        'Practice with authentic conversations - ordering coffee, visiting the doctor, talking to your landlord. No synthetic textbook scripts.',
+      titleKey: 'features.cards.audioDialogs.title',
+      descriptionKey: 'features.cards.audioDialogs.description',
       mockup: 'audio',
       comingSoon: false,
     },
     {
       icon: <Landmark className="h-8 w-8" />,
-      title: 'History & Culture Questions',
-      description:
-        'Prepare for the citizenship exam history and culture section with curated questions about Greek heritage and traditions.',
+      titleKey: 'features.cards.historyCulture.title',
+      descriptionKey: 'features.cards.historyCulture.description',
       mockup: 'quiz',
       comingSoon: false,
     },
@@ -109,30 +103,36 @@ const Features = () => {
     <MockupWrapper>
       <div className="mb-4 flex items-center justify-between">
         <span className="rounded-full bg-blue-100 px-3 py-1.5 text-xs font-semibold text-blue-600">
-          Finance
+          {t('features.mockups.finance')}
         </span>
-        <span className="text-xs text-muted-foreground">Card 8 of 40</span>
+        <span className="text-xs text-muted-foreground">
+          {t('features.mockups.cardOf', { current: 8, total: 40 })}
+        </span>
       </div>
       <div className="flex flex-1 flex-col justify-center rounded-xl bg-secondary/50 p-6 text-center">
         <p className="mb-1 text-2xl font-bold text-foreground md:text-3xl">i eforia</p>
-        <p className="text-sm text-muted-foreground">tap to reveal</p>
+        <p className="text-sm text-muted-foreground">{t('features.mockups.tapToReveal')}</p>
       </div>
       <div className="my-3 flex flex-wrap gap-2">
-        <span className="rounded bg-secondary px-2 py-1 text-xs">Tax Authority</span>
-        <span className="rounded bg-secondary px-2 py-1 text-xs">A2 Level</span>
+        <span className="rounded bg-secondary px-2 py-1 text-xs">
+          {t('features.mockups.taxAuthority')}
+        </span>
+        <span className="rounded bg-secondary px-2 py-1 text-xs">
+          {t('features.mockups.a2Level')}
+        </span>
       </div>
       <div className="mt-auto flex gap-3">
         <button
           type="button"
           className="flex h-11 flex-1 items-center justify-center rounded-lg bg-destructive/10 text-sm font-semibold text-destructive"
         >
-          Again
+          {t('features.mockups.again')}
         </button>
         <button
           type="button"
           className="flex h-11 flex-1 items-center justify-center rounded-lg bg-primary text-sm font-semibold text-primary-foreground"
         >
-          Got it!
+          {t('features.mockups.gotIt')}
         </button>
       </div>
     </MockupWrapper>
@@ -145,8 +145,10 @@ const Features = () => {
           <Volume2 className="h-6 w-6 text-primary" />
         </div>
         <div>
-          <p className="text-base font-bold text-foreground">At the Pharmacy</p>
-          <p className="text-sm text-muted-foreground">Dialog - 2:34</p>
+          <p className="text-base font-bold text-foreground">
+            {t('features.mockups.atThePharmacy')}
+          </p>
+          <p className="text-sm text-muted-foreground">{t('features.mockups.dialog')} - 2:34</p>
         </div>
       </div>
       <div className="flex-1 rounded-xl bg-secondary/50 p-4">
@@ -159,22 +161,20 @@ const Features = () => {
           </div>
           <span className="text-xs text-muted-foreground">0:48</span>
         </div>
-        <p className="text-sm italic text-foreground">
-          &quot;Kalimera, thelo kati gia ton ponokefalo...&quot;
-        </p>
+        <p className="text-sm italic text-foreground">{t('features.mockups.pharmacyDialog')}</p>
       </div>
       <div className="mt-auto flex gap-3">
         <button
           type="button"
           className="flex h-11 flex-1 items-center justify-center rounded-lg border border-border text-sm font-semibold text-foreground"
         >
-          Transcript
+          {t('features.mockups.transcript')}
         </button>
         <button
           type="button"
           className="flex h-11 flex-1 items-center justify-center rounded-lg bg-primary text-sm font-semibold text-primary-foreground"
         >
-          Quiz Me
+          {t('features.mockups.quizMe')}
         </button>
       </div>
     </MockupWrapper>
@@ -184,12 +184,14 @@ const Features = () => {
     <MockupWrapper>
       <div className="mb-3 flex items-center justify-between">
         <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-          History
+          {t('features.mockups.history')}
         </span>
-        <span className="text-xs text-muted-foreground">Question 5/20</span>
+        <span className="text-xs text-muted-foreground">
+          {t('features.mockups.questionOf', { current: 5, total: 20 })}
+        </span>
       </div>
       <p className="mb-3 line-clamp-2 text-sm font-bold text-foreground">
-        When did Greece gain independence from the Ottoman Empire?
+        {t('features.mockups.independenceQuestion')}
       </p>
       <div className="flex-1 space-y-1.5">
         <div className="rounded-lg border border-border p-2.5 text-sm text-foreground">1821</div>
@@ -203,7 +205,7 @@ const Features = () => {
         type="button"
         className="mt-auto flex h-11 w-full items-center justify-center rounded-lg bg-primary text-sm font-semibold text-primary-foreground"
       >
-        Next Question
+        {t('features.mockups.nextQuestion')}
       </button>
     </MockupWrapper>
   );
@@ -212,30 +214,36 @@ const Features = () => {
     <MockupWrapper>
       <div className="mb-4 flex items-center justify-between">
         <span className="rounded-full bg-green-100 px-3 py-1.5 text-xs font-semibold text-green-600">
-          Basics
+          {t('features.mockups.basics')}
         </span>
-        <span className="text-xs text-muted-foreground">Card 3 of 25</span>
+        <span className="text-xs text-muted-foreground">
+          {t('features.mockups.cardOf', { current: 3, total: 25 })}
+        </span>
       </div>
       <div className="flex flex-1 flex-col justify-center rounded-xl bg-secondary/50 p-6 text-center">
         <p className="mb-1 text-3xl font-bold text-foreground md:text-4xl">kalimera</p>
-        <p className="text-sm text-muted-foreground">tap to reveal</p>
+        <p className="text-sm text-muted-foreground">{t('features.mockups.tapToReveal')}</p>
       </div>
       <div className="my-3 flex flex-wrap gap-2">
-        <span className="rounded bg-secondary px-2 py-1 text-xs">Greetings</span>
-        <span className="rounded bg-secondary px-2 py-1 text-xs">A1 Level</span>
+        <span className="rounded bg-secondary px-2 py-1 text-xs">
+          {t('features.mockups.greetings')}
+        </span>
+        <span className="rounded bg-secondary px-2 py-1 text-xs">
+          {t('features.mockups.a1Level')}
+        </span>
       </div>
       <div className="mt-auto flex gap-3">
         <button
           type="button"
           className="flex h-11 flex-1 items-center justify-center rounded-lg bg-destructive/10 text-sm font-semibold text-destructive"
         >
-          Again
+          {t('features.mockups.again')}
         </button>
         <button
           type="button"
           className="flex h-11 flex-1 items-center justify-center rounded-lg bg-primary text-sm font-semibold text-primary-foreground"
         >
-          Got it!
+          {t('features.mockups.gotIt')}
         </button>
       </div>
     </MockupWrapper>
@@ -245,29 +253,29 @@ const Features = () => {
     <MockupWrapper>
       <div className="mb-3 flex items-center justify-between">
         <span className="rounded-full bg-purple-100 px-3 py-1 text-xs font-semibold text-purple-600">
-          Nouns
+          {t('features.mockups.nouns')}
         </span>
-        <span className="text-xs text-muted-foreground">Cases</span>
+        <span className="text-xs text-muted-foreground">{t('features.mockups.cases')}</span>
       </div>
       <div className="mb-3 rounded-xl bg-secondary/50 p-4 text-center">
         <p className="text-2xl font-bold text-foreground">o filos</p>
-        <p className="mt-1 text-xs text-muted-foreground">the friend (masc.)</p>
+        <p className="mt-1 text-xs text-muted-foreground">{t('features.mockups.theFriendMasc')}</p>
       </div>
       <div className="grid flex-1 grid-cols-2 gap-2">
         <div className="rounded-lg bg-secondary/30 p-2 text-center">
-          <p className="text-xs text-muted-foreground">Singular</p>
+          <p className="text-xs text-muted-foreground">{t('features.mockups.singular')}</p>
           <p className="text-sm font-medium text-foreground">o filos</p>
         </div>
         <div className="rounded-lg bg-secondary/30 p-2 text-center">
-          <p className="text-xs text-muted-foreground">Plural</p>
+          <p className="text-xs text-muted-foreground">{t('features.mockups.plural')}</p>
           <p className="text-sm font-medium text-foreground">oi filoi</p>
         </div>
         <div className="rounded-lg bg-secondary/30 p-2 text-center">
-          <p className="text-xs text-muted-foreground">Accusative</p>
+          <p className="text-xs text-muted-foreground">{t('features.mockups.accusative')}</p>
           <p className="text-sm font-medium text-foreground">ton filo</p>
         </div>
         <div className="rounded-lg bg-secondary/30 p-2 text-center">
-          <p className="text-xs text-muted-foreground">Genitive</p>
+          <p className="text-xs text-muted-foreground">{t('features.mockups.genitive')}</p>
           <p className="text-sm font-medium text-foreground">tou filou</p>
         </div>
       </div>
@@ -275,7 +283,7 @@ const Features = () => {
         type="button"
         className="mt-auto flex h-11 w-full items-center justify-center rounded-lg bg-primary text-sm font-semibold text-primary-foreground"
       >
-        Next Noun
+        {t('features.mockups.nextNoun')}
       </button>
     </MockupWrapper>
   );
@@ -284,29 +292,29 @@ const Features = () => {
     <MockupWrapper>
       <div className="mb-3 flex items-center justify-between">
         <span className="rounded-full bg-orange-100 px-3 py-1 text-xs font-semibold text-orange-600">
-          Verbs
+          {t('features.mockups.verbs')}
         </span>
-        <span className="text-xs text-muted-foreground">Present</span>
+        <span className="text-xs text-muted-foreground">{t('features.mockups.present')}</span>
       </div>
       <div className="mb-3 rounded-xl bg-secondary/50 p-4 text-center">
         <p className="text-2xl font-bold text-foreground">milao</p>
-        <p className="mt-1 text-xs text-muted-foreground">to speak</p>
+        <p className="mt-1 text-xs text-muted-foreground">{t('features.mockups.toSpeak')}</p>
       </div>
       <div className="grid flex-1 grid-cols-2 gap-2">
         <div className="rounded-lg bg-secondary/30 p-2 text-center">
-          <p className="text-xs text-muted-foreground">I speak</p>
+          <p className="text-xs text-muted-foreground">{t('features.mockups.iSpeak')}</p>
           <p className="text-sm font-medium text-foreground">milao</p>
         </div>
         <div className="rounded-lg bg-secondary/30 p-2 text-center">
-          <p className="text-xs text-muted-foreground">you speak</p>
+          <p className="text-xs text-muted-foreground">{t('features.mockups.youSpeak')}</p>
           <p className="text-sm font-medium text-foreground">milas</p>
         </div>
         <div className="rounded-lg bg-secondary/30 p-2 text-center">
-          <p className="text-xs text-muted-foreground">he/she speaks</p>
+          <p className="text-xs text-muted-foreground">{t('features.mockups.heSheSpeak')}</p>
           <p className="text-sm font-medium text-foreground">milaei</p>
         </div>
         <div className="rounded-lg bg-secondary/30 p-2 text-center">
-          <p className="text-xs text-muted-foreground">we speak</p>
+          <p className="text-xs text-muted-foreground">{t('features.mockups.weSpeak')}</p>
           <p className="text-sm font-medium text-foreground">milame</p>
         </div>
       </div>
@@ -314,7 +322,7 @@ const Features = () => {
         type="button"
         className="mt-auto flex h-11 w-full items-center justify-center rounded-lg bg-primary text-sm font-semibold text-primary-foreground"
       >
-        Show Past Tense
+        {t('features.mockups.showPastTense')}
       </button>
     </MockupWrapper>
   );
@@ -323,25 +331,25 @@ const Features = () => {
     <MockupWrapper>
       <div className="mb-3 flex items-center justify-between">
         <span className="rounded-full bg-teal-100 px-3 py-1 text-xs font-semibold text-teal-600">
-          Tenses
+          {t('features.mockups.tenses')}
         </span>
         <span className="text-xs text-muted-foreground">grafo</span>
       </div>
       <div className="mb-3 rounded-xl bg-secondary/50 p-4 text-center">
         <p className="text-2xl font-bold text-foreground">grafo</p>
-        <p className="mt-1 text-xs text-muted-foreground">to write</p>
+        <p className="mt-1 text-xs text-muted-foreground">{t('features.mockups.toWrite')}</p>
       </div>
       <div className="flex-1 space-y-2">
         <div className="flex items-center justify-between rounded-lg bg-secondary/30 p-2">
-          <span className="text-xs text-muted-foreground">Present</span>
+          <span className="text-xs text-muted-foreground">{t('features.mockups.present')}</span>
           <span className="text-sm font-medium text-foreground">grafo</span>
         </div>
         <div className="flex items-center justify-between rounded-lg bg-secondary/30 p-2">
-          <span className="text-xs text-muted-foreground">Past (simple)</span>
+          <span className="text-xs text-muted-foreground">{t('features.mockups.pastSimple')}</span>
           <span className="text-sm font-medium text-foreground">egrapsa</span>
         </div>
         <div className="flex items-center justify-between rounded-lg bg-secondary/30 p-2">
-          <span className="text-xs text-muted-foreground">Future</span>
+          <span className="text-xs text-muted-foreground">{t('features.mockups.future')}</span>
           <span className="text-sm font-medium text-foreground">tha grapso</span>
         </div>
       </div>
@@ -349,7 +357,7 @@ const Features = () => {
         type="button"
         className="mt-auto flex h-11 w-full items-center justify-center rounded-lg bg-primary text-sm font-semibold text-primary-foreground"
       >
-        Next Verb
+        {t('features.mockups.nextVerb')}
       </button>
     </MockupWrapper>
   );
@@ -359,15 +367,14 @@ const Features = () => {
       <div className="mb-4 flex items-center gap-2">
         <Tv className="h-4 w-4 text-primary" />
         <span className="text-xs font-semibold text-primary">ERT News</span>
-        <span className="ml-auto text-xs text-muted-foreground">Today</span>
+        <span className="ml-auto text-xs text-muted-foreground">{t('features.mockups.today')}</span>
       </div>
       <div className="mb-3 flex-1 rounded-xl bg-secondary/50 p-4">
         <p className="mb-2 text-sm font-medium text-foreground">
           I kivernisi anakoinose nea metra...
         </p>
         <p className="line-clamp-2 text-xs text-muted-foreground">
-          The government announced new measures for the economy, focusing on support for small
-          businesses.
+          {t('features.mockups.newsHeadline')}
         </p>
       </div>
       <div className="mb-3 flex items-center gap-3">
@@ -384,13 +391,13 @@ const Features = () => {
           type="button"
           className="flex h-11 flex-1 items-center justify-center rounded-lg border border-border text-sm font-semibold text-foreground"
         >
-          Read Article
+          {t('features.mockups.readArticle')}
         </button>
         <button
           type="button"
           className="flex h-11 flex-1 items-center justify-center rounded-lg bg-primary text-sm font-semibold text-primary-foreground"
         >
-          Watch Clip
+          {t('features.mockups.watchClip')}
         </button>
       </div>
     </MockupWrapper>
@@ -400,29 +407,39 @@ const Features = () => {
     <MockupWrapper>
       <div className="mb-4 flex items-center justify-between">
         <span className="rounded-full bg-indigo-100 px-3 py-1.5 text-xs font-semibold text-indigo-600">
-          My Decks
+          {t('features.mockups.myDecks')}
         </span>
-        <span className="text-xs text-muted-foreground">3 decks</span>
+        <span className="text-xs text-muted-foreground">
+          {t('features.mockups.decksCount', { count: 3 })}
+        </span>
       </div>
       <div className="flex-1 space-y-2">
         <div className="flex items-center justify-between rounded-lg bg-secondary/50 p-3">
           <div>
-            <p className="text-sm font-medium text-foreground">Work Vocabulary</p>
-            <p className="text-xs text-muted-foreground">24 cards</p>
+            <p className="text-sm font-medium text-foreground">
+              {t('features.mockups.workVocabulary')}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {t('features.mockups.cardsCount', { count: 24 })}
+            </p>
           </div>
-          <div className="text-xs font-medium text-primary">80%</div>
+          <div className="text-xs font-medium text-primary">{t('features.mockups.progress80')}</div>
         </div>
         <div className="flex items-center justify-between rounded-lg bg-secondary/50 p-3">
           <div>
-            <p className="text-sm font-medium text-foreground">Restaurant Phrases</p>
-            <p className="text-xs text-muted-foreground">15 cards</p>
+            <p className="text-sm font-medium text-foreground">
+              {t('features.mockups.restaurantPhrases')}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {t('features.mockups.cardsCount', { count: 15 })}
+            </p>
           </div>
-          <div className="text-xs font-medium text-primary">65%</div>
+          <div className="text-xs font-medium text-primary">{t('features.mockups.progress65')}</div>
         </div>
         <div className="flex items-center justify-between rounded-lg border-2 border-dashed border-border bg-secondary/30 p-3">
           <div className="flex items-center gap-2 text-muted-foreground">
             <Plus className="h-4 w-4" />
-            <span className="text-sm">Create new deck</span>
+            <span className="text-sm">{t('features.mockups.createNewDeck')}</span>
           </div>
         </div>
       </div>
@@ -430,7 +447,7 @@ const Features = () => {
         type="button"
         className="mt-auto flex h-11 w-full items-center justify-center rounded-lg bg-primary text-sm font-semibold text-primary-foreground"
       >
-        Add New Card
+        {t('features.mockups.addNewCard')}
       </button>
     </MockupWrapper>
   );
@@ -470,19 +487,19 @@ const Features = () => {
         {/* Section header */}
         <div className="mx-auto mb-10 max-w-2xl text-center">
           <p className="mb-3 animate-fade-up text-sm font-medium text-primary opacity-0">
-            DESIGNED FOR SUCCESS
+            {t('features.label')}
           </p>
           <h2
             className="mb-3 animate-fade-up text-2xl font-bold opacity-0 md:text-4xl"
             style={{ animationDelay: '0.1s' }}
           >
-            Everything you need to pass
+            {t('features.title')}
           </h2>
           <p
             className="animate-fade-up text-lg text-muted-foreground opacity-0"
             style={{ animationDelay: '0.2s' }}
           >
-            A complete toolkit built specifically for Greek citizenship exam preparation
+            {t('features.subtitle')}
           </p>
         </div>
 
@@ -496,10 +513,10 @@ const Features = () => {
                   {feature.icon}
                 </div>
                 <h3 className="mb-2 line-clamp-2 text-xl font-bold text-foreground">
-                  {feature.title}
+                  {t(feature.titleKey)}
                 </h3>
                 <p className="line-clamp-2 text-sm leading-relaxed text-muted-foreground">
-                  {feature.description}
+                  {t(feature.descriptionKey)}
                 </p>
               </div>
 

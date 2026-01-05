@@ -29,6 +29,7 @@ import enCommon from './locales/en/common.json';
 import enCulture from './locales/en/culture.json';
 import enDeck from './locales/en/deck.json';
 import enFeedback from './locales/en/feedback.json';
+import enLanding from './locales/en/landing.json';
 import enProfile from './locales/en/profile.json';
 import enReview from './locales/en/review.json';
 import enSettings from './locales/en/settings.json';
@@ -51,6 +52,7 @@ const englishResources = {
     feedback: enFeedback,
     culture: enCulture,
     admin: enAdmin,
+    landing: enLanding,
   },
 };
 
@@ -83,19 +85,31 @@ function detectInitialLanguage(): SupportedLanguage {
  * @returns Promise resolving to Greek resource bundle
  */
 async function loadGreekBundle(): Promise<Record<string, unknown>> {
-  const [admin, auth, common, culture, deck, feedback, profile, review, settings, statistics] =
-    await Promise.all([
-      import('./locales/el/admin.json'),
-      import('./locales/el/auth.json'),
-      import('./locales/el/common.json'),
-      import('./locales/el/culture.json'),
-      import('./locales/el/deck.json'),
-      import('./locales/el/feedback.json'),
-      import('./locales/el/profile.json'),
-      import('./locales/el/review.json'),
-      import('./locales/el/settings.json'),
-      import('./locales/el/statistics.json'),
-    ]);
+  const [
+    admin,
+    auth,
+    common,
+    culture,
+    deck,
+    feedback,
+    landing,
+    profile,
+    review,
+    settings,
+    statistics,
+  ] = await Promise.all([
+    import('./locales/el/admin.json'),
+    import('./locales/el/auth.json'),
+    import('./locales/el/common.json'),
+    import('./locales/el/culture.json'),
+    import('./locales/el/deck.json'),
+    import('./locales/el/feedback.json'),
+    import('./locales/el/landing.json'),
+    import('./locales/el/profile.json'),
+    import('./locales/el/review.json'),
+    import('./locales/el/settings.json'),
+    import('./locales/el/statistics.json'),
+  ]);
 
   return {
     admin: admin.default,
@@ -104,6 +118,7 @@ async function loadGreekBundle(): Promise<Record<string, unknown>> {
     culture: culture.default,
     deck: deck.default,
     feedback: feedback.default,
+    landing: landing.default,
     profile: profile.default,
     review: review.default,
     settings: settings.default,
@@ -117,19 +132,31 @@ async function loadGreekBundle(): Promise<Record<string, unknown>> {
  * @returns Promise resolving to Russian resource bundle
  */
 async function loadRussianBundle(): Promise<Record<string, unknown>> {
-  const [admin, auth, common, culture, deck, feedback, profile, review, settings, statistics] =
-    await Promise.all([
-      import('./locales/ru/admin.json'),
-      import('./locales/ru/auth.json'),
-      import('./locales/ru/common.json'),
-      import('./locales/ru/culture.json'),
-      import('./locales/ru/deck.json'),
-      import('./locales/ru/feedback.json'),
-      import('./locales/ru/profile.json'),
-      import('./locales/ru/review.json'),
-      import('./locales/ru/settings.json'),
-      import('./locales/ru/statistics.json'),
-    ]);
+  const [
+    admin,
+    auth,
+    common,
+    culture,
+    deck,
+    feedback,
+    landing,
+    profile,
+    review,
+    settings,
+    statistics,
+  ] = await Promise.all([
+    import('./locales/ru/admin.json'),
+    import('./locales/ru/auth.json'),
+    import('./locales/ru/common.json'),
+    import('./locales/ru/culture.json'),
+    import('./locales/ru/deck.json'),
+    import('./locales/ru/feedback.json'),
+    import('./locales/ru/landing.json'),
+    import('./locales/ru/profile.json'),
+    import('./locales/ru/review.json'),
+    import('./locales/ru/settings.json'),
+    import('./locales/ru/statistics.json'),
+  ]);
 
   return {
     admin: admin.default,
@@ -138,6 +165,7 @@ async function loadRussianBundle(): Promise<Record<string, unknown>> {
     culture: culture.default,
     deck: deck.default,
     feedback: feedback.default,
+    landing: landing.default,
     profile: profile.default,
     review: review.default,
     settings: settings.default,

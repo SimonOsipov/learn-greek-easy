@@ -1,6 +1,10 @@
+import { useTranslation } from 'react-i18next';
+
 import { Button } from '@/components/ui/button';
 
 const Header = () => {
+  const { t } = useTranslation('landing');
+
   return (
     <header
       data-testid="header-section"
@@ -11,7 +15,7 @@ const Header = () => {
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
             <span className="text-sm font-bold text-primary-foreground">G</span>
           </div>
-          <span className="text-lg font-semibold text-foreground">Greekly</span>
+          <span className="text-lg font-semibold text-foreground">{t('header.brandName')}</span>
         </div>
 
         <nav className="hidden items-center gap-8 md:flex">
@@ -19,27 +23,27 @@ const Header = () => {
             href="#features"
             className="text-lg text-muted-foreground transition-colors hover:text-foreground"
           >
-            Features
+            {t('header.nav.features')}
           </a>
           <a
             href="#pricing"
             className="text-lg text-muted-foreground transition-colors hover:text-foreground"
           >
-            Pricing
+            {t('header.nav.pricing')}
           </a>
           <a
             href="#about"
             className="text-lg text-muted-foreground transition-colors hover:text-foreground"
           >
-            About Us
+            {t('header.nav.aboutUs')}
           </a>
         </nav>
 
         <div className="flex items-center gap-3">
           <Button variant="ghost" className="hidden text-lg sm:inline-flex">
-            Log In
+            {t('header.cta.login')}
           </Button>
-          <Button className="text-lg">Get Started</Button>
+          <Button className="text-lg">{t('header.cta.getStarted')}</Button>
         </div>
       </div>
     </header>
