@@ -75,6 +75,12 @@ export default {
   					bg: '#f3f4f6',
   					text: '#6b7280'
   				}
+  			},
+  			landing: {
+  				navy: "hsl(var(--landing-navy))",
+  				"greek-blue": "hsl(var(--landing-greek-blue))",
+  				"greek-blue-light": "hsl(var(--landing-greek-blue-light))",
+  				gold: "hsl(var(--landing-gold))",
   			}
   		},
   		fontFamily: {
@@ -208,7 +214,9 @@ export default {
   			nav: '0 -2px 10px rgba(0, 0, 0, 0.05)',
   			'card-hover': '0 4px 6px rgba(0, 0, 0, 0.1)',
   			'button-primary': '0 4px 8px rgba(102, 126, 234, 0.3)',
-  			none: 'none'
+  			none: 'none',
+  			'landing-card': 'var(--landing-shadow-card)',
+  			'landing-card-hover': 'var(--landing-shadow-card-hover)'
   		},
   		transitionDuration: {
   			'200': '200ms',
