@@ -20,6 +20,10 @@ if (import.meta.env.PROD && import.meta.env.VITE_SENTRY_DSN) {
     integrations: [
       // Performance monitoring - traces page loads and API calls
       Sentry.browserTracingIntegration(),
+      // Console logging integration - captures warn and error logs
+      Sentry.consoleLoggingIntegration({ levels: ['warn', 'error'] }),
+      // Browser profiling integration - requires Document-Policy header
+      Sentry.browserProfilingIntegration(),
     ],
 
     // Enable Sentry Logs for centralized log aggregation
@@ -28,6 +32,12 @@ if (import.meta.env.PROD && import.meta.env.VITE_SENTRY_DSN) {
     // Performance monitoring sample rate
     // Capture 20% of transactions in production (adjust based on traffic)
     tracesSampleRate: 0.2,
+
+    // Browser profiling configuration
+    // Sample 20% of sessions for profiling (requires browserProfilingIntegration)
+    profileSessionSampleRate: 0.2,
+    // Profile lifecycle tied to traces for correlated performance data
+    profileLifecycle: 'trace',
 
     // Propagate traces to our backend API
     tracePropagationTargets: [

@@ -105,13 +105,7 @@ export const DeckDetailPage: React.FC = () => {
       {/* Main Content */}
       <div className="space-y-6">
         {/* Deck Header Section */}
-        <DeckHeaderSection deck={selectedDeck} isPremiumLocked={isPremiumLocked} />
-
-        {/* Statistics Section */}
-        <StatisticsSection deck={selectedDeck} />
-
-        {/* Action Buttons Section */}
-        <ActionButtonsSection
+        <DeckHeaderSection
           deck={selectedDeck}
           isPremiumLocked={isPremiumLocked}
           deckStatus={deckStatus}
@@ -119,6 +113,9 @@ export const DeckDetailPage: React.FC = () => {
           onContinue={() => handleContinue(deckId, navigate)}
           onUpgrade={() => handleUpgrade(navigate)}
         />
+
+        {/* Statistics Section */}
+        <StatisticsSection deck={selectedDeck} />
       </div>
     </div>
   );
@@ -154,9 +151,20 @@ const handleUpgrade = (navigate: any) => {
 interface DeckHeaderSectionProps {
   deck: Deck;
   isPremiumLocked: boolean;
+  deckStatus: DeckStatus;
+  onStartLearning: () => void;
+  onContinue: () => void;
+  onUpgrade: () => void;
 }
 
-const DeckHeaderSection: React.FC<DeckHeaderSectionProps> = ({ deck, isPremiumLocked }) => {
+const DeckHeaderSection: React.FC<DeckHeaderSectionProps> = ({
+  deck,
+  isPremiumLocked,
+  deckStatus,
+  onStartLearning,
+  onContinue,
+  onUpgrade,
+}) => {
   const { t } = useTranslation('deck');
   const { resetProgress } = useDeckStore();
   const [isResetting, setIsResetting] = useState(false);
@@ -258,6 +266,51 @@ const DeckHeaderSection: React.FC<DeckHeaderSectionProps> = ({ deck, isPremiumLo
             <DeckProgressBar progress={deck.progress} showLegend={true} size="large" />
           </div>
         )}
+
+        {/* Action Button */}
+        <div className="mt-6">
+          {isPremiumLocked ? (
+            <Button
+              data-testid="start-review-button"
+              size="lg"
+              onClick={onUpgrade}
+              className="w-full bg-gradient-to-br from-amber-500 to-orange-600 text-white hover:from-amber-600 hover:to-orange-700"
+            >
+              <Lock className="mr-2 h-5 w-5" />
+              {t('detail.upgradeToPremium')}
+            </Button>
+          ) : deckStatus === 'not-started' ? (
+            <Button
+              data-testid="start-review-button"
+              size="lg"
+              onClick={onStartLearning}
+              className="w-full bg-gradient-to-br from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700"
+            >
+              <BookOpen className="mr-2 h-5 w-5" />
+              {t('detail.startReview')}
+            </Button>
+          ) : deckStatus === 'completed' ? (
+            <Button
+              data-testid="start-review-button"
+              size="lg"
+              onClick={onContinue}
+              className="w-full bg-gradient-to-br from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700"
+            >
+              <CheckCircle className="mr-2 h-5 w-5" />
+              {t('detail.reviewDeck')}
+            </Button>
+          ) : (
+            <Button
+              data-testid="start-review-button"
+              size="lg"
+              onClick={onContinue}
+              className="w-full bg-gradient-to-br from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700"
+            >
+              <TrendingUp className="mr-2 h-5 w-5" />
+              {t('detail.continueReview')}
+            </Button>
+          )}
+        </div>
       </CardContent>
     </Card>
   );
@@ -352,153 +405,6 @@ const StatCard: React.FC<StatCardProps> = ({ icon, label, value, subtext }) => {
       <p className="text-xl font-bold text-gray-900">{value}</p>
       <p className="mt-1 text-xs text-gray-500">{subtext}</p>
     </div>
-  );
-};
-
-// Action Buttons Section Component
-interface ActionButtonsSectionProps {
-  deck: Deck;
-  isPremiumLocked: boolean;
-  deckStatus: DeckStatus;
-  onStartLearning: () => void;
-  onContinue: () => void;
-  onUpgrade: () => void;
-}
-
-const ActionButtonsSection: React.FC<ActionButtonsSectionProps> = ({
-  deck,
-  isPremiumLocked,
-  deckStatus,
-  onStartLearning,
-  onContinue,
-  onUpgrade,
-}) => {
-  const { t } = useTranslation('deck');
-  const { reviewSession } = useDeckStore();
-  const [isSimulating, setIsSimulating] = useState(false);
-
-  // Handler for simulating a study session (demo/testing only)
-  const handleSimulateSession = async () => {
-    if (!deck.id) return;
-
-    setIsSimulating(true);
-    try {
-      // Simulate reviewing 10 cards with 80% accuracy in 15 minutes
-      await reviewSession(deck.id, 10, 8, 15);
-
-      // Show success toast/notification (optional)
-      log.info('Study session simulated successfully!');
-    } catch (error) {
-      reportAPIError(error, {
-        operation: 'simulateSession',
-        endpoint: `/decks/${deck.id}/session`,
-      });
-    } finally {
-      setIsSimulating(false);
-    }
-  };
-
-  return (
-    <Card>
-      <CardContent className="pt-6">
-        {/* Premium Locked State */}
-        {isPremiumLocked && (
-          <div className="py-8 text-center">
-            <Lock className="mx-auto mb-4 h-12 w-12 text-amber-500" />
-            <h3 className="mb-2 text-lg font-semibold text-gray-900">
-              {t('detail.premiumLocked.title')}
-            </h3>
-            <p className="mx-auto mb-6 max-w-md text-sm text-gray-600">
-              {t('detail.premiumLocked.description')}
-            </p>
-            <Button
-              size="lg"
-              onClick={onUpgrade}
-              className="bg-gradient-to-br from-amber-500 to-orange-600 text-white hover:from-amber-600 hover:to-orange-700"
-            >
-              {t('detail.upgradeToPremium')}
-            </Button>
-          </div>
-        )}
-
-        {/* Not Started State */}
-        {!isPremiumLocked && deckStatus === 'not-started' && (
-          <div className="py-8 text-center">
-            <BookOpen className="mx-auto mb-4 h-12 w-12 text-blue-500" />
-            <h3 className="mb-2 text-lg font-semibold text-gray-900">{t('detail.readyToStart')}</h3>
-            <p className="mx-auto mb-6 max-w-md text-sm text-gray-600">
-              {t('detail.notStarted.description', {
-                count: deck.cardCount,
-              })}
-            </p>
-            <Button
-              data-testid="start-review-button"
-              size="lg"
-              onClick={onStartLearning}
-              className="bg-gradient-to-br from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700"
-            >
-              {t('detail.startReview')}
-            </Button>
-          </div>
-        )}
-
-        {/* In Progress State */}
-        {!isPremiumLocked && deckStatus === 'in-progress' && (
-          <div className="py-8 text-center">
-            <TrendingUp className="mx-auto mb-4 h-12 w-12 text-green-500" />
-            <h3 className="mb-2 text-lg font-semibold text-gray-900">
-              {t('detail.continueProgress')}
-            </h3>
-            <p className="mx-auto mb-2 max-w-md text-sm text-gray-600">
-              {t('detail.inProgress.cardsDue', { count: deck.progress?.dueToday || 0 })}
-            </p>
-            <p className="mb-6 text-xs text-gray-500">{t('detail.inProgress.keepStreak')}</p>
-            <Button
-              data-testid="start-review-button"
-              size="lg"
-              onClick={onContinue}
-              className="bg-gradient-to-br from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700"
-            >
-              {t('detail.continueReview')}
-            </Button>
-
-            {/* Demo: Simulate Study Session Button */}
-            <div className="mt-4 border-t pt-4">
-              <p className="mb-2 text-xs text-gray-500">{t('detail.demo.title')}</p>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleSimulateSession}
-                disabled={isSimulating}
-              >
-                {isSimulating ? t('detail.demo.simulating') : t('detail.demo.simulateSession')}
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* Completed State */}
-        {!isPremiumLocked && deckStatus === 'completed' && (
-          <div className="py-8 text-center">
-            <CheckCircle className="mx-auto mb-4 h-12 w-12 text-purple-500" />
-            <h3 className="mb-2 text-lg font-semibold text-gray-900">
-              {t('detail.deckCompleted')}
-            </h3>
-            <p className="mx-auto mb-6 max-w-md text-sm text-gray-600">
-              {t('detail.completed.description')}
-            </p>
-            <Button
-              data-testid="start-review-button"
-              size="lg"
-              onClick={onContinue}
-              className="bg-gradient-to-br from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700"
-            >
-              {t('detail.reviewDeck')}
-            </Button>
-          </div>
-        )}
-      </CardContent>
-    </Card>
   );
 };
 

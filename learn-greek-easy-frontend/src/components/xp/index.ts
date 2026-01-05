@@ -15,7 +15,4 @@ export type { XPGainAnimationProps } from './XPGainAnimation';
 export { AchievementToast } from './AchievementToast';
 export type { AchievementToastProps } from './AchievementToast';
 
-export { LevelUpCelebration } from './LevelUpCelebration';
-export type { LevelUpCelebrationProps } from './LevelUpCelebration';
-
 export { AchievementNotificationManager } from './AchievementNotificationManager';
