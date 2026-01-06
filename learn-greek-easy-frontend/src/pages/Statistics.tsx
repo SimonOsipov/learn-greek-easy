@@ -140,7 +140,7 @@ const Statistics: React.FC = () => {
         </h2>
         <StatsGrid
           streak={currentStreak}
-          wordsLearned={stats.wordsLearned}
+          wordsLearned={analyticsData?.summary?.totalCardsReviewed ?? 0}
           totalXP={stats.totalXP}
           joinedDate={stats.joinedDate}
         />
