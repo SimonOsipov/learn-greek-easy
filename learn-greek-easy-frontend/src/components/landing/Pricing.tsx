@@ -120,7 +120,7 @@ const Pricing = () => {
                 {/* Founders badge */}
                 {plan.highlight && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                    <span className="flex items-center gap-1 rounded-full bg-amber-500 px-3 py-1 text-xs font-semibold text-white">
+                    <span className="flex items-center gap-1 rounded-full bg-amber-700 px-3 py-1 text-xs font-semibold text-white">
                       <Crown className="h-3 w-3" />
                       {t('pricing.badges.limited')}
                     </span>
@@ -167,7 +167,7 @@ const Pricing = () => {
                 <Button
                   variant={plan.buttonVariant}
                   className={`h-11 w-full font-semibold ${
-                    plan.highlight ? 'border-0 bg-amber-500 text-white hover:bg-amber-600' : ''
+                    plan.highlight ? 'border-0 bg-amber-700 text-white hover:bg-amber-800' : ''
                   }`}
                   data-testid="pricing-cta"
                 >

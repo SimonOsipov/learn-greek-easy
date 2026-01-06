@@ -183,7 +183,7 @@ const Features = () => {
   const QuizMockup = () => (
     <MockupWrapper>
       <div className="mb-3 flex items-center justify-between">
-        <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+        <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-900">
           {t('features.mockups.history')}
         </span>
         <span className="text-xs text-muted-foreground">
