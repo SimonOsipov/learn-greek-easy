@@ -112,7 +112,7 @@ const Features = () => {
         </span>
       </div>
       <div className="flex flex-1 flex-col justify-center rounded-xl bg-secondary/50 p-6 text-center">
-        <p className="mb-1 text-2xl font-bold text-foreground md:text-3xl">i eforia</p>
+        <p className="mb-1 text-2xl font-bold text-foreground md:text-3xl">η εφορία</p>
         <p className="text-sm text-muted-foreground">{t('features.mockups.tapToReveal')}</p>
       </div>
       <div className="my-3 flex flex-wrap gap-2">
@@ -166,7 +166,7 @@ const Features = () => {
           <span className="text-xs text-muted-foreground">0:48</span>
         </div>
         <p className="text-sm italic text-foreground">
-          "Kalimera, thelo kati gia ton ponokefalo..."
+          "Καλημέρα, θέλω κάτι για τον πονοκέφαλο..."
         </p>
       </div>
       <div className="mt-auto flex gap-3">
@@ -227,7 +227,7 @@ const Features = () => {
         </span>
       </div>
       <div className="flex flex-1 flex-col justify-center rounded-xl bg-secondary/50 p-6 text-center">
-        <p className="mb-1 text-3xl font-bold text-foreground md:text-4xl">kalimera</p>
+        <p className="mb-1 text-3xl font-bold text-foreground md:text-4xl">καλημέρα</p>
         <p className="text-sm text-muted-foreground">{t('features.mockups.tapToReveal')}</p>
       </div>
       <div className="my-3 flex flex-wrap gap-2">
@@ -266,25 +266,25 @@ const Features = () => {
         <span className="text-xs text-muted-foreground">{t('features.mockups.cases')}</span>
       </div>
       <div className="mb-3 rounded-xl bg-secondary/50 p-4 text-center">
-        <p className="text-2xl font-bold text-foreground">o filos</p>
+        <p className="text-2xl font-bold text-foreground">ο φίλος</p>
         <p className="mt-1 text-xs text-muted-foreground">{t('features.mockups.theFriendMasc')}</p>
       </div>
       <div className="grid flex-1 grid-cols-2 gap-2">
         <div className="rounded-lg bg-secondary/30 p-2 text-center">
           <p className="text-xs text-muted-foreground">{t('features.mockups.singular')}</p>
-          <p className="text-sm font-medium text-foreground">o filos</p>
+          <p className="text-sm font-medium text-foreground">ο φίλος</p>
         </div>
         <div className="rounded-lg bg-secondary/30 p-2 text-center">
           <p className="text-xs text-muted-foreground">{t('features.mockups.plural')}</p>
-          <p className="text-sm font-medium text-foreground">oi filoi</p>
+          <p className="text-sm font-medium text-foreground">οι φίλοι</p>
         </div>
         <div className="rounded-lg bg-secondary/30 p-2 text-center">
           <p className="text-xs text-muted-foreground">{t('features.mockups.accusative')}</p>
-          <p className="text-sm font-medium text-foreground">ton filo</p>
+          <p className="text-sm font-medium text-foreground">τον φίλο</p>
         </div>
         <div className="rounded-lg bg-secondary/30 p-2 text-center">
           <p className="text-xs text-muted-foreground">{t('features.mockups.genitive')}</p>
-          <p className="text-sm font-medium text-foreground">tou filou</p>
+          <p className="text-sm font-medium text-foreground">του φίλου</p>
         </div>
       </div>
       <button
@@ -305,25 +305,25 @@ const Features = () => {
         <span className="text-xs text-muted-foreground">{t('features.mockups.present')}</span>
       </div>
       <div className="mb-3 rounded-xl bg-secondary/50 p-4 text-center">
-        <p className="text-2xl font-bold text-foreground">milao</p>
+        <p className="text-2xl font-bold text-foreground">μιλάω</p>
         <p className="mt-1 text-xs text-muted-foreground">{t('features.mockups.toSpeak')}</p>
       </div>
       <div className="grid flex-1 grid-cols-2 gap-2">
         <div className="rounded-lg bg-secondary/30 p-2 text-center">
           <p className="text-xs text-muted-foreground">{t('features.mockups.iSpeak')}</p>
-          <p className="text-sm font-medium text-foreground">milao</p>
+          <p className="text-sm font-medium text-foreground">μιλάω</p>
         </div>
         <div className="rounded-lg bg-secondary/30 p-2 text-center">
           <p className="text-xs text-muted-foreground">{t('features.mockups.youSpeak')}</p>
-          <p className="text-sm font-medium text-foreground">milas</p>
+          <p className="text-sm font-medium text-foreground">μιλάς</p>
         </div>
         <div className="rounded-lg bg-secondary/30 p-2 text-center">
           <p className="text-xs text-muted-foreground">{t('features.mockups.heSheSpeak')}</p>
-          <p className="text-sm font-medium text-foreground">milaei</p>
+          <p className="text-sm font-medium text-foreground">μιλάει</p>
         </div>
         <div className="rounded-lg bg-secondary/30 p-2 text-center">
           <p className="text-xs text-muted-foreground">{t('features.mockups.weSpeak')}</p>
-          <p className="text-sm font-medium text-foreground">milame</p>
+          <p className="text-sm font-medium text-foreground">μιλάμε</p>
         </div>
       </div>
       <button
@@ -341,24 +341,24 @@ const Features = () => {
         <span className="rounded-full bg-teal-100 px-3 py-1 text-xs font-semibold text-teal-800">
           {t('features.mockups.tenses')}
         </span>
-        <span className="text-xs text-muted-foreground">grafo</span>
+        <span className="text-xs text-muted-foreground">γράφω</span>
       </div>
       <div className="mb-3 rounded-xl bg-secondary/50 p-4 text-center">
-        <p className="text-2xl font-bold text-foreground">grafo</p>
+        <p className="text-2xl font-bold text-foreground">γράφω</p>
         <p className="mt-1 text-xs text-muted-foreground">{t('features.mockups.toWrite')}</p>
       </div>
       <div className="flex-1 space-y-2">
         <div className="flex items-center justify-between rounded-lg bg-secondary/30 p-2">
           <span className="text-xs text-muted-foreground">{t('features.mockups.present')}</span>
-          <span className="text-sm font-medium text-foreground">grafo</span>
+          <span className="text-sm font-medium text-foreground">γράφω</span>
         </div>
         <div className="flex items-center justify-between rounded-lg bg-secondary/30 p-2">
           <span className="text-xs text-muted-foreground">{t('features.mockups.pastSimple')}</span>
-          <span className="text-sm font-medium text-foreground">egrapsa</span>
+          <span className="text-sm font-medium text-foreground">έγραψα</span>
         </div>
         <div className="flex items-center justify-between rounded-lg bg-secondary/30 p-2">
           <span className="text-xs text-muted-foreground">{t('features.mockups.future')}</span>
-          <span className="text-sm font-medium text-foreground">tha grapso</span>
+          <span className="text-sm font-medium text-foreground">θα γράψω</span>
         </div>
       </div>
       <button
@@ -379,7 +379,7 @@ const Features = () => {
       </div>
       <div className="mb-3 flex-1 rounded-xl bg-secondary/50 p-4">
         <p className="mb-2 text-sm font-medium text-foreground">
-          I kivernisi anakoinose nea metra...
+          Η κυβέρνηση ανακοίνωσε νέα μέτρα...
         </p>
         <p className="line-clamp-2 text-xs text-muted-foreground">
           {t('features.mockups.newsHeadline')}
