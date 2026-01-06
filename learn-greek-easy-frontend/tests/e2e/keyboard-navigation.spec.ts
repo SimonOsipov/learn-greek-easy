@@ -87,9 +87,12 @@ test.describe('Keyboard Navigation - Public Pages', () => {
     const hasError = (await page.locator('[role="alert"]').count()) > 0;
 
     // Form submission was attempted (not blocked)
-    expect(currentUrl === '/' || currentUrl.endsWith('/') || currentUrl.includes('/login')).toBe(
-      true
-    );
+    expect(
+      currentUrl === '/' ||
+        currentUrl.endsWith('/') ||
+        currentUrl.includes('/login') ||
+        currentUrl.includes('/dashboard')
+    ).toBe(true);
   });
 
   test('Focus visible styles should be present', async ({ page }) => {
@@ -113,6 +116,35 @@ test.describe('Keyboard Navigation - Public Pages', () => {
 
     expect(buttonHasFocusStyle).toBe(true);
   });
+
+  test('Landing page should have logical tab order', async ({ page, browserName }) => {
+    test.skip(browserName === 'webkit', 'Webkit has different tab order behavior');
+
+    await page.goto('/');
+    await expect(page.getByTestId('landing-page')).toBeVisible();
+
+    // Tab through header elements
+    await page.keyboard.press('Tab'); // First focusable element
+    await page.keyboard.press('Tab'); // Should be nav or button
+
+    // Verify focus is on an interactive element
+    const focused = await page.evaluate(() => document.activeElement?.tagName);
+    expect(['BUTTON', 'A', 'INPUT']).toContain(focused);
+  });
+
+  test('Landing page links should be keyboard accessible', async ({ page }) => {
+    await page.goto('/');
+
+    // Focus on login button via Tab
+    const loginButton = page.getByTestId('landing-login-button');
+    await loginButton.focus();
+
+    // Press Enter to navigate
+    await page.keyboard.press('Enter');
+
+    await page.waitForURL('/login');
+    await expect(page.getByTestId('login-card')).toBeVisible();
+  });
 });
 
 /**
@@ -130,7 +162,7 @@ test.describe('Keyboard Navigation - Protected Pages', () => {
     test.skip(browserName === 'webkit', 'Webkit has different tab focus behavior');
 
     // Navigate to dashboard - storageState handles auth
-    await page.goto('/');
+    await page.goto('/dashboard');
 
     // CRITICAL: Verify we're authenticated and not redirected to login
     const currentUrl = page.url();

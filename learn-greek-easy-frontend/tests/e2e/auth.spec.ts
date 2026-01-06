@@ -82,7 +82,7 @@ test.describe('Unauthenticated - Login & Register Forms', () => {
     page,
   }) => {
     // Try to access protected routes
-    const protectedRoutes = ['/', '/decks', '/profile'];
+    const protectedRoutes = ['/dashboard', '/decks', '/profile'];
 
     for (const route of protectedRoutes) {
       await page.goto(route);
@@ -106,12 +106,12 @@ test.describe('Unauthenticated - Login & Register Forms', () => {
     // Submit form using test ID
     await page.getByTestId('login-submit').click();
 
-    // Wait for redirect to dashboard at root (with increased timeout for real API)
-    await page.waitForURL('/', { timeout: 15000 });
+    // Wait for redirect to dashboard (with increased timeout for real API)
+    await page.waitForURL('/dashboard', { timeout: 15000 });
 
-    // Verify we're on dashboard (root path)
+    // Verify we're on dashboard
     const currentUrl = page.url();
-    expect(currentUrl.endsWith('/') || currentUrl.match(/\/$/)).toBeTruthy();
+    expect(currentUrl.includes('/dashboard')).toBeTruthy();
   });
 
   test('E2E-01.2: Login fails with invalid credentials', async ({ page }) => {
@@ -158,7 +158,7 @@ test.describe('Authenticated - Protected Routes & Logout', () => {
 
   test('should access protected routes when authenticated', async ({ page }) => {
     // Navigate to dashboard - should work with pre-loaded auth
-    await page.goto('/');
+    await page.goto('/dashboard');
     await expect(page).not.toHaveURL(/\/login/);
     await expect(page.getByRole('heading', { name: /dashboard/i })).toBeVisible({ timeout: 15000 });
 
@@ -175,7 +175,7 @@ test.describe('Authenticated - Protected Routes & Logout', () => {
 
   test('should maintain authentication state after page reload', async ({ page }) => {
     // Navigate to dashboard
-    await page.goto('/');
+    await page.goto('/dashboard');
     await expect(page).not.toHaveURL(/\/login/);
     await expect(page.getByRole('heading', { name: /dashboard/i })).toBeVisible({ timeout: 15000 });
 
@@ -189,7 +189,7 @@ test.describe('Authenticated - Protected Routes & Logout', () => {
 
   test('E2E-01.3: User can log out successfully', async ({ page }) => {
     // Navigate to dashboard (auth state already loaded)
-    await page.goto('/');
+    await page.goto('/dashboard');
 
     // Wait for page to be ready
     await page.waitForLoadState('domcontentloaded');

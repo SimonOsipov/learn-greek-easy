@@ -138,7 +138,7 @@ export function SessionSummaryPage() {
             <AlertDescription>{t('session.invalidDeckId')}</AlertDescription>
           </Alert>
           <div className="mt-4">
-            <Button onClick={() => navigate('/')}>{t('session.goToDashboard')}</Button>
+            <Button onClick={() => navigate('/dashboard')}>{t('session.goToDashboard')}</Button>
           </div>
         </div>
       </div>
@@ -155,7 +155,7 @@ export function SessionSummaryPage() {
   };
 
   const handleDashboard = () => {
-    navigate('/');
+    navigate('/dashboard');
   };
 
   // Main render

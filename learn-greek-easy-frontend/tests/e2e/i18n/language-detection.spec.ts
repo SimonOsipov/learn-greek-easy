@@ -18,13 +18,13 @@ test.describe('Language Detection', () => {
     const page = await context.newPage();
 
     // Clear any localStorage that might have language preference
-    await page.goto('/');
+    await page.goto('/login');
     await page.evaluate(() => localStorage.removeItem('i18nextLng'));
     await page.reload();
     await page.waitForLoadState('networkidle');
 
     // Check for English text on login page
-    // Since we're not authenticated, we'll see login page
+    // Navigate to login page to see login form
     await expect(page.getByTestId('login-card')).toBeVisible({ timeout: 10000 });
     await expect(page.getByTestId('login-title')).toHaveText('Welcome Back');
 
@@ -38,7 +38,7 @@ test.describe('Language Detection', () => {
     const page = await context.newPage();
 
     // Clear localStorage to ensure detection happens
-    await page.goto('/');
+    await page.goto('/login');
     await page.evaluate(() => localStorage.removeItem('i18nextLng'));
     await page.reload();
 
@@ -59,7 +59,7 @@ test.describe('Language Detection', () => {
     const page = await context.newPage();
 
     // Clear localStorage to ensure detection happens
-    await page.goto('/');
+    await page.goto('/login');
     await page.evaluate(() => localStorage.removeItem('i18nextLng'));
     await page.reload();
 
@@ -82,7 +82,7 @@ test.describe('Language Detection', () => {
     const page = await context.newPage();
 
     // Clear localStorage
-    await page.goto('/');
+    await page.goto('/login');
     await page.evaluate(() => localStorage.removeItem('i18nextLng'));
     await page.reload();
     await page.waitForLoadState('networkidle');
@@ -103,7 +103,7 @@ test.describe('Language Detection', () => {
     const page = await context.newPage();
 
     // Clear localStorage
-    await page.goto('/');
+    await page.goto('/login');
     await page.evaluate(() => localStorage.removeItem('i18nextLng'));
     await page.reload();
     await page.waitForLoadState('networkidle');
@@ -122,7 +122,7 @@ test.describe('Language Detection', () => {
     const page = await context.newPage();
 
     // Clear localStorage
-    await page.goto('/');
+    await page.goto('/login');
     await page.evaluate(() => localStorage.removeItem('i18nextLng'));
     await page.reload();
     await page.waitForLoadState('networkidle');
@@ -141,7 +141,7 @@ test.describe('Language Detection', () => {
     const page = await context.newPage();
 
     // Clear localStorage
-    await page.goto('/');
+    await page.goto('/login');
     await page.evaluate(() => localStorage.removeItem('i18nextLng'));
     await page.reload();
     await page.waitForLoadState('networkidle');
@@ -164,7 +164,7 @@ test.describe('Language Priority', () => {
     const page = await context.newPage();
 
     // Navigate and set localStorage to English
-    await page.goto('/');
+    await page.goto('/login');
     await page.evaluate(() => localStorage.setItem('i18nextLng', 'en'));
     await page.reload();
     await page.waitForLoadState('networkidle');
@@ -183,7 +183,7 @@ test.describe('Language Priority', () => {
     const page = await context.newPage();
 
     // Navigate and clear any stored language
-    await page.goto('/');
+    await page.goto('/login');
     await page.evaluate(() => localStorage.removeItem('i18nextLng'));
     await page.reload();
     await page.waitForLoadState('networkidle');

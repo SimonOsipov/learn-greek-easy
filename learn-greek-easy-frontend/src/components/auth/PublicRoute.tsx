@@ -32,7 +32,7 @@ export const PublicRoute: React.FC<PublicRouteProps> = ({ redirectTo, children }
   // Redirect authenticated users away from public pages
   useEffect(() => {
     if (isAuthenticated) {
-      const from = location.state?.from || redirectTo || '/';
+      const from = location.state?.from || redirectTo || '/dashboard';
       navigate(from, { replace: true });
     }
   }, [isAuthenticated, location.state?.from, redirectTo, navigate]);

@@ -82,7 +82,7 @@ export const Login: React.FC = () => {
       await login(data.email, data.password, data.rememberMe);
 
       // Check if there's a saved location to return to
-      const from = location.state?.from || '/';
+      const from = location.state?.from || '/dashboard';
       navigate(from, { replace: true });
     } catch (err) {
       // Display API error at form level
@@ -229,7 +229,7 @@ export const Login: React.FC = () => {
             <GoogleSignInButton
               disabled={isFormDisabled}
               onSuccess={() => {
-                const from = location.state?.from || '/';
+                const from = location.state?.from || '/dashboard';
                 navigate(from, { replace: true });
               }}
               onError={(error) => setFormError(error)}

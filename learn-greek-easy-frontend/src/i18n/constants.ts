@@ -38,6 +38,7 @@ export const NAMESPACES = [
   'feedback', // Feedback submission/voting
   'culture', // Culture exam practice
   'admin', // Admin dashboard and statistics
+  'landing', // Landing page
 ] as const;
 
 export type Namespace = (typeof NAMESPACES)[number];

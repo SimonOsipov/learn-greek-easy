@@ -24,6 +24,17 @@
     --input: 240 5.9% 90%;
     --ring: 240 5.9% 10%;
     --radius: 0.625rem;
+
+    /* Landing page custom tokens */
+    --landing-navy: 240 27% 14%;
+    --landing-greek-blue: 212 85% 37%;
+    --landing-greek-blue-light: 212 85% 95%;
+    --landing-gold: 45 93% 58%;
+
+    /* Landing page shadows */
+    --landing-shadow-card: 0 0 0 1px hsl(var(--border)), 0 4px 12px hsl(240 27% 14% / 0.04);
+    --landing-shadow-card-hover:
+      0 0 0 1px hsl(var(--landing-greek-blue) / 0.2), 0 8px 24px hsl(240 27% 14% / 0.08);
   }
 
   .dark {
