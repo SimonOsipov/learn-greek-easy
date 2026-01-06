@@ -12,6 +12,7 @@ import { StatsGrid, LevelProgressCard, ActivityTimeline } from '@/components/sta
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useAnalytics } from '@/hooks/useAnalytics';
 import { useAuth } from '@/hooks/useAuth';
 
 /**
@@ -80,6 +81,7 @@ const StatisticsLoadingSkeleton: React.FC = () => (
 const Statistics: React.FC = () => {
   const { t } = useTranslation('statistics');
   const { user, isLoading } = useAuth();
+  const { data: analyticsData } = useAnalytics(true); // Auto-load analytics on mount
 
   // Show loading skeleton while user data is loading
   if (isLoading) {
@@ -120,6 +122,9 @@ const Statistics: React.FC = () => {
   // Extract stats from user
   const { stats } = user;
 
+  // Get streak from analytics data (fetched from backend API)
+  const currentStreak = analyticsData?.streak?.currentStreak ?? 0;
+
   return (
     <div className="space-y-6 pb-8" data-testid="statistics-page">
       {/* Page Header */}
@@ -134,7 +139,7 @@ const Statistics: React.FC = () => {
           {t('page.learningStats')}
         </h2>
         <StatsGrid
-          streak={stats.streak}
+          streak={currentStreak}
           wordsLearned={stats.wordsLearned}
           totalXP={stats.totalXP}
           joinedDate={stats.joinedDate}
