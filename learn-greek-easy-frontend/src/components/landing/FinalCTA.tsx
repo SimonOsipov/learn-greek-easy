@@ -1,4 +1,4 @@
-import { ArrowRight, BookOpen } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import ctaImage from '@/assets/landing/limassol-cta.webp';
@@ -41,24 +41,13 @@ const FinalCTA = () => {
             {t('finalCta.subtitle')}
           </p>
 
-          <div
-            className="flex flex-col items-center justify-center gap-4 motion-safe:animate-fade-up sm:flex-row"
-            style={{ animationDelay: '0.3s' }}
-          >
+          <div className="motion-safe:animate-fade-up" style={{ animationDelay: '0.3s' }}>
             <Button
               size="xl"
               className="group bg-background text-foreground shadow-lg hover:bg-background/90"
             >
               {t('finalCta.primaryCta')}
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-            </Button>
-            <Button
-              size="xl"
-              variant="ghost"
-              className="border border-background/20 text-background hover:bg-background/10"
-            >
-              <BookOpen className="h-4 w-4" />
-              {t('finalCta.secondaryCta')}
             </Button>
           </div>
         </div>
