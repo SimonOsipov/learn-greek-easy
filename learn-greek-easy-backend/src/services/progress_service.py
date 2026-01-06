@@ -202,9 +202,7 @@ class ProgressService:
         vocab_stats = await self.review_repo.get_accuracy_stats(user_id, days=days)
 
         # Get culture accuracy stats
-        culture_stats = await self.culture_stats_repo.get_culture_accuracy_stats(
-            user_id, days=days
-        )
+        culture_stats = await self.culture_stats_repo.get_culture_accuracy_stats(user_id, days=days)
 
         # Combine totals
         total_correct = vocab_stats["correct"] + culture_stats["correct"]

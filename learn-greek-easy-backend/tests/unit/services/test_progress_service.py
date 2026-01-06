@@ -150,9 +150,7 @@ class TestProgressServiceDashboard:
         service.review_repo.get_accuracy_stats = AsyncMock(
             return_value={"correct": 80, "total": 100}
         )
-        service.review_repo.get_dates_with_vocab_activity = AsyncMock(
-            return_value=[date.today()]
-        )
+        service.review_repo.get_dates_with_vocab_activity = AsyncMock(return_value=[date.today()])
         service.stats_repo.count_by_status = AsyncMock(
             return_value={"new": 50, "learning": 35, "review": 45, "mastered": 45, "due": 12}
         )
@@ -197,7 +195,9 @@ class TestProgressServiceDashboard:
         service.review_repo.get_streak = AsyncMock(return_value=7)
         service.review_repo.get_longest_streak = AsyncMock(return_value=14)
         service.review_repo.get_daily_stats = AsyncMock(return_value=[])
-        service.review_repo.get_accuracy_stats = AsyncMock(return_value={"correct": 80, "total": 100})
+        service.review_repo.get_accuracy_stats = AsyncMock(
+            return_value={"correct": 80, "total": 100}
+        )
         # 7 consecutive days of vocab activity
         service.review_repo.get_dates_with_vocab_activity = AsyncMock(
             return_value=[today - timedelta(days=i) for i in range(7)]
