@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 
+import { LanguageSwitcher } from '@/components/i18n/LanguageSwitcher';
 import { Button } from '@/components/ui/button';
 
 const Header = () => {
@@ -33,14 +34,15 @@ const Header = () => {
             {t('header.nav.pricing')}
           </a>
           <a
-            href="#about"
+            href="#faq"
             className="text-lg text-muted-foreground transition-colors hover:text-foreground"
           >
-            {t('header.nav.aboutUs')}
+            {t('header.nav.faq')}
           </a>
         </nav>
 
         <div className="flex items-center gap-3">
+          <LanguageSwitcher variant="icon" data-testid="landing-language-switcher" />
           <Button
             variant="ghost"
             className="hidden text-lg sm:inline-flex"

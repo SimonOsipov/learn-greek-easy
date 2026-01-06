@@ -4,7 +4,7 @@
     "nav": {
       "features": "Features",
       "pricing": "Pricing",
-      "aboutUs": "About Us"
+      "faq": "FAQ"
     },
     "cta": {
       "login": "Log In",
@@ -106,16 +106,13 @@
       "cases": "Cases",
       "myDecks": "My Decks",
       "greetings": "Greetings",
-      "a1Level": "A1 Level",
-      "a2Level": "A2 Level",
       "taxAuthority": "Tax Authority",
       "workVocabulary": "Work Vocabulary",
       "restaurantPhrases": "Restaurant Phrases",
       "progress80": "80%",
       "progress65": "65%",
       "independenceQuestion": "When did Greece gain independence from the Ottoman Empire?",
-      "newsHeadline": "The government announced new measures for the economy, focusing on support for small businesses.",
-      "pharmacyDialog": "\"Kalimera, thelo kati gia ton ponokefalo...\""
+      "newsHeadline": "The government announced new measures for the economy, focusing on support for small businesses."
     }
   },
   "pricing": {
@@ -275,14 +272,13 @@
     "title": "Your citizenship journey starts with the right foundation",
     "subtitle": "Stop wasting time with scattered resources. Get a structured path to Greek fluency.",
     "primaryCta": "Start Free Trial",
-    "secondaryCta": "View Lesson Preview",
     "imageAlt": "Limassol cityscape with Mediterranean Sea"
   },
   "footer": {
     "brandName": "Greekly",
     "nav": {
-      "about": "About",
       "pricing": "Pricing",
+      "faq": "FAQ",
       "contact": "Contact",
       "privacy": "Privacy"
     },

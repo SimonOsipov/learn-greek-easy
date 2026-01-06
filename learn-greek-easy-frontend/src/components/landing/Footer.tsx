@@ -18,16 +18,16 @@ const Footer = () => {
           {/* Links */}
           <nav className="flex items-center gap-8" data-testid="footer-links">
             <a
-              href="#"
-              className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-            >
-              {t('footer.nav.about')}
-            </a>
-            <a
-              href="#"
+              href="#pricing"
               className="text-sm text-muted-foreground transition-colors hover:text-foreground"
             >
               {t('footer.nav.pricing')}
+            </a>
+            <a
+              href="#faq"
+              className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+            >
+              {t('footer.nav.faq')}
             </a>
             <a
               href="#"

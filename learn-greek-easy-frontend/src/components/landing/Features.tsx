@@ -16,6 +16,8 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import { getCEFRColor, getCEFRTextColor } from '@/lib/cefrColors';
+
 interface Feature {
   icon: ReactNode;
   titleKey: string;
@@ -117,8 +119,10 @@ const Features = () => {
         <span className="rounded bg-secondary px-2 py-1 text-xs">
           {t('features.mockups.taxAuthority')}
         </span>
-        <span className="rounded bg-secondary px-2 py-1 text-xs">
-          {t('features.mockups.a2Level')}
+        <span
+          className={`rounded px-2 py-1 text-xs font-semibold ${getCEFRColor('A2')} ${getCEFRTextColor('A2')}`}
+        >
+          A2
         </span>
       </div>
       <div className="mt-auto flex gap-3">
@@ -161,7 +165,9 @@ const Features = () => {
           </div>
           <span className="text-xs text-muted-foreground">0:48</span>
         </div>
-        <p className="text-sm italic text-foreground">{t('features.mockups.pharmacyDialog')}</p>
+        <p className="text-sm italic text-foreground">
+          "Kalimera, thelo kati gia ton ponokefalo..."
+        </p>
       </div>
       <div className="mt-auto flex gap-3">
         <button
@@ -228,8 +234,10 @@ const Features = () => {
         <span className="rounded bg-secondary px-2 py-1 text-xs">
           {t('features.mockups.greetings')}
         </span>
-        <span className="rounded bg-secondary px-2 py-1 text-xs">
-          {t('features.mockups.a1Level')}
+        <span
+          className={`rounded px-2 py-1 text-xs font-semibold ${getCEFRColor('A1')} ${getCEFRTextColor('A1')}`}
+        >
+          A1
         </span>
       </div>
       <div className="mt-auto flex gap-3">
