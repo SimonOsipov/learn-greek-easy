@@ -249,7 +249,7 @@ const transformToAnalyticsDashboardData = (
     summary: {
       totalCardsReviewed: dashboard.overview.total_cards_studied,
       totalTimeStudied: dashboard.today.study_time_seconds,
-      averageAccuracy: dashboard.overview.overall_mastery_percentage,
+      averageAccuracy: dashboard.overview.accuracy_percentage ?? dashboard.overview.overall_mastery_percentage,
       cardsNewlyMastered: dashboard.overview.total_cards_mastered,
     },
     streak,

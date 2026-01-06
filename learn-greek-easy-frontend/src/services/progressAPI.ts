@@ -24,6 +24,7 @@ export interface OverviewStats {
   total_cards_mastered: number;
   total_decks_started: number;
   overall_mastery_percentage: number;
+  accuracy_percentage?: number;
 }
 
 /**
