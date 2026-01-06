@@ -163,9 +163,7 @@
         "features": [
           "Everything in Monthly Premium",
           "2+ months free",
-          "Early access to new features",
-          "Offline mode (coming soon)",
-          "Certificate upon completion"
+          "Early access to new features"
         ]
       },
       "founders": {
@@ -179,7 +177,6 @@
           "Lifetime updates included",
           "Founders badge on profile",
           "Direct input on new features",
-          "Exclusive founders community",
           "Support our mission"
         ]
       }
@@ -268,7 +265,7 @@
     }
   },
   "finalCta": {
-    "title": "Your citizenship journey starts with the right foundation",
+    "title": "Your Greek journey starts with the right foundation",
     "subtitle": "Stop wasting time with scattered resources. Get a structured path to Greek fluency.",
     "primaryCta": "Start Free Trial",
     "imageAlt": "Limassol cityscape with Mediterranean Sea"
@@ -276,6 +273,7 @@
   "footer": {
     "brandName": "Greekly",
     "nav": {
+      "features": "Features",
       "pricing": "Pricing",
       "faq": "FAQ",
       "contact": "Contact",
@@ -283,6 +281,6 @@
     },
     "language": "English",
     "languageCode": "EN",
-    "copyright": "{{year}} Greekly. Made with care for future Greek citizens."
+    "copyright": "{{year}} Greekly. Made with care and souvlaki for Greek / Cypriot learners"
   }
 }

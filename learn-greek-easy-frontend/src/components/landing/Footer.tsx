@@ -18,6 +18,12 @@ const Footer = () => {
           {/* Links */}
           <nav className="flex items-center gap-8" data-testid="footer-links">
             <a
+              href="#features"
+              className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+            >
+              {t('footer.nav.features')}
+            </a>
+            <a
               href="#pricing"
               className="text-sm text-muted-foreground transition-colors hover:text-foreground"
             >
@@ -42,12 +48,6 @@ const Footer = () => {
               {t('footer.nav.privacy')}
             </a>
           </nav>
-
-          {/* Language hint */}
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <span>{t('footer.languageCode')}</span>
-            <span>{t('footer.language')}</span>
-          </div>
         </div>
 
         {/* Copyright */}
