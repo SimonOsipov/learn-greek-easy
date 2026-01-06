@@ -115,8 +115,12 @@ test.describe('Authenticated Language Sync', () => {
     await confirmButton.waitFor({ state: 'visible', timeout: 5000 });
     await confirmButton.click();
 
-    // Wait for redirect to login page
-    await page.waitForURL('**/login**', { timeout: 10000 });
+    // Wait for redirect to landing page (logout now goes to / instead of /login)
+    await page.waitForURL('/', { timeout: 10000 });
+    await page.waitForLoadState('networkidle');
+
+    // Navigate to login page to re-authenticate
+    await page.goto('/login');
     await page.waitForLoadState('networkidle');
 
     // Wait for login form to be ready before attempting login
