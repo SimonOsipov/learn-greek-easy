@@ -30,6 +30,7 @@ from src.repositories import (
     ReviewRepository,
     UserDeckProgressRepository,
 )
+from src.repositories.culture_question_stats import CultureQuestionStatsRepository
 from src.schemas.progress import (
     Achievement,
     AchievementsResponse,
@@ -86,6 +87,7 @@ class ProgressService:
         self.review_repo = ReviewRepository(db)
         self.deck_repo = DeckRepository(db)
         self.card_repo = CardRepository(db)
+        self.culture_stats_repo = CultureQuestionStatsRepository(db)
 
     # =========================================================================
     # Helper Methods
@@ -182,6 +184,78 @@ class ProgressService:
         seconds = cards_due * self.AVG_TIME_PER_CARD_SECONDS
         return math.ceil(seconds / 60)
 
+    async def _calculate_combined_accuracy(
+        self,
+        user_id: UUID,
+        days: int = 30,
+    ) -> float:
+        """Calculate combined accuracy percentage from vocab and culture.
+
+        Args:
+            user_id: User UUID
+            days: Number of days to look back
+
+        Returns:
+            Combined accuracy percentage (0.0-100.0)
+        """
+        # Get vocab accuracy stats
+        vocab_stats = await self.review_repo.get_accuracy_stats(user_id, days=days)
+
+        # Get culture accuracy stats
+        culture_stats = await self.culture_stats_repo.get_culture_accuracy_stats(
+            user_id, days=days
+        )
+
+        # Combine totals
+        total_correct = vocab_stats["correct"] + culture_stats["correct"]
+        total_answers = vocab_stats["total"] + culture_stats["total"]
+
+        # Calculate combined accuracy, handle zero division
+        if total_answers == 0:
+            return 0.0
+
+        return round((total_correct / total_answers) * 100, 1)
+
+    async def _calculate_combined_streak(self, user_id: UUID) -> int:
+        """Calculate current streak from combined vocab and culture activity.
+
+        Streak is count of consecutive days (from today backwards) with
+        activity in either vocab reviews or culture questions.
+
+        Args:
+            user_id: User UUID
+
+        Returns:
+            Current streak in days
+        """
+        # Get unique dates from both activity sources
+        vocab_dates = await self.review_repo.get_dates_with_vocab_activity(user_id, days=30)
+        culture_dates = await self.culture_stats_repo.get_dates_with_culture_activity(
+            user_id, days=30
+        )
+
+        # Combine and deduplicate dates
+        all_dates = set(vocab_dates) | set(culture_dates)
+
+        if not all_dates:
+            return 0
+
+        # Sort descending (most recent first)
+        sorted_dates = sorted(all_dates, reverse=True)
+
+        # Count consecutive days from today
+        streak = 0
+        current_date = date.today()
+
+        for activity_date in sorted_dates:
+            if activity_date == current_date:
+                streak += 1
+                current_date -= timedelta(days=1)
+            else:
+                break
+
+        return streak
+
     # =========================================================================
     # Dashboard Stats
     # =========================================================================
@@ -189,10 +263,10 @@ class ProgressService:
     async def get_dashboard_stats(self, user_id: UUID) -> DashboardStatsResponse:
         """Get complete dashboard statistics for a user.
 
-        Aggregates:
-        - Overview: total studied, mastered, decks started
-        - Today: reviews completed, cards due, goal progress
-        - Streak: current and longest streak
+        Aggregates vocab and culture data:
+        - Overview: total studied, mastered (vocab + culture), decks started, accuracy
+        - Today: reviews completed, cards due (vocab + culture), goal progress
+        - Streak: combined current streak and longest streak
         - Cards by status: breakdown of card statuses
         - Recent activity: last 7 days of reviews
 
@@ -207,27 +281,44 @@ class ProgressService:
             extra={"user_id": str(user_id)},
         )
 
-        # Get overview stats
-        total_studied = await self.progress_repo.get_total_cards_studied(user_id)
-        total_mastered = await self.progress_repo.get_total_cards_mastered(user_id)
+        # Get vocab overview stats
+        vocab_studied = await self.progress_repo.get_total_cards_studied(user_id)
+        vocab_mastered = await self.progress_repo.get_total_cards_mastered(user_id)
         total_decks = await self.progress_repo.count_user_decks(user_id)
 
+        # Get culture stats for aggregation
+        culture_mastered = await self.culture_stats_repo.count_mastered_questions(user_id)
+        culture_due = await self.culture_stats_repo.count_due_questions(user_id)
+
+        # Combine vocab + culture totals
+        total_mastered = vocab_mastered + culture_mastered
+
         mastery_percentage = 0.0
-        if total_studied > 0:
-            mastery_percentage = min((total_mastered / total_studied) * 100, 100.0)
+        if vocab_studied > 0:
+            mastery_percentage = min((total_mastered / vocab_studied) * 100, 100.0)
+
+        # Calculate combined accuracy
+        accuracy_percentage = await self._calculate_combined_accuracy(user_id, days=30)
 
         overview = OverviewStats(
-            total_cards_studied=total_studied,
+            total_cards_studied=vocab_studied,
             total_cards_mastered=total_mastered,
             total_decks_started=total_decks,
             overall_mastery_percentage=round(mastery_percentage, 1),
+            accuracy_percentage=accuracy_percentage,
         )
 
         # Get today's stats
         reviews_today = await self.review_repo.count_reviews_today(user_id)
-        study_time_today = await self.review_repo.get_study_time_today(user_id)
+        vocab_study_time_today = await self.review_repo.get_study_time_today(user_id)
+        culture_study_time_today = await self.culture_stats_repo.get_culture_study_time_seconds(
+            user_id, today_only=True
+        )
+        study_time_today = vocab_study_time_today + culture_study_time_today
+
         status_counts = await self.stats_repo.count_by_status(user_id)
-        cards_due = status_counts.get("due", 0)
+        vocab_due = status_counts.get("due", 0)
+        cards_due = vocab_due + culture_due
 
         goal_progress = min((reviews_today / self.DEFAULT_DAILY_GOAL) * 100, 100.0)
 
@@ -239,8 +330,8 @@ class ProgressService:
             study_time_seconds=study_time_today,
         )
 
-        # Get streak stats
-        current_streak = await self.review_repo.get_streak(user_id)
+        # Get streak stats - use combined streak
+        current_streak = await self._calculate_combined_streak(user_id)
         longest_streak = await self.review_repo.get_longest_streak(user_id)
 
         # Get last study date from progress records
@@ -262,7 +353,7 @@ class ProgressService:
             "Dashboard stats built successfully",
             extra={
                 "user_id": str(user_id),
-                "total_studied": total_studied,
+                "total_studied": vocab_studied,
                 "total_mastered": total_mastered,
                 "reviews_today": reviews_today,
                 "current_streak": current_streak,
