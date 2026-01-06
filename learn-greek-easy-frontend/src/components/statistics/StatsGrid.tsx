@@ -63,12 +63,6 @@ export const StatsGrid: React.FC<StatsGridProps> = ({
   // Calculate average words per day
   const avgWordsPerDay = daysSinceJoining > 0 ? Math.round(wordsLearned / daysSinceJoining) : 0;
 
-  // Calculate level from XP (1000 XP per level)
-  const xpPerLevel = 1000;
-  const level = Math.floor(totalXP / xpPerLevel) || 1;
-  const currentLevelXP = totalXP % xpPerLevel;
-  const progressPercent = (currentLevelXP / xpPerLevel) * 100;
-
   return (
     <div className={cn('grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3', className)}>
       {/* Streak Card */}
@@ -122,9 +116,6 @@ export const StatsGrid: React.FC<StatsGridProps> = ({
         </CardHeader>
         <CardContent>
           <div className="text-3xl font-bold text-foreground">{totalXP.toLocaleString()}</div>
-          <p className="mt-2 text-xs text-muted-foreground">
-            {t('stats.level', { level, percent: Math.round(progressPercent) })}
-          </p>
         </CardContent>
       </Card>
     </div>

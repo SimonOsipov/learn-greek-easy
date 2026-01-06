@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 
 import { useTranslation } from 'react-i18next';
 
@@ -14,6 +14,7 @@ import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import { useAuth } from '@/hooks/useAuth';
+import { useXPStore, selectXPStats } from '@/stores/xpStore';
 
 /**
  * Loading skeleton for the statistics page
@@ -82,6 +83,13 @@ const Statistics: React.FC = () => {
   const { t } = useTranslation('statistics');
   const { user, isLoading } = useAuth();
   const { data: analyticsData } = useAnalytics(true); // Auto-load analytics on mount
+  const xpStats = useXPStore(selectXPStats);
+  const loadXPStats = useXPStore((state) => state.loadXPStats);
+
+  // Load XP stats on mount
+  useEffect(() => {
+    loadXPStats();
+  }, [loadXPStats]);
 
   // Show loading skeleton while user data is loading
   if (isLoading) {
@@ -141,13 +149,13 @@ const Statistics: React.FC = () => {
         <StatsGrid
           streak={currentStreak}
           wordsLearned={analyticsData?.summary?.totalCardsReviewed ?? 0}
-          totalXP={stats.totalXP}
+          totalXP={xpStats?.total_xp ?? 0}
           joinedDate={stats.joinedDate}
         />
       </section>
 
       {/* Level Progress */}
-      <LevelProgressCard totalXP={stats.totalXP} />
+      <LevelProgressCard totalXP={xpStats?.total_xp ?? 0} />
 
       <Separator />
 
