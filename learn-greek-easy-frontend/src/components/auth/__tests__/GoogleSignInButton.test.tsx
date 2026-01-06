@@ -121,14 +121,14 @@ describe('GoogleSignInButton', () => {
       expect(screen.getByText('Loading Google Sign-In...')).toBeInTheDocument();
 
       // Fast-forward past the timeout (10 seconds)
+      // Using act to ensure React processes all state updates
       await act(async () => {
         vi.advanceTimersByTime(10001);
       });
 
-      // Should now show unavailable
-      await waitFor(() => {
-        expect(screen.getByText('Google Sign-In unavailable')).toBeInTheDocument();
-      });
+      // After advancing fake timers, state should already be updated
+      // No waitFor needed - the setTimeout callback has already fired
+      expect(screen.getByText('Google Sign-In unavailable')).toBeInTheDocument();
 
       vi.useRealTimers();
     });
@@ -138,8 +138,10 @@ describe('GoogleSignInButton', () => {
     it('shows disabled button with Google icon when disabled prop is true', () => {
       render(<GoogleSignInButton disabled />);
 
-      const button = screen.getByTestId('google-signin-button').querySelector('button');
-      expect(button).toBeDisabled();
+      // In disabled state, data-testid IS the button element (not a wrapper)
+      const buttonElement = screen.getByTestId('google-signin-button');
+      expect(buttonElement.tagName).toBe('BUTTON');
+      expect(buttonElement).toBeDisabled();
       expect(screen.getByText('Continue with Google')).toBeInTheDocument();
     });
 
@@ -151,8 +153,10 @@ describe('GoogleSignInButton', () => {
 
       render(<GoogleSignInButton />);
 
-      const button = screen.getByTestId('google-signin-button').querySelector('button');
-      expect(button).toBeDisabled();
+      // In loading state, data-testid IS the button element (not a wrapper)
+      const buttonElement = screen.getByTestId('google-signin-button');
+      expect(buttonElement.tagName).toBe('BUTTON');
+      expect(buttonElement).toBeDisabled();
     });
 
     it('shows signing in state during Google login', async () => {
