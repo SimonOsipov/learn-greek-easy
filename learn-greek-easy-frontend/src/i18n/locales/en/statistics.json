@@ -26,6 +26,7 @@
     "title": "Level {{level}}",
     "xpProgress": "{{current}} / {{total}} XP",
     "xpToNext": "{{xp}} XP to Level {{level}}",
+    "maxLevel": "Max Level!",
     "description": "Keep learning to earn more XP and level up! Each lesson, quiz, and review session contributes to your progress."
   },
   "achievements": {

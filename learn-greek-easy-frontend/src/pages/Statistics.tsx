@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 
 import { useTranslation } from 'react-i18next';
 
@@ -12,7 +12,9 @@ import { StatsGrid, LevelProgressCard, ActivityTimeline } from '@/components/sta
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useAnalytics } from '@/hooks/useAnalytics';
 import { useAuth } from '@/hooks/useAuth';
+import { useXPStore, selectXPStats } from '@/stores/xpStore';
 
 /**
  * Loading skeleton for the statistics page
@@ -80,6 +82,14 @@ const StatisticsLoadingSkeleton: React.FC = () => (
 const Statistics: React.FC = () => {
   const { t } = useTranslation('statistics');
   const { user, isLoading } = useAuth();
+  const { data: analyticsData } = useAnalytics(true); // Auto-load analytics on mount
+  const xpStats = useXPStore(selectXPStats);
+  const loadXPStats = useXPStore((state) => state.loadXPStats);
+
+  // Load XP stats on mount
+  useEffect(() => {
+    loadXPStats();
+  }, [loadXPStats]);
 
   // Show loading skeleton while user data is loading
   if (isLoading) {
@@ -120,6 +130,9 @@ const Statistics: React.FC = () => {
   // Extract stats from user
   const { stats } = user;
 
+  // Get streak from analytics data (fetched from backend API)
+  const currentStreak = analyticsData?.streak?.currentStreak ?? 0;
+
   return (
     <div className="space-y-6 pb-8" data-testid="statistics-page">
       {/* Page Header */}
@@ -134,15 +147,15 @@ const Statistics: React.FC = () => {
           {t('page.learningStats')}
         </h2>
         <StatsGrid
-          streak={stats.streak}
-          wordsLearned={stats.wordsLearned}
-          totalXP={stats.totalXP}
+          streak={currentStreak}
+          wordsLearned={analyticsData?.summary?.totalCardsReviewed ?? 0}
+          totalXP={xpStats?.total_xp ?? 0}
           joinedDate={stats.joinedDate}
         />
       </section>
 
       {/* Level Progress */}
-      <LevelProgressCard totalXP={stats.totalXP} />
+      <LevelProgressCard />
 
       <Separator />
 
