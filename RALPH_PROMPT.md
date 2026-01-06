@@ -28,7 +28,23 @@ cd /Users/samosipov/Downloads/learn-greek-easy/learn-greek-easy-frontend && npm 
 docker exec learn-greek-frontend npm test -- --run
 ```
 
-### 3. CI/CD Gate (BLOCKING)
+### 3. NO Assumptions, NO Feature Cuts (CRITICAL)
+**NEVER guess, assume, or take shortcuts that reduce functionality.**
+
+| WRONG | RIGHT |
+|-------|-------|
+| "Translation files are empty, so hide the selector" | "Translation files are empty, so populate them with translations" |
+| "This feature is complex, let's disable it" | "This feature is complex, let's implement it properly" |
+| "The bug is hard to fix, let's remove the feature" | "The bug is hard to fix, let's investigate and fix it" |
+
+**Rules:**
+- If a ticket says "fix X", fix X - don't remove/hide X
+- If data is missing, add the data - don't hide the UI that needs it
+- If something is broken, repair it - don't cut the feature
+- NEVER reduce user-facing functionality as a "solution"
+- When in doubt, ASK the user - don't assume
+
+### 4. CI/CD Gate (BLOCKING)
 **You CANNOT output ALL_TASKS_COMPLETE until CI/CD passes.**
 
 After marking PR ready:
@@ -79,10 +95,12 @@ Work through them ONE at a time, but all go into the SAME branch/PR.
 ```
 Task(
   subagent_type="product-architecture-spec",
-  prompt="Architect implementation for task: [TASK TITLE]\n\nTask description: [DESCRIPTION]\n\nWrite a detailed implementation plan covering:\n- Files to modify\n- Changes needed in each file\n- Dependencies/imports required\n- Testing approach"
+  prompt="Architect implementation for task: [TASK TITLE]\n\nTask description: [DESCRIPTION]\n\nWrite a detailed implementation plan covering:\n- Files to modify\n- Changes needed in each file
+- Dependencies/imports required\n- Testing approach\n\nIMPORTANT: Do NOT create subtasks or new tickets. Return the plan as text output only."
 )
 ```
-- Plan goes INTO the Vibe Kanban task description (update via MCP)
+- **DO NOT create subtasks** - architecture agent returns plan as text only
+- After receiving plan, UPDATE the existing task description in Vibe Kanban (append plan)
 - **Checkpoint:** Output `<promise>ARCHITECTURE_DONE</promise>`
 - **If skipped:** Loop will NOT progress correctly
 
@@ -223,3 +241,7 @@ Human decides merge after reviewing the PR.
 | Outputting ALL_TASKS_COMPLETE before CI | CI might fail, false completion | Wait for `gh pr checks` |
 | Skipping stage checkpoints | Loop can't track progress | Output every checkpoint |
 | Multiple Grep/Glob calls for research | Bloats context | Single Explore agent call |
+| Architecture agent creating subtasks | Creates clutter in Kanban | Return plan as text, update existing task |
+| Hiding/disabling features to "fix" bugs | Reduces functionality, lazy solution | Actually fix the bug, add missing data |
+| Assuming root cause without verification | May implement wrong solution | Investigate thoroughly, verify with Playwright |
+| Guessing what user wants | Wastes time on wrong implementation | Ask clarifying questions when unclear |
