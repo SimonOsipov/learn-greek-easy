@@ -116,6 +116,9 @@ test.describe('Accessibility - Public Pages', () => {
   });
 
   test('Landing page should have no accessibility violations', async ({ page }) => {
+    // Disable animations for accessibility scanning to prevent false contrast failures
+    // (motion-safe:animate-fade-up starts at opacity: 0 which fails contrast checks mid-animation)
+    await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.goto('/');
 
     // Wait for landing page to load
@@ -130,6 +133,9 @@ test.describe('Accessibility - Public Pages', () => {
   });
 
   test('Landing page color contrast should meet WCAG AA', async ({ page }) => {
+    // Disable animations for accessibility scanning to prevent false contrast failures
+    // (motion-safe:animate-fade-up starts at opacity: 0 which fails contrast checks mid-animation)
+    await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.goto('/');
 
     // Wait for landing page to load
