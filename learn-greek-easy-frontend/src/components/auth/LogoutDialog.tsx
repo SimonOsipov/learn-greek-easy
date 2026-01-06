@@ -25,7 +25,7 @@ interface LogoutDialogProps {
  * Logout confirmation dialog
  *
  * Shows a confirmation before logging the user out.
- * Cleans up auth state and redirects to login page.
+ * Cleans up auth state and redirects to the main landing page.
  */
 export const LogoutDialog: React.FC<LogoutDialogProps> = ({ trigger }) => {
   const { t } = useTranslation('auth');
@@ -40,7 +40,7 @@ export const LogoutDialog: React.FC<LogoutDialogProps> = ({ trigger }) => {
     try {
       await logout();
       setOpen(false);
-      navigate('/login');
+      navigate('/');
       toast({
         title: t('logout.success.title'),
         description: t('logout.success.description'),
