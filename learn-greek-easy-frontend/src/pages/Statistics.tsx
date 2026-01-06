@@ -155,7 +155,7 @@ const Statistics: React.FC = () => {
       </section>
 
       {/* Level Progress */}
-      <LevelProgressCard totalXP={xpStats?.total_xp ?? 0} />
+      <LevelProgressCard />
 
       <Separator />
 
