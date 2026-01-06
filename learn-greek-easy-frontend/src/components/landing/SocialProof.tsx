@@ -98,7 +98,7 @@ const SocialProof = () => {
               </p>
             </div>
             <div className="text-center">
-              <p className="text-2xl font-bold text-foreground md:text-3xl">B1-B2</p>
+              <p className="text-2xl font-bold text-foreground md:text-3xl">A1-B2</p>
               <p className="mt-1 text-sm text-muted-foreground">
                 {t('socialProof.stats.levelCoverage')}
               </p>

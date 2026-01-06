@@ -65,17 +65,6 @@ const FAQ = () => {
             ))}
           </Accordion>
         </div>
-
-        {/* Contact CTA */}
-        <p
-          className="mt-10 text-center text-muted-foreground motion-safe:animate-fade-up"
-          style={{ animationDelay: '0.4s' }}
-        >
-          {t('faq.contactPrompt')}{' '}
-          <a href="mailto:hello@greekly.app" className="font-medium text-primary hover:underline">
-            {t('faq.contactLink')}
-          </a>
-        </p>
       </div>
     </section>
   );

@@ -17,7 +17,7 @@
     "titleHighlight": "Companion",
     "subtitle": "One place to practice reading, listening, and speaking - the perfect support alongside your books and lessons.",
     "cta": "Start Learning Free",
-    "socialProof": "Join 500+ learners preparing for their Greek citizenship exam",
+    "socialProof": "Join 500+ learners preparing for the Greek language, Greek culture exams and Cypriot Citizenship Interview",
     "heroImageAlt": "Ancient Greek ruins overlooking the Mediterranean Sea in Cyprus"
   },
   "features": {
@@ -27,11 +27,11 @@
     "cards": {
       "basicVocabulary": {
         "title": "Basic Vocabulary Cards",
-        "description": "Start with essential Greek words and phrases. Build your foundation with everyday vocabulary from greetings to numbers."
+        "description": "Start with essential Greek words and phrases. Build your foundation with everyday vocabulary."
       },
       "themedVocabulary": {
         "title": "Themed Vocabulary Cards",
-        "description": "From A2 foundations to specialized topics - master words for real estate, medical visits, banking, and everyday conversations."
+        "description": "From A1 foundations to specialized topics - master words for real estate, medical visits, banking, and everyday conversations."
       },
       "customCards": {
         "title": "Custom Cards & Decks",
@@ -51,7 +51,7 @@
       },
       "realNews": {
         "title": "Real News Practice",
-        "description": "Learn from actual Greek TV broadcasts and newspaper articles. Immerse yourself in authentic content to sharpen comprehension."
+        "description": "Learn from actual Greek and Cyprus TV, radio, newspaper and bloggers. Immerse yourself in authentic content to sharpen comprehension."
       },
       "audioDialogs": {
         "title": "Real Audio Dialogs",
@@ -59,7 +59,7 @@
       },
       "historyCulture": {
         "title": "History & Culture Questions",
-        "description": "Prepare for the citizenship exam history and culture section with curated questions about Greek heritage and traditions."
+        "description": "Prepare for the citizenship exam history and culture section with curated questions about Cypriot heritage and traditions."
       }
     },
     "mockups": {
@@ -134,6 +134,7 @@
         "features": [
           "Basic vocabulary cards (A1 level)",
           "Limited daily practice sessions",
+          "Limited personal decks",
           "Progress tracking",
           "Community access"
         ]
@@ -188,8 +189,6 @@
     "label": "COMMON QUESTIONS",
     "title": "Frequently Asked Questions",
     "subtitle": "Everything you need to know about Greekly and the citizenship exam",
-    "contactPrompt": "Still have questions?",
-    "contactLink": "Contact us",
     "items": {
       "exam": {
         "question": "What is the Greek citizenship language exam?",
