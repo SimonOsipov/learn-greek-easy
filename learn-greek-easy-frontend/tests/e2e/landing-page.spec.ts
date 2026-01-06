@@ -331,7 +331,11 @@ test.describe('Landing Page - Performance', () => {
     // Filter out known acceptable errors (e.g., third-party scripts)
     const criticalErrors = consoleErrors.filter(
       (error) =>
-        !error.includes('favicon') && !error.includes('analytics') && !error.includes('Failed to load resource')
+        !error.includes('favicon') &&
+        !error.includes('analytics') &&
+        !error.includes('Failed to load resource') &&
+        !error.includes('Failed to preconnect') &&
+        !error.includes('sentry.io')
     );
 
     expect(criticalErrors).toHaveLength(0);
