@@ -2,287 +2,287 @@
   "header": {
     "brandName": "Greekly",
     "nav": {
-      "features": "Features",
-      "pricing": "Pricing",
-      "faq": "FAQ"
+      "features": "Χαρακτηριστικά",
+      "pricing": "Τιμές",
+      "faq": "Συχνές Ερωτήσεις"
     },
     "cta": {
-      "login": "Log In",
-      "getStarted": "Get Started"
+      "login": "Σύνδεση",
+      "getStarted": "Ξεκινήστε"
     }
   },
   "hero": {
-    "badge": "Now in Beta",
-    "title": "Your Greek Practice",
-    "titleHighlight": "Companion",
-    "subtitle": "One place to practice reading, listening, and speaking - the perfect support alongside your books and lessons.",
-    "cta": "Start Learning Free",
-    "socialProof": "Join 500+ learners preparing for the Greek language, Greek culture exams and Cypriot Citizenship Interview",
-    "heroImageAlt": "Ancient Greek ruins overlooking the Mediterranean Sea in Cyprus"
+    "badge": "Τώρα σε Beta",
+    "title": "Ο Σύντροφος Εξάσκησης",
+    "titleHighlight": "Ελληνικών",
+    "subtitle": "Ένα μέρος για να εξασκήσετε την ανάγνωση, την ακρόαση και την ομιλία - η τέλεια υποστήριξη δίπλα στα βιβλία και τα μαθήματά σας.",
+    "cta": "Ξεκινήστε Δωρεάν",
+    "socialProof": "Γίνετε μέλος με 500+ μαθητές που προετοιμάζονται για τις εξετάσεις ελληνικής γλώσσας, ελληνικού πολιτισμού και τη συνέντευξη για την Κυπριακή Υπηκοότητα",
+    "heroImageAlt": "Αρχαία ελληνικά ερείπια με θέα στη Μεσόγειο Θάλασσα στην Κύπρο"
   },
   "features": {
-    "label": "DESIGNED FOR SUCCESS",
-    "title": "Everything you need to pass",
-    "subtitle": "A complete toolkit built specifically for Greek citizenship exam preparation",
+    "label": "ΣΧΕΔΙΑΣΜΕΝΟ ΓΙΑ ΕΠΙΤΥΧΙΑ",
+    "title": "Όλα όσα χρειάζεστε για να περάσετε",
+    "subtitle": "Μια πλήρης εργαλειοθήκη ειδικά σχεδιασμένη για την προετοιμασία εξετάσεων ελληνικής υπηκοότητας",
     "cards": {
       "basicVocabulary": {
-        "title": "Basic Vocabulary Cards",
-        "description": "Start with essential Greek words and phrases. Build your foundation with everyday vocabulary."
+        "title": "Βασικές Κάρτες Λεξιλογίου",
+        "description": "Ξεκινήστε με βασικές ελληνικές λέξεις και φράσεις. Χτίστε τη βάση σας με καθημερινό λεξιλόγιο."
       },
       "themedVocabulary": {
-        "title": "Themed Vocabulary Cards",
-        "description": "From A1 foundations to specialized topics - master words for real estate, medical visits, banking, and everyday conversations."
+        "title": "Θεματικές Κάρτες Λεξιλογίου",
+        "description": "Από τα βασικά A1 έως εξειδικευμένα θέματα - κατακτήστε λέξεις για ακίνητα, ιατρικές επισκέψεις, τράπεζες και καθημερινές συνομιλίες."
       },
       "customCards": {
-        "title": "Custom Cards & Decks",
-        "description": "Create your own flashcards and organize them into custom decks. Learn the words that matter most to you."
+        "title": "Προσαρμοσμένες Κάρτες & Τράπουλες",
+        "description": "Δημιουργήστε τις δικές σας κάρτες μνήμης και οργανώστε τις σε προσαρμοσμένες τράπουλες. Μάθετε τις λέξεις που σας ενδιαφέρουν περισσότερο."
       },
       "nounForms": {
-        "title": "Noun Forms & Cases",
-        "description": "Master articles, plural/singular forms, and noun cases like accusative and genitive - essential for speaking correctly."
+        "title": "Τύποι & Πτώσεις Ουσιαστικών",
+        "description": "Κατακτήστε τα άρθρα, τους τύπους πληθυντικού/ενικού και τις πτώσεις όπως αιτιατική και γενική - απαραίτητα για σωστή ομιλία."
       },
       "verbConjugations": {
-        "title": "Verb Conjugations",
-        "description": "Practice verb forms across tenses and persons. From present to past, master how Greek verbs change."
+        "title": "Κλίσεις Ρημάτων",
+        "description": "Εξασκηθείτε στους τύπους ρημάτων σε διάφορους χρόνους και πρόσωπα. Από τον ενεστώτα στον αόριστο, κατακτήστε πώς αλλάζουν τα ελληνικά ρήματα."
       },
       "verbTenses": {
-        "title": "Verb Tenses",
-        "description": "Learn past, present, and future forms of verbs. See how the same verb changes across different time contexts."
+        "title": "Χρόνοι Ρημάτων",
+        "description": "Μάθετε τύπους παρελθόντος, παρόντος και μέλλοντος. Δείτε πώς το ίδιο ρήμα αλλάζει σε διαφορετικά χρονικά πλαίσια."
       },
       "realNews": {
-        "title": "Real News Practice",
-        "description": "Learn from actual Greek and Cyprus TV, radio, newspaper and bloggers. Immerse yourself in authentic content to sharpen comprehension."
+        "title": "Εξάσκηση με Πραγματικά Νέα",
+        "description": "Μάθετε από πραγματικά ελληνικά και κυπριακά κανάλια, ραδιόφωνο, εφημερίδες και bloggers. Βυθιστείτε σε αυθεντικό περιεχόμενο για να βελτιώσετε την κατανόηση."
       },
       "audioDialogs": {
-        "title": "Real Audio Dialogs",
-        "description": "Practice with authentic conversations - ordering coffee, visiting the doctor, talking to your landlord. No synthetic textbook scripts."
+        "title": "Πραγματικοί Ηχητικοί Διάλογοι",
+        "description": "Εξασκηθείτε με αυθεντικές συνομιλίες - παραγγελία καφέ, επίσκεψη στον γιατρό, συζήτηση με τον ιδιοκτήτη. Χωρίς συνθετικά σενάρια βιβλίων."
       },
       "historyCulture": {
-        "title": "History & Culture Questions",
-        "description": "Prepare for the citizenship exam history and culture section with curated questions about Cypriot heritage and traditions."
+        "title": "Ερωτήσεις Ιστορίας & Πολιτισμού",
+        "description": "Προετοιμαστείτε για την ενότητα ιστορίας και πολιτισμού της εξέτασης υπηκοότητας με επιλεγμένες ερωτήσεις για την κυπριακή κληρονομιά και τις παραδόσεις."
       }
     },
     "mockups": {
-      "tapToReveal": "tap to reveal",
-      "again": "Again",
-      "gotIt": "Got it!",
-      "transcript": "Transcript",
-      "quizMe": "Quiz Me",
-      "nextQuestion": "Next Question",
-      "nextNoun": "Next Noun",
-      "showPastTense": "Show Past Tense",
-      "nextVerb": "Next Verb",
-      "readArticle": "Read Article",
-      "watchClip": "Watch Clip",
-      "createNewDeck": "Create new deck",
-      "addNewCard": "Add New Card",
-      "cardOf": "Card {{current}} of {{total}}",
-      "questionOf": "Question {{current}}/{{total}}",
-      "decksCount": "{{count}} decks",
-      "cardsCount": "{{count}} cards",
-      "dialog": "Dialog",
-      "singular": "Singular",
-      "plural": "Plural",
-      "accusative": "Accusative",
-      "genitive": "Genitive",
-      "present": "Present",
-      "pastSimple": "Past (simple)",
-      "future": "Future",
-      "iSpeak": "I speak",
-      "youSpeak": "you speak",
-      "heSheSpeak": "he/she speaks",
-      "weSpeak": "we speak",
-      "toSpeak": "to speak",
-      "toWrite": "to write",
-      "theFriendMasc": "the friend (masc.)",
-      "atThePharmacy": "At the Pharmacy",
-      "today": "Today",
-      "history": "History",
-      "basics": "Basics",
-      "finance": "Finance",
-      "nouns": "Nouns",
-      "verbs": "Verbs",
-      "tenses": "Tenses",
-      "cases": "Cases",
-      "myDecks": "My Decks",
-      "greetings": "Greetings",
-      "taxAuthority": "Tax Authority",
-      "workVocabulary": "Work Vocabulary",
-      "restaurantPhrases": "Restaurant Phrases",
+      "tapToReveal": "πατήστε για αποκάλυψη",
+      "again": "Ξανά",
+      "gotIt": "Το κατάλαβα!",
+      "transcript": "Απομαγνητοφώνηση",
+      "quizMe": "Εξέτασέ με",
+      "nextQuestion": "Επόμενη Ερώτηση",
+      "nextNoun": "Επόμενο Ουσιαστικό",
+      "showPastTense": "Εμφάνιση Αορίστου",
+      "nextVerb": "Επόμενο Ρήμα",
+      "readArticle": "Διαβάστε Άρθρο",
+      "watchClip": "Δείτε Κλιπ",
+      "createNewDeck": "Δημιουργία νέας τράπουλας",
+      "addNewCard": "Προσθήκη Νέας Κάρτας",
+      "cardOf": "Κάρτα {{current}} από {{total}}",
+      "questionOf": "Ερώτηση {{current}}/{{total}}",
+      "decksCount": "{{count}} τράπουλες",
+      "cardsCount": "{{count}} κάρτες",
+      "dialog": "Διάλογος",
+      "singular": "Ενικός",
+      "plural": "Πληθυντικός",
+      "accusative": "Αιτιατική",
+      "genitive": "Γενική",
+      "present": "Ενεστώτας",
+      "pastSimple": "Αόριστος",
+      "future": "Μέλλοντας",
+      "iSpeak": "μιλάω",
+      "youSpeak": "μιλάς",
+      "heSheSpeak": "μιλάει",
+      "weSpeak": "μιλάμε",
+      "toSpeak": "μιλάω",
+      "toWrite": "γράφω",
+      "theFriendMasc": "ο φίλος (αρσ.)",
+      "atThePharmacy": "Στο Φαρμακείο",
+      "today": "Σήμερα",
+      "history": "Ιστορία",
+      "basics": "Βασικά",
+      "finance": "Οικονομικά",
+      "nouns": "Ουσιαστικά",
+      "verbs": "Ρήματα",
+      "tenses": "Χρόνοι",
+      "cases": "Πτώσεις",
+      "myDecks": "Οι Τράπουλές μου",
+      "greetings": "Χαιρετισμοί",
+      "taxAuthority": "Εφορία",
+      "workVocabulary": "Λεξιλόγιο Εργασίας",
+      "restaurantPhrases": "Φράσεις Εστιατορίου",
       "progress80": "80%",
       "progress65": "65%",
-      "independenceQuestion": "When did Greece gain independence from the Ottoman Empire?",
-      "newsHeadline": "The government announced new measures for the economy, focusing on support for small businesses."
+      "independenceQuestion": "Πότε η Ελλάδα απέκτησε ανεξαρτησία από την Οθωμανική Αυτοκρατορία;",
+      "newsHeadline": "Η κυβέρνηση ανακοίνωσε νέα μέτρα για την οικονομία, με επίκεντρο την υποστήριξη μικρών επιχειρήσεων."
     }
   },
   "pricing": {
-    "label": "SIMPLE PRICING",
-    "title": "Choose your path to fluency",
-    "subtitle": "Start free, upgrade when you're ready",
-    "guarantee": "All plans include a 14-day money-back guarantee. No questions asked.",
+    "label": "ΑΠΛΕΣ ΤΙΜΕΣ",
+    "title": "Επιλέξτε τον δρόμο σας προς την ευχέρεια",
+    "subtitle": "Ξεκινήστε δωρεάν, αναβαθμίστε όταν είστε έτοιμοι",
+    "guarantee": "Όλα τα πακέτα περιλαμβάνουν εγγύηση επιστροφής χρημάτων 14 ημερών. Χωρίς ερωτήσεις.",
     "badges": {
-      "mostPopular": "Most Popular",
-      "limited": "Limited"
+      "mostPopular": "Πιο Δημοφιλές",
+      "limited": "Περιορισμένο"
     },
     "plans": {
       "free": {
-        "name": "Free",
+        "name": "Δωρεάν",
         "price": "0 EUR",
-        "period": "forever",
-        "description": "Get started with the basics",
-        "cta": "Start Free",
+        "period": "για πάντα",
+        "description": "Ξεκινήστε με τα βασικά",
+        "cta": "Ξεκινήστε Δωρεάν",
         "features": [
-          "Basic vocabulary cards (A1 level)",
-          "Limited daily practice sessions",
-          "Limited personal decks",
-          "Progress tracking",
-          "Community access"
+          "Βασικές κάρτες λεξιλογίου (επίπεδο A1)",
+          "Περιορισμένες ημερήσιες συνεδρίες εξάσκησης",
+          "Περιορισμένες προσωπικές τράπουλες",
+          "Παρακολούθηση προόδου",
+          "Πρόσβαση στην κοινότητα"
         ]
       },
       "monthly": {
-        "name": "Monthly Premium",
+        "name": "Μηνιαίο Premium",
         "price": "29 EUR",
-        "period": "/month",
-        "description": "Full access, billed monthly",
-        "cta": "Go Premium",
+        "period": "/μήνα",
+        "description": "Πλήρης πρόσβαση, μηνιαία χρέωση",
+        "cta": "Γίνετε Premium",
         "features": [
-          "All vocabulary themes (A1-B2)",
-          "Unlimited practice sessions",
-          "Verb conjugations & noun cases",
-          "Real news & audio dialogs",
-          "History & culture questions",
-          "Priority support"
+          "Όλα τα θέματα λεξιλογίου (A1-B2)",
+          "Απεριόριστες συνεδρίες εξάσκησης",
+          "Κλίσεις ρημάτων & πτώσεις ουσιαστικών",
+          "Πραγματικά νέα & ηχητικοί διάλογοι",
+          "Ερωτήσεις ιστορίας & πολιτισμού",
+          "Προτεραιότητα υποστήριξης"
         ]
       },
       "yearly": {
-        "name": "Yearly Premium",
+        "name": "Ετήσιο Premium",
         "price": "200 EUR",
-        "period": "/year",
-        "description": "Save 148 EUR vs monthly",
-        "cta": "Save with Yearly",
+        "period": "/έτος",
+        "description": "Εξοικονομήστε 148 EUR σε σχέση με το μηνιαίο",
+        "cta": "Εξοικονομήστε με Ετήσιο",
         "features": [
-          "Everything in Monthly Premium",
-          "2+ months free",
-          "Early access to new features",
-          "Offline mode (coming soon)",
-          "Certificate upon completion"
+          "Όλα όσα περιλαμβάνει το Μηνιαίο Premium",
+          "2+ μήνες δωρεάν",
+          "Πρόωρη πρόσβαση σε νέες λειτουργίες",
+          "Λειτουργία εκτός σύνδεσης (σύντομα)",
+          "Πιστοποιητικό ολοκλήρωσης"
         ]
       },
       "founders": {
-        "name": "Founders Edition",
+        "name": "Έκδοση Ιδρυτών",
         "price": "250 EUR",
-        "period": "one-time",
-        "description": "Lifetime access, forever",
-        "cta": "Become a Founder",
+        "period": "εφάπαξ",
+        "description": "Πρόσβαση εφ' όρου ζωής, για πάντα",
+        "cta": "Γίνετε Ιδρυτής",
         "features": [
-          "Everything in Premium, forever",
-          "Lifetime updates included",
-          "Founders badge on profile",
-          "Direct input on new features",
-          "Exclusive founders community",
-          "Support our mission"
+          "Όλα τα Premium, για πάντα",
+          "Συμπεριλαμβάνονται ενημερώσεις εφ' όρου ζωής",
+          "Σήμα Ιδρυτή στο προφίλ",
+          "Άμεση συμβολή σε νέες λειτουργίες",
+          "Αποκλειστική κοινότητα ιδρυτών",
+          "Υποστηρίξτε την αποστολή μας"
         ]
       }
     }
   },
   "faq": {
-    "label": "COMMON QUESTIONS",
-    "title": "Frequently Asked Questions",
-    "subtitle": "Everything you need to know about Greekly and the citizenship exam",
+    "label": "ΣΥΧΝΕΣ ΕΡΩΤΗΣΕΙΣ",
+    "title": "Συχνές Ερωτήσεις",
+    "subtitle": "Όλα όσα πρέπει να γνωρίζετε για το Greekly και την εξέταση υπηκοότητας",
     "items": {
       "exam": {
-        "question": "What is the Greek citizenship language exam?",
-        "answer": "The Greek citizenship language exam tests your ability to communicate in Greek at a B1 or B2 level (depending on your application category). It includes reading comprehension, writing, listening, and speaking sections. You will need to demonstrate that you can handle everyday situations, understand main points of clear texts, and express yourself on familiar topics."
+        "question": "Τι είναι η εξέταση γλώσσας για την ελληνική υπηκοότητα;",
+        "answer": "Η εξέταση γλώσσας για την ελληνική υπηκοότητα ελέγχει την ικανότητά σας να επικοινωνείτε στα ελληνικά σε επίπεδο B1 ή B2 (ανάλογα με την κατηγορία της αίτησής σας). Περιλαμβάνει ενότητες κατανόησης κειμένου, γραφής, ακρόασης και ομιλίας. Θα πρέπει να αποδείξετε ότι μπορείτε να χειριστείτε καθημερινές καταστάσεις, να κατανοείτε τα κύρια σημεία σαφών κειμένων και να εκφράζεστε σε οικεία θέματα."
       },
       "level": {
-        "question": "What level of Greek do I need to pass?",
-        "answer": "Most applicants need to demonstrate B1 level proficiency, which means you can understand the main points of clear standard input on familiar matters. Some categories may require B2 level. Greekly covers vocabulary and grammar from A1 through B2 to ensure you are fully prepared."
+        "question": "Τι επίπεδο ελληνικών χρειάζομαι για να περάσω;",
+        "answer": "Οι περισσότεροι αιτούντες πρέπει να αποδείξουν επάρκεια επιπέδου B1, που σημαίνει ότι μπορείτε να κατανοήσετε τα κύρια σημεία σαφούς τυπικής εισόδου σε οικεία θέματα. Ορισμένες κατηγορίες ενδέχεται να απαιτούν επίπεδο B2. Το Greekly καλύπτει λεξιλόγιο και γραμματική από A1 έως B2 για να εξασφαλίσει ότι είστε πλήρως προετοιμασμένοι."
       },
       "difference": {
-        "question": "How is Greekly different from other language apps?",
-        "answer": "Greekly is built specifically for the Greek citizenship exam. Unlike general language apps, we focus on the vocabulary, grammar, and cultural knowledge you will actually be tested on. Our content includes themed vocabulary for real-life situations (banking, medical visits, bureaucracy), history and culture questions, and authentic audio from Greek media."
+        "question": "Πώς διαφέρει το Greekly από άλλες εφαρμογές γλωσσών;",
+        "answer": "Το Greekly είναι σχεδιασμένο ειδικά για την εξέταση ελληνικής υπηκοότητας. Σε αντίθεση με γενικές εφαρμογές γλωσσών, επικεντρωνόμαστε στο λεξιλόγιο, τη γραμματική και τις πολιτιστικές γνώσεις που θα εξεταστείτε πραγματικά. Το περιεχόμενό μας περιλαμβάνει θεματικό λεξιλόγιο για πραγματικές καταστάσεις (τράπεζες, ιατρικές επισκέψεις, γραφειοκρατία), ερωτήσεις ιστορίας και πολιτισμού, και αυθεντικό ήχο από ελληνικά μέσα."
       },
       "customCards": {
-        "question": "Can I create my own flashcards?",
-        "answer": "Yes! With our Custom Cards & Decks feature, you can create your own flashcards and organize them into personalized decks. This is perfect for words you encounter in daily life, terms from your specific profession, or areas where you need extra practice."
+        "question": "Μπορώ να δημιουργήσω τις δικές μου κάρτες μνήμης;",
+        "answer": "Ναι! Με τη λειτουργία Προσαρμοσμένες Κάρτες & Τράπουλες, μπορείτε να δημιουργήσετε τις δικές σας κάρτες μνήμης και να τις οργανώσετε σε εξατομικευμένες τράπουλες. Αυτό είναι ιδανικό για λέξεις που συναντάτε στην καθημερινή ζωή, όρους από το συγκεκριμένο επάγγελμά σας ή τομείς όπου χρειάζεστε επιπλέον εξάσκηση."
       },
       "prepTime": {
-        "question": "How long does it take to prepare for the exam?",
-        "answer": "Preparation time varies based on your starting level. If you are starting from zero, plan for 6-12 months of consistent study. If you already have some Greek knowledge, 3-6 months of focused practice may be sufficient. We recommend 20-30 minutes of daily practice for best results."
+        "question": "Πόσο χρόνο χρειάζεται για την προετοιμασία της εξέτασης;",
+        "answer": "Ο χρόνος προετοιμασίας ποικίλλει ανάλογα με το αρχικό σας επίπεδο. Αν ξεκινάτε από το μηδέν, υπολογίστε 6-12 μήνες συνεπούς μελέτης. Αν έχετε ήδη κάποιες γνώσεις ελληνικών, 3-6 μήνες εστιασμένης εξάσκησης μπορεί να αρκούν. Συνιστούμε 20-30 λεπτά καθημερινής εξάσκησης για καλύτερα αποτελέσματα."
       },
       "freePlan": {
-        "question": "What is included in the Free plan?",
-        "answer": "The Free plan includes access to basic A1 vocabulary cards, limited daily practice sessions, progress tracking, and community access. It is a great way to get started and see if Greekly is right for you before upgrading to Premium."
+        "question": "Τι περιλαμβάνει το Δωρεάν πακέτο;",
+        "answer": "Το Δωρεάν πακέτο περιλαμβάνει πρόσβαση σε βασικές κάρτες λεξιλογίου A1, περιορισμένες ημερήσιες συνεδρίες εξάσκησης, παρακολούθηση προόδου και πρόσβαση στην κοινότητα. Είναι ένας εξαιρετικός τρόπος για να ξεκινήσετε και να δείτε αν το Greekly είναι κατάλληλο για εσάς πριν αναβαθμιστείτε σε Premium."
       },
       "monthlyVsYearly": {
-        "question": "What is the difference between Monthly and Yearly Premium?",
-        "answer": "Both plans include full access to all features: complete vocabulary from A1-B2, unlimited practice, all grammar exercises, real news and audio content, and history/culture questions. The Yearly plan saves you 148 EUR compared to paying monthly (equivalent to getting 2+ months free) and includes early access to new features."
+        "question": "Ποια είναι η διαφορά μεταξύ Μηνιαίου και Ετήσιου Premium;",
+        "answer": "Και τα δύο πακέτα περιλαμβάνουν πλήρη πρόσβαση σε όλες τις λειτουργίες: πλήρες λεξιλόγιο A1-B2, απεριόριστη εξάσκηση, όλες τις ασκήσεις γραμματικής, πραγματικά νέα και ηχητικό περιεχόμενο, και ερωτήσεις ιστορίας/πολιτισμού. Το Ετήσιο πακέτο σας εξοικονομεί 148 EUR σε σύγκριση με τη μηνιαία πληρωμή (ισοδύναμο με 2+ μήνες δωρεάν) και περιλαμβάνει πρόωρη πρόσβαση σε νέες λειτουργίες."
       },
       "foundersEdition": {
-        "question": "What is the Founders Edition?",
-        "answer": "The Founders Edition is a one-time payment of 250 EUR that gives you lifetime access to Greekly, including all future updates and features. You will also get a Founders badge, direct input on new features, and access to our exclusive founders community. It is perfect for those who want to support our mission while securing permanent access."
+        "question": "Τι είναι η Έκδοση Ιδρυτών;",
+        "answer": "Η Έκδοση Ιδρυτών είναι μια εφάπαξ πληρωμή 250 EUR που σας δίνει πρόσβαση εφ' όρου ζωής στο Greekly, συμπεριλαμβανομένων όλων των μελλοντικών ενημερώσεων και λειτουργιών. Θα λάβετε επίσης ένα Σήμα Ιδρυτή, άμεση συμβολή σε νέες λειτουργίες και πρόσβαση στην αποκλειστική κοινότητα ιδρυτών. Είναι ιδανικό για όσους θέλουν να υποστηρίξουν την αποστολή μας εξασφαλίζοντας μόνιμη πρόσβαση."
       },
       "refundPolicy": {
-        "question": "What is your refund policy?",
-        "answer": "We offer a 14-day money-back guarantee on all paid plans, no questions asked. If Greekly is not the right fit for you, simply contact us within 14 days of your purchase for a full refund. For the Founders Edition, the same 14-day guarantee applies."
+        "question": "Ποια είναι η πολιτική επιστροφής χρημάτων;",
+        "answer": "Προσφέρουμε εγγύηση επιστροφής χρημάτων 14 ημερών σε όλα τα πληρωμένα πακέτα, χωρίς ερωτήσεις. Αν το Greekly δεν είναι κατάλληλο για εσάς, απλά επικοινωνήστε μαζί μας εντός 14 ημερών από την αγορά σας για πλήρη επιστροφή. Για την Έκδοση Ιδρυτών, ισχύει η ίδια εγγύηση 14 ημερών."
       },
       "offline": {
-        "question": "Can I use Greekly offline?",
-        "answer": "Offline mode is coming soon for Yearly Premium and Founders Edition members. This will allow you to download vocabulary decks and practice without an internet connection - perfect for studying on your commute or when traveling."
+        "question": "Μπορώ να χρησιμοποιήσω το Greekly εκτός σύνδεσης;",
+        "answer": "Η λειτουργία εκτός σύνδεσης έρχεται σύντομα για τα μέλη Ετήσιου Premium και Έκδοσης Ιδρυτών. Αυτό θα σας επιτρέψει να κατεβάσετε τράπουλες λεξιλογίου και να εξασκηθείτε χωρίς σύνδεση στο διαδίκτυο - ιδανικό για μελέτη κατά τη μετακίνηση ή ταξίδι."
       }
     }
   },
   "socialProof": {
-    "goToQuote": "Go to quote {{number}}",
+    "goToQuote": "Μετάβαση στο απόσπασμα {{number}}",
     "stats": {
-      "activeLearners": "Active Learners",
-      "flashcards": "Flashcards",
-      "levelCoverage": "Level Coverage"
+      "activeLearners": "Ενεργοί Μαθητές",
+      "flashcards": "Κάρτες Μνήμης",
+      "levelCoverage": "Κάλυψη Επιπέδων"
     },
     "quotes": {
       "founder": {
-        "text": "Built by someone actively preparing for the same exam you are taking. I understand the journey because I am on it too.",
-        "author": "Greekly Founder",
-        "role": "Greek Citizenship Applicant"
+        "text": "Δημιουργήθηκε από κάποιον που προετοιμάζεται ενεργά για την ίδια εξέταση που δίνετε. Καταλαβαίνω το ταξίδι γιατί το ζω κι εγώ.",
+        "author": "Ιδρυτής Greekly",
+        "role": "Αιτών Ελληνική Υπηκοότητα"
       },
       "mariaK": {
-        "text": "The themed vocabulary cards are exactly what I needed. Real-world topics like banking and medical visits prepared me for actual conversations.",
-        "author": "Maria K.",
-        "role": "Passed B1 Exam"
+        "text": "Οι θεματικές κάρτες λεξιλογίου ήταν ακριβώς αυτό που χρειαζόμουν. Θέματα της πραγματικής ζωής όπως τράπεζες και ιατρικές επισκέψεις με προετοίμασαν για πραγματικές συνομιλίες.",
+        "author": "Μαρία Κ.",
+        "role": "Πέρασε την Εξέταση B1"
       },
       "dimitrisP": {
-        "text": "Finally, an app that focuses on what matters for the citizenship exam. The history questions are spot-on.",
-        "author": "Dimitris P.",
-        "role": "Citizenship Applicant"
+        "text": "Επιτέλους, μια εφαρμογή που επικεντρώνεται σε αυτό που μετράει για την εξέταση υπηκοότητας. Οι ερωτήσεις ιστορίας είναι ακριβείς.",
+        "author": "Δημήτρης Π.",
+        "role": "Αιτών Υπηκοότητα"
       },
       "annaS": {
-        "text": "The audio dialogs with real Greek speakers made such a difference. I can now understand everyday conversations.",
-        "author": "Anna S.",
-        "role": "Learning Greek"
+        "text": "Οι ηχητικοί διάλογοι με πραγματικούς Έλληνες ομιλητές έκαναν τεράστια διαφορά. Τώρα μπορώ να καταλάβω καθημερινές συνομιλίες.",
+        "author": "Άννα Σ.",
+        "role": "Μαθαίνει Ελληνικά"
       },
       "georgeM": {
-        "text": "Custom decks let me focus on my weak points. I created a deck just for verb conjugations and it helped tremendously.",
-        "author": "George M.",
-        "role": "B2 Student"
+        "text": "Οι προσαρμοσμένες τράπουλες με άφησαν να επικεντρωθώ στα αδύνατα σημεία μου. Δημιούργησα μια τράπουλα μόνο για κλίσεις ρημάτων και με βοήθησε τρομερά.",
+        "author": "Γιώργος Μ.",
+        "role": "Μαθητής B2"
       }
     }
   },
   "finalCta": {
-    "title": "Your citizenship journey starts with the right foundation",
-    "subtitle": "Stop wasting time with scattered resources. Get a structured path to Greek fluency.",
-    "primaryCta": "Start Free Trial",
-    "imageAlt": "Limassol cityscape with Mediterranean Sea"
+    "title": "Το ταξίδι σας για την υπηκοότητα ξεκινά με τη σωστή βάση",
+    "subtitle": "Σταματήστε να χάνετε χρόνο με διάσπαρτους πόρους. Αποκτήστε μια δομημένη διαδρομή προς την ελληνική ευχέρεια.",
+    "primaryCta": "Ξεκινήστε Δωρεάν Δοκιμή",
+    "imageAlt": "Τοπίο της Λεμεσού με τη Μεσόγειο Θάλασσα"
   },
   "footer": {
     "brandName": "Greekly",
     "nav": {
-      "pricing": "Pricing",
-      "faq": "FAQ",
-      "contact": "Contact",
-      "privacy": "Privacy"
+      "pricing": "Τιμές",
+      "faq": "Συχνές Ερωτήσεις",
+      "contact": "Επικοινωνία",
+      "privacy": "Απόρρητο"
     },
-    "language": "English",
-    "languageCode": "EN",
-    "copyright": "{{year}} Greekly. Made with care for future Greek citizens."
+    "language": "Ελληνικά",
+    "languageCode": "EL",
+    "copyright": "{{year}} Greekly. Φτιαγμένο με φροντίδα για τους μελλοντικούς Έλληνες πολίτες."
   }
 }
