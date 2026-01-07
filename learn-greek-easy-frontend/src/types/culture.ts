@@ -29,8 +29,8 @@ export interface CultureQuestionResponse {
 
 export interface CultureDeckResponse {
   id: string;
-  name: string;
-  description: string;
+  name: MultilingualText;
+  description: MultilingualText;
   icon: string;
   color_accent: string;
   category: CultureCategory;

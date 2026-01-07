@@ -133,7 +133,7 @@ export function CultureDeckDetailPage() {
           {t('deck:detail.breadcrumb')}
         </Link>
         <span>/</span>
-        <span className="truncate font-medium text-gray-900">{deck.name}</span>
+        <span className="truncate font-medium text-gray-900">{deck.name.el}</span>
       </nav>
 
       {/* Main Content */}
@@ -144,10 +144,12 @@ export function CultureDeckDetailPage() {
             {/* Title and Badges Row */}
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="min-w-0 flex-1">
-                {/* Deck Title */}
+                {/* Greek Title */}
                 <h1 className="mb-1 text-2xl font-semibold text-gray-900 md:text-3xl">
-                  {deck.name}
+                  {deck.name.el}
                 </h1>
+                {/* English Subtitle */}
+                <p className="text-base text-gray-600 md:text-lg">{deck.name.en}</p>
               </div>
 
               {/* Culture Badge */}
@@ -166,7 +168,7 @@ export function CultureDeckDetailPage() {
 
           <CardContent>
             {/* Description */}
-            <p className="leading-relaxed text-gray-700">{deck.description}</p>
+            <p className="leading-relaxed text-gray-700">{deck.description.en}</p>
 
             {/* Progress Bar (if has progress) */}
             {progress && progress.status !== 'not-started' && (
