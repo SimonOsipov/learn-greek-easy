@@ -643,6 +643,10 @@ class TestProgressServiceTrends:
 
         service.review_repo.get_daily_stats = AsyncMock(return_value=daily_stats)
         service.stats_repo.count_cards_mastered_in_range = AsyncMock(return_value=5)
+        service.stats_repo.count_cards_by_status_per_day = AsyncMock(return_value={})
+        service.culture_stats_repo.count_cards_by_status_per_day = AsyncMock(return_value={})
+        service.review_repo.get_daily_accuracy_stats = AsyncMock(return_value={})
+        service.culture_stats_repo.get_daily_culture_accuracy_stats = AsyncMock(return_value={})
 
         result = await service.get_learning_trends(user_id, period="week")
 
@@ -658,6 +662,10 @@ class TestProgressServiceTrends:
 
         service.review_repo.get_daily_stats = AsyncMock(return_value=[])
         service.stats_repo.count_cards_mastered_in_range = AsyncMock(return_value=0)
+        service.stats_repo.count_cards_by_status_per_day = AsyncMock(return_value={})
+        service.culture_stats_repo.count_cards_by_status_per_day = AsyncMock(return_value={})
+        service.review_repo.get_daily_accuracy_stats = AsyncMock(return_value={})
+        service.culture_stats_repo.get_daily_culture_accuracy_stats = AsyncMock(return_value={})
 
         result = await service.get_learning_trends(user_id, period="month")
 
@@ -674,6 +682,10 @@ class TestProgressServiceTrends:
 
         service.review_repo.get_daily_stats = AsyncMock(return_value=[])
         service.stats_repo.count_cards_mastered_in_range = AsyncMock(return_value=0)
+        service.stats_repo.count_cards_by_status_per_day = AsyncMock(return_value={})
+        service.culture_stats_repo.count_cards_by_status_per_day = AsyncMock(return_value={})
+        service.review_repo.get_daily_accuracy_stats = AsyncMock(return_value={})
+        service.culture_stats_repo.get_daily_culture_accuracy_stats = AsyncMock(return_value={})
 
         result = await service.get_learning_trends(user_id, period="year")
 
@@ -689,6 +701,10 @@ class TestProgressServiceTrends:
 
         service.review_repo.get_daily_stats = AsyncMock(return_value=[])
         service.stats_repo.count_cards_mastered_in_range = AsyncMock(return_value=0)
+        service.stats_repo.count_cards_by_status_per_day = AsyncMock(return_value={})
+        service.culture_stats_repo.count_cards_by_status_per_day = AsyncMock(return_value={})
+        service.review_repo.get_daily_accuracy_stats = AsyncMock(return_value={})
+        service.culture_stats_repo.get_daily_culture_accuracy_stats = AsyncMock(return_value={})
 
         # Note: The current implementation doesn't actually filter by deck_id
         # but the API supports it. We test that it doesn't break.
@@ -704,6 +720,10 @@ class TestProgressServiceTrends:
 
         service.review_repo.get_daily_stats = AsyncMock(return_value=[])
         service.stats_repo.count_cards_mastered_in_range = AsyncMock(return_value=0)
+        service.stats_repo.count_cards_by_status_per_day = AsyncMock(return_value={})
+        service.culture_stats_repo.count_cards_by_status_per_day = AsyncMock(return_value={})
+        service.review_repo.get_daily_accuracy_stats = AsyncMock(return_value={})
+        service.culture_stats_repo.get_daily_culture_accuracy_stats = AsyncMock(return_value={})
 
         result = await service.get_learning_trends(user_id, period="week")
 
@@ -745,6 +765,10 @@ class TestProgressServiceTrends:
 
         service.review_repo.get_daily_stats = AsyncMock(return_value=daily_stats)
         service.stats_repo.count_cards_mastered_in_range = AsyncMock(return_value=8)
+        service.stats_repo.count_cards_by_status_per_day = AsyncMock(return_value={})
+        service.culture_stats_repo.count_cards_by_status_per_day = AsyncMock(return_value={})
+        service.review_repo.get_daily_accuracy_stats = AsyncMock(return_value={})
+        service.culture_stats_repo.get_daily_culture_accuracy_stats = AsyncMock(return_value={})
 
         result = await service.get_learning_trends(user_id, period="week")
 
@@ -764,6 +788,10 @@ class TestProgressServiceTrends:
 
         service.review_repo.get_daily_stats = AsyncMock(return_value=[])
         service.stats_repo.count_cards_mastered_in_range = AsyncMock(return_value=0)
+        service.stats_repo.count_cards_by_status_per_day = AsyncMock(return_value={})
+        service.culture_stats_repo.count_cards_by_status_per_day = AsyncMock(return_value={})
+        service.review_repo.get_daily_accuracy_stats = AsyncMock(return_value={})
+        service.culture_stats_repo.get_daily_culture_accuracy_stats = AsyncMock(return_value={})
 
         result = await service.get_learning_trends(user_id, period="invalid")
 
