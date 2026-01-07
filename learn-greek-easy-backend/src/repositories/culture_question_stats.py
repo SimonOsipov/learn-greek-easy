@@ -432,8 +432,8 @@ class CultureQuestionStatsRepository(BaseRepository[CultureQuestionStats]):
             select(
                 cast(CultureAnswerHistory.created_at, Date).label("day"),
                 func.count()
-                .filter(CultureAnswerHistory.is_correct == True)
-                .label("correct"),  # noqa: E712
+                .filter(CultureAnswerHistory.is_correct.is_(True))
+                .label("correct"),
                 func.count().label("total"),
             )
             .where(CultureAnswerHistory.user_id == user_id)

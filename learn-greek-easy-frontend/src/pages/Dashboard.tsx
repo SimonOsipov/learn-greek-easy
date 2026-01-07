@@ -260,7 +260,8 @@ export const Dashboard: React.FC = () => {
                   status: deck.progress?.status ?? 'not-started',
                   level: deck.level,
                   progress: {
-                    current: (deck.progress?.cardsLearning ?? 0) + (deck.progress?.cardsMastered ?? 0),
+                    current:
+                      (deck.progress?.cardsLearning ?? 0) + (deck.progress?.cardsMastered ?? 0),
                     total: deck.cardCount,
                     percentage:
                       deck.progress && deck.progress.cardsTotal > 0

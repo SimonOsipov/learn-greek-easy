@@ -178,7 +178,6 @@ const Statistics: React.FC = () => {
           <StageDistributionChart height={320} />
         </div>
       </section>
-
     </div>
   );
 };
