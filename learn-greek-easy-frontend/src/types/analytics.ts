@@ -59,7 +59,9 @@ export interface ProgressDataPoint {
   // Multiple y-axis metrics (all optional, use only needed ones)
   cardsMastered: number; // Cumulative cards mastered by this date
   cardsReviewed: number; // Cards reviewed on this date
-  accuracy: number; // Accuracy percentage (0-100)
+  accuracy: number; // Accuracy percentage (0-100) - combined vocab + culture
+  vocabAccuracy: number; // Vocabulary accuracy percentage (0-100)
+  cultureAccuracy: number; // Culture questions accuracy percentage (0-100)
   timeStudied: number; // Seconds studied on this date
   streak: number; // Current streak length on this date
   cardsNew: number; // Total new cards remaining

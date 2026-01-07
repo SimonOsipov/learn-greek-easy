@@ -447,3 +447,46 @@ class ReviewRepository(BaseRepository[Review]):
 
         result = await self.db.execute(query)
         return [row[0] for row in result.all()]
+
+    async def get_daily_accuracy_stats(
+        self,
+        user_id: UUID,
+        start_date: date,
+        end_date: date,
+    ) -> dict[date, dict]:
+        """Get daily accuracy statistics for vocabulary reviews.
+
+        Reviews with quality >= 3 are considered correct (SM-2 convention).
+
+        Args:
+            user_id: User UUID
+            start_date: Start date (inclusive)
+            end_date: End date (inclusive)
+
+        Returns:
+            Dict of {date: {correct_count, total_count, accuracy}}
+
+        Use Case:
+            Accuracy Trend chart - vocab accuracy per day
+        """
+        result = await self.db.execute(
+            select(
+                func.date(Review.reviewed_at).label("day"),
+                func.count().filter(Review.quality >= 3).label("correct"),
+                func.count().label("total"),
+            )
+            .where(Review.user_id == user_id)
+            .where(func.date(Review.reviewed_at) >= start_date)
+            .where(func.date(Review.reviewed_at) <= end_date)
+            .group_by(func.date(Review.reviewed_at))
+        )
+        rows = result.all()
+
+        return {
+            row.day: {
+                "correct_count": row.correct,
+                "total_count": row.total,
+                "accuracy": (row.correct / row.total * 100) if row.total > 0 else 0.0,
+            }
+            for row in rows
+        }

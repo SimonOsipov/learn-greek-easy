@@ -165,6 +165,9 @@ export interface DailyStats {
   cards_mastered: number;
   study_time_seconds: number;
   average_quality: number;
+  vocab_accuracy: number;
+  culture_accuracy: number;
+  combined_accuracy: number;
 }
 
 /**

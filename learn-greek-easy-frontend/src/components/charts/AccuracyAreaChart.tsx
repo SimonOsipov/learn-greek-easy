@@ -12,6 +12,7 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  Legend,
 } from 'recharts';
 
 import { ChartContainer, ChartTooltip } from '@/components/charts';
@@ -38,7 +39,7 @@ interface CustomTooltipProps {
 
 /**
  * AreaChart visualization of accuracy percentage trend over time
- * Shows accuracy as a filled area with gradient
+ * Shows vocab and culture accuracy as two separate area series
  *
  * @example
  * ```tsx
@@ -138,9 +139,13 @@ export const AccuracyAreaChart = React.forwardRef<HTMLDivElement, AccuracyAreaCh
         <ResponsiveContainer width="100%" height={chartHeight}>
           <AreaChart data={progressData} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
             <defs>
-              <linearGradient id="accuracyGradient" x1="0" y1="0" x2="0" y2="1">
+              <linearGradient id="vocabAccuracyGradient" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor={chartColors.chart1} stopOpacity={0.3} />
                 <stop offset="100%" stopColor={chartColors.chart1} stopOpacity={0.05} />
+              </linearGradient>
+              <linearGradient id="cultureAccuracyGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={chartColors.chart2} stopOpacity={0.3} />
+                <stop offset="100%" stopColor={chartColors.chart2} stopOpacity={0.05} />
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke={chartColors.gray200} />
@@ -157,13 +162,22 @@ export const AccuracyAreaChart = React.forwardRef<HTMLDivElement, AccuracyAreaCh
               tickFormatter={formatYAxis}
             />
             <Tooltip content={<CustomTooltip />} />
+            <Legend wrapperStyle={{ paddingTop: '10px' }} />
             <Area
               type="monotone"
-              dataKey="accuracy"
+              dataKey="vocabAccuracy"
               stroke={chartColors.chart1}
-              fill="url(#accuracyGradient)"
+              fill="url(#vocabAccuracyGradient)"
               isAnimationActive={false}
-              name={t('charts.accuracyTrend.accuracy')}
+              name={t('charts.accuracyTrend.vocabulary')}
+            />
+            <Area
+              type="monotone"
+              dataKey="cultureAccuracy"
+              stroke={chartColors.chart2}
+              fill="url(#cultureAccuracyGradient)"
+              isAnimationActive={false}
+              name={t('charts.accuracyTrend.culture')}
             />
           </AreaChart>
         </ResponsiveContainer>

@@ -63,7 +63,9 @@
     "accuracyTrend": {
       "title": "Τάση Ακρίβειας",
       "description": "Το ποσοστό ακρίβειάς σας στο χρόνο",
-      "accuracy": "Ακρίβεια"
+      "accuracy": "Ακρίβεια",
+      "vocabulary": "Λεξιλόγιο",
+      "culture": "Πολιτισμός"
     },
     "deckPerformance": {
       "title": "Απόδοση Τράπουλας",

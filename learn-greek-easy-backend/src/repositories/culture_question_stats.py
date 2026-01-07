@@ -409,6 +409,49 @@ class CultureQuestionStatsRepository(BaseRepository[CultureQuestionStats]):
                 counts[day]["mastered"] += row.count
         return counts
 
+    async def get_daily_culture_accuracy_stats(
+        self,
+        user_id: UUID,
+        start_date: date,
+        end_date: date,
+    ) -> dict[date, dict]:
+        """Get daily accuracy statistics for culture questions.
+
+        Args:
+            user_id: User UUID
+            start_date: Start date (inclusive)
+            end_date: End date (inclusive)
+
+        Returns:
+            Dict of {date: {correct_count, total_count, accuracy}}
+
+        Use Case:
+            Accuracy Trend chart - culture accuracy per day
+        """
+        result = await self.db.execute(
+            select(
+                cast(CultureAnswerHistory.created_at, Date).label("day"),
+                func.count().filter(CultureAnswerHistory.is_correct == True).label(  # noqa: E712
+                    "correct"
+                ),
+                func.count().label("total"),
+            )
+            .where(CultureAnswerHistory.user_id == user_id)
+            .where(cast(CultureAnswerHistory.created_at, Date) >= start_date)
+            .where(cast(CultureAnswerHistory.created_at, Date) <= end_date)
+            .group_by(cast(CultureAnswerHistory.created_at, Date))
+        )
+        rows = result.all()
+
+        return {
+            row.day: {
+                "correct_count": row.correct,
+                "total_count": row.total,
+                "accuracy": (row.correct / row.total * 100) if row.total > 0 else 0.0,
+            }
+            for row in rows
+        }
+
 
 # ============================================================================
 # Module Exports

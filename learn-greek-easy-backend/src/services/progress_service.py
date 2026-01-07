@@ -662,6 +662,18 @@ class ProgressService:
             end_date=end_date,
         )
 
+        # Get daily accuracy stats for vocab and culture
+        vocab_accuracy_stats = await self.review_repo.get_daily_accuracy_stats(
+            user_id=user_id,
+            start_date=start_date,
+            end_date=end_date,
+        )
+        culture_accuracy_stats = await self.culture_stats_repo.get_daily_culture_accuracy_stats(
+            user_id=user_id,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
         # Create a map for quick lookup
         stats_map = {stat["date"]: stat for stat in raw_daily_stats}
 
@@ -677,6 +689,19 @@ class ProgressService:
             cards_learning = vocab_counts["learning"] + culture_counts["learning"]
             cards_mastered = vocab_counts["mastered"] + culture_counts["mastered"]
 
+            # Get accuracy stats for this day
+            vocab_acc = vocab_accuracy_stats.get(
+                current_date, {"correct_count": 0, "total_count": 0, "accuracy": 0.0}
+            )
+            culture_acc = culture_accuracy_stats.get(
+                current_date, {"correct_count": 0, "total_count": 0, "accuracy": 0.0}
+            )
+
+            # Calculate combined accuracy
+            total_correct = vocab_acc["correct_count"] + culture_acc["correct_count"]
+            total_count = vocab_acc["total_count"] + culture_acc["total_count"]
+            combined_accuracy = (total_correct / total_count * 100) if total_count > 0 else 0.0
+
             if current_date in stats_map:
                 stat = stats_map[current_date]
                 daily_stats.append(
@@ -688,6 +713,9 @@ class ProgressService:
                         cards_mastered=cards_mastered,
                         study_time_seconds=stat["total_time_seconds"],
                         average_quality=round(stat["average_quality"], 2),
+                        vocab_accuracy=round(vocab_acc["accuracy"], 1),
+                        culture_accuracy=round(culture_acc["accuracy"], 1),
+                        combined_accuracy=round(combined_accuracy, 1),
                     )
                 )
             else:
@@ -700,6 +728,9 @@ class ProgressService:
                         cards_mastered=cards_mastered,
                         study_time_seconds=0,
                         average_quality=0.0,
+                        vocab_accuracy=round(vocab_acc["accuracy"], 1),
+                        culture_accuracy=round(culture_acc["accuracy"], 1),
+                        combined_accuracy=round(combined_accuracy, 1),
                     )
                 )
             current_date += timedelta(days=1)

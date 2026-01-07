@@ -63,7 +63,9 @@
     "accuracyTrend": {
       "title": "Динамика точности",
       "description": "Процент точности во времени",
-      "accuracy": "Точность"
+      "accuracy": "Точность",
+      "vocabulary": "Словарный запас",
+      "culture": "Культура"
     },
     "deckPerformance": {
       "title": "Эффективность колод",

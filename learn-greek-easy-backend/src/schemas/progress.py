@@ -222,6 +222,9 @@ class DailyStats(BaseModel):
     cards_mastered: int
     study_time_seconds: int
     average_quality: float = Field(..., ge=0, le=5)
+    vocab_accuracy: float = Field(default=0.0, ge=0, le=100)
+    culture_accuracy: float = Field(default=0.0, ge=0, le=100)
+    combined_accuracy: float = Field(default=0.0, ge=0, le=100)
 
 
 class TrendsSummary(BaseModel):

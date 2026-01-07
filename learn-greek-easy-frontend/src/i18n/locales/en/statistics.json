@@ -63,7 +63,9 @@
     "accuracyTrend": {
       "title": "Accuracy Trend",
       "description": "Your accuracy percentage over time",
-      "accuracy": "Accuracy"
+      "accuracy": "Accuracy",
+      "vocabulary": "Vocabulary",
+      "culture": "Culture"
     },
     "deckPerformance": {
       "title": "Deck Performance",
