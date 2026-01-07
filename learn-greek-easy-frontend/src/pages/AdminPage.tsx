@@ -8,11 +8,13 @@ import {
   ChevronRight,
   Database,
   Layers,
+  Pencil,
   RefreshCw,
   Search,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import { DeckEditModal, type DeckEditFormData } from '@/components/admin';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -254,9 +256,10 @@ interface UnifiedDeckListItemProps {
   deck: UnifiedDeckItem;
   locale: string;
   t: (key: string, options?: { count: number }) => string;
+  onEdit: (deck: UnifiedDeckItem) => void;
 }
 
-const UnifiedDeckListItem: React.FC<UnifiedDeckListItemProps> = ({ deck, locale, t }) => {
+const UnifiedDeckListItem: React.FC<UnifiedDeckListItemProps> = ({ deck, locale, t, onEdit }) => {
   const displayName = getLocalizedName(deck.name, locale);
   const itemCountKey = deck.type === 'vocabulary' ? 'deck.cardCount' : 'deck.questionCount';
 
@@ -274,9 +277,20 @@ const UnifiedDeckListItem: React.FC<UnifiedDeckListItemProps> = ({ deck, locale,
           {t(`deckTypes.${deck.type}`)}
         </Badge>
       </div>
-      <span className="text-sm text-muted-foreground">
-        {t(itemCountKey, { count: deck.item_count })}
-      </span>
+      <div className="flex items-center gap-3">
+        <span className="text-sm text-muted-foreground">
+          {t(itemCountKey, { count: deck.item_count })}
+        </span>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => onEdit(deck)}
+          data-testid={`edit-deck-${deck.id}`}
+        >
+          <Pencil className="h-4 w-4" />
+          <span className="sr-only">{t('actions.edit')}</span>
+        </Button>
+      </div>
     </div>
   );
 };
@@ -306,9 +320,10 @@ function useDebounce<T>(value: T, delay: number): T {
 interface AllDecksListProps {
   t: (key: string, options?: Record<string, unknown>) => string;
   locale: string;
+  onEditDeck: (deck: UnifiedDeckItem) => void;
 }
 
-const AllDecksList: React.FC<AllDecksListProps> = ({ t, locale }) => {
+const AllDecksList: React.FC<AllDecksListProps> = ({ t, locale, onEditDeck }) => {
   const [deckList, setDeckList] = useState<DeckListResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -442,7 +457,13 @@ const AllDecksList: React.FC<AllDecksListProps> = ({ t, locale }) => {
             ) : (
               <div className="space-y-3">
                 {deckList.decks.map((deck) => (
-                  <UnifiedDeckListItem key={deck.id} deck={deck} locale={locale} t={t} />
+                  <UnifiedDeckListItem
+                    key={deck.id}
+                    deck={deck}
+                    locale={locale}
+                    t={t}
+                    onEdit={onEditDeck}
+                  />
                 ))}
               </div>
             )}
@@ -509,6 +530,10 @@ const AdminPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isRetrying, setIsRetrying] = useState(false);
 
+  // Deck edit modal state
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [selectedDeck, setSelectedDeck] = useState<UnifiedDeckItem | null>(null);
+
   const locale = i18n.language;
 
   const fetchStats = async () => {
@@ -534,6 +559,24 @@ const AdminPage: React.FC = () => {
     setIsRetrying(true);
     setIsLoading(true);
     fetchStats();
+  };
+
+  /**
+   * Handle opening the edit modal for a deck
+   */
+  const handleEditDeck = (deck: UnifiedDeckItem) => {
+    setSelectedDeck(deck);
+    setEditModalOpen(true);
+  };
+
+  /**
+   * Handle saving deck changes (stub - API integration in DECK-EDIT-05)
+   */
+  const handleSaveDeck = async (_data: DeckEditFormData) => {
+    // TODO: Implement API call in DECK-EDIT-05
+    // Will use selectedDeck?.id and _data to update the deck
+    setEditModalOpen(false);
+    setSelectedDeck(null);
   };
 
   // Show loading skeleton while fetching
@@ -693,8 +736,16 @@ const AdminPage: React.FC = () => {
 
       {/* All Decks List with Search and Pagination */}
       <section aria-labelledby="all-decks-heading">
-        <AllDecksList t={t} locale={locale} />
+        <AllDecksList t={t} locale={locale} onEditDeck={handleEditDeck} />
       </section>
+
+      {/* Deck Edit Modal */}
+      <DeckEditModal
+        open={editModalOpen}
+        onOpenChange={setEditModalOpen}
+        deck={selectedDeck}
+        onSave={handleSaveDeck}
+      />
     </div>
   );
 };
