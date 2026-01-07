@@ -155,7 +155,7 @@ const transformToAnalyticsDashboardData = (
     timeStudied: day.study_time_seconds,
     streak: 0, // Not available per day
     cardsNew: 0,
-    cardsLearning: 0,
+    cardsLearning: day.cards_learning,
     cardsReview: 0,
   }));
 

@@ -3,7 +3,7 @@
 from datetime import date, datetime
 from uuid import UUID
 
-from sqlalchemy import func, not_, select
+from sqlalchemy import Date, cast, func, not_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -662,3 +662,49 @@ class CardStatisticsRepository(BaseRepository[CardStatistics]):
         )
         result = await self.db.execute(query)
         return result.scalar() or 0
+
+    async def count_cards_by_status_per_day(
+        self,
+        user_id: UUID,
+        start_date: date,
+        end_date: date,
+    ) -> dict[date, dict[str, int]]:
+        """Count cards in each status per day based on updated_at.
+
+        Groups cards by the date they were last updated and their current status.
+        Learning includes both LEARNING and REVIEW statuses.
+
+        Args:
+            user_id: User UUID
+            start_date: Start date (inclusive)
+            end_date: End date (inclusive)
+
+        Returns:
+            Dict of {date: {learning: count, mastered: count}}
+
+        Use Case:
+            Progress Over Time chart - show learning/mastered counts per day
+        """
+        result = await self.db.execute(
+            select(
+                cast(CardStatistics.updated_at, Date).label("day"),
+                CardStatistics.status,
+                func.count(CardStatistics.id).label("count"),
+            )
+            .where(CardStatistics.user_id == user_id)
+            .where(cast(CardStatistics.updated_at, Date) >= start_date)
+            .where(cast(CardStatistics.updated_at, Date) <= end_date)
+            .group_by(cast(CardStatistics.updated_at, Date), CardStatistics.status)
+        )
+        rows = result.all()
+
+        counts: dict[date, dict[str, int]] = {}
+        for row in rows:
+            day = row.day
+            if day not in counts:
+                counts[day] = {"learning": 0, "mastered": 0}
+            if row.status == CardStatus.LEARNING or row.status == CardStatus.REVIEW:
+                counts[day]["learning"] += row.count
+            elif row.status == CardStatus.MASTERED:
+                counts[day]["mastered"] += row.count
+        return counts

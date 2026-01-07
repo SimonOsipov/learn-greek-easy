@@ -161,6 +161,7 @@ export interface DailyStats {
   date: string;
   reviews_count: number;
   cards_learned: number;
+  cards_learning: number;
   cards_mastered: number;
   study_time_seconds: number;
   average_quality: number;

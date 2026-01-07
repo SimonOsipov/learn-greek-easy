@@ -218,6 +218,7 @@ class DailyStats(BaseModel):
     date: date
     reviews_count: int
     cards_learned: int
+    cards_learning: int = 0
     cards_mastered: int
     study_time_seconds: int
     average_quality: float = Field(..., ge=0, le=5)
