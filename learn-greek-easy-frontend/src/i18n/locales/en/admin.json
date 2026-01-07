@@ -4,6 +4,21 @@
     "subtitle": "Manage content and view statistics"
   },
   "deckEdit": {
+    "title": "Edit Deck",
+    "name": "Name",
+    "namePlaceholder": "Enter deck name",
+    "nameRequired": "Name is required",
+    "description": "Description",
+    "descriptionPlaceholder": "Enter deck description (optional)",
+    "level": "CEFR Level",
+    "levelPlaceholder": "Select level",
+    "category": "Category",
+    "categoryPlaceholder": "Select category",
+    "isActive": "Active",
+    "isActiveDescription": "Inactive decks are hidden from learners",
+    "save": "Save Changes",
+    "saving": "Saving...",
+    "cancel": "Cancel",
     "deactivateWarning": {
       "title": "Deactivate Deck?",
       "deckName": "You are about to deactivate \"{{name}}\"",
@@ -16,6 +31,22 @@
       "cancel": "Keep Active",
       "confirm": "Deactivate"
     }
+  },
+  "categories": {
+    "history": "History",
+    "geography": "Geography",
+    "politics": "Politics",
+    "culture": "Culture",
+    "traditions": "Traditions",
+    "practical": "Practical"
+  },
+  "levels": {
+    "A1": "A1 - Beginner",
+    "A2": "A2 - Elementary",
+    "B1": "B1 - Intermediate",
+    "B2": "B2 - Upper Intermediate",
+    "C1": "C1 - Advanced",
+    "C2": "C2 - Proficient"
   },
   "sections": {
     "contentSummary": "Content Summary",
@@ -58,11 +89,13 @@
   "errors": {
     "loadingStats": "Error loading admin statistics",
     "loadingDecks": "Error loading decks",
-    "failed": "Failed to load statistics"
+    "failed": "Failed to load statistics",
+    "saveFailed": "Failed to save changes. Please try again."
   },
   "actions": {
     "retry": "Retry",
-    "retrying": "Retrying..."
+    "retrying": "Retrying...",
+    "edit": "Edit"
   },
   "states": {
     "noStats": "No statistics available",
