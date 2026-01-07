@@ -8,7 +8,7 @@ import {
   DeckPerformanceChart,
   StageDistributionChart,
 } from '@/components/charts';
-import { StatsGrid, LevelProgressCard, ActivityTimeline } from '@/components/statistics';
+import { StatsGrid, LevelProgressCard } from '@/components/statistics';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -179,8 +179,6 @@ const Statistics: React.FC = () => {
         </div>
       </section>
 
-      {/* Activity Timeline */}
-      <ActivityTimeline joinedDate={stats.joinedDate} lastActivity={stats.lastActivity} />
     </div>
   );
 };

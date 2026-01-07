@@ -52,13 +52,6 @@
       "description": "Διατηρήστε σειρά 30 ημερών"
     }
   },
-  "timeline": {
-    "title": "Χρονολόγιο Δραστηριότητας",
-    "joined": "Εγγραφήκατε στο Learn Greek Easy",
-    "lastActive": "Τελευταία Δραστηριότητα",
-    "daysAgo": "{{count}} ημέρα πριν",
-    "daysAgo_plural": "{{count}} ημέρες πριν"
-  },
   "charts": {
     "progressOverTime": {
       "title": "Πρόοδος στο Χρόνο",
