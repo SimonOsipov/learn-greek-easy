@@ -106,8 +106,8 @@ class TestCultureDeckResponse:
         """Test valid deck response."""
         deck = CultureDeckResponse(
             id="12345678-1234-1234-1234-123456789abc",
-            name={"el": "Ιστορία", "en": "History", "ru": "История"},
-            description={"el": "...", "en": "...", "ru": "..."},
+            name="History",
+            description="Learn about Greek history",
             icon="book-open",
             color_accent="#4F46E5",
             category="history",
@@ -127,8 +127,8 @@ class TestCultureDeckResponse:
         )
         deck = CultureDeckResponse(
             id=uuid4(),
-            name={"el": "Test", "en": "Test", "ru": "Test"},
-            description={"el": "...", "en": "...", "ru": "..."},
+            name="Test Deck",
+            description="Test description",
             icon="test",
             color_accent="#FFFFFF",
             category="history",
@@ -143,8 +143,8 @@ class TestCultureDeckResponse:
         with pytest.raises(ValidationError) as exc_info:
             CultureDeckResponse(
                 id="12345678-1234-1234-1234-123456789abc",
-                name={"el": "Test", "en": "Test", "ru": "Test"},
-                description={"el": "...", "en": "...", "ru": "..."},
+                name="Test Deck",
+                description="Test description",
                 icon="test",
                 color_accent="invalid",  # Not hex format
                 category="history",
@@ -157,8 +157,8 @@ class TestCultureDeckResponse:
         with pytest.raises(ValidationError) as exc_info:
             CultureDeckResponse(
                 id=uuid4(),
-                name={"el": "Test", "en": "Test", "ru": "Test"},
-                description={"el": "...", "en": "...", "ru": "..."},
+                name="Test Deck",
+                description="Test description",
                 icon="test",
                 color_accent="#FFF",  # Short form not allowed
                 category="history",
@@ -171,8 +171,8 @@ class TestCultureDeckResponse:
         with pytest.raises(ValidationError) as exc_info:
             CultureDeckResponse(
                 id=uuid4(),
-                name={"el": "Test", "en": "Test", "ru": "Test"},
-                description={"el": "...", "en": "...", "ru": "..."},
+                name="Test Deck",
+                description="Test description",
                 icon="test",
                 color_accent="4F46E5",  # Missing #
                 category="history",
@@ -185,8 +185,8 @@ class TestCultureDeckResponse:
         with pytest.raises(ValidationError) as exc_info:
             CultureDeckResponse(
                 id=uuid4(),
-                name={"el": "Test", "en": "Test", "ru": "Test"},
-                description={"el": "...", "en": "...", "ru": "..."},
+                name="Test Deck",
+                description="Test description",
                 icon="test",
                 color_accent="#4F46E5",
                 category="history",
@@ -473,7 +473,7 @@ class TestCultureSessionSummary:
         summary = CultureSessionSummary(
             session_id="sess-123",
             deck_id=uuid4(),
-            deck_name={"el": "Test", "en": "Test", "ru": "Test"},
+            deck_name="Test Deck",
             questions_answered=10,
             correct_count=8,
             incorrect_count=2,
@@ -492,7 +492,7 @@ class TestCultureSessionSummary:
         summary = CultureSessionSummary(
             session_id="sess-123",
             deck_id=uuid4(),
-            deck_name={"el": "Test", "en": "Test", "ru": "Test"},
+            deck_name="Test Deck",
             questions_answered=10,
             correct_count=10,
             incorrect_count=0,
@@ -510,7 +510,7 @@ class TestCultureSessionSummary:
         summary = CultureSessionSummary(
             session_id="sess-123",
             deck_id=uuid4(),
-            deck_name={"el": "Test", "en": "Test", "ru": "Test"},
+            deck_name="Test Deck",
             questions_answered=10,
             correct_count=0,
             incorrect_count=10,

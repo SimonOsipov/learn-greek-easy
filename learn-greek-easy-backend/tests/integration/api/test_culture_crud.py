@@ -29,11 +29,11 @@ def valid_multilingual_text():
 
 
 @pytest.fixture
-def valid_culture_deck_data(valid_multilingual_text):
+def valid_culture_deck_data():
     """Return valid culture deck creation data."""
     return {
-        "name": valid_multilingual_text,
-        "description": valid_multilingual_text,
+        "name": "Test Deck",
+        "description": "Test description",
         "icon": "book-open",
         "color_accent": "#4F46E5",
         "category": "history",
@@ -56,12 +56,12 @@ def valid_culture_question_data(valid_multilingual_text):
 
 
 @pytest.fixture
-async def culture_deck_for_tests(db_session, valid_multilingual_text):
+async def culture_deck_for_tests(db_session):
     """Create a culture deck for testing question operations."""
     deck = CultureDeck(
         id=uuid4(),
-        name={"el": "Test Deck", "en": "Test Deck", "ru": "Test Deck"},
-        description={"el": "Desc", "en": "Desc", "ru": "Desc"},
+        name="Test Deck",
+        description="Test description",
         icon="test-icon",
         color_accent="#FF0000",
         category="history",
@@ -157,12 +157,12 @@ class TestCreateCultureDeck:
         assert response.status_code == 422
 
     @pytest.mark.asyncio
-    async def test_create_deck_missing_multilingual_field_returns_422(
+    async def test_create_deck_empty_name_returns_422(
         self, client: AsyncClient, superuser_auth_headers: dict, valid_culture_deck_data
     ):
-        """Test missing language in multilingual field returns 422."""
+        """Test empty name returns 422."""
         invalid_data = {**valid_culture_deck_data}
-        invalid_data["name"] = {"el": "Greek only"}  # Missing en and ru
+        invalid_data["name"] = ""  # Empty string
         response = await client.post(
             "/api/v1/culture/decks",
             json=invalid_data,

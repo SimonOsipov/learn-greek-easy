@@ -101,7 +101,7 @@ class TestCultureDecksList(E2ETestCase):
         for i in range(5):
             await CultureDeckFactory.create(
                 session=db_session,
-                name={"el": f"Deck {i}", "en": f"Deck {i}", "ru": f"Deck {i}"},
+                name=f"Deck {i}",
             )
         await db_session.commit()
 
@@ -225,13 +225,13 @@ class TestCultureDecksList(E2ETestCase):
         assert "questions_new" in progress
 
     @pytest.mark.asyncio
-    async def test_list_decks_multilingual_content(
+    async def test_list_decks_name_and_description(
         self,
         client: AsyncClient,
         auth_headers: dict[str, str],
         db_session: AsyncSession,
     ) -> None:
-        """Test that decks include multilingual name and description."""
+        """Test that decks include name and description as strings."""
         await CultureDeckFactory.create(session=db_session)
         await db_session.commit()
 
@@ -240,14 +240,11 @@ class TestCultureDecksList(E2ETestCase):
         data = response.json()
 
         deck_data = data["decks"][0]
-        # Name should have el, en, ru keys
-        assert "el" in deck_data["name"]
-        assert "en" in deck_data["name"]
-        assert "ru" in deck_data["name"]
-        # Description should have el, en, ru keys
-        assert "el" in deck_data["description"]
-        assert "en" in deck_data["description"]
-        assert "ru" in deck_data["description"]
+        # Name should be a string
+        assert isinstance(deck_data["name"], str)
+        assert len(deck_data["name"]) > 0
+        # Description should be a string or None
+        assert deck_data["description"] is None or isinstance(deck_data["description"], str)
 
 
 # =============================================================================
@@ -670,13 +667,13 @@ class TestCultureQuestionQueue(E2ETestCase):
         assert len(new_questions) <= 2
 
     @pytest.mark.asyncio
-    async def test_question_queue_multilingual_content(
+    async def test_question_queue_content(
         self,
         client: AsyncClient,
         fresh_user_session: UserSession,
         db_session: AsyncSession,
     ) -> None:
-        """Test that questions include multilingual content."""
+        """Test that question queue includes deck name and question text."""
         deck = await CultureDeckFactory.create(session=db_session)
         await CultureQuestionFactory.create(session=db_session, deck_id=deck.id)
         await db_session.commit()
@@ -689,12 +686,11 @@ class TestCultureQuestionQueue(E2ETestCase):
         assert response.status_code == 200
         data = response.json()
 
-        # Deck name should be multilingual
-        assert "el" in data["deck_name"]
-        assert "en" in data["deck_name"]
-        assert "ru" in data["deck_name"]
+        # Deck name should be a string
+        assert isinstance(data["deck_name"], str)
+        assert len(data["deck_name"]) > 0
 
-        # Question text and options should be multilingual
+        # Question text and options should be multilingual (questions remain multilingual)
         question = data["questions"][0]
         assert "el" in question["question_text"]
         assert "en" in question["question_text"]

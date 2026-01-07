@@ -52,8 +52,8 @@ class TestCultureDeckServiceList:
         # Create mock deck
         mock_deck = MagicMock()
         mock_deck.id = uuid4()
-        mock_deck.name = {"en": "Greek History", "el": "Ελληνική Ιστορία"}
-        mock_deck.description = {"en": "History deck", "el": "Ιστορία"}
+        mock_deck.name = "Greek History"
+        mock_deck.description = "History deck"
         mock_deck.icon = "book"
         mock_deck.color_accent = "#4F46E5"
         mock_deck.category = "history"
@@ -121,8 +121,8 @@ class TestCultureDeckServiceList:
         # Create mock deck
         mock_deck = MagicMock()
         mock_deck.id = uuid4()
-        mock_deck.name = {"en": "Test", "el": "Test", "ru": "Test"}
-        mock_deck.description = {"en": "Test desc", "el": "Test desc", "ru": "Test desc"}
+        mock_deck.name = "Test"
+        mock_deck.description = "Test desc"
         mock_deck.icon = "test"
         mock_deck.color_accent = "#000000"
         mock_deck.category = "culture"
@@ -169,8 +169,8 @@ class TestCultureDeckServiceList:
 
         mock_deck = MagicMock()
         mock_deck.id = uuid4()
-        mock_deck.name = {"en": "Test", "el": "Test", "ru": "Test"}
-        mock_deck.description = {"en": "Test desc", "el": "Test desc", "ru": "Test desc"}
+        mock_deck.name = "Test"
+        mock_deck.description = "Test desc"
         mock_deck.icon = "test"
         mock_deck.color_accent = "#000000"
         mock_deck.category = "culture"
@@ -204,8 +204,8 @@ class TestCultureDeckServiceGetDeck:
 
         mock_deck = MagicMock()
         mock_deck.id = deck_id
-        mock_deck.name = {"en": "Greek History"}
-        mock_deck.description = {"en": "Learn about Greek history"}
+        mock_deck.name = "Greek History"
+        mock_deck.description = "Learn about Greek history"
         mock_deck.icon = "book"
         mock_deck.color_accent = "#4F46E5"
         mock_deck.category = "history"
@@ -271,8 +271,8 @@ class TestCultureDeckServiceGetDeck:
 
         mock_deck = MagicMock()
         mock_deck.id = deck_id
-        mock_deck.name = {"en": "Test", "el": "Test", "ru": "Test"}
-        mock_deck.description = {"en": "Test desc", "el": "Test desc", "ru": "Test desc"}
+        mock_deck.name = "Test"
+        mock_deck.description = "Test desc"
         mock_deck.icon = "test"
         mock_deck.color_accent = "#000000"
         mock_deck.category = "culture"
@@ -409,21 +409,13 @@ class TestCreateDeck:
     @pytest.mark.asyncio
     async def test_create_deck_success(self, mock_db_session: MagicMock):
         """Should successfully create a deck."""
-        from src.schemas.culture import CultureDeckCreate, MultilingualText
+        from src.schemas.culture import CultureDeckCreate
 
         service = CultureDeckService(mock_db_session)
 
         deck_data = CultureDeckCreate(
-            name=MultilingualText(
-                el="Νέα τράπουλα",
-                en="New deck",
-                ru="Новая колода",
-            ),
-            description=MultilingualText(
-                el="Περιγραφή",
-                en="Description",
-                ru="Описание",
-            ),
+            name="New deck",
+            description="Description",
             icon="book",
             color_accent="#4F46E5",
             category="history",
@@ -432,8 +424,8 @@ class TestCreateDeck:
 
         mock_deck = MagicMock()
         mock_deck.id = uuid4()
-        mock_deck.name = {"el": "Νέα τράπουλα", "en": "New deck", "ru": "Новая колода"}
-        mock_deck.description = {"el": "Περιγραφή", "en": "Description", "ru": "Описание"}
+        mock_deck.name = "New deck"
+        mock_deck.description = "Description"
         mock_deck.icon = "book"
         mock_deck.color_accent = "#4F46E5"
         mock_deck.category = "history"
@@ -459,13 +451,13 @@ class TestCreateDeck:
     @pytest.mark.asyncio
     async def test_create_deck_with_custom_order_index(self, mock_db_session: MagicMock):
         """Should create deck with specified order_index."""
-        from src.schemas.culture import CultureDeckCreate, MultilingualText
+        from src.schemas.culture import CultureDeckCreate
 
         service = CultureDeckService(mock_db_session)
 
         deck_data = CultureDeckCreate(
-            name=MultilingualText(el="Test", en="Test", ru="Test"),
-            description=MultilingualText(el="Desc", en="Desc", ru="Desc"),
+            name="Test",
+            description="Desc",
             icon="test",
             color_accent="#000000",
             category="culture",
@@ -474,8 +466,8 @@ class TestCreateDeck:
 
         mock_deck = MagicMock()
         mock_deck.id = uuid4()
-        mock_deck.name = {"el": "Test", "en": "Test", "ru": "Test"}
-        mock_deck.description = {"el": "Desc", "en": "Desc", "ru": "Desc"}
+        mock_deck.name = "Test"
+        mock_deck.description = "Desc"
         mock_deck.icon = "test"
         mock_deck.color_accent = "#000000"
         mock_deck.category = "culture"
@@ -499,34 +491,26 @@ class TestUpdateDeck:
     @pytest.mark.asyncio
     async def test_update_deck_success(self, mock_db_session: MagicMock):
         """Should successfully update a deck."""
-        from src.schemas.culture import CultureDeckUpdate, MultilingualText
+        from src.schemas.culture import CultureDeckUpdate
 
         service = CultureDeckService(mock_db_session)
         deck_id = uuid4()
 
         update_data = CultureDeckUpdate(
-            name=MultilingualText(
-                el="Ενημερωμένο όνομα",
-                en="Updated name",
-                ru="Обновленное имя",
-            ),
+            name="Updated name",
             icon="new-icon",
         )
 
         mock_deck = MagicMock()
         mock_deck.id = deck_id
-        mock_deck.name = {"el": "Old", "en": "Old", "ru": "Old"}
-        mock_deck.description = {"el": "Desc", "en": "Desc", "ru": "Desc"}
+        mock_deck.name = "Old"
+        mock_deck.description = "Desc"
         mock_deck.icon = "old-icon"
         mock_deck.is_active = True
 
         mock_updated_deck = MagicMock()
         mock_updated_deck.id = deck_id
-        mock_updated_deck.name = {
-            "el": "Ενημερωμένο όνομα",
-            "en": "Updated name",
-            "ru": "Обновленное имя",
-        }
+        mock_updated_deck.name = "Updated name"
         mock_updated_deck.icon = "new-icon"
 
         with (

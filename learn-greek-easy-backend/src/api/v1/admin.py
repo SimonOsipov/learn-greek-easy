@@ -62,7 +62,7 @@ router = APIRouter(
                         "culture_decks": [
                             {
                                 "id": "660e8400-e29b-41d4-a716-446655440000",
-                                "name": {"el": "Ιστορία", "en": "History", "ru": "История"},
+                                "name": "History",
                                 "category": "history",
                                 "question_count": 45,
                             }
@@ -354,9 +354,9 @@ async def list_decks(
             .where(CultureDeck.is_active.is_(True))
         )
 
-        # Apply search filter (search in English name field)
+        # Apply search filter
         if search:
-            culture_query = culture_query.where(CultureDeck.name["en"].astext.ilike(f"%{search}%"))
+            culture_query = culture_query.where(CultureDeck.name.ilike(f"%{search}%"))
 
         # Get total count for culture
         culture_count_query = select(func.count()).select_from(culture_query.subquery())
