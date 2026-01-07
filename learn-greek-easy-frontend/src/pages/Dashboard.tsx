@@ -255,12 +255,12 @@ export const Dashboard: React.FC = () => {
                 key={deck.id}
                 deck={{
                   id: deck.id,
-                  title: deck.title,
+                  title: deck.titleGreek || deck.title,
                   description: deck.description,
                   status: deck.progress?.status ?? 'not-started',
                   level: deck.level,
                   progress: {
-                    current: deck.progress?.cardsMastered ?? 0,
+                    current: (deck.progress?.cardsLearning ?? 0) + (deck.progress?.cardsMastered ?? 0),
                     total: deck.cardCount,
                     percentage:
                       deck.progress && deck.progress.cardsTotal > 0
