@@ -401,12 +401,13 @@ class CultureQuestionStatsRepository(BaseRepository[CultureQuestionStats]):
         counts: dict[date, dict[str, int]] = {}
         for row in rows:
             day = row.day
+            count_val: int = int(row[2])  # count column is at index 2
             if day not in counts:
                 counts[day] = {"learning": 0, "mastered": 0}
             if row.status == CardStatus.LEARNING or row.status == CardStatus.REVIEW:
-                counts[day]["learning"] += row.count
+                counts[day]["learning"] += count_val
             elif row.status == CardStatus.MASTERED:
-                counts[day]["mastered"] += row.count
+                counts[day]["mastered"] += count_val
         return counts
 
     async def get_daily_culture_accuracy_stats(
