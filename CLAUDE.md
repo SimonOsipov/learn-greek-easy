@@ -26,7 +26,7 @@ cd /Users/samosipov/Downloads/learn-greek-easy/learn-greek-easy-backend && /User
 
 | Server | Purpose |
 |--------|---------|
-| Vibe Kanban | Task tracking. Project ID: `cb892c2b-4a17-4402-83f2-8f6cb086468b` |
+| Vibe Kanban | Task tracking. Project ID: `9cad311d-e4b4-4861-bf89-4fe6bad3ce8b` |
 | Context7 | Library docs - **always check before writing code** |
 | Playwright | Visual verification, E2E testing, bug research |
 | GitHub | PRs, issues, code search |
