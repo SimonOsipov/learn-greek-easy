@@ -138,7 +138,7 @@ export async function authScenario() {
 export function handleSummary(data) {
   // Generate timestamp for unique report filename
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const reportPath = `reports/auth-${currentEnvironment}-${timestamp}.json`;
+  const reportPath = `k6/reports/auth-${currentEnvironment}-${timestamp}.json`;
 
   // Log execution context
   console.log(`\n--- Auth Scenario Summary ---`);
