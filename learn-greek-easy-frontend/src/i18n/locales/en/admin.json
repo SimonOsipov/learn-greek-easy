@@ -3,6 +3,20 @@
     "title": "Admin Dashboard",
     "subtitle": "Manage content and view statistics"
   },
+  "deckEdit": {
+    "deactivateWarning": {
+      "title": "Deactivate Deck?",
+      "deckName": "You are about to deactivate \"{{name}}\"",
+      "description": "Deactivating this deck will have the following effects:",
+      "impact": {
+        "hidden": "The deck will be hidden from all learners",
+        "progressPreserved": "All user progress will be preserved",
+        "reversible": "You can reactivate the deck at any time"
+      },
+      "cancel": "Keep Active",
+      "confirm": "Deactivate"
+    }
+  },
   "sections": {
     "contentSummary": "Content Summary",
     "decksByLevel": "Vocabulary Decks by Level",

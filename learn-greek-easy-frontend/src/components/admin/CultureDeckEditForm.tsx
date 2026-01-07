@@ -1,6 +1,6 @@
 // src/components/admin/CultureDeckEditForm.tsx
 
-import React from 'react';
+import React, { useState } from 'react';
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -29,6 +29,8 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import type { UnifiedDeckItem } from '@/services/adminAPI';
+
+import { DeactivationWarningDialog } from './DeactivationWarningDialog';
 
 /**
  * Culture deck categories
@@ -83,6 +85,7 @@ export const CultureDeckEditForm: React.FC<CultureDeckEditFormProps> = ({
   isLoading = false,
 }) => {
   const { t } = useTranslation('admin');
+  const [showDeactivationWarning, setShowDeactivationWarning] = useState(false);
 
   // Get the deck name as string (culture decks now use simple strings after migration)
   const deckName = typeof deck.name === 'string' ? deck.name : deck.name.en;
@@ -100,6 +103,29 @@ export const CultureDeckEditForm: React.FC<CultureDeckEditFormProps> = ({
 
   const onSubmit = (data: CultureDeckFormData) => {
     onSave(data);
+  };
+
+  /**
+   * Handles changes to the is_active switch.
+   * Shows a warning dialog when toggling from active to inactive.
+   */
+  const handleActiveChange = (checked: boolean) => {
+    if (!checked && form.getValues('is_active')) {
+      // Toggling from active to inactive - show warning
+      setShowDeactivationWarning(true);
+    } else {
+      // Toggling from inactive to active - allow directly
+      form.setValue('is_active', checked, { shouldDirty: true });
+    }
+  };
+
+  const handleDeactivationCancel = () => {
+    setShowDeactivationWarning(false);
+  };
+
+  const handleDeactivationConfirm = () => {
+    setShowDeactivationWarning(false);
+    form.setValue('is_active', false, { shouldDirty: true });
   };
 
   return (
@@ -183,7 +209,7 @@ export const CultureDeckEditForm: React.FC<CultureDeckEditFormProps> = ({
               <FormControl>
                 <Switch
                   checked={field.value}
-                  onCheckedChange={field.onChange}
+                  onCheckedChange={handleActiveChange}
                   data-testid="deck-edit-is-active"
                 />
               </FormControl>
@@ -203,6 +229,13 @@ export const CultureDeckEditForm: React.FC<CultureDeckEditFormProps> = ({
             {isLoading ? t('deckEdit.saving') : t('deckEdit.save')}
           </Button>
         </DialogFooter>
+
+        <DeactivationWarningDialog
+          open={showDeactivationWarning}
+          onCancel={handleDeactivationCancel}
+          onConfirm={handleDeactivationConfirm}
+          deckName={deckName}
+        />
       </form>
     </Form>
   );

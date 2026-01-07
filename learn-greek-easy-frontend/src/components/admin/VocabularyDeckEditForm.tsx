@@ -1,6 +1,6 @@
 // src/components/admin/VocabularyDeckEditForm.tsx
 
-import React from 'react';
+import React, { useState } from 'react';
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -29,6 +29,8 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import type { DeckLevel, UnifiedDeckItem } from '@/services/adminAPI';
+
+import { DeactivationWarningDialog } from './DeactivationWarningDialog';
 
 /**
  * CEFR levels for vocabulary decks
@@ -74,6 +76,7 @@ export const VocabularyDeckEditForm: React.FC<VocabularyDeckEditFormProps> = ({
   isLoading = false,
 }) => {
   const { t } = useTranslation('admin');
+  const [showDeactivationWarning, setShowDeactivationWarning] = useState(false);
 
   // Get the deck name as string (vocabulary decks always have string names now)
   const deckName = typeof deck.name === 'string' ? deck.name : deck.name.en;
@@ -91,6 +94,29 @@ export const VocabularyDeckEditForm: React.FC<VocabularyDeckEditFormProps> = ({
 
   const onSubmit = (data: VocabularyDeckFormData) => {
     onSave(data);
+  };
+
+  /**
+   * Handles changes to the is_active switch.
+   * Shows a warning dialog when toggling from active to inactive.
+   */
+  const handleActiveChange = (checked: boolean) => {
+    if (!checked && form.getValues('is_active')) {
+      // Toggling from active to inactive - show warning
+      setShowDeactivationWarning(true);
+    } else {
+      // Toggling from inactive to active - allow directly
+      form.setValue('is_active', checked, { shouldDirty: true });
+    }
+  };
+
+  const handleDeactivationCancel = () => {
+    setShowDeactivationWarning(false);
+  };
+
+  const handleDeactivationConfirm = () => {
+    setShowDeactivationWarning(false);
+    form.setValue('is_active', false, { shouldDirty: true });
   };
 
   return (
@@ -174,7 +200,7 @@ export const VocabularyDeckEditForm: React.FC<VocabularyDeckEditFormProps> = ({
               <FormControl>
                 <Switch
                   checked={field.value}
-                  onCheckedChange={field.onChange}
+                  onCheckedChange={handleActiveChange}
                   data-testid="deck-edit-is-active"
                 />
               </FormControl>
@@ -194,6 +220,13 @@ export const VocabularyDeckEditForm: React.FC<VocabularyDeckEditFormProps> = ({
             {isLoading ? t('deckEdit.saving') : t('deckEdit.save')}
           </Button>
         </DialogFooter>
+
+        <DeactivationWarningDialog
+          open={showDeactivationWarning}
+          onCancel={handleDeactivationCancel}
+          onConfirm={handleDeactivationConfirm}
+          deckName={deckName}
+        />
       </form>
     </Form>
   );
