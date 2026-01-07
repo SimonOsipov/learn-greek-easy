@@ -5,8 +5,12 @@
   },
   "sections": {
     "contentSummary": "Сводка контента",
-    "decksByLevel": "Колоды по уровням",
-    "decksByLevelDescription": "Все активные колоды, отсортированные по уровню CEFR (от A1 до C2)"
+    "decksByLevel": "Колоды словаря по уровням",
+    "decksByLevelDescription": "Все активные колоды словаря, отсортированные по уровню CEFR (от A1 до C2)",
+    "cultureDecks": "Колоды культуры по категориям",
+    "cultureDecksDescription": "Все активные колоды культуры, организованные по категориям",
+    "allDecks": "Все колоды",
+    "allDecksDescription": "Поиск и просмотр всех колод словаря и культуры"
   },
   "stats": {
     "totalDecks": "Всего колод",
@@ -16,10 +20,34 @@
     "cardCount_one": "{{count}} карточка",
     "cardCount_few": "{{count}} карточки",
     "cardCount_many": "{{count}} карточек",
-    "cardCount_other": "{{count}} карточек"
+    "cardCount_other": "{{count}} карточек",
+    "questionCount_one": "{{count}} вопрос",
+    "questionCount_few": "{{count}} вопроса",
+    "questionCount_many": "{{count}} вопросов",
+    "questionCount_other": "{{count}} вопросов"
+  },
+  "deckTypes": {
+    "vocabulary": "Словарь",
+    "culture": "Культура"
+  },
+  "search": {
+    "placeholder": "Поиск колод..."
+  },
+  "filter": {
+    "type": "Фильтр по типу",
+    "allTypes": "Все типы",
+    "vocabulary": "Словарь",
+    "culture": "Культура"
+  },
+  "pagination": {
+    "showing": "Показано {{from}}-{{to}} из {{total}}",
+    "pageOf": "Страница {{page}} из {{totalPages}}",
+    "previous": "Назад",
+    "next": "Вперед"
   },
   "errors": {
     "loadingStats": "Ошибка загрузки статистики администратора",
+    "loadingDecks": "Ошибка загрузки колод",
     "failed": "Не удалось загрузить статистику"
   },
   "actions": {
@@ -28,6 +56,8 @@
   },
   "states": {
     "noStats": "Статистика недоступна",
-    "noDecks": "Колоды недоступны"
+    "noDecks": "Колоды словаря недоступны",
+    "noCultureDecks": "Колоды культуры недоступны",
+    "noDecksFound": "Колоды, соответствующие вашему поиску, не найдены"
   }
 }

@@ -35,9 +35,9 @@ test.describe('Admin Panel - i18n Translations', () => {
     );
 
     // Should display English section titles
-    await expect(page.getByTestId('decks-by-level-title')).toHaveText('Decks by Level');
+    await expect(page.getByTestId('decks-by-level-title')).toHaveText('Vocabulary Decks by Level');
     await expect(page.getByTestId('decks-by-level-description')).toHaveText(
-      'All active decks sorted by CEFR level (A1 to C2)'
+      'All active vocabulary decks sorted by CEFR level (A1 to C2)'
     );
   });
 
@@ -56,9 +56,9 @@ test.describe('Admin Panel - i18n Translations', () => {
     );
 
     // Should display Greek section titles
-    await expect(page.getByTestId('decks-by-level-title')).toHaveText('Τράπουλες ανά Επίπεδο');
+    await expect(page.getByTestId('decks-by-level-title')).toHaveText('Τράπουλες Λεξιλογίου ανά Επίπεδο');
     await expect(page.getByTestId('decks-by-level-description')).toHaveText(
-      'Όλες οι ενεργές τράπουλες ταξινομημένες κατά επίπεδο CEFR (A1 έως C2)'
+      'Όλες οι ενεργές τράπουλες λεξιλογίου ταξινομημένες κατά επίπεδο CEFR (A1 έως C2)'
     );
   });
 
@@ -77,9 +77,9 @@ test.describe('Admin Panel - i18n Translations', () => {
     );
 
     // Should display Russian section titles
-    await expect(page.getByTestId('decks-by-level-title')).toHaveText('Колоды по уровням');
+    await expect(page.getByTestId('decks-by-level-title')).toHaveText('Колоды словаря по уровням');
     await expect(page.getByTestId('decks-by-level-description')).toHaveText(
-      'Все активные колоды, отсортированные по уровню CEFR (от A1 до C2)'
+      'Все активные колоды словаря, отсортированные по уровню CEFR (от A1 до C2)'
     );
   });
 
