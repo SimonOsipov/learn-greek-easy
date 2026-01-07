@@ -1,6 +1,6 @@
 // src/pages/AdminPage.tsx
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 
 import {
   AlertCircle,
@@ -212,10 +212,7 @@ function getCategoryBadgeVariant(category: string): 'default' | 'secondary' | 'o
 /**
  * Get localized name from multilingual object
  */
-function getLocalizedName(
-  name: string | MultilingualName,
-  locale: string
-): string {
+function getLocalizedName(name: string | MultilingualName, locale: string): string {
   if (typeof name === 'string') {
     return name;
   }
@@ -682,9 +679,7 @@ const AdminPage: React.FC = () => {
           </CardHeader>
           <CardContent>
             {stats.culture_decks.length === 0 ? (
-              <p className="py-4 text-center text-muted-foreground">
-                {t('states.noCultureDecks')}
-              </p>
+              <p className="py-4 text-center text-muted-foreground">{t('states.noCultureDecks')}</p>
             ) : (
               <div className="space-y-3">
                 {stats.culture_decks.map((deck) => (

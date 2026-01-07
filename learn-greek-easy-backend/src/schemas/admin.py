@@ -51,9 +51,13 @@ class AdminStatsResponse(BaseModel):
     - Per-deck breakdown with counts
     """
 
-    total_decks: int = Field(..., ge=0, description="Total number of active decks (vocabulary + culture)")
+    total_decks: int = Field(
+        ..., ge=0, description="Total number of active decks (vocabulary + culture)"
+    )
     total_cards: int = Field(..., ge=0, description="Total number of items (cards + questions)")
-    total_vocabulary_decks: int = Field(..., ge=0, description="Total number of active vocabulary decks")
+    total_vocabulary_decks: int = Field(
+        ..., ge=0, description="Total number of active vocabulary decks"
+    )
     total_culture_decks: int = Field(..., ge=0, description="Total number of active culture decks")
     total_vocabulary_cards: int = Field(..., ge=0, description="Total vocabulary cards")
     total_culture_questions: int = Field(..., ge=0, description="Total culture questions")

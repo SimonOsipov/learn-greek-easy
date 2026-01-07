@@ -356,9 +356,7 @@ async def list_decks(
 
         # Apply search filter (search in English name field)
         if search:
-            culture_query = culture_query.where(
-                CultureDeck.name["en"].astext.ilike(f"%{search}%")
-            )
+            culture_query = culture_query.where(CultureDeck.name["en"].astext.ilike(f"%{search}%"))
 
         # Get total count for culture
         culture_count_query = select(func.count()).select_from(culture_query.subquery())

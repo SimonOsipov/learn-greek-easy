@@ -618,7 +618,9 @@ class TestAdminStats(E2ETestCase):
         # Verify total_decks = vocab + culture
         assert data["total_decks"] == data["total_vocabulary_decks"] + data["total_culture_decks"]
         # Verify total_cards = vocab cards + culture questions
-        assert data["total_cards"] == data["total_vocabulary_cards"] + data["total_culture_questions"]
+        assert (
+            data["total_cards"] == data["total_vocabulary_cards"] + data["total_culture_questions"]
+        )
 
     @pytest.mark.asyncio
     async def test_get_admin_stats_deck_structure(
