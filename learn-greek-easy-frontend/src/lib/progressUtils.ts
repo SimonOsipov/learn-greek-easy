@@ -16,7 +16,8 @@ import type { DeckProgress } from '@/types/deck';
  */
 export function calculateCompletionPercentage(progress: DeckProgress): number {
   if (progress.cardsTotal === 0) return 0;
-  return Math.round((progress.cardsMastered / progress.cardsTotal) * 100);
+  const cardsInProgress = progress.cardsLearning + progress.cardsMastered;
+  return Math.round((cardsInProgress / progress.cardsTotal) * 100);
 }
 
 /**

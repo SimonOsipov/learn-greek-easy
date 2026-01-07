@@ -178,8 +178,10 @@ export function CultureDeckDetailPage() {
                     {t('deck:detail.yourProgress')}
                   </span>
                   <span className="text-sm text-gray-600">
-                    {Math.round((progress.cardsMastered / progress.cardsTotal) * 100)}%{' '}
-                    {t('deck:detail.complete')}
+                    {Math.round(
+                      ((progress.cardsLearning + progress.cardsMastered) / progress.cardsTotal) * 100
+                    )}
+                    % {t('deck:detail.complete')}
                   </span>
                 </div>
                 <DeckProgressBar progress={progress} showLegend={true} size="large" />

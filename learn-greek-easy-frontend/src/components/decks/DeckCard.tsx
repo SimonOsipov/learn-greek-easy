@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { CultureBadge, type CultureCategory } from '@/components/culture';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { calculateCompletionPercentage } from '@/lib/progressUtils';
 import type { Deck } from '@/types/deck';
 
 import { DeckBadge } from './DeckBadge';
@@ -34,9 +35,7 @@ export const DeckCard: React.FC<DeckCardProps> = ({
   const { titleGreek, title, level, category, cardCount, isPremium, progress } = deck;
 
   // Calculate completion percentage
-  const completionPercent = progress
-    ? Math.round((progress.cardsMastered / progress.cardsTotal) * 100)
-    : 0;
+  const completionPercent = progress ? calculateCompletionPercentage(progress) : 0;
 
   // Determine if card should be locked (premium and user is free tier)
   // This will be checked against auth store in future integration

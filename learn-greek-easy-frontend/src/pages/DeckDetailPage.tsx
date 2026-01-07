@@ -259,8 +259,12 @@ const DeckHeaderSection: React.FC<DeckHeaderSectionProps> = ({
             <div className="mb-2 flex items-center justify-between">
               <span className="text-sm font-medium text-gray-700">{t('detail.yourProgress')}</span>
               <span className="text-sm text-gray-600">
-                {Math.round((deck.progress.cardsMastered / deck.progress.cardsTotal) * 100)}%{' '}
-                {t('detail.complete')}
+                {Math.round(
+                  ((deck.progress.cardsLearning + deck.progress.cardsMastered) /
+                    deck.progress.cardsTotal) *
+                    100
+                )}
+                % {t('detail.complete')}
               </span>
             </div>
             <DeckProgressBar progress={deck.progress} showLegend={true} size="large" />

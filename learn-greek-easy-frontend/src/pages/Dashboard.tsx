@@ -264,7 +264,11 @@ export const Dashboard: React.FC = () => {
                     total: deck.cardCount,
                     percentage:
                       deck.progress && deck.progress.cardsTotal > 0
-                        ? Math.round((deck.progress.cardsMastered / deck.progress.cardsTotal) * 100)
+                        ? Math.round(
+                            ((deck.progress.cardsLearning + deck.progress.cardsMastered) /
+                              deck.progress.cardsTotal) *
+                              100
+                          )
                         : 0,
                   },
                   stats: {
