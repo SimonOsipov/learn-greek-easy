@@ -116,7 +116,21 @@ if (typeof global !== 'undefined') {
 // Mock @react-oauth/google library
 // This prevents "Google OAuth components must be used within GoogleOAuthProvider" errors
 vi.mock('@react-oauth/google', () => ({
-  GoogleOAuthProvider: ({ children }: { children: React.ReactNode }) => children,
+  GoogleOAuthProvider: ({
+    children,
+    onScriptLoadSuccess,
+  }: {
+    children: React.ReactNode;
+    clientId?: string;
+    onScriptLoadSuccess?: () => void;
+    onScriptLoadError?: () => void;
+  }) => {
+    // Simulate script loading success after a microtask
+    if (onScriptLoadSuccess) {
+      Promise.resolve().then(() => onScriptLoadSuccess());
+    }
+    return children;
+  },
   GoogleLogin: ({
     onSuccess,
     onError,
@@ -138,6 +152,18 @@ vi.mock('@react-oauth/google', () => ({
     ),
   useGoogleLogin: () => vi.fn(),
 }));
+
+// Mock the GSI script state hook for tests that don't use AuthRoutesWrapper
+vi.mock('@/components/auth/AuthRoutesWrapper', async (importOriginal) => {
+  const original = (await importOriginal()) as Record<string, unknown>;
+  return {
+    ...original,
+    useGSIScriptState: () => ({
+      isScriptReady: true,
+      hasScriptError: false,
+    }),
+  };
+});
 
 // Mock posthog-js library
 // This prevents PostHog from initializing during tests

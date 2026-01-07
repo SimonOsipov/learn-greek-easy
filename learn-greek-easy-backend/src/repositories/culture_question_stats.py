@@ -1,13 +1,13 @@
 """CultureQuestionStats repository for SM-2 spaced repetition tracking."""
 
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from typing import Optional
 from uuid import UUID
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.db.models import CardStatus, CultureQuestion, CultureQuestionStats
+from src.db.models import CardStatus, CultureAnswerHistory, CultureQuestion, CultureQuestionStats
 from src.repositories.base import BaseRepository
 
 
@@ -225,6 +225,143 @@ class CultureQuestionStatsRepository(BaseRepository[CultureQuestionStats]):
         )
         result = await self.db.execute(query)
         return result.scalar_one() or 0
+
+    async def count_due_questions(self, user_id: UUID) -> int:
+        """Count culture questions due for review (today or overdue).
+
+        Args:
+            user_id: User UUID
+
+        Returns:
+            Number of culture questions due for review
+
+        Use Case:
+            Dashboard stats - combined due cards count
+        """
+        today = date.today()
+        query = select(func.count(CultureQuestionStats.id)).where(
+            CultureQuestionStats.user_id == user_id,
+            CultureQuestionStats.next_review_date <= today,
+        )
+        result = await self.db.execute(query)
+        return result.scalar_one() or 0
+
+    async def count_mastered_questions(self, user_id: UUID) -> int:
+        """Count culture questions with MASTERED status.
+
+        Args:
+            user_id: User UUID
+
+        Returns:
+            Number of mastered culture questions
+
+        Use Case:
+            Dashboard stats - combined mastered count
+        """
+        query = select(func.count(CultureQuestionStats.id)).where(
+            CultureQuestionStats.user_id == user_id,
+            CultureQuestionStats.status == CardStatus.MASTERED,
+        )
+        result = await self.db.execute(query)
+        return result.scalar_one() or 0
+
+    async def get_culture_study_time_seconds(
+        self,
+        user_id: UUID,
+        today_only: bool = False,
+    ) -> int:
+        """Get total study time from CultureAnswerHistory.
+
+        Args:
+            user_id: User UUID
+            today_only: If True, only count today's study time
+
+        Returns:
+            Total study time in seconds
+
+        Use Case:
+            Dashboard stats - combined study time
+        """
+        query = select(func.coalesce(func.sum(CultureAnswerHistory.time_taken_seconds), 0)).where(
+            CultureAnswerHistory.user_id == user_id
+        )
+
+        if today_only:
+            today = date.today()
+            query = query.where(func.date(CultureAnswerHistory.created_at) == today)
+
+        result = await self.db.execute(query)
+        return result.scalar_one() or 0
+
+    async def get_culture_accuracy_stats(
+        self,
+        user_id: UUID,
+        days: int = 30,
+    ) -> dict[str, int]:
+        """Get correct/total for accuracy calculation.
+
+        Args:
+            user_id: User UUID
+            days: Number of days to look back
+
+        Returns:
+            Dict with 'correct' and 'total' counts
+
+        Use Case:
+            Dashboard stats - combined accuracy percentage
+        """
+        cutoff_date = date.today() - timedelta(days=days)
+
+        # Count total answers
+        total_query = select(func.count(CultureAnswerHistory.id)).where(
+            CultureAnswerHistory.user_id == user_id,
+            func.date(CultureAnswerHistory.created_at) >= cutoff_date,
+        )
+        total_result = await self.db.execute(total_query)
+        total = total_result.scalar_one() or 0
+
+        # Count correct answers
+        correct_query = select(func.count(CultureAnswerHistory.id)).where(
+            CultureAnswerHistory.user_id == user_id,
+            CultureAnswerHistory.is_correct == True,  # noqa: E712
+            func.date(CultureAnswerHistory.created_at) >= cutoff_date,
+        )
+        correct_result = await self.db.execute(correct_query)
+        correct = correct_result.scalar_one() or 0
+
+        return {"correct": correct, "total": total}
+
+    async def get_dates_with_culture_activity(
+        self,
+        user_id: UUID,
+        days: int = 30,
+    ) -> list[date]:
+        """Get unique dates with culture activity for streak calculation.
+
+        Args:
+            user_id: User UUID
+            days: Number of days to look back
+
+        Returns:
+            List of dates with culture activity, ordered descending
+
+        Use Case:
+            Dashboard stats - combined streak calculation
+        """
+        cutoff_date = date.today() - timedelta(days=days)
+
+        query = (
+            select(func.date(CultureAnswerHistory.created_at).label("activity_date"))
+            .where(
+                CultureAnswerHistory.user_id == user_id,
+                func.date(CultureAnswerHistory.created_at) >= cutoff_date,
+            )
+            .group_by(func.date(CultureAnswerHistory.created_at))
+            .order_by(func.date(CultureAnswerHistory.created_at).desc())
+        )
+
+        result = await self.db.execute(query)
+        return [row[0] for row in result.all()]
 
 
 # ============================================================================

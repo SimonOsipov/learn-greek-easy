@@ -373,3 +373,77 @@ class ReviewRepository(BaseRepository[Review]):
                 current = 1
 
         return longest
+
+    async def get_accuracy_stats(
+        self,
+        user_id: UUID,
+        days: int = 30,
+    ) -> dict[str, int]:
+        """Get correct/total for accuracy calculation.
+
+        Reviews with quality >= 3 are considered correct (SM-2 convention).
+
+        Args:
+            user_id: User UUID
+            days: Number of days to look back
+
+        Returns:
+            Dict with 'correct' and 'total' counts
+
+        Use Case:
+            Dashboard stats - combined accuracy percentage
+        """
+        cutoff = datetime.now() - timedelta(days=days)
+
+        # Count total reviews in period
+        total_query = (
+            select(func.count())
+            .select_from(Review)
+            .where(Review.user_id == user_id)
+            .where(Review.reviewed_at >= cutoff)
+        )
+        total_result = await self.db.execute(total_query)
+        total = total_result.scalar_one()
+
+        # Count correct reviews (quality >= 3)
+        correct_query = (
+            select(func.count())
+            .select_from(Review)
+            .where(Review.user_id == user_id)
+            .where(Review.reviewed_at >= cutoff)
+            .where(Review.quality >= 3)
+        )
+        correct_result = await self.db.execute(correct_query)
+        correct = correct_result.scalar_one()
+
+        return {"correct": correct, "total": total}
+
+    async def get_dates_with_vocab_activity(
+        self,
+        user_id: UUID,
+        days: int = 30,
+    ) -> list[date]:
+        """Get unique dates with vocab activity for streak calculation.
+
+        Args:
+            user_id: User UUID
+            days: Number of days to look back
+
+        Returns:
+            List of dates with vocab activity, ordered descending
+
+        Use Case:
+            Dashboard stats - combined streak calculation
+        """
+        cutoff = datetime.now() - timedelta(days=days)
+
+        query = (
+            select(func.date(Review.reviewed_at).label("review_date"))
+            .where(Review.user_id == user_id)
+            .where(Review.reviewed_at >= cutoff)
+            .group_by(func.date(Review.reviewed_at))
+            .order_by(func.date(Review.reviewed_at).desc())
+        )
+
+        result = await self.db.execute(query)
+        return [row[0] for row in result.all()]

@@ -101,9 +101,19 @@ class TestProgressServiceDashboard:
         service.review_repo.get_streak = AsyncMock(return_value=0)
         service.review_repo.get_longest_streak = AsyncMock(return_value=0)
         service.review_repo.get_daily_stats = AsyncMock(return_value=[])
+        service.review_repo.get_accuracy_stats = AsyncMock(return_value={"correct": 0, "total": 0})
+        service.review_repo.get_dates_with_vocab_activity = AsyncMock(return_value=[])
         service.stats_repo.count_by_status = AsyncMock(
             return_value={"new": 0, "learning": 0, "review": 0, "mastered": 0, "due": 0}
         )
+        # Mock culture stats repo
+        service.culture_stats_repo.count_mastered_questions = AsyncMock(return_value=0)
+        service.culture_stats_repo.count_due_questions = AsyncMock(return_value=0)
+        service.culture_stats_repo.get_culture_study_time_seconds = AsyncMock(return_value=0)
+        service.culture_stats_repo.get_culture_accuracy_stats = AsyncMock(
+            return_value={"correct": 0, "total": 0}
+        )
+        service.culture_stats_repo.get_dates_with_culture_activity = AsyncMock(return_value=[])
 
         result = await service.get_dashboard_stats(user_id)
 
@@ -111,6 +121,7 @@ class TestProgressServiceDashboard:
         assert result.overview.total_cards_mastered == 0
         assert result.overview.total_decks_started == 0
         assert result.overview.overall_mastery_percentage == 0.0
+        assert result.overview.accuracy_percentage == 0.0
         assert result.today.reviews_completed == 0
         assert result.today.cards_due == 0
         assert result.streak.current_streak == 0
@@ -136,24 +147,43 @@ class TestProgressServiceDashboard:
         service.review_repo.get_daily_stats = AsyncMock(
             return_value=[{"date": date.today(), "reviews_count": 25, "average_quality": 4.0}]
         )
+        service.review_repo.get_accuracy_stats = AsyncMock(
+            return_value={"correct": 80, "total": 100}
+        )
+        service.review_repo.get_dates_with_vocab_activity = AsyncMock(return_value=[date.today()])
         service.stats_repo.count_by_status = AsyncMock(
             return_value={"new": 50, "learning": 35, "review": 45, "mastered": 45, "due": 12}
+        )
+        # Mock culture stats repo with some activity
+        service.culture_stats_repo.count_mastered_questions = AsyncMock(return_value=5)
+        service.culture_stats_repo.count_due_questions = AsyncMock(return_value=3)
+        service.culture_stats_repo.get_culture_study_time_seconds = AsyncMock(return_value=300)
+        service.culture_stats_repo.get_culture_accuracy_stats = AsyncMock(
+            return_value={"correct": 20, "total": 25}
+        )
+        service.culture_stats_repo.get_dates_with_culture_activity = AsyncMock(
+            return_value=[date.today()]
         )
 
         result = await service.get_dashboard_stats(user_id)
 
         assert result.overview.total_cards_studied == 150
-        assert result.overview.total_cards_mastered == 45
+        # Mastered = vocab (45) + culture (5) = 50
+        assert result.overview.total_cards_mastered == 50
         assert result.overview.total_decks_started == 3
         assert result.today.reviews_completed == 25
-        assert result.today.cards_due == 12
-        assert result.today.study_time_seconds == 1800
-        assert result.streak.current_streak == 7
+        # Due = vocab (12) + culture (3) = 15
+        assert result.today.cards_due == 15
+        # Study time = vocab (1800) + culture (300) = 2100
+        assert result.today.study_time_seconds == 2100
+        # Combined streak (1 day with activity today)
+        assert result.streak.current_streak == 1
         assert result.streak.longest_streak == 14
 
     async def test_get_dashboard_stats_streak_calculation(self, service):
-        """Streak is calculated correctly."""
+        """Streak is calculated correctly using combined vocab + culture activity."""
         user_id = uuid4()
+        today = date.today()
 
         # Setup minimum required mocks
         service.progress_repo.get_total_cards_studied = AsyncMock(return_value=100)
@@ -165,14 +195,28 @@ class TestProgressServiceDashboard:
         service.review_repo.get_streak = AsyncMock(return_value=7)
         service.review_repo.get_longest_streak = AsyncMock(return_value=14)
         service.review_repo.get_daily_stats = AsyncMock(return_value=[])
+        service.review_repo.get_accuracy_stats = AsyncMock(
+            return_value={"correct": 80, "total": 100}
+        )
+        # 7 consecutive days of vocab activity
+        service.review_repo.get_dates_with_vocab_activity = AsyncMock(
+            return_value=[today - timedelta(days=i) for i in range(7)]
+        )
         service.stats_repo.count_by_status = AsyncMock(return_value={"due": 5})
+        # Culture mocks
+        service.culture_stats_repo.count_mastered_questions = AsyncMock(return_value=0)
+        service.culture_stats_repo.count_due_questions = AsyncMock(return_value=0)
+        service.culture_stats_repo.get_culture_study_time_seconds = AsyncMock(return_value=0)
+        service.culture_stats_repo.get_culture_accuracy_stats = AsyncMock(
+            return_value={"correct": 0, "total": 0}
+        )
+        service.culture_stats_repo.get_dates_with_culture_activity = AsyncMock(return_value=[])
 
         result = await service.get_dashboard_stats(user_id)
 
+        # Combined streak from vocab dates (7 consecutive days)
         assert result.streak.current_streak == 7
         assert result.streak.longest_streak == 14
-        service.review_repo.get_streak.assert_awaited_once_with(user_id)
-        service.review_repo.get_longest_streak.assert_awaited_once_with(user_id)
 
     async def test_get_dashboard_stats_cards_by_status(self, service):
         """Status breakdown is accurate."""
@@ -195,7 +239,17 @@ class TestProgressServiceDashboard:
         service.review_repo.get_streak = AsyncMock(return_value=5)
         service.review_repo.get_longest_streak = AsyncMock(return_value=10)
         service.review_repo.get_daily_stats = AsyncMock(return_value=[])
+        service.review_repo.get_accuracy_stats = AsyncMock(return_value={"correct": 0, "total": 0})
+        service.review_repo.get_dates_with_vocab_activity = AsyncMock(return_value=[])
         service.stats_repo.count_by_status = AsyncMock(return_value=status_counts)
+        # Culture mocks
+        service.culture_stats_repo.count_mastered_questions = AsyncMock(return_value=0)
+        service.culture_stats_repo.count_due_questions = AsyncMock(return_value=0)
+        service.culture_stats_repo.get_culture_study_time_seconds = AsyncMock(return_value=0)
+        service.culture_stats_repo.get_culture_accuracy_stats = AsyncMock(
+            return_value={"correct": 0, "total": 0}
+        )
+        service.culture_stats_repo.get_dates_with_culture_activity = AsyncMock(return_value=[])
 
         result = await service.get_dashboard_stats(user_id)
 
@@ -219,7 +273,17 @@ class TestProgressServiceDashboard:
         service.review_repo.get_streak = AsyncMock(return_value=3)
         service.review_repo.get_longest_streak = AsyncMock(return_value=7)
         service.review_repo.get_daily_stats = AsyncMock(return_value=[])
+        service.review_repo.get_accuracy_stats = AsyncMock(return_value={"correct": 0, "total": 0})
+        service.review_repo.get_dates_with_vocab_activity = AsyncMock(return_value=[])
         service.stats_repo.count_by_status = AsyncMock(return_value={"due": 10})
+        # Culture mocks
+        service.culture_stats_repo.count_mastered_questions = AsyncMock(return_value=0)
+        service.culture_stats_repo.count_due_questions = AsyncMock(return_value=0)
+        service.culture_stats_repo.get_culture_study_time_seconds = AsyncMock(return_value=0)
+        service.culture_stats_repo.get_culture_accuracy_stats = AsyncMock(
+            return_value={"correct": 0, "total": 0}
+        )
+        service.culture_stats_repo.get_dates_with_culture_activity = AsyncMock(return_value=[])
 
         result = await service.get_dashboard_stats(user_id)
 
@@ -231,7 +295,8 @@ class TestProgressServiceDashboard:
         """Overall mastery percentage calculated correctly."""
         user_id = uuid4()
 
-        # 45 mastered out of 150 studied = 30%
+        # 45 vocab mastered + 5 culture mastered = 50 total mastered out of 150 studied
+        # (50 / 150) * 100 = 33.3%
         service.progress_repo.get_total_cards_studied = AsyncMock(return_value=150)
         service.progress_repo.get_total_cards_mastered = AsyncMock(return_value=45)
         service.progress_repo.count_user_decks = AsyncMock(return_value=2)
@@ -241,11 +306,22 @@ class TestProgressServiceDashboard:
         service.review_repo.get_streak = AsyncMock(return_value=2)
         service.review_repo.get_longest_streak = AsyncMock(return_value=5)
         service.review_repo.get_daily_stats = AsyncMock(return_value=[])
+        service.review_repo.get_accuracy_stats = AsyncMock(return_value={"correct": 0, "total": 0})
+        service.review_repo.get_dates_with_vocab_activity = AsyncMock(return_value=[])
         service.stats_repo.count_by_status = AsyncMock(return_value={"due": 8})
+        # Culture mocks - add 5 more mastered
+        service.culture_stats_repo.count_mastered_questions = AsyncMock(return_value=5)
+        service.culture_stats_repo.count_due_questions = AsyncMock(return_value=0)
+        service.culture_stats_repo.get_culture_study_time_seconds = AsyncMock(return_value=0)
+        service.culture_stats_repo.get_culture_accuracy_stats = AsyncMock(
+            return_value={"correct": 0, "total": 0}
+        )
+        service.culture_stats_repo.get_dates_with_culture_activity = AsyncMock(return_value=[])
 
         result = await service.get_dashboard_stats(user_id)
 
-        assert result.overview.overall_mastery_percentage == 30.0
+        # (45 vocab + 5 culture) / 150 studied = 33.3%
+        assert result.overview.overall_mastery_percentage == 33.3
 
     async def test_get_dashboard_stats_recent_activity(self, service):
         """Recent activity is returned correctly."""
@@ -267,7 +343,17 @@ class TestProgressServiceDashboard:
         service.review_repo.get_streak = AsyncMock(return_value=3)
         service.review_repo.get_longest_streak = AsyncMock(return_value=5)
         service.review_repo.get_daily_stats = AsyncMock(return_value=daily_stats)
+        service.review_repo.get_accuracy_stats = AsyncMock(return_value={"correct": 0, "total": 0})
+        service.review_repo.get_dates_with_vocab_activity = AsyncMock(return_value=[])
         service.stats_repo.count_by_status = AsyncMock(return_value={"due": 10})
+        # Culture mocks
+        service.culture_stats_repo.count_mastered_questions = AsyncMock(return_value=0)
+        service.culture_stats_repo.count_due_questions = AsyncMock(return_value=0)
+        service.culture_stats_repo.get_culture_study_time_seconds = AsyncMock(return_value=0)
+        service.culture_stats_repo.get_culture_accuracy_stats = AsyncMock(
+            return_value={"correct": 0, "total": 0}
+        )
+        service.culture_stats_repo.get_dates_with_culture_activity = AsyncMock(return_value=[])
 
         result = await service.get_dashboard_stats(user_id)
 

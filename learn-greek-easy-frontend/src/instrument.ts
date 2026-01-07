@@ -59,6 +59,13 @@ if (import.meta.env.PROD && import.meta.env.VITE_SENTRY_DSN) {
       // ResizeObserver - browser quirk, not actionable
       'ResizeObserver loop limit exceeded',
       'ResizeObserver loop completed with undelivered notifications',
+      // Google Sign-In SDK race condition in Safari
+      // The GSI script reports onload before internal initialization is complete
+      // causing "undefined is not an object (evaluating 'X.contentType')" errors
+      /undefined is not an object.*contentType/,
+      /Cannot read properties of undefined.*contentType/,
+      // Also filter common GSI initialization errors
+      /google.*accounts.*not.*initialized/i,
     ],
 
     // Intelligent filtering based on network state
