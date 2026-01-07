@@ -10,6 +10,7 @@ Use labels on Pull Requests to control which CI/CD tests run.
 | `visual-test` | Force full visual regression suite (all pages, all viewports) |
 | `skip-visual` | Skip post-deploy visual tests (Playwright visual + Chromatic) |
 | `skip-seed` | Skip database seeding in dev environment |
+| `perf-test` | Run k6 performance tests against preview deployment |
 | (no label) | Default - see workflow behavior below |
 
 ## CI Workflow Behavior
@@ -49,6 +50,8 @@ The CI is split into **Quick Checks** (every commit) and **Full Tests** (on-dema
 | Config/documentation changes | `skip-visual` |
 | Backend-only changes (no test data needed) | `skip-seed` |
 | Infrastructure/CI changes | `skip-seed` |
+| Performance optimization, load testing | `perf-test` |
+| API performance validation | `perf-test` |
 | Most feature PRs | (no label) - smart detection |
 
 ## Adding Labels via CLI
@@ -65,4 +68,22 @@ gh pr edit 123 --add-label "run-full-tests"
 
 # Remove label
 gh pr edit 123 --remove-label "visual-test"
+
+# Run performance tests
+gh pr edit 123 --add-label "perf-test"
 ```
+
+## Performance Testing
+
+The `perf-test` label triggers k6 browser-based performance tests against the preview deployment.
+
+**Tests run:**
+- Auth scenario: Login flow timing (6 metrics)
+- Dashboard scenario: User journey timing (7 metrics)
+
+**Results:**
+- Metrics reported in PR comment (p95 values)
+- JSON reports uploaded as artifacts
+- Non-blocking: won't fail PR if thresholds exceeded
+
+See [Performance Testing Guide](./performance-testing.md) for details.
