@@ -354,9 +354,7 @@ class CultureDeckCreate(BaseModel):
 class CultureDeckUpdate(BaseModel):
     """Schema for updating a culture deck (admin only). All fields optional."""
 
-    name: Optional[str] = Field(
-        None, min_length=1, max_length=255, description="Deck name"
-    )
+    name: Optional[str] = Field(None, min_length=1, max_length=255, description="Deck name")
     description: Optional[str] = Field(None, description="Deck description")
     icon: Optional[str] = Field(
         None, max_length=50, description="Icon identifier (e.g., 'book-open', 'map')"
