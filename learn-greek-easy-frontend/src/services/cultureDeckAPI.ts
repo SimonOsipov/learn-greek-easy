@@ -38,8 +38,8 @@ export interface CultureDeckProgress {
  */
 export interface CultureDeckResponse {
   id: string;
-  name: LocalizedText;
-  description: LocalizedText;
+  name: string;
+  description: string | null;
   icon: string;
   color_accent: string;
   category: string; // "history", "geography", "politics", "culture", "traditions"
@@ -91,7 +91,7 @@ export interface CultureQuestionQueueItem {
  */
 export interface CultureQuestionQueue {
   deck_id: string;
-  deck_name: LocalizedText;
+  deck_name: string;
   category: string;
   total_due: number;
   total_new: number;
