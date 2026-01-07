@@ -930,15 +930,11 @@ class TestSeedServiceCulture:
             assert "name" in deck_data
             assert "description" in deck_data
 
-            # Check name has translations
-            assert "el" in deck_data["name"]
-            assert "en" in deck_data["name"]
-            assert "ru" in deck_data["name"]
-
-            # Check description has translations
-            assert "el" in deck_data["description"]
-            assert "en" in deck_data["description"]
-            assert "ru" in deck_data["description"]
+            # Name and description are now simple English strings (not multilingual dicts)
+            assert isinstance(deck_data["name"], str)
+            assert isinstance(deck_data["description"], str)
+            assert len(deck_data["name"]) > 0
+            assert len(deck_data["description"]) > 0
 
 
 class TestSeedServiceCultureStatistics:
