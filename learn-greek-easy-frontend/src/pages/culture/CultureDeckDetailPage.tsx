@@ -179,7 +179,8 @@ export function CultureDeckDetailPage() {
                   </span>
                   <span className="text-sm text-gray-600">
                     {Math.round(
-                      ((progress.cardsLearning + progress.cardsMastered) / progress.cardsTotal) * 100
+                      ((progress.cardsLearning + progress.cardsMastered) / progress.cardsTotal) *
+                        100
                     )}
                     % {t('deck:detail.complete')}
                   </span>

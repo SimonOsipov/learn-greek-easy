@@ -683,9 +683,7 @@ class ProgressService:
         while current_date <= end_date:
             # Get combined learning/mastered counts for this day
             vocab_counts = vocab_status_counts.get(current_date, {"learning": 0, "mastered": 0})
-            culture_counts = culture_status_counts.get(
-                current_date, {"learning": 0, "mastered": 0}
-            )
+            culture_counts = culture_status_counts.get(current_date, {"learning": 0, "mastered": 0})
             cards_learning = vocab_counts["learning"] + culture_counts["learning"]
             cards_mastered = vocab_counts["mastered"] + culture_counts["mastered"]
 
