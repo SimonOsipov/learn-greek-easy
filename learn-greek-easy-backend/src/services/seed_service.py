@@ -188,75 +188,35 @@ class SeedService:
         ],
     }
 
-    # Culture categories with multilingual deck definitions
+    # Culture categories with deck definitions (simple English strings)
     CULTURE_DECKS = {
         "history": {
-            "name": {
-                "el": "Ιστορία της Ελλάδας",
-                "en": "Greek History",
-                "ru": "История Греции",
-            },
-            "description": {
-                "el": "Ερωτήσεις για την ελληνική ιστορία",
-                "en": "Questions about Greek history",
-                "ru": "Вопросы по истории Греции",
-            },
+            "name": "Greek History",
+            "description": "Questions about Greek history",
             "icon": "book-open",
             "color_accent": "#8B4513",
         },
         "geography": {
-            "name": {
-                "el": "Γεωγραφία της Ελλάδας",
-                "en": "Greek Geography",
-                "ru": "География Греции",
-            },
-            "description": {
-                "el": "Ερωτήσεις για την ελληνική γεωγραφία",
-                "en": "Questions about Greek geography",
-                "ru": "Вопросы по географии Греции",
-            },
+            "name": "Greek Geography",
+            "description": "Questions about Greek geography",
             "icon": "map",
             "color_accent": "#228B22",
         },
         "politics": {
-            "name": {
-                "el": "Πολιτικό Σύστημα",
-                "en": "Political System",
-                "ru": "Политическая система",
-            },
-            "description": {
-                "el": "Ερωτήσεις για το πολιτικό σύστημα",
-                "en": "Questions about the political system",
-                "ru": "Вопросы о политической системе",
-            },
+            "name": "Political System",
+            "description": "Questions about the political system",
             "icon": "landmark",
             "color_accent": "#4169E1",
         },
         "culture": {
-            "name": {
-                "el": "Ελληνικός Πολιτισμός",
-                "en": "Greek Culture",
-                "ru": "Греческая культура",
-            },
-            "description": {
-                "el": "Ερωτήσεις για τον ελληνικό πολιτισμό",
-                "en": "Questions about Greek culture",
-                "ru": "Вопросы о греческой культуре",
-            },
+            "name": "Greek Culture",
+            "description": "Questions about Greek culture",
             "icon": "palette",
             "color_accent": "#9932CC",
         },
         "traditions": {
-            "name": {
-                "el": "Παραδόσεις και Έθιμα",
-                "en": "Traditions and Customs",
-                "ru": "Традиции и обычаи",
-            },
-            "description": {
-                "el": "Ερωτήσεις για ελληνικές παραδόσεις",
-                "en": "Questions about Greek traditions",
-                "ru": "Вопросы о греческих традициях",
-            },
+            "name": "Traditions and Customs",
+            "description": "Questions about Greek traditions",
             "icon": "star",
             "color_accent": "#DAA520",
         },
