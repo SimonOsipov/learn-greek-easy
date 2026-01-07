@@ -23,7 +23,7 @@ interface DeckEditModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   deck: UnifiedDeckItem | null;
-  onSave: (data: DeckEditFormData) => void;
+  onSave: (data: DeckEditFormData) => void | Promise<void>;
   isLoading?: boolean;
 }
 
