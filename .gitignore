@@ -4,3 +4,7 @@
 backlog/
 # Claude Code local files
 .claude/
+
+# k6 Performance Testing
+k6/reports/*
+!k6/reports/.gitkeep

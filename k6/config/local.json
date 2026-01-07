@@ -1,0 +1,58 @@
+{
+  "environment": "local",
+  "baseUrl": {
+    "api": "http://localhost:8000",
+    "frontend": "http://localhost:5173"
+  },
+  "testUsers": {
+    "learner": {
+      "email": "e2e_learner@test.com",
+      "password": "TestPassword123!"
+    },
+    "beginner": {
+      "email": "e2e_beginner@test.com",
+      "password": "TestPassword123!"
+    },
+    "advanced": {
+      "email": "e2e_advanced@test.com",
+      "password": "TestPassword123!"
+    },
+    "admin": {
+      "email": "e2e_admin@test.com",
+      "password": "TestPassword123!"
+    },
+    "xpBoundary": {
+      "email": "e2e_xp_boundary@test.com",
+      "password": "TestPassword123!"
+    },
+    "xpMid": {
+      "email": "e2e_xp_mid@test.com",
+      "password": "TestPassword123!"
+    },
+    "xpMax": {
+      "email": "e2e_xp_max@test.com",
+      "password": "TestPassword123!"
+    }
+  },
+  "thresholds": {
+    "http_req_duration": ["p(95)<500"],
+    "http_req_failed": ["rate<0.01"]
+  },
+  "scenarios": {
+    "default": {
+      "executor": "constant-vus",
+      "vus": 10,
+      "duration": "30s"
+    },
+    "smoke": {
+      "executor": "constant-vus",
+      "vus": 1,
+      "duration": "10s"
+    },
+    "load": {
+      "executor": "constant-vus",
+      "vus": 50,
+      "duration": "5m"
+    }
+  }
+}
