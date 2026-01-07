@@ -52,13 +52,6 @@
       "description": "Maintain a 30-day streak"
     }
   },
-  "timeline": {
-    "title": "Activity Timeline",
-    "joined": "Joined Learn Greek Easy",
-    "lastActive": "Last Active",
-    "daysAgo": "{{count}} day ago",
-    "daysAgo_plural": "{{count}} days ago"
-  },
   "charts": {
     "progressOverTime": {
       "title": "Progress Over Time",
@@ -70,7 +63,9 @@
     "accuracyTrend": {
       "title": "Accuracy Trend",
       "description": "Your accuracy percentage over time",
-      "accuracy": "Accuracy"
+      "accuracy": "Accuracy",
+      "vocabulary": "Vocabulary",
+      "culture": "Culture"
     },
     "deckPerformance": {
       "title": "Deck Performance",

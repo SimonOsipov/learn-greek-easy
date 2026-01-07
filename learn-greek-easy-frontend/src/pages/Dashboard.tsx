@@ -155,11 +155,9 @@ export const Dashboard: React.FC = () => {
   };
 
   // Get active decks (in-progress or with progress)
-  const activeDecks = decks
-    .filter(
-      (deck) => deck.progress?.status === 'in-progress' || (deck.progress?.cardsReview ?? 0) > 0
-    )
-    .slice(0, 2);
+  const activeDecks = decks.filter(
+    (deck) => deck.progress?.status === 'in-progress' || (deck.progress?.cardsReview ?? 0) > 0
+  );
 
   // Loading state
   const isLoading = analyticsLoading || decksLoading;
@@ -246,7 +244,7 @@ export const Dashboard: React.FC = () => {
         </div>
         {decksLoading ? (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {[1, 2].map((i) => (
+            {[1, 2, 3].map((i) => (
               <Skeleton key={i} className="h-48 rounded-lg" />
             ))}
           </div>
@@ -257,16 +255,21 @@ export const Dashboard: React.FC = () => {
                 key={deck.id}
                 deck={{
                   id: deck.id,
-                  title: deck.title,
+                  title: deck.titleGreek || deck.title,
                   description: deck.description,
                   status: deck.progress?.status ?? 'not-started',
                   level: deck.level,
                   progress: {
-                    current: deck.progress?.cardsMastered ?? 0,
+                    current:
+                      (deck.progress?.cardsLearning ?? 0) + (deck.progress?.cardsMastered ?? 0),
                     total: deck.cardCount,
                     percentage:
                       deck.progress && deck.progress.cardsTotal > 0
-                        ? Math.round((deck.progress.cardsMastered / deck.progress.cardsTotal) * 100)
+                        ? Math.round(
+                            ((deck.progress.cardsLearning + deck.progress.cardsMastered) /
+                              deck.progress.cardsTotal) *
+                              100
+                          )
                         : 0,
                   },
                   stats: {

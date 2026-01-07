@@ -52,13 +52,6 @@
       "description": "Поддерживайте серию 30 дней"
     }
   },
-  "timeline": {
-    "title": "Хронология активности",
-    "joined": "Присоединились к Learn Greek Easy",
-    "lastActive": "Последняя активность",
-    "daysAgo": "{{count}} день назад",
-    "daysAgo_plural": "{{count}} дней назад"
-  },
   "charts": {
     "progressOverTime": {
       "title": "Прогресс во времени",
@@ -70,7 +63,9 @@
     "accuracyTrend": {
       "title": "Динамика точности",
       "description": "Процент точности во времени",
-      "accuracy": "Точность"
+      "accuracy": "Точность",
+      "vocabulary": "Словарный запас",
+      "culture": "Культура"
     },
     "deckPerformance": {
       "title": "Эффективность колод",

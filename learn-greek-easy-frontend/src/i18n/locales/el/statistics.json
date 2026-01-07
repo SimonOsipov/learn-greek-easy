@@ -52,13 +52,6 @@
       "description": "Διατηρήστε σειρά 30 ημερών"
     }
   },
-  "timeline": {
-    "title": "Χρονολόγιο Δραστηριότητας",
-    "joined": "Εγγραφήκατε στο Learn Greek Easy",
-    "lastActive": "Τελευταία Δραστηριότητα",
-    "daysAgo": "{{count}} ημέρα πριν",
-    "daysAgo_plural": "{{count}} ημέρες πριν"
-  },
   "charts": {
     "progressOverTime": {
       "title": "Πρόοδος στο Χρόνο",
@@ -70,7 +63,9 @@
     "accuracyTrend": {
       "title": "Τάση Ακρίβειας",
       "description": "Το ποσοστό ακρίβειάς σας στο χρόνο",
-      "accuracy": "Ακρίβεια"
+      "accuracy": "Ακρίβεια",
+      "vocabulary": "Λεξιλόγιο",
+      "culture": "Πολιτισμός"
     },
     "deckPerformance": {
       "title": "Απόδοση Τράπουλας",

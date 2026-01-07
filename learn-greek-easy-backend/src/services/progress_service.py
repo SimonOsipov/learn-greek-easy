@@ -787,6 +787,30 @@ class ProgressService:
             end_date=end_date,
         )
 
+        # Get cards by status per day from both vocab and culture
+        vocab_status_counts = await self.stats_repo.count_cards_by_status_per_day(
+            user_id=user_id,
+            start_date=start_date,
+            end_date=end_date,
+        )
+        culture_status_counts = await self.culture_stats_repo.count_cards_by_status_per_day(
+            user_id=user_id,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+        # Get daily accuracy stats for vocab and culture
+        vocab_accuracy_stats = await self.review_repo.get_daily_accuracy_stats(
+            user_id=user_id,
+            start_date=start_date,
+            end_date=end_date,
+        )
+        culture_accuracy_stats = await self.culture_stats_repo.get_daily_culture_accuracy_stats(
+            user_id=user_id,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
         # Create a map for quick lookup
         stats_map = {stat["date"]: stat for stat in raw_daily_stats}
 
@@ -794,6 +818,25 @@ class ProgressService:
         daily_stats: list[DailyStats] = []
         current_date = start_date
         while current_date <= end_date:
+            # Get combined learning/mastered counts for this day
+            vocab_counts = vocab_status_counts.get(current_date, {"learning": 0, "mastered": 0})
+            culture_counts = culture_status_counts.get(current_date, {"learning": 0, "mastered": 0})
+            cards_learning = vocab_counts["learning"] + culture_counts["learning"]
+            cards_mastered = vocab_counts["mastered"] + culture_counts["mastered"]
+
+            # Get accuracy stats for this day
+            vocab_acc = vocab_accuracy_stats.get(
+                current_date, {"correct_count": 0, "total_count": 0, "accuracy": 0.0}
+            )
+            culture_acc = culture_accuracy_stats.get(
+                current_date, {"correct_count": 0, "total_count": 0, "accuracy": 0.0}
+            )
+
+            # Calculate combined accuracy
+            total_correct = vocab_acc["correct_count"] + culture_acc["correct_count"]
+            total_count = vocab_acc["total_count"] + culture_acc["total_count"]
+            combined_accuracy = (total_correct / total_count * 100) if total_count > 0 else 0.0
+
             if current_date in stats_map:
                 stat = stats_map[current_date]
                 daily_stats.append(
@@ -801,9 +844,13 @@ class ProgressService:
                         date=current_date,
                         reviews_count=stat["reviews_count"],
                         cards_learned=0,  # Not tracked at review level
-                        cards_mastered=0,  # Calculated separately
+                        cards_learning=cards_learning,
+                        cards_mastered=cards_mastered,
                         study_time_seconds=stat["total_time_seconds"],
                         average_quality=round(stat["average_quality"], 2),
+                        vocab_accuracy=round(vocab_acc["accuracy"], 1),
+                        culture_accuracy=round(culture_acc["accuracy"], 1),
+                        combined_accuracy=round(combined_accuracy, 1),
                     )
                 )
             else:
@@ -812,9 +859,13 @@ class ProgressService:
                         date=current_date,
                         reviews_count=0,
                         cards_learned=0,
-                        cards_mastered=0,
+                        cards_learning=cards_learning,
+                        cards_mastered=cards_mastered,
                         study_time_seconds=0,
                         average_quality=0.0,
+                        vocab_accuracy=round(vocab_acc["accuracy"], 1),
+                        culture_accuracy=round(culture_acc["accuracy"], 1),
+                        combined_accuracy=round(combined_accuracy, 1),
                     )
                 )
             current_date += timedelta(days=1)

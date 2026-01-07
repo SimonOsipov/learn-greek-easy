@@ -151,15 +151,6 @@ export const ProgressLineChart = React.forwardRef<HTMLDivElement, ProgressLineCh
             <Legend wrapperStyle={{ paddingTop: '20px' }} iconType="circle" />
             <Line
               type="monotone"
-              dataKey="cardsNew"
-              stroke={colorSchemes.progression[0]} // cyan
-              name={t('charts.progressOverTime.newCards')}
-              strokeWidth={2}
-              dot={false}
-              isAnimationActive={false}
-            />
-            <Line
-              type="monotone"
               dataKey="cardsLearning"
               stroke={colorSchemes.progression[1]} // blue
               name={t('charts.progressOverTime.learningCards')}

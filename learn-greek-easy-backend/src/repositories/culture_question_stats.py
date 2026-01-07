@@ -4,7 +4,7 @@ from datetime import date, datetime, timedelta
 from typing import Optional
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import Date, cast, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.db.models import CardStatus, CultureAnswerHistory, CultureQuestion, CultureQuestionStats
@@ -362,6 +362,94 @@ class CultureQuestionStatsRepository(BaseRepository[CultureQuestionStats]):
 
         result = await self.db.execute(query)
         return [row[0] for row in result.all()]
+
+    async def count_cards_by_status_per_day(
+        self,
+        user_id: UUID,
+        start_date: date,
+        end_date: date,
+    ) -> dict[date, dict[str, int]]:
+        """Count culture questions in each status per day based on updated_at.
+
+        Groups questions by the date they were last updated and their current status.
+        Learning includes both LEARNING and REVIEW statuses.
+
+        Args:
+            user_id: User UUID
+            start_date: Start date (inclusive)
+            end_date: End date (inclusive)
+
+        Returns:
+            Dict of {date: {learning: count, mastered: count}}
+
+        Use Case:
+            Progress Over Time chart - show learning/mastered counts per day
+        """
+        result = await self.db.execute(
+            select(
+                cast(CultureQuestionStats.updated_at, Date).label("day"),
+                CultureQuestionStats.status,
+                func.count(CultureQuestionStats.id).label("count"),
+            )
+            .where(CultureQuestionStats.user_id == user_id)
+            .where(cast(CultureQuestionStats.updated_at, Date) >= start_date)
+            .where(cast(CultureQuestionStats.updated_at, Date) <= end_date)
+            .group_by(cast(CultureQuestionStats.updated_at, Date), CultureQuestionStats.status)
+        )
+        rows = result.all()
+
+        counts: dict[date, dict[str, int]] = {}
+        for row in rows:
+            day = row.day
+            count_val: int = int(row[2])  # count column is at index 2
+            if day not in counts:
+                counts[day] = {"learning": 0, "mastered": 0}
+            if row.status == CardStatus.LEARNING or row.status == CardStatus.REVIEW:
+                counts[day]["learning"] += count_val
+            elif row.status == CardStatus.MASTERED:
+                counts[day]["mastered"] += count_val
+        return counts
+
+    async def get_daily_culture_accuracy_stats(
+        self,
+        user_id: UUID,
+        start_date: date,
+        end_date: date,
+    ) -> dict[date, dict]:
+        """Get daily accuracy statistics for culture questions.
+
+        Args:
+            user_id: User UUID
+            start_date: Start date (inclusive)
+            end_date: End date (inclusive)
+
+        Returns:
+            Dict of {date: {correct_count, total_count, accuracy}}
+
+        Use Case:
+            Accuracy Trend chart - culture accuracy per day
+        """
+        result = await self.db.execute(
+            select(
+                cast(CultureAnswerHistory.created_at, Date).label("day"),
+                func.count().filter(CultureAnswerHistory.is_correct.is_(True)).label("correct"),
+                func.count().label("total"),
+            )
+            .where(CultureAnswerHistory.user_id == user_id)
+            .where(cast(CultureAnswerHistory.created_at, Date) >= start_date)
+            .where(cast(CultureAnswerHistory.created_at, Date) <= end_date)
+            .group_by(cast(CultureAnswerHistory.created_at, Date))
+        )
+        rows = result.all()
+
+        return {
+            row.day: {
+                "correct_count": row.correct,
+                "total_count": row.total,
+                "accuracy": (row.correct / row.total * 100) if row.total > 0 else 0.0,
+            }
+            for row in rows
+        }
 
 
 # ============================================================================

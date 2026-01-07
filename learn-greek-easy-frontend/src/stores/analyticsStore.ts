@@ -151,11 +151,13 @@ const transformToAnalyticsDashboardData = (
     dateString: day.date,
     cardsMastered: day.cards_mastered,
     cardsReviewed: day.reviews_count,
-    accuracy: day.average_quality * 20, // Convert 0-5 scale to 0-100
+    accuracy: day.combined_accuracy ?? day.average_quality * 20, // Use combined accuracy from backend
+    vocabAccuracy: day.vocab_accuracy ?? 0,
+    cultureAccuracy: day.culture_accuracy ?? 0,
     timeStudied: day.study_time_seconds,
     streak: 0, // Not available per day
     cardsNew: 0,
-    cardsLearning: 0,
+    cardsLearning: day.cards_learning,
     cardsReview: 0,
   }));
 
