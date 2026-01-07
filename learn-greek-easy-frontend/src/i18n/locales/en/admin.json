@@ -5,8 +5,12 @@
   },
   "sections": {
     "contentSummary": "Content Summary",
-    "decksByLevel": "Decks by Level",
-    "decksByLevelDescription": "All active decks sorted by CEFR level (A1 to C2)"
+    "decksByLevel": "Vocabulary Decks by Level",
+    "decksByLevelDescription": "All active vocabulary decks sorted by CEFR level (A1 to C2)",
+    "cultureDecks": "Culture Decks by Category",
+    "cultureDecksDescription": "All active culture decks organized by category",
+    "allDecks": "All Decks",
+    "allDecksDescription": "Search and browse all vocabulary and culture decks"
   },
   "stats": {
     "totalDecks": "Total Decks",
@@ -14,10 +18,32 @@
   },
   "deck": {
     "cardCount_one": "{{count}} card",
-    "cardCount_other": "{{count}} cards"
+    "cardCount_other": "{{count}} cards",
+    "questionCount_one": "{{count}} question",
+    "questionCount_other": "{{count}} questions"
+  },
+  "deckTypes": {
+    "vocabulary": "Vocabulary",
+    "culture": "Culture"
+  },
+  "search": {
+    "placeholder": "Search decks..."
+  },
+  "filter": {
+    "type": "Filter by type",
+    "allTypes": "All Types",
+    "vocabulary": "Vocabulary",
+    "culture": "Culture"
+  },
+  "pagination": {
+    "showing": "Showing {{from}}-{{to}} of {{total}}",
+    "pageOf": "Page {{page}} of {{totalPages}}",
+    "previous": "Previous",
+    "next": "Next"
   },
   "errors": {
     "loadingStats": "Error loading admin statistics",
+    "loadingDecks": "Error loading decks",
     "failed": "Failed to load statistics"
   },
   "actions": {
@@ -26,6 +52,8 @@
   },
   "states": {
     "noStats": "No statistics available",
-    "noDecks": "No decks available"
+    "noDecks": "No vocabulary decks available",
+    "noCultureDecks": "No culture decks available",
+    "noDecksFound": "No decks found matching your search"
   }
 }

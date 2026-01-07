@@ -520,8 +520,8 @@ class TestAdminStats(E2ETestCase):
         admin_session: UserSession,
         db_session: AsyncSession,
     ) -> None:
-        """Test superuser can get admin statistics."""
-        # Create some decks and cards
+        """Test superuser can get admin statistics with vocabulary decks."""
+        # Create some vocabulary decks and cards
         deck = await DeckFactory.create(session=db_session, is_active=True)
         for _ in range(5):
             await CardFactory.create(session=db_session, deck=deck)
@@ -534,13 +534,91 @@ class TestAdminStats(E2ETestCase):
 
         assert response.status_code == 200
         data = response.json()
+        # Check all required fields
         assert "total_decks" in data
         assert "total_cards" in data
+        assert "total_vocabulary_decks" in data
+        assert "total_culture_decks" in data
+        assert "total_vocabulary_cards" in data
+        assert "total_culture_questions" in data
         assert "decks" in data
+        assert "culture_decks" in data
         assert isinstance(data["decks"], list)
-        # Should have at least our created deck
-        assert data["total_decks"] >= 1
-        assert data["total_cards"] >= 5
+        assert isinstance(data["culture_decks"], list)
+        # Should have at least our created vocabulary deck
+        assert data["total_vocabulary_decks"] >= 1
+        assert data["total_vocabulary_cards"] >= 5
+
+    @pytest.mark.asyncio
+    async def test_get_admin_stats_with_culture_decks(
+        self,
+        client: AsyncClient,
+        admin_session: UserSession,
+        db_session: AsyncSession,
+    ) -> None:
+        """Test admin stats includes culture decks and questions."""
+        # Create culture deck with questions
+        culture_deck = await CultureDeckFactory.create(session=db_session, is_active=True)
+        for _ in range(3):
+            await CultureQuestionFactory.create(session=db_session, deck=culture_deck)
+        await db_session.commit()
+
+        response = await client.get(
+            "/api/v1/admin/stats",
+            headers=admin_session.headers,
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+
+        # Should include culture deck in stats
+        assert data["total_culture_decks"] >= 1
+        assert data["total_culture_questions"] >= 3
+        assert len(data["culture_decks"]) >= 1
+
+        # Verify culture deck structure
+        culture_deck_item = next(
+            (d for d in data["culture_decks"] if d["id"] == str(culture_deck.id)),
+            None,
+        )
+        if culture_deck_item:
+            assert "name" in culture_deck_item
+            assert "category" in culture_deck_item
+            assert "question_count" in culture_deck_item
+            assert isinstance(culture_deck_item["name"], dict)
+            assert culture_deck_item["question_count"] >= 3
+
+    @pytest.mark.asyncio
+    async def test_get_admin_stats_combined_totals(
+        self,
+        client: AsyncClient,
+        admin_session: UserSession,
+        db_session: AsyncSession,
+    ) -> None:
+        """Test admin stats correctly combines vocabulary and culture totals."""
+        # Create vocabulary deck
+        vocab_deck = await DeckFactory.create(session=db_session, is_active=True)
+        for _ in range(2):
+            await CardFactory.create(session=db_session, deck=vocab_deck)
+
+        # Create culture deck
+        culture_deck = await CultureDeckFactory.create(session=db_session, is_active=True)
+        for _ in range(3):
+            await CultureQuestionFactory.create(session=db_session, deck=culture_deck)
+        await db_session.commit()
+
+        response = await client.get(
+            "/api/v1/admin/stats",
+            headers=admin_session.headers,
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+
+        # Verify total_decks = vocab + culture
+        assert data["total_decks"] == data["total_vocabulary_decks"] + data["total_culture_decks"]
+        # Verify total_cards = vocab cards + culture questions
+        assert data["total_cards"] == data["total_vocabulary_cards"] + data["total_culture_questions"]
 
     @pytest.mark.asyncio
     async def test_get_admin_stats_deck_structure(

@@ -5,8 +5,12 @@
   },
   "sections": {
     "contentSummary": "Περίληψη Περιεχομένου",
-    "decksByLevel": "Τράπουλες ανά Επίπεδο",
-    "decksByLevelDescription": "Όλες οι ενεργές τράπουλες ταξινομημένες κατά επίπεδο CEFR (A1 έως C2)"
+    "decksByLevel": "Τράπουλες Λεξιλογίου ανά Επίπεδο",
+    "decksByLevelDescription": "Όλες οι ενεργές τράπουλες λεξιλογίου ταξινομημένες κατά επίπεδο CEFR (A1 έως C2)",
+    "cultureDecks": "Τράπουλες Πολιτισμού ανά Κατηγορία",
+    "cultureDecksDescription": "Όλες οι ενεργές τράπουλες πολιτισμού οργανωμένες ανά κατηγορία",
+    "allDecks": "Όλες οι Τράπουλες",
+    "allDecksDescription": "Αναζήτηση και περιήγηση σε όλες τις τράπουλες λεξιλογίου και πολιτισμού"
   },
   "stats": {
     "totalDecks": "Συνολικές Τράπουλες",
@@ -14,10 +18,32 @@
   },
   "deck": {
     "cardCount_one": "{{count}} κάρτα",
-    "cardCount_other": "{{count}} κάρτες"
+    "cardCount_other": "{{count}} κάρτες",
+    "questionCount_one": "{{count}} ερώτηση",
+    "questionCount_other": "{{count}} ερωτήσεις"
+  },
+  "deckTypes": {
+    "vocabulary": "Λεξιλόγιο",
+    "culture": "Πολιτισμός"
+  },
+  "search": {
+    "placeholder": "Αναζήτηση τραπουλών..."
+  },
+  "filter": {
+    "type": "Φίλτρο ανά τύπο",
+    "allTypes": "Όλοι οι Τύποι",
+    "vocabulary": "Λεξιλόγιο",
+    "culture": "Πολιτισμός"
+  },
+  "pagination": {
+    "showing": "Εμφάνιση {{from}}-{{to}} από {{total}}",
+    "pageOf": "Σελίδα {{page}} από {{totalPages}}",
+    "previous": "Προηγούμενη",
+    "next": "Επόμενη"
   },
   "errors": {
     "loadingStats": "Σφάλμα φόρτωσης στατιστικών διαχείρισης",
+    "loadingDecks": "Σφάλμα φόρτωσης τραπουλών",
     "failed": "Αποτυχία φόρτωσης στατιστικών"
   },
   "actions": {
@@ -26,6 +52,8 @@
   },
   "states": {
     "noStats": "Δεν υπάρχουν διαθέσιμα στατιστικά",
-    "noDecks": "Δεν υπάρχουν διαθέσιμες τράπουλες"
+    "noDecks": "Δεν υπάρχουν διαθέσιμες τράπουλες λεξιλογίου",
+    "noCultureDecks": "Δεν υπάρχουν διαθέσιμες τράπουλες πολιτισμού",
+    "noDecksFound": "Δεν βρέθηκαν τράπουλες που να ταιριάζουν με την αναζήτησή σας"
   }
 }

@@ -1,17 +1,40 @@
 // src/pages/AdminPage.tsx
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { AlertCircle, Database, Layers, RefreshCw } from 'lucide-react';
+import {
+  AlertCircle,
+  ChevronLeft,
+  ChevronRight,
+  Database,
+  Layers,
+  RefreshCw,
+  Search,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { adminAPI } from '@/services/adminAPI';
-import type { ContentStatsResponse, DeckStats } from '@/services/adminAPI';
+import type {
+  ContentStatsResponse,
+  CultureDeckStats,
+  DeckListResponse,
+  DeckStats,
+  MultilingualName,
+  UnifiedDeckItem,
+} from '@/services/adminAPI';
 
 /**
  * CEFR level order for sorting decks
@@ -173,20 +196,323 @@ function sortDecksByLevel(decks: DeckStats[]): DeckStats[] {
 }
 
 /**
+ * Get category badge variant
+ */
+function getCategoryBadgeVariant(category: string): 'default' | 'secondary' | 'outline' {
+  switch (category) {
+    case 'history':
+      return 'default';
+    case 'geography':
+      return 'secondary';
+    default:
+      return 'outline';
+  }
+}
+
+/**
+ * Get localized name from multilingual object
+ */
+function getLocalizedName(
+  name: string | MultilingualName,
+  locale: string
+): string {
+  if (typeof name === 'string') {
+    return name;
+  }
+  // Map i18n locale to our supported locales
+  const localeMap: Record<string, keyof MultilingualName> = {
+    en: 'en',
+    el: 'el',
+    ru: 'ru',
+  };
+  const key = localeMap[locale] || 'en';
+  return name[key] || name.en || Object.values(name)[0] || '';
+}
+
+/**
+ * Culture deck list item component
+ */
+interface CultureDeckListItemProps {
+  deck: CultureDeckStats;
+  locale: string;
+  t: (key: string, options?: { count: number }) => string;
+}
+
+const CultureDeckListItem: React.FC<CultureDeckListItemProps> = ({ deck, locale, t }) => (
+  <div className="flex items-center justify-between rounded-lg border p-4 transition-colors hover:bg-muted/50">
+    <div className="flex items-center gap-3">
+      <Badge variant={getCategoryBadgeVariant(deck.category)}>{deck.category}</Badge>
+      <span className="font-medium">{getLocalizedName(deck.name, locale)}</span>
+    </div>
+    <span className="text-sm text-muted-foreground">
+      {t('deck.questionCount', { count: deck.question_count })}
+    </span>
+  </div>
+);
+
+/**
+ * Unified deck list item for All Decks section
+ */
+interface UnifiedDeckListItemProps {
+  deck: UnifiedDeckItem;
+  locale: string;
+  t: (key: string, options?: { count: number }) => string;
+}
+
+const UnifiedDeckListItem: React.FC<UnifiedDeckListItemProps> = ({ deck, locale, t }) => {
+  const displayName = getLocalizedName(deck.name, locale);
+  const itemCountKey = deck.type === 'vocabulary' ? 'deck.cardCount' : 'deck.questionCount';
+
+  return (
+    <div className="flex items-center justify-between rounded-lg border p-4 transition-colors hover:bg-muted/50">
+      <div className="flex items-center gap-3">
+        {deck.type === 'vocabulary' && deck.level && (
+          <Badge variant={getLevelBadgeVariant(deck.level)}>{deck.level}</Badge>
+        )}
+        {deck.type === 'culture' && deck.category && (
+          <Badge variant={getCategoryBadgeVariant(deck.category)}>{deck.category}</Badge>
+        )}
+        <span className="font-medium">{displayName}</span>
+        <Badge variant="outline" className="text-xs">
+          {t(`deckTypes.${deck.type}`)}
+        </Badge>
+      </div>
+      <span className="text-sm text-muted-foreground">
+        {t(itemCountKey, { count: deck.item_count })}
+      </span>
+    </div>
+  );
+};
+
+/**
+ * Debounce hook for search input
+ */
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+}
+
+/**
+ * All Decks List Component
+ */
+interface AllDecksListProps {
+  t: (key: string, options?: Record<string, unknown>) => string;
+  locale: string;
+}
+
+const AllDecksList: React.FC<AllDecksListProps> = ({ t, locale }) => {
+  const [deckList, setDeckList] = useState<DeckListResponse | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [searchInput, setSearchInput] = useState('');
+  const [typeFilter, setTypeFilter] = useState<'all' | 'vocabulary' | 'culture'>('all');
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
+
+  const debouncedSearch = useDebounce(searchInput, 300);
+
+  const fetchDecks = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const params: {
+        page: number;
+        page_size: number;
+        search?: string;
+        type?: 'vocabulary' | 'culture';
+      } = {
+        page,
+        page_size: pageSize,
+      };
+
+      if (debouncedSearch) {
+        params.search = debouncedSearch;
+      }
+      if (typeFilter !== 'all') {
+        params.type = typeFilter;
+      }
+
+      const data = await adminAPI.listDecks(params);
+      setDeckList(data);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : t('errors.failed');
+      setError(message);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [page, debouncedSearch, typeFilter, t]);
+
+  useEffect(() => {
+    fetchDecks();
+  }, [fetchDecks]);
+
+  // Reset to page 1 when search or filter changes
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, typeFilter]);
+
+  const totalPages = deckList ? Math.ceil(deckList.total / pageSize) : 0;
+
+  const handlePreviousPage = () => {
+    if (page > 1) {
+      setPage(page - 1);
+    }
+  };
+
+  const handleNextPage = () => {
+    if (page < totalPages) {
+      setPage(page + 1);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle data-testid="all-decks-title">{t('sections.allDecks')}</CardTitle>
+        <CardDescription data-testid="all-decks-description">
+          {t('sections.allDecksDescription')}
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {/* Search and Filter Controls */}
+        <div className="mb-4 flex flex-col gap-4 sm:flex-row">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder={t('search.placeholder')}
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              className="pl-9"
+              data-testid="deck-search-input"
+            />
+          </div>
+          <Select
+            value={typeFilter}
+            onValueChange={(value: 'all' | 'vocabulary' | 'culture') => setTypeFilter(value)}
+          >
+            <SelectTrigger className="w-full sm:w-[180px]" data-testid="type-filter-select">
+              <SelectValue placeholder={t('filter.type')} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t('filter.allTypes')}</SelectItem>
+              <SelectItem value="vocabulary">{t('filter.vocabulary')}</SelectItem>
+              <SelectItem value="culture">{t('filter.culture')}</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Loading State */}
+        {isLoading && (
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="flex items-center justify-between rounded-lg border p-4">
+                <div className="flex items-center gap-3">
+                  <Skeleton className="h-6 w-12" />
+                  <Skeleton className="h-5 w-32" />
+                </div>
+                <Skeleton className="h-5 w-16" />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Error State */}
+        {error && !isLoading && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>{t('errors.loadingDecks')}</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
+        {/* Deck List */}
+        {!isLoading && !error && deckList && (
+          <>
+            {deckList.decks.length === 0 ? (
+              <p className="py-4 text-center text-muted-foreground">{t('states.noDecksFound')}</p>
+            ) : (
+              <div className="space-y-3">
+                {deckList.decks.map((deck) => (
+                  <UnifiedDeckListItem key={deck.id} deck={deck} locale={locale} t={t} />
+                ))}
+              </div>
+            )}
+
+            {/* Pagination */}
+            {deckList.total > 0 && (
+              <div className="mt-4 flex items-center justify-between">
+                <p className="text-sm text-muted-foreground">
+                  {t('pagination.showing', {
+                    from: (page - 1) * pageSize + 1,
+                    to: Math.min(page * pageSize, deckList.total),
+                    total: deckList.total,
+                  })}
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handlePreviousPage}
+                    disabled={page === 1}
+                    data-testid="pagination-prev"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    {t('pagination.previous')}
+                  </Button>
+                  <span className="text-sm text-muted-foreground">
+                    {t('pagination.pageOf', { page, totalPages })}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleNextPage}
+                    disabled={page >= totalPages}
+                    data-testid="pagination-next"
+                  >
+                    {t('pagination.next')}
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
+
+/**
  * Admin Page
  *
  * Displays content statistics for administrators:
  * - Summary cards with total decks and cards counts
- * - Deck list sorted by CEFR level with card counts
+ * - Vocabulary deck list sorted by CEFR level with card counts
+ * - Culture deck list by category with question counts
+ * - All decks searchable list with pagination
  *
  * Requires superuser authentication.
  */
 const AdminPage: React.FC = () => {
-  const { t } = useTranslation('admin');
+  const { t, i18n } = useTranslation('admin');
   const [stats, setStats] = useState<ContentStatsResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isRetrying, setIsRetrying] = useState(false);
+
+  const locale = i18n.language;
 
   const fetchStats = async () => {
     try {
@@ -318,11 +644,11 @@ const AdminPage: React.FC = () => {
         </div>
       </section>
 
-      {/* Deck List */}
-      <section aria-labelledby="decks-heading">
+      {/* Vocabulary Deck List */}
+      <section aria-labelledby="vocab-decks-heading">
         <Card>
           <CardHeader>
-            <CardTitle id="decks-heading" data-testid="decks-by-level-title">
+            <CardTitle id="vocab-decks-heading" data-testid="decks-by-level-title">
               {t('sections.decksByLevel')}
             </CardTitle>
             <CardDescription data-testid="decks-by-level-description">
@@ -341,6 +667,38 @@ const AdminPage: React.FC = () => {
             )}
           </CardContent>
         </Card>
+      </section>
+
+      {/* Culture Deck List */}
+      <section aria-labelledby="culture-decks-heading">
+        <Card>
+          <CardHeader>
+            <CardTitle id="culture-decks-heading" data-testid="culture-decks-title">
+              {t('sections.cultureDecks')}
+            </CardTitle>
+            <CardDescription data-testid="culture-decks-description">
+              {t('sections.cultureDecksDescription')}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {stats.culture_decks.length === 0 ? (
+              <p className="py-4 text-center text-muted-foreground">
+                {t('states.noCultureDecks')}
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {stats.culture_decks.map((deck) => (
+                  <CultureDeckListItem key={deck.id} deck={deck} locale={locale} t={t} />
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </section>
+
+      {/* All Decks List with Search and Pagination */}
+      <section aria-labelledby="all-decks-heading">
+        <AllDecksList t={t} locale={locale} />
       </section>
     </div>
   );
