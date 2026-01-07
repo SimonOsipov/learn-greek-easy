@@ -7,6 +7,9 @@ to provide comprehensive progress statistics including:
 3. Detailed deck statistics
 4. Learning trends over time periods
 
+Statistics are aggregated from BOTH vocabulary flashcards (Review table)
+and culture card sessions (CultureAnswerHistory table).
+
 Example Usage:
     async with get_db_session() as db:
         service = ProgressService(db)
@@ -26,6 +29,7 @@ from src.core.logging import get_logger
 from src.repositories import (
     CardRepository,
     CardStatisticsRepository,
+    CultureAnswerHistoryRepository,
     DeckRepository,
     ReviewRepository,
     UserDeckProgressRepository,
@@ -61,6 +65,10 @@ class ProgressService:
     This service aggregates data from multiple repositories to provide
     comprehensive progress statistics for users.
 
+    Statistics are aggregated from BOTH:
+    - Vocabulary flashcards (Review table)
+    - Culture card sessions (CultureAnswerHistory table)
+
     Attributes:
         db: Async database session
         progress_repo: Repository for UserDeckProgress operations
@@ -68,6 +76,7 @@ class ProgressService:
         review_repo: Repository for Review operations
         deck_repo: Repository for Deck operations
         card_repo: Repository for Card operations
+        culture_answer_repo: Repository for CultureAnswerHistory operations
     """
 
     # Class constants
@@ -88,10 +97,142 @@ class ProgressService:
         self.deck_repo = DeckRepository(db)
         self.card_repo = CardRepository(db)
         self.culture_stats_repo = CultureQuestionStatsRepository(db)
+        self.culture_answer_repo = CultureAnswerHistoryRepository(db)
 
     # =========================================================================
     # Helper Methods
     # =========================================================================
+
+    async def _get_aggregated_streak(self, user_id: UUID) -> int:
+        """Calculate current study streak combining vocabulary and culture activity.
+
+        Counts consecutive days where user had at least one review OR
+        culture answer, starting from today going backwards.
+
+        Args:
+            user_id: User UUID
+
+        Returns:
+            Number of consecutive days with study activity
+        """
+        # Get unique dates from vocabulary reviews (last 30 days)
+        review_dates_raw = await self.review_repo.get_user_reviews(user_id, skip=0, limit=1000)
+        review_dates = set()
+        thirty_days_ago = date.today() - timedelta(days=30)
+        for review in review_dates_raw:
+            review_date = review.reviewed_at.date()
+            if review_date >= thirty_days_ago:
+                review_dates.add(review_date)
+
+        # Get unique dates from culture answers (last 30 days)
+        culture_dates = await self.culture_answer_repo.get_unique_dates(user_id, days=30)
+        culture_dates_set = set(culture_dates)
+
+        # Combine both sets
+        all_study_dates = review_dates | culture_dates_set
+
+        if not all_study_dates:
+            return 0
+
+        # Count consecutive days starting from today
+        streak = 0
+        current_date = date.today()
+
+        while current_date in all_study_dates:
+            streak += 1
+            current_date -= timedelta(days=1)
+
+        return streak
+
+    async def _get_aggregated_longest_streak(self, user_id: UUID) -> int:
+        """Calculate longest historical streak combining vocabulary and culture activity.
+
+        Scans full history from both Review and CultureAnswerHistory tables
+        to find the longest consecutive day streak.
+
+        Args:
+            user_id: User UUID
+
+        Returns:
+            Longest streak in days
+        """
+        # Get all unique dates from vocabulary reviews
+        review_dates_raw = await self.review_repo.get_user_reviews(user_id, skip=0, limit=10000)
+        review_dates = {review.reviewed_at.date() for review in review_dates_raw}
+
+        # Get all unique dates from culture answers
+        culture_dates = await self.culture_answer_repo.get_all_unique_dates(user_id)
+        culture_dates_set = set(culture_dates)
+
+        # Combine and sort
+        all_dates = sorted(review_dates | culture_dates_set)
+
+        if not all_dates:
+            return 0
+
+        longest = 1
+        current = 1
+
+        for i in range(1, len(all_dates)):
+            if (all_dates[i] - all_dates[i - 1]).days == 1:
+                current += 1
+                longest = max(longest, current)
+            else:
+                current = 1
+
+        return longest
+
+    async def _get_aggregated_study_time_today(self, user_id: UUID) -> int:
+        """Get combined study time from vocabulary and culture sessions today.
+
+        Args:
+            user_id: User UUID
+
+        Returns:
+            Total study time in seconds for today
+        """
+        vocab_time = await self.review_repo.get_study_time_today(user_id)
+        culture_time = await self.culture_answer_repo.get_study_time_today(user_id)
+        return vocab_time + culture_time
+
+    async def _get_aggregated_reviews_today(self, user_id: UUID) -> int:
+        """Get combined review/answer count from vocabulary and culture sessions today.
+
+        Args:
+            user_id: User UUID
+
+        Returns:
+            Total reviews/answers today
+        """
+        vocab_reviews = await self.review_repo.count_reviews_today(user_id)
+        culture_answers = await self.culture_answer_repo.count_answers_today(user_id)
+        return vocab_reviews + culture_answers
+
+    async def _get_aggregated_total_reviews(self, user_id: UUID) -> int:
+        """Get total review/answer count combining vocabulary and culture.
+
+        Args:
+            user_id: User UUID
+
+        Returns:
+            Total reviews + culture answers
+        """
+        vocab_reviews = await self.review_repo.get_total_reviews(user_id)
+        culture_answers = await self.culture_answer_repo.get_total_answers(user_id)
+        return vocab_reviews + culture_answers
+
+    async def _get_aggregated_total_study_time(self, user_id: UUID) -> int:
+        """Get total study time combining vocabulary and culture sessions.
+
+        Args:
+            user_id: User UUID
+
+        Returns:
+            Total study time in seconds
+        """
+        vocab_time = await self.review_repo.get_total_study_time(user_id)
+        culture_time = await self.culture_answer_repo.get_total_study_time(user_id)
+        return vocab_time + culture_time
 
     async def _get_recent_activity(
         self,
@@ -261,9 +402,10 @@ class ProgressService:
     async def get_dashboard_stats(self, user_id: UUID) -> DashboardStatsResponse:
         """Get complete dashboard statistics for a user.
 
-        Aggregates vocab and culture data:
+        Aggregates data from BOTH vocabulary flashcards (Review) and
+        culture card sessions (CultureAnswerHistory):
         - Overview: total studied, mastered (vocab + culture), decks started, accuracy
-        - Today: reviews completed, cards due (vocab + culture), goal progress
+        - Today: reviews completed (vocab + culture), cards due (vocab + culture), goal progress
         - Streak: combined current streak and longest streak
         - Cards by status: breakdown of card statuses
         - Recent activity: last 7 days of reviews
@@ -306,14 +448,9 @@ class ProgressService:
             accuracy_percentage=accuracy_percentage,
         )
 
-        # Get today's stats
-        reviews_today = await self.review_repo.count_reviews_today(user_id)
-        vocab_study_time_today = await self.review_repo.get_study_time_today(user_id)
-        culture_study_time_today = await self.culture_stats_repo.get_culture_study_time_seconds(
-            user_id, today_only=True
-        )
-        study_time_today = vocab_study_time_today + culture_study_time_today
-
+        # Get today's stats - AGGREGATED from vocabulary + culture
+        reviews_today = await self._get_aggregated_reviews_today(user_id)
+        study_time_today = await self._get_aggregated_study_time_today(user_id)
         status_counts = await self.stats_repo.count_by_status(user_id)
         vocab_due = status_counts.get("due", 0)
         cards_due = vocab_due + culture_due
@@ -328,9 +465,9 @@ class ProgressService:
             study_time_seconds=study_time_today,
         )
 
-        # Get streak stats - use combined streak
-        current_streak = await self._calculate_combined_streak(user_id)
-        longest_streak = await self.review_repo.get_longest_streak(user_id)
+        # Get streak stats - AGGREGATED from vocabulary + culture
+        current_streak = await self._get_aggregated_streak(user_id)
+        longest_streak = await self._get_aggregated_longest_streak(user_id)
 
         # Get last study date from progress records
         progress_records = await self.progress_repo.get_user_progress(user_id, skip=0, limit=1)
@@ -537,9 +674,9 @@ class ProgressService:
             completion_percentage=round(completion_pct, 1),
         )
 
-        # Build statistics
-        total_reviews = await self.review_repo.get_total_reviews(user_id)
-        total_study_time = await self.review_repo.get_total_study_time(user_id)
+        # Build statistics - AGGREGATED from vocabulary + culture
+        total_reviews = await self._get_aggregated_total_reviews(user_id)
+        total_study_time = await self._get_aggregated_total_study_time(user_id)
         avg_quality = await self.review_repo.get_average_quality(user_id)
         avg_ef = await self.stats_repo.get_average_easiness_factor(user_id, deck_id=deck_id)
         avg_interval = await self.stats_repo.get_average_interval(user_id, deck_id=deck_id)
@@ -768,6 +905,7 @@ class ProgressService:
         """Get user achievements and progress.
 
         Calculates achievement progress in real-time based on user statistics.
+        Statistics are AGGREGATED from vocabulary flashcards and culture cards.
         Returns all achievements with their unlock status, progress percentage,
         total points earned, and the next milestone to unlock.
 
@@ -782,12 +920,12 @@ class ProgressService:
             extra={"user_id": str(user_id)},
         )
 
-        # Gather user statistics
+        # Gather user statistics - AGGREGATED from vocabulary + culture
         stats = {
-            "longest_streak": await self.review_repo.get_longest_streak(user_id),
+            "longest_streak": await self._get_aggregated_longest_streak(user_id),
             "total_mastered": await self.progress_repo.get_total_cards_mastered(user_id),
-            "total_reviews": await self.review_repo.get_total_reviews(user_id),
-            "total_study_time": await self.review_repo.get_total_study_time(user_id),
+            "total_reviews": await self._get_aggregated_total_reviews(user_id),
+            "total_study_time": await self._get_aggregated_total_study_time(user_id),
             "total_decks": await self.progress_repo.count_user_decks(user_id),
         }
 

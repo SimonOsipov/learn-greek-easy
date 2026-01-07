@@ -2,6 +2,7 @@
 
 from src.repositories.base import BaseRepository
 from src.repositories.card import CardRepository
+from src.repositories.culture_answer_history import CultureAnswerHistoryRepository
 from src.repositories.culture_deck import CultureDeckRepository
 from src.repositories.culture_question import CultureQuestionRepository
 from src.repositories.culture_question_stats import CultureQuestionStatsRepository
@@ -38,4 +39,5 @@ __all__ = [
     "CultureDeckRepository",
     "CultureQuestionRepository",
     "CultureQuestionStatsRepository",
+    "CultureAnswerHistoryRepository",
 ]
