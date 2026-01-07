@@ -155,11 +155,9 @@ export const Dashboard: React.FC = () => {
   };
 
   // Get active decks (in-progress or with progress)
-  const activeDecks = decks
-    .filter(
-      (deck) => deck.progress?.status === 'in-progress' || (deck.progress?.cardsReview ?? 0) > 0
-    )
-    .slice(0, 2);
+  const activeDecks = decks.filter(
+    (deck) => deck.progress?.status === 'in-progress' || (deck.progress?.cardsReview ?? 0) > 0
+  );
 
   // Loading state
   const isLoading = analyticsLoading || decksLoading;
@@ -246,7 +244,7 @@ export const Dashboard: React.FC = () => {
         </div>
         {decksLoading ? (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {[1, 2].map((i) => (
+            {[1, 2, 3].map((i) => (
               <Skeleton key={i} className="h-48 rounded-lg" />
             ))}
           </div>
