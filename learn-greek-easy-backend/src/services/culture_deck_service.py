@@ -305,10 +305,10 @@ class CultureDeckService:
             },
         )
 
-        # Convert Pydantic model to dict, then MultilingualText to dict
+        # Convert Pydantic model to dict for create
         deck_dict = {
-            "name": deck_data.name.model_dump(),
-            "description": deck_data.description.model_dump(),
+            "name": deck_data.name,
+            "description": deck_data.description,
             "icon": deck_data.icon,
             "color_accent": deck_data.color_accent,
             "category": deck_data.category,
@@ -373,14 +373,8 @@ class CultureDeckService:
         if deck is None:
             raise CultureDeckNotFoundException(deck_id=str(deck_id))
 
-        # Build update dict, converting MultilingualText to dict
-        update_dict = {}
-        for field, value in deck_data.model_dump(exclude_unset=True).items():
-            if field in ("name", "description") and value is not None:
-                # MultilingualText needs to be converted to dict
-                update_dict[field] = value
-            else:
-                update_dict[field] = value
+        # Build update dict from only the fields that were set
+        update_dict = deck_data.model_dump(exclude_unset=True)
 
         # Update deck using repository
         updated_deck = await self.deck_repo.update(deck, update_dict)

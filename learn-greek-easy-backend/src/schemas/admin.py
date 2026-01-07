@@ -8,7 +8,7 @@ This module contains schemas for:
 """
 
 from datetime import datetime
-from typing import Dict, List, Optional, Union
+from typing import List, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -37,7 +37,7 @@ class CultureDeckStatsItem(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID = Field(..., description="Culture deck UUID")
-    name: Dict[str, str] = Field(..., description="Multilingual deck name {el, en, ru}")
+    name: str = Field(..., description="Deck name")
     category: str = Field(..., description="Deck category (history, geography, etc.)")
     question_count: int = Field(..., ge=0, description="Number of questions in deck")
 
@@ -82,9 +82,7 @@ class UnifiedDeckItem(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID = Field(..., description="Deck UUID")
-    name: Union[str, Dict[str, str]] = Field(
-        ..., description="Deck name (string for vocabulary, dict for culture)"
-    )
+    name: str = Field(..., description="Deck name")
     type: str = Field(..., description="Deck type: 'vocabulary' or 'culture'")
     level: Optional[DeckLevel] = Field(None, description="CEFR level (vocabulary decks only)")
     category: Optional[str] = Field(None, description="Category (culture decks only)")

@@ -27,8 +27,8 @@ from src.repositories.culture_deck import CultureDeckRepository
 async def culture_deck(db_session: AsyncSession) -> CultureDeck:
     """Create an active culture deck for testing."""
     deck = CultureDeck(
-        name={"en": "Greek History", "el": "Ελληνική Ιστορία", "ru": "Греческая история"},
-        description={"en": "Learn about Greek history", "el": "Μάθετε"},
+        name="Greek History",
+        description="Learn about Greek history",
         icon="book-open",
         color_accent="#4F46E5",
         category="history",
@@ -44,8 +44,8 @@ async def culture_deck(db_session: AsyncSession) -> CultureDeck:
 async def inactive_culture_deck(db_session: AsyncSession) -> CultureDeck:
     """Create an inactive culture deck for testing."""
     deck = CultureDeck(
-        name={"en": "Archived Deck", "el": "Αρχείο"},
-        description={"en": "Archived deck", "el": "Αρχείο"},
+        name="Archived Deck",
+        description="Archived deck",
         icon="archive",
         color_accent="#6B7280",
         category="archived_category",
@@ -61,8 +61,8 @@ async def inactive_culture_deck(db_session: AsyncSession) -> CultureDeck:
 async def second_culture_deck(db_session: AsyncSession) -> CultureDeck:
     """Create a second active culture deck for testing."""
     deck = CultureDeck(
-        name={"en": "Greek Geography", "el": "Ελληνική Γεωγραφία"},
-        description={"en": "Learn about Greek geography", "el": "Μάθετε"},
+        name="Greek Geography",
+        description="Learn about Greek geography",
         icon="globe",
         color_accent="#10B981",
         category="geography",

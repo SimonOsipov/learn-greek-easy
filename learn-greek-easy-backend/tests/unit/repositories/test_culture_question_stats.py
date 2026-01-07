@@ -29,8 +29,8 @@ from src.repositories.culture_question_stats import CultureQuestionStatsReposito
 async def culture_deck(db_session: AsyncSession) -> CultureDeck:
     """Create an active culture deck for testing."""
     deck = CultureDeck(
-        name={"en": "Greek History", "el": "Ελληνική Ιστορία", "ru": "Греческая история"},
-        description={"en": "Learn about Greek history", "el": "Μάθετε"},
+        name="Greek History",
+        description="Learn about Greek history",
         icon="book-open",
         color_accent="#4F46E5",
         category="history",

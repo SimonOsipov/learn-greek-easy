@@ -22,3 +22,19 @@ export {
   trackDeckFilterChanged,
   generateCultureSessionId,
 } from './cultureAnalytics';
+export {
+  // Type interfaces
+  type AdminDeckEditOpenedProperties,
+  type AdminDeckEditSavedProperties,
+  type AdminDeckEditCancelledProperties,
+  type AdminDeckEditFailedProperties,
+  type AdminDeckDeactivatedProperties,
+  type AdminDeckReactivatedProperties,
+  // Tracking functions
+  trackAdminDeckEditOpened,
+  trackAdminDeckEditSaved,
+  trackAdminDeckEditCancelled,
+  trackAdminDeckEditFailed,
+  trackAdminDeckDeactivated,
+  trackAdminDeckReactivated,
+} from './adminAnalytics';

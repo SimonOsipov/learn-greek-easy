@@ -1,6 +1,13 @@
 // src/pages/AdminPage.tsx
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from 'react';
 
 import {
   AlertCircle,
@@ -8,11 +15,13 @@ import {
   ChevronRight,
   Database,
   Layers,
+  Pencil,
   RefreshCw,
   Search,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import { DeckEditModal, type DeckEditFormData } from '@/components/admin';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -26,14 +35,24 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  trackAdminDeckDeactivated,
+  trackAdminDeckEditCancelled,
+  trackAdminDeckEditFailed,
+  trackAdminDeckEditOpened,
+  trackAdminDeckEditSaved,
+  trackAdminDeckReactivated,
+} from '@/lib/analytics/adminAnalytics';
 import { adminAPI } from '@/services/adminAPI';
 import type {
   ContentStatsResponse,
   CultureDeckStats,
+  CultureDeckUpdatePayload,
   DeckListResponse,
   DeckStats,
   MultilingualName,
   UnifiedDeckItem,
+  VocabularyDeckUpdatePayload,
 } from '@/services/adminAPI';
 
 /**
@@ -254,9 +273,10 @@ interface UnifiedDeckListItemProps {
   deck: UnifiedDeckItem;
   locale: string;
   t: (key: string, options?: { count: number }) => string;
+  onEdit: (deck: UnifiedDeckItem) => void;
 }
 
-const UnifiedDeckListItem: React.FC<UnifiedDeckListItemProps> = ({ deck, locale, t }) => {
+const UnifiedDeckListItem: React.FC<UnifiedDeckListItemProps> = ({ deck, locale, t, onEdit }) => {
   const displayName = getLocalizedName(deck.name, locale);
   const itemCountKey = deck.type === 'vocabulary' ? 'deck.cardCount' : 'deck.questionCount';
 
@@ -274,9 +294,20 @@ const UnifiedDeckListItem: React.FC<UnifiedDeckListItemProps> = ({ deck, locale,
           {t(`deckTypes.${deck.type}`)}
         </Badge>
       </div>
-      <span className="text-sm text-muted-foreground">
-        {t(itemCountKey, { count: deck.item_count })}
-      </span>
+      <div className="flex items-center gap-3">
+        <span className="text-sm text-muted-foreground">
+          {t(itemCountKey, { count: deck.item_count })}
+        </span>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => onEdit(deck)}
+          data-testid={`edit-deck-${deck.id}`}
+        >
+          <Pencil className="h-4 w-4" />
+          <span className="sr-only">{t('actions.edit')}</span>
+        </Button>
+      </div>
     </div>
   );
 };
@@ -306,190 +337,214 @@ function useDebounce<T>(value: T, delay: number): T {
 interface AllDecksListProps {
   t: (key: string, options?: Record<string, unknown>) => string;
   locale: string;
+  onEditDeck: (deck: UnifiedDeckItem) => void;
 }
 
-const AllDecksList: React.FC<AllDecksListProps> = ({ t, locale }) => {
-  const [deckList, setDeckList] = useState<DeckListResponse | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [searchInput, setSearchInput] = useState('');
-  const [typeFilter, setTypeFilter] = useState<'all' | 'vocabulary' | 'culture'>('all');
-  const [page, setPage] = useState(1);
-  const pageSize = 10;
+export interface AllDecksListHandle {
+  refresh: () => void;
+}
 
-  const debouncedSearch = useDebounce(searchInput, 300);
+const AllDecksList = forwardRef<AllDecksListHandle, AllDecksListProps>(
+  ({ t, locale, onEditDeck }, ref) => {
+    const [deckList, setDeckList] = useState<DeckListResponse | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [searchInput, setSearchInput] = useState('');
+    const [typeFilter, setTypeFilter] = useState<'all' | 'vocabulary' | 'culture'>('all');
+    const [page, setPage] = useState(1);
+    const pageSize = 10;
 
-  const fetchDecks = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const params: {
-        page: number;
-        page_size: number;
-        search?: string;
-        type?: 'vocabulary' | 'culture';
-      } = {
-        page,
-        page_size: pageSize,
-      };
+    const debouncedSearch = useDebounce(searchInput, 300);
 
-      if (debouncedSearch) {
-        params.search = debouncedSearch;
+    const fetchDecks = useCallback(async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const params: {
+          page: number;
+          page_size: number;
+          search?: string;
+          type?: 'vocabulary' | 'culture';
+        } = {
+          page,
+          page_size: pageSize,
+        };
+
+        if (debouncedSearch) {
+          params.search = debouncedSearch;
+        }
+        if (typeFilter !== 'all') {
+          params.type = typeFilter;
+        }
+
+        const data = await adminAPI.listDecks(params);
+        setDeckList(data);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : t('errors.failed');
+        setError(message);
+      } finally {
+        setIsLoading(false);
       }
-      if (typeFilter !== 'all') {
-        params.type = typeFilter;
+    }, [page, debouncedSearch, typeFilter, t]);
+
+    useEffect(() => {
+      fetchDecks();
+    }, [fetchDecks]);
+
+    // Expose refresh method via ref
+    useImperativeHandle(
+      ref,
+      () => ({
+        refresh: fetchDecks,
+      }),
+      [fetchDecks]
+    );
+
+    // Reset to page 1 when search or filter changes
+    useEffect(() => {
+      setPage(1);
+    }, [debouncedSearch, typeFilter]);
+
+    const totalPages = deckList ? Math.ceil(deckList.total / pageSize) : 0;
+
+    const handlePreviousPage = () => {
+      if (page > 1) {
+        setPage(page - 1);
       }
+    };
 
-      const data = await adminAPI.listDecks(params);
-      setDeckList(data);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : t('errors.failed');
-      setError(message);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [page, debouncedSearch, typeFilter, t]);
+    const handleNextPage = () => {
+      if (page < totalPages) {
+        setPage(page + 1);
+      }
+    };
 
-  useEffect(() => {
-    fetchDecks();
-  }, [fetchDecks]);
-
-  // Reset to page 1 when search or filter changes
-  useEffect(() => {
-    setPage(1);
-  }, [debouncedSearch, typeFilter]);
-
-  const totalPages = deckList ? Math.ceil(deckList.total / pageSize) : 0;
-
-  const handlePreviousPage = () => {
-    if (page > 1) {
-      setPage(page - 1);
-    }
-  };
-
-  const handleNextPage = () => {
-    if (page < totalPages) {
-      setPage(page + 1);
-    }
-  };
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle data-testid="all-decks-title">{t('sections.allDecks')}</CardTitle>
-        <CardDescription data-testid="all-decks-description">
-          {t('sections.allDecksDescription')}
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        {/* Search and Filter Controls */}
-        <div className="mb-4 flex flex-col gap-4 sm:flex-row">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              type="text"
-              placeholder={t('search.placeholder')}
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              className="pl-9"
-              data-testid="deck-search-input"
-            />
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle data-testid="all-decks-title">{t('sections.allDecks')}</CardTitle>
+          <CardDescription data-testid="all-decks-description">
+            {t('sections.allDecksDescription')}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {/* Search and Filter Controls */}
+          <div className="mb-4 flex flex-col gap-4 sm:flex-row">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder={t('search.placeholder')}
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                className="pl-9"
+                data-testid="deck-search-input"
+              />
+            </div>
+            <Select
+              value={typeFilter}
+              onValueChange={(value: 'all' | 'vocabulary' | 'culture') => setTypeFilter(value)}
+            >
+              <SelectTrigger className="w-full sm:w-[180px]" data-testid="type-filter-select">
+                <SelectValue placeholder={t('filter.type')} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t('filter.allTypes')}</SelectItem>
+                <SelectItem value="vocabulary">{t('filter.vocabulary')}</SelectItem>
+                <SelectItem value="culture">{t('filter.culture')}</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-          <Select
-            value={typeFilter}
-            onValueChange={(value: 'all' | 'vocabulary' | 'culture') => setTypeFilter(value)}
-          >
-            <SelectTrigger className="w-full sm:w-[180px]" data-testid="type-filter-select">
-              <SelectValue placeholder={t('filter.type')} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t('filter.allTypes')}</SelectItem>
-              <SelectItem value="vocabulary">{t('filter.vocabulary')}</SelectItem>
-              <SelectItem value="culture">{t('filter.culture')}</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
 
-        {/* Loading State */}
-        {isLoading && (
-          <div className="space-y-3">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="flex items-center justify-between rounded-lg border p-4">
-                <div className="flex items-center gap-3">
-                  <Skeleton className="h-6 w-12" />
-                  <Skeleton className="h-5 w-32" />
+          {/* Loading State */}
+          {isLoading && (
+            <div className="space-y-3">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex items-center justify-between rounded-lg border p-4">
+                  <div className="flex items-center gap-3">
+                    <Skeleton className="h-6 w-12" />
+                    <Skeleton className="h-5 w-32" />
+                  </div>
+                  <Skeleton className="h-5 w-16" />
                 </div>
-                <Skeleton className="h-5 w-16" />
-              </div>
-            ))}
-          </div>
-        )}
+              ))}
+            </div>
+          )}
 
-        {/* Error State */}
-        {error && !isLoading && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>{t('errors.loadingDecks')}</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
+          {/* Error State */}
+          {error && !isLoading && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>{t('errors.loadingDecks')}</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
 
-        {/* Deck List */}
-        {!isLoading && !error && deckList && (
-          <>
-            {deckList.decks.length === 0 ? (
-              <p className="py-4 text-center text-muted-foreground">{t('states.noDecksFound')}</p>
-            ) : (
-              <div className="space-y-3">
-                {deckList.decks.map((deck) => (
-                  <UnifiedDeckListItem key={deck.id} deck={deck} locale={locale} t={t} />
-                ))}
-              </div>
-            )}
-
-            {/* Pagination */}
-            {deckList.total > 0 && (
-              <div className="mt-4 flex items-center justify-between">
-                <p className="text-sm text-muted-foreground">
-                  {t('pagination.showing', {
-                    from: (page - 1) * pageSize + 1,
-                    to: Math.min(page * pageSize, deckList.total),
-                    total: deckList.total,
-                  })}
-                </p>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handlePreviousPage}
-                    disabled={page === 1}
-                    data-testid="pagination-prev"
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                    {t('pagination.previous')}
-                  </Button>
-                  <span className="text-sm text-muted-foreground">
-                    {t('pagination.pageOf', { page, totalPages })}
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleNextPage}
-                    disabled={page >= totalPages}
-                    data-testid="pagination-next"
-                  >
-                    {t('pagination.next')}
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
+          {/* Deck List */}
+          {!isLoading && !error && deckList && (
+            <>
+              {deckList.decks.length === 0 ? (
+                <p className="py-4 text-center text-muted-foreground">{t('states.noDecksFound')}</p>
+              ) : (
+                <div className="space-y-3">
+                  {deckList.decks.map((deck) => (
+                    <UnifiedDeckListItem
+                      key={deck.id}
+                      deck={deck}
+                      locale={locale}
+                      t={t}
+                      onEdit={onEditDeck}
+                    />
+                  ))}
                 </div>
-              </div>
-            )}
-          </>
-        )}
-      </CardContent>
-    </Card>
-  );
-};
+              )}
+
+              {/* Pagination */}
+              {deckList.total > 0 && (
+                <div className="mt-4 flex items-center justify-between">
+                  <p className="text-sm text-muted-foreground">
+                    {t('pagination.showing', {
+                      from: (page - 1) * pageSize + 1,
+                      to: Math.min(page * pageSize, deckList.total),
+                      total: deckList.total,
+                    })}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handlePreviousPage}
+                      disabled={page === 1}
+                      data-testid="pagination-prev"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                      {t('pagination.previous')}
+                    </Button>
+                    <span className="text-sm text-muted-foreground">
+                      {t('pagination.pageOf', { page, totalPages })}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleNextPage}
+                      disabled={page >= totalPages}
+                      data-testid="pagination-next"
+                    >
+                      {t('pagination.next')}
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </CardContent>
+      </Card>
+    );
+  }
+);
+
+AllDecksList.displayName = 'AllDecksList';
 
 /**
  * Admin Page
@@ -508,6 +563,14 @@ const AdminPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isRetrying, setIsRetrying] = useState(false);
+
+  // Deck edit modal state
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [selectedDeck, setSelectedDeck] = useState<UnifiedDeckItem | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Ref for refreshing the deck list
+  const allDecksListRef = useRef<AllDecksListHandle>(null);
 
   const locale = i18n.language;
 
@@ -534,6 +597,145 @@ const AdminPage: React.FC = () => {
     setIsRetrying(true);
     setIsLoading(true);
     fetchStats();
+  };
+
+  /**
+   * Get display name for a deck (handles multilingual names)
+   */
+  const getDeckDisplayName = (deck: UnifiedDeckItem): string => {
+    return typeof deck.name === 'string' ? deck.name : deck.name.en;
+  };
+
+  /**
+   * Handle opening the edit modal for a deck
+   */
+  const handleEditDeck = (deck: UnifiedDeckItem) => {
+    setSelectedDeck(deck);
+    setEditModalOpen(true);
+
+    // Track analytics event
+    trackAdminDeckEditOpened({
+      deck_id: deck.id,
+      deck_type: deck.type,
+      deck_name: getDeckDisplayName(deck),
+    });
+  };
+
+  /**
+   * Handle saving deck changes
+   */
+  const handleSaveDeck = async (data: DeckEditFormData) => {
+    if (!selectedDeck) return;
+
+    setIsSaving(true);
+
+    try {
+      // Track activation/deactivation changes
+      const wasActive = selectedDeck.is_active;
+      const isNowActive = data.is_active;
+
+      // Determine which fields changed
+      const fieldsChanged: string[] = [];
+      const deckName = getDeckDisplayName(selectedDeck);
+
+      if (data.name !== deckName) {
+        fieldsChanged.push('name');
+      }
+      if (data.description !== (selectedDeck as { description?: string | null }).description) {
+        fieldsChanged.push('description');
+      }
+      if (data.is_active !== wasActive) {
+        fieldsChanged.push('is_active');
+      }
+      if ('level' in data && data.level !== selectedDeck.level) {
+        fieldsChanged.push('level');
+      }
+      if ('category' in data && data.category !== selectedDeck.category) {
+        fieldsChanged.push('category');
+      }
+
+      // Call appropriate API based on deck type
+      if (selectedDeck.type === 'vocabulary') {
+        const payload: VocabularyDeckUpdatePayload = {
+          name: data.name,
+          description: data.description,
+          is_active: data.is_active,
+        };
+        if ('level' in data) {
+          payload.level = data.level;
+        }
+        await adminAPI.updateVocabularyDeck(selectedDeck.id, payload);
+      } else {
+        const payload: CultureDeckUpdatePayload = {
+          name: data.name,
+          description: data.description,
+          is_active: data.is_active,
+        };
+        if ('category' in data) {
+          payload.category = data.category;
+        }
+        await adminAPI.updateCultureDeck(selectedDeck.id, payload);
+      }
+
+      // Track success analytics
+      trackAdminDeckEditSaved({
+        deck_id: selectedDeck.id,
+        deck_type: selectedDeck.type,
+        deck_name: data.name,
+        fields_changed: fieldsChanged,
+      });
+
+      // Track activation/deactivation status changes
+      if (wasActive && !isNowActive) {
+        trackAdminDeckDeactivated({
+          deck_id: selectedDeck.id,
+          deck_type: selectedDeck.type,
+          deck_name: data.name,
+        });
+      } else if (!wasActive && isNowActive) {
+        trackAdminDeckReactivated({
+          deck_id: selectedDeck.id,
+          deck_type: selectedDeck.type,
+          deck_name: data.name,
+        });
+      }
+
+      // Close modal and refresh deck list
+      setEditModalOpen(false);
+      setSelectedDeck(null);
+      allDecksListRef.current?.refresh();
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : t('errors.saveFailed');
+
+      // Track failure analytics
+      trackAdminDeckEditFailed({
+        deck_id: selectedDeck.id,
+        deck_type: selectedDeck.type,
+        error_message: errorMessage,
+      });
+
+      // Re-throw to let the form handle the error display
+      throw err;
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  /**
+   * Handle modal close (track cancel if not saving)
+   */
+  const handleModalClose = (open: boolean) => {
+    if (!open && selectedDeck && !isSaving) {
+      // Modal was closed without saving
+      trackAdminDeckEditCancelled({
+        deck_id: selectedDeck.id,
+        deck_type: selectedDeck.type,
+      });
+    }
+    setEditModalOpen(open);
+    if (!open) {
+      setSelectedDeck(null);
+    }
   };
 
   // Show loading skeleton while fetching
@@ -693,8 +895,17 @@ const AdminPage: React.FC = () => {
 
       {/* All Decks List with Search and Pagination */}
       <section aria-labelledby="all-decks-heading">
-        <AllDecksList t={t} locale={locale} />
+        <AllDecksList ref={allDecksListRef} t={t} locale={locale} onEditDeck={handleEditDeck} />
       </section>
+
+      {/* Deck Edit Modal */}
+      <DeckEditModal
+        open={editModalOpen}
+        onOpenChange={handleModalClose}
+        deck={selectedDeck}
+        onSave={handleSaveDeck}
+        isLoading={isSaving}
+      />
     </div>
   );
 };

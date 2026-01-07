@@ -54,8 +54,8 @@ class CultureDeckResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID = Field(..., description="Deck unique identifier")
-    name: dict[str, str] = Field(..., description="Multilingual name {el, en, ru}")
-    description: dict[str, str] = Field(..., description="Multilingual description {el, en, ru}")
+    name: str = Field(..., min_length=1, max_length=255, description="Deck name")
+    description: Optional[str] = Field(None, description="Deck description")
     icon: str = Field(..., max_length=50, description="Icon identifier (e.g., 'book-open', 'map')")
     color_accent: str = Field(
         ..., pattern=r"^#[0-9A-Fa-f]{6}$", description="Hex color (e.g., '#4F46E5')"
@@ -215,7 +215,7 @@ class CultureSessionSummary(BaseModel):
 
     session_id: str = Field(..., description="Session identifier")
     deck_id: UUID = Field(..., description="Deck practiced")
-    deck_name: dict[str, str] = Field(..., description="Deck name {el, en, ru}")
+    deck_name: str = Field(..., description="Deck name")
     questions_answered: int = Field(..., ge=0, description="Total questions answered")
     correct_count: int = Field(..., ge=0, description="Correct answers")
     incorrect_count: int = Field(..., ge=0, description="Incorrect answers")
@@ -255,7 +255,7 @@ class CultureQuestionQueue(BaseModel):
     """Response for question queue endpoint (practice session)."""
 
     deck_id: UUID = Field(..., description="Deck these questions belong to")
-    deck_name: dict[str, str] = Field(..., description="Multilingual deck name {el, en, ru}")
+    deck_name: str = Field(..., description="Deck name")
     category: str = Field(
         ...,
         max_length=50,
@@ -337,10 +337,8 @@ class CultureAnswerResponseFast(BaseModel):
 class CultureDeckCreate(BaseModel):
     """Schema for creating a new culture deck (admin only)."""
 
-    name: MultilingualText = Field(..., description="Multilingual deck name {el, en, ru}")
-    description: MultilingualText = Field(
-        ..., description="Multilingual deck description {el, en, ru}"
-    )
+    name: str = Field(..., min_length=1, max_length=255, description="Deck name")
+    description: Optional[str] = Field(None, description="Deck description")
     icon: str = Field(..., max_length=50, description="Icon identifier (e.g., 'book-open', 'map')")
     color_accent: str = Field(
         ..., pattern=r"^#[0-9A-Fa-f]{6}$", description="Hex color (e.g., '#4F46E5')"
@@ -356,12 +354,8 @@ class CultureDeckCreate(BaseModel):
 class CultureDeckUpdate(BaseModel):
     """Schema for updating a culture deck (admin only). All fields optional."""
 
-    name: Optional[MultilingualText] = Field(
-        None, description="Multilingual deck name {el, en, ru}"
-    )
-    description: Optional[MultilingualText] = Field(
-        None, description="Multilingual deck description {el, en, ru}"
-    )
+    name: Optional[str] = Field(None, min_length=1, max_length=255, description="Deck name")
+    description: Optional[str] = Field(None, description="Deck description")
     icon: Optional[str] = Field(
         None, max_length=50, description="Icon identifier (e.g., 'book-open', 'map')"
     )

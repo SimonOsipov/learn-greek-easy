@@ -26,8 +26,8 @@ from src.db.models import CultureDeck, CultureQuestion
 async def culture_deck(db_session: AsyncSession) -> CultureDeck:
     """Create a single active culture deck for testing."""
     deck = CultureDeck(
-        name={"en": "Greek History", "el": "Ελληνική Ιστορία", "ru": "Греческая история"},
-        description={"en": "Learn about Greek history", "el": "Μάθετε για την ελληνική ιστορία"},
+        name="Greek History",
+        description="Learn about Greek history",
         icon="book-open",
         color_accent="#4F46E5",
         category="history",
@@ -73,8 +73,8 @@ async def culture_deck_with_questions(
 async def inactive_culture_deck(db_session: AsyncSession) -> CultureDeck:
     """Create an inactive culture deck."""
     deck = CultureDeck(
-        name={"en": "Archived Deck", "el": "Αρχειοθετημένο"},
-        description={"en": "This deck is archived"},
+        name="Archived Deck",
+        description="This deck is archived",
         icon="archive",
         color_accent="#6B7280",
         category="history",
@@ -94,11 +94,8 @@ async def multiple_culture_decks(db_session: AsyncSession) -> list[CultureDeck]:
 
     for i, category in enumerate(categories):
         deck = CultureDeck(
-            name={
-                "en": f"{category.title()} Deck",
-                "el": f"Κατηγορία {category}",
-            },
-            description={"en": f"Deck about {category}"},
+            name=f"{category.title()} Deck",
+            description=f"Deck about {category}",
             icon=f"icon-{i}",
             color_accent=f"#{i:02x}4F46",
             category=category,

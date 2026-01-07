@@ -1070,7 +1070,7 @@ class Notification(Base, TimestampMixin):
 class CultureDeck(Base, TimestampMixin):
     """Culture exam deck (e.g., Greek History, Geography, Politics).
 
-    Stores multilingual content for deck name and description.
+    Stores deck name and description in English.
     """
 
     __tablename__ = "culture_decks"
@@ -1081,16 +1081,17 @@ class CultureDeck(Base, TimestampMixin):
         server_default=func.uuid_generate_v4(),
     )
 
-    # Deck information (multilingual JSON: {"el": "...", "en": "...", "ru": "..."})
-    name: Mapped[dict] = mapped_column(
-        JSON,
+    # Deck information (English only - simplified from multilingual JSON)
+    name: Mapped[str] = mapped_column(
+        String(255),
         nullable=False,
-        comment="Multilingual deck name: {el, en, ru}",
+        index=True,
+        comment="Deck name (English)",
     )
-    description: Mapped[dict] = mapped_column(
-        JSON,
-        nullable=False,
-        comment="Multilingual deck description: {el, en, ru}",
+    description: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        comment="Deck description (English, optional)",
     )
 
     # Display properties

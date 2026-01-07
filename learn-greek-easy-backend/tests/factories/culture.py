@@ -59,14 +59,8 @@ class CultureDeckFactory(BaseFactory):
     class Meta:
         model = CultureDeck
 
-    name = factory.LazyAttribute(lambda _: {"el": "Ιστορία", "en": "History", "ru": "История"})
-    description = factory.LazyAttribute(
-        lambda _: {
-            "el": "Ερωτήσεις ελληνικής ιστορίας",
-            "en": "Greek history questions",
-            "ru": "Вопросы по истории Греции",
-        }
-    )
+    name = "History"
+    description = "Greek history questions"
     icon = "book-open"
     color_accent = "#4F46E5"
     category = "history"
@@ -84,16 +78,8 @@ class CultureDeckFactory(BaseFactory):
             category="geography",
             icon="map",
             color_accent="#10B981",
-            name=factory.LazyAttribute(
-                lambda _: {"el": "Γεωγραφία", "en": "Geography", "ru": "География"}
-            ),
-            description=factory.LazyAttribute(
-                lambda _: {
-                    "el": "Ερωτήσεις γεωγραφίας",
-                    "en": "Geography questions",
-                    "ru": "Вопросы по географии",
-                }
-            ),
+            name="Geography",
+            description="Geography questions",
         )
 
         # Politics category deck
@@ -101,16 +87,8 @@ class CultureDeckFactory(BaseFactory):
             category="politics",
             icon="landmark",
             color_accent="#F59E0B",
-            name=factory.LazyAttribute(
-                lambda _: {"el": "Πολιτική", "en": "Politics", "ru": "Политика"}
-            ),
-            description=factory.LazyAttribute(
-                lambda _: {
-                    "el": "Ερωτήσεις πολιτικής",
-                    "en": "Politics questions",
-                    "ru": "Вопросы по политике",
-                }
-            ),
+            name="Politics",
+            description="Politics questions",
         )
 
         # Culture category deck
@@ -118,16 +96,8 @@ class CultureDeckFactory(BaseFactory):
             category="culture",
             icon="music",
             color_accent="#EC4899",
-            name=factory.LazyAttribute(
-                lambda _: {"el": "Πολιτισμός", "en": "Culture", "ru": "Культура"}
-            ),
-            description=factory.LazyAttribute(
-                lambda _: {
-                    "el": "Ερωτήσεις πολιτισμού",
-                    "en": "Culture questions",
-                    "ru": "Вопросы по культуре",
-                }
-            ),
+            name="Culture",
+            description="Culture questions",
         )
 
 

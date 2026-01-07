@@ -98,6 +98,26 @@ export interface ListDecksParams {
   type?: 'vocabulary' | 'culture';
 }
 
+/**
+ * Payload for updating a vocabulary deck
+ */
+export interface VocabularyDeckUpdatePayload {
+  name?: string;
+  description?: string | null;
+  level?: DeckLevel;
+  is_active?: boolean;
+}
+
+/**
+ * Payload for updating a culture deck
+ */
+export interface CultureDeckUpdatePayload {
+  name?: string;
+  description?: string | null;
+  category?: string;
+  is_active?: boolean;
+}
+
 // ============================================
 // Admin API Methods
 // ============================================
@@ -140,5 +160,25 @@ export const adminAPI = {
     const url = queryString ? `/api/v1/admin/decks?${queryString}` : '/api/v1/admin/decks';
 
     return api.get<DeckListResponse>(url);
+  },
+
+  /**
+   * Update a vocabulary deck's metadata
+   *
+   * Updates deck name, description, level, or active status.
+   * Requires superuser authentication.
+   */
+  updateVocabularyDeck: async (deckId: string, data: VocabularyDeckUpdatePayload) => {
+    return api.patch(`/api/v1/decks/${deckId}`, data);
+  },
+
+  /**
+   * Update a culture deck's metadata
+   *
+   * Updates deck name, description, category, or active status.
+   * Requires superuser authentication.
+   */
+  updateCultureDeck: async (deckId: string, data: CultureDeckUpdatePayload) => {
+    return api.patch(`/api/v1/culture/decks/${deckId}`, data);
   },
 };

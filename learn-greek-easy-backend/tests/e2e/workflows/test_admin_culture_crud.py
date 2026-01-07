@@ -30,16 +30,8 @@ from tests.factories.culture import CultureDeckFactory, CultureQuestionFactory
 def get_valid_deck_data() -> dict:
     """Get valid deck creation data."""
     return {
-        "name": {
-            "el": "Ελληνική Ιστορία",
-            "en": "Greek History Test",
-            "ru": "Греческая история тест",
-        },
-        "description": {
-            "el": "Περιγραφή για τεστ",
-            "en": "Test description for E2E",
-            "ru": "Тестовое описание",
-        },
+        "name": "Greek History Test",
+        "description": "Test description for E2E",
         "icon": "book-open",
         "color_accent": "#4F46E5",
         "category": "history",
@@ -91,7 +83,7 @@ class TestAdminDeckCreate(E2ETestCase):
         assert response.status_code == 201
         data = response.json()
 
-        assert data["name"]["en"] == "Greek History Test"
+        assert data["name"] == "Greek History Test"
         assert data["category"] == "history"
         assert data["icon"] == "book-open"
         assert data["is_active"] is True
@@ -130,10 +122,9 @@ class TestAdminDeckCreate(E2ETestCase):
         for field in required_fields:
             assert field in data, f"Missing field: {field}"
 
-        # Multilingual fields
-        assert "el" in data["name"]
-        assert "en" in data["name"]
-        assert "ru" in data["name"]
+        # Name and description are now simple strings
+        assert isinstance(data["name"], str)
+        assert isinstance(data["description"], str)
 
     @pytest.mark.asyncio
     async def test_create_deck_forbidden_for_regular_user(
@@ -180,7 +171,7 @@ class TestAdminDeckCreate(E2ETestCase):
             deck_data = get_valid_deck_data()
             deck_data["category"] = category
             # Make name unique per category
-            deck_data["name"]["en"] = f"Test {category} deck"
+            deck_data["name"] = f"Test {category} deck"
 
             response = await client.post(
                 "/api/v1/culture/decks",
