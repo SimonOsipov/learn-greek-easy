@@ -62,4 +62,36 @@ test.describe('Culture Deck Browsing', () => {
     const progressBar = page.locator('[data-testid="deck-progress"]');
     await expect(progressBar.first()).toBeVisible({ timeout: 10000 });
   });
+
+  test('culture deck cards should display visible names', async ({ page }) => {
+    await page.goto('/decks');
+
+    // Wait for decks to load
+    await expect(page.locator('[data-testid="deck-card"]').first()).toBeVisible({ timeout: 15000 });
+
+    // Click on culture filter
+    await page.getByRole('button', { name: 'Culture', exact: true }).click();
+    await page.waitForTimeout(500);
+
+    // Get all culture deck cards
+    const deckCards = page.locator('[data-testid="deck-card"]');
+    const count = await deckCards.count();
+    expect(count).toBeGreaterThan(0);
+
+    // Verify each deck card has a visible, non-empty name
+    for (let i = 0; i < count; i++) {
+      const card = deckCards.nth(i);
+      const title = card.locator('[data-testid="deck-card-title"]');
+
+      // Title should be visible
+      await expect(title).toBeVisible();
+
+      // Title should not be empty or "undefined"
+      const titleText = await title.textContent();
+      expect(titleText).toBeTruthy();
+      expect(titleText).not.toBe('undefined');
+      expect(titleText).not.toBe('');
+      expect(titleText?.length).toBeGreaterThan(0);
+    }
+  });
 });
