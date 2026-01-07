@@ -167,9 +167,9 @@ const transformCultureDeckResponse = (deck: CultureDeckResponse): Deck => {
 
   return {
     id: deck.id,
-    title: deck.name.en,
-    titleGreek: deck.name.el,
-    description: deck.description.en,
+    title: deck.name,
+    titleGreek: deck.name, // Use same English string since Greek is no longer separate
+    description: deck.description,
     level: 'A1', // Culture decks don't have CEFR levels
     category: 'culture', // KEY: Set category to 'culture'
     cardCount: totalCards,

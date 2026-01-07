@@ -38,8 +38,8 @@ export interface CultureDeckProgress {
  */
 export interface CultureDeckResponse {
   id: string;
-  name: LocalizedText;
-  description: LocalizedText;
+  name: string;
+  description: string;
   icon: string;
   color_accent: string;
   category: string; // "history", "geography", "politics", "culture", "traditions"
