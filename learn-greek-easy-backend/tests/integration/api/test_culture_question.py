@@ -26,8 +26,8 @@ from src.db.models import CardStatus, CultureDeck, CultureQuestion, CultureQuest
 async def culture_deck(db_session: AsyncSession) -> CultureDeck:
     """Create an active culture deck for testing."""
     deck = CultureDeck(
-        name={"en": "Greek History", "el": "Ελληνική Ιστορία", "ru": "Греческая история"},
-        description={"en": "Learn about Greek history", "el": "Μάθετε"},
+        name="Greek History",
+        description="Learn about Greek history",
         icon="book-open",
         color_accent="#4F46E5",
         category="history",
@@ -43,8 +43,8 @@ async def culture_deck(db_session: AsyncSession) -> CultureDeck:
 async def inactive_deck(db_session: AsyncSession) -> CultureDeck:
     """Create an inactive culture deck."""
     deck = CultureDeck(
-        name={"en": "Archived", "el": "Αρχειοθετημένο", "ru": "Архивный"},
-        description={"en": "Archived deck", "el": "Αρχειοθετημένο"},
+        name="Archived",
+        description="Archived deck",
         icon="archive",
         color_accent="#6B7280",
         category="history",
