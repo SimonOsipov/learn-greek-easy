@@ -830,23 +830,13 @@ jobs:
           REDIS_URL: redis://localhost:6379/0
           TEST_SEED_ENABLED: "true"
         run: |
-          # Run E2E tests with coverage
+          # Run E2E tests (no coverage - E2E tests verify behavior, not coverage)
+          # Coverage is enforced by the Backend Tests job which runs all tests
           poetry run pytest tests/e2e/ \
             -m e2e \
-            --cov=src \
-            --cov-report=xml:e2e-coverage.xml \
-            --cov-report=term-missing \
+            --no-cov \
             -v \
             --tb=short
-
-      - name: Upload E2E coverage to Codecov
-        uses: codecov/codecov-action@v4
-        with:
-          files: learn-greek-easy-backend/e2e-coverage.xml
-          flags: e2e
-          name: e2e-coverage
-          fail_ci_if_error: false
-          token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Upload E2E test results
         uses: actions/upload-artifact@v4

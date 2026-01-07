@@ -74,7 +74,18 @@ def mock_user_deck_progress(mock_deck):
 @pytest.fixture
 def service(mock_db_session):
     """Create ProgressService instance with mocked DB."""
-    return ProgressService(mock_db_session)
+    svc = ProgressService(mock_db_session)
+    # Pre-initialize culture_answer_repo mocks with safe defaults
+    # Tests can override these as needed
+    svc.culture_answer_repo.count_answers_today = AsyncMock(return_value=0)
+    svc.culture_answer_repo.get_study_time_today = AsyncMock(return_value=0)
+    svc.culture_answer_repo.get_unique_dates = AsyncMock(return_value=[])
+    svc.culture_answer_repo.get_all_unique_dates = AsyncMock(return_value=[])
+    svc.culture_answer_repo.get_total_answers = AsyncMock(return_value=0)
+    svc.culture_answer_repo.get_total_study_time = AsyncMock(return_value=0)
+    # Also mock review_repo.get_user_reviews used in aggregation
+    svc.review_repo.get_user_reviews = AsyncMock(return_value=[])
+    return svc
 
 
 # =============================================================================
@@ -106,14 +117,13 @@ class TestProgressServiceDashboard:
         service.stats_repo.count_by_status = AsyncMock(
             return_value={"new": 0, "learning": 0, "review": 0, "mastered": 0, "due": 0}
         )
-        # Mock culture stats repo
+        # Mock culture stats repo (for mastered/due counts)
         service.culture_stats_repo.count_mastered_questions = AsyncMock(return_value=0)
         service.culture_stats_repo.count_due_questions = AsyncMock(return_value=0)
-        service.culture_stats_repo.get_culture_study_time_seconds = AsyncMock(return_value=0)
         service.culture_stats_repo.get_culture_accuracy_stats = AsyncMock(
             return_value={"correct": 0, "total": 0}
         )
-        service.culture_stats_repo.get_dates_with_culture_activity = AsyncMock(return_value=[])
+        # Culture answer repo mocks are pre-initialized in fixture
 
         result = await service.get_dashboard_stats(user_id)
 
@@ -131,6 +141,7 @@ class TestProgressServiceDashboard:
     async def test_get_dashboard_stats_active_user(self, service):
         """User with reviews and progress returns correct aggregations."""
         user_id = uuid4()
+        today = date.today()
 
         # Mock progress with last_studied_at
         mock_progress = MagicMock()
@@ -142,10 +153,8 @@ class TestProgressServiceDashboard:
         service.progress_repo.get_user_progress = AsyncMock(return_value=[mock_progress])
         service.review_repo.count_reviews_today = AsyncMock(return_value=25)
         service.review_repo.get_study_time_today = AsyncMock(return_value=1800)
-        service.review_repo.get_streak = AsyncMock(return_value=7)
-        service.review_repo.get_longest_streak = AsyncMock(return_value=14)
         service.review_repo.get_daily_stats = AsyncMock(
-            return_value=[{"date": date.today(), "reviews_count": 25, "average_quality": 4.0}]
+            return_value=[{"date": today, "reviews_count": 25, "average_quality": 4.0}]
         )
         service.review_repo.get_accuracy_stats = AsyncMock(
             return_value={"correct": 80, "total": 100}
@@ -165,6 +174,23 @@ class TestProgressServiceDashboard:
             return_value=[date.today()]
         )
 
+        # Create mock reviews with 7-day streak of vocab + 7 more days of culture = 14 longest
+        mock_reviews = []
+        for i in range(7):
+            mock_review = MagicMock()
+            mock_review.reviewed_at = datetime.combine(
+                today - timedelta(days=i), datetime.min.time()
+            )
+            mock_reviews.append(mock_review)
+        service.review_repo.get_user_reviews = AsyncMock(return_value=mock_reviews)
+
+        # Culture activity extends longest streak to 14 days
+        culture_dates = [today - timedelta(days=i) for i in range(7, 14)]
+        service.culture_answer_repo.get_unique_dates = AsyncMock(return_value=[])
+        service.culture_answer_repo.get_all_unique_dates = AsyncMock(return_value=culture_dates)
+        # Override fixture to add culture study time for aggregation
+        service.culture_answer_repo.get_study_time_today = AsyncMock(return_value=300)
+
         result = await service.get_dashboard_stats(user_id)
 
         assert result.overview.total_cards_studied == 150
@@ -176,12 +202,12 @@ class TestProgressServiceDashboard:
         assert result.today.cards_due == 15
         # Study time = vocab (1800) + culture (300) = 2100
         assert result.today.study_time_seconds == 2100
-        # Combined streak (1 day with activity today)
-        assert result.streak.current_streak == 1
-        assert result.streak.longest_streak == 14
+        # Streak from aggregated vocab reviews (7 consecutive days)
+        assert result.streak.current_streak == 7
+        assert result.streak.longest_streak == 14  # vocab (7) + culture (7) = 14 consecutive
 
     async def test_get_dashboard_stats_streak_calculation(self, service):
-        """Streak is calculated correctly using combined vocab + culture activity."""
+        """Streak is calculated correctly from aggregated vocabulary + culture data."""
         user_id = uuid4()
         today = date.today()
 
@@ -192,8 +218,6 @@ class TestProgressServiceDashboard:
         service.progress_repo.get_user_progress = AsyncMock(return_value=[])
         service.review_repo.count_reviews_today = AsyncMock(return_value=10)
         service.review_repo.get_study_time_today = AsyncMock(return_value=600)
-        service.review_repo.get_streak = AsyncMock(return_value=7)
-        service.review_repo.get_longest_streak = AsyncMock(return_value=14)
         service.review_repo.get_daily_stats = AsyncMock(return_value=[])
         service.review_repo.get_accuracy_stats = AsyncMock(
             return_value={"correct": 80, "total": 100}
@@ -212,11 +236,25 @@ class TestProgressServiceDashboard:
         )
         service.culture_stats_repo.get_dates_with_culture_activity = AsyncMock(return_value=[])
 
+        # Create mock reviews with consecutive dates (7-day streak)
+        mock_reviews = []
+        for i in range(7):
+            mock_review = MagicMock()
+            mock_review.reviewed_at = datetime.combine(
+                today - timedelta(days=i), datetime.min.time()
+            )
+            mock_reviews.append(mock_review)
+        service.review_repo.get_user_reviews = AsyncMock(return_value=mock_reviews)
+
+        # Culture dates also contribute to streak
+        service.culture_answer_repo.get_unique_dates = AsyncMock(return_value=[])
+        service.culture_answer_repo.get_all_unique_dates = AsyncMock(return_value=[])
+
         result = await service.get_dashboard_stats(user_id)
 
-        # Combined streak from vocab dates (7 consecutive days)
+        # Streak calculated from aggregation: 7 consecutive days (vocab only, no culture dates)
         assert result.streak.current_streak == 7
-        assert result.streak.longest_streak == 14
+        assert result.streak.longest_streak == 7
 
     async def test_get_dashboard_stats_cards_by_status(self, service):
         """Status breakdown is accurate."""
@@ -918,9 +956,18 @@ class TestProgressServiceAchievements:
     async def test_get_achievements_partial_progress(self, service):
         """User with partial progress shows correct percentage."""
         user_id = uuid4()
+        today = date.today()
 
         # 5-day streak (threshold for Week Warrior is 7)
-        service.review_repo.get_longest_streak = AsyncMock(return_value=5)
+        # Create mock reviews for 5-day streak
+        mock_reviews = []
+        for i in range(5):
+            mock_review = MagicMock()
+            mock_review.reviewed_at = datetime.combine(
+                today - timedelta(days=i), datetime.min.time()
+            )
+            mock_reviews.append(mock_review)
+        service.review_repo.get_user_reviews = AsyncMock(return_value=mock_reviews)
         service.progress_repo.get_total_cards_mastered = AsyncMock(return_value=5)
         service.review_repo.get_total_reviews = AsyncMock(return_value=30)
         service.review_repo.get_total_study_time = AsyncMock(return_value=1800)
@@ -938,9 +985,18 @@ class TestProgressServiceAchievements:
     async def test_get_achievements_unlocked_gives_points(self, service):
         """Unlocked achievement adds to total points."""
         user_id = uuid4()
+        today = date.today()
 
         # 7-day streak unlocks Week Warrior (50 points)
-        service.review_repo.get_longest_streak = AsyncMock(return_value=7)
+        # Create mock reviews for 7-day streak
+        mock_reviews = []
+        for i in range(7):
+            mock_review = MagicMock()
+            mock_review.reviewed_at = datetime.combine(
+                today - timedelta(days=i), datetime.min.time()
+            )
+            mock_reviews.append(mock_review)
+        service.review_repo.get_user_reviews = AsyncMock(return_value=mock_reviews)
         service.progress_repo.get_total_cards_mastered = AsyncMock(return_value=5)
         service.review_repo.get_total_reviews = AsyncMock(return_value=50)
         service.review_repo.get_total_study_time = AsyncMock(return_value=3000)
@@ -959,14 +1015,21 @@ class TestProgressServiceAchievements:
     async def test_get_achievements_multiple_unlocked(self, service):
         """Multiple unlocked achievements sum points correctly."""
         user_id = uuid4()
+        today = date.today()
 
         # Unlock multiple achievements:
-        # - streak_3 (3-day streak, 25 points)
+        # - streak_3 (3-day streak, 15 points)
         # - streak_7 (7-day streak, 50 points)
-        # - mastered_10 (10 cards mastered, 25 points)
-        service.review_repo.get_longest_streak = AsyncMock(
-            return_value=10
-        )  # Unlocks streak_3 and streak_7
+        # - mastered_10 (10 cards mastered, 20 points)
+        # Create mock reviews for 10-day streak
+        mock_reviews = []
+        for i in range(10):
+            mock_review = MagicMock()
+            mock_review.reviewed_at = datetime.combine(
+                today - timedelta(days=i), datetime.min.time()
+            )
+            mock_reviews.append(mock_review)
+        service.review_repo.get_user_reviews = AsyncMock(return_value=mock_reviews)
         service.progress_repo.get_total_cards_mastered = AsyncMock(
             return_value=15
         )  # Unlocks mastered_10
@@ -980,15 +1043,24 @@ class TestProgressServiceAchievements:
         unlocked_achievements = [a for a in result.achievements if a.unlocked]
         assert len(unlocked_achievements) >= 3  # At least streak_3, streak_7, mastered_10
 
-        # Total points should be at least 100 (25 + 50 + 25)
-        assert result.total_points >= 100
+        # Total points should be at least 85 (15 + 50 + 20 based on actual achievement values)
+        assert result.total_points >= 85
 
     async def test_get_achievements_next_milestone(self, service):
         """Next milestone is closest incomplete achievement."""
         user_id = uuid4()
+        today = date.today()
 
         # 5-day streak, 8 cards mastered (close to 10)
-        service.review_repo.get_longest_streak = AsyncMock(return_value=5)
+        # Create mock reviews for 5-day streak
+        mock_reviews = []
+        for i in range(5):
+            mock_review = MagicMock()
+            mock_review.reviewed_at = datetime.combine(
+                today - timedelta(days=i), datetime.min.time()
+            )
+            mock_reviews.append(mock_review)
+        service.review_repo.get_user_reviews = AsyncMock(return_value=mock_reviews)
         service.progress_repo.get_total_cards_mastered = AsyncMock(return_value=8)
         service.review_repo.get_total_reviews = AsyncMock(return_value=40)
         service.review_repo.get_total_study_time = AsyncMock(return_value=2000)
@@ -1005,8 +1077,17 @@ class TestProgressServiceAchievements:
     async def test_get_achievements_response_structure(self, service):
         """Response has correct structure."""
         user_id = uuid4()
+        today = date.today()
 
-        service.review_repo.get_longest_streak = AsyncMock(return_value=3)
+        # Create mock reviews for 3-day streak
+        mock_reviews = []
+        for i in range(3):
+            mock_review = MagicMock()
+            mock_review.reviewed_at = datetime.combine(
+                today - timedelta(days=i), datetime.min.time()
+            )
+            mock_reviews.append(mock_review)
+        service.review_repo.get_user_reviews = AsyncMock(return_value=mock_reviews)
         service.progress_repo.get_total_cards_mastered = AsyncMock(return_value=5)
         service.review_repo.get_total_reviews = AsyncMock(return_value=20)
         service.review_repo.get_total_study_time = AsyncMock(return_value=1000)
@@ -1036,14 +1117,24 @@ class TestProgressServiceAchievements:
     async def test_get_achievements_all_types_coverage(self, service):
         """All achievement types are testable."""
         user_id = uuid4()
+        today = date.today()
+
+        # Create mock reviews for 30-day streak
+        mock_reviews = []
+        for i in range(30):
+            mock_review = MagicMock()
+            mock_review.reviewed_at = datetime.combine(
+                today - timedelta(days=i), datetime.min.time()
+            )
+            mock_reviews.append(mock_review)
+        service.review_repo.get_user_reviews = AsyncMock(return_value=mock_reviews)
 
         # Set values that cover all types:
-        # STREAK: longest_streak
+        # STREAK: calculated from review dates (30 consecutive days)
         # MASTERED: total_mastered
-        # REVIEWS: total_reviews (not used but available)
+        # REVIEWS: total_reviews
         # STUDY_TIME: total_study_time
         # DECKS: total_decks
-        service.review_repo.get_longest_streak = AsyncMock(return_value=30)
         service.progress_repo.get_total_cards_mastered = AsyncMock(return_value=100)
         service.review_repo.get_total_reviews = AsyncMock(return_value=1000)
         service.review_repo.get_total_study_time = AsyncMock(return_value=36000)  # 10 hours
