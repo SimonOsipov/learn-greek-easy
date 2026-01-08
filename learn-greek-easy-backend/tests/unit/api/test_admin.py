@@ -874,21 +874,29 @@ class TestAdminDecks:
         db_session: AsyncSession,
     ):
         """Test that results are sorted by created_at DESC."""
-        # Create decks in sequence
+        from datetime import datetime, timedelta, timezone
+
+        # Use explicit timestamps to ensure deterministic ordering
+        now = datetime.now(timezone.utc)
+
+        # Create decks with explicit timestamps (oldest to newest)
         deck1 = await DeckFactory.create(
             session=db_session,
             name="First Created",
             is_active=True,
+            created_at=now - timedelta(hours=2),
         )
         deck2 = await DeckFactory.create(
             session=db_session,
             name="Second Created",
             is_active=True,
+            created_at=now - timedelta(hours=1),
         )
         deck3 = await DeckFactory.create(
             session=db_session,
             name="Third Created",
             is_active=True,
+            created_at=now,
         )
 
         response = await client.get(
