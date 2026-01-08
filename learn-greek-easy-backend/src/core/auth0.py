@@ -13,7 +13,7 @@ Usage:
 
 import time
 from dataclasses import dataclass
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, cast
 
 import httpx
 from authlib.jose import JsonWebKey, jwt
@@ -129,7 +129,7 @@ async def fetch_jwks(jwks_uri: str) -> Dict[str, Any]:
         async with httpx.AsyncClient(timeout=10.0) as client:
             response = await client.get(jwks_uri)
             response.raise_for_status()
-            jwks_data = response.json()
+            jwks_data: Dict[str, Any] = cast(Dict[str, Any], response.json())
 
             # Cache the keys
             _jwks_cache.set(jwks_data)
