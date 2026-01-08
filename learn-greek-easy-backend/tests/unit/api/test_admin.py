@@ -916,15 +916,22 @@ class TestAdminDecks:
         db_session: AsyncSession,
     ):
         """Test that mixed types are sorted together by created_at."""
+        from datetime import datetime, timedelta, timezone
+
+        now = datetime.now(timezone.utc)
+        earlier = now - timedelta(hours=1)
+
         vocab_deck = await DeckFactory.create(
             session=db_session,
             name="Vocab Mixed Sort",
             is_active=True,
+            created_at=earlier,
         )
         culture_deck = await CultureDeckFactory.create(
             session=db_session,
             name="Culture Mixed Sort",
             is_active=True,
+            created_at=now,
         )
 
         response = await client.get(
@@ -939,7 +946,7 @@ class TestAdminDecks:
         vocab_idx = deck_ids.index(str(vocab_deck.id))
         culture_idx = deck_ids.index(str(culture_deck.id))
 
-        # Culture deck was created after, so should come first
+        # Culture deck was created later, so should come first (DESC order)
         assert culture_idx < vocab_idx
 
     @pytest.mark.asyncio
