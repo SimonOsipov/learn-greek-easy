@@ -134,9 +134,20 @@ class ProgressService:
         if not all_study_dates:
             return 0
 
-        # Count consecutive days starting from today
+        # Count consecutive days starting from today if active today,
+        # or from yesterday if active yesterday (streak grace period)
         streak = 0
-        current_date = date.today()
+        today = date.today()
+        yesterday = today - timedelta(days=1)
+
+        # Determine starting point: today if active, else yesterday if active
+        if today in all_study_dates:
+            current_date = today
+        elif yesterday in all_study_dates:
+            current_date = yesterday
+        else:
+            # No activity today or yesterday = streak is broken
+            return 0
 
         while current_date in all_study_dates:
             streak += 1
@@ -354,46 +365,6 @@ class ProgressService:
             return 0.0
 
         return round((total_correct / total_answers) * 100, 1)
-
-    async def _calculate_combined_streak(self, user_id: UUID) -> int:
-        """Calculate current streak from combined vocab and culture activity.
-
-        Streak is count of consecutive days (from today backwards) with
-        activity in either vocab reviews or culture questions.
-
-        Args:
-            user_id: User UUID
-
-        Returns:
-            Current streak in days
-        """
-        # Get unique dates from both activity sources
-        vocab_dates = await self.review_repo.get_dates_with_vocab_activity(user_id, days=30)
-        culture_dates = await self.culture_stats_repo.get_dates_with_culture_activity(
-            user_id, days=30
-        )
-
-        # Combine and deduplicate dates
-        all_dates = set(vocab_dates) | set(culture_dates)
-
-        if not all_dates:
-            return 0
-
-        # Sort descending (most recent first)
-        sorted_dates = sorted(all_dates, reverse=True)
-
-        # Count consecutive days from today
-        streak = 0
-        current_date = date.today()
-
-        for activity_date in sorted_dates:
-            if activity_date == current_date:
-                streak += 1
-                current_date -= timedelta(days=1)
-            else:
-                break
-
-        return streak
 
     # =========================================================================
     # Dashboard Stats
