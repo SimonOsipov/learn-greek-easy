@@ -79,6 +79,43 @@ jobs:
     secrets: inherit
 
   # =============================================================================
+  # JOB: Backend Coverage Comment
+  # Purpose: Post coverage report as a sticky PR comment
+  # Uses pytest-coverage-comment action to display detailed coverage metrics
+  # =============================================================================
+  backend-coverage-comment:
+    name: Backend Coverage Comment
+    needs: [ci-tests]
+    if: github.event_name == 'pull_request' && needs.ci-tests.result == 'success'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download coverage artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-coverage-report
+          path: coverage-data/
+
+      - name: Post Coverage Comment
+        uses: MishaKav/pytest-coverage-comment@main
+        with:
+          pytest-coverage-path: ./coverage-data/pytest-coverage.txt
+          pytest-xml-coverage-path: ./coverage-data/coverage.xml
+          junitxml-path: ./coverage-data/pytest.xml
+          title: Backend Coverage Report
+          badge-title: Coverage
+          hide-badge: false
+          hide-report: false
+          report-only-changed-files: false
+          create-new-comment: false
+          unique-id-for-comment: coverage-report
+          coverage-path-prefix: learn-greek-easy-backend/src/
+          default-branch: main
+
+  # =============================================================================
   # JOB 2: Check Deploy Conditions
   # Purpose: Determine if preview should be deployed based on changed files
   # Docs-only changes (*.md, docs/*) are automatically skipped
