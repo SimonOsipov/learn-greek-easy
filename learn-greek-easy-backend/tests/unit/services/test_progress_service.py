@@ -85,6 +85,12 @@ def service(mock_db_session):
     svc.culture_answer_repo.get_total_study_time = AsyncMock(return_value=0)
     # Also mock review_repo.get_user_reviews used in aggregation
     svc.review_repo.get_user_reviews = AsyncMock(return_value=[])
+    # Mock culture_stats_repo.count_all_by_status used in _get_combined_status_counts
+    svc.culture_stats_repo.count_all_by_status = AsyncMock(
+        return_value={"new": 0, "learning": 0, "review": 0, "mastered": 0, "due": 0}
+    )
+    # Mock culture_deck_repo.list_active used in get_deck_progress_list
+    svc.culture_deck_repo.list_active = AsyncMock(return_value=[])
     return svc
 
 
@@ -172,6 +178,10 @@ class TestProgressServiceDashboard:
         )
         service.culture_stats_repo.get_dates_with_culture_activity = AsyncMock(
             return_value=[date.today()]
+        )
+        # Override count_all_by_status to include culture due cards (3)
+        service.culture_stats_repo.count_all_by_status = AsyncMock(
+            return_value={"new": 0, "learning": 0, "review": 0, "mastered": 5, "due": 3}
         )
 
         # Create mock reviews with 7-day streak of vocab + 7 more days of culture = 14 longest
@@ -427,6 +437,7 @@ class TestProgressServiceDashboard:
 
         # Create mock reviews for 5 consecutive days ENDING YESTERDAY (not today)
         # Days: yesterday, day before yesterday, ..., 5 days ago
+        # NOTE: Must set mock BEFORE creating mock_reviews to ensure service uses them
         mock_reviews = []
         for i in range(5):
             mock_review = MagicMock()
@@ -436,7 +447,7 @@ class TestProgressServiceDashboard:
             mock_reviews.append(mock_review)
         service.review_repo.get_user_reviews = AsyncMock(return_value=mock_reviews)
 
-        # No culture dates
+        # No culture dates - explicitly override fixture defaults
         service.culture_answer_repo.get_unique_dates = AsyncMock(return_value=[])
         service.culture_answer_repo.get_all_unique_dates = AsyncMock(return_value=[])
 
@@ -634,7 +645,9 @@ class TestProgressServiceDeckList:
 
         result = await service.get_deck_progress_list(user_id, page=1, page_size=2)
 
-        assert result.total == 3
+        # Total is now calculated from combined vocab + culture decks actually present
+        # 2 vocab decks from get_user_progress + 0 culture decks = 2
+        assert result.total == 2
         assert result.page == 1
         assert result.page_size == 2
         assert len(result.decks) == 2
