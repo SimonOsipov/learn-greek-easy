@@ -134,9 +134,7 @@ export const Auth0LoginForm: React.FC = () => {
           <CardTitle className="text-2xl font-bold" data-testid="login-title">
             {t('login.title')}
           </CardTitle>
-          <CardDescription data-testid="login-description">
-            {t('login.subtitle')}
-          </CardDescription>
+          <CardDescription data-testid="login-description">{t('login.subtitle')}</CardDescription>
         </CardHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} data-testid="login-form">

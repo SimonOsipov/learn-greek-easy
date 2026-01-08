@@ -42,7 +42,7 @@ export function Auth0ProviderWithNavigate({ children }: Auth0ProviderWithNavigat
 
   // Don't render provider if not configured
   if (!domain || !clientId) {
-    console.warn('Auth0 is not configured. Missing VITE_AUTH0_DOMAIN or VITE_AUTH0_CLIENT_ID.');
+    // Auth0 not configured - render children without Auth0 provider
     return <>{children}</>;
   }
 

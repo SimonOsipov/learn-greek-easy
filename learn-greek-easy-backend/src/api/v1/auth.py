@@ -361,9 +361,7 @@ async def google_login(
         503: {
             "description": "Auth0 not enabled",
             "content": {
-                "application/json": {
-                    "example": {"detail": "Auth0 authentication is not enabled"}
-                }
+                "application/json": {"example": {"detail": "Auth0 authentication is not enabled"}}
             },
         },
     },

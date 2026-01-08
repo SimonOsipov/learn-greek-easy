@@ -224,10 +224,7 @@ function mapAuth0LoginErrorToMessage(error: Auth0LoginError): string {
  * @returns Promise that resolves with auth result on successful login
  * @throws Error with translated error key on failure
  */
-export function loginWithAuth0(
-  email: string,
-  password: string
-): Promise<auth0.Auth0DecodedHash> {
+export function loginWithAuth0(email: string, password: string): Promise<auth0.Auth0DecodedHash> {
   return new Promise((resolve, reject) => {
     const webAuth = getWebAuth();
 

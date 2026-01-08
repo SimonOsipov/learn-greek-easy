@@ -23,13 +23,7 @@ import { z } from 'zod';
 import { AuthLayout } from '@/components/auth/AuthLayout';
 import { SubmitButton } from '@/components/forms';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { isAuth0Enabled } from '@/hooks';

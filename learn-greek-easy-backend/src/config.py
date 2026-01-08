@@ -563,11 +563,7 @@ class Settings(BaseSettings):
         Returns True only if domain, M2M client ID, and M2M client secret are all set.
         This is used to determine whether the migration script can access the Management API.
         """
-        return bool(
-            self.auth0_domain
-            and self.auth0_m2m_client_id
-            and self.auth0_m2m_client_secret
-        )
+        return bool(self.auth0_domain and self.auth0_m2m_client_id and self.auth0_m2m_client_secret)
 
     @property
     def database_url_sync(self) -> str:

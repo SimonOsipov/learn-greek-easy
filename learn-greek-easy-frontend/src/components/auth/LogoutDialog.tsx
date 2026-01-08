@@ -14,8 +14,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 import { isAuth0Enabled } from '@/hooks/useAuth0Integration';
 
 interface LogoutDialogProps {

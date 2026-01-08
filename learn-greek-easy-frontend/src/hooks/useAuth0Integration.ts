@@ -32,7 +32,11 @@ function transformAuth0User(auth0User: Auth0User): User {
   // Common patterns: https://your-namespace/roles or app_metadata.role
   const customClaims = auth0User as Record<string, unknown>;
   const roles = (customClaims['https://learn-greek-easy.com/roles'] as string[]) || [];
-  const role: UserRole = roles.includes('admin') ? 'admin' : roles.includes('premium') ? 'premium' : 'free';
+  const role: UserRole = roles.includes('admin')
+    ? 'admin'
+    : roles.includes('premium')
+      ? 'premium'
+      : 'free';
 
   // Extract name from various Auth0 fields
   const name = auth0User.name || auth0User.nickname || auth0User.email?.split('@')[0] || 'User';

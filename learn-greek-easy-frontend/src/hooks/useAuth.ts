@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect } from 'react';
 
 import { useNavigate } from 'react-router-dom';
 
@@ -17,7 +17,13 @@ interface UseAuthResult {
   error: AuthError | Error | null | undefined;
   login: (emailOrReturnTo?: string, password?: string, remember?: boolean) => Promise<void>;
   logout: () => Promise<void>;
-  register: (data: { name: string; email: string; password: string; agreeToTerms: boolean; ageConfirmation: boolean }) => Promise<void>;
+  register: (data: {
+    name: string;
+    email: string;
+    password: string;
+    agreeToTerms: boolean;
+    ageConfirmation: boolean;
+  }) => Promise<void>;
   updateProfile: (updates: Partial<User>) => Promise<void>;
   clearError: () => void;
   isAdmin: boolean;
@@ -93,7 +99,9 @@ function useAuth0Auth(): UseAuthResult {
 
   // Auth0 doesn't support profile updates through the SDK
   const updateProfile = async (_updates: Partial<User>) => {
-    throw new Error('Profile updates are not supported with Auth0. Use the Auth0 dashboard or Management API.');
+    throw new Error(
+      'Profile updates are not supported with Auth0. Use the Auth0 dashboard or Management API.'
+    );
   };
 
   // No-op for Auth0 (errors are handled differently)
