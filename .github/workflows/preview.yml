@@ -653,6 +653,60 @@ jobs:
             });
 
   # =============================================================================
+  # JOB: Accessibility PR Comment
+  # Purpose: Post detailed accessibility report as a dedicated PR comment
+  # =============================================================================
+  accessibility-comment:
+    name: Accessibility PR Comment
+    needs: [accessibility]
+    if: github.event_name == 'pull_request' && needs.accessibility.result == 'success'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Download Accessibility Report
+        uses: actions/download-artifact@v4
+        with:
+          name: accessibility-report
+          path: accessibility-data/
+
+      - name: Parse Accessibility Results
+        env:
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_SERVER_URL: ${{ github.server_url }}
+        run: |
+          cp accessibility-data/accessibility-report.json ./accessibility-report.json
+          node learn-greek-easy-frontend/scripts/parse-accessibility-results.cjs
+          mv accessibility-comment.md accessibility-data/
+
+      - name: Read Comment Body
+        id: comment
+        run: |
+          if [ -f accessibility-data/accessibility-comment.md ]; then
+            {
+              echo 'body<<EOF'
+              cat accessibility-data/accessibility-comment.md
+              echo 'EOF'
+            } >> $GITHUB_OUTPUT
+          else
+            echo "body=:warning: Accessibility results are not available." >> $GITHUB_OUTPUT
+          fi
+
+      - name: Post Accessibility Comment
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: accessibility-report
+          message: ${{ steps.comment.outputs.body }}
+
+  # =============================================================================
   # JOB 8: Lighthouse CI
   # Purpose: Measure performance, accessibility, best practices, SEO
   # Runs both desktop and mobile configurations
