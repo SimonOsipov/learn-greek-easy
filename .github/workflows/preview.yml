@@ -1117,6 +1117,8 @@ jobs:
     outputs:
       build_url: ${{ steps.chromatic.outputs.buildUrl }}
       change_count: ${{ steps.chromatic.outputs.changeCount }}
+      error_count: ${{ steps.chromatic.outputs.errorCount }}
+      storybook_url: ${{ steps.chromatic.outputs.storybookUrl }}
 
     steps:
       - name: Checkout code
@@ -1153,6 +1155,55 @@ jobs:
         env:
           CHROMATIC_ARCHIVE_LOCATION: ./test-results
 
+  # =============================================================================
+  # JOB: Visual Test PR Comment
+  # Purpose: Post detailed visual test report with Chromatic build link
+  # =============================================================================
+  visual-test-comment:
+    name: Visual Test PR Comment
+    needs: [chromatic]
+    if: github.event_name == 'pull_request' && needs.chromatic.result == 'success'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Generate Visual Test Report
+        env:
+          CHROMATIC_BUILD_URL: ${{ needs.chromatic.outputs.build_url }}
+          CHROMATIC_CHANGE_COUNT: ${{ needs.chromatic.outputs.change_count }}
+          CHROMATIC_ERROR_COUNT: ${{ needs.chromatic.outputs.error_count }}
+          CHROMATIC_STORYBOOK_URL: ${{ needs.chromatic.outputs.storybook_url }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_SERVER_URL: ${{ github.server_url }}
+        run: |
+          node learn-greek-easy-frontend/scripts/parse-visual-test-results.cjs
+
+      - name: Read Comment Body
+        id: comment
+        run: |
+          if [ -f visual-test-comment.md ]; then
+            {
+              echo 'body<<EOF'
+              cat visual-test-comment.md
+              echo 'EOF'
+            } >> $GITHUB_OUTPUT
+          else
+            echo "body=:warning: Visual test results are not available." >> $GITHUB_OUTPUT
+          fi
+
+      - name: Post Visual Test Comment
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: visual-test-report
+          message: ${{ steps.comment.outputs.body }}
 
   # =============================================================================
   # JOB 11: Report Results
