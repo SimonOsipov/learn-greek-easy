@@ -360,9 +360,7 @@ class TestAdminDecks:
         assert len(data["decks"]) >= 1
 
         # Find our deck
-        deck_data = next(
-            (d for d in data["decks"] if d["id"] == str(culture_deck.id)), None
-        )
+        deck_data = next((d for d in data["decks"] if d["id"] == str(culture_deck.id)), None)
         assert deck_data is not None
         assert deck_data["type"] == "culture"
         assert deck_data["name"] == "Test Culture Deck"
@@ -463,9 +461,7 @@ class TestAdminDecks:
         data = response.json()
 
         # Find our deck
-        deck_data = next(
-            (d for d in data["decks"] if d["id"] == str(culture_deck.id)), None
-        )
+        deck_data = next((d for d in data["decks"] if d["id"] == str(culture_deck.id)), None)
         assert deck_data is not None
 
         # Verify structure
@@ -999,9 +995,7 @@ class TestAdminDecks:
         assert response.status_code == 200
         data = response.json()
 
-        deck_data = next(
-            (d for d in data["decks"] if d["id"] == str(empty_deck.id)), None
-        )
+        deck_data = next((d for d in data["decks"] if d["id"] == str(empty_deck.id)), None)
         assert deck_data is not None
         assert deck_data["item_count"] == 0
 
@@ -1069,9 +1063,7 @@ class TestAdminDecks:
             is_active=True,
         )
         for _ in range(5):
-            await CultureQuestionFactory.create(
-                session=db_session, deck_id=culture_deck.id
-            )
+            await CultureQuestionFactory.create(session=db_session, deck_id=culture_deck.id)
 
         response = await client.get(
             "/api/v1/admin/decks",
@@ -1082,15 +1074,11 @@ class TestAdminDecks:
         data = response.json()
 
         # Check vocabulary deck item count
-        vocab_data = next(
-            (d for d in data["decks"] if d["id"] == str(vocab_deck.id)), None
-        )
+        vocab_data = next((d for d in data["decks"] if d["id"] == str(vocab_deck.id)), None)
         assert vocab_data is not None
         assert vocab_data["item_count"] == 7
 
         # Check culture deck item count
-        culture_data = next(
-            (d for d in data["decks"] if d["id"] == str(culture_deck.id)), None
-        )
+        culture_data = next((d for d in data["decks"] if d["id"] == str(culture_deck.id)), None)
         assert culture_data is not None
         assert culture_data["item_count"] == 5
