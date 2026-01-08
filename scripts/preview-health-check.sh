@@ -28,6 +28,12 @@ BACKEND_URL=$2
 MAX_RETRIES=${3:-30}
 RETRY_INTERVAL=${4:-10}
 
+# Threshold for slow responses (in milliseconds)
+SLOW_THRESHOLD_MS=500
+
+# Arrays to store endpoint data for JSON report
+ENDPOINT_DATA=""
+
 # ============================================================================
 # Validation
 # ============================================================================
@@ -54,17 +60,51 @@ BACKEND_URL="${BACKEND_URL%/}"
 # Check if an endpoint returns expected status code
 # Arguments: url, name, expected_status (default: 200)
 # Returns: 0 on success, 1 on failure
+# Side effect: Appends endpoint data to ENDPOINT_DATA string
 check_endpoint() {
     local url=$1
     local name=$2
     local expected_status=${3:-200}
 
-    status=$(curl -s -o /dev/null -w "%{http_code}" "$url" --max-time 10 2>/dev/null || echo "000")
+    # Get both status code and response time using curl's -w format
+    response=$(curl -s -o /dev/null -w "%{http_code}|%{time_total}" "$url" --max-time 10 2>/dev/null || echo "000|0")
+    status=$(echo "$response" | cut -d'|' -f1)
+    time_total=$(echo "$response" | cut -d'|' -f2)
+
+    # Convert time_total (seconds) to milliseconds
+    time_ms=$(echo "$time_total * 1000" | bc | cut -d'.' -f1)
+    if [ -z "$time_ms" ]; then
+        time_ms=0
+    fi
+
+    # Determine if passed and if slow
+    local passed="false"
+    local slow="false"
     if [ "$status" = "$expected_status" ]; then
-        echo "[PASS] $name: $status"
+        passed="true"
+    fi
+    if [ "$time_ms" -gt "$SLOW_THRESHOLD_MS" ]; then
+        slow="true"
+    fi
+
+    # Build JSON entry for this endpoint (append to ENDPOINT_DATA)
+    local entry="{\"name\": \"$name\", \"url\": \"$url\", \"status_code\": $status, \"expected_status\": $expected_status, \"response_time_ms\": $time_ms, \"passed\": $passed, \"slow\": $slow}"
+    if [ -n "$ENDPOINT_DATA" ]; then
+        ENDPOINT_DATA="$ENDPOINT_DATA, $entry"
+    else
+        ENDPOINT_DATA="$entry"
+    fi
+
+    # Print result
+    if [ "$passed" = "true" ]; then
+        if [ "$slow" = "true" ]; then
+            echo "[SLOW] $name: $status (${time_ms}ms)"
+        else
+            echo "[PASS] $name: $status (${time_ms}ms)"
+        fi
         return 0
     else
-        echo "[FAIL] $name: got $status, expected $expected_status"
+        echo "[FAIL] $name: got $status, expected $expected_status (${time_ms}ms)"
         return 1
     fi
 }
@@ -201,7 +241,14 @@ fi
 # ============================================================================
 
 TOTAL=${#RESULTS[@]}
-PASSED=$((TOTAL - FAILED))
+PASSED_COUNT=$((TOTAL - FAILED))
+
+# Count slow endpoints by parsing ENDPOINT_DATA
+# Using grep to count occurrences of "slow": true
+SLOW_COUNT=$(echo "$ENDPOINT_DATA" | grep -o '"slow": true' | wc -l | tr -d ' ')
+if [ -z "$SLOW_COUNT" ]; then
+    SLOW_COUNT=0
+fi
 
 echo ""
 echo "=============================================="
@@ -211,20 +258,26 @@ for result in "${RESULTS[@]}"; do
     echo "  $result"
 done
 echo "=============================================="
-echo "Total: $PASSED passed, $FAILED failed (out of $TOTAL)"
+echo "Total: $PASSED_COUNT passed, $FAILED failed, $SLOW_COUNT slow (out of $TOTAL)"
 echo "=============================================="
 
-# Generate JSON report
+# Generate enhanced JSON report with endpoint details
 cat > health-check-results.json << EOF
 {
   "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
   "frontend_url": "$FRONTEND_URL",
   "backend_url": "$BACKEND_URL",
-  "total_tests": $TOTAL,
-  "passed": $PASSED,
-  "failed": $FAILED,
-  "results": [
-    $(printf '"%s",' "${RESULTS[@]}" | sed 's/,$//')
+  "summary": {
+    "total": $TOTAL,
+    "passed": $PASSED_COUNT,
+    "failed": $FAILED,
+    "slow": $SLOW_COUNT
+  },
+  "thresholds": {
+    "slow_response_ms": $SLOW_THRESHOLD_MS
+  },
+  "endpoints": [
+    $ENDPOINT_DATA
   ]
 }
 EOF

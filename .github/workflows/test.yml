@@ -683,6 +683,7 @@ jobs:
             --dist loadscope \
             --cov=src \
             --cov-branch \
+            --junitxml=pytest.xml \
             -v \
             --tb=short
 
@@ -691,6 +692,9 @@ jobs:
           poetry run coverage xml -o coverage.xml
           poetry run coverage html
           poetry run coverage report --format=markdown >> $GITHUB_STEP_SUMMARY
+
+          # Generate text coverage for pytest-coverage-comment action
+          poetry run coverage report > pytest-coverage.txt
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
@@ -705,7 +709,11 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: backend-coverage-report
-          path: learn-greek-easy-backend/htmlcov/
+          path: |
+            learn-greek-easy-backend/htmlcov/
+            learn-greek-easy-backend/coverage.xml
+            learn-greek-easy-backend/pytest.xml
+            learn-greek-easy-backend/pytest-coverage.txt
           retention-days: 7
 
   # Job 7: E2E API Tests

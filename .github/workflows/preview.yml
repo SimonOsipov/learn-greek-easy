@@ -79,6 +79,50 @@ jobs:
     secrets: inherit
 
   # =============================================================================
+  # JOB: Backend Coverage Comment
+  # Purpose: Post coverage report as a sticky PR comment
+  # Uses pytest-coverage-comment action to display detailed coverage metrics
+  # =============================================================================
+  backend-coverage-comment:
+    name: Backend Coverage Comment
+    needs: [ci-tests]
+    if: github.event_name == 'pull_request' && needs.ci-tests.result == 'success'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download coverage artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-coverage-report
+          path: coverage-data/
+
+      - name: Post Coverage Comment
+        uses: MishaKav/pytest-coverage-comment@main
+        with:
+          pytest-coverage-path: ./coverage-data/pytest-coverage.txt
+          pytest-xml-coverage-path: ./coverage-data/coverage.xml
+          junitxml-path: ./coverage-data/pytest.xml
+          title: Backend Coverage Report
+          badge-title: Coverage
+          hide-badge: false
+          hide-report: false
+          report-only-changed-files: false
+          create-new-comment: false
+          unique-id-for-comment: coverage-report
+          coverage-path-prefix: learn-greek-easy-backend/src/
+          default-branch: main
+
+      - name: Add Artifact Link
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: coverage-artifact-link
+          message: |
+            :bar_chart: [View Full Coverage Report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+
+  # =============================================================================
   # JOB 2: Check Deploy Conditions
   # Purpose: Determine if preview should be deployed based on changed files
   # Docs-only changes (*.md, docs/*) are automatically skipped
@@ -363,6 +407,59 @@ jobs:
             });
 
   # =============================================================================
+  # JOB: Health Check PR Comment
+  # Purpose: Post detailed health check report as a dedicated PR comment
+  # =============================================================================
+  health-check-comment:
+    name: Health Check PR Comment
+    needs: [health-check]
+    if: github.event_name == 'pull_request' && needs.health-check.result == 'success'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Download Health Check Results
+        uses: actions/download-artifact@v4
+        with:
+          name: health-check-results
+          path: health-data/
+
+      - name: Parse Health Check Results
+        env:
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_SERVER_URL: ${{ github.server_url }}
+          HEALTH_CHECK_REPORT_PATH: ./health-data/health-check-results.json
+        run: |
+          node learn-greek-easy-frontend/scripts/parse-health-check-results.cjs
+
+      - name: Read Comment Body
+        id: comment
+        run: |
+          if [ -f health-check-comment.md ]; then
+            {
+              echo 'body<<EOF'
+              cat health-check-comment.md
+              echo 'EOF'
+            } >> $GITHUB_OUTPUT
+          else
+            echo "body=:warning: Health check results are not available." >> $GITHUB_OUTPUT
+          fi
+
+      - name: Post Health Check Comment
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: health-check-report
+          message: ${{ steps.comment.outputs.body }}
+
+  # =============================================================================
   # JOB 5: Seed Dev Database
   # Purpose: Populate the dev database with test data for E2E testing
   # Uses the seed API endpoint to create users, decks, cards, and progress data
@@ -519,6 +616,59 @@ jobs:
           if-no-files-found: ignore
 
   # =============================================================================
+  # JOB: K6 Performance PR Comment
+  # Purpose: Post detailed k6 performance report as a dedicated PR comment
+  # =============================================================================
+  k6-comment:
+    name: K6 Performance PR Comment
+    needs: [k6-performance]
+    if: github.event_name == 'pull_request' && needs.k6-performance.result == 'success'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Download K6 Reports
+        uses: actions/download-artifact@v4
+        with:
+          name: k6-performance-reports
+          path: k6-data/
+
+      - name: Parse K6 Results
+        env:
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_SERVER_URL: ${{ github.server_url }}
+          K6_REPORTS_DIR: ./k6-data
+        run: |
+          node learn-greek-easy-frontend/scripts/parse-k6-results.cjs
+
+      - name: Read Comment Body
+        id: comment
+        run: |
+          if [ -f k6-comment.md ]; then
+            {
+              echo 'body<<EOF'
+              cat k6-comment.md
+              echo 'EOF'
+            } >> $GITHUB_OUTPUT
+          else
+            echo "body=:warning: K6 performance results are not available." >> $GITHUB_OUTPUT
+          fi
+
+      - name: Post K6 Comment
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: k6-performance-report
+          message: ${{ steps.comment.outputs.body }}
+
+  # =============================================================================
   # JOB 7: Accessibility Tests
   # Purpose: Scan pages for WCAG 2.1 AA violations using axe-core
   # Pages tested: Home, Login, Register
@@ -607,6 +757,60 @@ jobs:
                 : `${violations} critical/serious violations found`,
               context: 'preview/a11y'
             });
+
+  # =============================================================================
+  # JOB: Accessibility PR Comment
+  # Purpose: Post detailed accessibility report as a dedicated PR comment
+  # =============================================================================
+  accessibility-comment:
+    name: Accessibility PR Comment
+    needs: [accessibility]
+    if: github.event_name == 'pull_request' && needs.accessibility.result == 'success'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Download Accessibility Report
+        uses: actions/download-artifact@v4
+        with:
+          name: accessibility-report
+          path: accessibility-data/
+
+      - name: Parse Accessibility Results
+        env:
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_SERVER_URL: ${{ github.server_url }}
+        run: |
+          cp accessibility-data/accessibility-report.json ./accessibility-report.json
+          node learn-greek-easy-frontend/scripts/parse-accessibility-results.cjs
+          mv accessibility-comment.md accessibility-data/
+
+      - name: Read Comment Body
+        id: comment
+        run: |
+          if [ -f accessibility-data/accessibility-comment.md ]; then
+            {
+              echo 'body<<EOF'
+              cat accessibility-data/accessibility-comment.md
+              echo 'EOF'
+            } >> $GITHUB_OUTPUT
+          else
+            echo "body=:warning: Accessibility results are not available." >> $GITHUB_OUTPUT
+          fi
+
+      - name: Post Accessibility Comment
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: accessibility-report
+          message: ${{ steps.comment.outputs.body }}
 
   # =============================================================================
   # JOB 8: Lighthouse CI
@@ -749,6 +953,22 @@ jobs:
           path: learn-greek-easy-frontend/lighthouse-reports/
           retention-days: 7
 
+      - name: Parse Lighthouse Results
+        working-directory: learn-greek-easy-frontend
+        env:
+          LIGHTHOUSE_REPORT_URL: ${{ steps.lighthouse.outputs.report_url }}
+        run: |
+          node scripts/parse-lighthouse-results.cjs
+
+      - name: Upload Lighthouse Summary
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-summary
+          path: |
+            learn-greek-easy-frontend/lighthouse-summary.json
+            learn-greek-easy-frontend/lighthouse-comment.md
+          retention-days: 7
+
       - name: Set Lighthouse Status Check
         uses: actions/github-script@v7
         with:
@@ -784,6 +1004,43 @@ jobs:
               description: description,
               context: 'preview/lighthouse'
             });
+
+  # =============================================================================
+  # JOB: Lighthouse PR Comment
+  # Purpose: Post detailed Lighthouse report as a dedicated PR comment
+  # =============================================================================
+  lighthouse-comment:
+    name: Lighthouse PR Comment
+    needs: [lighthouse]
+    if: github.event_name == 'pull_request' && needs.lighthouse.result == 'success'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download Lighthouse Summary
+        uses: actions/download-artifact@v4
+        with:
+          name: lighthouse-summary
+          path: lighthouse-data/
+
+      - name: Read Comment Body
+        id: comment
+        run: |
+          if [ -f lighthouse-data/lighthouse-comment.md ]; then
+            # Read and escape for multiline output
+            {
+              echo 'body<<EOF'
+              cat lighthouse-data/lighthouse-comment.md
+              echo 'EOF'
+            } >> $GITHUB_OUTPUT
+          else
+            echo "body=:warning: Lighthouse results are not available." >> $GITHUB_OUTPUT
+          fi
+
+      - name: Post Lighthouse Comment
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: lighthouse-report
+          message: ${{ steps.comment.outputs.body }}
 
   # =============================================================================
   # JOB 9: Visual Tests (Playwright)
@@ -860,6 +1117,8 @@ jobs:
     outputs:
       build_url: ${{ steps.chromatic.outputs.buildUrl }}
       change_count: ${{ steps.chromatic.outputs.changeCount }}
+      error_count: ${{ steps.chromatic.outputs.errorCount }}
+      storybook_url: ${{ steps.chromatic.outputs.storybookUrl }}
 
     steps:
       - name: Checkout code
@@ -896,6 +1155,55 @@ jobs:
         env:
           CHROMATIC_ARCHIVE_LOCATION: ./test-results
 
+  # =============================================================================
+  # JOB: Visual Test PR Comment
+  # Purpose: Post detailed visual test report with Chromatic build link
+  # =============================================================================
+  visual-test-comment:
+    name: Visual Test PR Comment
+    needs: [chromatic]
+    if: github.event_name == 'pull_request' && needs.chromatic.result == 'success'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Generate Visual Test Report
+        env:
+          CHROMATIC_BUILD_URL: ${{ needs.chromatic.outputs.build_url }}
+          CHROMATIC_CHANGE_COUNT: ${{ needs.chromatic.outputs.change_count }}
+          CHROMATIC_ERROR_COUNT: ${{ needs.chromatic.outputs.error_count }}
+          CHROMATIC_STORYBOOK_URL: ${{ needs.chromatic.outputs.storybook_url }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_SERVER_URL: ${{ github.server_url }}
+        run: |
+          node learn-greek-easy-frontend/scripts/parse-visual-test-results.cjs
+
+      - name: Read Comment Body
+        id: comment
+        run: |
+          if [ -f visual-test-comment.md ]; then
+            {
+              echo 'body<<EOF'
+              cat visual-test-comment.md
+              echo 'EOF'
+            } >> $GITHUB_OUTPUT
+          else
+            echo "body=:warning: Visual test results are not available." >> $GITHUB_OUTPUT
+          fi
+
+      - name: Post Visual Test Comment
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: visual-test-report
+          message: ${{ steps.comment.outputs.body }}
 
   # =============================================================================
   # JOB 11: Report Results
