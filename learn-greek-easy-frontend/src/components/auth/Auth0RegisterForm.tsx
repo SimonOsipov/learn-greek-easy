@@ -1,15 +1,35 @@
+/**
+ * Auth0 Registration Form Component
+ *
+ * Embedded registration form using Auth0's authentication API.
+ * Users stay on our page - no redirects during signup.
+ *
+ * State Machine:
+ * - 'form': Show registration form
+ * - 'verification': Show "check your email" screen
+ * - 'error': Show error with retry option
+ *
+ * Features:
+ * - Email/password registration
+ * - Password strength indicator
+ * - Terms of service checkbox
+ * - Google signup button
+ * - Resend verification email
+ * - Loading states
+ * - Error handling
+ */
+
 import React, { useState } from 'react';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, Mail, ArrowLeft, RefreshCw } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { z } from 'zod';
 
-import { Auth0RegisterForm } from '@/components/auth/Auth0RegisterForm';
 import { AuthLayout } from '@/components/auth/AuthLayout';
-import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton';
+import { PasswordStrengthIndicator } from '@/components/auth/PasswordStrengthIndicator';
 import { SubmitButton } from '@/components/forms';
 import { Button } from '@/components/ui/button';
 import {
@@ -23,19 +43,15 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Progress } from '@/components/ui/progress';
-import { isAuth0Enabled } from '@/hooks';
-import { useAuthStore } from '@/stores/authStore';
+import { signupWithAuth0, signupWithGoogle, changePassword } from '@/lib/auth0WebAuth';
+import log from '@/lib/logger';
+
+/** Form state machine states */
+type FormState = 'form' | 'verification' | 'error';
 
 /**
  * Registration form validation schema
- * - Name: Required, min 2 chars, max 50 chars
- * - Email: Required, valid email format
- * - Password: Required, minimum 8 characters
- * - ConfirmPassword: Required, must match password
- * - AcceptedTerms: Must be true
- *
- * Note: Error messages are translated at display time using t() function
+ * Matches Auth0 password policy requirements
  */
 const registerSchema = z
   .object({
@@ -54,34 +70,30 @@ const registerSchema = z
 
 type RegisterFormData = z.infer<typeof registerSchema>;
 
-export const Register: React.FC = () => {
-  // If Auth0 is enabled, render the Auth0 registration form
-  if (isAuth0Enabled()) {
-    return <Auth0RegisterForm />;
-  }
-
-  // Legacy registration form (when Auth0 is disabled)
-  return <LegacyRegisterForm />;
-};
-
-/**
- * Legacy Registration Form Component
- * Used when Auth0 is disabled (VITE_AUTH0_ENABLED !== 'true')
- */
-const LegacyRegisterForm: React.FC = () => {
+export const Auth0RegisterForm: React.FC = () => {
   const { t } = useTranslation('auth');
-  const navigate = useNavigate();
-  const { register: registerUser, isLoading } = useAuthStore();
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  // Form state machine
+  const [formState, setFormState] = useState<FormState>('form');
+  const [registeredEmail, setRegisteredEmail] = useState<string>('');
   const [formError, setFormError] = useState<string | null>(null);
 
-  // Initialize React Hook Form with Zod validation
+  // Loading states
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isResending, setIsResending] = useState(false);
+  const [resendSuccess, setResendSuccess] = useState(false);
+
+  // Password visibility
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  // React Hook Form
   const {
     register,
     handleSubmit,
-    formState: { errors, isSubmitting },
+    formState: { errors },
     watch,
+    setValue,
   } = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
@@ -91,64 +103,74 @@ const LegacyRegisterForm: React.FC = () => {
       confirmPassword: '',
       acceptedTerms: false,
     },
-    mode: 'onSubmit', // Validate on submit, then revalidate on change
+    mode: 'onSubmit',
     reValidateMode: 'onChange',
   });
 
-  // Watch password for strength indicator
+  // Watch values for UI feedback
   const passwordValue = watch('password');
   const acceptedTermsValue = watch('acceptedTerms');
 
-  // Simple password strength calculation for UI demo
-  const calculatePasswordStrength = (pwd: string): number => {
-    if (!pwd) return 0;
-    let strength = 0;
-    if (pwd.length >= 8) strength += 25;
-    if (pwd.length >= 12) strength += 25;
-    if (/[A-Z]/.test(pwd) && /[a-z]/.test(pwd)) strength += 25;
-    if (/[0-9]/.test(pwd)) strength += 12.5;
-    if (/[^A-Za-z0-9]/.test(pwd)) strength += 12.5;
-    return Math.min(strength, 100);
-  };
-
-  const passwordStrength = calculatePasswordStrength(passwordValue);
-  const getStrengthText = (): string => {
-    if (!passwordValue) return '';
-    if (passwordStrength < 33) return t('register.passwordStrength.weak');
-    if (passwordStrength < 66) return t('register.passwordStrength.fair');
-    return t('register.passwordStrength.strong');
-  };
-
   /**
-   * Handle form submission with validation
-   * - Clears previous errors
-   * - Calls auth store register
-   * - Handles success (navigate to dashboard)
-   * - Handles errors (display at form level)
+   * Handle form submission
    */
   const onSubmit = async (data: RegisterFormData) => {
     setFormError(null);
+    setIsSubmitting(true);
 
     try {
-      await registerUser({
-        name: data.name,
-        email: data.email,
-        password: data.password,
-        agreeToTerms: data.acceptedTerms,
-        ageConfirmation: true, // We assume users are 18+ if they can access the form
-      });
-      // Success - navigate to dashboard
-      navigate('/dashboard');
+      await signupWithAuth0(data.email, data.password, data.name);
+      setRegisteredEmail(data.email);
+      setFormState('verification');
     } catch (err) {
-      // Display API error at form level
-      const errorMessage =
-        err instanceof Error ? err.message : t('register.errors.registrationFailed');
-      setFormError(errorMessage);
+      const errorKey = err instanceof Error ? err.message : 'auth0Error';
+      // Map error key to translated message
+      const translatedError = t(`register.auth0.errors.${errorKey}`, {
+        defaultValue: t('register.auth0.errors.auth0Error'),
+      });
+      setFormError(translatedError);
+      log.error('[Auth0RegisterForm] Registration failed:', errorKey);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  // Determine if form should be disabled
-  const isFormDisabled = isLoading || isSubmitting;
+  /**
+   * Handle resend verification email
+   * Uses Auth0 password reset flow as a workaround
+   */
+  const handleResendEmail = async () => {
+    setIsResending(true);
+    setResendSuccess(false);
+
+    try {
+      await changePassword(registeredEmail);
+      setResendSuccess(true);
+      // Reset success message after 5 seconds
+      setTimeout(() => setResendSuccess(false), 5000);
+    } catch (err) {
+      log.error('[Auth0RegisterForm] Resend failed:', err);
+      // Don't show error - just silently fail and let user retry
+    } finally {
+      setIsResending(false);
+    }
+  };
+
+  /**
+   * Handle Google signup
+   */
+  const handleGoogleSignup = () => {
+    signupWithGoogle('/dashboard');
+  };
+
+  /**
+   * Reset form to initial state
+   */
+  const handleStartOver = () => {
+    setFormState('form');
+    setRegisteredEmail('');
+    setFormError(null);
+  };
 
   // Helper to translate Zod error messages
   const getErrorMessage = (errorKey: string | undefined): string | undefined => {
@@ -156,6 +178,88 @@ const LegacyRegisterForm: React.FC = () => {
     return t(`register.errors.${errorKey}`);
   };
 
+  const isFormDisabled = isSubmitting;
+
+  // Render verification screen
+  if (formState === 'verification') {
+    return (
+      <AuthLayout>
+        <Card className="shadow-xl" data-testid="verification-card">
+          <CardHeader className="space-y-1 text-center">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-blue-100">
+              <Mail className="h-8 w-8 text-blue-600" />
+            </div>
+            <CardTitle className="text-2xl font-bold" data-testid="verification-title">
+              {t('register.auth0.checkEmailTitle')}
+            </CardTitle>
+            <CardDescription className="text-base">
+              {t('register.auth0.checkEmailDescription')}
+            </CardDescription>
+            <p className="mt-2 font-medium text-foreground" data-testid="registered-email">
+              {registeredEmail}
+            </p>
+          </CardHeader>
+
+          <CardContent className="space-y-4">
+            <p className="text-center text-sm text-muted-foreground">
+              {t('register.auth0.checkSpam')}
+            </p>
+
+            {resendSuccess && (
+              <div
+                className="rounded-md border border-green-200 bg-green-50 p-3 text-center text-sm text-green-600"
+                role="status"
+                data-testid="resend-success"
+              >
+                {t('register.auth0.resendSuccess')}
+              </div>
+            )}
+
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={handleResendEmail}
+              disabled={isResending}
+              data-testid="resend-button"
+            >
+              {isResending ? (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  {t('register.auth0.resendEmail')}
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  {t('register.auth0.resendEmail')}
+                </>
+              )}
+            </Button>
+          </CardContent>
+
+          <CardFooter className="flex flex-col space-y-4">
+            <Button
+              variant="ghost"
+              className="w-full"
+              onClick={handleStartOver}
+              data-testid="start-over-button"
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              {t('register.auth0.wrongEmail')}
+            </Button>
+
+            <p className="text-center text-sm text-muted-foreground">
+              {t('register.hasAccount')}{' '}
+              <Link to="/login" className="font-medium text-primary hover:underline">
+                {t('register.signIn')}
+              </Link>
+            </p>
+          </CardFooter>
+        </Card>
+      </AuthLayout>
+    );
+  }
+
+  // Render registration form
   return (
     <AuthLayout>
       <Card className="shadow-xl" data-testid="register-card">
@@ -173,17 +277,18 @@ const LegacyRegisterForm: React.FC = () => {
 
         <form onSubmit={handleSubmit(onSubmit)} data-testid="register-form">
           <CardContent className="space-y-4">
-            {/* Form-level error display (API errors, network errors) */}
+            {/* Form-level error display */}
             {formError && (
               <div
                 className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-600"
                 role="alert"
+                data-testid="form-error"
               >
                 {formError}
               </div>
             )}
 
-            {/* Name field with validation */}
+            {/* Name field */}
             <div className="space-y-2">
               <Label htmlFor="name">{t('register.name')}</Label>
               <Input
@@ -204,7 +309,7 @@ const LegacyRegisterForm: React.FC = () => {
               )}
             </div>
 
-            {/* Email field with validation */}
+            {/* Email field */}
             <div className="space-y-2">
               <Label htmlFor="email">{t('register.email')}</Label>
               <Input
@@ -225,7 +330,7 @@ const LegacyRegisterForm: React.FC = () => {
               )}
             </div>
 
-            {/* Password field with validation and visibility toggle */}
+            {/* Password field */}
             <div className="space-y-2">
               <Label htmlFor="password">{t('register.password')}</Label>
               <div className="relative">
@@ -259,28 +364,10 @@ const LegacyRegisterForm: React.FC = () => {
                   {getErrorMessage(errors.password.message)}
                 </p>
               )}
-              {passwordValue && (
-                <div className="space-y-1">
-                  <Progress value={passwordStrength} className="h-1.5" />
-                  <p className="text-xs text-muted-foreground">
-                    {t('register.passwordStrength.label')}{' '}
-                    <span
-                      className={`font-medium ${
-                        passwordStrength < 33
-                          ? 'text-red-500'
-                          : passwordStrength < 66
-                            ? 'text-yellow-500'
-                            : 'text-green-500'
-                      }`}
-                    >
-                      {getStrengthText()}
-                    </span>
-                  </p>
-                </div>
-              )}
+              <PasswordStrengthIndicator password={passwordValue} />
             </div>
 
-            {/* Confirm Password field with validation and visibility toggle */}
+            {/* Confirm Password field */}
             <div className="space-y-2">
               <Label htmlFor="confirmPassword">{t('register.confirmPassword')}</Label>
               <div className="relative">
@@ -318,22 +405,18 @@ const LegacyRegisterForm: React.FC = () => {
               )}
             </div>
 
-            {/* Terms acceptance with validation */}
+            {/* Terms checkbox */}
             <div className="space-y-2">
               <div className="flex items-center space-x-2">
                 <Checkbox
                   id="terms"
                   checked={acceptedTermsValue}
                   onCheckedChange={(checked) => {
-                    // Manually update the form value
-                    register('acceptedTerms').onChange({
-                      target: { value: checked, name: 'acceptedTerms' },
-                    });
+                    setValue('acceptedTerms', checked === true, { shouldValidate: true });
                   }}
                   disabled={isFormDisabled}
                   aria-invalid={errors.acceptedTerms ? 'true' : 'false'}
                   aria-describedby={errors.acceptedTerms ? 'terms-error' : undefined}
-                  {...register('acceptedTerms')}
                 />
                 <Label htmlFor="terms" className="cursor-pointer text-sm font-normal">
                   {t('register.acceptTerms')}{' '}
@@ -353,7 +436,7 @@ const LegacyRegisterForm: React.FC = () => {
           <CardFooter className="flex flex-col space-y-4">
             <SubmitButton
               data-testid="register-submit"
-              loading={isFormDisabled}
+              loading={isSubmitting}
               loadingText={t('register.submitting')}
               className="w-full bg-gradient-to-br from-[#667eea] to-[#764ba2] text-white hover:opacity-90"
               size="lg"
@@ -368,11 +451,18 @@ const LegacyRegisterForm: React.FC = () => {
               <div className="flex-grow border-t border-gray-300"></div>
             </div>
 
-            <GoogleSignInButton
+            {/* Google Sign Up Button */}
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              onClick={handleGoogleSignup}
               disabled={isFormDisabled}
-              onSuccess={() => navigate('/dashboard')}
-              onError={(error) => setFormError(error)}
-            />
+              data-testid="google-signup-button"
+            >
+              <GoogleIcon />
+              {t('register.auth0.signUpWithGoogle')}
+            </Button>
 
             <p className="text-center text-sm text-muted-foreground">
               {t('register.hasAccount')}{' '}
@@ -390,3 +480,27 @@ const LegacyRegisterForm: React.FC = () => {
     </AuthLayout>
   );
 };
+
+// Google icon component
+const GoogleIcon = () => (
+  <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24" aria-hidden="true">
+    <path
+      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+      fill="#4285F4"
+    />
+    <path
+      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+      fill="#34A853"
+    />
+    <path
+      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+      fill="#FBBC05"
+    />
+    <path
+      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+      fill="#EA4335"
+    />
+  </svg>
+);
+
+export default Auth0RegisterForm;
