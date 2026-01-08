@@ -182,6 +182,81 @@ export function changePassword(email: string): Promise<string> {
 }
 
 /**
+ * Auth0 login error type
+ */
+export interface Auth0LoginError {
+  code: string;
+  description: string;
+  original?: string;
+  statusCode?: number;
+}
+
+/**
+ * Map Auth0 login error codes to user-friendly error keys
+ */
+function mapAuth0LoginErrorToMessage(error: Auth0LoginError): string {
+  switch (error.code) {
+    case 'invalid_grant':
+      return 'invalidCredentials';
+    case 'access_denied':
+      return 'invalidCredentials';
+    case 'too_many_attempts':
+      return 'tooManyAttempts';
+    case 'user_is_blocked':
+      return 'userBlocked';
+    case 'requires_verification':
+      return 'requiresVerification';
+    case 'invalid_user_password':
+      return 'invalidCredentials';
+    case 'unauthorized':
+      return 'invalidCredentials';
+    default:
+      log.error('[Auth0WebAuth] Unknown login error code:', error.code, error.description);
+      return 'auth0Error';
+  }
+}
+
+/**
+ * Login a user with Auth0 using embedded form (Resource Owner flow)
+ *
+ * @param email User's email address
+ * @param password User's password
+ * @returns Promise that resolves with auth result on successful login
+ * @throws Error with translated error key on failure
+ */
+export function loginWithAuth0(
+  email: string,
+  password: string
+): Promise<auth0.Auth0DecodedHash> {
+  return new Promise((resolve, reject) => {
+    const webAuth = getWebAuth();
+
+    webAuth.login(
+      {
+        realm: 'Username-Password-Authentication',
+        email,
+        password,
+        responseType: 'token id_token',
+        scope: 'openid profile email',
+        redirectUri: `${window.location.origin}/callback`,
+      },
+      (err, result) => {
+        if (err) {
+          const auth0Error = err as Auth0LoginError;
+          log.error('[Auth0WebAuth] Login error:', auth0Error.code, auth0Error.description);
+          const errorKey = mapAuth0LoginErrorToMessage(auth0Error);
+          reject(new Error(errorKey));
+          return;
+        }
+
+        log.info('[Auth0WebAuth] Login successful for:', email);
+        resolve(result as auth0.Auth0DecodedHash);
+      }
+    );
+  });
+}
+
+/**
  * Initiate Google OAuth login
  * This uses redirect-based flow (acceptable for OAuth providers)
  *
