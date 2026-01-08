@@ -407,6 +407,59 @@ jobs:
             });
 
   # =============================================================================
+  # JOB: Health Check PR Comment
+  # Purpose: Post detailed health check report as a dedicated PR comment
+  # =============================================================================
+  health-check-comment:
+    name: Health Check PR Comment
+    needs: [health-check]
+    if: github.event_name == 'pull_request' && needs.health-check.result == 'success'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Download Health Check Results
+        uses: actions/download-artifact@v4
+        with:
+          name: health-check-results
+          path: health-data/
+
+      - name: Parse Health Check Results
+        env:
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_SERVER_URL: ${{ github.server_url }}
+          HEALTH_CHECK_REPORT_PATH: ./health-data/health-check-results.json
+        run: |
+          node learn-greek-easy-frontend/scripts/parse-health-check-results.cjs
+
+      - name: Read Comment Body
+        id: comment
+        run: |
+          if [ -f health-check-comment.md ]; then
+            {
+              echo 'body<<EOF'
+              cat health-check-comment.md
+              echo 'EOF'
+            } >> $GITHUB_OUTPUT
+          else
+            echo "body=:warning: Health check results are not available." >> $GITHUB_OUTPUT
+          fi
+
+      - name: Post Health Check Comment
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: health-check-report
+          message: ${{ steps.comment.outputs.body }}
+
+  # =============================================================================
   # JOB 5: Seed Dev Database
   # Purpose: Populate the dev database with test data for E2E testing
   # Uses the seed API endpoint to create users, decks, cards, and progress data
