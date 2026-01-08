@@ -563,6 +563,59 @@ jobs:
           if-no-files-found: ignore
 
   # =============================================================================
+  # JOB: K6 Performance PR Comment
+  # Purpose: Post detailed k6 performance report as a dedicated PR comment
+  # =============================================================================
+  k6-comment:
+    name: K6 Performance PR Comment
+    needs: [k6-performance]
+    if: github.event_name == 'pull_request' && needs.k6-performance.result == 'success'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Download K6 Reports
+        uses: actions/download-artifact@v4
+        with:
+          name: k6-performance-reports
+          path: k6-data/
+
+      - name: Parse K6 Results
+        env:
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_SERVER_URL: ${{ github.server_url }}
+          K6_REPORTS_DIR: ./k6-data
+        run: |
+          node learn-greek-easy-frontend/scripts/parse-k6-results.cjs
+
+      - name: Read Comment Body
+        id: comment
+        run: |
+          if [ -f k6-comment.md ]; then
+            {
+              echo 'body<<EOF'
+              cat k6-comment.md
+              echo 'EOF'
+            } >> $GITHUB_OUTPUT
+          else
+            echo "body=:warning: K6 performance results are not available." >> $GITHUB_OUTPUT
+          fi
+
+      - name: Post K6 Comment
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: k6-performance-report
+          message: ${{ steps.comment.outputs.body }}
+
+  # =============================================================================
   # JOB 7: Accessibility Tests
   # Purpose: Scan pages for WCAG 2.1 AA violations using axe-core
   # Pages tested: Home, Login, Register
