@@ -439,8 +439,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup k6
+      - name: Setup k6 with browser support
         uses: grafana/setup-k6-action@v1
+        with:
+          browser: true
 
       - name: Create reports directory
         run: mkdir -p k6/reports
@@ -454,6 +456,8 @@ jobs:
           K6_FRONTEND_BASE_URL: ${{ needs.deploy.outputs.frontend_url }}
           K6_SCENARIO: smoke
           K6_CLOUD_TOKEN: ${{ secrets.K6_CLOUD_TOKEN }}
+          K6_BROWSER_HEADLESS: 'true'
+          K6_BROWSER_ARGS: 'no-sandbox,disable-dev-shm-usage,disable-gpu'
         run: |
           echo "Running K6 Auth Scenario"
           echo "Frontend: $K6_FRONTEND_BASE_URL"
@@ -475,6 +479,8 @@ jobs:
           K6_FRONTEND_BASE_URL: ${{ needs.deploy.outputs.frontend_url }}
           K6_SCENARIO: smoke
           K6_CLOUD_TOKEN: ${{ secrets.K6_CLOUD_TOKEN }}
+          K6_BROWSER_HEADLESS: 'true'
+          K6_BROWSER_ARGS: 'no-sandbox,disable-dev-shm-usage,disable-gpu'
         run: |
           echo "Running K6 Dashboard Scenario"
 
