@@ -1,0 +1,10 @@
+# K6 Performance Test Reports Directory
+#
+# This directory stores generated performance test reports.
+# Reports are gitignored and should not be committed.
+#
+# Report types that may be generated here:
+# - JSON summary reports
+# - HTML reports (if using k6 reporter extensions)
+# - CSV exports
+# - Cloud run artifacts

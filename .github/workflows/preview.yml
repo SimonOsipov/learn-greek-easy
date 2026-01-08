@@ -416,10 +416,119 @@ jobs:
           echo "status=success" >> $GITHUB_OUTPUT
 
   # =============================================================================
-  # JOB 6: Accessibility Tests
+  # JOB 6: K6 Performance Tests
+  # Purpose: Run k6 load tests against preview environment
+  # Triggered: Only when 'perf-test' label is present
+  # Non-blocking: continue-on-error: true to prevent blocking PR merge
+  # =============================================================================
+  k6-performance:
+    name: K6 Performance Tests
+    needs: [deploy, health-check, seed-database]
+    if: |
+      needs.health-check.outputs.status == 'success' &&
+      needs.seed-database.outputs.status == 'success' &&
+      contains(github.event.pull_request.labels.*.name, 'perf-test')
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    outputs:
+      status: ${{ steps.results.outputs.status }}
+      auth_p95: ${{ steps.results.outputs.auth_p95 }}
+      dashboard_p95: ${{ steps.results.outputs.dashboard_p95 }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup k6 with browser support
+        uses: grafana/setup-k6-action@v1
+        with:
+          browser: true
+
+      - name: Create reports directory
+        run: mkdir -p k6/reports
+
+      - name: Run Auth Scenario
+        id: auth
+        continue-on-error: true
+        env:
+          K6_ENV: preview
+          K6_API_BASE_URL: ${{ needs.deploy.outputs.backend_url }}
+          K6_FRONTEND_BASE_URL: ${{ needs.deploy.outputs.frontend_url }}
+          K6_SCENARIO: smoke
+          K6_BROWSER_HEADLESS: 'true'
+          K6_BROWSER_ARGS: 'no-sandbox,disable-dev-shm-usage,disable-gpu'
+        run: |
+          echo "Running K6 Auth Scenario"
+          echo "Frontend: $K6_FRONTEND_BASE_URL"
+          echo "Backend: $K6_API_BASE_URL"
+
+          k6 run k6/scenarios/auth.js 2>&1 | tee k6/reports/auth-output.txt
+          echo "exit_code=$?" >> $GITHUB_OUTPUT
+
+      - name: Run Dashboard Scenario
+        id: dashboard
+        continue-on-error: true
+        env:
+          K6_ENV: preview
+          K6_API_BASE_URL: ${{ needs.deploy.outputs.backend_url }}
+          K6_FRONTEND_BASE_URL: ${{ needs.deploy.outputs.frontend_url }}
+          K6_SCENARIO: smoke
+          K6_BROWSER_HEADLESS: 'true'
+          K6_BROWSER_ARGS: 'no-sandbox,disable-dev-shm-usage,disable-gpu'
+        run: |
+          echo "Running K6 Dashboard Scenario"
+
+          k6 run k6/scenarios/dashboard.js 2>&1 | tee k6/reports/dashboard-output.txt
+          echo "exit_code=$?" >> $GITHUB_OUTPUT
+
+      - name: Aggregate Results
+        id: results
+        if: always()
+        run: |
+          AUTH_EXIT="${{ steps.auth.outputs.exit_code }}"
+          DASHBOARD_EXIT="${{ steps.dashboard.outputs.exit_code }}"
+
+          if [ "$AUTH_EXIT" = "0" ] && [ "$DASHBOARD_EXIT" = "0" ]; then
+            echo "status=success" >> $GITHUB_OUTPUT
+          else
+            echo "status=failure" >> $GITHUB_OUTPUT
+          fi
+
+          # Extract p95 from JSON reports if they exist
+          AUTH_P95="N/A"
+          DASHBOARD_P95="N/A"
+
+          for f in k6/reports/auth-preview-*.json; do
+            if [ -f "$f" ]; then
+              AUTH_P95=$(jq -r '.metrics.auth_total_time.values["p(95)"] // "N/A"' "$f" 2>/dev/null || echo "N/A")
+              break
+            fi
+          done
+
+          for f in k6/reports/dashboard-preview-*.json; do
+            if [ -f "$f" ]; then
+              DASHBOARD_P95=$(jq -r '.metrics.dashboard_flow_total_time.values["p(95)"] // "N/A"' "$f" 2>/dev/null || echo "N/A")
+              break
+            fi
+          done
+
+          echo "auth_p95=${AUTH_P95}" >> $GITHUB_OUTPUT
+          echo "dashboard_p95=${DASHBOARD_P95}" >> $GITHUB_OUTPUT
+
+      - name: Upload K6 Reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: k6-performance-reports
+          path: k6/reports/
+          retention-days: 30
+          if-no-files-found: ignore
+
+  # =============================================================================
+  # JOB 7: Accessibility Tests
   # Purpose: Scan pages for WCAG 2.1 AA violations using axe-core
   # Pages tested: Home, Login, Register
-  # Note: Runs in parallel with seed-database (doesn't depend on seeded data)
+  # Note: Runs in parallel with k6-performance (doesn't depend on seeded data)
   # =============================================================================
   accessibility:
     name: Accessibility Tests (axe-core)
@@ -506,7 +615,7 @@ jobs:
             });
 
   # =============================================================================
-  # JOB 7: Lighthouse CI
+  # JOB 8: Lighthouse CI
   # Purpose: Measure performance, accessibility, best practices, SEO
   # Runs both desktop and mobile configurations
   # =============================================================================
@@ -683,7 +792,7 @@ jobs:
             });
 
   # =============================================================================
-  # JOB 8: Visual Tests (Playwright)
+  # JOB 9: Visual Tests (Playwright)
   # Purpose: Capture screenshots of pages for visual regression
   # Screenshots are later uploaded to Chromatic for comparison
   # =============================================================================
@@ -745,7 +854,7 @@ jobs:
           retention-days: 30
 
   # =============================================================================
-  # JOB 9: Chromatic Upload
+  # JOB 10: Chromatic Upload
   # Purpose: Upload Playwright screenshots to Chromatic for visual comparison
   # Compares against main branch baseline, reports changes in PR
   # =============================================================================
@@ -795,13 +904,13 @@ jobs:
 
 
   # =============================================================================
-  # JOB 10: Report Results
+  # JOB 11: Report Results
   # Purpose: Post/update PR comment with deployment URLs and test results
-  # Summarizes: CI status, health checks, accessibility, Lighthouse, Chromatic
+  # Summarizes: CI status, health checks, accessibility, Lighthouse, Chromatic, K6
   # =============================================================================
   report-results:
     name: Report Results
-    needs: [ci-tests, should-deploy, should-run-full, deploy, health-check, seed-database, accessibility, lighthouse, chromatic]
+    needs: [ci-tests, should-deploy, should-run-full, deploy, health-check, seed-database, k6-performance, accessibility, lighthouse, chromatic]
     if: always() && needs.should-run-full.outputs.run_full == 'true' && needs.should-deploy.outputs.deploy == 'true'
     runs-on: ubuntu-latest
     steps:
@@ -888,6 +997,21 @@ jobs:
                 : `${visualChangeCount} change(s) need review`
               : 'Visual tests failed';
 
+            // K6 Performance
+            const k6Status = '${{ needs.k6-performance.outputs.status }}' || 'skipped';
+            const k6Result = '${{ needs.k6-performance.result }}';
+            const k6AuthP95 = '${{ needs.k6-performance.outputs.auth_p95 }}' || 'N/A';
+            const k6DashboardP95 = '${{ needs.k6-performance.outputs.dashboard_p95 }}' || 'N/A';
+
+            const k6Icon = k6Result === 'skipped' ? ':yellow_circle:'
+              : k6Status === 'success' ? ':white_check_mark:'
+              : ':x:';
+            const k6Details = k6Result === 'skipped'
+              ? 'Skipped (no perf-test label)'
+              : k6Status === 'success'
+              ? `Auth p95: ${k6AuthP95}ms, Dashboard p95: ${k6DashboardP95}ms`
+              : 'Thresholds not met';
+
             let body;
             if (ciStatus === 'failure') {
               body = `## :rocket: Preview Deployment\n\n`;
@@ -914,6 +1038,7 @@ jobs:
               body += `| Accessibility | ${a11yIcon} | ${a11yDetails} |\n`;
               body += `| Lighthouse | ${lighthouseIcon} | ${lighthouseDetails} |\n`;
               body += `| Visual Regression | ${visualIcon} | ${visualDetails} |\n`;
+              body += `| K6 Performance | ${k6Icon} | ${k6Details} |\n`;
               body += `\n`;
 
               // Status indicator based on all checks
@@ -996,7 +1121,7 @@ jobs:
             }
 
   # =============================================================================
-  # JOB 11: Skip Comment (Docs-only)
+  # JOB 12: Skip Comment (Docs-only)
   # Purpose: Post comment when preview is skipped (docs-only changes)
   # =============================================================================
   skip-comment:
@@ -1049,7 +1174,7 @@ jobs:
             }
 
   # =============================================================================
-  # JOB 12: Draft Skip Comment
+  # JOB 13: Draft Skip Comment
   # Purpose: Post comment when full tests are skipped (draft PR)
   # =============================================================================
   draft-skip-comment:
