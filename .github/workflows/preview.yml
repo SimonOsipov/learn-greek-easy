@@ -115,6 +115,13 @@ jobs:
           coverage-path-prefix: learn-greek-easy-backend/src/
           default-branch: main
 
+      - name: Add Artifact Link
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: coverage-artifact-link
+          message: |
+            :bar_chart: [View Full Coverage Report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+
   # =============================================================================
   # JOB 2: Check Deploy Conditions
   # Purpose: Determine if preview should be deployed based on changed files
