@@ -8,7 +8,7 @@ This module contains schemas for:
 """
 
 from datetime import date, datetime
-from typing import Optional
+from typing import Literal, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -152,6 +152,7 @@ class DeckProgressSummary(BaseModel):
     last_studied_at: Optional[datetime]
     average_easiness_factor: Optional[float]
     estimated_review_time_minutes: int
+    deck_type: Literal["vocabulary", "culture"] = "vocabulary"
 
 
 class DeckProgressListResponse(BaseModel):

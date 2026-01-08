@@ -94,6 +94,7 @@ export interface DeckProgressSummary {
   last_studied_at: string | null;
   average_easiness_factor: number;
   estimated_review_time_minutes: number;
+  deck_type: 'vocabulary' | 'culture';
 }
 
 /**

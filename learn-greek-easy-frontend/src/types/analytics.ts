@@ -82,6 +82,7 @@ export interface DeckPerformanceStats {
   deckId: string; // Which deck
   deckName: string; // Display name (e.g., "A1 Basics")
   deckColor: string; // Color for chart bars (hex code)
+  deckType: 'vocabulary' | 'culture'; // Type of deck
 
   // Card counts
   cardsInDeck: number; // Total cards (new + learning + review + mastered)

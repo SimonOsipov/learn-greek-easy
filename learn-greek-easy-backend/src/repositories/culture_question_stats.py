@@ -226,23 +226,31 @@ class CultureQuestionStatsRepository(BaseRepository[CultureQuestionStats]):
         result = await self.db.execute(query)
         return result.scalar_one() or 0
 
-    async def count_due_questions(self, user_id: UUID) -> int:
+    async def count_due_questions(self, user_id: UUID, deck_id: Optional[UUID] = None) -> int:
         """Count culture questions due for review (today or overdue).
 
         Args:
             user_id: User UUID
+            deck_id: Optional deck UUID to filter by specific deck
 
         Returns:
             Number of culture questions due for review
 
         Use Case:
             Dashboard stats - combined due cards count
+            Deck progress list - due count per culture deck
         """
         today = date.today()
         query = select(func.count(CultureQuestionStats.id)).where(
             CultureQuestionStats.user_id == user_id,
             CultureQuestionStats.next_review_date <= today,
         )
+
+        if deck_id is not None:
+            query = query.join(
+                CultureQuestion, CultureQuestionStats.question_id == CultureQuestion.id
+            ).where(CultureQuestion.deck_id == deck_id)
+
         result = await self.db.execute(query)
         return result.scalar_one() or 0
 
