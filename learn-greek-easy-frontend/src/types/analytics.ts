@@ -257,6 +257,7 @@ export interface AnalyticsDashboardData {
     totalTimeStudied: number; // Seconds in date range
     averageAccuracy: number; // Across all reviews in range
     cardsNewlyMastered: number; // Graduated in date range
+    cultureQuestionsMastered: number; // Culture questions mastered
   };
 
   // Streak info (for prominent display)

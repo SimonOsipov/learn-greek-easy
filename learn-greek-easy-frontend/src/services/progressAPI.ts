@@ -25,6 +25,7 @@ export interface OverviewStats {
   total_decks_started: number;
   overall_mastery_percentage: number;
   accuracy_percentage?: number;
+  culture_questions_mastered: number;
 }
 
 /**

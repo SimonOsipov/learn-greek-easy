@@ -417,6 +417,7 @@ class ProgressService:
             total_decks_started=total_decks,
             overall_mastery_percentage=round(mastery_percentage, 1),
             accuracy_percentage=accuracy_percentage,
+            culture_questions_mastered=culture_mastered,
         )
 
         # Get today's stats - AGGREGATED from vocabulary + culture

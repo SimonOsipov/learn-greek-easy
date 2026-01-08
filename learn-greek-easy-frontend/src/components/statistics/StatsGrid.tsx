@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { BookOpen, Flame, Trophy } from 'lucide-react';
+import { BookOpen, Flame, Landmark, Trophy } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,6 +13,8 @@ export interface StatsGridProps {
   wordsLearned: number;
   /** Total experience points earned */
   totalXP: number;
+  /** Number of culture questions mastered */
+  cultureQuestionsMastered: number;
   /** Date when user joined (for calculating average) */
   joinedDate: Date | string;
   /** Optional CSS class name */
@@ -50,6 +52,7 @@ export const StatsGrid: React.FC<StatsGridProps> = ({
   streak,
   wordsLearned,
   totalXP,
+  cultureQuestionsMastered,
   joinedDate,
   className,
 }) => {
@@ -64,7 +67,7 @@ export const StatsGrid: React.FC<StatsGridProps> = ({
   const avgWordsPerDay = daysSinceJoining > 0 ? Math.round(wordsLearned / daysSinceJoining) : 0;
 
   return (
-    <div className={cn('grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3', className)}>
+    <div className={cn('grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4', className)}>
       {/* Streak Card */}
       <Card>
         <CardHeader className="pb-3">
@@ -101,6 +104,24 @@ export const StatsGrid: React.FC<StatsGridProps> = ({
           <p className="mt-2 text-xs text-muted-foreground">
             {t('stats.wordsPerDay', { count: avgWordsPerDay })}
           </p>
+        </CardContent>
+      </Card>
+
+      {/* Culture Questions Mastered Card */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              {t('stats.cultureQuestionsMastered')}
+            </CardTitle>
+            <Landmark className="h-5 w-5 text-purple-500" />
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="text-3xl font-bold text-foreground">
+            {cultureQuestionsMastered.toLocaleString()}
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">{t('stats.cultureProgress')}</p>
         </CardContent>
       </Card>
 

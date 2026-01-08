@@ -254,6 +254,7 @@ const transformToAnalyticsDashboardData = (
       averageAccuracy:
         dashboard.overview.accuracy_percentage ?? dashboard.overview.overall_mastery_percentage,
       cardsNewlyMastered: dashboard.overview.total_cards_mastered,
+      cultureQuestionsMastered: dashboard.overview.culture_questions_mastered ?? 0,
     },
     streak,
     progressData,
