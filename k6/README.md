@@ -83,13 +83,6 @@ K6_FRONTEND_BASE_URL=https://pr-123.railway.app \
 k6 run k6/scenarios/auth.js
 ```
 
-### Grafana Cloud
-
-```bash
-# With cloud output (requires K6_CLOUD_TOKEN)
-K6_CLOUD_TOKEN=your-token k6 run --out cloud k6/scenarios/auth.js
-```
-
 ### Verify Configuration
 
 ```bash
@@ -148,6 +141,37 @@ All test users share the same password: `TestPassword123!`
 | `xpBoundary` | e2e_xp_boundary@test.com | XP boundary testing |
 | `xpMid` | e2e_xp_mid@test.com | Mid-level XP testing |
 | `xpMax` | e2e_xp_max@test.com | Max XP testing |
+
+## Viewing Reports
+
+After running tests, reports are generated in `k6/reports/`:
+
+### HTML Reports
+
+HTML reports provide a visual summary with charts and color-coded pass/fail indicators:
+
+```bash
+# After running tests, open HTML report in browser
+open k6/reports/auth-local-*.html      # macOS
+xdg-open k6/reports/auth-local-*.html  # Linux
+```
+
+### JSON Reports
+
+JSON reports contain raw data for programmatic analysis:
+
+```bash
+# Extract p95 from JSON report
+jq '.metrics.auth_total_time.values["p(95)"]' k6/reports/auth-local-*.json
+```
+
+### GitHub Actions Artifacts
+
+In CI/CD, reports are uploaded as GitHub Actions artifacts (30-day retention):
+
+1. Go to the workflow run in GitHub Actions
+2. Download `k6-performance-reports` artifact
+3. Extract and open the HTML files in your browser
 
 ## CI/CD Integration
 

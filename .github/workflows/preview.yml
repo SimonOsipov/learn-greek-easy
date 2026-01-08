@@ -455,7 +455,6 @@ jobs:
           K6_API_BASE_URL: ${{ needs.deploy.outputs.backend_url }}
           K6_FRONTEND_BASE_URL: ${{ needs.deploy.outputs.frontend_url }}
           K6_SCENARIO: smoke
-          K6_CLOUD_TOKEN: ${{ secrets.K6_CLOUD_TOKEN }}
           K6_BROWSER_HEADLESS: 'true'
           K6_BROWSER_ARGS: 'no-sandbox,disable-dev-shm-usage,disable-gpu'
         run: |
@@ -463,11 +462,7 @@ jobs:
           echo "Frontend: $K6_FRONTEND_BASE_URL"
           echo "Backend: $K6_API_BASE_URL"
 
-          if [ -n "$K6_CLOUD_TOKEN" ]; then
-            k6 run --out cloud k6/scenarios/auth.js 2>&1 | tee k6/reports/auth-output.txt
-          else
-            k6 run k6/scenarios/auth.js 2>&1 | tee k6/reports/auth-output.txt
-          fi
+          k6 run k6/scenarios/auth.js 2>&1 | tee k6/reports/auth-output.txt
           echo "exit_code=$?" >> $GITHUB_OUTPUT
 
       - name: Run Dashboard Scenario
@@ -478,17 +473,12 @@ jobs:
           K6_API_BASE_URL: ${{ needs.deploy.outputs.backend_url }}
           K6_FRONTEND_BASE_URL: ${{ needs.deploy.outputs.frontend_url }}
           K6_SCENARIO: smoke
-          K6_CLOUD_TOKEN: ${{ secrets.K6_CLOUD_TOKEN }}
           K6_BROWSER_HEADLESS: 'true'
           K6_BROWSER_ARGS: 'no-sandbox,disable-dev-shm-usage,disable-gpu'
         run: |
           echo "Running K6 Dashboard Scenario"
 
-          if [ -n "$K6_CLOUD_TOKEN" ]; then
-            k6 run --out cloud k6/scenarios/dashboard.js 2>&1 | tee k6/reports/dashboard-output.txt
-          else
-            k6 run k6/scenarios/dashboard.js 2>&1 | tee k6/reports/dashboard-output.txt
-          fi
+          k6 run k6/scenarios/dashboard.js 2>&1 | tee k6/reports/dashboard-output.txt
           echo "exit_code=$?" >> $GITHUB_OUTPUT
 
       - name: Aggregate Results
@@ -531,7 +521,7 @@ jobs:
         with:
           name: k6-performance-reports
           path: k6/reports/
-          retention-days: 7
+          retention-days: 30
           if-no-files-found: ignore
 
   # =============================================================================

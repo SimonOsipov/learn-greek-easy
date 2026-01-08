@@ -22,7 +22,8 @@ This project uses [k6](https://k6.io/) with browser support to measure real user
 | Browser Engine | Chromium (via k6 browser module) | Real browser automation |
 | Metrics | k6 Trends | Custom timing measurements |
 | CI Integration | GitHub Actions | Automated test runs |
-| Cloud Dashboard | Grafana Cloud (optional) | Metrics visualization |
+| Reports | HTML (k6-reporter) + JSON | Local report generation |
+| Artifacts | GitHub Actions artifacts | 30-day report retention |
 
 ### Design Decisions
 
@@ -143,7 +144,6 @@ k6 run k6/scenarios/dashboard.js
 | `K6_SCENARIO` | No | Scenario: `smoke` (default), `default`, or `load` |
 | `K6_API_BASE_URL` | Preview only | Backend API URL |
 | `K6_FRONTEND_BASE_URL` | Preview only | Frontend URL |
-| `K6_CLOUD_TOKEN` | No | Grafana Cloud API token |
 
 ### Test Users
 
@@ -226,7 +226,7 @@ The `k6-performance` job in `.github/workflows/preview.yml`:
 2. **Setup**: Installs k6 using `grafana/setup-k6-action@v1`
 3. **Execution**: Runs auth and dashboard scenarios
 4. **Reporting**: Extracts p95 metrics and adds to PR comment
-5. **Artifacts**: Uploads JSON reports (7-day retention)
+5. **Artifacts**: Uploads HTML and JSON reports (30-day retention)
 
 ### Non-Blocking Design
 
@@ -242,31 +242,41 @@ Results are included in the PR summary comment:
 | K6 Performance | :white_check_mark: | Auth p95: 3245ms, Dashboard p95: 8123ms |
 ```
 
-## Grafana Cloud Integration
+### Viewing Reports from GitHub Actions
 
-### Setup
+Reports are available as GitHub Actions artifacts after each run:
 
-1. Create account at [grafana.com](https://grafana.com)
-2. Get API token from k6 Cloud settings
-3. Add `K6_CLOUD_TOKEN` to GitHub repository secrets
+1. Navigate to the workflow run in GitHub Actions
+2. Scroll to the "Artifacts" section at the bottom
+3. Download `k6-performance-reports`
+4. Extract the ZIP file to access:
+   - **HTML reports**: Open in browser for visual summary with charts
+   - **JSON reports**: For programmatic analysis or custom tooling
 
-### Running with Cloud Output
+## Report Formats
 
+### HTML Reports
+
+HTML reports are generated using [k6-reporter](https://github.com/benc-uk/k6-reporter) and provide:
+- Visual summary with color-coded pass/fail indicators
+- Interactive charts for metric trends
+- Threshold status at a glance
+- Detailed metric breakdowns (avg, min, max, p90, p95)
+
+To view an HTML report, simply open the `.html` file in any web browser.
+
+### JSON Reports
+
+JSON reports contain raw metric data for programmatic analysis:
+- Full metric data with all percentiles
+- Threshold results
+- Check pass/fail counts
+- Iteration counts and timing
+
+Example: Extract p95 from JSON report:
 ```bash
-# Local
-K6_CLOUD_TOKEN=your-token k6 run --out cloud k6/scenarios/auth.js
-
-# CI (automatic if secret is set)
-# The workflow detects K6_CLOUD_TOKEN and adds --out cloud
+jq '.metrics.auth_total_time.values["p(95)"]' k6/reports/auth-preview-*.json
 ```
-
-### Viewing Results
-
-Cloud results include:
-- Real-time test monitoring
-- Historical trend analysis
-- Detailed metric breakdowns
-- Threshold comparisons
 
 ## Extending Tests
 
@@ -279,6 +289,7 @@ import { browser } from 'k6/browser';
 import { check } from 'k6';
 import { Trend } from 'k6/metrics';
 import { textSummary } from 'https://jslib.k6.io/k6-summary/0.1.0/index.js';
+import { htmlReport } from 'https://raw.githubusercontent.com/benc-uk/k6-reporter/main/dist/bundle.js';
 
 import { login } from '../lib/auth.js';
 import { currentEnvironment, getScenario } from '../lib/config.js';
@@ -325,8 +336,10 @@ export async function myScenarioFunc() {
 
 export function handleSummary(data) {
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const reportBasePath = `k6/reports/my-scenario-${currentEnvironment}-${timestamp}`;
   return {
-    [`k6/reports/my-scenario-${currentEnvironment}-${timestamp}.json`]: JSON.stringify(data, null, 2),
+    [`${reportBasePath}.json`]: JSON.stringify(data, null, 2),
+    [`${reportBasePath}.html`]: htmlReport(data),
     stdout: textSummary(data, { indent: '  ', enableColors: true }),
   };
 }

@@ -37,6 +37,7 @@ import { browser } from 'k6/browser';
 import { check, sleep } from 'k6';
 import { Trend } from 'k6/metrics';
 import { textSummary } from 'https://jslib.k6.io/k6-summary/0.1.0/index.js';
+import { htmlReport } from 'https://raw.githubusercontent.com/benc-uk/k6-reporter/main/dist/bundle.js';
 
 import { login } from '../lib/auth.js';
 import { testId, dashboard, decks, culture, answerOption } from '../lib/selectors.js';
@@ -394,7 +395,7 @@ export async function dashboardScenario() {
 /**
  * Handle test summary and generate reports.
  *
- * Generates a timestamped JSON report in the reports directory and outputs
+ * Generates timestamped JSON and HTML reports in the reports directory and outputs
  * a colored text summary to stdout.
  *
  * @param {Object} data - The k6 summary data object
@@ -403,7 +404,7 @@ export async function dashboardScenario() {
 export function handleSummary(data) {
   // Generate timestamp for unique report filename
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const reportPath = `k6/reports/dashboard-${currentEnvironment}-${timestamp}.json`;
+  const reportBasePath = `k6/reports/dashboard-${currentEnvironment}-${timestamp}`;
 
   // Log execution context
   console.log(`\n--- Dashboard Scenario Summary ---`);
@@ -411,11 +412,13 @@ export function handleSummary(data) {
   console.log(`Scenario: ${scenarioName}`);
   console.log(`VUs: ${scenarioConfig.vus}`);
   console.log(`Duration: ${scenarioConfig.duration}`);
-  console.log(`Report: ${reportPath}`);
+  console.log(`JSON Report: ${reportBasePath}.json`);
+  console.log(`HTML Report: ${reportBasePath}.html`);
   console.log(`----------------------------------\n`);
 
   return {
-    [reportPath]: JSON.stringify(data, null, 2),
+    [`${reportBasePath}.json`]: JSON.stringify(data, null, 2),
+    [`${reportBasePath}.html`]: htmlReport(data),
     stdout: textSummary(data, { indent: '  ', enableColors: true }),
   };
 }
