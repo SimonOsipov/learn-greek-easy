@@ -128,7 +128,7 @@ export function signupWithAuth0(
         password,
         userMetadata: {
           name,
-          agreedToTerms: true,
+          agreedToTerms: 'true',
           agreedToTermsAt: new Date().toISOString(),
         },
       },

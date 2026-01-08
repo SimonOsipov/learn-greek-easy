@@ -40,6 +40,9 @@ const Register = lazyWithRetry(() =>
 const ForgotPassword = lazyWithRetry(() =>
   import('@/pages/auth/ForgotPassword').then((m) => ({ default: m.ForgotPassword }))
 );
+const Callback = lazyWithRetry(() =>
+  import('@/pages/auth/Callback').then((m) => ({ default: m.Callback }))
+);
 
 // Main dashboard and navigation pages
 const Dashboard = lazyWithRetry(() =>
@@ -143,6 +146,9 @@ function AppContent() {
                 <Route path="/register" element={<Register />} />
                 <Route path="/forgot-password" element={<ForgotPassword />} />
               </Route>
+
+              {/* OAuth callback route - handles Auth0 redirect with tokens in hash */}
+              <Route path="/callback" element={<Callback />} />
 
               {/* Protected Routes - require authentication */}
               <Route element={<ProtectedRoute />}>
