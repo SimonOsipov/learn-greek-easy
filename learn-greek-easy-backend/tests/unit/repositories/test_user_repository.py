@@ -13,7 +13,6 @@ from src.db.models import User
 from src.repositories.user import UserRepository
 from tests.factories.auth import UserFactory
 
-
 # =============================================================================
 # Test Fixtures
 # =============================================================================
