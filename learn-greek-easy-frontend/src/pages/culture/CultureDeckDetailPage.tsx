@@ -133,7 +133,7 @@ export function CultureDeckDetailPage() {
           {t('deck:detail.breadcrumb')}
         </Link>
         <span>/</span>
-        <span className="truncate font-medium text-gray-900">{deck.name.el}</span>
+        <span className="truncate font-medium text-gray-900">{deck.name}</span>
       </nav>
 
       {/* Main Content */}
@@ -144,12 +144,10 @@ export function CultureDeckDetailPage() {
             {/* Title and Badges Row */}
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="min-w-0 flex-1">
-                {/* Greek Title */}
+                {/* Title */}
                 <h1 className="mb-1 text-2xl font-semibold text-gray-900 md:text-3xl">
-                  {deck.name.el}
+                  {deck.name}
                 </h1>
-                {/* English Subtitle */}
-                <p className="text-base text-gray-600 md:text-lg">{deck.name.en}</p>
               </div>
 
               {/* Culture Badge */}
@@ -157,18 +155,13 @@ export function CultureDeckDetailPage() {
                 <CultureBadge category={cultureCategory} showLabel={true} />
               </div>
             </div>
-
-            {/* Category Info */}
-            <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-gray-600">
-              <span className="capitalize">{deck.category}</span>
-              <span>-</span>
-              <span>{t('culture:deck.culture')}</span>
-            </div>
           </CardHeader>
 
           <CardContent>
             {/* Description */}
-            <p className="leading-relaxed text-gray-700">{deck.description.en}</p>
+            {deck.description && (
+              <p className="leading-relaxed text-gray-700">{deck.description}</p>
+            )}
 
             {/* Progress Bar (if has progress) */}
             {progress && progress.status !== 'not-started' && (

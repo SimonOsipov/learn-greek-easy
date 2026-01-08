@@ -85,6 +85,12 @@ def service(mock_db_session):
     svc.culture_answer_repo.get_total_study_time = AsyncMock(return_value=0)
     # Also mock review_repo.get_user_reviews used in aggregation
     svc.review_repo.get_user_reviews = AsyncMock(return_value=[])
+    # Mock culture_stats_repo.count_all_by_status used in _get_combined_status_counts
+    svc.culture_stats_repo.count_all_by_status = AsyncMock(
+        return_value={"new": 0, "learning": 0, "review": 0, "mastered": 0, "due": 0}
+    )
+    # Mock culture_deck_repo.list_active used in get_deck_progress_list
+    svc.culture_deck_repo.list_active = AsyncMock(return_value=[])
     return svc
 
 
@@ -172,6 +178,10 @@ class TestProgressServiceDashboard:
         )
         service.culture_stats_repo.get_dates_with_culture_activity = AsyncMock(
             return_value=[date.today()]
+        )
+        # Override count_all_by_status to include culture due cards (3)
+        service.culture_stats_repo.count_all_by_status = AsyncMock(
+            return_value={"new": 0, "learning": 0, "review": 0, "mastered": 5, "due": 3}
         )
 
         # Create mock reviews with 7-day streak of vocab + 7 more days of culture = 14 longest
@@ -400,6 +410,186 @@ class TestProgressServiceDashboard:
         assert result.recent_activity[0].reviews_count == 20
         assert result.recent_activity[0].average_quality == 4.2
 
+    async def test_get_dashboard_stats_streak_maintained_from_yesterday(self, service):
+        """User studied yesterday but not today, streak shows yesterday's value (grace period)."""
+        user_id = uuid4()
+        today = date.today()
+        yesterday = today - timedelta(days=1)
+
+        # Setup minimum required mocks
+        service.progress_repo.get_total_cards_studied = AsyncMock(return_value=100)
+        service.progress_repo.get_total_cards_mastered = AsyncMock(return_value=50)
+        service.progress_repo.count_user_decks = AsyncMock(return_value=1)
+        service.progress_repo.get_user_progress = AsyncMock(return_value=[])
+        service.review_repo.count_reviews_today = AsyncMock(return_value=0)
+        service.review_repo.get_study_time_today = AsyncMock(return_value=0)
+        service.review_repo.get_daily_stats = AsyncMock(return_value=[])
+        service.review_repo.get_accuracy_stats = AsyncMock(
+            return_value={"correct": 80, "total": 100}
+        )
+        service.stats_repo.count_by_status = AsyncMock(return_value={"due": 5})
+        # Culture mocks
+        service.culture_stats_repo.count_mastered_questions = AsyncMock(return_value=0)
+        service.culture_stats_repo.count_due_questions = AsyncMock(return_value=0)
+        service.culture_stats_repo.get_culture_accuracy_stats = AsyncMock(
+            return_value={"correct": 0, "total": 0}
+        )
+
+        # Create mock reviews for 5 consecutive days ENDING YESTERDAY (not today)
+        # Days: yesterday, day before yesterday, ..., 5 days ago
+        # NOTE: Must set mock BEFORE creating mock_reviews to ensure service uses them
+        mock_reviews = []
+        for i in range(5):
+            mock_review = MagicMock()
+            mock_review.reviewed_at = datetime.combine(
+                yesterday - timedelta(days=i), datetime.min.time()
+            )
+            mock_reviews.append(mock_review)
+        service.review_repo.get_user_reviews = AsyncMock(return_value=mock_reviews)
+
+        # No culture dates - explicitly override fixture defaults
+        service.culture_answer_repo.get_unique_dates = AsyncMock(return_value=[])
+        service.culture_answer_repo.get_all_unique_dates = AsyncMock(return_value=[])
+
+        result = await service.get_dashboard_stats(user_id)
+
+        # Streak should be 5 (grace period: starts from yesterday since no activity today)
+        assert result.streak.current_streak == 5
+
+    async def test_get_dashboard_stats_streak_broken_no_yesterday_activity(self, service):
+        """No activity today or yesterday, streak is 0 (broken)."""
+        user_id = uuid4()
+        today = date.today()
+
+        # Setup minimum required mocks
+        service.progress_repo.get_total_cards_studied = AsyncMock(return_value=100)
+        service.progress_repo.get_total_cards_mastered = AsyncMock(return_value=50)
+        service.progress_repo.count_user_decks = AsyncMock(return_value=1)
+        service.progress_repo.get_user_progress = AsyncMock(return_value=[])
+        service.review_repo.count_reviews_today = AsyncMock(return_value=0)
+        service.review_repo.get_study_time_today = AsyncMock(return_value=0)
+        service.review_repo.get_daily_stats = AsyncMock(return_value=[])
+        service.review_repo.get_accuracy_stats = AsyncMock(
+            return_value={"correct": 80, "total": 100}
+        )
+        service.stats_repo.count_by_status = AsyncMock(return_value={"due": 5})
+        # Culture mocks
+        service.culture_stats_repo.count_mastered_questions = AsyncMock(return_value=0)
+        service.culture_stats_repo.count_due_questions = AsyncMock(return_value=0)
+        service.culture_stats_repo.get_culture_accuracy_stats = AsyncMock(
+            return_value={"correct": 0, "total": 0}
+        )
+
+        # Create mock reviews for 5 consecutive days starting 2 DAYS AGO (gap of today + yesterday)
+        mock_reviews = []
+        for i in range(5):
+            mock_review = MagicMock()
+            mock_review.reviewed_at = datetime.combine(
+                today - timedelta(days=i + 2), datetime.min.time()  # Start from 2 days ago
+            )
+            mock_reviews.append(mock_review)
+        service.review_repo.get_user_reviews = AsyncMock(return_value=mock_reviews)
+
+        # No culture dates
+        service.culture_answer_repo.get_unique_dates = AsyncMock(return_value=[])
+        service.culture_answer_repo.get_all_unique_dates = AsyncMock(return_value=[])
+
+        result = await service.get_dashboard_stats(user_id)
+
+        # Streak should be 0 (no activity today or yesterday = broken)
+        assert result.streak.current_streak == 0
+
+    async def test_get_dashboard_stats_streak_continues_after_study_today(self, service):
+        """Studied yesterday and today, streak increments properly."""
+        user_id = uuid4()
+        today = date.today()
+
+        # Setup minimum required mocks
+        service.progress_repo.get_total_cards_studied = AsyncMock(return_value=100)
+        service.progress_repo.get_total_cards_mastered = AsyncMock(return_value=50)
+        service.progress_repo.count_user_decks = AsyncMock(return_value=1)
+        service.progress_repo.get_user_progress = AsyncMock(return_value=[])
+        service.review_repo.count_reviews_today = AsyncMock(return_value=10)
+        service.review_repo.get_study_time_today = AsyncMock(return_value=600)
+        service.review_repo.get_daily_stats = AsyncMock(return_value=[])
+        service.review_repo.get_accuracy_stats = AsyncMock(
+            return_value={"correct": 80, "total": 100}
+        )
+        service.stats_repo.count_by_status = AsyncMock(return_value={"due": 5})
+        # Culture mocks
+        service.culture_stats_repo.count_mastered_questions = AsyncMock(return_value=0)
+        service.culture_stats_repo.count_due_questions = AsyncMock(return_value=0)
+        service.culture_stats_repo.get_culture_accuracy_stats = AsyncMock(
+            return_value={"correct": 0, "total": 0}
+        )
+
+        # Create mock reviews for 5 consecutive days INCLUDING today
+        mock_reviews = []
+        for i in range(5):
+            mock_review = MagicMock()
+            mock_review.reviewed_at = datetime.combine(
+                today - timedelta(days=i), datetime.min.time()
+            )
+            mock_reviews.append(mock_review)
+        service.review_repo.get_user_reviews = AsyncMock(return_value=mock_reviews)
+
+        # No culture dates
+        service.culture_answer_repo.get_unique_dates = AsyncMock(return_value=[])
+        service.culture_answer_repo.get_all_unique_dates = AsyncMock(return_value=[])
+
+        result = await service.get_dashboard_stats(user_id)
+
+        # Streak should be 5 (studied today and 4 previous consecutive days)
+        assert result.streak.current_streak == 5
+
+    async def test_get_dashboard_stats_streak_gap_resets_correctly(self, service):
+        """Activity today + 2 days ago but not yesterday, streak is 1 (only today counts)."""
+        user_id = uuid4()
+        today = date.today()
+
+        # Setup minimum required mocks
+        service.progress_repo.get_total_cards_studied = AsyncMock(return_value=100)
+        service.progress_repo.get_total_cards_mastered = AsyncMock(return_value=50)
+        service.progress_repo.count_user_decks = AsyncMock(return_value=1)
+        service.progress_repo.get_user_progress = AsyncMock(return_value=[])
+        service.review_repo.count_reviews_today = AsyncMock(return_value=10)
+        service.review_repo.get_study_time_today = AsyncMock(return_value=600)
+        service.review_repo.get_daily_stats = AsyncMock(return_value=[])
+        service.review_repo.get_accuracy_stats = AsyncMock(
+            return_value={"correct": 80, "total": 100}
+        )
+        service.stats_repo.count_by_status = AsyncMock(return_value={"due": 5})
+        # Culture mocks
+        service.culture_stats_repo.count_mastered_questions = AsyncMock(return_value=0)
+        service.culture_stats_repo.count_due_questions = AsyncMock(return_value=0)
+        service.culture_stats_repo.get_culture_accuracy_stats = AsyncMock(
+            return_value={"correct": 0, "total": 0}
+        )
+
+        # Create mock reviews for today and 2-5 days ago (GAP at yesterday)
+        mock_reviews = []
+        # Today
+        mock_review_today = MagicMock()
+        mock_review_today.reviewed_at = datetime.combine(today, datetime.min.time())
+        mock_reviews.append(mock_review_today)
+        # 2 days ago through 5 days ago (skipping yesterday)
+        for i in range(2, 6):
+            mock_review = MagicMock()
+            mock_review.reviewed_at = datetime.combine(
+                today - timedelta(days=i), datetime.min.time()
+            )
+            mock_reviews.append(mock_review)
+        service.review_repo.get_user_reviews = AsyncMock(return_value=mock_reviews)
+
+        # No culture dates
+        service.culture_answer_repo.get_unique_dates = AsyncMock(return_value=[])
+        service.culture_answer_repo.get_all_unique_dates = AsyncMock(return_value=[])
+
+        result = await service.get_dashboard_stats(user_id)
+
+        # Streak should be 1 (only today counts, yesterday gap breaks the streak)
+        assert result.streak.current_streak == 1
+
 
 # =============================================================================
 # TestProgressServiceDeckList
@@ -455,7 +645,9 @@ class TestProgressServiceDeckList:
 
         result = await service.get_deck_progress_list(user_id, page=1, page_size=2)
 
-        assert result.total == 3
+        # Total is now calculated from combined vocab + culture decks actually present
+        # 2 vocab decks from get_user_progress + 0 culture decks = 2
+        assert result.total == 2
         assert result.page == 1
         assert result.page_size == 2
         assert len(result.decks) == 2

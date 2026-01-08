@@ -25,6 +25,7 @@ export interface OverviewStats {
   total_decks_started: number;
   overall_mastery_percentage: number;
   accuracy_percentage?: number;
+  culture_questions_mastered: number;
 }
 
 /**
@@ -93,6 +94,7 @@ export interface DeckProgressSummary {
   last_studied_at: string | null;
   average_easiness_factor: number;
   estimated_review_time_minutes: number;
+  deck_type: 'vocabulary' | 'culture';
 }
 
 /**

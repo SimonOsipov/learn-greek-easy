@@ -22,6 +22,8 @@ import {
 import { useTranslation } from 'react-i18next';
 
 import { DeckEditModal, type DeckEditFormData } from '@/components/admin';
+import { CultureBadge, type CultureCategory } from '@/components/culture';
+import { DeckBadge } from '@/components/decks';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -66,20 +68,6 @@ const CEFR_LEVEL_ORDER: Record<string, number> = {
   C1: 5,
   C2: 6,
 };
-
-/**
- * Get badge variant based on CEFR level
- * A1-B2: default (filled), C1-C2: outline
- */
-function getLevelBadgeVariant(level: string): 'default' | 'secondary' | 'outline' {
-  if (level === 'C1' || level === 'C2') {
-    return 'outline';
-  }
-  if (level === 'A1' || level === 'A2') {
-    return 'default';
-  }
-  return 'secondary';
-}
 
 /**
  * Loading skeleton for the admin page
@@ -190,7 +178,7 @@ interface DeckListItemProps {
 const DeckListItem: React.FC<DeckListItemProps> = ({ deck, t }) => (
   <div className="flex items-center justify-between rounded-lg border p-4 transition-colors hover:bg-muted/50">
     <div className="flex items-center gap-3">
-      <Badge variant={getLevelBadgeVariant(deck.level)}>{deck.level}</Badge>
+      <DeckBadge type="level" level={deck.level} />
       <span className="font-medium">{deck.name}</span>
     </div>
     <span className="text-sm text-muted-foreground">
@@ -212,20 +200,6 @@ function sortDecksByLevel(decks: DeckStats[]): DeckStats[] {
     // Same level - sort by name
     return a.name.localeCompare(b.name);
   });
-}
-
-/**
- * Get category badge variant
- */
-function getCategoryBadgeVariant(category: string): 'default' | 'secondary' | 'outline' {
-  switch (category) {
-    case 'history':
-      return 'default';
-    case 'geography':
-      return 'secondary';
-    default:
-      return 'outline';
-  }
 }
 
 /**
@@ -257,7 +231,7 @@ interface CultureDeckListItemProps {
 const CultureDeckListItem: React.FC<CultureDeckListItemProps> = ({ deck, locale, t }) => (
   <div className="flex items-center justify-between rounded-lg border p-4 transition-colors hover:bg-muted/50">
     <div className="flex items-center gap-3">
-      <Badge variant={getCategoryBadgeVariant(deck.category)}>{deck.category}</Badge>
+      <CultureBadge category={deck.category as CultureCategory} />
       <span className="font-medium">{getLocalizedName(deck.name, locale)}</span>
     </div>
     <span className="text-sm text-muted-foreground">
@@ -283,11 +257,9 @@ const UnifiedDeckListItem: React.FC<UnifiedDeckListItemProps> = ({ deck, locale,
   return (
     <div className="flex items-center justify-between rounded-lg border p-4 transition-colors hover:bg-muted/50">
       <div className="flex items-center gap-3">
-        {deck.type === 'vocabulary' && deck.level && (
-          <Badge variant={getLevelBadgeVariant(deck.level)}>{deck.level}</Badge>
-        )}
+        {deck.type === 'vocabulary' && deck.level && <DeckBadge type="level" level={deck.level} />}
         {deck.type === 'culture' && deck.category && (
-          <Badge variant={getCategoryBadgeVariant(deck.category)}>{deck.category}</Badge>
+          <CultureBadge category={deck.category as CultureCategory} />
         )}
         <span className="font-medium">{displayName}</span>
         <Badge variant="outline" className="text-xs">

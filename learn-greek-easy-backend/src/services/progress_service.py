@@ -18,7 +18,7 @@ Example Usage:
 """
 
 import math
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from typing import Optional
 from uuid import UUID
 
@@ -34,6 +34,7 @@ from src.repositories import (
     ReviewRepository,
     UserDeckProgressRepository,
 )
+from src.repositories.culture_deck import CultureDeckRepository
 from src.repositories.culture_question_stats import CultureQuestionStatsRepository
 from src.schemas.progress import (
     Achievement,
@@ -98,6 +99,7 @@ class ProgressService:
         self.card_repo = CardRepository(db)
         self.culture_stats_repo = CultureQuestionStatsRepository(db)
         self.culture_answer_repo = CultureAnswerHistoryRepository(db)
+        self.culture_deck_repo = CultureDeckRepository(db)
 
     # =========================================================================
     # Helper Methods
@@ -134,9 +136,20 @@ class ProgressService:
         if not all_study_dates:
             return 0
 
-        # Count consecutive days starting from today
+        # Count consecutive days starting from today if active today,
+        # or from yesterday if active yesterday (streak grace period)
         streak = 0
-        current_date = date.today()
+        today = date.today()
+        yesterday = today - timedelta(days=1)
+
+        # Determine starting point: today if active, else yesterday if active
+        if today in all_study_dates:
+            current_date = today
+        elif yesterday in all_study_dates:
+            current_date = yesterday
+        else:
+            # No activity today or yesterday = streak is broken
+            return 0
 
         while current_date in all_study_dates:
             streak += 1
@@ -355,45 +368,28 @@ class ProgressService:
 
         return round((total_correct / total_answers) * 100, 1)
 
-    async def _calculate_combined_streak(self, user_id: UUID) -> int:
-        """Calculate current streak from combined vocab and culture activity.
+    async def _get_combined_status_counts(self, user_id: UUID) -> dict[str, int]:
+        """Get combined card status counts from vocabulary + culture.
 
-        Streak is count of consecutive days (from today backwards) with
-        activity in either vocab reviews or culture questions.
+        Aggregates status counts from both vocabulary flashcards and culture
+        questions for use in the Stage Distribution chart.
 
         Args:
             user_id: User UUID
 
         Returns:
-            Current streak in days
+            Dict with combined counts: {new, learning, review, mastered, due}
         """
-        # Get unique dates from both activity sources
-        vocab_dates = await self.review_repo.get_dates_with_vocab_activity(user_id, days=30)
-        culture_dates = await self.culture_stats_repo.get_dates_with_culture_activity(
-            user_id, days=30
-        )
+        vocab_counts = await self.stats_repo.count_by_status(user_id)
+        culture_counts = await self.culture_stats_repo.count_all_by_status(user_id)
 
-        # Combine and deduplicate dates
-        all_dates = set(vocab_dates) | set(culture_dates)
-
-        if not all_dates:
-            return 0
-
-        # Sort descending (most recent first)
-        sorted_dates = sorted(all_dates, reverse=True)
-
-        # Count consecutive days from today
-        streak = 0
-        current_date = date.today()
-
-        for activity_date in sorted_dates:
-            if activity_date == current_date:
-                streak += 1
-                current_date -= timedelta(days=1)
-            else:
-                break
-
-        return streak
+        return {
+            "new": vocab_counts.get("new", 0) + culture_counts.get("new", 0),
+            "learning": vocab_counts.get("learning", 0) + culture_counts.get("learning", 0),
+            "review": vocab_counts.get("review", 0) + culture_counts.get("review", 0),
+            "mastered": vocab_counts.get("mastered", 0) + culture_counts.get("mastered", 0),
+            "due": vocab_counts.get("due", 0) + culture_counts.get("due", 0),
+        }
 
     # =========================================================================
     # Dashboard Stats
@@ -428,7 +424,6 @@ class ProgressService:
 
         # Get culture stats for aggregation
         culture_mastered = await self.culture_stats_repo.count_mastered_questions(user_id)
-        culture_due = await self.culture_stats_repo.count_due_questions(user_id)
 
         # Combine vocab + culture totals
         total_mastered = vocab_mastered + culture_mastered
@@ -446,14 +441,16 @@ class ProgressService:
             total_decks_started=total_decks,
             overall_mastery_percentage=round(mastery_percentage, 1),
             accuracy_percentage=accuracy_percentage,
+            culture_questions_mastered=culture_mastered,
         )
 
         # Get today's stats - AGGREGATED from vocabulary + culture
         reviews_today = await self._get_aggregated_reviews_today(user_id)
         study_time_today = await self._get_aggregated_study_time_today(user_id)
-        status_counts = await self.stats_repo.count_by_status(user_id)
-        vocab_due = status_counts.get("due", 0)
-        cards_due = vocab_due + culture_due
+
+        # Get combined status counts (vocab + culture) for Stage Distribution chart
+        status_counts = await self._get_combined_status_counts(user_id)
+        cards_due = status_counts.get("due", 0)
 
         goal_progress = min((reviews_today / self.DEFAULT_DAILY_GOAL) * 100, 100.0)
 
@@ -513,12 +510,16 @@ class ProgressService:
         page: int = 1,
         page_size: int = 10,
     ) -> DeckProgressListResponse:
-        """Get paginated list of user's deck progress.
+        """Get paginated list of user's deck progress (vocabulary + culture).
+
+        Combines vocabulary flashcard decks and culture exam decks into a single
+        list, sorted by last_studied_at descending.
 
         For each deck, includes:
-        - Deck info (name, level)
+        - Deck info (name, level/category)
         - Progress metrics (studied, mastered, due)
         - Percentages and estimated review time
+        - Deck type (vocabulary or culture)
 
         Args:
             user_id: User UUID
@@ -528,17 +529,14 @@ class ProgressService:
         Returns:
             DeckProgressListResponse with paginated deck progress
         """
-        skip = (page - 1) * page_size
+        all_deck_summaries: list[DeckProgressSummary] = []
 
-        # Get total count
-        total = await self.progress_repo.count_user_decks(user_id)
-
-        # Get progress records with deck info
+        # =====================================================================
+        # 1. Get vocabulary deck progress (existing logic)
+        # =====================================================================
         progress_records = await self.progress_repo.get_user_progress(
-            user_id, skip=skip, limit=page_size
+            user_id, skip=0, limit=1000  # Get all, we'll paginate combined list
         )
-
-        deck_summaries: list[DeckProgressSummary] = []
 
         for progress in progress_records:
             deck = progress.deck
@@ -564,7 +562,7 @@ class ProgressService:
             if total_cards > 0:
                 completion_pct = min((progress.cards_studied / total_cards) * 100, 100.0)
 
-            deck_summaries.append(
+            all_deck_summaries.append(
                 DeckProgressSummary(
                     deck_id=deck.id,
                     deck_name=deck.name,
@@ -578,16 +576,92 @@ class ProgressService:
                     last_studied_at=progress.last_studied_at,
                     average_easiness_factor=round(avg_ef, 2) if avg_ef else None,
                     estimated_review_time_minutes=self._estimate_review_time(cards_due),
+                    deck_type="vocabulary",
                 )
             )
 
+        # =====================================================================
+        # 2. Get culture deck progress
+        # =====================================================================
+        culture_decks = await self.culture_deck_repo.list_active(skip=0, limit=1000)
+
+        for culture_deck in culture_decks:
+            # Check if user has started this deck
+            has_started = await self.culture_stats_repo.has_user_started_deck(
+                user_id, culture_deck.id
+            )
+            if not has_started:
+                continue  # Only include decks user has practiced
+
+            # Get progress stats for this culture deck
+            deck_progress = await self.culture_stats_repo.get_deck_progress(
+                user_id, culture_deck.id
+            )
+
+            # Get last practiced timestamp
+            last_practiced = await self.culture_stats_repo.get_last_practiced_at(
+                user_id, culture_deck.id
+            )
+
+            # Get due questions for this deck
+            cards_due = await self.culture_stats_repo.count_due_questions(
+                user_id, deck_id=culture_deck.id
+            )
+
+            # Map culture deck progress to DeckProgressSummary
+            total_cards = deck_progress["questions_total"]
+            cards_mastered = deck_progress["questions_mastered"]
+            cards_studied = deck_progress["questions_learning"] + cards_mastered
+
+            # Calculate percentages
+            mastery_pct = 0.0
+            if cards_studied > 0:
+                mastery_pct = min((cards_mastered / cards_studied) * 100, 100.0)
+
+            completion_pct = 0.0
+            if total_cards > 0:
+                completion_pct = min((cards_studied / total_cards) * 100, 100.0)
+
+            all_deck_summaries.append(
+                DeckProgressSummary(
+                    deck_id=culture_deck.id,
+                    deck_name=culture_deck.name,
+                    deck_level=culture_deck.category,  # Use category as level
+                    total_cards=total_cards,
+                    cards_studied=cards_studied,
+                    cards_mastered=cards_mastered,
+                    cards_due=cards_due,
+                    mastery_percentage=round(mastery_pct, 1),
+                    completion_percentage=round(completion_pct, 1),
+                    last_studied_at=last_practiced,
+                    average_easiness_factor=None,  # Not tracked for culture decks
+                    estimated_review_time_minutes=self._estimate_review_time(cards_due),
+                    deck_type="culture",
+                )
+            )
+
+        # =====================================================================
+        # 3. Sort combined list by last_studied_at descending
+        # =====================================================================
+        all_deck_summaries.sort(
+            key=lambda x: x.last_studied_at or datetime.min,
+            reverse=True,
+        )
+
+        # =====================================================================
+        # 4. Apply pagination to combined list
+        # =====================================================================
+        total = len(all_deck_summaries)
+        skip = (page - 1) * page_size
+        paginated_decks = all_deck_summaries[skip : skip + page_size]
+
         logger.debug(
-            "Deck progress list built",
+            "Deck progress list built (vocab + culture)",
             extra={
                 "user_id": str(user_id),
                 "page": page,
                 "total": total,
-                "returned": len(deck_summaries),
+                "returned": len(paginated_decks),
             },
         )
 
@@ -595,7 +669,7 @@ class ProgressService:
             total=total,
             page=page,
             page_size=page_size,
-            decks=deck_summaries,
+            decks=paginated_decks,
         )
 
     # =========================================================================

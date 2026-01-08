@@ -82,6 +82,7 @@ export interface DeckPerformanceStats {
   deckId: string; // Which deck
   deckName: string; // Display name (e.g., "A1 Basics")
   deckColor: string; // Color for chart bars (hex code)
+  deckType: 'vocabulary' | 'culture'; // Type of deck
 
   // Card counts
   cardsInDeck: number; // Total cards (new + learning + review + mastered)
@@ -257,6 +258,7 @@ export interface AnalyticsDashboardData {
     totalTimeStudied: number; // Seconds in date range
     averageAccuracy: number; // Across all reviews in range
     cardsNewlyMastered: number; // Graduated in date range
+    cultureQuestionsMastered: number; // Culture questions mastered
   };
 
   // Streak info (for prominent display)

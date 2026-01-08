@@ -35,7 +35,7 @@ describe('analyticsStore', () => {
       cards_due: 10,
       daily_goal: 30,
       goal_progress_percentage: 66,
-      study_time_seconds: 3600,
+      study_time_seconds: 900, // 15 min today (different from period total)
     },
     streak: {
       current_streak: 7,
@@ -73,7 +73,7 @@ describe('analyticsStore', () => {
     ],
     summary: {
       total_reviews: 120,
-      total_study_time_seconds: 3600,
+      total_study_time_seconds: 7200, // 2 hours period total (different from today's 900)
       cards_mastered: 5,
       average_daily_reviews: 17,
       best_day: 'Monday',
@@ -248,6 +248,20 @@ describe('analyticsStore', () => {
       await loadPromise;
 
       expect(result.current.loading).toBe(false);
+    });
+  });
+
+  describe('totalTimeStudied calculation', () => {
+    it('should use trends total_study_time_seconds for totalTimeStudied, not dashboard today', async () => {
+      setupMocks();
+      const { result } = renderHook(() => useAnalyticsStore());
+
+      await act(async () => {
+        await result.current.loadAnalytics('test-user-123');
+      });
+
+      // Should be 7200 (from trends.summary.total_study_time_seconds), not 900 (from today.study_time_seconds)
+      expect(result.current.dashboardData?.summary.totalTimeStudied).toBe(7200);
     });
   });
 

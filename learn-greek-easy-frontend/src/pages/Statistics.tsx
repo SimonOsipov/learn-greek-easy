@@ -22,8 +22,8 @@ import { useXPStore, selectXPStats } from '@/stores/xpStore';
 const StatisticsLoadingSkeleton: React.FC = () => (
   <div className="space-y-6">
     {/* Stats Grid Skeleton */}
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {[1, 2, 3].map((i) => (
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {[1, 2, 3, 4].map((i) => (
         <Card key={i}>
           <CardHeader className="pb-3">
             <Skeleton className="h-4 w-24" />
@@ -150,6 +150,7 @@ const Statistics: React.FC = () => {
           streak={currentStreak}
           wordsLearned={analyticsData?.summary?.totalCardsReviewed ?? 0}
           totalXP={xpStats?.total_xp ?? 0}
+          cultureQuestionsMastered={analyticsData?.summary?.cultureQuestionsMastered ?? 0}
           joinedDate={stats.joinedDate}
         />
       </section>

@@ -166,6 +166,7 @@ const transformToAnalyticsDashboardData = (
     deckId: deck.deck_id,
     deckName: deck.deck_name,
     deckColor: ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'][index % 6],
+    deckType: deck.deck_type || 'vocabulary',
     cardsInDeck: deck.total_cards,
     cardsNew: deck.total_cards - deck.cards_studied,
     cardsLearning: Math.round(deck.cards_studied * 0.3), // Estimate
@@ -250,10 +251,11 @@ const transformToAnalyticsDashboardData = (
     fetchedAt: now,
     summary: {
       totalCardsReviewed: dashboard.overview.total_cards_studied,
-      totalTimeStudied: dashboard.today.study_time_seconds,
+      totalTimeStudied: trends.summary.total_study_time_seconds,
       averageAccuracy:
         dashboard.overview.accuracy_percentage ?? dashboard.overview.overall_mastery_percentage,
       cardsNewlyMastered: dashboard.overview.total_cards_mastered,
+      cultureQuestionsMastered: dashboard.overview.culture_questions_mastered ?? 0,
     },
     streak,
     progressData,

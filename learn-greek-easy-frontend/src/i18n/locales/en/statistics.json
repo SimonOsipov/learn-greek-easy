@@ -20,7 +20,9 @@
       "great": "Great job! One week strong!",
       "nice": "Nice start! Keep going!",
       "start": "Start your learning streak today!"
-    }
+    },
+    "cultureQuestionsMastered": "Culture Questions Mastered",
+    "cultureProgress": "Greek culture knowledge"
   },
   "level": {
     "title": "Level {{level}}",
