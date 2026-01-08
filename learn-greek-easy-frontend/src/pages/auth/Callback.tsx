@@ -16,8 +16,8 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import log from '@/lib/logger';
-import type { User } from '@/types/auth';
 import { useAuthStore } from '@/stores/authStore';
+import type { User } from '@/types/auth';
 
 /**
  * Auth0 OAuth Callback Component
@@ -40,7 +40,7 @@ export const Callback: React.FC = () => {
         const params = new URLSearchParams(hash);
 
         const accessToken = params.get('access_token');
-        const idToken = params.get('id_token');
+        const _idToken = params.get('id_token');
         const errorParam = params.get('error');
         const errorDescription = params.get('error_description');
         const state = params.get('state');
@@ -122,7 +122,6 @@ export const Callback: React.FC = () => {
         }
 
         // Update auth store with tokens and user
-        const authStore = useAuthStore.getState();
         useAuthStore.setState({
           user,
           token: data.access_token,
