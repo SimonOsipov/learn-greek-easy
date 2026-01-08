@@ -6,76 +6,63 @@ Use labels on Pull Requests to control which CI/CD tests run.
 
 | Label | Effect |
 |-------|--------|
-| `run-full-tests` | Force full test suite + deployment on draft PRs |
-| `visual-test` | Force full visual regression suite (all pages, all viewports) |
-| `skip-visual` | Skip post-deploy visual tests (Playwright visual + Chromatic) |
-| `skip-seed` | Skip database seeding in dev environment |
-| `perf-test` | Run k6 performance tests against preview deployment |
-| (no label) | Default - see workflow behavior below |
+| `skip-visual` | Skip visual tests (Playwright + Chromatic) |
+| `skip-k6` | Skip k6 performance tests |
+
+## Default Behavior
+
+| PR State | Tests Run |
+|----------|-----------|
+| Draft PR | Quick checks only (lint, typecheck, format) |
+| Ready PR | Full suite: CI tests, deploy, health, a11y, Lighthouse, visual, k6 |
 
 ## CI Workflow Behavior
 
-The CI is split into **Quick Checks** (every commit) and **Full Tests** (on-demand):
-
-| PR State | Quick Checks | Full Tests | Deployment |
-|----------|--------------|------------|------------|
-| Draft PR | Every commit | Skipped | Skipped |
-| Draft + `run-full-tests` label | Every commit | Runs | Runs |
-| Ready for review | Every commit | Runs | Runs |
-
 ### Quick Checks (~2-3 min)
-
 - Frontend lint/typecheck
 - Backend lint/typecheck (black, isort, flake8, mypy)
 - Alembic migration check
 
 ### Full Tests (~15-25 min)
-
 - Quick checks
 - Unit tests
 - E2E tests (3 browsers)
 - Backend tests
 - API tests
 - Deployment
-- Health/A11y/Lighthouse/Visual tests
+- Health/A11y/Lighthouse tests
+- Visual regression (Playwright + Chromatic)
+- K6 performance tests
 
 ## When to Use Each Label
 
-| Scenario | Recommended Label |
-|----------|-------------------|
-| Working on draft PR, need full tests | `run-full-tests` |
-| Major UI changes, new pages | `visual-test` |
-| Design system updates | `visual-test` |
-| Backend-only changes | `skip-visual` |
+| Scenario | Label |
+|----------|-------|
+| Backend-only changes (no UI) | `skip-visual` |
 | Config/documentation changes | `skip-visual` |
-| Backend-only changes (no test data needed) | `skip-seed` |
-| Infrastructure/CI changes | `skip-seed` |
-| Performance optimization, load testing | `perf-test` |
-| API performance validation | `perf-test` |
-| Most feature PRs | (no label) - smart detection |
+| Quick iteration, skip load tests | `skip-k6` |
+| Infrastructure/CI changes | `skip-visual`, `skip-k6` |
+| Most feature PRs | (no label) - run everything |
 
 ## Adding Labels via CLI
 
 ```bash
 # When creating PR
-gh pr create --title "..." --body "..." --label "visual-test"
+gh pr create --title "..." --body "..." --label "skip-visual"
 
 # Add to existing PR
 gh pr edit 123 --add-label "skip-visual"
 
-# Force full tests on draft PR
-gh pr edit 123 --add-label "run-full-tests"
-
 # Remove label
-gh pr edit 123 --remove-label "visual-test"
+gh pr edit 123 --remove-label "skip-visual"
 
-# Run performance tests
-gh pr edit 123 --add-label "perf-test"
+# Skip multiple test types
+gh pr edit 123 --add-label "skip-visual" --add-label "skip-k6"
 ```
 
 ## Performance Testing
 
-The `perf-test` label triggers k6 browser-based performance tests against the preview deployment.
+K6 browser-based performance tests run by default on ready PRs.
 
 **Tests run:**
 - Auth scenario: Login flow timing (6 metrics)
