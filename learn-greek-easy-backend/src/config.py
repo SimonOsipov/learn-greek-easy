@@ -264,9 +264,9 @@ class Settings(BaseSettings):
     # Sentry
     sentry_dsn: Optional[str] = Field(default=None, description="Sentry DSN")
     sentry_environment: str = Field(default="development", description="Sentry environment")
-    sentry_traces_sample_rate: float = Field(default=0.1, description="Sentry trace sample rate")
+    sentry_traces_sample_rate: float = Field(default=0.2, description="Sentry trace sample rate")
     sentry_profiles_sample_rate: float = Field(
-        default=0.1,
+        default=0.2,
         description="Sentry profiling sample rate (requires tracing enabled)",
     )
     sentry_send_default_pii: bool = Field(
