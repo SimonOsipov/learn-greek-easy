@@ -368,6 +368,29 @@ class ProgressService:
 
         return round((total_correct / total_answers) * 100, 1)
 
+    async def _get_combined_status_counts(self, user_id: UUID) -> dict[str, int]:
+        """Get combined card status counts from vocabulary + culture.
+
+        Aggregates status counts from both vocabulary flashcards and culture
+        questions for use in the Stage Distribution chart.
+
+        Args:
+            user_id: User UUID
+
+        Returns:
+            Dict with combined counts: {new, learning, review, mastered, due}
+        """
+        vocab_counts = await self.stats_repo.count_by_status(user_id)
+        culture_counts = await self.culture_stats_repo.count_all_by_status(user_id)
+
+        return {
+            "new": vocab_counts.get("new", 0) + culture_counts.get("new", 0),
+            "learning": vocab_counts.get("learning", 0) + culture_counts.get("learning", 0),
+            "review": vocab_counts.get("review", 0) + culture_counts.get("review", 0),
+            "mastered": vocab_counts.get("mastered", 0) + culture_counts.get("mastered", 0),
+            "due": vocab_counts.get("due", 0) + culture_counts.get("due", 0),
+        }
+
     # =========================================================================
     # Dashboard Stats
     # =========================================================================
@@ -401,7 +424,6 @@ class ProgressService:
 
         # Get culture stats for aggregation
         culture_mastered = await self.culture_stats_repo.count_mastered_questions(user_id)
-        culture_due = await self.culture_stats_repo.count_due_questions(user_id)
 
         # Combine vocab + culture totals
         total_mastered = vocab_mastered + culture_mastered
@@ -425,9 +447,10 @@ class ProgressService:
         # Get today's stats - AGGREGATED from vocabulary + culture
         reviews_today = await self._get_aggregated_reviews_today(user_id)
         study_time_today = await self._get_aggregated_study_time_today(user_id)
-        status_counts = await self.stats_repo.count_by_status(user_id)
-        vocab_due = status_counts.get("due", 0)
-        cards_due = vocab_due + culture_due
+
+        # Get combined status counts (vocab + culture) for Stage Distribution chart
+        status_counts = await self._get_combined_status_counts(user_id)
+        cards_due = status_counts.get("due", 0)
 
         goal_progress = min((reviews_today / self.DEFAULT_DAILY_GOAL) * 100, 100.0)
 

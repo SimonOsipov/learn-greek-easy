@@ -53,6 +53,64 @@ class CultureQuestionStatsRepository(BaseRepository[CultureQuestionStats]):
         result = await self.db.execute(query)
         return result.scalar_one_or_none()
 
+    async def count_all_by_status(self, user_id: UUID) -> dict[str, int]:
+        """Count ALL culture questions by status for a user (across all decks).
+
+        Calculates status counts for all culture questions the user has access to,
+        aggregating across all culture decks.
+
+        Args:
+            user_id: User UUID
+
+        Returns:
+            Dict with counts: {new, learning, review, mastered, due}
+
+        Use Case:
+            Dashboard Stage Distribution chart - combined with vocabulary cards
+        """
+        # Get total culture questions across all decks
+        total_questions_query = select(func.count(CultureQuestion.id))
+        total_result = await self.db.execute(total_questions_query)
+        total_questions = total_result.scalar_one()
+
+        # Get counts by status for this user (across all decks)
+        status_query = (
+            select(
+                CultureQuestionStats.status,
+                func.count(CultureQuestionStats.id).label("count"),
+            )
+            .where(CultureQuestionStats.user_id == user_id)
+            .group_by(CultureQuestionStats.status)
+        )
+        status_result = await self.db.execute(status_query)
+        status_counts: dict[str, int] = {}
+        for row in status_result:
+            status_counts[row.status.value] = row.count  # type: ignore[assignment]
+
+        # Calculate counts
+        learning_count: int = status_counts.get(CardStatus.LEARNING.value, 0)
+        review_count: int = status_counts.get(CardStatus.REVIEW.value, 0)
+        mastered_count: int = status_counts.get(CardStatus.MASTERED.value, 0)
+        in_progress_count: int = learning_count + review_count + mastered_count
+        new_count: int = total_questions - in_progress_count
+
+        # Count due questions (today or overdue)
+        today = date.today()
+        due_query = select(func.count(CultureQuestionStats.id)).where(
+            CultureQuestionStats.user_id == user_id,
+            CultureQuestionStats.next_review_date <= today,
+        )
+        due_result = await self.db.execute(due_query)
+        due_count: int = due_result.scalar_one() or 0
+
+        return {
+            "new": new_count,
+            "learning": learning_count,
+            "review": review_count,
+            "mastered": mastered_count,
+            "due": due_count,
+        }
+
     async def count_by_status_for_deck(
         self,
         user_id: UUID,
