@@ -289,6 +289,53 @@ class AccountLinkingConflictException(BaseAPIException):
 
 
 # ============================================================================
+# Auth0 Exceptions
+# ============================================================================
+
+
+class Auth0DisabledException(BaseAPIException):
+    """Auth0 authentication is not enabled or configured."""
+
+    def __init__(
+        self,
+        detail: str = "Auth0 authentication is not enabled",
+    ) -> None:
+        super().__init__(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=detail,
+            error_code="AUTH0_DISABLED",
+        )
+
+
+class Auth0TokenExpiredException(BaseAPIException):
+    """Auth0 token has expired."""
+
+    def __init__(
+        self,
+        detail: str = "Auth0 token has expired",
+    ) -> None:
+        super().__init__(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=detail,
+            error_code="AUTH0_TOKEN_EXPIRED",
+        )
+
+
+class Auth0TokenInvalidException(BaseAPIException):
+    """Auth0 token is invalid or could not be verified."""
+
+    def __init__(
+        self,
+        detail: str = "Invalid Auth0 token",
+    ) -> None:
+        super().__init__(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=detail,
+            error_code="AUTH0_TOKEN_INVALID",
+        )
+
+
+# ============================================================================
 # Seed API Exceptions
 # ============================================================================
 

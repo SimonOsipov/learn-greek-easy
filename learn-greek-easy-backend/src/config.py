@@ -138,6 +138,24 @@ class Settings(BaseSettings):
         description="Google OAuth redirect URI",
     )
 
+    # Auth0
+    auth0_domain: Optional[str] = Field(
+        default=None,
+        description="Auth0 domain (e.g., your-tenant.us.auth0.com)",
+    )
+    auth0_audience: Optional[str] = Field(
+        default=None,
+        description="Auth0 API audience/identifier",
+    )
+    auth0_algorithms: str = Field(
+        default="RS256",
+        description="Auth0 JWT signing algorithm",
+    )
+    auth0_jwks_cache_ttl: int = Field(
+        default=3600,
+        description="JWKS cache TTL in seconds",
+    )
+
     # =========================================================================
     # Email (Future)
     # =========================================================================
@@ -498,6 +516,35 @@ class Settings(BaseSettings):
             and self.google_client_id is not None
             and len(self.google_client_id) > 0
         )
+
+    @property
+    def auth0_configured(self) -> bool:
+        """Check if Auth0 is properly configured.
+
+        Returns True only if both the Auth0 domain and audience are set.
+        This is used to determine whether to accept Auth0 login requests.
+        """
+        return bool(self.auth0_domain and self.auth0_audience)
+
+    @property
+    def auth0_issuer(self) -> Optional[str]:
+        """Get Auth0 issuer URL.
+
+        Returns the issuer URL for token validation, or None if Auth0 is not configured.
+        """
+        if self.auth0_domain:
+            return f"https://{self.auth0_domain}/"
+        return None
+
+    @property
+    def auth0_jwks_uri(self) -> Optional[str]:
+        """Get Auth0 JWKS URI.
+
+        Returns the JWKS URI for fetching public keys, or None if Auth0 is not configured.
+        """
+        if self.auth0_domain:
+            return f"https://{self.auth0_domain}/.well-known/jwks.json"
+        return None
 
     @property
     def database_url_sync(self) -> str:

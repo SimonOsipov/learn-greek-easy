@@ -234,3 +234,22 @@ class GoogleUserInfo(BaseModel):
     email_verified: bool = Field(..., description="Whether Google has verified the email")
     full_name: Optional[str] = Field(None, description="User's full name from Google")
     picture_url: Optional[str] = Field(None, description="Profile picture URL")
+
+
+# ============================================================================
+# Auth0 OAuth Schemas
+# ============================================================================
+
+
+class Auth0AuthRequest(BaseModel):
+    """Schema for Auth0 authentication request.
+
+    The frontend obtains this token from Auth0 SDK/Universal Login
+    and sends it to the backend for verification.
+    """
+
+    access_token: str = Field(
+        ...,
+        min_length=10,
+        description="Auth0 access token (JWT)",
+    )

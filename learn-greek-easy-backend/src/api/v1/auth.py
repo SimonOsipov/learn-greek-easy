@@ -14,6 +14,9 @@ from src.config import settings
 from src.core.dependencies import get_current_user
 from src.core.exceptions import (
     AccountLinkingConflictException,
+    Auth0DisabledException,
+    Auth0TokenExpiredException,
+    Auth0TokenInvalidException,
     EmailAlreadyExistsException,
     GoogleOAuthDisabledException,
     GoogleTokenInvalidException,
@@ -26,6 +29,7 @@ from src.db.dependencies import get_db
 from src.db.models import User
 from src.repositories.user import UserSettingsRepository
 from src.schemas.user import (
+    Auth0AuthRequest,
     GoogleAuthRequest,
     LogoutAllResponse,
     LogoutResponse,
@@ -290,6 +294,141 @@ async def google_login(
         )
 
     except GoogleTokenInvalidException as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=e.detail,
+        )
+
+    except AccountLinkingConflictException as e:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=e.detail,
+        )
+
+    except InvalidCredentialsException as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=e.detail,
+        )
+
+
+@router.post(
+    "/auth0",
+    response_model=TokenResponse,
+    summary="Login with Auth0",
+    description="Authenticate using Auth0 access token",
+    responses={
+        200: {
+            "description": "Successfully authenticated with Auth0",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "access_token": "eyJhbGciOiJIUzI1NiIs...",
+                        "refresh_token": "eyJhbGciOiJIUzI1NiIs...",
+                        "token_type": "bearer",
+                        "expires_in": 1800,
+                    }
+                }
+            },
+        },
+        401: {
+            "description": "Invalid Auth0 token",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "invalid": {
+                            "summary": "Invalid token",
+                            "value": {"detail": "Invalid Auth0 token"},
+                        },
+                        "expired": {
+                            "summary": "Token expired",
+                            "value": {"detail": "Auth0 token has expired"},
+                        },
+                    }
+                }
+            },
+        },
+        409: {
+            "description": "Account linking conflict",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "This email is already registered with a different Auth0 account."
+                    }
+                }
+            },
+        },
+        503: {
+            "description": "Auth0 not enabled",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Auth0 authentication is not enabled"}
+                }
+            },
+        },
+    },
+)
+async def auth0_login(
+    auth_data: Auth0AuthRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+) -> TokenResponse:
+    """Authenticate with Auth0.
+
+    This endpoint accepts an Auth0 access token obtained from the Auth0 SDK
+    or Universal Login on the frontend. The token is verified against Auth0's
+    JWKS, and if valid, the user is authenticated.
+
+    **New Users**: A new account is created automatically with the email
+    and name from Auth0 (if available). The email is auto-verified if Auth0
+    indicates it is verified.
+
+    **Existing Users (by email)**: If an account exists with the same email
+    but no Auth0 account linked, the Auth0 account is automatically linked.
+
+    **Existing Auth0 Users**: If the user has previously logged in with Auth0,
+    they are authenticated to their existing account.
+
+    Args:
+        auth_data: Auth0 access token from frontend
+        request: FastAPI request object for client IP
+        db: Database session (injected)
+
+    Returns:
+        TokenResponse containing access and refresh tokens
+
+    Raises:
+        HTTPException(401): If Auth0 token is invalid or expired
+        HTTPException(409): If email is registered with a different Auth0 account
+        HTTPException(503): If Auth0 is not enabled
+    """
+    service = AuthService(db)
+
+    # Extract client info for session tracking
+    client_ip = request.client.host if request.client else None
+    user_agent = request.headers.get("user-agent")
+
+    try:
+        user, token_response = await service.authenticate_auth0(
+            access_token=auth_data.access_token,
+            client_ip=client_ip,
+            user_agent=user_agent,
+        )
+        return token_response
+
+    except Auth0DisabledException as e:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=e.detail,
+        )
+
+    except Auth0TokenExpiredException as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=e.detail,
+        )
+
+    except Auth0TokenInvalidException as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=e.detail,
