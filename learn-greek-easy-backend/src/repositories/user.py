@@ -50,6 +50,22 @@ class UserRepository(BaseRepository[User]):
         result = await self.db.execute(query)
         return result.scalar_one_or_none()
 
+    async def get_by_auth0_id(self, auth0_id: str) -> User | None:
+        """Get user by Auth0 ID.
+
+        Args:
+            auth0_id: Auth0 user identifier (sub claim)
+
+        Returns:
+            User instance or None if not found
+
+        Use Case:
+            Auth0 login/signup
+        """
+        query = select(User).where(User.auth0_id == auth0_id)
+        result = await self.db.execute(query)
+        return result.scalar_one_or_none()
+
     async def get_with_settings(self, user_id: UUID) -> User | None:
         """Get user with settings eagerly loaded.
 
