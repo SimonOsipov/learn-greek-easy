@@ -156,6 +156,16 @@ class Settings(BaseSettings):
         description="JWKS cache TTL in seconds",
     )
 
+    # Auth0 Machine-to-Machine (for Management API - migration script)
+    auth0_m2m_client_id: Optional[str] = Field(
+        default=None,
+        description="Auth0 M2M application client ID for Management API",
+    )
+    auth0_m2m_client_secret: Optional[str] = Field(
+        default=None,
+        description="Auth0 M2M application client secret for Management API",
+    )
+
     # =========================================================================
     # Email (Future)
     # =========================================================================
@@ -545,6 +555,19 @@ class Settings(BaseSettings):
         if self.auth0_domain:
             return f"https://{self.auth0_domain}/.well-known/jwks.json"
         return None
+
+    @property
+    def auth0_m2m_configured(self) -> bool:
+        """Check if Auth0 M2M (Machine-to-Machine) is properly configured.
+
+        Returns True only if domain, M2M client ID, and M2M client secret are all set.
+        This is used to determine whether the migration script can access the Management API.
+        """
+        return bool(
+            self.auth0_domain
+            and self.auth0_m2m_client_id
+            and self.auth0_m2m_client_secret
+        )
 
     @property
     def database_url_sync(self) -> str:
