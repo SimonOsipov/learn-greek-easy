@@ -10,8 +10,11 @@ Session Storage Strategy:
 """
 
 from datetime import datetime
-from typing import List, Optional, Tuple
+from typing import TYPE_CHECKING, List, Optional, Tuple
 from uuid import UUID
+
+if TYPE_CHECKING:
+    from src.core.auth0 import Auth0UserInfo
 
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -21,8 +24,6 @@ from sqlalchemy.orm import selectinload
 from src.core.exceptions import (
     AccountLinkingConflictException,
     Auth0DisabledException,
-    Auth0TokenExpiredException,
-    Auth0TokenInvalidException,
     EmailAlreadyExistsException,
     GoogleOAuthDisabledException,
     InvalidCredentialsException,
@@ -863,7 +864,7 @@ class AuthService:
             InvalidCredentialsException: User account is deactivated
         """
         from src.config import settings
-        from src.core.auth0 import Auth0UserInfo, verify_auth0_token
+        from src.core.auth0 import verify_auth0_token
 
         # Check if Auth0 is configured
         if not settings.auth0_configured:
@@ -1005,8 +1006,6 @@ class AuthService:
         Raises:
             AccountLinkingConflictException: If email exists with different Auth0 account
         """
-        from src.core.auth0 import Auth0UserInfo
-
         # Check by auth0_id first
         user = await self._get_user_by_auth0_id(auth0_user.auth0_id)
 
