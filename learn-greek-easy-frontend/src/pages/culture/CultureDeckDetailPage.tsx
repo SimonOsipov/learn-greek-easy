@@ -155,7 +155,6 @@ export function CultureDeckDetailPage() {
                 <CultureBadge category={cultureCategory} showLabel={true} />
               </div>
             </div>
-
           </CardHeader>
 
           <CardContent>
