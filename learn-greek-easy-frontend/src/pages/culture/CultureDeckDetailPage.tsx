@@ -156,12 +156,6 @@ export function CultureDeckDetailPage() {
               </div>
             </div>
 
-            {/* Category Info */}
-            <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-gray-600">
-              <span className="capitalize">{deck.category}</span>
-              <span>-</span>
-              <span>{t('culture:deck.culture')}</span>
-            </div>
           </CardHeader>
 
           <CardContent>
