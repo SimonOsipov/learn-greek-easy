@@ -17,9 +17,8 @@ concurrency:
 
 env:
   PR_NUMBER: ${{ github.event.pull_request.number }}
-  # Dev environment URLs (public, not secrets)
+  # Dev environment URL (backend is private, accessed via frontend proxy)
   DEV_FRONTEND_URL: frontend-dev-8db9.up.railway.app
-  DEV_BACKEND_URL: backend-dev-bc44.up.railway.app
 
 permissions:
   contents: read
@@ -174,7 +173,6 @@ jobs:
     container: ghcr.io/railwayapp/cli:latest
     outputs:
       frontend_url: ${{ steps.urls.outputs.frontend_url }}
-      backend_url: ${{ steps.urls.outputs.backend_url }}
       environment_id: ${{ steps.urls.outputs.environment_id }}
 
     steps:
@@ -318,18 +316,17 @@ jobs:
       - name: Get deployment URLs
         id: urls
         run: |
-          # Dev environment URLs from workflow env vars
+          # Dev environment URL from workflow env vars
+          # Backend is private - accessed via frontend proxy
           FRONTEND_URL="https://${{ env.DEV_FRONTEND_URL }}"
-          BACKEND_URL="https://${{ env.DEV_BACKEND_URL }}"
           DEPLOY_ENV="${{ steps.env.outputs.env_name }}"
 
           echo "=== Dev Environment URLs ==="
           echo "Frontend URL: $FRONTEND_URL"
-          echo "Backend URL: $BACKEND_URL"
+          echo "Backend API: $FRONTEND_URL/api/v1 (via frontend proxy)"
           echo "Environment: $DEPLOY_ENV"
 
           echo "frontend_url=$FRONTEND_URL" >> $GITHUB_OUTPUT
-          echo "backend_url=$BACKEND_URL" >> $GITHUB_OUTPUT
           echo "environment_id=$DEPLOY_ENV" >> $GITHUB_OUTPUT
 
   # =============================================================================
@@ -351,18 +348,19 @@ jobs:
 
       - name: Warm up Backend
         run: |
-          BACKEND_URL="https://${{ env.DEV_BACKEND_URL }}"
-          echo "=== Warming up Backend at $BACKEND_URL ==="
+          FRONTEND_URL="${{ needs.deploy.outputs.frontend_url }}"
+          echo "=== Warming up Backend via frontend proxy at $FRONTEND_URL ==="
           chmod +x scripts/backend-warmup.sh
-          ./scripts/backend-warmup.sh "$BACKEND_URL" 5 2
+          # Backend is private - warmup via frontend proxy using /api/v1/health endpoints
+          ./scripts/backend-warmup.sh "$FRONTEND_URL" 5 2
 
       - name: Run Health Checks
         id: health
         run: |
           chmod +x scripts/preview-health-check.sh
+          # Backend is private - health checks via frontend proxy
           if ./scripts/preview-health-check.sh \
             "${{ needs.deploy.outputs.frontend_url }}" \
-            "${{ needs.deploy.outputs.backend_url }}" \
             30 \
             10; then
             echo "status=success" >> $GITHUB_OUTPUT
@@ -375,7 +373,8 @@ jobs:
         if: steps.health.outputs.status == 'success'
         run: |
           chmod +x scripts/preview-api-smoke.sh
-          ./scripts/preview-api-smoke.sh "${{ needs.deploy.outputs.backend_url }}" || true
+          # Backend is private - smoke tests via frontend proxy
+          ./scripts/preview-api-smoke.sh "${{ needs.deploy.outputs.frontend_url }}" || true
           # API smoke tests are informational - don't fail the job
 
       - name: Upload Health Check Results
@@ -477,10 +476,11 @@ jobs:
         id: seed
         run: |
           echo "=== Seeding Dev Database ==="
-          BACKEND_URL="${{ needs.deploy.outputs.backend_url }}"
+          # Backend is private - seed via frontend proxy
+          FRONTEND_URL="${{ needs.deploy.outputs.frontend_url }}"
 
           # Check if seeding is enabled
-          STATUS_RESPONSE=$(curl -s "$BACKEND_URL/api/v1/test/seed/status" || echo '{"enabled": false}')
+          STATUS_RESPONSE=$(curl -s "$FRONTEND_URL/api/v1/test/seed/status" || echo '{"enabled": false}')
           echo "Seed status: $STATUS_RESPONSE"
 
           ENABLED=$(echo $STATUS_RESPONSE | jq -r '.enabled')
@@ -492,7 +492,7 @@ jobs:
           fi
 
           # Call seed endpoint
-          RESPONSE=$(curl -s -X POST "$BACKEND_URL/api/v1/test/seed/all")
+          RESPONSE=$(curl -s -X POST "$FRONTEND_URL/api/v1/test/seed/all")
           echo "Seed response: $RESPONSE"
 
           # Verify success
@@ -543,7 +543,8 @@ jobs:
         continue-on-error: true
         env:
           K6_ENV: preview
-          K6_API_BASE_URL: ${{ needs.deploy.outputs.backend_url }}
+          # Backend is private - K6 accesses API via frontend proxy
+          K6_API_BASE_URL: ${{ needs.deploy.outputs.frontend_url }}
           K6_FRONTEND_BASE_URL: ${{ needs.deploy.outputs.frontend_url }}
           K6_SCENARIO: smoke
           K6_BROWSER_HEADLESS: 'true'
@@ -551,7 +552,7 @@ jobs:
         run: |
           echo "Running K6 Auth Scenario"
           echo "Frontend: $K6_FRONTEND_BASE_URL"
-          echo "Backend: $K6_API_BASE_URL"
+          echo "Backend API: $K6_API_BASE_URL (via frontend proxy)"
 
           k6 run k6/scenarios/auth.js 2>&1 | tee k6/reports/auth-output.txt
           echo "exit_code=$?" >> $GITHUB_OUTPUT
@@ -561,7 +562,8 @@ jobs:
         continue-on-error: true
         env:
           K6_ENV: preview
-          K6_API_BASE_URL: ${{ needs.deploy.outputs.backend_url }}
+          # Backend is private - K6 accesses API via frontend proxy
+          K6_API_BASE_URL: ${{ needs.deploy.outputs.frontend_url }}
           K6_FRONTEND_BASE_URL: ${{ needs.deploy.outputs.frontend_url }}
           K6_SCENARIO: smoke
           K6_BROWSER_HEADLESS: 'true'
@@ -1224,7 +1226,8 @@ jobs:
             const ciStatus = '${{ needs.ci-tests.result }}';
             const deployStatus = '${{ needs.deploy.result }}';
             const frontendUrl = '${{ needs.deploy.outputs.frontend_url }}';
-            const backendUrl = '${{ needs.deploy.outputs.backend_url }}';
+            // Backend is private - accessed via frontend proxy
+            const backendApiUrl = frontendUrl + '/api/v1';
             const envId = '${{ needs.deploy.outputs.environment_id }}';
 
             // Health check status
@@ -1328,8 +1331,8 @@ jobs:
               body += `| Service | URL |\n`;
               body += `|---------|-----|\n`;
               body += `| Frontend | ${frontendUrl} |\n`;
-              body += `| Backend | ${backendUrl} |\n`;
-              body += `| API Docs | ${backendUrl}/docs |\n\n`;
+              body += `| Backend API | ${backendApiUrl} (via frontend proxy) |\n`;
+              body += `| API Docs | ${frontendUrl}/docs |\n\n`;
 
               // Test Results section
               body += `### Test Results\n\n`;
