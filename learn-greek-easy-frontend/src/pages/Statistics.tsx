@@ -13,7 +13,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAnalytics } from '@/hooks/useAnalytics';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuthStore } from '@/stores/authStore';
 import { useXPStore, selectXPStats } from '@/stores/xpStore';
 
 /**
@@ -81,7 +81,8 @@ const StatisticsLoadingSkeleton: React.FC = () => (
  */
 const Statistics: React.FC = () => {
   const { t } = useTranslation('statistics');
-  const { user, isLoading } = useAuth();
+  const user = useAuthStore((state) => state.user);
+  const isLoading = useAuthStore((state) => state.isLoading);
   const { data: analyticsData } = useAnalytics(true); // Auto-load analytics on mount
   const xpStats = useXPStore(selectXPStats);
   const loadXPStats = useXPStore((state) => state.loadXPStats);
