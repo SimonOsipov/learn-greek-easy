@@ -125,18 +125,6 @@ class Settings(BaseSettings):
         default=30,
         description="JWT refresh token expiry (days)",
     )
-    bcrypt_rounds: int = Field(default=12, description="Bcrypt hashing rounds")
-
-    # Google OAuth
-    google_client_id: Optional[str] = Field(default=None, description="Google OAuth client ID")
-    google_client_secret: Optional[str] = Field(
-        default=None,
-        description="Google OAuth client secret",
-    )
-    google_redirect_uri: Optional[str] = Field(
-        default=None,
-        description="Google OAuth redirect URI",
-    )
 
     # Auth0
     auth0_domain: Optional[str] = Field(
@@ -317,7 +305,6 @@ class Settings(BaseSettings):
     # =========================================================================
     # Feature Flags
     # =========================================================================
-    feature_google_oauth: bool = Field(default=False, description="Enable Google OAuth")
     feature_email_notifications: bool = Field(
         default=False,
         description="Enable email notifications",
@@ -512,20 +499,6 @@ class Settings(BaseSettings):
     def sentry_enabled(self) -> bool:
         """Check if Sentry is configured and should be enabled."""
         return bool(self.sentry_dsn) and not self.is_testing
-
-    @property
-    def google_oauth_configured(self) -> bool:
-        """Check if Google OAuth is properly configured.
-
-        Returns True only if both the feature flag is enabled AND
-        the Google client ID is set. This is used to determine
-        whether to accept Google OAuth login requests.
-        """
-        return (
-            self.feature_google_oauth
-            and self.google_client_id is not None
-            and len(self.google_client_id) > 0
-        )
 
     @property
     def auth0_configured(self) -> bool:

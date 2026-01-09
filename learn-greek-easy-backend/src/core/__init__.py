@@ -1,17 +1,15 @@
 """Core module containing security utilities, authentication, and algorithms.
 
 This module provides:
-- Password hashing and verification (bcrypt)
 - JWT token generation and validation
 - Authentication dependencies for FastAPI routes
 - SM-2 spaced repetition algorithm
 
+Legacy password hashing functions have been removed.
+All authentication now flows through Auth0.
+
 Example:
     from src.core import (
-        # Password utilities
-        hash_password,
-        verify_password,
-        validate_password_strength,
         # JWT utilities
         create_access_token,
         create_refresh_token,
@@ -40,9 +38,6 @@ from src.core.security import (
     create_access_token,
     create_refresh_token,
     extract_token_from_header,
-    hash_password,
-    validate_password_strength,
-    verify_password,
     verify_token,
 )
 from src.core.sm2 import (
@@ -60,10 +55,6 @@ from src.core.sm2 import (
 )
 
 __all__ = [
-    # Password hashing (from security.py)
-    "hash_password",
-    "verify_password",
-    "validate_password_strength",
     # JWT token management (from security.py)
     "create_access_token",
     "create_refresh_token",

@@ -11,6 +11,9 @@ This module provides comprehensive authentication fixtures:
 
 All fixtures use PostgreSQL and integrate with the db_session fixture.
 
+Note: All test users are created as Auth0-style users (no password hash)
+since password-based authentication has been removed.
+
 Usage:
     async def test_protected_endpoint(client: AsyncClient, auth_headers: dict):
         response = await client.get("/api/v1/protected", headers=auth_headers)
@@ -30,7 +33,7 @@ import pytest
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.security import create_access_token, create_refresh_token, hash_password
+from src.core.security import create_access_token, create_refresh_token
 from src.db.models import RefreshToken, User, UserSettings
 
 # =============================================================================
@@ -62,21 +65,24 @@ class AuthenticatedUser(NamedTuple):
 
 def create_test_user_data(
     email: str | None = None,
-    password: str = "TestPassword123!",
     full_name: str = "Test User",
     is_active: bool = True,
     is_superuser: bool = False,
     email_verified: bool = False,
+    auth0_id: str | None = None,
 ) -> dict[str, Any]:
     """Create test user data dictionary.
 
+    All test users are created as Auth0-style users (no password hash)
+    since password-based authentication has been removed.
+
     Args:
         email: User email (auto-generated if None)
-        password: Plain text password (will be hashed)
         full_name: User's full name
         is_active: Whether user account is active
         is_superuser: Whether user has superuser privileges
         email_verified: Whether email is verified
+        auth0_id: Auth0 user ID (auto-generated if None)
 
     Returns:
         dict: User data ready for User model creation
@@ -84,13 +90,17 @@ def create_test_user_data(
     if email is None:
         email = f"testuser_{uuid4().hex[:8]}@example.com"
 
+    if auth0_id is None:
+        auth0_id = f"auth0|test_{uuid4().hex[:16]}"
+
     return {
         "email": email,
-        "password_hash": hash_password(password),
+        "password_hash": None,  # Auth0 users don't have password
         "full_name": full_name,
         "is_active": is_active,
         "is_superuser": is_superuser,
         "email_verified_at": datetime.utcnow() if email_verified else None,
+        "auth0_id": auth0_id,
     }
 
 

@@ -248,24 +248,20 @@ class TestSeedServiceUsers:
 
     @pytest.mark.asyncio
     async def test_password_is_returned(self, seed_service, mock_db, mock_settings_can_seed):
-        """Verify default password is returned for E2E test login."""
+        """Verify default password is returned for backward compatibility."""
         result = await seed_service.seed_users()
 
         assert "password" in result
         assert result["password"] == SeedService.DEFAULT_PASSWORD
 
-    def test_password_hash_is_cached(self, seed_service, mock_settings_can_seed):
-        """Verify password hash is computed once and cached."""
-        with patch("src.services.seed_service.hash_password") as mock_hash:
-            mock_hash.return_value = "hashed_password"
+    @pytest.mark.asyncio
+    async def test_users_have_auth0_id(self, seed_service, mock_db, mock_settings_can_seed):
+        """Verify all created users have auth0_id set."""
+        result = await seed_service.seed_users()
 
-            # Access password_hash twice
-            hash1 = seed_service.password_hash
-            hash2 = seed_service.password_hash
-
-            # Should only call hash_password once
-            mock_hash.assert_called_once()
-            assert hash1 == hash2
+        for user in result["users"]:
+            assert "auth0_id" in user
+            assert user["auth0_id"].startswith("auth0|")
 
 
 # ============================================================================

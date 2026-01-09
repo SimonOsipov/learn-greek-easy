@@ -10,14 +10,13 @@ All methods check settings.can_seed_database() before executing.
 """
 
 from datetime import date, datetime, timedelta, timezone
-from typing import Any, Optional, TypedDict
+from typing import Any, TypedDict
 from uuid import UUID
 
 from sqlalchemy import select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config import settings
-from src.core.security import hash_password
 from src.db.models import (
     Achievement,
     Card,
@@ -1199,14 +1198,6 @@ class SeedService:
             db: Async SQLAlchemy session for database operations
         """
         self.db = db
-        self._password_hash: Optional[str] = None
-
-    @property
-    def password_hash(self) -> str:
-        """Lazily compute password hash (expensive operation)."""
-        if self._password_hash is None:
-            self._password_hash = hash_password(self.DEFAULT_PASSWORD)
-        return self._password_hash
 
     # =====================
     # Guard Methods
@@ -1259,8 +1250,9 @@ class SeedService:
     async def seed_users(self) -> dict[str, Any]:
         """Create deterministic test users for E2E scenarios.
 
-        Creates users idempotently - if user with email exists,
-        updates their data instead of creating new.
+        Creates Auth0-style users (no password hash) for E2E testing.
+        Auth0 test users should authenticate via Auth0's test mode or
+        have corresponding Auth0 accounts configured.
 
         Test Users Created:
         1. e2e_learner@test.com - Regular learner with progress
@@ -1282,24 +1274,28 @@ class SeedService:
                 "full_name": "E2E Learner",
                 "is_superuser": False,
                 "is_active": True,
+                "auth0_id": "auth0|e2e_learner",
             },
             {
                 "email": "e2e_beginner@test.com",
                 "full_name": "E2E Beginner",
                 "is_superuser": False,
                 "is_active": True,
+                "auth0_id": "auth0|e2e_beginner",
             },
             {
                 "email": "e2e_advanced@test.com",
                 "full_name": "E2E Advanced",
                 "is_superuser": False,
                 "is_active": True,
+                "auth0_id": "auth0|e2e_advanced",
             },
             {
                 "email": "e2e_admin@test.com",
                 "full_name": "E2E Admin",
                 "is_superuser": True,
                 "is_active": True,
+                "auth0_id": "auth0|e2e_admin",
             },
         ]
 
@@ -1310,7 +1306,8 @@ class SeedService:
             user = User(
                 email=user_data["email"],
                 full_name=user_data["full_name"],
-                password_hash=self.password_hash,
+                password_hash=None,  # Auth0 users don't have password
+                auth0_id=user_data["auth0_id"],
                 is_superuser=user_data["is_superuser"],
                 is_active=user_data["is_active"],
                 email_verified_at=now,  # Pre-verified for E2E tests
@@ -1332,6 +1329,7 @@ class SeedService:
                     "email": user.email,
                     "full_name": user.full_name,
                     "is_superuser": user.is_superuser,
+                    "auth0_id": user.auth0_id,
                 }
             )
 
@@ -1340,7 +1338,7 @@ class SeedService:
         return {
             "success": True,
             "users": created_users,
-            "password": self.DEFAULT_PASSWORD,  # For E2E test login
+            "password": self.DEFAULT_PASSWORD,  # Kept for backward compatibility
         }
 
     # =====================
@@ -1817,11 +1815,10 @@ class SeedService:
 
             # Extract English name for return value
             name_translations = deck_data["name"]
-            name_en = (
-                name_translations["en"]
-                if isinstance(name_translations, dict)
-                else str(name_translations)
-            )
+            if isinstance(name_translations, dict):
+                name_en = name_translations.get("en", str(name_translations))
+            else:
+                name_en = str(name_translations)
 
             created_decks.append(
                 {
@@ -2231,7 +2228,8 @@ class SeedService:
         xp_boundary_user = User(
             email="e2e_xp_boundary@test.com",
             full_name="E2E XP Boundary",
-            password_hash=self.password_hash,
+            password_hash=None,  # Auth0 users don't have password
+            auth0_id="auth0|e2e_xp_boundary",
             is_superuser=False,
             is_active=True,
             email_verified_at=now,
@@ -2257,7 +2255,8 @@ class SeedService:
         xp_mid_user = User(
             email="e2e_xp_mid@test.com",
             full_name="E2E XP Mid",
-            password_hash=self.password_hash,
+            password_hash=None,  # Auth0 users don't have password
+            auth0_id="auth0|e2e_xp_mid",
             is_superuser=False,
             is_active=True,
             email_verified_at=now,
@@ -2291,7 +2290,8 @@ class SeedService:
         xp_max_user = User(
             email="e2e_xp_max@test.com",
             full_name="E2E XP Max",
-            password_hash=self.password_hash,
+            password_hash=None,  # Auth0 users don't have password
+            auth0_id="auth0|e2e_xp_max",
             is_superuser=False,
             is_active=True,
             email_verified_at=now,

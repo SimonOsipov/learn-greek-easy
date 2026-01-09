@@ -9,7 +9,6 @@ from sqlalchemy.orm import selectinload
 
 from src.db.models import RefreshToken, User, UserSettings
 from src.repositories.base import BaseRepository
-from src.schemas.user import UserCreate
 
 
 class UserRepository(BaseRepository[User]):
@@ -81,46 +80,6 @@ class UserRepository(BaseRepository[User]):
         query = select(User).where(User.id == user_id).options(selectinload(User.settings))
         result = await self.db.execute(query)
         return result.scalar_one_or_none()
-
-    async def create_with_settings(
-        self,
-        user_in: UserCreate,
-        password_hash: str,
-        preferred_language: str | None = None,
-    ) -> User:
-        """Create user with default settings in one transaction.
-
-        Args:
-            user_in: User creation schema
-            password_hash: Hashed password from security module
-            preferred_language: Optional ISO 639-1 language code (e.g., 'en', 'el')
-
-        Returns:
-            Created user with settings (not yet committed)
-
-        Use Case:
-            User registration
-        """
-        # Create user
-        db_user = User(
-            email=user_in.email,
-            password_hash=password_hash,
-            full_name=user_in.full_name,
-        )
-        self.db.add(db_user)
-        await self.db.flush()
-
-        # Create default settings
-        db_settings = UserSettings(
-            user_id=db_user.id,
-            daily_goal=20,
-            email_notifications=True,
-            preferred_language=preferred_language,
-        )
-        self.db.add(db_settings)
-        await self.db.flush()
-
-        return db_user
 
     async def verify_email(self, user_id: UUID) -> User:
         """Mark user's email as verified.

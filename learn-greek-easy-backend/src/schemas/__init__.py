@@ -108,8 +108,6 @@ from src.schemas.user import (
     TokenPayload,
     TokenRefresh,
     TokenResponse,
-    UserCreate,
-    UserLogin,
     UserProfileResponse,
     UserResponse,
     UserSettingsResponse,
@@ -120,8 +118,6 @@ from src.schemas.user import (
 
 __all__ = [
     # User
-    "UserCreate",
-    "UserLogin",
     "UserUpdate",
     "UserResponse",
     "UserProfileResponse",

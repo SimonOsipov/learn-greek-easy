@@ -1,9 +1,12 @@
 """User-related Pydantic schemas for API request/response validation.
 
 This module contains schemas for:
-- User authentication (registration, login, JWT tokens)
+- User authentication (Auth0, JWT tokens)
 - User profile management
 - User settings
+
+Legacy email/password registration and Google OAuth schemas have been removed.
+All authentication now flows through Auth0.
 """
 
 from datetime import datetime
@@ -29,30 +32,6 @@ class UserBase(BaseModel):
 
     email: EmailStr
     full_name: Optional[str] = Field(None, max_length=255)
-
-
-class UserCreate(UserBase):
-    """Schema for user registration."""
-
-    password: str = Field(..., min_length=8, max_length=100)
-    full_name: str = Field(..., min_length=1, max_length=255)
-
-    @field_validator("password")
-    @classmethod
-    def validate_password(cls, v: str) -> str:
-        """Validate password strength."""
-        if not any(char.isdigit() for char in v):
-            raise ValueError("Password must contain at least one digit")
-        if not any(char.isalpha() for char in v):
-            raise ValueError("Password must contain at least one letter")
-        return v
-
-
-class UserLogin(BaseModel):
-    """Schema for user login."""
-
-    email: EmailStr
-    password: str = Field(..., min_length=1)
 
 
 class UserUpdate(BaseModel):
@@ -199,41 +178,6 @@ class LogoutAllResponse(BaseModel):
     success: bool
     message: str
     sessions_revoked: int
-
-
-# ============================================================================
-# Google OAuth Schemas
-# ============================================================================
-
-
-class GoogleAuthRequest(BaseModel):
-    """Schema for Google OAuth authentication request.
-
-    The frontend obtains this token from Google Sign-In SDK
-    and sends it to the backend for verification.
-    """
-
-    id_token: str = Field(
-        ...,
-        min_length=100,  # Google ID tokens are ~1000+ chars
-        description="Google ID token (JWT) from Google Sign-In",
-    )
-
-
-class GoogleUserInfo(BaseModel):
-    """Internal schema for parsed Google user information.
-
-    Extracted from verified Google ID token payload.
-    Not used in API responses.
-    """
-
-    model_config = ConfigDict(frozen=True)  # Immutable
-
-    google_id: str = Field(..., description="Google's unique user identifier (sub claim)")
-    email: EmailStr = Field(..., description="User's email from Google")
-    email_verified: bool = Field(..., description="Whether Google has verified the email")
-    full_name: Optional[str] = Field(None, description="User's full name from Google")
-    picture_url: Optional[str] = Field(None, description="Profile picture URL")
 
 
 # ============================================================================

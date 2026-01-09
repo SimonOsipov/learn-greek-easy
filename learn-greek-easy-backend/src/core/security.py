@@ -1,259 +1,30 @@
-"""Password hashing and security utilities using bcrypt.
+"""JWT token generation and verification utilities.
 
-This module provides secure password hashing and verification functions
-using the bcrypt algorithm with industry-standard security settings.
+This module provides secure JWT token management for authentication:
+- Access token generation and verification
+- Refresh token generation and verification with JTI tracking
+- Token extraction from HTTP headers
+
+All authentication now flows through Auth0. Legacy password hashing
+and Google OAuth token verification have been removed.
 
 Security Features:
-- Bcrypt with cost factor 12 (2^12 = 4096 iterations)
-- Automatic salt generation per password
-- Constant-time password verification to prevent timing attacks
-- Optional password strength validation
-
-Example Usage:
-    from src.core.security import hash_password, verify_password
-
-    # Hash a password
-    hashed = hash_password("MySecurePassword123!")
-
-    # Verify a password
-    is_valid = verify_password("MySecurePassword123!", hashed)
-    assert is_valid is True
+- HS256 algorithm with configurable secret key
+- Token type validation to prevent confused deputy attacks
+- JTI (JWT ID) for refresh token tracking and revocation
+- Constant-time token verification
 """
 
-import re
 import secrets
 from datetime import datetime, timedelta
-from typing import TYPE_CHECKING, List, Optional, Tuple
+from typing import Optional
 from uuid import UUID
 
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from google.auth.transport import requests as google_requests
-from google.oauth2 import id_token as google_id_token
 from jose import JWTError, jwt
-from passlib.context import CryptContext
 
 from src.config import settings
-from src.core.exceptions import (
-    GoogleTokenInvalidException,
-    TokenExpiredException,
-    TokenInvalidException,
-)
-
-if TYPE_CHECKING:
-    from src.schemas.user import GoogleUserInfo
-
-# ============================================================================
-# Password Hashing Configuration
-# ============================================================================
-
-# Configure bcrypt context with explicit security settings
-# - bcrypt: The hashing algorithm (industry standard)
-# - deprecated="auto": Automatically deprecate old schemes
-# - rounds=12: Cost factor (2^12 = 4096 iterations, ~300ms on modern hardware)
-#   * Rounds 10 = ~100ms (too fast, vulnerable to GPU attacks)
-#   * Rounds 12 = ~300ms (recommended by OWASP 2024)
-#   * Rounds 14 = ~1200ms (too slow for user experience)
-pwd_context = CryptContext(
-    schemes=["bcrypt"],
-    deprecated="auto",
-    bcrypt__rounds=12,  # Cost factor 12 as required
-    bcrypt__ident="2b",  # Use bcrypt $2b$ variant (most secure)
-)
-
-
-# ============================================================================
-# Password Hashing Functions
-# ============================================================================
-
-
-def hash_password(password: str) -> str:
-    """Hash a plaintext password using bcrypt.
-
-    Creates a secure hash of the provided password using bcrypt with
-    cost factor 12. Each hash includes an automatically generated salt,
-    making every hash unique even for identical passwords.
-
-    Args:
-        password (str): The plaintext password to hash.
-            Must be non-empty. Typically 8-128 characters.
-
-    Returns:
-        str: The bcrypt hash string in the format:
-            $2b$12$[22-char-salt][31-char-hash]
-            Example: "$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY5eBzGqF3VpW6u"
-
-    Raises:
-        ValueError: If password is empty or None.
-
-    Security Notes:
-        - Salt is automatically generated (no need to pass separately)
-        - Each call produces a unique hash, even for the same password
-        - Hash computation takes ~300ms on modern hardware (intentional)
-        - The hash is safe to store in a database
-
-    Example:
-        >>> password = "MySecurePassword123!"
-        >>> hashed = hash_password(password)
-        >>> print(len(hashed))  # Always 60 characters for bcrypt
-        60
-        >>> hashed.startswith("$2b$12$")
-        True
-    """
-    # Validate input
-    if not password:
-        raise ValueError("Password cannot be empty")
-
-    # Hash the password (salt is auto-generated)
-    hashed_password: str = pwd_context.hash(password)
-
-    return hashed_password
-
-
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verify a plaintext password against a bcrypt hash.
-
-    Performs constant-time comparison to prevent timing attacks.
-    The verification process extracts the salt from the hash and
-    re-hashes the plaintext password to compare.
-
-    Args:
-        plain_password (str): The plaintext password to verify.
-        hashed_password (str): The bcrypt hash to verify against.
-            Must be a valid bcrypt hash (60 characters, starts with $2b$12$).
-
-    Returns:
-        bool: True if the password matches the hash, False otherwise.
-            False is also returned for invalid hash formats.
-
-    Security Notes:
-        - Uses constant-time comparison (safe from timing attacks)
-        - Always takes ~300ms regardless of password correctness
-        - Never throws exceptions for invalid passwords (returns False)
-        - Safe to use in authentication flows
-
-    Example:
-        >>> password = "MySecurePassword123!"
-        >>> hashed = hash_password(password)
-        >>> verify_password(password, hashed)
-        True
-        >>> verify_password("WrongPassword", hashed)
-        False
-    """
-    # Validate inputs (prevent None errors)
-    if not plain_password or not hashed_password:
-        return False
-
-    try:
-        # Verify password (constant-time comparison)
-        is_valid: bool = pwd_context.verify(plain_password, hashed_password)
-        return is_valid
-    except (ValueError, TypeError):
-        # Invalid hash format or other errors
-        # Don't expose error details to prevent information leakage
-        return False
-
-
-# ============================================================================
-# Password Strength Validation (Optional)
-# ============================================================================
-
-
-def validate_password_strength(password: str) -> Tuple[bool, List[str]]:  # noqa: C901
-    """Validate password strength against security best practices.
-
-    This is an optional validation function that can be used during
-    registration to enforce password complexity requirements.
-
-    Password Requirements:
-        - Minimum 8 characters (OWASP recommendation)
-        - Maximum 128 characters (bcrypt limitation)
-        - At least one uppercase letter (A-Z)
-        - At least one lowercase letter (a-z)
-        - At least one digit (0-9)
-        - At least one special character (!@#$%^&*()_+-=[]{}|;:,.<>?)
-        - No common patterns (e.g., "password", "123456")
-
-    Args:
-        password (str): The plaintext password to validate.
-
-    Returns:
-        Tuple[bool, List[str]]: A tuple containing:
-            - bool: True if password meets all requirements, False otherwise
-            - List[str]: List of error messages (empty if valid)
-
-    Example:
-        >>> is_valid, errors = validate_password_strength("weak")
-        >>> is_valid
-        False
-        >>> errors
-        ['Password must be at least 8 characters long', 'Password must contain at least one uppercase letter', ...]
-
-        >>> is_valid, errors = validate_password_strength("SecurePass123!")
-        >>> is_valid
-        True
-        >>> errors
-        []
-    """
-    errors: List[str] = []
-
-    # Check minimum length
-    if len(password) < 8:
-        errors.append("Password must be at least 8 characters long")
-
-    # Check maximum length (bcrypt limitation)
-    if len(password) > 128:
-        errors.append("Password must be at most 128 characters long")
-
-    # Check for uppercase letter
-    if not re.search(r"[A-Z]", password):
-        errors.append("Password must contain at least one uppercase letter")
-
-    # Check for lowercase letter
-    if not re.search(r"[a-z]", password):
-        errors.append("Password must contain at least one lowercase letter")
-
-    # Check for digit
-    if not re.search(r"\d", password):
-        errors.append("Password must contain at least one digit")
-
-    # Check for special character
-    if not re.search(r"[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]", password):
-        errors.append("Password must contain at least one special character")
-
-    # Check for common weak passwords
-    common_passwords = [
-        "password",
-        "123456",
-        "12345678",
-        "qwerty",
-        "abc123",
-        "password123",
-        "admin",
-        "letmein",
-        "welcome",
-        "monkey",
-    ]
-    if password.lower() in common_passwords:
-        errors.append("Password is too common and easily guessable")
-
-    # Check for sequential characters (e.g., "abcdef" or "123456")
-    if re.search(
-        r"(abc|bcd|cde|def|efg|fgh|ghi|hij|ijk|jkl|klm|lmn|mno|nop|opq|pqr|qrs|rst|stu|tuv|uvw|vwx|wxy|xyz)",
-        password.lower(),
-    ):
-        errors.append("Password contains sequential characters (too predictable)")
-
-    if re.search(r"(012|123|234|345|456|567|678|789|890)", password):
-        errors.append("Password contains sequential numbers (too predictable)")
-
-    # Check for repeated characters (e.g., "aaaaaa")
-    if re.search(r"(.)\1{3,}", password):
-        errors.append("Password contains too many repeated characters")
-
-    # Return validation result
-    is_valid = len(errors) == 0
-    return is_valid, errors
-
+from src.core.exceptions import TokenExpiredException, TokenInvalidException
 
 # ============================================================================
 # Token ID Generation
@@ -658,90 +429,17 @@ def extract_token_from_header(
 
 
 # ============================================================================
-# Google OAuth Token Verification
-# ============================================================================
-
-
-def verify_google_id_token(token: str, client_id: str) -> "GoogleUserInfo":
-    """Verify Google ID token and extract user information.
-
-    Uses Google's official library to verify the token signature
-    against Google's public keys (automatically cached).
-
-    Args:
-        token: Google ID token (JWT) from frontend
-        client_id: Google OAuth client ID for audience verification
-
-    Returns:
-        GoogleUserInfo with extracted user data
-
-    Raises:
-        GoogleTokenInvalidException: If token is invalid, expired, or
-            doesn't match the expected audience (client_id)
-
-    Security Notes:
-        - Token signature is verified against Google's public keys
-        - Token expiration is automatically checked
-        - Audience (aud) claim must match our client_id
-        - Issuer (iss) must be accounts.google.com or https://accounts.google.com
-    """
-    # Import here to avoid circular import at module load time
-    from src.schemas.user import GoogleUserInfo
-
-    try:
-        # Verify the token with Google's public keys
-        # This handles signature verification, expiration, and issuer validation
-        # google-auth library does not have type stubs
-        idinfo = google_id_token.verify_oauth2_token(
-            token,
-            google_requests.Request(),
-            client_id,
-        )
-
-        # Additional validation: check issuer
-        issuer = idinfo.get("iss", "")
-        if issuer not in ["accounts.google.com", "https://accounts.google.com"]:
-            raise GoogleTokenInvalidException(detail=f"Invalid token issuer: {issuer}")
-
-        # Extract user information
-        return GoogleUserInfo(
-            google_id=idinfo["sub"],  # Unique Google user ID
-            email=idinfo["email"],
-            email_verified=idinfo.get("email_verified", False),
-            full_name=idinfo.get("name"),
-            picture_url=idinfo.get("picture"),
-        )
-
-    except ValueError as e:
-        # ValueError is raised for invalid tokens
-        raise GoogleTokenInvalidException(detail=f"Invalid Google ID token: {str(e)}")
-    except Exception as e:
-        # Catch any other verification errors
-        # Check if it's already our exception type
-        if isinstance(e, GoogleTokenInvalidException):
-            raise
-        raise GoogleTokenInvalidException(detail=f"Failed to verify Google ID token: {str(e)}")
-
-
-# ============================================================================
 # Export Public API
 # ============================================================================
 
 __all__ = [
-    # Password hashing (from Task 03.01)
-    "hash_password",
-    "verify_password",
-    "validate_password_strength",
-    "pwd_context",
-    # JWT token management (Task 03.02)
+    # JWT token management
     "create_access_token",
     "create_refresh_token",
     "verify_token",
     "extract_token_from_header",
     "security_scheme",
-    # Session management (Task 05.02)
+    # Session management
     "generate_token_id",
     "verify_refresh_token_with_jti",
-    # Google OAuth (Task 03.06)
-    "verify_google_id_token",
 ]

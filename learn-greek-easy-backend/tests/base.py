@@ -33,7 +33,7 @@ from httpx import AsyncClient, Response
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.security import create_access_token, hash_password
+from src.core.security import create_access_token
 from src.db.models import Card, CardDifficulty, Deck, DeckLevel, User, UserSettings
 
 
@@ -66,7 +66,6 @@ class BaseTestCase:
         self,
         db_session: AsyncSession,
         email: str | None = None,
-        password: str = "TestPassword123!",
         full_name: str = "Test User",
         is_active: bool = True,
         is_superuser: bool = False,
@@ -74,10 +73,12 @@ class BaseTestCase:
     ) -> User:
         """Create a test user in the database.
 
+        All test users are created as Auth0-style users (no password hash)
+        since password-based authentication has been removed.
+
         Args:
             db_session: Database session
             email: User email (auto-generated if None)
-            password: Plain text password
             full_name: User's full name
             is_active: Whether account is active
             is_superuser: Whether user has admin privileges
@@ -91,7 +92,8 @@ class BaseTestCase:
 
         user = User(
             email=email,
-            password_hash=hash_password(password),
+            password_hash=None,  # Auth0 users don't have password
+            auth0_id=f"auth0|test_{uuid4().hex[:16]}",
             full_name=full_name,
             is_active=is_active,
             is_superuser=is_superuser,

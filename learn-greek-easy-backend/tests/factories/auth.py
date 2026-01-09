@@ -5,6 +5,9 @@ This module provides factories for authentication-related models:
 - UserSettingsFactory: User preferences
 - RefreshTokenFactory: JWT refresh tokens
 
+All users are now created as Auth0-style users (no password hash)
+since password-based authentication has been removed.
+
 Usage:
     # Create a regular user
     user = await UserFactory.create()
@@ -26,7 +29,7 @@ from uuid import uuid4
 import factory
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.security import create_refresh_token, hash_password
+from src.core.security import create_refresh_token
 from src.db.models import RefreshToken, User, UserSettings
 from tests.factories.base import BaseFactory, unique_email, unique_token, utc_now
 
@@ -35,12 +38,12 @@ class UserFactory(BaseFactory):
     """Factory for User model.
 
     Creates test users with configurable attributes.
+    All users are created as Auth0-style users (no password hash).
 
     Traits:
         admin: Superuser with verified email
         inactive: Deactivated account
         verified: Email verified
-        oauth: Google OAuth user (no password)
 
     Example:
         user = await UserFactory.create()
@@ -51,15 +54,15 @@ class UserFactory(BaseFactory):
     class Meta:
         model = User
 
-    # Default values
+    # Default values - all users are Auth0-style (no password)
     email = factory.LazyFunction(unique_email)
-    password_hash = factory.LazyAttribute(lambda _: hash_password("TestPassword123!"))
+    password_hash = None  # Auth0 users don't have password
     full_name = factory.Faker("name")
     is_active = True
     is_superuser = False
     email_verified_at = None
     google_id = None
-    auth0_id = None
+    auth0_id = factory.LazyFunction(lambda: f"auth0|test_{uuid4().hex[:16]}")
     last_login_at = None
     last_login_ip = None
 
@@ -80,20 +83,6 @@ class UserFactory(BaseFactory):
 
         # Verified email trait
         verified = factory.Trait(
-            email_verified_at=factory.LazyFunction(utc_now),
-        )
-
-        # OAuth user trait (no password)
-        oauth = factory.Trait(
-            password_hash=None,
-            google_id=factory.LazyFunction(lambda: f"google_{uuid4().hex}"),
-            email_verified_at=factory.LazyFunction(utc_now),
-        )
-
-        # Auth0 user trait (no password)
-        auth0 = factory.Trait(
-            password_hash=None,
-            auth0_id=factory.LazyFunction(lambda: f"auth0|{uuid4().hex}"),
             email_verified_at=factory.LazyFunction(utc_now),
         )
 
