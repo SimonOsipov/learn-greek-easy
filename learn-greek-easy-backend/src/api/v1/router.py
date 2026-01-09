@@ -28,6 +28,7 @@ from src.api.v1.cards import router as card_router
 from src.api.v1.culture import router as culture_router
 from src.api.v1.decks import router as deck_router
 from src.api.v1.feedback import router as feedback_router
+from src.api.v1.health import router as health_router
 from src.api.v1.notifications import router as notification_router
 from src.api.v1.progress import router as progress_router
 from src.api.v1.reviews import router as review_router
@@ -36,6 +37,11 @@ from src.api.v1.xp import router as xp_router
 
 # Create the main v1 router
 v1_router = APIRouter()
+
+# =============================================================================
+# Health Routes (for private backend access via frontend proxy)
+# =============================================================================
+v1_router.include_router(health_router)
 
 # =============================================================================
 # Authentication Routes

@@ -6,10 +6,12 @@ This project uses GitHub Actions for sequential deployments to ensure Backend is
 
 ## Environments
 
-| Environment | Trigger | Workflow | URLs |
-|-------------|---------|----------|------|
-| Production | Push to `main` | `deploy-production.yml` | [Frontend](https://learn-greek-frontend.up.railway.app), [Backend](https://backend-production-7429.up.railway.app) |
-| Dev (PR Preview) | PR opened/sync | `preview.yml` | [Frontend](https://frontend-dev-8db9.up.railway.app), [Backend](https://backend-dev-bc44.up.railway.app) |
+| Environment | Trigger | Workflow | Frontend URL |
+|-------------|---------|----------|--------------|
+| Production | Push to `main` | `deploy-production.yml` | [learn-greek-frontend.up.railway.app](https://learn-greek-frontend.up.railway.app) |
+| Dev (PR Preview) | PR opened/sync | `preview.yml` | [frontend-dev-8db9.up.railway.app](https://frontend-dev-8db9.up.railway.app) |
+
+> **Note**: The backend is private and accessible only via the frontend proxy. All API calls go through `<frontend-url>/api/v1/*`. See [Railway Backend Privacy](railway-backend-privacy.md) for details.
 
 ## How Deployments Work
 
@@ -38,20 +40,20 @@ After the backend deploys, a warm-up step runs before the frontend deployment be
 
 ```bash
 # Usage
-./scripts/backend-warmup.sh <BACKEND_URL> [WARMUP_REQUESTS] [RETRY_DELAY]
+./scripts/backend-warmup.sh <BASE_URL> [WARMUP_REQUESTS] [RETRY_DELAY]
 
 # Parameters
-#   BACKEND_URL      - The backend URL (required)
+#   BASE_URL         - The frontend URL (backend is accessed via frontend proxy)
 #   WARMUP_REQUESTS  - Number of warmup requests per endpoint (default: 10)
 #   RETRY_DELAY      - Seconds between health check retries (default: 3)
 
 # Example
-./scripts/backend-warmup.sh "https://backend-production-7429.up.railway.app" 10 3
+./scripts/backend-warmup.sh "https://learn-greek-frontend.up.railway.app" 10 3
 ```
 
 The script performs three phases:
-1. **Wait for ready** - Polls `/health/ready` until backend responds (max 20 attempts)
-2. **Send warmup requests** - Makes multiple requests to `/health`, `/health/live`, `/health/ready`, `/version`, and `/api/v1/status`
+1. **Wait for ready** - Polls `/api/v1/health/ready` until backend responds (max 20 attempts)
+2. **Send warmup requests** - Makes multiple requests to `/api/v1/health`, `/api/v1/health/live`, `/api/v1/health/ready`, and `/api/v1/status`
 3. **Final verification** - Confirms backend is still healthy after warmup
 
 ### Why Sequential?
@@ -144,10 +146,10 @@ If `railway up --ci` hangs for more than 10 minutes:
 
 1. Check Railway dashboard for deployment status
 2. Check service logs for errors
-3. Cancel with Ctrl+C and check health endpoint manually:
+3. Cancel with Ctrl+C and check health endpoint manually via frontend proxy:
    ```bash
-   curl https://backend-production-7429.up.railway.app/health
-   curl https://backend-production-7429.up.railway.app/health/ready
+   curl https://learn-greek-frontend.up.railway.app/api/v1/health
+   curl https://learn-greek-frontend.up.railway.app/api/v1/health/ready
    ```
 4. If service is healthy but CLI hung, deployment likely succeeded
 
@@ -155,7 +157,7 @@ If `railway up --ci` hangs for more than 10 minutes:
 
 If deployment completes but health check fails:
 
-1. Check `/health` and `/health/ready` endpoints directly
+1. Check `/api/v1/health` and `/api/v1/health/ready` endpoints via frontend proxy
 2. Review service logs in Railway dashboard
 3. Verify database connectivity (check Postgres service)
 4. Check environment variables are set correctly
@@ -226,9 +228,13 @@ If both Railway auto-deploy and GitHub Actions try to deploy:
 
 ## Health Endpoints
 
-| Endpoint | Purpose |
-|----------|---------|
-| `/health` | Basic liveness check |
-| `/health/ready` | Readiness check (includes DB connectivity) |
-| `/health/live` | Kubernetes-style liveness probe |
-| `/docs` | API documentation (Swagger UI) |
+All health endpoints are accessed via the frontend proxy (backend is private).
+
+| Endpoint | Purpose | URL |
+|----------|---------|-----|
+| `/api/v1/health` | Comprehensive health check | `<frontend-url>/api/v1/health` |
+| `/api/v1/health/ready` | Readiness check (includes DB connectivity) | `<frontend-url>/api/v1/health/ready` |
+| `/api/v1/health/live` | Kubernetes-style liveness probe | `<frontend-url>/api/v1/health/live` |
+| `/docs` | API documentation (Swagger UI) | `<frontend-url>/docs` |
+
+> **Note**: Root-level `/health`, `/health/ready`, `/health/live` endpoints are also available via proxy for backward compatibility.
