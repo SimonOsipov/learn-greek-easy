@@ -62,7 +62,14 @@ setup.beforeAll(async () => {
 });
 
 /**
- * Authenticate a user via UI and save storage state
+ * Authenticate a user via test seed API and save storage state
+ *
+ * Since Auth0 is now the only authentication method, we can't use the UI login
+ * form (it would redirect to Auth0). Instead, we:
+ * 1. Get auth tokens from the test seed endpoint
+ * 2. Set up localStorage with the auth state
+ * 3. Navigate to verify the auth works
+ * 4. Save the browser state
  */
 async function authenticateAndSave(
   page: import('@playwright/test').Page,
@@ -73,146 +80,94 @@ async function authenticateAndSave(
   console.log(`[SETUP] Starting authentication for ${user.email}`);
   console.log(`[SETUP] API Base URL: ${apiBaseUrl}`);
 
-  // Navigate to login page
-  await page.goto('/login');
-
-  // Step 1: Wait for React to hydrate and auth check to complete
-  await page.waitForSelector('[data-app-ready="true"]', {
-    timeout: 30000,
-    state: 'attached'
-  });
-
-  // Step 2: Wait for PageLoader Suspense fallback to resolve (if visible)
-  const pageLoader = page.locator('[data-testid="page-loader"]');
+  // Step 1: Get auth tokens from test seed endpoint
+  const apiRequest = await request.newContext({ baseURL: apiBaseUrl });
+  let authResponse;
   try {
-    await pageLoader.waitFor({ state: 'visible', timeout: 1000 });
-    await pageLoader.waitFor({ state: 'hidden', timeout: 15000 });
-  } catch {
-    // PageLoader never appeared (fast load) - fine
-  }
-
-  // Step 3: Wait for the actual login form
-  await page.waitForSelector('[data-testid="login-card"]', { timeout: 15000 });
-
-  // Fill login form
-  await page.getByTestId('email-input').fill(user.email);
-  await page.getByTestId('password-input').fill(user.password);
-
-  // Check "Remember Me" to persist auth state in localStorage
-  // Note: Using click() instead of check() because Radix UI renders
-  // <button role="checkbox"> not native <input>, and check() times out
-  await page.locator('#remember').click();
-
-  // Set up response interception BEFORE clicking submit
-  const responsePromise = page.waitForResponse(
-    response =>
-      response.url().includes('/api/v1/auth/login') &&
-      response.request().method() === 'POST',
-    { timeout: 20000 }
-  );
-
-  // Click submit
-  await page.getByTestId('login-submit').click();
-
-  // Wait for API response and capture details
-  let response;
-  try {
-    response = await responsePromise;
+    authResponse = await apiRequest.post('/api/v1/test/seed/auth', {
+      data: { email: user.email },
+      headers: { 'Content-Type': 'application/json' },
+    });
   } catch (error) {
-    // Take screenshot on timeout
-    const screenshotPath = path.join(STORAGE_STATE_DIR, `login-error-timeout-${user.email.replace('@', '_at_')}.png`);
-    await page.screenshot({ path: screenshotPath, fullPage: true });
-    console.error(`[SETUP] Screenshot saved to ${screenshotPath}`);
-
+    await apiRequest.dispose();
     throw new Error(
-      `[SETUP] Login API request timed out for ${user.email}. ` +
-      `This may indicate the frontend is not correctly configured to call ${apiBaseUrl}. ` +
-      `Screenshot saved to ${screenshotPath}`
+      `[SETUP] Failed to reach test auth endpoint for ${user.email}: ${error}`
     );
   }
 
-  // Check if API succeeded
-  if (!response.ok()) {
-    // Get error details from response body
+  if (!authResponse.ok()) {
     let errorBody = 'Unknown error';
     try {
-      const jsonBody = await response.json();
+      const jsonBody = await authResponse.json();
       errorBody = jsonBody.detail || jsonBody.message || JSON.stringify(jsonBody);
     } catch {
       try {
-        errorBody = await response.text();
+        errorBody = await authResponse.text();
       } catch {
         // Keep default error message
       }
     }
-
-    // Check for error alert on page
-    const errorAlert = page.locator('[role="alert"]');
-    const hasErrorAlert = await errorAlert.isVisible().catch(() => false);
-    let pageError = '';
-    if (hasErrorAlert) {
-      pageError = await errorAlert.textContent() || '';
-    }
-
-    // Take screenshot on API error
-    const screenshotPath = path.join(STORAGE_STATE_DIR, `login-error-api-${user.email.replace('@', '_at_')}.png`);
-    await page.screenshot({ path: screenshotPath, fullPage: true });
-    console.error(`[SETUP] Screenshot saved to ${screenshotPath}`);
-
+    await apiRequest.dispose();
     throw new Error(
-      `[SETUP] Login API failed for ${user.email}. ` +
-      `Status: ${response.status()}, Body: ${errorBody}` +
-      (pageError ? ` | Page error: ${pageError}` : '') +
-      ` | Screenshot: ${screenshotPath}`
+      `[SETUP] Test auth endpoint failed for ${user.email}. ` +
+      `Status: ${authResponse.status()}, Body: ${errorBody}`
     );
   }
 
-  console.log(`[SETUP] Login API succeeded for ${user.email}, waiting for navigation...`);
+  const authData = await authResponse.json();
+  await apiRequest.dispose();
 
-  // Wait for successful login - verify we navigated away from login page
+  console.log(`[SETUP] Got auth tokens for ${user.email}, setting up localStorage...`);
+
+  // Step 2: Navigate to the app first (required for localStorage)
+  await page.goto('/');
+
+  // Step 3: Set up localStorage with auth state matching Zustand store format
+  await page.evaluate(({ tokens, userEmail, userName }) => {
+    // Set up the auth-storage in the format expected by useAuthStore
+    const authState = {
+      state: {
+        user: {
+          id: tokens.user_id,
+          email: userEmail,
+          full_name: userName,
+        },
+        token: tokens.access_token,
+        refreshToken: tokens.refresh_token,
+        isAuthenticated: true,
+        rememberMe: true,
+        error: null,
+      },
+      version: 0,
+    };
+    localStorage.setItem('auth-storage', JSON.stringify(authState));
+  }, { tokens: authData, userEmail: user.email, userName: user.name });
+
+  // Step 4: Reload to pick up the localStorage state
+  await page.reload();
+
+  // Step 5: Wait for app to be ready and verify we're authenticated
   try {
-    await expect(page).not.toHaveURL(/\/login/, { timeout: 15000 });
-  } catch (navError) {
-    // Check for error alert on page
-    const errorAlert = page.locator('[role="alert"]');
-    const hasErrorAlert = await errorAlert.isVisible().catch(() => false);
-    let pageError = '';
-    if (hasErrorAlert) {
-      pageError = await errorAlert.textContent() || '';
-    }
+    await page.waitForSelector('[data-app-ready="true"]', {
+      timeout: 30000,
+      state: 'attached'
+    });
+  } catch {
+    console.warn(`[SETUP] Warning: data-app-ready not found for ${user.email}`);
+  }
 
-    // Take screenshot on navigation failure
-    const screenshotPath = path.join(STORAGE_STATE_DIR, `login-error-nav-${user.email.replace('@', '_at_')}.png`);
+  // Verify we're not on the login page
+  const currentUrl = page.url();
+  if (currentUrl.includes('/login')) {
+    const screenshotPath = path.join(STORAGE_STATE_DIR, `login-error-${user.email.replace('@', '_at_')}.png`);
     await page.screenshot({ path: screenshotPath, fullPage: true });
-    console.error(`[SETUP] Screenshot saved to ${screenshotPath}`);
-
     throw new Error(
-      `[SETUP] Login API succeeded but navigation failed for ${user.email}. ` +
-      `Current URL: ${page.url()}` +
-      (pageError ? ` | Page error: ${pageError}` : '') +
-      ` | Screenshot: ${screenshotPath}`
+      `[SETUP] Authentication failed for ${user.email}. ` +
+      `Still on login page after setting localStorage. Screenshot: ${screenshotPath}`
     );
   }
 
-  // Wait for authenticated content to ensure state is fully set
-  try {
-    await page.waitForSelector(
-      '[data-testid="dashboard"], [data-testid="user-menu"], h1:has-text("Dashboard"), h1:has-text("Welcome"), nav[aria-label="Main navigation"]',
-      { timeout: 10000 }
-    );
-  } catch (contentError) {
-    // Take screenshot if authenticated content not found
-    const screenshotPath = path.join(STORAGE_STATE_DIR, `login-error-content-${user.email.replace('@', '_at_')}.png`);
-    await page.screenshot({ path: screenshotPath, fullPage: true });
-    console.error(`[SETUP] Screenshot saved to ${screenshotPath}`);
-
-    console.warn(
-      `[SETUP] Warning: Could not find authenticated content for ${user.email}. ` +
-      `URL: ${page.url()}. Proceeding anyway. Screenshot: ${screenshotPath}`
-    );
-  }
-
-  // Small delay to ensure localStorage is fully persisted
+  // Small delay to ensure state is fully set
   await page.waitForTimeout(500);
 
   // Save storage state to file
