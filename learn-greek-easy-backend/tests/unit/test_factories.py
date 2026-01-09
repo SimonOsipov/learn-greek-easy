@@ -44,7 +44,10 @@ class TestUserFactory:
         assert "@example.com" in user.email
         assert user.is_active is True
         assert user.is_superuser is False
-        assert user.password_hash is not None
+        # Auth0 users don't have password_hash
+        assert user.password_hash is None
+        # Auth0 users have auth0_id
+        assert user.auth0_id is not None
 
     async def test_create_admin_user(self, db_session: AsyncSession):
         """Test creating an admin user with trait."""
@@ -63,14 +66,6 @@ class TestUserFactory:
         """Test creating a verified user with trait."""
         user = await UserFactory.create(session=db_session, verified=True)
 
-        assert user.email_verified_at is not None
-
-    async def test_create_oauth_user(self, db_session: AsyncSession):
-        """Test creating an OAuth user with trait."""
-        user = await UserFactory.create(session=db_session, oauth=True)
-
-        assert user.password_hash is None
-        assert user.google_id is not None
         assert user.email_verified_at is not None
 
     async def test_compose_traits(self, db_session: AsyncSession):
