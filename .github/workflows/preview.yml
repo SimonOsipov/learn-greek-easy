@@ -357,6 +357,8 @@ jobs:
       - name: Run Health Checks
         id: health
         run: |
+          # Use frontend URL for both since backend is private (no public domain)
+          # Frontend proxies /health/* to backend via internal network
           chmod +x scripts/preview-health-check.sh
           # Backend is private - health checks via frontend proxy
           if ./scripts/preview-health-check.sh \
@@ -372,6 +374,8 @@ jobs:
         id: smoke
         if: steps.health.outputs.status == 'success'
         run: |
+          # Use frontend URL since backend is private (no public domain)
+          # Frontend proxies /health/*, /api/*, /docs, /redoc, /openapi.json to backend
           chmod +x scripts/preview-api-smoke.sh
           # Backend is private - smoke tests via frontend proxy
           ./scripts/preview-api-smoke.sh "${{ needs.deploy.outputs.frontend_url }}" || true

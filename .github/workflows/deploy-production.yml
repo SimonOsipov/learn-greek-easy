@@ -117,6 +117,8 @@ jobs:
 
       - name: Run warmup script
         run: |
+          # Use frontend URL since backend is private (no public domain)
+          # Frontend proxies /health/* to backend via internal network
           chmod +x scripts/backend-warmup.sh
           # Backend is private - warmup via frontend proxy using /api/v1/health endpoints
           ./scripts/backend-warmup.sh "${{ env.PROD_FRONTEND_URL }}" 10 3
@@ -204,8 +206,8 @@ jobs:
           BACKEND_READY=$(curl -sf "${{ env.PROD_FRONTEND_URL }}/api/v1/health/ready" || echo "FAILED")
           echo "Backend /api/v1/health/ready: $BACKEND_READY"
 
-          # Frontend health check
-          echo "Checking Frontend health..."
+          # Frontend health check (index page)
+          echo "Checking Frontend..."
           FRONTEND_STATUS=$(curl -sf -o /dev/null -w "%{http_code}" "${{ env.PROD_FRONTEND_URL }}" || echo "000")
           echo "Frontend HTTP status: $FRONTEND_STATUS"
 

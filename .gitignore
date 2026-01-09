@@ -4,6 +4,7 @@
 backlog/
 # Claude Code local files
 .claude/
+.mcp.json
 
 # k6 Performance Testing
 k6/reports/*
