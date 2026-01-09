@@ -15,6 +15,7 @@ from time import perf_counter
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Header
+from pydantic import BaseModel, EmailStr
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config import settings
@@ -23,9 +24,29 @@ from src.core.exceptions import (
     SeedForbiddenException,
     SeedUnauthorizedException,
 )
+from src.core.security import create_access_token, create_refresh_token
 from src.db.dependencies import get_db
+from src.repositories.user import UserRepository
 from src.schemas.seed import SeedRequest, SeedResultResponse, SeedStatusResponse
 from src.services.seed_service import SeedService
+
+
+class TestAuthRequest(BaseModel):
+    """Request model for test authentication."""
+
+    email: EmailStr
+
+
+class TestAuthResponse(BaseModel):
+    """Response model for test authentication."""
+
+    success: bool
+    access_token: str
+    refresh_token: str
+    token_type: str = "Bearer"
+    user_id: str
+    email: str
+
 
 router = APIRouter(
     prefix="/test/seed",
@@ -312,4 +333,61 @@ async def seed_culture(
         timestamp=datetime.now(timezone.utc),
         duration_ms=duration_ms,
         results=result,
+    )
+
+
+@router.post(
+    "/auth",
+    response_model=TestAuthResponse,
+    summary="Get auth tokens for test user",
+    description="Generate authentication tokens for a seeded test user. "
+    "ONLY available when TEST_SEED_ENABLED=true and NOT in production. "
+    "This endpoint bypasses normal authentication for E2E testing.",
+    dependencies=[Depends(verify_seed_access)],
+)
+async def get_test_auth(
+    request: TestAuthRequest,
+    db: AsyncSession = Depends(get_db),
+) -> TestAuthResponse:
+    """Generate auth tokens for a test user by email.
+
+    This endpoint allows E2E tests to authenticate as seeded users without
+    going through Auth0 or the legacy login flow. It's gated behind the
+    same security checks as other seed endpoints.
+
+    Args:
+        request: Contains the email of the test user
+        db: Database session
+
+    Returns:
+        TestAuthResponse with access and refresh tokens
+
+    Raises:
+        HTTPException 404: If user not found
+        HTTPException 403: If seeding is disabled or in production
+    """
+    from fastapi import HTTPException
+
+    user_repo = UserRepository(db)
+    user = await user_repo.get_by_email(request.email)
+
+    if not user:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Test user not found: {request.email}. "
+            "Make sure to seed the database first with POST /api/v1/test/seed/all",
+        )
+
+    # Generate tokens for the test user
+    # create_access_token returns (token, expires_at)
+    # create_refresh_token returns (token, expires_at, token_id)
+    access_token, _ = create_access_token(user_id=user.id)
+    refresh_token, _, _ = create_refresh_token(user_id=user.id)
+
+    return TestAuthResponse(
+        success=True,
+        access_token=access_token,
+        refresh_token=refresh_token,
+        user_id=str(user.id),
+        email=user.email,
     )

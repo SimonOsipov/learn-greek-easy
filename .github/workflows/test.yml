@@ -509,11 +509,11 @@ jobs:
           fi
           echo "Seed status check passed: enabled=true"
 
-          # Try to login as e2e_learner@test.com
-          echo "Attempting to login as e2e_learner@test.com..."
-          LOGIN_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST http://localhost:8000/api/v1/auth/login \
+          # Get auth token for e2e_learner@test.com using test auth endpoint
+          echo "Getting auth token for e2e_learner@test.com..."
+          LOGIN_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST http://localhost:8000/api/v1/test/seed/auth \
             -H "Content-Type: application/json" \
-            -d '{"email": "e2e_learner@test.com", "password": "TestPassword123!"}')
+            -d '{"email": "e2e_learner@test.com"}')
 
           HTTP_CODE=$(echo "$LOGIN_RESPONSE" | tail -n1)
           BODY=$(echo "$LOGIN_RESPONSE" | sed '$d')
@@ -522,7 +522,7 @@ jobs:
           echo "Login response body: $BODY"
 
           if [ "$HTTP_CODE" != "200" ]; then
-            echo "ERROR: Failed to login as seed user. HTTP code: $HTTP_CODE"
+            echo "ERROR: Failed to get auth token for seed user. HTTP code: $HTTP_CODE"
             echo "This indicates the database was not seeded properly."
             exit 1
           fi
@@ -530,11 +530,11 @@ jobs:
           # Verify response contains access_token
           ACCESS_TOKEN=$(echo "$BODY" | jq -r '.access_token')
           if [ -z "$ACCESS_TOKEN" ] || [ "$ACCESS_TOKEN" = "null" ]; then
-            echo "ERROR: Login response does not contain access_token"
+            echo "ERROR: Test auth response does not contain access_token"
             exit 1
           fi
 
-          echo "SUCCESS: Seed user e2e_learner@test.com can login"
+          echo "SUCCESS: Got auth token for seed user e2e_learner@test.com"
 
       - name: Verify API connectivity from frontend context
         working-directory: learn-greek-easy-frontend
