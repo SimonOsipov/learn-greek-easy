@@ -354,7 +354,7 @@ async def api_status() -> dict:
         "app_version": settings.app_version,
         "environment": settings.app_env,
         "features": {
-            "google_oauth": settings.feature_google_oauth,
+            "auth0": True,  # Auth0 is now the only auth method
             "email_notifications": settings.feature_email_notifications,
             "rate_limiting": settings.feature_rate_limiting,
             "background_tasks": settings.feature_background_tasks,
@@ -404,7 +404,7 @@ if settings.debug:
                 "headers": settings.cors_allow_headers,
             },
             "features": {
-                "google_oauth": settings.feature_google_oauth,
+                "auth0": True,  # Auth0 is now the only auth method
                 "email_notifications": settings.feature_email_notifications,
                 "rate_limiting": settings.feature_rate_limiting,
                 "background_tasks": settings.feature_background_tasks,
