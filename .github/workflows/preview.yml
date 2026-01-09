@@ -288,6 +288,14 @@ jobs:
           echo "Backend deployment completed successfully"
         timeout-minutes: 10
 
+      - name: Wait for Railway internal DNS propagation
+        run: |
+          echo "=== Waiting for Railway internal DNS propagation ==="
+          echo "Backend has a new internal IP after redeploy."
+          echo "Waiting 10 seconds for DNS to propagate before deploying frontend..."
+          sleep 10
+          echo "DNS propagation wait complete"
+
       - name: Deploy Frontend
         env:
           RAILWAY_API_TOKEN: ${{ secrets.RAILWAY_API_TOKEN }}
