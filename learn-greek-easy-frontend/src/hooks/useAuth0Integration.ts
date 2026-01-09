@@ -12,7 +12,11 @@
  */
 
 import { useAuth0, type User as Auth0User } from '@auth0/auth0-react';
+import posthog from 'posthog-js';
 
+import { clearAuthTokens } from '@/services/api';
+import { useAnalyticsStore } from '@/stores/analyticsStore';
+import { useAuthStore } from '@/stores/authStore';
 import type { User, UserRole } from '@/types/auth';
 
 /**
@@ -124,7 +128,37 @@ export function useAuth0Integration(): UseAuth0IntegrationResult {
   };
 
   // Wrap logout to redirect to home
+  // CRITICAL: Clear Zustand store BEFORE Auth0 logout to prevent route guards
+  // from seeing isAuthenticated=true and redirecting back to dashboard
   const logout = async () => {
+    // Track logout event before state reset
+    if (typeof posthog?.capture === 'function') {
+      posthog.capture('user_logged_out');
+    }
+
+    // Clear the parallel Zustand store state FIRST (before redirect)
+    // This prevents route guards from redirecting back to dashboard
+    useAuthStore.setState({
+      user: null,
+      token: null,
+      refreshToken: null,
+      isAuthenticated: false,
+      rememberMe: false,
+      error: null,
+    });
+
+    // Clear any legacy tokens from localStorage/sessionStorage
+    clearAuthTokens();
+
+    // Clear analytics state
+    useAnalyticsStore.getState().clearAnalytics();
+
+    // Reset PostHog identity
+    if (typeof posthog?.reset === 'function') {
+      posthog.reset();
+    }
+
+    // Then trigger Auth0 logout (which will redirect)
     await auth0Logout({
       logoutParams: {
         returnTo: window.location.origin,

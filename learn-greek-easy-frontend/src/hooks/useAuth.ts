@@ -142,9 +142,50 @@ function useAuth0Auth(): UseAuthResult {
  */
 export const useAuth: () => UseAuthResult = isAuth0Enabled() ? useAuth0Auth : useLegacyAuth;
 
+/**
+ * Internal hook to get unified auth state for helper hooks (Auth0 version).
+ * Combines Auth0 state with Zustand store state to handle logout correctly.
+ */
+function useUnifiedAuthStateAuth0() {
+  const auth0State = useAuth0Integration();
+  const legacyState = useAuthStore();
+
+  // For Auth0: use Auth0's isAuthenticated AND check Zustand isn't cleared
+  // This handles the logout case where Zustand is cleared before Auth0 redirect
+  return {
+    isAuthenticated: auth0State.isAuthenticated && legacyState.isAuthenticated !== false,
+    isLoading: auth0State.isLoading,
+    user: auth0State.user,
+  };
+}
+
+/**
+ * Internal hook to get unified auth state for helper hooks (legacy version).
+ * Simply returns the Zustand store state.
+ */
+function useUnifiedAuthStateLegacy() {
+  const legacyState = useAuthStore();
+
+  return {
+    isAuthenticated: legacyState.isAuthenticated,
+    isLoading: legacyState.isLoading,
+    user: legacyState.user,
+  };
+}
+
+/**
+ * Internal hook to get unified auth state for helper hooks.
+ * Uses Auth0 state when Auth0 is enabled, otherwise uses Zustand store.
+ * This ensures route guards work correctly with both auth systems.
+ *
+ * Note: The implementation is selected at build time based on VITE_AUTH0_ENABLED
+ * to comply with React hooks rules (no conditional hook calls).
+ */
+const useUnifiedAuthState = isAuth0Enabled() ? useUnifiedAuthStateAuth0 : useUnifiedAuthStateLegacy;
+
 // Hook to require authentication
 export const useRequireAuth = (redirectTo = '/login') => {
-  const { isAuthenticated, isLoading } = useAuthStore();
+  const { isAuthenticated, isLoading } = useUnifiedAuthState();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -158,7 +199,7 @@ export const useRequireAuth = (redirectTo = '/login') => {
 
 // Hook to redirect if already authenticated
 export const useRedirectIfAuth = (redirectTo = '/dashboard') => {
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated } = useUnifiedAuthState();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -170,7 +211,7 @@ export const useRedirectIfAuth = (redirectTo = '/dashboard') => {
 
 // Hook for role-based access
 export const useRequireRole = (requiredRole: 'admin' | 'premium', redirectTo = '/dashboard') => {
-  const { user, isAuthenticated } = useAuthStore();
+  const { user, isAuthenticated } = useUnifiedAuthState();
   const navigate = useNavigate();
 
   useEffect(() => {
