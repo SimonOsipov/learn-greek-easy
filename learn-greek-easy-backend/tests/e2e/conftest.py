@@ -155,9 +155,18 @@ class E2ETestCase(AuthenticatedTestCase):
             AssertionError: If user creation or auth fails
         """
         from tests.factories import UserFactory
+        from tests.factories.base import BaseFactory
 
         if email is None:
             email = f"e2e_user_{uuid4().hex[:8]}@example.com"
+
+        # Ensure factory has session bound (the autouse fixture should do this,
+        # but we need to ensure it's set for async context)
+        if BaseFactory._session is None:
+            raise ValueError(
+                "No database session available. Either pass session parameter "
+                "or ensure the factory session fixture is active."
+            )
 
         # Create user via factory (directly in DB)
         user = await UserFactory.create(email=email, full_name=full_name)
@@ -493,9 +502,13 @@ async def fresh_user_session(
             assert "Authorization" in fresh_user_session.headers
     """
     from tests.factories import UserFactory
+    from tests.factories.base import BaseFactory
 
     email = f"e2e_fresh_{uuid4().hex[:8]}@example.com"
     full_name = "Fresh E2E User"
+
+    # Ensure factory has session bound (fixture ordering can be tricky)
+    BaseFactory._session = db_session
 
     # Create user via factory (directly in DB)
     user = await UserFactory.create(email=email, full_name=full_name)
