@@ -10,9 +10,47 @@ log {
     level INFO
 }
 
-# Health check
-handle /health {
-    respond "healthy" 200
+# Health check endpoints - proxy to backend for real health data
+# Matches /health, /health/live, /health/ready
+handle /health* {
+    reverse_proxy {
+        dynamic a {$BACKEND_HOST:backend.railway.internal} {$BACKEND_PORT:8080} {
+            refresh 1s
+        }
+
+        # Load balancer retries
+        lb_try_duration 5s
+        lb_retries 3
+
+        # Passive health checks
+        fail_duration 10s
+        max_fails 1
+        unhealthy_status 502 503 504
+
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+}
+
+# Version endpoint - proxy to backend
+handle /version {
+    reverse_proxy {
+        dynamic a {$BACKEND_HOST:backend.railway.internal} {$BACKEND_PORT:8080} {
+            refresh 1s
+        }
+
+        lb_try_duration 5s
+        lb_retries 3
+
+        fail_duration 10s
+        max_fails 1
+        unhealthy_status 502 503 504
+
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
 }
 
 # API proxy to backend with dynamic DNS resolution for Railway

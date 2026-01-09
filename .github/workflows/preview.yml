@@ -351,18 +351,22 @@ jobs:
 
       - name: Warm up Backend
         run: |
-          BACKEND_URL="https://${{ env.DEV_BACKEND_URL }}"
-          echo "=== Warming up Backend at $BACKEND_URL ==="
+          # Use frontend URL since backend is private (no public domain)
+          # Frontend proxies /health/* to backend via internal network
+          WARMUP_URL="${{ needs.deploy.outputs.frontend_url }}"
+          echo "=== Warming up Backend via Frontend at $WARMUP_URL ==="
           chmod +x scripts/backend-warmup.sh
-          ./scripts/backend-warmup.sh "$BACKEND_URL" 5 2
+          ./scripts/backend-warmup.sh "$WARMUP_URL" 5 2
 
       - name: Run Health Checks
         id: health
         run: |
+          # Use frontend URL for both since backend is private (no public domain)
+          # Frontend proxies /health/* to backend via internal network
           chmod +x scripts/preview-health-check.sh
           if ./scripts/preview-health-check.sh \
             "${{ needs.deploy.outputs.frontend_url }}" \
-            "${{ needs.deploy.outputs.backend_url }}" \
+            "${{ needs.deploy.outputs.frontend_url }}" \
             30 \
             10; then
             echo "status=success" >> $GITHUB_OUTPUT
@@ -374,8 +378,10 @@ jobs:
         id: smoke
         if: steps.health.outputs.status == 'success'
         run: |
+          # Use frontend URL since backend is private (no public domain)
+          # Frontend proxies /health/*, /api/*, /docs, /redoc, /openapi.json to backend
           chmod +x scripts/preview-api-smoke.sh
-          ./scripts/preview-api-smoke.sh "${{ needs.deploy.outputs.backend_url }}" || true
+          ./scripts/preview-api-smoke.sh "${{ needs.deploy.outputs.frontend_url }}" || true
           # API smoke tests are informational - don't fail the job
 
       - name: Upload Health Check Results
@@ -477,10 +483,12 @@ jobs:
         id: seed
         run: |
           echo "=== Seeding Dev Database ==="
-          BACKEND_URL="${{ needs.deploy.outputs.backend_url }}"
+          # Use frontend URL since backend is private (no public domain)
+          # Frontend proxies /api/* to backend via internal network
+          API_URL="${{ needs.deploy.outputs.frontend_url }}"
 
           # Check if seeding is enabled
-          STATUS_RESPONSE=$(curl -s "$BACKEND_URL/api/v1/test/seed/status" || echo '{"enabled": false}')
+          STATUS_RESPONSE=$(curl -s "$API_URL/api/v1/test/seed/status" || echo '{"enabled": false}')
           echo "Seed status: $STATUS_RESPONSE"
 
           ENABLED=$(echo $STATUS_RESPONSE | jq -r '.enabled')
@@ -492,7 +500,7 @@ jobs:
           fi
 
           # Call seed endpoint
-          RESPONSE=$(curl -s -X POST "$BACKEND_URL/api/v1/test/seed/all")
+          RESPONSE=$(curl -s -X POST "$API_URL/api/v1/test/seed/all")
           echo "Seed response: $RESPONSE"
 
           # Verify success
@@ -543,7 +551,9 @@ jobs:
         continue-on-error: true
         env:
           K6_ENV: preview
-          K6_API_BASE_URL: ${{ needs.deploy.outputs.backend_url }}
+          # Use frontend URL for API calls since backend is private (no public domain)
+          # Frontend proxies /api/* to backend via internal network
+          K6_API_BASE_URL: ${{ needs.deploy.outputs.frontend_url }}
           K6_FRONTEND_BASE_URL: ${{ needs.deploy.outputs.frontend_url }}
           K6_SCENARIO: smoke
           K6_BROWSER_HEADLESS: 'true'
@@ -551,7 +561,7 @@ jobs:
         run: |
           echo "Running K6 Auth Scenario"
           echo "Frontend: $K6_FRONTEND_BASE_URL"
-          echo "Backend: $K6_API_BASE_URL"
+          echo "API (via Frontend): $K6_API_BASE_URL"
 
           k6 run k6/scenarios/auth.js 2>&1 | tee k6/reports/auth-output.txt
           echo "exit_code=$?" >> $GITHUB_OUTPUT
@@ -561,7 +571,9 @@ jobs:
         continue-on-error: true
         env:
           K6_ENV: preview
-          K6_API_BASE_URL: ${{ needs.deploy.outputs.backend_url }}
+          # Use frontend URL for API calls since backend is private (no public domain)
+          # Frontend proxies /api/* to backend via internal network
+          K6_API_BASE_URL: ${{ needs.deploy.outputs.frontend_url }}
           K6_FRONTEND_BASE_URL: ${{ needs.deploy.outputs.frontend_url }}
           K6_SCENARIO: smoke
           K6_BROWSER_HEADLESS: 'true'

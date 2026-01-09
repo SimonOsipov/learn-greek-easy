@@ -1,0 +1,37 @@
+{
+  "mcpServers": {
+    "vibe_kanban": {
+      "command": "npx",
+      "args": ["-y", "vibe-kanban@latest", "--mcp"]
+    },
+    "context7": {
+      "type": "http",
+      "url": "https://mcp.context7.com/mcp",
+      "headers": {
+        "CONTEXT7_API_KEY": "ctx7sk-81c8b625-b8a5-4a1c-8bce-18be98432b8d"
+      }
+    },
+    "playwright": {
+      "command": "npx",
+      "args": ["-y", "@playwright/mcp@latest", "--headless"]
+    },
+    "github": {
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp/",
+      "headers": {
+        "Authorization": "Bearer ${GITHUB_PERSONAL_ACCESS_TOKEN}"
+      }
+    },
+    "railway": {
+      "command": "npx",
+      "args": ["-y", "@railway/mcp-server"]
+    },
+    "posthog": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote@latest", "https://mcp.posthog.com/mcp", "--header", "Authorization:${POSTHOG_AUTH_HEADER}"],
+      "env": {
+        "POSTHOG_AUTH_HEADER": "Bearer phx_rVZXjSdSz7IuoyCPjXilVRYKYZO4vTZl0tjOWBecAge8anS"
+      }
+    }
+  }
+}
