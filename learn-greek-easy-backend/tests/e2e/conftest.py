@@ -140,7 +140,7 @@ class E2ETestCase(AuthenticatedTestCase):
         password: str | None = None,
         full_name: str = "E2E Test User",
     ) -> UserSession:
-        """Create user via factory and authenticate via test seed endpoint.
+        """Create user via test seed endpoint and return authenticated session.
 
         Args:
             client: AsyncClient instance
@@ -154,43 +154,29 @@ class E2ETestCase(AuthenticatedTestCase):
         Raises:
             AssertionError: If user creation or auth fails
         """
-        from tests.factories import UserFactory
-        from tests.factories.base import BaseFactory
-
         if email is None:
             email = f"e2e_user_{uuid4().hex[:8]}@example.com"
 
-        # Ensure factory has session bound (the autouse fixture should do this,
-        # but we need to ensure it's set for async context)
-        if BaseFactory._session is None:
-            raise ValueError(
-                "No database session available. Either pass session parameter "
-                "or ensure the factory session fixture is active."
-            )
-
-        # Create user via factory (directly in DB)
-        user = await UserFactory.create(email=email, full_name=full_name)
-
-        # Get auth tokens via test seed endpoint
+        # Create user and get auth tokens via test seed endpoint
         response = await client.post(
-            "/api/v1/test/seed/auth",
-            json={"email": email},
+            "/api/v1/test/seed/create-user",
+            json={"email": email, "full_name": full_name},
         )
-        assert response.status_code == 200, f"Test auth failed: {response.text}"
+        assert response.status_code == 200, f"Create user failed: {response.text}"
         token_data = response.json()
 
         headers = {"Authorization": f"Bearer {token_data['access_token']}"}
 
-        # Create user-like object
+        # Create user-like object from response
         class UserInfo:
             """Lightweight user representation."""
 
-            def __init__(self, user_model, data: dict) -> None:
-                self.id = user_model.id
-                self.email = user_model.email
-                self.full_name = user_model.full_name
+            def __init__(self, data: dict) -> None:
+                self.id = UUID(data["user_id"])
+                self.email = data["email"]
+                self.full_name = full_name
 
-        return UserSession(user=UserInfo(user, token_data), headers=headers)
+        return UserSession(user=UserInfo(token_data), headers=headers)
 
     async def login_user(
         self,
@@ -484,10 +470,10 @@ async def fresh_user_session(
     client: AsyncClient,
     db_session: AsyncSession,
 ) -> UserSession:
-    """Create new user via factory and authenticate via test seed endpoint.
+    """Create new user via test seed endpoint and return authenticated session.
 
-    This fixture creates a fresh user directly in DB via factory,
-    then authenticates via the test seed auth endpoint.
+    This fixture creates a fresh user through the test seed API,
+    simulating user creation for E2E tests.
 
     Args:
         client: AsyncClient fixture
@@ -501,24 +487,15 @@ async def fresh_user_session(
             assert fresh_user_session.user is not None
             assert "Authorization" in fresh_user_session.headers
     """
-    from tests.factories import UserFactory
-    from tests.factories.base import BaseFactory
-
     email = f"e2e_fresh_{uuid4().hex[:8]}@example.com"
     full_name = "Fresh E2E User"
 
-    # Ensure factory has session bound (fixture ordering can be tricky)
-    BaseFactory._session = db_session
-
-    # Create user via factory (directly in DB)
-    user = await UserFactory.create(email=email, full_name=full_name)
-
-    # Get auth tokens via test seed endpoint
+    # Create user and get auth tokens via test seed endpoint
     resp = await client.post(
-        "/api/v1/test/seed/auth",
-        json={"email": email},
+        "/api/v1/test/seed/create-user",
+        json={"email": email, "full_name": full_name},
     )
-    assert resp.status_code == 200, f"Test auth failed: {resp.text}"
+    assert resp.status_code == 200, f"Create user failed: {resp.text}"
     token_data = resp.json()
 
     headers = {"Authorization": f"Bearer {token_data['access_token']}"}
@@ -526,12 +503,12 @@ async def fresh_user_session(
     class UserInfo:
         """Lightweight user representation."""
 
-        def __init__(self, user_model) -> None:
-            self.id = user_model.id
-            self.email = user_model.email
-            self.full_name = user_model.full_name
+        def __init__(self, data: dict) -> None:
+            self.id = UUID(data["user_id"])
+            self.email = data["email"]
+            self.full_name = full_name
 
-    return UserSession(user=UserInfo(user), headers=headers)
+    return UserSession(user=UserInfo(token_data), headers=headers)
 
 
 @pytest_asyncio.fixture
