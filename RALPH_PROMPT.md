@@ -15,16 +15,16 @@
 **Exception:** MCP tools (Vibe Kanban, git commands, gh commands) can be called directly.
 
 ### 2. Testing Environment
-**NEVER install dependencies in worktrees. Use existing environment.**
+**Run tests from the project directory.**
 
 ```bash
-# WRONG - wastes time, wrong pattern
-cd worktree/frontend && npm install  # NO!
+# Backend tests
+cd /Users/samosipov/Downloads/learn-greek-easy/learn-greek-easy-backend && /Users/samosipov/.local/bin/poetry run pytest -x
 
-# RIGHT - use main repo's node_modules (symlink or run from main)
+# Frontend tests
 cd /Users/samosipov/Downloads/learn-greek-easy/learn-greek-easy-frontend && npm test -- --run
 
-# RIGHT - use Docker if running
+# Or use Docker if running
 docker exec learn-greek-frontend npm test -- --run
 ```
 
@@ -128,7 +128,7 @@ Task(
 ```
 Task(
   subagent_type="product-executor",
-  prompt="Implement [TASK] following this plan:\n\n[PLAN]\n\nWorking directory: [WORKTREE_PATH]\nBranch: [BRANCH_NAME]\n\nAfter implementation, run tests from MAIN repo (not worktree):\ncd /Users/samosipov/Downloads/learn-greek-easy/learn-greek-easy-frontend && npm test -- --run"
+  prompt="Implement [TASK] following this plan:\n\n[PLAN]\n\nBranch: [BRANCH_NAME]\n\nAfter implementation, run tests:\ncd /Users/samosipov/Downloads/learn-greek-easy/learn-greek-easy-frontend && npm test -- --run"
 )
 ```
 - Agent handles all file edits
@@ -157,11 +157,8 @@ Task(
 
 ### First task in batch:
 ```bash
-# Create worktree + branch (named after feature, not individual task)
-MAIN_REPO=$(git rev-parse --show-toplevel)
-REPO_NAME=$(basename "$MAIN_REPO")
-git worktree add "../${REPO_NAME}-[feature]" -b feature/[name] main
-cd "../${REPO_NAME}-[feature]"
+# Create feature branch (named after feature, not individual task)
+git checkout -b feature/[name] main
 
 # After first task implemented:
 git push -u origin feature/[name]
@@ -169,7 +166,7 @@ gh pr create --draft --title "[FEATURE] Name" --body "..." --label "skip-visual"
 ```
 
 ### Middle tasks:
-- Work in SAME worktree
+- Stay on SAME branch
 - Commit to SAME branch
 - Push to SAME PR (stays draft)
 
@@ -177,6 +174,13 @@ gh pr create --draft --title "[FEATURE] Name" --body "..." --label "skip-visual"
 ```bash
 # Remove label while draft (no CI trigger), then mark ready (triggers CI once)
 gh pr edit --remove-label "skip-visual" && gh pr ready
+```
+
+### After merge - cleanup:
+```bash
+git checkout main
+git pull origin main
+git branch -d feature/[name]
 ```
 
 ---
@@ -190,20 +194,13 @@ gh pr edit --remove-label "skip-visual" && gh pr ready
 
 ## Back Pressure (local validation)
 
-**Run from MAIN repo, not worktree:**
+**Run tests before pushing:**
 ```bash
-# Backend (from main repo)
+# Backend
 cd /Users/samosipov/Downloads/learn-greek-easy/learn-greek-easy-backend && /Users/samosipov/.local/bin/poetry run pytest -x
 
-# Frontend (from main repo - has node_modules)
+# Frontend
 cd /Users/samosipov/Downloads/learn-greek-easy/learn-greek-easy-frontend && npm test -- --run && npm run build
-```
-
-**For worktree changes to be tested:**
-```bash
-# Option 1: Copy changed files to main repo temporarily for testing
-# Option 2: Run lint/typecheck in worktree (no npm install needed if using npx)
-cd /path/to/worktree/frontend && npx tsc --noEmit
 ```
 
 ---
@@ -237,7 +234,6 @@ Human decides merge after reviewing the PR.
 |--------------|----------------|------------------|
 | Reading files directly in main context | Bloats context, wastes tokens | Use Explore agent |
 | Editing files directly in main context | Bloats context, error-prone | Use Executor agent |
-| `npm install` in worktree | Slow, unnecessary, wrong pattern | Use main repo's node_modules |
 | Outputting ALL_TASKS_COMPLETE before CI | CI might fail, false completion | Wait for `gh pr checks` |
 | Skipping stage checkpoints | Loop can't track progress | Output every checkpoint |
 | Multiple Grep/Glob calls for research | Bloats context | Single Explore agent call |
