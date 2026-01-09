@@ -1,10 +1,9 @@
 /**
  * Forgot Password Page
  *
- * Renders either the Auth0 password reset form or the legacy placeholder
- * based on the VITE_AUTH0_ENABLED feature flag.
+ * Uses Auth0 password reset flow.
  *
- * Auth0 flow:
+ * Flow:
  * 1. User enters email
  * 2. Submit triggers Auth0 changePassword API
  * 3. Success screen shows "Check your email" message
@@ -26,23 +25,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { isAuth0Enabled } from '@/hooks';
 import { changePassword } from '@/lib/auth0WebAuth';
 import log from '@/lib/logger';
-
-/**
- * Main Forgot Password Component
- * Routes to Auth0 or legacy form based on feature flag
- */
-export const ForgotPassword: React.FC = () => {
-  // If Auth0 is enabled, render the Auth0 forgot password form
-  if (isAuth0Enabled()) {
-    return <Auth0ForgotPasswordForm />;
-  }
-
-  // Legacy placeholder (when Auth0 is disabled)
-  return <LegacyForgotPassword />;
-};
 
 /** Form state machine states */
 type FormState = 'form' | 'success';
@@ -57,7 +41,7 @@ const forgotPasswordSchema = z.object({
 type ForgotPasswordFormData = z.infer<typeof forgotPasswordSchema>;
 
 /**
- * Auth0 Forgot Password Form Component
+ * Forgot Password Component
  *
  * Features:
  * - Email input with validation
@@ -66,7 +50,7 @@ type ForgotPasswordFormData = z.infer<typeof forgotPasswordSchema>;
  * - Error display with retry capability
  * - "Try different email" button on success screen
  */
-const Auth0ForgotPasswordForm: React.FC = () => {
+export const ForgotPassword: React.FC = () => {
   const { t } = useTranslation('auth');
 
   // Form state machine
@@ -104,7 +88,7 @@ const Auth0ForgotPasswordForm: React.FC = () => {
     } catch (err) {
       const translatedError = t('forgotPassword.auth0.errors.sendFailed');
       setFormError(translatedError);
-      log.error('[Auth0ForgotPasswordForm] Password reset failed:', err);
+      log.error('[ForgotPassword] Password reset failed:', err);
     } finally {
       setIsSubmitting(false);
     }
@@ -246,50 +230,6 @@ const Auth0ForgotPasswordForm: React.FC = () => {
             </div>
           </CardContent>
         </form>
-      </Card>
-    </AuthLayout>
-  );
-};
-
-/**
- * Legacy Forgot Password Component
- * Placeholder shown when Auth0 is disabled
- */
-const LegacyForgotPassword: React.FC = () => {
-  const { t } = useTranslation('auth');
-
-  return (
-    <AuthLayout>
-      <Card className="shadow-xl">
-        <CardHeader className="space-y-1 text-center">
-          <div className="mx-auto mb-4">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-blue-100 to-purple-100">
-              <Lock className="h-8 w-8 text-primary" />
-            </div>
-          </div>
-          <CardTitle className="text-2xl font-bold">{t('forgotPassword.title')}</CardTitle>
-          <CardDescription>{t('forgotPassword.description')}</CardDescription>
-        </CardHeader>
-
-        <CardContent className="space-y-4">
-          <div className="space-y-2 text-center">
-            <p className="text-muted-foreground">
-              Password reset functionality will be available soon.
-            </p>
-            <p className="text-sm text-muted-foreground">
-              In the meantime, please contact support if you need help accessing your account.
-            </p>
-          </div>
-
-          <div className="pt-4">
-            <Button asChild variant="outline" className="w-full">
-              <Link to="/login">
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                {t('forgotPassword.backToLogin')}
-              </Link>
-            </Button>
-          </div>
-        </CardContent>
       </Card>
     </AuthLayout>
   );

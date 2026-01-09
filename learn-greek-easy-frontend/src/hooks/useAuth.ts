@@ -5,17 +5,17 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 import type { User, AuthError } from '@/types/auth';
 
-import { isAuth0Enabled, useAuth0Integration } from './useAuth0Integration';
+import { useAuth0Integration } from './useAuth0Integration';
 
 /**
- * Auth hook return type - unified interface for both Auth0 and legacy auth.
+ * Auth hook return type - unified interface for Auth0 authentication.
  */
 interface UseAuthResult {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   error: AuthError | Error | null | undefined;
-  login: (emailOrReturnTo?: string, password?: string, remember?: boolean) => Promise<void>;
+  login: (returnTo?: string) => Promise<void>;
   logout: () => Promise<void>;
   register: (data: {
     name: string;
@@ -32,50 +32,14 @@ interface UseAuthResult {
 }
 
 /**
- * Hook for legacy (non-Auth0) authentication.
+ * Main auth hook - uses Auth0 authentication.
+ *
+ * Usage:
+ * ```tsx
+ * const { user, isAuthenticated, login, logout } = useAuth();
+ * ```
  */
-function useLegacyAuth(): UseAuthResult {
-  const {
-    user,
-    isAuthenticated,
-    isLoading,
-    error,
-    login: legacyLogin,
-    logout,
-    register,
-    updateProfile,
-    clearError,
-  } = useAuthStore();
-
-  // Wrap login to match expected signature
-  const login = async (email?: string, password?: string, remember?: boolean) => {
-    if (!email || !password) {
-      throw new Error('Email and password are required for login');
-    }
-    await legacyLogin(email, password, remember);
-  };
-
-  return {
-    user,
-    isAuthenticated,
-    isLoading,
-    error,
-    login,
-    logout,
-    register,
-    updateProfile,
-    clearError,
-    isAdmin: user?.role === 'admin',
-    isPremium: user?.role === 'premium' || user?.role === 'admin',
-    isFree: user?.role === 'free',
-  };
-}
-
-/**
- * Hook for Auth0 authentication.
- * Adapts Auth0 interface to match the legacy auth interface.
- */
-function useAuth0Auth(): UseAuthResult {
+export function useAuth(): UseAuthResult {
   const {
     user,
     isAuthenticated,
@@ -126,27 +90,10 @@ function useAuth0Auth(): UseAuthResult {
 }
 
 /**
- * Main auth hook - facade that returns Auth0 or legacy auth based on feature flag.
- *
- * Usage:
- * ```tsx
- * const { user, isAuthenticated, login, logout } = useAuth();
- * ```
- *
- * When VITE_AUTH0_ENABLED=true, uses Auth0 authentication.
- * Otherwise, uses the legacy email/password authentication.
- *
- * IMPORTANT: Since the auth system is determined by environment variable
- * at build time, we export two separate hook implementations and the
- * correct one is selected based on the feature flag.
- */
-export const useAuth: () => UseAuthResult = isAuth0Enabled() ? useAuth0Auth : useLegacyAuth;
-
-/**
- * Internal hook to get unified auth state for helper hooks (Auth0 version).
+ * Internal hook to get unified auth state for helper hooks.
  * Combines Auth0 state with Zustand store state to handle logout correctly.
  */
-function useUnifiedAuthStateAuth0() {
+function useUnifiedAuthState() {
   const auth0State = useAuth0Integration();
   const legacyState = useAuthStore();
 
@@ -158,30 +105,6 @@ function useUnifiedAuthStateAuth0() {
     user: auth0State.user,
   };
 }
-
-/**
- * Internal hook to get unified auth state for helper hooks (legacy version).
- * Simply returns the Zustand store state.
- */
-function useUnifiedAuthStateLegacy() {
-  const legacyState = useAuthStore();
-
-  return {
-    isAuthenticated: legacyState.isAuthenticated,
-    isLoading: legacyState.isLoading,
-    user: legacyState.user,
-  };
-}
-
-/**
- * Internal hook to get unified auth state for helper hooks.
- * Uses Auth0 state when Auth0 is enabled, otherwise uses Zustand store.
- * This ensures route guards work correctly with both auth systems.
- *
- * Note: The implementation is selected at build time based on VITE_AUTH0_ENABLED
- * to comply with React hooks rules (no conditional hook calls).
- */
-const useUnifiedAuthState = isAuth0Enabled() ? useUnifiedAuthStateAuth0 : useUnifiedAuthStateLegacy;
 
 // Hook to require authentication
 export const useRequireAuth = (redirectTo = '/login') => {
