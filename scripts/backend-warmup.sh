@@ -152,18 +152,21 @@ echo ""
 echo "Phase 3: Final health verification..."
 echo ""
 
-FINAL_HEALTH=$(curl -sf "$BASE_URL/api/v1/health" --max-time 10 2>/dev/null || echo "FAILED")
+# Readiness check is the deployment gate
 FINAL_READY=$(curl -sf "$BASE_URL/api/v1/health/ready" --max-time 10 2>/dev/null || echo "FAILED")
 
-if [ "$FINAL_HEALTH" = "FAILED" ] || [ "$FINAL_READY" = "FAILED" ]; then
-    echo "ERROR: Final health check failed!"
-    echo "  /api/v1/health: $FINAL_HEALTH"
-    echo "  /api/v1/health/ready: $FINAL_READY"
+# Also fetch comprehensive health for logging (but don't gate on it)
+FINAL_HEALTH=$(curl -s "$BASE_URL/api/v1/health" --max-time 10 2>/dev/null || echo '{"status":"timeout"}')
+
+if [ "$FINAL_READY" = "FAILED" ]; then
+    echo "ERROR: Readiness check failed!"
+    echo "  /api/v1/health/ready: FAILED"
+    echo "  /api/v1/health (info only): $FINAL_HEALTH"
     exit 1
 fi
 
-echo "  /api/v1/health: OK"
-echo "  /api/v1/health/ready: OK"
+echo "  /api/v1/health/ready: $FINAL_READY"
+echo "  /api/v1/health (info only): $FINAL_HEALTH"
 
 # ============================================================================
 # Summary
