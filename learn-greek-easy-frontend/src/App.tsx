@@ -1,7 +1,8 @@
-import { Suspense, useEffect } from 'react';
+import { Suspense, useEffect, type ReactNode } from 'react';
 
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 
+import { Auth0TokenInjector } from '@/components/auth/Auth0TokenInjector';
 import { AuthRoutesWrapper } from '@/components/auth/AuthRoutesWrapper';
 import { LandingRoute } from '@/components/auth/LandingRoute';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
@@ -16,8 +17,9 @@ import { AchievementNotificationManager } from '@/components/xp';
 import { LanguageProvider } from '@/contexts/LanguageContext';
 import { LayoutProvider } from '@/contexts/LayoutContext';
 import { NotificationProvider } from '@/contexts/NotificationContext';
+import { isAuth0Enabled } from '@/hooks/useAuth0Integration';
 import { lazyWithRetry } from '@/lib/lazyWithRetry';
-import { PostHogProvider } from '@/providers';
+import { Auth0ProviderWithNavigate, PostHogProvider } from '@/providers';
 import { useAppStore, selectIsReady } from '@/stores/appStore';
 
 // ============================================================================
@@ -37,6 +39,9 @@ const Register = lazyWithRetry(() =>
 );
 const ForgotPassword = lazyWithRetry(() =>
   import('@/pages/auth/ForgotPassword').then((m) => ({ default: m.ForgotPassword }))
+);
+const Callback = lazyWithRetry(() =>
+  import('@/pages/auth/Callback').then((m) => ({ default: m.Callback }))
 );
 
 // Main dashboard and navigation pages
@@ -142,6 +147,9 @@ function AppContent() {
                 <Route path="/forgot-password" element={<ForgotPassword />} />
               </Route>
 
+              {/* OAuth callback route - handles Auth0 redirect with tokens in hash */}
+              <Route path="/callback" element={<Callback />} />
+
               {/* Protected Routes - require authentication */}
               <Route element={<ProtectedRoute />}>
                 <Route path="/dashboard" element={<AppLayout />}>
@@ -202,21 +210,43 @@ function AppContent() {
   );
 }
 
+/**
+ * Conditional Auth0 Provider wrapper.
+ * Wraps children with Auth0Provider when Auth0 is enabled.
+ * Must be inside BrowserRouter for useNavigate to work.
+ */
+function ConditionalAuth0Provider({ children }: { children: ReactNode }) {
+  if (!isAuth0Enabled()) {
+    return <>{children}</>;
+  }
+
+  return (
+    <Auth0ProviderWithNavigate>
+      {/* Inject Auth0 token getter into API client */}
+      <Auth0TokenInjector />
+      {children}
+    </Auth0ProviderWithNavigate>
+  );
+}
+
 function App() {
   return (
     <ErrorBoundary>
       <BrowserRouter>
-        <PostHogProvider>
-          <TooltipProvider>
-            <LanguageProvider>
-              <LayoutProvider>
-                <NotificationProvider>
-                  <AppContent />
-                </NotificationProvider>
-              </LayoutProvider>
-            </LanguageProvider>
-          </TooltipProvider>
-        </PostHogProvider>
+        {/* Auth0Provider must be inside BrowserRouter for useNavigate */}
+        <ConditionalAuth0Provider>
+          <PostHogProvider>
+            <TooltipProvider>
+              <LanguageProvider>
+                <LayoutProvider>
+                  <NotificationProvider>
+                    <AppContent />
+                  </NotificationProvider>
+                </LayoutProvider>
+              </LanguageProvider>
+            </TooltipProvider>
+          </PostHogProvider>
+        </ConditionalAuth0Provider>
       </BrowserRouter>
     </ErrorBoundary>
   );

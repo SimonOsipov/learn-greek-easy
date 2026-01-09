@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 
+import { Auth0RegisterForm } from '@/components/auth/Auth0RegisterForm';
 import { AuthLayout } from '@/components/auth/AuthLayout';
 import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton';
 import { SubmitButton } from '@/components/forms';
@@ -23,6 +24,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
+import { isAuth0Enabled } from '@/hooks';
 import { useAuthStore } from '@/stores/authStore';
 
 /**
@@ -53,6 +55,20 @@ const registerSchema = z
 type RegisterFormData = z.infer<typeof registerSchema>;
 
 export const Register: React.FC = () => {
+  // If Auth0 is enabled, render the Auth0 registration form
+  if (isAuth0Enabled()) {
+    return <Auth0RegisterForm />;
+  }
+
+  // Legacy registration form (when Auth0 is disabled)
+  return <LegacyRegisterForm />;
+};
+
+/**
+ * Legacy Registration Form Component
+ * Used when Auth0 is disabled (VITE_AUTH0_ENABLED !== 'true')
+ */
+const LegacyRegisterForm: React.FC = () => {
   const { t } = useTranslation('auth');
   const navigate = useNavigate();
   const { register: registerUser, isLoading } = useAuthStore();

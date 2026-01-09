@@ -59,6 +59,7 @@ class UserFactory(BaseFactory):
     is_superuser = False
     email_verified_at = None
     google_id = None
+    auth0_id = None
     last_login_at = None
     last_login_ip = None
 
@@ -86,6 +87,13 @@ class UserFactory(BaseFactory):
         oauth = factory.Trait(
             password_hash=None,
             google_id=factory.LazyFunction(lambda: f"google_{uuid4().hex}"),
+            email_verified_at=factory.LazyFunction(utc_now),
+        )
+
+        # Auth0 user trait (no password)
+        auth0 = factory.Trait(
+            password_hash=None,
+            auth0_id=factory.LazyFunction(lambda: f"auth0|{uuid4().hex}"),
             email_verified_at=factory.LazyFunction(utc_now),
         )
 

@@ -2,13 +2,16 @@
 # Preview Environment Health Check Script
 #
 # Usage:
-#   ./scripts/preview-health-check.sh <FRONTEND_URL> <BACKEND_URL> [MAX_RETRIES] [RETRY_INTERVAL]
+#   ./scripts/preview-health-check.sh <FRONTEND_URL> [MAX_RETRIES] [RETRY_INTERVAL]
 #
 # Parameters:
 #   FRONTEND_URL   - The frontend deployment URL (required)
-#   BACKEND_URL    - The backend deployment URL (required)
 #   MAX_RETRIES    - Maximum number of retry attempts (default: 30)
 #   RETRY_INTERVAL - Seconds between retries (default: 10)
+#
+# Note:
+#   The backend is private and accessed via the frontend proxy.
+#   Backend health checks use /api/v1/health/* endpoints through the frontend.
 #
 # This script waits for services to become ready, then runs smoke tests
 # to verify the deployment is functional.
@@ -24,9 +27,8 @@ set -e
 # ============================================================================
 
 FRONTEND_URL=$1
-BACKEND_URL=$2
-MAX_RETRIES=${3:-30}
-RETRY_INTERVAL=${4:-10}
+MAX_RETRIES=${2:-30}
+RETRY_INTERVAL=${3:-10}
 
 # Threshold for slow responses (in milliseconds)
 SLOW_THRESHOLD_MS=500
@@ -38,20 +40,20 @@ ENDPOINT_DATA=""
 # Validation
 # ============================================================================
 
-if [ -z "$FRONTEND_URL" ] || [ -z "$BACKEND_URL" ]; then
-    echo "Usage: $0 <FRONTEND_URL> <BACKEND_URL> [MAX_RETRIES] [RETRY_INTERVAL]"
+if [ -z "$FRONTEND_URL" ]; then
+    echo "Usage: $0 <FRONTEND_URL> [MAX_RETRIES] [RETRY_INTERVAL]"
     echo ""
     echo "Parameters:"
     echo "  FRONTEND_URL   - The frontend deployment URL (required)"
-    echo "  BACKEND_URL    - The backend deployment URL (required)"
     echo "  MAX_RETRIES    - Maximum number of retry attempts (default: 30)"
     echo "  RETRY_INTERVAL - Seconds between retries (default: 10)"
+    echo ""
+    echo "Note: Backend is private. Health checks use /api/v1/health/* via frontend proxy."
     exit 1
 fi
 
-# Remove trailing slashes from URLs
+# Remove trailing slash from URL
 FRONTEND_URL="${FRONTEND_URL%/}"
-BACKEND_URL="${BACKEND_URL%/}"
 
 # ============================================================================
 # Functions
@@ -118,7 +120,7 @@ echo "Preview Environment Health Check"
 echo "=============================================="
 echo ""
 echo "Frontend URL: $FRONTEND_URL"
-echo "Backend URL:  $BACKEND_URL"
+echo "Backend API:  $FRONTEND_URL/api/v1 (via frontend proxy)"
 echo "Max Retries:  $MAX_RETRIES"
 echo "Retry Interval: ${RETRY_INTERVAL}s"
 echo ""
@@ -137,13 +139,13 @@ for i in $(seq 1 $MAX_RETRIES); do
         echo "  Frontend /health: $frontend_status (ready)"
     fi
 
-    # Check backend health
-    backend_status=$(curl -s -o /dev/null -w "%{http_code}" "$BACKEND_URL/health" --max-time 10 2>/dev/null || echo "000")
+    # Check backend health via frontend proxy
+    backend_status=$(curl -s -o /dev/null -w "%{http_code}" "$FRONTEND_URL/api/v1/health" --max-time 10 2>/dev/null || echo "000")
     if [ "$backend_status" != "200" ]; then
-        echo "  Backend /health: $backend_status (waiting...)"
+        echo "  Backend /api/v1/health: $backend_status (waiting...)"
         READY=false
     else
-        echo "  Backend /health: $backend_status (ready)"
+        echo "  Backend /api/v1/health: $backend_status (ready)"
     fi
 
     if [ "$READY" = true ]; then
@@ -196,22 +198,23 @@ else
 fi
 
 echo ""
-echo "--- Backend Tests ---"
-if check_endpoint "$BACKEND_URL/health" "Backend Health"; then
+echo "--- Backend Tests (via frontend proxy) ---"
+# Backend is private - all health checks use /api/v1/health/* via frontend proxy
+if check_endpoint "$FRONTEND_URL/api/v1/health" "Backend Health"; then
     RESULTS+=("Backend Health: PASS")
 else
     RESULTS+=("Backend Health: FAIL")
     FAILED=$((FAILED + 1))
 fi
 
-if check_endpoint "$BACKEND_URL/health/live" "Backend Liveness"; then
+if check_endpoint "$FRONTEND_URL/api/v1/health/live" "Backend Liveness"; then
     RESULTS+=("Backend Liveness: PASS")
 else
     RESULTS+=("Backend Liveness: FAIL")
     FAILED=$((FAILED + 1))
 fi
 
-if check_endpoint "$BACKEND_URL/health/ready" "Backend Readiness"; then
+if check_endpoint "$FRONTEND_URL/api/v1/health/ready" "Backend Readiness"; then
     RESULTS+=("Backend Readiness: PASS")
 else
     RESULTS+=("Backend Readiness: FAIL")
@@ -220,16 +223,16 @@ fi
 
 echo ""
 echo "--- Documentation Tests (Optional - Non-Blocking) ---"
-# Note: /docs and /openapi.json are only available when DEBUG=true in backend
+# Note: /docs and /openapi.json are accessed via frontend proxy
 # These tests are informational only and don't block the health check
-if check_endpoint "$BACKEND_URL/docs" "API Docs (Swagger)"; then
+if check_endpoint "$FRONTEND_URL/docs" "API Docs (Swagger)"; then
     RESULTS+=("API Docs: PASS")
 else
     RESULTS+=("API Docs: SKIP (DEBUG mode disabled)")
     echo "  Note: API docs are disabled when DEBUG=false"
 fi
 
-if check_endpoint "$BACKEND_URL/openapi.json" "OpenAPI Schema"; then
+if check_endpoint "$FRONTEND_URL/openapi.json" "OpenAPI Schema"; then
     RESULTS+=("OpenAPI Schema: PASS")
 else
     RESULTS+=("OpenAPI Schema: SKIP (DEBUG mode disabled)")
@@ -266,7 +269,7 @@ cat > health-check-results.json << EOF
 {
   "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
   "frontend_url": "$FRONTEND_URL",
-  "backend_url": "$BACKEND_URL",
+  "backend_api_url": "$FRONTEND_URL/api/v1",
   "summary": {
     "total": $TOTAL,
     "passed": $PASSED_COUNT,

@@ -63,11 +63,11 @@ jobs:
           # Install curl and jq (Railway CLI container is Alpine-based)
           apk add --no-cache curl jq
 
-          # Backend should still be running, call truncate endpoint
-          # This cleans up seed data before stopping services
-          BACKEND_URL="https://backend-dev-bc44.up.railway.app"
+          # Backend is private - call truncate endpoint via frontend proxy
+          # Frontend should still be running at this point
+          FRONTEND_URL="https://frontend-dev-8db9.up.railway.app"
 
-          RESPONSE=$(curl -s -X POST "$BACKEND_URL/api/v1/test/seed/truncate" || echo '{"skipped": true, "error": "Backend not reachable"}')
+          RESPONSE=$(curl -s -X POST "$FRONTEND_URL/api/v1/test/seed/truncate" || echo '{"skipped": true, "error": "Backend not reachable via proxy"}')
           echo "Truncate response: $RESPONSE"
 
           # Don't fail if truncate fails - service might already be stopped

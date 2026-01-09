@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { z } from 'zod';
 
+import { Auth0LoginForm } from '@/components/auth/Auth0LoginForm';
 import { AuthLayout } from '@/components/auth/AuthLayout';
 import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton';
 import { SubmitButton } from '@/components/forms';
@@ -22,6 +23,7 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { isAuth0Enabled } from '@/hooks';
 import { useAuthStore } from '@/stores/authStore';
 
 /**
@@ -41,6 +43,20 @@ const loginSchema = z.object({
 type LoginFormData = z.infer<typeof loginSchema>;
 
 export const Login: React.FC = () => {
+  // If Auth0 is enabled, render the Auth0 login form
+  if (isAuth0Enabled()) {
+    return <Auth0LoginForm />;
+  }
+
+  // Legacy login form (when Auth0 is disabled)
+  return <LegacyLoginForm />;
+};
+
+/**
+ * Legacy Login Form Component
+ * Used when Auth0 is disabled (VITE_AUTH0_ENABLED !== 'true')
+ */
+const LegacyLoginForm: React.FC = () => {
   const { t } = useTranslation('auth');
   const navigate = useNavigate();
   const location = useLocation();

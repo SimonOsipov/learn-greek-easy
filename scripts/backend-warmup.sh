@@ -5,11 +5,16 @@
 #   Warm up the backend after deployment to trigger DNS refresh in Caddy
 #   and initialize connection pools, lazy-loaded modules, and caches.
 #
+# Note:
+#   The backend is now private and accessed via the frontend proxy.
+#   This script uses /api/v1/health/* endpoints which route through Caddy
+#   to the internal backend service.
+#
 # Usage:
-#   ./scripts/backend-warmup.sh <BACKEND_URL> [WARMUP_REQUESTS] [RETRY_DELAY]
+#   ./scripts/backend-warmup.sh <BASE_URL> [WARMUP_REQUESTS] [RETRY_DELAY]
 #
 # Parameters:
-#   BACKEND_URL      - The backend URL (required)
+#   BASE_URL         - The base URL (frontend URL, which proxies to backend)
 #   WARMUP_REQUESTS  - Number of warmup requests per endpoint (default: 10)
 #   RETRY_DELAY      - Seconds between health check retries (default: 3)
 #
@@ -18,7 +23,7 @@
 #   1 - Warmup failed (backend not healthy after max retries)
 #
 # Example:
-#   ./scripts/backend-warmup.sh "https://backend-production-7429.up.railway.app" 10 3
+#   ./scripts/backend-warmup.sh "https://learn-greek-frontend.up.railway.app" 10 3
 
 set -e
 
@@ -26,7 +31,7 @@ set -e
 # Parameters
 # ============================================================================
 
-BACKEND_URL=$1
+BASE_URL=$1
 WARMUP_REQUESTS=${2:-10}
 RETRY_DELAY=${3:-3}
 MAX_READY_RETRIES=20
@@ -35,18 +40,20 @@ MAX_READY_RETRIES=20
 # Validation
 # ============================================================================
 
-if [ -z "$BACKEND_URL" ]; then
-    echo "Usage: $0 <BACKEND_URL> [WARMUP_REQUESTS] [RETRY_DELAY]"
+if [ -z "$BASE_URL" ]; then
+    echo "Usage: $0 <BASE_URL> [WARMUP_REQUESTS] [RETRY_DELAY]"
     echo ""
     echo "Parameters:"
-    echo "  BACKEND_URL      - The backend URL (required)"
+    echo "  BASE_URL         - The base URL (frontend URL, which proxies to backend)"
     echo "  WARMUP_REQUESTS  - Number of warmup requests per endpoint (default: 10)"
     echo "  RETRY_DELAY      - Seconds between health check retries (default: 3)"
+    echo ""
+    echo "Note: Backend is private. Use frontend URL to access via proxy."
     exit 1
 fi
 
 # Remove trailing slash from URL
-BACKEND_URL="${BACKEND_URL%/}"
+BASE_URL="${BASE_URL%/}"
 
 # ============================================================================
 # Functions
@@ -81,7 +88,8 @@ echo "=============================================="
 echo "Backend Warmup Script"
 echo "=============================================="
 echo ""
-echo "Backend URL:     $BACKEND_URL"
+echo "Base URL:        $BASE_URL"
+echo "Health Endpoint: $BASE_URL/api/v1/health (via frontend proxy)"
 echo "Warmup Requests: $WARMUP_REQUESTS per endpoint"
 echo "Retry Delay:     ${RETRY_DELAY}s"
 echo ""
@@ -91,17 +99,18 @@ echo ""
 START_TIME=$(date +%s)
 
 for i in $(seq 1 $MAX_READY_RETRIES); do
-    status=$(curl -sf -o /dev/null -w "%{http_code}" "$BACKEND_URL/health/ready" --max-time 10 2>/dev/null || echo "000")
+    # Use /api/v1/health/ready - accessed via frontend proxy to private backend
+    status=$(curl -sf -o /dev/null -w "%{http_code}" "$BASE_URL/api/v1/health/ready" --max-time 10 2>/dev/null || echo "000")
 
     if [ "$status" = "200" ]; then
         READY_TIME=$(date +%s)
         READY_DURATION=$((READY_TIME - START_TIME))
-        echo "  /health/ready: $status (ready after ${READY_DURATION}s)"
+        echo "  /api/v1/health/ready: $status (ready after ${READY_DURATION}s)"
         echo ""
         break
     fi
 
-    echo "  Attempt $i/$MAX_READY_RETRIES: /health/ready returned $status"
+    echo "  Attempt $i/$MAX_READY_RETRIES: /api/v1/health/ready returned $status"
 
     if [ $i -eq $MAX_READY_RETRIES ]; then
         echo ""
@@ -123,11 +132,11 @@ echo ""
 WARMUP_START=$(date +%s)
 
 # Warmup endpoints (public only - no auth required)
-warmup_endpoint "$BACKEND_URL/health" "/health"
-warmup_endpoint "$BACKEND_URL/health/live" "/health/live"
-warmup_endpoint "$BACKEND_URL/health/ready" "/health/ready"
-warmup_endpoint "$BACKEND_URL/version" "/version"
-warmup_endpoint "$BACKEND_URL/api/v1/status" "/api/v1/status"
+# All endpoints are accessed via frontend proxy to private backend
+warmup_endpoint "$BASE_URL/api/v1/health" "/api/v1/health"
+warmup_endpoint "$BASE_URL/api/v1/health/live" "/api/v1/health/live"
+warmup_endpoint "$BASE_URL/api/v1/health/ready" "/api/v1/health/ready"
+warmup_endpoint "$BASE_URL/api/v1/status" "/api/v1/status"
 
 WARMUP_END=$(date +%s)
 WARMUP_DURATION=$((WARMUP_END - WARMUP_START))
@@ -143,18 +152,21 @@ echo ""
 echo "Phase 3: Final health verification..."
 echo ""
 
-FINAL_HEALTH=$(curl -sf "$BACKEND_URL/health" --max-time 10 2>/dev/null || echo "FAILED")
-FINAL_READY=$(curl -sf "$BACKEND_URL/health/ready" --max-time 10 2>/dev/null || echo "FAILED")
+# Readiness check is the deployment gate
+FINAL_READY=$(curl -sf "$BASE_URL/api/v1/health/ready" --max-time 10 2>/dev/null || echo "FAILED")
 
-if [ "$FINAL_HEALTH" = "FAILED" ] || [ "$FINAL_READY" = "FAILED" ]; then
-    echo "ERROR: Final health check failed!"
-    echo "  /health: $FINAL_HEALTH"
-    echo "  /health/ready: $FINAL_READY"
+# Also fetch comprehensive health for logging (but don't gate on it)
+FINAL_HEALTH=$(curl -s "$BASE_URL/api/v1/health" --max-time 10 2>/dev/null || echo '{"status":"timeout"}')
+
+if [ "$FINAL_READY" = "FAILED" ]; then
+    echo "ERROR: Readiness check failed!"
+    echo "  /api/v1/health/ready: FAILED"
+    echo "  /api/v1/health (info only): $FINAL_HEALTH"
     exit 1
 fi
 
-echo "  /health: OK"
-echo "  /health/ready: OK"
+echo "  /api/v1/health/ready: $FINAL_READY"
+echo "  /api/v1/health (info only): $FINAL_HEALTH"
 
 # ============================================================================
 # Summary

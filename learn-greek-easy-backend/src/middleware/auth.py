@@ -61,6 +61,8 @@ class AuthLoggingMiddleware:
         "/api/v1/auth/register",
         "/api/v1/auth/logout",
         "/api/v1/auth/logout-all",
+        "/api/v1/auth/google",
+        "/api/v1/auth/auth0",
     ]
 
     def __init__(self, app: ASGIApp) -> None:

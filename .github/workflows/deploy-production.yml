@@ -16,9 +16,8 @@ concurrency:
   cancel-in-progress: false  # Never cancel in-progress prod deploys
 
 env:
-  # Production environment URLs
+  # Production environment URL (backend is private, accessed via frontend proxy)
   PROD_FRONTEND_URL: https://learn-greek-frontend.up.railway.app
-  PROD_BACKEND_URL: https://backend-production-7429.up.railway.app
 
 permissions:
   contents: read
@@ -60,7 +59,7 @@ jobs:
     container: ghcr.io/railwayapp/cli:latest
     environment:
       name: production
-      url: ${{ env.PROD_BACKEND_URL }}
+      # Backend is private - no public URL, accessed via frontend proxy
     outputs:
       deployment_id: ${{ steps.deploy.outputs.deployment_id }}
 
@@ -121,6 +120,7 @@ jobs:
           # Use frontend URL since backend is private (no public domain)
           # Frontend proxies /health/* to backend via internal network
           chmod +x scripts/backend-warmup.sh
+          # Backend is private - warmup via frontend proxy using /api/v1/health endpoints
           ./scripts/backend-warmup.sh "${{ env.PROD_FRONTEND_URL }}" 10 3
 
   # =============================================================================
@@ -198,14 +198,13 @@ jobs:
         run: |
           echo "=== Post-Deploy Health Verification ==="
 
-          # Backend health check (via frontend proxy since backend is private)
-          # Frontend proxies /health/* to backend via internal network
-          echo "Checking Backend health (via frontend proxy)..."
-          BACKEND_HEALTH=$(curl -sf "${{ env.PROD_FRONTEND_URL }}/health" || echo "FAILED")
-          echo "Backend /health: $BACKEND_HEALTH"
+          # Backend health check via frontend proxy (backend is private)
+          echo "Checking Backend health via frontend proxy..."
+          BACKEND_HEALTH=$(curl -sf "${{ env.PROD_FRONTEND_URL }}/api/v1/health" || echo "FAILED")
+          echo "Backend /api/v1/health: $BACKEND_HEALTH"
 
-          BACKEND_READY=$(curl -sf "${{ env.PROD_FRONTEND_URL }}/health/ready" || echo "FAILED")
-          echo "Backend /health/ready: $BACKEND_READY"
+          BACKEND_READY=$(curl -sf "${{ env.PROD_FRONTEND_URL }}/api/v1/health/ready" || echo "FAILED")
+          echo "Backend /api/v1/health/ready: $BACKEND_READY"
 
           # Frontend health check (index page)
           echo "Checking Frontend..."
@@ -251,4 +250,4 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**URLs**:" >> $GITHUB_STEP_SUMMARY
           echo "- Frontend: ${{ env.PROD_FRONTEND_URL }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Backend: ${{ env.PROD_BACKEND_URL }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Backend API: ${{ env.PROD_FRONTEND_URL }}/api/v1 (via frontend proxy)" >> $GITHUB_STEP_SUMMARY

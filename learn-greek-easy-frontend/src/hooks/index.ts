@@ -2,6 +2,8 @@
 
 // Auth hooks
 export { useAuth } from './useAuth';
+export { useAuth0Integration, isAuth0Enabled } from './useAuth0Integration';
+export type { UseAuth0IntegrationResult } from './useAuth0Integration';
 
 // Deck hooks
 export { useDecks } from './useDecks';

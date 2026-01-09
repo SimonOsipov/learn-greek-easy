@@ -10,8 +10,11 @@ Session Storage Strategy:
 """
 
 from datetime import datetime
-from typing import List, Optional, Tuple
+from typing import TYPE_CHECKING, List, Optional, Tuple
 from uuid import UUID
+
+if TYPE_CHECKING:
+    from src.core.auth0 import Auth0UserInfo
 
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -20,6 +23,7 @@ from sqlalchemy.orm import selectinload
 
 from src.core.exceptions import (
     AccountLinkingConflictException,
+    Auth0DisabledException,
     EmailAlreadyExistsException,
     GoogleOAuthDisabledException,
     InvalidCredentialsException,
@@ -818,3 +822,247 @@ class AuthService:
             extra={"session_id": session_id, "user_id": str(user_id)},
         )
         return False
+
+    # ========================================================================
+    # Auth0 Authentication Methods
+    # ========================================================================
+
+    async def authenticate_auth0(
+        self,
+        access_token: str,
+        client_ip: Optional[str] = None,
+        user_agent: Optional[str] = None,
+    ) -> Tuple[User, TokenResponse]:
+        """Authenticate user with Auth0 access token.
+
+        This method handles the complete Auth0 authentication flow:
+        1. Verify Auth0 access token
+        2. Find existing user by auth0_id or email
+        3. Create new user or link Auth0 account
+        4. Generate JWT tokens
+        5. Store session in Redis
+
+        Account Linking Logic:
+        - If user exists with this auth0_id -> login that user
+        - If user exists with this email but no auth0_id -> link Auth0 account
+        - If user exists with this email AND different auth0_id -> error (conflict)
+        - If no user exists -> create new user
+
+        Args:
+            access_token: Auth0 access token (JWT)
+            client_ip: Optional client IP for session tracking
+            user_agent: Optional user agent for session tracking
+
+        Returns:
+            Tuple of (User, TokenResponse)
+
+        Raises:
+            Auth0DisabledException: Auth0 not configured
+            Auth0TokenExpiredException: Token has expired
+            Auth0TokenInvalidException: Invalid token
+            AccountLinkingConflictException: Email exists with different Auth0 account
+            InvalidCredentialsException: User account is deactivated
+        """
+        from src.config import settings
+        from src.core.auth0 import verify_auth0_token
+
+        # Check if Auth0 is configured
+        if not settings.auth0_configured:
+            raise Auth0DisabledException()
+
+        # Step 1: Verify Auth0 access token
+        auth0_user = await verify_auth0_token(access_token)
+
+        # Step 2: Find or create user, returns (user, is_new_user)
+        user, is_new_user = await self._find_or_create_auth0_user(auth0_user)
+
+        # Step 3: Validate user is active
+        if not user.is_active:
+            logger.warning(
+                "Auth0 login attempt by inactive user",
+                extra={"user_id": str(user.id), "email": user.email},
+            )
+            raise InvalidCredentialsException("Account is deactivated")
+
+        # Step 4: Update last login
+        user.last_login_at = datetime.utcnow()
+        if client_ip:
+            user.last_login_ip = client_ip
+
+        # Step 5: Generate JWT tokens (reuse existing functions)
+        access_token_jwt, access_expires = create_access_token(user.id)
+        refresh_token, refresh_expires, token_id = create_refresh_token(user.id)
+
+        # Step 6: Store session in Redis (reuse existing SessionRepository)
+        redis_stored = await self.session_repo.create_session(
+            user_id=user.id,
+            token_id=token_id,
+            token=refresh_token,
+            expires_at=refresh_expires,
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
+
+        if not redis_stored:
+            logger.warning(
+                "Redis unavailable for Auth0 session",
+                extra={"user_id": str(user.id)},
+            )
+
+        # Commit all changes
+        await self.db.commit()
+
+        # Create welcome notification for new Auth0 users
+        if is_new_user:
+            await self._create_welcome_notification(user.id)
+
+        # Calculate expiry in seconds
+        expires_in = int((access_expires - datetime.utcnow()).total_seconds())
+
+        # Create token response (reuse existing schema)
+        token_response = TokenResponse(
+            access_token=access_token_jwt,
+            refresh_token=refresh_token,
+            token_type="bearer",
+            expires_in=expires_in,
+        )
+
+        return user, token_response
+
+    async def _get_user_by_auth0_id(self, auth0_id: str) -> Optional[User]:
+        """Get user by Auth0 ID.
+
+        Args:
+            auth0_id: Auth0's unique user identifier (sub claim)
+
+        Returns:
+            User model if found, None otherwise
+        """
+        result = await self.db.execute(
+            select(User).where(User.auth0_id == auth0_id).options(selectinload(User.settings))
+        )
+        return result.scalar_one_or_none()
+
+    async def _create_auth0_user(
+        self,
+        auth0_id: str,
+        email: Optional[str],
+        email_verified: bool,
+        name: Optional[str],
+    ) -> User:
+        """Create a new user from Auth0 data.
+
+        Args:
+            auth0_id: Auth0 user identifier
+            email: User's email (may be None)
+            email_verified: Whether email is verified
+            name: User's full name (may be None)
+
+        Returns:
+            Created User model with settings
+        """
+        # Create user without password (Auth0-only user)
+        user = User(
+            email=email or f"{auth0_id}@auth0.placeholder",  # Auth0 may not provide email
+            password_hash=None,  # No password for OAuth users
+            full_name=name,
+            auth0_id=auth0_id,
+            is_active=True,
+            is_superuser=False,
+            # Auto-verify email if Auth0 says it's verified
+            email_verified_at=datetime.utcnow() if email_verified else None,
+        )
+
+        self.db.add(user)
+        await self.db.flush()  # Get user.id
+
+        # Create default user settings (same as email registration)
+        user_settings = UserSettings(
+            user_id=user.id,
+            daily_goal=20,
+            email_notifications=True,
+        )
+
+        self.db.add(user_settings)
+
+        return user
+
+    async def _find_or_create_auth0_user(
+        self,
+        auth0_user: "Auth0UserInfo",  # Forward reference
+    ) -> Tuple[User, bool]:
+        """Find existing user or create new one for Auth0 authentication.
+
+        Handles the user lookup/creation logic for Auth0 authentication.
+        Extracted to reduce complexity of authenticate_auth0.
+
+        Args:
+            auth0_user: Verified Auth0 user information
+
+        Returns:
+            Tuple of (User, is_new_user) where is_new_user indicates if this
+            is a newly created user (for welcome notification).
+
+        Raises:
+            AccountLinkingConflictException: If email exists with different Auth0 account
+        """
+        # Check by auth0_id first
+        user = await self._get_user_by_auth0_id(auth0_user.auth0_id)
+
+        if user:
+            # User found by auth0_id - this is a returning Auth0 user
+            logger.info(
+                "Auth0 login - existing user",
+                extra={"user_id": str(user.id), "email": user.email},
+            )
+            return user, False
+
+        # No user with this auth0_id, check by email if email is provided
+        if auth0_user.email:
+            user = await self._get_user_by_email(auth0_user.email)
+
+            if user:
+                # User exists with this email - attempt to link Auth0 account
+                if user.auth0_id is not None and user.auth0_id != auth0_user.auth0_id:
+                    # Email linked to a DIFFERENT Auth0 account - conflict
+                    logger.warning(
+                        "Auth0 conflict - email linked to different Auth0 account",
+                        extra={
+                            "email": auth0_user.email,
+                            "existing_auth0_id": user.auth0_id[:10] + "...",
+                            "new_auth0_id": auth0_user.auth0_id[:10] + "...",
+                        },
+                    )
+                    raise AccountLinkingConflictException(
+                        detail="This email is already registered with a different Auth0 account."
+                    )
+
+                # Link Auth0 account to existing user
+                user.auth0_id = auth0_user.auth0_id
+
+                # Auto-verify email if Auth0 says it's verified
+                if auth0_user.email_verified and user.email_verified_at is None:
+                    user.email_verified_at = datetime.utcnow()
+
+                # Update name if not set
+                if user.full_name is None and auth0_user.name:
+                    user.full_name = auth0_user.name
+
+                logger.info(
+                    "Auth0 - linked to existing email account",
+                    extra={"user_id": str(user.id), "email": user.email},
+                )
+                return user, False
+
+        # No user exists - create new user
+        user = await self._create_auth0_user(
+            auth0_id=auth0_user.auth0_id,
+            email=auth0_user.email,
+            email_verified=auth0_user.email_verified,
+            name=auth0_user.name,
+        )
+        logger.info(
+            "Auth0 - new user created",
+            extra={"user_id": str(user.id), "email": user.email},
+        )
+        return user, True

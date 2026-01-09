@@ -182,6 +182,15 @@ class User(Base, TimestampMixin):
         index=True,
     )
 
+    # Auth0
+    auth0_id: Mapped[str | None] = mapped_column(
+        String(255),
+        unique=True,
+        nullable=True,
+        index=True,
+        comment="Auth0 user identifier (sub claim)",
+    )
+
     # Tracking
     last_login_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
