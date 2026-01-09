@@ -123,15 +123,36 @@ async function authenticateAndSave(
   await page.goto('/');
 
   // Step 3: Set up localStorage with auth state matching Zustand store format
+  // The User type requires: id, email, name, role, preferences, stats, createdAt, updatedAt
   await page.evaluate(({ tokens, userEmail, userName }) => {
+    const now = new Date().toISOString();
+
+    // Create a complete User object matching the frontend's User type
+    const user = {
+      id: tokens.user_id,
+      email: userEmail,
+      name: userName,  // Frontend uses 'name', not 'full_name'
+      role: userEmail.includes('admin') ? 'admin' : 'free',
+      preferences: {
+        language: 'en',
+        dailyGoal: 20,
+        notifications: true,
+        theme: 'light',
+      },
+      stats: {
+        streak: 0,
+        wordsLearned: 0,
+        totalXP: 0,
+        joinedDate: now,
+      },
+      createdAt: now,
+      updatedAt: now,
+    };
+
     // Set up the auth-storage in the format expected by useAuthStore
     const authState = {
       state: {
-        user: {
-          id: tokens.user_id,
-          email: userEmail,
-          full_name: userName,
-        },
+        user,
         token: tokens.access_token,
         refreshToken: tokens.refresh_token,
         isAuthenticated: true,
