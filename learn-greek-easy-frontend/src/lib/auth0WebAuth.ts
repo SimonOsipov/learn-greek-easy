@@ -192,6 +192,15 @@ export interface Auth0LoginError {
 }
 
 /**
+ * Auth0 login result from Resource Owner Password Grant
+ */
+export interface Auth0LoginResult {
+  accessToken: string;
+  idToken?: string;
+  expiresIn: number;
+}
+
+/**
  * Map Auth0 login error codes to user-friendly error keys
  */
 function mapAuth0LoginErrorToMessage(error: Auth0LoginError): string {
@@ -217,25 +226,29 @@ function mapAuth0LoginErrorToMessage(error: Auth0LoginError): string {
 }
 
 /**
- * Login a user with Auth0 using embedded form (Resource Owner flow)
+ * Login a user with Auth0 using Resource Owner Password Grant (ROPG)
+ *
+ * Uses webAuth.client.login() which directly returns tokens without redirect.
+ * This is the correct method for embedded login forms where we want to
+ * keep the user on our page.
  *
  * @param email User's email address
  * @param password User's password
- * @returns Promise that resolves with auth result on successful login
+ * @returns Promise that resolves with tokens on successful login
  * @throws Error with translated error key on failure
  */
-export function loginWithAuth0(email: string, password: string): Promise<auth0.Auth0DecodedHash> {
+export function loginWithAuth0(email: string, password: string): Promise<Auth0LoginResult> {
   return new Promise((resolve, reject) => {
     const webAuth = getWebAuth();
+    const audience = import.meta.env.VITE_AUTH0_AUDIENCE;
 
-    webAuth.login(
+    webAuth.client.login(
       {
         realm: 'Username-Password-Authentication',
-        email,
+        username: email, // client.login uses 'username' instead of 'email'
         password,
-        responseType: 'token id_token',
         scope: 'openid profile email',
-        redirectUri: `${window.location.origin}/callback`,
+        audience, // Required for API access
       },
       (err, result) => {
         if (err) {
@@ -247,7 +260,11 @@ export function loginWithAuth0(email: string, password: string): Promise<auth0.A
         }
 
         log.info('[Auth0WebAuth] Login successful for:', email);
-        resolve(result as auth0.Auth0DecodedHash);
+        resolve({
+          accessToken: result.accessToken,
+          idToken: result.idToken,
+          expiresIn: result.expiresIn,
+        });
       }
     );
   });

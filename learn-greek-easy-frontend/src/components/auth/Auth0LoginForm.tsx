@@ -18,6 +18,7 @@ import React, { useState } from 'react';
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Eye, EyeOff } from 'lucide-react';
+import posthog from 'posthog-js';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
@@ -39,6 +40,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { loginWithAuth0, loginWithGoogle } from '@/lib/auth0WebAuth';
 import log from '@/lib/logger';
+import { useAuthStore } from '@/stores/authStore';
+import type { User } from '@/types/auth';
 
 /**
  * Login form validation schema
@@ -85,24 +88,109 @@ export const Auth0LoginForm: React.FC = () => {
 
   /**
    * Handle form submission
+   * 1. Get Auth0 tokens via ROPG (Resource Owner Password Grant)
+   * 2. Exchange Auth0 access_token with backend
+   * 3. Update auth store with app tokens and user
+   * 4. Navigate to dashboard
    */
   const onSubmit = async (data: LoginFormData) => {
     setFormError(null);
     setIsSubmitting(true);
 
     try {
-      await loginWithAuth0(data.email, data.password);
-      // On success, redirect to returnTo from location.state or /dashboard
+      // Step 1: Get Auth0 tokens via ROPG
+      const auth0Result = await loginWithAuth0(data.email, data.password);
+      log.info('[Auth0LoginForm] Got Auth0 tokens, exchanging with backend');
+
+      // Step 2: Exchange Auth0 access_token with backend
+      const apiUrl = import.meta.env.VITE_API_URL || '';
+      const response = await fetch(`${apiUrl}/api/v1/auth/auth0`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ access_token: auth0Result.accessToken }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage =
+          errorData.detail ||
+          errorData.error?.message ||
+          'Authentication failed. Please try again.';
+        log.error('[Auth0LoginForm] Backend auth0 endpoint error:', errorMessage);
+        throw new Error(errorMessage);
+      }
+
+      const backendData = await response.json();
+
+      // Step 3: Transform backend response to frontend User type
+      const user: User = {
+        id: backendData.user?.id || '',
+        email: backendData.user?.email || '',
+        name: backendData.user?.full_name || backendData.user?.email?.split('@')[0] || 'User',
+        role: backendData.user?.is_superuser ? 'admin' : 'free',
+        preferences: {
+          language: 'en',
+          dailyGoal: backendData.user?.settings?.daily_goal || 20,
+          notifications: backendData.user?.settings?.email_notifications ?? true,
+          theme: 'light',
+        },
+        stats: {
+          streak: 0,
+          wordsLearned: 0,
+          totalXP: 0,
+          joinedDate: new Date(backendData.user?.created_at || Date.now()),
+        },
+        createdAt: new Date(backendData.user?.created_at || Date.now()),
+        updatedAt: new Date(backendData.user?.updated_at || Date.now()),
+      };
+
+      // Track with PostHog
+      if (typeof posthog?.identify === 'function') {
+        posthog.identify(user.id, {
+          email: user.email,
+          created_at: user.createdAt.toISOString(),
+          auth_method: 'auth0_password',
+        });
+      }
+      if (typeof posthog?.capture === 'function') {
+        posthog.capture('user_logged_in', {
+          method: 'auth0_password',
+        });
+      }
+
+      // Step 4: Update auth store with tokens and user
+      useAuthStore.setState({
+        user,
+        token: backendData.access_token,
+        refreshToken: backendData.refresh_token,
+        isAuthenticated: true,
+        rememberMe: data.rememberMe,
+        isLoading: false,
+        error: null,
+      });
+
+      // Store in sessionStorage as backup
+      sessionStorage.setItem('auth-token', backendData.access_token);
+
+      log.info('[Auth0LoginForm] Successfully authenticated via Auth0');
+
+      // Navigate to destination
       const from = (location.state as { from?: string })?.from || '/dashboard';
       navigate(from, { replace: true });
     } catch (err) {
-      const errorKey = err instanceof Error ? err.message : 'auth0Error';
-      // Map error key to translated message
-      const translatedError = t(`login.auth0.errors.${errorKey}`, {
-        defaultValue: t('login.auth0.errors.auth0Error'),
+      // Check if this is an Auth0 error key or a direct error message
+      const errorMessage = err instanceof Error ? err.message : 'auth0Error';
+
+      // Try to translate as Auth0 error key, fallback to direct message
+      const translatedError = t(`login.auth0.errors.${errorMessage}`, {
+        defaultValue: errorMessage.includes(' ')
+          ? errorMessage
+          : t('login.auth0.errors.auth0Error'),
       });
       setFormError(translatedError);
-      log.error('[Auth0LoginForm] Login failed:', errorKey);
+      log.error('[Auth0LoginForm] Login failed:', errorMessage);
     } finally {
       setIsSubmitting(false);
     }
