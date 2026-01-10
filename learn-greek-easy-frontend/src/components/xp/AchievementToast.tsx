@@ -2,6 +2,7 @@ import React, { useEffect, useMemo } from 'react';
 
 import { motion } from 'framer-motion';
 import { X, Star } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 import { cn } from '@/lib/utils';
 import type { UnnotifiedAchievementResponse } from '@/services/xpAPI';
@@ -38,6 +39,11 @@ export const AchievementToast: React.FC<AchievementToastProps> = ({
   duration = 5000,
   className,
 }) => {
+  const { t } = useTranslation('achievements');
+
+  // Get translated achievement name (fallback to API value)
+  const translatedName = t(`items.${achievement.id}.name`, achievement.name);
+
   // Check for reduced motion preference
   const prefersReducedMotion = useMemo(() => {
     if (typeof window === 'undefined') return false;
@@ -64,7 +70,8 @@ export const AchievementToast: React.FC<AchievementToastProps> = ({
     <>
       {/* Screen reader announcement */}
       <div className="sr-only" role="status" aria-live="polite">
-        Achievement unlocked: {achievement.name}. You earned {achievement.xp_reward} XP!
+        {t('toast.unlocked')}: {translatedName}.{' '}
+        {t('toast.xpEarned', { xp: achievement.xp_reward })}
       </div>
 
       {/* Visual toast */}
@@ -94,17 +101,17 @@ export const AchievementToast: React.FC<AchievementToastProps> = ({
         {/* Content */}
         <div className="min-w-0 flex-1">
           <p className="text-xs font-medium uppercase tracking-wide text-purple-600 dark:text-purple-400">
-            Achievement Unlocked!
+            {t('toast.unlocked')}
           </p>
           <p
             id="achievement-toast-title"
             className="mt-0.5 truncate font-semibold text-gray-900 dark:text-white"
           >
-            {achievement.name}
+            {translatedName}
           </p>
           <div className="mt-1 flex items-center gap-1 text-sm text-amber-600 dark:text-amber-400">
             <Star className="h-3.5 w-3.5" aria-hidden="true" />
-            <span>+{achievement.xp_reward} XP</span>
+            <span>{t('toast.xpEarned', { xp: achievement.xp_reward })}</span>
           </div>
         </div>
 
