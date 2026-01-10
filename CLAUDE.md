@@ -94,6 +94,26 @@ Manual deploy: See [docs/deployment-guide.md](docs/deployment-guide.md)
 
 **Important**: Railway auto-deploy is DISABLED. All deploys go through GitHub Actions for sequential Backend -> Frontend deployment.
 
+## Session Continuity (PreCompact Hook)
+
+When context is compacted (automatically or via `/compact`), a PreCompact hook saves session state to `.claude/handoff.yaml`.
+
+### After Compaction
+If `.claude/handoff.yaml` exists with a recent timestamp:
+1. **READ IT FIRST** to restore context
+2. Check Vibe Kanban for current task details
+3. Continue from where you left off
+
+### During Long Sessions
+Periodically update `.claude/handoff.yaml` with:
+- `current_task`: Vibe Kanban task ID being worked on
+- `progress`: What's done, what's in progress
+- `decisions`: Key choices made
+- `blockers`: Any issues encountered
+
+### Setup (one-time per machine)
+See [docs/precompact-hook-setup.md](docs/precompact-hook-setup.md) for `.claude/` files to create.
+
 ## Documentation
 
 - [Deployment Guide](docs/deployment-guide.md) - Sequential deploy, rollback, troubleshooting
@@ -103,3 +123,4 @@ Manual deploy: See [docs/deployment-guide.md](docs/deployment-guide.md)
 - [Railway Backend Privacy](docs/railway-backend-privacy.md) - Production setup
 - [PR Preview Deployments](docs/pr-preview-deployments.md) - Preview environments
 - [Logging](learn-greek-easy-backend/docs/logging.md) - Logging architecture and best practices
+- [PreCompact Hook Setup](docs/precompact-hook-setup.md) - Session continuity configuration

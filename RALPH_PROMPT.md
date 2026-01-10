@@ -60,9 +60,44 @@ gh pr checks --watch --interval 180
 ---
 
 ## Context Loading
-- Study @CLAUDE.md for project conventions
-- Query Vibe Kanban (project: 9cad311d-e4b4-4861-bf89-4fe6bad3ce8b) for current tasks
-- Check Context7 before using any library APIs
+1. **Check handoff first**: If `.claude/handoff.yaml` exists, READ IT to restore session state
+2. Study @CLAUDE.md for project conventions
+3. Query Vibe Kanban (project: 9cad311d-e4b4-4861-bf89-4fe6bad3ce8b) for current tasks
+4. Check Context7 before using any library APIs
+
+## Session Continuity (CRITICAL for long loops)
+
+### On Loop Start
+```bash
+# Check if handoff exists
+cat .claude/handoff.yaml 2>/dev/null
+```
+If exists and recent, use it to restore:
+- Which task you were working on
+- What stage you were at (Architecture/Explore/QA/Execution)
+- Decisions already made
+
+### During Loop (every 2-3 tasks or major milestone)
+Update `.claude/handoff.yaml`:
+```yaml
+timestamp: [current time]
+current_task: "[TASK-ID] Task title"
+stage: "execution"  # architecture|explore|qa-plan|execution|qa-verify
+completed_tasks:
+  - "[TASK-01] First task"
+progress: |
+  Working on API endpoint implementation.
+  Tests written, 2/5 passing.
+decisions:
+  - "Using Redis for caching"
+  - "Skipped pagination for MVP"
+blockers: []
+branch: "feature/my-feature"
+pr_number: 123
+```
+
+### On Compaction
+A PreCompact hook auto-saves state. After compaction, READ the handoff to continue.
 
 ## Documentation (docs/)
 Reference these before making changes to related areas:
