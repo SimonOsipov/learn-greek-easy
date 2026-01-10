@@ -11,7 +11,9 @@ export type NotificationType =
   | 'level_up'
   | 'streak_at_risk'
   | 'streak_lost'
-  | 'welcome';
+  | 'welcome'
+  | 'feedback_response'
+  | 'feedback_status_change';
 
 /**
  * Single notification from API
@@ -80,4 +82,6 @@ export const NOTIFICATION_CONFIG: Record<NotificationType, NotificationIconConfi
   streak_at_risk: { icon: 'Flame', colorClass: 'text-warning' },
   streak_lost: { icon: 'HeartCrack', colorClass: 'text-destructive' },
   welcome: { icon: 'Hand', colorClass: 'text-info' },
+  feedback_response: { icon: 'MessageSquareText', colorClass: 'text-info' },
+  feedback_status_change: { icon: 'RefreshCw', colorClass: 'text-primary' },
 };

@@ -92,5 +92,8 @@
     "newest": "Newest",
     "oldest": "Oldest",
     "clear": "Clear"
+  },
+  "developerResponse": {
+    "title": "Developer Response"
   }
 }

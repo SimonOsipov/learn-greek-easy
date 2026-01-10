@@ -94,6 +94,21 @@
       opacity: 1;
     }
   }
+
+  /* Highlight animation for feedback cards when navigating from notifications */
+  @keyframes highlight-pulse {
+    0%,
+    100% {
+      box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.5);
+    }
+    50% {
+      box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.5);
+    }
+  }
+
+  .highlight-animation {
+    animation: highlight-pulse 0.5s ease-in-out 3;
+  }
 }
 
 /* Smooth scrolling for the entire app */

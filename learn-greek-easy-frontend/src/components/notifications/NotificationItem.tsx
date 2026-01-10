@@ -10,6 +10,8 @@ import {
   Hand,
   HeartCrack,
   Info,
+  MessageSquareText,
+  RefreshCw,
   Trophy,
   type LucideIcon,
 } from 'lucide-react';
@@ -29,6 +31,8 @@ const notificationConfig: Record<NotificationType, { icon: LucideIcon; colorClas
   streak_at_risk: { icon: Flame, colorClass: 'text-warning' },
   streak_lost: { icon: HeartCrack, colorClass: 'text-destructive' },
   welcome: { icon: Hand, colorClass: 'text-info' },
+  feedback_response: { icon: MessageSquareText, colorClass: 'text-info' },
+  feedback_status_change: { icon: RefreshCw, colorClass: 'text-primary' },
 };
 
 // Fallback for unknown types
