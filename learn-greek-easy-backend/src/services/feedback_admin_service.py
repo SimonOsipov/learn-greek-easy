@@ -80,6 +80,7 @@ class FeedbackAdminService:
         - If admin_response is provided without status, and current status is NEW,
           auto-change status to UNDER_REVIEW
         - Set admin_response_at timestamp when response is added/updated
+        - Send notification to user when response is added or status changes
 
         Args:
             feedback_id: ID of feedback to update
@@ -97,25 +98,32 @@ class FeedbackAdminService:
         if feedback is None:
             raise ValueError(f"Feedback with ID '{feedback_id}' not found")
 
-        # Track what's being updated for logging
+        # Track original status BEFORE any modifications
+        old_status = feedback.status
+
+        # Track what's being updated for logging and notifications
         updates = []
+        admin_response_changed = False
+        status_changed = False
 
         # Handle status update
-        if status is not None:
-            old_status = feedback.status
+        if status is not None and status != feedback.status:
             feedback.status = status
+            status_changed = True
             updates.append(f"status: {old_status.value} -> {status.value}")
 
         # Handle admin response
         if admin_response is not None:
             feedback.admin_response = admin_response
             feedback.admin_response_at = datetime.now(timezone.utc)
+            admin_response_changed = True
             updates.append("admin_response added")
 
             # Auto-transition: if response provided without explicit status change
             # and current status is NEW, change to UNDER_REVIEW
             if status is None and feedback.status == FeedbackStatus.NEW:
                 feedback.status = FeedbackStatus.UNDER_REVIEW
+                status_changed = True
                 updates.append("auto-transition: new -> under_review")
 
         await self.db.flush()
@@ -129,4 +137,71 @@ class FeedbackAdminService:
             },
         )
 
+        # Send notification to user (response takes priority over status change)
+        await self._send_feedback_notification(
+            feedback=feedback,
+            old_status=old_status,
+            admin_response_changed=admin_response_changed,
+            status_changed=status_changed,
+        )
+
         return feedback
+
+    async def _send_feedback_notification(
+        self,
+        feedback: Feedback,
+        old_status: FeedbackStatus,
+        admin_response_changed: bool,
+        status_changed: bool,
+    ) -> None:
+        """Send notification to user about feedback updates.
+
+        Deduplication logic: if both response and status changed,
+        only send response notification (more important).
+        """
+        if not admin_response_changed and not status_changed:
+            return
+
+        try:
+            # Late import to avoid circular dependencies
+            from src.services.notification_service import NotificationService
+
+            notification_service = NotificationService(self.db)
+
+            # Response notification takes priority (deduplication)
+            if admin_response_changed:
+                await notification_service.notify_feedback_response(
+                    user_id=feedback.user_id,
+                    feedback_id=feedback.id,
+                    feedback_title=feedback.title,
+                )
+                logger.debug(
+                    "Feedback response notification sent",
+                    extra={"feedback_id": str(feedback.id)},
+                )
+            elif status_changed:
+                # Only send status change if no response was added
+                await notification_service.notify_feedback_status_change(
+                    user_id=feedback.user_id,
+                    feedback_id=feedback.id,
+                    feedback_title=feedback.title,
+                    new_status=feedback.status,
+                )
+                logger.debug(
+                    "Feedback status change notification sent",
+                    extra={
+                        "feedback_id": str(feedback.id),
+                        "old_status": old_status.value,
+                        "new_status": feedback.status.value,
+                    },
+                )
+        except Exception as e:
+            # Log error but don't fail the main operation
+            logger.error(
+                "Failed to send feedback notification",
+                extra={
+                    "feedback_id": str(feedback.id),
+                    "error": str(e),
+                },
+                exc_info=True,
+            )
