@@ -53,8 +53,9 @@ test.describe('Landing Page - Unauthenticated', () => {
       await page.goto('/');
 
       // Scroll to features section to ensure it's loaded
-      await page.getByTestId('features-section').scrollIntoViewIfNeeded();
-      await page.waitForTimeout(500);
+      const featuresSection = page.getByTestId('features-section');
+      await featuresSection.scrollIntoViewIfNeeded();
+      await expect(featuresSection).toBeInViewport();
 
       const featureCards = page.getByTestId('feature-card');
       await expect(featureCards.first()).toBeVisible();
@@ -68,8 +69,9 @@ test.describe('Landing Page - Unauthenticated', () => {
       await page.goto('/');
 
       // Scroll to pricing section
-      await page.getByTestId('pricing-section').scrollIntoViewIfNeeded();
-      await page.waitForTimeout(500);
+      const pricingSection = page.getByTestId('pricing-section');
+      await pricingSection.scrollIntoViewIfNeeded();
+      await expect(pricingSection).toBeInViewport();
 
       const pricingCards = page.getByTestId('pricing-card');
       await expect(pricingCards.first()).toBeVisible();
@@ -83,8 +85,9 @@ test.describe('Landing Page - Unauthenticated', () => {
       await page.goto('/');
 
       // Scroll to FAQ section
-      await page.getByTestId('faq-section').scrollIntoViewIfNeeded();
-      await page.waitForTimeout(500);
+      const faqSection = page.getByTestId('faq-section');
+      await faqSection.scrollIntoViewIfNeeded();
+      await expect(faqSection).toBeInViewport();
 
       const faqItems = page.getByTestId('faq-item');
       await expect(faqItems.first()).toBeVisible();
@@ -130,9 +133,8 @@ test.describe('Landing Page - Unauthenticated', () => {
       const featuresLink = page.getByRole('link', { name: /features/i });
       if ((await featuresLink.count()) > 0) {
         await featuresLink.click();
-        await page.waitForTimeout(500); // Allow scroll animation
 
-        // Verify features section is in view
+        // Verify features section is in view (Playwright auto-waits for scroll animation)
         const featuresSection = page.getByTestId('features-section');
         await expect(featuresSection).toBeInViewport();
       }
@@ -264,8 +266,9 @@ test.describe('Landing Page - Responsive', () => {
       await page.goto('/');
 
       // Scroll to pricing
-      await page.getByTestId('pricing-section').scrollIntoViewIfNeeded();
-      await page.waitForTimeout(500);
+      const pricingSection = page.getByTestId('pricing-section');
+      await pricingSection.scrollIntoViewIfNeeded();
+      await expect(pricingSection).toBeInViewport();
 
       const pricingCards = page.getByTestId('pricing-card');
       await expect(pricingCards.first()).toBeVisible();
@@ -354,8 +357,9 @@ test.describe('Landing Page - FAQ Interactions', () => {
     await page.goto('/');
 
     // Scroll to FAQ section
-    await page.getByTestId('faq-section').scrollIntoViewIfNeeded();
-    await page.waitForTimeout(500);
+    const faqSection = page.getByTestId('faq-section');
+    await faqSection.scrollIntoViewIfNeeded();
+    await expect(faqSection).toBeInViewport();
 
     // Get the first FAQ item trigger (AccordionTrigger renders as button)
     const firstFaqItem = page.getByTestId('faq-item').first();
@@ -363,9 +367,8 @@ test.describe('Landing Page - FAQ Interactions', () => {
 
     // Click to expand
     await trigger.click();
-    await page.waitForTimeout(300);
 
-    // Verify content is visible (accordion content)
+    // Verify content is visible (accordion content) - Playwright auto-waits for animation
     const content = firstFaqItem.locator('[role="region"][data-state="open"]');
     await expect(content).toBeVisible();
   });

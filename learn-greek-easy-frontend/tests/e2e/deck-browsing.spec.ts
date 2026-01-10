@@ -82,7 +82,10 @@ test.describe('Deck Browsing', () => {
 
   test('E2E-03.2: Filter decks by level (A1)', async ({ page }) => {
     await page.goto('/decks');
-    await page.waitForTimeout(1000);
+
+    // Wait for deck cards to load
+    const deckCards = page.locator('[data-testid="deck-card"]');
+    await expect(deckCards.first()).toBeVisible({ timeout: 15000 });
 
     // Look for A1 filter button
     const a1FilterBtn = page.getByRole('button', { name: /^a1$/i });
@@ -91,7 +94,8 @@ test.describe('Deck Browsing', () => {
     if (isA1FilterVisible) {
       // Click A1 filter button
       await a1FilterBtn.click();
-      await page.waitForTimeout(500);
+      // Wait for filter to be applied (button state change)
+      await expect(a1FilterBtn).toHaveAttribute('aria-pressed', 'true');
 
       // Verify page still shows decks (filtered results)
       const pageContent = await page.textContent('body');
@@ -104,7 +108,10 @@ test.describe('Deck Browsing', () => {
 
   test('E2E-03.3: Filter decks by status', async ({ page }) => {
     await page.goto('/decks');
-    await page.waitForTimeout(1000);
+
+    // Wait for deck cards to load
+    const deckCards = page.locator('[data-testid="deck-card"]');
+    await expect(deckCards.first()).toBeVisible({ timeout: 15000 });
 
     // Look for status filter buttons
     const statusFilterBtn = page.getByRole('button', { name: /in progress|not started|completed/i }).first();
@@ -113,7 +120,8 @@ test.describe('Deck Browsing', () => {
     if (isStatusFilterVisible) {
       // Click status filter
       await statusFilterBtn.click();
-      await page.waitForTimeout(500);
+      // Wait for filter to be applied (button state change)
+      await expect(statusFilterBtn).toHaveAttribute('aria-pressed', 'true');
 
       // Verify filtered results or no results message
       const pageContent = await page.textContent('body');
@@ -126,7 +134,10 @@ test.describe('Deck Browsing', () => {
 
   test('E2E-03.4: Search decks by name', async ({ page }) => {
     await page.goto('/decks');
-    await page.waitForTimeout(1000);
+
+    // Wait for deck cards to load
+    const deckCards = page.locator('[data-testid="deck-card"]');
+    await expect(deckCards.first()).toBeVisible({ timeout: 15000 });
 
     // Look for search input
     const searchInput = page.getByPlaceholder(/search/i).or(
@@ -138,8 +149,8 @@ test.describe('Deck Browsing', () => {
       // Type in search box
       await searchInput.fill('Greek');
 
-      // Wait for filtering (debounced)
-      await page.waitForTimeout(800);
+      // Wait for filtering (debounced) - check page is still functional
+      await expect(page.getByRole('heading', { name: /decks/i })).toBeVisible();
 
       // Verify page content updated (search results)
       const pageContent = await page.textContent('body');
@@ -153,30 +164,27 @@ test.describe('Deck Browsing', () => {
   test('E2E-03.5: View deck details', async ({ page }) => {
     await page.goto('/decks');
 
-    // Wait for deck cards to load from API (replaces fixed timeout)
+    // Wait for deck cards to load from API
     const firstDeck = page.locator('[data-testid="deck-card"]').first();
     await expect(firstDeck).toBeVisible({ timeout: 15000 });
     await firstDeck.click();
 
-    // Wait for detail page to load
-    await page.waitForTimeout(500);
+    // Wait for detail page to load - look for action button
+    const actionButton = page.getByRole('button', { name: /review|start|continue/i }).first();
+    await expect(actionButton).toBeVisible({ timeout: 10000 });
 
     // Verify deck detail page loaded (should have deck name and actions)
     const pageContent = await page.textContent('body');
     expect(pageContent).toBeTruthy();
 
-    // Look for "Start Review" or similar action button
-    const actionButton = page.getByRole('button', { name: /review|start|continue/i }).first();
-    const hasActionBtn = await actionButton.isVisible().catch(() => false);
-
     // Should have some action available or deck information
-    expect(hasActionBtn || pageContent.includes('card')).toBe(true);
+    expect(pageContent.includes('card')).toBe(true);
   });
 
   test('E2E-03.6: Reset filters', async ({ page }) => {
     await page.goto('/decks');
 
-    // Wait for deck cards to load from API (replaces fixed timeout)
+    // Wait for deck cards to load from API
     const deckCards = page.locator('[data-testid="deck-card"]');
     await expect(deckCards.first()).toBeVisible({ timeout: 15000 });
 
@@ -186,7 +194,8 @@ test.describe('Deck Browsing', () => {
 
     if (isFilterVisible) {
       await filterButton.click();
-      await page.waitForTimeout(500);
+      // Wait for filter to be applied
+      await expect(filterButton).toHaveAttribute('aria-pressed', 'true');
     }
 
     // Look for clear/reset button
@@ -195,9 +204,7 @@ test.describe('Deck Browsing', () => {
 
     if (isClearVisible) {
       await clearButton.click();
-      await page.waitForTimeout(500);
-
-      // Verify decks page still functional
+      // Wait for reset to complete - page should be visible
       await expect(page.getByRole('heading', { name: /decks/i })).toBeVisible();
     } else {
       // Clear button might not exist, just verify page works

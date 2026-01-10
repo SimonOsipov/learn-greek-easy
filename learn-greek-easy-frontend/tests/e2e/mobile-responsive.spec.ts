@@ -78,11 +78,12 @@ test.describe('Mobile Responsive (375px)', () => {
       if (await startReviewButton.count() > 0) {
         await startReviewButton.click();
 
-        // Wait for review interface
-        await page.waitForTimeout(1000);
+        // Wait for review interface - look for flashcard or show answer button
+        const reviewInterface = page.locator('[data-testid="flashcard"], [data-testid="review-card"]');
+        const showAnswerButton = page.getByRole('button', { name: /show answer|flip/i });
+        await expect(reviewInterface.or(showAnswerButton).first()).toBeVisible({ timeout: 10000 });
 
         // Show answer button should be visible and tappable
-        const showAnswerButton = page.getByRole('button', { name: /show answer|flip/i });
         if (await showAnswerButton.count() > 0) {
           await expect(showAnswerButton).toBeVisible();
 

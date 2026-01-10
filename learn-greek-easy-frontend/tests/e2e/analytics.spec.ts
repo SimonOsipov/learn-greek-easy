@@ -97,9 +97,8 @@ test.describe('Analytics Dashboard', () => {
     if (isDateRangeVisible) {
       // Click date range dropdown
       await dateRangeButton.click();
-      await page.waitForTimeout(300);
 
-      // Try to select a different time range
+      // Try to select a different time range - wait for menu to appear
       const monthOption = page.getByRole('menuitem', { name: /month/i }).or(
         page.getByText(/month/i).and(page.locator('button, a, li'))
       ).first();
@@ -107,9 +106,8 @@ test.describe('Analytics Dashboard', () => {
 
       if (isMonthVisible) {
         await monthOption.click();
-        await page.waitForTimeout(500);
 
-        // Verify charts still visible (they should re-render)
+        // Verify charts still visible (they should re-render) - assertion auto-retries
         const charts = page.locator('svg.recharts-surface');
         await expect(charts.first()).toBeVisible({ timeout: 3000 });
       }
@@ -129,9 +127,8 @@ test.describe('Analytics Dashboard', () => {
 
     if (isActivityVisible) {
       await activityHeading.scrollIntoViewIfNeeded();
-      await page.waitForTimeout(300);
 
-      // Look for activity items
+      // Look for activity items - heading visibility after scroll confirms it
       const activityItems = page.locator('[data-testid="activity-item"]').or(
         page.locator('div:has-text("reviewed")').or(
           page.locator('li:has-text("reviewed")')
@@ -237,9 +234,8 @@ test.describe('Analytics Dashboard', () => {
       // Try hovering over first chart
       const firstChart = charts.first();
       await firstChart.hover();
-      await page.waitForTimeout(300);
 
-      // Chart should still be visible after interaction
+      // Chart should still be visible after interaction - assertion auto-retries
       await expect(firstChart).toBeVisible();
 
       // Verify chart has some data (has path elements for lines/bars)

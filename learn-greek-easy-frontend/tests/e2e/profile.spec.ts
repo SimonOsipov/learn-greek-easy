@@ -148,8 +148,10 @@ test.describe('Daily Goal Slider', () => {
     // Set a specific value
     await slider.fill('55');
 
-    // Wait for save to complete (debounce + API)
-    await page.waitForTimeout(2000);
+    // Wait for save to complete - saving indicator should appear then disappear
+    const savingIndicator = page.getByTestId('preferences-saving');
+    // Wait for any save operation to complete - either indicator disappears or network settles
+    await page.waitForLoadState('networkidle');
 
     // Reload the page
     await page.reload();
