@@ -110,3 +110,6 @@ CACHE_USER_PROGRESS = 300  # 5 minutes
 RATE_LIMIT_GENERAL = "60/minute"
 RATE_LIMIT_AUTH = "5/minute"
 RATE_LIMIT_REVIEW = "120/minute"
+
+# Answer Time Limits
+MAX_ANSWER_TIME_SECONDS = 180  # Cap per-answer time at 3 minutes

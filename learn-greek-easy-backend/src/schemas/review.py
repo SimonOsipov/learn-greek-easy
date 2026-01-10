@@ -12,6 +12,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from src.constants import MAX_ANSWER_TIME_SECONDS
 from src.db.models import ReviewRating
 
 # ============================================================================
@@ -24,7 +25,12 @@ class ReviewSubmit(BaseModel):
 
     card_id: UUID
     quality: int = Field(..., ge=0, le=5)
-    time_taken: int = Field(..., ge=0, description="Time taken in seconds")
+    time_taken: int = Field(
+        ...,
+        ge=0,
+        le=MAX_ANSWER_TIME_SECONDS,
+        description=f"Time taken in seconds (max {MAX_ANSWER_TIME_SECONDS}s)",
+    )
 
     @field_validator("quality")
     @classmethod

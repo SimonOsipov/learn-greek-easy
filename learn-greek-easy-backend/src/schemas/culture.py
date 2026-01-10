@@ -13,6 +13,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from src.constants import MAX_ANSWER_TIME_SECONDS
+
 # ============================================================================
 # Multilingual Content Type
 # ============================================================================
@@ -142,7 +144,12 @@ class CultureAnswerRequest(BaseModel):
     """Request schema for submitting an answer."""
 
     selected_option: int = Field(..., ge=1, le=4, description="Selected option (1-4)")
-    time_taken: int = Field(..., ge=0, description="Time taken in seconds")
+    time_taken: int = Field(
+        ...,
+        ge=0,
+        le=MAX_ANSWER_TIME_SECONDS,
+        description=f"Time taken in seconds (max {MAX_ANSWER_TIME_SECONDS}s)",
+    )
     language: str = Field(
         default="en",
         pattern=r"^(el|en|ru)$",

@@ -5,6 +5,7 @@ import { Clock } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAnalytics } from '@/hooks/useAnalytics';
+import { formatStudyTime } from '@/lib/timeFormatUtils';
 import type { DateRangeType } from '@/stores/analyticsStore';
 
 /**
@@ -15,23 +16,7 @@ export interface TimeStudiedWidgetProps {
   isLoading?: boolean;
 }
 
-/**
- * Format time studied in minutes to human-readable string
- * Examples: "0m", "45m", "1h 23m", "12h 34m"
- */
-const formatTimeStudied = (totalSeconds: number): string => {
-  if (totalSeconds === 0) return '0m';
-
-  const minutes = Math.floor(totalSeconds / 60);
-  const hours = Math.floor(minutes / 60);
-  const remainingMinutes = minutes % 60;
-
-  if (hours > 0) {
-    return `${hours}h ${remainingMinutes}m`;
-  }
-
-  return `${minutes}m`;
-};
+// Use formatStudyTime from timeFormatUtils for consistent formatting with day support
 
 /**
  * Get date range label for display
@@ -83,7 +68,7 @@ export const TimeStudiedWidget: React.FC<TimeStudiedWidgetProps> = ({ isLoading:
 
   // Get total time studied from summary
   const timeStudiedSeconds = data?.summary?.totalTimeStudied ?? 0;
-  const formattedTime = formatTimeStudied(timeStudiedSeconds);
+  const formattedTime = formatStudyTime(timeStudiedSeconds);
   const rangeText = getDateRangeLabel(dateRange);
 
   return (

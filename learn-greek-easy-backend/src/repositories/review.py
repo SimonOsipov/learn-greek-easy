@@ -7,6 +7,7 @@ from uuid import UUID
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.constants import MAX_ANSWER_TIME_SECONDS
 from src.db.models import Card, Review
 from src.repositories.base import BaseRepository
 
@@ -168,13 +169,13 @@ class ReviewRepository(BaseRepository[Review]):
             user_id: User UUID
 
         Returns:
-            Total seconds spent studying
+            Total seconds spent studying (capped at MAX_ANSWER_TIME_SECONDS per review)
         """
-        query = select(func.coalesce(func.sum(Review.time_taken), 0)).where(
-            Review.user_id == user_id
-        )
+        # Cap each review's time_taken at MAX_ANSWER_TIME_SECONDS to handle outliers
+        capped_time = func.least(Review.time_taken, MAX_ANSWER_TIME_SECONDS)
+        query = select(func.coalesce(func.sum(capped_time), 0)).where(Review.user_id == user_id)
         result = await self.db.execute(query)
-        return result.scalar_one()
+        return int(result.scalar_one())
 
     async def count_user_reviews(
         self,
@@ -288,14 +289,16 @@ class ReviewRepository(BaseRepository[Review]):
             List of dicts with:
             - date: The review date
             - reviews_count: Number of reviews
-            - total_time_seconds: Sum of time_taken
+            - total_time_seconds: Sum of time_taken (capped per review)
             - average_quality: Average quality rating (0-5)
         """
+        # Cap each review's time_taken at MAX_ANSWER_TIME_SECONDS to handle outliers
+        capped_time = func.least(Review.time_taken, MAX_ANSWER_TIME_SECONDS)
         query = (
             select(
                 func.date(Review.reviewed_at).label("review_date"),
                 func.count().label("reviews_count"),
-                func.coalesce(func.sum(Review.time_taken), 0).label("total_time_seconds"),
+                func.coalesce(func.sum(capped_time), 0).label("total_time_seconds"),
                 func.avg(Review.quality).label("average_quality"),
             )
             .where(Review.user_id == user_id)
@@ -322,11 +325,13 @@ class ReviewRepository(BaseRepository[Review]):
             user_id: User UUID
 
         Returns:
-            Total study time in seconds for today
+            Total study time in seconds for today (capped per review)
         """
         today = date.today()
+        # Cap each review's time_taken at MAX_ANSWER_TIME_SECONDS to handle outliers
+        capped_time = func.least(Review.time_taken, MAX_ANSWER_TIME_SECONDS)
         query = (
-            select(func.coalesce(func.sum(Review.time_taken), 0))
+            select(func.coalesce(func.sum(capped_time), 0))
             .where(Review.user_id == user_id)
             .where(func.date(Review.reviewed_at) == today)
         )
