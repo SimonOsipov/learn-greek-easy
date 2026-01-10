@@ -83,6 +83,14 @@ export interface CreateFeedbackRequest {
 }
 
 /**
+ * Update feedback request (partial update)
+ */
+export interface UpdateFeedbackRequest {
+  title?: string;
+  description?: string;
+}
+
+/**
  * Vote request
  */
 export interface VoteRequest {

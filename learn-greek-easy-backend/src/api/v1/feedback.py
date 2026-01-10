@@ -23,6 +23,7 @@ from src.schemas.feedback import (
     FeedbackCreate,
     FeedbackListResponse,
     FeedbackResponse,
+    FeedbackUpdate,
     VoteRequest,
     VoteResponse,
 )
@@ -232,6 +233,61 @@ async def get_feedback(
         )
 
     return _build_feedback_response(feedback, current_user.id)
+
+
+@router.put(
+    "/{feedback_id}",
+    response_model=FeedbackResponse,
+    summary="Update feedback",
+    description="Update your own feedback item (title and/or description).",
+    responses={
+        200: {"description": "Feedback updated successfully"},
+        403: {"description": "Cannot update others' feedback"},
+        404: {"description": "Feedback not found"},
+    },
+)
+async def update_feedback(
+    feedback_id: UUID,
+    feedback_data: FeedbackUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> FeedbackResponse:
+    """Update feedback (own items only).
+
+    Args:
+        feedback_id: UUID of feedback to update
+        feedback_data: Updated title and/or description
+        db: Database session
+        current_user: Authenticated user
+
+    Returns:
+        Updated FeedbackResponse
+
+    Raises:
+        NotFoundException: If feedback doesn't exist
+        ForbiddenException: If trying to update others' feedback
+    """
+    repo = FeedbackRepository(db)
+
+    feedback = await repo.get(feedback_id)
+    if feedback is None:
+        raise NotFoundException(
+            resource="Feedback", detail=f"Feedback with ID '{feedback_id}' not found"
+        )
+
+    # Only allow updating own feedback (or superuser)
+    if feedback.user_id != current_user.id and not current_user.is_superuser:
+        raise ForbiddenException(detail="You can only update your own feedback")
+
+    # Update the feedback with provided fields
+    await repo.update(feedback, feedback_data)
+    await db.commit()
+
+    # Reload with relationships
+    feedback_with_user = await repo.get_with_user(feedback_id)
+    assert feedback_with_user is not None
+
+    return _build_feedback_response(feedback_with_user, current_user.id)
 
 
 @router.delete(

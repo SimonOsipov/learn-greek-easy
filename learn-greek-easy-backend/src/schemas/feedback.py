@@ -41,6 +41,13 @@ class FeedbackCreate(BaseModel):
     category: FeedbackCategory
 
 
+class FeedbackUpdate(BaseModel):
+    """Schema for updating feedback (partial update)."""
+
+    title: Optional[str] = Field(None, min_length=3, max_length=255)
+    description: Optional[str] = Field(None, min_length=10, max_length=5000)
+
+
 class FeedbackResponse(BaseModel):
     """Schema for feedback response."""
 

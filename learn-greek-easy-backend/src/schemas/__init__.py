@@ -42,6 +42,7 @@ from src.schemas.feedback import (
     FeedbackCreate,
     FeedbackListResponse,
     FeedbackResponse,
+    FeedbackUpdate,
     VoteRequest,
     VoteResponse,
 )
@@ -192,6 +193,7 @@ __all__ = [
     "FeedbackCreate",
     "FeedbackListResponse",
     "FeedbackResponse",
+    "FeedbackUpdate",
     "VoteRequest",
     "VoteResponse",
     # Notification

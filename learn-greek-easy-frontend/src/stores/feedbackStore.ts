@@ -15,6 +15,7 @@ import type {
   FeedbackItem,
   FeedbackFilters,
   CreateFeedbackRequest,
+  UpdateFeedbackRequest,
   VoteResponse,
 } from '@/types/feedback';
 
@@ -50,6 +51,7 @@ interface FeedbackState {
   isLoading: boolean;
   isSubmitting: boolean;
   isVoting: boolean;
+  isDeleting: boolean;
 
   // Error state
   error: string | null;
@@ -58,6 +60,8 @@ interface FeedbackState {
   fetchFeedbackList: () => Promise<void>;
   fetchFeedbackById: (id: string) => Promise<void>;
   createFeedback: (data: CreateFeedbackRequest) => Promise<FeedbackItem>;
+  updateFeedback: (feedbackId: string, data: UpdateFeedbackRequest) => Promise<FeedbackItem>;
+  deleteFeedback: (feedbackId: string) => Promise<void>;
   vote: (feedbackId: string, voteType: 'up' | 'down') => Promise<void>;
   removeVote: (feedbackId: string) => Promise<void>;
   setFilters: (filters: Partial<FeedbackFilters>) => void;
@@ -84,6 +88,7 @@ export const useFeedbackStore = create<FeedbackState>()(
       isLoading: false,
       isSubmitting: false,
       isVoting: false,
+      isDeleting: false,
       error: null,
 
       /**
@@ -149,6 +154,57 @@ export const useFeedbackStore = create<FeedbackState>()(
         } catch (error) {
           const message = error instanceof Error ? error.message : 'Failed to submit feedback';
           set({ isSubmitting: false, error: message });
+          throw error;
+        }
+      },
+
+      /**
+       * Update existing feedback and update local state
+       */
+      updateFeedback: async (feedbackId: string, data: UpdateFeedbackRequest) => {
+        set({ isSubmitting: true, error: null });
+
+        try {
+          const updatedFeedback = await feedbackAPI.update(feedbackId, data);
+
+          // Update the feedback in list and selectedFeedback
+          set((state) => ({
+            feedbackList: state.feedbackList.map((f) =>
+              f.id === feedbackId ? updatedFeedback : f
+            ),
+            selectedFeedback:
+              state.selectedFeedback?.id === feedbackId ? updatedFeedback : state.selectedFeedback,
+            isSubmitting: false,
+          }));
+
+          return updatedFeedback;
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Failed to update feedback';
+          set({ isSubmitting: false, error: message });
+          throw error;
+        }
+      },
+
+      /**
+       * Delete feedback and update local state
+       */
+      deleteFeedback: async (feedbackId: string) => {
+        set({ isDeleting: true, error: null });
+
+        try {
+          await feedbackAPI.delete(feedbackId);
+
+          // Remove the feedback from list and clear selection if it was selected
+          set((state) => ({
+            feedbackList: state.feedbackList.filter((f) => f.id !== feedbackId),
+            selectedFeedback:
+              state.selectedFeedback?.id === feedbackId ? null : state.selectedFeedback,
+            total: state.total - 1,
+            isDeleting: false,
+          }));
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Failed to delete feedback';
+          set({ isDeleting: false, error: message });
           throw error;
         }
       },
@@ -271,6 +327,7 @@ export const selectSelectedFeedback = (state: FeedbackState) => state.selectedFe
 export const selectIsLoading = (state: FeedbackState) => state.isLoading;
 export const selectIsSubmitting = (state: FeedbackState) => state.isSubmitting;
 export const selectIsVoting = (state: FeedbackState) => state.isVoting;
+export const selectIsDeleting = (state: FeedbackState) => state.isDeleting;
 export const selectError = (state: FeedbackState) => state.error;
 export const selectFilters = (state: FeedbackState) => state.filters;
 export const selectPagination = (state: FeedbackState) => ({
