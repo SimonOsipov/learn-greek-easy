@@ -7,11 +7,16 @@
  * Tests then use these saved states via storageState config, eliminating
  * the need for per-test authentication and Zustand race condition workarounds.
  *
+ * Authentication Modes:
+ * - Auth0 Mode: When AUTH0_E2E_TEST_PASSWORD is set, authenticates via Auth0 login UI
+ * - Legacy Mode: Uses test seed endpoint for token generation (default)
+ *
  * @see https://playwright.dev/docs/auth
  */
 
 import { test as setup, expect, request } from '@playwright/test';
 import { SEED_USERS, verifySeedUsers, waitForAPIReady } from './helpers/auth-helpers';
+import { isAuth0Enabled, AUTH0_TEST_USERS } from './helpers/auth0-helpers';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -62,22 +67,100 @@ setup.beforeAll(async () => {
 });
 
 /**
+ * Authenticate a user via Auth0 login UI
+ *
+ * This method is used when AUTH0_E2E_TEST_PASSWORD is set, indicating
+ * we should test against the real Auth0 tenant.
+ *
+ * Flow:
+ * 1. Navigate to /login
+ * 2. Fill in email/password
+ * 3. Submit the form
+ * 4. Wait for successful redirect to dashboard
+ * 5. Save storage state
+ */
+async function authenticateViaAuth0(
+  page: import('@playwright/test').Page,
+  user: { email: string; password: string; name: string },
+  storageStatePath: string
+): Promise<void> {
+  console.log(`[SETUP] Starting Auth0 authentication for ${user.email}`);
+
+  // Step 1: Navigate to login page
+  await page.goto('/login');
+
+  // Step 2: Wait for the login form to be visible
+  await page.waitForSelector('[data-testid="login-form"]', {
+    state: 'visible',
+    timeout: 10000,
+  });
+
+  console.log(`[SETUP] Login form visible, filling credentials for ${user.email}`);
+
+  // Step 3: Fill in the credentials
+  await page.getByTestId('email-input').fill(user.email);
+  await page.getByTestId('password-input').fill(user.password);
+
+  // Step 4: Submit the form
+  await page.getByTestId('login-submit').click();
+
+  // Step 5: Wait for successful authentication - should redirect away from login
+  try {
+    await page.waitForURL((url) => !url.pathname.includes('/login'), {
+      timeout: 30000,
+    });
+  } catch (error) {
+    // Check if there's an error message on the page
+    const errorElement = page.getByTestId('form-error');
+    const hasError = await errorElement.isVisible().catch(() => false);
+    if (hasError) {
+      const errorText = await errorElement.textContent();
+      throw new Error(
+        `[SETUP] Auth0 login failed for ${user.email}: ${errorText}`
+      );
+    }
+    throw new Error(
+      `[SETUP] Auth0 login timeout for ${user.email}. Still on login page after 30s.`
+    );
+  }
+
+  console.log(`[SETUP] Auth0 login successful for ${user.email}`);
+
+  // Step 6: Wait for app to be ready
+  try {
+    await page.waitForSelector('[data-app-ready="true"]', {
+      timeout: 30000,
+      state: 'attached',
+    });
+  } catch {
+    console.warn(`[SETUP] Warning: data-app-ready not found for ${user.email}`);
+  }
+
+  // Step 7: Save storage state
+  await page.context().storageState({ path: storageStatePath });
+
+  console.log(`[SETUP] Saved Auth0 auth state for ${user.email} to ${storageStatePath}`);
+}
+
+/**
  * Authenticate a user via test seed API and save storage state
  *
- * Since Auth0 is now the only authentication method, we can't use the UI login
- * form (it would redirect to Auth0). Instead, we:
+ * This is the legacy method used when AUTH0_E2E_TEST_PASSWORD is not set.
+ * It uses the test seed endpoint to get tokens without going through Auth0.
+ *
+ * Flow:
  * 1. Get auth tokens from the test seed endpoint
  * 2. Set up localStorage with the auth state
  * 3. Navigate to verify the auth works
  * 4. Save the browser state
  */
-async function authenticateAndSave(
+async function authenticateViaSeedAPI(
   page: import('@playwright/test').Page,
   user: { email: string; password: string; name: string },
   storageStatePath: string
 ): Promise<void> {
   const apiBaseUrl = getApiBaseUrl();
-  console.log(`[SETUP] Starting authentication for ${user.email}`);
+  console.log(`[SETUP] Starting seed API authentication for ${user.email}`);
   console.log(`[SETUP] API Base URL: ${apiBaseUrl}`);
 
   // Step 1: Get auth tokens from test seed endpoint
@@ -195,6 +278,28 @@ async function authenticateAndSave(
   await page.context().storageState({ path: storageStatePath });
 
   console.log(`[SETUP] Saved auth state for ${user.email} to ${storageStatePath}`);
+}
+
+/**
+ * Authenticate a user and save storage state
+ *
+ * Routes to either Auth0 or seed API authentication based on environment.
+ */
+async function authenticateAndSave(
+  page: import('@playwright/test').Page,
+  user: { email: string; password: string; name: string },
+  storageStatePath: string
+): Promise<void> {
+  if (isAuth0Enabled()) {
+    // Use Auth0 login UI - get the Auth0 user credentials
+    const auth0User = user.email.includes('admin')
+      ? AUTH0_TEST_USERS.ADMIN
+      : AUTH0_TEST_USERS.LEARNER;
+    await authenticateViaAuth0(page, auth0User, storageStatePath);
+  } else {
+    // Use seed API for token generation
+    await authenticateViaSeedAPI(page, user, storageStatePath);
+  }
 }
 
 // Setup test for LEARNER user (primary test user with progress)

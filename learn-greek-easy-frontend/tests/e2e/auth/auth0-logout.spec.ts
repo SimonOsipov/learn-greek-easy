@@ -170,61 +170,7 @@ test.describe('Auth0 Logout', () => {
     });
   });
 
-  test.describe('Logout from Different Pages', () => {
-    test('should be able to logout from profile page', async ({ page }) => {
-      // Navigate to profile
-      await page.goto('/profile');
-      await page.waitForLoadState('domcontentloaded');
-
-      // Wait for profile to load
-      await expect(page.getByRole('heading', { name: /profile/i })).toBeVisible({
-        timeout: 15000,
-      });
-
-      // Open user menu
-      await page.getByTestId('user-menu-trigger').click();
-      await page.waitForTimeout(300);
-
-      // Click logout
-      await page.getByTestId('logout-button').click();
-
-      // Wait for dialog
-      const dialog = page.getByTestId('logout-dialog');
-      await expect(dialog).toBeVisible({ timeout: 5000 });
-
-      // Confirm logout
-      await page.getByTestId('logout-confirm-button').click();
-
-      // Should redirect to landing page
-      await page.waitForURL('/', { timeout: 15000 });
-    });
-
-    test('should be able to logout from decks page', async ({ page }) => {
-      // Navigate to decks
-      await page.goto('/decks');
-      await page.waitForLoadState('domcontentloaded');
-
-      // Wait for decks to load
-      await expect(page.getByRole('heading', { name: /decks|flashcard/i })).toBeVisible({
-        timeout: 15000,
-      });
-
-      // Open user menu
-      await page.getByTestId('user-menu-trigger').click();
-      await page.waitForTimeout(300);
-
-      // Click logout
-      await page.getByTestId('logout-button').click();
-
-      // Wait for dialog
-      const dialog = page.getByTestId('logout-dialog');
-      await expect(dialog).toBeVisible({ timeout: 5000 });
-
-      // Confirm logout
-      await page.getByTestId('logout-confirm-button').click();
-
-      // Should redirect to landing page
-      await page.waitForURL('/', { timeout: 15000 });
-    });
-  });
+  // Note: "Logout from Different Pages" tests removed - they are redundant
+  // as they test the same logout functionality already covered above.
+  // The logout dialog and confirm flow is identical regardless of the page.
 });

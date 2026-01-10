@@ -22,17 +22,19 @@ export function isAuth0Enabled(): boolean {
 
 /**
  * Test users for Auth0 authentication tests
- * These match the seed users in the backend
+ * These match the seed users created in Auth0 tenant.
+ * Password is read from AUTH0_E2E_TEST_PASSWORD env var in CI,
+ * with fallback to default for local development.
  */
 export const AUTH0_TEST_USERS = {
   LEARNER: {
     email: 'e2e_learner@test.com',
-    password: 'TestPassword123!',
+    password: process.env.AUTH0_E2E_TEST_PASSWORD || 'TestPassword123!',
     name: 'E2E Learner',
   },
   ADMIN: {
     email: 'e2e_admin@test.com',
-    password: 'TestPassword123!',
+    password: process.env.AUTH0_E2E_TEST_PASSWORD || 'TestPassword123!',
     name: 'E2E Admin',
   },
 };
