@@ -37,8 +37,8 @@ export default defineConfig({
   // Run tests sequentially for stability (parallel can cause connection pool issues)
   fullyParallel: false,
 
-  // Retry failed tests in CI (catch flaky tests) - increased retries for stability
-  retries: process.env.CI ? 3 : 0,
+  // Retry failed tests in CI (catch transient failures like network hiccups)
+  retries: process.env.CI ? 1 : 0,
 
   // Number of parallel workers - reduced for stability
   workers: process.env.CI ? 1 : undefined, // CI: 1 worker for stability, Local: auto

@@ -212,7 +212,7 @@ npm run test:e2e
 - ✅ Vitest watch mode for fast feedback
 - ✅ E2E tests run in headless mode in CI
 - ✅ Coverage collection optimized (V8 provider)
-- ✅ Test retries enabled in CI (2 retries for flaky tests)
+- ✅ Test retries enabled in CI (1 retry for transient failures)
 
 ---
 
