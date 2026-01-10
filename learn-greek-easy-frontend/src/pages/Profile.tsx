@@ -10,8 +10,8 @@ import { ProfileHeader } from '@/components/profile/ProfileHeader';
 import { SecuritySection } from '@/components/profile/SecuritySection';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
+import { useAuthStore } from '@/stores/authStore';
 
 type ProfileSection = 'personal' | 'preferences' | 'security';
 
@@ -23,7 +23,7 @@ interface NavigationItem {
 
 export const Profile: React.FC = () => {
   const { t } = useTranslation('profile');
-  const { user } = useAuth();
+  const user = useAuthStore((state) => state.user);
   const [activeSection, setActiveSection] = useState<ProfileSection>('personal');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 

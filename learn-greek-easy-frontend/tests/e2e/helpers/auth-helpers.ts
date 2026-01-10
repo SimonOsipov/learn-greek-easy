@@ -117,108 +117,28 @@ export async function waitForAppFullyLoaded(page: Page, timeout = 30000): Promis
 }
 
 /**
- * Login via UI with robust error handling
+ * @deprecated Legacy login via UI is no longer supported.
  *
- * Use this for:
- * - Testing the login form UI itself
- * - Tests that specifically verify login functionality
+ * With Auth0 as the only authentication method, the login page now redirects
+ * to Auth0 for authentication. This function is kept for backwards compatibility
+ * but will throw an error explaining the new authentication flow.
  *
- * For other tests, use storageState pattern (automatic with config)
+ * For E2E tests that need authentication:
+ * - Use the storageState pattern (automatic with config)
+ * - Auth setup (auth.setup.ts) uses test seed endpoint to get tokens
  *
  * @param page - Playwright page object
- * @param user - User credentials (defaults to SEED_USERS.LEARNER for real backend)
+ * @param user - User credentials (no longer used)
  */
 export async function loginViaUI(
   page: Page,
-  user: TestUser = SEED_USERS.LEARNER
+  _user: TestUser = SEED_USERS.LEARNER
 ): Promise<void> {
-  // Navigate to login page
-  await page.goto('/login');
-
-  // Wait for app to be fully loaded before interacting
-  await waitForAppFullyLoaded(page);
-
-  // Wait for login form to be ready
-  await page.waitForSelector('[data-testid="login-card"]', { timeout: 10000 });
-
-  // Fill login form
-  await page.getByTestId('email-input').fill(user.email);
-  await page.getByTestId('password-input').fill(user.password);
-
-  // Set up response interception BEFORE clicking submit
-  const responsePromise = page.waitForResponse(
-    response =>
-      response.url().includes('/api/v1/auth/login') &&
-      response.request().method() === 'POST',
-    { timeout: 15000 }
+  throw new Error(
+    'loginViaUI is deprecated. Auth0 is now the only authentication method. ' +
+    'Use storageState pattern for authenticated tests. ' +
+    'The auth.setup.ts file handles authentication via the test seed endpoint.'
   );
-
-  // Click submit
-  await page.getByTestId('login-submit').click();
-
-  // Wait for API response
-  const response = await responsePromise;
-
-  // Check if API succeeded
-  if (!response.ok()) {
-    // Get error details from response body
-    let errorBody = 'Unknown error';
-    try {
-      const jsonBody = await response.json();
-      errorBody = jsonBody.detail || jsonBody.message || JSON.stringify(jsonBody);
-    } catch {
-      try {
-        errorBody = await response.text();
-      } catch {
-        // Keep default error message
-      }
-    }
-
-    // Also check if error message appeared on page
-    const errorAlert = page.locator('[role="alert"]');
-    const hasErrorAlert = await errorAlert.isVisible().catch(() => false);
-    let pageError = '';
-    if (hasErrorAlert) {
-      pageError = await errorAlert.textContent() || '';
-    }
-
-    throw new Error(
-      `Login API failed with status ${response.status()}: ${errorBody}` +
-      (pageError ? ` | Page error: ${pageError}` : '')
-    );
-  }
-
-  // API succeeded, wait for navigation away from login page
-  try {
-    // Wait until we're no longer on /login
-    await page.waitForFunction(() => !window.location.pathname.includes('/login'), { timeout: 10000 });
-  } catch (navError) {
-    const currentUrl = page.url();
-
-    // Check for error message on page
-    const errorAlert = page.locator('[role="alert"]');
-    const hasErrorAlert = await errorAlert.isVisible().catch(() => false);
-
-    if (hasErrorAlert) {
-      const errorText = await errorAlert.textContent() || 'Unknown error';
-      throw new Error(`Login navigation failed - error on page: ${errorText}`);
-    }
-
-    throw new Error(
-      `Login succeeded but navigation failed. ` +
-      `Current URL: ${currentUrl}. `
-    );
-  }
-
-  // Verify we're no longer on login page (dashboard is at /)
-  const currentUrl = page.url();
-  if (currentUrl.includes('/login')) {
-    throw new Error(
-      `Expected to be on dashboard (/) but still on: ${currentUrl}`
-    );
-  }
-
-  console.log('[TEST] loginViaUI: Successfully logged in and navigated to dashboard');
 }
 
 /**
@@ -467,16 +387,15 @@ export async function verifySeedUsers(request: APIRequestContext): Promise<void>
     );
   }
 
-  // Step 2: Try to login as the primary test user
+  // Step 2: Try to get auth tokens for the primary test user via test seed endpoint
   const testUser = SEED_USERS.LEARNER;
-  console.log(`[TEST] Attempting to login as ${testUser.email}...`);
+  console.log(`[TEST] Attempting to authenticate ${testUser.email} via test seed endpoint...`);
 
-  let loginResponse;
+  let authResponse;
   try {
-    loginResponse = await request.post(`${apiBaseUrl}/api/v1/auth/login`, {
+    authResponse = await request.post(`${apiBaseUrl}/api/v1/test/seed/auth`, {
       data: {
         email: testUser.email,
-        password: testUser.password,
       },
       headers: {
         'Content-Type': 'application/json',
@@ -484,31 +403,31 @@ export async function verifySeedUsers(request: APIRequestContext): Promise<void>
     });
   } catch (error) {
     throw new Error(
-      `[VERIFY] Failed to reach login endpoint at ${apiBaseUrl}/api/v1/auth/login: ${error}`
+      `[VERIFY] Failed to reach test auth endpoint at ${apiBaseUrl}/api/v1/test/seed/auth: ${error}`
     );
   }
 
-  if (!loginResponse.ok()) {
+  if (!authResponse.ok()) {
     let errorBody = 'Unknown error';
     try {
-      const jsonBody = await loginResponse.json();
+      const jsonBody = await authResponse.json();
       errorBody = jsonBody.detail || jsonBody.message || JSON.stringify(jsonBody);
     } catch {
       try {
-        errorBody = await loginResponse.text();
+        errorBody = await authResponse.text();
       } catch {
         // Keep default error message
       }
     }
 
     throw new Error(
-      `[VERIFY] Seed user ${testUser.email} cannot login. ` +
-      `Status: ${loginResponse.status()}, Error: ${errorBody}. ` +
+      `[VERIFY] Seed user ${testUser.email} cannot authenticate. ` +
+      `Status: ${authResponse.status()}, Error: ${errorBody}. ` +
       `This likely means the database was not seeded properly.`
     );
   }
 
-  console.log(`[TEST] Successfully verified seed user ${testUser.email} can login`);
+  console.log(`[TEST] Successfully verified seed user ${testUser.email} can authenticate`);
 }
 
 /**

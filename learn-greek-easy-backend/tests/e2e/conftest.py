@@ -140,56 +140,43 @@ class E2ETestCase(AuthenticatedTestCase):
         password: str | None = None,
         full_name: str = "E2E Test User",
     ) -> UserSession:
-        """Register new user via API and return authenticated session.
+        """Create user via test seed endpoint and return authenticated session.
 
         Args:
             client: AsyncClient instance
             email: User email (auto-generated if None)
-            password: User password (uses DEFAULT_PASSWORD if None)
+            password: User password (unused, kept for API compatibility)
             full_name: User's display name
 
         Returns:
             UserSession: Container with user info and auth headers
 
         Raises:
-            AssertionError: If registration or login fails
+            AssertionError: If user creation or auth fails
         """
         if email is None:
             email = f"e2e_user_{uuid4().hex[:8]}@example.com"
-        if password is None:
-            password = self.DEFAULT_PASSWORD
 
-        # Register (returns TokenResponse, not UserResponse)
+        # Create user and get auth tokens via test seed endpoint
         response = await client.post(
-            "/api/v1/auth/register",
-            json={
-                "email": email,
-                "password": password,
-                "full_name": full_name,
-            },
+            "/api/v1/test/seed/create-user",
+            json={"email": email, "full_name": full_name},
         )
-        assert response.status_code == 201, f"Register failed: {response.text}"
+        assert response.status_code == 200, f"Create user failed: {response.text}"
         token_data = response.json()
 
-        # Get access token from registration response
-        token = token_data["access_token"]
-        headers = {"Authorization": f"Bearer {token}"}
+        headers = {"Authorization": f"Bearer {token_data['access_token']}"}
 
-        # Fetch user profile to get user ID
-        me_resp = await client.get("/api/v1/auth/me", headers=headers)
-        assert me_resp.status_code == 200, f"Get profile failed: {me_resp.text}"
-        user_data = me_resp.json()
-
-        # Create user-like object from API response
+        # Create user-like object from response
         class UserInfo:
-            """Lightweight user representation from API response."""
+            """Lightweight user representation."""
 
             def __init__(self, data: dict) -> None:
-                self.id = UUID(data["id"])
+                self.id = UUID(data["user_id"])
                 self.email = data["email"]
-                self.full_name = data.get("full_name", full_name)
+                self.full_name = full_name
 
-        return UserSession(user=UserInfo(user_data), headers=headers)
+        return UserSession(user=UserInfo(token_data), headers=headers)
 
     async def login_user(
         self,
@@ -197,28 +184,24 @@ class E2ETestCase(AuthenticatedTestCase):
         email: str,
         password: str | None = None,
     ) -> dict[str, str]:
-        """Login existing user via API, return auth headers.
+        """Get auth tokens for existing user via test seed endpoint.
 
         Args:
             client: AsyncClient instance
             email: User email
-            password: User password (uses DEFAULT_PASSWORD if None)
+            password: User password (unused, kept for API compatibility)
 
         Returns:
             dict: Authorization headers
 
         Raises:
-            AssertionError: If login fails
+            AssertionError: If auth fails
         """
-        password = password or self.DEFAULT_PASSWORD
         resp = await client.post(
-            "/api/v1/auth/login",
-            json={
-                "email": email,
-                "password": password,
-            },
+            "/api/v1/test/seed/auth",
+            json={"email": email},
         )
-        assert resp.status_code == 200, f"Login failed: {resp.text}"
+        assert resp.status_code == 200, f"Test auth failed: {resp.text}"
         return {"Authorization": f"Bearer {resp.json()['access_token']}"}
 
     # -------------------------------------------------------------------------
@@ -487,10 +470,10 @@ async def fresh_user_session(
     client: AsyncClient,
     db_session: AsyncSession,
 ) -> UserSession:
-    """Create new user via registration API and return session.
+    """Create new user via test seed endpoint and return authenticated session.
 
-    This fixture creates a fresh user through the API (not directly in DB),
-    simulating a real user registration flow.
+    This fixture creates a fresh user through the test seed API,
+    simulating user creation for E2E tests.
 
     Args:
         client: AsyncClient fixture
@@ -505,38 +488,27 @@ async def fresh_user_session(
             assert "Authorization" in fresh_user_session.headers
     """
     email = f"e2e_fresh_{uuid4().hex[:8]}@example.com"
-    password = "TestPassword123!"
     full_name = "Fresh E2E User"
 
-    # Register (returns TokenResponse with tokens, not UserResponse)
+    # Create user and get auth tokens via test seed endpoint
     resp = await client.post(
-        "/api/v1/auth/register",
-        json={
-            "email": email,
-            "password": password,
-            "full_name": full_name,
-        },
+        "/api/v1/test/seed/create-user",
+        json={"email": email, "full_name": full_name},
     )
-    assert resp.status_code == 201
+    assert resp.status_code == 200, f"Create user failed: {resp.text}"
     token_data = resp.json()
 
-    # Use token from registration (no need to login again)
     headers = {"Authorization": f"Bearer {token_data['access_token']}"}
 
-    # Fetch user profile to get user ID and details
-    me_resp = await client.get("/api/v1/auth/me", headers=headers)
-    assert me_resp.status_code == 200
-    user_data = me_resp.json()
-
     class UserInfo:
-        """Lightweight user representation from API response."""
+        """Lightweight user representation."""
 
         def __init__(self, data: dict) -> None:
-            self.id = UUID(data["id"])
+            self.id = UUID(data["user_id"])
             self.email = data["email"]
-            self.full_name = data.get("full_name")
+            self.full_name = full_name
 
-    return UserSession(user=UserInfo(user_data), headers=headers)
+    return UserSession(user=UserInfo(token_data), headers=headers)
 
 
 @pytest_asyncio.fixture

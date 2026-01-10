@@ -38,12 +38,9 @@ Available Fixtures (from tests/unit/conftest.py):
 
 Example:
 -------
-    class TestPasswordHashing:
-        def test_hash_password_returns_bcrypt_string(self):
-            result = hash_password("password123")
-            assert result.startswith("$2b$")
-
-        def test_verify_password_returns_true_for_correct_password(self):
-            hashed = hash_password("password123")
-            assert verify_password("password123", hashed) is True
+    class TestAuthService:
+        async def test_get_user_by_email_found(self, mock_db_session):
+            service = AuthService(mock_db_session)
+            user = await service._get_user_by_email("test@example.com")
+            assert user is not None
 """

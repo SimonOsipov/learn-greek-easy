@@ -16,9 +16,7 @@ from src.repositories import (
     ReviewRepository,
     UserDeckProgressRepository,
     UserRepository,
-    UserSettingsRepository,
 )
-from src.schemas.user import UserCreate
 
 # ============================================================================
 # BaseRepository Tests (via UserRepository)
@@ -75,7 +73,8 @@ async def test_list_with_pagination(db_session: AsyncSession):
     for i in range(5):
         user = User(
             email=f"user{i}@example.com",
-            password_hash="hashed",
+            password_hash=None,  # Auth0 users don't have password
+            auth0_id=f"auth0|test_{uuid4().hex[:8]}",
             full_name=f"User {i}",
         )
         db_session.add(user)
@@ -107,13 +106,15 @@ async def test_filter_by(db_session: AsyncSession):
     # Create users with different email verification status
     verified_user = User(
         email="verified@example.com",
-        password_hash="hashed",
+        password_hash=None,  # Auth0 users don't have password
+        auth0_id=f"auth0|test_{uuid4().hex[:8]}",
         full_name="Verified User",
         email_verified_at=datetime.utcnow(),
     )
     unverified_user = User(
         email="unverified@example.com",
-        password_hash="hashed",
+        password_hash=None,  # Auth0 users don't have password
+        auth0_id=f"auth0|test_{uuid4().hex[:8]}",
         full_name="Unverified User",
     )
     db_session.add(verified_user)
@@ -170,7 +171,8 @@ async def test_get_by_google_id(db_session: AsyncSession):
     # Create user with Google ID
     google_user = User(
         email="google@example.com",
-        password_hash="",
+        password_hash=None,  # Auth0 users don't have password
+        auth0_id="auth0|test_google_user",
         full_name="Google User",
         google_id="google_oauth_123",
     )
@@ -182,33 +184,6 @@ async def test_get_by_google_id(db_session: AsyncSession):
 
     assert user is not None
     assert user.google_id == "google_oauth_123"
-
-
-@pytest.mark.asyncio
-async def test_create_with_settings(db_session: AsyncSession):
-    """Test creating user with default settings."""
-    repo = UserRepository(db_session)
-
-    user_in = UserCreate(
-        email="newuser@example.com",
-        password="Password123",
-        full_name="New User",
-    )
-
-    user = await repo.create_with_settings(user_in, "hashed_password_123")
-    await db_session.commit()
-    await db_session.refresh(user)
-
-    assert user.email == "newuser@example.com"
-    assert user.password_hash == "hashed_password_123"
-
-    # Check settings were created
-    settings_repo = UserSettingsRepository(db_session)
-    settings = await settings_repo.get_by_user_id(user.id)
-
-    assert settings is not None
-    assert settings.daily_goal == 20
-    assert settings.email_notifications is True
 
 
 @pytest.mark.asyncio
@@ -1284,7 +1259,8 @@ async def test_get_total_reviews_no_reviews(db_session: AsyncSession, sample_use
     # Create a new user with no reviews
     new_user = User(
         email="no_reviews@example.com",
-        password_hash="hashed",
+        password_hash=None,  # Auth0 users don't have password
+        auth0_id=f"auth0|test_{uuid4().hex[:8]}",
         full_name="No Reviews",
     )
     db_session.add(new_user)
@@ -1328,7 +1304,8 @@ async def test_get_total_study_time_no_reviews(db_session: AsyncSession, sample_
     # Create a new user with no reviews
     new_user = User(
         email="no_study_time@example.com",
-        password_hash="hashed",
+        password_hash=None,  # Auth0 users don't have password
+        auth0_id=f"auth0|test_{uuid4().hex[:8]}",
         full_name="No Study Time",
     )
     db_session.add(new_user)
@@ -1496,7 +1473,8 @@ async def test_count_user_reviews_no_reviews(db_session: AsyncSession, sample_us
     # Create a new user with no reviews
     new_user = User(
         email="no_reviews_count@example.com",
-        password_hash="hashed",
+        password_hash=None,  # Auth0 users don't have password
+        auth0_id=f"auth0|test_{uuid4().hex[:8]}",
         full_name="No Reviews Count",
     )
     db_session.add(new_user)

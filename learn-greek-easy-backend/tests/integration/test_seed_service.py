@@ -14,7 +14,6 @@ import pytest
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.security import verify_password
 from src.db.models import (
     Card,
     CardStatistics,
@@ -262,44 +261,45 @@ class TestSeedServiceIdempotency:
 
 @pytest.mark.no_parallel
 class TestSeedServiceAuthentication:
-    """Tests for seeded user authentication."""
+    """Tests for seeded user authentication.
+
+    Since password-based authentication has been removed, seeded users
+    are Auth0-style users (no password hash) with auth0_id set.
+    """
 
     @pytest.mark.asyncio
-    async def test_users_can_login_with_seeded_password(
-        self, db_session: AsyncSession, enable_seeding
-    ):
-        """Seeded users can authenticate with the default password."""
+    async def test_users_have_auth0_id(self, db_session: AsyncSession, enable_seeding):
+        """Seeded users have Auth0 IDs for authentication."""
         seed_service = SeedService(db_session)
 
-        result = await seed_service.seed_all()
+        await seed_service.seed_all()
 
-        # Get the seeded password
-        default_password = result["users"]["password"]
-
-        # Verify each user can authenticate
+        # Verify each user has an auth0_id
         users = (await db_session.execute(select(User))).scalars().all()
 
         for user in users:
-            # Password hash should be set
-            assert user.password_hash is not None
+            # Auth0 users should have auth0_id set
+            assert user.auth0_id is not None, f"auth0_id not set for {user.email}"
+            assert user.auth0_id.startswith("auth0|"), f"Invalid auth0_id format for {user.email}"
 
-            # Verify password matches
-            is_valid = verify_password(default_password, user.password_hash)
-            assert is_valid, f"Password verification failed for {user.email}"
+            # Auth0 users should NOT have password_hash
+            assert (
+                user.password_hash is None
+            ), f"password_hash should be None for Auth0 user {user.email}"
 
     @pytest.mark.asyncio
-    async def test_all_users_have_same_password(self, db_session: AsyncSession, enable_seeding):
-        """All seeded users have the same password hash."""
+    async def test_all_users_are_auth0_style(self, db_session: AsyncSession, enable_seeding):
+        """All seeded users are Auth0-style (no password)."""
         seed_service = SeedService(db_session)
 
         await seed_service.seed_all()
 
         users = (await db_session.execute(select(User))).scalars().all()
 
-        # Since bcrypt generates unique salts, hashes will differ
-        # But all should verify against the same password
+        # All users should be Auth0-style
         for user in users:
-            assert verify_password(SeedService.DEFAULT_PASSWORD, user.password_hash)
+            assert user.password_hash is None
+            assert user.auth0_id is not None
 
 
 # ============================================================================

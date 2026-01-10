@@ -10,7 +10,6 @@ If Redis is not available, some tests will be skipped.
 """
 
 from datetime import datetime, timedelta
-from unittest.mock import patch
 from uuid import uuid4
 
 import pytest
@@ -238,53 +237,6 @@ class TestAuthServiceRedisIntegration:
         assert verified_user_id == user_id
         assert verified_jti == token_id
 
-    @pytest.mark.asyncio
-    async def test_login_stores_session_in_redis(self, db_session, redis_client):
-        """Test that login stores session in Redis when available."""
-        if redis_client is None:
-            pytest.skip("Redis not available")
-
-        from src.core.security import hash_password
-        from src.db.models import User
-        from src.schemas.user import UserLogin
-
-        # Create test user
-        user = User(
-            email="redis_login_test@example.com",
-            password_hash=hash_password("TestPass123!"),
-            full_name="Redis Login Test",
-            is_active=True,
-        )
-        db_session.add(user)
-        await db_session.commit()
-        await db_session.refresh(user)
-
-        # Create session repo with redis client
-        session_repo = SessionRepository(redis_client=redis_client)
-
-        # Create auth service
-        auth_service = AuthService(db=db_session, session_repo=session_repo)
-
-        # Login
-        login_data = UserLogin(email="redis_login_test@example.com", password="TestPass123!")
-        logged_in_user, tokens = await auth_service.login_user(
-            login_data,
-            client_ip="127.0.0.1",
-            user_agent="Test Client",
-        )
-
-        # Verify session is in Redis
-        sessions = await session_repo.get_user_sessions(logged_in_user.id)
-        assert len(sessions) >= 1
-
-        # Verify session has IP and user agent
-        session = sessions[0]
-        assert session["ip_address"] == "127.0.0.1"
-        assert session["user_agent"] == "Test Client"
-
-        # Cleanup
-        await session_repo.revoke_all_user_sessions(logged_in_user.id)
-
 
 class TestRedisOnlySessionStorage:
     """Test Redis-only session storage behavior.
@@ -292,47 +244,6 @@ class TestRedisOnlySessionStorage:
     Note: PostgreSQL fallback has been deprecated. Sessions are stored
     exclusively in Redis. These tests verify the current Redis-only behavior.
     """
-
-    @pytest.mark.asyncio
-    async def test_login_succeeds_but_warns_when_redis_unavailable(self, db_session):
-        """Test that login succeeds even when Redis is unavailable (but warns).
-
-        Note: Sessions won't be stored, but login still returns tokens.
-        The user may need to re-login if Redis becomes available.
-        """
-        from src.core.security import hash_password
-        from src.db.models import User
-        from src.schemas.user import UserLogin
-
-        # Create test user
-        user = User(
-            email="redis_unavailable_test@example.com",
-            password_hash=hash_password("TestPass123!"),
-            full_name="Redis Unavailable Test",
-            is_active=True,
-        )
-        db_session.add(user)
-        await db_session.commit()
-        await db_session.refresh(user)
-
-        # Create session repo that simulates Redis being unavailable
-        session_repo = SessionRepository(redis_client=None)
-
-        # Create auth service with unavailable Redis
-        with patch("src.repositories.session.get_redis", return_value=None):
-            auth_service = AuthService(db=db_session, session_repo=session_repo)
-
-            # Login should still succeed
-            login_data = UserLogin(
-                email="redis_unavailable_test@example.com",
-                password="TestPass123!",
-            )
-            logged_in_user, tokens = await auth_service.login_user(login_data)
-
-        # Verify login succeeded (tokens were generated)
-        assert tokens.access_token is not None
-        assert tokens.refresh_token is not None
-        assert logged_in_user.email == "redis_unavailable_test@example.com"
 
     @pytest.mark.asyncio
     async def test_get_user_sessions_returns_redis_only(self, db_session):

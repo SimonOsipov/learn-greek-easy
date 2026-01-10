@@ -57,11 +57,8 @@ class AuthLoggingMiddleware:
 
     # Sensitive paths that should have extra logging
     SENSITIVE_PATHS: list[str] = [
-        "/api/v1/auth/login",
-        "/api/v1/auth/register",
         "/api/v1/auth/logout",
         "/api/v1/auth/logout-all",
-        "/api/v1/auth/google",
         "/api/v1/auth/auth0",
     ]
 
@@ -205,10 +202,10 @@ class AuthLoggingMiddleware:
             extra=log_extra,
         )
 
-        # Additional warning for failed auth attempts
-        if path == "/api/v1/auth/login" and status_code == 401:
+        # Additional warning for failed Auth0 auth attempts
+        if path == "/api/v1/auth/auth0" and status_code == 401:
             logger.warning(
-                "Failed login attempt",
+                "Failed Auth0 authentication attempt",
                 extra={
                     "client_ip": client_ip,
                     "path": path,

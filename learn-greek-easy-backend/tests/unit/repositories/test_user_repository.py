@@ -109,13 +109,13 @@ class TestGetByAuth0Id:
         assert result.auth0_id == special_auth0_id
 
     @pytest.mark.asyncio
-    async def test_uses_factory_with_auth0_trait(
+    async def test_uses_factory_default_auth0_user(
         self,
         db_session: AsyncSession,
     ):
-        """Should work with UserFactory auth0 trait."""
-        # Create user using factory with auth0 trait
-        user = await UserFactory.create(session=db_session, auth0=True)
+        """Should work with UserFactory default Auth0-style user."""
+        # Create user using factory (all users are Auth0-style by default)
+        user = await UserFactory.create(session=db_session)
         await db_session.flush()
 
         repo = UserRepository(db_session)
@@ -126,4 +126,3 @@ class TestGetByAuth0Id:
         assert result is not None
         assert result.id == user.id
         assert result.password_hash is None  # Auth0 users have no local password
-        assert result.email_verified_at is not None  # Auth0 users are verified

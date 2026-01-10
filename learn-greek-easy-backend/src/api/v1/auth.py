@@ -1,7 +1,10 @@
 """Authentication API endpoints.
 
 This module provides HTTP endpoints for user authentication including
-registration, login, token refresh, and logout.
+Auth0 login, token refresh, logout, and session management.
+
+Legacy email/password and Google OAuth endpoints have been removed.
+All authentication now flows through Auth0.
 """
 
 from typing import Any
@@ -17,9 +20,6 @@ from src.core.exceptions import (
     Auth0DisabledException,
     Auth0TokenExpiredException,
     Auth0TokenInvalidException,
-    EmailAlreadyExistsException,
-    GoogleOAuthDisabledException,
-    GoogleTokenInvalidException,
     InvalidCredentialsException,
     TokenExpiredException,
     TokenInvalidException,
@@ -30,15 +30,12 @@ from src.db.models import User
 from src.repositories.user import UserSettingsRepository
 from src.schemas.user import (
     Auth0AuthRequest,
-    GoogleAuthRequest,
     LogoutAllResponse,
     LogoutResponse,
     SessionInfo,
     SessionListResponse,
     TokenRefresh,
     TokenResponse,
-    UserCreate,
-    UserLogin,
     UserProfileResponse,
     UserWithSettingsUpdate,
 )
@@ -53,263 +50,6 @@ router = APIRouter(
         422: {"description": "Validation error"},
     },
 )
-
-
-@router.post(
-    "/register",
-    response_model=TokenResponse,
-    status_code=status.HTTP_201_CREATED,
-    summary="Register new user",
-    responses={
-        201: {
-            "description": "User successfully registered",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "access_token": "eyJhbGciOiJIUzI1NiIs...",
-                        "refresh_token": "eyJhbGciOiJIUzI1NiIs...",
-                        "token_type": "bearer",
-                        "expires_in": 1800,
-                    }
-                }
-            },
-        },
-        409: {
-            "description": "Email already registered",
-            "content": {
-                "application/json": {
-                    "example": {"detail": "Email 'user@example.com' is already registered"}
-                }
-            },
-        },
-        422: {
-            "description": "Validation error",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "detail": [
-                            {
-                                "loc": ["body", "password"],
-                                "msg": "Password must contain at least one digit",
-                                "type": "value_error",
-                            }
-                        ]
-                    }
-                }
-            },
-        },
-    },
-)
-async def register(
-    user_data: UserCreate,
-    db: AsyncSession = Depends(get_db),
-) -> TokenResponse:
-    """Register a new user account.
-
-    Creates a new user with the provided email and password. The password
-    is securely hashed using bcrypt before storage. Upon successful
-    registration, JWT tokens are generated for immediate authentication.
-
-    Args:
-        user_data: Registration data containing email, password, and full_name
-        db: Database session (injected)
-
-    Returns:
-        TokenResponse containing access and refresh tokens
-
-    Raises:
-        HTTPException(409): If email is already registered
-        HTTPException(422): If validation fails (weak password, invalid email)
-    """
-    service = AuthService(db)
-
-    try:
-        user, token_response = await service.register_user(user_data)
-        return token_response
-
-    except EmailAlreadyExistsException as e:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=str(e.detail),
-        )
-
-
-@router.post(
-    "/login",
-    response_model=TokenResponse,
-    summary="Login user",
-    responses={
-        200: {
-            "description": "Successfully authenticated",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "access_token": "eyJhbGciOiJIUzI1NiIs...",
-                        "refresh_token": "eyJhbGciOiJIUzI1NiIs...",
-                        "token_type": "bearer",
-                        "expires_in": 1800,
-                    }
-                }
-            },
-        },
-        401: {
-            "description": "Invalid credentials",
-            "content": {"application/json": {"example": {"detail": "Invalid email or password"}}},
-        },
-    },
-)
-async def login(
-    login_data: UserLogin,
-    request: Request,
-    db: AsyncSession = Depends(get_db),
-) -> TokenResponse:
-    """Authenticate user and generate tokens.
-
-    Args:
-        login_data: Email and password credentials
-        request: FastAPI request object for client IP
-        db: Database session (injected)
-
-    Returns:
-        TokenResponse containing access and refresh tokens
-
-    Raises:
-        HTTPException(401): If credentials are invalid
-    """
-    service = AuthService(db)
-
-    # Extract client IP address
-    client_ip = request.client.host if request.client else None
-
-    try:
-        user, token_response = await service.login_user(login_data, client_ip)
-        return token_response
-
-    except Exception:
-        # Log the actual error internally but return generic message
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid email or password",
-        )
-
-
-@router.post(
-    "/google",
-    response_model=TokenResponse,
-    summary="Login with Google",
-    description="Authenticate using Google Sign-In ID token",
-    responses={
-        200: {
-            "description": "Successfully authenticated with Google",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "access_token": "eyJhbGciOiJIUzI1NiIs...",
-                        "refresh_token": "eyJhbGciOiJIUzI1NiIs...",
-                        "token_type": "bearer",
-                        "expires_in": 1800,
-                    }
-                }
-            },
-        },
-        401: {
-            "description": "Invalid Google token",
-            "content": {
-                "application/json": {"example": {"detail": "Invalid or expired Google token"}}
-            },
-        },
-        409: {
-            "description": "Account linking conflict",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "detail": "This email is already registered. Please login with your password to link your Google account."
-                    }
-                }
-            },
-        },
-        503: {
-            "description": "Google OAuth not enabled",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "detail": "Google OAuth is not enabled. Please use email/password authentication."
-                    }
-                }
-            },
-        },
-    },
-)
-async def google_login(
-    auth_data: GoogleAuthRequest,
-    request: Request,
-    db: AsyncSession = Depends(get_db),
-) -> TokenResponse:
-    """Authenticate with Google Sign-In.
-
-    This endpoint accepts a Google ID token obtained from the Google Sign-In
-    JavaScript SDK on the frontend. The token is verified against Google's
-    public keys, and if valid, the user is authenticated.
-
-    **New Users**: A new account is created automatically with the email
-    and name from Google. The email is auto-verified.
-
-    **Existing Users (by email)**: If an account exists with the same email
-    but no Google account linked, the Google account is automatically linked.
-
-    **Existing Google Users**: If the user has previously logged in with Google,
-    they are authenticated to their existing account.
-
-    Args:
-        auth_data: Google ID token from frontend
-        request: FastAPI request object for client IP
-        db: Database session (injected)
-
-    Returns:
-        TokenResponse containing access and refresh tokens
-
-    Raises:
-        HTTPException(401): If Google token is invalid or expired
-        HTTPException(409): If email is registered with a different Google account
-        HTTPException(503): If Google OAuth is not enabled
-    """
-    service = AuthService(db)
-
-    # Extract client info for session tracking
-    client_ip = request.client.host if request.client else None
-    user_agent = request.headers.get("user-agent")
-
-    try:
-        user, token_response = await service.authenticate_google(
-            id_token=auth_data.id_token,
-            client_ip=client_ip,
-            user_agent=user_agent,
-        )
-        return token_response
-
-    except GoogleOAuthDisabledException as e:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=e.detail,
-        )
-
-    except GoogleTokenInvalidException as e:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=e.detail,
-        )
-
-    except AccountLinkingConflictException as e:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=e.detail,
-        )
-
-    except InvalidCredentialsException as e:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=e.detail,
-        )
 
 
 @router.post(
