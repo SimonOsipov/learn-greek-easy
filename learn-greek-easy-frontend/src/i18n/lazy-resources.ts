@@ -32,6 +32,7 @@ export function isLanguageLoaded(lang: SupportedLanguage): boolean {
  */
 async function loadGreekResources(): Promise<void> {
   const [
+    achievements,
     admin,
     auth,
     common,
@@ -44,6 +45,7 @@ async function loadGreekResources(): Promise<void> {
     settings,
     statistics,
   ] = await Promise.all([
+    import('./locales/el/achievements.json'),
     import('./locales/el/admin.json'),
     import('./locales/el/auth.json'),
     import('./locales/el/common.json'),
@@ -57,6 +59,7 @@ async function loadGreekResources(): Promise<void> {
     import('./locales/el/statistics.json'),
   ]);
 
+  i18n.addResourceBundle('el', 'achievements', achievements.default, true, true);
   i18n.addResourceBundle('el', 'admin', admin.default, true, true);
   i18n.addResourceBundle('el', 'auth', auth.default, true, true);
   i18n.addResourceBundle('el', 'common', common.default, true, true);
@@ -77,6 +80,7 @@ async function loadGreekResources(): Promise<void> {
  */
 async function loadRussianResources(): Promise<void> {
   const [
+    achievements,
     admin,
     auth,
     common,
@@ -89,6 +93,7 @@ async function loadRussianResources(): Promise<void> {
     settings,
     statistics,
   ] = await Promise.all([
+    import('./locales/ru/achievements.json'),
     import('./locales/ru/admin.json'),
     import('./locales/ru/auth.json'),
     import('./locales/ru/common.json'),
@@ -102,6 +107,7 @@ async function loadRussianResources(): Promise<void> {
     import('./locales/ru/statistics.json'),
   ]);
 
+  i18n.addResourceBundle('ru', 'achievements', achievements.default, true, true);
   i18n.addResourceBundle('ru', 'admin', admin.default, true, true);
   i18n.addResourceBundle('ru', 'auth', auth.default, true, true);
   i18n.addResourceBundle('ru', 'common', common.default, true, true);

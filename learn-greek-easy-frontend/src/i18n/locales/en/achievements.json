@@ -1,0 +1,266 @@
+{
+  "page": {
+    "title": "Achievements",
+    "subtitle": "Track your learning milestones",
+    "loading": "Loading achievements...",
+    "error": "Failed to load achievements"
+  },
+  "card": {
+    "locked": "Locked",
+    "unlockedOn": "Unlocked {{date}}"
+  },
+  "category": {
+    "unlocked": "{{count}}/{{total}} unlocked",
+    "xpEarned": "+{{xp}} XP earned",
+    "names": {
+      "streak": "Streak",
+      "learning": "Learning",
+      "session": "Session",
+      "accuracy": "Accuracy",
+      "cefr": "CEFR Level",
+      "special": "Special",
+      "culture": "Culture"
+    }
+  },
+  "toast": {
+    "unlocked": "Achievement Unlocked!",
+    "xpEarned": "+{{xp}} XP"
+  },
+  "items": {
+    "streak_first_flame": {
+      "name": "First Flame",
+      "description": "Maintain a 3-day streak",
+      "hint": "Study for 3 days in a row"
+    },
+    "streak_warming_up": {
+      "name": "Warming Up",
+      "description": "Maintain a 7-day streak",
+      "hint": "Study for a full week"
+    },
+    "streak_on_fire": {
+      "name": "On Fire",
+      "description": "Maintain a 14-day streak",
+      "hint": "Study for two weeks straight"
+    },
+    "streak_burning_bright": {
+      "name": "Burning Bright",
+      "description": "Maintain a 30-day streak",
+      "hint": "Study for a full month"
+    },
+    "streak_unstoppable": {
+      "name": "Unstoppable",
+      "description": "Maintain a 60-day streak",
+      "hint": "Study for two months"
+    },
+    "streak_eternal_flame": {
+      "name": "Eternal Flame",
+      "description": "Maintain a 100-day streak",
+      "hint": "Study for 100 days"
+    },
+    "streak_prometheus": {
+      "name": "Prometheus",
+      "description": "Maintain a 365-day streak",
+      "hint": "Study every day for a year"
+    },
+    "learning_first_word": {
+      "name": "First Word",
+      "description": "Learn your first card",
+      "hint": "Complete your first flashcard"
+    },
+    "learning_vocabulary_builder": {
+      "name": "Vocabulary Builder",
+      "description": "Learn 50 cards",
+      "hint": "Learn 50 vocabulary words"
+    },
+    "learning_word_collector": {
+      "name": "Word Collector",
+      "description": "Learn 100 cards",
+      "hint": "Learn 100 vocabulary words"
+    },
+    "learning_lexicon": {
+      "name": "Lexicon",
+      "description": "Learn 250 cards",
+      "hint": "Learn 250 vocabulary words"
+    },
+    "learning_dictionary": {
+      "name": "Dictionary",
+      "description": "Learn 500 cards",
+      "hint": "Learn 500 vocabulary words"
+    },
+    "learning_encyclopedia": {
+      "name": "Encyclopedia",
+      "description": "Learn 1,000 cards",
+      "hint": "Learn 1000 vocabulary words"
+    },
+    "learning_library": {
+      "name": "Library",
+      "description": "Learn 2,500 cards",
+      "hint": "Learn 2500 vocabulary words"
+    },
+    "session_quick_study": {
+      "name": "Quick Study",
+      "description": "Complete 10 cards in one session",
+      "hint": "Review 10 cards in a single session"
+    },
+    "session_marathon": {
+      "name": "Marathon",
+      "description": "Complete 50 cards in one session",
+      "hint": "Review 50 cards in a single session"
+    },
+    "session_perfectionist": {
+      "name": "Perfectionist",
+      "description": "100% accuracy in 20+ card session",
+      "hint": "Get 100% accuracy in a 20+ card session"
+    },
+    "session_speed_demon": {
+      "name": "Speed Demon",
+      "description": "Average < 3s per card (20+ cards)",
+      "hint": "Answer quickly with high accuracy"
+    },
+    "session_night_owl": {
+      "name": "Night Owl",
+      "description": "Study after 10 PM",
+      "hint": "Study late at night"
+    },
+    "session_early_bird": {
+      "name": "Early Bird",
+      "description": "Study before 7 AM",
+      "hint": "Study early in the morning"
+    },
+    "accuracy_sharp_mind": {
+      "name": "Sharp Mind",
+      "description": "80% weekly accuracy",
+      "hint": "Maintain 80% accuracy over a week"
+    },
+    "accuracy_precision": {
+      "name": "Precision",
+      "description": "90% weekly accuracy",
+      "hint": "Maintain 90% accuracy over a week"
+    },
+    "accuracy_flawless": {
+      "name": "Flawless",
+      "description": "95% weekly accuracy (50+ reviews)",
+      "hint": "Maintain 95% accuracy with 50+ reviews"
+    },
+    "accuracy_master_memory": {
+      "name": "Master Memory",
+      "description": "100 consecutive correct answers",
+      "hint": "Answer 100 cards correctly in a row"
+    },
+    "cefr_a1_explorer": {
+      "name": "A1 Explorer",
+      "description": "Complete all A1 deck cards",
+      "hint": "Master the A1 vocabulary deck"
+    },
+    "cefr_a2_traveler": {
+      "name": "A2 Traveler",
+      "description": "Complete all A2 deck cards",
+      "hint": "Master the A2 vocabulary deck"
+    },
+    "cefr_b1_conversant": {
+      "name": "B1 Conversant",
+      "description": "Complete all B1 deck cards",
+      "hint": "Master the B1 vocabulary deck"
+    },
+    "cefr_b2_proficient": {
+      "name": "B2 Proficient",
+      "description": "Complete all B2 deck cards",
+      "hint": "Master the B2 vocabulary deck"
+    },
+    "cefr_c1_advanced": {
+      "name": "C1 Advanced",
+      "description": "Complete all C1 deck cards",
+      "hint": "Master the C1 vocabulary deck"
+    },
+    "cefr_c2_mastery": {
+      "name": "C2 Mastery",
+      "description": "Complete all C2 deck cards",
+      "hint": "Master the C2 vocabulary deck"
+    },
+    "special_first_review": {
+      "name": "First Steps",
+      "description": "Complete your first review",
+      "hint": "Start your learning journey"
+    },
+    "special_comeback_kid": {
+      "name": "Comeback Kid",
+      "description": "Return after 7+ days inactive",
+      "hint": "Come back after a break"
+    },
+    "special_dedicated": {
+      "name": "Dedicated",
+      "description": "Hit daily goal 7 days in a row",
+      "hint": "Hit your daily goal every day for a week"
+    },
+    "special_consistent": {
+      "name": "Consistent",
+      "description": "Hit daily goal 30 days in a row",
+      "hint": "Hit your daily goal every day for a month"
+    },
+    "special_overachiever": {
+      "name": "Overachiever",
+      "description": "Exceed daily goal by 2x",
+      "hint": "Double your daily goal"
+    },
+    "culture_curious": {
+      "name": "Culture Curious",
+      "description": "Answer 10 culture questions",
+      "hint": "Answer your first 10 culture questions"
+    },
+    "culture_explorer": {
+      "name": "Culture Explorer",
+      "description": "Answer 50 culture questions",
+      "hint": "Answer 50 culture questions"
+    },
+    "culture_scholar": {
+      "name": "Culture Scholar",
+      "description": "Answer 100 culture questions",
+      "hint": "Answer 100 culture questions"
+    },
+    "culture_master": {
+      "name": "Culture Master",
+      "description": "Answer 500 culture questions",
+      "hint": "Answer 500 culture questions"
+    },
+    "perfect_culture_score": {
+      "name": "Perfect Culture Score",
+      "description": "10 consecutive correct culture answers",
+      "hint": "Answer 10 culture questions correctly in a row"
+    },
+    "culture_sharp_mind": {
+      "name": "Culture Sharp Mind",
+      "description": "90% accuracy in culture exams",
+      "hint": "Maintain 90% accuracy in culture questions"
+    },
+    "culture_historian": {
+      "name": "Historian",
+      "description": "Master all history questions",
+      "hint": "Master all Greek history questions"
+    },
+    "culture_geographer": {
+      "name": "Geographer",
+      "description": "Master all geography questions",
+      "hint": "Master all Greek geography questions"
+    },
+    "culture_civic_expert": {
+      "name": "Civic Expert",
+      "description": "Master all politics questions",
+      "hint": "Master all Greek politics questions"
+    },
+    "culture_champion": {
+      "name": "Culture Champion",
+      "description": "Master all culture categories",
+      "hint": "Master all culture question categories"
+    },
+    "culture_native_speaker": {
+      "name": "Native Speaker",
+      "description": "Answer 50 questions in Greek",
+      "hint": "Answer 50 culture questions in Greek"
+    },
+    "culture_polyglot_learner": {
+      "name": "Polyglot Learner",
+      "description": "Use 3 different languages",
+      "hint": "Answer questions in 3 different languages"
+    }
+  }
+}

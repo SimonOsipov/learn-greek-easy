@@ -73,13 +73,20 @@ class TestCultureAnswerRequest:
             CultureAnswerRequest(selected_option=5, time_taken=10)
         assert "less than or equal to 4" in str(exc_info.value)
 
-    def test_time_taken_accepts_large_values(self):
-        """Test time taken accepts values over 300 seconds (no upper limit)."""
-        answer = CultureAnswerRequest(selected_option=1, time_taken=600)
-        assert answer.time_taken == 600
+    def test_time_taken_at_max_limit(self):
+        """Test time taken accepts values at the 180s limit."""
+        answer = CultureAnswerRequest(selected_option=1, time_taken=180)
+        assert answer.time_taken == 180
 
-        answer2 = CultureAnswerRequest(selected_option=1, time_taken=3600)  # 1 hour
-        assert answer2.time_taken == 3600
+    def test_time_taken_above_limit_rejected(self):
+        """Test time taken above 180 seconds is rejected."""
+        with pytest.raises(ValidationError) as exc_info:
+            CultureAnswerRequest(selected_option=1, time_taken=181)
+        assert "less than or equal to 180" in str(exc_info.value)
+
+        with pytest.raises(ValidationError) as exc_info:
+            CultureAnswerRequest(selected_option=1, time_taken=600)
+        assert "less than or equal to 180" in str(exc_info.value)
 
     def test_time_taken_negative(self):
         """Test negative time taken rejected."""
@@ -94,9 +101,9 @@ class TestCultureAnswerRequest:
 
     def test_boundary_option_4(self):
         """Test option at upper boundary."""
-        answer = CultureAnswerRequest(selected_option=4, time_taken=300)
+        answer = CultureAnswerRequest(selected_option=4, time_taken=180)
         assert answer.selected_option == 4
-        assert answer.time_taken == 300
+        assert answer.time_taken == 180
 
 
 class TestCultureDeckResponse:

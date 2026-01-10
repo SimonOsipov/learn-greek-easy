@@ -1,6 +1,7 @@
 import React from 'react';
 
 import { Lock, Star } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 import { AchievementIcon } from '@/components/achievements/AchievementIcon';
 import { Badge } from '@/components/ui/badge';
@@ -24,7 +25,9 @@ export interface AchievementCardProps {
  * Uses purple color scheme for unlocked achievements.
  */
 export const AchievementCard: React.FC<AchievementCardProps> = ({ achievement, className }) => {
+  const { t, i18n } = useTranslation('achievements');
   const {
+    id,
     name,
     description,
     icon,
@@ -37,8 +40,15 @@ export const AchievementCard: React.FC<AchievementCardProps> = ({ achievement, c
     current_value,
   } = achievement;
 
-  // Format unlocked date if available
-  const formattedDate = unlocked_at ? new Date(unlocked_at).toLocaleDateString() : null;
+  // Get translated name, description, and hint (fallback to API values)
+  const translatedName = t(`items.${id}.name`, name);
+  const translatedDescription = t(`items.${id}.description`, description);
+  const translatedHint = t(`items.${id}.hint`, hint);
+
+  // Format unlocked date if available, using the current language locale
+  const formattedDate = unlocked_at
+    ? new Date(unlocked_at).toLocaleDateString(i18n.language)
+    : null;
 
   return (
     <Card
@@ -50,7 +60,7 @@ export const AchievementCard: React.FC<AchievementCardProps> = ({ achievement, c
         className
       )}
       role="article"
-      aria-label={`Achievement: ${name}`}
+      aria-label={`Achievement: ${translatedName}`}
     >
       <CardContent className="p-4">
         {/* Icon and Status */}
@@ -71,13 +81,17 @@ export const AchievementCard: React.FC<AchievementCardProps> = ({ achievement, c
 
             {/* Name and Description */}
             <div className="flex-1">
-              <h3 className="font-semibold text-foreground">{name}</h3>
-              <p className="text-sm text-muted-foreground">{unlocked ? description : hint}</p>
+              <h3 className="font-semibold text-foreground">{translatedName}</h3>
+              <p className="text-sm text-muted-foreground">
+                {unlocked ? translatedDescription : translatedHint}
+              </p>
             </div>
           </div>
 
           {/* Lock indicator for locked achievements */}
-          {!unlocked && <Lock className="h-4 w-4 text-muted-foreground" aria-label="Locked" />}
+          {!unlocked && (
+            <Lock className="h-4 w-4 text-muted-foreground" aria-label={t('card.locked')} />
+          )}
         </div>
 
         {/* Progress Section */}
@@ -112,10 +126,12 @@ export const AchievementCard: React.FC<AchievementCardProps> = ({ achievement, c
 
           {/* Unlocked date or status */}
           {unlocked && formattedDate ? (
-            <span className="text-xs text-muted-foreground">Unlocked {formattedDate}</span>
+            <span className="text-xs text-muted-foreground">
+              {t('card.unlockedOn', { date: formattedDate })}
+            </span>
           ) : (
             <Badge variant="outline" className="text-muted-foreground">
-              Locked
+              {t('card.locked')}
             </Badge>
           )}
         </div>

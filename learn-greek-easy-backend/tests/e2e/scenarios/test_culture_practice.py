@@ -1000,33 +1000,33 @@ class TestCultureAnswerSubmission(E2ETestCase):
         fresh_user_session: UserSession,
         db_session: AsyncSession,
     ) -> None:
-        """Test that time_taken at max boundary (300) works."""
+        """Test that time_taken at max boundary (180) works."""
         deck = await CultureDeckFactory.create(session=db_session)
         question = await CultureQuestionFactory.create(session=db_session, deck_id=deck.id)
         await db_session.commit()
 
         response = await client.post(
             f"/api/v1/culture/questions/{question.id}/answer",
-            json={"selected_option": 1, "time_taken": 300, "language": "en"},
+            json={"selected_option": 1, "time_taken": 180, "language": "en"},
             headers=fresh_user_session.headers,
         )
         assert response.status_code == 200
 
     @pytest.mark.asyncio
-    async def test_submit_answer_time_taken_large_value_accepted(
+    async def test_submit_answer_time_taken_at_max_accepted(
         self,
         client: AsyncClient,
         fresh_user_session: UserSession,
         db_session: AsyncSession,
     ) -> None:
-        """Test that large time_taken values are accepted (no upper limit)."""
+        """Test that time_taken at max (180 seconds) is accepted."""
         deck = await CultureDeckFactory.create(session=db_session)
         question = await CultureQuestionFactory.create(session=db_session, deck_id=deck.id)
         await db_session.commit()
 
         response = await client.post(
             f"/api/v1/culture/questions/{question.id}/answer",
-            json={"selected_option": 1, "time_taken": 600, "language": "en"},
+            json={"selected_option": 1, "time_taken": 180, "language": "en"},
             headers=fresh_user_session.headers,
         )
         assert response.status_code == 200

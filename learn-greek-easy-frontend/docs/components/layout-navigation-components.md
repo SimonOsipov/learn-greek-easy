@@ -254,10 +254,6 @@ import { Header } from '@/components/layout/Header';
     <DropdownMenuItem asChild>
       <Link to="/profile">Profile</Link>
     </DropdownMenuItem>
-    <DropdownMenuItem asChild>
-      <Link to="/settings">Settings</Link>
-    </DropdownMenuItem>
-    <DropdownMenuItem>Help & Support</DropdownMenuItem>
     <DropdownMenuSeparator />
     <DropdownMenuItem asChild onSelect={(e) => e.preventDefault()}>
       <LogoutDialog />

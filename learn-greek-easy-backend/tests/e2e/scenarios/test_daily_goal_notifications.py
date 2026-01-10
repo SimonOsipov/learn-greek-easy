@@ -402,12 +402,12 @@ class TestReviewEdgeCases(E2ETestCase):
         assert response.status_code == 422
 
     @pytest.mark.asyncio
-    async def test_review_large_time_taken_accepted(
+    async def test_review_time_taken_at_max_accepted(
         self,
         client: AsyncClient,
         populated_study_environment: StudyEnvironment,
     ) -> None:
-        """Test that large time_taken values are accepted (no upper limit)."""
+        """Test that time_taken at max (180 seconds) is accepted."""
         env = populated_study_environment
 
         response = await client.post(
@@ -415,7 +415,7 @@ class TestReviewEdgeCases(E2ETestCase):
             json={
                 "card_id": str(env.cards[0].id),
                 "quality": 4,
-                "time_taken": 600,  # Large value - now accepted
+                "time_taken": 180,  # Max value (3 minutes)
             },
             headers=env.headers,
         )
@@ -467,7 +467,7 @@ class TestReviewEdgeCases(E2ETestCase):
         client: AsyncClient,
         populated_study_environment: StudyEnvironment,
     ) -> None:
-        """Test that review with max time_taken (300) is valid."""
+        """Test that review with max time_taken (180) is valid."""
         env = populated_study_environment
 
         response = await client.post(
@@ -475,7 +475,7 @@ class TestReviewEdgeCases(E2ETestCase):
             json={
                 "card_id": str(env.cards[0].id),
                 "quality": 4,
-                "time_taken": 300,  # Max value
+                "time_taken": 180,  # Max value (3 minutes)
             },
             headers=env.headers,
         )

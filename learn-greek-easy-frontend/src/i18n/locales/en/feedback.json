@@ -36,6 +36,36 @@
       "message": "Failed to submit feedback. Please try again."
     }
   },
+  "edit": {
+    "button": "Edit",
+    "title": "Edit Feedback",
+    "save": "Save Changes",
+    "saving": "Saving...",
+    "success": {
+      "title": "Feedback updated",
+      "message": "Your feedback has been updated successfully."
+    },
+    "error": {
+      "title": "Error",
+      "message": "Failed to update feedback. Please try again."
+    }
+  },
+  "delete": {
+    "button": "Delete",
+    "title": "Delete Feedback",
+    "description": "Are you sure you want to delete \"{{title}}\"? This action cannot be undone.",
+    "confirm": "Delete",
+    "cancel": "Cancel",
+    "deleting": "Deleting...",
+    "success": {
+      "title": "Feedback deleted",
+      "message": "Your feedback has been deleted."
+    },
+    "error": {
+      "title": "Error",
+      "message": "Failed to delete feedback. Please try again."
+    }
+  },
   "list": {
     "empty": "No feedback found. Be the first to share your ideas!",
     "by": "by"

@@ -15,6 +15,7 @@ import type {
   FeedbackItem,
   FeedbackListParams,
   FeedbackListResponse,
+  UpdateFeedbackRequest,
   VoteRequest,
   VoteResponse,
 } from '@/types/feedback';
@@ -53,6 +54,13 @@ export const feedbackAPI = {
    */
   create: async (data: CreateFeedbackRequest): Promise<FeedbackItem> => {
     return api.post<FeedbackItem>('/api/v1/feedback', data);
+  },
+
+  /**
+   * Update feedback (own items only)
+   */
+  update: async (feedbackId: string, data: UpdateFeedbackRequest): Promise<FeedbackItem> => {
+    return api.put<FeedbackItem>(`/api/v1/feedback/${feedbackId}`, data);
   },
 
   /**

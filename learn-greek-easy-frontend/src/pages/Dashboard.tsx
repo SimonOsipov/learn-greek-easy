@@ -11,6 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import { reportAPIError } from '@/lib/errorReporting';
 import log from '@/lib/logger';
+import { formatStudyTime } from '@/lib/timeFormatUtils';
 import { useAuthStore } from '@/stores/authStore';
 import { useDeckStore } from '@/stores/deckStore';
 import type { Metric } from '@/types/dashboard';
@@ -146,13 +147,7 @@ export const Dashboard: React.FC = () => {
     ];
   };
 
-  // Format study time (seconds to readable format)
-  const formatStudyTime = (seconds: number): string => {
-    if (seconds < 60) return `${seconds}s`;
-    if (seconds < 3600) return `${Math.round(seconds / 60)}m`;
-    const hours = seconds / 3600;
-    return hours >= 10 ? `${Math.round(hours)}h` : `${hours.toFixed(1)}h`;
-  };
+  // formatStudyTime is now imported from '@/lib/timeFormatUtils' with day support
 
   // Get active decks (in-progress or with progress)
   const activeDecks = decks.filter(

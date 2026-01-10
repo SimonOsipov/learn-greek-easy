@@ -23,6 +23,7 @@ import {
   SUPPORTED_LANGUAGES,
 } from './constants';
 // Only English resources are loaded synchronously (default language)
+import enAchievements from './locales/en/achievements.json';
 import enAdmin from './locales/en/admin.json';
 import enAuth from './locales/en/auth.json';
 import enCommon from './locales/en/common.json';
@@ -42,17 +43,18 @@ import type { SupportedLanguage } from './constants';
  */
 const englishResources = {
   en: {
-    common: enCommon,
+    achievements: enAchievements,
+    admin: enAdmin,
     auth: enAuth,
+    common: enCommon,
+    culture: enCulture,
     deck: enDeck,
+    feedback: enFeedback,
+    landing: enLanding,
+    profile: enProfile,
     review: enReview,
     settings: enSettings,
-    profile: enProfile,
     statistics: enStatistics,
-    feedback: enFeedback,
-    culture: enCulture,
-    admin: enAdmin,
-    landing: enLanding,
   },
 };
 
@@ -86,6 +88,7 @@ function detectInitialLanguage(): SupportedLanguage {
  */
 async function loadGreekBundle(): Promise<Record<string, unknown>> {
   const [
+    achievements,
     admin,
     auth,
     common,
@@ -98,6 +101,7 @@ async function loadGreekBundle(): Promise<Record<string, unknown>> {
     settings,
     statistics,
   ] = await Promise.all([
+    import('./locales/el/achievements.json'),
     import('./locales/el/admin.json'),
     import('./locales/el/auth.json'),
     import('./locales/el/common.json'),
@@ -112,6 +116,7 @@ async function loadGreekBundle(): Promise<Record<string, unknown>> {
   ]);
 
   return {
+    achievements: achievements.default,
     admin: admin.default,
     auth: auth.default,
     common: common.default,
@@ -133,6 +138,7 @@ async function loadGreekBundle(): Promise<Record<string, unknown>> {
  */
 async function loadRussianBundle(): Promise<Record<string, unknown>> {
   const [
+    achievements,
     admin,
     auth,
     common,
@@ -145,6 +151,7 @@ async function loadRussianBundle(): Promise<Record<string, unknown>> {
     settings,
     statistics,
   ] = await Promise.all([
+    import('./locales/ru/achievements.json'),
     import('./locales/ru/admin.json'),
     import('./locales/ru/auth.json'),
     import('./locales/ru/common.json'),
@@ -159,6 +166,7 @@ async function loadRussianBundle(): Promise<Record<string, unknown>> {
   ]);
 
   return {
+    achievements: achievements.default,
     admin: admin.default,
     auth: auth.default,
     common: common.default,

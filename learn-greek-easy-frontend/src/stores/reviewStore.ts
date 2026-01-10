@@ -13,6 +13,7 @@ import { devtools } from 'zustand/middleware';
 
 import { reportAPIError } from '@/lib/errorReporting';
 import log from '@/lib/logger';
+import { MAX_ANSWER_TIME_SECONDS } from '@/lib/timeFormatUtils';
 import { reviewAPI } from '@/services/reviewAPI';
 import { studyAPI } from '@/services/studyAPI';
 import type { StudyQueueCard } from '@/services/studyAPI';
@@ -339,9 +340,9 @@ export const useReviewStore = create<ReviewState>()(
         set({ isLoading: true, error: null });
 
         try {
-          // Calculate time spent on this card
+          // Calculate time spent on this card (capped at MAX_ANSWER_TIME_SECONDS)
           const timeSpent = cardStartTime
-            ? Math.min(Math.floor((Date.now() - cardStartTime) / 1000), 300)
+            ? Math.min(Math.floor((Date.now() - cardStartTime) / 1000), MAX_ANSWER_TIME_SECONDS)
             : 10;
 
           // Submit review to backend

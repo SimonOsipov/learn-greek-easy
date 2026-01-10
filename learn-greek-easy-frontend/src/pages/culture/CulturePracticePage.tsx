@@ -40,6 +40,7 @@ import { useTrackEvent } from '@/hooks/useTrackEvent';
 import i18n from '@/i18n';
 import { reportAPIError } from '@/lib/errorReporting';
 import log from '@/lib/logger';
+import { MAX_ANSWER_TIME_SECONDS } from '@/lib/timeFormatUtils';
 import { cultureDeckAPI, type LocalizedText } from '@/services/cultureDeckAPI';
 import { useCultureSessionStore } from '@/stores/cultureSessionStore';
 import type {
@@ -265,10 +266,11 @@ export function CulturePracticePage() {
         const timeTakenMs = Date.now() - startedAt;
 
         // Submit answer to backend API
-        // IMPORTANT: Convert milliseconds to seconds for API
+        // IMPORTANT: Convert milliseconds to seconds and cap at MAX_ANSWER_TIME_SECONDS
+        const timeTakenSeconds = Math.min(Math.round(timeTakenMs / 1000), MAX_ANSWER_TIME_SECONDS);
         const response = await cultureDeckAPI.submitAnswer(currentQuestion.question.id, {
           selected_option: selectedOption,
-          time_taken: Math.round(timeTakenMs / 1000), // Convert ms to seconds
+          time_taken: timeTakenSeconds,
           language: session.config.language,
         });
 

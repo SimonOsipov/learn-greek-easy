@@ -14,6 +14,7 @@ from uuid import UUID
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.constants import MAX_ANSWER_TIME_SECONDS
 from src.db.models import CultureAnswerHistory
 from src.repositories.base import BaseRepository
 
@@ -64,11 +65,13 @@ class CultureAnswerHistoryRepository(BaseRepository[CultureAnswerHistory]):
             user_id: User UUID
 
         Returns:
-            Total study time in seconds for today
+            Total study time in seconds for today (capped per answer)
         """
         today = date.today()
+        # Cap each answer's time at MAX_ANSWER_TIME_SECONDS to handle outliers
+        capped_time = func.least(CultureAnswerHistory.time_taken_seconds, MAX_ANSWER_TIME_SECONDS)
         query = (
-            select(func.coalesce(func.sum(CultureAnswerHistory.time_taken_seconds), 0))
+            select(func.coalesce(func.sum(capped_time), 0))
             .where(CultureAnswerHistory.user_id == user_id)
             .where(func.date(CultureAnswerHistory.created_at) == today)
         )
@@ -82,13 +85,15 @@ class CultureAnswerHistoryRepository(BaseRepository[CultureAnswerHistory]):
             user_id: User UUID
 
         Returns:
-            Total seconds spent on culture cards
+            Total seconds spent on culture cards (capped per answer)
         """
-        query = select(func.coalesce(func.sum(CultureAnswerHistory.time_taken_seconds), 0)).where(
+        # Cap each answer's time at MAX_ANSWER_TIME_SECONDS to handle outliers
+        capped_time = func.least(CultureAnswerHistory.time_taken_seconds, MAX_ANSWER_TIME_SECONDS)
+        query = select(func.coalesce(func.sum(capped_time), 0)).where(
             CultureAnswerHistory.user_id == user_id
         )
         result = await self.db.execute(query)
-        return result.scalar_one()
+        return int(result.scalar_one())
 
     async def get_total_answers(self, user_id: UUID) -> int:
         """Get total number of culture answers for a user.
@@ -188,10 +193,12 @@ class CultureAnswerHistoryRepository(BaseRepository[CultureAnswerHistory]):
             - date: The answer date
             - answers_count: Number of answers
             - correct_count: Number of correct answers
-            - total_time_seconds: Sum of time_taken_seconds
+            - total_time_seconds: Sum of time_taken_seconds (capped per answer)
         """
         from sqlalchemy import case, literal
 
+        # Cap each answer's time at MAX_ANSWER_TIME_SECONDS to handle outliers
+        capped_time = func.least(CultureAnswerHistory.time_taken_seconds, MAX_ANSWER_TIME_SECONDS)
         query = (
             select(
                 func.date(CultureAnswerHistory.created_at).label("answer_date"),
@@ -202,9 +209,7 @@ class CultureAnswerHistoryRepository(BaseRepository[CultureAnswerHistory]):
                         else_=literal(0),
                     )
                 ).label("correct_count"),
-                func.coalesce(func.sum(CultureAnswerHistory.time_taken_seconds), 0).label(
-                    "total_time_seconds"
-                ),
+                func.coalesce(func.sum(capped_time), 0).label("total_time_seconds"),
             )
             .where(CultureAnswerHistory.user_id == user_id)
             .where(func.date(CultureAnswerHistory.created_at) >= start_date)

@@ -18,6 +18,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useLayoutContext } from '@/contexts/LayoutContext';
+import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 
 import { PageContainer } from './PageContainer';
@@ -41,6 +42,16 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
   const { t } = useTranslation('common');
   const location = useLocation();
   const { toggleSidebar, isDesktop } = useLayoutContext();
+  const { user } = useAuth();
+
+  // Generate initials from user name (e.g., "John Doe" -> "JD")
+  const initials =
+    user?.name
+      ?.split(' ')
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2) || 'U';
 
   const navItems: NavItem[] = [
     { path: '/dashboard', labelKey: 'nav.dashboard' },
@@ -156,9 +167,9 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
                   data-testid="user-menu-trigger"
                 >
                   <Avatar className="h-9 w-9">
-                    <AvatarImage src="" alt="User" />
+                    <AvatarImage src={user?.avatar || ''} alt={user?.name || 'User'} />
                     <AvatarFallback className="bg-gradient-to-br from-gradient-from to-gradient-to text-white">
-                      JD
+                      {initials}
                     </AvatarFallback>
                   </Avatar>
                 </Button>
@@ -166,9 +177,9 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
               <DropdownMenuContent className="w-56" align="end" forceMount>
                 <DropdownMenuLabel className="font-normal">
                   <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">John Doe</p>
+                    <p className="text-sm font-medium leading-none">{user?.name || 'User'}</p>
                     <p className="text-xs leading-none text-muted-foreground">
-                      john.doe@example.com
+                      {user?.email || ''}
                     </p>
                   </div>
                 </DropdownMenuLabel>
@@ -176,7 +187,6 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
                 <DropdownMenuItem asChild>
                   <Link to="/profile">{t('nav.profile')}</Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem>{t('nav.help')}</DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild onSelect={(e) => e.preventDefault()}>
                   <LogoutDialog />
