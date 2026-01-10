@@ -15,9 +15,18 @@ import { Page } from '@playwright/test';
 /**
  * Check if Auth0 is enabled for the current environment.
  * Tests should skip if Auth0 is not enabled.
+ *
+ * Note: We check for the raw Auth0 secrets (same condition as playwright.config.ts)
+ * rather than VITE_AUTH0_ENABLED because the VITE_ prefixed vars are set in the
+ * dev server's environment, but this function runs in the test runner's environment.
+ * CI provides the source variables directly.
  */
 export function isAuth0Enabled(): boolean {
-  return process.env.VITE_AUTH0_ENABLED === 'true';
+  return (
+    !!process.env.AUTH0_E2E_TEST_PASSWORD &&
+    !!process.env.AUTH0_DOMAIN &&
+    !!process.env.AUTH0_CLIENT_ID
+  );
 }
 
 /**
