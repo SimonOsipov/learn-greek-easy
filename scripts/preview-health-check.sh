@@ -60,18 +60,48 @@ FRONTEND_URL="${FRONTEND_URL%/}"
 # ============================================================================
 
 # Check if an endpoint returns expected status code
-# Arguments: url, name, expected_status (default: 200)
+# Arguments: url, name, expected_status (default: 200), max_retries (default: 3), retry_delay (default: 2)
 # Returns: 0 on success, 1 on failure
 # Side effect: Appends endpoint data to ENDPOINT_DATA string
+# Note: Retries on 5xx errors and curl timeouts (000), not on 4xx errors
 check_endpoint() {
     local url=$1
     local name=$2
     local expected_status=${3:-200}
+    local max_retries=${4:-3}
+    local retry_delay=${5:-2}
 
-    # Get both status code and response time using curl's -w format
-    response=$(curl -s -o /dev/null -w "%{http_code}|%{time_total}" "$url" --max-time 10 2>/dev/null || echo "000|0")
-    status=$(echo "$response" | cut -d'|' -f1)
-    time_total=$(echo "$response" | cut -d'|' -f2)
+    local attempt=1
+    local retries_used=0
+    local status="000"
+    local time_total="0"
+
+    # Retry loop for 5xx errors and curl timeouts
+    while [ $attempt -le $max_retries ]; do
+        # Get both status code and response time using curl's -w format
+        response=$(curl -s -o /dev/null -w "%{http_code}|%{time_total}" "$url" --max-time 10 2>/dev/null || echo "000|0")
+        status=$(echo "$response" | cut -d'|' -f1)
+        time_total=$(echo "$response" | cut -d'|' -f2)
+
+        # Success - break out
+        if [ "$status" = "$expected_status" ]; then
+            break
+        fi
+
+        # 5xx error OR curl timeout (000) - retry if attempts remaining
+        if [[ "$status" =~ ^5[0-9]{2}$ || "$status" = "000" ]] && [ $attempt -lt $max_retries ]; then
+            echo "  [$name] Got $status, retrying ($attempt/$max_retries)..."
+            sleep $retry_delay
+            attempt=$((attempt + 1))
+            continue
+        fi
+
+        # Non-retryable error or max retries reached - fail
+        break
+    done
+
+    # Calculate retries used
+    retries_used=$((attempt - 1))
 
     # Convert time_total (seconds) to milliseconds
     time_ms=$(echo "$time_total * 1000" | bc | cut -d'.' -f1)
@@ -90,23 +120,36 @@ check_endpoint() {
     fi
 
     # Build JSON entry for this endpoint (append to ENDPOINT_DATA)
-    local entry="{\"name\": \"$name\", \"url\": \"$url\", \"status_code\": $status, \"expected_status\": $expected_status, \"response_time_ms\": $time_ms, \"passed\": $passed, \"slow\": $slow}"
+    local entry="{\"name\": \"$name\", \"url\": \"$url\", \"status_code\": $status, \"expected_status\": $expected_status, \"response_time_ms\": $time_ms, \"passed\": $passed, \"slow\": $slow, \"retries\": $retries_used}"
     if [ -n "$ENDPOINT_DATA" ]; then
         ENDPOINT_DATA="$ENDPOINT_DATA, $entry"
     else
         ENDPOINT_DATA="$entry"
     fi
 
-    # Print result
+    # Print result with retry information
+    local retry_suffix=""
+    if [ "$retries_used" -gt 0 ]; then
+        if [ "$retries_used" -eq 1 ]; then
+            retry_suffix=" (after $retries_used retry)"
+        else
+            retry_suffix=" (after $retries_used retries)"
+        fi
+    fi
+
     if [ "$passed" = "true" ]; then
         if [ "$slow" = "true" ]; then
-            echo "[SLOW] $name: $status (${time_ms}ms)"
+            echo "[SLOW] $name: $status (${time_ms}ms)$retry_suffix"
         else
-            echo "[PASS] $name: $status (${time_ms}ms)"
+            echo "[PASS] $name: $status (${time_ms}ms)$retry_suffix"
         fi
         return 0
     else
-        echo "[FAIL] $name: got $status, expected $expected_status (${time_ms}ms)"
+        local fail_retry_suffix=""
+        if [ "$retries_used" -gt 0 ]; then
+            fail_retry_suffix=" after $retries_used retries"
+        fi
+        echo "[FAIL] $name: got $status, expected $expected_status (${time_ms}ms)$fail_retry_suffix"
         return 1
     fi
 }

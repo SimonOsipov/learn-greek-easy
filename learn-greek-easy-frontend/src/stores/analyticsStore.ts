@@ -251,7 +251,7 @@ const transformToAnalyticsDashboardData = (
     fetchedAt: now,
     summary: {
       totalCardsReviewed: dashboard.overview.total_cards_studied,
-      totalTimeStudied: trends.summary.total_study_time_seconds,
+      totalTimeStudied: dashboard.overview.total_study_time_seconds,
       averageAccuracy:
         dashboard.overview.accuracy_percentage ?? dashboard.overview.overall_mastery_percentage,
       cardsNewlyMastered: dashboard.overview.total_cards_mastered,

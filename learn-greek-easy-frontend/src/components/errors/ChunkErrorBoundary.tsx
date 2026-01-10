@@ -5,6 +5,7 @@ import { RefreshCw, WifiOff } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import log from '@/lib/logger';
+import { getFrontendVersion } from '@/lib/versionCheck';
 
 interface ChunkErrorBoundaryProps {
   children: ReactNode;
@@ -75,10 +76,13 @@ export class ChunkErrorBoundary extends Component<
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     const isChunkError = this.isChunkLoadError(error);
+    const isVersionMismatch = this.isVersionMismatch(error);
 
     log.error('ChunkErrorBoundary caught error:', {
       error: error.message,
       isChunkError,
+      isVersionMismatch,
+      frontendVersion: getFrontendVersion(),
       componentStack: errorInfo.componentStack,
       chunkName: this.props.chunkName,
     });

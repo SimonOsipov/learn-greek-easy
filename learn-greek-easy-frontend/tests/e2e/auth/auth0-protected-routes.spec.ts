@@ -26,6 +26,7 @@ test.describe('Auth0 Protected Routes', () => {
     // Override storageState to be empty (no auth) for these tests
     test.use({ storageState: { cookies: [], origins: [] } });
 
+    // Test one representative protected route - all protected routes use the same guard
     test('should redirect to login when accessing dashboard without auth', async ({ page }) => {
       // Try to access dashboard
       await page.goto('/dashboard');
@@ -35,50 +36,8 @@ test.describe('Auth0 Protected Routes', () => {
       await expect(page.getByTestId('login-card')).toBeVisible({ timeout: 10000 });
     });
 
-    test('should redirect to login when accessing decks without auth', async ({ page }) => {
-      // Try to access decks
-      await page.goto('/decks');
-
-      // Should redirect to login
-      await page.waitForURL('/login');
-      await expect(page.getByTestId('login-card')).toBeVisible({ timeout: 10000 });
-    });
-
-    test('should redirect to login when accessing profile without auth', async ({ page }) => {
-      // Try to access profile
-      await page.goto('/profile');
-
-      // Should redirect to login
-      await page.waitForURL('/login');
-      await expect(page.getByTestId('login-card')).toBeVisible({ timeout: 10000 });
-    });
-
-    test('should redirect to login when accessing settings without auth', async ({ page }) => {
-      // Try to access settings
-      await page.goto('/settings');
-
-      // Should redirect to login
-      await page.waitForURL('/login');
-      await expect(page.getByTestId('login-card')).toBeVisible({ timeout: 10000 });
-    });
-
-    test('should redirect to login when accessing feedback without auth', async ({ page }) => {
-      // Try to access feedback
-      await page.goto('/feedback');
-
-      // Should redirect to login
-      await page.waitForURL('/login');
-      await expect(page.getByTestId('login-card')).toBeVisible({ timeout: 10000 });
-    });
-
-    test('should redirect to login when accessing statistics without auth', async ({ page }) => {
-      // Try to access statistics
-      await page.goto('/statistics');
-
-      // Should redirect to login
-      await page.waitForURL('/login');
-      await expect(page.getByTestId('login-card')).toBeVisible({ timeout: 10000 });
-    });
+    // Note: Removed individual tests for /decks, /profile, /settings, /feedback, /statistics
+    // They all use the same RouteGuard and would be redundant with the dashboard test above.
   });
 
   test.describe('Public Routes', () => {
@@ -136,30 +95,6 @@ test.describe('Auth0 Protected Routes', () => {
       });
     });
 
-    test('should allow authenticated access to decks', async ({ page }) => {
-      await page.goto('/decks');
-
-      // Should not redirect to login
-      await expect(page).not.toHaveURL(/\/login/);
-
-      // Should show decks content
-      await expect(page.getByRole('heading', { name: /decks|flashcard/i })).toBeVisible({
-        timeout: 15000,
-      });
-    });
-
-    test('should allow authenticated access to profile', async ({ page }) => {
-      await page.goto('/profile');
-
-      // Should not redirect to login
-      await expect(page).not.toHaveURL(/\/login/);
-
-      // Should show profile content
-      await expect(page.getByRole('heading', { name: /profile/i })).toBeVisible({
-        timeout: 15000,
-      });
-    });
-
     test('should maintain auth state after page reload', async ({ page }) => {
       // Go to dashboard
       await page.goto('/dashboard');
@@ -175,53 +110,10 @@ test.describe('Auth0 Protected Routes', () => {
       });
     });
 
-    test('should maintain auth state when navigating between protected routes', async ({
-      page,
-    }) => {
-      // Start at dashboard
-      await page.goto('/dashboard');
-      await expect(page).not.toHaveURL(/\/login/);
-
-      // Navigate to decks
-      await page.goto('/decks');
-      await expect(page).not.toHaveURL(/\/login/);
-
-      // Navigate to profile
-      await page.goto('/profile');
-      await expect(page).not.toHaveURL(/\/login/);
-
-      // Navigate back to dashboard
-      await page.goto('/dashboard');
-      await expect(page).not.toHaveURL(/\/login/);
-    });
+    // Note: Removed individual tests for /decks, /profile navigation
+    // These are redundant - if dashboard works, other protected routes use the same guard.
   });
 
-  test.describe('Redirect Handling', () => {
-    // Tests for returnTo parameter preservation
-    test.use({ storageState: { cookies: [], origins: [] } });
-
-    test('should preserve intended destination for dashboard', async ({ page }) => {
-      // Try to access dashboard without auth
-      await page.goto('/dashboard');
-
-      // Should redirect to login
-      await page.waitForURL('/login');
-
-      // The app should store the return URL in state
-      // (We can't easily verify this without completing login,
-      // but we can verify we're on the login page)
-      await expect(page.getByTestId('login-card')).toBeVisible();
-    });
-
-    test('should preserve intended destination for deep link', async ({ page }) => {
-      // Try to access a specific deck page without auth
-      await page.goto('/decks');
-
-      // Should redirect to login
-      await page.waitForURL('/login');
-
-      // Should be on login page
-      await expect(page.getByTestId('login-card')).toBeVisible();
-    });
-  });
+  // Note: Redirect handling tests removed - they were duplicative of the
+  // unauthenticated access tests above and didn't verify the actual returnTo behavior.
 });

@@ -33,11 +33,12 @@
       "currentStreak": "Τρέχουσα Σειρά",
       "mastered": "Κατακτημένες",
       "accuracy": "Ακρίβεια",
-      "totalTime": "Συνολικός Χρόνος",
+      "totalTime": "Συνολικός χρόνος μάθησης",
       "cardsToReview": "κάρτες για επανάληψη",
       "days": "ημέρες",
       "wordsTotal": "λέξεις συνολικά",
       "thisPeriod": "αυτή την περίοδο",
+      "allTime": "συνολικά",
       "tooltip": "Κάντε κλικ για λεπτομέρειες {{label}}"
     },
     "activeDecks": {

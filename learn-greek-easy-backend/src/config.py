@@ -190,7 +190,7 @@ class Settings(BaseSettings):
         description="Allowed headers (comma-separated or JSON array)",
     )
     cors_expose_headers_raw: str = Field(
-        default="X-Request-ID,X-RateLimit-Limit,X-RateLimit-Remaining,X-RateLimit-Reset",
+        default="X-Request-ID,X-RateLimit-Limit,X-RateLimit-Remaining,X-RateLimit-Reset,X-App-Version",
         alias="cors_expose_headers",
         description="Headers exposed to browser JavaScript (comma-separated or JSON array)",
     )

@@ -85,6 +85,8 @@ def service(mock_db_session):
     svc.culture_answer_repo.get_total_study_time = AsyncMock(return_value=0)
     # Also mock review_repo.get_user_reviews used in aggregation
     svc.review_repo.get_user_reviews = AsyncMock(return_value=[])
+    # Mock review_repo.get_total_study_time used in _get_aggregated_total_study_time
+    svc.review_repo.get_total_study_time = AsyncMock(return_value=0)
     # Mock culture_stats_repo.count_all_by_status used in _get_combined_status_counts
     svc.culture_stats_repo.count_all_by_status = AsyncMock(
         return_value={"new": 0, "learning": 0, "review": 0, "mastered": 0, "due": 0}
@@ -138,6 +140,7 @@ class TestProgressServiceDashboard:
         assert result.overview.total_decks_started == 0
         assert result.overview.overall_mastery_percentage == 0.0
         assert result.overview.accuracy_percentage == 0.0
+        assert result.overview.total_study_time_seconds == 0
         assert result.today.reviews_completed == 0
         assert result.today.cards_due == 0
         assert result.streak.current_streak == 0

@@ -26,6 +26,7 @@ export interface OverviewStats {
   overall_mastery_percentage: number;
   accuracy_percentage?: number;
   culture_questions_mastered: number;
+  total_study_time_seconds: number;
 }
 
 /**
