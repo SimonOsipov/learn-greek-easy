@@ -21,6 +21,7 @@ import {
   logRetryAttempt,
 } from '@/lib/retryUtils';
 import { shouldRefreshToken } from '@/lib/tokenUtils';
+import { checkVersionAndRefreshIfNeeded } from '@/lib/versionCheck';
 
 // API base URL - relative URL for nginx proxy in production, or VITE_API_URL for dev
 const API_BASE_URL = import.meta.env.VITE_API_URL || '';
@@ -406,6 +407,9 @@ async function request<T>(
             });
           }
 
+          // Check for version mismatch on retry response too
+          checkVersionAndRefreshIfNeeded(retryResponse);
+
           // Return response (handle 204 No Content)
           if (retryResponse.status === 204) {
             return undefined as T;
@@ -431,6 +435,10 @@ async function request<T>(
           detail: errorData.detail,
         });
       }
+
+      // Check for version mismatch and refresh if needed (stale client detection)
+      // This runs on every successful response to detect outdated frontend code
+      checkVersionAndRefreshIfNeeded(response);
 
       // Return response (handle 204 No Content)
       if (response.status === 204) {

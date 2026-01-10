@@ -30,6 +30,7 @@ from src.middleware import (
     ErrorHandlingMiddleware,
     RateLimitingMiddleware,
     RequestLoggingMiddleware,
+    VersionHeaderMiddleware,
 )
 
 # Setup logging
@@ -127,6 +128,10 @@ app.add_middleware(
     allow_headers=settings.cors_allow_headers,
     expose_headers=settings.cors_expose_headers,
 )
+
+# Version header middleware for stale client detection
+# Adds X-App-Version header to all responses
+app.add_middleware(VersionHeaderMiddleware)
 
 # NOTE: TrustedHostMiddleware removed - Railway handles host security at the edge,
 # and internal health checks use unpredictable Host headers that cause 400 errors.
