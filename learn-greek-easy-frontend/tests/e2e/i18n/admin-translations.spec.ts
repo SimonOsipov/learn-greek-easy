@@ -49,9 +49,8 @@ test.describe.skip('Admin Panel - i18n Translations', () => {
     // Switch to Greek
     await page.getByTestId('language-switcher-trigger').click();
     await page.getByTestId('language-option-el').click();
-    await page.waitForTimeout(500);
 
-    // Should display Greek title
+    // Should display Greek title (assertion auto-waits for text change)
     await expect(page.getByTestId('admin-title')).toHaveText('Πίνακας Διαχείρισης');
 
     // Should display Greek subtitle
@@ -70,9 +69,8 @@ test.describe.skip('Admin Panel - i18n Translations', () => {
     // Switch to Russian
     await page.getByTestId('language-switcher-trigger').click();
     await page.getByTestId('language-option-ru').click();
-    await page.waitForTimeout(500);
 
-    // Should display Russian title
+    // Should display Russian title (assertion auto-waits for text change)
     await expect(page.getByTestId('admin-title')).toHaveText('Панель администратора');
 
     // Should display Russian subtitle
@@ -91,9 +89,8 @@ test.describe.skip('Admin Panel - i18n Translations', () => {
     // Switch to Greek
     await page.getByTestId('language-switcher-trigger').click();
     await page.getByTestId('language-option-el').click();
-    await page.waitForTimeout(500);
 
-    // Verify Greek is displayed
+    // Verify Greek is displayed (assertion auto-waits)
     await expect(page.getByTestId('admin-title')).toHaveText('Πίνακας Διαχείρισης');
 
     // Reload the page
@@ -112,34 +109,28 @@ test.describe.skip('Admin Panel - i18n Translations', () => {
     // Switch to Greek
     await page.getByTestId('language-switcher-trigger').click();
     await page.getByTestId('language-option-el').click();
-    await page.waitForTimeout(500);
 
-    // Should immediately display Greek (no refresh needed)
+    // Should immediately display Greek (no refresh needed) - assertion auto-waits
     await expect(page.getByTestId('admin-title')).toHaveText('Πίνακας Διαχείρισης');
 
     // Switch to Russian
     await page.getByTestId('language-switcher-trigger').click();
     await page.getByTestId('language-option-ru').click();
-    await page.waitForTimeout(500);
 
-    // Should immediately display Russian
+    // Should immediately display Russian - assertion auto-waits
     await expect(page.getByTestId('admin-title')).toHaveText('Панель администратора');
 
     // Switch back to English
     await page.getByTestId('language-switcher-trigger').click();
     await page.getByTestId('language-option-en').click();
-    await page.waitForTimeout(500);
 
-    // Should immediately display English
+    // Should immediately display English - assertion auto-waits
     await expect(page.getByTestId('admin-title')).toHaveText('Admin Dashboard');
   });
 
   test('Card count shows pluralized correctly in English', async ({ page }) => {
-    // Wait for content to load
-    await page.waitForTimeout(1000);
-
     // Look for card count text (e.g., "10 cards" or "1 card")
-    // The pattern should match English plural forms
+    // The pattern should match English plural forms - assertion auto-waits for content
     const cardCountText = page.locator('text=/\\d+\\s+cards?$/');
     await expect(cardCountText.first()).toBeVisible({ timeout: 10000 });
   });
@@ -148,10 +139,9 @@ test.describe.skip('Admin Panel - i18n Translations', () => {
     // Switch to Greek
     await page.getByTestId('language-switcher-trigger').click();
     await page.getByTestId('language-option-el').click();
-    await page.waitForTimeout(500);
 
-    // Wait for content to load
-    await page.waitForTimeout(1000);
+    // Wait for language to change - verify title changed first
+    await expect(page.getByTestId('admin-title')).toHaveText('Πίνακας Διαχείρισης');
 
     // Look for Greek card count text
     // Greek uses "κάρτα" (singular) or "κάρτες" (plural)
@@ -163,10 +153,9 @@ test.describe.skip('Admin Panel - i18n Translations', () => {
     // Switch to Russian
     await page.getByTestId('language-switcher-trigger').click();
     await page.getByTestId('language-option-ru').click();
-    await page.waitForTimeout(500);
 
-    // Wait for content to load
-    await page.waitForTimeout(1000);
+    // Wait for language to change - verify title changed first
+    await expect(page.getByTestId('admin-title')).toHaveText('Панель администратора');
 
     // Look for Russian card count text
     // Russian uses "карточка" (1), "карточки" (2-4), "карточек" (5+)
@@ -202,8 +191,8 @@ test.describe.skip('Admin Panel - Summary Cards i18n', () => {
     // Switch to Greek
     await page.getByTestId('language-switcher-trigger').click();
     await page.getByTestId('language-option-el').click();
-    await page.waitForTimeout(500);
 
+    // Wait for language change - assertions auto-wait
     const totalDecksCard = page.getByTestId('total-decks-card');
     const totalCardsCard = page.getByTestId('total-cards-card');
 
@@ -215,8 +204,8 @@ test.describe.skip('Admin Panel - Summary Cards i18n', () => {
     // Switch to Russian
     await page.getByTestId('language-switcher-trigger').click();
     await page.getByTestId('language-option-ru').click();
-    await page.waitForTimeout(500);
 
+    // Wait for language change - assertions auto-wait
     const totalDecksCard = page.getByTestId('total-decks-card');
     const totalCardsCard = page.getByTestId('total-cards-card');
 

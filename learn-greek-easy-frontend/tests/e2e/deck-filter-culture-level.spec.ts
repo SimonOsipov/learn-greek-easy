@@ -29,11 +29,10 @@ test.describe('Deck Filter - Culture/Level Interaction', () => {
       const cultureButton = page.getByRole('button', { name: 'Culture', exact: true });
       await expect(cultureButton).toBeVisible();
 
-      // Click Culture to filter
+      // Click Culture to filter - assertions auto-retry so no timeout needed
       await cultureButton.click();
-      await page.waitForTimeout(500); // Wait for filter to apply
 
-      // Verify level buttons are disabled
+      // Verify level buttons are disabled (assertions auto-wait)
       const a1Button = page.getByRole('button', { name: /^A1$/i });
       const a2Button = page.getByRole('button', { name: /^A2$/i });
       const b1Button = page.getByRole('button', { name: /^B1$/i });
@@ -63,9 +62,8 @@ test.describe('Deck Filter - Culture/Level Interaction', () => {
       const vocabButton = page.getByRole('button', { name: 'Vocabulary', exact: true });
       await expect(vocabButton).toBeVisible();
       await vocabButton.click();
-      await page.waitForTimeout(500);
 
-      // Verify level buttons are enabled
+      // Verify level buttons are enabled (assertions auto-wait)
       const a1Button = page.getByRole('button', { name: /^A1$/i });
       const b1Button = page.getByRole('button', { name: /^B1$/i });
 
@@ -80,7 +78,6 @@ test.describe('Deck Filter - Culture/Level Interaction', () => {
       const a1Button = page.getByRole('button', { name: /^A1$/i });
       await expect(a1Button).toBeVisible();
       await a1Button.click();
-      await page.waitForTimeout(500);
 
       // Verify A1 is selected (has aria-pressed="true" or specific class)
       await expect(a1Button).toHaveAttribute('aria-pressed', 'true');
@@ -88,9 +85,8 @@ test.describe('Deck Filter - Culture/Level Interaction', () => {
       // Now switch to Culture
       const cultureButton = page.getByRole('button', { name: 'Culture', exact: true });
       await cultureButton.click();
-      await page.waitForTimeout(500);
 
-      // The A1 button should now be disabled and not pressed
+      // The A1 button should now be disabled and not pressed (assertions auto-wait)
       await expect(a1Button).toBeDisabled();
       // When switching to culture, levels are cleared so aria-pressed should be false
       await expect(a1Button).toHaveAttribute('aria-pressed', 'false');
@@ -101,21 +97,17 @@ test.describe('Deck Filter - Culture/Level Interaction', () => {
       const a1Button = page.getByRole('button', { name: /^A1$/i });
       const b1Button = page.getByRole('button', { name: /^B1$/i });
 
+      // Click A1 and wait for state change before clicking B1
       await a1Button.click();
-      await page.waitForTimeout(300);
-      await b1Button.click();
-      await page.waitForTimeout(500);
-
-      // Verify both are selected
       await expect(a1Button).toHaveAttribute('aria-pressed', 'true');
+      await b1Button.click();
       await expect(b1Button).toHaveAttribute('aria-pressed', 'true');
 
       // Switch to Culture
       const cultureButton = page.getByRole('button', { name: 'Culture', exact: true });
       await cultureButton.click();
-      await page.waitForTimeout(500);
 
-      // Both should be disabled and cleared
+      // Both should be disabled and cleared (assertions auto-wait)
       await expect(a1Button).toBeDisabled();
       await expect(b1Button).toBeDisabled();
       await expect(a1Button).toHaveAttribute('aria-pressed', 'false');
@@ -128,23 +120,20 @@ test.describe('Deck Filter - Culture/Level Interaction', () => {
       // First switch to Culture
       const cultureButton = page.getByRole('button', { name: 'Culture', exact: true });
       await cultureButton.click();
-      await page.waitForTimeout(500);
 
-      // Verify levels are disabled
+      // Verify levels are disabled (assertions auto-wait)
       const a1Button = page.getByRole('button', { name: /^A1$/i });
       await expect(a1Button).toBeDisabled();
 
       // Switch to Vocabulary
       const vocabButton = page.getByRole('button', { name: 'Vocabulary', exact: true });
       await vocabButton.click();
-      await page.waitForTimeout(500);
 
-      // Levels should be enabled now
+      // Levels should be enabled now (assertions auto-wait)
       await expect(a1Button).toBeEnabled();
 
       // Should be able to select a level
       await a1Button.click();
-      await page.waitForTimeout(300);
       await expect(a1Button).toHaveAttribute('aria-pressed', 'true');
     });
 
@@ -152,20 +141,20 @@ test.describe('Deck Filter - Culture/Level Interaction', () => {
       // Switch to Culture first
       const cultureButton = page.getByRole('button', { name: 'Culture', exact: true });
       await cultureButton.click();
-      await page.waitForTimeout(500);
+
+      // Verify levels are disabled before switching
+      const b2Button = page.getByRole('button', { name: /^B2$/i });
+      await expect(b2Button).toBeDisabled();
 
       // Switch to All
       const allButton = page.getByRole('button', { name: 'All', exact: true });
       await allButton.click();
-      await page.waitForTimeout(500);
 
-      // Levels should be enabled
-      const b2Button = page.getByRole('button', { name: /^B2$/i });
+      // Levels should be enabled (assertions auto-wait)
       await expect(b2Button).toBeEnabled();
 
       // Should be able to select a level
       await b2Button.click();
-      await page.waitForTimeout(300);
       await expect(b2Button).toHaveAttribute('aria-pressed', 'true');
     });
   });
@@ -182,9 +171,8 @@ test.describe('Deck Filter - Culture/Level Interaction', () => {
       // Switch to Culture
       const cultureButton = page.getByRole('button', { name: 'Culture', exact: true });
       await cultureButton.click();
-      await page.waitForTimeout(500);
 
-      // Label should now be dimmed (gray-400)
+      // Label should now be dimmed (gray-400) - assertions auto-wait
       await expect(levelLabel).toHaveClass(/text-gray-400/);
     });
 
@@ -192,10 +180,10 @@ test.describe('Deck Filter - Culture/Level Interaction', () => {
       // Switch to Culture
       const cultureButton = page.getByRole('button', { name: 'Culture', exact: true });
       await cultureButton.click();
-      await page.waitForTimeout(500);
 
-      // Hover over a level button
+      // Wait for the button to be disabled first (indicates state change complete)
       const a1Button = page.getByRole('button', { name: /^A1$/i });
+      await expect(a1Button).toBeDisabled();
 
       // Check that button has a title attribute
       const title = await a1Button.getAttribute('title');
@@ -210,12 +198,16 @@ test.describe('Deck Filter - Culture/Level Interaction', () => {
       const inProgressButton = page.getByRole('button', { name: /in progress/i });
       if (await inProgressButton.isVisible().catch(() => false)) {
         await inProgressButton.click();
-        await page.waitForTimeout(500);
+        // Wait for filter to be applied
+        await expect(inProgressButton).toHaveAttribute('aria-pressed', 'true');
 
         // Switch to Culture
         const cultureButton = page.getByRole('button', { name: 'Culture', exact: true });
         await cultureButton.click();
-        await page.waitForTimeout(500);
+
+        // Wait for culture filter to be applied
+        const a1Button = page.getByRole('button', { name: /^A1$/i });
+        await expect(a1Button).toBeDisabled();
 
         // Status filter should still be active
         await expect(inProgressButton).toHaveAttribute('aria-pressed', 'true');
@@ -226,15 +218,16 @@ test.describe('Deck Filter - Culture/Level Interaction', () => {
       // Switch to Culture
       const cultureButton = page.getByRole('button', { name: 'Culture', exact: true });
       await cultureButton.click();
-      await page.waitForTimeout(500);
+
+      // Wait for culture filter to be applied
+      const a1Button = page.getByRole('button', { name: /^A1$/i });
+      await expect(a1Button).toBeDisabled();
 
       // Should still be able to use search
       const searchInput = page.getByPlaceholder(/search/i);
       if (await searchInput.isVisible().catch(() => false)) {
         await searchInput.fill('history');
-        await page.waitForTimeout(800); // Wait for debounced search
-
-        // Page should still be functional
+        // Wait for debounced search results - check that title is still visible (page functional)
         await expect(page.getByTestId('decks-title')).toBeVisible();
       }
 
@@ -242,7 +235,8 @@ test.describe('Deck Filter - Culture/Level Interaction', () => {
       const completedButton = page.getByRole('button', { name: 'Completed', exact: true });
       if (await completedButton.isVisible().catch(() => false)) {
         await completedButton.click();
-        await page.waitForTimeout(500);
+        // Wait for filter to apply by checking button state
+        await expect(completedButton).toHaveAttribute('aria-pressed', 'true');
 
         // Page should still be functional
         await expect(page.getByTestId('decks-title')).toBeVisible();
@@ -255,12 +249,9 @@ test.describe('Deck Filter - Culture/Level Interaction', () => {
       // Switch to Culture
       const cultureButton = page.getByRole('button', { name: 'Culture', exact: true });
       await cultureButton.click();
-      await page.waitForTimeout(500);
 
-      // Try to click a disabled level button
+      // Wait for state change - button should be disabled (assertions auto-wait)
       const a1Button = page.getByRole('button', { name: /^A1$/i });
-
-      // Button should be disabled
       await expect(a1Button).toBeDisabled();
 
       // Force click attempt (to verify disabled state is enforced)
@@ -274,29 +265,25 @@ test.describe('Deck Filter - Culture/Level Interaction', () => {
       const vocabButton = page.getByRole('button', { name: 'Vocabulary', exact: true });
       const a1Button = page.getByRole('button', { name: /^A1$/i });
 
-      // All -> Culture
+      // All -> Culture (assertions auto-wait for state changes)
       await cultureButton.click();
-      await page.waitForTimeout(300);
       await expect(a1Button).toBeDisabled();
 
       // Culture -> Vocabulary
       await vocabButton.click();
-      await page.waitForTimeout(300);
       await expect(a1Button).toBeEnabled();
 
-      // Vocabulary -> Culture
+      // Vocabulary -> select A1
       await a1Button.click();
-      await page.waitForTimeout(300);
       await expect(a1Button).toHaveAttribute('aria-pressed', 'true');
 
+      // Vocabulary -> Culture (with A1 selected)
       await cultureButton.click();
-      await page.waitForTimeout(300);
       await expect(a1Button).toBeDisabled();
       await expect(a1Button).toHaveAttribute('aria-pressed', 'false');
 
       // Culture -> All
       await allButton.click();
-      await page.waitForTimeout(300);
       await expect(a1Button).toBeEnabled();
       await expect(a1Button).toHaveAttribute('aria-pressed', 'false');
     });
