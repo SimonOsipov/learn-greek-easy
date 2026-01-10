@@ -354,10 +354,10 @@ class TestSubmitReviewUnit:
         assert data["error"]["code"] == "VALIDATION_ERROR"
 
     @pytest.mark.asyncio
-    async def test_submit_review_time_taken_large_values_accepted(
+    async def test_submit_review_time_taken_at_max_accepted(
         self, client: AsyncClient, auth_headers: dict
     ):
-        """Test that large time_taken values are accepted (no upper limit)."""
+        """Test that time_taken at max (180 seconds) is accepted."""
         card_id = uuid4()
         mock_result = SM2ReviewResult(
             success=True,
@@ -383,10 +383,10 @@ class TestSubmitReviewUnit:
             mock_service.process_review.return_value = mock_result
             mock_service_class.return_value = mock_service
 
-            # Test with 600 seconds (10 minutes)
+            # Test with 180 seconds (3 minutes - max allowed)
             response = await client.post(
                 "/api/v1/reviews",
-                json={"card_id": str(card_id), "quality": 4, "time_taken": 600},
+                json={"card_id": str(card_id), "quality": 4, "time_taken": 180},
                 headers=auth_headers,
             )
 
@@ -605,10 +605,10 @@ class TestBulkReviewUnit:
         assert data["success"] is False
 
     @pytest.mark.asyncio
-    async def test_bulk_review_large_time_taken_accepted(
+    async def test_bulk_review_time_taken_at_max_accepted(
         self, client: AsyncClient, auth_headers: dict
     ):
-        """Test that large time_taken values in bulk review are accepted."""
+        """Test that time_taken at max (180 seconds) in bulk review is accepted."""
         card_id = uuid4()
         deck_id = uuid4()
 
@@ -642,7 +642,7 @@ class TestBulkReviewUnit:
                 json={
                     "deck_id": str(deck_id),
                     "session_id": "test-session",
-                    "reviews": [{"card_id": str(card_id), "quality": 4, "time_taken": 600}],
+                    "reviews": [{"card_id": str(card_id), "quality": 4, "time_taken": 180}],
                 },
                 headers=auth_headers,
             )
