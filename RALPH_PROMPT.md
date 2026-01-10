@@ -61,7 +61,7 @@ gh pr checks --watch --interval 180
 
 ## Context Loading
 - Study @CLAUDE.md for project conventions
-- Query Vibe Kanban (project: cb892c2b-4a17-4402-83f2-8f6cb086468b) for current tasks
+- Query Vibe Kanban (project: 9cad311d-e4b4-4861-bf89-4fe6bad3ce8b) for current tasks
 - Check Context7 before using any library APIs
 
 ## Documentation (docs/)
@@ -77,7 +77,7 @@ Reference these before making changes to related areas:
 ## Available MCP Servers
 | Server | Purpose | Usage |
 |--------|---------|-------|
-| **Vibe Kanban** | Task tracking | `mcp__vibe_kanban__*` - Project ID: `cb892c2b-4a17-4402-83f2-8f6cb086468b` |
+| **Vibe Kanban** | Task tracking | `mcp__vibe_kanban__*` - Project ID: `9cad311d-e4b4-4861-bf89-4fe6bad3ce8b` |
 | **Context7** | Library docs | `mcp__context7__*` - ALWAYS check before writing library code |
 | **Playwright** | Visual verification, E2E, bug research | `mcp__playwright__*` - Use for QA verification |
 | **Sentry** | Error tracking, issue investigation | `mcp__sentry__*` - Check for production errors related to changes |
