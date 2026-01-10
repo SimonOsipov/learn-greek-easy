@@ -187,7 +187,6 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
                 <DropdownMenuItem asChild>
                   <Link to="/profile">{t('nav.profile')}</Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem>{t('nav.help')}</DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild onSelect={(e) => e.preventDefault()}>
                   <LogoutDialog />
