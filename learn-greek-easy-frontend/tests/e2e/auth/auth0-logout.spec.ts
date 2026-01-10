@@ -55,7 +55,12 @@ test.describe('Auth0 Logout', () => {
     }) => {
       // Navigate to dashboard
       await page.goto('/dashboard');
-      await page.waitForLoadState('domcontentloaded');
+      await page.waitForLoadState('networkidle');
+
+      // Wait for dashboard to be ready
+      await expect(page.getByRole('heading', { name: /dashboard/i })).toBeVisible({
+        timeout: 15000,
+      });
 
       // Open user menu and click logout
       await page.getByTestId('user-menu-trigger').click();
