@@ -37,10 +37,7 @@ test.describe('Auth0 Logout', () => {
       await userMenuButton.waitFor({ state: 'visible', timeout: 10000 });
       await userMenuButton.click();
 
-      // Wait for dropdown
-      await page.waitForTimeout(300);
-
-      // Click logout button
+      // Click logout button - waitFor handles dropdown appearance
       const logoutButton = page.getByTestId('logout-button');
       await logoutButton.waitFor({ state: 'visible', timeout: 5000 });
       await logoutButton.click();
@@ -67,7 +64,7 @@ test.describe('Auth0 Logout', () => {
 
       // Open user menu and click logout
       await page.getByTestId('user-menu-trigger').click();
-      await page.waitForTimeout(300);
+      await page.getByTestId('logout-button').waitFor({ state: 'visible', timeout: 5000 });
       await page.getByTestId('logout-button').click();
 
       // Dialog should be visible with both buttons
@@ -93,11 +90,10 @@ test.describe('Auth0 Logout', () => {
       await userMenuButton.waitFor({ state: 'visible', timeout: 10000 });
       await userMenuButton.click();
 
-      // Wait for dropdown
-      await page.waitForTimeout(300);
-
-      // Click logout
-      await page.getByTestId('logout-button').click();
+      // Click logout - waitFor handles dropdown appearance
+      const logoutButton = page.getByTestId('logout-button');
+      await logoutButton.waitFor({ state: 'visible', timeout: 5000 });
+      await logoutButton.click();
 
       // Wait for dialog
       const dialog = page.getByTestId('logout-dialog');
@@ -132,7 +128,7 @@ test.describe('Auth0 Logout', () => {
 
       // Open user menu
       await page.getByTestId('user-menu-trigger').click();
-      await page.waitForTimeout(300);
+      await page.getByTestId('logout-button').waitFor({ state: 'visible', timeout: 5000 });
 
       // Click logout
       await page.getByTestId('logout-button').click();
@@ -159,7 +155,7 @@ test.describe('Auth0 Logout', () => {
 
       // Open user menu and click logout
       await page.getByTestId('user-menu-trigger').click();
-      await page.waitForTimeout(300);
+      await page.getByTestId('logout-button').waitFor({ state: 'visible', timeout: 5000 });
       await page.getByTestId('logout-button').click();
 
       // Wait for dialog
@@ -171,10 +167,7 @@ test.describe('Auth0 Logout', () => {
 
       // Dialog should close (or stay open depending on implementation)
       // If it stays open, that's also valid behavior
-      // We mainly want to ensure the app doesn't crash
-      await page.waitForTimeout(500);
-
-      // Should still be on dashboard either way
+      // We mainly want to ensure the app doesn't crash - assertion auto-retries
       await expect(page).toHaveURL(/\/dashboard/);
     });
   });

@@ -128,10 +128,7 @@ test.describe('Feedback & Voting System', () => {
     // Select "Feature Request"
     await page.getByRole('option', { name: /feature request/i }).click();
 
-    // Wait for filter to apply (list re-renders)
-    await page.waitForTimeout(500);
-
-    // Verify clear button appears (filter is active)
+    // Verify clear button appears (filter is active) - assertion auto-retries
     const clearButton = page.getByTestId('clear-filters-button');
     await expect(clearButton).toBeVisible();
   });
@@ -148,10 +145,7 @@ test.describe('Feedback & Voting System', () => {
     // Select "New"
     await page.getByRole('option', { name: /^new$/i }).click();
 
-    // Wait for filter to apply
-    await page.waitForTimeout(500);
-
-    // Verify clear button appears (filter is active)
+    // Verify clear button appears (filter is active) - assertion auto-retries
     const clearButton = page.getByTestId('clear-filters-button');
     await expect(clearButton).toBeVisible();
   });
@@ -168,10 +162,8 @@ test.describe('Feedback & Voting System', () => {
     // Select "Oldest"
     await page.getByRole('option', { name: /oldest/i }).click();
 
-    // Wait for sort to apply
-    await page.waitForTimeout(500);
-
     // Verify page still displays properly (sort doesn't show clear button by default)
+    // Assertion auto-retries until page stabilizes
     await expect(page.getByTestId('feedback-page')).toBeVisible();
   });
 
@@ -184,9 +176,8 @@ test.describe('Feedback & Voting System', () => {
     // Apply a filter first
     await page.getByTestId('category-filter').click();
     await page.getByRole('option', { name: /feature request/i }).click();
-    await page.waitForTimeout(500);
 
-    // Verify clear button appears
+    // Verify clear button appears - assertion auto-retries
     const clearButton = page.getByTestId('clear-filters-button');
     await expect(clearButton).toBeVisible();
 
@@ -265,12 +256,13 @@ test.describe('Feedback Voting', () => {
     // Click upvote button
     await firstCard.getByTestId('upvote-button').click();
 
-    // Wait for vote to be processed
-    await page.waitForTimeout(1000);
-
-    // Verify vote count changed (either increased by 1 or 2 if removing downvote)
-    const newCount = parseInt(await voteCount.textContent() || '0', 10);
-    expect(newCount).toBeGreaterThanOrEqual(initialCount);
+    // Wait for vote to be processed by checking the count has potentially changed
+    // Use poll to allow time for API response and re-render
+    await expect(async () => {
+      const newCount = parseInt(await voteCount.textContent() || '0', 10);
+      // Verify vote count changed (either increased by 1 or 2 if removing downvote)
+      expect(newCount).toBeGreaterThanOrEqual(initialCount);
+    }).toPass({ timeout: 5000 });
   });
 
   test('E2E-FEEDBACK-12: Toggle upvote removes vote', async ({ page }) => {
@@ -287,13 +279,14 @@ test.describe('Feedback Voting', () => {
 
     // First click - cast vote
     await upvoteButton.click();
-    await page.waitForTimeout(500);
+
+    // Wait for vote to be registered (button state change or visual feedback)
+    await expect(page.getByTestId('feedback-page')).toBeVisible();
 
     // Second click - remove vote
     await upvoteButton.click();
-    await page.waitForTimeout(500);
 
-    // Page should still be functional
+    // Page should still be functional - assertion auto-retries
     await expect(page.getByTestId('feedback-page')).toBeVisible();
   });
 
@@ -313,12 +306,13 @@ test.describe('Feedback Voting', () => {
     // Click downvote button
     await firstCard.getByTestId('downvote-button').click();
 
-    // Wait for vote to be processed
-    await page.waitForTimeout(1000);
-
-    // Verify vote count changed (either decreased by 1 or 2 if removing upvote)
-    const newCount = parseInt(await voteCount.textContent() || '0', 10);
-    expect(newCount).toBeLessThanOrEqual(initialCount);
+    // Wait for vote to be processed by checking the count has potentially changed
+    // Use poll to allow time for API response and re-render
+    await expect(async () => {
+      const newCount = parseInt(await voteCount.textContent() || '0', 10);
+      // Verify vote count changed (either decreased by 1 or 2 if removing upvote)
+      expect(newCount).toBeLessThanOrEqual(initialCount);
+    }).toPass({ timeout: 5000 });
   });
 });
 
