@@ -60,6 +60,8 @@ class FeedbackResponse(BaseModel):
     status: FeedbackStatus
     vote_count: int
     user_vote: Optional[VoteType] = None  # Current user's vote on this item
+    admin_response: Optional[str] = None
+    admin_response_at: Optional[datetime] = None
     author: AuthorBriefResponse
     created_at: datetime
     updated_at: datetime

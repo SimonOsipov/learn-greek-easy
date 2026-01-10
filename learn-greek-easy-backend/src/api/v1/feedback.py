@@ -62,6 +62,8 @@ def _build_feedback_response(feedback: Feedback, user_id: UUID) -> FeedbackRespo
         status=feedback.status,
         vote_count=feedback.vote_count,
         user_vote=user_vote,
+        admin_response=feedback.admin_response,
+        admin_response_at=feedback.admin_response_at,
         author=AuthorBriefResponse(
             id=feedback.user.id,
             full_name=feedback.user.full_name,
