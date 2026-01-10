@@ -101,10 +101,16 @@ async function authenticateViaAuth0(
   await page.getByTestId('email-input').fill(user.email);
   await page.getByTestId('password-input').fill(user.password);
 
-  // Step 4: Submit the form
+  // Step 4: Check "Remember me" to persist auth state to localStorage
+  // This is critical - without it, auth is stored only in sessionStorage
+  // which doesn't persist across storageState saves
+  const rememberMeCheckbox = page.locator('#remember');
+  await rememberMeCheckbox.check();
+
+  // Step 5: Submit the form
   await page.getByTestId('login-submit').click();
 
-  // Step 5: Wait for successful authentication - should redirect away from login
+  // Step 6: Wait for successful authentication - should redirect away from login
   try {
     await page.waitForURL((url) => !url.pathname.includes('/login'), {
       timeout: 30000,
@@ -126,7 +132,7 @@ async function authenticateViaAuth0(
 
   console.log(`[SETUP] Auth0 login successful for ${user.email}`);
 
-  // Step 6: Wait for app to be ready
+  // Step 7: Wait for app to be ready
   try {
     await page.waitForSelector('[data-app-ready="true"]', {
       timeout: 30000,
@@ -136,7 +142,7 @@ async function authenticateViaAuth0(
     console.warn(`[SETUP] Warning: data-app-ready not found for ${user.email}`);
   }
 
-  // Step 7: Save storage state
+  // Step 8: Save storage state
   await page.context().storageState({ path: storageStatePath });
 
   console.log(`[SETUP] Saved Auth0 auth state for ${user.email} to ${storageStatePath}`);
