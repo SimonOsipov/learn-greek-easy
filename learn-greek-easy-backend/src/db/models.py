@@ -130,6 +130,8 @@ class NotificationType(str, enum.Enum):
     STREAK_AT_RISK = "streak_at_risk"
     STREAK_LOST = "streak_lost"
     WELCOME = "welcome"
+    FEEDBACK_RESPONSE = "feedback_response"
+    FEEDBACK_STATUS_CHANGE = "feedback_status_change"
 
 
 # ============================================================================
@@ -709,6 +711,18 @@ class Feedback(Base, TimestampMixin):
         default=0,
         nullable=False,
         index=True,
+    )
+
+    # Admin response fields
+    admin_response: Mapped[str | None] = mapped_column(
+        String(500),
+        nullable=True,
+        comment="Admin's public response to the feedback",
+    )
+    admin_response_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        comment="Timestamp when admin responded",
     )
 
     # Relationships
