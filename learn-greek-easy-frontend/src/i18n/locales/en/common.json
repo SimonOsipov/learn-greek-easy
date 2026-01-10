@@ -33,11 +33,12 @@
       "currentStreak": "Current Streak",
       "mastered": "Mastered",
       "accuracy": "Accuracy",
-      "totalTime": "Total Time",
+      "totalTime": "Total time spent learning",
       "cardsToReview": "cards to review",
       "days": "days",
       "wordsTotal": "words total",
       "thisPeriod": "this period",
+      "allTime": "all time",
       "tooltip": "Click to view {{label}} details"
     },
     "activeDecks": {

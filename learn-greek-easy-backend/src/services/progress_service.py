@@ -435,6 +435,9 @@ class ProgressService:
         # Calculate combined accuracy
         accuracy_percentage = await self._calculate_combined_accuracy(user_id, days=30)
 
+        # Get total study time from all sessions
+        total_study_time = await self._get_aggregated_total_study_time(user_id)
+
         overview = OverviewStats(
             total_cards_studied=vocab_studied,
             total_cards_mastered=total_mastered,
@@ -442,6 +445,7 @@ class ProgressService:
             overall_mastery_percentage=round(mastery_percentage, 1),
             accuracy_percentage=accuracy_percentage,
             culture_questions_mastered=culture_mastered,
+            total_study_time_seconds=total_study_time,
         )
 
         # Get today's stats - AGGREGATED from vocabulary + culture

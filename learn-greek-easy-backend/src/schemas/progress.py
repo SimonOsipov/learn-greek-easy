@@ -92,6 +92,7 @@ class OverviewStats(BaseModel):
     overall_mastery_percentage: float = Field(..., ge=0, le=100)
     accuracy_percentage: float = Field(default=0.0, ge=0, le=100)
     culture_questions_mastered: int = Field(default=0, ge=0)
+    total_study_time_seconds: int = Field(default=0, ge=0)
 
 
 class TodayStats(BaseModel):

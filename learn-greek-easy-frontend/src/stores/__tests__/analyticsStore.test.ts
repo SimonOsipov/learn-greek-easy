@@ -29,13 +29,15 @@ describe('analyticsStore', () => {
       total_cards_mastered: 15,
       total_decks_started: 3,
       overall_mastery_percentage: 85,
+      culture_questions_mastered: 0,
+      total_study_time_seconds: 36000, // 10 hours all-time total
     },
     today: {
       reviews_completed: 20,
       cards_due: 10,
       daily_goal: 30,
       goal_progress_percentage: 66,
-      study_time_seconds: 900, // 15 min today (different from period total)
+      study_time_seconds: 900, // 15 min today (different from all-time total)
     },
     streak: {
       current_streak: 7,
@@ -252,7 +254,7 @@ describe('analyticsStore', () => {
   });
 
   describe('totalTimeStudied calculation', () => {
-    it('should use trends total_study_time_seconds for totalTimeStudied, not dashboard today', async () => {
+    it('should use dashboard overview total_study_time_seconds for totalTimeStudied (all-time total)', async () => {
       setupMocks();
       const { result } = renderHook(() => useAnalyticsStore());
 
@@ -260,8 +262,9 @@ describe('analyticsStore', () => {
         await result.current.loadAnalytics('test-user-123');
       });
 
-      // Should be 7200 (from trends.summary.total_study_time_seconds), not 900 (from today.study_time_seconds)
-      expect(result.current.dashboardData?.summary.totalTimeStudied).toBe(7200);
+      // Should be 36000 (from overview.total_study_time_seconds - all-time total),
+      // not 900 (from today.study_time_seconds) or 7200 (from trends.summary - period total)
+      expect(result.current.dashboardData?.summary.totalTimeStudied).toBe(36000);
     });
   });
 

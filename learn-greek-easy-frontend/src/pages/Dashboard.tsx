@@ -139,7 +139,7 @@ export const Dashboard: React.FC = () => {
         id: '5',
         label: t('dashboard.metrics.totalTime'),
         value: formatStudyTime(summary.totalTimeStudied),
-        sublabel: t('dashboard.metrics.thisPeriod'),
+        sublabel: t('dashboard.metrics.allTime'),
         color: 'muted',
         icon: '⏱️',
       },

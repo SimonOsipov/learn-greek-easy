@@ -33,11 +33,12 @@
       "currentStreak": "Текущая серия",
       "mastered": "Освоено",
       "accuracy": "Точность",
-      "totalTime": "Общее время",
+      "totalTime": "Общее время на изучение",
       "cardsToReview": "карточек на повторение",
       "days": "дней",
       "wordsTotal": "слов всего",
       "thisPeriod": "за этот период",
+      "allTime": "за всё время",
       "tooltip": "Нажмите для просмотра подробностей {{label}}"
     },
     "activeDecks": {
