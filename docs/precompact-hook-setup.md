@@ -115,6 +115,18 @@ cat .claude/handoff.yaml
 3. After compaction, Claude reads `CLAUDE.md` which instructs to check handoff
 4. Claude reads handoff and queries Vibe Kanban for full context
 5. Session continues with restored context
+6. **On completion**, Ralph deletes handoff to prevent stale context in next session
+
+## Cleanup on Completion
+
+**Important:** The handoff file must be deleted when Ralph finishes successfully.
+
+```bash
+# Ralph does this before outputting ALL_TASKS_COMPLETE
+rm -f .claude/handoff.yaml
+```
+
+This prevents a new session from picking up stale context from a previous completed run.
 
 ## Handoff File Format
 

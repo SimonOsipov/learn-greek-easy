@@ -250,6 +250,7 @@ Output `<promise>ALL_TASKS_COMPLETE</promise>` ONLY when ALL conditions are TRUE
 4. PR is created and marked ready
 5. Tasks moved to `inreview`
 6. **CI/CD checks have passed** (verify with `gh pr checks`)
+7. **Handoff file deleted** (cleanup for next session)
 
 ```bash
 # MUST run this before outputting ALL_TASKS_COMPLETE
@@ -257,6 +258,9 @@ Output `<promise>ALL_TASKS_COMPLETE</promise>` ONLY when ALL conditions are TRUE
 gh pr checks --watch --interval 180
 # Wait for all checks to pass
 # If any fail, fix and re-run - do NOT output the promise
+
+# Clean up handoff file (prevents stale context in next session)
+rm -f .claude/handoff.yaml
 ```
 
 Human decides merge after reviewing the PR.
