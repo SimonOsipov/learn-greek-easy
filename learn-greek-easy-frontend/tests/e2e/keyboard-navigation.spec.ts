@@ -79,14 +79,16 @@ test.describe('Keyboard Navigation - Public Pages', () => {
     // Press Enter (instead of clicking button)
     await page.keyboard.press('Enter');
 
-    // Wait for form submission attempt
-    await page.waitForTimeout(1000);
-
-    // Should either redirect or show error (both are valid - form submitted)
-    const currentUrl = page.url();
-    const hasError = (await page.locator('[role="alert"]').count()) > 0;
+    // Wait for form submission - either redirect to dashboard or error alert appears
+    await expect(async () => {
+      const currentUrl = page.url();
+      const hasError = (await page.locator('[role="alert"]').count()) > 0;
+      const redirectedOrHasError = currentUrl.includes('/dashboard') || hasError;
+      expect(redirectedOrHasError).toBe(true);
+    }).toPass({ timeout: 10000 });
 
     // Form submission was attempted (not blocked)
+    const currentUrl = page.url();
     expect(
       currentUrl === '/' ||
         currentUrl.endsWith('/') ||
@@ -268,15 +270,22 @@ test.describe('Keyboard Navigation - Protected Pages', () => {
       if ((await startReviewButton.count()) > 0) {
         await startReviewButton.click();
 
-        // Wait for review interface
-        await page.waitForTimeout(1000);
+        // Wait for review interface - look for flashcard or show answer button
+        const reviewInterface = page.locator('[data-testid="flashcard"], [data-testid="review-card"]');
+        const showAnswerButton = page.getByRole('button', { name: /show answer|flip/i });
+        await expect(reviewInterface.or(showAnswerButton).first()).toBeVisible({ timeout: 10000 });
 
         // Try keyboard shortcuts
         await page.keyboard.press('Space'); // Flip card
-        await page.waitForTimeout(500);
+
+        // Wait for card to flip - rating buttons should appear after flip
+        const ratingButtons = page.locator('[data-testid="rating-button"], button:has-text("Again"), button:has-text("Good")');
+        await expect(ratingButtons.first()).toBeVisible({ timeout: 5000 });
 
         await page.keyboard.press('4'); // Rate card
-        await page.waitForTimeout(500);
+
+        // Wait for next card or session completion
+        await page.waitForLoadState('networkidle');
       }
     }
   });

@@ -28,9 +28,8 @@ test.describe('PostHog Analytics Disabled in E2E', () => {
     // Navigate to home page (dashboard for authenticated user)
     await page.goto('/');
 
-    // Wait for page to fully load
+    // Wait for page to fully load - networkidle indicates no pending network requests
     await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(2000); // Extra wait for any delayed analytics
 
     // Verify no PostHog calls were made
     expect(posthogRequests).toHaveLength(0);
@@ -48,8 +47,8 @@ test.describe('PostHog Analytics Disabled in E2E', () => {
 
     // Navigate to decks page
     await page.goto('/decks');
+    // Wait for page to fully load - networkidle indicates no pending network requests
     await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000);
 
     expect(posthogRequests).toHaveLength(0);
   });
@@ -57,10 +56,8 @@ test.describe('PostHog Analytics Disabled in E2E', () => {
   test('should verify PostHog is not initialized on window', async ({ page }) => {
     // Navigate to app
     await page.goto('/');
-    await page.waitForLoadState('domcontentloaded');
-
-    // Give time for any initialization to complete
-    await page.waitForTimeout(1000);
+    // Wait for network to settle - ensures all initialization is complete
+    await page.waitForLoadState('networkidle');
 
     // PostHog should not be fully initialized in test mode
     // Either posthog doesn't exist or capture is not a function
@@ -88,7 +85,7 @@ test.describe('PostHog Analytics Disabled in E2E', () => {
       }
     });
 
-    // Navigate through multiple pages
+    // Navigate through multiple pages - networkidle ensures all network activity is complete
     await page.goto('/');
     await page.waitForLoadState('networkidle');
 
@@ -97,9 +94,6 @@ test.describe('PostHog Analytics Disabled in E2E', () => {
 
     await page.goto('/profile');
     await page.waitForLoadState('networkidle');
-
-    // Wait for any delayed analytics
-    await page.waitForTimeout(1000);
 
     // No PostHog requests should have been made
     expect(posthogRequests).toHaveLength(0);

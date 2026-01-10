@@ -91,11 +91,12 @@ test.describe('Accessibility - Public Pages', () => {
     const submitButton = page.getByTestId('login-submit');
     await submitButton.click();
 
-    // Wait for error message (may take a moment)
-    await page.waitForTimeout(1000);
+    // Wait for error message to appear - Playwright auto-retries assertions
+    const errorLocator = page.locator('[role="alert"], .text-destructive, .error');
+    await expect(errorLocator.first()).toBeVisible({ timeout: 10000 });
 
     // Check for error display (toast or inline error)
-    const hasError = await page.locator('[role="alert"], .text-destructive, .error').count();
+    const hasError = await errorLocator.count();
     expect(hasError).toBeGreaterThan(0);
   });
 
@@ -206,8 +207,10 @@ test.describe('Accessibility - Protected Pages', () => {
       if (await startReviewButton.count() > 0) {
         await startReviewButton.click();
 
-        // Wait for review interface to load
-        await page.waitForTimeout(1000);
+        // Wait for review interface to load - look for flashcard or show answer button
+        const reviewInterface = page.locator('[data-testid="flashcard"], [data-testid="review-card"]');
+        const showAnswerButton = page.getByRole('button', { name: /show answer|flip/i });
+        await expect(reviewInterface.or(showAnswerButton).first()).toBeVisible({ timeout: 10000 });
 
         const accessibilityScanResults = await new AxeBuilder({ page })
           .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])

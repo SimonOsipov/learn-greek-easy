@@ -20,14 +20,12 @@ test.describe('Culture Deck Browsing', () => {
     // Click on culture filter button (use exact match to avoid matching deck cards)
     await page.getByRole('button', { name: 'Culture', exact: true }).click();
 
-    // Wait for filtered results
-    await page.waitForTimeout(500);
+    // Wait for filtered results - culture badge should be visible
+    const cultureBadge = page.locator('[data-testid="culture-badge"]');
+    await expect(cultureBadge.first()).toBeVisible({ timeout: 5000 });
 
     const deckCards = page.locator('[data-testid="deck-card"]');
     await expect(deckCards.first()).toBeVisible();
-
-    const cultureBadge = page.locator('[data-testid="culture-badge"]');
-    await expect(cultureBadge.first()).toBeVisible();
   });
 
   test('should navigate to culture deck detail', async ({ page }) => {
@@ -39,8 +37,9 @@ test.describe('Culture Deck Browsing', () => {
     // Click on culture filter button (use exact match to avoid matching deck cards)
     await page.getByRole('button', { name: 'Culture', exact: true }).click();
 
-    // Wait for filtered results
-    await page.waitForTimeout(500);
+    // Wait for filtered results - culture badge should be visible
+    const cultureBadge = page.locator('[data-testid="culture-badge"]');
+    await expect(cultureBadge.first()).toBeVisible({ timeout: 5000 });
 
     const firstDeck = page.locator('[data-testid="deck-card"]').first();
     await firstDeck.click();
