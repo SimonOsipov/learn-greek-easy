@@ -20,14 +20,7 @@ export type { APIError } from './api';
 
 // Authentication API
 export { authAPI } from './authAPI';
-export type {
-  GoogleAuthRequest,
-  LoginRequest,
-  LogoutResponse,
-  RegisterRequest,
-  TokenResponse,
-  UserProfileResponse,
-} from './authAPI';
+export type { LogoutResponse, TokenResponse, UserProfileResponse } from './authAPI';
 
 // Deck API
 export { deckAPI } from './deckAPI';
