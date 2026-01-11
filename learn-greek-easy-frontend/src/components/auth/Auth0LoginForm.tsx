@@ -105,7 +105,10 @@ export const Auth0LoginForm: React.FC = () => {
 
       // Step 2: Exchange Auth0 access_token with backend
       const apiUrl = import.meta.env.VITE_API_URL || '';
-      const response = await fetch(`${apiUrl}/api/v1/auth/auth0`, {
+      const fullUrl = `${apiUrl}/api/v1/auth/auth0`;
+      log.info('[Auth0LoginForm] VITE_API_URL:', import.meta.env.VITE_API_URL);
+      log.info('[Auth0LoginForm] Fetching backend URL:', fullUrl);
+      const response = await fetch(fullUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -184,6 +187,14 @@ export const Auth0LoginForm: React.FC = () => {
       const from = (location.state as { from?: string })?.from || '/dashboard';
       navigate(from, { replace: true });
     } catch (err) {
+      // Enhanced error logging for debugging
+      log.error('[Auth0LoginForm] Login error:', err);
+      log.error('[Auth0LoginForm] Error type:', err?.constructor?.name);
+      if (err instanceof Error) {
+        log.error('[Auth0LoginForm] Error message:', err.message);
+        log.error('[Auth0LoginForm] Error stack:', err.stack);
+      }
+
       // Check if this is an Auth0 error key or a direct error message
       const errorMessage = err instanceof Error ? err.message : 'auth0Error';
 

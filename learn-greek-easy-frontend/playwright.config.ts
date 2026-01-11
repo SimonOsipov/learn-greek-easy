@@ -136,6 +136,8 @@ export default defineConfig({
     timeout: 120 * 1000, // 2 minutes to start
     env: {
       VITE_ENVIRONMENT: 'test',
+      // API URL - explicitly pass to ensure Vite exposes to client code
+      VITE_API_URL: process.env.VITE_API_URL || 'http://localhost:8000',
       // Auth0 configuration - map from CI secrets/env vars
       VITE_AUTH0_ENABLED: process.env.AUTH0_E2E_TEST_PASSWORD ? 'true' : 'false',
       VITE_AUTH0_DOMAIN: process.env.AUTH0_DOMAIN || '',
