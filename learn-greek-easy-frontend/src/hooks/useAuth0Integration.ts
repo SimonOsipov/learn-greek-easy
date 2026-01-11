@@ -28,19 +28,56 @@ export function isAuth0Enabled(): boolean {
 }
 
 /**
+ * Extract Auth0 custom roles from user claims.
+ * Returns array of role strings from the custom claim namespace.
+ */
+function extractAuth0Roles(auth0User: Auth0User | null): string[] {
+  if (!auth0User) return [];
+  const customClaims = auth0User as Record<string, unknown>;
+  return (customClaims['https://learn-greek-easy.com/roles'] as string[]) || [];
+}
+
+/**
+ * Determine user role using unified logic.
+ * Priority:
+ * 1. Backend is_superuser = true -> 'admin'
+ * 2. Auth0 claims include 'premium' -> 'premium'
+ * 3. Default -> 'free'
+ *
+ * @param isSuperuser - Backend is_superuser flag (takes priority for admin)
+ * @param auth0Roles - Array of roles from Auth0 custom claims
+ */
+export function determineUserRole(
+  isSuperuser: boolean | undefined,
+  auth0Roles: string[]
+): UserRole {
+  // Backend is_superuser takes priority for admin role
+  if (isSuperuser === true) {
+    return 'admin';
+  }
+
+  // Check Auth0 claims for premium (backend doesn't track premium status)
+  if (auth0Roles.includes('premium')) {
+    return 'premium';
+  }
+
+  // Default to free
+  return 'free';
+}
+
+/**
  * Transform Auth0 user to application User type.
  * Maps Auth0 user claims to the existing User interface.
+ *
+ * @param auth0User - Auth0 user object from SDK
+ * @param backendUser - Optional backend user data (when available from auth0 endpoint)
  */
-function transformAuth0User(auth0User: Auth0User): User {
-  // Extract role from Auth0 custom claims (namespace varies by tenant setup)
-  // Common patterns: https://your-namespace/roles or app_metadata.role
-  const customClaims = auth0User as Record<string, unknown>;
-  const roles = (customClaims['https://learn-greek-easy.com/roles'] as string[]) || [];
-  const role: UserRole = roles.includes('admin')
-    ? 'admin'
-    : roles.includes('premium')
-      ? 'premium'
-      : 'free';
+function transformAuth0User(auth0User: Auth0User, backendUser?: { is_superuser?: boolean }): User {
+  // Extract roles from Auth0 custom claims
+  const auth0Roles = extractAuth0Roles(auth0User);
+
+  // Determine role using unified logic
+  const role = determineUserRole(backendUser?.is_superuser, auth0Roles);
 
   // Extract name from various Auth0 fields
   const name = auth0User.name || auth0User.nickname || auth0User.email?.split('@')[0] || 'User';

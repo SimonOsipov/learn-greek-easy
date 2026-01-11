@@ -15,6 +15,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { determineUserRole } from '@/hooks/useAuth0Integration';
 import log from '@/lib/logger';
 import { useAuthStore } from '@/stores/authStore';
 import type { User } from '@/types/auth';
@@ -86,11 +87,14 @@ export const Callback: React.FC = () => {
         const data = await response.json();
 
         // Transform backend response to frontend User type
+        // Extract Auth0 roles from backend response if available (may be forwarded from token)
+        const auth0Roles = (data.user?.auth0_roles as string[]) || [];
+
         const user: User = {
           id: data.user?.id || '',
           email: data.user?.email || '',
           name: data.user?.full_name || data.user?.email?.split('@')[0] || 'User',
-          role: data.user?.is_superuser ? 'admin' : 'free',
+          role: determineUserRole(data.user?.is_superuser, auth0Roles),
           preferences: {
             language: 'en',
             dailyGoal: data.user?.settings?.daily_goal || 20,

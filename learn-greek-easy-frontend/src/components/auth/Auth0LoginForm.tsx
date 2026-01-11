@@ -38,6 +38,7 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { determineUserRole } from '@/hooks/useAuth0Integration';
 import { loginWithAuth0, loginWithGoogle } from '@/lib/auth0WebAuth';
 import log from '@/lib/logger';
 import { useAuthStore } from '@/stores/authStore';
@@ -125,11 +126,14 @@ export const Auth0LoginForm: React.FC = () => {
       const backendData = await response.json();
 
       // Step 3: Transform backend response to frontend User type
+      // Extract Auth0 roles from backend response if available (may be forwarded from token)
+      const auth0Roles = (backendData.user?.auth0_roles as string[]) || [];
+
       const user: User = {
         id: backendData.user?.id || '',
         email: backendData.user?.email || '',
         name: backendData.user?.full_name || backendData.user?.email?.split('@')[0] || 'User',
-        role: backendData.user?.is_superuser ? 'admin' : 'free',
+        role: determineUserRole(backendData.user?.is_superuser, auth0Roles),
         preferences: {
           language: 'en',
           dailyGoal: backendData.user?.settings?.daily_goal || 20,
