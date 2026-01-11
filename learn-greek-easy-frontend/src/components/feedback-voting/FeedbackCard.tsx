@@ -13,6 +13,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
 import type { FeedbackItem } from '@/types/feedback';
 
+import { DeveloperResponseSection } from './DeveloperResponseSection';
 import { FeedbackCategoryBadge } from './FeedbackCategoryBadge';
 import { FeedbackDeleteConfirmDialog } from './FeedbackDeleteConfirmDialog';
 import { FeedbackEditDialog } from './FeedbackEditDialog';
@@ -47,7 +48,7 @@ export const FeedbackCard: React.FC<FeedbackCardProps> = ({ feedback }) => {
 
   return (
     <>
-      <Card data-testid="feedback-card">
+      <Card id={`feedback-${feedback.id}`} data-testid="feedback-card">
         <CardHeader className="flex flex-row items-start gap-4 space-y-0">
           <FeedbackVoteButton
             feedbackId={feedback.id}
@@ -104,6 +105,12 @@ export const FeedbackCard: React.FC<FeedbackCardProps> = ({ feedback }) => {
             {feedback.description}
           </p>
         </CardContent>
+        {feedback.admin_response && (
+          <DeveloperResponseSection
+            response={feedback.admin_response}
+            respondedAt={feedback.admin_response_at!}
+          />
+        )}
       </Card>
 
       {/* Edit Dialog */}

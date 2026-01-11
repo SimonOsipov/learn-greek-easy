@@ -6,10 +6,20 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.logging import get_logger
-from src.db.models import Notification, NotificationType
+from src.db.models import FeedbackStatus, Notification, NotificationType
 from src.repositories.notification import NotificationRepository
 
 logger = get_logger(__name__)
+
+# Human-readable display names for feedback status values
+STATUS_DISPLAY_NAMES: dict[FeedbackStatus, str] = {
+    FeedbackStatus.NEW: "New",
+    FeedbackStatus.UNDER_REVIEW: "Under Review",
+    FeedbackStatus.PLANNED: "Planned",
+    FeedbackStatus.IN_PROGRESS: "In Progress",
+    FeedbackStatus.COMPLETED: "Completed",
+    FeedbackStatus.CANCELLED: "Cancelled",
+}
 
 
 class NotificationService:
@@ -216,4 +226,47 @@ class NotificationService:
             message="Start your Greek learning journey today. Choose a deck to begin!",
             icon="wave",
             action_url="/decks",
+        )
+
+    async def notify_feedback_response(
+        self,
+        user_id: UUID,
+        feedback_id: UUID,
+        feedback_title: str,
+    ) -> Notification:
+        """Create notification when admin responds to user's feedback."""
+        return await self.create_notification(
+            user_id=user_id,
+            type=NotificationType.FEEDBACK_RESPONSE,
+            title="New Response to Your Feedback",
+            message="Your feedback received a response from the developers",
+            icon="message-circle",
+            action_url=f"/feedback?highlight={feedback_id}",
+            extra_data={
+                "feedback_id": str(feedback_id),
+                "feedback_title": feedback_title,
+            },
+        )
+
+    async def notify_feedback_status_change(
+        self,
+        user_id: UUID,
+        feedback_id: UUID,
+        feedback_title: str,
+        new_status: FeedbackStatus,
+    ) -> Notification:
+        """Create notification when feedback status changes."""
+        human_readable_status = STATUS_DISPLAY_NAMES.get(new_status, new_status.value)
+        return await self.create_notification(
+            user_id=user_id,
+            type=NotificationType.FEEDBACK_STATUS_CHANGE,
+            title="Feedback Status Updated",
+            message=f"Your feedback status changed to: {human_readable_status}",
+            icon="info",
+            action_url=f"/feedback?highlight={feedback_id}",
+            extra_data={
+                "feedback_id": str(feedback_id),
+                "feedback_title": feedback_title,
+                "new_status": new_status.value,
+            },
         )

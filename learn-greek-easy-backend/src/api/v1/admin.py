@@ -3,19 +3,30 @@
 This module provides HTTP endpoints for admin operations including:
 - Dashboard statistics (deck and card counts)
 - Unified deck listing with search and pagination
+- Feedback management (list and update)
 
 All endpoints require superuser authentication.
 """
 
 from typing import Optional
+from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.dependencies import get_current_superuser
+from src.core.exceptions import NotFoundException
 from src.db.dependencies import get_db
-from src.db.models import Card, CultureDeck, CultureQuestion, Deck, User
+from src.db.models import (
+    Card,
+    CultureDeck,
+    CultureQuestion,
+    Deck,
+    FeedbackCategory,
+    FeedbackStatus,
+    User,
+)
 from src.schemas.admin import (
     AdminDeckListResponse,
     AdminStatsResponse,
@@ -23,6 +34,13 @@ from src.schemas.admin import (
     DeckStatsItem,
     UnifiedDeckItem,
 )
+from src.schemas.feedback import (
+    AdminFeedbackListResponse,
+    AdminFeedbackResponse,
+    AdminFeedbackUpdate,
+    AuthorBriefResponse,
+)
+from src.services.feedback_admin_service import FeedbackAdminService
 
 router = APIRouter(
     tags=["Admin"],
@@ -395,4 +413,214 @@ async def list_decks(
         total=total,
         page=page,
         page_size=page_size,
+    )
+
+
+# ============================================================================
+# Feedback Management Endpoints
+# ============================================================================
+
+
+@router.get(
+    "/feedback",
+    response_model=AdminFeedbackListResponse,
+    summary="List all feedback for admin",
+    description="Get a paginated list of all feedback with optional filtering. NEW status items are sorted first.",
+    responses={
+        200: {
+            "description": "Paginated feedback list",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "total": 15,
+                        "page": 1,
+                        "page_size": 10,
+                        "items": [
+                            {
+                                "id": "550e8400-e29b-41d4-a716-446655440000",
+                                "title": "Add dark mode",
+                                "description": "Please add dark mode support...",
+                                "category": "feature_request",
+                                "status": "new",
+                                "vote_count": 5,
+                                "admin_response": None,
+                                "admin_response_at": None,
+                                "author": {
+                                    "id": "660e8400-e29b-41d4-a716-446655440000",
+                                    "full_name": "John Doe",
+                                },
+                                "created_at": "2024-01-15T10:30:00Z",
+                                "updated_at": "2024-01-15T10:30:00Z",
+                            }
+                        ],
+                    }
+                }
+            },
+        },
+    },
+)
+async def list_feedback(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+    page: int = Query(1, ge=1, description="Page number"),
+    page_size: int = Query(10, ge=1, le=100, description="Items per page"),
+    status_filter: Optional[FeedbackStatus] = Query(
+        None, alias="status", description="Filter by status"
+    ),
+    category: Optional[FeedbackCategory] = Query(None, description="Filter by category"),
+) -> AdminFeedbackListResponse:
+    """List all feedback for admin with pagination and filters.
+
+    Returns feedback sorted with NEW status items first, then by created_at DESC.
+
+    Args:
+        db: Database session (injected)
+        current_user: Authenticated superuser (injected)
+        page: Page number (1-indexed)
+        page_size: Number of items per page (max 100)
+        status_filter: Optional filter by feedback status
+        category: Optional filter by feedback category
+
+    Returns:
+        AdminFeedbackListResponse with paginated feedback list
+
+    Raises:
+        401: If not authenticated
+        403: If authenticated but not superuser
+    """
+    service = FeedbackAdminService(db)
+    items, total = await service.get_feedback_list_for_admin(
+        status=status_filter,
+        category=category,
+        page=page,
+        page_size=page_size,
+    )
+
+    # Convert to response schema
+    response_items = [
+        AdminFeedbackResponse(
+            id=item.id,
+            title=item.title,
+            description=item.description,
+            category=item.category,
+            status=item.status,
+            vote_count=item.vote_count,
+            admin_response=item.admin_response,
+            admin_response_at=item.admin_response_at,
+            author=AuthorBriefResponse(
+                id=item.user.id,
+                full_name=item.user.full_name,
+            ),
+            created_at=item.created_at,
+            updated_at=item.updated_at,
+        )
+        for item in items
+    ]
+
+    return AdminFeedbackListResponse(
+        total=total,
+        page=page,
+        page_size=page_size,
+        items=response_items,
+    )
+
+
+@router.patch(
+    "/feedback/{feedback_id}",
+    response_model=AdminFeedbackResponse,
+    summary="Update feedback status and/or admin response",
+    description="Update feedback item with new status and/or admin response. If admin_response is provided without status and current status is NEW, it auto-changes to UNDER_REVIEW.",
+    responses={
+        200: {
+            "description": "Updated feedback",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "id": "550e8400-e29b-41d4-a716-446655440000",
+                        "title": "Add dark mode",
+                        "description": "Please add dark mode support...",
+                        "category": "feature_request",
+                        "status": "under_review",
+                        "vote_count": 5,
+                        "admin_response": "Thank you for your feedback!",
+                        "admin_response_at": "2024-01-16T14:00:00Z",
+                        "author": {
+                            "id": "660e8400-e29b-41d4-a716-446655440000",
+                            "full_name": "John Doe",
+                        },
+                        "created_at": "2024-01-15T10:30:00Z",
+                        "updated_at": "2024-01-16T14:00:00Z",
+                    }
+                }
+            },
+        },
+        404: {"description": "Feedback not found"},
+        422: {"description": "Validation error (empty update)"},
+    },
+)
+async def update_feedback(
+    feedback_id: UUID,
+    update_data: AdminFeedbackUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> AdminFeedbackResponse:
+    """Update feedback status and/or admin response.
+
+    Business logic:
+    - If admin_response is provided without status, and current status is NEW,
+      status auto-changes to UNDER_REVIEW
+    - admin_response_at timestamp is set when response is added/updated
+
+    Args:
+        feedback_id: ID of feedback to update
+        update_data: Fields to update (status and/or admin_response)
+        db: Database session (injected)
+        current_user: Authenticated superuser (injected)
+
+    Returns:
+        Updated AdminFeedbackResponse
+
+    Raises:
+        401: If not authenticated
+        403: If authenticated but not superuser
+        404: If feedback not found
+        422: If neither status nor admin_response is provided
+    """
+    # Validate that at least one field is provided
+    if update_data.status is None and update_data.admin_response is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="At least one of 'status' or 'admin_response' must be provided",
+        )
+
+    service = FeedbackAdminService(db)
+
+    try:
+        feedback = await service.update_feedback_admin(
+            feedback_id=feedback_id,
+            status=update_data.status,
+            admin_response=update_data.admin_response,
+        )
+    except ValueError:
+        raise NotFoundException(
+            resource="Feedback", detail=f"Feedback with ID '{feedback_id}' not found"
+        )
+
+    await db.commit()
+
+    return AdminFeedbackResponse(
+        id=feedback.id,
+        title=feedback.title,
+        description=feedback.description,
+        category=feedback.category,
+        status=feedback.status,
+        vote_count=feedback.vote_count,
+        admin_response=feedback.admin_response,
+        admin_response_at=feedback.admin_response_at,
+        author=AuthorBriefResponse(
+            id=feedback.user.id,
+            full_name=feedback.user.full_name,
+        ),
+        created_at=feedback.created_at,
+        updated_at=feedback.updated_at,
     )

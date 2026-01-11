@@ -3,7 +3,7 @@
 from typing import List, Optional
 from uuid import UUID
 
-from sqlalchemy import asc, desc, func, select
+from sqlalchemy import asc, case, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -138,3 +138,36 @@ class FeedbackRepository(BaseRepository[Feedback]):
         await self.db.flush()
 
         return feedback.vote_count
+
+    async def list_for_admin(
+        self,
+        *,
+        status: Optional[FeedbackStatus] = None,
+        category: Optional[FeedbackCategory] = None,
+        skip: int = 0,
+        limit: int = 20,
+    ) -> List[Feedback]:
+        """List feedback for admin with special sorting (NEW status first).
+
+        Sorting: NEW status items first, then by created_at DESC.
+        """
+        query = select(Feedback).options(
+            selectinload(Feedback.user),
+        )
+
+        if status is not None:
+            query = query.where(Feedback.status == status)
+        if category is not None:
+            query = query.where(Feedback.category == category)
+
+        # Sort NEW status first (0), all others second (1), then by created_at DESC
+        status_priority = case(
+            (Feedback.status == FeedbackStatus.NEW, 0),
+            else_=1,
+        )
+        query = query.order_by(status_priority, desc(Feedback.created_at))
+
+        query = query.offset(skip).limit(limit)
+
+        result = await self.db.execute(query)
+        return list(result.scalars().all())

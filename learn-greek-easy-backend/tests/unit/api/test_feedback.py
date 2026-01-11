@@ -49,6 +49,8 @@ def create_mock_feedback(
     vote_count=0,
     votes=None,
     user=None,
+    admin_response=None,
+    admin_response_at=None,
 ):
     """Create a mock Feedback object for testing."""
     mock = MagicMock(spec=Feedback)
@@ -62,6 +64,8 @@ def create_mock_feedback(
     mock.votes = votes or []
     mock.created_at = datetime.utcnow()
     mock.updated_at = datetime.utcnow()
+    mock.admin_response = admin_response
+    mock.admin_response_at = admin_response_at
 
     # Create mock user
     if user is None:

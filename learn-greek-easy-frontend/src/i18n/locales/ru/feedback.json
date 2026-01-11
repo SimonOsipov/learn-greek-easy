@@ -92,5 +92,8 @@
     "newest": "Новейшие",
     "oldest": "Старейшие",
     "clear": "Очистить"
+  },
+  "developerResponse": {
+    "title": "Ответ разработчика"
   }
 }

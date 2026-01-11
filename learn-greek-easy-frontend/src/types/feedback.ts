@@ -48,6 +48,8 @@ export interface FeedbackItem {
   author: AuthorBrief;
   created_at: string;
   updated_at: string;
+  admin_response: string | null;
+  admin_response_at: string | null;
 }
 
 /**

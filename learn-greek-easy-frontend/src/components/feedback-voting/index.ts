@@ -9,3 +9,4 @@ export { FeedbackDeleteConfirmDialog } from './FeedbackDeleteConfirmDialog';
 export { FeedbackVoteButton } from './FeedbackVoteButton';
 export { FeedbackStatusBadge } from './FeedbackStatusBadge';
 export { FeedbackCategoryBadge } from './FeedbackCategoryBadge';
+export { DeveloperResponseSection } from './DeveloperResponseSection';

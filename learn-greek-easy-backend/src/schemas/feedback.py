@@ -60,6 +60,8 @@ class FeedbackResponse(BaseModel):
     status: FeedbackStatus
     vote_count: int
     user_vote: Optional[VoteType] = None  # Current user's vote on this item
+    admin_response: Optional[str] = None
+    admin_response_at: Optional[datetime] = None
     author: AuthorBriefResponse
     created_at: datetime
     updated_at: datetime
@@ -91,3 +93,42 @@ class VoteResponse(BaseModel):
     feedback_id: UUID
     vote_type: Optional[VoteType]  # None if vote was removed
     new_vote_count: int
+
+
+# ============================================================================
+# Admin Feedback Schemas
+# ============================================================================
+
+
+class AdminFeedbackUpdate(BaseModel):
+    """Schema for admin updating feedback (status and/or response)."""
+
+    status: Optional[FeedbackStatus] = None
+    admin_response: Optional[str] = Field(None, max_length=500)
+
+
+class AdminFeedbackResponse(BaseModel):
+    """Schema for admin feedback response with admin-specific fields."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    title: str
+    description: str
+    category: FeedbackCategory
+    status: FeedbackStatus
+    vote_count: int
+    admin_response: Optional[str] = None
+    admin_response_at: Optional[datetime] = None
+    author: AuthorBriefResponse
+    created_at: datetime
+    updated_at: datetime
+
+
+class AdminFeedbackListResponse(BaseModel):
+    """Schema for paginated admin feedback list."""
+
+    total: int
+    page: int
+    page_size: int
+    items: List[AdminFeedbackResponse]

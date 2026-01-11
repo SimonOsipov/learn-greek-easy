@@ -550,3 +550,149 @@ class TestRemoveVote:
         result = await repo.remove_vote(uuid4(), feedback_user.id)
 
         assert result is None
+
+
+# =============================================================================
+# Test list_for_admin
+# =============================================================================
+
+
+@pytest.fixture
+async def admin_feedback_items(db_session: AsyncSession, feedback_user: User) -> list[Feedback]:
+    """Create feedback items with various statuses for admin list testing."""
+    items = []
+
+    # Create feedback with NEW status (should appear first in admin list)
+    new_feedback = Feedback(
+        user_id=feedback_user.id,
+        title="New Feedback 1",
+        description="This is a new feedback item that requires attention.",
+        category=FeedbackCategory.FEATURE_REQUEST,
+        status=FeedbackStatus.NEW,
+        vote_count=5,
+    )
+    db_session.add(new_feedback)
+    items.append(new_feedback)
+
+    # Create feedback with UNDER_REVIEW status
+    review_feedback = Feedback(
+        user_id=feedback_user.id,
+        title="Under Review Feedback",
+        description="This feedback is being reviewed by the admin team.",
+        category=FeedbackCategory.BUG_INCORRECT_DATA,
+        status=FeedbackStatus.UNDER_REVIEW,
+        vote_count=3,
+    )
+    db_session.add(review_feedback)
+    items.append(review_feedback)
+
+    # Create another NEW feedback (should also appear first)
+    new_feedback_2 = Feedback(
+        user_id=feedback_user.id,
+        title="New Feedback 2",
+        description="Another new feedback item that needs review.",
+        category=FeedbackCategory.FEATURE_REQUEST,
+        status=FeedbackStatus.NEW,
+        vote_count=10,
+    )
+    db_session.add(new_feedback_2)
+    items.append(new_feedback_2)
+
+    # Create PLANNED feedback
+    planned_feedback = Feedback(
+        user_id=feedback_user.id,
+        title="Planned Feedback",
+        description="This feature is planned for future implementation.",
+        category=FeedbackCategory.FEATURE_REQUEST,
+        status=FeedbackStatus.PLANNED,
+        vote_count=8,
+    )
+    db_session.add(planned_feedback)
+    items.append(planned_feedback)
+
+    await db_session.flush()
+    for item in items:
+        await db_session.refresh(item)
+
+    return items
+
+
+class TestListForAdmin:
+    """Tests for list_for_admin method."""
+
+    @pytest.mark.asyncio
+    async def test_list_for_admin_sorts_new_first(
+        self,
+        db_session: AsyncSession,
+        admin_feedback_items: list[Feedback],
+    ):
+        """Should sort NEW status items first, then by created_at DESC."""
+        repo = FeedbackRepository(db_session)
+
+        result = await repo.list_for_admin()
+
+        # First items should be NEW status
+        new_items = [f for f in result if f.status == FeedbackStatus.NEW]
+        other_items = [f for f in result if f.status != FeedbackStatus.NEW]
+
+        # Check that all NEW items appear before other items
+        if new_items and other_items:
+            new_indices = [result.index(f) for f in new_items]
+            other_indices = [result.index(f) for f in other_items]
+            assert max(new_indices) < min(other_indices)
+
+    @pytest.mark.asyncio
+    async def test_list_for_admin_filters_by_status(
+        self,
+        db_session: AsyncSession,
+        admin_feedback_items: list[Feedback],
+    ):
+        """Should filter by status when provided."""
+        repo = FeedbackRepository(db_session)
+
+        result = await repo.list_for_admin(status=FeedbackStatus.NEW)
+
+        # All returned items should have NEW status
+        assert len(result) >= 2  # We created 2 NEW items
+        for item in result:
+            assert item.status == FeedbackStatus.NEW
+
+    @pytest.mark.asyncio
+    async def test_list_for_admin_filters_by_category(
+        self,
+        db_session: AsyncSession,
+        admin_feedback_items: list[Feedback],
+    ):
+        """Should filter by category when provided."""
+        repo = FeedbackRepository(db_session)
+
+        result = await repo.list_for_admin(category=FeedbackCategory.BUG_INCORRECT_DATA)
+
+        # All returned items should have BUG_INCORRECT_DATA category
+        assert len(result) >= 1  # We created 1 bug report
+        for item in result:
+            assert item.category == FeedbackCategory.BUG_INCORRECT_DATA
+
+    @pytest.mark.asyncio
+    async def test_list_for_admin_respects_pagination(
+        self,
+        db_session: AsyncSession,
+        admin_feedback_items: list[Feedback],
+    ):
+        """Should respect skip and limit parameters."""
+        repo = FeedbackRepository(db_session)
+
+        # Get first 2 items
+        first_page = await repo.list_for_admin(skip=0, limit=2)
+
+        # Get next 2 items
+        second_page = await repo.list_for_admin(skip=2, limit=2)
+
+        # Pages should have different items
+        first_page_ids = {f.id for f in first_page}
+        second_page_ids = {f.id for f in second_page}
+        assert first_page_ids.isdisjoint(second_page_ids)
+
+        # Each page should have at most 2 items
+        assert len(first_page) <= 2
+        assert len(second_page) <= 2
