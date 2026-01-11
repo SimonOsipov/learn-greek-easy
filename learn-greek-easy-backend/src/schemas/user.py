@@ -126,6 +126,20 @@ class TokenResponse(BaseModel):
     expires_in: int  # seconds
 
 
+class Auth0LoginResponse(BaseModel):
+    """Schema for Auth0 login response with user profile.
+
+    Combines token information with user profile data for efficient
+    frontend initialization after login.
+    """
+
+    access_token: str
+    refresh_token: str
+    token_type: str = "bearer"
+    expires_in: int  # seconds
+    user: "UserProfileResponse"
+
+
 class TokenRefresh(BaseModel):
     """Schema for refresh token request."""
 
