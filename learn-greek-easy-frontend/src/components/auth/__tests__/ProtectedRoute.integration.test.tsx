@@ -14,11 +14,6 @@ import { ProtectedRoute } from '../ProtectedRoute';
 // Mock all API services to prevent real network calls
 vi.mock('@/services/authAPI', () => ({
   authAPI: {
-    login: vi.fn().mockResolvedValue({
-      access_token: 'mock-access-token',
-      refresh_token: 'mock-refresh-token',
-      token_type: 'bearer',
-    }),
     getProfile: vi.fn().mockResolvedValue({
       id: 'test-user-123',
       email: 'demo@learngreekeasy.com',
@@ -29,11 +24,6 @@ vi.mock('@/services/authAPI', () => ({
       settings: { daily_goal: 20, email_notifications: true },
     }),
     logout: vi.fn().mockResolvedValue(undefined),
-    register: vi.fn().mockResolvedValue({
-      access_token: 'mock-access-token',
-      refresh_token: 'mock-refresh-token',
-      token_type: 'bearer',
-    }),
     refresh: vi.fn().mockResolvedValue({
       access_token: 'mock-new-access-token',
       refresh_token: 'mock-new-refresh-token',
@@ -42,6 +32,38 @@ vi.mock('@/services/authAPI', () => ({
   },
   clearAuthTokens: vi.fn(),
 }));
+
+// Helper to set authenticated state directly (since login is handled by Auth0)
+const setAuthenticatedUser = (email: string, role: 'free' | 'admin' = 'free') => {
+  useAuthStore.setState({
+    user: {
+      id: 'test-user-123',
+      email,
+      name: 'Test User',
+      role,
+      preferences: {
+        language: 'en',
+        dailyGoal: 20,
+        notifications: true,
+        theme: 'light',
+      },
+      stats: {
+        streak: 0,
+        wordsLearned: 0,
+        totalXP: 0,
+        joinedDate: new Date('2025-01-01'),
+      },
+      createdAt: new Date('2025-01-01'),
+      updatedAt: new Date('2025-01-01'),
+    },
+    token: 'mock-access-token',
+    refreshToken: 'mock-refresh-token',
+    isAuthenticated: true,
+    isLoading: false,
+    error: null,
+    rememberMe: false,
+  });
+};
 
 vi.mock('@/services/progressAPI', () => ({
   progressAPI: {
@@ -168,9 +190,8 @@ describe('Protected Route Integration Tests', () => {
 
   describe('Authenticated Access', () => {
     it('should allow authenticated users to access protected routes', async () => {
-      // Login user first
-      const authStore = useAuthStore.getState();
-      await authStore.login('demo@learngreekeasy.com', 'Demo123!');
+      // Set authenticated user state directly
+      setAuthenticatedUser('demo@learngreekeasy.com');
 
       rtlRender(
         <MemoryRouter initialEntries={['/dashboard']}>
@@ -196,8 +217,8 @@ describe('Protected Route Integration Tests', () => {
     });
 
     it('should persist authentication across page refresh', async () => {
-      // Login user
-      await useAuthStore.getState().login('demo@learngreekeasy.com', 'Demo123!');
+      // Set authenticated user state directly
+      setAuthenticatedUser('demo@learngreekeasy.com');
 
       // First render
       const { unmount } = rtlRender(
@@ -247,7 +268,7 @@ describe('Protected Route Integration Tests', () => {
     });
 
     it('should render children when authenticated', async () => {
-      await useAuthStore.getState().login('demo@learngreekeasy.com', 'Demo123!');
+      setAuthenticatedUser('demo@learngreekeasy.com');
 
       rtlRender(
         <MemoryRouter initialEntries={['/protected']}>
@@ -273,8 +294,8 @@ describe('Protected Route Integration Tests', () => {
 
   describe('Role-Based Access Control', () => {
     it('should allow users with required role to access route', async () => {
-      // Login as user with 'free' role (free@learngreekeasy.com has role: 'free')
-      await useAuthStore.getState().login('free@learngreekeasy.com', 'Free123!');
+      // Set user with 'free' role
+      setAuthenticatedUser('free@learngreekeasy.com', 'free');
 
       rtlRender(
         <MemoryRouter initialEntries={['/free-content']}>
@@ -299,8 +320,8 @@ describe('Protected Route Integration Tests', () => {
     });
 
     it('should redirect users without required role to unauthorized page', async () => {
-      // Login as free user (free@learngreekeasy.com has role: 'free', not 'premium')
-      await useAuthStore.getState().login('free@learngreekeasy.com', 'Free123!');
+      // Set user with 'free' role (not 'premium')
+      setAuthenticatedUser('free@learngreekeasy.com', 'free');
 
       rtlRender(
         <MemoryRouter initialEntries={['/premium-content']}>
@@ -362,8 +383,8 @@ describe('Protected Route Integration Tests', () => {
 
   describe('Session Management', () => {
     it('should clear authentication and redirect when user logs out', async () => {
-      // Login first
-      await useAuthStore.getState().login('demo@learngreekeasy.com', 'Demo123!');
+      // Set authenticated user state directly
+      setAuthenticatedUser('demo@learngreekeasy.com');
 
       const { rerender } = rtlRender(
         <MemoryRouter initialEntries={['/dashboard']}>
@@ -414,11 +435,9 @@ describe('Protected Route Integration Tests', () => {
     });
 
     it('should verify auth state is cleared on logout', async () => {
-      // Enable rememberMe so auth state would be persisted
+      // Set authenticated user state directly with rememberMe enabled
+      setAuthenticatedUser('demo@learngreekeasy.com');
       useAuthStore.setState({ rememberMe: true });
-
-      // Login with remember me
-      await useAuthStore.getState().login('demo@learngreekeasy.com', 'Demo123!', true);
 
       // Verify user is authenticated
       await waitFor(() => {
@@ -441,7 +460,7 @@ describe('Protected Route Integration Tests', () => {
 
   describe('Nested Routes', () => {
     it('should render Outlet for nested routes when authenticated', async () => {
-      await useAuthStore.getState().login('demo@learngreekeasy.com', 'Demo123!');
+      setAuthenticatedUser('demo@learngreekeasy.com');
 
       rtlRender(
         <MemoryRouter initialEntries={['/app/profile']}>
