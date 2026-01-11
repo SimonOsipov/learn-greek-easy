@@ -84,7 +84,9 @@ class AuthService:
         Returns:
             User model if found, None otherwise
         """
-        result = await self.db.execute(select(User).where(User.email == email))
+        result = await self.db.execute(
+            select(User).where(User.email == email).options(selectinload(User.settings))
+        )
         return result.scalar_one_or_none()
 
     async def _create_welcome_notification(self, user_id: UUID) -> None:
@@ -554,6 +556,10 @@ class AuthService:
         )
 
         self.db.add(user_settings)
+        await self.db.flush()
+
+        # Refresh to load the settings relationship
+        await self.db.refresh(user, ["settings"])
 
         return user
 
