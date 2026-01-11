@@ -337,7 +337,11 @@ class TestAdminUpdateFeedbackEndpoint:
 
         assert response.status_code == 422
         error = response.json()
-        assert "detail" in error
+        assert error.get("success") is False
+        assert error.get("error", {}).get("code") == "HTTP_422"
+        assert "status" in error.get("error", {}).get(
+            "message", ""
+        ) or "admin_response" in error.get("error", {}).get("message", "")
 
 
 # =============================================================================
