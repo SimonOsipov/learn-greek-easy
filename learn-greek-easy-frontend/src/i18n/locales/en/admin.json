@@ -102,5 +102,57 @@
     "noDecks": "No vocabulary decks available",
     "noCultureDecks": "No culture decks available",
     "noDecksFound": "No decks found matching your search"
+  },
+  "feedback": {
+    "sectionTitle": "User Feedback",
+    "sectionDescription": "Review and respond to user feedback and bug reports",
+    "anonymousUser": "Anonymous User",
+    "respond": "Respond",
+    "editResponse": "Edit Response",
+    "adminResponseLabel": "Admin Response",
+    "filters": {
+      "statusPlaceholder": "Filter by status",
+      "categoryPlaceholder": "Filter by category",
+      "allStatuses": "All Statuses",
+      "allCategories": "All Categories",
+      "clear": "Clear Filters"
+    },
+    "statuses": {
+      "new": "New",
+      "under_review": "Under Review",
+      "planned": "Planned",
+      "in_progress": "In Progress",
+      "completed": "Completed",
+      "cancelled": "Cancelled"
+    },
+    "categories": {
+      "feature_request": "Feature Request",
+      "bug_incorrect_data": "Bug / Incorrect Data"
+    },
+    "response": {
+      "title": "Respond to Feedback",
+      "statusLabel": "Status",
+      "statusPlaceholder": "Select status",
+      "responseLabel": "Admin Response",
+      "responsePlaceholder": "Enter your response to the user (optional)...",
+      "cancel": "Cancel",
+      "save": "Save Response",
+      "saving": "Saving...",
+      "success": {
+        "title": "Response Saved",
+        "message": "Your response has been saved successfully."
+      },
+      "error": {
+        "title": "Error",
+        "message": "Failed to save response. Please try again."
+      }
+    },
+    "errors": {
+      "loadingTitle": "Error Loading Feedback"
+    },
+    "states": {
+      "noFeedback": "No feedback submitted yet",
+      "noFilteredResults": "No feedback matches the selected filters"
+    }
   }
 }

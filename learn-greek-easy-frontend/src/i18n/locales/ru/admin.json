@@ -106,5 +106,57 @@
     "noDecks": "Колоды словаря недоступны",
     "noCultureDecks": "Колоды культуры недоступны",
     "noDecksFound": "Колоды, соответствующие вашему поиску, не найдены"
+  },
+  "feedback": {
+    "sectionTitle": "Отзывы пользователей",
+    "sectionDescription": "Просматривайте и отвечайте на отзывы и сообщения об ошибках от пользователей",
+    "anonymousUser": "Анонимный пользователь",
+    "respond": "Ответить",
+    "editResponse": "Редактировать ответ",
+    "adminResponseLabel": "Ответ администратора",
+    "filters": {
+      "statusPlaceholder": "Фильтр по статусу",
+      "categoryPlaceholder": "Фильтр по категории",
+      "allStatuses": "Все статусы",
+      "allCategories": "Все категории",
+      "clear": "Сбросить фильтры"
+    },
+    "statuses": {
+      "new": "Новый",
+      "under_review": "На рассмотрении",
+      "planned": "Запланировано",
+      "in_progress": "В работе",
+      "completed": "Завершено",
+      "cancelled": "Отменено"
+    },
+    "categories": {
+      "feature_request": "Запрос функции",
+      "bug_incorrect_data": "Ошибка / Неверные данные"
+    },
+    "response": {
+      "title": "Ответить на отзыв",
+      "statusLabel": "Статус",
+      "statusPlaceholder": "Выберите статус",
+      "responseLabel": "Ответ администратора",
+      "responsePlaceholder": "Введите ваш ответ пользователю (необязательно)...",
+      "cancel": "Отмена",
+      "save": "Сохранить ответ",
+      "saving": "Сохранение...",
+      "success": {
+        "title": "Ответ сохранён",
+        "message": "Ваш ответ успешно сохранён."
+      },
+      "error": {
+        "title": "Ошибка",
+        "message": "Не удалось сохранить ответ. Пожалуйста, попробуйте ещё раз."
+      }
+    },
+    "errors": {
+      "loadingTitle": "Ошибка загрузки отзывов"
+    },
+    "states": {
+      "noFeedback": "Отзывы ещё не отправлены",
+      "noFilteredResults": "Нет отзывов, соответствующих выбранным фильтрам"
+    }
   }
 }
