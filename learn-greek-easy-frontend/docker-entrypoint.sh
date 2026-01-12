@@ -9,7 +9,7 @@ export BACKEND_PORT=${BACKEND_PORT:-8080}
 echo "=== Frontend Container Starting ==="
 echo "PORT: $PORT"
 echo "Using dynamic DNS resolution for ${BACKEND_HOST}:${BACKEND_PORT}"
-echo "DNS refresh interval: 30s"
+echo "DNS refresh: 1s, Railway resolver: fd12::10, retries: 100"
 
 # Validate Caddyfile syntax
 echo "Validating Caddyfile configuration..."
