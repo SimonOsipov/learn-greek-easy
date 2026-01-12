@@ -488,9 +488,12 @@ class AuthService:
         if is_new_user:
             await self._create_welcome_notification(user.id)
 
-        # Ensure settings relationship is loaded for serialization
-        # After commit, lazy-loading may not work in async context
-        await self.db.refresh(user, ["settings"])
+        # Re-query user with settings to avoid lazy loading issues
+        # After commit, the session may not properly load relationships
+        result = await self.db.execute(
+            select(User).where(User.id == user.id).options(selectinload(User.settings))
+        )
+        user = result.scalar_one()
 
         # Calculate expiry in seconds
         expires_in = int((access_expires - datetime.utcnow()).total_seconds())
