@@ -241,14 +241,16 @@ class CultureQuestionService:
 
         Raises:
             CultureQuestionNotFoundException: If question doesn't exist
-            ValueError: If selected_option not in range 1-4
+            ValueError: If selected_option not in valid range for question
         """
-        # Validate selected_option
-        if selected_option < 1 or selected_option > 4:
-            raise ValueError(f"selected_option must be between 1 and 4, got {selected_option}")
-
         # Step 1: Get question with deck category in single JOIN query
         question, deck_category = await self._get_question_with_deck_category(question_id)
+
+        # Validate selected_option against question's option count
+        if selected_option < 1 or selected_option > question.option_count:
+            raise ValueError(
+                f"selected_option must be between 1 and {question.option_count}, got {selected_option}"
+            )
 
         # Step 2: Determine correctness
         is_correct = selected_option == question.correct_option
@@ -383,15 +385,17 @@ class CultureQuestionService:
 
         Raises:
             CultureQuestionNotFoundException: If question doesn't exist
-            ValueError: If selected_option not in range 1-4
+            ValueError: If selected_option not in valid range for question
         """
-        # Validate selected_option
-        if selected_option < 1 or selected_option > 4:
-            raise ValueError(f"selected_option must be between 1 and 4, got {selected_option}")
-
         # Step 1: Get question with deck category in single JOIN query
         # This is the ONLY DB query in the fast path
         question, deck_category = await self._get_question_with_deck_category(question_id)
+
+        # Validate selected_option against question's option count
+        if selected_option < 1 or selected_option > question.option_count:
+            raise ValueError(
+                f"selected_option must be between 1 and {question.option_count}, got {selected_option}"
+            )
 
         # Step 2: Determine correctness (no DB needed)
         is_correct = selected_option == question.correct_option
@@ -784,15 +788,18 @@ class CultureQuestionService:
         if question.image_key:
             image_url = self.s3_service.generate_presigned_url(question.image_key)
 
+        # Build dynamic options array (2-4 options)
+        options = [question.option_a, question.option_b]
+        if question.option_c is not None:
+            options.append(question.option_c)
+        if question.option_d is not None:
+            options.append(question.option_d)
+
         return CultureQuestionQueueItem(
             id=question.id,
             question_text=question.question_text,
-            options=[
-                question.option_a,
-                question.option_b,
-                question.option_c,
-                question.option_d,
-            ],
+            options=options,
+            option_count=question.option_count,
             image_url=image_url,
             order_index=question.order_index,
             is_new=stats is None,
@@ -918,13 +925,14 @@ class CultureQuestionService:
             raise CultureDeckNotFoundException(deck_id=str(question_data.deck_id))
 
         # Convert Pydantic model to dict, converting MultilingualText to dict
+        # Handle nullable option_c and option_d for 2-3 option questions
         question_dict = {
             "deck_id": question_data.deck_id,
             "question_text": question_data.question_text.model_dump(),
             "option_a": question_data.option_a.model_dump(),
             "option_b": question_data.option_b.model_dump(),
-            "option_c": question_data.option_c.model_dump(),
-            "option_d": question_data.option_d.model_dump(),
+            "option_c": question_data.option_c.model_dump() if question_data.option_c else None,
+            "option_d": question_data.option_d.model_dump() if question_data.option_d else None,
             "correct_option": question_data.correct_option,
             "image_key": question_data.image_key,
             "order_index": question_data.order_index,
@@ -977,6 +985,7 @@ class CultureQuestionService:
             raise CultureDeckNotFoundException(deck_id=str(request.deck_id))
 
         # Convert questions to dict format
+        # Handle nullable option_c and option_d for 2-3 option questions
         questions_data = []
         for q in request.questions:
             questions_data.append(
@@ -985,8 +994,8 @@ class CultureQuestionService:
                     "question_text": q.question_text.model_dump(),
                     "option_a": q.option_a.model_dump(),
                     "option_b": q.option_b.model_dump(),
-                    "option_c": q.option_c.model_dump(),
-                    "option_d": q.option_d.model_dump(),
+                    "option_c": q.option_c.model_dump() if q.option_c else None,
+                    "option_d": q.option_d.model_dump() if q.option_d else None,
                     "correct_option": q.correct_option,
                     "image_key": q.image_key,
                     "order_index": q.order_index,
