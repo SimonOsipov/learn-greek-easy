@@ -13,7 +13,7 @@ from uuid import uuid4
 
 import pytest
 
-from src.db.models import NotificationType
+from src.db.models import FeedbackStatus, NotificationType
 from src.services.notification_service import NotificationService
 
 
@@ -308,6 +308,64 @@ class TestNotificationTriggerHelpers:
         assert notification.type == NotificationType.WELCOME
         assert "Welcome" in notification.title
         assert notification.action_url == "/decks"
+
+    @pytest.mark.asyncio
+    async def test_notify_feedback_response(self, mock_db_session):
+        """Should create feedback response notification with correct data."""
+        service = NotificationService(mock_db_session)
+        user_id = uuid4()
+        feedback_id = uuid4()
+
+        notification = await service.notify_feedback_response(
+            user_id=user_id,
+            feedback_id=feedback_id,
+            feedback_title="Add dark mode",
+        )
+
+        assert notification.type == NotificationType.FEEDBACK_RESPONSE
+        assert "Response" in notification.title
+        assert notification.icon == "message-circle"
+        assert f"highlight={feedback_id}" in notification.action_url
+        assert notification.extra_data["feedback_id"] == str(feedback_id)
+        assert notification.extra_data["feedback_title"] == "Add dark mode"
+
+    @pytest.mark.asyncio
+    async def test_notify_feedback_status_change(self, mock_db_session):
+        """Should create feedback status change notification with human-readable status."""
+        service = NotificationService(mock_db_session)
+        user_id = uuid4()
+        feedback_id = uuid4()
+
+        notification = await service.notify_feedback_status_change(
+            user_id=user_id,
+            feedback_id=feedback_id,
+            feedback_title="Bug report",
+            new_status=FeedbackStatus.IN_PROGRESS,
+        )
+
+        assert notification.type == NotificationType.FEEDBACK_STATUS_CHANGE
+        assert "Status Updated" in notification.title
+        assert "In Progress" in notification.message  # Human-readable status
+        assert f"highlight={feedback_id}" in notification.action_url
+        assert notification.extra_data["feedback_id"] == str(feedback_id)
+        assert notification.extra_data["feedback_title"] == "Bug report"
+        assert notification.extra_data["new_status"] == "in_progress"
+
+    @pytest.mark.asyncio
+    async def test_notify_feedback_status_change_completed(self, mock_db_session):
+        """Should show 'Completed' as human-readable status."""
+        service = NotificationService(mock_db_session)
+        user_id = uuid4()
+        feedback_id = uuid4()
+
+        notification = await service.notify_feedback_status_change(
+            user_id=user_id,
+            feedback_id=feedback_id,
+            feedback_title="Feature request",
+            new_status=FeedbackStatus.COMPLETED,
+        )
+
+        assert "Completed" in notification.message
 
 
 @pytest.mark.unit

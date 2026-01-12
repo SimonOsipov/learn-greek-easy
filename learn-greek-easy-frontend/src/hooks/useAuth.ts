@@ -36,13 +36,25 @@ interface UseAuthResult {
  */
 function useAuth0Mode(): UseAuthResult {
   const {
-    user,
-    isAuthenticated,
+    user: auth0User,
+    isAuthenticated: auth0IsAuthenticated,
     isLoading,
     error,
     login: auth0Login,
     logout,
   } = useAuth0Integration();
+
+  // Get user from auth store - this contains the backend database UUID
+  // The store is populated by Callback.tsx from /api/v1/auth/auth0 response
+  const storeUser = useAuthStore((state) => state.user);
+  const storeIsAuthenticated = useAuthStore((state) => state.isAuthenticated);
+
+  // Prefer store user (has correct backend UUID) over Auth0 user (has Auth0 sub)
+  const user = storeUser || auth0User;
+
+  // User is authenticated if both Auth0 says so AND store is not cleared
+  // This handles logout case where store is cleared before Auth0 redirect
+  const isAuthenticated = auth0IsAuthenticated && storeIsAuthenticated !== false;
 
   // Adapt Auth0 login to expected signature
   const login = async (returnTo?: string) => {
@@ -174,10 +186,11 @@ function useUnifiedAuthState() {
 
   // For Auth0: use Auth0's isAuthenticated AND check Zustand isn't cleared
   // This handles the logout case where Zustand is cleared before Auth0 redirect
+  // Prefer store user (has correct backend UUID) over Auth0 user (has Auth0 sub)
   return {
     isAuthenticated: auth0State.isAuthenticated && storeIsAuthenticated !== false,
     isLoading: auth0State.isLoading,
-    user: auth0State.user,
+    user: storeUser || auth0State.user,
   };
 }
 
