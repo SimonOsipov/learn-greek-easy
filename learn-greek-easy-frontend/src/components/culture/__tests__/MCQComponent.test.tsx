@@ -36,6 +36,7 @@ const mockQuestion: CultureQuestionResponse = {
     { el: 'Πάτρα', en: 'Patras', ru: 'Патры' },
     { el: 'Ηράκλειο', en: 'Heraklion', ru: 'Ираклион' },
   ],
+  option_count: 4,
   image_url: null,
   order_index: 1,
 };
@@ -59,6 +60,7 @@ const mockQuestionWithMissingTranslation: CultureQuestionResponse = {
     { el: '', en: 'Patras', ru: '' },
     { el: '', en: 'Heraklion', ru: '' },
   ],
+  option_count: 4,
   image_url: null,
   order_index: 1,
 };
