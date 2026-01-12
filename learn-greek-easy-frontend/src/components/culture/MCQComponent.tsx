@@ -69,14 +69,14 @@ export const MCQComponent: React.FC<MCQComponentProps> = ({
   const questionId = `mcq-question-${question.id}`;
   const keyboardHintId = `mcq-keyboard-hint-${question.id}`;
 
-  // Handle option selection (1-4)
+  // Handle option selection (1 to option_count)
   const handleSelectOption = useCallback(
     (option: number) => {
-      if (!disabled && option >= 1 && option <= 4) {
+      if (!disabled && option >= 1 && option <= question.option_count) {
         setSelectedOption(option);
       }
     },
-    [disabled]
+    [disabled, question.option_count]
   );
 
   // Handle submit
@@ -92,6 +92,7 @@ export const MCQComponent: React.FC<MCQComponentProps> = ({
     onSubmit: handleSubmit,
     canSubmit: selectedOption !== null,
     disabled,
+    optionCount: question.option_count,
   });
 
   // Handle image error - hide the image

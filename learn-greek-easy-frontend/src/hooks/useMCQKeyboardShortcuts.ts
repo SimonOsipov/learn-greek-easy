@@ -4,7 +4,7 @@ import { useEffect } from 'react';
  * Options for the MCQ keyboard shortcuts hook
  */
 export interface UseMCQKeyboardShortcutsOptions {
-  /** Callback when an option is selected (1-4) */
+  /** Callback when an option is selected (1-N where N = optionCount) */
   onSelectOption: (option: number) => void;
   /** Callback when submit is triggered */
   onSubmit: () => void;
@@ -12,16 +12,15 @@ export interface UseMCQKeyboardShortcutsOptions {
   canSubmit: boolean;
   /** Whether the component is disabled */
   disabled?: boolean;
+  /** Number of available options (2-4) */
+  optionCount: number;
 }
 
 /**
  * Keyboard shortcuts for Multiple Choice Question component
  *
  * Shortcuts:
- * - 1: Select option A
- * - 2: Select option B
- * - 3: Select option C
- * - 4: Select option D
+ * - 1-N: Select option A-N (where N = optionCount, max 4)
  * - Enter: Submit answer (when option selected)
  *
  * @param options - Configuration options for the hook
@@ -31,6 +30,7 @@ export function useMCQKeyboardShortcuts({
   onSubmit,
   canSubmit,
   disabled = false,
+  optionCount,
 }: UseMCQKeyboardShortcutsOptions): void {
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -49,33 +49,30 @@ export function useMCQKeyboardShortcuts({
         return;
       }
 
-      switch (event.code) {
-        case 'Digit1':
-          event.preventDefault();
-          onSelectOption(1);
-          break;
-        case 'Digit2':
-          event.preventDefault();
-          onSelectOption(2);
-          break;
-        case 'Digit3':
-          event.preventDefault();
-          onSelectOption(3);
-          break;
-        case 'Digit4':
-          event.preventDefault();
-          onSelectOption(4);
-          break;
-        case 'Enter':
-          if (canSubmit) {
-            event.preventDefault();
-            onSubmit();
-          }
-          break;
+      // Map digit keys to option numbers
+      const digitMap: Record<string, number> = {
+        Digit1: 1,
+        Digit2: 2,
+        Digit3: 3,
+        Digit4: 4,
+      };
+
+      // Handle digit keys for option selection
+      const optionNumber = digitMap[event.code];
+      if (optionNumber !== undefined && optionNumber <= optionCount) {
+        event.preventDefault();
+        onSelectOption(optionNumber);
+        return;
+      }
+
+      // Handle Enter key for submission
+      if (event.code === 'Enter' && canSubmit) {
+        event.preventDefault();
+        onSubmit();
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onSelectOption, onSubmit, canSubmit, disabled]);
+  }, [onSelectOption, onSubmit, canSubmit, disabled, optionCount]);
 }
