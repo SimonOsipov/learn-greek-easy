@@ -44,17 +44,20 @@ docker exec learn-greek-frontend npm test -- --run
 - NEVER reduce user-facing functionality as a "solution"
 - When in doubt, ASK the user - don't assume
 
-### 4. CI/CD Gate (BLOCKING)
-**You CANNOT output ALL_TASKS_COMPLETE until CI/CD passes.**
+### 4. Deploy + Smoke Gate (BLOCKING)
+**You CANNOT output ALL_TASKS_COMPLETE until deploy + smoke tests pass.**
 
 After marking PR ready:
 ```bash
-# Wait for CI/CD (takes 15-20 mins typically)
-# Check every 3 minutes (180 seconds) - no need to poll more frequently
-gh pr checks --watch --interval 180
+# Wait for deploy + smoke tests (takes ~5 mins typically)
+# Check status every 2 minutes
+gh pr checks
 
-# Only if ALL checks pass, then output the completion promise
-# If checks fail → fix issues, push, wait again
+# Required checks to pass:
+# - deploy (preview deployment)
+# - smoke-tests (basic functionality verification)
+# Only if these pass, output the completion promise
+# Other checks (visual, k6) can still be running - don't wait for them
 ```
 
 ---
@@ -222,8 +225,8 @@ git branch -d feature/[name]
 
 ## Completion Rules
 
-1. **Local tests green ≠ merge ready** - CI/CD must pass (~20 mins)
-2. **Never mark tasks as `done`** - only QA can do that after CI/CD green + merge
+1. **Local tests green ≠ merge ready** - deploy + smoke tests must pass (~5 mins)
+2. **Never mark tasks as `done`** - only QA can do that after deploy + smoke green + merge
 3. **All tasks stay `inprogress`** until PR merges
 4. **Update all tasks to `inreview`** when PR is marked ready
 
@@ -249,15 +252,17 @@ Output `<promise>ALL_TASKS_COMPLETE</promise>` ONLY when ALL conditions are TRUE
 3. All local tests pass
 4. PR is created and marked ready
 5. Tasks moved to `inreview`
-6. **CI/CD checks have passed** (verify with `gh pr checks`)
+6. **Deploy + smoke tests have passed** (verify with `gh pr checks`)
 7. **Handoff file deleted** (cleanup for next session)
 
 ```bash
 # MUST run this before outputting ALL_TASKS_COMPLETE
-# CI/CD takes 15-20 mins - check every 3 minutes
-gh pr checks --watch --interval 180
-# Wait for all checks to pass
-# If any fail, fix and re-run - do NOT output the promise
+# Deploy + smoke takes ~5 mins - check status
+gh pr checks
+
+# Required to pass: deploy, smoke-tests
+# Other checks (visual, k6, e2e) can still be running - don't wait
+# If deploy or smoke fail, fix and re-run - do NOT output the promise
 
 # Clean up handoff file (prevents stale context in next session)
 rm -f .claude/handoff.yaml
@@ -273,7 +278,7 @@ Human decides merge after reviewing the PR.
 |--------------|----------------|------------------|
 | Reading files directly in main context | Bloats context, wastes tokens | Use Explore agent |
 | Editing files directly in main context | Bloats context, error-prone | Use Executor agent |
-| Outputting ALL_TASKS_COMPLETE before CI | CI might fail, false completion | Wait for `gh pr checks` |
+| Outputting ALL_TASKS_COMPLETE before deploy+smoke | Deploy might fail, false completion | Wait for deploy + smoke-tests to pass |
 | Skipping stage checkpoints | Loop can't track progress | Output every checkpoint |
 | Multiple Grep/Glob calls for research | Bloats context | Single Explore agent call |
 | Architecture agent creating subtasks | Creates clutter in Kanban | Return plan as text, update existing task |
