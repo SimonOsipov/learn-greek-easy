@@ -481,19 +481,16 @@ class AuthService:
                 extra={"user_id": str(user.id)},
             )
 
+        # Ensure settings are loaded before commit to avoid lazy loading issues later
+        # After commit, the session may expire objects, so load relationships now
+        await self.db.refresh(user, ["settings"])
+
         # Commit all changes
         await self.db.commit()
 
         # Create welcome notification for new Auth0 users
         if is_new_user:
             await self._create_welcome_notification(user.id)
-
-        # Re-query user with settings to avoid lazy loading issues
-        # After commit, the session may not properly load relationships
-        result = await self.db.execute(
-            select(User).where(User.id == user.id).options(selectinload(User.settings))
-        )
-        user = result.scalar_one()
 
         # Calculate expiry in seconds
         expires_in = int((access_expires - datetime.utcnow()).total_seconds())
