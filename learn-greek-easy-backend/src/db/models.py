@@ -1254,6 +1254,16 @@ class CultureQuestion(Base, TimestampMixin):
         cascade="all, delete-orphan",
     )
 
+    @property
+    def option_count(self) -> int:
+        """Count of available options (2, 3, or 4)."""
+        count = 2  # option_a and option_b always present
+        if self.option_c is not None:
+            count += 1
+        if self.option_d is not None:
+            count += 1
+        return count
+
     def __repr__(self) -> str:
         return f"<CultureQuestion(id={self.id}, deck_id={self.deck_id})>"
 

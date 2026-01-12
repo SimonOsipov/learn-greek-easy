@@ -253,7 +253,7 @@ class TestCultureQuestionResponse:
     """Test question response schema."""
 
     def test_valid_question(self):
-        """Test valid question response."""
+        """Test valid question response with 4 options."""
         question = CultureQuestionResponse(
             id=uuid4(),
             question_text={"el": "Ερώτηση", "en": "Question", "ru": "Вопрос"},
@@ -263,11 +263,46 @@ class TestCultureQuestionResponse:
                 {"el": "C", "en": "C", "ru": "C"},
                 {"el": "D", "en": "D", "ru": "D"},
             ],
+            option_count=4,
             image_url=None,
             order_index=0,
         )
         assert len(question.options) == 4
+        assert question.option_count == 4
         assert question.order_index == 0
+
+    def test_valid_question_with_2_options(self):
+        """Test valid question response with 2 options."""
+        question = CultureQuestionResponse(
+            id=uuid4(),
+            question_text={"el": "Ερώτηση", "en": "Question", "ru": "Вопрос"},
+            options=[
+                {"el": "A", "en": "A", "ru": "A"},
+                {"el": "B", "en": "B", "ru": "B"},
+            ],
+            option_count=2,
+            image_url=None,
+            order_index=0,
+        )
+        assert len(question.options) == 2
+        assert question.option_count == 2
+
+    def test_valid_question_with_3_options(self):
+        """Test valid question response with 3 options."""
+        question = CultureQuestionResponse(
+            id=uuid4(),
+            question_text={"el": "Ερώτηση", "en": "Question", "ru": "Вопрос"},
+            options=[
+                {"el": "A", "en": "A", "ru": "A"},
+                {"el": "B", "en": "B", "ru": "B"},
+                {"el": "C", "en": "C", "ru": "C"},
+            ],
+            option_count=3,
+            image_url=None,
+            order_index=0,
+        )
+        assert len(question.options) == 3
+        assert question.option_count == 3
 
     def test_question_with_image(self):
         """Test question with image URL."""
@@ -280,22 +315,22 @@ class TestCultureQuestionResponse:
                 {"el": "C", "en": "C", "ru": "C"},
                 {"el": "D", "en": "D", "ru": "D"},
             ],
+            option_count=4,
             image_url="https://example.com/image.jpg",
             order_index=1,
         )
         assert question.image_url == "https://example.com/image.jpg"
 
     def test_too_few_options_rejected(self):
-        """Test less than 4 options rejected."""
+        """Test less than 2 options rejected."""
         with pytest.raises(ValidationError) as exc_info:
             CultureQuestionResponse(
                 id=uuid4(),
                 question_text={"el": "Test", "en": "Test", "ru": "Test"},
                 options=[
                     {"el": "A", "en": "A", "ru": "A"},
-                    {"el": "B", "en": "B", "ru": "B"},
-                    {"el": "C", "en": "C", "ru": "C"},
-                ],  # Only 3 options
+                ],  # Only 1 option
+                option_count=1,
                 order_index=0,
             )
         assert "too_short" in str(exc_info.value).lower()
@@ -313,6 +348,7 @@ class TestCultureQuestionResponse:
                     {"el": "D", "en": "D", "ru": "D"},
                     {"el": "E", "en": "E", "ru": "E"},
                 ],  # 5 options
+                option_count=5,
                 order_index=0,
             )
         assert "too_long" in str(exc_info.value).lower()
@@ -329,6 +365,7 @@ class TestCultureQuestionResponse:
                     {"el": "C", "en": "C", "ru": "C"},
                     {"el": "D", "en": "D", "ru": "D"},
                 ],
+                option_count=4,
                 order_index=-1,
             )
 
