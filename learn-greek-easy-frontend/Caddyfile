@@ -16,16 +16,22 @@ handle /health* {
     reverse_proxy {
         dynamic a {$BACKEND_HOST:backend.railway.internal} {$BACKEND_PORT:8080} {
             refresh 1s
+            versions ipv4 ipv6
+            resolvers fd12::10
+            dial_timeout 30s
         }
 
-        # Load balancer retries
-        lb_try_duration 5s
-        lb_retries 3
+        # Aggressive load balancer retries (Railway recommended)
+        lb_try_duration 10s
+        lb_try_interval 250ms
+        lb_retries 100
 
-        # Passive health checks
-        fail_duration 3s
-        max_fails 1
+        # Relaxed passive health checks (Railway recommended)
+        # Prevents marking backend unhealthy too fast during DNS transitions
+        fail_duration 60s
+        max_fails 300
         unhealthy_status 502 503 504
+        unhealthy_request_count 200
 
         header_up X-Real-IP {remote_host}
         header_up X-Forwarded-For {remote_host}
@@ -38,14 +44,19 @@ handle /version {
     reverse_proxy {
         dynamic a {$BACKEND_HOST:backend.railway.internal} {$BACKEND_PORT:8080} {
             refresh 1s
+            versions ipv4 ipv6
+            resolvers fd12::10
+            dial_timeout 30s
         }
 
-        lb_try_duration 5s
-        lb_retries 3
+        lb_try_duration 10s
+        lb_try_interval 250ms
+        lb_retries 100
 
-        fail_duration 3s
-        max_fails 1
+        fail_duration 60s
+        max_fails 300
         unhealthy_status 502 503 504
+        unhealthy_request_count 200
 
         header_up X-Real-IP {remote_host}
         header_up X-Forwarded-For {remote_host}
@@ -55,10 +66,14 @@ handle /version {
 
 # API proxy to backend with dynamic DNS resolution for Railway
 # Uses dynamic A record lookup with 1s refresh to handle backend IP changes
+# Includes Railway's internal DNS resolver to bypass system DNS caching
 handle /api/* {
     reverse_proxy {
         dynamic a {$BACKEND_HOST:backend.railway.internal} {$BACKEND_PORT:8080} {
             refresh 1s
+            versions ipv4 ipv6
+            resolvers fd12::10
+            dial_timeout 30s
         }
 
         # Buffer request body to prevent streaming race condition
@@ -70,15 +85,19 @@ handle /api/* {
             method POST PUT PATCH DELETE
         }
 
-        # Load balancer retries - user never sees 502 from stale IPs
-        lb_try_duration 5s
-        lb_retries 3
+        # Aggressive load balancer retries (Railway recommended)
+        # User never sees 502 from stale IPs - Caddy retries with fresh DNS
+        lb_try_duration 10s
+        lb_try_interval 250ms
+        lb_retries 100
 
-        # Passive health checks (active health checks don't work with dynamic upstreams)
-        fail_duration 3s
-        max_fails 1
+        # Relaxed passive health checks (Railway recommended)
+        # Prevents marking backend unhealthy too fast during DNS transitions
+        fail_duration 60s
+        max_fails 300
         unhealthy_status 502 503 504
-        unhealthy_latency 10s
+        unhealthy_latency 5s
+        unhealthy_request_count 200
 
         header_up X-Real-IP {remote_host}
         header_up X-Forwarded-For {remote_host}
@@ -97,18 +116,21 @@ handle /api/* {
 handle /docs {
     reverse_proxy {
         dynamic a {$BACKEND_HOST:backend.railway.internal} {$BACKEND_PORT:8080} {
-            refresh 5s
+            refresh 1s
+            versions ipv4 ipv6
+            resolvers fd12::10
+            dial_timeout 30s
         }
 
-        # Load balancer retries
-        lb_try_duration 5s
-        lb_retries 3
+        lb_try_duration 10s
+        lb_try_interval 250ms
+        lb_retries 100
 
-        # Passive health checks
-        fail_duration 3s
-        max_fails 1
+        fail_duration 60s
+        max_fails 300
         unhealthy_status 502 503 504
-        unhealthy_latency 10s
+        unhealthy_latency 5s
+        unhealthy_request_count 200
 
         header_up X-Real-IP {remote_host}
         header_up X-Forwarded-For {remote_host}
@@ -119,18 +141,21 @@ handle /docs {
 handle /docs/* {
     reverse_proxy {
         dynamic a {$BACKEND_HOST:backend.railway.internal} {$BACKEND_PORT:8080} {
-            refresh 5s
+            refresh 1s
+            versions ipv4 ipv6
+            resolvers fd12::10
+            dial_timeout 30s
         }
 
-        # Load balancer retries
-        lb_try_duration 5s
-        lb_retries 3
+        lb_try_duration 10s
+        lb_try_interval 250ms
+        lb_retries 100
 
-        # Passive health checks
-        fail_duration 3s
-        max_fails 1
+        fail_duration 60s
+        max_fails 300
         unhealthy_status 502 503 504
-        unhealthy_latency 10s
+        unhealthy_latency 5s
+        unhealthy_request_count 200
 
         header_up X-Real-IP {remote_host}
         header_up X-Forwarded-For {remote_host}
@@ -141,18 +166,21 @@ handle /docs/* {
 handle /redoc {
     reverse_proxy {
         dynamic a {$BACKEND_HOST:backend.railway.internal} {$BACKEND_PORT:8080} {
-            refresh 5s
+            refresh 1s
+            versions ipv4 ipv6
+            resolvers fd12::10
+            dial_timeout 30s
         }
 
-        # Load balancer retries
-        lb_try_duration 5s
-        lb_retries 3
+        lb_try_duration 10s
+        lb_try_interval 250ms
+        lb_retries 100
 
-        # Passive health checks
-        fail_duration 3s
-        max_fails 1
+        fail_duration 60s
+        max_fails 300
         unhealthy_status 502 503 504
-        unhealthy_latency 10s
+        unhealthy_latency 5s
+        unhealthy_request_count 200
 
         header_up X-Real-IP {remote_host}
         header_up X-Forwarded-For {remote_host}
@@ -163,18 +191,21 @@ handle /redoc {
 handle /redoc/* {
     reverse_proxy {
         dynamic a {$BACKEND_HOST:backend.railway.internal} {$BACKEND_PORT:8080} {
-            refresh 5s
+            refresh 1s
+            versions ipv4 ipv6
+            resolvers fd12::10
+            dial_timeout 30s
         }
 
-        # Load balancer retries
-        lb_try_duration 5s
-        lb_retries 3
+        lb_try_duration 10s
+        lb_try_interval 250ms
+        lb_retries 100
 
-        # Passive health checks
-        fail_duration 3s
-        max_fails 1
+        fail_duration 60s
+        max_fails 300
         unhealthy_status 502 503 504
-        unhealthy_latency 10s
+        unhealthy_latency 5s
+        unhealthy_request_count 200
 
         header_up X-Real-IP {remote_host}
         header_up X-Forwarded-For {remote_host}
@@ -185,18 +216,21 @@ handle /redoc/* {
 handle /openapi.json {
     reverse_proxy {
         dynamic a {$BACKEND_HOST:backend.railway.internal} {$BACKEND_PORT:8080} {
-            refresh 5s
+            refresh 1s
+            versions ipv4 ipv6
+            resolvers fd12::10
+            dial_timeout 30s
         }
 
-        # Load balancer retries
-        lb_try_duration 5s
-        lb_retries 3
+        lb_try_duration 10s
+        lb_try_interval 250ms
+        lb_retries 100
 
-        # Passive health checks
-        fail_duration 3s
-        max_fails 1
+        fail_duration 60s
+        max_fails 300
         unhealthy_status 502 503 504
-        unhealthy_latency 10s
+        unhealthy_latency 5s
+        unhealthy_request_count 200
 
         header_up X-Real-IP {remote_host}
         header_up X-Forwarded-For {remote_host}
