@@ -118,16 +118,10 @@ app = FastAPI(
 # ============================================================================
 # Middleware
 # ============================================================================
-
-# CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.cors_origins,
-    allow_credentials=settings.cors_allow_credentials,
-    allow_methods=settings.cors_allow_methods,
-    allow_headers=settings.cors_allow_headers,
-    expose_headers=settings.cors_expose_headers,
-)
+# NOTE: Starlette middleware execution order is REVERSE of registration order.
+# Last registered = first to execute on request, first to process response.
+# We want CORS to process ALL responses (including error responses from
+# ErrorHandlingMiddleware), so CORS must be registered LAST.
 
 # Version header middleware for stale client detection
 # Adds X-App-Version header to all responses
@@ -141,17 +135,26 @@ app.add_middleware(VersionHeaderMiddleware)
 app.add_middleware(AuthLoggingMiddleware)
 
 # Rate limiting middleware - checks limits before processing
-# Registered after AuthLogging so it executes BEFORE auth logging
 app.add_middleware(RateLimitingMiddleware)
 
 # Error handling middleware - catches exceptions from downstream middleware
-# Registered after RateLimiting so it can catch errors from that middleware
 app.add_middleware(ErrorHandlingMiddleware)
 
 # Request logging middleware for comprehensive API observability
-# Registered last so it executes first on requests (sets request_id)
-# (Starlette middleware execution: last registered = first to execute on request)
+# Sets request_id early in the chain
 app.add_middleware(RequestLoggingMiddleware)
+
+# CORS middleware - MUST be registered LAST so it executes FIRST on request
+# and wraps ALL responses (including error responses from ErrorHandlingMiddleware).
+# This ensures CORS headers are added to every response, not just successful ones.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origins,
+    allow_credentials=settings.cors_allow_credentials,
+    allow_methods=settings.cors_allow_methods,
+    allow_headers=settings.cors_allow_headers,
+    expose_headers=settings.cors_expose_headers,
+)
 
 # ============================================================================
 # Exception Handlers
