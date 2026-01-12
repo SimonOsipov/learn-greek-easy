@@ -36,6 +36,7 @@ const mockQuestion: CultureQuestionResponse = {
     { el: 'Πάτρα', en: 'Patras', ru: 'Патры' },
     { el: 'Ηράκλειο', en: 'Heraklion', ru: 'Ираклион' },
   ],
+  option_count: 4,
   image_url: null,
   order_index: 1,
 };
@@ -59,6 +60,41 @@ const mockQuestionWithMissingTranslation: CultureQuestionResponse = {
     { el: '', en: 'Patras', ru: '' },
     { el: '', en: 'Heraklion', ru: '' },
   ],
+  option_count: 4,
+  image_url: null,
+  order_index: 1,
+};
+
+// Mock question data for variable option count tests
+const mockQuestion2Options: CultureQuestionResponse = {
+  id: 'test-question-2opt',
+  question_text: {
+    el: 'Αληθές ή Ψευδές;',
+    en: 'True or False?',
+    ru: 'Правда или ложь?',
+  },
+  options: [
+    { el: 'Αληθές', en: 'True', ru: 'Правда' },
+    { el: 'Ψευδές', en: 'False', ru: 'Ложь' },
+  ],
+  option_count: 2,
+  image_url: null,
+  order_index: 1,
+};
+
+const mockQuestion3Options: CultureQuestionResponse = {
+  id: 'test-question-3opt',
+  question_text: {
+    el: 'Ποιο είναι;',
+    en: 'Which one?',
+    ru: 'Какой?',
+  },
+  options: [
+    { el: 'Α', en: 'A', ru: 'А' },
+    { el: 'Β', en: 'B', ru: 'Б' },
+    { el: 'Γ', en: 'C', ru: 'В' },
+  ],
+  option_count: 3,
   image_url: null,
   order_index: 1,
 };
@@ -437,6 +473,110 @@ describe('MCQComponent', () => {
       await user.click(optionA);
 
       expect(screen.queryByTestId('mcq-select-hint')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Variable Option Count', () => {
+    it('renders only 2 options for 2-option question', () => {
+      renderWithProviders(
+        <MCQComponent question={mockQuestion2Options} language="en" onAnswer={mockOnAnswer} />
+      );
+
+      // Should render 2 options (A and B)
+      expect(screen.getByTestId('answer-option-a')).toBeInTheDocument();
+      expect(screen.getByTestId('answer-option-b')).toBeInTheDocument();
+      // Should NOT render options C and D
+      expect(screen.queryByTestId('answer-option-c')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('answer-option-d')).not.toBeInTheDocument();
+    });
+
+    it('renders only 3 options for 3-option question', () => {
+      renderWithProviders(
+        <MCQComponent question={mockQuestion3Options} language="en" onAnswer={mockOnAnswer} />
+      );
+
+      // Should render 3 options (A, B, C)
+      expect(screen.getByTestId('answer-option-a')).toBeInTheDocument();
+      expect(screen.getByTestId('answer-option-b')).toBeInTheDocument();
+      expect(screen.getByTestId('answer-option-c')).toBeInTheDocument();
+      // Should NOT render option D
+      expect(screen.queryByTestId('answer-option-d')).not.toBeInTheDocument();
+    });
+
+    it('renders all 4 options for 4-option question', () => {
+      renderWithProviders(
+        <MCQComponent question={mockQuestion} language="en" onAnswer={mockOnAnswer} />
+      );
+
+      // Should render all 4 options
+      expect(screen.getByTestId('answer-option-a')).toBeInTheDocument();
+      expect(screen.getByTestId('answer-option-b')).toBeInTheDocument();
+      expect(screen.getByTestId('answer-option-c')).toBeInTheDocument();
+      expect(screen.getByTestId('answer-option-d')).toBeInTheDocument();
+    });
+
+    it('displays dynamic keyboard hint with correct max for 2 options', () => {
+      renderWithProviders(
+        <MCQComponent question={mockQuestion2Options} language="en" onAnswer={mockOnAnswer} />
+      );
+
+      // Should show "Press 1-2" not "Press 1-4"
+      expect(screen.getByText(/Press 1-2/)).toBeInTheDocument();
+    });
+
+    it('displays dynamic keyboard hint with correct max for 3 options', () => {
+      renderWithProviders(
+        <MCQComponent question={mockQuestion3Options} language="en" onAnswer={mockOnAnswer} />
+      );
+
+      // Should show "Press 1-3"
+      expect(screen.getByText(/Press 1-3/)).toBeInTheDocument();
+    });
+
+    it('displays dynamic keyboard hint with correct max for 4 options', () => {
+      renderWithProviders(
+        <MCQComponent question={mockQuestion} language="en" onAnswer={mockOnAnswer} />
+      );
+
+      // Should show "Press 1-4"
+      expect(screen.getByText(/Press 1-4/)).toBeInTheDocument();
+    });
+
+    it('renders correct option text for 2-option question', () => {
+      renderWithProviders(
+        <MCQComponent question={mockQuestion2Options} language="en" onAnswer={mockOnAnswer} />
+      );
+
+      expect(screen.getByText('True')).toBeInTheDocument();
+      expect(screen.getByText('False')).toBeInTheDocument();
+    });
+
+    it('allows selection of options in 2-option question', async () => {
+      const user = userEvent.setup();
+      renderWithProviders(
+        <MCQComponent question={mockQuestion2Options} language="en" onAnswer={mockOnAnswer} />
+      );
+
+      const optionB = screen.getByTestId('answer-option-b');
+      await user.click(optionB);
+
+      expect(optionB).toHaveAttribute('aria-pressed', 'true');
+    });
+
+    it('submits correct option number for 2-option question', async () => {
+      const user = userEvent.setup();
+      renderWithProviders(
+        <MCQComponent question={mockQuestion2Options} language="en" onAnswer={mockOnAnswer} />
+      );
+
+      // Select option B (index 1, so option number 2)
+      const optionB = screen.getByTestId('answer-option-b');
+      await user.click(optionB);
+
+      const submitButton = screen.getByTestId('mcq-submit-button');
+      await user.click(submitButton);
+
+      expect(mockOnAnswer).toHaveBeenCalledWith(2);
     });
   });
 });

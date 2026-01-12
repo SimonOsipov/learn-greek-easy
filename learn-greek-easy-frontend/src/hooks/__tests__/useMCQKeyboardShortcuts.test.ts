@@ -3,7 +3,8 @@
  *
  * Tests for the keyboard shortcuts hook used in MCQ components.
  * These tests verify:
- * - Digit 1-4 keys call onSelectOption with correct values
+ * - Digit 1-N keys call onSelectOption with correct values (where N = optionCount)
+ * - Digit keys beyond optionCount are ignored
  * - Enter key calls onSubmit when canSubmit is true
  * - Enter key does nothing when canSubmit is false
  * - Ignores keypresses in input/textarea fields
@@ -30,13 +31,14 @@ describe('useMCQKeyboardShortcuts', () => {
     vi.restoreAllMocks();
   });
 
-  describe('Option Selection (Digit 1-4)', () => {
+  describe('Option Selection (Digit 1-4 with optionCount=4)', () => {
     it('should call onSelectOption with 1 when Digit1 is pressed', () => {
       renderHook(() =>
         useMCQKeyboardShortcuts({
           onSelectOption: mockOnSelectOption,
           onSubmit: mockOnSubmit,
           canSubmit: false,
+          optionCount: 4,
         })
       );
 
@@ -53,6 +55,7 @@ describe('useMCQKeyboardShortcuts', () => {
           onSelectOption: mockOnSelectOption,
           onSubmit: mockOnSubmit,
           canSubmit: false,
+          optionCount: 4,
         })
       );
 
@@ -69,6 +72,7 @@ describe('useMCQKeyboardShortcuts', () => {
           onSelectOption: mockOnSelectOption,
           onSubmit: mockOnSubmit,
           canSubmit: false,
+          optionCount: 4,
         })
       );
 
@@ -85,6 +89,7 @@ describe('useMCQKeyboardShortcuts', () => {
           onSelectOption: mockOnSelectOption,
           onSubmit: mockOnSubmit,
           canSubmit: false,
+          optionCount: 4,
         })
       );
 
@@ -96,6 +101,60 @@ describe('useMCQKeyboardShortcuts', () => {
     });
   });
 
+  describe('Option Selection with variable optionCount', () => {
+    it('should only allow Digit1-2 when optionCount is 2', () => {
+      renderHook(() =>
+        useMCQKeyboardShortcuts({
+          onSelectOption: mockOnSelectOption,
+          onSubmit: mockOnSubmit,
+          canSubmit: false,
+          optionCount: 2,
+        })
+      );
+
+      // Digit1 and Digit2 should work
+      window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Digit1' }));
+      expect(mockOnSelectOption).toHaveBeenCalledWith(1);
+
+      window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Digit2' }));
+      expect(mockOnSelectOption).toHaveBeenCalledWith(2);
+
+      // Digit3 and Digit4 should NOT work
+      vi.clearAllMocks();
+      window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Digit3' }));
+      expect(mockOnSelectOption).not.toHaveBeenCalled();
+
+      window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Digit4' }));
+      expect(mockOnSelectOption).not.toHaveBeenCalled();
+    });
+
+    it('should only allow Digit1-3 when optionCount is 3', () => {
+      renderHook(() =>
+        useMCQKeyboardShortcuts({
+          onSelectOption: mockOnSelectOption,
+          onSubmit: mockOnSubmit,
+          canSubmit: false,
+          optionCount: 3,
+        })
+      );
+
+      // Digit1, Digit2, Digit3 should work
+      window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Digit1' }));
+      expect(mockOnSelectOption).toHaveBeenCalledWith(1);
+
+      window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Digit2' }));
+      expect(mockOnSelectOption).toHaveBeenCalledWith(2);
+
+      window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Digit3' }));
+      expect(mockOnSelectOption).toHaveBeenCalledWith(3);
+
+      // Digit4 should NOT work
+      vi.clearAllMocks();
+      window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Digit4' }));
+      expect(mockOnSelectOption).not.toHaveBeenCalled();
+    });
+  });
+
   describe('Submit (Enter key)', () => {
     it('should call onSubmit when Enter is pressed and canSubmit is true', () => {
       renderHook(() =>
@@ -103,6 +162,7 @@ describe('useMCQKeyboardShortcuts', () => {
           onSelectOption: mockOnSelectOption,
           onSubmit: mockOnSubmit,
           canSubmit: true,
+          optionCount: 4,
         })
       );
 
@@ -118,6 +178,7 @@ describe('useMCQKeyboardShortcuts', () => {
           onSelectOption: mockOnSelectOption,
           onSubmit: mockOnSubmit,
           canSubmit: false,
+          optionCount: 4,
         })
       );
 
@@ -125,6 +186,22 @@ describe('useMCQKeyboardShortcuts', () => {
       window.dispatchEvent(event);
 
       expect(mockOnSubmit).not.toHaveBeenCalled();
+    });
+
+    it('should call onSubmit regardless of optionCount', () => {
+      renderHook(() =>
+        useMCQKeyboardShortcuts({
+          onSelectOption: mockOnSelectOption,
+          onSubmit: mockOnSubmit,
+          canSubmit: true,
+          optionCount: 2,
+        })
+      );
+
+      const event = new KeyboardEvent('keydown', { code: 'Enter' });
+      window.dispatchEvent(event);
+
+      expect(mockOnSubmit).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -135,6 +212,7 @@ describe('useMCQKeyboardShortcuts', () => {
           onSelectOption: mockOnSelectOption,
           onSubmit: mockOnSubmit,
           canSubmit: true,
+          optionCount: 4,
         })
       );
 
@@ -161,6 +239,7 @@ describe('useMCQKeyboardShortcuts', () => {
           onSelectOption: mockOnSelectOption,
           onSubmit: mockOnSubmit,
           canSubmit: true,
+          optionCount: 4,
         })
       );
 
@@ -189,6 +268,7 @@ describe('useMCQKeyboardShortcuts', () => {
           onSelectOption: mockOnSelectOption,
           onSubmit: mockOnSubmit,
           canSubmit: true,
+          optionCount: 4,
         })
       );
 
@@ -207,6 +287,7 @@ describe('useMCQKeyboardShortcuts', () => {
           onSelectOption: mockOnSelectOption,
           onSubmit: mockOnSubmit,
           canSubmit: true,
+          optionCount: 4,
         })
       );
 
@@ -225,6 +306,7 @@ describe('useMCQKeyboardShortcuts', () => {
           onSelectOption: mockOnSelectOption,
           onSubmit: mockOnSubmit,
           canSubmit: true,
+          optionCount: 4,
         })
       );
 
@@ -248,6 +330,7 @@ describe('useMCQKeyboardShortcuts', () => {
           onSelectOption: mockOnSelectOption,
           onSubmit: mockOnSubmit,
           canSubmit: true,
+          optionCount: 4,
         })
       );
 
@@ -267,6 +350,7 @@ describe('useMCQKeyboardShortcuts', () => {
           onSubmit: mockOnSubmit,
           canSubmit: true,
           disabled: true,
+          optionCount: 4,
         })
       );
 
@@ -283,6 +367,7 @@ describe('useMCQKeyboardShortcuts', () => {
           onSubmit: mockOnSubmit,
           canSubmit: true,
           disabled: true,
+          optionCount: 4,
         })
       );
 
@@ -300,6 +385,7 @@ describe('useMCQKeyboardShortcuts', () => {
           onSelectOption: mockOnSelectOption,
           onSubmit: mockOnSubmit,
           canSubmit: true,
+          optionCount: 4,
         })
       );
 

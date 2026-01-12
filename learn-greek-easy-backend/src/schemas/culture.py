@@ -11,7 +11,7 @@ from datetime import date, datetime
 from typing import Any, Optional
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from src.constants import MAX_ANSWER_TIME_SECONDS
 
@@ -102,10 +102,11 @@ class CultureQuestionResponse(BaseModel):
     question_text: dict[str, str] = Field(..., description="Multilingual question {el, en, ru}")
     options: list[dict[str, str]] = Field(
         ...,
-        min_length=4,
+        min_length=2,
         max_length=4,
-        description="Four answer options, each with {el, en, ru}",
+        description="2-4 answer options, each with {el, en, ru}",
     )
+    option_count: int = Field(..., ge=2, le=4, description="Number of answer options (2, 3, or 4)")
     image_url: Optional[str] = Field(None, description="Pre-signed S3 URL for question image")
     order_index: int = Field(..., ge=0, description="Question order within deck")
 
@@ -247,10 +248,11 @@ class CultureQuestionQueueItem(BaseModel):
     question_text: dict[str, str] = Field(..., description="Multilingual question {el, en, ru}")
     options: list[dict[str, str]] = Field(
         ...,
-        min_length=4,
+        min_length=2,
         max_length=4,
-        description="Four answer options, each with {el, en, ru}",
+        description="2-4 answer options, each with {el, en, ru}",
     )
+    option_count: int = Field(..., ge=2, le=4, description="Number of answer options (2, 3, or 4)")
     image_url: Optional[str] = Field(None, description="Pre-signed S3 URL for question image")
     order_index: int = Field(..., ge=0, description="Question order within deck")
     is_new: bool = Field(..., description="True if user hasn't studied this question yet")
@@ -384,33 +386,74 @@ class CultureDeckUpdate(BaseModel):
 
 
 class CultureQuestionCreate(BaseModel):
-    """Schema for creating a new culture question (admin only)."""
+    """Schema for creating a new culture question (admin only).
+
+    Supports 2, 3, or 4 answer options:
+    - option_a and option_b are always required
+    - option_c is optional (required for 3-4 option questions)
+    - option_d is optional (required for 4 option questions)
+    - correct_option must be within the range of available options
+    """
 
     deck_id: UUID = Field(..., description="Deck UUID this question belongs to")
     question_text: MultilingualText = Field(
         ..., description="Multilingual question text {el, en, ru}"
     )
-    option_a: MultilingualText = Field(..., description="Option A: {el, en, ru}")
-    option_b: MultilingualText = Field(..., description="Option B: {el, en, ru}")
-    option_c: MultilingualText = Field(..., description="Option C: {el, en, ru}")
-    option_d: MultilingualText = Field(..., description="Option D: {el, en, ru}")
+    option_a: MultilingualText = Field(..., description="Option A: {el, en, ru} (required)")
+    option_b: MultilingualText = Field(..., description="Option B: {el, en, ru} (required)")
+    option_c: Optional[MultilingualText] = Field(
+        None, description="Option C: {el, en, ru} (optional, for 3-4 option questions)"
+    )
+    option_d: Optional[MultilingualText] = Field(
+        None, description="Option D: {el, en, ru} (optional, for 4 option questions)"
+    )
     correct_option: int = Field(..., ge=1, le=4, description="Correct answer (1=A, 2=B, 3=C, 4=D)")
     image_key: Optional[str] = Field(
         None, max_length=500, description="S3 key for question image (optional)"
     )
     order_index: int = Field(default=0, ge=0, description="Display order within deck")
 
+    @model_validator(mode="after")
+    def validate_options_and_correct_answer(self) -> "CultureQuestionCreate":
+        """Validate that correct_option is within available options and no gaps exist."""
+        option_count = 2  # A and B always required
+        if self.option_c is not None:
+            option_count += 1
+        if self.option_d is not None:
+            option_count += 1
+
+        if self.option_d is not None and self.option_c is None:
+            raise ValueError("option_d requires option_c to be present (no gaps allowed)")
+
+        if self.correct_option > option_count:
+            raise ValueError(
+                f"correct_option ({self.correct_option}) exceeds available options ({option_count})"
+            )
+
+        return self
+
 
 class CultureQuestionUpdate(BaseModel):
-    """Schema for updating a culture question (admin only). All fields optional."""
+    """Schema for updating a culture question (admin only). All fields optional.
+
+    Supports variable answer options (2, 3, or 4):
+    - Set option_c to None to remove it (converts 4->3 or 3->2 option question)
+    - Set option_d to None to remove it (converts 4->3 option question)
+    - Validation of correct_option range happens in the service layer
+      since it requires knowledge of existing options for partial updates
+    """
 
     question_text: Optional[MultilingualText] = Field(
         None, description="Multilingual question text {el, en, ru}"
     )
     option_a: Optional[MultilingualText] = Field(None, description="Option A: {el, en, ru}")
     option_b: Optional[MultilingualText] = Field(None, description="Option B: {el, en, ru}")
-    option_c: Optional[MultilingualText] = Field(None, description="Option C: {el, en, ru}")
-    option_d: Optional[MultilingualText] = Field(None, description="Option D: {el, en, ru}")
+    option_c: Optional[MultilingualText] = Field(
+        None, description="Option C: {el, en, ru} (set to null to remove)"
+    )
+    option_d: Optional[MultilingualText] = Field(
+        None, description="Option D: {el, en, ru} (set to null to remove)"
+    )
     correct_option: Optional[int] = Field(
         None, ge=1, le=4, description="Correct answer (1=A, 2=B, 3=C, 4=D)"
     )
@@ -430,9 +473,14 @@ class CultureQuestionAdminResponse(BaseModel):
     question_text: dict[str, str] = Field(..., description="Multilingual question {el, en, ru}")
     option_a: dict[str, str] = Field(..., description="Option A: {el, en, ru}")
     option_b: dict[str, str] = Field(..., description="Option B: {el, en, ru}")
-    option_c: dict[str, str] = Field(..., description="Option C: {el, en, ru}")
-    option_d: dict[str, str] = Field(..., description="Option D: {el, en, ru}")
+    option_c: Optional[dict[str, str]] = Field(
+        None, description="Option C: {el, en, ru} (null for 2-option questions)"
+    )
+    option_d: Optional[dict[str, str]] = Field(
+        None, description="Option D: {el, en, ru} (null for 2-3 option questions)"
+    )
     correct_option: int = Field(..., ge=1, le=4, description="Correct answer (1=A, 2=B, 3=C, 4=D)")
+    option_count: int = Field(..., ge=2, le=4, description="Number of answer options (2, 3, or 4)")
     image_key: Optional[str] = Field(None, description="S3 key for question image")
     order_index: int = Field(..., ge=0, description="Display order within deck")
     created_at: datetime = Field(..., description="Creation timestamp")
@@ -445,20 +493,50 @@ class CultureQuestionAdminResponse(BaseModel):
 
 
 class CultureQuestionBulkItem(BaseModel):
-    """Single question in bulk create (without deck_id)."""
+    """Single question in bulk create (without deck_id).
+
+    Supports 2, 3, or 4 answer options:
+    - option_a and option_b are always required
+    - option_c is optional (required for 3-4 option questions)
+    - option_d is optional (required for 4 option questions)
+    - correct_option must be within the range of available options
+    """
 
     question_text: MultilingualText = Field(
         ..., description="Multilingual question text {el, en, ru}"
     )
-    option_a: MultilingualText = Field(..., description="Option A: {el, en, ru}")
-    option_b: MultilingualText = Field(..., description="Option B: {el, en, ru}")
-    option_c: MultilingualText = Field(..., description="Option C: {el, en, ru}")
-    option_d: MultilingualText = Field(..., description="Option D: {el, en, ru}")
+    option_a: MultilingualText = Field(..., description="Option A: {el, en, ru} (required)")
+    option_b: MultilingualText = Field(..., description="Option B: {el, en, ru} (required)")
+    option_c: Optional[MultilingualText] = Field(
+        None, description="Option C: {el, en, ru} (optional, for 3-4 option questions)"
+    )
+    option_d: Optional[MultilingualText] = Field(
+        None, description="Option D: {el, en, ru} (optional, for 4 option questions)"
+    )
     correct_option: int = Field(..., ge=1, le=4, description="Correct answer (1=A, 2=B, 3=C, 4=D)")
     image_key: Optional[str] = Field(
         None, max_length=500, description="S3 key for question image (optional)"
     )
     order_index: int = Field(default=0, ge=0, description="Display order within deck")
+
+    @model_validator(mode="after")
+    def validate_options_and_correct_answer(self) -> "CultureQuestionBulkItem":
+        """Validate that correct_option is within available options and no gaps exist."""
+        option_count = 2  # A and B always required
+        if self.option_c is not None:
+            option_count += 1
+        if self.option_d is not None:
+            option_count += 1
+
+        if self.option_d is not None and self.option_c is None:
+            raise ValueError("option_d requires option_c to be present (no gaps allowed)")
+
+        if self.correct_option > option_count:
+            raise ValueError(
+                f"correct_option ({self.correct_option}) exceeds available options ({option_count})"
+            )
+
+        return self
 
 
 class CultureQuestionBulkCreateRequest(BaseModel):

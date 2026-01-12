@@ -8,6 +8,7 @@
   "mcq": {
     "submitAnswer": "Υποβολη Απαντησης",
     "keyboardHint": "Πατηστε 1-4 για επιλογη, Enter για υποβολη",
+    "keyboardHintDynamic": "Πατήστε 1-{{max}} για επιλογή, Enter για υποβολή",
     "questionOf": "Ερωτηση {{current}} απο {{total}}",
     "timeRemaining": "{{seconds}}δ απομενουν",
     "selectAnswer": "Επιλεξτε μια απαντηση για να συνεχισετε",
