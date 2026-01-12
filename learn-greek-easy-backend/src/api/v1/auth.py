@@ -25,6 +25,7 @@ from src.core.exceptions import (
     TokenInvalidException,
     UserNotFoundException,
 )
+from src.core.logging import get_logger
 from src.db.dependencies import get_db
 from src.db.models import User
 from src.repositories.user import UserSettingsRepository
@@ -41,6 +42,8 @@ from src.schemas.user import (
     UserWithSettingsUpdate,
 )
 from src.services.auth_service import AuthService
+
+logger = get_logger(__name__)
 
 router = APIRouter(
     # Note: prefix is set by parent router in v1/router.py
@@ -208,6 +211,21 @@ async def auth0_login(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=e.detail,
+        )
+
+    except Exception as e:
+        # Catch-all for debugging unexpected errors
+        logger.error(
+            "Unexpected error in Auth0 login endpoint",
+            extra={
+                "error": str(e),
+                "error_type": type(e).__name__,
+            },
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Auth0 login error: {type(e).__name__}: {str(e)}",
         )
 
 
