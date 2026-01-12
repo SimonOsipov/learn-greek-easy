@@ -1415,6 +1415,406 @@ class TestDeleteQuestion:
 # =============================================================================
 
 
+# =============================================================================
+# Test Variable Answer Count (VAC-04)
+# =============================================================================
+
+
+class TestVariableAnswerCount:
+    """Tests for variable answer count support (2, 3, or 4 options)."""
+
+    @pytest.fixture
+    async def two_option_question(
+        self, db_session: AsyncSession, culture_deck: CultureDeck
+    ) -> CultureQuestion:
+        """Create a 2-option (True/False) question."""
+        question = CultureQuestion(
+            deck_id=culture_deck.id,
+            question_text={
+                "en": "Athens is the capital of Greece?",
+                "el": "Η Αθήνα είναι η πρωτεύουσα της Ελλάδας;",
+                "ru": "Афины - столица Греции?",
+            },
+            option_a={"en": "True", "el": "Αληθές", "ru": "Правда"},
+            option_b={"en": "False", "el": "Ψευδές", "ru": "Ложь"},
+            option_c=None,  # 2-option question
+            option_d=None,
+            correct_option=1,  # True
+            order_index=100,
+        )
+        db_session.add(question)
+        await db_session.flush()
+        await db_session.refresh(question)
+        return question
+
+    @pytest.fixture
+    async def three_option_question(
+        self, db_session: AsyncSession, culture_deck: CultureDeck
+    ) -> CultureQuestion:
+        """Create a 3-option question."""
+        question = CultureQuestion(
+            deck_id=culture_deck.id,
+            question_text={
+                "en": "What color is the Greek flag?",
+                "el": "Τι χρώμα είναι η ελληνική σημαία;",
+                "ru": "Какого цвета греческий флаг?",
+            },
+            option_a={"en": "Blue and white", "el": "Μπλε και λευκό", "ru": "Синий и белый"},
+            option_b={"en": "Red and white", "el": "Κόκκινο και λευκό", "ru": "Красный и белый"},
+            option_c={"en": "Green and white", "el": "Πράσινο και λευκό", "ru": "Зеленый и белый"},
+            option_d=None,  # 3-option question
+            correct_option=1,
+            order_index=101,
+        )
+        db_session.add(question)
+        await db_session.flush()
+        await db_session.refresh(question)
+        return question
+
+    # -------------------------------------------------------------------------
+    # _build_queue_item tests
+    # -------------------------------------------------------------------------
+
+    @pytest.mark.asyncio
+    async def test_build_queue_item_two_option_question_returns_two_options(
+        self,
+        db_session: AsyncSession,
+        two_option_question: CultureQuestion,
+        mock_s3_service,
+    ):
+        """2-option question should return options array of length 2."""
+        service = CultureQuestionService(db_session, s3_service=mock_s3_service)
+
+        result = service._build_queue_item(two_option_question, stats=None)
+
+        assert len(result.options) == 2
+        assert result.option_count == 2
+        assert result.options[0]["en"] == "True"
+        assert result.options[1]["en"] == "False"
+
+    @pytest.mark.asyncio
+    async def test_build_queue_item_three_option_question_returns_three_options(
+        self,
+        db_session: AsyncSession,
+        three_option_question: CultureQuestion,
+        mock_s3_service,
+    ):
+        """3-option question should return options array of length 3."""
+        service = CultureQuestionService(db_session, s3_service=mock_s3_service)
+
+        result = service._build_queue_item(three_option_question, stats=None)
+
+        assert len(result.options) == 3
+        assert result.option_count == 3
+        assert result.options[0]["en"] == "Blue and white"
+        assert result.options[1]["en"] == "Red and white"
+        assert result.options[2]["en"] == "Green and white"
+
+    # -------------------------------------------------------------------------
+    # process_answer validation tests
+    # -------------------------------------------------------------------------
+
+    @pytest.mark.asyncio
+    async def test_process_answer_two_option_question_option_3_raises_error(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+        two_option_question: CultureQuestion,
+        mock_s3_service,
+    ):
+        """Answering option 3 on 2-option question should raise ValueError."""
+        service = CultureQuestionService(db_session, s3_service=mock_s3_service)
+
+        with pytest.raises(ValueError, match="selected_option must be between 1 and 2"):
+            await service.process_answer(
+                user_id=test_user.id,
+                question_id=two_option_question.id,
+                selected_option=3,  # Invalid for 2-option question
+                time_taken=10,
+            )
+
+    @pytest.mark.asyncio
+    async def test_process_answer_three_option_question_option_4_raises_error(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+        three_option_question: CultureQuestion,
+        mock_s3_service,
+    ):
+        """Answering option 4 on 3-option question should raise ValueError."""
+        service = CultureQuestionService(db_session, s3_service=mock_s3_service)
+
+        with pytest.raises(ValueError, match="selected_option must be between 1 and 3"):
+            await service.process_answer(
+                user_id=test_user.id,
+                question_id=three_option_question.id,
+                selected_option=4,  # Invalid for 3-option question
+                time_taken=10,
+            )
+
+    @pytest.mark.asyncio
+    async def test_process_answer_two_option_question_valid_options(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+        two_option_question: CultureQuestion,
+        mock_s3_service,
+    ):
+        """2-option question should accept options 1 and 2."""
+        service = CultureQuestionService(db_session, s3_service=mock_s3_service)
+
+        # Option 1 should work
+        result1 = await service.process_answer(
+            user_id=test_user.id,
+            question_id=two_option_question.id,
+            selected_option=1,  # Valid: True
+            time_taken=10,
+        )
+        assert result1.is_correct is True
+
+        # Option 2 should also work (but be wrong)
+        result2 = await service.process_answer(
+            user_id=test_user.id,
+            question_id=two_option_question.id,
+            selected_option=2,  # Valid: False (wrong answer)
+            time_taken=10,
+        )
+        assert result2.is_correct is False
+
+    # -------------------------------------------------------------------------
+    # process_answer_fast validation tests
+    # -------------------------------------------------------------------------
+
+    @pytest.mark.asyncio
+    async def test_process_answer_fast_two_option_question_option_3_raises_error(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+        two_option_question: CultureQuestion,
+        mock_s3_service,
+    ):
+        """Answering option 3 on 2-option question (fast path) should raise ValueError."""
+        service = CultureQuestionService(db_session, s3_service=mock_s3_service)
+
+        with pytest.raises(ValueError, match="selected_option must be between 1 and 2"):
+            await service.process_answer_fast(
+                user_id=test_user.id,
+                question_id=two_option_question.id,
+                selected_option=3,  # Invalid for 2-option question
+                time_taken=10,
+            )
+
+    @pytest.mark.asyncio
+    async def test_process_answer_fast_three_option_question_option_4_raises_error(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+        three_option_question: CultureQuestion,
+        mock_s3_service,
+    ):
+        """Answering option 4 on 3-option question (fast path) should raise ValueError."""
+        service = CultureQuestionService(db_session, s3_service=mock_s3_service)
+
+        with pytest.raises(ValueError, match="selected_option must be between 1 and 3"):
+            await service.process_answer_fast(
+                user_id=test_user.id,
+                question_id=three_option_question.id,
+                selected_option=4,  # Invalid for 3-option question
+                time_taken=10,
+            )
+
+    @pytest.mark.asyncio
+    async def test_process_answer_fast_two_option_question_valid_options(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+        two_option_question: CultureQuestion,
+        mock_s3_service,
+    ):
+        """2-option question (fast path) should accept options 1 and 2."""
+        service = CultureQuestionService(db_session, s3_service=mock_s3_service)
+
+        # Option 1 should work
+        response1, _ = await service.process_answer_fast(
+            user_id=test_user.id,
+            question_id=two_option_question.id,
+            selected_option=1,  # Valid: True
+            time_taken=10,
+        )
+        assert response1.is_correct is True
+
+        # Option 2 should also work (but be wrong)
+        response2, _ = await service.process_answer_fast(
+            user_id=test_user.id,
+            question_id=two_option_question.id,
+            selected_option=2,  # Valid: False (wrong answer)
+            time_taken=10,
+        )
+        assert response2.is_correct is False
+
+
+class TestCreateQuestionVariableOptions:
+    """Tests for create_question with variable option counts."""
+
+    @pytest.mark.asyncio
+    async def test_create_question_two_options(
+        self,
+        db_session: AsyncSession,
+        culture_deck: CultureDeck,
+        mock_s3_service,
+    ):
+        """Should create a 2-option question with null option_c and option_d."""
+        from src.schemas.culture import CultureQuestionCreate, MultilingualText
+
+        service = CultureQuestionService(db_session, s3_service=mock_s3_service)
+
+        question_data = CultureQuestionCreate(
+            deck_id=culture_deck.id,
+            question_text=MultilingualText(
+                el="Αληθές ή Ψευδές?",
+                en="True or False?",
+                ru="Правда или ложь?",
+            ),
+            option_a=MultilingualText(el="Αληθές", en="True", ru="Правда"),
+            option_b=MultilingualText(el="Ψευδές", en="False", ru="Ложь"),
+            option_c=None,  # 2-option question
+            option_d=None,
+            correct_option=1,
+            order_index=0,
+        )
+
+        result = await service.create_question(question_data)
+
+        assert result.option_a["en"] == "True"
+        assert result.option_b["en"] == "False"
+        assert result.option_c is None
+        assert result.option_d is None
+        assert result.option_count == 2
+
+    @pytest.mark.asyncio
+    async def test_create_question_three_options(
+        self,
+        db_session: AsyncSession,
+        culture_deck: CultureDeck,
+        mock_s3_service,
+    ):
+        """Should create a 3-option question with null option_d only."""
+        from src.schemas.culture import CultureQuestionCreate, MultilingualText
+
+        service = CultureQuestionService(db_session, s3_service=mock_s3_service)
+
+        question_data = CultureQuestionCreate(
+            deck_id=culture_deck.id,
+            question_text=MultilingualText(
+                el="Ερώτηση με 3 επιλογές?",
+                en="Question with 3 options?",
+                ru="Вопрос с 3 вариантами?",
+            ),
+            option_a=MultilingualText(el="Α", en="A", ru="А"),
+            option_b=MultilingualText(el="Β", en="B", ru="Б"),
+            option_c=MultilingualText(el="Γ", en="C", ru="В"),
+            option_d=None,  # 3-option question
+            correct_option=2,
+            order_index=0,
+        )
+
+        result = await service.create_question(question_data)
+
+        assert result.option_a["en"] == "A"
+        assert result.option_b["en"] == "B"
+        assert result.option_c["en"] == "C"
+        assert result.option_d is None
+        assert result.option_count == 3
+
+
+class TestBulkCreateQuestionsVariableOptions:
+    """Tests for bulk_create_questions with variable option counts."""
+
+    @pytest.mark.asyncio
+    async def test_bulk_create_mixed_option_counts(
+        self,
+        db_session: AsyncSession,
+        culture_deck: CultureDeck,
+        mock_s3_service,
+    ):
+        """Should create questions with different option counts in one batch."""
+        from src.schemas.culture import (
+            CultureQuestionBulkCreateRequest,
+            CultureQuestionBulkItem,
+            MultilingualText,
+        )
+
+        service = CultureQuestionService(db_session, s3_service=mock_s3_service)
+
+        request = CultureQuestionBulkCreateRequest(
+            deck_id=culture_deck.id,
+            questions=[
+                # 2-option question
+                CultureQuestionBulkItem(
+                    question_text=MultilingualText(
+                        el="2 επιλογές?",
+                        en="2 options?",
+                        ru="2 варианта?",
+                    ),
+                    option_a=MultilingualText(el="Α", en="A", ru="А"),
+                    option_b=MultilingualText(el="Β", en="B", ru="Б"),
+                    option_c=None,
+                    option_d=None,
+                    correct_option=1,
+                    order_index=0,
+                ),
+                # 3-option question
+                CultureQuestionBulkItem(
+                    question_text=MultilingualText(
+                        el="3 επιλογές?",
+                        en="3 options?",
+                        ru="3 варианта?",
+                    ),
+                    option_a=MultilingualText(el="Α", en="A", ru="А"),
+                    option_b=MultilingualText(el="Β", en="B", ru="Б"),
+                    option_c=MultilingualText(el="Γ", en="C", ru="В"),
+                    option_d=None,
+                    correct_option=2,
+                    order_index=1,
+                ),
+                # 4-option question
+                CultureQuestionBulkItem(
+                    question_text=MultilingualText(
+                        el="4 επιλογές?",
+                        en="4 options?",
+                        ru="4 варианта?",
+                    ),
+                    option_a=MultilingualText(el="Α", en="A", ru="А"),
+                    option_b=MultilingualText(el="Β", en="B", ru="Б"),
+                    option_c=MultilingualText(el="Γ", en="C", ru="В"),
+                    option_d=MultilingualText(el="Δ", en="D", ru="Г"),
+                    correct_option=3,
+                    order_index=2,
+                ),
+            ],
+        )
+
+        result = await service.bulk_create_questions(request)
+
+        assert result.created_count == 3
+        assert len(result.questions) == 3
+
+        # Verify 2-option question
+        assert result.questions[0].option_c is None
+        assert result.questions[0].option_d is None
+        assert result.questions[0].option_count == 2
+
+        # Verify 3-option question
+        assert result.questions[1].option_c is not None
+        assert result.questions[1].option_d is None
+        assert result.questions[1].option_count == 3
+
+        # Verify 4-option question
+        assert result.questions[2].option_c is not None
+        assert result.questions[2].option_d is not None
+        assert result.questions[2].option_count == 4
+
+
 class TestProcessAnswerFast:
     """Tests for process_answer_fast method (early response pattern)."""
 

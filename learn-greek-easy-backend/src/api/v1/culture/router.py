@@ -30,6 +30,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config import settings
 from src.core.dependencies import get_current_superuser, get_current_user
+from src.core.exceptions import ValidationException
 from src.db.dependencies import get_db
 from src.db.models import User
 from src.schemas.culture import (
@@ -462,7 +463,7 @@ async def submit_answer(
 
     Raises:
         CultureQuestionNotFoundException: If question doesn't exist
-        ValueError: If selected_option not in range 1-4
+        ValidationException: If selected_option exceeds question's available options
 
     Example:
         POST /api/v1/culture/questions/{question_id}/answer
@@ -470,48 +471,53 @@ async def submit_answer(
     """
     service = CultureQuestionService(db)
 
-    if is_background_tasks_enabled():
-        # Production: Fast path + background processing
-        response, context = await service.process_answer_fast(
-            user_id=current_user.id,
-            question_id=question_id,
-            selected_option=request.selected_option,
-            time_taken=request.time_taken,
-            language=request.language,
-        )
+    try:
+        if is_background_tasks_enabled():
+            # Production: Fast path + background processing
+            response, context = await service.process_answer_fast(
+                user_id=current_user.id,
+                question_id=question_id,
+                selected_option=request.selected_option,
+                time_taken=request.time_taken,
+                language=request.language,
+            )
 
-        # Queue comprehensive background task for all deferred operations
-        background_tasks.add_task(
-            process_culture_answer_full_async,
-            user_id=current_user.id,
-            question_id=question_id,
-            selected_option=request.selected_option,
-            time_taken=request.time_taken,
-            language=request.language,
-            is_correct=context["is_correct"],
-            is_perfect=context["is_perfect"],
-            deck_category=context["deck_category"],
-            db_url=settings.database_url,
-        )
+            # Queue comprehensive background task for all deferred operations
+            background_tasks.add_task(
+                process_culture_answer_full_async,
+                user_id=current_user.id,
+                question_id=question_id,
+                selected_option=request.selected_option,
+                time_taken=request.time_taken,
+                language=request.language,
+                is_correct=context["is_correct"],
+                is_perfect=context["is_perfect"],
+                deck_category=context["deck_category"],
+                db_url=settings.database_url,
+            )
 
-        return response
-    else:
-        # Testing/fallback: Synchronous processing (stats created immediately)
-        full_response = await service.process_answer(
-            user_id=current_user.id,
-            question_id=question_id,
-            selected_option=request.selected_option,
-            time_taken=request.time_taken,
-            language=request.language,
-        )
+            return response
+        else:
+            # Testing/fallback: Synchronous processing (stats created immediately)
+            full_response = await service.process_answer(
+                user_id=current_user.id,
+                question_id=question_id,
+                selected_option=request.selected_option,
+                time_taken=request.time_taken,
+                language=request.language,
+            )
 
-        return CultureAnswerResponseFast(
-            is_correct=full_response.is_correct,
-            correct_option=full_response.correct_option,
-            xp_earned=full_response.xp_earned,
-            message=full_response.message,
-            deck_category=full_response.deck_category,
-        )
+            return CultureAnswerResponseFast(
+                is_correct=full_response.is_correct,
+                correct_option=full_response.correct_option,
+                xp_earned=full_response.xp_earned,
+                message=full_response.message,
+                deck_category=full_response.deck_category,
+            )
+    except ValueError as e:
+        # Convert ValueError from service (e.g., selected_option exceeds option_count)
+        # to a proper HTTP validation error
+        raise ValidationException(detail=str(e), field="selected_option")
 
 
 @router.get(
