@@ -134,8 +134,8 @@ jobs:
           echo "=== Waiting for Railway Internal DNS Propagation ==="
           echo "Backend just deployed and received a new internal IP."
           echo "Railway's internal DNS (backend.railway.internal) needs time to update."
-          echo "Waiting 15 seconds to ensure DNS propagation before frontend deployment..."
-          sleep 15
+          echo "Waiting 60 seconds to ensure DNS propagation before frontend deployment..."
+          sleep 60
           echo "DNS propagation delay complete. Proceeding with frontend deployment."
 
       - name: Show deployment context
