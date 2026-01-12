@@ -1268,34 +1268,37 @@ class SeedService:
         """
         self._check_can_seed()
 
+        # NOTE: auth0_id is set to None so that when Auth0 E2E tests run,
+        # the real Auth0 user ID can be linked to these seeded users.
+        # Setting fake auth0_ids would cause AccountLinkingConflictException.
         users_data = [
             {
                 "email": "e2e_learner@test.com",
                 "full_name": "E2E Learner",
                 "is_superuser": False,
                 "is_active": True,
-                "auth0_id": "auth0|e2e_learner",
+                "auth0_id": None,
             },
             {
                 "email": "e2e_beginner@test.com",
                 "full_name": "E2E Beginner",
                 "is_superuser": False,
                 "is_active": True,
-                "auth0_id": "auth0|e2e_beginner",
+                "auth0_id": None,
             },
             {
                 "email": "e2e_advanced@test.com",
                 "full_name": "E2E Advanced",
                 "is_superuser": False,
                 "is_active": True,
-                "auth0_id": "auth0|e2e_advanced",
+                "auth0_id": None,
             },
             {
                 "email": "e2e_admin@test.com",
                 "full_name": "E2E Admin",
                 "is_superuser": True,
                 "is_active": True,
-                "auth0_id": "auth0|e2e_admin",
+                "auth0_id": None,
             },
         ]
 

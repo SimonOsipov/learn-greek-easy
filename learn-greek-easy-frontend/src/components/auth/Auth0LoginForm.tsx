@@ -38,6 +38,7 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { determineUserRole } from '@/hooks/useAuth0Integration';
 import { loginWithAuth0, loginWithGoogle } from '@/lib/auth0WebAuth';
 import log from '@/lib/logger';
 import { useAuthStore } from '@/stores/authStore';
@@ -104,7 +105,10 @@ export const Auth0LoginForm: React.FC = () => {
 
       // Step 2: Exchange Auth0 access_token with backend
       const apiUrl = import.meta.env.VITE_API_URL || '';
-      const response = await fetch(`${apiUrl}/api/v1/auth/auth0`, {
+      const fullUrl = `${apiUrl}/api/v1/auth/auth0`;
+      log.info('[Auth0LoginForm] VITE_API_URL:', import.meta.env.VITE_API_URL);
+      log.info('[Auth0LoginForm] Fetching backend URL:', fullUrl);
+      const response = await fetch(fullUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -125,11 +129,14 @@ export const Auth0LoginForm: React.FC = () => {
       const backendData = await response.json();
 
       // Step 3: Transform backend response to frontend User type
+      // Extract Auth0 roles from backend response if available (may be forwarded from token)
+      const auth0Roles = (backendData.user?.auth0_roles as string[]) || [];
+
       const user: User = {
         id: backendData.user?.id || '',
         email: backendData.user?.email || '',
         name: backendData.user?.full_name || backendData.user?.email?.split('@')[0] || 'User',
-        role: backendData.user?.is_superuser ? 'admin' : 'free',
+        role: determineUserRole(backendData.user?.is_superuser, auth0Roles),
         preferences: {
           language: 'en',
           dailyGoal: backendData.user?.settings?.daily_goal || 20,
@@ -180,6 +187,14 @@ export const Auth0LoginForm: React.FC = () => {
       const from = (location.state as { from?: string })?.from || '/dashboard';
       navigate(from, { replace: true });
     } catch (err) {
+      // Enhanced error logging for debugging
+      log.error('[Auth0LoginForm] Login error:', err);
+      log.error('[Auth0LoginForm] Error type:', err?.constructor?.name);
+      if (err instanceof Error) {
+        log.error('[Auth0LoginForm] Error message:', err.message);
+        log.error('[Auth0LoginForm] Error stack:', err.stack);
+      }
+
       // Check if this is an Auth0 error key or a direct error message
       const errorMessage = err instanceof Error ? err.message : 'auth0Error';
 

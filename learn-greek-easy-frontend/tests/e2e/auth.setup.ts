@@ -86,6 +86,21 @@ async function authenticateViaAuth0(
 ): Promise<void> {
   console.log(`[SETUP] Starting Auth0 authentication for ${user.email}`);
 
+  // Capture browser console logs for debugging
+  page.on('console', (msg) => {
+    console.log(`[BROWSER ${msg.type().toUpperCase()}] ${msg.text()}`);
+  });
+
+  // Capture page errors
+  page.on('pageerror', (error) => {
+    console.log(`[BROWSER PAGE ERROR] ${error.message}`);
+  });
+
+  // Capture request failures
+  page.on('requestfailed', (request) => {
+    console.log(`[BROWSER REQUEST FAILED] ${request.url()} - ${request.failure()?.errorText}`);
+  });
+
   // Step 1: Navigate to login page
   await page.goto('/login');
 

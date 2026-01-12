@@ -25,11 +25,13 @@ from src.core.exceptions import (
     TokenInvalidException,
     UserNotFoundException,
 )
+from src.core.logging import get_logger
 from src.db.dependencies import get_db
 from src.db.models import User
 from src.repositories.user import UserSettingsRepository
 from src.schemas.user import (
     Auth0AuthRequest,
+    Auth0LoginResponse,
     LogoutAllResponse,
     LogoutResponse,
     SessionInfo,
@@ -40,6 +42,8 @@ from src.schemas.user import (
     UserWithSettingsUpdate,
 )
 from src.services.auth_service import AuthService
+
+logger = get_logger(__name__)
 
 router = APIRouter(
     # Note: prefix is set by parent router in v1/router.py
@@ -54,7 +58,7 @@ router = APIRouter(
 
 @router.post(
     "/auth0",
-    response_model=TokenResponse,
+    response_model=Auth0LoginResponse,
     summary="Login with Auth0",
     description="Authenticate using Auth0 access token",
     responses={
@@ -67,6 +71,25 @@ router = APIRouter(
                         "refresh_token": "eyJhbGciOiJIUzI1NiIs...",
                         "token_type": "bearer",
                         "expires_in": 1800,
+                        "user": {
+                            "id": "550e8400-e29b-41d4-a716-446655440000",
+                            "email": "user@example.com",
+                            "full_name": "John Doe",
+                            "is_active": True,
+                            "is_superuser": False,
+                            "email_verified_at": "2024-11-25T10:30:00Z",
+                            "created_at": "2024-11-25T10:30:00Z",
+                            "updated_at": "2024-11-25T10:30:00Z",
+                            "settings": {
+                                "id": "660e8400-e29b-41d4-a716-446655440001",
+                                "user_id": "550e8400-e29b-41d4-a716-446655440000",
+                                "daily_goal": 20,
+                                "email_notifications": True,
+                                "preferred_language": None,
+                                "created_at": "2024-11-25T10:30:00Z",
+                                "updated_at": "2024-11-25T10:30:00Z",
+                            },
+                        },
                     }
                 }
             },
@@ -110,7 +133,7 @@ async def auth0_login(
     auth_data: Auth0AuthRequest,
     request: Request,
     db: AsyncSession = Depends(get_db),
-) -> TokenResponse:
+) -> Auth0LoginResponse:
     """Authenticate with Auth0.
 
     This endpoint accepts an Auth0 access token obtained from the Auth0 SDK
@@ -133,7 +156,7 @@ async def auth0_login(
         db: Database session (injected)
 
     Returns:
-        TokenResponse containing access and refresh tokens
+        Auth0LoginResponse containing access/refresh tokens and user profile
 
     Raises:
         HTTPException(401): If Auth0 token is invalid or expired
@@ -152,7 +175,13 @@ async def auth0_login(
             client_ip=client_ip,
             user_agent=user_agent,
         )
-        return token_response
+        return Auth0LoginResponse(
+            access_token=token_response.access_token,
+            refresh_token=token_response.refresh_token,
+            token_type=token_response.token_type,
+            expires_in=token_response.expires_in,
+            user=UserProfileResponse.model_validate(user),
+        )
 
     except Auth0DisabledException as e:
         raise HTTPException(
@@ -182,6 +211,21 @@ async def auth0_login(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=e.detail,
+        )
+
+    except Exception as e:
+        # Catch-all for debugging unexpected errors
+        logger.error(
+            "Unexpected error in Auth0 login endpoint",
+            extra={
+                "error": str(e),
+                "error_type": type(e).__name__,
+            },
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Auth0 login error: {type(e).__name__}: {str(e)}",
         )
 
 

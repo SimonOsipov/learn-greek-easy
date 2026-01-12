@@ -268,24 +268,43 @@ class TestSeedServiceAuthentication:
     """
 
     @pytest.mark.asyncio
-    async def test_users_have_auth0_id(self, db_session: AsyncSession, enable_seeding):
-        """Seeded users have Auth0 IDs for authentication."""
+    async def test_users_auth0_id_configuration(self, db_session: AsyncSession, enable_seeding):
+        """Verify auth0_id configuration for different user types.
+
+        Main E2E users (learner, beginner, advanced, admin) have auth0_id=None
+        to enable Auth0 account linking during E2E tests.
+
+        XP test users have fake auth0_ids for isolated XP/achievement testing.
+        """
         seed_service = SeedService(db_session)
 
         await seed_service.seed_all()
 
-        # Verify each user has an auth0_id
         users = (await db_session.execute(select(User))).scalars().all()
 
-        for user in users:
-            # Auth0 users should have auth0_id set
-            assert user.auth0_id is not None, f"auth0_id not set for {user.email}"
-            assert user.auth0_id.startswith("auth0|"), f"Invalid auth0_id format for {user.email}"
+        # Categorize users
+        main_e2e_emails = {
+            "e2e_learner@test.com",
+            "e2e_beginner@test.com",
+            "e2e_advanced@test.com",
+            "e2e_admin@test.com",
+        }
 
-            # Auth0 users should NOT have password_hash
-            assert (
-                user.password_hash is None
-            ), f"password_hash should be None for Auth0 user {user.email}"
+        for user in users:
+            # All users should NOT have password_hash (Auth0-style)
+            assert user.password_hash is None, f"password_hash should be None for user {user.email}"
+
+            if user.email in main_e2e_emails:
+                # Main E2E users should have None for account linking
+                assert (
+                    user.auth0_id is None
+                ), f"Main E2E user {user.email} should have auth0_id=None for linking"
+            else:
+                # XP and other test users should have auth0_id set
+                assert user.auth0_id is not None, f"auth0_id not set for {user.email}"
+                assert user.auth0_id.startswith(
+                    "auth0|"
+                ), f"Invalid auth0_id format for {user.email}"
 
     @pytest.mark.asyncio
     async def test_all_users_are_auth0_style(self, db_session: AsyncSession, enable_seeding):

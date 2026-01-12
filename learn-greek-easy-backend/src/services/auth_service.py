@@ -84,7 +84,9 @@ class AuthService:
         Returns:
             User model if found, None otherwise
         """
-        result = await self.db.execute(select(User).where(User.email == email))
+        result = await self.db.execute(
+            select(User).where(User.email == email).options(selectinload(User.settings))
+        )
         return result.scalar_one_or_none()
 
     async def _create_welcome_notification(self, user_id: UUID) -> None:
@@ -479,12 +481,22 @@ class AuthService:
                 extra={"user_id": str(user.id)},
             )
 
+        # Store user_id before commit (commit may expire objects)
+        user_id = user.id
+
         # Commit all changes
         await self.db.commit()
 
         # Create welcome notification for new Auth0 users
         if is_new_user:
-            await self._create_welcome_notification(user.id)
+            await self._create_welcome_notification(user_id)
+
+        # Re-fetch user with settings after commit to avoid lazy loading issues
+        # SQLAlchemy's expire_on_commit=True (default) expires all objects after commit
+        result = await self.db.execute(
+            select(User).where(User.id == user_id).options(selectinload(User.settings))
+        )
+        user = result.scalar_one()
 
         # Calculate expiry in seconds
         expires_in = int((access_expires - datetime.utcnow()).total_seconds())
@@ -554,6 +566,10 @@ class AuthService:
         )
 
         self.db.add(user_settings)
+        await self.db.flush()
+
+        # Refresh to load the settings relationship
+        await self.db.refresh(user, ["settings"])
 
         return user
 
