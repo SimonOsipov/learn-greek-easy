@@ -10,7 +10,14 @@
  * All endpoints require superuser authentication.
  */
 
-import { api } from './api';
+import type {
+  AdminFeedbackItem,
+  AdminFeedbackListParams,
+  AdminFeedbackListResponse,
+  AdminFeedbackUpdateRequest,
+} from '@/types/feedback';
+
+import { api, buildQueryString } from './api';
 
 // ============================================
 // Types
@@ -180,5 +187,41 @@ export const adminAPI = {
    */
   updateCultureDeck: async (deckId: string, data: CultureDeckUpdatePayload) => {
     return api.patch(`/api/v1/culture/decks/${deckId}`, data);
+  },
+
+  // ============================================
+  // Feedback Management
+  // ============================================
+
+  /**
+   * List all feedback for admin with pagination and filters
+   *
+   * Returns feedback sorted with NEW status items first, then by created_at DESC.
+   * Requires superuser authentication.
+   */
+  listFeedback: async (
+    params: AdminFeedbackListParams = {}
+  ): Promise<AdminFeedbackListResponse> => {
+    const queryString = buildQueryString({
+      status: params.status,
+      category: params.category,
+      page: params.page || 1,
+      page_size: params.page_size || 10,
+    });
+    return api.get<AdminFeedbackListResponse>(`/api/v1/admin/feedback${queryString}`);
+  },
+
+  /**
+   * Update feedback status and/or admin response
+   *
+   * If admin_response is provided without status, and current status is NEW,
+   * status auto-changes to UNDER_REVIEW.
+   * Requires superuser authentication.
+   */
+  updateFeedback: async (
+    feedbackId: string,
+    data: AdminFeedbackUpdateRequest
+  ): Promise<AdminFeedbackItem> => {
+    return api.patch<AdminFeedbackItem>(`/api/v1/admin/feedback/${feedbackId}`, data);
   },
 };

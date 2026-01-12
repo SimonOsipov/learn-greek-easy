@@ -291,8 +291,9 @@ jobs:
       - name: Wait for Railway internal DNS propagation
         run: |
           echo "=== Waiting for Railway internal DNS propagation ==="
-          echo "Backend has a new internal IP after redeploy."
-          echo "Waiting 60 seconds for DNS to propagate before deploying frontend..."
+          echo "Backend received a new internal IP after redeploy."
+          echo "Waiting 60 seconds for DNS to propagate before health checks..."
+          echo "This ensures Caddy has fresh DNS when health checks run."
           sleep 60
           echo "DNS propagation wait complete"
 

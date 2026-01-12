@@ -214,3 +214,52 @@ export const FEEDBACK_STATUSES = [
   { value: 'completed' as const, label: 'Completed' },
   { value: 'cancelled' as const, label: 'Cancelled' },
 ] as const;
+
+// ============================================
+// Admin Feedback Types
+// ============================================
+
+/**
+ * Admin feedback item (without user_vote since admin doesn't vote)
+ */
+export interface AdminFeedbackItem {
+  id: string;
+  title: string;
+  description: string;
+  category: FeedbackCategory;
+  status: FeedbackStatus;
+  vote_count: number;
+  author: AuthorBrief;
+  created_at: string;
+  updated_at: string;
+  admin_response: string | null;
+  admin_response_at: string | null;
+}
+
+/**
+ * Paginated admin feedback list response
+ */
+export interface AdminFeedbackListResponse {
+  total: number;
+  page: number;
+  page_size: number;
+  items: AdminFeedbackItem[];
+}
+
+/**
+ * Admin feedback update request
+ */
+export interface AdminFeedbackUpdateRequest {
+  status?: FeedbackStatus;
+  admin_response?: string;
+}
+
+/**
+ * Parameters for admin feedback listing
+ */
+export interface AdminFeedbackListParams {
+  status?: FeedbackStatus;
+  category?: FeedbackCategory;
+  page?: number;
+  page_size?: number;
+}

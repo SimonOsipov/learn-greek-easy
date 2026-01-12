@@ -1203,15 +1203,15 @@ class CultureQuestion(Base, TimestampMixin):
         nullable=False,
         comment="Option B: {el, en, ru}",
     )
-    option_c: Mapped[dict] = mapped_column(
+    option_c: Mapped[dict | None] = mapped_column(
         JSON,
-        nullable=False,
-        comment="Option C: {el, en, ru}",
+        nullable=True,
+        comment="Option C: {el, en, ru} - optional for 2-option questions",
     )
-    option_d: Mapped[dict] = mapped_column(
+    option_d: Mapped[dict | None] = mapped_column(
         JSON,
-        nullable=False,
-        comment="Option D: {el, en, ru}",
+        nullable=True,
+        comment="Option D: {el, en, ru} - optional for 2-3 option questions",
     )
 
     # Correct answer (1=A, 2=B, 3=C, 4=D)
@@ -1253,6 +1253,16 @@ class CultureQuestion(Base, TimestampMixin):
         lazy="raise",
         cascade="all, delete-orphan",
     )
+
+    @property
+    def option_count(self) -> int:
+        """Count of available options (2, 3, or 4)."""
+        count = 2  # option_a and option_b always present
+        if self.option_c is not None:
+            count += 1
+        if self.option_d is not None:
+            count += 1
+        return count
 
     def __repr__(self) -> str:
         return f"<CultureQuestion(id={self.id}, deck_id={self.deck_id})>"

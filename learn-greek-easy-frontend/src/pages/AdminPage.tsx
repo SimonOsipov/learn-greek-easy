@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { DeckEditModal, type DeckEditFormData } from '@/components/admin';
+import { AdminFeedbackSection, DeckEditModal, type DeckEditFormData } from '@/components/admin';
 import { CultureBadge, type CultureCategory } from '@/components/culture';
 import { DeckBadge } from '@/components/decks';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -868,6 +868,11 @@ const AdminPage: React.FC = () => {
       {/* All Decks List with Search and Pagination */}
       <section aria-labelledby="all-decks-heading">
         <AllDecksList ref={allDecksListRef} t={t} locale={locale} onEditDeck={handleEditDeck} />
+      </section>
+
+      {/* User Feedback Management */}
+      <section aria-labelledby="feedback-heading">
+        <AdminFeedbackSection />
       </section>
 
       {/* Deck Edit Modal */}

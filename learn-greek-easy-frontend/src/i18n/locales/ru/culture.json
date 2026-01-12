@@ -8,6 +8,7 @@
   "mcq": {
     "submitAnswer": "Отправить Ответ",
     "keyboardHint": "Нажмите 1-4 для выбора, Enter для отправки",
+    "keyboardHintDynamic": "Нажмите 1-{{max}} для выбора, Enter для отправки",
     "questionOf": "Вопрос {{current}} из {{total}}",
     "timeRemaining": "{{seconds}}с осталось",
     "selectAnswer": "Выберите ответ для продолжения",
