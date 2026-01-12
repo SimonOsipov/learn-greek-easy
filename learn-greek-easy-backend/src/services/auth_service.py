@@ -481,16 +481,22 @@ class AuthService:
                 extra={"user_id": str(user.id)},
             )
 
-        # Ensure settings are loaded before commit to avoid lazy loading issues later
-        # After commit, the session may expire objects, so load relationships now
-        await self.db.refresh(user, ["settings"])
+        # Store user_id before commit (commit may expire objects)
+        user_id = user.id
 
         # Commit all changes
         await self.db.commit()
 
         # Create welcome notification for new Auth0 users
         if is_new_user:
-            await self._create_welcome_notification(user.id)
+            await self._create_welcome_notification(user_id)
+
+        # Re-fetch user with settings after commit to avoid lazy loading issues
+        # SQLAlchemy's expire_on_commit=True (default) expires all objects after commit
+        result = await self.db.execute(
+            select(User).where(User.id == user_id).options(selectinload(User.settings))
+        )
+        user = result.scalar_one()
 
         # Calculate expiry in seconds
         expires_in = int((access_expires - datetime.utcnow()).total_seconds())

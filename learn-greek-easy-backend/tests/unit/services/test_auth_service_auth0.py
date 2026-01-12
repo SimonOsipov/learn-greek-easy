@@ -81,10 +81,33 @@ class TestAuthenticateAuth0:
             with patch("src.core.auth0.verify_auth0_token") as mock_verify:
                 mock_verify.return_value = auth0_user_info
 
-                # Mock no existing user (both by auth0_id and email)
-                mock_result = MagicMock()
-                mock_result.scalar_one_or_none = MagicMock(return_value=None)
-                mock_db.execute = AsyncMock(return_value=mock_result)
+                # Create a mock user that will be returned after creation
+                created_user = MagicMock()
+                created_user.id = uuid4()
+                created_user.email = "test@example.com"
+                created_user.auth0_id = "auth0|123456789"
+                created_user.password_hash = None
+                created_user.email_verified_at = datetime.utcnow()
+                created_user.is_active = True
+                created_user.settings = MagicMock()
+
+                # Mock execute: first 2 calls return None (no existing user),
+                # last call returns the created user (re-fetch after commit)
+                call_count = 0
+
+                async def mock_execute_side_effect(*args, **kwargs):
+                    nonlocal call_count
+                    call_count += 1
+                    result = MagicMock()
+                    if call_count <= 2:
+                        # First 2 calls: checking for existing user
+                        result.scalar_one_or_none = MagicMock(return_value=None)
+                    else:
+                        # Final call: re-fetch user after commit
+                        result.scalar_one = MagicMock(return_value=created_user)
+                    return result
+
+                mock_db.execute = AsyncMock(side_effect=mock_execute_side_effect)
 
                 with patch("src.services.auth_service.create_access_token") as mock_access:
                     mock_access.return_value = (
@@ -122,10 +145,24 @@ class TestAuthenticateAuth0:
                 mock_user.email = "test@example.com"
                 mock_user.auth0_id = auth0_user_info.auth0_id
                 mock_user.is_active = True
+                mock_user.settings = MagicMock()
 
-                mock_result = MagicMock()
-                mock_result.scalar_one_or_none = MagicMock(return_value=mock_user)
-                mock_db.execute = AsyncMock(return_value=mock_result)
+                # Mock execute: first call finds user, last call re-fetches after commit
+                call_count = 0
+
+                async def mock_execute_side_effect(*args, **kwargs):
+                    nonlocal call_count
+                    call_count += 1
+                    result = MagicMock()
+                    if call_count == 1:
+                        # First call: find user by auth0_id
+                        result.scalar_one_or_none = MagicMock(return_value=mock_user)
+                    else:
+                        # Final call: re-fetch user after commit
+                        result.scalar_one = MagicMock(return_value=mock_user)
+                    return result
+
+                mock_db.execute = AsyncMock(side_effect=mock_execute_side_effect)
 
                 with patch("src.services.auth_service.create_access_token") as mock_access:
                     mock_access.return_value = (
@@ -162,6 +199,15 @@ class TestAuthenticateAuth0:
                 mock_user.is_active = True
                 mock_user.email_verified_at = None
                 mock_user.full_name = None
+                mock_user.settings = MagicMock()
+
+                # After linking, auth0_id will be set
+                linked_user = MagicMock()
+                linked_user.id = mock_user.id
+                linked_user.email = auth0_user_info.email
+                linked_user.auth0_id = auth0_user_info.auth0_id
+                linked_user.is_active = True
+                linked_user.settings = MagicMock()
 
                 mock_result_no_user = MagicMock()
                 mock_result_no_user.scalar_one_or_none = MagicMock(return_value=None)
@@ -169,9 +215,13 @@ class TestAuthenticateAuth0:
                 mock_result_with_user = MagicMock()
                 mock_result_with_user.scalar_one_or_none = MagicMock(return_value=mock_user)
 
-                # First call (by auth0_id) returns None, second (by email) returns user
+                mock_result_refetch = MagicMock()
+                mock_result_refetch.scalar_one = MagicMock(return_value=linked_user)
+
+                # First call (by auth0_id) returns None, second (by email) returns user,
+                # third (re-fetch after commit) returns linked user
                 mock_db.execute = AsyncMock(
-                    side_effect=[mock_result_no_user, mock_result_with_user]
+                    side_effect=[mock_result_no_user, mock_result_with_user, mock_result_refetch]
                 )
 
                 with patch("src.services.auth_service.create_access_token") as mock_access:
@@ -324,10 +374,32 @@ class TestAuthenticateAuth0:
             with patch("src.core.auth0.verify_auth0_token") as mock_verify:
                 mock_verify.return_value = auth0_user_no_email
 
-                # Mock no existing user
-                mock_result = MagicMock()
-                mock_result.scalar_one_or_none = MagicMock(return_value=None)
-                mock_db.execute = AsyncMock(return_value=mock_result)
+                # Create mock user with placeholder email
+                placeholder_email = f"{uuid4()}@auth0.placeholder"
+                created_user = MagicMock()
+                created_user.id = uuid4()
+                created_user.email = placeholder_email
+                created_user.auth0_id = "auth0|no-email-user"
+                created_user.is_active = True
+                created_user.settings = MagicMock()
+
+                # Mock execute: first call returns None (no existing user),
+                # last call returns created user (re-fetch after commit)
+                call_count = 0
+
+                async def mock_execute_side_effect(*args, **kwargs):
+                    nonlocal call_count
+                    call_count += 1
+                    result = MagicMock()
+                    if call_count == 1:
+                        # First call: checking for existing user by auth0_id
+                        result.scalar_one_or_none = MagicMock(return_value=None)
+                    else:
+                        # Final call: re-fetch user after commit
+                        result.scalar_one = MagicMock(return_value=created_user)
+                    return result
+
+                mock_db.execute = AsyncMock(side_effect=mock_execute_side_effect)
 
                 with patch("src.services.auth_service.create_access_token") as mock_access:
                     mock_access.return_value = (
