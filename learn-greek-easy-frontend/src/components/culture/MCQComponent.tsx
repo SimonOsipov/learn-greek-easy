@@ -173,7 +173,7 @@ export const MCQComponent: React.FC<MCQComponentProps> = ({
           className="text-center text-sm text-gray-500 dark:text-gray-400"
           data-testid="mcq-keyboard-hint"
         >
-          {t('mcq.keyboardHint')}
+          {t('mcq.keyboardHintDynamic', { max: question.option_count })}
         </p>
 
         {/* Submit button */}

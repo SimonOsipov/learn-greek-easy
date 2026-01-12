@@ -8,6 +8,7 @@
   "mcq": {
     "submitAnswer": "Submit Answer",
     "keyboardHint": "Press 1-4 to select, Enter to submit",
+    "keyboardHintDynamic": "Press 1-{{max}} to select, Enter to submit",
     "questionOf": "Question {{current}} of {{total}}",
     "timeRemaining": "{{seconds}}s remaining",
     "selectAnswer": "Select an answer to continue",
