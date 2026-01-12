@@ -210,14 +210,6 @@ async def auth0_login(
             detail=e.detail,
         )
 
-    except Exception as e:
-        # Log unexpected exceptions for debugging
-        import logging
-
-        logger = logging.getLogger(__name__)
-        logger.exception(f"Unexpected error in auth0_login: {type(e).__name__}: {e}")
-        raise  # Re-raise to be handled by global exception handler
-
 
 @router.post(
     "/refresh",
