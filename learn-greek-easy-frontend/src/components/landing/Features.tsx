@@ -104,7 +104,7 @@ const Features = () => {
   const VocabularyMockup = () => (
     <MockupWrapper>
       <div className="mb-4 flex items-center justify-between">
-        <span className="rounded-full bg-blue-100 px-3 py-1.5 text-xs font-semibold text-blue-900">
+        <span className="rounded-full bg-blue-100 px-3 py-1.5 text-xs font-semibold text-blue-900 dark:bg-blue-900 dark:text-blue-100">
           {t('features.mockups.finance')}
         </span>
         <span className="text-xs text-muted-foreground">
@@ -128,7 +128,7 @@ const Features = () => {
       <div className="mt-auto flex gap-3">
         <button
           type="button"
-          className="flex h-11 flex-1 items-center justify-center rounded-lg bg-red-100 text-sm font-semibold text-red-900"
+          className="flex h-11 flex-1 items-center justify-center rounded-lg bg-red-100 text-sm font-semibold text-red-900 dark:bg-red-900 dark:text-red-100"
         >
           {t('features.mockups.again')}
         </button>
@@ -189,7 +189,7 @@ const Features = () => {
   const QuizMockup = () => (
     <MockupWrapper>
       <div className="mb-3 flex items-center justify-between">
-        <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-900">
+        <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-900 dark:bg-blue-900 dark:text-blue-100">
           {t('features.mockups.history')}
         </span>
         <span className="text-xs text-muted-foreground">
@@ -219,7 +219,7 @@ const Features = () => {
   const BasicVocabularyMockup = () => (
     <MockupWrapper>
       <div className="mb-4 flex items-center justify-between">
-        <span className="rounded-full bg-green-100 px-3 py-1.5 text-xs font-semibold text-green-800">
+        <span className="rounded-full bg-green-100 px-3 py-1.5 text-xs font-semibold text-green-800 dark:bg-green-900 dark:text-green-100">
           {t('features.mockups.basics')}
         </span>
         <span className="text-xs text-muted-foreground">
@@ -243,7 +243,7 @@ const Features = () => {
       <div className="mt-auto flex gap-3">
         <button
           type="button"
-          className="flex h-11 flex-1 items-center justify-center rounded-lg bg-red-100 text-sm font-semibold text-red-900"
+          className="flex h-11 flex-1 items-center justify-center rounded-lg bg-red-100 text-sm font-semibold text-red-900 dark:bg-red-900 dark:text-red-100"
         >
           {t('features.mockups.again')}
         </button>
@@ -260,7 +260,7 @@ const Features = () => {
   const NounGrammarMockup = () => (
     <MockupWrapper>
       <div className="mb-3 flex items-center justify-between">
-        <span className="rounded-full bg-purple-100 px-3 py-1 text-xs font-semibold text-purple-700">
+        <span className="rounded-full bg-purple-100 px-3 py-1 text-xs font-semibold text-purple-700 dark:bg-purple-900 dark:text-purple-100">
           {t('features.mockups.nouns')}
         </span>
         <span className="text-xs text-muted-foreground">{t('features.mockups.cases')}</span>
@@ -299,7 +299,7 @@ const Features = () => {
   const VerbGrammarMockup = () => (
     <MockupWrapper>
       <div className="mb-3 flex items-center justify-between">
-        <span className="rounded-full bg-orange-100 px-3 py-1 text-xs font-semibold text-orange-900">
+        <span className="rounded-full bg-orange-100 px-3 py-1 text-xs font-semibold text-orange-900 dark:bg-orange-900 dark:text-orange-100">
           {t('features.mockups.verbs')}
         </span>
         <span className="text-xs text-muted-foreground">{t('features.mockups.present')}</span>
@@ -338,7 +338,7 @@ const Features = () => {
   const VerbTensesMockup = () => (
     <MockupWrapper>
       <div className="mb-3 flex items-center justify-between">
-        <span className="rounded-full bg-teal-100 px-3 py-1 text-xs font-semibold text-teal-800">
+        <span className="rounded-full bg-teal-100 px-3 py-1 text-xs font-semibold text-teal-800 dark:bg-teal-900 dark:text-teal-100">
           {t('features.mockups.tenses')}
         </span>
         <span className="text-xs text-muted-foreground">γράφω</span>
@@ -414,7 +414,7 @@ const Features = () => {
   const CustomCardsMockup = () => (
     <MockupWrapper>
       <div className="mb-4 flex items-center justify-between">
-        <span className="rounded-full bg-indigo-100 px-3 py-1.5 text-xs font-semibold text-indigo-700">
+        <span className="rounded-full bg-indigo-100 px-3 py-1.5 text-xs font-semibold text-indigo-700 dark:bg-indigo-900 dark:text-indigo-100">
           {t('features.mockups.myDecks')}
         </span>
         <span className="text-xs text-muted-foreground">
