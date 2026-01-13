@@ -67,7 +67,7 @@ const organizationStructuredData = {
  *
  * Features:
  * - Full landing page composition
- * - Clean white background
+ * - Theme-aware background (light/dark mode)
  * - Responsive layout
  * - SEO meta tags with Open Graph and Twitter Card support
  * - Structured data for rich search snippets
@@ -120,7 +120,7 @@ export default function LandingPage() {
         <script type="application/ld+json">{JSON.stringify(organizationStructuredData)}</script>
       </Helmet>
 
-      <div className="min-h-screen bg-white" data-testid="landing-page">
+      <div className="min-h-screen bg-background" data-testid="landing-page">
         <Header />
         <main>
           <Hero />
