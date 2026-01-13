@@ -53,9 +53,9 @@ export const ActivityFeedItem: React.FC<ActivityFeedItemProps> = ({ activity }) 
    * - Red: <60% (needs attention)
    */
   const getAccuracyColor = (accuracy: number): string => {
-    if (accuracy >= 80) return 'text-green-600';
-    if (accuracy >= 60) return 'text-yellow-600';
-    return 'text-red-600';
+    if (accuracy >= 80) return 'text-green-600 dark:text-green-400';
+    if (accuracy >= 60) return 'text-yellow-600 dark:text-yellow-400';
+    return 'text-red-600 dark:text-red-400';
   };
 
   /**
@@ -109,11 +109,11 @@ export const ActivityFeedItem: React.FC<ActivityFeedItemProps> = ({ activity }) 
         {/* Activity Content */}
         <div className="min-w-0 flex-1">
           {/* Deck Name */}
-          <p className="truncate font-medium text-gray-900">{deckName}</p>
+          <p className="truncate font-medium text-foreground">{deckName}</p>
 
           {/* Metrics Row */}
           {activity.type === 'review_session' && cardsReviewed > 0 && (
-            <div className="mt-1 flex items-center gap-3 text-sm text-gray-500">
+            <div className="mt-1 flex items-center gap-3 text-sm text-muted-foreground">
               {/* Card Count */}
               <span>
                 {cardsReviewed} {cardsReviewed === 1 ? 'card' : 'cards'}
@@ -136,11 +136,13 @@ export const ActivityFeedItem: React.FC<ActivityFeedItemProps> = ({ activity }) 
 
           {/* Achievement Type Display (for non-review activities) */}
           {activity.type !== 'review_session' && activity.description && (
-            <p className="mt-1 text-sm text-gray-600">{activity.description}</p>
+            <p className="mt-1 text-sm text-muted-foreground">{activity.description}</p>
           )}
 
           {/* Relative Time */}
-          <p className="mt-1 text-xs text-gray-400">{getRelativeTime(activity.timestamp)}</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {getRelativeTime(activity.timestamp)}
+          </p>
         </div>
       </div>
     </Card>

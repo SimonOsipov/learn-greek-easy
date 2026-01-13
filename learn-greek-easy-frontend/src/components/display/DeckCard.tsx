@@ -14,9 +14,11 @@ interface DeckCardProps {
 }
 
 const statusVariants = {
-  'in-progress': 'bg-blue-100 text-blue-700 hover:bg-blue-200',
-  completed: 'bg-green-100 text-green-700 hover:bg-green-200',
-  'not-started': 'bg-gray-100 text-gray-700 hover:bg-gray-200',
+  'in-progress':
+    'bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:hover:bg-blue-900/50',
+  completed:
+    'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-300 dark:hover:bg-green-900/50',
+  'not-started': 'bg-muted text-muted-foreground hover:bg-muted/80',
 };
 
 export const DeckCard: React.FC<DeckCardProps> = ({ deck, onContinue }) => {

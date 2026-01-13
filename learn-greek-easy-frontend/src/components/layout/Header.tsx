@@ -79,7 +79,7 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
 
   return (
     <header
-      className={cn('sticky top-0 z-50 w-full border-b border-border-gray bg-white', className)}
+      className={cn('sticky top-0 z-50 w-full border-b border-border bg-background', className)}
     >
       <PageContainer>
         <div className="flex h-16 items-center justify-between">

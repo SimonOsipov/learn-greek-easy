@@ -114,8 +114,8 @@ describe('DeckFilters', () => {
       // Find the "Level:" label by its text content
       const levelLabel = screen.getByText(/Level:/i);
 
-      // The label should have the dimmed gray-400 class
-      expect(levelLabel).toHaveClass('text-gray-400');
+      // The label should have the dimmed text-muted-foreground/50 class (with opacity)
+      expect(levelLabel).toHaveClass('text-muted-foreground/50');
     });
 
     it('should have normal label text color when deckType is not "culture"', () => {
@@ -123,8 +123,8 @@ describe('DeckFilters', () => {
 
       const levelLabel = screen.getByText(/Level:/i);
 
-      // The label should have the normal gray-700 class
-      expect(levelLabel).toHaveClass('text-gray-700');
+      // The label should have the normal text-foreground class
+      expect(levelLabel).toHaveClass('text-foreground');
     });
 
     it('should show tooltip on level buttons when disabled', () => {

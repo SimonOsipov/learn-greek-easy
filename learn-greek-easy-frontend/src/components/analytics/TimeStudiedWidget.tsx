@@ -76,14 +76,14 @@ export const TimeStudiedWidget: React.FC<TimeStudiedWidgetProps> = ({ isLoading:
       <CardContent className="pt-6">
         <div className="flex items-center justify-between">
           <div className="flex-1">
-            <p className="text-sm font-medium text-gray-500">Time Studied</p>
+            <p className="text-sm font-medium text-muted-foreground">Time Studied</p>
             <div className="mt-2">
-              <span className="text-3xl font-bold text-gray-900">{formattedTime}</span>
+              <span className="text-3xl font-bold text-foreground">{formattedTime}</span>
             </div>
-            <p className="mt-1 text-xs text-gray-400">{rangeText}</p>
+            <p className="mt-1 text-xs text-muted-foreground">{rangeText}</p>
           </div>
-          <div className="rounded-full bg-blue-100 p-3">
-            <Clock className="h-8 w-8 text-blue-600" aria-hidden="true" />
+          <div className="rounded-full bg-blue-100 p-3 dark:bg-blue-900/50">
+            <Clock className="h-8 w-8 text-blue-600 dark:text-blue-400" aria-hidden="true" />
           </div>
         </div>
       </CardContent>

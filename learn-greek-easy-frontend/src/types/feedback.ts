@@ -147,33 +147,33 @@ export interface StatusConfig {
 export const STATUS_CONFIG: Record<FeedbackStatus, StatusConfig> = {
   new: {
     label: 'New',
-    color: 'text-gray-700',
-    bgColor: 'bg-gray-100',
+    color: 'text-gray-700 dark:text-gray-300',
+    bgColor: 'bg-gray-100 dark:bg-gray-800',
   },
   under_review: {
     label: 'Under Review',
-    color: 'text-blue-700',
-    bgColor: 'bg-blue-100',
+    color: 'text-blue-700 dark:text-blue-300',
+    bgColor: 'bg-blue-100 dark:bg-blue-900/50',
   },
   planned: {
     label: 'Planned',
-    color: 'text-purple-700',
-    bgColor: 'bg-purple-100',
+    color: 'text-purple-700 dark:text-purple-300',
+    bgColor: 'bg-purple-100 dark:bg-purple-900/50',
   },
   in_progress: {
     label: 'In Progress',
-    color: 'text-yellow-700',
-    bgColor: 'bg-yellow-100',
+    color: 'text-yellow-700 dark:text-yellow-300',
+    bgColor: 'bg-yellow-100 dark:bg-yellow-900/50',
   },
   completed: {
     label: 'Completed',
-    color: 'text-green-700',
-    bgColor: 'bg-green-100',
+    color: 'text-green-700 dark:text-green-300',
+    bgColor: 'bg-green-100 dark:bg-green-900/50',
   },
   cancelled: {
     label: 'Cancelled',
-    color: 'text-red-700',
-    bgColor: 'bg-red-100',
+    color: 'text-red-700 dark:text-red-300',
+    bgColor: 'bg-red-100 dark:bg-red-900/50',
   },
 };
 

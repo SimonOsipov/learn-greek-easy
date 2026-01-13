@@ -56,7 +56,7 @@ export function FlashcardContainer({ card }: FlashcardContainerProps) {
       <div
         data-testid="flashcard"
         className={cn(
-          'mx-auto max-w-4xl overflow-hidden rounded-2xl bg-white shadow-2xl',
+          'mx-auto max-w-4xl overflow-hidden rounded-2xl bg-card shadow-2xl',
           'flex min-h-[800px] flex-col transition-transform duration-300',
           'hover:-translate-y-1'
         )}
@@ -68,7 +68,10 @@ export function FlashcardContainer({ card }: FlashcardContainerProps) {
           <div className="-mt-2 mb-2 flex justify-center">
             <Tooltip>
               <TooltipTrigger asChild>
-                <Badge variant="secondary" className="bg-amber-100 text-amber-800">
+                <Badge
+                  variant="secondary"
+                  className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
+                >
                   <Clock className="mr-1 h-3 w-3" />
                   {t('session.earlyPractice.badge')}
                 </Badge>

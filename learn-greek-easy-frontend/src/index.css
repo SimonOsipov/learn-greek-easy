@@ -140,7 +140,7 @@
 @layer components {
   /* Card component base styles */
   .card {
-    @apply rounded-lg border border-border-gray bg-white p-6 transition-all duration-200;
+    @apply rounded-lg border border-border bg-card p-6 transition-all duration-200;
   }
 
   .card-hover {

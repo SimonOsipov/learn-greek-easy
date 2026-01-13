@@ -73,8 +73,8 @@ export const PreferencesSection: React.FC<PreferencesSectionProps> = ({ user }) 
   return (
     <div className="p-6" data-testid="preferences-section">
       <div className="mb-6">
-        <h2 className="text-xl font-bold text-gray-900">{t('preferences.title')}</h2>
-        <p className="text-sm text-gray-600">{t('preferences.subtitle')}</p>
+        <h2 className="text-xl font-bold text-foreground">{t('preferences.title')}</h2>
+        <p className="text-sm text-muted-foreground">{t('preferences.subtitle')}</p>
       </div>
 
       <Separator className="mb-6" />
@@ -95,49 +95,55 @@ export const PreferencesSection: React.FC<PreferencesSectionProps> = ({ user }) 
                 onClick={() => handlePreferenceChange('language', 'en')}
                 className={`flex items-center justify-between rounded-lg border-2 p-4 transition-all ${
                   preferences.language === 'en'
-                    ? 'border-blue-600 bg-blue-50'
-                    : 'border-gray-200 hover:border-gray-300'
+                    ? 'border-blue-600 bg-blue-50 dark:border-blue-400 dark:bg-blue-900/20'
+                    : 'border-border hover:border-border/80 dark:hover:border-border/60'
                 }`}
               >
                 <div className="flex items-center gap-2">
                   <span className="text-2xl">🇬🇧</span>
-                  <span className="font-medium text-gray-900">
+                  <span className="font-medium text-foreground">
                     {t('preferences.language.english')}
                   </span>
                 </div>
-                {preferences.language === 'en' && <Check className="h-5 w-5 text-blue-600" />}
+                {preferences.language === 'en' && (
+                  <Check className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                )}
               </button>
               <button
                 onClick={() => handlePreferenceChange('language', 'el')}
                 className={`flex items-center justify-between rounded-lg border-2 p-4 transition-all ${
                   preferences.language === 'el'
-                    ? 'border-blue-600 bg-blue-50'
-                    : 'border-gray-200 hover:border-gray-300'
+                    ? 'border-blue-600 bg-blue-50 dark:border-blue-400 dark:bg-blue-900/20'
+                    : 'border-border hover:border-border/80 dark:hover:border-border/60'
                 }`}
               >
                 <div className="flex items-center gap-2">
                   <span className="text-2xl">🇬🇷</span>
-                  <span className="font-medium text-gray-900">
+                  <span className="font-medium text-foreground">
                     {t('preferences.language.greek')}
                   </span>
                 </div>
-                {preferences.language === 'el' && <Check className="h-5 w-5 text-blue-600" />}
+                {preferences.language === 'el' && (
+                  <Check className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                )}
               </button>
               <button
                 onClick={() => handlePreferenceChange('language', 'ru')}
                 className={`flex items-center justify-between rounded-lg border-2 p-4 transition-all ${
                   preferences.language === 'ru'
-                    ? 'border-blue-600 bg-blue-50'
-                    : 'border-gray-200 hover:border-gray-300'
+                    ? 'border-blue-600 bg-blue-50 dark:border-blue-400 dark:bg-blue-900/20'
+                    : 'border-border hover:border-border/80 dark:hover:border-border/60'
                 }`}
               >
                 <div className="flex items-center gap-2">
                   <span className="text-2xl">🇷🇺</span>
-                  <span className="font-medium text-gray-900">
+                  <span className="font-medium text-foreground">
                     {t('preferences.language.russian')}
                   </span>
                 </div>
-                {preferences.language === 'ru' && <Check className="h-5 w-5 text-blue-600" />}
+                {preferences.language === 'ru' && (
+                  <Check className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                )}
               </button>
             </div>
           </CardContent>
@@ -156,12 +162,12 @@ export const PreferencesSection: React.FC<PreferencesSectionProps> = ({ user }) 
             <div className="flex items-center justify-between">
               <Label
                 htmlFor="dailyGoal"
-                className="text-base font-medium text-gray-900"
+                className="text-base font-medium text-foreground"
                 data-testid="daily-goal-value"
               >
                 {t('preferences.dailyGoal.unit', { minutes: preferences.dailyGoal })}
               </Label>
-              <div className="flex items-center gap-2 text-sm text-gray-600">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 {preferences.dailyGoal < 15 && (
                   <span data-testid="daily-goal-intensity">{t('preferences.dailyGoal.light')}</span>
                 )}
@@ -194,14 +200,14 @@ export const PreferencesSection: React.FC<PreferencesSectionProps> = ({ user }) 
                 className="w-full accent-green-600"
                 data-testid="daily-goal-slider"
               />
-              <div className="flex justify-between text-xs text-gray-500">
+              <div className="flex justify-between text-xs text-muted-foreground">
                 <span>5 min</span>
                 <span>30 min</span>
                 <span>60 min</span>
                 <span>120 min</span>
               </div>
             </div>
-            <p className="text-sm text-gray-600">{t('preferences.dailyGoal.reminder')}</p>
+            <p className="text-sm text-muted-foreground">{t('preferences.dailyGoal.reminder')}</p>
           </CardContent>
         </Card>
 
@@ -215,17 +221,17 @@ export const PreferencesSection: React.FC<PreferencesSectionProps> = ({ user }) 
             <CardDescription>{t('preferences.notifications.description')}</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center justify-between rounded-lg border border-gray-200 p-4">
+            <div className="flex items-center justify-between rounded-lg border border-border p-4">
               <div className="flex-1">
-                <p className="font-medium text-gray-900">{t('preferences.notifications.push')}</p>
-                <p className="text-sm text-gray-600">
+                <p className="font-medium text-foreground">{t('preferences.notifications.push')}</p>
+                <p className="text-sm text-muted-foreground">
                   {t('preferences.notifications.pushDescription')}
                 </p>
               </div>
               <button
                 onClick={() => handlePreferenceChange('notifications', !preferences.notifications)}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 ${
-                  preferences.notifications ? 'bg-purple-600' : 'bg-gray-300'
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 dark:focus:ring-offset-background ${
+                  preferences.notifications ? 'bg-purple-600' : 'bg-muted'
                 }`}
                 role="switch"
                 aria-checked={preferences.notifications}
@@ -241,11 +247,11 @@ export const PreferencesSection: React.FC<PreferencesSectionProps> = ({ user }) 
               </button>
             </div>
             {preferences.notifications && (
-              <div className="mt-4 rounded-lg bg-purple-50 p-4">
-                <p className="text-sm font-medium text-purple-900">
+              <div className="mt-4 rounded-lg bg-purple-50 p-4 dark:bg-purple-900/20">
+                <p className="text-sm font-medium text-purple-900 dark:text-purple-100">
                   {t('preferences.notifications.enabled')}
                 </p>
-                <p className="mt-1 text-sm text-purple-700">
+                <p className="mt-1 text-sm text-purple-700 dark:text-purple-300">
                   {t('preferences.notifications.enabledDescription')}
                 </p>
               </div>
@@ -311,10 +317,10 @@ export const PreferencesSection: React.FC<PreferencesSectionProps> = ({ user }) 
         {/* Save Status Indicator */}
         {isSaving && (
           <div
-            className="flex items-center justify-center gap-2 text-sm text-gray-600"
+            className="flex items-center justify-center gap-2 text-sm text-muted-foreground"
             data-testid="preferences-saving"
           >
-            <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600" />
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-muted border-t-blue-600 dark:border-t-blue-400" />
             {t('preferences.saving')}
           </div>
         )}

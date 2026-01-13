@@ -49,11 +49,14 @@ export function ErrorFallback({ error, onReset, eventId }: ErrorFallbackProps) {
   };
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50 p-8">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-background p-8">
       <div className="w-full max-w-md space-y-6">
         <div className="text-center">
-          <AlertCircle className="mx-auto mb-4 h-16 w-16 text-red-500" aria-hidden="true" />
-          <h1 className="mb-2 text-2xl font-bold text-gray-900">{t('error.somethingWrong')}</h1>
+          <AlertCircle
+            className="mx-auto mb-4 h-16 w-16 text-red-500 dark:text-red-400"
+            aria-hidden="true"
+          />
+          <h1 className="mb-2 text-2xl font-bold text-foreground">{t('error.somethingWrong')}</h1>
           <p className="text-muted-foreground">{t('error.unexpectedError')}</p>
         </div>
 

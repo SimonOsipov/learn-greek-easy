@@ -195,10 +195,7 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
   // Button group variant (default)
   return (
     <div
-      className={cn(
-        'inline-flex rounded-lg border border-gray-200 p-1 dark:border-gray-700',
-        className
-      )}
+      className={cn('inline-flex rounded-lg border border-border p-1', className)}
       role="group"
       aria-label={t('language.selectLanguage', 'Question Language')}
     >
@@ -212,11 +209,11 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
             type="button"
             onClick={() => handleSelect(lang)}
             className={cn(
-              'rounded-md font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-1',
+              'rounded-md font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-1 dark:focus:ring-offset-background',
               sizeClasses[size],
               isSelected
                 ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-200'
-                : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200'
+                : 'text-muted-foreground hover:bg-muted hover:text-foreground'
             )}
             aria-pressed={isSelected}
             aria-label={t(`language.${lang}`, display.name)}

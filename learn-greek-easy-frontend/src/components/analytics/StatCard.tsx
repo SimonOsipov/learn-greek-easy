@@ -35,28 +35,28 @@ const getColorClasses = (scheme: StatCardProps['colorScheme']) => {
   switch (scheme) {
     case 'success':
       return {
-        icon: 'text-green-600',
-        bg: 'bg-green-100',
-        trend: 'text-green-600',
+        icon: 'text-green-600 dark:text-green-400',
+        bg: 'bg-green-100 dark:bg-green-900/50',
+        trend: 'text-green-600 dark:text-green-400',
       };
     case 'warning':
       return {
-        icon: 'text-yellow-600',
-        bg: 'bg-yellow-100',
-        trend: 'text-yellow-600',
+        icon: 'text-yellow-600 dark:text-yellow-400',
+        bg: 'bg-yellow-100 dark:bg-yellow-900/50',
+        trend: 'text-yellow-600 dark:text-yellow-400',
       };
     case 'danger':
       return {
-        icon: 'text-red-600',
-        bg: 'bg-red-100',
-        trend: 'text-red-600',
+        icon: 'text-red-600 dark:text-red-400',
+        bg: 'bg-red-100 dark:bg-red-900/50',
+        trend: 'text-red-600 dark:text-red-400',
       };
     case 'primary':
     default:
       return {
-        icon: 'text-blue-600',
-        bg: 'bg-blue-100',
-        trend: 'text-blue-600',
+        icon: 'text-blue-600 dark:text-blue-400',
+        bg: 'bg-blue-100 dark:bg-blue-900/50',
+        trend: 'text-blue-600 dark:text-blue-400',
       };
   }
 };
@@ -69,18 +69,18 @@ const getTrendDisplay = (direction: 'up' | 'down' | 'neutral') => {
     case 'up':
       return {
         Icon: TrendingUp,
-        color: 'text-green-600',
+        color: 'text-green-600 dark:text-green-400',
       };
     case 'down':
       return {
         Icon: TrendingDown,
-        color: 'text-red-600',
+        color: 'text-red-600 dark:text-red-400',
       };
     case 'neutral':
     default:
       return {
         Icon: null,
-        color: 'text-gray-600',
+        color: 'text-muted-foreground',
       };
   }
 };
@@ -131,11 +131,11 @@ export const StatCard: React.FC<StatCardProps> = ({
       <CardContent className="pt-6">
         <div className="flex items-center justify-between">
           <div className="flex-1">
-            <p className="text-sm font-medium text-gray-500">{label}</p>
+            <p className="text-sm font-medium text-muted-foreground">{label}</p>
             <div className="mt-2">
-              <span className="text-3xl font-bold text-gray-900">{value}</span>
+              <span className="text-3xl font-bold text-foreground">{value}</span>
             </div>
-            {subtext && <p className="mt-1 text-xs text-gray-400">{subtext}</p>}
+            {subtext && <p className="mt-1 text-xs text-muted-foreground">{subtext}</p>}
             {trend && (
               <div className="mt-2 flex items-center gap-1">
                 {trendDisplay?.Icon && (

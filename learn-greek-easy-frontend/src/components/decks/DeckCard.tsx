@@ -81,12 +81,12 @@ export const DeckCard: React.FC<DeckCardProps> = ({
             {/* Greek Title */}
             <h3
               data-testid="deck-card-title"
-              className="truncate text-lg font-semibold text-gray-900"
+              className="truncate text-lg font-semibold text-foreground"
             >
               {titleGreek}
             </h3>
             {/* English Subtitle */}
-            <p className="truncate text-sm text-gray-600">{title}</p>
+            <p className="truncate text-sm text-muted-foreground">{title}</p>
           </div>
 
           {/* Level Badge and Lock Icon */}
@@ -140,7 +140,7 @@ export const DeckCard: React.FC<DeckCardProps> = ({
                 }
                 showLegend={false}
               />
-              <p className="mt-1 text-xs text-gray-600">
+              <p className="mt-1 text-xs text-muted-foreground">
                 {completionPercent}% {t('detail.complete')}
               </p>
             </div>
@@ -151,18 +151,18 @@ export const DeckCard: React.FC<DeckCardProps> = ({
         {showStats && (
           <div
             data-testid="deck-card-stats"
-            className="grid grid-cols-2 gap-2 border-t pt-3 text-center"
+            className="grid grid-cols-2 gap-2 border-t border-border pt-3 text-center"
           >
             {/* Card Count */}
             <div>
-              <p className="text-xs text-gray-600">{t('detail.cards')}</p>
-              <p className="text-sm font-semibold text-gray-900">{cardCount}</p>
+              <p className="text-xs text-muted-foreground">{t('detail.cards')}</p>
+              <p className="text-sm font-semibold text-foreground">{cardCount}</p>
             </div>
 
             {/* Completion or Progress */}
             <div>
-              <p className="text-xs text-gray-600">{t('detail.progress')}</p>
-              <p className="text-sm font-semibold text-gray-900">{completionPercent}%</p>
+              <p className="text-xs text-muted-foreground">{t('detail.progress')}</p>
+              <p className="text-sm font-semibold text-foreground">{completionPercent}%</p>
             </div>
           </div>
         )}

@@ -33,22 +33,22 @@ interface RetentionColors {
 const getRetentionColor = (rate: number): RetentionColors => {
   if (rate >= 80) {
     return {
-      text: 'text-green-600',
-      bg: 'bg-green-100',
-      icon: 'text-green-600',
+      text: 'text-green-600 dark:text-green-400',
+      bg: 'bg-green-100 dark:bg-green-900/50',
+      icon: 'text-green-600 dark:text-green-400',
     };
   }
   if (rate >= 60) {
     return {
-      text: 'text-yellow-600',
-      bg: 'bg-yellow-100',
-      icon: 'text-yellow-600',
+      text: 'text-yellow-600 dark:text-yellow-400',
+      bg: 'bg-yellow-100 dark:bg-yellow-900/50',
+      icon: 'text-yellow-600 dark:text-yellow-400',
     };
   }
   return {
-    text: 'text-red-600',
-    bg: 'bg-red-100',
-    icon: 'text-red-600',
+    text: 'text-red-600 dark:text-red-400',
+    bg: 'bg-red-100 dark:bg-red-900/50',
+    icon: 'text-red-600 dark:text-red-400',
   };
 };
 
@@ -118,9 +118,9 @@ export const RetentionWidget: React.FC<RetentionWidgetProps> = ({ isLoading: pro
   const colors = hasData
     ? getRetentionColor(retentionRate)
     : {
-        text: 'text-gray-600',
-        bg: 'bg-gray-100',
-        icon: 'text-gray-600',
+        text: 'text-muted-foreground',
+        bg: 'bg-muted',
+        icon: 'text-muted-foreground',
       };
 
   return (
@@ -128,14 +128,14 @@ export const RetentionWidget: React.FC<RetentionWidgetProps> = ({ isLoading: pro
       <CardContent className="pt-6">
         <div className="flex items-center justify-between">
           <div className="flex-1">
-            <p className="text-sm font-medium text-gray-500">Retention Rate</p>
+            <p className="text-sm font-medium text-muted-foreground">Retention Rate</p>
             <div className="mt-2 flex items-baseline gap-2">
               <span className={`text-3xl font-bold ${colors.text}`}>{displayValue}</span>
               {hasData && retentionRate >= 75 && (
                 <TrendingUp className={`h-5 w-5 ${colors.icon}`} aria-hidden="true" />
               )}
             </div>
-            <p className="mt-1 text-xs text-gray-400">
+            <p className="mt-1 text-xs text-muted-foreground">
               {hasData ? '% remembered after 7+ days' : 'Insufficient data'}
             </p>
           </div>

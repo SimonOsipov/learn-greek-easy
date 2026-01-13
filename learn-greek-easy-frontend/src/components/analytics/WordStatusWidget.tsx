@@ -72,7 +72,7 @@ export const WordStatusWidget: React.FC<WordStatusWidgetProps> = ({ isLoading: p
           <CardTitle>Vocabulary Breakdown</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-gray-400">No cards yet. Start learning!</p>
+          <p className="text-sm text-muted-foreground">No cards yet. Start learning!</p>
         </CardContent>
       </Card>
     );
@@ -90,7 +90,7 @@ export const WordStatusWidget: React.FC<WordStatusWidgetProps> = ({ isLoading: p
       key: 'new',
       label: 'New',
       count: wordStatus.new,
-      color: 'text-gray-500',
+      color: 'text-muted-foreground',
       Icon: Circle,
       badgeVariant: 'secondary',
     },
@@ -98,7 +98,7 @@ export const WordStatusWidget: React.FC<WordStatusWidgetProps> = ({ isLoading: p
       key: 'learning',
       label: 'Learning',
       count: wordStatus.learning,
-      color: 'text-blue-500',
+      color: 'text-blue-500 dark:text-blue-400',
       Icon: BookOpen,
       badgeVariant: 'secondary',
     },
@@ -106,7 +106,7 @@ export const WordStatusWidget: React.FC<WordStatusWidgetProps> = ({ isLoading: p
       key: 'review',
       label: 'Review',
       count: wordStatus.review,
-      color: 'text-yellow-500',
+      color: 'text-yellow-500 dark:text-yellow-400',
       Icon: RefreshCw,
       badgeVariant: 'secondary',
     },
@@ -114,7 +114,7 @@ export const WordStatusWidget: React.FC<WordStatusWidgetProps> = ({ isLoading: p
       key: 'mastered',
       label: 'Mastered',
       count: wordStatus.mastered,
-      color: 'text-green-500',
+      color: 'text-green-500 dark:text-green-400',
       Icon: CheckCircle,
       badgeVariant: 'default',
     },
@@ -132,19 +132,19 @@ export const WordStatusWidget: React.FC<WordStatusWidgetProps> = ({ isLoading: p
             <div key={key} className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Icon className={`h-4 w-4 ${color}`} aria-hidden={true} />
-                <span className="text-sm font-medium text-gray-700">{label}</span>
+                <span className="text-sm font-medium text-foreground">{label}</span>
               </div>
               <div className="flex items-center gap-2">
                 <Badge variant={badgeVariant}>{count}</Badge>
-                <span className="w-12 text-right text-xs text-gray-500">{percentage}%</span>
+                <span className="w-12 text-right text-xs text-muted-foreground">{percentage}%</span>
               </div>
             </div>
           );
         })}
-        <div className="border-t border-gray-200 pt-3">
+        <div className="border-t border-border pt-3">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-bold text-gray-900">Total Cards</span>
-            <span className="text-lg font-bold text-gray-900">{wordStatus.total}</span>
+            <span className="text-sm font-bold text-foreground">Total Cards</span>
+            <span className="text-lg font-bold text-foreground">{wordStatus.total}</span>
           </div>
         </div>
       </CardContent>

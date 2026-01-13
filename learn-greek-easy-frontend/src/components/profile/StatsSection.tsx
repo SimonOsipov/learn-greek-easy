@@ -49,8 +49,10 @@ export const StatsSection: React.FC<StatsSectionProps> = ({ stats }) => {
   return (
     <div className="p-6">
       <div className="mb-6">
-        <h2 className="text-xl font-bold text-gray-900">Learning Statistics</h2>
-        <p className="text-sm text-gray-600">Track your progress and celebrate your achievements</p>
+        <h2 className="text-xl font-bold text-foreground">Learning Statistics</h2>
+        <p className="text-sm text-muted-foreground">
+          Track your progress and celebrate your achievements
+        </p>
       </div>
 
       <Separator className="mb-6" />
@@ -61,18 +63,20 @@ export const StatsSection: React.FC<StatsSectionProps> = ({ stats }) => {
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-medium text-gray-600">Current Streak</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Current Streak
+              </CardTitle>
               <Flame className="h-5 w-5 text-orange-500" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-gray-900">
+            <div className="text-3xl font-bold text-foreground">
               {stats.streak}
-              <span className="ml-1 text-lg font-normal text-gray-600">
+              <span className="ml-1 text-lg font-normal text-muted-foreground">
                 {stats.streak === 1 ? 'day' : 'days'}
               </span>
             </div>
-            <p className="mt-2 text-xs text-gray-500">{getStreakMessage(stats.streak)}</p>
+            <p className="mt-2 text-xs text-muted-foreground">{getStreakMessage(stats.streak)}</p>
           </CardContent>
         </Card>
 
@@ -80,15 +84,19 @@ export const StatsSection: React.FC<StatsSectionProps> = ({ stats }) => {
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-medium text-gray-600">Words Learned</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Words Learned
+              </CardTitle>
               <BookOpen className="h-5 w-5 text-blue-500" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-gray-900">
+            <div className="text-3xl font-bold text-foreground">
               {stats.wordsLearned.toLocaleString()}
             </div>
-            <p className="mt-2 text-xs text-gray-500">~{avgWordsPerDay} words per day average</p>
+            <p className="mt-2 text-xs text-muted-foreground">
+              ~{avgWordsPerDay} words per day average
+            </p>
           </CardContent>
         </Card>
 
@@ -96,13 +104,15 @@ export const StatsSection: React.FC<StatsSectionProps> = ({ stats }) => {
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-medium text-gray-600">Total XP</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Total XP</CardTitle>
               <Trophy className="h-5 w-5 text-yellow-500" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-gray-900">{stats.totalXP.toLocaleString()}</div>
-            <p className="mt-2 text-xs text-gray-500">
+            <div className="text-3xl font-bold text-foreground">
+              {stats.totalXP.toLocaleString()}
+            </div>
+            <p className="mt-2 text-xs text-muted-foreground">
               Level {level} • {Math.round(progressPercent)}% to next level
             </p>
           </CardContent>
@@ -129,7 +139,7 @@ export const StatsSection: React.FC<StatsSectionProps> = ({ stats }) => {
         </CardHeader>
         <CardContent>
           <Progress value={progressPercent} className="h-3" />
-          <p className="mt-3 text-sm text-gray-600">
+          <p className="mt-3 text-sm text-muted-foreground">
             Keep learning to earn more XP and level up! Each lesson, quiz, and review session
             contributes to your progress.
           </p>
@@ -140,19 +150,19 @@ export const StatsSection: React.FC<StatsSectionProps> = ({ stats }) => {
       <Card className="mb-8">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Clock className="h-5 w-5 text-gray-600" />
+            <Clock className="h-5 w-5 text-muted-foreground" />
             Activity Timeline
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-start gap-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100">
-              <Calendar className="h-5 w-5 text-green-600" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
+              <Calendar className="h-5 w-5 text-green-600 dark:text-green-400" />
             </div>
             <div className="flex-1">
-              <p className="font-medium text-gray-900">Joined Learn Greek Easy</p>
-              <p className="text-sm text-gray-600">{formatDate(stats.joinedDate)}</p>
-              <p className="mt-1 text-xs text-gray-500">
+              <p className="font-medium text-foreground">Joined Learn Greek Easy</p>
+              <p className="text-sm text-muted-foreground">{formatDate(stats.joinedDate)}</p>
+              <p className="mt-1 text-xs text-muted-foreground">
                 {daysSinceJoining} {daysSinceJoining === 1 ? 'day' : 'days'} ago
               </p>
             </div>
@@ -160,13 +170,13 @@ export const StatsSection: React.FC<StatsSectionProps> = ({ stats }) => {
 
           {stats.lastActivity && (
             <div className="flex items-start gap-4">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100">
-                <TrendingUp className="h-5 w-5 text-blue-600" />
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30">
+                <TrendingUp className="h-5 w-5 text-blue-600 dark:text-blue-400" />
               </div>
               <div className="flex-1">
-                <p className="font-medium text-gray-900">Last Active</p>
-                <p className="text-sm text-gray-600">{formatDate(stats.lastActivity)}</p>
-                <p className="mt-1 text-xs text-gray-500">
+                <p className="font-medium text-foreground">Last Active</p>
+                <p className="text-sm text-muted-foreground">{formatDate(stats.lastActivity)}</p>
+                <p className="mt-1 text-xs text-muted-foreground">
                   {Math.floor(
                     (new Date().getTime() - new Date(stats.lastActivity).getTime()) /
                       (1000 * 60 * 60 * 24)
@@ -203,25 +213,28 @@ export const StatsSection: React.FC<StatsSectionProps> = ({ stats }) => {
                 key={index}
                 className={`flex flex-col items-center rounded-lg border-2 p-4 text-center transition-all ${
                   achievement.unlocked
-                    ? 'border-purple-300 bg-purple-50'
-                    : 'border-gray-200 bg-gray-50 opacity-60'
+                    ? 'border-purple-300 bg-purple-50 dark:border-purple-700 dark:bg-purple-900/20'
+                    : 'border-border bg-muted/50 opacity-60'
                 }`}
               >
                 <div className="mb-2 text-3xl">{achievement.icon}</div>
-                <p className="text-xs font-medium text-gray-900">{achievement.name}</p>
+                <p className="text-xs font-medium text-foreground">{achievement.name}</p>
                 {achievement.unlocked ? (
-                  <Badge variant="secondary" className="mt-2 bg-purple-100 text-purple-700">
+                  <Badge
+                    variant="secondary"
+                    className="mt-2 bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300"
+                  >
                     Unlocked
                   </Badge>
                 ) : (
-                  <Badge variant="outline" className="mt-2 text-gray-500">
+                  <Badge variant="outline" className="mt-2 text-muted-foreground">
                     Locked
                   </Badge>
                 )}
               </div>
             ))}
           </div>
-          <p className="mt-6 text-center text-sm text-gray-600">
+          <p className="mt-6 text-center text-sm text-muted-foreground">
             More achievements coming soon! Keep learning to unlock special badges.
           </p>
         </CardContent>
