@@ -229,6 +229,7 @@ export function CulturePracticePage() {
         id: q.id,
         question_text: q.question_text,
         options: q.options,
+        option_count: q.option_count,
         image_url: q.image_url,
         order_index: q.order_index,
       }));

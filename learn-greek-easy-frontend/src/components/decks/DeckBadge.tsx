@@ -82,7 +82,7 @@ export const DeckBadge: React.FC<DeckBadgeProps> = ({
     return (
       <Badge
         variant="outline"
-        className={`${config.bgColor} ${config.textColor} rounded px-2 py-1 text-xs ${className}`}
+        className={`${config.bgColor} ${config.textColor} whitespace-nowrap rounded px-2 py-1 text-xs ${className}`}
         aria-label={`Status: ${statusLabel}`}
       >
         {statusLabel}
