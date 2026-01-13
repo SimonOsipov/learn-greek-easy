@@ -61,7 +61,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({ user, onAvatarClic
           className="group relative mb-4 transition-transform hover:scale-105"
           type="button"
         >
-          <Avatar className="h-24 w-24 border-4 border-white shadow-lg">
+          <Avatar className="h-24 w-24 border-4 border-background shadow-lg">
             <AvatarImage src={user.avatar} alt={user.name} />
             <AvatarFallback className="bg-gradient-to-br from-blue-500 to-blue-600 text-2xl font-bold text-white">
               {initials}
@@ -76,24 +76,24 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({ user, onAvatarClic
 
         {/* User Info */}
         <div className="mb-3">
-          <h2 className="mb-1 text-xl font-bold text-gray-900">{user.name}</h2>
-          <p className="text-sm text-gray-600">{user.email}</p>
+          <h2 className="mb-1 text-xl font-bold text-foreground">{user.name}</h2>
+          <p className="text-sm text-muted-foreground">{user.email}</p>
         </div>
 
         {/* Role Badge */}
         <div className="mb-4">{getRoleBadge()}</div>
 
         {/* Metadata */}
-        <div className="w-full border-t border-gray-200 pt-4">
-          <div className="flex items-center justify-center gap-4 text-sm text-gray-600">
+        <div className="w-full border-t border-border pt-4">
+          <div className="flex items-center justify-center gap-4 text-sm text-muted-foreground">
             <div className="flex flex-col">
-              <span className="text-xs text-gray-500">{t('header.memberSince')}</span>
-              <span className="font-medium text-gray-900">{memberSince}</span>
+              <span className="text-xs text-muted-foreground">{t('header.memberSince')}</span>
+              <span className="font-medium text-foreground">{memberSince}</span>
             </div>
             {user.stats.lastActivity && (
-              <div className="flex flex-col border-l border-gray-200 pl-4">
-                <span className="text-xs text-gray-500">{t('header.lastActive')}</span>
-                <span className="font-medium text-gray-900">
+              <div className="flex flex-col border-l border-border pl-4">
+                <span className="text-xs text-muted-foreground">{t('header.lastActive')}</span>
+                <span className="font-medium text-foreground">
                   {new Date(user.stats.lastActivity).toLocaleDateString(i18n.language, {
                     month: 'short',
                     day: 'numeric',

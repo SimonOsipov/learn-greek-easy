@@ -185,11 +185,11 @@ export const QuestionFeedback: React.FC<QuestionFeedbackProps> = ({
 
           {/* Correct answer reveal (when wrong) */}
           {!isCorrect && (
-            <div className="mt-4 rounded-lg bg-white/60 p-3 dark:bg-gray-900/40">
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+            <div className="mt-4 rounded-lg bg-background/60 p-3">
+              <p className="text-sm font-medium text-muted-foreground">
                 {t('feedback.correctAnswerWas', 'The correct answer was:')}
               </p>
-              <p className="mt-1 font-semibold text-gray-900 dark:text-gray-100">
+              <p className="mt-1 font-semibold text-foreground">
                 {t('feedback.optionWithLabel', {
                   label: correctOption.label,
                   text: correctAnswerText,

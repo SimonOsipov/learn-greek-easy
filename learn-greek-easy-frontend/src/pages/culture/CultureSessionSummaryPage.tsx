@@ -81,7 +81,7 @@ function getPerformanceMessage(
  */
 function SummaryPageSkeleton() {
   return (
-    <div className="min-h-screen bg-gray-50 py-8 md:py-12">
+    <div className="min-h-screen bg-background py-8 md:py-12">
       <div className="container mx-auto max-w-3xl space-y-6 px-4">
         <Skeleton className="h-48 w-full" />
         <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
@@ -151,7 +151,7 @@ export function CultureSessionSummaryPage() {
   // Error state
   if (!deckId) {
     return (
-      <div className="min-h-screen bg-gray-50 py-8 md:py-12">
+      <div className="min-h-screen bg-background py-8 md:py-12">
         <div className="container mx-auto max-w-3xl px-4">
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
@@ -183,7 +183,7 @@ export function CultureSessionSummaryPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 md:py-12">
+    <div className="min-h-screen bg-background py-8 md:py-12">
       <div className="container mx-auto max-w-3xl px-4">
         {/* Header Card - Performance Summary */}
         <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-purple-600 to-indigo-700 text-white">
@@ -229,9 +229,11 @@ export function CultureSessionSummaryPage() {
           {/* Questions Answered */}
           <Card>
             <CardContent className="flex flex-col items-center p-4">
-              <Target className="mb-2 h-8 w-8 text-purple-600" />
-              <p className="text-2xl font-bold">{summary.stats.questionsAnswered}</p>
-              <p className="text-center text-sm text-gray-500">
+              <Target className="mb-2 h-8 w-8 text-purple-600 dark:text-purple-400" />
+              <p className="text-2xl font-bold text-foreground">
+                {summary.stats.questionsAnswered}
+              </p>
+              <p className="text-center text-sm text-muted-foreground">
                 {t('summary.questionsAnswered', 'Questions')}
               </p>
             </CardContent>
@@ -240,18 +242,20 @@ export function CultureSessionSummaryPage() {
           {/* Correct */}
           <Card>
             <CardContent className="flex flex-col items-center p-4">
-              <CheckCircle className="mb-2 h-8 w-8 text-emerald-600" />
-              <p className="text-2xl font-bold">{summary.stats.correctCount}</p>
-              <p className="text-center text-sm text-gray-500">{t('summary.correct', 'Correct')}</p>
+              <CheckCircle className="mb-2 h-8 w-8 text-emerald-600 dark:text-emerald-400" />
+              <p className="text-2xl font-bold text-foreground">{summary.stats.correctCount}</p>
+              <p className="text-center text-sm text-muted-foreground">
+                {t('summary.correct', 'Correct')}
+              </p>
             </CardContent>
           </Card>
 
           {/* Incorrect */}
           <Card>
             <CardContent className="flex flex-col items-center p-4">
-              <XCircle className="mb-2 h-8 w-8 text-red-500" />
-              <p className="text-2xl font-bold">{summary.stats.incorrectCount}</p>
-              <p className="text-center text-sm text-gray-500">
+              <XCircle className="mb-2 h-8 w-8 text-red-500 dark:text-red-400" />
+              <p className="text-2xl font-bold text-foreground">{summary.stats.incorrectCount}</p>
+              <p className="text-center text-sm text-muted-foreground">
                 {t('summary.incorrect', 'Incorrect')}
               </p>
             </CardContent>
@@ -260,9 +264,11 @@ export function CultureSessionSummaryPage() {
           {/* Time Spent */}
           <Card>
             <CardContent className="flex flex-col items-center p-4">
-              <Clock className="mb-2 h-8 w-8 text-blue-600" />
-              <p className="text-2xl font-bold">{formatDuration(summary.durationSeconds)}</p>
-              <p className="text-center text-sm text-gray-500">
+              <Clock className="mb-2 h-8 w-8 text-blue-600 dark:text-blue-400" />
+              <p className="text-2xl font-bold text-foreground">
+                {formatDuration(summary.durationSeconds)}
+              </p>
+              <p className="text-center text-sm text-muted-foreground">
                 {t('summary.timeSpent', 'Time Spent')}
               </p>
             </CardContent>
@@ -294,30 +300,32 @@ export function CultureSessionSummaryPage() {
                   className={cn(
                     'rounded-lg border p-3',
                     result.isCorrect
-                      ? 'border-emerald-200 bg-emerald-50'
-                      : 'border-red-200 bg-red-50'
+                      ? 'border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950/30'
+                      : 'border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950/30'
                   )}
                 >
                   <div className="flex items-start gap-3">
                     <div className="mt-0.5">
                       {result.isCorrect ? (
-                        <CheckCircle className="h-5 w-5 text-emerald-600" />
+                        <CheckCircle className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
                       ) : (
-                        <XCircle className="h-5 w-5 text-red-500" />
+                        <XCircle className="h-5 w-5 text-red-500 dark:text-red-400" />
                       )}
                     </div>
                     <div className="flex-1 space-y-1">
-                      <p className="font-medium text-gray-900">
+                      <p className="font-medium text-foreground">
                         {index + 1}. {questionText}
                       </p>
                       <p className="text-sm">
-                        <span className="text-gray-500">
+                        <span className="text-muted-foreground">
                           {t('summary.yourAnswer', 'Your answer')}:
                         </span>{' '}
                         <span
                           className={cn(
                             'font-medium',
-                            result.isCorrect ? 'text-emerald-700' : 'text-red-600'
+                            result.isCorrect
+                              ? 'text-emerald-700 dark:text-emerald-400'
+                              : 'text-red-600 dark:text-red-400'
                           )}
                         >
                           {OPTION_LETTERS[result.selectedOption - 1]}: {selectedText}
@@ -325,16 +333,16 @@ export function CultureSessionSummaryPage() {
                       </p>
                       {!result.isCorrect && (
                         <p className="text-sm">
-                          <span className="text-gray-500">
+                          <span className="text-muted-foreground">
                             {t('summary.correctAnswer', 'Correct answer')}:
                           </span>{' '}
-                          <span className="font-medium text-emerald-700">
+                          <span className="font-medium text-emerald-700 dark:text-emerald-400">
                             {OPTION_LETTERS[result.correctOption - 1]}: {correctText}
                           </span>
                         </p>
                       )}
                     </div>
-                    <div className="flex items-center gap-1 rounded-full bg-amber-100 px-2 py-1 text-xs font-medium text-amber-700">
+                    <div className="flex items-center gap-1 rounded-full bg-amber-100 px-2 py-1 text-xs font-medium text-amber-700 dark:bg-amber-900/50 dark:text-amber-300">
                       <Star className="h-3 w-3" fill="currentColor" />+{result.xpEarned}
                     </div>
                   </div>

@@ -164,16 +164,16 @@ test.describe('Deck Filter - Culture/Level Interaction', () => {
       // Find the level label
       const levelLabel = page.getByText(/level:/i);
 
-      // Initially should have normal color (gray-700)
+      // Initially should have normal color (text-foreground semantic class)
       await expect(levelLabel).toBeVisible();
-      await expect(levelLabel).toHaveClass(/text-gray-700/);
+      await expect(levelLabel).toHaveClass(/text-foreground/);
 
       // Switch to Culture
       const cultureButton = page.getByRole('button', { name: 'Culture', exact: true });
       await cultureButton.click();
 
-      // Label should now be dimmed (gray-400) - assertions auto-wait
-      await expect(levelLabel).toHaveClass(/text-gray-400/);
+      // Label should now be dimmed (text-muted-foreground/50 semantic class) - assertions auto-wait
+      await expect(levelLabel).toHaveClass(/text-muted-foreground/);
     });
 
     test('should show tooltip on disabled level buttons', async ({ page }) => {

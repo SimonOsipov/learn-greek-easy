@@ -95,7 +95,7 @@ export const DeckFilters: React.FC<DeckFiltersProps> = ({
     <div className="mb-6 space-y-4">
       {/* Search Input */}
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           type="text"
           placeholder={t('filters.searchPlaceholder')}
@@ -110,7 +110,7 @@ export const DeckFilters: React.FC<DeckFiltersProps> = ({
               setSearchInput('');
               onChange({ search: '' });
             }}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
             aria-label="Clear search"
           >
             <X className="h-4 w-4" />
@@ -128,7 +128,7 @@ export const DeckFilters: React.FC<DeckFiltersProps> = ({
         {/* Row 1: Level Filters */}
         <div className="flex flex-wrap items-center gap-2">
           <span
-            className={`text-sm font-medium ${isLevelFilterDisabled ? 'text-gray-400' : 'text-gray-700'}`}
+            className={`text-sm font-medium ${isLevelFilterDisabled ? 'text-muted-foreground/50' : 'text-foreground'}`}
             title={isLevelFilterDisabled ? t('filters.levelDisabledForCulture') : undefined}
           >
             {t('filters.level')}
@@ -153,7 +153,7 @@ export const DeckFilters: React.FC<DeckFiltersProps> = ({
 
         {/* Row 2: Status Filters + Premium + Clear */}
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm font-medium text-gray-700">{t('filters.status')}</span>
+          <span className="text-sm font-medium text-foreground">{t('filters.status')}</span>
           {STATUS_OPTIONS.map(({ value, labelKey }) => (
             <Button
               key={value}
@@ -183,7 +183,7 @@ export const DeckFilters: React.FC<DeckFiltersProps> = ({
               variant="ghost"
               size="sm"
               onClick={handleClearFilters}
-              className="ml-auto text-gray-600 hover:text-gray-900"
+              className="ml-auto text-muted-foreground hover:text-foreground"
             >
               <X className="mr-1 h-4 w-4" />
               {t('filters.clearAll')} ({activeFilterCount})
@@ -193,7 +193,7 @@ export const DeckFilters: React.FC<DeckFiltersProps> = ({
       </div>
 
       {/* Results Counter */}
-      <div className="text-sm text-gray-600">
+      <div className="text-sm text-muted-foreground">
         {t('filters.showing', { count: filteredDecks, total: totalDecks })}
       </div>
     </div>

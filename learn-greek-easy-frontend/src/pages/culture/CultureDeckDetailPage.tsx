@@ -125,15 +125,18 @@ export function CultureDeckDetailPage() {
       {/* Breadcrumb Navigation */}
       <nav
         data-testid="breadcrumb"
-        className="mb-4 flex items-center gap-2 text-sm text-gray-600"
+        className="mb-4 flex items-center gap-2 text-sm text-muted-foreground"
         aria-label="Breadcrumb"
       >
-        <Link to="/decks" className="flex items-center gap-1 transition-colors hover:text-gray-900">
+        <Link
+          to="/decks"
+          className="flex items-center gap-1 transition-colors hover:text-foreground"
+        >
           <ChevronLeft className="h-4 w-4" />
           {t('deck:detail.breadcrumb')}
         </Link>
         <span>/</span>
-        <span className="truncate font-medium text-gray-900">{deck.name}</span>
+        <span className="truncate font-medium text-foreground">{deck.name}</span>
       </nav>
 
       {/* Main Content */}
@@ -145,7 +148,7 @@ export function CultureDeckDetailPage() {
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="min-w-0 flex-1">
                 {/* Title */}
-                <h1 className="mb-1 text-2xl font-semibold text-gray-900 md:text-3xl">
+                <h1 className="mb-1 text-2xl font-semibold text-foreground md:text-3xl">
                   {deck.name}
                 </h1>
               </div>
@@ -160,17 +163,17 @@ export function CultureDeckDetailPage() {
           <CardContent>
             {/* Description */}
             {deck.description && (
-              <p className="leading-relaxed text-gray-700">{deck.description}</p>
+              <p className="leading-relaxed text-foreground">{deck.description}</p>
             )}
 
             {/* Progress Bar (if has progress) */}
             {progress && progress.status !== 'not-started' && (
               <div className="mt-6">
                 <div className="mb-2 flex items-center justify-between">
-                  <span className="text-sm font-medium text-gray-700">
+                  <span className="text-sm font-medium text-foreground">
                     {t('deck:detail.yourProgress')}
                   </span>
-                  <span className="text-sm text-gray-600">
+                  <span className="text-sm text-muted-foreground">
                     {Math.round(
                       ((progress.cardsLearning + progress.cardsMastered) / progress.cardsTotal) *
                         100
@@ -227,18 +230,24 @@ export function CultureDeckDetailPage() {
 
             {/* Question Distribution (if started) */}
             {progress && progress.status !== 'not-started' && (
-              <div className="mt-6 grid grid-cols-3 gap-4 border-t pt-4">
+              <div className="mt-6 grid grid-cols-3 gap-4 border-t border-border pt-4">
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-gray-400">{progress.cardsNew}</p>
-                  <p className="mt-1 text-xs text-gray-600">{t('deck:detail.new')}</p>
+                  <p className="text-2xl font-bold text-muted-foreground">{progress.cardsNew}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{t('deck:detail.new')}</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-blue-500">{progress.cardsLearning}</p>
-                  <p className="mt-1 text-xs text-gray-600">{t('deck:detail.learning')}</p>
+                  <p className="text-2xl font-bold text-blue-500 dark:text-blue-400">
+                    {progress.cardsLearning}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">{t('deck:detail.learning')}</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-green-500">{progress.cardsMastered}</p>
-                  <p className="mt-1 text-xs text-gray-600">{t('deck:detail.masteredLabel')}</p>
+                  <p className="text-2xl font-bold text-green-500 dark:text-green-400">
+                    {progress.cardsMastered}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {t('deck:detail.masteredLabel')}
+                  </p>
                 </div>
               </div>
             )}
@@ -259,11 +268,11 @@ interface StatCardProps {
 
 const StatCard: React.FC<StatCardProps> = ({ icon, label, value, subtext }) => {
   return (
-    <div className="flex flex-col items-center rounded-lg bg-gray-50 p-3 text-center">
+    <div className="flex flex-col items-center rounded-lg bg-muted p-3 text-center">
       <div className="mb-2">{icon}</div>
-      <p className="mb-1 text-xs text-gray-600">{label}</p>
-      <p className="text-xl font-bold text-gray-900">{value}</p>
-      <p className="mt-1 text-xs text-gray-500">{subtext}</p>
+      <p className="mb-1 text-xs text-muted-foreground">{label}</p>
+      <p className="text-xl font-bold text-foreground">{value}</p>
+      <p className="mt-1 text-xs text-muted-foreground">{subtext}</p>
     </div>
   );
 };
@@ -301,7 +310,7 @@ const LoadingSkeleton: React.FC = () => {
         <CardContent>
           <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="rounded-lg bg-gray-50 p-3">
+              <div key={i} className="rounded-lg bg-muted p-3">
                 <Skeleton className="mx-auto mb-2 h-5 w-5" />
                 <Skeleton className="mx-auto mb-1 h-4 w-16" />
                 <Skeleton className="mx-auto h-6 w-12" />
@@ -345,11 +354,11 @@ const ErrorState: React.FC<ErrorStateProps> = ({ error, onRetry }) => {
 
       <Card>
         <CardContent className="py-12 pt-6 text-center">
-          <AlertCircle className="mx-auto mb-4 h-16 w-16 text-red-500" />
-          <h2 className="mb-2 text-xl font-semibold text-gray-900">
+          <AlertCircle className="mx-auto mb-4 h-16 w-16 text-red-500 dark:text-red-400" />
+          <h2 className="mb-2 text-xl font-semibold text-foreground">
             {t('detail.error.failedToLoad')}
           </h2>
-          <p className="mx-auto mb-6 max-w-md text-sm text-gray-600">
+          <p className="mx-auto mb-6 max-w-md text-sm text-muted-foreground">
             {t('detail.error.description')}
           </p>
           <div className="flex justify-center gap-3">
@@ -373,9 +382,9 @@ const NotFoundState: React.FC = () => {
     <div data-testid="deck-detail" className="container mx-auto max-w-4xl px-4 py-6 md:py-8">
       <Card>
         <CardContent className="py-12 pt-6 text-center">
-          <BookOpen className="mx-auto mb-4 h-16 w-16 text-gray-400" />
-          <h2 className="mb-2 text-xl font-semibold text-gray-900">{t('detail.notFound')}</h2>
-          <p className="mx-auto mb-6 max-w-md text-sm text-gray-600">
+          <BookOpen className="mx-auto mb-4 h-16 w-16 text-muted-foreground" />
+          <h2 className="mb-2 text-xl font-semibold text-foreground">{t('detail.notFound')}</h2>
+          <p className="mx-auto mb-6 max-w-md text-sm text-muted-foreground">
             {t('detail.notFoundDescription')}
           </p>
           <Button onClick={() => navigate('/decks')}>{t('detail.browseAll')}</Button>

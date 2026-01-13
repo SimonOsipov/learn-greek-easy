@@ -20,20 +20,22 @@ export function ConjugationTable({ conjugation }: ConjugationTableProps) {
   ];
 
   return (
-    <div className="overflow-hidden rounded-xl bg-white shadow-sm">
+    <div className="overflow-hidden rounded-xl bg-card shadow-sm">
       {persons.map(({ label, greek, english }, index) => (
         <div
           key={label}
           className={cn(
-            'grid grid-cols-[140px_1fr_1fr] border-gray-200',
+            'grid grid-cols-[140px_1fr_1fr] border-border',
             index < persons.length - 1 && 'border-b'
           )}
         >
-          <div className="bg-gray-50 px-4 py-3.5 text-center text-sm font-semibold text-gray-700">
+          <div className="bg-muted/50 px-4 py-3.5 text-center text-sm font-semibold text-muted-foreground">
             {label}
           </div>
-          <div className="px-4 py-3.5 text-center text-sm font-medium text-gray-900">{greek}</div>
-          <div className="px-4 py-3.5 text-center text-sm italic text-gray-600">{english}</div>
+          <div className="px-4 py-3.5 text-center text-sm font-medium text-foreground">{greek}</div>
+          <div className="px-4 py-3.5 text-center text-sm italic text-muted-foreground">
+            {english}
+          </div>
         </div>
       ))}
     </div>

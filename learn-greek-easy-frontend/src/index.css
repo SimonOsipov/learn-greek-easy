@@ -140,7 +140,7 @@
 @layer components {
   /* Card component base styles */
   .card {
-    @apply rounded-lg border border-border-gray bg-white p-6 transition-all duration-200;
+    @apply rounded-lg border border-border bg-card p-6 transition-all duration-200;
   }
 
   .card-hover {
@@ -176,6 +176,17 @@
   .metric-sublabel {
     @apply text-xs text-text-subtle;
   }
+}
+
+/* Theme transition animation */
+html.theme-transition,
+html.theme-transition *,
+html.theme-transition *::before,
+html.theme-transition *::after {
+  transition:
+    background-color 200ms ease-in-out,
+    border-color 200ms ease-in-out,
+    color 200ms ease-in-out !important;
 }
 
 /* Accessibility: Respect user's motion preferences */

@@ -23,10 +23,10 @@ export function NounGrammarSection({ nounData }: NounGrammarSectionProps) {
   ];
 
   return (
-    <div className="border-t border-gray-200 bg-gray-50 px-6 py-6">
+    <div className="border-t border-border bg-muted/50 px-6 py-6">
       <div className="mb-5 flex min-h-[40px] items-center gap-2">
-        <span className="text-base font-bold text-gray-900">📝</span>
-        <span className="text-base font-bold text-gray-900">Noun Forms & Cases</span>
+        <span className="text-base font-bold text-foreground">📝</span>
+        <span className="text-base font-bold text-foreground">Noun Forms & Cases</span>
       </div>
 
       <PremiumGate isLocked={!isPremium} badgeText="Pro">

@@ -19,7 +19,7 @@ export function CardMain({ card, isFlipped, onFlip }: CardMainProps) {
 
   return (
     <div
-      className="relative flex min-h-[280px] cursor-pointer flex-col justify-center px-8 py-12 text-center transition-colors hover:bg-gray-50/50"
+      className="relative flex min-h-[280px] cursor-pointer flex-col justify-center px-8 py-12 text-center transition-colors hover:bg-muted/50"
       onClick={onFlip}
       role="button"
       tabIndex={0}
@@ -43,7 +43,7 @@ export function CardMain({ card, isFlipped, onFlip }: CardMainProps) {
       <Translation text={card.translation || card.back} isVisible={isFlipped} />
 
       {!isFlipped && (
-        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 text-base text-gray-400">
+        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 text-base text-muted-foreground">
           {t('session.clickToReveal')}
         </div>
       )}

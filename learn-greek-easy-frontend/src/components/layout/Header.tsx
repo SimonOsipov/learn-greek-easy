@@ -7,6 +7,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { LogoutDialog } from '@/components/auth/LogoutDialog';
 import { LanguageSwitcher } from '@/components/i18n';
 import { NotificationsDropdown } from '@/components/notifications';
+import { ThemeSwitcher } from '@/components/theme';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
@@ -78,7 +79,7 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
 
   return (
     <header
-      className={cn('sticky top-0 z-50 w-full border-b border-border-gray bg-white', className)}
+      className={cn('sticky top-0 z-50 w-full border-b border-border bg-background', className)}
     >
       <PageContainer>
         <div className="flex h-16 items-center justify-between">
@@ -149,8 +150,11 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
             </nav>
           )}
 
-          {/* Right side: Language, Notifications and User Menu */}
+          {/* Right side: Theme, Language, Notifications and User Menu */}
           <div className="flex items-center space-x-3">
+            {/* Theme Switcher */}
+            <ThemeSwitcher />
+
             {/* Language Switcher */}
             <LanguageSwitcher variant="icon" />
 

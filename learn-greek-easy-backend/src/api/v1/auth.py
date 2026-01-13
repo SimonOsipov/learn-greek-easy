@@ -780,6 +780,7 @@ async def update_me(
         "daily_goal": update_data.daily_goal,
         "email_notifications": update_data.email_notifications,
         "preferred_language": update_data.preferred_language,
+        "theme": update_data.theme,
     }
 
     # Filter out None values (only update provided fields)

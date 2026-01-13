@@ -53,14 +53,13 @@ export const AnswerOption: React.FC<AnswerOptionProps> = ({
         // Default state
         !isSelected &&
           !disabled &&
-          'border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-blue-600 dark:hover:bg-gray-700',
+          'border-border bg-card hover:border-blue-300 hover:bg-blue-50 dark:hover:border-blue-600 dark:hover:bg-blue-900/20',
         // Selected state - uses border AND background for accessibility (not just color)
         isSelected &&
           !disabled &&
           'border-blue-500 bg-blue-50 ring-2 ring-blue-500 ring-offset-2 dark:border-blue-400 dark:bg-blue-900/30 dark:ring-blue-400',
         // Disabled state
-        disabled &&
-          'cursor-not-allowed border-gray-200 bg-gray-100 opacity-60 dark:border-gray-700 dark:bg-gray-800'
+        disabled && 'cursor-not-allowed border-border bg-muted opacity-60'
       )}
     >
       {/* Letter badge */}
@@ -68,7 +67,7 @@ export const AnswerOption: React.FC<AnswerOptionProps> = ({
         className={cn(
           'flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-sm font-bold',
           // Default badge state
-          !isSelected && 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
+          !isSelected && 'bg-muted text-muted-foreground',
           // Selected badge state
           isSelected && 'bg-blue-500 text-white dark:bg-blue-400'
         )}
@@ -77,7 +76,7 @@ export const AnswerOption: React.FC<AnswerOptionProps> = ({
       </span>
 
       {/* Option text */}
-      <span className="flex-1 text-base text-gray-900 dark:text-gray-100">{text}</span>
+      <span className="flex-1 text-base text-foreground">{text}</span>
 
       {/* Selection indicator */}
       {isSelected && (

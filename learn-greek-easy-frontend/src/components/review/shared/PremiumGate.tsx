@@ -15,7 +15,7 @@ export function PremiumGate({ isLocked, badgeText = 'Pro', children }: PremiumGa
     <div className="relative">
       <div className="pointer-events-none select-none blur-sm filter">{children}</div>
       <div className="absolute inset-0 flex items-center justify-center">
-        <span className="rounded-xl bg-amber-400 px-4 py-2 text-sm font-bold uppercase tracking-wider text-gray-900 shadow-lg">
+        <span className="rounded-xl bg-amber-400 px-4 py-2 text-sm font-bold uppercase tracking-wider text-foreground shadow-lg dark:bg-amber-500">
           {badgeText}
         </span>
       </div>

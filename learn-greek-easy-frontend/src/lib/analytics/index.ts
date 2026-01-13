@@ -38,3 +38,9 @@ export {
   trackAdminDeckDeactivated,
   trackAdminDeckReactivated,
 } from './adminAnalytics';
+export {
+  registerTheme,
+  trackThemeChange,
+  trackThemePreferenceLoaded,
+  trackThemeMigration,
+} from './themeAnalytics';

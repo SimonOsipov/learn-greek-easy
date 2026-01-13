@@ -21,12 +21,12 @@ interface ShortcutItemProps {
 function ShortcutItem({ keys, description }: ShortcutItemProps) {
   return (
     <div className="flex items-center justify-between py-2">
-      <span className="text-sm text-gray-700">{description}</span>
+      <span className="text-sm text-foreground">{description}</span>
       <div className="flex gap-1">
         {keys.map((key) => (
           <kbd
             key={key}
-            className="min-w-[2rem] rounded border border-gray-300 bg-gray-100 px-2 py-1 text-center text-xs font-semibold text-gray-800 shadow-sm"
+            className="min-w-[2rem] rounded border border-border bg-muted px-2 py-1 text-center text-xs font-semibold text-foreground shadow-sm"
           >
             {key}
           </kbd>
@@ -50,7 +50,7 @@ export function KeyboardShortcutsHelp({ open, onOpenChange }: KeyboardShortcutsH
         <div className="space-y-6">
           {/* Review Actions Section */}
           <div>
-            <h3 className="mb-3 text-sm font-semibold text-gray-900">
+            <h3 className="mb-3 text-sm font-semibold text-foreground">
               {t('keyboard.reviewActions')}
             </h3>
             <div className="space-y-1 border-l-2 border-blue-500 pl-4">
@@ -64,7 +64,9 @@ export function KeyboardShortcutsHelp({ open, onOpenChange }: KeyboardShortcutsH
 
           {/* Navigation Section */}
           <div>
-            <h3 className="mb-3 text-sm font-semibold text-gray-900">{t('keyboard.navigation')}</h3>
+            <h3 className="mb-3 text-sm font-semibold text-foreground">
+              {t('keyboard.navigation')}
+            </h3>
             <div className="space-y-1 border-l-2 border-purple-500 pl-4">
               <ShortcutItem keys={['?']} description={t('keyboard.toggleHelp')} />
               <ShortcutItem keys={[t('keyboard.escKey')]} description={t('keyboard.closeOrExit')} />
@@ -72,7 +74,7 @@ export function KeyboardShortcutsHelp({ open, onOpenChange }: KeyboardShortcutsH
           </div>
 
           {/* Footer Tip */}
-          <div className="rounded-lg bg-blue-50 p-3 text-sm text-blue-800">
+          <div className="rounded-lg bg-blue-50 p-3 text-sm text-blue-800 dark:bg-blue-900/30 dark:text-blue-200">
             <strong>{t('keyboard.tip')}</strong> {t('keyboard.tipMessage')}
           </div>
         </div>

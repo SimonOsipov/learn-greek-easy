@@ -8,17 +8,17 @@ export const Unauthorized: React.FC = () => {
   const requiredRole = location.state?.requiredRole;
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 via-white to-purple-50 px-4">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 via-background to-purple-50 px-4 dark:from-blue-950/20 dark:to-purple-950/20">
       <div className="max-w-md text-center">
-        <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-full bg-yellow-100">
+        <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-full bg-yellow-100 dark:bg-yellow-900/50">
           {requiredRole === 'premium' ? (
-            <Crown className="h-8 w-8 text-yellow-600" />
+            <Crown className="h-8 w-8 text-yellow-600 dark:text-yellow-400" />
           ) : (
-            <Lock className="h-8 w-8 text-yellow-600" />
+            <Lock className="h-8 w-8 text-yellow-600 dark:text-yellow-400" />
           )}
         </div>
-        <h1 className="mb-2 text-2xl font-bold text-gray-900">Access Restricted</h1>
-        <p className="mb-8 text-gray-600">
+        <h1 className="mb-2 text-2xl font-bold text-foreground">Access Restricted</h1>
+        <p className="mb-8 text-muted-foreground">
           {requiredRole === 'premium'
             ? 'This feature requires a Premium subscription. Upgrade to unlock all learning features!'
             : requiredRole === 'admin'

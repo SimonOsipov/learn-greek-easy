@@ -55,7 +55,7 @@ export function EmptyState({
       aria-label={title}
     >
       <Icon className="mb-4 h-16 w-16 text-muted-foreground/50" aria-hidden="true" />
-      <h3 className="mb-2 text-lg font-semibold text-gray-900">{title}</h3>
+      <h3 className="mb-2 text-lg font-semibold text-foreground">{title}</h3>
       {description && <p className="mb-6 max-w-sm text-muted-foreground">{description}</p>}
       {action && (
         <Button onClick={action.onClick} variant={action.variant || 'default'}>

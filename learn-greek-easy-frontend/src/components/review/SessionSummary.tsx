@@ -50,9 +50,9 @@ export function SessionSummary({
   if (summary.cardsReviewed === 0) {
     return (
       <div className="mx-auto w-full max-w-3xl space-y-6 p-4">
-        <Card className="bg-gray-50 text-center">
+        <Card className="bg-muted/50 text-center">
           <CardContent className="pb-6 pt-8">
-            <p className="mb-4 text-lg text-gray-700">{t('session.sessionEndedNoCards')}</p>
+            <p className="mb-4 text-lg text-foreground">{t('session.sessionEndedNoCards')}</p>
             <Button
               size="lg"
               onClick={onBackToDeck}
@@ -75,14 +75,16 @@ export function SessionSummary({
     <div className="mx-auto w-full max-w-3xl space-y-4 p-2 sm:space-y-6 sm:p-4">
       {/* 1. Completion Message */}
       <Card
-        className="border-blue-200 bg-gradient-to-br from-blue-50 to-purple-50 text-center"
+        className="border-blue-200 bg-gradient-to-br from-blue-50 to-purple-50 text-center dark:border-blue-800 dark:from-blue-900/20 dark:to-purple-900/20"
         role="status"
         aria-live="polite"
       >
         <CardContent className="pb-4 pt-6 sm:pb-6 sm:pt-8">
           <CheckCircle className="mx-auto mb-3 h-12 w-12 text-green-500 sm:mb-4 sm:h-16 sm:w-16" />
-          <h2 className="mb-2 text-xl font-bold text-gray-900 sm:text-2xl">{t('summary.title')}</h2>
-          <p className="text-base text-gray-700 sm:text-lg">{message}</p>
+          <h2 className="mb-2 text-xl font-bold text-foreground sm:text-2xl">
+            {t('summary.title')}
+          </h2>
+          <p className="text-base text-foreground sm:text-lg">{message}</p>
         </CardContent>
       </Card>
 
@@ -95,8 +97,12 @@ export function SessionSummary({
               className="mx-auto mb-2 h-6 w-6 text-blue-500 sm:h-8 sm:w-8"
               aria-hidden="true"
             />
-            <p className="text-2xl font-bold text-gray-900 sm:text-3xl">{summary.cardsReviewed}</p>
-            <p className="mt-1 text-xs text-gray-600 sm:text-sm">{t('summary.cardsReviewed')}</p>
+            <p className="text-2xl font-bold text-foreground sm:text-3xl">
+              {summary.cardsReviewed}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground sm:text-sm">
+              {t('summary.cardsReviewed')}
+            </p>
           </CardContent>
         </Card>
 
@@ -108,7 +114,7 @@ export function SessionSummary({
               aria-hidden="true"
             />
             <p className={`text-2xl font-bold sm:text-3xl ${accuracyColor}`}>{summary.accuracy}%</p>
-            <p className="mt-1 text-xs text-gray-600 sm:text-sm">{t('summary.accuracy')}</p>
+            <p className="mt-1 text-xs text-muted-foreground sm:text-sm">{t('summary.accuracy')}</p>
           </CardContent>
         </Card>
 
@@ -119,10 +125,12 @@ export function SessionSummary({
               className="mx-auto mb-2 h-6 w-6 text-orange-500 sm:h-8 sm:w-8"
               aria-hidden="true"
             />
-            <p className="text-2xl font-bold text-gray-900 sm:text-3xl">
+            <p className="text-2xl font-bold text-foreground sm:text-3xl">
               {formatTime(summary.totalTime)}
             </p>
-            <p className="mt-1 text-xs text-gray-600 sm:text-sm">{t('summary.timeSpent')}</p>
+            <p className="mt-1 text-xs text-muted-foreground sm:text-sm">
+              {t('summary.timeSpent')}
+            </p>
           </CardContent>
         </Card>
 
@@ -133,11 +141,13 @@ export function SessionSummary({
               className="mx-auto mb-2 h-6 w-6 text-purple-500 sm:h-8 sm:w-8"
               aria-hidden="true"
             />
-            <p className="text-2xl font-bold text-gray-900 sm:text-3xl">
+            <p className="text-2xl font-bold text-foreground sm:text-3xl">
               {summary.averageTimePerCard}
               {t('summary.seconds')}
             </p>
-            <p className="mt-1 text-xs text-gray-600 sm:text-sm">{t('summary.avgPerCard')}</p>
+            <p className="mt-1 text-xs text-muted-foreground sm:text-sm">
+              {t('summary.avgPerCard')}
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -152,8 +162,8 @@ export function SessionSummary({
             {ratingBreakdown.map((item) => (
               <div key={item.label} className={`p-3 text-center sm:p-4 ${item.bgColor} rounded-lg`}>
                 <p className={`text-xl font-bold sm:text-2xl ${item.color}`}>{item.count}</p>
-                <p className="mt-1 text-sm text-gray-700">{item.label}</p>
-                <p className="mt-0.5 text-xs text-gray-500">{item.percentage}%</p>
+                <p className="mt-1 text-sm text-foreground">{item.label}</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">{item.percentage}%</p>
               </div>
             ))}
           </div>
@@ -169,7 +179,7 @@ export function SessionSummary({
           <CardContent>
             <div className="space-y-2 text-sm">
               {summary.transitions.newToLearning > 0 && (
-                <p className="text-gray-700">
+                <p className="text-foreground">
                   <span className="mr-2" aria-hidden="true">
                     🆕
                   </span>
@@ -178,7 +188,7 @@ export function SessionSummary({
                 </p>
               )}
               {summary.transitions.learningToReview > 0 && (
-                <p className="text-gray-700">
+                <p className="text-foreground">
                   <span className="mr-2" aria-hidden="true">
                     📚
                   </span>
@@ -187,7 +197,7 @@ export function SessionSummary({
                 </p>
               )}
               {summary.transitions.reviewToMastered > 0 && (
-                <p className="text-gray-700">
+                <p className="text-foreground">
                   <span className="mr-2" aria-hidden="true">
                     ✨
                   </span>
@@ -196,7 +206,7 @@ export function SessionSummary({
                 </p>
               )}
               {summary.transitions.toRelearning > 0 && (
-                <p className="text-gray-700">
+                <p className="text-foreground">
                   <span className="mr-2" aria-hidden="true">
                     🔄
                   </span>

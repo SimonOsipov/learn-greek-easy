@@ -63,7 +63,7 @@ export const ActivityFeed: React.FC<ActivityFeedProps> = ({ activities, maxItems
       <CardContent>
         {displayActivities.length === 0 ? (
           /* Empty State */
-          <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+          <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
             <BookOpen className="mb-3 h-12 w-12" aria-hidden="true" />
             <p className="text-sm font-medium">No recent activity</p>
             <p className="mt-1 text-xs">Start learning to see your progress here!</p>

@@ -82,8 +82,8 @@ export const PersonalInfoSection: React.FC<PersonalInfoSectionProps> = ({ user }
   return (
     <div className="p-6">
       <div className="mb-6">
-        <h2 className="text-xl font-bold text-gray-900">{t('personalInfo.title')}</h2>
-        <p className="text-sm text-gray-600">{t('personalInfo.subtitle')}</p>
+        <h2 className="text-xl font-bold text-foreground">{t('personalInfo.title')}</h2>
+        <p className="text-sm text-muted-foreground">{t('personalInfo.subtitle')}</p>
       </div>
 
       <Separator className="mb-6" />
@@ -91,7 +91,7 @@ export const PersonalInfoSection: React.FC<PersonalInfoSectionProps> = ({ user }
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         {/* Avatar Upload */}
         <div>
-          <Label className="mb-2 block text-sm font-medium text-gray-700">
+          <Label className="mb-2 block text-sm font-medium text-foreground">
             {t('personalInfo.profilePicture')}
           </Label>
           <div className="flex items-center gap-4">
@@ -114,12 +114,12 @@ export const PersonalInfoSection: React.FC<PersonalInfoSectionProps> = ({ user }
               {t('personalInfo.uploadPhoto')}
             </Button>
           </div>
-          <p className="mt-2 text-xs text-gray-500">{t('personalInfo.photoHint')}</p>
+          <p className="mt-2 text-xs text-muted-foreground">{t('personalInfo.photoHint')}</p>
         </div>
 
         {/* Name Input */}
         <div>
-          <Label htmlFor="name" className="mb-2 block text-sm font-medium text-gray-700">
+          <Label htmlFor="name" className="mb-2 block text-sm font-medium text-foreground">
             {t('personalInfo.fullName')}
           </Label>
           <Input
@@ -134,7 +134,7 @@ export const PersonalInfoSection: React.FC<PersonalInfoSectionProps> = ({ user }
 
         {/* Email (Read-only) */}
         <div>
-          <Label htmlFor="email" className="mb-2 block text-sm font-medium text-gray-700">
+          <Label htmlFor="email" className="mb-2 block text-sm font-medium text-foreground">
             {t('personalInfo.email')}
           </Label>
           <div className="relative">
@@ -144,15 +144,17 @@ export const PersonalInfoSection: React.FC<PersonalInfoSectionProps> = ({ user }
               value={user.email}
               readOnly
               disabled
-              className="pr-10 text-gray-500"
+              className="pr-10 text-muted-foreground"
             />
-            <Lock className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <Lock className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           </div>
-          <p className="mt-1 text-xs text-gray-500">{t('personalInfo.emailCannotChange')}</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {t('personalInfo.emailCannotChange')}
+          </p>
         </div>
 
         {/* Submit Button */}
-        <div className="flex justify-end gap-3 border-t border-gray-200 pt-6">
+        <div className="flex justify-end gap-3 border-t border-border pt-6">
           <Button
             type="button"
             variant="outline"

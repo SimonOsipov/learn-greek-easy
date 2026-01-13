@@ -110,10 +110,7 @@ export const MCQComponent: React.FC<MCQComponentProps> = ({
       <CardHeader className="space-y-4">
         {/* Progress indicator */}
         {questionNumber !== undefined && totalQuestions !== undefined && (
-          <p
-            className="text-sm font-medium text-gray-500 dark:text-gray-400"
-            data-testid="mcq-progress"
-          >
+          <p className="text-sm font-medium text-muted-foreground" data-testid="mcq-progress">
             {t('mcq.questionOf', { current: questionNumber, total: totalQuestions })}
           </p>
         )}
@@ -133,7 +130,7 @@ export const MCQComponent: React.FC<MCQComponentProps> = ({
         {/* Question text */}
         <h2
           id={questionId}
-          className="text-xl font-semibold text-gray-900 dark:text-gray-100"
+          className="text-xl font-semibold text-foreground"
           data-testid="mcq-question-text"
         >
           {questionText}
@@ -170,7 +167,7 @@ export const MCQComponent: React.FC<MCQComponentProps> = ({
         {/* Keyboard hint */}
         <p
           id={keyboardHintId}
-          className="text-center text-sm text-gray-500 dark:text-gray-400"
+          className="text-center text-sm text-muted-foreground"
           data-testid="mcq-keyboard-hint"
         >
           {t('mcq.keyboardHintDynamic', { max: question.option_count })}

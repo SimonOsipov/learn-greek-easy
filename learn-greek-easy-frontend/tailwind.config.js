@@ -37,8 +37,8 @@ export default {
   				to: '#764ba2'
   			},
   			secondary: {
-  				DEFAULT: '#f3f4f6',
-  				foreground: '#374151'
+  				DEFAULT: 'hsl(var(--secondary))',
+  				foreground: 'hsl(var(--secondary-foreground))'
   			},
   			success: '#059669',
   			warning: '#ea580c',

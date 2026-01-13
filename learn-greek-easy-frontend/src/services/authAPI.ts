@@ -45,6 +45,7 @@ export interface UserProfileResponse {
     user_id: string;
     daily_goal: number;
     email_notifications: boolean;
+    theme?: 'light' | 'dark';
     created_at: string;
     updated_at: string;
   };

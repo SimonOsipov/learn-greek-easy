@@ -63,7 +63,7 @@ function PracticePageSkeleton() {
       <div className="mx-auto max-w-2xl">
         <Skeleton className="mb-4 h-10 w-32 bg-white/20" />
         <Skeleton className="mb-8 h-4 w-48 bg-white/20" />
-        <Card className="bg-white/95">
+        <Card className="bg-card/95">
           <CardContent className="space-y-6 p-6">
             <Skeleton className="h-6 w-3/4" />
             <Skeleton className="h-32 w-full" />
@@ -423,7 +423,7 @@ export function CulturePracticePage() {
             <ChevronLeft className="mr-2 h-4 w-4" />
             {t('practice.backToDecks', 'Back to Decks')}
           </Button>
-          <Alert variant="destructive" className="bg-white">
+          <Alert variant="destructive" className="bg-card">
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>{t('practice.error', 'Error')}</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
@@ -454,7 +454,7 @@ export function CulturePracticePage() {
             <ChevronLeft className="mr-2 h-4 w-4" />
             {t('practice.backToDecks', 'Back to Decks')}
           </Button>
-          <Alert className="bg-white">
+          <Alert className="bg-card">
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>{t('practice.noQuestions', 'No Questions')}</AlertTitle>
             <AlertDescription>

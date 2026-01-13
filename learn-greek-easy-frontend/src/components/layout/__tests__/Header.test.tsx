@@ -105,6 +105,10 @@ vi.mock('@/components/notifications', () => ({
   NotificationsDropdown: () => <div data-testid="notifications-dropdown">Notifications</div>,
 }));
 
+vi.mock('@/components/theme', () => ({
+  ThemeSwitcher: () => <div data-testid="theme-switcher">Theme</div>,
+}));
+
 describe('Header', () => {
   beforeEach(() => {
     vi.clearAllMocks();

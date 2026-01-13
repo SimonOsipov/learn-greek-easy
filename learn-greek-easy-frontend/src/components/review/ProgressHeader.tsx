@@ -14,9 +14,9 @@ export function ProgressHeader() {
   const minutesRemaining = Math.ceil((cardsRemaining * avgTimePerCard) / 60);
 
   return (
-    <div className="border-b border-gray-200 bg-gray-50 px-6 py-4">
+    <div className="border-b border-border bg-muted/50 px-6 py-4">
       {/* Progress bar */}
-      <div className="mb-2 h-2 overflow-hidden rounded-full bg-gray-200">
+      <div className="mb-2 h-2 overflow-hidden rounded-full bg-muted">
         <div
           className="h-full bg-gradient-to-r from-[#667eea] to-[#764ba2] transition-all duration-300"
           style={{ width: `${percentage}%` }}
@@ -24,7 +24,7 @@ export function ProgressHeader() {
       </div>
 
       {/* Progress text */}
-      <div className="text-center text-sm text-gray-600">
+      <div className="text-center text-sm text-muted-foreground">
         {t('session.cardOf', { current: current + 1, total })} •{' '}
         {t('session.minRemaining', { minutes: minutesRemaining })}
       </div>
