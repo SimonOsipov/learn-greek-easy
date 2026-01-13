@@ -41,7 +41,9 @@ export const DeckCard: React.FC<DeckCardProps> = ({ deck, onContinue }) => {
             <CardTitle className="text-lg">{deck.title}</CardTitle>
             <CardDescription className="text-text-muted">{deck.description}</CardDescription>
           </div>
-          <Badge className={statusVariants[deck.status ?? 'not-started']}>
+          <Badge
+            className={`${statusVariants[deck.status ?? 'not-started']} flex-shrink-0 whitespace-nowrap`}
+          >
             {getStatusLabel(deck.status ?? 'not-started')}
           </Badge>
         </div>
@@ -63,15 +65,15 @@ export const DeckCard: React.FC<DeckCardProps> = ({ deck, onContinue }) => {
         </div>
 
         {/* Stats Row */}
-        <div className="flex gap-4 text-sm text-text-muted">
-          <span className="flex items-center gap-1">
+        <div className="flex min-w-0 flex-wrap gap-x-4 gap-y-1 text-sm text-text-muted">
+          <span className="flex items-center gap-1 whitespace-nowrap">
             <span className="text-base">📚</span> {t('card.stats.due', { count: deck.stats.due })}
           </span>
-          <span className="flex items-center gap-1">
+          <span className="flex items-center gap-1 whitespace-nowrap">
             <span className="text-base">✅</span>{' '}
             {t('card.stats.mastered', { count: deck.stats.mastered })}
           </span>
-          <span className="flex items-center gap-1">
+          <span className="flex items-center gap-1 whitespace-nowrap">
             <span className="text-base">📝</span>{' '}
             {t('card.stats.learning', { count: deck.stats.learning })}
           </span>
