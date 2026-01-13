@@ -177,7 +177,7 @@ export const useAuthStore = create<AuthState>()(
               language: 'en',
               dailyGoal: profileResponse.settings?.daily_goal || 20,
               notifications: profileResponse.settings?.email_notifications || true,
-              theme: 'light',
+              theme: profileResponse.settings?.theme || 'light',
             },
             stats: {
               streak: 0,
@@ -269,7 +269,7 @@ export const useAuthStore = create<AuthState>()(
               language: 'en',
               dailyGoal: profileResponse.settings?.daily_goal || 20,
               notifications: profileResponse.settings?.email_notifications || true,
-              theme: 'light',
+              theme: profileResponse.settings?.theme || 'light',
             },
             stats: {
               streak: 0,
