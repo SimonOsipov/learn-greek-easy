@@ -2,6 +2,17 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <!-- Theme initialization - prevents flash of wrong theme -->
+    <script>
+      (function() {
+        try {
+          var theme = localStorage.getItem('theme');
+          if (theme === 'dark') {
+            document.documentElement.classList.add('dark');
+          }
+        } catch (e) {}
+      })();
+    </script>
     <!-- Preconnect hints for external origins -->
     <link rel="preconnect" href="https://accounts.google.com" crossorigin />
     <link rel="dns-prefetch" href="https://accounts.google.com" />
@@ -42,6 +53,18 @@
           font-weight: 700;
           font-family: 'Inter', system-ui, sans-serif;
           color: #1f2937;
+        }
+        /* Dark mode LCP shell */
+        .dark .lcp-shell {
+          background: linear-gradient(to bottom right, #1e1e2e, #0f0f14, #1a1a2e);
+        }
+        .dark .lcp-card {
+          background: #1f1f2e;
+          color: #f0f0f5;
+          box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.4);
+        }
+        .dark .lcp-title {
+          color: #f0f0f5;
         }
       </style>
       <div class="lcp-card">
