@@ -303,6 +303,14 @@ class UserSettings(Base, TimestampMixin):
         comment="ISO 639-1 language code (e.g., 'en', 'el')",
     )
 
+    # Theme preference
+    theme: Mapped[str | None] = mapped_column(
+        String(10),
+        nullable=True,
+        default=None,
+        comment="User's preferred theme: 'light' or 'dark'",
+    )
+
     # Relationship
     user: Mapped["User"] = relationship(
         back_populates="settings",

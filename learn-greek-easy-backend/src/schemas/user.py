@@ -73,6 +73,11 @@ class UserSettingsUpdate(BaseModel):
         None,
         description="ISO 639-1 language code for interface language",
     )
+    theme: Optional[str] = Field(
+        None,
+        pattern="^(light|dark)$",
+        description="User's preferred theme: 'light' or 'dark'",
+    )
 
     @field_validator("preferred_language", mode="before")
     @classmethod
@@ -93,6 +98,7 @@ class UserSettingsResponse(BaseModel):
     daily_goal: int
     email_notifications: bool
     preferred_language: Optional[str] = None
+    theme: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 
@@ -109,6 +115,11 @@ class UserWithSettingsUpdate(BaseModel):
     preferred_language: Optional[SupportedLanguage] = Field(
         None,
         description="ISO 639-1 language code for interface language",
+    )
+    theme: Optional[str] = Field(
+        None,
+        pattern="^(light|dark)$",
+        description="User's preferred theme: 'light' or 'dark'",
     )
 
 
