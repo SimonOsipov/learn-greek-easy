@@ -11,6 +11,7 @@ import { BrowserRouter } from 'react-router-dom';
 
 import { Toaster } from '@/components/ui/toaster';
 import { LanguageProvider } from '@/contexts/LanguageContext';
+import { ThemeProvider } from '@/contexts/ThemeContext';
 import i18n from '@/i18n';
 
 // Custom render function that wraps components with providers
@@ -37,10 +38,12 @@ export function renderWithProviders(
     return (
       <I18nextProvider i18n={i18n}>
         <LanguageProvider>
-          <BrowserRouter>
-            {children}
-            <Toaster />
-          </BrowserRouter>
+          <ThemeProvider>
+            <BrowserRouter>
+              {children}
+              <Toaster />
+            </BrowserRouter>
+          </ThemeProvider>
         </LanguageProvider>
       </I18nextProvider>
     );

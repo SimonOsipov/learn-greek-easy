@@ -1,12 +1,14 @@
 import React, { useState, useRef } from 'react';
 
-import { Globe, Bell, Clock, Palette, Check } from 'lucide-react';
+import { Globe, Bell, Clock, Palette, Check, Sun, Moon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
+import { useTheme } from '@/contexts/ThemeContext';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/authStore';
 import type { User } from '@/types/auth';
 
@@ -30,6 +32,7 @@ export const PreferencesSection: React.FC<PreferencesSectionProps> = ({ user }) 
   const { t, i18n } = useTranslation('profile');
   const updateProfile = useAuthStore((state) => state.updateProfile);
   const { toast } = useToast();
+  const { currentTheme, setTheme } = useTheme();
 
   const [preferences, setPreferences] = useState(user.preferences);
   const [isSaving, setIsSaving] = useState(false);
@@ -250,46 +253,56 @@ export const PreferencesSection: React.FC<PreferencesSectionProps> = ({ user }) 
           </CardContent>
         </Card>
 
-        {/* Theme (Coming Soon) */}
-        <Card className="opacity-60">
+        {/* Theme */}
+        <Card data-testid="theme-card">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
-              <Palette className="h-5 w-5 text-gray-600" />
+              <Palette className="h-5 w-5 text-orange-600 dark:text-orange-400" />
               {t('preferences.theme.title')}
-              <span className="ml-auto rounded-full bg-gray-200 px-2 py-1 text-xs font-medium text-gray-700">
-                {t('preferences.theme.comingSoon')}
-              </span>
             </CardTitle>
             <CardDescription>{t('preferences.theme.description')}</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-3 gap-3 opacity-50">
+            <div className="grid grid-cols-2 gap-3">
               <button
-                disabled
-                className="flex flex-col items-center gap-2 rounded-lg border-2 border-gray-200 p-4"
+                onClick={() => setTheme('light', 'settings')}
+                className={cn(
+                  'flex flex-col items-center gap-2 rounded-lg border-2 p-4 transition-all',
+                  currentTheme === 'light'
+                    ? 'border-orange-600 bg-orange-50 dark:border-orange-400 dark:bg-orange-900/20'
+                    : 'border-gray-200 hover:border-gray-300 dark:border-gray-700 dark:hover:border-gray-600'
+                )}
+                data-testid="theme-option-light"
               >
-                <div className="h-12 w-12 rounded-lg bg-white shadow-sm" />
-                <span className="text-sm font-medium text-gray-700">
+                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-white shadow-sm dark:bg-gray-200">
+                  <Sun className="h-6 w-6 text-yellow-500" />
+                </div>
+                <span className="text-sm font-medium text-foreground">
                   {t('preferences.theme.light')}
                 </span>
+                {currentTheme === 'light' && (
+                  <Check className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                )}
               </button>
               <button
-                disabled
-                className="flex flex-col items-center gap-2 rounded-lg border-2 border-gray-200 p-4"
+                onClick={() => setTheme('dark', 'settings')}
+                className={cn(
+                  'flex flex-col items-center gap-2 rounded-lg border-2 p-4 transition-all',
+                  currentTheme === 'dark'
+                    ? 'border-orange-600 bg-orange-50 dark:border-orange-400 dark:bg-orange-900/20'
+                    : 'border-gray-200 hover:border-gray-300 dark:border-gray-700 dark:hover:border-gray-600'
+                )}
+                data-testid="theme-option-dark"
               >
-                <div className="h-12 w-12 rounded-lg bg-gray-900 shadow-sm" />
-                <span className="text-sm font-medium text-gray-700">
+                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-gray-900 shadow-sm">
+                  <Moon className="h-6 w-6 text-blue-400" />
+                </div>
+                <span className="text-sm font-medium text-foreground">
                   {t('preferences.theme.dark')}
                 </span>
-              </button>
-              <button
-                disabled
-                className="flex flex-col items-center gap-2 rounded-lg border-2 border-gray-200 p-4"
-              >
-                <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-white to-gray-900 shadow-sm" />
-                <span className="text-sm font-medium text-gray-700">
-                  {t('preferences.theme.auto')}
-                </span>
+                {currentTheme === 'dark' && (
+                  <Check className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                )}
               </button>
             </div>
           </CardContent>

@@ -75,7 +75,7 @@
     },
     "theme": {
       "title": "Theme Preference",
-      "description": "Switch between light and dark mode (available in a future update)",
+      "description": "Choose your preferred color theme",
       "comingSoon": "Coming Soon",
       "light": "Light",
       "dark": "Dark",
