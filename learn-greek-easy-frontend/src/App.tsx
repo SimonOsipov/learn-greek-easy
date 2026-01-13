@@ -17,6 +17,7 @@ import { AchievementNotificationManager } from '@/components/xp';
 import { LanguageProvider } from '@/contexts/LanguageContext';
 import { LayoutProvider } from '@/contexts/LayoutContext';
 import { NotificationProvider } from '@/contexts/NotificationContext';
+import { ThemeProvider } from '@/contexts/ThemeContext';
 import { isAuth0Enabled } from '@/hooks/useAuth0Integration';
 import { lazyWithRetry } from '@/lib/lazyWithRetry';
 import { Auth0ProviderWithNavigate, PostHogProvider } from '@/providers';
@@ -237,13 +238,15 @@ function App() {
         <ConditionalAuth0Provider>
           <PostHogProvider>
             <TooltipProvider>
-              <LanguageProvider>
-                <LayoutProvider>
-                  <NotificationProvider>
-                    <AppContent />
-                  </NotificationProvider>
-                </LayoutProvider>
-              </LanguageProvider>
+              <ThemeProvider>
+                <LanguageProvider>
+                  <LayoutProvider>
+                    <NotificationProvider>
+                      <AppContent />
+                    </NotificationProvider>
+                  </LayoutProvider>
+                </LanguageProvider>
+              </ThemeProvider>
             </TooltipProvider>
           </PostHogProvider>
         </ConditionalAuth0Provider>
