@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 
 import { LanguageSwitcher } from '@/components/i18n/LanguageSwitcher';
+import { ThemeSwitcher } from '@/components/theme';
 import { Button } from '@/components/ui/button';
 
 const Header = () => {
@@ -45,6 +46,7 @@ const Header = () => {
         </nav>
 
         <div className="flex items-center gap-3">
+          <ThemeSwitcher data-testid="landing-theme-switcher" />
           <LanguageSwitcher variant="icon" data-testid="landing-language-switcher" />
           <Button
             variant="ghost"
