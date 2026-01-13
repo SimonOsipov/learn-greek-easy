@@ -339,8 +339,93 @@ test.describe('Culture Practice Session', () => {
   });
 });
 
+test.describe('Culture Practice Session - Variable Answer Counts', () => {
+  test('CULTURE-10.11: Variable option counts are rendered correctly', async ({ page }) => {
+    // Navigate to culture practice via UI
+    await navigateToCulturePractice(page);
+
+    // Look for MCQ component
+    const mcqComponent = page.getByTestId('mcq-component');
+    const hasMCQ = await mcqComponent.isVisible().catch(() => false);
+
+    if (hasMCQ) {
+      // Get all visible answer options
+      const optionA = page.getByTestId('answer-option-a');
+      const optionB = page.getByTestId('answer-option-b');
+      const optionC = page.getByTestId('answer-option-c');
+      const optionD = page.getByTestId('answer-option-d');
+
+      // At minimum, options A and B should always be visible (minimum 2 options)
+      await expect(optionA).toBeVisible();
+      await expect(optionB).toBeVisible();
+
+      // Count how many options are visible (should be 2, 3, or 4)
+      const hasOptionC = await optionC.isVisible().catch(() => false);
+      const hasOptionD = await optionD.isVisible().catch(() => false);
+
+      // Verify the keyboard hint matches the option count
+      const keyboardHint = page.getByTestId('mcq-keyboard-hint');
+      await expect(keyboardHint).toBeVisible();
+
+      const hintText = await keyboardHint.textContent();
+
+      // The hint should mention the correct range based on visible options
+      if (hasOptionD) {
+        // 4 options - hint should say "1-4"
+        expect(hintText).toContain('4');
+      } else if (hasOptionC) {
+        // 3 options - hint should say "1-3"
+        expect(hintText).toContain('3');
+      } else {
+        // 2 options - hint should say "1-2"
+        expect(hintText).toContain('2');
+      }
+    }
+  });
+
+  test('CULTURE-10.12: Keyboard shortcut 4 is ignored for 3-option questions', async ({ page }) => {
+    // Navigate to culture practice via UI
+    await navigateToCulturePractice(page);
+
+    // Look for MCQ component
+    const mcqComponent = page.getByTestId('mcq-component');
+    const hasMCQ = await mcqComponent.isVisible().catch(() => false);
+
+    if (hasMCQ) {
+      // Check if this is a 3-option question (option D not visible)
+      const optionD = page.getByTestId('answer-option-d');
+      const hasOptionD = await optionD.isVisible().catch(() => false);
+
+      // Get submit button initial state
+      const submitButton = page.getByTestId('mcq-submit-button');
+      await expect(submitButton).toBeDisabled();
+
+      if (!hasOptionD) {
+        // This is a question with fewer than 4 options
+        // Press '4' - should NOT select anything since option 4 doesn't exist
+        await page.keyboard.press('4');
+
+        // Submit button should still be disabled (no selection made)
+        await expect(submitButton).toBeDisabled();
+
+        // Now press '1' - should select the first option
+        await page.keyboard.press('1');
+
+        // Submit button should now be enabled
+        await expect(submitButton).toBeEnabled();
+      } else {
+        // This is a 4-option question - pressing '4' should work
+        await page.keyboard.press('4');
+
+        // Submit button should be enabled after selecting option 4
+        await expect(submitButton).toBeEnabled();
+      }
+    }
+  });
+});
+
 test.describe('Culture Practice Session - Full Flow', () => {
-  test('CULTURE-10.11: Complete practice session flow (integration)', async ({ page }) => {
+  test('CULTURE-10.13: Complete practice session flow (integration)', async ({ page }) => {
     // Navigate to decks
     await page.goto('/decks');
     await expect(page.locator('[data-testid="deck-card"]').first()).toBeVisible({ timeout: 15000 });
