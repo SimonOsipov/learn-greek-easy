@@ -47,7 +47,7 @@ export const DecksPage: React.FC = () => {
         >
           {t('list.title')}
         </h1>
-        <p className="mt-2 text-sm text-text-muted md:text-base">{t('list.subtitle')}</p>
+        <p className="mt-2 text-sm text-muted-foreground md:text-base">{t('list.subtitle')}</p>
       </div>
 
       {/* Filters */}

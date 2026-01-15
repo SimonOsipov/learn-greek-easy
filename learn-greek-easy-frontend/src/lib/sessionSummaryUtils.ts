@@ -111,9 +111,9 @@ export function getEncouragingMessage(accuracy: number, cardsReviewed: number): 
  * @returns Tailwind text color class
  */
 export function getAccuracyColor(accuracy: number): string {
-  if (accuracy >= 70) return 'text-green-600';
-  if (accuracy >= 50) return 'text-orange-600';
-  return 'text-red-600';
+  if (accuracy >= 70) return 'text-green-600 dark:text-green-400';
+  if (accuracy >= 50) return 'text-orange-600 dark:text-orange-400';
+  return 'text-red-600 dark:text-red-400';
 }
 
 /**
@@ -146,29 +146,29 @@ export function formatRatingBreakdown(summary: SessionSummary): RatingBreakdownI
       label: 'Again',
       count: again,
       percentage: percentages[0],
-      color: 'text-red-600',
-      bgColor: 'bg-red-50',
+      color: 'text-red-600 dark:text-red-400',
+      bgColor: 'bg-red-50 dark:bg-red-900/30',
     },
     {
       label: 'Hard',
       count: hard,
       percentage: percentages[1],
-      color: 'text-orange-600',
-      bgColor: 'bg-orange-50',
+      color: 'text-orange-600 dark:text-orange-400',
+      bgColor: 'bg-orange-50 dark:bg-orange-900/30',
     },
     {
       label: 'Good',
       count: good,
       percentage: percentages[2],
-      color: 'text-green-600',
-      bgColor: 'bg-green-50',
+      color: 'text-green-600 dark:text-green-400',
+      bgColor: 'bg-green-50 dark:bg-green-900/30',
     },
     {
       label: 'Easy',
       count: easy,
       percentage: percentages[3],
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-50',
+      color: 'text-blue-600 dark:text-blue-400',
+      bgColor: 'bg-blue-50 dark:bg-blue-900/30',
     },
   ];
 }

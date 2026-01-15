@@ -276,11 +276,11 @@ export const PreferencesSection: React.FC<PreferencesSectionProps> = ({ user }) 
                   'flex flex-col items-center gap-2 rounded-lg border-2 p-4 transition-all',
                   currentTheme === 'light'
                     ? 'border-orange-600 bg-orange-50 dark:border-orange-400 dark:bg-orange-900/20'
-                    : 'border-gray-200 hover:border-gray-300 dark:border-gray-700 dark:hover:border-gray-600'
+                    : 'border-border hover:border-border/80'
                 )}
                 data-testid="theme-option-light"
               >
-                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-white shadow-sm dark:bg-gray-200">
+                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-card shadow-sm">
                   <Sun className="h-6 w-6 text-yellow-500" />
                 </div>
                 <span className="text-sm font-medium text-foreground">
@@ -296,7 +296,7 @@ export const PreferencesSection: React.FC<PreferencesSectionProps> = ({ user }) 
                   'flex flex-col items-center gap-2 rounded-lg border-2 p-4 transition-all',
                   currentTheme === 'dark'
                     ? 'border-orange-600 bg-orange-50 dark:border-orange-400 dark:bg-orange-900/20'
-                    : 'border-gray-200 hover:border-gray-300 dark:border-gray-700 dark:hover:border-gray-600'
+                    : 'border-border hover:border-border/80'
                 )}
                 data-testid="theme-option-dark"
               >

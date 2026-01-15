@@ -344,9 +344,11 @@ export const Auth0LoginForm: React.FC = () => {
 
             {/* OAuth Divider */}
             <div className="relative my-6 flex items-center">
-              <div className="flex-grow border-t border-gray-300"></div>
-              <span className="px-4 text-sm text-gray-500">{t('login.orContinueWith')}</span>
-              <div className="flex-grow border-t border-gray-300"></div>
+              <div className="flex-grow border-t border-border"></div>
+              <span className="px-4 text-sm text-muted-foreground">
+                {t('login.orContinueWith')}
+              </span>
+              <div className="flex-grow border-t border-border"></div>
             </div>
 
             {/* Google Sign In Button */}

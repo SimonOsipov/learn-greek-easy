@@ -16,7 +16,7 @@ const colorClasses = {
   orange: 'text-warning',
   green: 'text-success',
   blue: 'text-info',
-  muted: 'text-text-muted',
+  muted: 'text-muted-foreground',
 };
 
 export const MetricCard: React.FC<MetricCardProps> = ({
@@ -48,11 +48,11 @@ export const MetricCard: React.FC<MetricCardProps> = ({
     >
       <CardContent className="p-6">
         <div className="mb-2 flex items-center justify-between">
-          <span className="text-sm text-text-muted">{label}</span>
+          <span className="text-sm text-muted-foreground">{label}</span>
           {icon && <span className="text-2xl">{icon}</span>}
         </div>
         <div className={`text-2xl font-bold md:text-3xl ${colorClasses[color]}`}>{value}</div>
-        <p className="mt-1 text-xs text-text-subtle">{sublabel}</p>
+        <p className="mt-1 text-xs text-muted-foreground">{sublabel}</p>
       </CardContent>
     </Card>
   );

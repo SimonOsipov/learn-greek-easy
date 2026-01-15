@@ -41,7 +41,7 @@ export const DeckCard: React.FC<DeckCardProps> = ({ deck, onContinue }) => {
         <div className="flex items-start justify-between">
           <div className="space-y-1">
             <CardTitle className="text-lg">{deck.title}</CardTitle>
-            <CardDescription className="text-text-muted">{deck.description}</CardDescription>
+            <CardDescription className="text-muted-foreground">{deck.description}</CardDescription>
           </div>
           <Badge
             className={`${statusVariants[deck.status ?? 'not-started']} flex-shrink-0 whitespace-nowrap`}
@@ -54,7 +54,7 @@ export const DeckCard: React.FC<DeckCardProps> = ({ deck, onContinue }) => {
         {/* Progress Section */}
         <div>
           <div className="mb-2 flex justify-between text-sm">
-            <span className="text-text-muted">
+            <span className="text-muted-foreground">
               {t('card.progress', { current: deck.progress.current, total: deck.progress.total })}
             </span>
             <span className="font-medium">{deck.progress.percentage}%</span>
@@ -67,7 +67,7 @@ export const DeckCard: React.FC<DeckCardProps> = ({ deck, onContinue }) => {
         </div>
 
         {/* Stats Row */}
-        <div className="flex min-w-0 flex-wrap gap-x-4 gap-y-1 text-sm text-text-muted">
+        <div className="flex min-w-0 flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
           <span className="flex items-center gap-1 whitespace-nowrap">
             <span className="text-base">📚</span> {t('card.stats.due', { count: deck.stats.due })}
           </span>

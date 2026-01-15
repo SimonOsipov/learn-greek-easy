@@ -110,10 +110,8 @@ export const SecuritySection: React.FC = () => {
   return (
     <div className="p-6" data-testid="security-section">
       <div className="mb-6">
-        <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
-          {t('security.title')}
-        </h2>
-        <p className="text-sm text-gray-600 dark:text-gray-400">{t('security.subtitle')}</p>
+        <h2 className="text-xl font-bold text-foreground">{t('security.title')}</h2>
+        <p className="text-sm text-muted-foreground">{t('security.subtitle')}</p>
       </div>
 
       <Separator className="mb-6" />
@@ -208,23 +206,21 @@ export const SecuritySection: React.FC = () => {
             <CardTitle className="flex items-center gap-2 text-base">
               <Smartphone className="h-5 w-5 text-green-600" />
               {t('security.twoFactor.title')}
-              <span className="ml-auto rounded-full bg-gray-200 px-2 py-1 text-xs font-medium text-gray-700 dark:bg-gray-700 dark:text-gray-300">
+              <span className="ml-auto rounded-full bg-muted px-2 py-1 text-xs font-medium text-muted-foreground">
                 {t('security.twoFactor.comingSoon')}
               </span>
             </CardTitle>
             <CardDescription>{t('security.twoFactor.description')}</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="rounded-lg border border-gray-200 p-4 opacity-50 dark:border-gray-700">
+            <div className="rounded-lg border border-border p-4 opacity-50">
               <div className="flex items-start gap-4">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800">
-                  <Shield className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
+                  <Shield className="h-5 w-5 text-muted-foreground" />
                 </div>
                 <div className="flex-1">
-                  <p className="font-medium text-gray-900 dark:text-gray-100">
-                    {t('security.twoFactor.enable2FA')}
-                  </p>
-                  <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                  <p className="font-medium text-foreground">{t('security.twoFactor.enable2FA')}</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
                     {t('security.twoFactor.enable2FADescription')}
                   </p>
                 </div>
@@ -247,26 +243,26 @@ export const SecuritySection: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              <div className="flex items-start justify-between rounded-lg border border-gray-200 p-4 dark:border-gray-700">
+              <div className="flex items-start justify-between rounded-lg border border-border p-4">
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
-                    <p className="font-medium text-gray-900 dark:text-gray-100">
+                    <p className="font-medium text-foreground">
                       {t('security.sessions.currentDevice')}
                     </p>
                     <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900 dark:text-green-300">
                       {t('security.sessions.activeNow')}
                     </span>
                   </div>
-                  <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                  <p className="mt-1 text-sm text-muted-foreground">
                     {navigator.userAgent.includes('Mac') ? 'macOS' : 'Unknown'} •{' '}
                     {navigator.userAgent.includes('Chrome') ? 'Chrome' : 'Unknown Browser'}
                   </p>
-                  <p className="text-sm text-gray-500 dark:text-gray-500">
+                  <p className="text-sm text-muted-foreground">
                     {t('security.sessions.lastActive')} {new Date().toLocaleString()}
                   </p>
                 </div>
               </div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+              <p className="text-sm text-muted-foreground">
                 {t('security.sessions.comingSoonDescription')}
               </p>
             </div>

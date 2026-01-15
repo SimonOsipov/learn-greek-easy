@@ -128,8 +128,8 @@ export const XPCard: React.FC<XPCardProps> = ({
           <Star className={cn('h-4 w-4', colors.text)} aria-hidden="true" />
         </div>
         <div className="flex flex-col">
-          <span className="text-sm font-semibold text-gray-900">Level {level}</span>
-          <span className="text-xs text-gray-500">{formatXP(totalXP)} XP</span>
+          <span className="text-sm font-semibold text-foreground">Level {level}</span>
+          <span className="text-xs text-muted-foreground">{formatXP(totalXP)} XP</span>
         </div>
       </div>
     );
@@ -142,7 +142,7 @@ export const XPCard: React.FC<XPCardProps> = ({
           {/* Left side: Level and XP info */}
           <div className="flex-1">
             <div className="flex items-center gap-2">
-              <p className="text-sm font-medium text-gray-500">Total XP</p>
+              <p className="text-sm font-medium text-muted-foreground">Total XP</p>
               {streak && streak.currentStreak > 0 && (
                 <span
                   className="text-xs text-orange-500"
@@ -155,18 +155,18 @@ export const XPCard: React.FC<XPCardProps> = ({
 
             {/* Level display */}
             <div className="mt-2 flex items-baseline gap-2">
-              <span className="text-3xl font-bold text-gray-900">Level {level}</span>
-              <span className="text-sm text-gray-500">{levelNameEnglish}</span>
+              <span className="text-3xl font-bold text-foreground">Level {level}</span>
+              <span className="text-sm text-muted-foreground">{levelNameEnglish}</span>
             </div>
 
             {/* Greek level name */}
-            <p className="mt-0.5 text-xs text-gray-400" lang="el">
+            <p className="mt-0.5 text-xs text-muted-foreground" lang="el">
               {levelNameGreek}
             </p>
 
             {/* XP count */}
             <div className="mt-2">
-              <span className="text-lg font-semibold text-gray-700">{formatXP(totalXP)} XP</span>
+              <span className="text-lg font-semibold text-foreground">{formatXP(totalXP)} XP</span>
             </div>
 
             {/* Progress bar - hide "next level" info at max level */}
@@ -179,7 +179,7 @@ export const XPCard: React.FC<XPCardProps> = ({
                 aria-valuemax={100}
                 aria-label={`${xpInLevel} of ${xpForNextLevel} XP to next level`}
               >
-                <div className="mb-1 flex items-center justify-between text-xs text-gray-500">
+                <div className="mb-1 flex items-center justify-between text-xs text-muted-foreground">
                   <span>
                     {xpInLevel} / {xpForNextLevel} XP
                   </span>
@@ -192,7 +192,7 @@ export const XPCard: React.FC<XPCardProps> = ({
                     !prefersReducedMotion && 'transition-all duration-500 ease-out'
                   )}
                 />
-                <p className="mt-1 text-xs text-gray-400">
+                <p className="mt-1 text-xs text-muted-foreground">
                   {xpForNextLevel - xpInLevel} XP to Level {level + 1}
                 </p>
               </div>
@@ -217,17 +217,17 @@ export const XPCard: React.FC<XPCardProps> = ({
           <button
             onClick={onViewAchievements}
             className={cn(
-              'mt-4 flex w-full items-center justify-between rounded-lg border border-gray-200 p-3',
-              'hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
+              'mt-4 flex w-full items-center justify-between rounded-lg border border-border p-3',
+              'hover:bg-muted focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
               !prefersReducedMotion && 'transition-colors duration-200'
             )}
             aria-label="View all achievements"
           >
             <div className="flex items-center gap-2">
-              <Trophy className="h-4 w-4 text-gray-500" aria-hidden="true" />
-              <span className="text-sm font-medium text-gray-700">View Achievements</span>
+              <Trophy className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+              <span className="text-sm font-medium text-foreground">View Achievements</span>
             </div>
-            <ChevronRight className="h-4 w-4 text-gray-400" aria-hidden="true" />
+            <ChevronRight className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
           </button>
         )}
       </CardContent>

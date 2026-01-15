@@ -83,8 +83,8 @@ export const AchievementToast: React.FC<AchievementToastProps> = ({
         transition={{ duration: prefersReducedMotion ? 0.1 : 0.3, ease: 'easeOut' }}
         className={cn(
           'pointer-events-auto relative flex w-full max-w-sm items-center gap-3',
-          'rounded-lg border border-purple-200 bg-white p-4 shadow-lg',
-          'dark:border-purple-800 dark:bg-gray-900',
+          'rounded-lg border border-purple-200 bg-card p-4 shadow-lg',
+          'dark:border-purple-800',
           className
         )}
         role="alert"
@@ -103,10 +103,7 @@ export const AchievementToast: React.FC<AchievementToastProps> = ({
           <p className="text-xs font-medium uppercase tracking-wide text-purple-600 dark:text-purple-400">
             {t('toast.unlocked')}
           </p>
-          <p
-            id="achievement-toast-title"
-            className="mt-0.5 truncate font-semibold text-gray-900 dark:text-white"
-          >
+          <p id="achievement-toast-title" className="mt-0.5 truncate font-semibold text-foreground">
             {translatedName}
           </p>
           <div className="mt-1 flex items-center gap-1 text-sm text-amber-600 dark:text-amber-400">
@@ -120,9 +117,8 @@ export const AchievementToast: React.FC<AchievementToastProps> = ({
           onClick={onDismiss}
           className={cn(
             'flex-shrink-0 rounded-full p-1.5',
-            'text-gray-400 hover:bg-gray-100 hover:text-gray-600',
-            'focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2',
-            'dark:hover:bg-gray-800 dark:hover:text-gray-300'
+            'text-muted-foreground hover:bg-muted hover:text-foreground',
+            'focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2'
           )}
           aria-label="Dismiss achievement notification"
         >

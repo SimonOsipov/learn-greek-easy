@@ -32,7 +32,7 @@ export const DeckProgressBar: React.FC<DeckProgressBarProps> = ({
     <div className={className} data-testid="deck-progress">
       {/* Progress Bar */}
       <div
-        className={`w-full ${height} flex overflow-hidden rounded-full bg-gray-200`}
+        className={`w-full ${height} flex overflow-hidden rounded-full bg-muted`}
         role="progressbar"
         aria-label="Deck learning progress"
         aria-valuenow={cardsMastered}
@@ -42,7 +42,7 @@ export const DeckProgressBar: React.FC<DeckProgressBarProps> = ({
         {/* New Cards Segment */}
         {newPercent > 0 && (
           <div
-            className="bg-gray-200"
+            className="bg-muted"
             style={{ width: `${newPercent}%` }}
             aria-label={`${cardsNew} new cards`}
           />
@@ -69,9 +69,9 @@ export const DeckProgressBar: React.FC<DeckProgressBarProps> = ({
 
       {/* Optional Legend */}
       {showLegend && (
-        <div className="mt-2 flex gap-4 text-xs text-gray-600">
+        <div className="mt-2 flex gap-4 text-xs text-muted-foreground">
           <div className="flex items-center gap-1">
-            <div className="h-3 w-3 rounded-full bg-gray-200" />
+            <div className="h-3 w-3 rounded-full bg-muted" />
             <span>
               {cardsNew} {t('detail.new')}
             </span>
