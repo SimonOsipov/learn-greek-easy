@@ -63,7 +63,7 @@ export const AppLayout: React.FC = () => {
                           'flex items-center space-x-3 rounded-md px-3 py-2 transition-colors',
                           active
                             ? 'bg-primary/10 text-primary'
-                            : 'text-text-secondary hover:bg-secondary hover:text-text-primary'
+                            : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
                         )}
                       >
                         <Icon className="h-5 w-5" />

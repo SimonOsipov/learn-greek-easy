@@ -175,7 +175,7 @@ export const Dashboard: React.FC = () => {
     <div className="space-y-6 pb-8" data-testid="dashboard">
       {/* Page Title - visible for accessibility and E2E tests */}
       <h1
-        className="text-2xl font-semibold text-text-primary md:text-3xl"
+        className="text-2xl font-semibold text-foreground md:text-3xl"
         data-testid="dashboard-title"
       >
         {t('dashboard.title')}
@@ -191,7 +191,7 @@ export const Dashboard: React.FC = () => {
 
       {/* Metrics Grid */}
       <section>
-        <h2 className="mb-4 text-lg font-semibold text-text-primary">
+        <h2 className="mb-4 text-lg font-semibold text-foreground">
           {t('dashboard.progress.title')}
         </h2>
         {isLoading ? (
@@ -227,7 +227,7 @@ export const Dashboard: React.FC = () => {
       {/* Active Decks Section */}
       <section>
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-text-primary">
+          <h2 className="text-lg font-semibold text-foreground">
             {t('dashboard.activeDecks.title')}
           </h2>
           <button

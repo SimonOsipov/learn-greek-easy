@@ -98,9 +98,7 @@ const Statistics: React.FC = () => {
       <div className="space-y-6 pb-8" data-testid="statistics-page">
         {/* Page Header */}
         <div>
-          <h1 className="text-2xl font-semibold text-text-primary md:text-3xl">
-            {t('page.title')}
-          </h1>
+          <h1 className="text-2xl font-semibold text-foreground md:text-3xl">{t('page.title')}</h1>
           <p className="mt-2 text-muted-foreground">{t('page.subtitle')}</p>
         </div>
         <StatisticsLoadingSkeleton />
@@ -114,9 +112,7 @@ const Statistics: React.FC = () => {
       <div className="space-y-6 pb-8" data-testid="statistics-page">
         {/* Page Header */}
         <div>
-          <h1 className="text-2xl font-semibold text-text-primary md:text-3xl">
-            {t('page.title')}
-          </h1>
+          <h1 className="text-2xl font-semibold text-foreground md:text-3xl">{t('page.title')}</h1>
           <p className="mt-2 text-muted-foreground">{t('page.subtitle')}</p>
         </div>
         <Card>
@@ -138,7 +134,7 @@ const Statistics: React.FC = () => {
     <div className="space-y-6 pb-8" data-testid="statistics-page">
       {/* Page Header */}
       <div>
-        <h1 className="text-2xl font-semibold text-text-primary md:text-3xl">{t('page.title')}</h1>
+        <h1 className="text-2xl font-semibold text-foreground md:text-3xl">{t('page.title')}</h1>
         <p className="mt-2 text-muted-foreground">{t('page.subtitle')}</p>
       </div>
 

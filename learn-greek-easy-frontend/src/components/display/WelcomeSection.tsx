@@ -29,7 +29,7 @@ export const WelcomeSection: React.FC<WelcomeSectionProps> = ({
   return (
     <div className="mb-8 flex flex-col md:flex-row md:items-center md:justify-between">
       <div>
-        <h2 className="mb-2 text-xl font-semibold text-text-primary md:text-2xl">
+        <h2 className="mb-2 text-xl font-semibold text-foreground md:text-2xl">
           {t('welcome.greeting', { name: userName })} 👋
         </h2>
         <p className="text-text-muted">

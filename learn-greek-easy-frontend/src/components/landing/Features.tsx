@@ -107,7 +107,7 @@ const Features = () => {
         <span className="rounded-full bg-blue-100 px-3 py-1.5 text-xs font-semibold text-blue-900 dark:bg-blue-900 dark:text-blue-100">
           {t('features.mockups.finance')}
         </span>
-        <span className="text-xs text-muted-foreground">
+        <span className="text-xs text-muted-foreground dark:text-foreground/70">
           {t('features.mockups.cardOf', { current: 8, total: 40 })}
         </span>
       </div>
@@ -116,7 +116,7 @@ const Features = () => {
         <p className="text-sm text-muted-foreground">{t('features.mockups.tapToReveal')}</p>
       </div>
       <div className="my-3 flex flex-wrap gap-2">
-        <span className="rounded bg-secondary px-2 py-1 text-xs">
+        <span className="rounded bg-secondary px-2 py-1 text-xs text-secondary-foreground">
           {t('features.mockups.taxAuthority')}
         </span>
         <span
@@ -192,7 +192,7 @@ const Features = () => {
         <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-900 dark:bg-blue-900 dark:text-blue-100">
           {t('features.mockups.history')}
         </span>
-        <span className="text-xs text-muted-foreground">
+        <span className="text-xs text-muted-foreground dark:text-foreground/70">
           {t('features.mockups.questionOf', { current: 5, total: 20 })}
         </span>
       </div>
@@ -222,7 +222,7 @@ const Features = () => {
         <span className="rounded-full bg-green-100 px-3 py-1.5 text-xs font-semibold text-green-800 dark:bg-green-900 dark:text-green-100">
           {t('features.mockups.basics')}
         </span>
-        <span className="text-xs text-muted-foreground">
+        <span className="text-xs text-muted-foreground dark:text-foreground/70">
           {t('features.mockups.cardOf', { current: 3, total: 25 })}
         </span>
       </div>
@@ -231,7 +231,7 @@ const Features = () => {
         <p className="text-sm text-muted-foreground">{t('features.mockups.tapToReveal')}</p>
       </div>
       <div className="my-3 flex flex-wrap gap-2">
-        <span className="rounded bg-secondary px-2 py-1 text-xs">
+        <span className="rounded bg-secondary px-2 py-1 text-xs text-secondary-foreground">
           {t('features.mockups.greetings')}
         </span>
         <span
@@ -263,7 +263,9 @@ const Features = () => {
         <span className="rounded-full bg-purple-100 px-3 py-1 text-xs font-semibold text-purple-700 dark:bg-purple-900 dark:text-purple-100">
           {t('features.mockups.nouns')}
         </span>
-        <span className="text-xs text-muted-foreground">{t('features.mockups.cases')}</span>
+        <span className="text-xs text-muted-foreground dark:text-foreground/70">
+          {t('features.mockups.cases')}
+        </span>
       </div>
       <div className="mb-3 rounded-xl bg-secondary/50 p-4 text-center">
         <p className="text-2xl font-bold text-foreground">ο φίλος</p>
@@ -302,7 +304,9 @@ const Features = () => {
         <span className="rounded-full bg-orange-100 px-3 py-1 text-xs font-semibold text-orange-900 dark:bg-orange-900 dark:text-orange-100">
           {t('features.mockups.verbs')}
         </span>
-        <span className="text-xs text-muted-foreground">{t('features.mockups.present')}</span>
+        <span className="text-xs text-muted-foreground dark:text-foreground/70">
+          {t('features.mockups.present')}
+        </span>
       </div>
       <div className="mb-3 rounded-xl bg-secondary/50 p-4 text-center">
         <p className="text-2xl font-bold text-foreground">μιλάω</p>
@@ -341,7 +345,7 @@ const Features = () => {
         <span className="rounded-full bg-teal-100 px-3 py-1 text-xs font-semibold text-teal-800 dark:bg-teal-900 dark:text-teal-100">
           {t('features.mockups.tenses')}
         </span>
-        <span className="text-xs text-muted-foreground">γράφω</span>
+        <span className="text-xs text-muted-foreground dark:text-foreground/70">γράφω</span>
       </div>
       <div className="mb-3 rounded-xl bg-secondary/50 p-4 text-center">
         <p className="text-2xl font-bold text-foreground">γράφω</p>
@@ -375,7 +379,9 @@ const Features = () => {
       <div className="mb-4 flex items-center gap-2">
         <Tv className="h-4 w-4 text-primary" />
         <span className="text-xs font-semibold text-primary">ERT News</span>
-        <span className="ml-auto text-xs text-muted-foreground">{t('features.mockups.today')}</span>
+        <span className="ml-auto text-xs text-muted-foreground dark:text-foreground/70">
+          {t('features.mockups.today')}
+        </span>
       </div>
       <div className="mb-3 flex-1 rounded-xl bg-secondary/50 p-4">
         <p className="mb-2 text-sm font-medium text-foreground">
@@ -417,7 +423,7 @@ const Features = () => {
         <span className="rounded-full bg-indigo-100 px-3 py-1.5 text-xs font-semibold text-indigo-700 dark:bg-indigo-900 dark:text-indigo-100">
           {t('features.mockups.myDecks')}
         </span>
-        <span className="text-xs text-muted-foreground">
+        <span className="text-xs text-muted-foreground dark:text-foreground/70">
           {t('features.mockups.decksCount', { count: 3 })}
         </span>
       </div>
@@ -445,7 +451,7 @@ const Features = () => {
           <div className="text-xs font-medium text-primary">{t('features.mockups.progress65')}</div>
         </div>
         <div className="flex items-center justify-between rounded-lg border-2 border-dashed border-border bg-secondary/30 p-3">
-          <div className="flex items-center gap-2 text-muted-foreground">
+          <div className="flex items-center gap-2 text-muted-foreground dark:text-foreground">
             <Plus className="h-4 w-4" />
             <span className="text-sm">{t('features.mockups.createNewDeck')}</span>
           </div>

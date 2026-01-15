@@ -36,7 +36,10 @@ test.describe('Keyboard Navigation - Public Pages', () => {
     expect(focusableElements).toBeGreaterThanOrEqual(3);
 
     // Tab through elements - verify order using test IDs
-    // First tab goes to language switcher in header
+    // First tab goes to theme switcher in header
+    await page.keyboard.press('Tab'); // Theme switcher
+    await expect(page.getByTestId('theme-switcher')).toBeFocused();
+
     await page.keyboard.press('Tab'); // Language switcher
     await expect(page.getByTestId('language-switcher-trigger')).toBeFocused();
 

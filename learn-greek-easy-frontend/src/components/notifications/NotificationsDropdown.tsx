@@ -62,7 +62,7 @@ export const NotificationsDropdown: React.FC = () => {
           className="relative"
           aria-label={t('notifications.title', 'Notifications')}
         >
-          <Bell className="h-5 w-5 text-text-secondary" />
+          <Bell className="h-5 w-5" />
           {unreadCount > 0 && (
             <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-warning text-[10px] font-medium text-white">
               {unreadCount > 9 ? '9+' : unreadCount}
