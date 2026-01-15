@@ -72,7 +72,7 @@ export const AchievementCard: React.FC<AchievementCardProps> = ({ achievement, c
                 'flex h-12 w-12 items-center justify-center rounded-lg',
                 unlocked
                   ? 'bg-purple-100 text-purple-600 dark:bg-purple-800/50 dark:text-purple-300'
-                  : 'bg-gray-100 text-gray-500 grayscale dark:bg-gray-800 dark:text-gray-400'
+                  : 'bg-muted text-muted-foreground grayscale'
               )}
               aria-hidden="true"
             >
@@ -105,7 +105,10 @@ export const AchievementCard: React.FC<AchievementCardProps> = ({ achievement, c
           </div>
           <Progress
             value={progress}
-            className={cn('h-2', unlocked ? '[&>div]:bg-purple-500' : '[&>div]:bg-gray-400')}
+            className={cn(
+              'h-2',
+              unlocked ? '[&>div]:bg-purple-500' : '[&>div]:bg-muted-foreground'
+            )}
             aria-label={`Progress: ${Math.round(progress)}%`}
           />
         </div>
