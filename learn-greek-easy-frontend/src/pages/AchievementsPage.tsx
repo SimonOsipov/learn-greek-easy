@@ -129,7 +129,7 @@ const AchievementsPage: React.FC = () => {
     <div className="space-y-6 pb-8" data-testid="achievements-page">
       {/* Page Header */}
       <div>
-        <h1 className="text-2xl font-semibold text-text-primary md:text-3xl">
+        <h1 className="text-2xl font-semibold text-foreground md:text-3xl">
           {t('page.title', 'Achievements')}
         </h1>
         <p className="mt-2 text-muted-foreground">

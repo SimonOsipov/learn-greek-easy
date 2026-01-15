@@ -717,7 +717,7 @@ const AdminPage: React.FC = () => {
         {/* Page Header */}
         <div>
           <h1
-            className="text-2xl font-semibold text-text-primary md:text-3xl"
+            className="text-2xl font-semibold text-foreground md:text-3xl"
             data-testid="admin-title"
           >
             {t('page.title')}
@@ -738,7 +738,7 @@ const AdminPage: React.FC = () => {
         {/* Page Header */}
         <div>
           <h1
-            className="text-2xl font-semibold text-text-primary md:text-3xl"
+            className="text-2xl font-semibold text-foreground md:text-3xl"
             data-testid="admin-title"
           >
             {t('page.title')}
@@ -759,7 +759,7 @@ const AdminPage: React.FC = () => {
         {/* Page Header */}
         <div>
           <h1
-            className="text-2xl font-semibold text-text-primary md:text-3xl"
+            className="text-2xl font-semibold text-foreground md:text-3xl"
             data-testid="admin-title"
           >
             {t('page.title')}
@@ -784,7 +784,7 @@ const AdminPage: React.FC = () => {
       {/* Page Header */}
       <div>
         <h1
-          className="text-2xl font-semibold text-text-primary md:text-3xl"
+          className="text-2xl font-semibold text-foreground md:text-3xl"
           data-testid="admin-title"
         >
           {t('page.title')}
