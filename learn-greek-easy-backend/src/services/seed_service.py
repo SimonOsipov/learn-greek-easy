@@ -1367,13 +1367,18 @@ class SeedService:
         created_decks = []
         difficulties = [CardDifficulty.EASY, CardDifficulty.MEDIUM, CardDifficulty.HARD]
 
+        # Premium levels - C1 and C2 are premium content
+        premium_levels = {DeckLevel.C1, DeckLevel.C2}
+
         for level, words in self.VOCABULARY.items():
-            # Create deck
+            # Create deck - C1 and C2 are premium
+            is_premium = level in premium_levels
             deck = Deck(
                 name=f"Greek {level.value} Vocabulary",
                 description=f"Essential Greek vocabulary for CEFR level {level.value}",
                 level=level,
                 is_active=True,
+                is_premium=is_premium,
             )
             self.db.add(deck)
             await self.db.flush()
@@ -1397,6 +1402,7 @@ class SeedService:
                     "name": deck.name,
                     "level": level.value,
                     "card_count": len(words),
+                    "is_premium": is_premium,
                 }
             )
 
@@ -1787,7 +1793,11 @@ class SeedService:
         created_decks = []
         total_questions = 0
 
+        # Premium categories - history and traditions are premium content
+        premium_categories = {"history", "traditions"}
+
         for category, deck_data in self.CULTURE_DECKS.items():
+            is_premium = category in premium_categories
             deck = CultureDeck(
                 name=deck_data["name"],
                 description=deck_data["description"],
@@ -1795,6 +1805,7 @@ class SeedService:
                 color_accent=deck_data["color_accent"],
                 category=category,
                 is_active=True,
+                is_premium=is_premium,
             )
             self.db.add(deck)
             await self.db.flush()
@@ -1829,6 +1840,7 @@ class SeedService:
                     "name": name_en,
                     "category": category,
                     "question_count": len(questions_data),
+                    "is_premium": is_premium,
                 }
             )
 
