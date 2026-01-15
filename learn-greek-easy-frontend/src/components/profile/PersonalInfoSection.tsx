@@ -154,7 +154,7 @@ export const PersonalInfoSection: React.FC<PersonalInfoSectionProps> = ({ user }
         </div>
 
         {/* Submit Button */}
-        <div className="flex justify-end gap-3 border-t border-border pt-6">
+        <div className="flex justify-end gap-3 pt-6">
           <Button
             type="button"
             variant="outline"
