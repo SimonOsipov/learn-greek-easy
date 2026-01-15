@@ -361,7 +361,13 @@ jobs:
           echo "=== Warming up Backend via frontend proxy at $FRONTEND_URL ==="
           chmod +x scripts/backend-warmup.sh
           # Backend is private - warmup via frontend proxy using /api/v1/health endpoints
-          ./scripts/backend-warmup.sh "$FRONTEND_URL" 5 2
+          # Use same parameters as production (10 requests, 3s delay) for consistent initialization
+          ./scripts/backend-warmup.sh "$FRONTEND_URL" 10 3
+
+      - name: Wait for DNS stabilization
+        run: |
+          echo "Waiting 10 seconds for DNS stabilization after warmup..."
+          sleep 10
 
       - name: Run Health Checks
         id: health
