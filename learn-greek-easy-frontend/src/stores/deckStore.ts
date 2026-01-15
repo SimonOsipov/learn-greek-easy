@@ -88,7 +88,7 @@ const transformDeckResponse = (deck: DeckResponse, progressData?: DeckProgressSu
     category: 'vocabulary', // Default category - backend doesn't have categories
     cardCount: totalCards,
     estimatedTime: deck.estimated_time_minutes ?? 10,
-    isPremium: false, // Backend doesn't have premium concept yet
+    isPremium: deck.is_premium ?? false,
     tags: deck.tags || [],
     thumbnail: `/images/decks/${deck.level.toLowerCase()}.jpg`,
     createdBy: 'Learn Greek Easy', // Default author
@@ -174,7 +174,7 @@ const transformCultureDeckResponse = (deck: CultureDeckResponse): Deck => {
     category: 'culture', // KEY: Set category to 'culture'
     cardCount: totalCards,
     estimatedTime: Math.ceil(totalCards * 0.5), // Estimate 30 seconds per question
-    isPremium: false,
+    isPremium: deck.is_premium ?? false,
     tags: [deck.category], // Use culture category as tag (history, geography, etc.)
     thumbnail: `/images/culture/${deck.category}.jpg`,
     createdBy: 'Learn Greek Easy',

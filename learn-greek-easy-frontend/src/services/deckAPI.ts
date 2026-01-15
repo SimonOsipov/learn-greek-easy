@@ -29,6 +29,7 @@ export interface DeckResponse {
   description: string | null;
   level: DeckLevel;
   is_active: boolean;
+  is_premium?: boolean;
   card_count?: number; // Optional - list endpoint may not return this
   estimated_time_minutes?: number;
   tags?: string[];

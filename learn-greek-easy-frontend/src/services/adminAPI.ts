@@ -82,6 +82,7 @@ export interface UnifiedDeckItem {
   category: string | null;
   item_count: number;
   is_active: boolean;
+  is_premium: boolean;
   created_at: string;
 }
 
@@ -113,6 +114,7 @@ export interface VocabularyDeckUpdatePayload {
   description?: string | null;
   level?: DeckLevel;
   is_active?: boolean;
+  is_premium?: boolean;
 }
 
 /**
@@ -123,6 +125,7 @@ export interface CultureDeckUpdatePayload {
   description?: string | null;
   category?: string;
   is_active?: boolean;
+  is_premium?: boolean;
 }
 
 // ============================================
