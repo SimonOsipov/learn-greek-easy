@@ -142,7 +142,7 @@ export function PasswordField({
       {showStrength && value && strength && (
         <div className="flex items-center gap-2">
           <div
-            className="h-2 flex-1 overflow-hidden rounded-full bg-gray-200"
+            className="h-2 flex-1 overflow-hidden rounded-full bg-muted"
             role="progressbar"
             aria-label="Password strength"
             aria-valuenow={strength.level}
