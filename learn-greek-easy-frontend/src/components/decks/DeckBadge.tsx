@@ -17,8 +17,8 @@ export interface DeckBadgeProps {
 const STATUS_CONFIG = {
   'not-started': {
     labelKey: 'card.status.notStarted',
-    bgColor: 'bg-gray-200',
-    textColor: 'text-gray-700',
+    bgColor: 'bg-muted',
+    textColor: 'text-muted-foreground',
   },
   'in-progress': {
     labelKey: 'card.status.inProgress',
