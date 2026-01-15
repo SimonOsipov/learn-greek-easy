@@ -1793,11 +1793,9 @@ class SeedService:
         created_decks = []
         total_questions = 0
 
-        # Premium categories - history and traditions are premium content
-        premium_categories = {"history", "traditions"}
-
         for category, deck_data in self.CULTURE_DECKS.items():
-            is_premium = category in premium_categories
+            # Culture decks are always free (non-premium)
+            # Only vocabulary decks (C1/C2 levels) are premium
             deck = CultureDeck(
                 name=deck_data["name"],
                 description=deck_data["description"],
@@ -1805,7 +1803,7 @@ class SeedService:
                 color_accent=deck_data["color_accent"],
                 category=category,
                 is_active=True,
-                is_premium=is_premium,
+                is_premium=False,
             )
             self.db.add(deck)
             await self.db.flush()
@@ -1840,7 +1838,7 @@ class SeedService:
                     "name": name_en,
                     "category": category,
                     "question_count": len(questions_data),
-                    "is_premium": is_premium,
+                    "is_premium": False,
                 }
             )
 
