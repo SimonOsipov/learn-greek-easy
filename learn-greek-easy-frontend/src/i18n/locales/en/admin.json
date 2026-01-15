@@ -16,6 +16,8 @@
     "categoryPlaceholder": "Select category",
     "isActive": "Active",
     "isActiveDescription": "Inactive decks are hidden from learners",
+    "isPremium": "Premium",
+    "isPremiumDescription": "Premium decks require a subscription to access",
     "save": "Save Changes",
     "saving": "Saving...",
     "cancel": "Cancel",

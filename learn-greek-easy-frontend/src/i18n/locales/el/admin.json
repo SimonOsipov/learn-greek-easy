@@ -16,6 +16,8 @@
     "categoryPlaceholder": "Επιλέξτε κατηγορία",
     "isActive": "Ενεργό",
     "isActiveDescription": "Οι ανενεργές τράπουλες είναι κρυφές από τους μαθητές",
+    "isPremium": "Premium",
+    "isPremiumDescription": "Οι premium τράπουλες απαιτούν συνδρομή για πρόσβαση",
     "save": "Αποθήκευση Αλλαγών",
     "saving": "Αποθήκευση...",
     "cancel": "Ακύρωση",
