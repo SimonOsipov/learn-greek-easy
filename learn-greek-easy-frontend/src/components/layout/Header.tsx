@@ -98,7 +98,7 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
             )}
 
             <Link to="/dashboard" className="flex items-center space-x-2">
-              <h1 className="text-xl font-semibold text-text-primary">Learn Greek Easy</h1>
+              <h1 className="text-xl font-semibold text-foreground">Learn Greek Easy</h1>
             </Link>
           </div>
 
@@ -111,7 +111,7 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
                     <DropdownMenuTrigger
                       className={cn(
                         'flex items-center gap-1 text-sm font-medium transition-colors hover:text-primary focus:outline-none',
-                        isActiveParent(item) ? 'text-primary' : 'text-text-secondary'
+                        isActiveParent(item) ? 'text-primary' : 'text-muted-foreground'
                       )}
                       data-testid="statistics-dropdown-trigger"
                     >
@@ -140,7 +140,7 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
                     to={item.path}
                     className={cn(
                       'text-sm font-medium transition-colors hover:text-primary',
-                      isActiveRoute(item.path) ? 'text-primary' : 'text-text-secondary'
+                      isActiveRoute(item.path) ? 'text-primary' : 'text-muted-foreground'
                     )}
                   >
                     {t(item.labelKey)}
