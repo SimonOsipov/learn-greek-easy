@@ -547,3 +547,191 @@ class TestDeleteCultureQuestion:
             headers=auth_headers,
         )
         assert response.status_code == 403
+
+
+# ============================================================================
+# Culture Deck is_premium Tests
+# ============================================================================
+
+
+class TestCultureDeckIsPremiumIntegration:
+    """Integration tests for is_premium field on culture decks."""
+
+    @pytest.mark.asyncio
+    async def test_create_culture_deck_is_premium_default_false(
+        self, client: AsyncClient, superuser_auth_headers: dict, valid_culture_deck_data
+    ):
+        """Test that is_premium defaults to False when creating a culture deck."""
+        response = await client.post(
+            "/api/v1/culture/decks",
+            json=valid_culture_deck_data,
+            headers=superuser_auth_headers,
+        )
+
+        assert response.status_code == 201
+        data = response.json()
+        assert "is_premium" in data
+        assert data["is_premium"] is False
+
+    @pytest.mark.asyncio
+    async def test_create_culture_deck_with_is_premium_true(
+        self, client: AsyncClient, superuser_auth_headers: dict, valid_culture_deck_data
+    ):
+        """Test creating a culture deck with is_premium=True."""
+        deck_data = {**valid_culture_deck_data, "name": "Premium Culture", "is_premium": True}
+
+        response = await client.post(
+            "/api/v1/culture/decks",
+            json=deck_data,
+            headers=superuser_auth_headers,
+        )
+
+        assert response.status_code == 201
+        data = response.json()
+        assert data["is_premium"] is True
+
+    @pytest.mark.asyncio
+    async def test_list_culture_decks_includes_is_premium(
+        self, client: AsyncClient, auth_headers: dict, culture_deck_for_tests
+    ):
+        """Test that GET /culture/decks returns is_premium field."""
+        response = await client.get(
+            "/api/v1/culture/decks",
+            headers=auth_headers,
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data["decks"]) >= 1
+
+        for deck in data["decks"]:
+            assert "is_premium" in deck
+            assert isinstance(deck["is_premium"], bool)
+
+    @pytest.mark.asyncio
+    async def test_update_culture_deck_is_premium_to_true(
+        self, client: AsyncClient, superuser_auth_headers: dict, culture_deck_for_tests
+    ):
+        """Test PATCH /culture/decks/{id} can update is_premium to True."""
+        response = await client.patch(
+            f"/api/v1/culture/decks/{culture_deck_for_tests.id}",
+            json={"is_premium": True},
+            headers=superuser_auth_headers,
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["is_premium"] is True
+
+    @pytest.mark.asyncio
+    async def test_update_culture_deck_is_premium_to_false(
+        self, client: AsyncClient, superuser_auth_headers: dict, valid_culture_deck_data
+    ):
+        """Test PATCH /culture/decks/{id} can update is_premium to False."""
+        # Create a premium deck
+        deck_data = {**valid_culture_deck_data, "name": "Premium to Reset", "is_premium": True}
+        create_response = await client.post(
+            "/api/v1/culture/decks",
+            json=deck_data,
+            headers=superuser_auth_headers,
+        )
+        assert create_response.status_code == 201
+        deck_id = create_response.json()["id"]
+
+        # Update to non-premium
+        update_response = await client.patch(
+            f"/api/v1/culture/decks/{deck_id}",
+            json={"is_premium": False},
+            headers=superuser_auth_headers,
+        )
+
+        assert update_response.status_code == 200
+        assert update_response.json()["is_premium"] is False
+
+    @pytest.mark.asyncio
+    async def test_update_culture_deck_is_premium_independent_of_is_active(
+        self, client: AsyncClient, superuser_auth_headers: dict, culture_deck_for_tests
+    ):
+        """Test that updating is_premium does not affect is_active."""
+        # Set deck to premium
+        response = await client.patch(
+            f"/api/v1/culture/decks/{culture_deck_for_tests.id}",
+            json={"is_premium": True},
+            headers=superuser_auth_headers,
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["is_premium"] is True
+        assert data["is_active"] is True  # Should remain unchanged
+
+    @pytest.mark.asyncio
+    async def test_update_culture_deck_is_active_independent_of_is_premium(
+        self, client: AsyncClient, superuser_auth_headers: dict, valid_culture_deck_data
+    ):
+        """Test that updating is_active does not affect is_premium."""
+        # Create a premium deck
+        deck_data = {**valid_culture_deck_data, "name": "Active Premium Test", "is_premium": True}
+        create_response = await client.post(
+            "/api/v1/culture/decks",
+            json=deck_data,
+            headers=superuser_auth_headers,
+        )
+        assert create_response.status_code == 201
+        deck_id = create_response.json()["id"]
+
+        # Update is_active to False
+        update_response = await client.patch(
+            f"/api/v1/culture/decks/{deck_id}",
+            json={"is_active": False},
+            headers=superuser_auth_headers,
+        )
+
+        assert update_response.status_code == 200
+        data = update_response.json()
+        assert data["is_active"] is False
+        assert data["is_premium"] is True  # Should remain unchanged
+
+    @pytest.mark.asyncio
+    async def test_update_culture_deck_both_is_active_and_is_premium(
+        self, client: AsyncClient, superuser_auth_headers: dict, culture_deck_for_tests
+    ):
+        """Test updating both is_active and is_premium in one request."""
+        response = await client.patch(
+            f"/api/v1/culture/decks/{culture_deck_for_tests.id}",
+            json={"is_active": False, "is_premium": True},
+            headers=superuser_auth_headers,
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["is_active"] is False
+        assert data["is_premium"] is True
+
+    @pytest.mark.asyncio
+    async def test_culture_deck_response_fields_include_is_premium(
+        self, client: AsyncClient, auth_headers: dict, culture_deck_for_tests
+    ):
+        """Test that culture deck response has all required fields including is_premium."""
+        response = await client.get(
+            "/api/v1/culture/decks",
+            headers=auth_headers,
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data["decks"]) >= 1
+
+        deck = data["decks"][0]
+        required_fields = [
+            "id",
+            "name",
+            "description",
+            "icon",
+            "color_accent",
+            "category",
+            "is_premium",
+            "question_count",
+        ]
+        for field in required_fields:
+            assert field in deck, f"Missing required field: {field}"

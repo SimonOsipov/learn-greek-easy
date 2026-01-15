@@ -714,6 +714,7 @@ async def update_culture_deck(
         color_accent=updated_deck.color_accent,
         category=updated_deck.category,
         question_count=question_count,
+        is_premium=updated_deck.is_premium,
         progress=None,
         is_active=updated_deck.is_active,
         created_at=updated_deck.created_at,

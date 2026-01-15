@@ -453,3 +453,127 @@ class TestDeleteDeckUnit:
         response = await client.delete("/api/v1/decks/invalid-uuid", headers=superuser_auth_headers)
 
         assert response.status_code == 422
+
+
+class TestDeckIsPremiumUnit:
+    """Unit tests for is_premium field in deck API endpoints."""
+
+    @pytest.mark.asyncio
+    async def test_list_decks_includes_is_premium_in_response(
+        self, client: AsyncClient, auth_headers: dict
+    ):
+        """Test that list endpoint includes is_premium field in response."""
+        mock_deck = MagicMock(spec=Deck)
+        mock_deck.id = uuid4()
+        mock_deck.name = "Premium Test Deck"
+        mock_deck.description = "Test description"
+        mock_deck.level = DeckLevel.A1
+        mock_deck.is_active = True
+        mock_deck.is_premium = True
+        mock_deck.created_at = MagicMock()
+        mock_deck.updated_at = MagicMock()
+
+        with patch("src.api.v1.decks.DeckRepository") as mock_repo_class:
+            mock_repo = AsyncMock()
+            mock_repo.list_active.return_value = [mock_deck]
+            mock_repo.count_active.return_value = 1
+            mock_repo_class.return_value = mock_repo
+
+            response = await client.get("/api/v1/decks", headers=auth_headers)
+
+            assert response.status_code == 200
+            data = response.json()
+            assert len(data["decks"]) == 1
+            assert "is_premium" in data["decks"][0]
+            assert data["decks"][0]["is_premium"] is True
+
+    @pytest.mark.asyncio
+    async def test_list_decks_is_premium_false_in_response(
+        self, client: AsyncClient, auth_headers: dict
+    ):
+        """Test that list endpoint returns is_premium=False for free decks."""
+        mock_deck = MagicMock(spec=Deck)
+        mock_deck.id = uuid4()
+        mock_deck.name = "Free Test Deck"
+        mock_deck.description = "Free content"
+        mock_deck.level = DeckLevel.A1
+        mock_deck.is_active = True
+        mock_deck.is_premium = False
+        mock_deck.created_at = MagicMock()
+        mock_deck.updated_at = MagicMock()
+
+        with patch("src.api.v1.decks.DeckRepository") as mock_repo_class:
+            mock_repo = AsyncMock()
+            mock_repo.list_active.return_value = [mock_deck]
+            mock_repo.count_active.return_value = 1
+            mock_repo_class.return_value = mock_repo
+
+            response = await client.get("/api/v1/decks", headers=auth_headers)
+
+            assert response.status_code == 200
+            data = response.json()
+            assert len(data["decks"]) == 1
+            assert data["decks"][0]["is_premium"] is False
+
+    @pytest.mark.asyncio
+    async def test_get_deck_includes_is_premium_in_response(
+        self, client: AsyncClient, auth_headers: dict
+    ):
+        """Test that get deck endpoint includes is_premium field."""
+        deck_id = uuid4()
+        mock_deck = MagicMock(spec=Deck)
+        mock_deck.id = deck_id
+        mock_deck.name = "Premium Deck"
+        mock_deck.description = "Premium content"
+        mock_deck.level = DeckLevel.B1
+        mock_deck.is_active = True
+        mock_deck.is_premium = True
+        mock_deck.created_at = MagicMock()
+        mock_deck.updated_at = MagicMock()
+
+        with patch("src.api.v1.decks.DeckRepository") as mock_repo_class:
+            mock_repo = AsyncMock()
+            mock_repo.get.return_value = mock_deck
+            mock_repo.count_cards.return_value = 10
+            mock_repo_class.return_value = mock_repo
+
+            response = await client.get(f"/api/v1/decks/{deck_id}", headers=auth_headers)
+
+            assert response.status_code == 200
+            data = response.json()
+            assert "is_premium" in data
+            assert data["is_premium"] is True
+
+    @pytest.mark.asyncio
+    async def test_search_decks_includes_is_premium_in_response(
+        self, client: AsyncClient, auth_headers: dict
+    ):
+        """Test that search endpoint includes is_premium field."""
+        mock_deck = MagicMock(spec=Deck)
+        mock_deck.id = uuid4()
+        mock_deck.name = "Greek Premium"
+        mock_deck.description = "Premium Greek content"
+        mock_deck.level = DeckLevel.B2
+        mock_deck.is_active = True
+        mock_deck.is_premium = True
+        mock_deck.created_at = MagicMock()
+        mock_deck.updated_at = MagicMock()
+
+        with patch("src.api.v1.decks.DeckRepository") as mock_repo_class:
+            mock_repo = AsyncMock()
+            mock_repo.search.return_value = [mock_deck]
+            mock_repo.count_search.return_value = 1
+            mock_repo_class.return_value = mock_repo
+
+            response = await client.get("/api/v1/decks/search?q=greek", headers=auth_headers)
+
+            assert response.status_code == 200
+            data = response.json()
+            assert len(data["decks"]) == 1
+            assert "is_premium" in data["decks"][0]
+            assert data["decks"][0]["is_premium"] is True
+
+    # Note: Update tests for is_premium are in integration tests
+    # (tests/integration/api/test_decks.py::TestDeckIsPremiumIntegration)
+    # because mocking the database session for update operations is complex
+    # and integration tests provide better coverage for CRUD operations.
