@@ -323,6 +323,7 @@ async def get_deck(
         description=deck.description,
         level=deck.level,
         is_active=deck.is_active,
+        is_premium=deck.is_premium,
         created_at=deck.created_at,
         updated_at=deck.updated_at,
         card_count=card_count,

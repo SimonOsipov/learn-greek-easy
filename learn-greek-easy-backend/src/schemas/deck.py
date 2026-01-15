@@ -40,6 +40,7 @@ class DeckUpdate(BaseModel):
     description: Optional[str] = None
     level: Optional[DeckLevel] = None
     is_active: Optional[bool] = None
+    is_premium: Optional[bool] = None
 
 
 class DeckResponse(DeckBase):
@@ -49,6 +50,7 @@ class DeckResponse(DeckBase):
 
     id: UUID
     is_active: bool
+    is_premium: bool
     created_at: datetime
     updated_at: datetime
 

@@ -127,6 +127,7 @@ class CultureDeckService:
             color_accent=deck.color_accent,
             category=deck.category,
             question_count=question_count,
+            is_premium=deck.is_premium,
             progress=progress,
         )
 
@@ -255,6 +256,7 @@ class CultureDeckService:
             color_accent=deck.color_accent,
             category=deck.category,
             question_count=question_count,
+            is_premium=deck.is_premium,
             progress=progress,
             is_active=deck.is_active,
             created_at=deck.created_at,
@@ -314,6 +316,7 @@ class CultureDeckService:
             "category": deck_data.category,
             "order_index": deck_data.order_index,
             "is_active": True,
+            "is_premium": deck_data.is_premium,
         }
 
         # Create deck using repository
@@ -335,6 +338,7 @@ class CultureDeckService:
             color_accent=deck.color_accent,
             category=deck.category,
             question_count=0,  # New deck has no questions
+            is_premium=deck.is_premium,
             progress=None,
             is_active=deck.is_active,
             created_at=deck.created_at,
