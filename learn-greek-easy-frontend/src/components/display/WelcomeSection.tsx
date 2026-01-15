@@ -32,7 +32,7 @@ export const WelcomeSection: React.FC<WelcomeSectionProps> = ({
         <h2 className="mb-2 text-xl font-semibold text-foreground md:text-2xl">
           {t('welcome.greeting', { name: userName })} 👋
         </h2>
-        <p className="text-text-muted">
+        <p className="text-muted-foreground">
           <Trans
             i18nKey="welcome.cardsToReview"
             ns="common"
