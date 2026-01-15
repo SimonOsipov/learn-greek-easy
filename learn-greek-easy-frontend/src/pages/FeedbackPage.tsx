@@ -52,7 +52,11 @@ export const FeedbackPage: React.FC = () => {
           </h1>
           <p className="mt-2 text-muted-foreground">{t('page.subtitle')}</p>
         </div>
-        <Button onClick={() => setIsSubmitDialogOpen(true)} data-testid="open-submit-dialog-button">
+        <Button
+          variant="hero"
+          onClick={() => setIsSubmitDialogOpen(true)}
+          data-testid="open-submit-dialog-button"
+        >
           <Plus className="mr-2 h-4 w-4" />
           {t('page.submitButton')}
         </Button>

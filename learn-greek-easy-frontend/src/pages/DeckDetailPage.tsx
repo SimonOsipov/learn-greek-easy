@@ -291,9 +291,10 @@ const DeckHeaderSection: React.FC<DeckHeaderSectionProps> = ({
           ) : deckStatus === 'not-started' ? (
             <Button
               data-testid="start-review-button"
+              variant="hero"
               size="lg"
               onClick={onStartLearning}
-              className="w-full bg-gradient-to-br from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700"
+              className="w-full"
             >
               <BookOpen className="mr-2 h-5 w-5" />
               {t('detail.startReview')}
@@ -301,9 +302,10 @@ const DeckHeaderSection: React.FC<DeckHeaderSectionProps> = ({
           ) : deckStatus === 'completed' ? (
             <Button
               data-testid="start-review-button"
+              variant="hero"
               size="lg"
               onClick={onContinue}
-              className="w-full bg-gradient-to-br from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700"
+              className="w-full"
             >
               <CheckCircle className="mr-2 h-5 w-5" />
               {t('detail.reviewDeck')}
@@ -311,9 +313,10 @@ const DeckHeaderSection: React.FC<DeckHeaderSectionProps> = ({
           ) : (
             <Button
               data-testid="start-review-button"
+              variant="hero"
               size="lg"
               onClick={onContinue}
-              className="w-full bg-gradient-to-br from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700"
+              className="w-full"
             >
               <TrendingUp className="mr-2 h-5 w-5" />
               {t('detail.continueReview')}
