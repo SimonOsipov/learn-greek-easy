@@ -48,7 +48,7 @@ export const MobileNav: React.FC<MobileNavProps> = ({ className }) => {
   return (
     <nav
       className={cn(
-        'fixed bottom-0 left-0 right-0 z-50 border-t border-border-gray bg-white shadow-nav lg:hidden',
+        'fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background shadow-nav lg:hidden',
         className
       )}
     >
@@ -64,7 +64,7 @@ export const MobileNav: React.FC<MobileNavProps> = ({ className }) => {
               to={item.href}
               className={cn(
                 'flex min-w-[64px] flex-col items-center px-3 py-2 transition-colors',
-                active ? 'text-primary' : 'text-text-muted hover:text-text-secondary'
+                active ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
               )}
               aria-label={label}
               aria-current={active ? 'page' : undefined}

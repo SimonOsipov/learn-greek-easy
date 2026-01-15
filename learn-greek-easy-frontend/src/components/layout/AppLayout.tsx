@@ -34,7 +34,7 @@ export const AppLayout: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-bg-page">
+    <div className="min-h-screen bg-background">
       {/* Header - Always visible */}
       <Header />
 
@@ -44,7 +44,7 @@ export const AppLayout: React.FC = () => {
           <SheetContent side="left" className="w-[280px] p-0">
             <div className="flex h-full flex-col">
               {/* Sidebar Header */}
-              <div className="border-b border-border-gray p-6">
+              <div className="border-b border-border p-6">
                 <h2 className="text-lg font-semibold">{t('nav.menu')}</h2>
               </div>
 
