@@ -263,7 +263,7 @@ export const PreferencesSection: React.FC<PreferencesSectionProps> = ({ user }) 
         <Card data-testid="theme-card">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
-              <Palette className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+              <Palette className="h-5 w-5 text-purple-600 dark:text-purple-400" />
               {t('preferences.theme.title')}
             </CardTitle>
             <CardDescription>{t('preferences.theme.description')}</CardDescription>
@@ -275,7 +275,7 @@ export const PreferencesSection: React.FC<PreferencesSectionProps> = ({ user }) 
                 className={cn(
                   'flex flex-col items-center gap-2 rounded-lg border-2 p-4 transition-all',
                   currentTheme === 'light'
-                    ? 'border-orange-600 bg-orange-50 dark:border-orange-400 dark:bg-orange-900/20'
+                    ? 'border-purple-600 bg-purple-50 dark:border-purple-400 dark:bg-purple-900/20'
                     : 'border-border hover:border-border/80'
                 )}
                 data-testid="theme-option-light"
@@ -287,7 +287,7 @@ export const PreferencesSection: React.FC<PreferencesSectionProps> = ({ user }) 
                   {t('preferences.theme.light')}
                 </span>
                 {currentTheme === 'light' && (
-                  <Check className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                  <Check className="h-4 w-4 text-purple-600 dark:text-purple-400" />
                 )}
               </button>
               <button
@@ -295,7 +295,7 @@ export const PreferencesSection: React.FC<PreferencesSectionProps> = ({ user }) 
                 className={cn(
                   'flex flex-col items-center gap-2 rounded-lg border-2 p-4 transition-all',
                   currentTheme === 'dark'
-                    ? 'border-orange-600 bg-orange-50 dark:border-orange-400 dark:bg-orange-900/20'
+                    ? 'border-purple-600 bg-purple-50 dark:border-purple-400 dark:bg-purple-900/20'
                     : 'border-border hover:border-border/80'
                 )}
                 data-testid="theme-option-dark"
@@ -307,7 +307,7 @@ export const PreferencesSection: React.FC<PreferencesSectionProps> = ({ user }) 
                   {t('preferences.theme.dark')}
                 </span>
                 {currentTheme === 'dark' && (
-                  <Check className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                  <Check className="h-4 w-4 text-purple-600 dark:text-purple-400" />
                 )}
               </button>
             </div>
