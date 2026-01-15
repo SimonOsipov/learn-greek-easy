@@ -47,7 +47,7 @@ export const FeedbackPage: React.FC = () => {
     <div className="space-y-6" data-testid="feedback-page">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold" data-testid="feedback-page-title">
+          <h1 className="text-3xl font-bold text-foreground" data-testid="feedback-page-title">
             {t('page.title')}
           </h1>
           <p className="mt-2 text-muted-foreground">{t('page.subtitle')}</p>
