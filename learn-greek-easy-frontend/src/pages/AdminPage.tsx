@@ -13,6 +13,7 @@ import {
   AlertCircle,
   ChevronLeft,
   ChevronRight,
+  Crown,
   Database,
   Layers,
   Pencil,
@@ -262,6 +263,13 @@ const UnifiedDeckListItem: React.FC<UnifiedDeckListItemProps> = ({ deck, locale,
           <CultureBadge category={deck.category as CultureCategory} />
         )}
         <span className="font-medium">{displayName}</span>
+        {deck.is_premium && (
+          <Crown
+            className="h-4 w-4 text-amber-500"
+            aria-label="Premium deck"
+            data-testid={`premium-indicator-${deck.id}`}
+          />
+        )}
         <Badge variant="outline" className="text-xs">
           {t(`deckTypes.${deck.type}`)}
         </Badge>
