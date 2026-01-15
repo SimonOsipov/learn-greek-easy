@@ -44,6 +44,8 @@ import {
   trackAdminDeckEditFailed,
   trackAdminDeckEditOpened,
   trackAdminDeckEditSaved,
+  trackAdminDeckPremiumDisabled,
+  trackAdminDeckPremiumEnabled,
   trackAdminDeckReactivated,
 } from '@/lib/analytics/adminAnalytics';
 import { adminAPI } from '@/services/adminAPI';
@@ -633,6 +635,9 @@ const AdminPage: React.FC = () => {
       if ('category' in data && data.category !== selectedDeck.category) {
         fieldsChanged.push('category');
       }
+      if (data.is_premium !== selectedDeck.is_premium) {
+        fieldsChanged.push('is_premium');
+      }
 
       // Call appropriate API based on deck type
       if (selectedDeck.type === 'vocabulary') {
@@ -674,6 +679,24 @@ const AdminPage: React.FC = () => {
         });
       } else if (!wasActive && isNowActive) {
         trackAdminDeckReactivated({
+          deck_id: selectedDeck.id,
+          deck_type: selectedDeck.type,
+          deck_name: data.name,
+        });
+      }
+
+      // Track premium status changes
+      const wasPremium = selectedDeck.is_premium ?? false;
+      const isNowPremium = data.is_premium ?? false;
+
+      if (!wasPremium && isNowPremium) {
+        trackAdminDeckPremiumEnabled({
+          deck_id: selectedDeck.id,
+          deck_type: selectedDeck.type,
+          deck_name: data.name,
+        });
+      } else if (wasPremium && !isNowPremium) {
+        trackAdminDeckPremiumDisabled({
           deck_id: selectedDeck.id,
           deck_type: selectedDeck.type,
           deck_name: data.name,

@@ -30,6 +30,8 @@ export {
   type AdminDeckEditFailedProperties,
   type AdminDeckDeactivatedProperties,
   type AdminDeckReactivatedProperties,
+  type AdminDeckPremiumEnabledProperties,
+  type AdminDeckPremiumDisabledProperties,
   // Tracking functions
   trackAdminDeckEditOpened,
   trackAdminDeckEditSaved,
@@ -37,7 +39,15 @@ export {
   trackAdminDeckEditFailed,
   trackAdminDeckDeactivated,
   trackAdminDeckReactivated,
+  trackAdminDeckPremiumEnabled,
+  trackAdminDeckPremiumDisabled,
 } from './adminAnalytics';
+export {
+  type PremiumDeckLockedViewedProperties,
+  type PremiumDeckLockedClickedProperties,
+  trackPremiumDeckLockedViewed,
+  trackPremiumDeckLockedClicked,
+} from './deckAnalytics';
 export {
   registerTheme,
   trackThemeChange,
