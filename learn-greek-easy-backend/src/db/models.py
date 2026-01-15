@@ -400,6 +400,7 @@ class Deck(Base, TimestampMixin):
     is_premium: Mapped[bool] = mapped_column(
         Boolean,
         default=False,
+        server_default=text("false"),
         nullable=False,
         index=True,
         comment="Premium decks require a subscription to access",
@@ -1162,6 +1163,7 @@ class CultureDeck(Base, TimestampMixin):
     is_premium: Mapped[bool] = mapped_column(
         Boolean,
         default=False,
+        server_default=text("false"),
         nullable=False,
         index=True,
         comment="Premium decks require a subscription to access",
