@@ -166,7 +166,7 @@
   }
 
   .metric-label {
-    @apply mb-2 text-sm text-text-muted;
+    @apply mb-2 text-sm text-muted-foreground;
   }
 
   .metric-value {
@@ -174,7 +174,7 @@
   }
 
   .metric-sublabel {
-    @apply text-xs text-text-subtle;
+    @apply text-xs text-muted-foreground;
   }
 }
 

@@ -44,23 +44,10 @@ export default {
   			warning: '#ea580c',
   			info: '#3b82f6',
   			danger: '#ef4444',
-  			text: {
-  				primary: '#1a1a1a',
-  				secondary: '#374151',
-  				muted: '#6b7280',
-  				subtle: '#6b7280'
-  			},
-  			bg: {
-  				page: '#f8f9fa',
-  				card: '#ffffff'
-  			},
-  			border: {
-  				DEFAULT: '#e5e7eb',
-  				gray: '#e5e7eb'
-  			},
+  			border: 'hsl(var(--border))',
   			muted: {
-  				DEFAULT: '#f3f4f6',
-  				foreground: '#6b7280'
+  				DEFAULT: 'hsl(var(--muted))',
+  				foreground: 'hsl(var(--muted-foreground))'
   			},
   			badge: {
   				blue: {
