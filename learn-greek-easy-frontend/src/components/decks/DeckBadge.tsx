@@ -1,5 +1,6 @@
 import React from 'react';
 
+import { BookText, Languages, MessageSquare } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Badge } from '@/components/ui/badge';
@@ -34,22 +35,38 @@ const STATUS_CONFIG = {
 
 const CATEGORY_CONFIG: Record<
   Exclude<DeckCategory, 'culture'>,
-  { labelKey: string; bgColor: string; textColor: string }
+  {
+    icon: React.ComponentType<{ className?: string }>;
+    labelKey: string;
+    bgColor: string;
+    textColor: string;
+    darkBgColor: string;
+    darkTextColor: string;
+  }
 > = {
   vocabulary: {
+    icon: BookText,
     labelKey: 'card.categories.vocabulary',
     bgColor: 'bg-cyan-100',
-    textColor: 'text-cyan-700',
+    textColor: 'text-cyan-800',
+    darkBgColor: 'dark:bg-cyan-900',
+    darkTextColor: 'dark:text-cyan-200',
   },
   grammar: {
+    icon: Languages,
     labelKey: 'card.categories.grammar',
     bgColor: 'bg-orange-100',
-    textColor: 'text-orange-700',
+    textColor: 'text-orange-800',
+    darkBgColor: 'dark:bg-orange-900',
+    darkTextColor: 'dark:text-orange-200',
   },
   phrases: {
+    icon: MessageSquare,
     labelKey: 'card.categories.phrases',
     bgColor: 'bg-teal-100',
-    textColor: 'text-teal-700',
+    textColor: 'text-teal-800',
+    darkBgColor: 'dark:bg-teal-900',
+    darkTextColor: 'dark:text-teal-200',
   },
 };
 
@@ -93,13 +110,15 @@ export const DeckBadge: React.FC<DeckBadgeProps> = ({
   if (type === 'category' && category && category !== 'culture') {
     const config = CATEGORY_CONFIG[category];
     const categoryLabel = t(config.labelKey);
+    const Icon = config.icon;
     return (
       <Badge
         variant="outline"
-        className={`${config.bgColor} ${config.textColor} rounded px-2 py-1 text-xs ${className}`}
+        className={`${config.bgColor} ${config.textColor} ${config.darkBgColor} ${config.darkTextColor} ${className}`}
         aria-label={`Category: ${categoryLabel}`}
         data-testid="deck-category-badge"
       >
+        <Icon className="mr-1 h-3 w-3" />
         {categoryLabel}
       </Badge>
     );
