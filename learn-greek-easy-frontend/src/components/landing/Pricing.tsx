@@ -78,7 +78,7 @@ const Pricing = () => {
             {t('pricing.label')}
           </p>
           <h2
-            className="mb-3 text-2xl font-bold motion-safe:animate-fade-up md:text-4xl"
+            className="mb-3 text-2xl font-bold text-foreground motion-safe:animate-fade-up md:text-4xl"
             style={{ animationDelay: '0.1s' }}
           >
             {t('pricing.title')}
