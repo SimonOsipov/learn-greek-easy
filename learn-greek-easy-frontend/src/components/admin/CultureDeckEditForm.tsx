@@ -58,6 +58,7 @@ const cultureDeckSchema = z.object({
     .or(z.literal('')),
   category: z.enum(CULTURE_CATEGORIES),
   is_active: z.boolean(),
+  is_premium: z.boolean(),
 });
 
 export type CultureDeckFormData = z.infer<typeof cultureDeckSchema>;
@@ -98,6 +99,7 @@ export const CultureDeckEditForm: React.FC<CultureDeckEditFormProps> = ({
       description: '', // Culture decks don't have description in current model
       category: (deck.category as CultureCategory) || 'culture',
       is_active: deck.is_active,
+      is_premium: deck.is_premium ?? false,
     },
   });
 
@@ -211,6 +213,26 @@ export const CultureDeckEditForm: React.FC<CultureDeckEditFormProps> = ({
                   checked={field.value}
                   onCheckedChange={handleActiveChange}
                   data-testid="deck-edit-is-active"
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="is_premium"
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+              <div className="space-y-0.5">
+                <FormLabel className="text-base">{t('deckEdit.isPremium')}</FormLabel>
+                <FormDescription>{t('deckEdit.isPremiumDescription')}</FormDescription>
+              </div>
+              <FormControl>
+                <Switch
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                  data-testid="deck-edit-is-premium"
                 />
               </FormControl>
             </FormItem>
