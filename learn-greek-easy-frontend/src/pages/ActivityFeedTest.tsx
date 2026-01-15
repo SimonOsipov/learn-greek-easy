@@ -100,17 +100,17 @@ export const ActivityFeedTest: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
+    <div className="min-h-screen bg-muted p-8">
       <div className="mx-auto max-w-7xl space-y-8">
         {/* Header */}
         <div>
-          <h1 className="mb-2 text-3xl font-bold text-gray-900">Activity Feed Component Test</h1>
-          <p className="text-gray-600">Task 06.06 - Verification Page</p>
+          <h1 className="mb-2 text-3xl font-bold text-foreground">Activity Feed Component Test</h1>
+          <p className="text-muted-foreground">Task 06.06 - Verification Page</p>
         </div>
 
         {/* Test 1: Activity Feed with Data */}
         <div>
-          <h2 className="mb-4 text-xl font-semibold text-gray-900">
+          <h2 className="mb-4 text-xl font-semibold text-foreground">
             Scenario 1: Activity Feed with Data (5 items)
           </h2>
           <div className="max-w-2xl">
@@ -120,7 +120,7 @@ export const ActivityFeedTest: React.FC = () => {
 
         {/* Test 2: Activity Feed with Limited Items */}
         <div>
-          <h2 className="mb-4 text-xl font-semibold text-gray-900">
+          <h2 className="mb-4 text-xl font-semibold text-foreground">
             Scenario 2: Activity Feed with Limit (3 items)
           </h2>
           <div className="max-w-2xl">
@@ -130,7 +130,7 @@ export const ActivityFeedTest: React.FC = () => {
 
         {/* Test 3: Empty Activity Feed */}
         <div>
-          <h2 className="mb-4 text-xl font-semibold text-gray-900">
+          <h2 className="mb-4 text-xl font-semibold text-foreground">
             Scenario 3: Empty Activity Feed
           </h2>
           <div className="max-w-2xl">
@@ -140,8 +140,8 @@ export const ActivityFeedTest: React.FC = () => {
 
         {/* Test Summary */}
         <div className="rounded-lg bg-white p-6 shadow">
-          <h2 className="mb-4 text-xl font-semibold text-gray-900">Test Checklist</h2>
-          <ul className="space-y-2 text-gray-700">
+          <h2 className="mb-4 text-xl font-semibold text-foreground">Test Checklist</h2>
+          <ul className="space-y-2 text-muted-foreground">
             <li>✅ Activity feed displays recent sessions</li>
             <li>✅ Deck name with icon visible</li>
             <li>✅ Card count with singular/plural handling</li>
