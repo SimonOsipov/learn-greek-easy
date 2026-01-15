@@ -112,7 +112,7 @@ export function SessionSummaryPage() {
   // Loading state (while redirect is processing)
   if (!sessionSummary) {
     return (
-      <div className="min-h-screen bg-gray-50 py-8 md:py-12">
+      <div className="min-h-screen bg-muted py-8 md:py-12">
         <div className="container mx-auto max-w-3xl space-y-6 px-4">
           <Skeleton className="h-48 w-full" />
           <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
@@ -130,7 +130,7 @@ export function SessionSummaryPage() {
   // Error state (should not happen if redirect works)
   if (!deckId) {
     return (
-      <div className="min-h-screen bg-gray-50 py-8 md:py-12">
+      <div className="min-h-screen bg-muted py-8 md:py-12">
         <div className="container mx-auto max-w-3xl px-4">
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
@@ -160,7 +160,7 @@ export function SessionSummaryPage() {
 
   // Main render
   return (
-    <div className="min-h-screen bg-gray-50 py-8 md:py-12">
+    <div className="min-h-screen bg-muted py-8 md:py-12">
       <div className="container mx-auto px-4">
         <SessionSummary
           summary={sessionSummary}
