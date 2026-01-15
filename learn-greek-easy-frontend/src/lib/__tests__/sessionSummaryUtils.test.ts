@@ -226,26 +226,26 @@ describe('sessionSummaryUtils', () => {
 
   describe('getAccuracyColor', () => {
     it('should return green for 70%+ accuracy', () => {
-      expect(getAccuracyColor(70)).toBe('text-green-600');
-      expect(getAccuracyColor(80)).toBe('text-green-600');
-      expect(getAccuracyColor(100)).toBe('text-green-600');
+      expect(getAccuracyColor(70)).toBe('text-green-600 dark:text-green-400');
+      expect(getAccuracyColor(80)).toBe('text-green-600 dark:text-green-400');
+      expect(getAccuracyColor(100)).toBe('text-green-600 dark:text-green-400');
     });
 
     it('should return orange for 50-69% accuracy', () => {
-      expect(getAccuracyColor(50)).toBe('text-orange-600');
-      expect(getAccuracyColor(60)).toBe('text-orange-600');
-      expect(getAccuracyColor(69)).toBe('text-orange-600');
+      expect(getAccuracyColor(50)).toBe('text-orange-600 dark:text-orange-400');
+      expect(getAccuracyColor(60)).toBe('text-orange-600 dark:text-orange-400');
+      expect(getAccuracyColor(69)).toBe('text-orange-600 dark:text-orange-400');
     });
 
     it('should return red for < 50% accuracy', () => {
-      expect(getAccuracyColor(0)).toBe('text-red-600');
-      expect(getAccuracyColor(25)).toBe('text-red-600');
-      expect(getAccuracyColor(49)).toBe('text-red-600');
+      expect(getAccuracyColor(0)).toBe('text-red-600 dark:text-red-400');
+      expect(getAccuracyColor(25)).toBe('text-red-600 dark:text-red-400');
+      expect(getAccuracyColor(49)).toBe('text-red-600 dark:text-red-400');
     });
 
     it('should handle boundary cases', () => {
-      expect(getAccuracyColor(70)).toBe('text-green-600'); // Exactly 70
-      expect(getAccuracyColor(50)).toBe('text-orange-600'); // Exactly 50
+      expect(getAccuracyColor(70)).toBe('text-green-600 dark:text-green-400'); // Exactly 70
+      expect(getAccuracyColor(50)).toBe('text-orange-600 dark:text-orange-400'); // Exactly 50
     });
   });
 
@@ -297,20 +297,20 @@ describe('sessionSummaryUtils', () => {
       const summary = createSessionSummary();
       const breakdown = formatRatingBreakdown(summary);
 
-      expect(breakdown[0].color).toBe('text-red-600'); // Again
-      expect(breakdown[1].color).toBe('text-orange-600'); // Hard
-      expect(breakdown[2].color).toBe('text-green-600'); // Good
-      expect(breakdown[3].color).toBe('text-blue-600'); // Easy
+      expect(breakdown[0].color).toBe('text-red-600 dark:text-red-400'); // Again
+      expect(breakdown[1].color).toBe('text-orange-600 dark:text-orange-400'); // Hard
+      expect(breakdown[2].color).toBe('text-green-600 dark:text-green-400'); // Good
+      expect(breakdown[3].color).toBe('text-blue-600 dark:text-blue-400'); // Easy
     });
 
     it('should assign correct background colors', () => {
       const summary = createSessionSummary();
       const breakdown = formatRatingBreakdown(summary);
 
-      expect(breakdown[0].bgColor).toBe('bg-red-50'); // Again
-      expect(breakdown[1].bgColor).toBe('bg-orange-50'); // Hard
-      expect(breakdown[2].bgColor).toBe('bg-green-50'); // Good
-      expect(breakdown[3].bgColor).toBe('bg-blue-50'); // Easy
+      expect(breakdown[0].bgColor).toBe('bg-red-50 dark:bg-red-900/30'); // Again
+      expect(breakdown[1].bgColor).toBe('bg-orange-50 dark:bg-orange-900/30'); // Hard
+      expect(breakdown[2].bgColor).toBe('bg-green-50 dark:bg-green-900/30'); // Good
+      expect(breakdown[3].bgColor).toBe('bg-blue-50 dark:bg-blue-900/30'); // Easy
     });
 
     it('should handle zero cards reviewed', () => {
