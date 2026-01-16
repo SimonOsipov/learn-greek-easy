@@ -42,12 +42,7 @@ export const WelcomeSection: React.FC<WelcomeSectionProps> = ({
           {getEncouragement()}
         </p>
       </div>
-      <Button
-        variant="success"
-        size="lg"
-        className="mt-4 transition-all hover:shadow-lg md:mt-0"
-        onClick={onStartReview}
-      >
+      <Button variant="hero" size="lg" className="mt-4 md:mt-0" onClick={onStartReview}>
         {t('welcome.startReview')}
       </Button>
     </div>

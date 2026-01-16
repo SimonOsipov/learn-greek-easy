@@ -190,9 +190,10 @@ export function CultureDeckDetailPage() {
               {progress && progress.status !== 'not-started' ? (
                 <Button
                   data-testid="start-practice-button"
+                  variant="hero"
                   size="lg"
                   onClick={handleStartPractice}
-                  className="w-full bg-gradient-to-br from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700"
+                  className="w-full"
                 >
                   <TrendingUp className="mr-2 h-5 w-5" />
                   {t('culture:practice.continuePractice')}
@@ -200,9 +201,10 @@ export function CultureDeckDetailPage() {
               ) : (
                 <Button
                   data-testid="start-practice-button"
+                  variant="hero"
                   size="lg"
                   onClick={handleStartPractice}
-                  className="w-full bg-gradient-to-br from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700"
+                  className="w-full"
                 >
                   <Play className="mr-2 h-5 w-5" />
                   {t('culture:practice.startPractice')}
