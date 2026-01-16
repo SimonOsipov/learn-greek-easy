@@ -58,6 +58,9 @@ const DeckDetailPage = lazyWithRetry(() =>
 const MyDecksPage = lazyWithRetry(() =>
   import('@/pages/MyDecksPage').then((m) => ({ default: m.MyDecksPage }))
 );
+const MyDeckDetailPage = lazyWithRetry(() =>
+  import('@/pages/MyDeckDetailPage').then((m) => ({ default: m.MyDeckDetailPage }))
+);
 
 // User pages
 const Profile = lazyWithRetry(() =>
@@ -165,6 +168,7 @@ function AppContent() {
                 </Route>
                 <Route path="/my-decks" element={<AppLayout />}>
                   <Route index element={<MyDecksPage />} />
+                  <Route path=":id" element={<MyDeckDetailPage />} />
                 </Route>
                 <Route path="/statistics" element={<AppLayout />}>
                   <Route index element={<Statistics />} />
