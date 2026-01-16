@@ -68,6 +68,9 @@ class CultureDeckResponse(BaseModel):
         description="Category: history, geography, politics, culture, traditions",
     )
     question_count: int = Field(..., ge=0, description="Total questions in deck")
+    is_premium: bool = Field(
+        default=False, description="Whether deck requires premium subscription"
+    )
     progress: Optional[CultureDeckProgress] = Field(
         None, description="User progress (null for unauthenticated)"
     )
@@ -358,6 +361,9 @@ class CultureDeckCreate(BaseModel):
         description="Category: history, geography, politics, culture, traditions",
     )
     order_index: int = Field(default=0, ge=0, description="Display order within category")
+    is_premium: bool = Field(
+        default=False, description="Whether deck requires premium subscription"
+    )
 
 
 class CultureDeckUpdate(BaseModel):
@@ -378,6 +384,9 @@ class CultureDeckUpdate(BaseModel):
     )
     order_index: Optional[int] = Field(None, ge=0, description="Display order within category")
     is_active: Optional[bool] = Field(None, description="Whether deck is active")
+    is_premium: Optional[bool] = Field(
+        None, description="Whether deck requires premium subscription"
+    )
 
 
 # ============================================================================

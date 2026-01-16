@@ -397,6 +397,14 @@ class Deck(Base, TimestampMixin):
         nullable=False,
         index=True,
     )
+    is_premium: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        server_default=text("false"),
+        nullable=False,
+        index=True,
+        comment="Premium decks require a subscription to access",
+    )
 
     # Relationships
     cards: Mapped[List["Card"]] = relationship(
@@ -1151,6 +1159,14 @@ class CultureDeck(Base, TimestampMixin):
         default=True,
         nullable=False,
         index=True,
+    )
+    is_premium: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        server_default=text("false"),
+        nullable=False,
+        index=True,
+        comment="Premium decks require a subscription to access",
     )
 
     # Display order

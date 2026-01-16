@@ -16,6 +16,8 @@
     "categoryPlaceholder": "Выберите категорию",
     "isActive": "Активна",
     "isActiveDescription": "Неактивные колоды скрыты от учеников",
+    "isPremium": "Премиум",
+    "isPremiumDescription": "Премиум-колоды требуют подписки для доступа",
     "save": "Сохранить изменения",
     "saving": "Сохранение...",
     "cancel": "Отмена",

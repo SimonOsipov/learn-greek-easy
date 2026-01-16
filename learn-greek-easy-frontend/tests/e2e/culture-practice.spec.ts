@@ -28,10 +28,17 @@ async function navigateToCulturePractice(page: Page): Promise<string> {
   // Filter to culture decks
   await page.getByRole('button', { name: 'Culture', exact: true }).click();
 
-  // Click first culture deck to get to detail page - deck card visibility confirms filter applied
-  const firstDeck = page.locator('[data-testid="deck-card"]').first();
-  await expect(firstDeck).toBeVisible();
-  await firstDeck.click();
+  // Find a non-premium culture deck (one without the premium locked badge)
+  // Premium decks have aria-label="Premium locked" on their lock icon
+  const deckCards = page.locator('[data-testid="deck-card"]');
+  await expect(deckCards.first()).toBeVisible();
+
+  // Find deck without premium lock
+  const nonPremiumDeck = deckCards.filter({
+    hasNot: page.locator('[aria-label="Premium locked"]'),
+  }).first();
+  await expect(nonPremiumDeck).toBeVisible();
+  await nonPremiumDeck.click();
 
   // Wait for deck detail page
   await expect(page).toHaveURL(/\/culture\/decks\//);
@@ -136,9 +143,12 @@ test.describe('Culture Practice Session', () => {
     // Navigate to decks first to get a real deck ID
     await navigateToCultureDecks(page);
 
-    // Get first culture deck and extract its ID
-    const firstDeck = page.locator('[data-testid="deck-card"]').first();
-    await firstDeck.click();
+    // Get a non-premium culture deck and extract its ID
+    const deckCards = page.locator('[data-testid="deck-card"]');
+    const nonPremiumDeck = deckCards.filter({
+      hasNot: page.locator('[aria-label="Premium locked"]'),
+    }).first();
+    await nonPremiumDeck.click();
 
     // Wait for deck detail page and extract deck ID
     await expect(page).toHaveURL(/\/culture\/decks\//);
@@ -238,9 +248,12 @@ test.describe('Culture Practice Session', () => {
     // Navigate to decks first to get a real deck ID
     await navigateToCultureDecks(page);
 
-    // Get first culture deck and extract its ID
-    const firstDeck = page.locator('[data-testid="deck-card"]').first();
-    await firstDeck.click();
+    // Get a non-premium culture deck and extract its ID
+    const deckCards = page.locator('[data-testid="deck-card"]');
+    const nonPremiumDeck = deckCards.filter({
+      hasNot: page.locator('[aria-label="Premium locked"]'),
+    }).first();
+    await nonPremiumDeck.click();
 
     // Wait for deck detail page and extract deck ID
     await expect(page).toHaveURL(/\/culture\/decks\//);
@@ -435,10 +448,13 @@ test.describe('Culture Practice Session - Full Flow', () => {
     await expect(cultureTab).toBeVisible();
     await cultureTab.click();
 
-    // Click on first culture deck - visibility confirms filter applied
-    const deckCard = page.locator('[data-testid="deck-card"]').first();
-    await expect(deckCard).toBeVisible();
-    await deckCard.click();
+    // Click on a non-premium culture deck - visibility confirms filter applied
+    const deckCards = page.locator('[data-testid="deck-card"]');
+    await expect(deckCards.first()).toBeVisible();
+    const nonPremiumDeck = deckCards.filter({
+      hasNot: page.locator('[aria-label="Premium locked"]'),
+    }).first();
+    await nonPremiumDeck.click();
 
     // Wait for deck detail page
     await expect(page).toHaveURL(/\/culture\/decks\//);

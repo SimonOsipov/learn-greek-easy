@@ -9,8 +9,10 @@ from pydantic import ValidationError
 from src.schemas.culture import (
     CultureAnswerRequest,
     CultureAnswerResponse,
+    CultureDeckCreate,
     CultureDeckProgress,
     CultureDeckResponse,
+    CultureDeckUpdate,
     CultureOverallProgress,
     CultureQuestionResponse,
     CultureQuestionStatsResponse,
@@ -565,3 +567,176 @@ class TestCultureSessionSummary:
             ended_at=now,
         )
         assert summary.accuracy_percentage == 0.0
+
+
+class TestCultureDeckResponseIsPremium:
+    """Test CultureDeckResponse is_premium field."""
+
+    def test_deck_response_is_premium_default_false(self):
+        """Test is_premium defaults to False."""
+        deck = CultureDeckResponse(
+            id=uuid4(),
+            name="Test Deck",
+            description="Test description",
+            icon="book-open",
+            color_accent="#4F46E5",
+            category="history",
+            question_count=10,
+            progress=None,
+        )
+        assert deck.is_premium is False
+
+    def test_deck_response_is_premium_true(self):
+        """Test is_premium can be set to True."""
+        deck = CultureDeckResponse(
+            id=uuid4(),
+            name="Premium Deck",
+            description="Premium content",
+            icon="star",
+            color_accent="#FFD700",
+            category="history",
+            question_count=20,
+            is_premium=True,
+            progress=None,
+        )
+        assert deck.is_premium is True
+
+    def test_deck_response_is_premium_false_explicit(self):
+        """Test is_premium can be explicitly set to False."""
+        deck = CultureDeckResponse(
+            id=uuid4(),
+            name="Free Deck",
+            description="Free content",
+            icon="book",
+            color_accent="#4F46E5",
+            category="geography",
+            question_count=15,
+            is_premium=False,
+            progress=None,
+        )
+        assert deck.is_premium is False
+
+    def test_deck_response_with_progress_and_premium(self):
+        """Test deck response with progress includes is_premium."""
+        progress = CultureDeckProgress(
+            questions_total=50,
+            questions_mastered=20,
+            questions_learning=15,
+            questions_new=15,
+        )
+        deck = CultureDeckResponse(
+            id=uuid4(),
+            name="Premium with Progress",
+            description="Test",
+            icon="crown",
+            color_accent="#9333EA",
+            category="politics",
+            question_count=50,
+            is_premium=True,
+            progress=progress,
+        )
+        assert deck.is_premium is True
+        assert deck.progress.questions_total == 50
+
+
+class TestCultureDeckCreate:
+    """Test CultureDeckCreate schema validation."""
+
+    def test_create_deck_with_is_premium_default_false(self):
+        """Test is_premium defaults to False on create."""
+        deck_data = CultureDeckCreate(
+            name="New Culture Deck",
+            description="Learn Greek culture",
+            icon="book-open",
+            color_accent="#4F46E5",
+            category="history",
+            order_index=0,
+        )
+        assert deck_data.is_premium is False
+
+    def test_create_deck_with_is_premium_true(self):
+        """Test is_premium can be set to True on create."""
+        deck_data = CultureDeckCreate(
+            name="Premium Culture Deck",
+            description="Premium Greek culture content",
+            icon="crown",
+            color_accent="#9333EA",
+            category="traditions",
+            order_index=0,
+            is_premium=True,
+        )
+        assert deck_data.is_premium is True
+
+    def test_create_deck_with_is_premium_false_explicit(self):
+        """Test is_premium can be explicitly False on create."""
+        deck_data = CultureDeckCreate(
+            name="Free Culture Deck",
+            description="Free content",
+            icon="book",
+            color_accent="#22C55E",
+            category="geography",
+            order_index=0,
+            is_premium=False,
+        )
+        assert deck_data.is_premium is False
+
+
+class TestCultureDeckUpdate:
+    """Test CultureDeckUpdate schema validation for is_premium field."""
+
+    def test_update_is_premium_only(self):
+        """Test updating only is_premium field."""
+        update = CultureDeckUpdate(is_premium=True)
+        assert update.is_premium is True
+        assert update.name is None
+        assert update.is_active is None
+
+    def test_update_is_premium_false(self):
+        """Test updating is_premium to False."""
+        update = CultureDeckUpdate(is_premium=False)
+        assert update.is_premium is False
+
+    def test_update_is_premium_and_is_active_independent(self):
+        """Test is_premium and is_active can be updated independently."""
+        # Set premium only
+        update1 = CultureDeckUpdate(is_premium=True)
+        assert update1.is_premium is True
+        assert update1.is_active is None
+
+        # Set active only
+        update2 = CultureDeckUpdate(is_active=False)
+        assert update2.is_active is False
+        assert update2.is_premium is None
+
+        # Set both - they should be independent
+        update3 = CultureDeckUpdate(is_active=False, is_premium=True)
+        assert update3.is_active is False
+        assert update3.is_premium is True
+
+    def test_update_all_fields_including_premium(self):
+        """Test updating all fields including is_premium."""
+        update = CultureDeckUpdate(
+            name="Updated Name",
+            description="New description",
+            icon="map",
+            color_accent="#FF5733",
+            category="geography",
+            order_index=5,
+            is_active=True,
+            is_premium=True,
+        )
+        assert update.name == "Updated Name"
+        assert update.is_active is True
+        assert update.is_premium is True
+
+    def test_update_empty_all_fields_none(self):
+        """Test empty update has all fields as None."""
+        update = CultureDeckUpdate()
+        assert update.name is None
+        assert update.description is None
+        assert update.icon is None
+        assert update.color_accent is None
+        assert update.category is None
+        assert update.order_index is None
+        assert update.is_active is None
+        assert update.is_premium is None

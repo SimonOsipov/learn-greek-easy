@@ -1557,3 +1557,231 @@ class TestDeckCRUDFlow:
 
         search_response = await client.get("/api/v1/decks/search?q=Auth", headers=auth_headers)
         assert search_response.status_code == 200
+
+
+class TestDeckIsPremiumIntegration:
+    """Integration tests for is_premium field on vocabulary decks."""
+
+    @pytest.mark.asyncio
+    async def test_create_deck_is_premium_default_false(
+        self, client: AsyncClient, superuser_auth_headers: dict
+    ):
+        """Test that is_premium defaults to False when creating a deck."""
+        deck_data = {
+            "name": "Free Deck Default",
+            "description": "Default premium test",
+            "level": "A1",
+        }
+
+        response = await client.post(
+            "/api/v1/decks",
+            json=deck_data,
+            headers=superuser_auth_headers,
+        )
+
+        assert response.status_code == 201
+        data = response.json()
+        assert data["is_premium"] is False
+
+    @pytest.mark.asyncio
+    async def test_list_decks_includes_is_premium_field(
+        self, client: AsyncClient, auth_headers: dict, deck_with_cards: DeckWithCards
+    ):
+        """Test that GET /decks returns is_premium field for each deck."""
+        response = await client.get("/api/v1/decks", headers=auth_headers)
+
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data["decks"]) >= 1
+
+        for deck in data["decks"]:
+            assert "is_premium" in deck
+            assert isinstance(deck["is_premium"], bool)
+
+    @pytest.mark.asyncio
+    async def test_get_deck_includes_is_premium_field(
+        self, client: AsyncClient, auth_headers: dict, deck_with_cards: DeckWithCards
+    ):
+        """Test that GET /decks/{id} returns is_premium field."""
+        deck = deck_with_cards.deck
+
+        response = await client.get(f"/api/v1/decks/{deck.id}", headers=auth_headers)
+
+        assert response.status_code == 200
+        data = response.json()
+        assert "is_premium" in data
+        assert isinstance(data["is_premium"], bool)
+
+    @pytest.mark.asyncio
+    async def test_search_decks_includes_is_premium_field(
+        self, client: AsyncClient, auth_headers: dict, deck_with_cards: DeckWithCards
+    ):
+        """Test that GET /decks/search returns is_premium field."""
+        response = await client.get("/api/v1/decks/search?q=Greek", headers=auth_headers)
+
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data["decks"]) >= 1
+
+        for deck in data["decks"]:
+            assert "is_premium" in deck
+            assert isinstance(deck["is_premium"], bool)
+
+    @pytest.mark.asyncio
+    async def test_update_deck_is_premium_to_true(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        auth_headers: dict,
+        empty_deck: Deck,
+    ):
+        """Test PATCH /decks/{id} can update is_premium to True."""
+        # First verify is_premium is False
+        get_response = await client.get(f"/api/v1/decks/{empty_deck.id}", headers=auth_headers)
+        assert get_response.status_code == 200
+        assert get_response.json()["is_premium"] is False
+
+        # Update is_premium to True
+        update_response = await client.patch(
+            f"/api/v1/decks/{empty_deck.id}",
+            json={"is_premium": True},
+            headers=superuser_auth_headers,
+        )
+
+        assert update_response.status_code == 200
+        data = update_response.json()
+        assert data["is_premium"] is True
+
+        # Verify persistence
+        verify_response = await client.get(f"/api/v1/decks/{empty_deck.id}", headers=auth_headers)
+        assert verify_response.status_code == 200
+        assert verify_response.json()["is_premium"] is True
+
+    @pytest.mark.asyncio
+    async def test_update_deck_is_premium_to_false(
+        self, client: AsyncClient, superuser_auth_headers: dict, auth_headers: dict
+    ):
+        """Test PATCH /decks/{id} can update is_premium to False."""
+        # Create a premium deck
+        create_data = {
+            "name": "Premium Deck to Reset",
+            "description": "Will be set to non-premium",
+            "level": "B1",
+        }
+        create_response = await client.post(
+            "/api/v1/decks",
+            json=create_data,
+            headers=superuser_auth_headers,
+        )
+        assert create_response.status_code == 201
+        deck_id = create_response.json()["id"]
+
+        # First set it to premium
+        await client.patch(
+            f"/api/v1/decks/{deck_id}",
+            json={"is_premium": True},
+            headers=superuser_auth_headers,
+        )
+
+        # Now set it back to non-premium
+        update_response = await client.patch(
+            f"/api/v1/decks/{deck_id}",
+            json={"is_premium": False},
+            headers=superuser_auth_headers,
+        )
+
+        assert update_response.status_code == 200
+        assert update_response.json()["is_premium"] is False
+
+        # Verify persistence
+        verify_response = await client.get(f"/api/v1/decks/{deck_id}", headers=auth_headers)
+        assert verify_response.status_code == 200
+        assert verify_response.json()["is_premium"] is False
+
+    @pytest.mark.asyncio
+    async def test_update_deck_is_premium_independent_of_is_active(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        auth_headers: dict,
+        empty_deck: Deck,
+    ):
+        """Test that updating is_premium does not affect is_active."""
+        # Set deck to premium
+        await client.patch(
+            f"/api/v1/decks/{empty_deck.id}",
+            json={"is_premium": True},
+            headers=superuser_auth_headers,
+        )
+
+        # Verify is_active is still True
+        response = await client.get(f"/api/v1/decks/{empty_deck.id}", headers=auth_headers)
+        assert response.status_code == 200
+        data = response.json()
+        assert data["is_premium"] is True
+        assert data["is_active"] is True
+
+    @pytest.mark.asyncio
+    async def test_update_deck_is_active_independent_of_is_premium(
+        self, client: AsyncClient, superuser_auth_headers: dict, empty_deck: Deck
+    ):
+        """Test that updating is_active does not affect is_premium."""
+        # First set deck to premium
+        await client.patch(
+            f"/api/v1/decks/{empty_deck.id}",
+            json={"is_premium": True},
+            headers=superuser_auth_headers,
+        )
+
+        # Now set is_active to False
+        update_response = await client.patch(
+            f"/api/v1/decks/{empty_deck.id}",
+            json={"is_active": False},
+            headers=superuser_auth_headers,
+        )
+
+        assert update_response.status_code == 200
+        data = update_response.json()
+        assert data["is_active"] is False
+        assert data["is_premium"] is True  # Should remain True
+
+    @pytest.mark.asyncio
+    async def test_update_deck_both_is_active_and_is_premium(
+        self, client: AsyncClient, superuser_auth_headers: dict, empty_deck: Deck
+    ):
+        """Test updating both is_active and is_premium in one request."""
+        update_response = await client.patch(
+            f"/api/v1/decks/{empty_deck.id}",
+            json={"is_active": False, "is_premium": True},
+            headers=superuser_auth_headers,
+        )
+
+        assert update_response.status_code == 200
+        data = update_response.json()
+        assert data["is_active"] is False
+        assert data["is_premium"] is True
+
+    @pytest.mark.asyncio
+    async def test_deck_response_fields_include_is_premium(
+        self, client: AsyncClient, auth_headers: dict, deck_with_cards: DeckWithCards
+    ):
+        """Test that deck object in response has all required fields including is_premium."""
+        response = await client.get("/api/v1/decks", headers=auth_headers)
+
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data["decks"]) >= 1
+
+        deck = data["decks"][0]
+        required_fields = [
+            "id",
+            "name",
+            "description",
+            "level",
+            "is_active",
+            "is_premium",
+            "created_at",
+            "updated_at",
+        ]
+        for field in required_fields:
+            assert field in deck, f"Missing required field: {field}"

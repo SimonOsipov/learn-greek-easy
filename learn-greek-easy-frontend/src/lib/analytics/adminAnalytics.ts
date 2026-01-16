@@ -48,6 +48,18 @@ export interface AdminDeckReactivatedProperties {
   deck_name: string;
 }
 
+export interface AdminDeckPremiumEnabledProperties {
+  deck_id: string;
+  deck_type: string;
+  deck_name: string;
+}
+
+export interface AdminDeckPremiumDisabledProperties {
+  deck_id: string;
+  deck_type: string;
+  deck_name: string;
+}
+
 // ============================================================================
 // Tracking Functions
 // ============================================================================
@@ -103,5 +115,25 @@ export function trackAdminDeckDeactivated(properties: AdminDeckDeactivatedProper
 export function trackAdminDeckReactivated(properties: AdminDeckReactivatedProperties): void {
   if (typeof posthog?.capture === 'function') {
     posthog.capture('admin_deck_reactivated', properties);
+  }
+}
+
+/**
+ * Track when admin enables premium status on a deck.
+ */
+export function trackAdminDeckPremiumEnabled(properties: AdminDeckPremiumEnabledProperties): void {
+  if (typeof posthog?.capture === 'function') {
+    posthog.capture('admin_deck_premium_enabled', properties);
+  }
+}
+
+/**
+ * Track when admin disables premium status on a deck.
+ */
+export function trackAdminDeckPremiumDisabled(
+  properties: AdminDeckPremiumDisabledProperties
+): void {
+  if (typeof posthog?.capture === 'function') {
+    posthog.capture('admin_deck_premium_disabled', properties);
   }
 }

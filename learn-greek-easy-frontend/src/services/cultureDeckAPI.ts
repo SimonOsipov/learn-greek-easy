@@ -44,6 +44,7 @@ export interface CultureDeckResponse {
   color_accent: string;
   category: string; // "history", "geography", "politics", "culture", "traditions"
   question_count: number;
+  is_premium?: boolean;
   progress?: CultureDeckProgress;
 }
 

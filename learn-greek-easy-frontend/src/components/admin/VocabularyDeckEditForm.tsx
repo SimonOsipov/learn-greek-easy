@@ -49,6 +49,7 @@ const vocabularyDeckSchema = z.object({
     .or(z.literal('')),
   level: z.enum(['A1', 'A2', 'B1', 'B2', 'C1', 'C2'] as const),
   is_active: z.boolean(),
+  is_premium: z.boolean(),
 });
 
 export type VocabularyDeckFormData = z.infer<typeof vocabularyDeckSchema>;
@@ -89,6 +90,7 @@ export const VocabularyDeckEditForm: React.FC<VocabularyDeckEditFormProps> = ({
       description: '', // Vocabulary decks don't have description in current model
       level: (deck.level as DeckLevel) || 'A1',
       is_active: deck.is_active,
+      is_premium: deck.is_premium ?? false,
     },
   });
 
@@ -202,6 +204,26 @@ export const VocabularyDeckEditForm: React.FC<VocabularyDeckEditFormProps> = ({
                   checked={field.value}
                   onCheckedChange={handleActiveChange}
                   data-testid="deck-edit-is-active"
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="is_premium"
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+              <div className="space-y-0.5">
+                <FormLabel className="text-base">{t('deckEdit.isPremium')}</FormLabel>
+                <FormDescription>{t('deckEdit.isPremiumDescription')}</FormDescription>
+              </div>
+              <FormControl>
+                <Switch
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                  data-testid="deck-edit-is-premium"
                 />
               </FormControl>
             </FormItem>
