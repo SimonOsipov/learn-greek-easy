@@ -12,10 +12,18 @@ test.describe('Flashcard Review Session', () => {
     // Start at dashboard
     await page.goto('/');
 
-    // Navigate to decks page
-    const decksLink = page.getByRole('link', { name: /decks/i }).first();
-    await decksLink.click();
-    await page.waitForURL('/decks');
+    // Navigate to decks page via dropdown menu
+    const decksDropdown = page.locator('[data-testid="decks-dropdown-trigger"]');
+    await expect(decksDropdown).toBeVisible();
+    await decksDropdown.click();
+
+    // Click "All Decks" in the dropdown menu
+    const allDecksLink = page.getByRole('menuitem', { name: /all decks/i });
+    await expect(allDecksLink).toBeVisible();
+    await allDecksLink.click();
+
+    // Wait for navigation to complete
+    await page.waitForURL(/\/decks/);
 
     // Wait for deck cards to load
     const deckCard = page.locator('[data-testid="deck-card"]').first();
