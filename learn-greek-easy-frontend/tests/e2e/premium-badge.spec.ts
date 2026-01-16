@@ -52,8 +52,8 @@ test.describe('Premium Badge - Learner View', () => {
     });
 
     // Premium decks should show lock icon
-    // The lock icon has aria-label="Premium locked"
-    const lockIcon = page.locator('[aria-label="Premium locked"]').first();
+    // The lock icon has aria-label="Premium content"
+    const lockIcon = page.locator('[aria-label="Premium content"]').first();
     await expect(lockIcon).toBeVisible({ timeout: 5000 });
   });
 
@@ -110,7 +110,7 @@ test.describe('Premium Badge - Learner View', () => {
 
     // Find a deck card with the lock icon (premium deck)
     const lockedDeck = page.locator('[data-testid="deck-card"]').filter({
-      has: page.locator('[aria-label="Premium locked"]'),
+      has: page.locator('[aria-label="Premium content"]'),
     }).first();
 
     // Try to click the locked deck

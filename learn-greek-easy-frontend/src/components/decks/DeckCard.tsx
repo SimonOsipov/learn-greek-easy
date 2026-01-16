@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { Crown, Lock } from 'lucide-react';
+import { Crown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { CultureBadge, type CultureCategory } from '@/components/culture';
@@ -48,9 +48,9 @@ export const DeckCard: React.FC<DeckCardProps> = ({
   // Note: Removed opacity-70 from locked cards to maintain WCAG AA contrast
   // Locked state is indicated by Lock icon and non-clickable behavior
   const cardClassName = `
+    relative overflow-hidden
     min-h-[300px] flex flex-col
     ${isClickable ? 'cursor-pointer transition-all duration-200 hover:shadow-lg' : ''}
-    ${isLocked ? 'grayscale-[30%]' : ''}
     ${isPremium && !isLocked ? 'border-amber-400 hover:border-amber-500' : ''}
     ${variant === 'list' ? 'flex flex-row items-center' : ''}
   `.trim();
@@ -74,7 +74,7 @@ export const DeckCard: React.FC<DeckCardProps> = ({
       }
       aria-label={`${titleGreek} - ${title} deck, ${level} level, ${completionPercent}% completed${isLocked ? ', locked' : ''}`}
     >
-      <CardHeader data-testid="deck-card-header" className="flex-shrink-0 pb-3">
+      <CardHeader data-testid="deck-card-header" className="relative z-20 flex-shrink-0 pb-3">
         {/* Title and Level Badge Row */}
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
@@ -89,9 +89,9 @@ export const DeckCard: React.FC<DeckCardProps> = ({
             <p className="truncate text-sm text-muted-foreground">{title}</p>
           </div>
 
-          {/* Level Badge and Lock Icon */}
+          {/* Level Badge and Premium Icon */}
           <div className="flex flex-shrink-0 items-center gap-2">
-            {isLocked && <Lock className="h-4 w-4 text-amber-500" aria-label="Premium locked" />}
+            {isLocked && <Crown className="h-4 w-4 text-amber-500" aria-label="Premium content" />}
             {!isCultureDeck && <DeckBadge type="level" level={level} />}
           </div>
         </div>
@@ -115,7 +115,7 @@ export const DeckCard: React.FC<DeckCardProps> = ({
 
       <CardContent
         data-testid="deck-card-content"
-        className="flex flex-1 flex-col justify-between pt-0"
+        className={`flex flex-1 flex-col justify-between pt-0 ${isLocked ? 'blur-sm' : ''}`}
       >
         <div>
           {/* Progress Bar - Always shown if showProgress is true */}
@@ -159,6 +159,15 @@ export const DeckCard: React.FC<DeckCardProps> = ({
           </div>
         )}
       </CardContent>
+
+      {/* Locked state overlay - indicates premium content */}
+      {isLocked && (
+        <div
+          data-testid="deck-card-locked-overlay"
+          className="pointer-events-none absolute inset-0 z-10 bg-background/30"
+          aria-hidden="true"
+        />
+      )}
     </Card>
   );
 };

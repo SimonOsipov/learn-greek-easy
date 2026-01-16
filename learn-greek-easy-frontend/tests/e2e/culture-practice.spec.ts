@@ -29,13 +29,13 @@ async function navigateToCulturePractice(page: Page): Promise<string> {
   await page.getByRole('button', { name: 'Culture', exact: true }).click();
 
   // Find a non-premium culture deck (one without the premium locked badge)
-  // Premium decks have aria-label="Premium locked" on their lock icon
+  // Premium decks have aria-label="Premium content" on their lock icon
   const deckCards = page.locator('[data-testid="deck-card"]');
   await expect(deckCards.first()).toBeVisible();
 
   // Find deck without premium lock
   const nonPremiumDeck = deckCards.filter({
-    hasNot: page.locator('[aria-label="Premium locked"]'),
+    hasNot: page.locator('[aria-label="Premium content"]'),
   }).first();
   await expect(nonPremiumDeck).toBeVisible();
   await nonPremiumDeck.click();
@@ -146,7 +146,7 @@ test.describe('Culture Practice Session', () => {
     // Get a non-premium culture deck and extract its ID
     const deckCards = page.locator('[data-testid="deck-card"]');
     const nonPremiumDeck = deckCards.filter({
-      hasNot: page.locator('[aria-label="Premium locked"]'),
+      hasNot: page.locator('[aria-label="Premium content"]'),
     }).first();
     await nonPremiumDeck.click();
 
@@ -251,7 +251,7 @@ test.describe('Culture Practice Session', () => {
     // Get a non-premium culture deck and extract its ID
     const deckCards = page.locator('[data-testid="deck-card"]');
     const nonPremiumDeck = deckCards.filter({
-      hasNot: page.locator('[aria-label="Premium locked"]'),
+      hasNot: page.locator('[aria-label="Premium content"]'),
     }).first();
     await nonPremiumDeck.click();
 
@@ -452,7 +452,7 @@ test.describe('Culture Practice Session - Full Flow', () => {
     const deckCards = page.locator('[data-testid="deck-card"]');
     await expect(deckCards.first()).toBeVisible();
     const nonPremiumDeck = deckCards.filter({
-      hasNot: page.locator('[aria-label="Premium locked"]'),
+      hasNot: page.locator('[aria-label="Premium content"]'),
     }).first();
     await nonPremiumDeck.click();
 
