@@ -479,25 +479,17 @@ export function CulturePracticePage() {
             {/* Session info */}
             <div className="text-right text-foreground">
               <div className="text-sm font-medium">{session.deckName}</div>
-              <div className="text-xs text-muted-foreground">
-                {t('practice.xpEarned', 'XP: {{xp}}', { xp: session.stats.xpEarned })}
-              </div>
             </div>
           </div>
         </div>
 
         {/* Progress bar */}
         <div className="mb-6">
-          <div className="mb-2 flex items-center justify-between text-sm text-foreground">
+          <div className="mb-2 text-sm text-foreground">
             <span>
               {t('mcq.questionOf', {
                 current: progress.current,
                 total: progress.total,
-              })}
-            </span>
-            <span>
-              {t('practice.accuracy', '{{accuracy}}% accuracy', {
-                accuracy: session.stats.accuracy,
               })}
             </span>
           </div>

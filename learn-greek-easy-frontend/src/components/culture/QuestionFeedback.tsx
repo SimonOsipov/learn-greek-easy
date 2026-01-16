@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 
 import { motion } from 'framer-motion';
-import { CheckCircle, XCircle, Star, ArrowRight, BarChart3 } from 'lucide-react';
+import { CheckCircle, XCircle, ArrowRight, BarChart3 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
@@ -24,7 +24,7 @@ export interface QuestionFeedbackProps {
     text: Record<SupportedLanguage, string>;
   };
 
-  /** XP earned for this answer */
+  /** XP earned for this answer (retained for analytics, not displayed in UI) */
   xpEarned: number;
 
   /** Current display language for the correct answer text */
@@ -54,28 +54,19 @@ const feedbackVariants = {
 };
 
 /**
- * Animation variants for the XP badge
- */
-const xpVariants = {
-  initial: (prefersReducedMotion: boolean) =>
-    prefersReducedMotion ? { scale: 1 } : { scale: 0.8, opacity: 0 },
-  animate: (prefersReducedMotion: boolean) =>
-    prefersReducedMotion ? { scale: 1 } : { scale: 1, opacity: 1 },
-};
-
-/**
  * QuestionFeedback Component
  *
  * Displays immediate feedback after a user submits an answer in the culture exam.
  * Shows whether the answer was correct or wrong, reveals the correct answer if
- * wrong, displays XP earned, and provides navigation to the next question or summary.
+ * wrong, and provides navigation to the next question or summary.
  *
  * Features:
  * - Green/red visual distinction for correct/wrong answers
  * - Animated entry with framer-motion (respects prefers-reduced-motion)
- * - XP earned display with star icon
  * - Auto-focus on action button for keyboard accessibility
  * - Screen reader announcements for accessibility
+ *
+ * Note: xpEarned prop is retained for analytics purposes but not displayed in UI.
  *
  * @example
  * ```tsx
@@ -92,7 +83,7 @@ const xpVariants = {
 export const QuestionFeedback: React.FC<QuestionFeedbackProps> = ({
   isCorrect,
   correctOption,
-  xpEarned,
+  xpEarned: _xpEarned, // Retained for analytics, not displayed
   language,
   onNextQuestion,
   isLastQuestion = false,
@@ -125,12 +116,11 @@ export const QuestionFeedback: React.FC<QuestionFeedbackProps> = ({
 
   // Screen reader announcement text
   const srAnnouncement = isCorrect
-    ? t('feedback.srCorrect', { xp: xpEarned, defaultValue: `Correct! You earned ${xpEarned} XP.` })
-    : t('feedback.srWrong', {
+    ? t('feedback.srCorrectSimple', { defaultValue: 'Correct!' })
+    : t('feedback.srWrongSimple', {
         label: correctOption.label,
         answer: correctAnswerText,
-        xp: xpEarned,
-        defaultValue: `Wrong. The correct answer was ${correctOption.label}: ${correctAnswerText}. You earned ${xpEarned} XP.`,
+        defaultValue: `Wrong. The correct answer was ${correctOption.label}: ${correctAnswerText}.`,
       });
 
   return (
@@ -190,21 +180,6 @@ export const QuestionFeedback: React.FC<QuestionFeedbackProps> = ({
               </p>
             </div>
           )}
-
-          {/* XP earned badge */}
-          <motion.div
-            variants={xpVariants}
-            custom={prefersReducedMotion}
-            transition={{
-              delay: prefersReducedMotion ? 0 : 0.2,
-              duration: prefersReducedMotion ? 0.1 : 0.3,
-              ease: 'easeOut',
-            }}
-            className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-warning/20 px-3 py-1.5 text-warning dark:bg-warning/30"
-          >
-            <Star className="h-4 w-4" fill="currentColor" aria-hidden="true" />
-            <span className="font-semibold">{t('feedback.xpEarned', { xp: xpEarned })}</span>
-          </motion.div>
 
           {/* Action button */}
           <div className="mt-6">
