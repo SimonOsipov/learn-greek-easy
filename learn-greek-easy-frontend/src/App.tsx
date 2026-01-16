@@ -2,7 +2,6 @@ import { Suspense, useEffect, type ReactNode } from 'react';
 
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 
-import { Auth0TokenInjector } from '@/components/auth/Auth0TokenInjector';
 import { AuthRoutesWrapper } from '@/components/auth/AuthRoutesWrapper';
 import { LandingRoute } from '@/components/auth/LandingRoute';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
@@ -231,13 +230,7 @@ function ConditionalAuth0Provider({ children }: { children: ReactNode }) {
     return <>{children}</>;
   }
 
-  return (
-    <Auth0ProviderWithNavigate>
-      {/* Inject Auth0 token getter into API client */}
-      <Auth0TokenInjector />
-      {children}
-    </Auth0ProviderWithNavigate>
-  );
+  return <Auth0ProviderWithNavigate>{children}</Auth0ProviderWithNavigate>;
 }
 
 function App() {
