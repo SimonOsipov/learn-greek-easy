@@ -101,6 +101,18 @@ export const deckAPI = {
   },
 
   /**
+   * List user's own decks with pagination and optional level filtering
+   */
+  getMyDecks: async (params: ListDecksParams = {}): Promise<DeckListResponse> => {
+    const queryString = buildQueryString({
+      page: params.page || 1,
+      page_size: params.page_size || 50,
+      level: params.level,
+    });
+    return api.get<DeckListResponse>(`/api/v1/decks/mine${queryString}`);
+  },
+
+  /**
    * Search decks by name or description
    */
   search: async (params: SearchDecksParams): Promise<DeckSearchResponse> => {
