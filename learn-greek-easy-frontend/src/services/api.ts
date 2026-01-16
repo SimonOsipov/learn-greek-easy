@@ -269,20 +269,24 @@ async function request<T>(
 
   // Add auth token if not skipped
   if (!skipAuth) {
-    // Use Auth0 token when Auth0 is enabled, otherwise use legacy auth
+    let useStoredToken = true;
+
+    // Try Auth0 token when Auth0 is enabled and token getter is available
     if (isAuth0Enabled() && auth0TokenGetter) {
       try {
         const auth0Token = await auth0TokenGetter();
         if (auth0Token) {
           headers['Authorization'] = `Bearer ${auth0Token}`;
+          useStoredToken = false; // Auth0 token succeeded, don't use stored token
         }
       } catch (error) {
-        // Auth0 token retrieval failed - log and continue without auth
-        // The SDK will handle token refresh automatically
-        log.warn('Failed to get Auth0 token', { error });
+        // Auth0 token retrieval failed - fall back to stored token
+        log.warn('Failed to get Auth0 token, falling back to stored token', { error });
       }
-    } else {
-      // Legacy auth: use stored tokens with proactive refresh
+    }
+
+    // Fall back to legacy auth: use stored tokens with proactive refresh
+    if (useStoredToken) {
       let { accessToken } = getAuthTokens();
 
       // PROACTIVE REFRESH: Check if token is expired or expiring soon
