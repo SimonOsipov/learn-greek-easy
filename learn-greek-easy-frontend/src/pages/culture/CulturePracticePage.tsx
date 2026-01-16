@@ -59,10 +59,10 @@ const OPTION_LETTERS = ['A', 'B', 'C', 'D'] as const;
  */
 function PracticePageSkeleton() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-600 to-indigo-700 p-4 md:p-8">
+    <div className="min-h-screen bg-background p-4 md:p-8">
       <div className="mx-auto max-w-2xl">
-        <Skeleton className="mb-4 h-10 w-32 bg-white/20" />
-        <Skeleton className="mb-8 h-4 w-48 bg-white/20" />
+        <Skeleton className="mb-4 h-10 w-32 bg-secondary" />
+        <Skeleton className="mb-8 h-4 w-48 bg-secondary" />
         <Card className="bg-card/95">
           <CardContent className="space-y-6 p-6">
             <Skeleton className="h-6 w-3/4" />
@@ -379,7 +379,7 @@ export function CulturePracticePage() {
   // Recovery dialog
   if (showRecoveryDialog) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-purple-600 to-indigo-700 p-4">
+      <div className="flex min-h-screen items-center justify-center bg-background p-4">
         <Dialog open={showRecoveryDialog} onOpenChange={setShowRecoveryDialog}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
@@ -413,13 +413,9 @@ export function CulturePracticePage() {
   // Error state
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-600 to-indigo-700 p-4 md:p-8">
+      <div className="min-h-screen bg-background p-4 md:p-8">
         <div className="mx-auto max-w-2xl">
-          <Button
-            variant="ghost"
-            onClick={() => navigate('/decks')}
-            className="mb-4 text-white hover:bg-white/20"
-          >
+          <Button variant="ghost" onClick={() => navigate('/decks')} className="mb-4">
             <ChevronLeft className="mr-2 h-4 w-4" />
             {t('practice.backToDecks', 'Back to Decks')}
           </Button>
@@ -444,13 +440,9 @@ export function CulturePracticePage() {
   // No current question
   if (!currentQuestion) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-600 to-indigo-700 p-4 md:p-8">
+      <div className="min-h-screen bg-background p-4 md:p-8">
         <div className="mx-auto max-w-2xl">
-          <Button
-            variant="ghost"
-            onClick={() => navigate('/decks')}
-            className="mb-4 text-white hover:bg-white/20"
-          >
+          <Button variant="ghost" onClick={() => navigate('/decks')} className="mb-4">
             <ChevronLeft className="mr-2 h-4 w-4" />
             {t('practice.backToDecks', 'Back to Decks')}
           </Button>
@@ -471,32 +463,23 @@ export function CulturePracticePage() {
   const isInFeedback = session.phase === 'feedback' && lastAnswerResponse !== null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-600 to-indigo-700 p-4 md:p-8">
+    <div className="min-h-screen bg-background p-4 md:p-8">
       <div className="mx-auto max-w-2xl">
         {/* Header */}
         <div className="mb-6 flex items-center justify-between">
-          <Button
-            variant="ghost"
-            onClick={handleExitClick}
-            className="text-white hover:bg-white/20"
-            data-testid="exit-button"
-          >
+          <Button variant="ghost" onClick={handleExitClick} data-testid="exit-button">
             <ChevronLeft className="mr-2 h-4 w-4" />
             {t('practice.exit', 'Exit')}
           </Button>
 
           <div className="flex items-center gap-4">
             {/* Language selector */}
-            <LanguageSelector
-              value={currentLanguage}
-              onChange={handleLanguageChange}
-              className="bg-white/20 text-white hover:bg-white/30"
-            />
+            <LanguageSelector value={currentLanguage} onChange={handleLanguageChange} />
 
             {/* Session info */}
-            <div className="text-right text-white">
+            <div className="text-right text-foreground">
               <div className="text-sm font-medium">{session.deckName}</div>
-              <div className="text-xs opacity-80">
+              <div className="text-xs text-muted-foreground">
                 {t('practice.xpEarned', 'XP: {{xp}}', { xp: session.stats.xpEarned })}
               </div>
             </div>
@@ -505,7 +488,7 @@ export function CulturePracticePage() {
 
         {/* Progress bar */}
         <div className="mb-6">
-          <div className="mb-2 flex items-center justify-between text-sm text-white">
+          <div className="mb-2 flex items-center justify-between text-sm text-foreground">
             <span>
               {t('mcq.questionOf', {
                 current: progress.current,
@@ -518,7 +501,7 @@ export function CulturePracticePage() {
               })}
             </span>
           </div>
-          <Progress value={progressPercent} className="h-2 bg-white/20" />
+          <Progress value={progressPercent} className="h-2 bg-secondary" />
         </div>
 
         {/* Question or Feedback */}
