@@ -645,6 +645,7 @@ const AdminPage: React.FC = () => {
           name: data.name,
           description: data.description,
           is_active: data.is_active,
+          is_premium: data.is_premium,
         };
         if ('level' in data) {
           payload.level = data.level;
@@ -655,6 +656,7 @@ const AdminPage: React.FC = () => {
           name: data.name,
           description: data.description,
           is_active: data.is_active,
+          is_premium: data.is_premium,
         };
         if ('category' in data) {
           payload.category = data.category;

@@ -96,29 +96,21 @@ export const DeckCard: React.FC<DeckCardProps> = ({
           </div>
         </div>
 
-        {/* Premium Badge - Reserve space for consistency */}
-        <div className="mt-2 h-6">
+        {/* Badge Row - Premium + Category/Culture displayed side-by-side */}
+        <div className="mt-2 flex min-h-6 flex-wrap items-center gap-2">
           {isPremium && (
             <Badge className="inline-flex items-center gap-1 border-0 bg-gradient-to-r from-purple-500 to-purple-700 text-white">
               <Crown className="h-3 w-3" />
               {t('card.premium')}
             </Badge>
           )}
-        </div>
 
-        {/* Culture Badge - shown for culture decks */}
-        {isCultureDeck && (
-          <div className="mt-2">
-            <CultureBadge category={cultureCategory} showLabel={true} />
-          </div>
-        )}
+          {isCultureDeck && <CultureBadge category={cultureCategory} showLabel={true} />}
 
-        {/* Category Tag - hide for culture decks since they have their own badge */}
-        {!isCultureDeck && category !== 'culture' && (
-          <div className="mt-2">
+          {!isCultureDeck && category !== 'culture' && (
             <DeckBadge type="category" category={category} />
-          </div>
-        )}
+          )}
+        </div>
       </CardHeader>
 
       <CardContent
