@@ -263,16 +263,75 @@ describe('DeckCard', () => {
   });
 
   describe('Premium Badge Positioning', () => {
-    it('should reserve space for premium badge even when not premium', () => {
+    it('should reserve space for badge row even when not premium', () => {
       const deck = createMockDeck({ isPremium: false });
 
       renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
 
-      // Find the badge container div (has mt-2 h-6 class for consistent height)
+      // Find the badge container div (has mt-2 flex min-h-6 classes)
       const header = screen.getByTestId('deck-card-header');
-      const badgeContainer = header.querySelector('.mt-2.h-6');
+      const badgeContainer = header.querySelector('.mt-2.flex.min-h-6');
 
       expect(badgeContainer).toBeInTheDocument();
+    });
+
+    it('should display premium and category badges side-by-side in a flex container', () => {
+      const deck = createMockDeck({ isPremium: true, category: 'vocabulary' });
+
+      renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
+
+      // Find the badge container with flex layout
+      const header = screen.getByTestId('deck-card-header');
+      const badgeContainer = header.querySelector('.mt-2.flex.min-h-6');
+
+      expect(badgeContainer).toBeInTheDocument();
+      expect(badgeContainer?.className).toContain('flex');
+      expect(badgeContainer?.className).toContain('gap-2');
+
+      // Both badges should be inside the same container
+      const premiumBadge = within(badgeContainer as HTMLElement).queryByText(/premium/i);
+      const categoryBadge = within(badgeContainer as HTMLElement).queryByText(/vocabulary/i);
+
+      expect(premiumBadge).toBeInTheDocument();
+      expect(categoryBadge).toBeInTheDocument();
+    });
+
+    it('should display premium and culture badges side-by-side when isCultureDeck is true', () => {
+      const deck = createMockDeck({ isPremium: true, category: 'culture' });
+
+      renderWithI18n(
+        <DeckCard
+          deck={deck}
+          onClick={mockOnClick}
+          isCultureDeck={true}
+          cultureCategory="history"
+        />
+      );
+
+      // Find the badge container with flex layout
+      const header = screen.getByTestId('deck-card-header');
+      const badgeContainer = header.querySelector('.mt-2.flex.min-h-6');
+
+      expect(badgeContainer).toBeInTheDocument();
+
+      // Both badges should be inside the same container
+      const premiumBadge = within(badgeContainer as HTMLElement).queryByText(/premium/i);
+      // The culture badge renders with the testid
+      const cultureBadge = within(badgeContainer as HTMLElement).queryByTestId('culture-badge');
+
+      expect(premiumBadge).toBeInTheDocument();
+      expect(cultureBadge).toBeInTheDocument();
+    });
+
+    it('should support flex-wrap for graceful wrapping on small screens', () => {
+      const deck = createMockDeck({ isPremium: true, category: 'vocabulary' });
+
+      renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
+
+      const header = screen.getByTestId('deck-card-header');
+      const badgeContainer = header.querySelector('.mt-2.flex.min-h-6');
+
+      expect(badgeContainer?.className).toContain('flex-wrap');
     });
   });
 
