@@ -41,8 +41,12 @@ test.describe('Culture Deck Browsing', () => {
     const cultureBadge = page.locator('[data-testid="culture-badge"]');
     await expect(cultureBadge.first()).toBeVisible({ timeout: 5000 });
 
-    const firstDeck = page.locator('[data-testid="deck-card"]').first();
-    await firstDeck.click();
+    // Click on a non-premium culture deck to avoid premium lock blocking navigation
+    const deckCards = page.locator('[data-testid="deck-card"]');
+    const nonPremiumDeck = deckCards.filter({
+      hasNot: page.locator('[aria-label="Premium locked"]'),
+    }).first();
+    await nonPremiumDeck.click();
 
     await expect(page).toHaveURL(/\/culture\/decks\//);
     await expect(page.getByTestId('deck-detail')).toBeVisible();
