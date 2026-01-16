@@ -15,7 +15,7 @@
  */
 
 import { test as setup, expect, request } from '@playwright/test';
-import { SEED_USERS, verifySeedUsers, waitForAPIReady } from './helpers/auth-helpers';
+import { SEED_USERS, seedDatabase, verifySeedUsers, waitForAPIReady } from './helpers/auth-helpers';
 import { isAuth0Enabled, AUTH0_TEST_USERS } from './helpers/auth0-helpers';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -54,7 +54,12 @@ setup.beforeAll(async () => {
     }
     console.log('[SETUP] Backend health check passed');
 
-    // Check seed status and verify users can login
+    // Seed the database with test data (users, decks, cards, progress, user-owned decks)
+    console.log('[SETUP] Seeding database with test data...');
+    await seedDatabase(apiRequest);
+    console.log('[SETUP] Database seeded successfully');
+
+    // Verify seed users can login (sanity check after seeding)
     console.log('[SETUP] Verifying seed users exist and can login...');
     await verifySeedUsers(apiRequest);
     console.log('[SETUP] Seed users verified successfully');
