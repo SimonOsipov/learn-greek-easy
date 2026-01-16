@@ -1,6 +1,6 @@
 // src/pages/MyDecksPage.tsx
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 import { AlertCircle, BookOpen, Plus, Square } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -10,6 +10,11 @@ import { CardSkeleton } from '@/components/feedback';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  trackMyDecksPageViewed,
+  trackMyDecksCreateDeckClicked,
+  trackMyDecksCreateCardClicked,
+} from '@/lib/analytics/myDecksAnalytics';
 import { reportAPIError } from '@/lib/errorReporting';
 import { deckAPI, type DeckResponse } from '@/services/deckAPI';
 import type { Deck, DeckProgress } from '@/types/deck';
@@ -46,6 +51,7 @@ export const MyDecksPage: React.FC = () => {
   const [decks, setDecks] = useState<Deck[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const hasTrackedPageView = useRef(false);
 
   const fetchMyDecks = useCallback(async () => {
     setIsLoading(true);
@@ -68,9 +74,32 @@ export const MyDecksPage: React.FC = () => {
     fetchMyDecks();
   }, [fetchMyDecks]);
 
+  // Track page view after decks loaded successfully
+  useEffect(() => {
+    if (!isLoading && !error && !hasTrackedPageView.current) {
+      trackMyDecksPageViewed({
+        user_deck_count: decks.length,
+        has_decks: decks.length > 0,
+      });
+      hasTrackedPageView.current = true;
+    }
+  }, [isLoading, error, decks.length]);
+
   const handleRetry = () => {
     setError(null);
     fetchMyDecks();
+  };
+
+  const handleCreateDeckClick = () => {
+    trackMyDecksCreateDeckClicked({
+      button_state: 'disabled',
+    });
+  };
+
+  const handleCreateCardClick = () => {
+    trackMyDecksCreateCardClicked({
+      button_state: 'disabled',
+    });
   };
 
   return (
@@ -90,7 +119,7 @@ export const MyDecksPage: React.FC = () => {
         <div className="flex flex-wrap gap-3">
           <Tooltip>
             <TooltipTrigger asChild>
-              <span>
+              <span onClick={handleCreateDeckClick}>
                 <Button variant="outline" size="lg" disabled>
                   <Plus className="mr-2 h-4 w-4" />
                   {t('myDecks.createDeck')}
@@ -104,7 +133,7 @@ export const MyDecksPage: React.FC = () => {
 
           <Tooltip>
             <TooltipTrigger asChild>
-              <span>
+              <span onClick={handleCreateCardClick}>
                 <Button variant="outline" size="lg" disabled>
                   <Square className="mr-2 h-4 w-4" />
                   {t('myDecks.createCard')}

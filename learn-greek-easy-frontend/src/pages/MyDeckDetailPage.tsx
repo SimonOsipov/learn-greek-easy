@@ -10,6 +10,7 @@ import { AlertDialog } from '@/components/dialogs/AlertDialog';
 import { PageLoader } from '@/components/feedback';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { trackMyDecksAccessDenied } from '@/lib/analytics/myDecksAnalytics';
 import { reportAPIError } from '@/lib/errorReporting';
 import { APIRequestError } from '@/services/api';
 import { deckAPI, type DeckDetailResponse } from '@/services/deckAPI';
@@ -37,6 +38,10 @@ export const MyDeckDetailPage: React.FC = () => {
       // Handle 403 Forbidden specifically - show access denied dialog
       if (err instanceof APIRequestError && err.status === 403) {
         setShowAccessDenied(true);
+        trackMyDecksAccessDenied({
+          attempted_deck_id: deckId,
+          redirect_destination: '/my-decks',
+        });
         return;
       }
 
