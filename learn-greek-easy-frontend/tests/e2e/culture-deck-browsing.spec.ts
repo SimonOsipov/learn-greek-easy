@@ -44,7 +44,7 @@ test.describe('Culture Deck Browsing', () => {
     // Click on a non-premium culture deck to avoid premium lock blocking navigation
     const deckCards = page.locator('[data-testid="deck-card"]');
     const nonPremiumDeck = deckCards.filter({
-      hasNot: page.locator('[aria-label="Premium locked"]'),
+      hasNot: page.locator('[aria-label="Premium content"]'),
     }).first();
     await nonPremiumDeck.click();
 
