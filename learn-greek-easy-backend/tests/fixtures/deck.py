@@ -24,6 +24,7 @@ Usage:
 
 from collections.abc import AsyncGenerator
 from typing import Any, NamedTuple
+from uuid import UUID
 
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -217,6 +218,7 @@ def create_deck_data(
     description: str | None = None,
     level: DeckLevel = DeckLevel.A1,
     is_active: bool = True,
+    owner_id: UUID | None = None,
 ) -> dict[str, Any]:
     """Create deck data dictionary.
 
@@ -225,6 +227,7 @@ def create_deck_data(
         description: Deck description
         level: CEFR level (A1-C2)
         is_active: Whether deck is active
+        owner_id: Owner user ID (None for system decks)
 
     Returns:
         dict: Deck data ready for Deck model creation
@@ -248,6 +251,7 @@ def create_deck_data(
         "description": description,
         "level": level,
         "is_active": is_active,
+        "owner_id": owner_id,
     }
 
 
@@ -291,6 +295,7 @@ async def create_deck(
     description: str | None = None,
     level: DeckLevel = DeckLevel.A1,
     is_active: bool = True,
+    owner_id: UUID | None = None,
 ) -> Deck:
     """Create a deck in the database.
 
@@ -300,6 +305,7 @@ async def create_deck(
         description: Deck description
         level: CEFR level
         is_active: Whether deck is active
+        owner_id: Owner user ID (None for system decks)
 
     Returns:
         Deck: Created deck
@@ -309,6 +315,7 @@ async def create_deck(
         description=description,
         level=level,
         is_active=is_active,
+        owner_id=owner_id,
     )
     deck = Deck(**deck_data)
     db_session.add(deck)
