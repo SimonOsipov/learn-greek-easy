@@ -157,7 +157,20 @@ async function authenticateViaAuth0(
     console.warn(`[SETUP] Warning: data-app-ready not found for ${user.email}`);
   }
 
-  // Step 8: Save storage state
+  // Step 8: Wait for auth state to be persisted to localStorage
+  // Zustand's persist middleware is async, so we need to wait for it to complete
+  await page.waitForFunction(() => {
+    const authStorage = localStorage.getItem('auth-storage');
+    if (!authStorage) return false;
+    try {
+      const parsed = JSON.parse(authStorage);
+      return !!parsed.state?.token && !!parsed.state?.isAuthenticated;
+    } catch {
+      return false;
+    }
+  }, { timeout: 10000 });
+
+  // Step 9: Save storage state
   await page.context().storageState({ path: storageStatePath });
 
   console.log(`[SETUP] Saved Auth0 auth state for ${user.email} to ${storageStatePath}`);
