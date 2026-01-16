@@ -157,27 +157,19 @@ export const QuestionFeedback: React.FC<QuestionFeedbackProps> = ({
           className={cn(
             'relative overflow-hidden border-2 p-6',
             isCorrect
-              ? 'border-emerald-300 bg-gradient-to-br from-emerald-50 to-green-50 dark:border-emerald-700 dark:from-emerald-950/50 dark:to-green-950/50'
-              : 'border-red-300 bg-gradient-to-br from-red-50 to-rose-50 dark:border-red-700 dark:from-red-950/50 dark:to-rose-950/50'
+              ? 'border-success/50 bg-gradient-to-br from-emerald-50 to-green-50 dark:border-success/30 dark:from-emerald-950/50 dark:to-green-950/50'
+              : 'border-destructive/50 bg-gradient-to-br from-red-50 to-rose-50 dark:border-destructive/30 dark:from-red-950/50 dark:to-rose-950/50'
           )}
         >
           {/* Result header */}
           <div className="flex items-center gap-3">
             {isCorrect ? (
-              <CheckCircle
-                className="h-8 w-8 text-emerald-600 dark:text-emerald-400"
-                aria-hidden="true"
-              />
+              <CheckCircle className="h-8 w-8 text-success" aria-hidden="true" />
             ) : (
-              <XCircle className="h-8 w-8 text-red-600 dark:text-red-400" aria-hidden="true" />
+              <XCircle className="h-8 w-8 text-destructive" aria-hidden="true" />
             )}
             <h3
-              className={cn(
-                'text-xl font-bold',
-                isCorrect
-                  ? 'text-emerald-800 dark:text-emerald-200'
-                  : 'text-red-800 dark:text-red-200'
-              )}
+              className={cn('text-xl font-bold', isCorrect ? 'text-success' : 'text-destructive')}
             >
               {isCorrect ? t('feedback.correct', 'Correct!') : t('feedback.wrong', 'Wrong!')}
             </h3>
@@ -208,7 +200,7 @@ export const QuestionFeedback: React.FC<QuestionFeedbackProps> = ({
               duration: prefersReducedMotion ? 0.1 : 0.3,
               ease: 'easeOut',
             }}
-            className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-1.5 text-amber-800 dark:bg-amber-900/50 dark:text-amber-200"
+            className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-warning/20 px-3 py-1.5 text-warning dark:bg-warning/30"
           >
             <Star className="h-4 w-4" fill="currentColor" aria-hidden="true" />
             <span className="font-semibold">{t('feedback.xpEarned', { xp: xpEarned })}</span>
@@ -222,8 +214,8 @@ export const QuestionFeedback: React.FC<QuestionFeedbackProps> = ({
               className={cn(
                 'w-full',
                 isCorrect
-                  ? 'bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-700 dark:hover:bg-emerald-600'
-                  : 'bg-purple-600 hover:bg-purple-700 dark:bg-purple-700 dark:hover:bg-purple-600'
+                  ? 'bg-success text-success-foreground hover:bg-success/90'
+                  : 'bg-primary text-primary-foreground hover:bg-primary/90'
               )}
               size="lg"
             >

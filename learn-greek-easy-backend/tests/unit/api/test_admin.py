@@ -435,6 +435,7 @@ class TestAdminDecks:
         assert deck_data["category"] is None
         assert "item_count" in deck_data
         assert "is_active" in deck_data
+        assert "is_premium" in deck_data
         assert "created_at" in deck_data
 
     @pytest.mark.asyncio
@@ -470,6 +471,7 @@ class TestAdminDecks:
         assert deck_data["category"] == "geography"
         assert "item_count" in deck_data
         assert "is_active" in deck_data
+        assert "is_premium" in deck_data
         assert "created_at" in deck_data
 
     # =========================================================================

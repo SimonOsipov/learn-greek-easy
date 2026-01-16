@@ -307,6 +307,7 @@ async def list_decks(
                 Deck.name,
                 Deck.level,
                 Deck.is_active,
+                Deck.is_premium,
                 Deck.created_at,
                 func.coalesce(vocab_card_count_subquery.c.card_count, 0).label("item_count"),
             )
@@ -336,6 +337,7 @@ async def list_decks(
                     category=None,
                     item_count=row.item_count,
                     is_active=row.is_active,
+                    is_premium=row.is_premium,
                     created_at=row.created_at,
                 )
             )
@@ -360,6 +362,7 @@ async def list_decks(
                 CultureDeck.name,
                 CultureDeck.category,
                 CultureDeck.is_active,
+                CultureDeck.is_premium,
                 CultureDeck.created_at,
                 func.coalesce(culture_question_count_subquery.c.question_count, 0).label(
                     "item_count"
@@ -394,6 +397,7 @@ async def list_decks(
                     category=row.category,
                     item_count=row.item_count,
                     is_active=row.is_active,
+                    is_premium=row.is_premium,
                     created_at=row.created_at,
                 )
             )
