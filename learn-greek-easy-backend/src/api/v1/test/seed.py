@@ -154,6 +154,9 @@ async def seed_all(
         users_result = await service.seed_users()
         content_result = await service.seed_decks_and_cards()
 
+        # Create user-owned decks (My Decks feature)
+        user_decks_result = await service.seed_user_decks(users_result["users"])
+
         # Get first user and deck for statistics/reviews
         users = users_result.get("users", [])
         decks = content_result.get("decks", [])
@@ -183,6 +186,7 @@ async def seed_all(
         result = {
             "users": users_result,
             "content": content_result,
+            "user_decks": user_decks_result,
             "statistics": stats_result,
             "reviews": reviews_result,
         }
