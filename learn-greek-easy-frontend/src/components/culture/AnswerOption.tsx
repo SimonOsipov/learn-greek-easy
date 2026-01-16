@@ -49,15 +49,15 @@ export const AnswerOption: React.FC<AnswerOptionProps> = ({
         // Base styles
         'flex w-full items-center gap-3 rounded-lg border-2 p-4 text-left transition-all duration-200',
         // Focus styles (always visible for accessibility)
-        'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
+        'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
         // Default state
         !isSelected &&
           !disabled &&
-          'border-border bg-card hover:border-blue-300 hover:bg-blue-50 dark:hover:border-blue-600 dark:hover:bg-blue-900/20',
+          'border-border bg-card hover:border-primary/30 hover:bg-primary/5 dark:hover:border-primary/60 dark:hover:bg-primary/10',
         // Selected state - uses border AND background for accessibility (not just color)
         isSelected &&
           !disabled &&
-          'border-blue-500 bg-blue-50 ring-2 ring-blue-500 ring-offset-2 dark:border-blue-400 dark:bg-blue-900/30 dark:ring-blue-400',
+          'border-primary bg-primary/10 ring-2 ring-ring ring-offset-2 dark:border-primary dark:bg-primary/20 dark:ring-ring',
         // Disabled state
         disabled && 'cursor-not-allowed border-border bg-muted opacity-60'
       )}
@@ -69,7 +69,7 @@ export const AnswerOption: React.FC<AnswerOptionProps> = ({
           // Default badge state
           !isSelected && 'bg-muted text-muted-foreground',
           // Selected badge state
-          isSelected && 'bg-blue-500 text-white dark:bg-blue-400'
+          isSelected && 'bg-primary text-primary-foreground'
         )}
       >
         {letter}
@@ -81,7 +81,7 @@ export const AnswerOption: React.FC<AnswerOptionProps> = ({
       {/* Selection indicator */}
       {isSelected && (
         <svg
-          className="h-5 w-5 flex-shrink-0 text-blue-500 dark:text-blue-400"
+          className="h-5 w-5 flex-shrink-0 text-primary"
           fill="currentColor"
           viewBox="0 0 20 20"
           aria-hidden="true"

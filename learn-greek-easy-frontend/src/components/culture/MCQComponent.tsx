@@ -189,7 +189,7 @@ export const MCQComponent: React.FC<MCQComponentProps> = ({
         {/* Helper text when no option selected */}
         {selectedOption === null && !disabled && (
           <p
-            className="text-center text-sm text-amber-600 dark:text-amber-400"
+            className="text-center text-sm text-warning"
             role="status"
             aria-live="polite"
             data-testid="mcq-select-hint"

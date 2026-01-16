@@ -159,14 +159,14 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
               <DropdownMenuItem
                 key={lang}
                 onClick={() => handleSelect(lang)}
-                className={cn(isSelected && 'bg-purple-50 dark:bg-purple-950/50')}
+                className={cn(isSelected && 'bg-primary/10 dark:bg-primary/20')}
               >
                 <span className="flex items-center gap-2">
                   {showFlags && display.flag && <span aria-hidden="true">{display.flag}</span>}
                   <span className={cn(isSelected && 'font-semibold')}>{display.name}</span>
                 </span>
                 {isSelected && (
-                  <span className="ml-auto text-purple-600 dark:text-purple-400">
+                  <span className="ml-auto text-primary">
                     {/* Checkmark indicator for selected */}
                     <svg
                       className="h-4 w-4"
@@ -209,10 +209,10 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
             type="button"
             onClick={() => handleSelect(lang)}
             className={cn(
-              'rounded-md font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-1 dark:focus:ring-offset-background',
+              'rounded-md font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 dark:focus:ring-offset-background',
               sizeClasses[size],
               isSelected
-                ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-200'
+                ? 'bg-primary/20 text-primary dark:bg-primary/30'
                 : 'text-muted-foreground hover:bg-muted hover:text-foreground'
             )}
             aria-pressed={isSelected}

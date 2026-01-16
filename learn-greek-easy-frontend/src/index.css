@@ -25,6 +25,12 @@
     --ring: 240 5.9% 10%;
     --radius: 0.625rem;
 
+    /* Semantic status colors */
+    --success: 160 84% 39%; /* emerald-600: #059669 */
+    --success-foreground: 0 0% 100%; /* white */
+    --warning: 38 92% 50%; /* amber-500: #f59e0b */
+    --warning-foreground: 0 0% 100%; /* white */
+
     /* Landing page custom tokens */
     --landing-navy: 240 27% 14%;
     --landing-greek-blue: 212 85% 37%;
@@ -57,6 +63,11 @@
     --border: 240 4% 22%;
     --input: 240 5% 30%;
     --ring: 240 4.9% 83.9%;
+
+    --success: 160 84% 39%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
   }
 }
 
