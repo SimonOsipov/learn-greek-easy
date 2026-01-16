@@ -88,6 +88,7 @@ class UnifiedDeckItem(BaseModel):
     category: Optional[str] = Field(None, description="Category (culture decks only)")
     item_count: int = Field(..., ge=0, description="Number of cards/questions")
     is_active: bool = Field(..., description="Whether deck is active")
+    is_premium: bool = Field(..., description="Whether deck requires premium subscription")
     created_at: datetime = Field(..., description="Creation timestamp")
 
 
