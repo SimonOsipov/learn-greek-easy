@@ -41,16 +41,6 @@ export const AUTH0_TEST_USERS = {
     password: process.env.AUTH0_E2E_TEST_PASSWORD || 'TestPassword123!',
     name: 'E2E Learner',
   },
-  BEGINNER: {
-    email: 'e2e_beginner@test.com',
-    password: process.env.AUTH0_E2E_TEST_PASSWORD || 'TestPassword123!',
-    name: 'E2E Beginner',
-  },
-  ADVANCED: {
-    email: 'e2e_advanced@test.com',
-    password: process.env.AUTH0_E2E_TEST_PASSWORD || 'TestPassword123!',
-    name: 'E2E Advanced',
-  },
   ADMIN: {
     email: 'e2e_admin@test.com',
     password: process.env.AUTH0_E2E_TEST_PASSWORD || 'TestPassword123!',
