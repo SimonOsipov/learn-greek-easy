@@ -144,7 +144,8 @@ const Features = () => {
 
   const AudioMockup = () => (
     <MockupWrapper>
-      <div className="mb-5 flex items-center gap-3">
+      {/* Header */}
+      <div className="mb-4 flex items-center gap-3">
         <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
           <Volume2 className="h-6 w-6 text-primary" />
         </div>
@@ -155,20 +156,23 @@ const Features = () => {
           <p className="text-sm text-muted-foreground">{t('features.mockups.dialog')} - 2:34</p>
         </div>
       </div>
-      <div className="flex-1 rounded-xl bg-secondary/50 p-4">
-        <div className="mb-3 flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/20">
-            <Play className="ml-0.5 h-4 w-4 text-primary" />
-          </div>
-          <div className="h-2 flex-1 overflow-hidden rounded-full bg-primary/20">
-            <div className="h-full w-1/3 rounded-full bg-primary" />
-          </div>
-          <span className="text-xs text-muted-foreground">0:48</span>
-        </div>
-        <p className="text-sm italic text-foreground">
+      {/* Gray content area - only contains transcript */}
+      <div className="mb-3 flex-1 rounded-xl bg-secondary/50 p-4">
+        <p className="line-clamp-2 text-sm italic text-foreground">
           "Καλημέρα, θέλω κάτι για τον πονοκέφαλο..."
         </p>
       </div>
+      {/* Audio player - separate element */}
+      <div className="mb-3 flex items-center gap-3">
+        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/20">
+          <Play className="ml-0.5 h-4 w-4 text-primary" />
+        </div>
+        <div className="h-2 flex-1 overflow-hidden rounded-full bg-primary/20">
+          <div className="h-full w-1/3 rounded-full bg-primary" />
+        </div>
+        <span className="text-xs text-muted-foreground">0:48</span>
+      </div>
+      {/* Buttons */}
       <div className="mt-auto flex gap-3">
         <button
           type="button"
