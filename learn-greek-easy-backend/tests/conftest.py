@@ -66,7 +66,7 @@ from tests.fixtures.database import (
 )
 
 # Import deck fixtures from fixtures package
-from tests.fixtures.deck import (  # Type definitions; Core fixtures; Card fixtures; Composite fixtures
+from tests.fixtures.deck import (  # Type definitions; Core fixtures; Card fixtures; Composite fixtures; User-owned fixtures
     DeckWithCards,
     MultiLevelDecks,
     cards_by_difficulty,
@@ -77,7 +77,10 @@ from tests.fixtures.deck import (  # Type definitions; Core fixtures; Card fixtu
     deck_with_many_cards,
     empty_deck,
     inactive_deck,
+    inactive_user_deck,
     multi_level_decks,
+    multiple_user_decks,
+    other_user_deck,
     test_card,
     test_cards,
     test_deck,
@@ -85,6 +88,7 @@ from tests.fixtures.deck import (  # Type definitions; Core fixtures; Card fixtu
     test_deck_a2,
     test_deck_b1,
     two_decks,
+    user_owned_deck,
 )
 
 # Import progress fixtures from fixtures package
@@ -168,6 +172,11 @@ __all__ = [
     "multi_level_decks",
     "two_decks",
     "deck_with_many_cards",
+    # User-owned deck fixtures
+    "user_owned_deck",
+    "other_user_deck",
+    "multiple_user_decks",
+    "inactive_user_deck",
     # Progress fixtures
     "UserProgress",
     "CardWithStatistics",

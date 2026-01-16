@@ -1785,3 +1785,219 @@ class TestDeckIsPremiumIntegration:
         ]
         for field in required_fields:
             assert field in deck, f"Missing required field: {field}"
+
+
+class TestListMyDecksEndpoint:
+    """Test suite for GET /api/v1/decks/mine endpoint."""
+
+    @pytest.mark.asyncio
+    async def test_list_my_decks_unauthenticated_returns_401(self, client: AsyncClient):
+        """Test unauthenticated request returns 401."""
+        response = await client.get("/api/v1/decks/mine")
+
+        assert response.status_code == 401
+        data = response.json()
+        assert data["success"] is False
+
+    @pytest.mark.asyncio
+    async def test_list_my_decks_empty(self, client: AsyncClient, auth_headers: dict):
+        """Test empty result when user has no decks."""
+        response = await client.get("/api/v1/decks/mine", headers=auth_headers)
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 0
+        assert data["decks"] == []
+        assert data["page"] == 1
+        assert data["page_size"] == 20
+
+    @pytest.mark.asyncio
+    async def test_list_my_decks_with_user_owned_deck(
+        self, client: AsyncClient, auth_headers: dict, user_owned_deck: Deck
+    ):
+        """Test returns user's own deck."""
+        response = await client.get("/api/v1/decks/mine", headers=auth_headers)
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 1
+        assert len(data["decks"]) == 1
+        assert data["decks"][0]["id"] == str(user_owned_deck.id)
+        assert data["decks"][0]["name"] == user_owned_deck.name
+
+    @pytest.mark.asyncio
+    async def test_list_my_decks_excludes_system_decks(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        user_owned_deck: Deck,
+        deck_with_cards: DeckWithCards,
+    ):
+        """Test that system decks (owner_id=None) are not included."""
+        response = await client.get("/api/v1/decks/mine", headers=auth_headers)
+
+        assert response.status_code == 200
+        data = response.json()
+        # Only user's own deck should be returned, not system decks
+        assert data["total"] == 1
+        deck_ids = [d["id"] for d in data["decks"]]
+        assert str(user_owned_deck.id) in deck_ids
+        assert str(deck_with_cards.deck.id) not in deck_ids
+
+    @pytest.mark.asyncio
+    async def test_list_my_decks_excludes_other_users_decks(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        user_owned_deck: Deck,
+        other_user_deck: Deck,
+    ):
+        """Test that other users' decks are not included."""
+        response = await client.get("/api/v1/decks/mine", headers=auth_headers)
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 1
+        deck_ids = [d["id"] for d in data["decks"]]
+        assert str(user_owned_deck.id) in deck_ids
+        assert str(other_user_deck.id) not in deck_ids
+
+    @pytest.mark.asyncio
+    async def test_list_my_decks_with_level_filter(
+        self, client: AsyncClient, auth_headers: dict, user_owned_deck: Deck
+    ):
+        """Test filtering by CEFR level."""
+        # user_owned_deck is A1 level
+        response = await client.get("/api/v1/decks/mine?level=A1", headers=auth_headers)
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 1
+
+        # Filter by different level - should return empty
+        response = await client.get("/api/v1/decks/mine?level=C2", headers=auth_headers)
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 0
+        assert data["decks"] == []
+
+    @pytest.mark.asyncio
+    async def test_list_my_decks_pagination(
+        self, client: AsyncClient, auth_headers: dict, multiple_user_decks: list[Deck]
+    ):
+        """Test pagination for user's decks."""
+        # First page
+        response = await client.get("/api/v1/decks/mine?page=1&page_size=2", headers=auth_headers)
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["page"] == 1
+        assert data["page_size"] == 2
+        assert len(data["decks"]) == 2
+        assert data["total"] == 3
+
+        # Second page
+        response = await client.get("/api/v1/decks/mine?page=2&page_size=2", headers=auth_headers)
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["page"] == 2
+        assert len(data["decks"]) == 1
+
+    @pytest.mark.asyncio
+    async def test_list_my_decks_excludes_inactive(
+        self, client: AsyncClient, auth_headers: dict, inactive_user_deck: Deck
+    ):
+        """Test that inactive user decks are not returned."""
+        response = await client.get("/api/v1/decks/mine", headers=auth_headers)
+
+        assert response.status_code == 200
+        data = response.json()
+        deck_ids = [d["id"] for d in data["decks"]]
+        assert str(inactive_user_deck.id) not in deck_ids
+
+    @pytest.mark.asyncio
+    async def test_list_my_decks_response_fields(
+        self, client: AsyncClient, auth_headers: dict, user_owned_deck: Deck
+    ):
+        """Test response includes all required fields."""
+        response = await client.get("/api/v1/decks/mine", headers=auth_headers)
+
+        assert response.status_code == 200
+        data = response.json()
+        assert "total" in data
+        assert "page" in data
+        assert "page_size" in data
+        assert "decks" in data
+
+        deck = data["decks"][0]
+        required_fields = [
+            "id",
+            "name",
+            "description",
+            "level",
+            "is_active",
+            "is_premium",
+            "created_at",
+            "updated_at",
+        ]
+        for field in required_fields:
+            assert field in deck, f"Missing required field: {field}"
+
+
+class TestDeckAuthorizationIntegration:
+    """Integration tests for deck ownership authorization."""
+
+    @pytest.mark.asyncio
+    async def test_get_system_deck_accessible_to_all(
+        self, client: AsyncClient, auth_headers: dict, deck_with_cards: DeckWithCards
+    ):
+        """Test that system decks (owner_id=None) are accessible to all users."""
+        deck = deck_with_cards.deck
+        response = await client.get(f"/api/v1/decks/{deck.id}", headers=auth_headers)
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["id"] == str(deck.id)
+
+    @pytest.mark.asyncio
+    async def test_get_own_deck_succeeds(
+        self, client: AsyncClient, auth_headers: dict, user_owned_deck: Deck
+    ):
+        """Test that user can access their own deck."""
+        response = await client.get(f"/api/v1/decks/{user_owned_deck.id}", headers=auth_headers)
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["id"] == str(user_owned_deck.id)
+        assert data["name"] == user_owned_deck.name
+
+    @pytest.mark.asyncio
+    async def test_get_other_users_deck_returns_403(
+        self, client: AsyncClient, auth_headers: dict, other_user_deck: Deck
+    ):
+        """Test that user cannot access another user's deck."""
+        response = await client.get(f"/api/v1/decks/{other_user_deck.id}", headers=auth_headers)
+
+        assert response.status_code == 403
+        data = response.json()
+        assert data["success"] is False
+        assert data["error"]["code"] == "FORBIDDEN"
+        assert "permission" in data["error"]["message"].lower()
+
+    @pytest.mark.asyncio
+    async def test_superuser_cannot_access_other_users_deck(
+        self, client: AsyncClient, superuser_auth_headers: dict, other_user_deck: Deck
+    ):
+        """Test that even superusers cannot access other users' decks via get endpoint.
+
+        Note: Superusers have admin endpoints, but the regular get_deck endpoint
+        enforces ownership for user-created decks.
+        """
+        response = await client.get(
+            f"/api/v1/decks/{other_user_deck.id}", headers=superuser_auth_headers
+        )
+
+        # Superuser is also a non-owner, so 403
+        assert response.status_code == 403
