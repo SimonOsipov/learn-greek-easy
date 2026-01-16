@@ -14,11 +14,14 @@
  *   - Flow 9: Unauthenticated redirect for /my-decks
  *   - Flow 12: Unauthenticated redirect for /my-decks/:id
  *   - Flow 13: API returns 403 for unauthorized deck access
+ * - Admin Flows:
+ *   - Flow 10: Admin on My Decks page sees only their own deck (1 deck)
+ *   - Flow 11: Admin Panel shows all decks (system + user-created)
  *
  * Test Users:
  * - e2e_learner: Has 3 user-owned decks (My Greek Basics, Travel Phrases, Practice Deck)
  * - e2e_beginner: Has 0 user-owned decks (empty state)
- * - e2e_admin: Has admin role
+ * - e2e_admin: Has 1 user-owned deck (Admin's Personal Deck) + admin role
  */
 
 import * as fs from 'fs';
@@ -28,6 +31,7 @@ import { test, expect } from '@playwright/test';
 // Storage state paths
 const LEARNER_AUTH = 'playwright/.auth/learner.json';
 const BEGINNER_AUTH = 'playwright/.auth/beginner.json';
+const ADMIN_AUTH = 'playwright/.auth/admin.json';
 
 // ============================================================================
 // DESKTOP NAVIGATION TESTS
@@ -568,5 +572,118 @@ test.describe('My Decks - Security & Access Control', () => {
       const errorData = await response.json();
       expect(errorData.detail).toBeDefined();
     });
+  });
+});
+
+// ============================================================================
+// ADMIN FLOW TESTS
+// ============================================================================
+
+test.describe('My Decks - Admin Flows', () => {
+  test.use({ storageState: ADMIN_AUTH });
+
+  test('Flow 10: admin sees only their own deck on My Decks page', async ({ page }) => {
+    // Navigate to My Decks page
+    await page.goto('/my-decks');
+
+    // Wait for page to load
+    await expect(page.locator('[data-testid="my-decks-title"]')).toBeVisible({
+      timeout: 15000,
+    });
+
+    // Wait for deck cards to load (or empty state)
+    const deckCards = page.locator('[data-testid="deck-card"]');
+    await expect(deckCards.first()).toBeVisible({ timeout: 15000 });
+
+    // Admin should see exactly 1 deck - their own personal deck
+    // (NOT system decks, NOT other users' decks)
+    const count = await deckCards.count();
+    expect(count).toBe(1);
+
+    // Assert it's the admin's personal deck (use the title element specifically)
+    await expect(
+      page.locator('[data-testid="deck-card-title"]', { hasText: "Admin's Personal Deck" })
+    ).toBeVisible();
+
+    // System decks should NOT be shown (A1, A2, B1, B2, C1, C2)
+    await expect(
+      page.locator('[data-testid="deck-card-title"]', { hasText: 'Greek A1 Vocabulary' })
+    ).toHaveCount(0);
+    await expect(
+      page.locator('[data-testid="deck-card-title"]', { hasText: 'Greek A2 Vocabulary' })
+    ).toHaveCount(0);
+
+    // Other users' decks should NOT be shown
+    await expect(
+      page.locator('[data-testid="deck-card-title"]', { hasText: 'My Greek Basics' })
+    ).toHaveCount(0);
+    await expect(
+      page.locator('[data-testid="deck-card-title"]', { hasText: 'Travel Phrases' })
+    ).toHaveCount(0);
+  });
+
+  test('Flow 11: admin panel shows all decks (system + user-created)', async ({ page }) => {
+    // Navigate to Admin page
+    await page.goto('/admin');
+
+    // Wait for admin page to load
+    await expect(page.locator('[data-testid="admin-title"]')).toBeVisible({
+      timeout: 15000,
+    });
+
+    // Find the All Decks section
+    const allDecksSection = page.locator('[data-testid="all-decks-title"]');
+    await expect(allDecksSection).toBeVisible({ timeout: 10000 });
+
+    // Wait for decks to load in the All Decks list
+    // The admin panel lists all decks with pagination
+    await page.waitForLoadState('networkidle');
+
+    // Find the search input within the All Decks section to scope our searches
+    const searchInput = page.locator('[data-testid="deck-search-input"]');
+    await expect(searchInput).toBeVisible({ timeout: 10000 });
+
+    // The pagination is near the search input - find it in the same section
+    // Look for the pagination section that has the pagination buttons
+    const allDecksCard = page.locator('section', {
+      has: page.locator('[data-testid="all-decks-title"]'),
+    });
+
+    // Wait for pagination to appear in All Decks section
+    const paginationText = allDecksCard.locator('text=/Showing \\d+-\\d+ of \\d+/');
+    await expect(paginationText).toBeVisible({ timeout: 10000 });
+
+    // Get the pagination text and verify total count
+    const paginationContent = await paginationText.textContent();
+    // Extract total from "Showing X-Y of TOTAL"
+    const totalMatch = paginationContent?.match(/of (\d+)/);
+    const totalDecks = totalMatch ? parseInt(totalMatch[1], 10) : 0;
+
+    // Should have at least 10 decks (6 system vocabulary + 5 culture + 4 user-created = 15)
+    // Note: The actual count is 15 (6 vocab + 5 culture + 4 user decks)
+    expect(totalDecks).toBeGreaterThanOrEqual(10);
+
+    // Verify we can see system decks by searching for A1 vocabulary deck
+    await searchInput.fill('Greek A1');
+    await page.waitForTimeout(500); // Wait for debounce
+
+    // Should find the A1 system deck
+    await expect(allDecksCard.getByText('Greek A1 Vocabulary')).toBeVisible({ timeout: 5000 });
+
+    // Clear search and search for user deck
+    await searchInput.clear();
+    await searchInput.fill("Admin's Personal");
+    await page.waitForTimeout(500);
+
+    // Should find the admin's personal deck
+    await expect(allDecksCard.getByText("Admin's Personal Deck")).toBeVisible({ timeout: 5000 });
+
+    // Clear search and search for learner's deck
+    await searchInput.clear();
+    await searchInput.fill('My Greek Basics');
+    await page.waitForTimeout(500);
+
+    // Admin can see learner's deck in admin panel (all user decks are visible to admin)
+    await expect(allDecksCard.getByText('My Greek Basics')).toBeVisible({ timeout: 5000 });
   });
 });
