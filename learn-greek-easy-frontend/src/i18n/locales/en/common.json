@@ -99,7 +99,11 @@
     "logout": "Logout",
     "menu": "Menu",
     "toggleMenu": "Toggle menu",
-    "userMenu": "User menu"
+    "userMenu": "User menu",
+    "decksDropdown": {
+      "allDecks": "All Decks",
+      "myDecks": "My Decks"
+    }
   },
   "language": {
     "select": "Select language",

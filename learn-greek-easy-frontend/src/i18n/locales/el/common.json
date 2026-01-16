@@ -99,7 +99,11 @@
     "logout": "Αποσύνδεση",
     "menu": "Μενού",
     "toggleMenu": "Εναλλαγή μενού",
-    "userMenu": "Μενού χρήστη"
+    "userMenu": "Μενού χρήστη",
+    "decksDropdown": {
+      "allDecks": "Όλες οι Τράπουλες",
+      "myDecks": "Οι Τράπουλές Μου"
+    }
   },
   "language": {
     "select": "Επιλέξτε γλώσσα",

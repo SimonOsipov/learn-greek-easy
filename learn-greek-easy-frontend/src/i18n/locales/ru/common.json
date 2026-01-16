@@ -99,7 +99,11 @@
     "logout": "Выйти",
     "menu": "Меню",
     "toggleMenu": "Переключить меню",
-    "userMenu": "Меню пользователя"
+    "userMenu": "Меню пользователя",
+    "decksDropdown": {
+      "allDecks": "Все Колоды",
+      "myDecks": "Мои Колоды"
+    }
   },
   "language": {
     "select": "Выбрать язык",
