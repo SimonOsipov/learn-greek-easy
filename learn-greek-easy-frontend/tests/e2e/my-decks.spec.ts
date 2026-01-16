@@ -8,6 +8,12 @@
  * - Disabled button tooltips
  * - Dropdown navigation highlighting
  * - Own deck detail access
+ * - Security & Access Control:
+ *   - Flow 8: Unauthorized deck access shows AlertDialog modal
+ *   - Flow 8b: Modal cannot be dismissed with Escape key
+ *   - Flow 9: Unauthenticated redirect for /my-decks
+ *   - Flow 12: Unauthenticated redirect for /my-decks/:id
+ *   - Flow 13: API returns 403 for unauthorized deck access
  *
  * Test Users:
  * - e2e_learner: Has 3 user-owned decks (My Greek Basics, Travel Phrases, Practice Deck)
@@ -15,8 +21,9 @@
  * - e2e_admin: Has admin role
  */
 
+import * as fs from 'fs';
+
 import { test, expect } from '@playwright/test';
-import { STORAGE_STATE } from '../../playwright.config';
 
 // Storage state paths
 const LEARNER_AUTH = 'playwright/.auth/learner.json';
@@ -349,5 +356,217 @@ test.describe('My Decks - Page Structure', () => {
       const title = card.locator('[data-testid="deck-card-title"]');
       await expect(title).toBeVisible();
     }
+  });
+});
+
+// ============================================================================
+// SECURITY & ACCESS CONTROL TESTS
+// ============================================================================
+
+/**
+ * Helper function to read learner's auth state and extract access token
+ */
+function getLearnerAccessToken(): string | null {
+  try {
+    const learnerAuthState = JSON.parse(fs.readFileSync(LEARNER_AUTH, 'utf-8'));
+    const learnerToken = learnerAuthState.origins?.[0]?.localStorage?.find(
+      (item: { name: string; value: string }) => item.name === 'auth-storage'
+    );
+    if (learnerToken) {
+      const authData = JSON.parse(learnerToken.value);
+      return authData?.state?.accessToken || null;
+    }
+  } catch {
+    // File might not exist or be invalid
+  }
+  return null;
+}
+
+/**
+ * Helper function to read beginner's auth state and extract access token
+ */
+function getBeginnerAccessToken(): string | null {
+  try {
+    const beginnerAuthState = JSON.parse(fs.readFileSync(BEGINNER_AUTH, 'utf-8'));
+    const beginnerToken = beginnerAuthState.origins?.[0]?.localStorage?.find(
+      (item: { name: string; value: string }) => item.name === 'auth-storage'
+    );
+    if (beginnerToken) {
+      const authData = JSON.parse(beginnerToken.value);
+      return authData?.state?.accessToken || null;
+    }
+  } catch {
+    // File might not exist or be invalid
+  }
+  return null;
+}
+
+test.describe('My Decks - Security & Access Control', () => {
+  test.describe('Unauthorized Deck Access (Authenticated User)', () => {
+    test.use({ storageState: BEGINNER_AUTH });
+
+    test('Flow 8: should show access denied modal when accessing another user deck', async ({
+      page,
+      request,
+    }) => {
+      // Get learner's access token to fetch their decks
+      const learnerAccessToken = getLearnerAccessToken();
+      test.skip(!learnerAccessToken, 'Learner auth state not available');
+      if (!learnerAccessToken) return;
+
+      // Fetch learner's decks using their token
+      const decksResponse = await request.get('/api/v1/decks/mine', {
+        headers: {
+          Authorization: `Bearer ${learnerAccessToken}`,
+        },
+      });
+
+      test.skip(!decksResponse.ok(), 'Could not fetch learner decks');
+      if (!decksResponse.ok()) return;
+
+      const decksData = await decksResponse.json();
+      test.skip(!decksData.decks?.length, 'Learner has no decks');
+      if (!decksData.decks?.length) return;
+
+      const learnerDeckId = decksData.decks[0].id;
+
+      // Navigate to the learner's deck as beginner (should trigger 403 -> modal)
+      await page.goto(`/my-decks/${learnerDeckId}`);
+
+      // Wait for the AlertDialog modal to appear
+      const dialog = page.getByRole('dialog');
+      await expect(dialog).toBeVisible({ timeout: 15000 });
+
+      // Assert modal shows "Access Denied" title
+      const title = dialog.getByRole('heading', { name: /access denied/i });
+      await expect(title).toBeVisible();
+
+      // Assert modal shows "This is not your deck" message
+      const description = dialog.getByText(/this is not your deck/i);
+      await expect(description).toBeVisible();
+
+      // Assert modal has "Ok" button
+      const okButton = dialog.getByRole('button', { name: /ok/i });
+      await expect(okButton).toBeVisible();
+
+      // Click "Ok" → should navigate to /my-decks
+      await okButton.click();
+      await expect(page).toHaveURL(/\/my-decks$/);
+    });
+
+    test('Flow 8b: access denied modal cannot be dismissed by pressing Escape', async ({
+      page,
+      request,
+    }) => {
+      // Get learner's access token to fetch their decks
+      const learnerAccessToken = getLearnerAccessToken();
+      test.skip(!learnerAccessToken, 'Learner auth state not available');
+      if (!learnerAccessToken) return;
+
+      // Fetch learner's decks using their token
+      const decksResponse = await request.get('/api/v1/decks/mine', {
+        headers: {
+          Authorization: `Bearer ${learnerAccessToken}`,
+        },
+      });
+
+      test.skip(!decksResponse.ok(), 'Could not fetch learner decks');
+      if (!decksResponse.ok()) return;
+
+      const decksData = await decksResponse.json();
+      test.skip(!decksData.decks?.length, 'Learner has no decks');
+      if (!decksData.decks?.length) return;
+
+      const learnerDeckId = decksData.decks[0].id;
+
+      // Navigate to the learner's deck as beginner
+      await page.goto(`/my-decks/${learnerDeckId}`);
+
+      // Wait for the AlertDialog modal to appear
+      const dialog = page.getByRole('dialog');
+      await expect(dialog).toBeVisible({ timeout: 15000 });
+
+      // Press Escape - modal should NOT close (non-dismissible)
+      await page.keyboard.press('Escape');
+
+      // Modal should still be visible after pressing Escape
+      await expect(dialog).toBeVisible();
+
+      // Title should still be visible
+      await expect(dialog.getByRole('heading', { name: /access denied/i })).toBeVisible();
+    });
+  });
+
+  test.describe('Unauthenticated Access', () => {
+    // Use empty storage state to simulate unauthenticated user
+    test.use({ storageState: { cookies: [], origins: [] } });
+
+    test('Flow 9: should redirect to login when accessing /my-decks unauthenticated', async ({
+      page,
+    }) => {
+      // Navigate directly to /my-decks without authentication
+      await page.goto('/my-decks');
+
+      // Should be redirected to login page
+      await expect(page).toHaveURL(/\/login/, { timeout: 10000 });
+    });
+
+    test('Flow 12: should redirect to login when accessing /my-decks/:id unauthenticated', async ({
+      page,
+    }) => {
+      // Navigate directly to a specific deck detail page without authentication
+      // Use a random UUID to simulate accessing a deck
+      const randomUuid = '12345678-1234-1234-1234-123456789abc';
+      await page.goto(`/my-decks/${randomUuid}`);
+
+      // Should be redirected to login page
+      await expect(page).toHaveURL(/\/login/, { timeout: 10000 });
+    });
+  });
+
+  test.describe('API Access Control', () => {
+    test.use({ storageState: BEGINNER_AUTH });
+
+    test('Flow 13: API should return 403 for unauthorized deck access', async ({ request }) => {
+      // Get both users' access tokens
+      const learnerAccessToken = getLearnerAccessToken();
+      const beginnerAccessToken = getBeginnerAccessToken();
+
+      test.skip(
+        !learnerAccessToken || !beginnerAccessToken,
+        'Auth states not available for both users'
+      );
+      if (!learnerAccessToken || !beginnerAccessToken) return;
+
+      // Fetch learner's decks to get a deck ID
+      const decksResponse = await request.get('/api/v1/decks/mine', {
+        headers: {
+          Authorization: `Bearer ${learnerAccessToken}`,
+        },
+      });
+
+      test.skip(!decksResponse.ok(), 'Could not fetch learner decks');
+      if (!decksResponse.ok()) return;
+
+      const decksData = await decksResponse.json();
+      test.skip(!decksData.decks?.length, 'Learner has no decks');
+      if (!decksData.decks?.length) return;
+
+      const learnerDeckId = decksData.decks[0].id;
+
+      // Make API request as beginner to access learner's deck
+      const response = await request.get(`/api/v1/decks/${learnerDeckId}`, {
+        headers: {
+          Authorization: `Bearer ${beginnerAccessToken}`,
+        },
+      });
+
+      // Assert 403 status code
+      expect(response.status()).toBe(403);
+
+      // Assert error response includes appropriate error detail
+      const errorData = await response.json();
+      expect(errorData.detail).toBeDefined();
+    });
   });
 });
