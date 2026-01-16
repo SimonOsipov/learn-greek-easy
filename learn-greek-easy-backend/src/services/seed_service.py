@@ -187,6 +187,39 @@ class SeedService:
         ],
     }
 
+    # User-owned deck definitions for E2E testing
+    # Maps user email -> list of deck configurations
+    USER_DECKS: dict[str, list[dict[str, Any]]] = {
+        "e2e_learner@test.com": [
+            {
+                "name": "My Greek Basics",
+                "description": "My personal collection of basic Greek words",
+                "level": DeckLevel.A1,
+                "card_count": 5,
+            },
+            {
+                "name": "Travel Phrases",
+                "description": "Essential phrases for traveling in Greece",
+                "level": DeckLevel.A2,
+                "card_count": 3,
+            },
+            {
+                "name": "Practice Deck",
+                "description": "An empty deck for practice",
+                "level": DeckLevel.B1,
+                "card_count": 0,
+            },
+        ],
+        "e2e_admin@test.com": [
+            {
+                "name": "Admin's Personal Deck",
+                "description": "Admin's personal vocabulary collection",
+                "level": DeckLevel.A1,
+                "card_count": 2,
+            },
+        ],
+    }
+
     # Culture categories with deck definitions (simple English strings)
     CULTURE_DECKS = {
         "history": {
@@ -1414,6 +1447,88 @@ class SeedService:
             "total_cards": sum(len(v) for v in self.VOCABULARY.values()),
         }
 
+    async def seed_user_decks(self, users: list[dict[str, Any]]) -> dict[str, Any]:
+        """Create user-owned decks with cards for E2E testing.
+
+        Creates personal decks for specified test users:
+        - e2e_learner: 3 decks (My Greek Basics, Travel Phrases, Practice Deck)
+        - e2e_admin: 1 deck (Admin's Personal Deck)
+        - Other users (beginner, advanced): 0 decks (for empty state testing)
+
+        Args:
+            users: List of user dicts with 'id' and 'email' keys from seed_users()
+
+        Returns:
+            dict with 'decks' list containing created user deck info
+
+        Raises:
+            RuntimeError: If seeding not allowed
+        """
+        self._check_can_seed()
+
+        # Build user email -> UUID mapping
+        user_map: dict[str, UUID] = {user["email"]: UUID(user["id"]) for user in users}
+        created_decks: list[dict[str, Any]] = []
+        difficulties = [CardDifficulty.EASY, CardDifficulty.MEDIUM, CardDifficulty.HARD]
+
+        for email, deck_configs in self.USER_DECKS.items():
+            user_id = user_map.get(email)
+            if not user_id:
+                # Skip if user not found (e.g., email not in seeded users)
+                continue
+
+            for deck_config in deck_configs:
+                # Create deck with owner_id set to the user
+                deck = Deck(
+                    name=deck_config["name"],
+                    description=deck_config["description"],
+                    level=deck_config["level"],
+                    is_active=True,
+                    is_premium=False,  # User decks are never premium
+                    owner_id=user_id,
+                )
+                self.db.add(deck)
+                await self.db.flush()
+
+                # Create cards if card_count > 0
+                card_count = deck_config["card_count"]
+                if card_count > 0:
+                    # Reuse vocabulary from existing VOCABULARY dict
+                    vocab = self.VOCABULARY.get(deck_config["level"], [])
+                    words_to_use = vocab[:card_count]
+
+                    for i, (greek, english, category) in enumerate(words_to_use):
+                        card = Card(
+                            deck_id=deck.id,
+                            front_text=greek,
+                            back_text=english,
+                            example_sentence=f"User example: '{greek}' in context",
+                            pronunciation=f"[{greek}]",
+                            difficulty=difficulties[i % 3],  # Rotate through difficulties
+                            order_index=i,
+                        )
+                        self.db.add(card)
+
+                created_decks.append(
+                    {
+                        "id": str(deck.id),
+                        "name": deck.name,
+                        "level": deck_config["level"].value,
+                        "card_count": card_count,
+                        "owner_id": str(user_id),
+                        "owner_email": email,
+                    }
+                )
+
+        await self.db.flush()
+
+        return {
+            "success": True,
+            "decks": created_decks,
+            "total_user_decks": len(created_decks),
+            "total_user_cards": sum(d["card_count"] for d in created_decks),
+        }
+
     # =====================
     # Progress Seeding
     # =====================
@@ -2160,7 +2275,8 @@ class SeedService:
         Orchestrates complete seeding:
         1. Truncate all tables (clean slate)
         2. Create test users
-        3. Create decks and cards
+        3. Create system decks and cards
+        3b. Create user-owned decks (My Decks feature)
         4. Create progress data for learner user
         5. Create review history for learner user
         6. Create notifications for learner user
@@ -2186,6 +2302,9 @@ class SeedService:
 
         # Step 3: Create content
         content_result = await self.seed_decks_and_cards()
+
+        # Step 3b: Create user-owned decks (My Decks feature)
+        user_decks_result = await self.seed_user_decks(users_result["users"])
 
         # Step 4 & 5: Create progress for learner user
         # Find the learner user and A1 deck for detailed progress
@@ -2382,6 +2501,7 @@ class SeedService:
             "truncation": truncate_result,
             "users": users_result,
             "content": content_result,
+            "user_decks": user_decks_result,
             "statistics": stats_result,
             "reviews": reviews_result,
             "notifications": notifications_result,
