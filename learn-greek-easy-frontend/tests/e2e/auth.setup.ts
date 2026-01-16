@@ -312,10 +312,17 @@ async function authenticateAndSave(
   storageStatePath: string
 ): Promise<void> {
   if (isAuth0Enabled()) {
-    // Use Auth0 login UI - get the Auth0 user credentials
-    const auth0User = user.email.includes('admin')
-      ? AUTH0_TEST_USERS.ADMIN
-      : AUTH0_TEST_USERS.LEARNER;
+    // Use Auth0 login UI - get the matching Auth0 user credentials
+    let auth0User;
+    if (user.email.includes('admin')) {
+      auth0User = AUTH0_TEST_USERS.ADMIN;
+    } else if (user.email.includes('beginner')) {
+      auth0User = AUTH0_TEST_USERS.BEGINNER;
+    } else if (user.email.includes('advanced')) {
+      auth0User = AUTH0_TEST_USERS.ADVANCED;
+    } else {
+      auth0User = AUTH0_TEST_USERS.LEARNER;
+    }
     await authenticateViaAuth0(page, auth0User, storageStatePath);
   } else {
     // Use seed API for token generation
