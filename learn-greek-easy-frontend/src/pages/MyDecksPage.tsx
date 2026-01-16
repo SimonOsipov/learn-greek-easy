@@ -190,6 +190,7 @@ export const MyDecksPage: React.FC = () => {
           className="flex min-h-[400px] flex-col items-center justify-center p-8 text-center"
           role="status"
           aria-label={t('myDecks.empty.title')}
+          data-testid="my-decks-empty-state"
         >
           <BookOpen className="mb-4 h-16 w-16 text-muted-foreground/50" aria-hidden="true" />
           <h3 className="mb-2 text-lg font-semibold text-foreground">{t('myDecks.empty.title')}</h3>

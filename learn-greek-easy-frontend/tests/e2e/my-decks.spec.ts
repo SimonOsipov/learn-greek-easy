@@ -207,12 +207,17 @@ test.describe('My Decks - Empty State', () => {
     // Wait for page title
     await expect(page.locator('[data-testid="my-decks-title"]')).toBeVisible({ timeout: 15000 });
 
-    // Empty state should be visible (contains the BookOpen icon and message)
-    const emptyStateMessage = page.getByText(/You haven't created any decks yet/i);
-    await expect(emptyStateMessage).toBeVisible({ timeout: 10000 });
+    // Empty state container should be visible
+    const emptyState = page.locator('[data-testid="my-decks-empty-state"]');
+    await expect(emptyState).toBeVisible({ timeout: 10000 });
 
-    // Create Deck CTA button should be visible but disabled
-    const createDeckButton = page.getByRole('button', { name: /create deck/i });
+    // Empty state message should be visible
+    const emptyStateMessage = emptyState.getByText(/You haven't created any decks yet/i);
+    await expect(emptyStateMessage).toBeVisible();
+
+    // Create Deck CTA button within empty state should be visible but disabled
+    // Use locator chain to target the button specifically within the empty state container
+    const createDeckButton = emptyState.getByRole('button', { name: /create deck/i });
     await expect(createDeckButton).toBeVisible();
     await expect(createDeckButton).toBeDisabled();
   });
@@ -223,8 +228,9 @@ test.describe('My Decks - Empty State', () => {
     // Wait for page to load
     await expect(page.locator('[data-testid="my-decks-title"]')).toBeVisible({ timeout: 15000 });
 
-    // Wait for empty state to render (give API time to respond)
-    await page.waitForTimeout(2000);
+    // Wait for empty state to appear (this confirms the API returned no decks)
+    const emptyState = page.locator('[data-testid="my-decks-empty-state"]');
+    await expect(emptyState).toBeVisible({ timeout: 10000 });
 
     // No deck cards should be visible
     const deckCards = page.locator('[data-testid="deck-card"]');
