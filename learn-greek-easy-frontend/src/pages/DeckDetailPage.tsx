@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 
 import {
   ChevronLeft,
+  Crown,
   Lock,
   BookOpen,
   Clock,
@@ -203,10 +204,10 @@ const DeckHeaderSection: React.FC<DeckHeaderSectionProps> = ({
             <p className="text-base text-muted-foreground md:text-lg">{deck.title}</p>
           </div>
 
-          {/* Level Badge, Lock Icon, and Actions */}
+          {/* Level Badge, Premium Icon, and Actions */}
           <div className="flex flex-shrink-0 items-center gap-2">
             {isPremiumLocked && (
-              <Lock className="h-5 w-5 text-amber-500" aria-label="Premium locked" />
+              <Crown className="h-5 w-5 text-amber-500" aria-label="Premium content" />
             )}
             <DeckBadge type="level" level={deck.level} />
 

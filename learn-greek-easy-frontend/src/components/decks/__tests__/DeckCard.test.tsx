@@ -120,24 +120,24 @@ describe('DeckCard', () => {
   });
 
   describe('Locked State', () => {
-    it('should show lock icon when deck is premium', () => {
+    it('should show crown icon when deck is premium', () => {
       const deck = createMockDeck({ isPremium: true });
 
       renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
 
-      // Look for the lock icon with aria-label
-      const lockIcon = screen.getByLabelText(/premium locked/i);
-      expect(lockIcon).toBeInTheDocument();
+      // Look for the crown icon with aria-label
+      const crownIcon = screen.getByLabelText(/premium content/i);
+      expect(crownIcon).toBeInTheDocument();
     });
 
-    it('should not show lock icon when deck is not premium', () => {
+    it('should not show crown icon when deck is not premium', () => {
       const deck = createMockDeck({ isPremium: false });
 
       renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
 
-      // Lock icon should NOT be present
-      const lockIcon = screen.queryByLabelText(/premium locked/i);
-      expect(lockIcon).not.toBeInTheDocument();
+      // Crown icon should NOT be present
+      const crownIcon = screen.queryByLabelText(/premium content/i);
+      expect(crownIcon).not.toBeInTheDocument();
     });
 
     it('should apply grayscale styling when deck is locked', () => {

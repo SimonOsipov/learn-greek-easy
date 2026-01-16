@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { Crown, Lock } from 'lucide-react';
+import { Crown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { CultureBadge, type CultureCategory } from '@/components/culture';
@@ -89,9 +89,9 @@ export const DeckCard: React.FC<DeckCardProps> = ({
             <p className="truncate text-sm text-muted-foreground">{title}</p>
           </div>
 
-          {/* Level Badge and Lock Icon */}
+          {/* Level Badge and Premium Icon */}
           <div className="flex flex-shrink-0 items-center gap-2">
-            {isLocked && <Lock className="h-4 w-4 text-amber-500" aria-label="Premium locked" />}
+            {isLocked && <Crown className="h-4 w-4 text-amber-500" aria-label="Premium content" />}
             {!isCultureDeck && <DeckBadge type="level" level={level} />}
           </div>
         </div>
