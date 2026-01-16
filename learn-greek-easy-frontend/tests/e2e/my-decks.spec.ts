@@ -185,8 +185,8 @@ test.describe('My Decks - Page Content', () => {
     // Click on the first deck
     await firstDeck.click();
 
-    // Should navigate to deck detail page (URL contains /deck/ or /decks/)
-    await page.waitForURL(/\/(deck|decks)\/[a-f0-9-]+/i);
+    // Should navigate to deck detail page (URL contains /my-decks/)
+    await page.waitForURL(/\/my-decks\/[a-f0-9-]+/i);
 
     // Deck detail content should be visible - look for action buttons or deck info
     const deckContent = page.getByRole('button', { name: /start|continue|review/i }).first();
