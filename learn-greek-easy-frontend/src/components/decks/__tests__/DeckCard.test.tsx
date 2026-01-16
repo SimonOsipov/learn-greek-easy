@@ -140,26 +140,60 @@ describe('DeckCard', () => {
       expect(crownIcon).not.toBeInTheDocument();
     });
 
-    it('should apply grayscale styling when deck is locked', () => {
+    it('should apply blur styling to content when deck is locked', () => {
       const deck = createMockDeck({ isPremium: true });
 
       renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
 
-      const card = screen.getByTestId('deck-card');
+      const content = screen.getByTestId('deck-card-content');
 
-      // Card should have grayscale filter applied
-      expect(card.className).toContain('grayscale');
+      // Content should have blur-sm class applied
+      expect(content.className).toContain('blur-sm');
     });
 
-    it('should not apply grayscale styling when deck is not premium', () => {
+    it('should not apply blur styling to content when deck is not premium', () => {
       const deck = createMockDeck({ isPremium: false });
 
       renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
 
-      const card = screen.getByTestId('deck-card');
+      const content = screen.getByTestId('deck-card-content');
 
-      // Card should NOT have grayscale filter
-      expect(card.className).not.toContain('grayscale');
+      // Content should NOT have blur class
+      expect(content.className).not.toContain('blur');
+    });
+
+    it('should render overlay when deck is locked', () => {
+      const deck = createMockDeck({ isPremium: true });
+
+      renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
+
+      // Overlay should be present with correct classes
+      const overlay = screen.getByTestId('deck-card-locked-overlay');
+      expect(overlay).toBeInTheDocument();
+      expect(overlay.className).toContain('bg-background/30');
+      expect(overlay.className).toContain('z-10');
+      expect(overlay.className).toContain('pointer-events-none');
+    });
+
+    it('should not render overlay when deck is not locked', () => {
+      const deck = createMockDeck({ isPremium: false });
+
+      renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
+
+      // Overlay should NOT be present
+      const overlay = screen.queryByTestId('deck-card-locked-overlay');
+      expect(overlay).not.toBeInTheDocument();
+    });
+
+    it('should have z-20 on header to keep it above overlay', () => {
+      const deck = createMockDeck({ isPremium: true });
+
+      renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
+
+      const header = screen.getByTestId('deck-card-header');
+
+      // Header should have z-20 class for proper layering
+      expect(header.className).toContain('z-20');
     });
 
     it('should not be clickable when deck is locked', async () => {
