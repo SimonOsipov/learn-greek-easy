@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 import { AlertCircle, BookOpen, Plus, Square } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 
 import { DecksGrid } from '@/components/decks/DecksGrid';
 import { CardSkeleton } from '@/components/feedback';
@@ -48,6 +49,7 @@ const transformDeckResponse = (deck: DeckResponse): Deck => {
 
 export const MyDecksPage: React.FC = () => {
   const { t } = useTranslation('deck');
+  const navigate = useNavigate();
   const [decks, setDecks] = useState<Deck[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -100,6 +102,10 @@ export const MyDecksPage: React.FC = () => {
     trackMyDecksCreateCardClicked({
       button_state: 'disabled',
     });
+  };
+
+  const handleDeckClick = (deckId: string) => {
+    navigate(`/my-decks/${deckId}`);
   };
 
   return (
@@ -174,7 +180,9 @@ export const MyDecksPage: React.FC = () => {
       {isLoading && !error && <MyDecksGridSkeleton />}
 
       {/* Decks Grid */}
-      {!isLoading && !error && decks.length > 0 && <DecksGrid decks={decks} />}
+      {!isLoading && !error && decks.length > 0 && (
+        <DecksGrid decks={decks} onDeckClick={handleDeckClick} />
+      )}
 
       {/* Empty State */}
       {!isLoading && !error && decks.length === 0 && (
