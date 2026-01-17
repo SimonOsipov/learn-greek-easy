@@ -47,6 +47,20 @@ from src.schemas.feedback import (
     VoteResponse,
 )
 
+# Mock Exam schemas
+from src.schemas.mock_exam import (
+    MockExamAnswerRequest,
+    MockExamAnswerResponse,
+    MockExamCompleteRequest,
+    MockExamCompleteResponse,
+    MockExamCreateResponse,
+    MockExamHistoryItem,
+    MockExamQuestionResponse,
+    MockExamQueueResponse,
+    MockExamSessionResponse,
+    MockExamStatisticsResponse,
+)
+
 # Notification schemas
 from src.schemas.notification import (
     ClearResponse,
@@ -216,4 +230,15 @@ __all__ = [
     "CultureOverallProgress",
     "CultureProgressResponse",
     "CultureSessionSummary",
+    # Mock Exam
+    "MockExamQuestionResponse",
+    "MockExamSessionResponse",
+    "MockExamCreateResponse",
+    "MockExamQueueResponse",
+    "MockExamAnswerRequest",
+    "MockExamAnswerResponse",
+    "MockExamCompleteRequest",
+    "MockExamCompleteResponse",
+    "MockExamHistoryItem",
+    "MockExamStatisticsResponse",
 ]
