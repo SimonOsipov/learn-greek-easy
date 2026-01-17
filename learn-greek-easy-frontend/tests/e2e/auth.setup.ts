@@ -318,13 +318,20 @@ async function authenticateViaSeedAPI(
  * Authenticate a user and save storage state
  *
  * Routes to either Auth0 or seed API authentication based on environment.
+ * Note: We only have LEARNER and ADMIN users in Auth0, so BEGINNER and ADVANCED
+ * always use the seed API to get their correct seeded data.
  */
 async function authenticateAndSave(
   page: import('@playwright/test').Page,
   user: { email: string; password: string; name: string },
   storageStatePath: string
 ): Promise<void> {
-  if (isAuth0Enabled()) {
+  // Auth0 only has LEARNER and ADMIN users - BEGINNER and ADVANCED must use seed API
+  // to get tokens that match their seeded data (e.g., beginner has 0 decks)
+  const canUseAuth0 = isAuth0Enabled() &&
+    (user.email === AUTH0_TEST_USERS.LEARNER.email || user.email === AUTH0_TEST_USERS.ADMIN.email);
+
+  if (canUseAuth0) {
     // Use Auth0 login UI - get the Auth0 user credentials
     const auth0User = user.email.includes('admin')
       ? AUTH0_TEST_USERS.ADMIN
@@ -332,6 +339,7 @@ async function authenticateAndSave(
     await authenticateViaAuth0(page, auth0User, storageStatePath);
   } else {
     // Use seed API for token generation
+    // This is used for: (1) when Auth0 is disabled, (2) for BEGINNER/ADVANCED users
     await authenticateViaSeedAPI(page, user, storageStatePath);
   }
 }
