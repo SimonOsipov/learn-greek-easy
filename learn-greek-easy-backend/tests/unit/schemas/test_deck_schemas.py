@@ -91,6 +91,23 @@ class TestDeckCreate:
             deck = DeckCreate(name=f"Level {level.value}", level=level)
             assert deck.level == level
 
+    def test_deck_create_is_system_deck_default_false(self):
+        """Test is_system_deck defaults to False."""
+        deck = DeckCreate(
+            name="Test Deck",
+            level=DeckLevel.A1,
+        )
+        assert deck.is_system_deck is False
+
+    def test_deck_create_is_system_deck_true(self):
+        """Test is_system_deck can be set to True."""
+        deck = DeckCreate(
+            name="System Deck",
+            level=DeckLevel.B1,
+            is_system_deck=True,
+        )
+        assert deck.is_system_deck is True
+
 
 class TestDeckUpdate:
     """Test DeckUpdate schema validation for partial updates."""

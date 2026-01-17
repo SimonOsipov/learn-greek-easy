@@ -84,12 +84,20 @@ export interface SearchDecksParams {
 }
 
 /**
- * Input for creating a new user deck
+ * Input for creating a new deck
+ *
+ * By default (is_system_deck=false), decks are owned by the creator.
+ * Superusers can set is_system_deck=true to create system decks (owner_id=null).
  */
 export interface CreateDeckInput {
   name: string;
   description?: string;
   level: DeckLevel;
+  /**
+   * If true, create a system deck (owner_id=null). Only superusers can set this.
+   * Defaults to false (personal deck owned by creator).
+   */
+  is_system_deck?: boolean;
 }
 
 /**

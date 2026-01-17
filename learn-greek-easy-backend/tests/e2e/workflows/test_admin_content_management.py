@@ -45,11 +45,12 @@ class TestAdminDeckManagement(E2ETestCase):
         Verify Update -> Delete Deck -> Verify Deletion -> Verify Regular
         User Cannot See Deleted Deck
         """
-        # Step 1: CREATE deck
+        # Step 1: CREATE deck (system deck so it's visible to all users)
         deck_data = {
             "name": "Greek Travel Vocabulary",
             "description": "Essential phrases for travelers",
             "level": "A2",
+            "is_system_deck": True,
         }
         create_response = await client.post(
             "/api/v1/decks",
@@ -119,10 +120,10 @@ class TestAdminDeckManagement(E2ETestCase):
         User Cannot See Deck -> Admin Can Still Update -> Admin Reactivates ->
         User Can See Deck Again
         """
-        # Step 1: Create active deck
+        # Step 1: Create active deck (system deck for visibility testing)
         deck_response = await client.post(
             "/api/v1/decks",
-            json={"name": "Visibility Test Deck", "level": "A1"},
+            json={"name": "Visibility Test Deck", "level": "A1", "is_system_deck": True},
             headers=superuser_auth_headers,
         )
         assert deck_response.status_code == 201
@@ -392,10 +393,10 @@ class TestContentPropagation(E2ETestCase):
         Admin Creates Deck -> Regular User Sees Deck -> Admin Adds Cards ->
         Regular User Sees Cards -> Admin Updates Card -> Regular User Sees Update
         """
-        # Step 1: Admin creates deck
+        # Step 1: Admin creates deck (system deck for user visibility)
         deck_response = await client.post(
             "/api/v1/decks",
-            json={"name": "Propagation Test Deck", "level": "A1"},
+            json={"name": "Propagation Test Deck", "level": "A1", "is_system_deck": True},
             headers=superuser_auth_headers,
         )
         assert deck_response.status_code == 201
@@ -453,10 +454,10 @@ class TestContentPropagation(E2ETestCase):
         This verifies that when an admin updates card content, users
         see the updated content in their study queue.
         """
-        # Step 1: Admin creates deck with card
+        # Step 1: Admin creates deck with card (system deck for user study access)
         deck_response = await client.post(
             "/api/v1/decks",
-            json={"name": "Study Content Test", "level": "A1"},
+            json={"name": "Study Content Test", "level": "A1", "is_system_deck": True},
             headers=superuser_auth_headers,
         )
         deck_id = deck_response.json()["id"]

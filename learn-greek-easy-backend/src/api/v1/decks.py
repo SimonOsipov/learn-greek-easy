@@ -118,7 +118,8 @@ async def list_decks(
     summary="Create a new deck",
     description=(
         "Create a new deck. Regular users create personal decks (owner_id set to their ID, "
-        "is_active=True, is_premium=False). Superusers create system decks (owner_id=None) by default."
+        "is_active=True, is_premium=False). Superusers create personal decks by default; "
+        "set is_system_deck=True to create system decks (owner_id=None)."
     ),
     responses={
         201: {
@@ -151,11 +152,11 @@ async def create_deck(
     Any authenticated user can create a deck:
     - Regular users: Deck is automatically owned by the user (owner_id=current_user.id),
       is_active=True, is_premium=False. The deck will appear in /mine endpoint.
-    - Superusers: Deck is a system deck (owner_id=None) with full control over
-      is_active and is_premium values.
+    - Superusers: By default, create personal decks. Set is_system_deck=True to
+      create system decks (owner_id=None) with full control over is_active and is_premium.
 
     Args:
-        deck_data: Deck creation data (name, description, level)
+        deck_data: Deck creation data (name, description, level, is_system_deck)
         db: Database session (injected)
         current_user: Authenticated user (injected)
 
@@ -164,21 +165,29 @@ async def create_deck(
 
     Raises:
         401: If not authenticated
+        403: If regular user tries to create a system deck
         422: If validation fails
     """
     repo = DeckRepository(db)
 
-    # Build the creation data dictionary
-    create_data = deck_data.model_dump(exclude_unset=True)
+    # Build the creation data dictionary, excluding the is_system_deck flag
+    # which is only used for logic, not stored in the database
+    create_data = deck_data.model_dump(exclude_unset=True, exclude={"is_system_deck"})
 
-    # Apply ownership rules based on user type
-    if not current_user.is_superuser:
-        # Regular users: force owner_id, is_active, is_premium
+    # Determine deck ownership based on is_system_deck flag and user permissions
+    if deck_data.is_system_deck:
+        # Only superusers can create system decks
+        if not current_user.is_superuser:
+            raise ForbiddenException(detail="Only administrators can create system decks")
+        # System deck: owner_id remains None (not set)
+        # Superusers can control is_active and is_premium (defaults from model)
+    else:
+        # Personal deck: owned by the current user
         create_data["owner_id"] = current_user.id
-        create_data["is_active"] = True
-        create_data["is_premium"] = False
-    # Superusers: create system deck (owner_id=None by default)
-    # They can set is_active and is_premium as needed (defaults apply from model)
+        # Non-superusers have forced values for safety
+        if not current_user.is_superuser:
+            create_data["is_active"] = True
+            create_data["is_premium"] = False
 
     # Create the deck using BaseRepository.create()
     # Note: BaseRepository.create() uses flush, not commit
