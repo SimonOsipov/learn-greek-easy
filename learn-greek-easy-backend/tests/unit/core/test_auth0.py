@@ -9,6 +9,7 @@ from authlib.jose.errors import BadSignatureError, DecodeError, ExpiredTokenErro
 from src.core.auth0 import (
     Auth0UserInfo,
     JWKSCache,
+    extract_claims_from_id_token,
     fetch_jwks,
     invalidate_jwks_cache,
     verify_auth0_token,
@@ -46,12 +47,26 @@ class TestAuth0UserInfo:
         assert user_info.email_verified is False
         assert user_info.name is None
 
-    def test_immutable(self):
-        """Test that Auth0UserInfo is immutable (frozen dataclass)."""
+    def test_mutable_for_email_update(self):
+        """Test that Auth0UserInfo is mutable to allow email update from ID token.
+
+        Auth0UserInfo is intentionally mutable because access tokens for
+        custom API audiences may not include email claims. We need to update
+        the email from the ID token after initial creation.
+        """
         user_info = Auth0UserInfo(auth0_id="auth0|123")
 
-        with pytest.raises(Exception):  # FrozenInstanceError
-            user_info.auth0_id = "different"
+        # Should be able to update email (from ID token)
+        user_info.email = "updated@example.com"
+        assert user_info.email == "updated@example.com"
+
+        # Should be able to update email_verified
+        user_info.email_verified = True
+        assert user_info.email_verified is True
+
+        # Should be able to update name
+        user_info.name = "Updated Name"
+        assert user_info.name == "Updated Name"
 
 
 class TestJWKSCache:
@@ -357,6 +372,62 @@ class TestVerifyAuth0Token:
         # Note: Current implementation looks for standard claims first,
         # then falls back to namespaced
         assert result.email == "namespaced@example.com"
+
+
+class TestExtractClaimsFromIdToken:
+    """Tests for extract_claims_from_id_token function."""
+
+    def test_extracts_claims_from_valid_token(self):
+        """Test extracting claims from a valid ID token."""
+        import base64
+        import json
+
+        # Create a mock JWT with email claims
+        header = {"alg": "RS256", "typ": "JWT"}
+        payload = {
+            "sub": "auth0|123",
+            "email": "test@example.com",
+            "email_verified": True,
+            "name": "Test User",
+        }
+        # Base64url encode (without padding)
+        header_b64 = base64.urlsafe_b64encode(json.dumps(header).encode()).rstrip(b"=")
+        payload_b64 = base64.urlsafe_b64encode(json.dumps(payload).encode()).rstrip(b"=")
+        signature_b64 = base64.urlsafe_b64encode(b"fake-signature").rstrip(b"=")
+
+        mock_token = f"{header_b64.decode()}.{payload_b64.decode()}.{signature_b64.decode()}"
+
+        result = extract_claims_from_id_token(mock_token)
+
+        assert result is not None
+        assert result["email"] == "test@example.com"
+        assert result["email_verified"] is True
+        assert result["name"] == "Test User"
+        assert result["sub"] == "auth0|123"
+
+    def test_returns_none_for_invalid_structure(self):
+        """Test that invalid token structure returns None."""
+        # Token with wrong number of parts
+        result = extract_claims_from_id_token("only.two")
+        assert result is None
+
+        result = extract_claims_from_id_token("no-dots-at-all")
+        assert result is None
+
+    def test_returns_none_for_invalid_base64(self):
+        """Test that invalid base64 in payload returns None."""
+        # Invalid base64 in the payload position
+        result = extract_claims_from_id_token("header.!!!invalid-base64!!!.signature")
+        assert result is None
+
+    def test_returns_none_for_invalid_json(self):
+        """Test that invalid JSON in payload returns None."""
+        import base64
+
+        # Valid base64 but not valid JSON
+        invalid_json = base64.urlsafe_b64encode(b"not-json").decode()
+        result = extract_claims_from_id_token(f"header.{invalid_json}.signature")
+        assert result is None
 
 
 class TestInvalidateJWKSCache:
