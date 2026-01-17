@@ -188,9 +188,13 @@ test.describe('My Decks - Page Content', () => {
     // Should navigate to deck detail page (URL contains /my-decks/)
     await page.waitForURL(/\/my-decks\/[a-f0-9-]+/i);
 
-    // Deck detail content should be visible - look for action buttons or deck info
-    const deckContent = page.getByRole('button', { name: /start|continue|review/i }).first();
-    await expect(deckContent).toBeVisible({ timeout: 10000 });
+    // Deck detail content should be visible - look for the deck detail container
+    const deckDetail = page.locator('[data-testid="my-deck-detail"]');
+    await expect(deckDetail).toBeVisible({ timeout: 10000 });
+
+    // Verify breadcrumb navigation is present
+    const breadcrumb = page.locator('[data-testid="breadcrumb"]');
+    await expect(breadcrumb).toBeVisible();
   });
 });
 
