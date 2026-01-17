@@ -34,3 +34,7 @@ export { useNotifications } from './useNotifications';
 // Culture hooks
 export { useQuestionLanguage } from './useQuestionLanguage';
 export type { UseQuestionLanguageResult } from './useQuestionLanguage';
+
+// Mock exam hooks
+export { useMockExamTimer } from './useMockExamTimer';
+export type { UseMockExamTimerOptions, UseMockExamTimerResult } from './useMockExamTimer';
