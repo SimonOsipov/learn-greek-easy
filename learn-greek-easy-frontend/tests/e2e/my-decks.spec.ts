@@ -211,9 +211,19 @@ test.describe('My Decks - Empty State', () => {
     // Wait for page title
     await expect(page.locator('[data-testid="my-decks-title"]')).toBeVisible({ timeout: 15000 });
 
-    // Empty state container should be visible
+    // Wait for loading to complete - either empty state OR decks grid OR error should appear
+    // The skeleton disappears when loading completes
     const emptyState = page.locator('[data-testid="my-decks-empty-state"]');
-    await expect(emptyState).toBeVisible({ timeout: 10000 });
+    const decksGrid = page.locator('[data-testid="deck-card"]');
+    const errorState = page.getByText(/error loading|try again/i);
+
+    // Wait for one of the three states to appear
+    await expect(
+      emptyState.or(decksGrid.first()).or(errorState.first())
+    ).toBeVisible({ timeout: 15000 });
+
+    // Now verify it's the empty state specifically
+    await expect(emptyState).toBeVisible({ timeout: 5000 });
 
     // Empty state message should be visible
     const emptyStateMessage = emptyState.getByText(/You haven't created any decks yet/i);
@@ -232,9 +242,17 @@ test.describe('My Decks - Empty State', () => {
     // Wait for page to load
     await expect(page.locator('[data-testid="my-decks-title"]')).toBeVisible({ timeout: 15000 });
 
-    // Wait for empty state to appear (this confirms the API returned no decks)
+    // Wait for loading to complete - either empty state, decks, or error should appear
     const emptyState = page.locator('[data-testid="my-decks-empty-state"]');
-    await expect(emptyState).toBeVisible({ timeout: 10000 });
+    const decksGrid = page.locator('[data-testid="deck-card"]');
+    const errorState = page.getByText(/error loading|try again/i);
+
+    await expect(
+      emptyState.or(decksGrid.first()).or(errorState.first())
+    ).toBeVisible({ timeout: 15000 });
+
+    // Verify empty state is shown (not error or decks)
+    await expect(emptyState).toBeVisible({ timeout: 5000 });
 
     // No deck cards should be visible
     const deckCards = page.locator('[data-testid="deck-card"]');
