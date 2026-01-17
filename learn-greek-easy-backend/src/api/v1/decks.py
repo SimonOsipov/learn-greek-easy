@@ -11,7 +11,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, Query, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config import settings
-from src.core.dependencies import get_current_superuser, get_current_user
+from src.core.dependencies import get_current_user
 from src.core.exceptions import DeckNotFoundException, ForbiddenException
 from src.db.dependencies import get_db
 from src.db.models import DeckLevel, User
@@ -527,11 +527,14 @@ async def update_deck(
     "/{deck_id}",
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Delete a deck",
-    description="Soft delete a deck by setting is_active to False. Requires superuser privileges.",
+    description=(
+        "Soft delete a deck by setting is_active to False. "
+        "Deck owners can delete their own decks. Superusers can delete any deck."
+    ),
     responses={
         204: {"description": "Deck deleted successfully"},
         401: {"description": "Not authenticated"},
-        403: {"description": "Not authorized (requires superuser)"},
+        403: {"description": "Not authorized to delete this deck"},
         404: {"description": "Deck not found"},
     },
 )
@@ -539,11 +542,13 @@ async def delete_deck(
     deck_id: UUID,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_superuser),
+    current_user: User = Depends(get_current_user),
 ) -> Response:
     """Soft delete a deck.
 
-    Requires superuser privileges.
+    Authorization rules:
+    - Deck owners can delete their own decks (deck.owner_id == current_user.id)
+    - Superusers can delete any deck (including system decks with owner_id=None)
 
     This does NOT physically delete the deck from the database.
     Instead, it sets is_active=False, making the deck invisible
@@ -555,14 +560,14 @@ async def delete_deck(
         deck_id: UUID of the deck to delete
         background_tasks: FastAPI BackgroundTasks for scheduling async operations
         db: Database session (injected)
-        current_user: Authenticated superuser (injected)
+        current_user: Authenticated user (injected)
 
     Returns:
         Empty response with 204 status
 
     Raises:
         401: If not authenticated
-        403: If authenticated but not superuser
+        403: If not authorized to delete this deck
         404: If deck doesn't exist
     """
     repo = DeckRepository(db)
@@ -571,6 +576,10 @@ async def delete_deck(
     deck = await repo.get(deck_id)
     if deck is None:
         raise DeckNotFoundException(deck_id=str(deck_id))
+
+    # Authorization check: owner can delete their deck, superuser can delete any deck
+    if deck.owner_id != current_user.id and not current_user.is_superuser:
+        raise ForbiddenException(detail="Not authorized to delete this deck")
 
     # Soft delete by setting is_active to False
     deck.is_active = False

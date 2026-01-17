@@ -1395,10 +1395,10 @@ class TestDeleteDeckEndpoint:
         assert data["success"] is False
 
     @pytest.mark.asyncio
-    async def test_delete_deck_non_superuser_returns_403(
+    async def test_delete_system_deck_non_superuser_returns_403(
         self, client: AsyncClient, auth_headers: dict, empty_deck: Deck
     ):
-        """Test regular user (non-superuser) returns 403."""
+        """Test regular user cannot delete system deck (owner_id=None)."""
         response = await client.delete(
             f"/api/v1/decks/{empty_deck.id}",
             headers=auth_headers,
@@ -1407,6 +1407,54 @@ class TestDeleteDeckEndpoint:
         assert response.status_code == 403
         data = response.json()
         assert data["success"] is False
+        assert data["error"]["code"] == "FORBIDDEN"
+        assert "not authorized to delete this deck" in data["error"]["message"].lower()
+
+    @pytest.mark.asyncio
+    async def test_delete_own_deck_succeeds(
+        self, client: AsyncClient, auth_headers: dict, user_owned_deck: Deck
+    ):
+        """Test that deck owner can delete their own deck."""
+        deck_id = user_owned_deck.id
+
+        response = await client.delete(
+            f"/api/v1/decks/{deck_id}",
+            headers=auth_headers,
+        )
+
+        assert response.status_code == 204
+        assert response.content == b""
+
+    @pytest.mark.asyncio
+    async def test_delete_other_users_deck_returns_403(
+        self, client: AsyncClient, auth_headers: dict, other_user_deck: Deck
+    ):
+        """Test that user cannot delete another user's deck."""
+        response = await client.delete(
+            f"/api/v1/decks/{other_user_deck.id}",
+            headers=auth_headers,
+        )
+
+        assert response.status_code == 403
+        data = response.json()
+        assert data["success"] is False
+        assert data["error"]["code"] == "FORBIDDEN"
+        assert "not authorized to delete this deck" in data["error"]["message"].lower()
+
+    @pytest.mark.asyncio
+    async def test_superuser_can_delete_user_owned_deck(
+        self, client: AsyncClient, superuser_auth_headers: dict, user_owned_deck: Deck
+    ):
+        """Test that superuser can delete any deck including user-owned decks."""
+        deck_id = user_owned_deck.id
+
+        response = await client.delete(
+            f"/api/v1/decks/{deck_id}",
+            headers=superuser_auth_headers,
+        )
+
+        assert response.status_code == 204
+        assert response.content == b""
 
     @pytest.mark.asyncio
     async def test_delete_deck_not_found_returns_404(
