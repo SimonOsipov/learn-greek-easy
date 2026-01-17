@@ -83,6 +83,24 @@ export interface SearchDecksParams {
   page_size?: number;
 }
 
+/**
+ * Input for creating a new user deck
+ */
+export interface CreateDeckInput {
+  name: string;
+  description?: string;
+  level: DeckLevel;
+}
+
+/**
+ * Input for updating a user deck
+ */
+export interface UpdateDeckInput {
+  name?: string;
+  description?: string;
+  level?: DeckLevel;
+}
+
 // ============================================
 // Deck API Methods
 // ============================================
@@ -129,5 +147,26 @@ export const deckAPI = {
    */
   getById: async (deckId: string): Promise<DeckDetailResponse> => {
     return api.get<DeckDetailResponse>(`/api/v1/decks/${deckId}`);
+  },
+
+  /**
+   * Create a new user deck
+   */
+  createDeck: async (data: CreateDeckInput): Promise<DeckResponse> => {
+    return api.post<DeckResponse>('/api/v1/decks', data);
+  },
+
+  /**
+   * Update a user's own deck
+   */
+  updateMyDeck: async (deckId: string, data: UpdateDeckInput): Promise<DeckResponse> => {
+    return api.patch<DeckResponse>(`/api/v1/decks/${deckId}`, data);
+  },
+
+  /**
+   * Delete a user's own deck
+   */
+  deleteMyDeck: async (deckId: string): Promise<void> => {
+    return api.delete<void>(`/api/v1/decks/${deckId}`);
   },
 };

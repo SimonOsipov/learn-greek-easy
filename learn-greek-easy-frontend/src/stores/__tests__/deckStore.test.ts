@@ -154,7 +154,12 @@ import { useDeckStore, type DeckStoreFilters } from '../deckStore';
 vi.mock('@/services/deckAPI', () => ({
   deckAPI: {
     getList: vi.fn().mockResolvedValue({ total: 0, page: 1, page_size: 50, decks: [] }),
+    getMyDecks: vi.fn().mockResolvedValue({ total: 0, page: 1, page_size: 50, decks: [] }),
+    search: vi.fn().mockResolvedValue({ total: 0, page: 1, page_size: 20, query: '', decks: [] }),
     getById: vi.fn(),
+    createDeck: vi.fn(),
+    updateMyDeck: vi.fn(),
+    deleteMyDeck: vi.fn(),
   },
 }));
 

@@ -139,13 +139,51 @@
     "createDeck": "Create Deck",
     "createCard": "Create Card",
     "comingSoon": "Coming soon",
+    "editDeck": "Edit deck",
+    "deleteDeck": "Delete deck",
+    "deleteSuccess": "Deck deleted successfully",
+    "deleteError": "Failed to delete deck",
     "accessDenied": {
       "title": "Access Denied",
       "message": "This is not your deck",
       "ok": "Ok"
     },
+    "delete": {
+      "title": "Delete Deck",
+      "message": "Are you sure you want to delete \"{{deckName}}\"? This action cannot be undone.",
+      "confirm": "Delete",
+      "cancel": "Cancel"
+    },
     "error": {
       "loading": "Failed to load your decks"
     }
+  },
+  "form": {
+    "nameLabel": "Deck Name",
+    "namePlaceholder": "Enter deck name...",
+    "descriptionLabel": "Description",
+    "descriptionPlaceholder": "Enter a description for your deck (optional)...",
+    "levelLabel": "Level",
+    "levelPlaceholder": "Select a level",
+    "cancel": "Cancel",
+    "create": "Create Deck",
+    "creating": "Creating...",
+    "save": "Save Changes",
+    "saving": "Saving...",
+    "validation": {
+      "nameRequired": "Deck name is required",
+      "nameMaxLength": "Deck name must be at most 255 characters",
+      "descriptionMaxLength": "Description must be at most 1000 characters"
+    }
+  },
+  "modal": {
+    "createTitle": "Create New Deck",
+    "createDescription": "Create a new vocabulary deck to organize your learning",
+    "editTitle": "Edit Deck",
+    "editDescription": "Update your deck's name, description, or level",
+    "createSuccess": "Deck created successfully",
+    "editSuccess": "Deck updated successfully",
+    "createError": "Failed to create deck",
+    "editError": "Failed to update deck"
   }
 }

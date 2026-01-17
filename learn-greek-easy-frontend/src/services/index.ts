@@ -25,6 +25,7 @@ export type { LogoutResponse, TokenResponse, UserProfileResponse } from './authA
 // Deck API
 export { deckAPI } from './deckAPI';
 export type {
+  CreateDeckInput,
   DeckDetailResponse,
   DeckLevel,
   DeckListResponse,
@@ -32,6 +33,7 @@ export type {
   DeckSearchResponse,
   ListDecksParams,
   SearchDecksParams,
+  UpdateDeckInput,
 } from './deckAPI';
 
 // Card API

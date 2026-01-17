@@ -5,8 +5,11 @@
  * - Premium badge renders when isPremium: true
  * - No badge renders when isPremium: false
  * - Locked state applies when premium + free user
+ * - Action buttons (edit/delete) for user-owned decks
  *
- * Related feature: [PREMBDG] Premium Badge for Decks
+ * Related features:
+ * - [PREMBDG] Premium Badge for Decks
+ * - [DECKCREAT-08] Deck Card Edit/Delete Buttons
  */
 
 import React from 'react';
@@ -382,6 +385,232 @@ describe('DeckCard', () => {
       // Premium (and locked) cards have grayscale but when unlocked would have amber border
       // For now, just verify the card renders correctly
       expect(card).toBeInTheDocument();
+    });
+  });
+
+  describe('Action Buttons (Edit/Delete)', () => {
+    it('should not render action buttons when showActions is false', () => {
+      const deck = createMockDeck();
+
+      renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} showActions={false} />);
+
+      const actionsContainer = screen.queryByTestId('deck-card-actions');
+      expect(actionsContainer).not.toBeInTheDocument();
+    });
+
+    it('should not render action buttons when showActions is not provided (default)', () => {
+      const deck = createMockDeck();
+
+      renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
+
+      const actionsContainer = screen.queryByTestId('deck-card-actions');
+      expect(actionsContainer).not.toBeInTheDocument();
+    });
+
+    it('should render action buttons when showActions is true', () => {
+      const deck = createMockDeck();
+
+      renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} showActions={true} />);
+
+      const actionsContainer = screen.getByTestId('deck-card-actions');
+      expect(actionsContainer).toBeInTheDocument();
+    });
+
+    it('should render edit button with correct data-testid', () => {
+      const deck = createMockDeck({ id: 'my-deck-123' });
+
+      renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} showActions={true} />);
+
+      const editButton = screen.getByTestId('edit-deck-my-deck-123');
+      expect(editButton).toBeInTheDocument();
+    });
+
+    it('should render delete button with correct data-testid', () => {
+      const deck = createMockDeck({ id: 'my-deck-123' });
+
+      renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} showActions={true} />);
+
+      const deleteButton = screen.getByTestId('delete-deck-my-deck-123');
+      expect(deleteButton).toBeInTheDocument();
+    });
+
+    it('should use ghost variant styling for edit button (no background)', () => {
+      const deck = createMockDeck();
+
+      renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} showActions={true} />);
+
+      const editButton = screen.getByTestId(`edit-deck-${deck.id}`);
+
+      // Ghost variant buttons don't have the primary bg class, but have hover:text-accent-foreground
+      // The edit button uses custom styling: bg-background/80 hover:bg-background
+      expect(editButton.className).toContain('hover:bg-background');
+      expect(editButton.className).toContain('text-foreground');
+    });
+
+    it('should use ghost variant styling for delete button (no background)', () => {
+      const deck = createMockDeck();
+
+      renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} showActions={true} />);
+
+      const deleteButton = screen.getByTestId(`delete-deck-${deck.id}`);
+
+      // Ghost variant with destructive color
+      expect(deleteButton.className).toContain('hover:bg-background');
+      expect(deleteButton.className).toContain('text-destructive');
+    });
+
+    it('should call onEditClick when edit button is clicked', async () => {
+      const deck = createMockDeck();
+      const onEditClick = vi.fn();
+
+      renderWithI18n(
+        <DeckCard deck={deck} onClick={mockOnClick} showActions={true} onEditClick={onEditClick} />
+      );
+
+      const editButton = screen.getByTestId(`edit-deck-${deck.id}`);
+      await userEvent.setup().click(editButton);
+
+      expect(onEditClick).toHaveBeenCalledTimes(1);
+    });
+
+    it('should call onDeleteClick when delete button is clicked', async () => {
+      const deck = createMockDeck();
+      const onDeleteClick = vi.fn();
+
+      renderWithI18n(
+        <DeckCard
+          deck={deck}
+          onClick={mockOnClick}
+          showActions={true}
+          onDeleteClick={onDeleteClick}
+        />
+      );
+
+      const deleteButton = screen.getByTestId(`delete-deck-${deck.id}`);
+      await userEvent.setup().click(deleteButton);
+
+      expect(onDeleteClick).toHaveBeenCalledTimes(1);
+    });
+
+    it('should NOT trigger card onClick when edit button is clicked (stopPropagation)', async () => {
+      const deck = createMockDeck();
+      const onCardClick = vi.fn();
+      const onEditClick = vi.fn();
+
+      renderWithI18n(
+        <DeckCard deck={deck} onClick={onCardClick} showActions={true} onEditClick={onEditClick} />
+      );
+
+      const editButton = screen.getByTestId(`edit-deck-${deck.id}`);
+      await userEvent.setup().click(editButton);
+
+      expect(onEditClick).toHaveBeenCalledTimes(1);
+      expect(onCardClick).not.toHaveBeenCalled();
+    });
+
+    it('should NOT trigger card onClick when delete button is clicked (stopPropagation)', async () => {
+      const deck = createMockDeck();
+      const onCardClick = vi.fn();
+      const onDeleteClick = vi.fn();
+
+      renderWithI18n(
+        <DeckCard
+          deck={deck}
+          onClick={onCardClick}
+          showActions={true}
+          onDeleteClick={onDeleteClick}
+        />
+      );
+
+      const deleteButton = screen.getByTestId(`delete-deck-${deck.id}`);
+      await userEvent.setup().click(deleteButton);
+
+      expect(onDeleteClick).toHaveBeenCalledTimes(1);
+      expect(onCardClick).not.toHaveBeenCalled();
+    });
+
+    it('should position action buttons in top-right corner', () => {
+      const deck = createMockDeck();
+
+      renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} showActions={true} />);
+
+      const actionsContainer = screen.getByTestId('deck-card-actions');
+
+      // Should have absolute positioning classes
+      expect(actionsContainer.className).toContain('absolute');
+      expect(actionsContainer.className).toContain('right-2');
+      expect(actionsContainer.className).toContain('top-2');
+    });
+
+    it('should hide action buttons by default and show on hover', () => {
+      const deck = createMockDeck();
+
+      renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} showActions={true} />);
+
+      const actionsContainer = screen.getByTestId('deck-card-actions');
+
+      // Should have opacity-0 (hidden) and group-hover:opacity-100 (show on hover)
+      expect(actionsContainer.className).toContain('opacity-0');
+      expect(actionsContainer.className).toContain('group-hover:opacity-100');
+    });
+
+    it('should have proper z-index to appear above other card content', () => {
+      const deck = createMockDeck();
+
+      renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} showActions={true} />);
+
+      const actionsContainer = screen.getByTestId('deck-card-actions');
+
+      // Should have z-30 to be above the header (z-20) and overlay (z-10)
+      expect(actionsContainer.className).toContain('z-30');
+    });
+
+    it('should have accessible aria-labels for action buttons', () => {
+      const deck = createMockDeck();
+
+      renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} showActions={true} />);
+
+      const editButton = screen.getByTestId(`edit-deck-${deck.id}`);
+      const deleteButton = screen.getByTestId(`delete-deck-${deck.id}`);
+
+      // Buttons should have aria-labels for screen readers
+      expect(editButton).toHaveAttribute('aria-label');
+      expect(deleteButton).toHaveAttribute('aria-label');
+    });
+
+    it('should render edit button with Pencil icon', () => {
+      const deck = createMockDeck();
+
+      renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} showActions={true} />);
+
+      const editButton = screen.getByTestId(`edit-deck-${deck.id}`);
+
+      // Pencil icon should be inside the button (as SVG)
+      const svg = editButton.querySelector('svg');
+      expect(svg).toBeInTheDocument();
+    });
+
+    it('should render delete button with Trash2 icon', () => {
+      const deck = createMockDeck();
+
+      renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} showActions={true} />);
+
+      const deleteButton = screen.getByTestId(`delete-deck-${deck.id}`);
+
+      // Trash2 icon should be inside the button (as SVG)
+      const svg = deleteButton.querySelector('svg');
+      expect(svg).toBeInTheDocument();
+    });
+
+    it('should render delete button with destructive color styling', () => {
+      const deck = createMockDeck();
+
+      renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} showActions={true} />);
+
+      const deleteButton = screen.getByTestId(`delete-deck-${deck.id}`);
+
+      // Delete button should have destructive text color
+      expect(deleteButton.className).toContain('text-destructive');
     });
   });
 });

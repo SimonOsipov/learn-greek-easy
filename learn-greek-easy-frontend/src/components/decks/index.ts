@@ -17,3 +17,11 @@ export type { DeckFiltersProps } from './DeckFilters';
 // New exports for culture deck support (CULTURE-07)
 export { DeckTypeFilter } from './DeckTypeFilter';
 export type { DeckType, DeckTypeFilterProps } from './DeckTypeFilter';
+
+// User deck form component (DECKCREAT-05)
+export { UserDeckForm } from './UserDeckForm';
+export type { UserDeckFormData, UserDeckFormProps } from './UserDeckForm';
+
+// User deck edit modal (DECKCREAT-06)
+export { UserDeckEditModal } from './UserDeckEditModal';
+export type { UserDeckEditModalProps } from './UserDeckEditModal';

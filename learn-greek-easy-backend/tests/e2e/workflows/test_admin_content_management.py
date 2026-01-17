@@ -520,29 +520,34 @@ class TestPermissionBoundaries(E2ETestCase):
         superuser_auth_headers: dict,
         empty_deck: Deck,
     ):
-        """Test that regular users cannot perform admin operations.
+        """Test permission boundaries for regular users vs admins.
 
         Tests:
-        - Regular user cannot CREATE deck
-        - Regular user cannot UPDATE deck
-        - Regular user cannot DELETE deck
-        - Regular user cannot CREATE card
-        - Regular user cannot BULK CREATE cards
-        - Unauthenticated user gets 401
+        - Regular user CAN create their own deck (personal deck)
+        - Regular user CANNOT update system decks (owner_id=None)
+        - Regular user CANNOT delete system decks
+        - Regular user CANNOT create cards (requires superuser)
+        - Regular user CANNOT bulk create cards (requires superuser)
         """
-        # Setup: Get an existing deck ID for update/delete tests
+        # Setup: Get an existing system deck ID for update/delete tests
+        # empty_deck is a system deck (owner_id=None)
         deck_id = str(empty_deck.id)
 
-        # Test 1: Regular user cannot CREATE deck
+        # Test 1: Regular user CAN create their own deck (personal deck)
+        # DECKCREAT-01 feature: regular users can create decks owned by them
         create_response = await client.post(
             "/api/v1/decks",
-            json={"name": "Unauthorized Deck", "level": "A1"},
+            json={"name": "My Personal Deck", "level": "A1"},
             headers=auth_headers,
         )
-        assert create_response.status_code == 403
-        assert create_response.json()["success"] is False
+        assert create_response.status_code == 201
+        created_deck = create_response.json()
+        assert created_deck["name"] == "My Personal Deck"
+        # Personal decks are automatically active and non-premium
+        assert created_deck["is_active"] is True
+        assert created_deck["is_premium"] is False
 
-        # Test 2: Regular user cannot UPDATE deck
+        # Test 2: Regular user CANNOT update system deck (owner_id=None)
         update_response = await client.patch(
             f"/api/v1/decks/{deck_id}",
             json={"name": "Unauthorized Update"},
@@ -550,14 +555,14 @@ class TestPermissionBoundaries(E2ETestCase):
         )
         assert update_response.status_code == 403
 
-        # Test 3: Regular user cannot DELETE deck
+        # Test 3: Regular user CANNOT delete system deck
         delete_response = await client.delete(
             f"/api/v1/decks/{deck_id}",
             headers=auth_headers,
         )
         assert delete_response.status_code == 403
 
-        # Test 4: Regular user cannot CREATE card
+        # Test 4: Regular user CANNOT create card (requires superuser)
         card_response = await client.post(
             "/api/v1/cards",
             json={
@@ -570,7 +575,7 @@ class TestPermissionBoundaries(E2ETestCase):
         )
         assert card_response.status_code == 403
 
-        # Test 5: Regular user cannot BULK CREATE cards
+        # Test 5: Regular user CANNOT bulk create cards (requires superuser)
         bulk_response = await client.post(
             "/api/v1/cards/bulk",
             json={

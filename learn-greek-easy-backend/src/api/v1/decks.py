@@ -11,7 +11,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, Query, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config import settings
-from src.core.dependencies import get_current_superuser, get_current_user
+from src.core.dependencies import get_current_user
 from src.core.exceptions import DeckNotFoundException, ForbiddenException
 from src.db.dependencies import get_db
 from src.db.models import DeckLevel, User
@@ -116,7 +116,10 @@ async def list_decks(
     response_model=DeckResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Create a new deck",
-    description="Create a new deck. Requires superuser privileges.",
+    description=(
+        "Create a new deck. Regular users create personal decks (owner_id set to their ID, "
+        "is_active=True, is_premium=False). Superusers create system decks (owner_id=None) by default."
+    ),
     responses={
         201: {
             "description": "Deck created successfully",
@@ -128,6 +131,7 @@ async def list_decks(
                         "description": "Intermediate grammar concepts",
                         "level": "B1",
                         "is_active": True,
+                        "is_premium": False,
                         "created_at": "2024-01-15T10:30:00Z",
                         "updated_at": "2024-01-15T10:30:00Z",
                     }
@@ -135,36 +139,50 @@ async def list_decks(
             },
         },
         401: {"description": "Not authenticated"},
-        403: {"description": "Not authorized (requires superuser)"},
     },
 )
 async def create_deck(
     deck_data: DeckCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_superuser),
+    current_user: User = Depends(get_current_user),
 ) -> DeckResponse:
     """Create a new deck.
 
-    Requires superuser privileges.
+    Any authenticated user can create a deck:
+    - Regular users: Deck is automatically owned by the user (owner_id=current_user.id),
+      is_active=True, is_premium=False. The deck will appear in /mine endpoint.
+    - Superusers: Deck is a system deck (owner_id=None) with full control over
+      is_active and is_premium values.
 
     Args:
         deck_data: Deck creation data (name, description, level)
         db: Database session (injected)
-        current_user: Authenticated superuser (injected)
+        current_user: Authenticated user (injected)
 
     Returns:
         DeckResponse: The created deck
 
     Raises:
         401: If not authenticated
-        403: If authenticated but not superuser
         422: If validation fails
     """
     repo = DeckRepository(db)
 
+    # Build the creation data dictionary
+    create_data = deck_data.model_dump(exclude_unset=True)
+
+    # Apply ownership rules based on user type
+    if not current_user.is_superuser:
+        # Regular users: force owner_id, is_active, is_premium
+        create_data["owner_id"] = current_user.id
+        create_data["is_active"] = True
+        create_data["is_premium"] = False
+    # Superusers: create system deck (owner_id=None by default)
+    # They can set is_active and is_premium as needed (defaults apply from model)
+
     # Create the deck using BaseRepository.create()
     # Note: BaseRepository.create() uses flush, not commit
-    deck = await repo.create(deck_data)
+    deck = await repo.create(create_data)
 
     # Commit the transaction
     await db.commit()
@@ -419,7 +437,10 @@ async def get_deck(
     "/{deck_id}",
     response_model=DeckResponse,
     summary="Update a deck",
-    description="Update an existing deck. Requires superuser privileges.",
+    description=(
+        "Update an existing deck. Deck owners can update their own decks. "
+        "Superusers can update any deck including system decks."
+    ),
     responses={
         200: {
             "description": "Deck updated successfully",
@@ -438,7 +459,7 @@ async def get_deck(
             },
         },
         401: {"description": "Not authenticated"},
-        403: {"description": "Not authorized (requires superuser)"},
+        403: {"description": "Not authorized to edit this deck"},
         404: {"description": "Deck not found"},
     },
 )
@@ -447,11 +468,14 @@ async def update_deck(
     deck_data: DeckUpdate,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_superuser),
+    current_user: User = Depends(get_current_user),
 ) -> DeckResponse:
     """Update an existing deck.
 
-    Requires superuser privileges.
+    Authorization rules:
+    - Deck owners can update their own decks (deck.owner_id == current_user.id)
+    - Superusers can update any deck (including system decks with owner_id=None)
+
     Only provided fields will be updated (partial update).
 
     Args:
@@ -459,23 +483,27 @@ async def update_deck(
         deck_data: Fields to update (all optional)
         background_tasks: FastAPI BackgroundTasks for scheduling async operations
         db: Database session (injected)
-        current_user: Authenticated superuser (injected)
+        current_user: Authenticated user (injected)
 
     Returns:
         DeckResponse: The updated deck
 
     Raises:
         401: If not authenticated
-        403: If authenticated but not superuser
+        403: If not authorized to edit this deck
         404: If deck doesn't exist
         422: If validation fails
     """
     repo = DeckRepository(db)
 
-    # Get existing deck (include inactive - admins can update any deck)
+    # Get existing deck (include inactive - owners/admins can update any deck state)
     deck = await repo.get(deck_id)
     if deck is None:
         raise DeckNotFoundException(deck_id=str(deck_id))
+
+    # Authorization check: owner can update their deck, superuser can update any deck
+    if deck.owner_id != current_user.id and not current_user.is_superuser:
+        raise ForbiddenException(detail="Not authorized to edit this deck")
 
     # Update using BaseRepository.update() pattern
     updated_deck = await repo.update(deck, deck_data)
@@ -499,11 +527,14 @@ async def update_deck(
     "/{deck_id}",
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Delete a deck",
-    description="Soft delete a deck by setting is_active to False. Requires superuser privileges.",
+    description=(
+        "Soft delete a deck by setting is_active to False. "
+        "Deck owners can delete their own decks. Superusers can delete any deck."
+    ),
     responses={
         204: {"description": "Deck deleted successfully"},
         401: {"description": "Not authenticated"},
-        403: {"description": "Not authorized (requires superuser)"},
+        403: {"description": "Not authorized to delete this deck"},
         404: {"description": "Deck not found"},
     },
 )
@@ -511,11 +542,13 @@ async def delete_deck(
     deck_id: UUID,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_superuser),
+    current_user: User = Depends(get_current_user),
 ) -> Response:
     """Soft delete a deck.
 
-    Requires superuser privileges.
+    Authorization rules:
+    - Deck owners can delete their own decks (deck.owner_id == current_user.id)
+    - Superusers can delete any deck (including system decks with owner_id=None)
 
     This does NOT physically delete the deck from the database.
     Instead, it sets is_active=False, making the deck invisible
@@ -527,14 +560,14 @@ async def delete_deck(
         deck_id: UUID of the deck to delete
         background_tasks: FastAPI BackgroundTasks for scheduling async operations
         db: Database session (injected)
-        current_user: Authenticated superuser (injected)
+        current_user: Authenticated user (injected)
 
     Returns:
         Empty response with 204 status
 
     Raises:
         401: If not authenticated
-        403: If authenticated but not superuser
+        403: If not authorized to delete this deck
         404: If deck doesn't exist
     """
     repo = DeckRepository(db)
@@ -543,6 +576,10 @@ async def delete_deck(
     deck = await repo.get(deck_id)
     if deck is None:
         raise DeckNotFoundException(deck_id=str(deck_id))
+
+    # Authorization check: owner can delete their deck, superuser can delete any deck
+    if deck.owner_id != current_user.id and not current_user.is_superuser:
+        raise ForbiddenException(detail="Not authorized to delete this deck")
 
     # Soft delete by setting is_active to False
     deck.is_active = False
