@@ -458,6 +458,7 @@ class TestCreateDeckEndpoint:
             "name": "System Deck By Admin",
             "description": "A system deck",
             "level": "B2",
+            "is_system_deck": True,
         }
 
         # Create deck as superuser
@@ -476,6 +477,53 @@ class TestCreateDeckEndpoint:
         list_data = list_response.json()
         deck_ids = [d["id"] for d in list_data["decks"]]
         assert deck_id in deck_ids
+
+    @pytest.mark.asyncio
+    async def test_superuser_creates_personal_deck_by_default(
+        self, client: AsyncClient, superuser_auth_headers: dict
+    ):
+        """Test superuser creates personal deck when is_system_deck not specified."""
+        deck_data = {
+            "name": "Superuser Personal Deck",
+            "level": "A1",
+        }
+
+        response = await client.post(
+            "/api/v1/decks",
+            json=deck_data,
+            headers=superuser_auth_headers,
+        )
+
+        assert response.status_code == 201
+        deck_id = response.json()["id"]
+
+        # Verify deck appears in superuser's /mine endpoint
+        mine_response = await client.get("/api/v1/decks/mine", headers=superuser_auth_headers)
+        assert mine_response.status_code == 200
+        mine_deck_ids = [d["id"] for d in mine_response.json()["decks"]]
+        assert deck_id in mine_deck_ids
+
+    @pytest.mark.asyncio
+    async def test_regular_user_cannot_create_system_deck(
+        self, client: AsyncClient, auth_headers: dict
+    ):
+        """Test regular user gets 403 when trying to create system deck."""
+        deck_data = {
+            "name": "Should Fail System Deck",
+            "level": "A1",
+            "is_system_deck": True,
+        }
+
+        response = await client.post(
+            "/api/v1/decks",
+            json=deck_data,
+            headers=auth_headers,
+        )
+
+        assert response.status_code == 403
+        data = response.json()
+        assert data["success"] is False
+        assert data["error"]["code"] == "FORBIDDEN"
 
     @pytest.mark.asyncio
     async def test_create_deck_missing_name_returns_422(
@@ -590,6 +638,7 @@ class TestCreateDeckEndpoint:
             "name": "Persistence Test Deck",
             "description": "Testing persistence",
             "level": "B2",
+            "is_system_deck": True,
         }
 
         # Create deck
@@ -1589,6 +1638,7 @@ class TestDeckCRUDFlow:
             "name": "CRUD Test Deck",
             "description": "Testing full lifecycle",
             "level": "A2",
+            "is_system_deck": True,
         }
         create_response = await client.post(
             "/api/v1/decks",
@@ -1652,6 +1702,7 @@ class TestDeckCRUDFlow:
             "name": unique_name,
             "description": "Testing visibility in list",
             "level": "A1",
+            "is_system_deck": True,
         }
 
         # Create deck
@@ -1687,6 +1738,7 @@ class TestDeckCRUDFlow:
             "name": "Before Update",
             "description": "Initial description",
             "level": "A1",
+            "is_system_deck": True,
         }
         create_response = await client.post(
             "/api/v1/decks",
@@ -1728,8 +1780,12 @@ class TestDeckCRUDFlow:
         assert create_response.status_code == 201
         user_deck_id = create_response.json()["id"]
 
-        # 2. Superuser can create (creates system deck)
-        create_data_system = {"name": "Auth Test System Deck", "level": "A1"}
+        # 2. Superuser can create (creates system deck with is_system_deck=True)
+        create_data_system = {
+            "name": "Auth Test System Deck",
+            "level": "A1",
+            "is_system_deck": True,
+        }
         create_response = await client.post(
             "/api/v1/decks", json=create_data_system, headers=superuser_auth_headers
         )
@@ -1893,6 +1949,7 @@ class TestDeckIsPremiumIntegration:
             "name": "Premium Deck to Reset",
             "description": "Will be set to non-premium",
             "level": "B1",
+            "is_system_deck": True,
         }
         create_response = await client.post(
             "/api/v1/decks",

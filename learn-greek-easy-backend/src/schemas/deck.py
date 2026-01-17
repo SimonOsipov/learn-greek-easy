@@ -33,14 +33,15 @@ class DeckCreate(DeckBase):
     Any authenticated user can create a deck:
     - Regular users: The endpoint automatically sets owner_id=current_user.id,
       is_active=True, is_premium=False. User-created decks appear in /mine.
-    - Superusers: Create system decks (owner_id=None) with full control over
-      is_active and is_premium.
+    - Superusers: By default, create personal decks (owner_id=current_user.id).
+      Set is_system_deck=True to create system decks (owner_id=None).
 
-    The schema only contains name, description, and level. Ownership and
-    activation settings are handled by the endpoint based on user type.
+    The is_system_deck flag explicitly controls whether the deck is a system
+    deck (visible to all users in /decks) or a personal deck (visible only
+    to the creator in /mine).
     """
 
-    pass
+    is_system_deck: bool = False
 
 
 class DeckUpdate(BaseModel):
