@@ -130,3 +130,6 @@ export type {
 // Admin API
 export { adminAPI } from './adminAPI';
 export type { ContentStatsResponse, DeckStats } from './adminAPI';
+
+// Mock Exam API
+export { mockExamAPI } from './mockExamAPI';

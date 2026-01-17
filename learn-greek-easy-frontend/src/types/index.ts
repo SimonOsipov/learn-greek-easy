@@ -96,3 +96,25 @@ export interface LoadableComponentProps {
   loading?: boolean;
   error?: Error | null;
 }
+
+// Mock Exam types
+export type {
+  MockExamSessionStatus,
+  MockExamQuestion,
+  MockExamSession,
+  MockExamCreateResponse,
+  MockExamQueueResponse,
+  MockExamAnswerRequest,
+  MockExamAnswerResponse,
+  MockExamCompleteRequest,
+  MockExamCompleteResponse,
+  MockExamStats,
+  MockExamHistoryItem,
+  MockExamStatisticsResponse,
+} from './mockExam';
+
+export {
+  MOCK_EXAM_QUESTION_COUNT,
+  MOCK_EXAM_PASS_THRESHOLD,
+  MOCK_EXAM_PASS_SCORE,
+} from './mockExam';
