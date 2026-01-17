@@ -260,7 +260,7 @@ export const MyDeckDetailPage: React.FC = () => {
             id: deck.id,
             name: deck.name,
             description: deck.description,
-            level: deck.level.toLowerCase() as DeckLevel,
+            level: deck.level as DeckLevel,
           }}
           onSuccess={handleDeckUpdated}
         />

@@ -317,7 +317,7 @@ export const MyDecksPage: React.FC = () => {
             id: editingDeck.id,
             name: editingDeck.title,
             description: editingDeck.description,
-            level: editingDeck.level.toLowerCase() as DeckLevel,
+            level: editingDeck.level as DeckLevel,
           }}
           onSuccess={handleDeckUpdated}
         />
