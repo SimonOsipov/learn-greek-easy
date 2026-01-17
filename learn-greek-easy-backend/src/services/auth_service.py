@@ -402,6 +402,7 @@ class AuthService:
     async def authenticate_auth0(
         self,
         access_token: str,
+        id_token: Optional[str] = None,
         client_ip: Optional[str] = None,
         user_agent: Optional[str] = None,
     ) -> Tuple[User, TokenResponse]:
@@ -409,10 +410,11 @@ class AuthService:
 
         This method handles the complete Auth0 authentication flow:
         1. Verify Auth0 access token
-        2. Find existing user by auth0_id or email
-        3. Create new user or link Auth0 account
-        4. Generate JWT tokens
-        5. Store session in Redis
+        2. Extract email from ID token if not in access token
+        3. Find existing user by auth0_id or email
+        4. Create new user or link Auth0 account
+        5. Generate JWT tokens
+        6. Store session in Redis
 
         Account Linking Logic:
         - If user exists with this auth0_id -> login that user
@@ -422,6 +424,7 @@ class AuthService:
 
         Args:
             access_token: Auth0 access token (JWT)
+            id_token: Optional Auth0 ID token (JWT) - contains email/profile claims
             client_ip: Optional client IP for session tracking
             user_agent: Optional user agent for session tracking
 
@@ -436,7 +439,7 @@ class AuthService:
             InvalidCredentialsException: User account is deactivated
         """
         from src.config import settings
-        from src.core.auth0 import verify_auth0_token
+        from src.core.auth0 import extract_claims_from_id_token, verify_auth0_token
 
         # Check if Auth0 is configured
         if not settings.auth0_configured:
@@ -444,6 +447,19 @@ class AuthService:
 
         # Step 1: Verify Auth0 access token
         auth0_user = await verify_auth0_token(access_token)
+
+        # Step 1b: If email not in access token, try to get it from ID token
+        if not auth0_user.email and id_token:
+            logger.info("Email not in access token, extracting from ID token")
+            id_token_claims = extract_claims_from_id_token(id_token)
+            if id_token_claims:
+                auth0_user.email = id_token_claims.get("email")
+                auth0_user.email_verified = id_token_claims.get("email_verified", False)
+                auth0_user.name = auth0_user.name or id_token_claims.get("name")
+                logger.info(
+                    "Extracted email from ID token",
+                    extra={"email": auth0_user.email, "name": auth0_user.name},
+                )
 
         # Step 2: Find or create user, returns (user, is_new_user)
         user, is_new_user = await self._find_or_create_auth0_user(auth0_user)

@@ -2,7 +2,6 @@ import { Suspense, useEffect, type ReactNode } from 'react';
 
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 
-import { Auth0TokenInjector } from '@/components/auth/Auth0TokenInjector';
 import { AuthRoutesWrapper } from '@/components/auth/AuthRoutesWrapper';
 import { LandingRoute } from '@/components/auth/LandingRoute';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
@@ -54,6 +53,12 @@ const DecksPage = lazyWithRetry(() =>
 );
 const DeckDetailPage = lazyWithRetry(() =>
   import('@/pages/DeckDetailPage').then((m) => ({ default: m.DeckDetailPage }))
+);
+const MyDecksPage = lazyWithRetry(() =>
+  import('@/pages/MyDecksPage').then((m) => ({ default: m.MyDecksPage }))
+);
+const MyDeckDetailPage = lazyWithRetry(() =>
+  import('@/pages/MyDeckDetailPage').then((m) => ({ default: m.MyDeckDetailPage }))
 );
 
 // User pages
@@ -160,6 +165,10 @@ function AppContent() {
                   <Route index element={<DecksPage />} />
                   <Route path=":id" element={<DeckDetailPage />} />
                 </Route>
+                <Route path="/my-decks" element={<AppLayout />}>
+                  <Route index element={<MyDecksPage />} />
+                  <Route path=":id" element={<MyDeckDetailPage />} />
+                </Route>
                 <Route path="/statistics" element={<AppLayout />}>
                   <Route index element={<Statistics />} />
                 </Route>
@@ -221,13 +230,7 @@ function ConditionalAuth0Provider({ children }: { children: ReactNode }) {
     return <>{children}</>;
   }
 
-  return (
-    <Auth0ProviderWithNavigate>
-      {/* Inject Auth0 token getter into API client */}
-      <Auth0TokenInjector />
-      {children}
-    </Auth0ProviderWithNavigate>
-  );
+  return <Auth0ProviderWithNavigate>{children}</Auth0ProviderWithNavigate>;
 }
 
 function App() {

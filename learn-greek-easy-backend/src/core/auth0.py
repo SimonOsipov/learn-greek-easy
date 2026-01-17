@@ -30,7 +30,7 @@ from src.core.logging import get_logger
 logger = get_logger(__name__)
 
 
-@dataclass(frozen=True)
+@dataclass
 class Auth0UserInfo:
     """Parsed user information from Auth0 access token.
 
@@ -39,6 +39,9 @@ class Auth0UserInfo:
         email: User's email address (if present)
         email_verified: Whether the email is verified
         name: User's full name (if present)
+
+    Note: Not frozen to allow updating email from ID token when
+    access token doesn't contain the email claim.
     """
 
     auth0_id: str
@@ -256,6 +259,60 @@ async def verify_auth0_token(access_token: str) -> Auth0UserInfo:
             extra={"error": str(e), "error_type": type(e).__name__},
         )
         raise Auth0TokenInvalidException(detail="Token verification failed")
+
+
+def extract_claims_from_id_token(id_token: str) -> Optional[Dict[str, Any]]:
+    """Extract claims from an Auth0 ID token without full verification.
+
+    ID tokens contain user profile claims (email, name, etc.) that may not
+    be present in access tokens for custom API audiences. We extract these
+    claims without full cryptographic verification because:
+    1. The access token is already verified
+    2. The ID token and access token come from the same Auth0 authentication
+    3. The ID token is issued at the same time as the access token
+
+    Args:
+        id_token: Auth0 ID token (JWT)
+
+    Returns:
+        Dictionary of claims if successfully decoded, None otherwise
+    """
+    import base64
+    import json
+
+    try:
+        # JWT structure: header.payload.signature
+        # We only need the payload (middle part)
+        parts = id_token.split(".")
+        if len(parts) != 3:
+            logger.warning("ID token has invalid structure")
+            return None
+
+        # Decode the payload (base64url encoded)
+        payload = parts[1]
+        # Add padding if needed (base64 requires length to be multiple of 4)
+        padding = 4 - len(payload) % 4
+        if padding != 4:
+            payload += "=" * padding
+
+        decoded = base64.urlsafe_b64decode(payload)
+        claims: Dict[str, Any] = json.loads(decoded)
+
+        logger.debug(
+            "ID token claims extracted",
+            extra={
+                "has_email": "email" in claims,
+                "has_name": "name" in claims,
+            },
+        )
+        return claims
+
+    except Exception as e:
+        logger.warning(
+            "Failed to extract claims from ID token",
+            extra={"error": str(e), "error_type": type(e).__name__},
+        )
+        return None
 
 
 def invalidate_jwks_cache() -> None:

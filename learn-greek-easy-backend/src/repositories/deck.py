@@ -153,3 +153,59 @@ class DeckRepository(BaseRepository[Deck]):
         )
         result = await self.db.execute(query)
         return result.scalar() or 0
+
+    async def list_user_owned(
+        self,
+        user_id: UUID,
+        *,
+        skip: int = 0,
+        limit: int = 100,
+        level: DeckLevel | None = None,
+    ) -> list[Deck]:
+        """List decks owned by a specific user.
+
+        Args:
+            user_id: Owner's user UUID
+            skip: Pagination offset
+            limit: Max results
+            level: Optional CEFR level filter (A1, A2, B1, B2, C1, C2)
+
+        Returns:
+            List of active decks owned by the user
+
+        Use Case:
+            User's "My Decks" page
+        """
+        query = select(Deck).where(Deck.owner_id == user_id).where(Deck.is_active.is_(True))
+        if level is not None:
+            query = query.where(Deck.level == level)
+        query = query.offset(skip).limit(limit).order_by(Deck.created_at.desc())
+        result = await self.db.execute(query)
+        return list(result.scalars().all())
+
+    async def count_user_owned(
+        self,
+        user_id: UUID,
+        level: DeckLevel | None = None,
+    ) -> int:
+        """Count decks owned by a specific user.
+
+        Args:
+            user_id: Owner's user UUID
+            level: Optional CEFR level filter (A1, A2, B1, B2, C1, C2)
+
+        Returns:
+            Total number of active decks owned by the user
+
+        Use Case:
+            Pagination total count for user's deck listings
+        """
+        query = (
+            select(func.count(Deck.id))
+            .where(Deck.owner_id == user_id)
+            .where(Deck.is_active.is_(True))
+        )
+        if level is not None:
+            query = query.where(Deck.level == level)
+        result = await self.db.execute(query)
+        return result.scalar() or 0

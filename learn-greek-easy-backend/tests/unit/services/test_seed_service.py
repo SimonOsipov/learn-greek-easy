@@ -1065,3 +1065,269 @@ class TestSeedServiceCultureStatistics:
             assert stat.ease_factor >= 2.5
             # Higher interval
             assert stat.interval >= 7
+
+
+# ============================================================================
+# User Deck Seeding Tests
+# ============================================================================
+
+
+class TestSeedServiceUserDecks:
+    """Tests for user-owned deck seeding."""
+
+    @pytest.fixture
+    def mock_db_with_ids(self):
+        """Create mock database that assigns IDs to added objects."""
+        db = AsyncMock()
+
+        def track_add(obj):
+            # Assign a UUID to the object if it has an id attribute
+            if hasattr(obj, "id") and obj.id is None:
+                obj.id = uuid4()
+
+        db.add = MagicMock(side_effect=track_add)
+        db.flush = AsyncMock()
+        db.commit = AsyncMock()
+        db.execute = AsyncMock()
+
+        return db
+
+    def test_user_decks_constant_has_correct_structure(self, seed_service):
+        """Verify USER_DECKS constant has correct structure."""
+        # Check expected users exist
+        assert "e2e_learner@test.com" in SeedService.USER_DECKS
+        assert "e2e_admin@test.com" in SeedService.USER_DECKS
+
+        # e2e_learner should have 3 decks
+        learner_decks = SeedService.USER_DECKS["e2e_learner@test.com"]
+        assert len(learner_decks) == 3
+
+        # Verify learner deck names and card counts
+        learner_names = [d["name"] for d in learner_decks]
+        assert "My Greek Basics" in learner_names
+        assert "Travel Phrases" in learner_names
+        assert "Practice Deck" in learner_names
+
+        # Verify card counts for learner
+        learner_card_counts = {d["name"]: d["card_count"] for d in learner_decks}
+        assert learner_card_counts["My Greek Basics"] == 5
+        assert learner_card_counts["Travel Phrases"] == 3
+        assert learner_card_counts["Practice Deck"] == 0
+
+        # e2e_admin should have 1 deck
+        admin_decks = SeedService.USER_DECKS["e2e_admin@test.com"]
+        assert len(admin_decks) == 1
+        assert admin_decks[0]["name"] == "Admin's Personal Deck"
+        assert admin_decks[0]["card_count"] == 2
+
+    def test_user_decks_have_valid_levels(self, seed_service):
+        """Verify all user deck levels are valid DeckLevel values."""
+        for email, deck_configs in SeedService.USER_DECKS.items():
+            for deck_config in deck_configs:
+                assert "level" in deck_config
+                assert deck_config["level"] in DeckLevel
+
+    @pytest.mark.asyncio
+    async def test_seed_user_decks_blocked_in_production(
+        self, seed_service, mock_settings_cannot_seed
+    ):
+        """seed_user_decks should raise RuntimeError in production."""
+        mock_users = [{"id": str(uuid4()), "email": "e2e_learner@test.com"}]
+        with pytest.raises(RuntimeError) as exc_info:
+            await seed_service.seed_user_decks(mock_users)
+
+        assert "Database seeding not allowed" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_creates_four_user_decks(self, mock_db_with_ids, mock_settings_can_seed):
+        """Verify 4 user decks are created (3 for learner + 1 for admin)."""
+        seed_service = SeedService(mock_db_with_ids)
+        mock_users = [
+            {"id": str(uuid4()), "email": "e2e_learner@test.com"},
+            {"id": str(uuid4()), "email": "e2e_admin@test.com"},
+            {"id": str(uuid4()), "email": "e2e_beginner@test.com"},
+            {"id": str(uuid4()), "email": "e2e_advanced@test.com"},
+        ]
+
+        result = await seed_service.seed_user_decks(mock_users)
+
+        assert result["success"] is True
+        assert result["total_user_decks"] == 4
+        # 5 + 3 + 0 + 2 = 10 cards total
+        assert result["total_user_cards"] == 10
+
+    @pytest.mark.asyncio
+    async def test_decks_have_correct_owner_ids(self, mock_db_with_ids, mock_settings_can_seed):
+        """Verify decks have correct owner_id set."""
+        seed_service = SeedService(mock_db_with_ids)
+        learner_id = uuid4()
+        admin_id = uuid4()
+        mock_users = [
+            {"id": str(learner_id), "email": "e2e_learner@test.com"},
+            {"id": str(admin_id), "email": "e2e_admin@test.com"},
+        ]
+
+        result = await seed_service.seed_user_decks(mock_users)
+
+        # Check learner's decks have correct owner
+        learner_decks = [d for d in result["decks"] if d["owner_email"] == "e2e_learner@test.com"]
+        assert len(learner_decks) == 3
+        for deck in learner_decks:
+            assert deck["owner_id"] == str(learner_id)
+
+        # Check admin's deck has correct owner
+        admin_decks = [d for d in result["decks"] if d["owner_email"] == "e2e_admin@test.com"]
+        assert len(admin_decks) == 1
+        assert admin_decks[0]["owner_id"] == str(admin_id)
+
+    @pytest.mark.asyncio
+    async def test_skips_unknown_users(self, mock_db_with_ids, mock_settings_can_seed):
+        """Verify skipping users not in USER_DECKS config."""
+        seed_service = SeedService(mock_db_with_ids)
+        # Only provide beginner user, who has no decks configured
+        mock_users = [
+            {"id": str(uuid4()), "email": "e2e_beginner@test.com"},
+            {"id": str(uuid4()), "email": "unknown@test.com"},
+        ]
+
+        result = await seed_service.seed_user_decks(mock_users)
+
+        assert result["success"] is True
+        assert result["total_user_decks"] == 0
+        assert result["total_user_cards"] == 0
+        assert len(result["decks"]) == 0
+
+    @pytest.mark.asyncio
+    async def test_creates_cards_for_non_empty_decks(
+        self, mock_db_with_ids, mock_settings_can_seed
+    ):
+        """Verify cards are created only for decks with card_count > 0."""
+        seed_service = SeedService(mock_db_with_ids)
+
+        # Track added objects
+        added_decks = []
+        added_cards = []
+        original_add = mock_db_with_ids.add.side_effect
+
+        def track_objects(obj):
+            original_add(obj)
+            if hasattr(obj, "owner_id") and hasattr(obj, "name") and hasattr(obj, "level"):
+                added_decks.append(obj)
+            elif hasattr(obj, "deck_id") and hasattr(obj, "front_text"):
+                added_cards.append(obj)
+
+        mock_db_with_ids.add = MagicMock(side_effect=track_objects)
+
+        mock_users = [
+            {"id": str(uuid4()), "email": "e2e_learner@test.com"},
+        ]
+
+        await seed_service.seed_user_decks(mock_users)
+
+        # Verify 3 decks created for learner
+        assert len(added_decks) == 3
+
+        # Verify card counts: 5 + 3 + 0 = 8 cards
+        assert len(added_cards) == 8
+
+        # Find the Practice Deck (which has 0 cards)
+        practice_deck = next((d for d in added_decks if d.name == "Practice Deck"), None)
+        assert practice_deck is not None
+
+        # Verify no cards were created for Practice Deck
+        practice_deck_cards = [c for c in added_cards if c.deck_id == practice_deck.id]
+        assert len(practice_deck_cards) == 0
+
+    @pytest.mark.asyncio
+    async def test_user_decks_are_not_premium(self, mock_db_with_ids, mock_settings_can_seed):
+        """Verify user decks have is_premium=False."""
+        seed_service = SeedService(mock_db_with_ids)
+
+        # Track added decks
+        added_decks = []
+        original_add = mock_db_with_ids.add.side_effect
+
+        def track_decks(obj):
+            original_add(obj)
+            if hasattr(obj, "owner_id") and hasattr(obj, "is_premium"):
+                added_decks.append(obj)
+
+        mock_db_with_ids.add = MagicMock(side_effect=track_decks)
+
+        mock_users = [
+            {"id": str(uuid4()), "email": "e2e_learner@test.com"},
+            {"id": str(uuid4()), "email": "e2e_admin@test.com"},
+        ]
+
+        await seed_service.seed_user_decks(mock_users)
+
+        # All user decks should not be premium
+        for deck in added_decks:
+            assert deck.is_premium is False
+
+    @pytest.mark.asyncio
+    async def test_user_decks_are_active(self, mock_db_with_ids, mock_settings_can_seed):
+        """Verify user decks have is_active=True."""
+        seed_service = SeedService(mock_db_with_ids)
+
+        # Track added decks
+        added_decks = []
+        original_add = mock_db_with_ids.add.side_effect
+
+        def track_decks(obj):
+            original_add(obj)
+            if hasattr(obj, "owner_id") and hasattr(obj, "is_active"):
+                added_decks.append(obj)
+
+        mock_db_with_ids.add = MagicMock(side_effect=track_decks)
+
+        mock_users = [
+            {"id": str(uuid4()), "email": "e2e_learner@test.com"},
+        ]
+
+        await seed_service.seed_user_decks(mock_users)
+
+        # All user decks should be active
+        for deck in added_decks:
+            assert deck.is_active is True
+
+    @pytest.mark.asyncio
+    async def test_cards_use_vocabulary_from_deck_level(
+        self, mock_db_with_ids, mock_settings_can_seed
+    ):
+        """Verify cards use vocabulary from the correct level."""
+        seed_service = SeedService(mock_db_with_ids)
+
+        # Track added cards
+        added_cards = []
+        original_add = mock_db_with_ids.add.side_effect
+
+        def track_cards(obj):
+            original_add(obj)
+            if hasattr(obj, "front_text") and hasattr(obj, "back_text"):
+                added_cards.append(obj)
+
+        mock_db_with_ids.add = MagicMock(side_effect=track_cards)
+
+        mock_users = [
+            {"id": str(uuid4()), "email": "e2e_learner@test.com"},
+        ]
+
+        await seed_service.seed_user_decks(mock_users)
+
+        # My Greek Basics uses A1 vocabulary (5 cards)
+        a1_vocab = SeedService.VOCABULARY[DeckLevel.A1][:5]
+        a1_front_texts = [v[0] for v in a1_vocab]
+
+        # Travel Phrases uses A2 vocabulary (3 cards)
+        a2_vocab = SeedService.VOCABULARY[DeckLevel.A2][:3]
+        a2_front_texts = [v[0] for v in a2_vocab]
+
+        # Verify all expected vocabulary items are in added cards
+        card_front_texts = [c.front_text for c in added_cards]
+
+        for text in a1_front_texts:
+            assert text in card_front_texts, f"A1 word '{text}' not found in cards"
+
+        for text in a2_front_texts:
+            assert text in card_front_texts, f"A2 word '{text}' not found in cards"

@@ -24,6 +24,7 @@ Usage:
 
 from collections.abc import AsyncGenerator
 from typing import Any, NamedTuple
+from uuid import UUID
 
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -217,6 +218,7 @@ def create_deck_data(
     description: str | None = None,
     level: DeckLevel = DeckLevel.A1,
     is_active: bool = True,
+    owner_id: UUID | None = None,
 ) -> dict[str, Any]:
     """Create deck data dictionary.
 
@@ -225,6 +227,7 @@ def create_deck_data(
         description: Deck description
         level: CEFR level (A1-C2)
         is_active: Whether deck is active
+        owner_id: Owner user ID (None for system decks)
 
     Returns:
         dict: Deck data ready for Deck model creation
@@ -248,6 +251,7 @@ def create_deck_data(
         "description": description,
         "level": level,
         "is_active": is_active,
+        "owner_id": owner_id,
     }
 
 
@@ -291,6 +295,7 @@ async def create_deck(
     description: str | None = None,
     level: DeckLevel = DeckLevel.A1,
     is_active: bool = True,
+    owner_id: UUID | None = None,
 ) -> Deck:
     """Create a deck in the database.
 
@@ -300,6 +305,7 @@ async def create_deck(
         description: Deck description
         level: CEFR level
         is_active: Whether deck is active
+        owner_id: Owner user ID (None for system decks)
 
     Returns:
         Deck: Created deck
@@ -309,6 +315,7 @@ async def create_deck(
         description=description,
         level=level,
         is_active=is_active,
+        owner_id=owner_id,
     )
     deck = Deck(**deck_data)
     db_session.add(deck)
@@ -758,3 +765,115 @@ async def deck_with_many_cards(
         cards.append(card)
 
     yield DeckWithCards(deck=deck, cards=cards)
+
+
+# =============================================================================
+# User-Owned Deck Fixtures
+# =============================================================================
+
+
+@pytest_asyncio.fixture
+async def user_owned_deck(
+    db_session: AsyncSession,
+    test_user,  # User fixture from auth.py
+) -> AsyncGenerator[Deck, None]:
+    """Provide a deck owned by the test user.
+
+    Use for testing /mine endpoint and ownership authorization.
+
+    Yields:
+        Deck: Deck owned by test_user
+    """
+    deck = await create_deck(
+        db_session,
+        name="My Custom Vocabulary",
+        description="My personal Greek vocabulary deck",
+        level=DeckLevel.A1,
+        owner_id=test_user.id,
+    )
+    yield deck
+
+
+@pytest_asyncio.fixture
+async def other_user_deck(
+    db_session: AsyncSession,
+) -> AsyncGenerator[Deck, None]:
+    """Provide a deck owned by a different user.
+
+    Use for testing 403 authorization when accessing another user's deck.
+
+    Yields:
+        Deck: Deck owned by another user
+    """
+    from src.db.models import User
+
+    # Create another user to own this deck
+    other_user = User(
+        email="other_user@example.com",
+        password_hash=None,
+        full_name="Other User",
+        is_active=True,
+        is_superuser=False,
+        auth0_id="auth0|other_user_test",
+    )
+    db_session.add(other_user)
+    await db_session.commit()
+    await db_session.refresh(other_user)
+
+    # Create a deck owned by the other user
+    deck = await create_deck(
+        db_session,
+        name="Other User's Deck",
+        description="This deck belongs to someone else",
+        level=DeckLevel.A1,
+        owner_id=other_user.id,
+    )
+    yield deck
+
+
+@pytest_asyncio.fixture
+async def multiple_user_decks(
+    db_session: AsyncSession,
+    test_user,  # User fixture from auth.py
+) -> AsyncGenerator[list[Deck], None]:
+    """Provide multiple decks owned by the test user.
+
+    Use for testing pagination in /mine endpoint.
+
+    Yields:
+        list[Deck]: 3 decks owned by test_user
+    """
+    decks = []
+    for i, level in enumerate([DeckLevel.A1, DeckLevel.A2, DeckLevel.B1]):
+        deck = await create_deck(
+            db_session,
+            name=f"My Deck {i + 1}",
+            description=f"Personal deck number {i + 1}",
+            level=level,
+            owner_id=test_user.id,
+        )
+        decks.append(deck)
+    yield decks
+
+
+@pytest_asyncio.fixture
+async def inactive_user_deck(
+    db_session: AsyncSession,
+    test_user,  # User fixture from auth.py
+) -> AsyncGenerator[Deck, None]:
+    """Provide an inactive deck owned by the test user.
+
+    Use for testing that inactive user decks are excluded from /mine.
+
+    Yields:
+        Deck: Inactive deck owned by test_user
+    """
+    deck = await create_deck(
+        db_session,
+        name="My Archived Deck",
+        description="Inactive personal deck",
+        level=DeckLevel.A1,
+        is_active=False,
+        owner_id=test_user.id,
+    )
+    yield deck

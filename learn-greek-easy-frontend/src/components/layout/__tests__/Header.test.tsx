@@ -74,6 +74,8 @@ vi.mock('react-i18next', () => ({
       const translations: Record<string, string> = {
         'nav.dashboard': 'Dashboard',
         'nav.decks': 'Decks',
+        'nav.decksDropdown.allDecks': 'All Decks',
+        'nav.decksDropdown.myDecks': 'My Decks',
         'nav.statistics': 'Statistics',
         'nav.generalProgress': 'General Progress',
         'nav.achievements': 'Achievements',

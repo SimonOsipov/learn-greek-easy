@@ -41,7 +41,7 @@ export const Callback: React.FC = () => {
         const params = new URLSearchParams(hash);
 
         const accessToken = params.get('access_token');
-        const _idToken = params.get('id_token');
+        const idToken = params.get('id_token');
         const errorParam = params.get('error');
         const errorDescription = params.get('error_description');
         const state = params.get('state');
@@ -64,14 +64,18 @@ export const Callback: React.FC = () => {
 
         log.info('[Callback] Processing OAuth callback with access token');
 
-        // Exchange Auth0 token for app tokens via backend
+        // Exchange Auth0 tokens for app tokens via backend
+        // Send both access_token and id_token - the id_token contains email/profile claims
         const apiUrl = import.meta.env.VITE_API_URL || '';
         const response = await fetch(`${apiUrl}/api/v1/auth/auth0`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ access_token: accessToken }),
+          body: JSON.stringify({
+            access_token: accessToken,
+            id_token: idToken,
+          }),
         });
 
         if (!response.ok) {

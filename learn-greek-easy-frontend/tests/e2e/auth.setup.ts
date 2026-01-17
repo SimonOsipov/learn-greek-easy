@@ -312,15 +312,23 @@ async function authenticateAndSave(
   storageStatePath: string
 ): Promise<void> {
   if (isAuth0Enabled()) {
-    // Use Auth0 login UI - get the Auth0 user credentials
-    const auth0User = user.email.includes('admin')
-      ? AUTH0_TEST_USERS.ADMIN
-      : AUTH0_TEST_USERS.LEARNER;
+    // Use Auth0 login UI - get the Auth0 user credentials matching the seed user
+    const auth0User = getAuth0UserForSeedUser(user.email);
     await authenticateViaAuth0(page, auth0User, storageStatePath);
   } else {
     // Use seed API for token generation
     await authenticateViaSeedAPI(page, user, storageStatePath);
   }
+}
+
+/**
+ * Map seed user email to corresponding Auth0 test user credentials
+ */
+function getAuth0UserForSeedUser(email: string): { email: string; password: string; name: string } {
+  if (email === SEED_USERS.ADMIN.email) return AUTH0_TEST_USERS.ADMIN;
+  if (email === SEED_USERS.BEGINNER.email) return AUTH0_TEST_USERS.BEGINNER;
+  if (email === SEED_USERS.ADVANCED.email) return AUTH0_TEST_USERS.ADVANCED;
+  return AUTH0_TEST_USERS.LEARNER; // Default to learner
 }
 
 // Setup test for LEARNER user (primary test user with progress)

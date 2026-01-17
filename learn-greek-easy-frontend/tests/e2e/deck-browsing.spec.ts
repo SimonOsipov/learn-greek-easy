@@ -18,9 +18,15 @@ test.describe('Deck Browsing', () => {
   test('should navigate to decks page from dashboard', async ({ page }) => {
     await page.goto('/');
 
-    // Find and click decks navigation link
-    const decksLink = page.getByRole('link', { name: /decks/i }).first();
-    await decksLink.click();
+    // Find and click the Decks dropdown trigger
+    const decksDropdown = page.locator('[data-testid="decks-dropdown-trigger"]');
+    await expect(decksDropdown).toBeVisible();
+    await decksDropdown.click();
+
+    // Click "All Decks" in the dropdown menu
+    const allDecksLink = page.getByRole('menuitem', { name: /all decks/i });
+    await expect(allDecksLink).toBeVisible();
+    await allDecksLink.click();
 
     // Should navigate to decks page
     await page.waitForURL(/\/decks/);
@@ -46,16 +52,13 @@ test.describe('Deck Browsing', () => {
   test('should have working navigation menu', async ({ page }) => {
     await page.goto('/');
 
-    // Verify main navigation items exist
-    const mainNav = [
-      { name: /dashboard/i, url: '/' },
-      { name: /decks/i, url: '/decks' },
-    ];
+    // Verify Dashboard link exists (direct link)
+    const dashboardLink = page.getByRole('link', { name: /dashboard/i }).first();
+    await expect(dashboardLink).toBeVisible();
 
-    for (const navItem of mainNav) {
-      const link = page.getByRole('link', { name: navItem.name }).first();
-      await expect(link).toBeVisible();
-    }
+    // Verify Decks dropdown trigger exists (it's now a dropdown, not a direct link)
+    const decksDropdown = page.locator('[data-testid="decks-dropdown-trigger"]');
+    await expect(decksDropdown).toBeVisible();
   });
 
   test('should access profile page', async ({ page }) => {

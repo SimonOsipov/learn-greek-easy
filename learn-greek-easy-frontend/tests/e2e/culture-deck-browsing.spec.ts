@@ -35,18 +35,24 @@ test.describe('Culture Deck Browsing', () => {
     await expect(page.locator('[data-testid="deck-card"]').first()).toBeVisible({ timeout: 15000 });
 
     // Click on culture filter button (use exact match to avoid matching deck cards)
-    await page.getByRole('button', { name: 'Culture', exact: true }).click();
+    const cultureButton = page.getByRole('button', { name: 'Culture', exact: true });
+    await cultureButton.click();
 
-    // Wait for filtered results - culture badge should be visible
-    const cultureBadge = page.locator('[data-testid="culture-badge"]');
-    await expect(cultureBadge.first()).toBeVisible({ timeout: 5000 });
+    // Wait for the filter to be active (button should be in pressed state)
+    await expect(cultureButton).toHaveAttribute('aria-pressed', 'true', { timeout: 5000 });
 
-    // Click on a non-premium culture deck to avoid premium lock blocking navigation
-    const deckCards = page.locator('[data-testid="deck-card"]');
-    const nonPremiumDeck = deckCards.filter({
+    // Wait for the deck list to update - find a deck card that contains a culture badge
+    // This ensures we're clicking on an actual culture deck, not a vocabulary deck
+    const cultureDeckCard = page.locator('[data-testid="deck-card"]').filter({
+      has: page.locator('[data-testid="culture-badge"]'),
+    });
+    await expect(cultureDeckCard.first()).toBeVisible({ timeout: 10000 });
+
+    // Find a non-premium culture deck to click
+    const nonPremiumCultureDeck = cultureDeckCard.filter({
       hasNot: page.locator('[aria-label="Premium content"]'),
     }).first();
-    await nonPremiumDeck.click();
+    await nonPremiumCultureDeck.click();
 
     await expect(page).toHaveURL(/\/culture\/decks\//);
     await expect(page.getByTestId('deck-detail')).toBeVisible();

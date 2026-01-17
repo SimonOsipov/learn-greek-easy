@@ -56,7 +56,14 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
 
   const navItems: NavItem[] = [
     { path: '/dashboard', labelKey: 'nav.dashboard' },
-    { path: '/decks', labelKey: 'nav.decks' },
+    {
+      path: '/decks',
+      labelKey: 'nav.decks',
+      children: [
+        { path: '/decks', labelKey: 'nav.decksDropdown.allDecks' },
+        { path: '/my-decks', labelKey: 'nav.decksDropdown.myDecks' },
+      ],
+    },
     {
       path: '/statistics',
       labelKey: 'nav.statistics',
@@ -113,7 +120,7 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
                         'flex items-center gap-1 text-sm font-medium transition-colors hover:text-primary focus:outline-none',
                         isActiveParent(item) ? 'text-primary' : 'text-muted-foreground'
                       )}
-                      data-testid="statistics-dropdown-trigger"
+                      data-testid={`${item.path.replace('/', '')}-dropdown-trigger`}
                     >
                       {t(item.labelKey)}
                       <ChevronDown className="h-4 w-4" />

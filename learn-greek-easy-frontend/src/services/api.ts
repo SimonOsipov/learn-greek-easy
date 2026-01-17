@@ -27,42 +27,6 @@ import { checkVersionAndRefreshIfNeeded } from '@/lib/versionCheck';
 const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
 /**
- * Check if Auth0 authentication is enabled via feature flag.
- * Duplicated here to avoid circular dependency with hooks.
- */
-function isAuth0Enabled(): boolean {
-  return import.meta.env.VITE_AUTH0_ENABLED === 'true';
-}
-
-/**
- * Auth0 token getter function type.
- * This matches the signature of Auth0's getAccessTokenSilently.
- */
-type Auth0TokenGetter = () => Promise<string>;
-
-/**
- * Registered Auth0 token getter.
- * Set by Auth0TokenInjector when Auth0 is enabled and user is authenticated.
- */
-let auth0TokenGetter: Auth0TokenGetter | null = null;
-
-/**
- * Register the Auth0 getAccessTokenSilently function.
- * Called by Auth0TokenInjector when Auth0 is enabled.
- */
-export function registerAuth0TokenGetter(getter: Auth0TokenGetter): void {
-  auth0TokenGetter = getter;
-}
-
-/**
- * Unregister the Auth0 token getter.
- * Called when Auth0TokenInjector unmounts or user logs out.
- */
-export function unregisterAuth0TokenGetter(): void {
-  auth0TokenGetter = null;
-}
-
-/**
  * API error response structure
  */
 export interface APIError {
@@ -268,43 +232,31 @@ async function request<T>(
   };
 
   // Add auth token if not skipped
+  // NOTE: We ALWAYS use the stored backend JWT for API calls, never the Auth0 token.
+  // The Auth0 token is only used during initial authentication exchange (/api/v1/auth/auth0).
+  // After that exchange, the backend returns its own JWT which we store and use for all API calls.
   if (!skipAuth) {
-    // Use Auth0 token when Auth0 is enabled, otherwise use legacy auth
-    if (isAuth0Enabled() && auth0TokenGetter) {
-      try {
-        const auth0Token = await auth0TokenGetter();
-        if (auth0Token) {
-          headers['Authorization'] = `Bearer ${auth0Token}`;
-        }
-      } catch (error) {
-        // Auth0 token retrieval failed - log and continue without auth
-        // The SDK will handle token refresh automatically
-        log.warn('Failed to get Auth0 token', { error });
-      }
-    } else {
-      // Legacy auth: use stored tokens with proactive refresh
-      let { accessToken } = getAuthTokens();
+    let { accessToken } = getAuthTokens();
 
-      // PROACTIVE REFRESH: Check if token is expired or expiring soon
-      // This is the key fix - refresh BEFORE the request, not after 401
-      if (accessToken && shouldRefreshToken(accessToken)) {
-        log.debug('Token expiring soon, proactively refreshing');
-        const newToken = await refreshAccessToken();
-        if (newToken) {
-          accessToken = newToken;
-          log.debug('Proactive token refresh successful');
-        } else {
-          // Refresh failed - clear tokens and let request proceed without auth
-          // The 401 handler will trigger login redirect
-          log.warn('Proactive token refresh failed, clearing auth');
-          clearAuthTokens();
-          accessToken = null;
-        }
+    // PROACTIVE REFRESH: Check if token is expired or expiring soon
+    // This is the key fix - refresh BEFORE the request, not after 401
+    if (accessToken && shouldRefreshToken(accessToken)) {
+      log.debug('Token expiring soon, proactively refreshing');
+      const newToken = await refreshAccessToken();
+      if (newToken) {
+        accessToken = newToken;
+        log.debug('Proactive token refresh successful');
+      } else {
+        // Refresh failed - clear tokens and let request proceed without auth
+        // The 401 handler will trigger login redirect
+        log.warn('Proactive token refresh failed, clearing auth');
+        clearAuthTokens();
+        accessToken = null;
       }
+    }
 
-      if (accessToken) {
-        headers['Authorization'] = `Bearer ${accessToken}`;
-      }
+    if (accessToken) {
+      headers['Authorization'] = `Bearer ${accessToken}`;
     }
   }
 
@@ -373,18 +325,7 @@ async function request<T>(
       // Handle 401 - This should be RARE after proactive refresh
       // If we get here, something is actually wrong (revoked token, security issue)
       if (response.status === 401 && !skipAuth) {
-        // When Auth0 is enabled, don't try legacy refresh - Auth0 SDK handles this
-        // Just throw the error and let the UI redirect to login
-        if (isAuth0Enabled()) {
-          log.warn('Received 401 with Auth0 - token may have expired or been revoked');
-          throw new APIRequestError({
-            status: 401,
-            statusText: 'Unauthorized',
-            message: 'Session expired. Please log in again.',
-          });
-        }
-
-        // Legacy auth: try to refresh the token
+        // Try to refresh the token (works for both Auth0 and legacy auth since we use backend JWTs)
         log.warn('Received 401 despite proactive refresh - token may have been revoked');
         const newToken = await refreshAccessToken();
 

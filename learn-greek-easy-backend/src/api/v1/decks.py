@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config import settings
 from src.core.dependencies import get_current_superuser, get_current_user
-from src.core.exceptions import DeckNotFoundException
+from src.core.exceptions import DeckNotFoundException, ForbiddenException
 from src.db.dependencies import get_db
 from src.db.models import DeckLevel, User
 from src.repositories.deck import DeckRepository
@@ -255,6 +255,85 @@ async def search_decks(
 
 
 @router.get(
+    "/mine",
+    response_model=DeckListResponse,
+    summary="List user's own decks",
+    description="Get paginated list of decks owned by the current user.",
+    responses={
+        200: {
+            "description": "Paginated list of user's own decks",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "total": 3,
+                        "page": 1,
+                        "page_size": 20,
+                        "decks": [
+                            {
+                                "id": "550e8400-e29b-41d4-a716-446655440000",
+                                "name": "My Custom Vocabulary",
+                                "description": "My personal Greek vocabulary deck",
+                                "level": "A1",
+                                "is_active": True,
+                                "is_premium": False,
+                                "created_at": "2024-01-15T10:30:00Z",
+                                "updated_at": "2024-01-15T10:30:00Z",
+                            }
+                        ],
+                    }
+                }
+            },
+        },
+        401: {"description": "Not authenticated"},
+    },
+)
+async def list_my_decks(
+    page: int = Query(default=1, ge=1, description="Page number (starting from 1)"),
+    page_size: int = Query(default=20, ge=1, le=100, description="Items per page (max 100)"),
+    level: Optional[DeckLevel] = Query(
+        default=None, description="Filter by CEFR level (A1, A2, B1, B2, C1, C2)"
+    ),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> DeckListResponse:
+    """List all decks owned by the current authenticated user.
+
+    Requires authentication. Returns only active decks owned by the user.
+    Use the level parameter to filter by CEFR proficiency level.
+
+    Args:
+        page: Page number starting from 1
+        page_size: Number of items per page (1-100)
+        level: Optional CEFR level filter
+        db: Database session (injected)
+        current_user: Authenticated user (injected)
+
+    Returns:
+        DeckListResponse with total count and paginated deck list
+
+    Example:
+        GET /api/v1/decks/mine?page=1&page_size=10&level=A1
+    """
+    repo = DeckRepository(db)
+
+    # Calculate offset from page number
+    skip = (page - 1) * page_size
+
+    # Get user's decks and total count
+    decks = await repo.list_user_owned(
+        user_id=current_user.id, skip=skip, limit=page_size, level=level
+    )
+    total = await repo.count_user_owned(user_id=current_user.id, level=level)
+
+    return DeckListResponse(
+        total=total,
+        page=page,
+        page_size=page_size,
+        decks=[DeckResponse.model_validate(deck) for deck in decks],
+    )
+
+
+@router.get(
     "/{deck_id}",
     response_model=DeckDetailResponse,
     summary="Get deck by ID",
@@ -277,6 +356,7 @@ async def search_decks(
                 }
             },
         },
+        403: {"description": "Not authorized to access this deck"},
         404: {"description": "Deck not found"},
     },
 )
@@ -312,6 +392,11 @@ async def get_deck(
     # Return 404 for non-existent or inactive decks
     if deck is None or not deck.is_active:
         raise DeckNotFoundException(deck_id=str(deck_id))
+
+    # Authorization check: user-created decks can only be accessed by their owner
+    # System decks (owner_id=NULL) are accessible to all authenticated users
+    if deck.owner_id is not None and deck.owner_id != current_user.id:
+        raise ForbiddenException(detail="You do not have permission to access this deck")
 
     # Get card count
     card_count = await repo.count_cards(deck_id)

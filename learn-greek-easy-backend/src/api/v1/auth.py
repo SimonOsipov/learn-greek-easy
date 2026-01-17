@@ -172,6 +172,7 @@ async def auth0_login(
     try:
         user, token_response = await service.authenticate_auth0(
             access_token=auth_data.access_token,
+            id_token=auth_data.id_token,
             client_ip=client_ip,
             user_agent=user_agent,
         )

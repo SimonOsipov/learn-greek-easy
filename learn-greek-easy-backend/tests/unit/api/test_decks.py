@@ -156,6 +156,7 @@ class TestGetDeckUnit:
         mock_deck.description = "Test"
         mock_deck.level = DeckLevel.A1
         mock_deck.is_active = True
+        mock_deck.owner_id = None  # System deck (accessible to all)
         mock_deck.created_at = MagicMock()
         mock_deck.updated_at = MagicMock()
 
@@ -528,6 +529,7 @@ class TestDeckIsPremiumUnit:
         mock_deck.level = DeckLevel.B1
         mock_deck.is_active = True
         mock_deck.is_premium = True
+        mock_deck.owner_id = None  # System deck (accessible to all)
         mock_deck.created_at = MagicMock()
         mock_deck.updated_at = MagicMock()
 
@@ -577,3 +579,174 @@ class TestDeckIsPremiumUnit:
     # (tests/integration/api/test_decks.py::TestDeckIsPremiumIntegration)
     # because mocking the database session for update operations is complex
     # and integration tests provide better coverage for CRUD operations.
+
+
+class TestListMyDecksUnit:
+    """Unit tests for GET /api/v1/decks/mine endpoint."""
+
+    @pytest.mark.asyncio
+    async def test_list_my_decks_unauthenticated_returns_401(self, client: AsyncClient):
+        """Test that unauthenticated request returns 401."""
+        response = await client.get("/api/v1/decks/mine")
+
+        assert response.status_code == 401
+        data = response.json()
+        assert data["success"] is False
+
+    @pytest.mark.asyncio
+    async def test_list_my_decks_calls_repository_with_user_id(
+        self, client: AsyncClient, auth_headers: dict
+    ):
+        """Test that list_my_decks calls repository with current user's ID."""
+        mock_deck = MagicMock(spec=Deck)
+        mock_deck.id = uuid4()
+        mock_deck.name = "My Custom Deck"
+        mock_deck.description = "My personal deck"
+        mock_deck.level = DeckLevel.A1
+        mock_deck.is_active = True
+        mock_deck.is_premium = False
+        mock_deck.created_at = MagicMock()
+        mock_deck.updated_at = MagicMock()
+
+        with patch("src.api.v1.decks.DeckRepository") as mock_repo_class:
+            mock_repo = AsyncMock()
+            mock_repo.list_user_owned.return_value = [mock_deck]
+            mock_repo.count_user_owned.return_value = 1
+            mock_repo_class.return_value = mock_repo
+
+            response = await client.get("/api/v1/decks/mine", headers=auth_headers)
+
+            assert response.status_code == 200
+            # Verify repository was called with user_id
+            mock_repo.list_user_owned.assert_called_once()
+            call_kwargs = mock_repo.list_user_owned.call_args.kwargs
+            assert "user_id" in call_kwargs
+
+    @pytest.mark.asyncio
+    async def test_list_my_decks_with_pagination(self, client: AsyncClient, auth_headers: dict):
+        """Test that pagination parameters are passed correctly."""
+        with patch("src.api.v1.decks.DeckRepository") as mock_repo_class:
+            mock_repo = AsyncMock()
+            mock_repo.list_user_owned.return_value = []
+            mock_repo.count_user_owned.return_value = 0
+            mock_repo_class.return_value = mock_repo
+
+            response = await client.get(
+                "/api/v1/decks/mine?page=2&page_size=10", headers=auth_headers
+            )
+
+            assert response.status_code == 200
+            call_kwargs = mock_repo.list_user_owned.call_args.kwargs
+            assert call_kwargs["skip"] == 10  # (page 2 - 1) * page_size 10
+            assert call_kwargs["limit"] == 10
+
+    @pytest.mark.asyncio
+    async def test_list_my_decks_with_level_filter(self, client: AsyncClient, auth_headers: dict):
+        """Test that level filter is passed to repository."""
+        with patch("src.api.v1.decks.DeckRepository") as mock_repo_class:
+            mock_repo = AsyncMock()
+            mock_repo.list_user_owned.return_value = []
+            mock_repo.count_user_owned.return_value = 0
+            mock_repo_class.return_value = mock_repo
+
+            response = await client.get("/api/v1/decks/mine?level=B1", headers=auth_headers)
+
+            assert response.status_code == 200
+            call_kwargs = mock_repo.list_user_owned.call_args.kwargs
+            assert call_kwargs["level"] == DeckLevel.B1
+
+    @pytest.mark.asyncio
+    async def test_list_my_decks_returns_correct_response_structure(
+        self, client: AsyncClient, auth_headers: dict
+    ):
+        """Test that response has correct structure."""
+        with patch("src.api.v1.decks.DeckRepository") as mock_repo_class:
+            mock_repo = AsyncMock()
+            mock_repo.list_user_owned.return_value = []
+            mock_repo.count_user_owned.return_value = 0
+            mock_repo_class.return_value = mock_repo
+
+            response = await client.get("/api/v1/decks/mine", headers=auth_headers)
+
+            assert response.status_code == 200
+            data = response.json()
+            assert "total" in data
+            assert "page" in data
+            assert "page_size" in data
+            assert "decks" in data
+            assert data["page"] == 1
+            assert data["page_size"] == 20  # Default
+
+    @pytest.mark.asyncio
+    async def test_list_my_decks_invalid_page_returns_422(
+        self, client: AsyncClient, auth_headers: dict
+    ):
+        """Test that invalid page number returns 422."""
+        response = await client.get("/api/v1/decks/mine?page=0", headers=auth_headers)
+        assert response.status_code == 422
+        data = response.json()
+        assert data["success"] is False
+        assert data["error"]["code"] == "VALIDATION_ERROR"
+
+
+class TestGetDeckAuthorizationUnit:
+    """Unit tests for deck ownership authorization in GET /api/v1/decks/{id}."""
+
+    @pytest.mark.asyncio
+    async def test_get_deck_system_deck_accessible_to_all(
+        self, client: AsyncClient, auth_headers: dict
+    ):
+        """Test that system decks (owner_id=None) are accessible to all users."""
+        deck_id = uuid4()
+        mock_deck = MagicMock(spec=Deck)
+        mock_deck.id = deck_id
+        mock_deck.name = "System Deck"
+        mock_deck.description = "A system deck"
+        mock_deck.level = DeckLevel.A1
+        mock_deck.is_active = True
+        mock_deck.is_premium = False
+        mock_deck.owner_id = None  # System deck
+        mock_deck.created_at = MagicMock()
+        mock_deck.updated_at = MagicMock()
+
+        with patch("src.api.v1.decks.DeckRepository") as mock_repo_class:
+            mock_repo = AsyncMock()
+            mock_repo.get.return_value = mock_deck
+            mock_repo.count_cards.return_value = 5
+            mock_repo_class.return_value = mock_repo
+
+            response = await client.get(f"/api/v1/decks/{deck_id}", headers=auth_headers)
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data["id"] == str(deck_id)
+
+    @pytest.mark.asyncio
+    async def test_get_deck_non_owner_returns_403(self, client: AsyncClient, auth_headers: dict):
+        """Test that non-owner cannot access another user's deck."""
+        deck_id = uuid4()
+        other_user_id = uuid4()  # Different from test_user
+
+        mock_deck = MagicMock(spec=Deck)
+        mock_deck.id = deck_id
+        mock_deck.name = "Other User's Deck"
+        mock_deck.description = "Not my deck"
+        mock_deck.level = DeckLevel.A1
+        mock_deck.is_active = True
+        mock_deck.is_premium = False
+        mock_deck.owner_id = other_user_id  # Owned by another user
+        mock_deck.created_at = MagicMock()
+        mock_deck.updated_at = MagicMock()
+
+        with patch("src.api.v1.decks.DeckRepository") as mock_repo_class:
+            mock_repo = AsyncMock()
+            mock_repo.get.return_value = mock_deck
+            mock_repo_class.return_value = mock_repo
+
+            response = await client.get(f"/api/v1/decks/{deck_id}", headers=auth_headers)
+
+            assert response.status_code == 403
+            data = response.json()
+            assert data["success"] is False
+            assert data["error"]["code"] == "FORBIDDEN"
+            assert "permission" in data["error"]["message"].lower()

@@ -406,7 +406,19 @@ class Deck(Base, TimestampMixin):
         comment="Premium decks require a subscription to access",
     )
 
+    # Owner (for user-created decks)
+    owner_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+        comment="Owner user ID (NULL for system decks, UUID for user-created decks)",
+    )
+
     # Relationships
+    owner: Mapped["User | None"] = relationship(
+        lazy="selectin",
+        foreign_keys=[owner_id],
+    )
     cards: Mapped[List["Card"]] = relationship(
         back_populates="deck",
         lazy="selectin",

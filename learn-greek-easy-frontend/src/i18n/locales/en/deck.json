@@ -129,5 +129,23 @@
       "grammar": "Grammar",
       "phrases": "Phrases"
     }
+  },
+  "myDecks": {
+    "title": "My Decks",
+    "empty": {
+      "title": "You haven't created any decks yet",
+      "cta": "Create Deck"
+    },
+    "createDeck": "Create Deck",
+    "createCard": "Create Card",
+    "comingSoon": "Coming soon",
+    "accessDenied": {
+      "title": "Access Denied",
+      "message": "This is not your deck",
+      "ok": "Ok"
+    },
+    "error": {
+      "loading": "Failed to load your decks"
+    }
   }
 }
