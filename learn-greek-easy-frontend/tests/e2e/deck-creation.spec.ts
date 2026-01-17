@@ -738,17 +738,10 @@ test.describe('Deck Creation - Validation Flows', () => {
   /**
    * Flow 14: Edit with no changes - submit works
    *
-   * KNOWN BUG: MyDecksPage.tsx line 320 passes level.toLowerCase() to the edit modal,
-   * but UserDeckForm's Zod schema expects uppercase ('A1', 'A2', etc.).
-   * This causes form validation to fail, making the submit button disabled.
-   *
-   * Bug location: learn-greek-easy-frontend/src/pages/MyDecksPage.tsx:320
-   * The line `level: editingDeck.level.toLowerCase() as DeckLevel` should be
-   * `level: editingDeck.level as DeckLevel` (keep uppercase).
-   *
-   * This test is skipped until the bug is fixed.
+   * Verifies that opening the edit modal and submitting without making any changes
+   * works correctly. The form should remain valid and the submit should succeed.
    */
-  test.skip('Flow 14: Edit with no changes - submit works', async ({ page }) => {
+  test('Flow 14: Edit with no changes - submit works', async ({ page }) => {
     await page.goto('/my-decks');
 
     // Wait for page to load
