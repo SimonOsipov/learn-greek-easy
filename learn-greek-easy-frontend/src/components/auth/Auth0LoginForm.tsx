@@ -103,7 +103,9 @@ export const Auth0LoginForm: React.FC = () => {
       const auth0Result = await loginWithAuth0(data.email, data.password);
       log.info('[Auth0LoginForm] Got Auth0 tokens, exchanging with backend');
 
-      // Step 2: Exchange Auth0 access_token with backend
+      // Step 2: Exchange Auth0 tokens with backend
+      // Send both access_token and id_token - the id_token contains email/profile claims
+      // that may not be present in the access_token (especially for custom API audiences)
       const apiUrl = import.meta.env.VITE_API_URL || '';
       const fullUrl = `${apiUrl}/api/v1/auth/auth0`;
       log.info('[Auth0LoginForm] VITE_API_URL:', import.meta.env.VITE_API_URL);
@@ -113,7 +115,10 @@ export const Auth0LoginForm: React.FC = () => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ access_token: auth0Result.accessToken }),
+        body: JSON.stringify({
+          access_token: auth0Result.accessToken,
+          id_token: auth0Result.idToken,
+        }),
       });
 
       if (!response.ok) {

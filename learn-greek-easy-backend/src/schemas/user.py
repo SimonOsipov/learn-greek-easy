@@ -215,10 +215,19 @@ class Auth0AuthRequest(BaseModel):
 
     The frontend obtains this token from Auth0 SDK/Universal Login
     and sends it to the backend for verification.
+
+    The id_token is optional but recommended - it contains the user's
+    email and profile claims which may not be present in the access_token
+    (especially for custom API audiences).
     """
 
     access_token: str = Field(
         ...,
         min_length=10,
         description="Auth0 access token (JWT)",
+    )
+    id_token: Optional[str] = Field(
+        default=None,
+        min_length=10,
+        description="Auth0 ID token (JWT) - contains email and profile claims",
     )
