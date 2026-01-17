@@ -243,11 +243,11 @@ test.describe('My Decks - Empty State', () => {
     const emptyStateMessage = emptyState.getByText(/You haven't created any decks yet/i);
     await expect(emptyStateMessage).toBeVisible();
 
-    // Create Deck CTA button within empty state should be visible but disabled
+    // Create Deck CTA button within empty state should be visible and enabled
     // Use locator chain to target the button specifically within the empty state container
     const createDeckButton = emptyState.getByRole('button', { name: /create deck/i });
     await expect(createDeckButton).toBeVisible();
-    await expect(createDeckButton).toBeDisabled();
+    await expect(createDeckButton).toBeEnabled();
   });
 
   test('should not show deck cards in empty state', async ({ page }) => {
@@ -288,26 +288,16 @@ test.describe('My Decks - Empty State', () => {
 test.describe('My Decks - Disabled Button Tooltips', () => {
   test.use({ storageState: LEARNER_AUTH });
 
-  test('Flow 5: should show "Coming soon" tooltip on Create Deck button hover', async ({
-    page,
-  }) => {
+  test('Flow 5: Create Deck button should be enabled and clickable', async ({ page }) => {
     await page.goto('/my-decks');
 
     // Wait for page to load
     await expect(page.locator('[data-testid="my-decks-title"]')).toBeVisible({ timeout: 15000 });
 
-    // Find the Create Deck button (disabled)
-    const createDeckButtonWrapper = page.locator('span').filter({
-      has: page.getByRole('button', { name: /create deck/i }),
-    });
-    await expect(createDeckButtonWrapper).toBeVisible();
-
-    // Hover over the button wrapper to trigger tooltip
-    await createDeckButtonWrapper.hover();
-
-    // Tooltip with "Coming soon" should appear
-    const tooltip = page.getByRole('tooltip').getByText(/coming soon/i);
-    await expect(tooltip).toBeVisible({ timeout: 5000 });
+    // Find the Create Deck button (now enabled)
+    const createDeckButton = page.getByRole('button', { name: /create deck/i });
+    await expect(createDeckButton).toBeVisible();
+    await expect(createDeckButton).toBeEnabled();
   });
 
   test('should show "Coming soon" tooltip on Create Card button hover', async ({ page }) => {
@@ -387,8 +377,8 @@ test.describe('My Decks - Page Structure', () => {
     await expect(createDeckButton).toBeVisible();
     await expect(createCardButton).toBeVisible();
 
-    // Both buttons should be disabled
-    await expect(createDeckButton).toBeDisabled();
+    // Create Deck button should be enabled, Create Card button should be disabled
+    await expect(createDeckButton).toBeEnabled();
     await expect(createCardButton).toBeDisabled();
   });
 
