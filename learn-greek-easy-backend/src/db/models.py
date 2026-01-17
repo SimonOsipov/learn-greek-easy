@@ -134,6 +134,14 @@ class NotificationType(str, enum.Enum):
     FEEDBACK_STATUS_CHANGE = "feedback_status_change"
 
 
+class MockExamStatus(str, enum.Enum):
+    """Status of a mock exam session."""
+
+    ACTIVE = "active"
+    COMPLETED = "completed"
+    ABANDONED = "abandoned"
+
+
 # ============================================================================
 # User Models
 # ============================================================================
@@ -256,6 +264,10 @@ class User(Base, TimestampMixin):
         cascade="all, delete-orphan",
     )
     notifications: Mapped[List["Notification"]] = relationship(
+        lazy="selectin",
+        cascade="all, delete-orphan",
+    )
+    mock_exam_sessions: Mapped[List["MockExamSession"]] = relationship(
         lazy="selectin",
         cascade="all, delete-orphan",
     )
@@ -1453,3 +1465,121 @@ class CultureAnswerHistory(Base, TimestampMixin):
             f"<CultureAnswerHistory(user_id={self.user_id}, "
             f"question_id={self.question_id}, correct={self.is_correct})>"
         )
+
+
+# ============================================================================
+# Mock Exam Models
+# ============================================================================
+
+
+class MockExamSession(Base, TimestampMixin):
+    """Mock exam session tracking."""
+
+    __tablename__ = "mock_exam_sessions"
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True,
+        server_default=func.uuid_generate_v4(),
+    )
+    user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    started_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+    completed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+    score: Mapped[int] = mapped_column(
+        Integer,
+        default=0,
+        nullable=False,
+    )
+    total_questions: Mapped[int] = mapped_column(
+        Integer,
+        default=25,
+        nullable=False,
+    )
+    passed: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        nullable=False,
+    )
+    time_taken_seconds: Mapped[int] = mapped_column(
+        Integer,
+        default=0,
+        nullable=False,
+    )
+    status: Mapped[MockExamStatus] = mapped_column(
+        nullable=False,
+        default=MockExamStatus.ACTIVE,
+        index=True,
+    )
+
+    # Relationships
+    user: Mapped["User"] = relationship(
+        lazy="selectin",
+        overlaps="mock_exam_sessions",
+    )
+    answers: Mapped[List["MockExamAnswer"]] = relationship(
+        back_populates="session",
+        lazy="selectin",
+        cascade="all, delete-orphan",
+    )
+
+    def __repr__(self) -> str:
+        return f"<MockExamSession(id={self.id}, user_id={self.user_id}, status={self.status}, score={self.score}/{self.total_questions})>"
+
+
+class MockExamAnswer(Base, TimestampMixin):
+    """Individual answer in a mock exam session."""
+
+    __tablename__ = "mock_exam_answers"
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True,
+        server_default=func.uuid_generate_v4(),
+    )
+    session_id: Mapped[UUID] = mapped_column(
+        ForeignKey("mock_exam_sessions.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    question_id: Mapped[UUID] = mapped_column(
+        ForeignKey("culture_questions.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    selected_option: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+    )
+    is_correct: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        index=True,
+    )
+    time_taken_seconds: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+    )
+    answered_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+
+    # Relationships
+    session: Mapped["MockExamSession"] = relationship(
+        back_populates="answers",
+        lazy="selectin",
+    )
+    question: Mapped["CultureQuestion"] = relationship(lazy="selectin")
+
+    def __repr__(self) -> str:
+        return f"<MockExamAnswer(id={self.id}, session_id={self.session_id}, question_id={self.question_id}, correct={self.is_correct})>"
