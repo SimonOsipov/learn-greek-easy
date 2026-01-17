@@ -165,5 +165,15 @@
       "nameMaxLength": "Deck name must be at most 255 characters",
       "descriptionMaxLength": "Description must be at most 1000 characters"
     }
+  },
+  "modal": {
+    "createTitle": "Create New Deck",
+    "createDescription": "Create a new vocabulary deck to organize your learning",
+    "editTitle": "Edit Deck",
+    "editDescription": "Update your deck's name, description, or level",
+    "createSuccess": "Deck created successfully",
+    "editSuccess": "Deck updated successfully",
+    "createError": "Failed to create deck",
+    "editError": "Failed to update deck"
   }
 }
