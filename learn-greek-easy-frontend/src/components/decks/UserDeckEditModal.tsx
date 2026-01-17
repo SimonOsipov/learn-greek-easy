@@ -1,6 +1,6 @@
 // src/components/decks/UserDeckEditModal.tsx
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 import { useTranslation } from 'react-i18next';
 
@@ -12,15 +12,28 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
+import {
+  trackUserDeckCreateStarted,
+  trackUserDeckCreateCompleted,
+  trackUserDeckCreateCancelled,
+  trackUserDeckEditStarted,
+  trackUserDeckEditCompleted,
+  trackUserDeckEditCancelled,
+} from '@/lib/analytics/myDecksAnalytics';
 import type { CreateDeckInput, DeckLevel, DeckResponse } from '@/services/deckAPI';
 import { deckAPI } from '@/services/deckAPI';
 
 import { UserDeckForm } from './UserDeckForm';
 
+export type CreateSource = 'my_decks_button' | 'empty_state_cta';
+export type EditSource = 'grid_card' | 'detail_page';
+
 export interface UserDeckEditModalProps {
   isOpen: boolean;
   onClose: () => void;
   mode: 'create' | 'edit';
+  /** Source of the modal opening for analytics tracking */
+  source?: CreateSource | EditSource;
   deck?: {
     id: string;
     name: string;
@@ -44,16 +57,53 @@ export const UserDeckEditModal: React.FC<UserDeckEditModalProps> = ({
   isOpen,
   onClose,
   mode,
+  source,
   deck,
   onSuccess,
 }) => {
   const { t } = useTranslation('deck');
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const hasTrackedOpen = useRef(false);
 
   const isCreateMode = mode === 'create';
   const title = isCreateMode ? t('modal.createTitle') : t('modal.editTitle');
   const description = isCreateMode ? t('modal.createDescription') : t('modal.editDescription');
+
+  // Track modal opened
+  useEffect(() => {
+    if (isOpen && !hasTrackedOpen.current) {
+      hasTrackedOpen.current = true;
+      if (isCreateMode && source) {
+        trackUserDeckCreateStarted({
+          source: source as CreateSource,
+        });
+      } else if (!isCreateMode && deck && source) {
+        trackUserDeckEditStarted({
+          deck_id: deck.id,
+          deck_name: deck.name,
+          source: source as EditSource,
+        });
+      }
+    } else if (!isOpen) {
+      // Reset tracking flag when modal closes
+      hasTrackedOpen.current = false;
+    }
+  }, [isOpen, isCreateMode, source, deck]);
+
+  /**
+   * Calculate which fields changed between original and submitted data.
+   */
+  const getChangedFields = (submittedData: CreateDeckInput): string[] => {
+    if (!deck) return [];
+    const changedFields: string[] = [];
+    if (submittedData.name !== deck.name) changedFields.push('name');
+    if ((submittedData.description || null) !== (deck.description || null)) {
+      changedFields.push('description');
+    }
+    if (submittedData.level !== deck.level) changedFields.push('level');
+    return changedFields;
+  };
 
   const handleSubmit = async (data: CreateDeckInput) => {
     setIsLoading(true);
@@ -62,6 +112,16 @@ export const UserDeckEditModal: React.FC<UserDeckEditModalProps> = ({
 
       if (isCreateMode) {
         result = await deckAPI.createDeck(data);
+        // Track create completed
+        if (source) {
+          trackUserDeckCreateCompleted({
+            deck_id: result.id,
+            deck_name: result.name,
+            level: result.level,
+            has_description: !!result.description,
+            source: source as CreateSource,
+          });
+        }
         toast({
           title: t('modal.createSuccess'),
         });
@@ -69,7 +129,17 @@ export const UserDeckEditModal: React.FC<UserDeckEditModalProps> = ({
         if (!deck?.id) {
           throw new Error('Deck ID is required for edit mode');
         }
+        const fieldsChanged = getChangedFields(data);
         result = await deckAPI.updateMyDeck(deck.id, data);
+        // Track edit completed
+        if (source) {
+          trackUserDeckEditCompleted({
+            deck_id: result.id,
+            deck_name: result.name,
+            fields_changed: fieldsChanged,
+            source: source as EditSource,
+          });
+        }
         toast({
           title: t('modal.editSuccess'),
         });
@@ -87,13 +157,29 @@ export const UserDeckEditModal: React.FC<UserDeckEditModalProps> = ({
     }
   };
 
+  const handleCancel = () => {
+    // Track cancellation
+    if (isCreateMode && source) {
+      trackUserDeckCreateCancelled({
+        source: source as CreateSource,
+      });
+    } else if (!isCreateMode && deck && source) {
+      trackUserDeckEditCancelled({
+        deck_id: deck.id,
+        deck_name: deck.name,
+        source: source as EditSource,
+      });
+    }
+    onClose();
+  };
+
   const handleOpenChange = (open: boolean) => {
     // Prevent closing while loading
     if (!open && isLoading) {
       return;
     }
     if (!open) {
-      onClose();
+      handleCancel();
     }
   };
 
@@ -110,7 +196,7 @@ export const UserDeckEditModal: React.FC<UserDeckEditModalProps> = ({
           mode={mode}
           deck={deck}
           onSubmit={handleSubmit}
-          onCancel={onClose}
+          onCancel={handleCancel}
           isLoading={isLoading}
         />
       </DialogContent>

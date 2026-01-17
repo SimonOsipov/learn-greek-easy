@@ -18,6 +18,8 @@ import {
   trackMyDecksEditDeckClicked,
   trackMyDecksDeleteDeckClicked,
   trackMyDecksDeckDeleted,
+  trackUserDeckDeleteStarted,
+  trackUserDeckDeleteCancelled,
 } from '@/lib/analytics/myDecksAnalytics';
 import { reportAPIError } from '@/lib/errorReporting';
 import { APIRequestError } from '@/services/api';
@@ -109,6 +111,11 @@ export const MyDeckDetailPage: React.FC = () => {
       deck_id: deck.id,
       deck_name: deck.name,
     });
+    trackUserDeckDeleteStarted({
+      deck_id: deck.id,
+      deck_name: deck.name,
+      source: 'detail_page',
+    });
     setIsDeleteDialogOpen(true);
   };
 
@@ -138,6 +145,13 @@ export const MyDeckDetailPage: React.FC = () => {
   };
 
   const handleDeleteCancel = () => {
+    if (deck) {
+      trackUserDeckDeleteCancelled({
+        deck_id: deck.id,
+        deck_name: deck.name,
+        source: 'detail_page',
+      });
+    }
     setIsDeleteDialogOpen(false);
   };
 
@@ -241,6 +255,7 @@ export const MyDeckDetailPage: React.FC = () => {
           isOpen={isEditModalOpen}
           onClose={handleEditModalClose}
           mode="edit"
+          source="detail_page"
           deck={{
             id: deck.id,
             name: deck.name,

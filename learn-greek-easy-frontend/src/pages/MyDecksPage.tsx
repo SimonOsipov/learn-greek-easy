@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 
 import { DecksGrid, UserDeckEditModal } from '@/components/decks';
+import type { CreateSource } from '@/components/decks/UserDeckEditModal';
 import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog';
 import { CardSkeleton } from '@/components/feedback';
 import { Button } from '@/components/ui/button';
@@ -20,6 +21,8 @@ import {
   trackMyDecksEditDeckClicked,
   trackMyDecksDeleteDeckClicked,
   trackMyDecksDeckDeleted,
+  trackUserDeckDeleteStarted,
+  trackUserDeckDeleteCancelled,
 } from '@/lib/analytics/myDecksAnalytics';
 import { reportAPIError } from '@/lib/errorReporting';
 import { deckAPI, type DeckLevel, type DeckResponse } from '@/services/deckAPI';
@@ -60,6 +63,7 @@ export const MyDecksPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [createSource, setCreateSource] = useState<CreateSource>('my_decks_button');
   const hasTrackedPageView = useRef(false);
 
   // Edit deck state
@@ -106,10 +110,11 @@ export const MyDecksPage: React.FC = () => {
     fetchMyDecks();
   };
 
-  const handleCreateDeckClick = () => {
+  const handleCreateDeckClick = (source: CreateSource = 'my_decks_button') => {
     trackMyDecksCreateDeckClicked({
       button_state: 'enabled',
     });
+    setCreateSource(source);
     setIsCreateModalOpen(true);
   };
 
@@ -155,6 +160,11 @@ export const MyDecksPage: React.FC = () => {
       deck_id: deck.id,
       deck_name: deck.title,
     });
+    trackUserDeckDeleteStarted({
+      deck_id: deck.id,
+      deck_name: deck.title,
+      source: 'grid_card',
+    });
     setDeletingDeck(deck);
   };
 
@@ -186,6 +196,13 @@ export const MyDecksPage: React.FC = () => {
   };
 
   const handleDeleteCancel = () => {
+    if (deletingDeck) {
+      trackUserDeckDeleteCancelled({
+        deck_id: deletingDeck.id,
+        deck_name: deletingDeck.title,
+        source: 'grid_card',
+      });
+    }
     setDeletingDeck(null);
   };
 
@@ -204,7 +221,7 @@ export const MyDecksPage: React.FC = () => {
       {/* Action Buttons Card */}
       <Card className="p-4">
         <div className="flex flex-wrap gap-3">
-          <Button variant="hero" size="lg" onClick={handleCreateDeckClick}>
+          <Button variant="hero" size="lg" onClick={() => handleCreateDeckClick('my_decks_button')}>
             <Plus className="mr-2 h-4 w-4" />
             {t('myDecks.createDeck')}
           </Button>
@@ -273,7 +290,7 @@ export const MyDecksPage: React.FC = () => {
           <BookOpen className="mb-4 h-16 w-16 text-muted-foreground/50" aria-hidden="true" />
           <h3 className="mb-2 text-lg font-semibold text-foreground">{t('myDecks.empty.title')}</h3>
           <div className="mt-4">
-            <Button variant="hero" onClick={handleCreateDeckClick}>
+            <Button variant="hero" onClick={() => handleCreateDeckClick('empty_state_cta')}>
               {t('myDecks.empty.cta')}
             </Button>
           </div>
@@ -285,6 +302,7 @@ export const MyDecksPage: React.FC = () => {
         isOpen={isCreateModalOpen}
         onClose={handleCreateModalClose}
         mode="create"
+        source={createSource}
         onSuccess={handleDeckCreated}
       />
 
@@ -294,6 +312,7 @@ export const MyDecksPage: React.FC = () => {
           isOpen={true}
           onClose={handleEditModalClose}
           mode="edit"
+          source="grid_card"
           deck={{
             id: editingDeck.id,
             name: editingDeck.title,
