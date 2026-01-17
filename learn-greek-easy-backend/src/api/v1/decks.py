@@ -116,7 +116,10 @@ async def list_decks(
     response_model=DeckResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Create a new deck",
-    description="Create a new deck. Requires superuser privileges.",
+    description=(
+        "Create a new deck. Regular users create personal decks (owner_id set to their ID, "
+        "is_active=True, is_premium=False). Superusers create system decks (owner_id=None) by default."
+    ),
     responses={
         201: {
             "description": "Deck created successfully",
@@ -128,6 +131,7 @@ async def list_decks(
                         "description": "Intermediate grammar concepts",
                         "level": "B1",
                         "is_active": True,
+                        "is_premium": False,
                         "created_at": "2024-01-15T10:30:00Z",
                         "updated_at": "2024-01-15T10:30:00Z",
                     }
@@ -135,36 +139,50 @@ async def list_decks(
             },
         },
         401: {"description": "Not authenticated"},
-        403: {"description": "Not authorized (requires superuser)"},
     },
 )
 async def create_deck(
     deck_data: DeckCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_superuser),
+    current_user: User = Depends(get_current_user),
 ) -> DeckResponse:
     """Create a new deck.
 
-    Requires superuser privileges.
+    Any authenticated user can create a deck:
+    - Regular users: Deck is automatically owned by the user (owner_id=current_user.id),
+      is_active=True, is_premium=False. The deck will appear in /mine endpoint.
+    - Superusers: Deck is a system deck (owner_id=None) with full control over
+      is_active and is_premium values.
 
     Args:
         deck_data: Deck creation data (name, description, level)
         db: Database session (injected)
-        current_user: Authenticated superuser (injected)
+        current_user: Authenticated user (injected)
 
     Returns:
         DeckResponse: The created deck
 
     Raises:
         401: If not authenticated
-        403: If authenticated but not superuser
         422: If validation fails
     """
     repo = DeckRepository(db)
 
+    # Build the creation data dictionary
+    create_data = deck_data.model_dump(exclude_unset=True)
+
+    # Apply ownership rules based on user type
+    if not current_user.is_superuser:
+        # Regular users: force owner_id, is_active, is_premium
+        create_data["owner_id"] = current_user.id
+        create_data["is_active"] = True
+        create_data["is_premium"] = False
+    # Superusers: create system deck (owner_id=None by default)
+    # They can set is_active and is_premium as needed (defaults apply from model)
+
     # Create the deck using BaseRepository.create()
     # Note: BaseRepository.create() uses flush, not commit
-    deck = await repo.create(deck_data)
+    deck = await repo.create(create_data)
 
     # Commit the transaction
     await db.commit()

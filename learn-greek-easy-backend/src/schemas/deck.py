@@ -28,7 +28,17 @@ class DeckBase(BaseModel):
 
 
 class DeckCreate(DeckBase):
-    """Schema for creating a new deck (admin only)."""
+    """Schema for creating a new deck.
+
+    Any authenticated user can create a deck:
+    - Regular users: The endpoint automatically sets owner_id=current_user.id,
+      is_active=True, is_premium=False. User-created decks appear in /mine.
+    - Superusers: Create system decks (owner_id=None) with full control over
+      is_active and is_premium.
+
+    The schema only contains name, description, and level. Ownership and
+    activation settings are handled by the endpoint based on user type.
+    """
 
     pass
 

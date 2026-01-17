@@ -344,12 +344,13 @@ class TestCreateDeckEndpoint:
         assert data["success"] is False
 
     @pytest.mark.asyncio
-    async def test_create_deck_non_superuser_returns_403(
+    async def test_create_deck_regular_user_creates_owned_deck(
         self, client: AsyncClient, auth_headers: dict
     ):
-        """Test regular user (non-superuser) returns 403."""
+        """Test regular user can create a deck with automatic ownership."""
         deck_data = {
-            "name": "Test Deck",
+            "name": "My Personal Deck",
+            "description": "A deck created by a regular user",
             "level": "A1",
         }
 
@@ -359,9 +360,122 @@ class TestCreateDeckEndpoint:
             headers=auth_headers,
         )
 
-        assert response.status_code == 403
+        assert response.status_code == 201
         data = response.json()
-        assert data["success"] is False
+        assert data["name"] == deck_data["name"]
+        assert data["description"] == deck_data["description"]
+        assert data["level"] == deck_data["level"]
+        # User-created decks are always active and non-premium
+        assert data["is_active"] is True
+        assert data["is_premium"] is False
+        assert "id" in data
+
+    @pytest.mark.asyncio
+    async def test_create_deck_regular_user_owner_id_auto_set(
+        self, client: AsyncClient, auth_headers: dict
+    ):
+        """Test that regular user's deck has owner_id auto-set and appears in /mine."""
+        deck_data = {
+            "name": "User Owned Deck Test",
+            "level": "B1",
+        }
+
+        # Create deck
+        create_response = await client.post(
+            "/api/v1/decks",
+            json=deck_data,
+            headers=auth_headers,
+        )
+        assert create_response.status_code == 201
+        created_deck = create_response.json()
+        deck_id = created_deck["id"]
+
+        # Verify deck appears in /mine endpoint
+        mine_response = await client.get("/api/v1/decks/mine", headers=auth_headers)
+        assert mine_response.status_code == 200
+        mine_data = mine_response.json()
+        deck_ids = [d["id"] for d in mine_data["decks"]]
+        assert deck_id in deck_ids
+
+    @pytest.mark.asyncio
+    async def test_create_deck_regular_user_forced_values(
+        self, client: AsyncClient, auth_headers: dict
+    ):
+        """Test that regular user cannot override is_active or is_premium."""
+        # Note: The schema doesn't accept these fields, but even if somehow passed,
+        # the endpoint should force them to True and False respectively
+        deck_data = {
+            "name": "Attempt Override Deck",
+            "level": "A2",
+        }
+
+        response = await client.post(
+            "/api/v1/decks",
+            json=deck_data,
+            headers=auth_headers,
+        )
+
+        assert response.status_code == 201
+        data = response.json()
+        # These values are forced by the endpoint for regular users
+        assert data["is_active"] is True
+        assert data["is_premium"] is False
+
+    @pytest.mark.asyncio
+    async def test_create_deck_regular_user_not_in_system_list(
+        self, client: AsyncClient, auth_headers: dict
+    ):
+        """Test that user-created decks do NOT appear in /decks (system deck list)."""
+        deck_data = {
+            "name": "User Deck Not In System List",
+            "level": "A1",
+        }
+
+        # Create deck
+        create_response = await client.post(
+            "/api/v1/decks",
+            json=deck_data,
+            headers=auth_headers,
+        )
+        assert create_response.status_code == 201
+        created_deck = create_response.json()
+        deck_id = created_deck["id"]
+
+        # Verify deck does NOT appear in main /decks endpoint
+        # (which lists only system decks with owner_id=NULL)
+        list_response = await client.get("/api/v1/decks", headers=auth_headers)
+        assert list_response.status_code == 200
+        list_data = list_response.json()
+        deck_ids = [d["id"] for d in list_data["decks"]]
+        assert deck_id not in deck_ids
+
+    @pytest.mark.asyncio
+    async def test_superuser_creates_system_deck(
+        self, client: AsyncClient, superuser_auth_headers: dict, auth_headers: dict
+    ):
+        """Test that superuser creates system deck (owner_id=NULL) that appears in /decks."""
+        deck_data = {
+            "name": "System Deck By Admin",
+            "description": "A system deck",
+            "level": "B2",
+        }
+
+        # Create deck as superuser
+        create_response = await client.post(
+            "/api/v1/decks",
+            json=deck_data,
+            headers=superuser_auth_headers,
+        )
+        assert create_response.status_code == 201
+        created_deck = create_response.json()
+        deck_id = created_deck["id"]
+
+        # Verify deck appears in main /decks endpoint (system deck list)
+        list_response = await client.get("/api/v1/decks", headers=auth_headers)
+        assert list_response.status_code == 200
+        list_data = list_response.json()
+        deck_ids = [d["id"] for d in list_data["decks"]]
+        assert deck_id in deck_ids
 
     @pytest.mark.asyncio
     async def test_create_deck_missing_name_returns_422(
@@ -1503,43 +1617,47 @@ class TestDeckCRUDFlow:
     async def test_auth_flow_for_admin_endpoints(
         self, client: AsyncClient, auth_headers: dict, superuser_auth_headers: dict
     ):
-        """Test authentication flow for admin-only endpoints."""
-        # 1. Regular user cannot create
-        create_data = {"name": "Auth Test", "level": "A1"}
+        """Test authentication flow for admin-only and user-accessible endpoints."""
+        # 1. Regular user CAN create (creates user-owned deck)
+        create_data = {"name": "Auth Test User Deck", "level": "A1"}
         create_response = await client.post("/api/v1/decks", json=create_data, headers=auth_headers)
-        assert create_response.status_code == 403
+        assert create_response.status_code == 201
+        user_deck_id = create_response.json()["id"]
 
-        # 2. Superuser can create
+        # 2. Superuser can create (creates system deck)
+        create_data_system = {"name": "Auth Test System Deck", "level": "A1"}
         create_response = await client.post(
-            "/api/v1/decks", json=create_data, headers=superuser_auth_headers
+            "/api/v1/decks", json=create_data_system, headers=superuser_auth_headers
         )
         assert create_response.status_code == 201
-        deck_id = create_response.json()["id"]
+        system_deck_id = create_response.json()["id"]
 
-        # 3. Regular user cannot update
+        # 3. Regular user cannot update SYSTEM decks
         update_response = await client.patch(
-            f"/api/v1/decks/{deck_id}",
+            f"/api/v1/decks/{system_deck_id}",
             json={"name": "Should Fail"},
             headers=auth_headers,
         )
         assert update_response.status_code == 403
 
-        # 4. Regular user cannot delete
-        delete_response = await client.delete(f"/api/v1/decks/{deck_id}", headers=auth_headers)
+        # 4. Regular user cannot delete SYSTEM decks
+        delete_response = await client.delete(
+            f"/api/v1/decks/{system_deck_id}", headers=auth_headers
+        )
         assert delete_response.status_code == 403
 
         # 5. Unauthenticated requests fail
         unauth_create = await client.post("/api/v1/decks", json=create_data)
         assert unauth_create.status_code == 401
 
-        unauth_update = await client.patch(f"/api/v1/decks/{deck_id}", json={"name": "Fail"})
+        unauth_update = await client.patch(f"/api/v1/decks/{system_deck_id}", json={"name": "Fail"})
         assert unauth_update.status_code == 401
 
-        unauth_delete = await client.delete(f"/api/v1/decks/{deck_id}")
+        unauth_delete = await client.delete(f"/api/v1/decks/{system_deck_id}")
         assert unauth_delete.status_code == 401
 
-        # 6. Read endpoints now require auth
-        get_response = await client.get(f"/api/v1/decks/{deck_id}")
+        # 6. Read endpoints require auth
+        get_response = await client.get(f"/api/v1/decks/{system_deck_id}")
         assert get_response.status_code == 401
 
         list_response = await client.get("/api/v1/decks")
@@ -1549,7 +1667,7 @@ class TestDeckCRUDFlow:
         assert search_response.status_code == 401
 
         # 7. Regular user can read with auth
-        get_response = await client.get(f"/api/v1/decks/{deck_id}", headers=auth_headers)
+        get_response = await client.get(f"/api/v1/decks/{system_deck_id}", headers=auth_headers)
         assert get_response.status_code == 200
 
         list_response = await client.get("/api/v1/decks", headers=auth_headers)
@@ -1557,6 +1675,10 @@ class TestDeckCRUDFlow:
 
         search_response = await client.get("/api/v1/decks/search?q=Auth", headers=auth_headers)
         assert search_response.status_code == 200
+
+        # 8. Regular user can access their own deck
+        get_own_deck = await client.get(f"/api/v1/decks/{user_deck_id}", headers=auth_headers)
+        assert get_own_deck.status_code == 200
 
 
 class TestDeckIsPremiumIntegration:

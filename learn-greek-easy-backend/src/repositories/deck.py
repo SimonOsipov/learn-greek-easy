@@ -23,7 +23,10 @@ class DeckRepository(BaseRepository[Deck]):
         limit: int = 100,
         level: DeckLevel | None = None,
     ) -> list[Deck]:
-        """List active decks with optional level filter.
+        """List active system decks with optional level filter.
+
+        Only returns system decks (owner_id=NULL). User-owned decks are
+        excluded and should be accessed via list_user_owned().
 
         Args:
             skip: Pagination offset
@@ -31,12 +34,15 @@ class DeckRepository(BaseRepository[Deck]):
             level: Optional CEFR level filter (A1, A2, B1, B2, C1, C2)
 
         Returns:
-            List of active decks
+            List of active system decks
 
         Use Case:
-            Browse decks page
+            Browse decks page (public deck listing)
         """
-        query = select(Deck).where(Deck.is_active.is_(True))
+        query = select(Deck).where(
+            Deck.is_active.is_(True),
+            Deck.owner_id.is_(None),  # Only system decks
+        )
 
         if level is not None:
             query = query.where(Deck.level == level)
@@ -47,18 +53,24 @@ class DeckRepository(BaseRepository[Deck]):
         return list(result.scalars().all())
 
     async def count_active(self, level: DeckLevel | None = None) -> int:
-        """Count all active decks, optionally filtered by level.
+        """Count all active system decks, optionally filtered by level.
+
+        Only counts system decks (owner_id=NULL). User-owned decks are
+        excluded and should be counted via count_user_owned().
 
         Args:
             level: Optional CEFR level filter (A1, A2, B1, B2, C1, C2)
 
         Returns:
-            Total number of active decks matching criteria
+            Total number of active system decks matching criteria
 
         Use Case:
             Pagination total count for deck listings
         """
-        query = select(func.count(Deck.id)).where(Deck.is_active.is_(True))
+        query = select(func.count(Deck.id)).where(
+            Deck.is_active.is_(True),
+            Deck.owner_id.is_(None),  # Only system decks
+        )
         if level is not None:
             query = query.where(Deck.level == level)
         result = await self.db.execute(query)
@@ -106,7 +118,10 @@ class DeckRepository(BaseRepository[Deck]):
         skip: int = 0,
         limit: int = 20,
     ) -> list[Deck]:
-        """Search decks by name or description.
+        """Search system decks by name or description.
+
+        Only searches system decks (owner_id=NULL). User-owned decks are
+        excluded from search results.
 
         Args:
             query_text: Search query string
@@ -114,10 +129,10 @@ class DeckRepository(BaseRepository[Deck]):
             limit: Max results
 
         Returns:
-            List of matching decks
+            List of matching system decks
 
         Use Case:
-            Search functionality
+            Search functionality (public deck search)
 
         Note:
             Uses case-insensitive ILIKE search (PostgreSQL)
@@ -127,6 +142,7 @@ class DeckRepository(BaseRepository[Deck]):
             select(Deck)
             .where((Deck.name.ilike(search_pattern)) | (Deck.description.ilike(search_pattern)))
             .where(Deck.is_active.is_(True))
+            .where(Deck.owner_id.is_(None))  # Only system decks
             .offset(skip)
             .limit(limit)
         )
@@ -135,13 +151,16 @@ class DeckRepository(BaseRepository[Deck]):
         return list(result.scalars().all())
 
     async def count_search(self, query_text: str) -> int:
-        """Count decks matching search query.
+        """Count system decks matching search query.
+
+        Only counts system decks (owner_id=NULL). User-owned decks are
+        excluded from count.
 
         Args:
             query_text: Search query string
 
         Returns:
-            Total number of matching active decks
+            Total number of matching active system decks
 
         Use Case:
             Pagination total count for search results
@@ -149,6 +168,7 @@ class DeckRepository(BaseRepository[Deck]):
         search_pattern = f"%{query_text}%"
         query = select(func.count(Deck.id)).where(
             Deck.is_active.is_(True),
+            Deck.owner_id.is_(None),  # Only system decks
             (Deck.name.ilike(search_pattern)) | (Deck.description.ilike(search_pattern)),
         )
         result = await self.db.execute(query)

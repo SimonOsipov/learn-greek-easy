@@ -282,7 +282,13 @@ class TestSearchDecksUnit:
 
 
 class TestCreateDeckUnit:
-    """Unit tests for POST /api/v1/decks endpoint."""
+    """Unit tests for POST /api/v1/decks endpoint.
+
+    Note: Complex mock tests for create behavior with ownership are covered
+    in integration tests (tests/integration/api/test_decks.py) since they
+    require proper database session handling. Unit tests here focus on
+    authentication and validation.
+    """
 
     @pytest.mark.asyncio
     async def test_create_deck_unauthorized_returns_401(self, client: AsyncClient):
@@ -292,19 +298,6 @@ class TestCreateDeckUnit:
         response = await client.post("/api/v1/decks", json=deck_data)
 
         assert response.status_code == 401
-        data = response.json()
-        assert data["success"] is False
-
-    @pytest.mark.asyncio
-    async def test_create_deck_non_superuser_returns_403(
-        self, client: AsyncClient, auth_headers: dict
-    ):
-        """Test that regular user returns 403."""
-        deck_data = {"name": "Test Deck", "level": "A1"}
-
-        response = await client.post("/api/v1/decks", json=deck_data, headers=auth_headers)
-
-        assert response.status_code == 403
         data = response.json()
         assert data["success"] is False
 
@@ -336,6 +329,20 @@ class TestCreateDeckUnit:
         )
 
         assert response.status_code == 422
+
+    @pytest.mark.asyncio
+    async def test_create_deck_missing_name_regular_user_returns_422(
+        self, client: AsyncClient, auth_headers: dict
+    ):
+        """Test that regular user with missing name returns 422."""
+        deck_data = {"level": "A1"}
+
+        response = await client.post("/api/v1/decks", json=deck_data, headers=auth_headers)
+
+        assert response.status_code == 422
+        data = response.json()
+        assert data["success"] is False
+        assert data["error"]["code"] == "VALIDATION_ERROR"
 
 
 class TestUpdateDeckUnit:
