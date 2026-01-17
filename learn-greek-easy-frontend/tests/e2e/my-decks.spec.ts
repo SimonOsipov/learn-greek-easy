@@ -222,6 +222,20 @@ test.describe('My Decks - Empty State', () => {
       emptyState.or(decksGrid.first()).or(errorState.first())
     ).toBeVisible({ timeout: 15000 });
 
+    // Check what actually appeared
+    const hasDecks = await decksGrid.count();
+    const hasError = await errorState.count();
+    const hasEmptyState = await emptyState.count();
+
+    // Log what we found for debugging (will appear in test report)
+    console.log(`[EMPTY-STATE-DEBUG] Found: decks=${hasDecks}, error=${hasError}, emptyState=${hasEmptyState}`);
+
+    if (hasDecks > 0) {
+      // Log the deck names we're seeing
+      const deckNames = await page.locator('[data-testid="deck-card"]').allTextContents();
+      console.log(`[EMPTY-STATE-DEBUG] Unexpected decks found: ${deckNames.join(', ')}`);
+    }
+
     // Now verify it's the empty state specifically
     await expect(emptyState).toBeVisible({ timeout: 5000 });
 
@@ -250,6 +264,13 @@ test.describe('My Decks - Empty State', () => {
     await expect(
       emptyState.or(decksGrid.first()).or(errorState.first())
     ).toBeVisible({ timeout: 15000 });
+
+    // Check what actually appeared
+    const hasDecks = await decksGrid.count();
+    const hasError = await errorState.count();
+    const hasEmptyState = await emptyState.count();
+
+    console.log(`[EMPTY-STATE-DEBUG] Found: decks=${hasDecks}, error=${hasError}, emptyState=${hasEmptyState}`);
 
     // Verify empty state is shown (not error or decks)
     await expect(emptyState).toBeVisible({ timeout: 5000 });
