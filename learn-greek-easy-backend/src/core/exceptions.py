@@ -371,3 +371,29 @@ class SeedUnauthorizedException(BaseAPIException):
             detail="Invalid or missing X-Test-Seed-Secret header",
             error_code="SEED_UNAUTHORIZED",
         )
+
+
+# ============================================================================
+# Mock Exam Exceptions
+# ============================================================================
+
+
+class MockExamNotFoundException(NotFoundException):
+    """Mock exam session not found."""
+
+    def __init__(self, session_id: str) -> None:
+        super().__init__(
+            resource="MockExamSession",
+            detail=f"Mock exam session {session_id} not found",
+        )
+
+
+class MockExamSessionExpiredException(BaseAPIException):
+    """Mock exam session is no longer active."""
+
+    def __init__(self, session_id: str) -> None:
+        super().__init__(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Mock exam session {session_id} is no longer active",
+            error_code="MOCK_EXAM_SESSION_EXPIRED",
+        )
