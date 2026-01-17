@@ -1,10 +1,11 @@
 import React from 'react';
 
-import { Crown } from 'lucide-react';
+import { Crown, Pencil, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { CultureBadge, type CultureCategory } from '@/components/culture';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { calculateCompletionPercentage } from '@/lib/progressUtils';
 import type { Deck } from '@/types/deck';
@@ -20,6 +21,12 @@ export interface DeckCardProps {
   showStats?: boolean;
   isCultureDeck?: boolean;
   cultureCategory?: CultureCategory;
+  /** Show edit/delete action buttons (for user-owned decks) */
+  showActions?: boolean;
+  /** Callback when edit button is clicked */
+  onEditClick?: () => void;
+  /** Callback when delete button is clicked */
+  onDeleteClick?: () => void;
 }
 
 export const DeckCard: React.FC<DeckCardProps> = ({
@@ -30,6 +37,9 @@ export const DeckCard: React.FC<DeckCardProps> = ({
   showStats = true,
   isCultureDeck = false,
   cultureCategory,
+  showActions = false,
+  onEditClick,
+  onDeleteClick,
 }) => {
   const { t } = useTranslation('deck');
   const { titleGreek, title, level, category, cardCount, isPremium, progress } = deck;
@@ -44,11 +54,23 @@ export const DeckCard: React.FC<DeckCardProps> = ({
   // Determine if card should be clickable
   const isClickable = onClick && !isLocked;
 
+  // Handle edit button click (prevent card click)
+  const handleEditClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onEditClick?.();
+  };
+
+  // Handle delete button click (prevent card click)
+  const handleDeleteClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onDeleteClick?.();
+  };
+
   // Build className for card
   // Note: Removed opacity-70 from locked cards to maintain WCAG AA contrast
   // Locked state is indicated by Lock icon and non-clickable behavior
   const cardClassName = `
-    relative overflow-hidden
+    relative overflow-hidden group
     min-h-[300px] flex flex-col
     ${isClickable ? 'cursor-pointer transition-all duration-200 hover:shadow-lg' : ''}
     ${isPremium && !isLocked ? 'border-amber-400 hover:border-amber-500' : ''}
@@ -74,6 +96,35 @@ export const DeckCard: React.FC<DeckCardProps> = ({
       }
       aria-label={`${titleGreek} - ${title} deck, ${level} level, ${completionPercent}% completed${isLocked ? ', locked' : ''}`}
     >
+      {/* Action buttons (edit/delete) - visible on hover */}
+      {showActions && (
+        <div
+          className="absolute right-2 top-2 z-30 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100"
+          data-testid="deck-card-actions"
+        >
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleEditClick}
+            data-testid={`edit-deck-${deck.id}`}
+            className="h-8 w-8 rounded-full bg-background/80 p-0 hover:bg-background"
+            aria-label={t('myDecks.editDeck')}
+          >
+            <Pencil className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleDeleteClick}
+            data-testid={`delete-deck-${deck.id}`}
+            className="h-8 w-8 rounded-full bg-background/80 p-0 text-destructive hover:bg-background hover:text-destructive"
+            aria-label={t('myDecks.deleteDeck')}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
+
       <CardHeader data-testid="deck-card-header" className="relative z-20 flex-shrink-0 pb-3">
         {/* Title and Level Badge Row */}
         <div className="flex items-start justify-between gap-2">

@@ -139,10 +139,20 @@
     "createDeck": "Create Deck",
     "createCard": "Create Card",
     "comingSoon": "Coming soon",
+    "editDeck": "Edit deck",
+    "deleteDeck": "Delete deck",
+    "deleteSuccess": "Deck deleted successfully",
+    "deleteError": "Failed to delete deck",
     "accessDenied": {
       "title": "Access Denied",
       "message": "This is not your deck",
       "ok": "Ok"
+    },
+    "delete": {
+      "title": "Delete Deck",
+      "message": "Are you sure you want to delete \"{{deckName}}\"? This action cannot be undone.",
+      "confirm": "Delete",
+      "cancel": "Cancel"
     },
     "error": {
       "loading": "Failed to load your decks"

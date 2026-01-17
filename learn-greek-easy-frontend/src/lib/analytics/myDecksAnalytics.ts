@@ -28,6 +28,21 @@ export interface MyDecksAccessDeniedProperties {
   redirect_destination: '/my-decks';
 }
 
+export interface MyDecksEditDeckClickedProperties {
+  deck_id: string;
+  deck_name: string;
+}
+
+export interface MyDecksDeleteDeckClickedProperties {
+  deck_id: string;
+  deck_name: string;
+}
+
+export interface MyDecksDeckDeletedProperties {
+  deck_id: string;
+  deck_name: string;
+}
+
 // ============================================================================
 // Event Tracking Functions
 // ============================================================================
@@ -69,5 +84,34 @@ export function trackMyDecksCreateCardClicked(
 export function trackMyDecksAccessDenied(properties: MyDecksAccessDeniedProperties): void {
   if (typeof posthog?.capture === 'function') {
     posthog.capture('my_decks_access_denied', properties);
+  }
+}
+
+/**
+ * Track when user clicks the Edit button on a deck card.
+ */
+export function trackMyDecksEditDeckClicked(properties: MyDecksEditDeckClickedProperties): void {
+  if (typeof posthog?.capture === 'function') {
+    posthog.capture('my_decks_edit_deck_clicked', properties);
+  }
+}
+
+/**
+ * Track when user clicks the Delete button on a deck card.
+ */
+export function trackMyDecksDeleteDeckClicked(
+  properties: MyDecksDeleteDeckClickedProperties
+): void {
+  if (typeof posthog?.capture === 'function') {
+    posthog.capture('my_decks_delete_deck_clicked', properties);
+  }
+}
+
+/**
+ * Track when a deck is successfully deleted.
+ */
+export function trackMyDecksDeckDeleted(properties: MyDecksDeckDeletedProperties): void {
+  if (typeof posthog?.capture === 'function') {
+    posthog.capture('my_decks_deck_deleted', properties);
   }
 }

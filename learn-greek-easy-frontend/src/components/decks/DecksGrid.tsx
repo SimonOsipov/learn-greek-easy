@@ -14,9 +14,21 @@ import { DeckCard } from './DeckCard';
 export interface DecksGridProps {
   decks: Deck[];
   onDeckClick?: (deckId: string) => void;
+  /** Show edit/delete action buttons on deck cards */
+  showActions?: boolean;
+  /** Callback when edit button is clicked on a deck */
+  onEditDeck?: (deck: Deck) => void;
+  /** Callback when delete button is clicked on a deck */
+  onDeleteDeck?: (deck: Deck) => void;
 }
 
-export const DecksGrid: React.FC<DecksGridProps> = ({ decks, onDeckClick }) => {
+export const DecksGrid: React.FC<DecksGridProps> = ({
+  decks,
+  onDeckClick,
+  showActions = false,
+  onEditDeck,
+  onDeleteDeck,
+}) => {
   const { t } = useTranslation('deck');
   const navigate = useNavigate();
   const { track } = useTrackEvent();
@@ -77,6 +89,9 @@ export const DecksGrid: React.FC<DecksGridProps> = ({ decks, onDeckClick }) => {
               variant="grid"
               isCultureDeck={isCultureDeck}
               cultureCategory={cultureCategory}
+              showActions={showActions}
+              onEditClick={onEditDeck ? () => onEditDeck(deck) : undefined}
+              onDeleteClick={onDeleteDeck ? () => onDeleteDeck(deck) : undefined}
             />
           </div>
         );
