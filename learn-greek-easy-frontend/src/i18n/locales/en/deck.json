@@ -147,5 +147,23 @@
     "error": {
       "loading": "Failed to load your decks"
     }
+  },
+  "form": {
+    "nameLabel": "Deck Name",
+    "namePlaceholder": "Enter deck name...",
+    "descriptionLabel": "Description",
+    "descriptionPlaceholder": "Enter a description for your deck (optional)...",
+    "levelLabel": "Level",
+    "levelPlaceholder": "Select a level",
+    "cancel": "Cancel",
+    "create": "Create Deck",
+    "creating": "Creating...",
+    "save": "Save Changes",
+    "saving": "Saving...",
+    "validation": {
+      "nameRequired": "Deck name is required",
+      "nameMaxLength": "Deck name must be at most 255 characters",
+      "descriptionMaxLength": "Description must be at most 1000 characters"
+    }
   }
 }
