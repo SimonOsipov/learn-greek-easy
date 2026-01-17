@@ -437,7 +437,10 @@ async def get_deck(
     "/{deck_id}",
     response_model=DeckResponse,
     summary="Update a deck",
-    description="Update an existing deck. Requires superuser privileges.",
+    description=(
+        "Update an existing deck. Deck owners can update their own decks. "
+        "Superusers can update any deck including system decks."
+    ),
     responses={
         200: {
             "description": "Deck updated successfully",
@@ -456,7 +459,7 @@ async def get_deck(
             },
         },
         401: {"description": "Not authenticated"},
-        403: {"description": "Not authorized (requires superuser)"},
+        403: {"description": "Not authorized to edit this deck"},
         404: {"description": "Deck not found"},
     },
 )
@@ -465,11 +468,14 @@ async def update_deck(
     deck_data: DeckUpdate,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_superuser),
+    current_user: User = Depends(get_current_user),
 ) -> DeckResponse:
     """Update an existing deck.
 
-    Requires superuser privileges.
+    Authorization rules:
+    - Deck owners can update their own decks (deck.owner_id == current_user.id)
+    - Superusers can update any deck (including system decks with owner_id=None)
+
     Only provided fields will be updated (partial update).
 
     Args:
@@ -477,23 +483,27 @@ async def update_deck(
         deck_data: Fields to update (all optional)
         background_tasks: FastAPI BackgroundTasks for scheduling async operations
         db: Database session (injected)
-        current_user: Authenticated superuser (injected)
+        current_user: Authenticated user (injected)
 
     Returns:
         DeckResponse: The updated deck
 
     Raises:
         401: If not authenticated
-        403: If authenticated but not superuser
+        403: If not authorized to edit this deck
         404: If deck doesn't exist
         422: If validation fails
     """
     repo = DeckRepository(db)
 
-    # Get existing deck (include inactive - admins can update any deck)
+    # Get existing deck (include inactive - owners/admins can update any deck state)
     deck = await repo.get(deck_id)
     if deck is None:
         raise DeckNotFoundException(deck_id=str(deck_id))
+
+    # Authorization check: owner can update their deck, superuser can update any deck
+    if deck.owner_id != current_user.id and not current_user.is_superuser:
+        raise ForbiddenException(detail="Not authorized to edit this deck")
 
     # Update using BaseRepository.update() pattern
     updated_deck = await repo.update(deck, deck_data)

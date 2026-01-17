@@ -360,19 +360,56 @@ class TestUpdateDeckUnit:
         assert data["success"] is False
 
     @pytest.mark.asyncio
-    async def test_update_deck_non_superuser_returns_403(
+    async def test_update_deck_non_owner_returns_403(self, client: AsyncClient, auth_headers: dict):
+        """Test that non-owner user returns 403 when trying to update another's deck."""
+        deck_id = uuid4()
+        other_user_id = uuid4()  # Different from test_user
+
+        mock_deck = MagicMock(spec=Deck)
+        mock_deck.id = deck_id
+        mock_deck.name = "Other User's Deck"
+        mock_deck.owner_id = other_user_id  # Owned by another user
+
+        with patch("src.api.v1.decks.DeckRepository") as mock_repo_class:
+            mock_repo = AsyncMock()
+            mock_repo.get.return_value = mock_deck
+            mock_repo_class.return_value = mock_repo
+
+            response = await client.patch(
+                f"/api/v1/decks/{deck_id}", json={"name": "Updated"}, headers=auth_headers
+            )
+
+            assert response.status_code == 403
+            data = response.json()
+            assert data["success"] is False
+            assert data["error"]["code"] == "FORBIDDEN"
+            assert "not authorized to edit this deck" in data["error"]["message"].lower()
+
+    @pytest.mark.asyncio
+    async def test_update_deck_system_deck_non_superuser_returns_403(
         self, client: AsyncClient, auth_headers: dict
     ):
-        """Test that regular user returns 403."""
+        """Test that regular user returns 403 when trying to update a system deck."""
         deck_id = uuid4()
 
-        response = await client.patch(
-            f"/api/v1/decks/{deck_id}", json={"name": "Updated"}, headers=auth_headers
-        )
+        mock_deck = MagicMock(spec=Deck)
+        mock_deck.id = deck_id
+        mock_deck.name = "System Deck"
+        mock_deck.owner_id = None  # System deck - owner_id is None
 
-        assert response.status_code == 403
-        data = response.json()
-        assert data["success"] is False
+        with patch("src.api.v1.decks.DeckRepository") as mock_repo_class:
+            mock_repo = AsyncMock()
+            mock_repo.get.return_value = mock_deck
+            mock_repo_class.return_value = mock_repo
+
+            response = await client.patch(
+                f"/api/v1/decks/{deck_id}", json={"name": "Updated"}, headers=auth_headers
+            )
+
+            assert response.status_code == 403
+            data = response.json()
+            assert data["success"] is False
+            assert data["error"]["code"] == "FORBIDDEN"
 
     @pytest.mark.asyncio
     async def test_update_deck_not_found_returns_404(

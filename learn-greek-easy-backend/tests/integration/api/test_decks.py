@@ -1132,10 +1132,10 @@ class TestUpdateDeckEndpoint:
         assert data["success"] is False
 
     @pytest.mark.asyncio
-    async def test_update_deck_non_superuser_returns_403(
+    async def test_update_deck_non_superuser_on_system_deck_returns_403(
         self, client: AsyncClient, auth_headers: dict, empty_deck: Deck
     ):
-        """Test regular user (non-superuser) returns 403."""
+        """Test regular user cannot update system deck (owner_id=None)."""
         response = await client.patch(
             f"/api/v1/decks/{empty_deck.id}",
             json={"name": "Should Fail"},
@@ -1145,6 +1145,62 @@ class TestUpdateDeckEndpoint:
         assert response.status_code == 403
         data = response.json()
         assert data["success"] is False
+        assert data["error"]["code"] == "FORBIDDEN"
+        assert "not authorized to edit this deck" in data["error"]["message"].lower()
+
+    @pytest.mark.asyncio
+    async def test_update_own_deck_succeeds(
+        self, client: AsyncClient, auth_headers: dict, user_owned_deck: Deck
+    ):
+        """Test that deck owner can update their own deck."""
+        new_name = "My Updated Deck Name"
+        new_description = "Updated description for my deck"
+
+        response = await client.patch(
+            f"/api/v1/decks/{user_owned_deck.id}",
+            json={"name": new_name, "description": new_description},
+            headers=auth_headers,
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["name"] == new_name
+        assert data["description"] == new_description
+        assert data["id"] == str(user_owned_deck.id)
+
+    @pytest.mark.asyncio
+    async def test_update_other_users_deck_returns_403(
+        self, client: AsyncClient, auth_headers: dict, other_user_deck: Deck
+    ):
+        """Test that user cannot update another user's deck."""
+        response = await client.patch(
+            f"/api/v1/decks/{other_user_deck.id}",
+            json={"name": "Should Fail"},
+            headers=auth_headers,
+        )
+
+        assert response.status_code == 403
+        data = response.json()
+        assert data["success"] is False
+        assert data["error"]["code"] == "FORBIDDEN"
+        assert "not authorized to edit this deck" in data["error"]["message"].lower()
+
+    @pytest.mark.asyncio
+    async def test_superuser_can_update_user_owned_deck(
+        self, client: AsyncClient, superuser_auth_headers: dict, user_owned_deck: Deck
+    ):
+        """Test that superuser can update any deck including user-owned decks."""
+        new_name = "Admin Updated This Deck"
+
+        response = await client.patch(
+            f"/api/v1/decks/{user_owned_deck.id}",
+            json={"name": new_name},
+            headers=superuser_auth_headers,
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["name"] == new_name
 
     @pytest.mark.asyncio
     async def test_update_deck_not_found_returns_404(
