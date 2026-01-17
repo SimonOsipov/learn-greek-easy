@@ -6,7 +6,7 @@ import { AlertCircle, BookOpen, Plus, Square } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 
-import { DecksGrid } from '@/components/decks/DecksGrid';
+import { DecksGrid, UserDeckEditModal } from '@/components/decks';
 import { CardSkeleton } from '@/components/feedback';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -53,6 +53,7 @@ export const MyDecksPage: React.FC = () => {
   const [decks, setDecks] = useState<Deck[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const hasTrackedPageView = useRef(false);
 
   const fetchMyDecks = useCallback(async () => {
@@ -94,8 +95,17 @@ export const MyDecksPage: React.FC = () => {
 
   const handleCreateDeckClick = () => {
     trackMyDecksCreateDeckClicked({
-      button_state: 'disabled',
+      button_state: 'enabled',
     });
+    setIsCreateModalOpen(true);
+  };
+
+  const handleCreateModalClose = () => {
+    setIsCreateModalOpen(false);
+  };
+
+  const handleDeckCreated = () => {
+    fetchMyDecks();
   };
 
   const handleCreateCardClick = () => {
@@ -123,19 +133,10 @@ export const MyDecksPage: React.FC = () => {
       {/* Action Buttons Card */}
       <Card className="p-4">
         <div className="flex flex-wrap gap-3">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span onClick={handleCreateDeckClick}>
-                <Button variant="outline" size="lg" disabled>
-                  <Plus className="mr-2 h-4 w-4" />
-                  {t('myDecks.createDeck')}
-                </Button>
-              </span>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>{t('myDecks.comingSoon')}</p>
-            </TooltipContent>
-          </Tooltip>
+          <Button variant="hero" size="lg" onClick={handleCreateDeckClick}>
+            <Plus className="mr-2 h-4 w-4" />
+            {t('myDecks.createDeck')}
+          </Button>
 
           <Tooltip>
             <TooltipTrigger asChild>
@@ -195,19 +196,20 @@ export const MyDecksPage: React.FC = () => {
           <BookOpen className="mb-4 h-16 w-16 text-muted-foreground/50" aria-hidden="true" />
           <h3 className="mb-2 text-lg font-semibold text-foreground">{t('myDecks.empty.title')}</h3>
           <div className="mt-4">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span>
-                  <Button disabled>{t('myDecks.empty.cta')}</Button>
-                </span>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{t('myDecks.comingSoon')}</p>
-              </TooltipContent>
-            </Tooltip>
+            <Button variant="hero" onClick={handleCreateDeckClick}>
+              {t('myDecks.empty.cta')}
+            </Button>
           </div>
         </div>
       )}
+
+      {/* Create Deck Modal */}
+      <UserDeckEditModal
+        isOpen={isCreateModalOpen}
+        onClose={handleCreateModalClose}
+        mode="create"
+        onSuccess={handleDeckCreated}
+      />
     </div>
   );
 };

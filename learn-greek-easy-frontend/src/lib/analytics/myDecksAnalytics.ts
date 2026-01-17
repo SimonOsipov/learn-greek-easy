@@ -16,7 +16,7 @@ export interface MyDecksPageViewedProperties {
 }
 
 export interface MyDecksCreateDeckClickedProperties {
-  button_state: 'disabled';
+  button_state: 'disabled' | 'enabled';
 }
 
 export interface MyDecksCreateCardClickedProperties {
