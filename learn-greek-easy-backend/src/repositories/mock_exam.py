@@ -275,17 +275,22 @@ class MockExamRepository(BaseRepository[MockExamSession]):
             }
 
         passed_exams = sum(1 for s in completed_sessions if s.passed)
-        total_score = sum(s.score for s in completed_sessions)
-        best_score = max(s.score for s in completed_sessions)
         total_questions = sum(s.total_questions for s in completed_sessions)
         total_time = sum(s.time_taken_seconds for s in completed_sessions)
+
+        # Calculate percentages based on actual questions per exam
+        total_percentage = sum((s.score / s.total_questions) * 100 for s in completed_sessions)
+        average_percentage = round(total_percentage / total_exams, 1)
+        best_percentage = round(
+            max((s.score / s.total_questions) * 100 for s in completed_sessions), 1
+        )
 
         return {
             "total_exams": total_exams,
             "passed_exams": passed_exams,
             "pass_rate": round((passed_exams / total_exams) * 100, 1),
-            "average_score": round(total_score / total_exams, 1),
-            "best_score": best_score,
+            "average_score": average_percentage,
+            "best_score": best_percentage,
             "total_questions_answered": total_questions,
             "average_time_seconds": round(total_time / total_exams),
         }

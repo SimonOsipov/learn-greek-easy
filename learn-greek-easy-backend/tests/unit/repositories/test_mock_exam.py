@@ -532,13 +532,14 @@ class TestGetUserStatistics:
 
         stats = await repo.get_user_statistics(test_user.id)
 
-        # 5 completed exams with scores: 20, 21, 22, 23, 24
+        # 5 completed exams with scores: 20, 21, 22, 23, 24 out of 25 questions
         assert stats["total_exams"] == 5
         assert stats["passed_exams"] == 5  # All >= 20 (80%)
         assert stats["pass_rate"] == 100.0
-        # Average score = (20+21+22+23+24) / 5 = 22.0
-        assert stats["average_score"] == 22.0
-        assert stats["best_score"] == 24
+        # Average score as percentage: (80+84+88+92+96) / 5 = 88.0%
+        assert stats["average_score"] == 88.0
+        # Best score as percentage: 24/25 = 96.0%
+        assert stats["best_score"] == 96.0
         # Total questions = 5 * 25 = 125
         assert stats["total_questions_answered"] == 125
         # Average time = (600+660+720+780+840) / 5 = 720
