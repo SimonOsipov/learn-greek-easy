@@ -4,8 +4,6 @@
  * Provides methods for XP and achievement system including:
  * - XP stats retrieval
  * - Achievements listing
- * - Unnotified achievements
- * - Mark achievements as notified
  */
 
 import { api } from './api';
@@ -55,39 +53,6 @@ export interface AchievementsListResponse {
   total_xp_earned: number;
 }
 
-/**
- * Unnotified achievement (simplified for notification)
- */
-export interface UnnotifiedAchievementResponse {
-  id: string;
-  name: string;
-  icon: string;
-  xp_reward: number;
-}
-
-/**
- * Unnotified achievements response
- */
-export interface UnnotifiedAchievementsResponse {
-  achievements: UnnotifiedAchievementResponse[];
-  count: number;
-}
-
-/**
- * Mark notified request
- */
-export interface MarkNotifiedRequest {
-  achievement_ids: string[];
-}
-
-/**
- * Mark notified response
- */
-export interface MarkNotifiedResponse {
-  marked_count: number;
-  success: boolean;
-}
-
 // ============================================
 // XP API Methods
 // ============================================
@@ -105,21 +70,5 @@ export const xpAPI = {
    */
   getAchievements: async (): Promise<AchievementsListResponse> => {
     return api.get<AchievementsListResponse>('/api/v1/xp/achievements');
-  },
-
-  /**
-   * Get newly unlocked achievements that haven't been shown to user
-   */
-  getUnnotifiedAchievements: async (): Promise<UnnotifiedAchievementsResponse> => {
-    return api.get<UnnotifiedAchievementsResponse>('/api/v1/xp/achievements/unnotified');
-  },
-
-  /**
-   * Mark achievements as notified (user has seen them)
-   */
-  markAchievementsNotified: async (achievementIds: string[]): Promise<MarkNotifiedResponse> => {
-    return api.post<MarkNotifiedResponse>('/api/v1/xp/achievements/notified', {
-      achievement_ids: achievementIds,
-    });
   },
 };
