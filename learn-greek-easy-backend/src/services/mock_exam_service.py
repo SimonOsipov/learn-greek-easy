@@ -8,7 +8,7 @@ This service handles the business logic for mock exams:
 
 Key Features:
 - 25 random questions from all active culture decks
-- 80% pass threshold (20/25 correct)
+- 60% pass threshold (16/25 correct)
 - SM-2 spaced repetition integration
 - XP awards for answers
 
@@ -59,8 +59,8 @@ from src.services.xp_service import XPService
 
 logger = get_logger(__name__)
 
-# Pass threshold: 80% (20 out of 25)
-PASS_THRESHOLD_PERCENTAGE = 80
+# Pass threshold: 60% (16 out of 25)
+PASS_THRESHOLD_PERCENTAGE = 60
 PERFECT_RECALL_THRESHOLD_SECONDS = 2
 
 
@@ -297,7 +297,7 @@ class MockExamService:
 
         await self.db.commit()
 
-        # Get updated answer count
+        # Get answer count for response (required by API contract)
         answers = await self.repository.get_session_answers(session_id)
 
         logger.info(
@@ -308,7 +308,6 @@ class MockExamService:
                 "is_correct": is_correct,
                 "xp_earned": xp_earned,
                 "current_score": session.score,
-                "answers_count": len(answers),
             },
         )
 
@@ -329,7 +328,7 @@ class MockExamService:
     ) -> dict[str, Any]:
         """Complete a mock exam session and calculate final results.
 
-        Pass threshold: 80% (20/25 correct)
+        Pass threshold: 60% (16/25 correct)
 
         Args:
             user_id: User UUID

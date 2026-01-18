@@ -481,8 +481,8 @@ class TestMockExamCompleteEndpoint:
         session_id = create_response.json()["session"]["id"]
         exam_questions = create_response.json()["questions"]
 
-        # Answer 20 questions correctly (80% pass threshold)
-        for i, question in enumerate(exam_questions[:20]):
+        # Answer 16 questions correctly (64% - above 60% pass threshold)
+        for i, question in enumerate(exam_questions[:16]):
             question_id = question["id"]
             db_question = next(q for q in questions if str(q.id) == question_id)
             await client.post(
@@ -495,8 +495,8 @@ class TestMockExamCompleteEndpoint:
                 },
             )
 
-        # Answer remaining 5 questions incorrectly
-        for question in exam_questions[20:]:
+        # Answer remaining 9 questions incorrectly
+        for question in exam_questions[16:]:
             question_id = question["id"]
             db_question = next(q for q in questions if str(q.id) == question_id)
             wrong_option = (db_question.correct_option % 4) + 1
@@ -520,10 +520,10 @@ class TestMockExamCompleteEndpoint:
         assert response.status_code == 200
         data = response.json()
         assert data["passed"] is True
-        assert data["score"] == 20
+        assert data["score"] == 16
         assert data["total_questions"] == 25
-        assert data["percentage"] == 80.0
-        assert data["pass_threshold"] == 80
+        assert data["percentage"] == 64.0
+        assert data["pass_threshold"] == 60
         assert data["session"]["status"] == "completed"
 
     @pytest.mark.asyncio

@@ -116,7 +116,7 @@ async def multiple_completed_exams(
     sessions = []
     for i in range(5):
         score = 15 + i * 2  # 15, 17, 19, 21, 23
-        passed = score >= 20  # 80% threshold
+        passed = score >= 16  # 60% threshold
         session = MockExamSession(
             user_id=test_user.id,
             total_questions=25,
@@ -357,11 +357,11 @@ class TestCompleteExam:
         culture_questions: list[CultureQuestion],
         mock_s3_service,
     ):
-        """80%+ should result in passed=True."""
+        """60%+ should result in passed=True."""
         service = MockExamService(db_session, s3_service=mock_s3_service)
 
-        # Submit 20 correct answers (80%)
-        for i in range(20):
+        # Submit 16 correct answers (64%)
+        for i in range(16):
             question = culture_questions[i]
             await service.submit_answer(
                 user_id=test_user.id,
@@ -371,8 +371,8 @@ class TestCompleteExam:
                 time_taken_seconds=10,
             )
 
-        # Submit 5 wrong answers
-        for i in range(20, 25):
+        # Submit 9 wrong answers
+        for i in range(16, 25):
             question = culture_questions[i]
             wrong_option = (question.correct_option % 4) + 1
             await service.submit_answer(
@@ -390,9 +390,9 @@ class TestCompleteExam:
         )
 
         assert result["passed"] is True
-        assert result["score"] == 20
-        assert result["percentage"] == 80.0
-        assert result["pass_threshold"] == 80
+        assert result["score"] == 16
+        assert result["percentage"] == 64.0
+        assert result["pass_threshold"] == 60
 
     @pytest.mark.asyncio
     async def test_complete_exam_fail(
@@ -403,11 +403,11 @@ class TestCompleteExam:
         culture_questions: list[CultureQuestion],
         mock_s3_service,
     ):
-        """<80% should result in passed=False."""
+        """<60% should result in passed=False."""
         service = MockExamService(db_session, s3_service=mock_s3_service)
 
-        # Submit 19 correct answers (76%)
-        for i in range(19):
+        # Submit 14 correct answers (56%)
+        for i in range(14):
             question = culture_questions[i]
             await service.submit_answer(
                 user_id=test_user.id,
@@ -417,8 +417,8 @@ class TestCompleteExam:
                 time_taken_seconds=10,
             )
 
-        # Submit 6 wrong answers
-        for i in range(19, 25):
+        # Submit 11 wrong answers
+        for i in range(14, 25):
             question = culture_questions[i]
             wrong_option = (question.correct_option % 4) + 1
             await service.submit_answer(
@@ -436,8 +436,8 @@ class TestCompleteExam:
         )
 
         assert result["passed"] is False
-        assert result["score"] == 19
-        assert result["percentage"] == 76.0
+        assert result["score"] == 14
+        assert result["percentage"] == 56.0
 
     @pytest.mark.asyncio
     async def test_complete_exam_invalid_session(
@@ -501,9 +501,9 @@ class TestGetStatistics:
 
         stats = result["stats"]
         assert stats["total_exams"] == 5
-        # Scores: 15, 17, 19, 21, 23 - only 21 and 23 pass (80%)
-        assert stats["passed_exams"] == 2
-        assert stats["pass_rate"] == 40.0
+        # Scores: 15, 17, 19, 21, 23 - all except 15 pass (60% = 16/25)
+        assert stats["passed_exams"] == 4
+        assert stats["pass_rate"] == 80.0
 
         # Recent exams should be ordered by completion date
         recent = result["recent_exams"]

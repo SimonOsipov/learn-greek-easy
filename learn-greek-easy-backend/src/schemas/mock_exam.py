@@ -7,7 +7,7 @@ This module contains schemas for:
 
 Key Features:
 - 25 random questions from all active culture decks
-- 80% pass threshold (20/25 correct)
+- 60% pass threshold (16/25 correct)
 - SM-2 spaced repetition integration
 - XP awards for answers
 """
@@ -55,7 +55,7 @@ class MockExamSessionResponse(BaseModel):
     completed_at: Optional[datetime] = Field(None, description="When the exam was completed")
     score: int = Field(..., ge=0, description="Number of correct answers")
     total_questions: int = Field(..., ge=0, description="Total questions in exam")
-    passed: bool = Field(..., description="Whether the exam was passed (>= 80%)")
+    passed: bool = Field(..., description="Whether the exam was passed (>= 60%)")
     time_taken_seconds: int = Field(..., ge=0, description="Total time taken in seconds")
     status: str = Field(..., description="Session status: active, completed, abandoned")
 
@@ -131,11 +131,11 @@ class MockExamCompleteResponse(BaseModel):
     """Response after completing a mock exam."""
 
     session: MockExamSessionResponse = Field(..., description="The completed session")
-    passed: bool = Field(..., description="Whether the exam was passed (>= 80%)")
+    passed: bool = Field(..., description="Whether the exam was passed (>= 60%)")
     score: int = Field(..., ge=0, description="Number of correct answers")
     total_questions: int = Field(..., ge=0, description="Total questions in exam")
     percentage: float = Field(..., ge=0, le=100, description="Score percentage")
-    pass_threshold: int = Field(..., ge=0, le=100, description="Required percentage to pass (80)")
+    pass_threshold: int = Field(..., ge=0, le=100, description="Required percentage to pass (60)")
 
 
 # ============================================================================

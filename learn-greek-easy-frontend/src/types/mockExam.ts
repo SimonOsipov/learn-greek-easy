@@ -59,7 +59,7 @@ export interface MockExamAnswerResponse {
   correct_option: number | null;
   xp_earned: number;
   current_score: number;
-  answers_count: number;
+  answers_count?: number; // Optional - frontend uses optimistic local tracking
   duplicate: boolean;
 }
 
@@ -108,5 +108,5 @@ export interface MockExamStatisticsResponse {
 
 // Constants
 export const MOCK_EXAM_QUESTION_COUNT = 25;
-export const MOCK_EXAM_PASS_THRESHOLD = 80;
-export const MOCK_EXAM_PASS_SCORE = 20;
+export const MOCK_EXAM_PASS_THRESHOLD = 60;
+export const MOCK_EXAM_PASS_SCORE = 16;

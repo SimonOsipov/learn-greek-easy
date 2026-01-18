@@ -59,6 +59,7 @@ async function startMockExam(page: Page): Promise<boolean> {
 
 /**
  * Helper to answer a question in the mock exam
+ * Note: Immediately transitions to next question (no feedback shown)
  */
 async function answerCurrentQuestion(page: Page, optionNumber: number = 1): Promise<void> {
   // Wait for question to be visible
@@ -76,22 +77,8 @@ async function answerCurrentQuestion(page: Page, optionNumber: number = 1): Prom
   await expect(submitButton).toBeEnabled({ timeout: 3000 });
   await submitButton.click();
 
-  // Wait for answer to be processed (feedback should appear or next question)
+  // Wait for answer to be processed and immediate transition to next question
   await page.waitForTimeout(500);
-}
-
-/**
- * Helper to proceed to next question after answering
- */
-async function proceedToNextQuestion(page: Page): Promise<void> {
-  // Look for next question button in feedback view
-  const nextButton = page.getByRole('button', { name: /next|continue/i });
-  const isNextVisible = await nextButton.isVisible().catch(() => false);
-
-  if (isNextVisible) {
-    await nextButton.click();
-    await page.waitForTimeout(300);
-  }
 }
 
 // ============================================================================
@@ -124,6 +111,7 @@ test.describe('Mock Exam Session', () => {
     await expect(page.getByTestId('mock-exam-exit-button')).toBeVisible();
 
     // Answer a few questions (up to 3)
+    // Note: No feedback shown - immediately transitions to next question
     for (let i = 0; i < 3; i++) {
       // Check if MCQ is visible
       const mcqComponent = page.getByTestId('mcq-component');
@@ -134,9 +122,8 @@ test.describe('Mock Exam Session', () => {
         break;
       }
 
-      // Answer the question
+      // Answer the question (automatically advances to next)
       await answerCurrentQuestion(page, 1);
-      await proceedToNextQuestion(page);
     }
 
     // Verify progress is being tracked
@@ -283,19 +270,9 @@ test.describe('Mock Exam Session', () => {
     await page.keyboard.press('Enter');
     await page.waitForTimeout(500);
 
-    // Should show feedback or next question
-    // Look for feedback or next question state
-    const hasNextButton = await page.getByRole('button', { name: /next|continue/i }).isVisible();
-    const hasMcqAgain = await mcqComponent.isVisible();
-
-    // Either we see next button (feedback) or question (if auto-advanced)
-    expect(hasNextButton || hasMcqAgain).toBe(true);
-
-    // If in feedback, test Space/Enter to continue
-    if (hasNextButton) {
-      await page.keyboard.press('Space');
-      await page.waitForTimeout(300);
-    }
+    // Should immediately show next question (no feedback displayed)
+    // MCQ component should still be visible for the next question
+    await expect(mcqComponent).toBeVisible();
 
     // Test Escape key to trigger exit dialog
     await page.keyboard.press('Escape');
