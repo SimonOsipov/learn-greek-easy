@@ -256,26 +256,54 @@ export const MockExamSessionPage: React.FC = () => {
         timer_remaining_seconds: remainingSeconds,
       });
 
-      // Fire the API call but don't wait for it (optimistic update)
-      answerQuestion(selectedOption)
-        .catch((err) => {
-          log.error('Failed to submit answer in background:', err);
-          // Show error toast but don't block the user - they can continue
-          toast({
-            title: t('common:error', { defaultValue: 'Error' }),
-            description: t('session.answerSyncError', {
-              defaultValue: 'Answer saved locally but may not sync. Continue with the exam.',
-            }),
-            variant: 'destructive',
-          });
-        })
-        .finally(() => {
-          isSubmittingRef.current = false;
-          setIsSubmitting(false);
-        });
+      // Check if this is the last question
+      const isLastQuestion = progress.current === progress.total;
 
-      // Immediately advance to next question (optimistic update)
-      nextQuestion();
+      if (isLastQuestion) {
+        // For the last question, wait for API response before completing
+        // This ensures isCorrect is set before completeExam() builds the summary
+        answerQuestion(selectedOption)
+          .then(() => {
+            nextQuestion(); // This will trigger completeExam()
+          })
+          .catch((err) => {
+            log.error('Failed to submit final answer:', err);
+            toast({
+              title: t('common:error', { defaultValue: 'Error' }),
+              description: t('session.answerSyncError', {
+                defaultValue: 'Answer saved locally but may not sync. Continue with the exam.',
+              }),
+              variant: 'destructive',
+            });
+            // Still advance even on error - let completeExam handle it
+            nextQuestion();
+          })
+          .finally(() => {
+            isSubmittingRef.current = false;
+            setIsSubmitting(false);
+          });
+      } else {
+        // For non-last questions, use optimistic update (immediate advance)
+        answerQuestion(selectedOption)
+          .catch((err) => {
+            log.error('Failed to submit answer in background:', err);
+            // Show error toast but don't block the user - they can continue
+            toast({
+              title: t('common:error', { defaultValue: 'Error' }),
+              description: t('session.answerSyncError', {
+                defaultValue: 'Answer saved locally but may not sync. Continue with the exam.',
+              }),
+              variant: 'destructive',
+            });
+          })
+          .finally(() => {
+            isSubmittingRef.current = false;
+            setIsSubmitting(false);
+          });
+
+        // Immediately advance to next question (optimistic update)
+        nextQuestion();
+      }
     },
     [session, currentQuestion, answerQuestion, nextQuestion, remainingSeconds, progress, t]
   );
