@@ -37,6 +37,7 @@ import type { SupportedLanguage } from '@/i18n';
 import log from '@/lib/logger';
 import { cn } from '@/lib/utils';
 import { useCultureSessionStore } from '@/stores/cultureSessionStore';
+import { useXPStore } from '@/stores/xpStore';
 
 /** Option letter mapping */
 const OPTION_LETTERS = ['A', 'B', 'C', 'D'] as const;
@@ -103,6 +104,7 @@ export function CultureSessionSummaryPage() {
   const { track } = useTrackEvent();
 
   const { summary, clearSummary, resetSession } = useCultureSessionStore();
+  const loadXPStats = useXPStore((state) => state.loadXPStats);
 
   // Ref to prevent duplicate tracking
   const hasTrackedComplete = useRef(false);
@@ -135,6 +137,13 @@ export function CultureSessionSummaryPage() {
       }
     }
   }, [summary, track]);
+
+  // Refresh XP stats when summary is available
+  useEffect(() => {
+    if (summary) {
+      loadXPStats(true);
+    }
+  }, [summary, loadXPStats]);
 
   // Clean up on unmount
   useEffect(() => {

@@ -49,6 +49,7 @@ import {
 import log from '@/lib/logger';
 import { cn } from '@/lib/utils';
 import { useMockExamSessionStore } from '@/stores/mockExamSessionStore';
+import { useXPStore } from '@/stores/xpStore';
 import type { MockExamQuestionState } from '@/types/mockExamSession';
 
 /** Option letter mapping */
@@ -102,6 +103,7 @@ export function MockExamResultsPage() {
   const { questionLanguage, setQuestionLanguage } = useQuestionLanguage();
 
   const { summary, resetSession } = useMockExamSessionStore();
+  const loadXPStats = useXPStore((state) => state.loadXPStats);
 
   // Ref to prevent duplicate tracking
   const hasTrackedView = useRef(false);
@@ -133,6 +135,13 @@ export function MockExamResultsPage() {
       });
     }
   }, [summary]);
+
+  // Refresh XP stats when summary is available
+  useEffect(() => {
+    if (summary) {
+      loadXPStats(true);
+    }
+  }, [summary, loadXPStats]);
 
   // Track accordion expand for incorrect answers review
   const handleAccordionChange = (value: string) => {
