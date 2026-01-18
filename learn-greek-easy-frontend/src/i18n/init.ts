@@ -31,6 +31,7 @@ import enCulture from './locales/en/culture.json';
 import enDeck from './locales/en/deck.json';
 import enFeedback from './locales/en/feedback.json';
 import enLanding from './locales/en/landing.json';
+import enMockExam from './locales/en/mockExam.json';
 import enProfile from './locales/en/profile.json';
 import enReview from './locales/en/review.json';
 import enSettings from './locales/en/settings.json';
@@ -51,6 +52,7 @@ const englishResources = {
     deck: enDeck,
     feedback: enFeedback,
     landing: enLanding,
+    mockExam: enMockExam,
     profile: enProfile,
     review: enReview,
     settings: enSettings,
@@ -96,6 +98,7 @@ async function loadGreekBundle(): Promise<Record<string, unknown>> {
     deck,
     feedback,
     landing,
+    mockExam,
     profile,
     review,
     settings,
@@ -109,6 +112,7 @@ async function loadGreekBundle(): Promise<Record<string, unknown>> {
     import('./locales/el/deck.json'),
     import('./locales/el/feedback.json'),
     import('./locales/el/landing.json'),
+    import('./locales/el/mockExam.json'),
     import('./locales/el/profile.json'),
     import('./locales/el/review.json'),
     import('./locales/el/settings.json'),
@@ -124,6 +128,7 @@ async function loadGreekBundle(): Promise<Record<string, unknown>> {
     deck: deck.default,
     feedback: feedback.default,
     landing: landing.default,
+    mockExam: mockExam.default,
     profile: profile.default,
     review: review.default,
     settings: settings.default,
@@ -146,6 +151,7 @@ async function loadRussianBundle(): Promise<Record<string, unknown>> {
     deck,
     feedback,
     landing,
+    mockExam,
     profile,
     review,
     settings,
@@ -159,6 +165,7 @@ async function loadRussianBundle(): Promise<Record<string, unknown>> {
     import('./locales/ru/deck.json'),
     import('./locales/ru/feedback.json'),
     import('./locales/ru/landing.json'),
+    import('./locales/ru/mockExam.json'),
     import('./locales/ru/profile.json'),
     import('./locales/ru/review.json'),
     import('./locales/ru/settings.json'),
@@ -174,6 +181,7 @@ async function loadRussianBundle(): Promise<Record<string, unknown>> {
     deck: deck.default,
     feedback: feedback.default,
     landing: landing.default,
+    mockExam: mockExam.default,
     profile: profile.default,
     review: review.default,
     settings: settings.default,

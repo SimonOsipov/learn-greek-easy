@@ -28,6 +28,7 @@ from uuid import UUID
 from fastapi import APIRouter, BackgroundTasks, Depends, Query, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.api.v1.culture.mock_exam import router as mock_exam_router
 from src.config import settings
 from src.core.dependencies import get_current_superuser, get_current_user
 from src.core.exceptions import ValidationException
@@ -586,6 +587,13 @@ async def get_culture_progress(
     service = CultureQuestionService(db)
 
     return await service.get_culture_progress(user_id=current_user.id)
+
+
+# ============================================================================
+# Mock Exam Sub-Router
+# ============================================================================
+
+router.include_router(mock_exam_router)
 
 
 # ============================================================================

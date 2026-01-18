@@ -37,6 +37,7 @@ export const NAMESPACES = [
   'statistics', // Statistics/analytics page
   'feedback', // Feedback submission/voting
   'culture', // Culture exam practice
+  'mockExam', // Mock citizenship exam
   'admin', // Admin dashboard and statistics
   'landing', // Landing page
   'achievements', // Achievement cards and categories

@@ -40,6 +40,7 @@ async function loadGreekResources(): Promise<void> {
     deck,
     feedback,
     landing,
+    mockExam,
     profile,
     review,
     settings,
@@ -53,6 +54,7 @@ async function loadGreekResources(): Promise<void> {
     import('./locales/el/deck.json'),
     import('./locales/el/feedback.json'),
     import('./locales/el/landing.json'),
+    import('./locales/el/mockExam.json'),
     import('./locales/el/profile.json'),
     import('./locales/el/review.json'),
     import('./locales/el/settings.json'),
@@ -67,6 +69,7 @@ async function loadGreekResources(): Promise<void> {
   i18n.addResourceBundle('el', 'deck', deck.default, true, true);
   i18n.addResourceBundle('el', 'feedback', feedback.default, true, true);
   i18n.addResourceBundle('el', 'landing', landing.default, true, true);
+  i18n.addResourceBundle('el', 'mockExam', mockExam.default, true, true);
   i18n.addResourceBundle('el', 'profile', profile.default, true, true);
   i18n.addResourceBundle('el', 'review', review.default, true, true);
   i18n.addResourceBundle('el', 'settings', settings.default, true, true);
@@ -88,6 +91,7 @@ async function loadRussianResources(): Promise<void> {
     deck,
     feedback,
     landing,
+    mockExam,
     profile,
     review,
     settings,
@@ -101,6 +105,7 @@ async function loadRussianResources(): Promise<void> {
     import('./locales/ru/deck.json'),
     import('./locales/ru/feedback.json'),
     import('./locales/ru/landing.json'),
+    import('./locales/ru/mockExam.json'),
     import('./locales/ru/profile.json'),
     import('./locales/ru/review.json'),
     import('./locales/ru/settings.json'),
@@ -115,6 +120,7 @@ async function loadRussianResources(): Promise<void> {
   i18n.addResourceBundle('ru', 'deck', deck.default, true, true);
   i18n.addResourceBundle('ru', 'feedback', feedback.default, true, true);
   i18n.addResourceBundle('ru', 'landing', landing.default, true, true);
+  i18n.addResourceBundle('ru', 'mockExam', mockExam.default, true, true);
   i18n.addResourceBundle('ru', 'profile', profile.default, true, true);
   i18n.addResourceBundle('ru', 'review', review.default, true, true);
   i18n.addResourceBundle('ru', 'settings', settings.default, true, true);

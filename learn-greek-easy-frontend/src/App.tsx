@@ -92,6 +92,17 @@ const CultureSessionSummaryPage = lazyWithRetry(() =>
   }))
 );
 
+// Mock exam pages
+const MockExamPage = lazyWithRetry(() =>
+  import('@/pages/MockExamPage').then((m) => ({ default: m.MockExamPage }))
+);
+const MockExamSessionPage = lazyWithRetry(() =>
+  import('@/pages/MockExamSessionPage').then((m) => ({ default: m.MockExamSessionPage }))
+);
+const MockExamResultsPage = lazyWithRetry(() =>
+  import('@/pages/MockExamResultsPage').then((m) => ({ default: m.MockExamResultsPage }))
+);
+
 // Statistics page (loads recharts chunk)
 const Statistics = lazyWithRetry(() => import('@/pages/Statistics'));
 
@@ -196,6 +207,14 @@ function AppContent() {
                 {/* Culture practice pages outside AppLayout for full-screen immersive experience */}
                 <Route path="/culture/:deckId/practice" element={<CulturePracticePage />} />
                 <Route path="/culture/:deckId/summary" element={<CultureSessionSummaryPage />} />
+                {/* Mock exam landing page inside AppLayout */}
+                <Route path="/practice/culture-exam" element={<AppLayout />}>
+                  <Route index element={<MockExamPage />} />
+                </Route>
+                {/* Mock exam session page outside AppLayout for full-screen experience */}
+                <Route path="/practice/culture-exam/session" element={<MockExamSessionPage />} />
+                {/* Mock exam results page outside AppLayout for full-screen experience */}
+                <Route path="/practice/culture-exam/results" element={<MockExamResultsPage />} />
               </Route>
 
               {/* Admin Routes - require admin role */}

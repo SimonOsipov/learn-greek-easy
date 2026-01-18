@@ -1,6 +1,14 @@
 import React, { useState, useEffect } from 'react';
 
-import { Home, Layers, BarChart3, User, MessageSquare, ChevronUp } from 'lucide-react';
+import {
+  Home,
+  Layers,
+  BarChart3,
+  User,
+  MessageSquare,
+  ChevronUp,
+  GraduationCap,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation } from 'react-router-dom';
 
@@ -38,6 +46,14 @@ const navItems: NavItem[] = [
       { labelKey: 'nav.decksDropdown.allDecks', href: '/decks' },
       { labelKey: 'nav.decksDropdown.myDecks', href: '/my-decks' },
     ],
+  },
+  {
+    id: 'practice',
+    labelKey: 'nav.practice',
+    icon: GraduationCap,
+    href: '/practice',
+    additionalActivePaths: ['/practice/culture-exam'],
+    children: [{ labelKey: 'nav.practiceDropdown.cultureExam', href: '/practice/culture-exam' }],
   },
   {
     id: 'stats',
@@ -89,9 +105,10 @@ export const MobileNav: React.FC<MobileNavProps> = ({ className }) => {
       {/* Sub-menu popover */}
       {openSubMenu && (
         <div
-          className="fixed bottom-16 left-0 right-0 z-50 border-t border-border bg-background shadow-lg lg:hidden"
+          className="fixed bottom-16 left-0 right-0 z-[60] border-t border-border bg-background shadow-lg lg:hidden"
           role="menu"
           aria-label={t('nav.decks')}
+          data-testid={`mobile-submenu-${openSubMenu}`}
         >
           <div className="flex flex-col py-2">
             {navItems

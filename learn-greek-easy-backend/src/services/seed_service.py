@@ -32,6 +32,9 @@ from src.db.models import (
     FeedbackCategory,
     FeedbackStatus,
     FeedbackVote,
+    MockExamAnswer,
+    MockExamSession,
+    MockExamStatus,
     Notification,
     NotificationType,
     Review,
@@ -84,6 +87,9 @@ class SeedService:
 
     # FK-safe truncation order (children first, then parents)
     TRUNCATION_ORDER = [
+        # Mock Exam tables (children first)
+        "mock_exam_answers",
+        "mock_exam_sessions",
         # XP & Achievement tables (children first)
         "xp_transactions",
         "user_achievements",
@@ -219,6 +225,47 @@ class SeedService:
             },
         ],
     }
+
+    # Mock exam session configurations for E2E testing
+    # 80% pass threshold (20/25 correct)
+    # Creates history for e2e_learner@test.com: 3 passed, 2 failed
+    MOCK_EXAM_SESSIONS = [
+        {
+            "score": 23,
+            "total_questions": 25,
+            "passed": True,
+            "time_taken_seconds": 1200,
+            "days_ago": 6,
+        },  # 92% Pass
+        {
+            "score": 21,
+            "total_questions": 25,
+            "passed": True,
+            "time_taken_seconds": 1500,
+            "days_ago": 5,
+        },  # 84% Pass
+        {
+            "score": 12,
+            "total_questions": 25,
+            "passed": False,
+            "time_taken_seconds": 900,
+            "days_ago": 4,
+        },  # 48% Fail
+        {
+            "score": 20,
+            "total_questions": 25,
+            "passed": True,
+            "time_taken_seconds": 1350,
+            "days_ago": 2,
+        },  # 80% Pass
+        {
+            "score": 15,
+            "total_questions": 25,
+            "passed": False,
+            "time_taken_seconds": 1100,
+            "days_ago": 1,
+        },  # 60% Fail
+    ]
 
     # Culture categories with deck definitions (simple English strings)
     CULTURE_DECKS = {
@@ -2056,6 +2103,110 @@ class SeedService:
         }
 
     # =====================
+    # Mock Exam Seeding
+    # =====================
+
+    async def seed_mock_exam_history(self, user_id: UUID) -> dict[str, Any]:
+        """Create mock exam history for a user.
+
+        Creates completed mock exam sessions with answers for E2E testing.
+        The data simulates a realistic exam history with mix of passed and failed exams.
+
+        Args:
+            user_id: User to create mock exam history for
+
+        Returns:
+            dict with seeding summary including sessions and answers created
+
+        Raises:
+            RuntimeError: If seeding not allowed
+        """
+        self._check_can_seed()
+
+        # Get culture question IDs from database (need 25 for each exam)
+        result = await self.db.execute(
+            select(CultureQuestion.id).order_by(CultureQuestion.id).limit(50)
+        )
+        question_ids = [row[0] for row in result.fetchall()]
+
+        if len(question_ids) < 25:
+            return {
+                "success": False,
+                "error": f"Need at least 25 culture questions, found {len(question_ids)}. "
+                "Run seed_culture_decks_and_questions() first.",
+                "sessions_created": 0,
+                "answers_created": 0,
+            }
+
+        sessions_created = 0
+        answers_created = 0
+        now = datetime.now(timezone.utc)
+
+        for exam_config in self.MOCK_EXAM_SESSIONS:
+            score = exam_config["score"]
+            total_questions = exam_config["total_questions"]
+            passed = exam_config["passed"]
+            time_taken_seconds = exam_config["time_taken_seconds"]
+            days_ago = exam_config["days_ago"]
+
+            # Calculate timestamps
+            exam_date = now - timedelta(days=days_ago)
+            started_at = exam_date
+            completed_at = exam_date + timedelta(seconds=time_taken_seconds)
+
+            # Create the session
+            session = MockExamSession(
+                user_id=user_id,
+                started_at=started_at,
+                completed_at=completed_at,
+                score=score,
+                total_questions=total_questions,
+                passed=passed,
+                time_taken_seconds=time_taken_seconds,
+                status=MockExamStatus.COMPLETED,
+            )
+            self.db.add(session)
+            await self.db.flush()  # Get session ID
+            sessions_created += 1
+
+            # Create 25 answers for this session
+            # Use first 25 questions (cycling if needed)
+            exam_questions = question_ids[:25]
+
+            # Calculate average time per question
+            avg_time_per_question = time_taken_seconds // total_questions
+
+            for i, question_id in enumerate(exam_questions):
+                # First `score` answers are correct, rest are incorrect
+                is_correct = i < score
+                # Correct answer is always option 1 in our seed data
+                selected_option = 1 if is_correct else 2
+
+                # Spread answer times across the exam duration
+                answer_time = started_at + timedelta(seconds=avg_time_per_question * (i + 1))
+
+                answer = MockExamAnswer(
+                    session_id=session.id,
+                    question_id=question_id,
+                    selected_option=selected_option,
+                    is_correct=is_correct,
+                    time_taken_seconds=avg_time_per_question,
+                    answered_at=answer_time,
+                )
+                self.db.add(answer)
+                answers_created += 1
+
+        await self.db.flush()
+
+        return {
+            "success": True,
+            "sessions_created": sessions_created,
+            "answers_created": answers_created,
+            "passed_count": sum(1 for e in self.MOCK_EXAM_SESSIONS if e["passed"]),
+            "failed_count": sum(1 for e in self.MOCK_EXAM_SESSIONS if not e["passed"]),
+        }
+
+    # =====================
     # XP & Achievement Seeding
     # =====================
 
@@ -2493,6 +2644,11 @@ class SeedService:
                         }
                     )
 
+        # Step 12: Create mock exam history for learner user
+        mock_exam_result: dict[str, Any] = {"success": True, "sessions_created": 0}
+        if learner_id:
+            mock_exam_result = await self.seed_mock_exam_history(user_id=learner_id)
+
         # Commit all changes
         await self.db.commit()
 
@@ -2511,4 +2667,5 @@ class SeedService:
             "culture": culture_result,
             "culture_statistics": culture_stats_result,
             "culture_advanced_stats": advanced_culture_stats,
+            "mock_exams": mock_exam_result,
         }

@@ -103,6 +103,10 @@
     "decksDropdown": {
       "allDecks": "Όλες οι Τράπουλες",
       "myDecks": "Οι Τράπουλές Μου"
+    },
+    "practice": "Εξάσκηση",
+    "practiceDropdown": {
+      "cultureExam": "Εξέταση Πολιτισμού"
     }
   },
   "language": {

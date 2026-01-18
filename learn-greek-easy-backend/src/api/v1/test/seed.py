@@ -348,6 +348,58 @@ async def seed_culture(
 
 
 @router.post(
+    "/mock-exams",
+    response_model=SeedResultResponse,
+    summary="Seed mock exam history",
+    description="Create mock exam history for the learner test user. "
+    "Creates 5 completed mock exam sessions (3 passed, 2 failed). "
+    "Requires culture questions to be seeded first.",
+    dependencies=[Depends(verify_seed_access)],
+)
+async def seed_mock_exams(
+    db: AsyncSession = Depends(get_db),
+) -> SeedResultResponse:
+    """Create mock exam history for learner user.
+
+    Creates:
+    - 5 mock exam sessions (3 passed, 2 failed with 80% threshold)
+    - 125 mock exam answers (25 per session)
+
+    Requires culture questions to be seeded first (seed_all or seed_culture).
+
+    Returns:
+        SeedResultResponse with mock exam creation results and timing
+    """
+    start_time = perf_counter()
+    service = SeedService(db)
+
+    # Get learner user
+    user_repo = UserRepository(db)
+    learner = await user_repo.get_by_email("e2e_learner@test.com")
+
+    if not learner:
+        return SeedResultResponse(
+            success=False,
+            operation="mock-exams",
+            timestamp=datetime.now(timezone.utc),
+            duration_ms=(perf_counter() - start_time) * 1000,
+            results={"error": "Learner user not found. Run /api/v1/test/seed/users first."},
+        )
+
+    result = await service.seed_mock_exam_history(user_id=learner.id)
+    await db.commit()
+    duration_ms = (perf_counter() - start_time) * 1000
+
+    return SeedResultResponse(
+        success=result.get("success", False),
+        operation="mock-exams",
+        timestamp=datetime.now(timezone.utc),
+        duration_ms=duration_ms,
+        results=result,
+    )
+
+
+@router.post(
     "/auth",
     response_model=TestAuthResponse,
     summary="Get auth tokens for test user",
