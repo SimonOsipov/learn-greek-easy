@@ -199,7 +199,6 @@ class AchievementService:
         user_achievement = UserAchievement(
             user_id=user_id,
             achievement_id=ach_def.id,
-            notified=False,
         )
         self.db.add(user_achievement)
 
@@ -329,62 +328,6 @@ class AchievementService:
         stat_key = metric_map.get(metric, "")
         value: int = stats.get(stat_key, 0)
         return value
-
-    async def get_unnotified_achievements(self, user_id: UUID) -> list[UnlockedAchievement]:
-        """Get achievements that user hasn't been notified about yet.
-
-        Used by the frontend to show celebration animations.
-
-        Args:
-            user_id: The user's UUID
-
-        Returns:
-            List of unnotified achievements
-        """
-        result = await self.db.execute(
-            select(UserAchievement).where(
-                UserAchievement.user_id == user_id,
-                UserAchievement.notified == False,  # noqa: E712
-            )
-        )
-        unnotified = result.scalars().all()
-
-        achievements: list[UnlockedAchievement] = []
-        for ua in unnotified:
-            ach_def = get_achievement_by_id(ua.achievement_id)
-            if ach_def:
-                achievements.append(
-                    UnlockedAchievement(
-                        id=ach_def.id,
-                        name=ach_def.name,
-                        icon=ach_def.icon,
-                        xp_reward=ach_def.xp_reward,
-                    )
-                )
-
-        return achievements
-
-    async def mark_achievements_notified(self, user_id: UUID, achievement_ids: list[str]) -> None:
-        """Mark achievements as notified.
-
-        Called after the frontend has shown the celebration animation.
-
-        Args:
-            user_id: The user's UUID
-            achievement_ids: List of achievement IDs to mark as notified
-        """
-        for ach_id in achievement_ids:
-            result = await self.db.execute(
-                select(UserAchievement).where(
-                    UserAchievement.user_id == user_id,
-                    UserAchievement.achievement_id == ach_id,
-                )
-            )
-            ua = result.scalar_one_or_none()
-            if ua:
-                ua.notified = True
-
-        await self.db.flush()
 
     async def unlock_achievement_by_id(
         self, user_id: UUID, achievement_id: str

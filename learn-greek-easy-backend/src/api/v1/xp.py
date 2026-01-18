@@ -3,8 +3,6 @@
 This module provides endpoints for:
 - GET /xp/stats - User XP statistics and level
 - GET /xp/achievements - All achievements with progress
-- GET /xp/achievements/unnotified - Newly unlocked, not yet notified
-- POST /xp/achievements/notified - Mark achievements as notified
 """
 
 from fastapi import APIRouter, Depends
@@ -13,15 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.core.dependencies import get_current_user
 from src.db.dependencies import get_db
 from src.db.models import User
-from src.schemas.xp import (
-    AchievementResponse,
-    AchievementsListResponse,
-    MarkNotifiedRequest,
-    MarkNotifiedResponse,
-    UnnotifiedAchievementResponse,
-    UnnotifiedAchievementsResponse,
-    XPStatsResponse,
-)
+from src.schemas.xp import AchievementResponse, AchievementsListResponse, XPStatsResponse
 from src.services.achievement_service import AchievementService
 from src.services.xp_service import XPService
 
@@ -170,107 +160,4 @@ async def get_achievements(
         total_count=len(achievements),
         unlocked_count=len(unlocked),
         total_xp_earned=total_xp,
-    )
-
-
-@router.get(
-    "/achievements/unnotified",
-    response_model=UnnotifiedAchievementsResponse,
-    summary="Get unnotified achievements",
-    description="""
-    Get achievements that have been unlocked but not yet shown to the user.
-
-    Frontend should call this endpoint:
-    - On app load
-    - After completing reviews
-    - When navigating to achievements page
-
-    Use this to trigger achievement celebration animations.
-    After showing the celebration, call POST /achievements/notified.
-    """,
-    responses={
-        200: {
-            "description": "Unnotified achievements retrieved",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "achievements": [
-                            {
-                                "id": "streak_7",
-                                "name": "Week Warrior",
-                                "icon": "medal",
-                                "xp_reward": 100,
-                            }
-                        ],
-                        "count": 1,
-                    }
-                }
-            },
-        },
-    },
-)
-async def get_unnotified_achievements(
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-) -> UnnotifiedAchievementsResponse:
-    """Get newly unlocked achievements that haven't been notified."""
-    service = AchievementService(db)
-    unnotified = await service.get_unnotified_achievements(current_user.id)
-
-    return UnnotifiedAchievementsResponse(
-        achievements=[
-            UnnotifiedAchievementResponse(
-                id=a["id"],
-                name=a["name"],
-                icon=a["icon"],
-                xp_reward=a["xp_reward"],
-            )
-            for a in unnotified
-        ],
-        count=len(unnotified),
-    )
-
-
-@router.post(
-    "/achievements/notified",
-    response_model=MarkNotifiedResponse,
-    summary="Mark achievements as notified",
-    description="""
-    Mark achievements as having been shown to the user.
-
-    Call this after displaying the achievement celebration animation
-    to prevent showing the same achievement notification again.
-
-    This is idempotent - marking already-notified achievements has no effect.
-    """,
-    responses={
-        200: {
-            "description": "Achievements marked as notified",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "marked_count": 2,
-                        "success": True,
-                    }
-                }
-            },
-        },
-    },
-)
-async def mark_achievements_notified(
-    request: MarkNotifiedRequest,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-) -> MarkNotifiedResponse:
-    """Mark achievements as notified after showing to user."""
-    service = AchievementService(db)
-    await service.mark_achievements_notified(
-        user_id=current_user.id,
-        achievement_ids=request.achievement_ids,
-    )
-    await db.commit()
-
-    return MarkNotifiedResponse(
-        marked_count=len(request.achievement_ids),
-        success=True,
     )
