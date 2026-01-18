@@ -96,6 +96,9 @@ function clearSessionStorage(): void {
   }
 }
 
+// Module-level Set for atomic duplicate prevention across async boundaries
+const submittedQuestionIds = new Set<string>();
+
 /**
  * Load recovery data from sessionStorage
  */
@@ -225,6 +228,9 @@ export const useMockExamSessionStore = create<MockExamSessionState>()(
           // Save to sessionStorage for recovery
           saveToSessionStorage(session);
 
+          // Clear any stale submitted IDs from previous session
+          submittedQuestionIds.clear();
+
           log.info(
             `Mock exam ${response.is_resumed ? 'resumed' : 'started'}:`,
             response.session.id
@@ -255,6 +261,15 @@ export const useMockExamSessionStore = create<MockExamSessionState>()(
           log.warn('No current question');
           return;
         }
+
+        // ATOMIC DUPLICATE PREVENTION: Check synchronously before any async work
+        const questionId = currentQuestion.question.id;
+        if (submittedQuestionIds.has(questionId)) {
+          log.warn('Question already submitted (atomic guard)', { questionId });
+          return;
+        }
+        // Add immediately (synchronous) - prevents race conditions
+        submittedQuestionIds.add(questionId);
 
         // Skip if already answered (optimistic duplicate prevention)
         if (currentQuestion.selectedOption !== null) {
@@ -314,9 +329,14 @@ export const useMockExamSessionStore = create<MockExamSessionState>()(
             }
           );
 
-          // Skip if this was a duplicate answer on backend
+          // Handle duplicate answer from backend
           if (response.duplicate) {
-            log.warn('Duplicate answer on backend, local state already updated');
+            log.warn('Duplicate answer detected by backend', {
+              questionId: currentQuestion.question.id,
+            });
+            // Duplicate means backend already recorded this answer.
+            // The optimistic update set selectedOption. Backend's complete_exam
+            // will return correct score. No further action needed.
             return;
           }
 
@@ -722,6 +742,9 @@ export const useMockExamSessionStore = create<MockExamSessionState>()(
        * Reset session state completely
        */
       resetSession: () => {
+        // Clear atomic duplicate prevention set
+        submittedQuestionIds.clear();
+
         set({
           session: null,
           summary: null,

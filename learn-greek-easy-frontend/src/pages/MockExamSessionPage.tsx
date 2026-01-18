@@ -454,7 +454,6 @@ export const MockExamSessionPage: React.FC = () => {
               onAnswer={handleAnswer}
               questionNumber={progress.current}
               totalQuestions={progress.total}
-              disabled={isSubmitting}
             />
           </div>
         </div>
