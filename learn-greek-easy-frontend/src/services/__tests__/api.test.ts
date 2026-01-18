@@ -479,7 +479,7 @@ describe('Token Refresh Mutex', () => {
       const results = await Promise.all([
         api.get('/api/v1/notifications/unread-count').catch((e) => e),
         api.get('/api/v1/xp/stats').catch((e) => e),
-        api.get('/api/v1/xp/unnotified-achievements').catch((e) => e),
+        api.get('/api/v1/xp/achievements').catch((e) => e),
       ]);
 
       // CRITICAL: Only ONE refresh request should be made

@@ -1019,11 +1019,6 @@ class UserAchievement(Base, TimestampMixin):
         nullable=False,
         server_default=func.now(),
     )
-    notified: Mapped[bool] = mapped_column(
-        Boolean,
-        default=False,
-        nullable=False,
-    )  # Track if user has been notified
 
     # Relationships
     achievement: Mapped["Achievement"] = relationship(

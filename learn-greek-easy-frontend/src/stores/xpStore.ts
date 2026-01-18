@@ -16,11 +16,7 @@ import { devtools } from 'zustand/middleware';
 import { reportAPIError } from '@/lib/errorReporting';
 import log from '@/lib/logger';
 import { xpAPI } from '@/services/xpAPI';
-import type {
-  XPStatsResponse,
-  AchievementsListResponse,
-  UnnotifiedAchievementsResponse,
-} from '@/services/xpAPI';
+import type { XPStatsResponse, AchievementsListResponse } from '@/services/xpAPI';
 
 /**
  * XP state interface
@@ -29,12 +25,10 @@ interface XPState {
   // Data
   xpStats: XPStatsResponse | null;
   achievements: AchievementsListResponse | null;
-  unnotifiedAchievements: UnnotifiedAchievementsResponse | null;
 
   // Loading states
   loadingStats: boolean;
   loadingAchievements: boolean;
-  loadingUnnotified: boolean;
 
   // Error state
   error: string | null;
@@ -46,8 +40,6 @@ interface XPState {
   // Actions
   loadXPStats: (forceRefresh?: boolean) => Promise<void>;
   loadAchievements: (forceRefresh?: boolean) => Promise<void>;
-  loadUnnotifiedAchievements: () => Promise<void>;
-  markAchievementsNotified: (achievementIds: string[]) => Promise<void>;
   refreshAll: () => Promise<void>;
   clearXPData: () => void;
 }
@@ -75,10 +67,8 @@ export const useXPStore = create<XPState>()(
       // Initial state
       xpStats: null,
       achievements: null,
-      unnotifiedAchievements: null,
       loadingStats: false,
       loadingAchievements: false,
-      loadingUnnotified: false,
       error: null,
       lastStatsFetch: null,
       lastAchievementsFetch: null,
@@ -149,62 +139,6 @@ export const useXPStore = create<XPState>()(
       },
 
       /**
-       * Load unnotified achievements
-       * No cache - always fetches fresh data
-       */
-      loadUnnotifiedAchievements: async () => {
-        set({ loadingUnnotified: true, error: null });
-
-        try {
-          const unnotified = await xpAPI.getUnnotifiedAchievements();
-
-          set({
-            unnotifiedAchievements: unnotified,
-            loadingUnnotified: false,
-          });
-        } catch (error) {
-          reportAPIError(error, {
-            operation: 'loadUnnotifiedAchievements',
-            endpoint: '/xp/achievements/unnotified',
-          });
-          set({
-            error: error instanceof Error ? error.message : 'Failed to load notifications',
-            loadingUnnotified: false,
-          });
-        }
-      },
-
-      /**
-       * Mark achievements as notified
-       * Clears from unnotified list on success
-       */
-      markAchievementsNotified: async (achievementIds: string[]) => {
-        try {
-          await xpAPI.markAchievementsNotified(achievementIds);
-
-          // Update local state - remove notified achievements
-          const state = get();
-          if (state.unnotifiedAchievements) {
-            const remainingAchievements = state.unnotifiedAchievements.achievements.filter(
-              (a) => !achievementIds.includes(a.id)
-            );
-            set({
-              unnotifiedAchievements: {
-                achievements: remainingAchievements,
-                count: remainingAchievements.length,
-              },
-            });
-          }
-        } catch (error) {
-          reportAPIError(error, {
-            operation: 'markAchievementsNotified',
-            endpoint: '/xp/achievements/notified',
-          });
-          // Non-blocking error - don't set error state
-        }
-      },
-
-      /**
        * Force refresh all XP data
        * Ignores cache and fetches fresh data
        */
@@ -213,11 +147,7 @@ export const useXPStore = create<XPState>()(
         set({ lastStatsFetch: null, lastAchievementsFetch: null });
 
         // Fetch all in parallel
-        await Promise.all([
-          get().loadXPStats(true),
-          get().loadAchievements(true),
-          get().loadUnnotifiedAchievements(),
-        ]);
+        await Promise.all([get().loadXPStats(true), get().loadAchievements(true)]);
       },
 
       /**
@@ -228,10 +158,8 @@ export const useXPStore = create<XPState>()(
         set({
           xpStats: null,
           achievements: null,
-          unnotifiedAchievements: null,
           loadingStats: false,
           loadingAchievements: false,
-          loadingUnnotified: false,
           error: null,
           lastStatsFetch: null,
           lastAchievementsFetch: null,
@@ -245,7 +173,6 @@ export const useXPStore = create<XPState>()(
 // Selectors for optimized re-renders
 export const selectXPStats = (state: XPState) => state.xpStats;
 export const selectAchievements = (state: XPState) => state.achievements;
-export const selectUnnotifiedAchievements = (state: XPState) => state.unnotifiedAchievements;
 export const selectIsLoadingStats = (state: XPState) => state.loadingStats;
 export const selectIsLoadingAchievements = (state: XPState) => state.loadingAchievements;
 export const selectXPError = (state: XPState) => state.error;

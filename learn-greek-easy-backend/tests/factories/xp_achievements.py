@@ -272,16 +272,12 @@ class UserAchievementFactory(BaseFactory):
     Creates user achievement unlock records.
 
     Traits:
-        seen: User has been notified about this achievement
         recent: Recently unlocked (today)
         old: Unlocked long ago
 
     Example:
         ua = await UserAchievementFactory.create(
             user_id=user.id, achievement_id=achievement.id
-        )
-        seen = await UserAchievementFactory.create(
-            user_id=user.id, achievement_id=achievement.id, seen=True
         )
     """
 
@@ -294,24 +290,16 @@ class UserAchievementFactory(BaseFactory):
 
     # Default values
     unlocked_at = factory.LazyFunction(utc_now)
-    notified = False
 
     class Params:
         """Factory traits for common variations."""
 
-        # User has been notified
-        seen = factory.Trait(
-            notified=True,
-        )
-
         # Recently unlocked (today)
         recent = factory.Trait(
             unlocked_at=factory.LazyFunction(utc_now),
-            notified=False,
         )
 
         # Old achievement (unlocked long ago)
         old = factory.Trait(
             unlocked_at=factory.LazyFunction(lambda: utc_now() - timedelta(days=30)),
-            notified=True,
         )
