@@ -12,7 +12,6 @@ import { PageLoader } from '@/components/feedback';
 import { AppLayout } from '@/components/layout';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { AchievementNotificationManager } from '@/components/xp';
 import { LanguageProvider } from '@/contexts/LanguageContext';
 import { LayoutProvider } from '@/contexts/LayoutContext';
 import { NotificationProvider } from '@/contexts/NotificationContext';
@@ -235,8 +234,6 @@ function AppContent() {
             </Routes>
           </Suspense>
         </ChunkErrorBoundary>
-        {/* Achievement manager inside RouteGuard to wait for auth validation */}
-        <AchievementNotificationManager />
       </RouteGuard>
 
       <Toaster />
