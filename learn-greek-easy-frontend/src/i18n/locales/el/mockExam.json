@@ -65,6 +65,12 @@
     "xpEarned": "XP που Κερδήθηκαν",
     "viewAnswers": "Προβολή Απαντήσεων",
     "tryAgain": "Δοκιμάστε Ξανά",
-    "backToHome": "Επιστροφή στην Εξέταση Πολιτισμού"
+    "backToHome": "Επιστροφή στην Εξέταση Πολιτισμού",
+    "timeExpired": "Έληξε ο Χρόνος",
+    "incorrectAnswers": "Επισκόπηση Λανθασμένων Απαντήσεων",
+    "yourAnswer": "Η απάντησή σας",
+    "correctAnswer": "Σωστή απάντηση",
+    "questionNumber": "Ερώτηση {{number}}",
+    "perfectScore": "Τέλεια! Καμία λανθασμένη απάντηση."
   }
 }

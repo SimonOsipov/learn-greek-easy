@@ -52,6 +52,8 @@ export interface MockExamQuestionState {
   question: MockExamQuestion;
   /** User's selected option (1-4) or null if not answered */
   selectedOption: number | null;
+  /** The correct option (1-4), populated after answering */
+  correctOption: number | null;
   /** Whether the answer was correct (null until answered) */
   isCorrect: boolean | null;
   /** XP earned for this question */

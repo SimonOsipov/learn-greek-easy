@@ -65,6 +65,12 @@
     "xpEarned": "XP Earned",
     "viewAnswers": "View Answers",
     "tryAgain": "Try Again",
-    "backToHome": "Back to Culture Exam"
+    "backToHome": "Back to Culture Exam",
+    "timeExpired": "Time Expired",
+    "incorrectAnswers": "Review Incorrect Answers",
+    "yourAnswer": "Your answer",
+    "correctAnswer": "Correct answer",
+    "questionNumber": "Question {{number}}",
+    "perfectScore": "Perfect! No incorrect answers."
   }
 }

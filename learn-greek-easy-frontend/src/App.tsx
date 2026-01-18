@@ -99,6 +99,9 @@ const MockExamPage = lazyWithRetry(() =>
 const MockExamSessionPage = lazyWithRetry(() =>
   import('@/pages/MockExamSessionPage').then((m) => ({ default: m.MockExamSessionPage }))
 );
+const MockExamResultsPage = lazyWithRetry(() =>
+  import('@/pages/MockExamResultsPage').then((m) => ({ default: m.MockExamResultsPage }))
+);
 
 // Statistics page (loads recharts chunk)
 const Statistics = lazyWithRetry(() => import('@/pages/Statistics'));
@@ -210,6 +213,8 @@ function AppContent() {
                 </Route>
                 {/* Mock exam session page outside AppLayout for full-screen experience */}
                 <Route path="/practice/culture-exam/session" element={<MockExamSessionPage />} />
+                {/* Mock exam results page outside AppLayout for full-screen experience */}
+                <Route path="/practice/culture-exam/results" element={<MockExamResultsPage />} />
               </Route>
 
               {/* Admin Routes - require admin role */}

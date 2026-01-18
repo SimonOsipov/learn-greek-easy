@@ -47,6 +47,7 @@ function createQuestionState(question: MockExamQuestion): MockExamQuestionState 
   return {
     question,
     selectedOption: null,
+    correctOption: null,
     isCorrect: null,
     xpEarned: 0,
     timeTaken: null,
@@ -306,6 +307,7 @@ export const useMockExamSessionStore = create<MockExamSessionState>()(
           updatedQuestions[session.currentIndex] = {
             ...currentQuestion,
             selectedOption,
+            correctOption: response.correct_option,
             isCorrect: response.is_correct,
             xpEarned: response.xp_earned,
             timeTaken: timeTakenSeconds,

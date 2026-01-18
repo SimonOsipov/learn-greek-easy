@@ -65,6 +65,12 @@
     "xpEarned": "Заработано XP",
     "viewAnswers": "Посмотреть ответы",
     "tryAgain": "Попробовать снова",
-    "backToHome": "Вернуться к экзамену по культуре"
+    "backToHome": "Вернуться к экзамену по культуре",
+    "timeExpired": "Время истекло",
+    "incorrectAnswers": "Просмотр неправильных ответов",
+    "yourAnswer": "Ваш ответ",
+    "correctAnswer": "Правильный ответ",
+    "questionNumber": "Вопрос {{number}}",
+    "perfectScore": "Отлично! Нет неправильных ответов."
   }
 }
