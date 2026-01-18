@@ -43,6 +43,7 @@ import log from '@/lib/logger';
 import { MAX_ANSWER_TIME_SECONDS } from '@/lib/timeFormatUtils';
 import { cultureDeckAPI, type LocalizedText } from '@/services/cultureDeckAPI';
 import { useCultureSessionStore } from '@/stores/cultureSessionStore';
+import { useXPStore } from '@/stores/xpStore';
 import type {
   CultureQuestionResponse,
   CultureAnswerResponse,
@@ -105,6 +106,9 @@ export function CulturePracticePage() {
     dismissRecovery,
     setLanguage,
   } = useCultureSessionStore();
+
+  // XP store - for refreshing XP after answer submission
+  const loadXPStats = useXPStore((state) => state.loadXPStats);
 
   // Local state
   const [showExitConfirm, setShowExitConfirm] = useState(false);
@@ -281,6 +285,9 @@ export function CulturePracticePage() {
         setLastAnswerResponse(answerResponse);
         answerQuestion(selectedOption, answerResponse);
 
+        // Refresh XP stats to update XPCard immediately
+        loadXPStats(true);
+
         // Track answer event (keep milliseconds for analytics)
         try {
           track('culture_question_answered', {
@@ -304,7 +311,7 @@ export function CulturePracticePage() {
         setIsSubmitting(false);
       }
     },
-    [session, currentQuestion, isSubmitting, answerQuestion, track]
+    [session, currentQuestion, isSubmitting, answerQuestion, loadXPStats, track]
   );
 
   /**
