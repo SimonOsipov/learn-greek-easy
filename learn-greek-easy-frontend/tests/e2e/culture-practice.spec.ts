@@ -61,7 +61,7 @@ async function navigateToCulturePractice(page: Page): Promise<string> {
   await practiceButton.click();
 
   // Wait for practice page to load
-  await expect(page).toHaveURL(/\/practice/, { timeout: 10000 });
+  await expect(page).toHaveURL(/\/culture\/[^/]+\/practice/, { timeout: 10000 });
 
   return deckId;
 }
@@ -92,7 +92,7 @@ test.describe('Culture Practice Session', () => {
     await navigateToCulturePractice(page);
 
     // Should be on practice page
-    await expect(page).toHaveURL(/\/practice/);
+    await expect(page).toHaveURL(/\/culture\/[^/]+\/practice/);
 
     // Page should have loaded (either practice content or loading state)
     const body = page.locator('body');
@@ -492,6 +492,6 @@ test.describe('Culture Practice Session - Full Flow', () => {
     await practiceButton.click();
 
     // Should be on practice page
-    await expect(page).toHaveURL(/\/practice/, { timeout: 10000 });
+    await expect(page).toHaveURL(/\/culture\/[^/]+\/practice/, { timeout: 10000 });
   });
 });
