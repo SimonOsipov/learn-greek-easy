@@ -70,27 +70,6 @@ function getWarningLevel(remainingSeconds: number): MockExamTimerWarningLevel {
 }
 
 /**
- * Calculate updated stats after answering a question
- */
-function calculateUpdatedStats(
-  currentStats: MockExamSessionStats,
-  isCorrect: boolean,
-  xpEarned: number
-): MockExamSessionStats {
-  const questionsAnswered = currentStats.questionsAnswered + 1;
-  const correctCount = currentStats.correctCount + (isCorrect ? 1 : 0);
-  const accuracy = questionsAnswered > 0 ? Math.round((correctCount / questionsAnswered) * 100) : 0;
-  const totalXpEarned = currentStats.xpEarned + xpEarned;
-
-  return {
-    questionsAnswered,
-    correctCount,
-    accuracy,
-    xpEarned: totalXpEarned,
-  };
-}
-
-/**
  * Save session to sessionStorage for crash recovery
  */
 function saveToSessionStorage(session: MockExamSessionData): void {
@@ -261,6 +240,8 @@ export const useMockExamSessionStore = create<MockExamSessionState>()(
 
       /**
        * Submit answer for current question
+       * Uses optimistic update: local state is updated IMMEDIATELY before API call.
+       * API call runs in background to sync with server.
        */
       answerQuestion: async (selectedOption: number) => {
         const { session } = get();
@@ -275,6 +256,12 @@ export const useMockExamSessionStore = create<MockExamSessionState>()(
           return;
         }
 
+        // Skip if already answered (optimistic duplicate prevention)
+        if (currentQuestion.selectedOption !== null) {
+          log.warn('Question already answered locally, skipping');
+          return;
+        }
+
         // Calculate time taken
         const startedAt = currentQuestion.startedAt
           ? new Date(currentQuestion.startedAt)
@@ -282,10 +269,42 @@ export const useMockExamSessionStore = create<MockExamSessionState>()(
         const answeredAt = new Date();
         const timeTakenSeconds = Math.round((answeredAt.getTime() - startedAt.getTime()) / 1000);
 
-        set({ isLoading: true });
+        // OPTIMISTIC UPDATE: Update local state IMMEDIATELY (before API call)
+        const updatedQuestions = [...session.questions];
+        updatedQuestions[session.currentIndex] = {
+          ...currentQuestion,
+          selectedOption,
+          // These will be updated when API responds, but we set placeholder values
+          correctOption: null,
+          isCorrect: null,
+          xpEarned: 0,
+          timeTaken: timeTakenSeconds,
+          answeredAt: answeredAt.toISOString(),
+        };
 
+        // Optimistically increment questionsAnswered
+        const optimisticStats: MockExamSessionStats = {
+          ...session.stats,
+          questionsAnswered: session.stats.questionsAnswered + 1,
+        };
+
+        const optimisticSession: MockExamSessionData = {
+          ...session,
+          questions: updatedQuestions,
+          stats: optimisticStats,
+        };
+
+        // Update state immediately (optimistic)
+        set({
+          session: optimisticSession,
+          currentQuestion: updatedQuestions[session.currentIndex],
+        });
+
+        // Save optimistic state to sessionStorage
+        saveToSessionStorage(optimisticSession);
+
+        // Now make API call in background (don't await - fire and forget with error handling)
         try {
-          // Submit to backend
           const response: MockExamAnswerResponse = await mockExamAPI.submitAnswer(
             session.backendSession.id,
             {
@@ -295,53 +314,59 @@ export const useMockExamSessionStore = create<MockExamSessionState>()(
             }
           );
 
-          // Skip if this was a duplicate answer
+          // Skip if this was a duplicate answer on backend
           if (response.duplicate) {
-            log.warn('Duplicate answer submitted, skipping update');
-            set({ isLoading: false });
+            log.warn('Duplicate answer on backend, local state already updated');
             return;
           }
 
-          // Update question state
-          const updatedQuestions = [...session.questions];
-          updatedQuestions[session.currentIndex] = {
-            ...currentQuestion,
-            selectedOption,
-            correctOption: response.correct_option,
-            isCorrect: response.is_correct,
-            xpEarned: response.xp_earned,
-            timeTaken: timeTakenSeconds,
-            answeredAt: answeredAt.toISOString(),
-          };
+          // Update with actual response data from backend
+          const currentState = get();
+          if (!currentState.session) return;
 
-          // Update stats
-          const updatedStats = calculateUpdatedStats(
-            session.stats,
-            response.is_correct ?? false,
-            response.xp_earned
+          const finalQuestions = [...currentState.session.questions];
+          const questionIndex = finalQuestions.findIndex(
+            (q) => q.question.id === currentQuestion.question.id
           );
 
-          // Update session
-          const updatedSession: MockExamSessionData = {
-            ...session,
-            questions: updatedQuestions,
-            stats: updatedStats,
-          };
+          if (questionIndex !== -1) {
+            finalQuestions[questionIndex] = {
+              ...finalQuestions[questionIndex],
+              correctOption: response.correct_option,
+              isCorrect: response.is_correct,
+              xpEarned: response.xp_earned,
+            };
 
-          set({
-            session: updatedSession,
-            currentQuestion: updatedQuestions[session.currentIndex],
-            isLoading: false,
-          });
+            // Update stats with actual correctness
+            const isCorrect = response.is_correct ?? false;
+            const finalStats: MockExamSessionStats = {
+              ...currentState.session.stats,
+              correctCount: currentState.session.stats.correctCount + (isCorrect ? 1 : 0),
+              accuracy:
+                currentState.session.stats.questionsAnswered > 0
+                  ? Math.round(
+                      ((currentState.session.stats.correctCount + (isCorrect ? 1 : 0)) /
+                        currentState.session.stats.questionsAnswered) *
+                        100
+                    )
+                  : 0,
+              xpEarned: currentState.session.stats.xpEarned + response.xp_earned,
+            };
 
-          // Save to sessionStorage
-          saveToSessionStorage(updatedSession);
+            const finalSession: MockExamSessionData = {
+              ...currentState.session,
+              questions: finalQuestions,
+              stats: finalStats,
+            };
+
+            set({ session: finalSession });
+            saveToSessionStorage(finalSession);
+          }
         } catch (error) {
-          log.error('Failed to submit answer:', error);
-          set({
-            isLoading: false,
-            error: error instanceof Error ? error.message : 'Failed to submit answer',
-          });
+          // Log error but don't disrupt user - local state is already saved
+          log.error('Failed to sync answer with backend:', error);
+          // Don't set error state - user can continue with optimistic local state
+          // The answer is saved locally and will be in sessionStorage for recovery
         }
       },
 

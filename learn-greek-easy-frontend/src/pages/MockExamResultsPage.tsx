@@ -203,18 +203,9 @@ export function MockExamResultsPage() {
               </div>
             </div>
 
-            {/* Score Display */}
-            <div className="mt-6 flex flex-wrap items-center gap-4 md:gap-6">
-              <div className="rounded-lg bg-white/20 px-4 py-3">
-                <p className="text-sm text-white/80">{t('results.score', 'Your Score')}</p>
-                <p className="text-3xl font-bold">
-                  {summary.score}/{summary.totalQuestions}
-                </p>
-                <p className="text-lg font-semibold">{summary.percentage}%</p>
-              </div>
-
-              {/* XP Earned Badge */}
-              <div className="flex items-center gap-2 rounded-lg bg-white/20 px-4 py-3">
+            {/* XP Earned Badge */}
+            <div className="mt-6">
+              <div className="inline-flex items-center gap-2 rounded-lg bg-white/20 px-4 py-3">
                 <Star className="h-6 w-6 text-amber-300" fill="currentColor" />
                 <span className="text-xl font-semibold">
                   +{summary.xpEarned} XP {t('common:earned', 'earned')}

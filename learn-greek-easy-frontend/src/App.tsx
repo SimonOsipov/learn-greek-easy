@@ -207,6 +207,11 @@ function AppContent() {
                 {/* Culture practice pages outside AppLayout for full-screen immersive experience */}
                 <Route path="/culture/:deckId/practice" element={<CulturePracticePage />} />
                 <Route path="/culture/:deckId/summary" element={<CultureSessionSummaryPage />} />
+                {/* Redirect /practice/ to /practice/culture-exam */}
+                <Route
+                  path="/practice"
+                  element={<Navigate to="/practice/culture-exam" replace />}
+                />
                 {/* Mock exam landing page inside AppLayout */}
                 <Route path="/practice/culture-exam" element={<AppLayout />}>
                   <Route index element={<MockExamPage />} />

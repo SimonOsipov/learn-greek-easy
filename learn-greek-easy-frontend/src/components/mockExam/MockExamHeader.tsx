@@ -5,7 +5,6 @@
  * - Exit button (left)
  * - Timer with color-coded warnings (center)
  * - Progress "Question X of Y" (right)
- * - Score "X / Y correct" (right)
  */
 
 import React from 'react';
@@ -28,10 +27,6 @@ export interface MockExamHeaderProps {
   currentQuestion: number;
   /** Total questions in exam */
   totalQuestions: number;
-  /** Number of correct answers so far */
-  correctCount: number;
-  /** Total questions answered so far */
-  answeredCount: number;
 }
 
 /**
@@ -49,8 +44,6 @@ export const MockExamHeader: React.FC<MockExamHeaderProps> = ({
   warningLevel,
   currentQuestion,
   totalQuestions,
-  correctCount,
-  answeredCount,
 }) => {
   const { t } = useTranslation('mockExam');
 
@@ -120,12 +113,6 @@ export const MockExamHeader: React.FC<MockExamHeaderProps> = ({
           {/* Mobile-friendly short progress */}
           <div className="text-muted-foreground sm:hidden" data-testid="mock-exam-progress-short">
             {currentQuestion}/{totalQuestions}
-          </div>
-
-          {/* Score */}
-          <div className="font-medium text-foreground" data-testid="mock-exam-score">
-            <span className="text-success">{correctCount}</span>
-            <span className="text-muted-foreground">/{answeredCount}</span>
           </div>
         </div>
       </div>

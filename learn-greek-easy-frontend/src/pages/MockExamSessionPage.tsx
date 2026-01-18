@@ -22,7 +22,7 @@ import { AlertCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 
-import { MCQComponent, QuestionFeedback, LanguageSelector } from '@/components/culture';
+import { MCQComponent, LanguageSelector } from '@/components/culture';
 import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog';
 import { MockExamHeader, TimerWarningBanner } from '@/components/mockExam';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -51,10 +51,6 @@ import {
 import log from '@/lib/logger';
 import { useMockExamSessionStore } from '@/stores/mockExamSessionStore';
 import type { CultureQuestionResponse } from '@/types/culture';
-import type { MockExamAnswerResponse } from '@/types/mockExam';
-
-/** Option letter mapping for feedback display */
-const OPTION_LETTERS = ['A', 'B', 'C', 'D'] as const;
 
 /**
  * Loading skeleton for session page
@@ -126,7 +122,6 @@ export const MockExamSessionPage: React.FC = () => {
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [showRecoveryDialog, setShowRecoveryDialog] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [lastAnswerResponse, setLastAnswerResponse] = useState<MockExamAnswerResponse | null>(null);
   const [hasShown5MinWarning, setHasShown5MinWarning] = useState(false);
   const [hasShown1MinWarning, setHasShown1MinWarning] = useState(false);
 
@@ -179,15 +174,11 @@ export const MockExamSessionPage: React.FC = () => {
     },
   });
 
-  // Calculate derived state
-  const isInFeedback = lastAnswerResponse !== null && currentQuestion?.answeredAt !== null;
-  const isLastQuestion = progress.current >= progress.total;
-
   // Keyboard shortcuts
   useMockExamKeyboardShortcuts({
     onEscape: () => setShowExitConfirm(true),
-    onNextQuestion: handleNextQuestion,
-    isInFeedback,
+    onNextQuestion: () => {},
+    isInFeedback: false,
     disabled: showExitConfirm || showRecoveryDialog || isLoading || isSubmitting,
   });
 
@@ -243,61 +234,56 @@ export const MockExamSessionPage: React.FC = () => {
 
   /**
    * Handle answer submission
+   * Uses optimistic UI update - immediately advances to next question without waiting for backend.
+   * The API call runs in the background to sync with server.
    */
   const handleAnswer = useCallback(
-    async (selectedOption: number) => {
+    (selectedOption: number) => {
       if (!session || !currentQuestion || isSubmitting) return;
 
       setIsSubmitting(true);
 
-      try {
-        await answerQuestion(selectedOption);
+      // Track answer event immediately (with optimistic is_correct based on local data)
+      // Note: We don't know if correct yet, but we track the selection
+      trackMockExamQuestionAnswered({
+        session_id: session.backendSession.id,
+        question_id: currentQuestion.question.id,
+        question_number: progress.current,
+        selected_option: selectedOption,
+        is_correct: false, // Will be updated by backend, but we don't wait
+        timer_remaining_seconds: remainingSeconds,
+      });
 
-        // Get the response from the updated store state
-        const updatedQuestion = useMockExamSessionStore.getState().currentQuestion;
-        if (updatedQuestion) {
-          setLastAnswerResponse({
-            is_correct: updatedQuestion.isCorrect,
-            correct_option: selectedOption, // Will be overwritten if backend returns different
-            xp_earned: updatedQuestion.xpEarned,
-            current_score: useMockExamSessionStore.getState().session?.stats.correctCount ?? 0,
-            answers_count: useMockExamSessionStore.getState().session?.stats.questionsAnswered ?? 0,
-            duplicate: false,
-          });
-        }
-
-        // Track answer event
-        trackMockExamQuestionAnswered({
-          session_id: session.backendSession.id,
-          question_id: currentQuestion.question.id,
-          question_number: progress.current,
-          selected_option: selectedOption,
-          is_correct: updatedQuestion?.isCorrect ?? false,
-          timer_remaining_seconds: remainingSeconds,
-        });
-      } catch (err) {
-        log.error('Failed to submit answer:', err);
+      // Fire the API call but don't wait for it (optimistic update)
+      answerQuestion(selectedOption).catch((err) => {
+        log.error('Failed to submit answer in background:', err);
+        // Show error toast but don't block the user - they can continue
         toast({
           title: t('common:error', { defaultValue: 'Error' }),
-          description: t('session.answerError', {
-            defaultValue: 'Failed to submit answer. Please try again.',
+          description: t('session.answerSyncError', {
+            defaultValue: 'Answer saved locally but may not sync. Continue with the exam.',
           }),
           variant: 'destructive',
         });
-      } finally {
-        setIsSubmitting(false);
-      }
-    },
-    [session, currentQuestion, isSubmitting, answerQuestion, remainingSeconds, progress, t]
-  );
+      });
 
-  /**
-   * Handle next question button
-   */
-  function handleNextQuestion() {
-    setLastAnswerResponse(null);
-    nextQuestion();
-  }
+      // Immediately advance to next question (optimistic update)
+      nextQuestion();
+
+      // Reset submitting state right after firing (not waiting for response)
+      setIsSubmitting(false);
+    },
+    [
+      session,
+      currentQuestion,
+      isSubmitting,
+      answerQuestion,
+      nextQuestion,
+      remainingSeconds,
+      progress,
+      t,
+    ]
+  );
 
   /**
    * Handle exit button click
@@ -450,8 +436,6 @@ export const MockExamSessionPage: React.FC = () => {
         warningLevel={warningLevel}
         currentQuestion={progress.current}
         totalQuestions={progress.total}
-        correctCount={session.stats.correctCount}
-        answeredCount={session.stats.questionsAnswered}
       />
 
       {/* Main Content */}
@@ -467,33 +451,16 @@ export const MockExamSessionPage: React.FC = () => {
             <Progress value={progressPercent} className="h-2 bg-secondary" />
           </div>
 
-          {/* Question or Feedback */}
+          {/* Question */}
           <div className="flex justify-center">
-            {isInFeedback && lastAnswerResponse ? (
-              <QuestionFeedback
-                isCorrect={lastAnswerResponse.is_correct ?? false}
-                correctOption={{
-                  label: OPTION_LETTERS[(lastAnswerResponse.correct_option ?? 1) - 1],
-                  text: currentQuestion.question.options[
-                    (lastAnswerResponse.correct_option ?? 1) - 1
-                  ],
-                }}
-                xpEarned={lastAnswerResponse.xp_earned}
-                language={questionLanguage}
-                onNextQuestion={handleNextQuestion}
-                isLastQuestion={isLastQuestion}
-                className="w-full max-w-2xl"
-              />
-            ) : (
-              <MCQComponent
-                question={mcqQuestion}
-                language={questionLanguage}
-                onAnswer={handleAnswer}
-                questionNumber={progress.current}
-                totalQuestions={progress.total}
-                disabled={isSubmitting}
-              />
-            )}
+            <MCQComponent
+              question={mcqQuestion}
+              language={questionLanguage}
+              onAnswer={handleAnswer}
+              questionNumber={progress.current}
+              totalQuestions={progress.total}
+              disabled={isSubmitting}
+            />
           </div>
         </div>
       </div>

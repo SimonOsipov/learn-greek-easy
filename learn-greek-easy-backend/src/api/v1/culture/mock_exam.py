@@ -384,7 +384,7 @@ async def submit_mock_exam_answer(
 
     **Authentication**: Required
 
-    **Pass Threshold**: 80% (20/25 correct answers)
+    **Pass Threshold**: 60% (16/25 correct answers)
 
     **Response includes**:
     - Final session details
