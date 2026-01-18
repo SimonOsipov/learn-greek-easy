@@ -1,6 +1,14 @@
 import React, { useState, useEffect } from 'react';
 
-import { Home, Layers, BarChart3, User, MessageSquare, ChevronUp } from 'lucide-react';
+import {
+  Home,
+  Layers,
+  BarChart3,
+  User,
+  MessageSquare,
+  ChevronUp,
+  GraduationCap,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation } from 'react-router-dom';
 
@@ -38,6 +46,14 @@ const navItems: NavItem[] = [
       { labelKey: 'nav.decksDropdown.allDecks', href: '/decks' },
       { labelKey: 'nav.decksDropdown.myDecks', href: '/my-decks' },
     ],
+  },
+  {
+    id: 'practice',
+    labelKey: 'nav.practice',
+    icon: GraduationCap,
+    href: '/practice',
+    additionalActivePaths: ['/practice/culture-exam'],
+    children: [{ labelKey: 'nav.practiceDropdown.cultureExam', href: '/practice/culture-exam' }],
   },
   {
     id: 'stats',

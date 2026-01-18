@@ -92,6 +92,11 @@ const CultureSessionSummaryPage = lazyWithRetry(() =>
   }))
 );
 
+// Mock exam pages
+const MockExamPage = lazyWithRetry(() =>
+  import('@/pages/MockExamPage').then((m) => ({ default: m.MockExamPage }))
+);
+
 // Statistics page (loads recharts chunk)
 const Statistics = lazyWithRetry(() => import('@/pages/Statistics'));
 
@@ -196,6 +201,10 @@ function AppContent() {
                 {/* Culture practice pages outside AppLayout for full-screen immersive experience */}
                 <Route path="/culture/:deckId/practice" element={<CulturePracticePage />} />
                 <Route path="/culture/:deckId/summary" element={<CultureSessionSummaryPage />} />
+                {/* Mock exam landing page inside AppLayout */}
+                <Route path="/practice/culture-exam" element={<AppLayout />}>
+                  <Route index element={<MockExamPage />} />
+                </Route>
               </Route>
 
               {/* Admin Routes - require admin role */}

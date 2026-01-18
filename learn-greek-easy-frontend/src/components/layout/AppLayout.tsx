@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 
-import { Home, Layers, BarChart3, User } from 'lucide-react';
+import { Home, Layers, BarChart3, User, GraduationCap } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Outlet, useLocation, Link } from 'react-router-dom';
 
@@ -26,6 +26,11 @@ export const AppLayout: React.FC = () => {
     { path: '/', labelKey: 'nav.dashboard', icon: Home },
     { path: '/decks', labelKey: 'nav.decksDropdown.allDecks', icon: Layers },
     { path: '/my-decks', labelKey: 'nav.decksDropdown.myDecks', icon: Layers },
+    {
+      path: '/practice/culture-exam',
+      labelKey: 'nav.practiceDropdown.cultureExam',
+      icon: GraduationCap,
+    },
     { path: '/statistics', labelKey: 'nav.statistics', icon: BarChart3 },
     { path: '/profile', labelKey: 'nav.profile', icon: User },
   ];

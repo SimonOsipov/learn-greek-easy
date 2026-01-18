@@ -103,6 +103,10 @@
     "decksDropdown": {
       "allDecks": "Все Колоды",
       "myDecks": "Мои Колоды"
+    },
+    "practice": "Практика",
+    "practiceDropdown": {
+      "cultureExam": "Экзамен по культуре"
     }
   },
   "language": {

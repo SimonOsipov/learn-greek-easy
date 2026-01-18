@@ -103,6 +103,10 @@
     "decksDropdown": {
       "allDecks": "All Decks",
       "myDecks": "My Decks"
+    },
+    "practice": "Practice",
+    "practiceDropdown": {
+      "cultureExam": "Culture Exam"
     }
   },
   "language": {

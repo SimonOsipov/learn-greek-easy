@@ -1,0 +1,57 @@
+{
+  "page": {
+    "title": "Culture Exam Preparation",
+    "subtitle": "Practice for the Greek citizenship culture exam with timed mock tests. Each exam contains 25 questions with a 45-minute time limit. You need 80% (20/25) to pass."
+  },
+  "stats": {
+    "totalExams": "Total Exams",
+    "passRate": "Pass Rate",
+    "averageScore": "Average Score",
+    "bestScore": "Best Score",
+    "notAvailable": "N/A"
+  },
+  "history": {
+    "title": "Recent Exam History",
+    "empty": "You haven't taken any exams yet. Start your first mock exam to begin tracking your progress!",
+    "passed": "Passed",
+    "failed": "Failed",
+    "score": "{{score}}/{{total}}",
+    "percentage": "{{percentage}}%",
+    "timeTaken": "{{minutes}}m {{seconds}}s"
+  },
+  "actions": {
+    "startExam": "Start Mock Exam",
+    "continueExam": "Continue Exam",
+    "startFirst": "Start Your First Exam"
+  },
+  "states": {
+    "loading": "Loading exam data...",
+    "error": "Failed to load exam data",
+    "retry": "Try Again",
+    "notEnoughQuestions": "Not enough questions available to start an exam. At least 25 questions are required.",
+    "examInProgress": "You have an exam in progress. Would you like to continue where you left off?"
+  },
+  "session": {
+    "question": "Question {{current}} of {{total}}",
+    "timeRemaining": "Time Remaining",
+    "submit": "Submit Answer",
+    "next": "Next Question",
+    "finish": "Finish Exam",
+    "abandon": "Abandon Exam",
+    "abandonConfirm": "Are you sure you want to abandon this exam? Your progress will be lost.",
+    "abandonYes": "Yes, Abandon",
+    "abandonNo": "No, Continue"
+  },
+  "results": {
+    "title": "Exam Complete",
+    "passed": "Congratulations! You passed!",
+    "failed": "You didn't pass this time",
+    "score": "Your Score",
+    "passingScore": "Passing Score: {{threshold}}%",
+    "timeTaken": "Time Taken",
+    "xpEarned": "XP Earned",
+    "viewAnswers": "View Answers",
+    "tryAgain": "Try Again",
+    "backToHome": "Back to Culture Exam"
+  }
+}
