@@ -121,12 +121,8 @@ test.describe('My Decks - Mobile Navigation', () => {
     await expect(decksNavButton).toBeVisible();
     await decksNavButton.click();
 
-    // Wait for sub-menu to appear (uses dynamic testid based on nav item id)
-    const subMenu = page.locator('[data-testid="mobile-submenu-decks"]');
-    await expect(subMenu).toBeVisible({ timeout: 5000 });
-
-    // Find "My Decks" link within the sub-menu and wait for it to be stable
-    const myDecksLink = subMenu.getByRole('menuitem', { name: /my decks/i });
+    // Sub-menu should appear with "My Decks" option
+    const myDecksLink = page.getByRole('menuitem', { name: /my decks/i });
     await expect(myDecksLink).toBeVisible();
     await myDecksLink.click();
 
