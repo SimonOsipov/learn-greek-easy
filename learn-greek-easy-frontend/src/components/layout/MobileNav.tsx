@@ -105,7 +105,7 @@ export const MobileNav: React.FC<MobileNavProps> = ({ className }) => {
       {/* Sub-menu popover */}
       {openSubMenu && (
         <div
-          className="fixed bottom-16 left-0 right-0 z-50 border-t border-border bg-background shadow-lg lg:hidden"
+          className="fixed bottom-16 left-0 right-0 z-[60] border-t border-border bg-background shadow-lg lg:hidden"
           role="menu"
           aria-label={t('nav.decks')}
           data-testid={`mobile-submenu-${openSubMenu}`}
