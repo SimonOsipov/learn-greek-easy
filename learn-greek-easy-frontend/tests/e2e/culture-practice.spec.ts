@@ -56,7 +56,7 @@ async function navigateToCulturePractice(page: Page): Promise<string> {
   const deckId = deckIdMatch ? deckIdMatch[1] : '';
 
   // Click practice button to start practice session
-  const practiceButton = page.getByRole('button', { name: /practice|start/i }).first();
+  const practiceButton = page.getByTestId('start-practice-button');
   await expect(practiceButton).toBeVisible({ timeout: 5000 });
   await practiceButton.click();
 
@@ -487,7 +487,7 @@ test.describe('Culture Practice Session - Full Flow', () => {
     await expect(page.getByTestId('deck-detail')).toBeVisible({ timeout: 10000 });
 
     // Look for practice button
-    const practiceButton = page.getByRole('button', { name: /practice|start/i }).first();
+    const practiceButton = page.getByTestId('start-practice-button');
     await expect(practiceButton).toBeVisible({ timeout: 5000 });
     await practiceButton.click();
 
