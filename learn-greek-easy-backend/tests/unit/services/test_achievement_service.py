@@ -5,8 +5,6 @@ Tests cover:
 - Unlock already unlocked is idempotent
 - Achievement awards XP
 - Progress calculation
-- Get unnotified achievements
-- Mark achievements notified
 """
 
 from datetime import datetime, timezone
@@ -37,7 +35,6 @@ def mock_user_achievement():
     ua.user_id = uuid4()
     ua.achievement_id = "streak_first_flame"
     ua.unlocked_at = datetime.now(timezone.utc)
-    ua.notified = False
     return ua
 
 
@@ -274,110 +271,6 @@ class TestProgressCalculation:
 
         progress = min((current / threshold) * 100, 100.0)
         assert progress == expected_progress
-
-
-@pytest.mark.unit
-class TestGetUnnotifiedAchievements:
-    """Tests for unnotified achievements retrieval."""
-
-    @pytest.mark.asyncio
-    async def test_get_unnotified_achievements(self, mock_db_session, mock_user_achievement):
-        """Should return achievements not yet notified."""
-        service = AchievementService(mock_db_session)
-
-        # Mock: one unnotified achievement
-        mock_user_achievement.notified = False
-        mock_result = MagicMock()
-        mock_result.scalars.return_value.all.return_value = [mock_user_achievement]
-        mock_db_session.execute.return_value = mock_result
-
-        user_id = uuid4()
-        unnotified = await service.get_unnotified_achievements(user_id)
-
-        assert len(unnotified) == 1
-        assert unnotified[0]["id"] == "streak_first_flame"
-
-    @pytest.mark.asyncio
-    async def test_get_unnotified_achievements_empty_when_all_notified(self, mock_db_session):
-        """Should return empty list when all achievements notified."""
-        service = AchievementService(mock_db_session)
-
-        # Mock: no unnotified achievements
-        mock_result = MagicMock()
-        mock_result.scalars.return_value.all.return_value = []
-        mock_db_session.execute.return_value = mock_result
-
-        user_id = uuid4()
-        unnotified = await service.get_unnotified_achievements(user_id)
-
-        assert len(unnotified) == 0
-
-
-@pytest.mark.unit
-class TestMarkNotified:
-    """Tests for marking achievements as notified."""
-
-    @pytest.mark.asyncio
-    async def test_mark_achievements_notified(self, mock_db_session, mock_user_achievement):
-        """Should mark achievements as notified."""
-        service = AchievementService(mock_db_session)
-
-        # Mock: achievement exists
-        mock_user_achievement.notified = False
-        mock_result = MagicMock()
-        mock_result.scalar_one_or_none.return_value = mock_user_achievement
-        mock_db_session.execute.return_value = mock_result
-
-        user_id = uuid4()
-        await service.mark_achievements_notified(user_id, ["streak_first_flame"])
-
-        # Should have set notified to True
-        assert mock_user_achievement.notified is True
-
-    @pytest.mark.asyncio
-    async def test_mark_multiple_achievements_notified(
-        self, mock_db_session, mock_user_achievement
-    ):
-        """Should mark multiple achievements as notified."""
-        service = AchievementService(mock_db_session)
-
-        # Create two mock achievements
-        mock_ua1 = MagicMock(spec=UserAchievement)
-        mock_ua1.notified = False
-        mock_ua2 = MagicMock(spec=UserAchievement)
-        mock_ua2.notified = False
-
-        # Create separate mock results for each call
-        mock_result1 = MagicMock()
-        mock_result1.scalar_one_or_none.return_value = mock_ua1
-        mock_result2 = MagicMock()
-        mock_result2.scalar_one_or_none.return_value = mock_ua2
-
-        # Return different mock for each execute call
-        mock_db_session.execute.side_effect = [mock_result1, mock_result2]
-
-        user_id = uuid4()
-        await service.mark_achievements_notified(
-            user_id, ["streak_first_flame", "streak_warming_up"]
-        )
-
-        # Both should be notified
-        assert mock_ua1.notified is True
-        assert mock_ua2.notified is True
-
-    @pytest.mark.asyncio
-    async def test_mark_notified_handles_missing_achievement(self, mock_db_session):
-        """Should handle marking non-existent achievement gracefully."""
-        service = AchievementService(mock_db_session)
-
-        # Mock: no achievement found
-        mock_result = MagicMock()
-        mock_result.scalar_one_or_none.return_value = None
-        mock_db_session.execute.return_value = mock_result
-
-        user_id = uuid4()
-        # Should not raise exception
-        await service.mark_achievements_notified(user_id, ["nonexistent"])
 
 
 @pytest.mark.unit
