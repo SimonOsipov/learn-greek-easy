@@ -128,6 +128,7 @@ export const MockExamSessionPage: React.FC = () => {
   // Refs for tracking
   const hasTrackedStart = useRef(false);
   const hasInitialized = useRef(false);
+  const isSubmittingRef = useRef(false);
 
   // Timer hook with warning callbacks
   const { formattedTime, warningLevel, remainingSeconds } = useMockExamTimer({
@@ -239,8 +240,9 @@ export const MockExamSessionPage: React.FC = () => {
    */
   const handleAnswer = useCallback(
     (selectedOption: number) => {
-      if (!session || !currentQuestion || isSubmitting) return;
+      if (!session || !currentQuestion || isSubmittingRef.current) return;
 
+      isSubmittingRef.current = true;
       setIsSubmitting(true);
 
       // Track answer event immediately (with optimistic is_correct based on local data)
@@ -255,34 +257,27 @@ export const MockExamSessionPage: React.FC = () => {
       });
 
       // Fire the API call but don't wait for it (optimistic update)
-      answerQuestion(selectedOption).catch((err) => {
-        log.error('Failed to submit answer in background:', err);
-        // Show error toast but don't block the user - they can continue
-        toast({
-          title: t('common:error', { defaultValue: 'Error' }),
-          description: t('session.answerSyncError', {
-            defaultValue: 'Answer saved locally but may not sync. Continue with the exam.',
-          }),
-          variant: 'destructive',
+      answerQuestion(selectedOption)
+        .catch((err) => {
+          log.error('Failed to submit answer in background:', err);
+          // Show error toast but don't block the user - they can continue
+          toast({
+            title: t('common:error', { defaultValue: 'Error' }),
+            description: t('session.answerSyncError', {
+              defaultValue: 'Answer saved locally but may not sync. Continue with the exam.',
+            }),
+            variant: 'destructive',
+          });
+        })
+        .finally(() => {
+          isSubmittingRef.current = false;
+          setIsSubmitting(false);
         });
-      });
 
       // Immediately advance to next question (optimistic update)
       nextQuestion();
-
-      // Reset submitting state right after firing (not waiting for response)
-      setIsSubmitting(false);
     },
-    [
-      session,
-      currentQuestion,
-      isSubmitting,
-      answerQuestion,
-      nextQuestion,
-      remainingSeconds,
-      progress,
-      t,
-    ]
+    [session, currentQuestion, answerQuestion, nextQuestion, remainingSeconds, progress, t]
   );
 
   /**

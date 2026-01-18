@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 
 import { useTranslation } from 'react-i18next';
 
@@ -61,6 +61,11 @@ export const MCQComponent: React.FC<MCQComponentProps> = ({
 }) => {
   const { t } = useTranslation('culture');
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
+
+  // Reset selection when question changes
+  useEffect(() => {
+    setSelectedOption(null);
+  }, [question.id]);
 
   // Get localized question text
   const questionText = getLocalizedText(question.question_text, language);
