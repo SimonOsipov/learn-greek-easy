@@ -259,6 +259,8 @@ export const MockExamSessionPage: React.FC = () => {
       if (isLastQuestion) {
         // For the last question, wait for API response before completing
         // This ensures isCorrect is set before completeExam() builds the summary
+        // NOTE: We intentionally do NOT reset isSubmitting for the last question
+        // so the spinner stays visible until navigation to results
         answerQuestion(selectedOption)
           .then(() => {
             nextQuestion(); // This will trigger completeExam()
@@ -274,10 +276,6 @@ export const MockExamSessionPage: React.FC = () => {
             });
             // Still advance even on error - let completeExam handle it
             nextQuestion();
-          })
-          .finally(() => {
-            isSubmittingRef.current = false;
-            setIsSubmitting(false);
           });
       } else {
         // For non-last questions, use optimistic update (immediate advance)
@@ -473,9 +471,7 @@ export const MockExamSessionPage: React.FC = () => {
 
           {/* Question or Completing State */}
           <div className="flex justify-center">
-            {isLoading &&
-            progress.current === progress.total &&
-            currentQuestion?.selectedOption !== null ? (
+            {isLoading || (isSubmitting && progress.current === progress.total) ? (
               <div className="flex min-h-[400px] items-center justify-center">
                 <div className="text-center">
                   <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-primary"></div>
