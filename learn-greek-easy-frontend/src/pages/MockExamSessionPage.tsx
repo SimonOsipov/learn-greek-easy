@@ -201,10 +201,7 @@ export const MockExamSessionPage: React.FC = () => {
   // Navigate to results when session completes
   useEffect(() => {
     if (summary) {
-      const timer = setTimeout(() => {
-        navigate('/practice/culture-exam/results');
-      }, 500);
-      return () => clearTimeout(timer);
+      navigate('/practice/culture-exam/results');
     }
   }, [summary, navigate]);
 
@@ -474,15 +471,28 @@ export const MockExamSessionPage: React.FC = () => {
             <Progress value={progressPercent} className="h-2 bg-secondary" />
           </div>
 
-          {/* Question */}
+          {/* Question or Completing State */}
           <div className="flex justify-center">
-            <MCQComponent
-              question={mcqQuestion}
-              language={questionLanguage}
-              onAnswer={handleAnswer}
-              questionNumber={progress.current}
-              totalQuestions={progress.total}
-            />
+            {isLoading &&
+            progress.current === progress.total &&
+            currentQuestion?.selectedOption !== null ? (
+              <div className="flex min-h-[400px] items-center justify-center">
+                <div className="text-center">
+                  <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-primary"></div>
+                  <p className="text-muted-foreground">
+                    {t('session.completing', { defaultValue: 'Completing exam...' })}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <MCQComponent
+                question={mcqQuestion}
+                language={questionLanguage}
+                onAnswer={handleAnswer}
+                questionNumber={progress.current}
+                totalQuestions={progress.total}
+              />
+            )}
           </div>
         </div>
       </div>

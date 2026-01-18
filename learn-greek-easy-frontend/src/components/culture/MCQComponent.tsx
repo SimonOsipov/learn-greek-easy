@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useTranslation } from 'react-i18next';
 
@@ -61,10 +61,14 @@ export const MCQComponent: React.FC<MCQComponentProps> = ({
 }) => {
   const { t } = useTranslation('culture');
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
+  const prevQuestionIdRef = useRef<string | null>(null);
 
-  // Reset selection when question changes
+  // Reset selection when question ID actually changes (not just object reference)
   useEffect(() => {
-    setSelectedOption(null);
+    if (prevQuestionIdRef.current !== null && prevQuestionIdRef.current !== question.id) {
+      setSelectedOption(null);
+    }
+    prevQuestionIdRef.current = question.id;
   }, [question.id]);
 
   // Get localized question text

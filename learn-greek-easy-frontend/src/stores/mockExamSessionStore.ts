@@ -102,6 +102,9 @@ const submittedQuestionIds = new Set<string>();
 // Module-level Map to track pending answer API promises
 const pendingAnswerPromises = new Map<string, Promise<void>>();
 
+// Flag to prevent multiple completeExam calls
+let isCompletingExam = false;
+
 /**
  * Load recovery data from sessionStorage
  */
@@ -231,9 +234,10 @@ export const useMockExamSessionStore = create<MockExamSessionState>()(
           // Save to sessionStorage for recovery
           saveToSessionStorage(session);
 
-          // Clear any stale submitted IDs and pending promises from previous session
+          // Clear any stale submitted IDs, pending promises, and completion flag from previous session
           submittedQuestionIds.clear();
           pendingAnswerPromises.clear();
+          isCompletingExam = false;
 
           log.info(
             `Mock exam ${response.is_resumed ? 'resumed' : 'started'}:`,
@@ -488,9 +492,17 @@ export const useMockExamSessionStore = create<MockExamSessionState>()(
        * Complete the exam and get final results
        */
       completeExam: async (timerExpired = false) => {
+        // Prevent duplicate completion calls
+        if (isCompletingExam) {
+          log.warn('completeExam already in progress, skipping duplicate call');
+          return;
+        }
+        isCompletingExam = true;
+
         const { session } = get();
         if (!session) {
           log.warn('No session to complete');
+          isCompletingExam = false;
           return;
         }
 
@@ -505,6 +517,7 @@ export const useMockExamSessionStore = create<MockExamSessionState>()(
         const freshSession = freshState.session;
         if (!freshSession) {
           log.warn('Session lost while waiting for answers');
+          isCompletingExam = false;
           return;
         }
 
@@ -562,6 +575,8 @@ export const useMockExamSessionStore = create<MockExamSessionState>()(
             isLoading: false,
             error: error instanceof Error ? error.message : 'Failed to complete exam',
           });
+        } finally {
+          isCompletingExam = false;
         }
       },
 
@@ -768,9 +783,10 @@ export const useMockExamSessionStore = create<MockExamSessionState>()(
        * Reset session state completely
        */
       resetSession: () => {
-        // Clear atomic duplicate prevention set and pending promises
+        // Clear atomic duplicate prevention set, pending promises, and completion flag
         submittedQuestionIds.clear();
         pendingAnswerPromises.clear();
+        isCompletingExam = false;
 
         set({
           session: null,
