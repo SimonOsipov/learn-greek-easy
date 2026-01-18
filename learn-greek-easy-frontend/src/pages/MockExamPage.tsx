@@ -5,7 +5,7 @@
  * entry point to start or continue mock citizenship exams.
  */
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 
 import {
   GraduationCap,
@@ -27,6 +27,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
+import { trackMockExamPageViewed } from '@/lib/analytics';
 import log from '@/lib/logger';
 import { mockExamAPI } from '@/services/mockExamAPI';
 import { useMockExamSessionStore } from '@/stores/mockExamSessionStore';
@@ -251,6 +252,9 @@ export const MockExamPage: React.FC = () => {
   const hasRecoverableSession = useMockExamSessionStore((state) => state.hasRecoverableSession);
   const checkRecoverableSession = useMockExamSessionStore((state) => state.checkRecoverableSession);
 
+  // Ref to prevent duplicate tracking
+  const hasTrackedPageView = useRef(false);
+
   /**
    * Load statistics and queue info
    */
@@ -288,6 +292,18 @@ export const MockExamPage: React.FC = () => {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // Track page view after data loads
+  useEffect(() => {
+    if (!isLoading && !error && statistics && !hasTrackedPageView.current) {
+      hasTrackedPageView.current = true;
+      trackMockExamPageViewed({
+        has_previous_attempts: (statistics.stats?.total_exams ?? 0) > 0,
+        best_score: statistics.stats?.best_score ?? null,
+        total_attempts: statistics.stats?.total_exams ?? 0,
+      });
+    }
+  }, [isLoading, error, statistics]);
 
   /**
    * Handle start exam button click

@@ -54,3 +54,25 @@ export {
   trackThemePreferenceLoaded,
   trackThemeMigration,
 } from './themeAnalytics';
+export {
+  // Type interfaces
+  type MockExamPageViewedProperties,
+  type MockExamStartedProperties,
+  type MockExamQuestionAnsweredProperties,
+  type MockExamCompletedProperties,
+  type MockExamAbandonedProperties,
+  type MockExamTimerWarningProperties,
+  type MockExamResultsViewedProperties,
+  type MockExamIncorrectReviewExpandedProperties,
+  type MockExamRetryClickedProperties,
+  // Tracking functions
+  trackMockExamPageViewed,
+  trackMockExamStarted,
+  trackMockExamQuestionAnswered,
+  trackMockExamCompleted,
+  trackMockExamAbandoned,
+  trackMockExamTimerWarning,
+  trackMockExamResultsViewed,
+  trackMockExamIncorrectReviewExpanded,
+  trackMockExamRetryClicked,
+} from './mockExamAnalytics';

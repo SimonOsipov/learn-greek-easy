@@ -42,7 +42,12 @@ import { toast } from '@/hooks/use-toast';
 import { useMockExamKeyboardShortcuts } from '@/hooks/useMockExamKeyboardShortcuts';
 import { useMockExamTimer } from '@/hooks/useMockExamTimer';
 import { useQuestionLanguage } from '@/hooks/useQuestionLanguage';
-import { useTrackEvent } from '@/hooks/useTrackEvent';
+import {
+  trackMockExamStarted,
+  trackMockExamQuestionAnswered,
+  trackMockExamAbandoned,
+  trackMockExamTimerWarning,
+} from '@/lib/analytics';
 import log from '@/lib/logger';
 import { useMockExamSessionStore } from '@/stores/mockExamSessionStore';
 import type { CultureQuestionResponse } from '@/types/culture';
@@ -95,7 +100,6 @@ function SessionPageSkeleton() {
 export const MockExamSessionPage: React.FC = () => {
   const { t } = useTranslation(['mockExam', 'common', 'culture']);
   const navigate = useNavigate();
-  const { track } = useTrackEvent();
 
   // Store state
   const {
@@ -141,6 +145,14 @@ export const MockExamSessionPage: React.FC = () => {
             defaultValue: 'Make sure to submit your remaining answers.',
           }),
         });
+        // Track timer warning
+        if (session) {
+          trackMockExamTimerWarning({
+            session_id: session.backendSession.id,
+            warning_level: 'warning_5min',
+            questions_answered: session.stats.questionsAnswered,
+          });
+        }
       }
       if (level === 'warning_1min' && !hasShown1MinWarning) {
         setHasShown1MinWarning(true);
@@ -151,6 +163,14 @@ export const MockExamSessionPage: React.FC = () => {
           }),
           variant: 'destructive',
         });
+        // Track timer warning
+        if (session) {
+          trackMockExamTimerWarning({
+            session_id: session.backendSession.id,
+            warning_level: 'warning_1min',
+            questions_answered: session.stats.questionsAnswered,
+          });
+        }
       }
     },
     onExpired: () => {
@@ -200,17 +220,13 @@ export const MockExamSessionPage: React.FC = () => {
   useEffect(() => {
     if (session && session.status === 'active' && !hasTrackedStart.current) {
       hasTrackedStart.current = true;
-      try {
-        track('mock_exam_session_started' as never, {
-          session_id: session.backendSession.id,
-          question_count: session.questions.length,
-          is_resumed: session.isResumed,
-        });
-      } catch {
-        // Silent failure
-      }
+      trackMockExamStarted({
+        session_id: session.backendSession.id,
+        total_questions: session.questions.length,
+        is_resumed: session.isResumed,
+      });
     }
-  }, [session, track]);
+  }, [session]);
 
   // beforeunload handler for browser close protection
   useEffect(() => {
@@ -251,17 +267,14 @@ export const MockExamSessionPage: React.FC = () => {
         }
 
         // Track answer event
-        try {
-          track('mock_exam_question_answered' as never, {
-            session_id: session.backendSession.id,
-            question_id: currentQuestion.question.id,
-            selected_option: selectedOption,
-            is_correct: updatedQuestion?.isCorrect,
-            time_remaining: remainingSeconds,
-          });
-        } catch {
-          // Silent failure for analytics
-        }
+        trackMockExamQuestionAnswered({
+          session_id: session.backendSession.id,
+          question_id: currentQuestion.question.id,
+          question_number: progress.current,
+          selected_option: selectedOption,
+          is_correct: updatedQuestion?.isCorrect ?? false,
+          timer_remaining_seconds: remainingSeconds,
+        });
       } catch (err) {
         log.error('Failed to submit answer:', err);
         toast({
@@ -275,7 +288,7 @@ export const MockExamSessionPage: React.FC = () => {
         setIsSubmitting(false);
       }
     },
-    [session, currentQuestion, isSubmitting, answerQuestion, track, remainingSeconds, t]
+    [session, currentQuestion, isSubmitting, answerQuestion, remainingSeconds, progress, t]
   );
 
   /**
@@ -299,20 +312,16 @@ export const MockExamSessionPage: React.FC = () => {
   const handleConfirmExit = useCallback(async () => {
     // Track abandonment
     if (session) {
-      try {
-        track('mock_exam_session_abandoned' as never, {
-          session_id: session.backendSession.id,
-          questions_answered: session.stats.questionsAnswered,
-          time_remaining: remainingSeconds,
-        });
-      } catch {
-        // Silent failure
-      }
+      trackMockExamAbandoned({
+        session_id: session.backendSession.id,
+        questions_answered: session.stats.questionsAnswered,
+        timer_remaining_seconds: remainingSeconds,
+      });
     }
 
     await abandonExam();
     navigate('/practice/culture-exam');
-  }, [session, abandonExam, navigate, track, remainingSeconds]);
+  }, [session, abandonExam, navigate, remainingSeconds]);
 
   /**
    * Handle session recovery - resume

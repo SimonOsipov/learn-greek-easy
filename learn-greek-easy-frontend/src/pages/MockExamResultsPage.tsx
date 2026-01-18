@@ -40,8 +40,12 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useQuestionLanguage } from '@/hooks/useQuestionLanguage';
-import { useTrackEvent } from '@/hooks/useTrackEvent';
 import type { SupportedLanguage } from '@/i18n';
+import {
+  trackMockExamResultsViewed,
+  trackMockExamIncorrectReviewExpanded,
+  trackMockExamRetryClicked,
+} from '@/lib/analytics';
 import log from '@/lib/logger';
 import { cn } from '@/lib/utils';
 import { useMockExamSessionStore } from '@/stores/mockExamSessionStore';
@@ -95,7 +99,6 @@ function ResultsPageSkeleton() {
 export function MockExamResultsPage() {
   const { t } = useTranslation(['mockExam', 'common']);
   const navigate = useNavigate();
-  const { track } = useTrackEvent();
   const { questionLanguage, setQuestionLanguage } = useQuestionLanguage();
 
   const { summary, resetSession } = useMockExamSessionStore();
@@ -119,35 +122,27 @@ export function MockExamResultsPage() {
     if (summary && !hasTrackedView.current) {
       hasTrackedView.current = true;
 
-      try {
-        track('mock_exam_results_viewed' as Parameters<typeof track>[0], {
-          session_id: summary.sessionId,
-          passed: summary.passed,
-          score: summary.score,
-          total_questions: summary.totalQuestions,
-          percentage: summary.percentage,
-          timer_expired: summary.timerExpired,
-          xp_earned: summary.xpEarned,
-        });
-      } catch {
-        // Silent failure
-      }
+      trackMockExamResultsViewed({
+        session_id: summary.sessionId,
+        score: summary.score,
+        total_questions: summary.totalQuestions,
+        passed: summary.passed,
+        percentage: summary.percentage,
+        timer_expired: summary.timerExpired,
+        xp_earned: summary.xpEarned,
+      });
     }
-  }, [summary, track]);
+  }, [summary]);
 
   // Track accordion expand for incorrect answers review
   const handleAccordionChange = (value: string) => {
     setAccordionValue(value);
 
     if (value === 'incorrect-answers' && summary) {
-      try {
-        track('mock_exam_incorrect_review_expanded' as Parameters<typeof track>[0], {
-          session_id: summary.sessionId,
-          incorrect_count: incorrectQuestions.length,
-        });
-      } catch {
-        // Silent failure
-      }
+      trackMockExamIncorrectReviewExpanded({
+        session_id: summary.sessionId,
+        incorrect_count: incorrectQuestions.length,
+      });
     }
   };
 
@@ -168,15 +163,11 @@ export function MockExamResultsPage() {
   };
 
   const handleStartNewExam = () => {
-    try {
-      track('mock_exam_retry_clicked' as Parameters<typeof track>[0], {
-        session_id: summary.sessionId,
-        previous_passed: summary.passed,
-        previous_score: summary.score,
-      });
-    } catch {
-      // Silent failure
-    }
+    trackMockExamRetryClicked({
+      session_id: summary.sessionId,
+      previous_passed: summary.passed,
+      previous_score: summary.score,
+    });
 
     resetSession();
     navigate('/practice/culture-exam/session');
