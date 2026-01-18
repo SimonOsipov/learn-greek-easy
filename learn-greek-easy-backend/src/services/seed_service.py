@@ -2290,7 +2290,6 @@ class SeedService:
                     user_id=user_id,
                     achievement_id=ach_id,
                     unlocked_at=now,
-                    notified=True,  # Pre-notified for E2E tests
                 )
                 self.db.add(user_ach)
                 achievements_unlocked += 1
