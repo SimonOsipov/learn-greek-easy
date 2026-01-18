@@ -16,6 +16,7 @@ import { devtools } from 'zustand/middleware';
 import log from '@/lib/logger';
 import { mockExamAPI } from '@/services/mockExamAPI';
 import { useAuthStore } from '@/stores/authStore';
+import { useXPStore } from '@/stores/xpStore';
 import type { MockExamQuestion, MockExamAnswerResponse } from '@/types/mockExam';
 import type {
   MockExamSessionData,
@@ -361,6 +362,9 @@ export const useMockExamSessionStore = create<MockExamSessionState>()(
 
             set({ session: finalSession });
             saveToSessionStorage(finalSession);
+
+            // Refresh XP stats to update XPCard immediately
+            useXPStore.getState().loadXPStats(true);
           }
         } catch (error) {
           // Log error but don't disrupt user - local state is already saved
@@ -504,6 +508,9 @@ export const useMockExamSessionStore = create<MockExamSessionState>()(
 
           // Clear sessionStorage (no need to recover completed session)
           clearSessionStorage();
+
+          // Refresh XP stats after exam completion
+          useXPStore.getState().loadXPStats(true);
 
           log.info('Mock exam completed:', session.backendSession.id, {
             passed: response.passed,

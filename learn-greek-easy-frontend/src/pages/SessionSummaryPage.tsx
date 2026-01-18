@@ -11,6 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useTrackEvent } from '@/hooks/useTrackEvent';
 import log from '@/lib/logger';
 import { useReviewStore } from '@/stores/reviewStore';
+import { useXPStore } from '@/stores/xpStore';
 
 /**
  * SessionSummaryPage Component
@@ -44,6 +45,7 @@ export function SessionSummaryPage() {
   const navigate = useNavigate();
   const { sessionSummary, clearSessionSummary } = useReviewStore();
   const { track } = useTrackEvent();
+  const loadXPStats = useXPStore((state) => state.loadXPStats);
 
   // Ref to prevent duplicate event tracking
   const hasTrackedComplete = useRef(false);
@@ -101,6 +103,13 @@ export function SessionSummaryPage() {
       }
     }
   }, [sessionSummary, track]);
+
+  // Refresh XP stats when session summary is available
+  useEffect(() => {
+    if (sessionSummary) {
+      loadXPStats(true);
+    }
+  }, [sessionSummary, loadXPStats]);
 
   // Clean up summary when component unmounts
   useEffect(() => {
