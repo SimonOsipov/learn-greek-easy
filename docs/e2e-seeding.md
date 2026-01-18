@@ -19,6 +19,8 @@ The seeding infrastructure provides deterministic test data for E2E tests, enabl
 | `/api/v1/test/seed/truncate` | POST | Truncate all tables |
 | `/api/v1/test/seed/users` | POST | Create test users only |
 | `/api/v1/test/seed/content` | POST | Create decks/cards only |
+| `/api/v1/test/seed/culture` | POST | Create culture decks/questions only |
+| `/api/v1/test/seed/mock-exams` | POST | Create mock exam history for learner |
 
 ## Test Users Created
 
@@ -36,6 +38,24 @@ The seeding infrastructure provides deterministic test data for E2E tests, enabl
 - **60 Cards**: 10 Greek vocabulary cards per deck
 - **Card Statistics**: SM-2 spaced repetition states for learner
 - **Reviews**: Review history for learner user
+- **5 Culture Decks**: History, Geography, Politics, Culture, Traditions
+- **50 Culture Questions**: 10 trilingual questions per deck (el, en, ru)
+- **5 Mock Exam Sessions**: 3 passed, 2 failed (for learner user)
+- **125 Mock Exam Answers**: 25 answers per session
+
+### Mock Exam History
+
+The seed data creates mock exam history for `e2e_learner@test.com` with the following sessions:
+
+| Score | Percentage | Result | Time Taken | Age |
+|-------|------------|--------|------------|-----|
+| 23/25 | 92% | Pass | 20 min | 6 days ago |
+| 21/25 | 84% | Pass | 25 min | 5 days ago |
+| 12/25 | 48% | Fail | 15 min | 4 days ago |
+| 20/25 | 80% | Pass | 22.5 min | 2 days ago |
+| 15/25 | 60% | Fail | 18.3 min | 1 day ago |
+
+**Note**: The pass threshold is 80% (20/25 correct answers).
 
 ## CLI Usage
 
