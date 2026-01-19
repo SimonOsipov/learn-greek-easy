@@ -7,7 +7,7 @@ This repository handles database operations for mock exam functionality:
 - User statistics aggregation
 """
 
-from datetime import datetime
+from datetime import date, datetime, timedelta
 from typing import Optional
 from uuid import UUID
 
@@ -397,6 +397,99 @@ class MockExamRepository(BaseRepository[MockExamSession]):
         result = await self.db.execute(query)
         count = result.scalar_one()
         return count > 0
+
+    async def get_unique_dates(self, user_id: UUID, days: int = 30) -> list[date]:
+        """Get unique dates with mock exam sessions in the past N days.
+
+        Includes ALL session states (ACTIVE, COMPLETED, ABANDONED) since
+        any exam attempt should count towards streak.
+
+        Args:
+            user_id: User UUID
+            days: Number of days to look back (default 30)
+
+        Returns:
+            List of dates with at least one mock exam session
+
+        Use Case:
+            Streak calculation - exam attempts contribute to study streak
+        """
+        cutoff = date.today() - timedelta(days=days)
+        query = (
+            select(func.date(MockExamSession.started_at).label("session_date"))
+            .where(MockExamSession.user_id == user_id)
+            .where(MockExamSession.started_at >= cutoff)
+            .group_by(func.date(MockExamSession.started_at))
+            .order_by(func.date(MockExamSession.started_at).desc())
+        )
+        result = await self.db.execute(query)
+        return [row[0] for row in result.all()]
+
+    async def get_all_unique_dates(self, user_id: UUID) -> list[date]:
+        """Get all unique dates with mock exam sessions (for longest streak).
+
+        Includes ALL session states (ACTIVE, COMPLETED, ABANDONED) since
+        any exam attempt should count towards streak.
+
+        Args:
+            user_id: User UUID
+
+        Returns:
+            List of all dates with at least one mock exam session, ordered ascending
+
+        Use Case:
+            Longest streak calculation
+        """
+        query = (
+            select(func.date(MockExamSession.started_at).label("session_date"))
+            .where(MockExamSession.user_id == user_id)
+            .group_by(func.date(MockExamSession.started_at))
+            .order_by(func.date(MockExamSession.started_at))
+        )
+        result = await self.db.execute(query)
+        return [row.session_date for row in result.all()]
+
+    async def get_study_time_today(self, user_id: UUID) -> int:
+        """Get total mock exam study time in seconds for today.
+
+        Only counts COMPLETED sessions. Active and abandoned sessions
+        are not included as their time_taken_seconds may be incomplete.
+
+        Args:
+            user_id: User UUID
+
+        Returns:
+            Total study time in seconds for today
+        """
+        today = date.today()
+        query = (
+            select(func.coalesce(func.sum(MockExamSession.time_taken_seconds), 0))
+            .where(MockExamSession.user_id == user_id)
+            .where(MockExamSession.status == MockExamStatus.COMPLETED)
+            .where(func.date(MockExamSession.completed_at) == today)
+        )
+        result = await self.db.execute(query)
+        return int(result.scalar_one())
+
+    async def get_total_study_time(self, user_id: UUID) -> int:
+        """Get total mock exam study time in seconds (all-time).
+
+        Only counts COMPLETED sessions. Active and abandoned sessions
+        are not included as their time_taken_seconds may be incomplete.
+
+        Args:
+            user_id: User UUID
+
+        Returns:
+            Total seconds spent on mock exams
+        """
+        query = (
+            select(func.coalesce(func.sum(MockExamSession.time_taken_seconds), 0))
+            .where(MockExamSession.user_id == user_id)
+            .where(MockExamSession.status == MockExamStatus.COMPLETED)
+        )
+        result = await self.db.execute(query)
+        return int(result.scalar_one())
 
 
 # ============================================================================

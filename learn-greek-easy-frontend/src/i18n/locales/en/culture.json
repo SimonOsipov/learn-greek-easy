@@ -45,6 +45,7 @@
     "noQuestionsDescription": "No questions available for this deck.",
     "xpEarned": "XP: {{xp}}",
     "accuracy": "{{accuracy}}% accuracy",
+    "completing": "Completing exam...",
     "recovery": {
       "title": "Resume Practice?",
       "description": "You have an unfinished practice session. Would you like to continue where you left off?",

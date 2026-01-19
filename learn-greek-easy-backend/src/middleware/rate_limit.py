@@ -27,8 +27,8 @@ Usage:
     app.add_middleware(RateLimitingMiddleware)
 
 Example Response Headers:
-    X-RateLimit-Limit: 100
-    X-RateLimit-Remaining: 95
+    X-RateLimit-Limit: 200
+    X-RateLimit-Remaining: 195
     X-RateLimit-Reset: 1701867700
 """
 

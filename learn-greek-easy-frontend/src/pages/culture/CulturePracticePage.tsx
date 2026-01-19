@@ -16,7 +16,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 
-import { AlertCircle, ChevronLeft } from 'lucide-react';
+import { AlertCircle, ChevronLeft, Loader2 } from 'lucide-react';
 import posthog from 'posthog-js';
 import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -115,6 +115,7 @@ export function CulturePracticePage() {
   const [showRecoveryDialog, setShowRecoveryDialog] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [lastAnswerResponse, setLastAnswerResponse] = useState<CultureAnswerResponse | null>(null);
+  const [isCompleting, setIsCompleting] = useState(false);
 
   // Refs for tracking
   const hasTrackedStart = useRef(false);
@@ -135,6 +136,8 @@ export function CulturePracticePage() {
   // Navigate to summary when session completes
   useEffect(() => {
     if (summary && deckId) {
+      // Immediately show completing loader to hide progress bar and language picker
+      setIsCompleting(true);
       const timer = setTimeout(() => {
         navigate(`/culture/${deckId}/summary`);
       }, 500);
@@ -382,6 +385,21 @@ export function CulturePracticePage() {
     },
     [setLanguage]
   );
+
+  // Completing state - full screen loader to hide progress bar and language picker during transition
+  if (isCompleting) {
+    return (
+      <div
+        className="flex min-h-screen flex-col items-center justify-center bg-background"
+        data-testid="completing-loader"
+      >
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="mt-4 text-muted-foreground">
+          {t('practice.completing', 'Completing exam...')}
+        </p>
+      </div>
+    );
+  }
 
   // Recovery dialog
   if (showRecoveryDialog) {

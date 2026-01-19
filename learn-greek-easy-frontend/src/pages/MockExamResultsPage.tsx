@@ -2,7 +2,7 @@
  * Mock Exam Results Page
  *
  * Full-screen display of mock citizenship exam results.
- * Shows pass/fail status, score breakdown, XP earned, and incorrect answer review.
+ * Shows pass/fail status, score breakdown, and incorrect answer review.
  *
  * Features:
  * - Pass/fail status with gradient header
@@ -21,7 +21,6 @@ import {
   Clock,
   Percent,
   RefreshCw,
-  Star,
   Target,
   Trophy,
   XCircle,
@@ -209,16 +208,6 @@ export function MockExamResultsPage() {
                     : t('results.failed', "You didn't pass this time")}
                 </h1>
                 <p className="mt-1 text-white/80">{t('results.title', 'Exam Complete')}</p>
-              </div>
-            </div>
-
-            {/* XP Earned Badge */}
-            <div className="mt-6">
-              <div className="inline-flex items-center gap-2 rounded-lg bg-white/20 px-4 py-3">
-                <Star className="h-6 w-6 text-amber-300" fill="currentColor" />
-                <span className="text-xl font-semibold">
-                  +{summary.xpEarned} XP {t('common:earned', 'earned')}
-                </span>
               </div>
             </div>
 
