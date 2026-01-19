@@ -93,6 +93,10 @@ def service(mock_db_session):
     )
     # Mock culture_deck_repo.list_active used in get_deck_progress_list
     svc.culture_deck_repo.list_active = AsyncMock(return_value=[])
+    # Mock mock_exam_repo methods used in streak calculation
+    # Any exam attempt counts towards streak (ACTIVE, COMPLETED, ABANDONED)
+    svc.mock_exam_repo.get_unique_dates = AsyncMock(return_value=[])
+    svc.mock_exam_repo.get_all_unique_dates = AsyncMock(return_value=[])
     return svc
 
 

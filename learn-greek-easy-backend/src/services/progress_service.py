@@ -36,6 +36,7 @@ from src.repositories import (
 )
 from src.repositories.culture_deck import CultureDeckRepository
 from src.repositories.culture_question_stats import CultureQuestionStatsRepository
+from src.repositories.mock_exam import MockExamRepository
 from src.schemas.progress import (
     Achievement,
     AchievementsResponse,
@@ -100,16 +101,17 @@ class ProgressService:
         self.culture_stats_repo = CultureQuestionStatsRepository(db)
         self.culture_answer_repo = CultureAnswerHistoryRepository(db)
         self.culture_deck_repo = CultureDeckRepository(db)
+        self.mock_exam_repo = MockExamRepository(db)
 
     # =========================================================================
     # Helper Methods
     # =========================================================================
 
     async def _get_aggregated_streak(self, user_id: UUID) -> int:
-        """Calculate current study streak combining vocabulary and culture activity.
+        """Calculate current study streak combining vocabulary, culture, and mock exam activity.
 
         Counts consecutive days where user had at least one review OR
-        culture answer, starting from today going backwards.
+        culture answer OR mock exam attempt, starting from today going backwards.
 
         Args:
             user_id: User UUID
@@ -130,8 +132,12 @@ class ProgressService:
         culture_dates = await self.culture_answer_repo.get_unique_dates(user_id, days=30)
         culture_dates_set = set(culture_dates)
 
-        # Combine both sets
-        all_study_dates = review_dates | culture_dates_set
+        # Get unique dates from mock exam sessions (last 30 days)
+        # Includes ALL session states (ACTIVE, COMPLETED, ABANDONED)
+        mock_exam_dates = await self.mock_exam_repo.get_unique_dates(user_id, days=30)
+
+        # Combine all sets
+        all_study_dates = review_dates | culture_dates_set | set(mock_exam_dates)
 
         if not all_study_dates:
             return 0
@@ -158,9 +164,9 @@ class ProgressService:
         return streak
 
     async def _get_aggregated_longest_streak(self, user_id: UUID) -> int:
-        """Calculate longest historical streak combining vocabulary and culture activity.
+        """Calculate longest historical streak combining vocabulary, culture, and mock exam activity.
 
-        Scans full history from both Review and CultureAnswerHistory tables
+        Scans full history from Review, CultureAnswerHistory, and MockExamSession tables
         to find the longest consecutive day streak.
 
         Args:
@@ -177,8 +183,12 @@ class ProgressService:
         culture_dates = await self.culture_answer_repo.get_all_unique_dates(user_id)
         culture_dates_set = set(culture_dates)
 
+        # Get all unique dates from mock exam sessions
+        # Includes ALL session states (ACTIVE, COMPLETED, ABANDONED)
+        mock_exam_dates = await self.mock_exam_repo.get_all_unique_dates(user_id)
+
         # Combine and sort
-        all_dates = sorted(review_dates | culture_dates_set)
+        all_dates = sorted(review_dates | culture_dates_set | set(mock_exam_dates))
 
         if not all_dates:
             return 0

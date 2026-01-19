@@ -7,7 +7,7 @@ This repository handles database operations for mock exam functionality:
 - User statistics aggregation
 """
 
-from datetime import datetime
+from datetime import date, datetime, timedelta
 from typing import Optional
 from uuid import UUID
 
@@ -392,6 +392,57 @@ class MockExamRepository(BaseRepository[MockExamSession]):
         result = await self.db.execute(query)
         count = result.scalar_one()
         return count > 0
+
+    async def get_unique_dates(self, user_id: UUID, days: int = 30) -> list[date]:
+        """Get unique dates with mock exam sessions in the past N days.
+
+        Includes ALL session states (ACTIVE, COMPLETED, ABANDONED) since
+        any exam attempt should count towards streak.
+
+        Args:
+            user_id: User UUID
+            days: Number of days to look back (default 30)
+
+        Returns:
+            List of dates with at least one mock exam session
+
+        Use Case:
+            Streak calculation - exam attempts contribute to study streak
+        """
+        cutoff = date.today() - timedelta(days=days)
+        query = (
+            select(func.date(MockExamSession.started_at).label("session_date"))
+            .where(MockExamSession.user_id == user_id)
+            .where(MockExamSession.started_at >= cutoff)
+            .group_by(func.date(MockExamSession.started_at))
+            .order_by(func.date(MockExamSession.started_at).desc())
+        )
+        result = await self.db.execute(query)
+        return [row[0] for row in result.all()]
+
+    async def get_all_unique_dates(self, user_id: UUID) -> list[date]:
+        """Get all unique dates with mock exam sessions (for longest streak).
+
+        Includes ALL session states (ACTIVE, COMPLETED, ABANDONED) since
+        any exam attempt should count towards streak.
+
+        Args:
+            user_id: User UUID
+
+        Returns:
+            List of all dates with at least one mock exam session, ordered ascending
+
+        Use Case:
+            Longest streak calculation
+        """
+        query = (
+            select(func.date(MockExamSession.started_at).label("session_date"))
+            .where(MockExamSession.user_id == user_id)
+            .group_by(func.date(MockExamSession.started_at))
+            .order_by(func.date(MockExamSession.started_at))
+        )
+        result = await self.db.execute(query)
+        return [row.session_date for row in result.all()]
 
 
 # ============================================================================
