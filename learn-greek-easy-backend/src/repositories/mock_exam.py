@@ -444,6 +444,48 @@ class MockExamRepository(BaseRepository[MockExamSession]):
         result = await self.db.execute(query)
         return [row.session_date for row in result.all()]
 
+    async def get_study_time_today(self, user_id: UUID) -> int:
+        """Get total mock exam study time in seconds for today.
+
+        Only counts COMPLETED sessions. Active and abandoned sessions
+        are not included as their time_taken_seconds may be incomplete.
+
+        Args:
+            user_id: User UUID
+
+        Returns:
+            Total study time in seconds for today
+        """
+        today = date.today()
+        query = (
+            select(func.coalesce(func.sum(MockExamSession.time_taken_seconds), 0))
+            .where(MockExamSession.user_id == user_id)
+            .where(MockExamSession.status == MockExamStatus.COMPLETED)
+            .where(func.date(MockExamSession.completed_at) == today)
+        )
+        result = await self.db.execute(query)
+        return int(result.scalar_one())
+
+    async def get_total_study_time(self, user_id: UUID) -> int:
+        """Get total mock exam study time in seconds (all-time).
+
+        Only counts COMPLETED sessions. Active and abandoned sessions
+        are not included as their time_taken_seconds may be incomplete.
+
+        Args:
+            user_id: User UUID
+
+        Returns:
+            Total seconds spent on mock exams
+        """
+        query = (
+            select(func.coalesce(func.sum(MockExamSession.time_taken_seconds), 0))
+            .where(MockExamSession.user_id == user_id)
+            .where(MockExamSession.status == MockExamStatus.COMPLETED)
+        )
+        result = await self.db.execute(query)
+        return int(result.scalar_one())
+
 
 # ============================================================================
 # Module Exports

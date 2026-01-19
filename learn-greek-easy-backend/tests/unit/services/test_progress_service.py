@@ -97,6 +97,9 @@ def service(mock_db_session):
     # Any exam attempt counts towards streak (ACTIVE, COMPLETED, ABANDONED)
     svc.mock_exam_repo.get_unique_dates = AsyncMock(return_value=[])
     svc.mock_exam_repo.get_all_unique_dates = AsyncMock(return_value=[])
+    # Mock mock_exam_repo study time methods (only COMPLETED sessions contribute)
+    svc.mock_exam_repo.get_study_time_today = AsyncMock(return_value=0)
+    svc.mock_exam_repo.get_total_study_time = AsyncMock(return_value=0)
     return svc
 
 
@@ -1453,3 +1456,512 @@ class TestAchievementValueMapping:
 
         result = service._get_achievement_value(AchievementType.STREAK, stats)
         assert result == 0
+
+
+# =============================================================================
+# TestProgressServiceMockExamStreak (EXAMSTREAK feature)
+# =============================================================================
+
+
+@pytest.mark.unit
+@pytest.mark.progress
+class TestProgressServiceMockExamStreak:
+    """Tests for mock exam contribution to streak calculation - EXAMSTREAK feature.
+
+    These tests verify that:
+    - Mock exam sessions contribute to current streak
+    - Mock exam sessions contribute to longest streak
+    - All session states (ACTIVE, COMPLETED, ABANDONED) count
+    - Mock exam dates combine correctly with vocab and culture dates
+    - No double-counting when user has activity from multiple sources on same day
+    """
+
+    async def test_streak_includes_mock_exam_only(self, service):
+        """User with only mock exam activity should have a streak."""
+        user_id = uuid4()
+        today = date.today()
+
+        # Setup: No vocab or culture activity, only mock exam
+        service.progress_repo.get_total_cards_studied = AsyncMock(return_value=0)
+        service.progress_repo.get_total_cards_mastered = AsyncMock(return_value=0)
+        service.progress_repo.count_user_decks = AsyncMock(return_value=0)
+        service.progress_repo.get_user_progress = AsyncMock(return_value=[])
+        service.review_repo.count_reviews_today = AsyncMock(return_value=0)
+        service.review_repo.get_study_time_today = AsyncMock(return_value=0)
+        service.review_repo.get_daily_stats = AsyncMock(return_value=[])
+        service.review_repo.get_accuracy_stats = AsyncMock(return_value={"correct": 0, "total": 0})
+        service.stats_repo.count_by_status = AsyncMock(return_value={"due": 0})
+        service.culture_stats_repo.count_mastered_questions = AsyncMock(return_value=0)
+        service.culture_stats_repo.get_culture_accuracy_stats = AsyncMock(
+            return_value={"correct": 0, "total": 0}
+        )
+
+        # No vocab reviews
+        service.review_repo.get_user_reviews = AsyncMock(return_value=[])
+
+        # No culture dates
+        service.culture_answer_repo.get_unique_dates = AsyncMock(return_value=[])
+        service.culture_answer_repo.get_all_unique_dates = AsyncMock(return_value=[])
+
+        # Mock exam activity for 5 consecutive days
+        mock_exam_dates = [today - timedelta(days=i) for i in range(5)]
+        service.mock_exam_repo.get_unique_dates = AsyncMock(return_value=mock_exam_dates)
+        service.mock_exam_repo.get_all_unique_dates = AsyncMock(
+            return_value=sorted(mock_exam_dates)
+        )
+
+        result = await service.get_dashboard_stats(user_id)
+
+        # Streak should be 5 from mock exam activity alone
+        assert result.streak.current_streak == 5
+        assert result.streak.longest_streak == 5
+
+    async def test_streak_combines_vocab_and_mock_exam(self, service):
+        """Streak should combine vocab and mock exam dates."""
+        user_id = uuid4()
+        today = date.today()
+
+        # Setup basic mocks
+        service.progress_repo.get_total_cards_studied = AsyncMock(return_value=50)
+        service.progress_repo.get_total_cards_mastered = AsyncMock(return_value=20)
+        service.progress_repo.count_user_decks = AsyncMock(return_value=1)
+        service.progress_repo.get_user_progress = AsyncMock(return_value=[])
+        service.review_repo.count_reviews_today = AsyncMock(return_value=10)
+        service.review_repo.get_study_time_today = AsyncMock(return_value=600)
+        service.review_repo.get_daily_stats = AsyncMock(return_value=[])
+        service.review_repo.get_accuracy_stats = AsyncMock(return_value={"correct": 0, "total": 0})
+        service.stats_repo.count_by_status = AsyncMock(return_value={"due": 5})
+        service.culture_stats_repo.count_mastered_questions = AsyncMock(return_value=0)
+        service.culture_stats_repo.get_culture_accuracy_stats = AsyncMock(
+            return_value={"correct": 0, "total": 0}
+        )
+
+        # Vocab reviews for days 0-2 (today, yesterday, 2 days ago)
+        mock_reviews = []
+        for i in range(3):
+            mock_review = MagicMock()
+            mock_review.reviewed_at = datetime.combine(
+                today - timedelta(days=i), datetime.min.time()
+            )
+            mock_reviews.append(mock_review)
+        service.review_repo.get_user_reviews = AsyncMock(return_value=mock_reviews)
+
+        # No culture dates
+        service.culture_answer_repo.get_unique_dates = AsyncMock(return_value=[])
+        service.culture_answer_repo.get_all_unique_dates = AsyncMock(return_value=[])
+
+        # Mock exam for days 3-5 (extends the streak)
+        mock_exam_dates = [today - timedelta(days=i) for i in range(3, 6)]
+        service.mock_exam_repo.get_unique_dates = AsyncMock(return_value=mock_exam_dates)
+        service.mock_exam_repo.get_all_unique_dates = AsyncMock(
+            return_value=sorted(mock_exam_dates)
+        )
+
+        result = await service.get_dashboard_stats(user_id)
+
+        # Combined streak: vocab (days 0-2) + mock exam (days 3-5) = 6 consecutive days
+        assert result.streak.current_streak == 6
+        assert result.streak.longest_streak == 6
+
+    async def test_streak_no_double_counting_same_day(self, service):
+        """Activity on same day from vocab and mock exam should count as one day."""
+        user_id = uuid4()
+        today = date.today()
+
+        # Setup basic mocks
+        service.progress_repo.get_total_cards_studied = AsyncMock(return_value=50)
+        service.progress_repo.get_total_cards_mastered = AsyncMock(return_value=20)
+        service.progress_repo.count_user_decks = AsyncMock(return_value=1)
+        service.progress_repo.get_user_progress = AsyncMock(return_value=[])
+        service.review_repo.count_reviews_today = AsyncMock(return_value=10)
+        service.review_repo.get_study_time_today = AsyncMock(return_value=600)
+        service.review_repo.get_daily_stats = AsyncMock(return_value=[])
+        service.review_repo.get_accuracy_stats = AsyncMock(return_value={"correct": 0, "total": 0})
+        service.stats_repo.count_by_status = AsyncMock(return_value={"due": 5})
+        service.culture_stats_repo.count_mastered_questions = AsyncMock(return_value=0)
+        service.culture_stats_repo.get_culture_accuracy_stats = AsyncMock(
+            return_value={"correct": 0, "total": 0}
+        )
+
+        # Vocab reviews for days 0-2 (overlapping with mock exam)
+        mock_reviews = []
+        for i in range(3):
+            mock_review = MagicMock()
+            mock_review.reviewed_at = datetime.combine(
+                today - timedelta(days=i), datetime.min.time()
+            )
+            mock_reviews.append(mock_review)
+        service.review_repo.get_user_reviews = AsyncMock(return_value=mock_reviews)
+
+        # No culture dates
+        service.culture_answer_repo.get_unique_dates = AsyncMock(return_value=[])
+        service.culture_answer_repo.get_all_unique_dates = AsyncMock(return_value=[])
+
+        # Mock exam for SAME days 0-2 (should not double-count)
+        mock_exam_dates = [today - timedelta(days=i) for i in range(3)]
+        service.mock_exam_repo.get_unique_dates = AsyncMock(return_value=mock_exam_dates)
+        service.mock_exam_repo.get_all_unique_dates = AsyncMock(
+            return_value=sorted(mock_exam_dates)
+        )
+
+        result = await service.get_dashboard_stats(user_id)
+
+        # Streak should still be 3, not 6 (no double-counting)
+        assert result.streak.current_streak == 3
+        assert result.streak.longest_streak == 3
+
+    async def test_longest_streak_with_historical_mock_exam(self, service):
+        """Longest streak should include historical mock exam activity."""
+        user_id = uuid4()
+        today = date.today()
+
+        # Setup basic mocks
+        service.progress_repo.get_total_cards_studied = AsyncMock(return_value=50)
+        service.progress_repo.get_total_cards_mastered = AsyncMock(return_value=20)
+        service.progress_repo.count_user_decks = AsyncMock(return_value=1)
+        service.progress_repo.get_user_progress = AsyncMock(return_value=[])
+        service.review_repo.count_reviews_today = AsyncMock(return_value=10)
+        service.review_repo.get_study_time_today = AsyncMock(return_value=600)
+        service.review_repo.get_daily_stats = AsyncMock(return_value=[])
+        service.review_repo.get_accuracy_stats = AsyncMock(return_value={"correct": 0, "total": 0})
+        service.stats_repo.count_by_status = AsyncMock(return_value={"due": 5})
+        service.culture_stats_repo.count_mastered_questions = AsyncMock(return_value=0)
+        service.culture_stats_repo.get_culture_accuracy_stats = AsyncMock(
+            return_value={"correct": 0, "total": 0}
+        )
+
+        # Current vocab reviews: today only
+        mock_review = MagicMock()
+        mock_review.reviewed_at = datetime.combine(today, datetime.min.time())
+        service.review_repo.get_user_reviews = AsyncMock(return_value=[mock_review])
+
+        # No culture dates
+        service.culture_answer_repo.get_unique_dates = AsyncMock(return_value=[])
+        service.culture_answer_repo.get_all_unique_dates = AsyncMock(return_value=[])
+
+        # Mock exam: today only for current streak
+        service.mock_exam_repo.get_unique_dates = AsyncMock(return_value=[today])
+
+        # Historical mock exam: 10 consecutive days, 50-60 days ago
+        historical_dates = [today - timedelta(days=i) for i in range(50, 60)]
+        service.mock_exam_repo.get_all_unique_dates = AsyncMock(
+            return_value=sorted(historical_dates + [today])
+        )
+
+        result = await service.get_dashboard_stats(user_id)
+
+        # Current streak is 1 (today)
+        assert result.streak.current_streak == 1
+        # Longest streak is 10 (historical mock exam activity)
+        assert result.streak.longest_streak == 10
+
+    async def test_mock_exam_extends_broken_vocab_streak(self, service):
+        """Mock exam should fill gap and extend streak when vocab has gap."""
+        user_id = uuid4()
+        today = date.today()
+
+        # Setup basic mocks
+        service.progress_repo.get_total_cards_studied = AsyncMock(return_value=50)
+        service.progress_repo.get_total_cards_mastered = AsyncMock(return_value=20)
+        service.progress_repo.count_user_decks = AsyncMock(return_value=1)
+        service.progress_repo.get_user_progress = AsyncMock(return_value=[])
+        service.review_repo.count_reviews_today = AsyncMock(return_value=10)
+        service.review_repo.get_study_time_today = AsyncMock(return_value=600)
+        service.review_repo.get_daily_stats = AsyncMock(return_value=[])
+        service.review_repo.get_accuracy_stats = AsyncMock(return_value={"correct": 0, "total": 0})
+        service.stats_repo.count_by_status = AsyncMock(return_value={"due": 5})
+        service.culture_stats_repo.count_mastered_questions = AsyncMock(return_value=0)
+        service.culture_stats_repo.get_culture_accuracy_stats = AsyncMock(
+            return_value={"correct": 0, "total": 0}
+        )
+
+        # Vocab reviews: today and days 3-4 (GAP on days 1-2)
+        mock_reviews = []
+        # Today
+        mock_review_today = MagicMock()
+        mock_review_today.reviewed_at = datetime.combine(today, datetime.min.time())
+        mock_reviews.append(mock_review_today)
+        # Days 3-4
+        for i in range(3, 5):
+            mock_review = MagicMock()
+            mock_review.reviewed_at = datetime.combine(
+                today - timedelta(days=i), datetime.min.time()
+            )
+            mock_reviews.append(mock_review)
+        service.review_repo.get_user_reviews = AsyncMock(return_value=mock_reviews)
+
+        # No culture dates
+        service.culture_answer_repo.get_unique_dates = AsyncMock(return_value=[])
+        service.culture_answer_repo.get_all_unique_dates = AsyncMock(return_value=[])
+
+        # Mock exam fills the gap: days 1-2
+        mock_exam_dates = [today - timedelta(days=1), today - timedelta(days=2)]
+        service.mock_exam_repo.get_unique_dates = AsyncMock(return_value=mock_exam_dates)
+        service.mock_exam_repo.get_all_unique_dates = AsyncMock(
+            return_value=sorted(mock_exam_dates)
+        )
+
+        result = await service.get_dashboard_stats(user_id)
+
+        # Combined: today + mock(days 1-2) + vocab(days 3-4) = 5 consecutive days
+        assert result.streak.current_streak == 5
+
+    async def test_streak_from_yesterday_mock_exam_grace_period(self, service):
+        """Mock exam yesterday (no activity today) should still show streak (grace period)."""
+        user_id = uuid4()
+        today = date.today()
+        yesterday = today - timedelta(days=1)
+
+        # Setup: No activity today
+        service.progress_repo.get_total_cards_studied = AsyncMock(return_value=0)
+        service.progress_repo.get_total_cards_mastered = AsyncMock(return_value=0)
+        service.progress_repo.count_user_decks = AsyncMock(return_value=0)
+        service.progress_repo.get_user_progress = AsyncMock(return_value=[])
+        service.review_repo.count_reviews_today = AsyncMock(return_value=0)
+        service.review_repo.get_study_time_today = AsyncMock(return_value=0)
+        service.review_repo.get_daily_stats = AsyncMock(return_value=[])
+        service.review_repo.get_accuracy_stats = AsyncMock(return_value={"correct": 0, "total": 0})
+        service.stats_repo.count_by_status = AsyncMock(return_value={"due": 0})
+        service.culture_stats_repo.count_mastered_questions = AsyncMock(return_value=0)
+        service.culture_stats_repo.get_culture_accuracy_stats = AsyncMock(
+            return_value={"correct": 0, "total": 0}
+        )
+
+        # No vocab reviews
+        service.review_repo.get_user_reviews = AsyncMock(return_value=[])
+
+        # No culture dates
+        service.culture_answer_repo.get_unique_dates = AsyncMock(return_value=[])
+        service.culture_answer_repo.get_all_unique_dates = AsyncMock(return_value=[])
+
+        # Mock exam: yesterday + 4 more days before = 5 consecutive days
+        mock_exam_dates = [yesterday - timedelta(days=i) for i in range(5)]
+        service.mock_exam_repo.get_unique_dates = AsyncMock(return_value=mock_exam_dates)
+        service.mock_exam_repo.get_all_unique_dates = AsyncMock(
+            return_value=sorted(mock_exam_dates)
+        )
+
+        result = await service.get_dashboard_stats(user_id)
+
+        # Grace period: streak shows 5 even though nothing today (activity yesterday)
+        assert result.streak.current_streak == 5
+
+    async def test_streak_all_three_sources_combined(self, service):
+        """Streak should combine vocab, culture, and mock exam dates."""
+        user_id = uuid4()
+        today = date.today()
+
+        # Setup basic mocks
+        service.progress_repo.get_total_cards_studied = AsyncMock(return_value=50)
+        service.progress_repo.get_total_cards_mastered = AsyncMock(return_value=20)
+        service.progress_repo.count_user_decks = AsyncMock(return_value=1)
+        service.progress_repo.get_user_progress = AsyncMock(return_value=[])
+        service.review_repo.count_reviews_today = AsyncMock(return_value=10)
+        service.review_repo.get_study_time_today = AsyncMock(return_value=600)
+        service.review_repo.get_daily_stats = AsyncMock(return_value=[])
+        service.review_repo.get_accuracy_stats = AsyncMock(return_value={"correct": 0, "total": 0})
+        service.stats_repo.count_by_status = AsyncMock(return_value={"due": 5})
+        service.culture_stats_repo.count_mastered_questions = AsyncMock(return_value=0)
+        service.culture_stats_repo.get_culture_accuracy_stats = AsyncMock(
+            return_value={"correct": 0, "total": 0}
+        )
+
+        # Vocab reviews: today only
+        mock_review = MagicMock()
+        mock_review.reviewed_at = datetime.combine(today, datetime.min.time())
+        service.review_repo.get_user_reviews = AsyncMock(return_value=[mock_review])
+
+        # Culture: yesterday
+        service.culture_answer_repo.get_unique_dates = AsyncMock(
+            return_value=[today - timedelta(days=1)]
+        )
+        service.culture_answer_repo.get_all_unique_dates = AsyncMock(
+            return_value=[today - timedelta(days=1)]
+        )
+
+        # Mock exam: 2 days ago
+        mock_exam_dates = [today - timedelta(days=2)]
+        service.mock_exam_repo.get_unique_dates = AsyncMock(return_value=mock_exam_dates)
+        service.mock_exam_repo.get_all_unique_dates = AsyncMock(return_value=mock_exam_dates)
+
+        result = await service.get_dashboard_stats(user_id)
+
+        # Combined: vocab(today) + culture(yesterday) + mock_exam(2 days ago) = 3 consecutive
+        assert result.streak.current_streak == 3
+        assert result.streak.longest_streak == 3
+
+
+# =============================================================================
+# TestProgressServiceMockExamStudyTime (EXAMTIME feature)
+# =============================================================================
+
+
+@pytest.mark.unit
+@pytest.mark.progress
+class TestProgressServiceMockExamStudyTime:
+    """Tests for ProgressService aggregation of mock exam study time.
+
+    EXAMTIME feature: Culture exam sessions should contribute to time spent learning.
+    """
+
+    async def test_study_time_today_includes_mock_exam(self, service):
+        """Study time today should include mock exam time."""
+        user_id = uuid4()
+
+        # Setup basic mocks
+        service.progress_repo.get_total_cards_studied = AsyncMock(return_value=0)
+        service.progress_repo.get_total_cards_mastered = AsyncMock(return_value=0)
+        service.progress_repo.count_user_decks = AsyncMock(return_value=0)
+        service.progress_repo.get_user_progress = AsyncMock(return_value=[])
+        service.review_repo.count_reviews_today = AsyncMock(return_value=0)
+        service.review_repo.get_daily_stats = AsyncMock(return_value=[])
+        service.review_repo.get_accuracy_stats = AsyncMock(return_value={"correct": 0, "total": 0})
+        service.stats_repo.count_by_status = AsyncMock(return_value={})
+        service.culture_stats_repo.count_mastered_questions = AsyncMock(return_value=0)
+        service.culture_stats_repo.get_culture_accuracy_stats = AsyncMock(
+            return_value={"correct": 0, "total": 0}
+        )
+
+        # Vocab study time: 300 seconds
+        service.review_repo.get_study_time_today = AsyncMock(return_value=300)
+
+        # Culture study time: 200 seconds
+        service.culture_answer_repo.get_study_time_today = AsyncMock(return_value=200)
+
+        # Mock exam study time: 100 seconds
+        service.mock_exam_repo.get_study_time_today = AsyncMock(return_value=100)
+
+        result = await service.get_dashboard_stats(user_id)
+
+        # Total should be vocab + culture + mock exam = 300 + 200 + 100 = 600
+        assert result.today.study_time_seconds == 600
+
+    async def test_study_time_today_without_mock_exam(self, service):
+        """Study time today should work when no mock exam time."""
+        user_id = uuid4()
+
+        # Setup basic mocks
+        service.progress_repo.get_total_cards_studied = AsyncMock(return_value=0)
+        service.progress_repo.get_total_cards_mastered = AsyncMock(return_value=0)
+        service.progress_repo.count_user_decks = AsyncMock(return_value=0)
+        service.progress_repo.get_user_progress = AsyncMock(return_value=[])
+        service.review_repo.count_reviews_today = AsyncMock(return_value=0)
+        service.review_repo.get_daily_stats = AsyncMock(return_value=[])
+        service.review_repo.get_accuracy_stats = AsyncMock(return_value={"correct": 0, "total": 0})
+        service.stats_repo.count_by_status = AsyncMock(return_value={})
+        service.culture_stats_repo.count_mastered_questions = AsyncMock(return_value=0)
+        service.culture_stats_repo.get_culture_accuracy_stats = AsyncMock(
+            return_value={"correct": 0, "total": 0}
+        )
+
+        # Vocab study time: 300 seconds
+        service.review_repo.get_study_time_today = AsyncMock(return_value=300)
+
+        # Culture study time: 200 seconds
+        service.culture_answer_repo.get_study_time_today = AsyncMock(return_value=200)
+
+        # Mock exam study time: 0 (no exams today)
+        service.mock_exam_repo.get_study_time_today = AsyncMock(return_value=0)
+
+        result = await service.get_dashboard_stats(user_id)
+
+        # Total should be vocab + culture = 300 + 200 = 500
+        assert result.today.study_time_seconds == 500
+
+    async def test_study_time_today_mock_exam_only(self, service):
+        """Study time today should work with only mock exam time."""
+        user_id = uuid4()
+
+        # Setup basic mocks
+        service.progress_repo.get_total_cards_studied = AsyncMock(return_value=0)
+        service.progress_repo.get_total_cards_mastered = AsyncMock(return_value=0)
+        service.progress_repo.count_user_decks = AsyncMock(return_value=0)
+        service.progress_repo.get_user_progress = AsyncMock(return_value=[])
+        service.review_repo.count_reviews_today = AsyncMock(return_value=0)
+        service.review_repo.get_daily_stats = AsyncMock(return_value=[])
+        service.review_repo.get_accuracy_stats = AsyncMock(return_value={"correct": 0, "total": 0})
+        service.stats_repo.count_by_status = AsyncMock(return_value={})
+        service.culture_stats_repo.count_mastered_questions = AsyncMock(return_value=0)
+        service.culture_stats_repo.get_culture_accuracy_stats = AsyncMock(
+            return_value={"correct": 0, "total": 0}
+        )
+
+        # Vocab study time: 0
+        service.review_repo.get_study_time_today = AsyncMock(return_value=0)
+
+        # Culture study time: 0
+        service.culture_answer_repo.get_study_time_today = AsyncMock(return_value=0)
+
+        # Mock exam study time: 180 seconds (capped at MAX_ANSWER_TIME_SECONDS)
+        service.mock_exam_repo.get_study_time_today = AsyncMock(return_value=180)
+
+        result = await service.get_dashboard_stats(user_id)
+
+        # Total should be mock exam only = 180
+        assert result.today.study_time_seconds == 180
+
+    async def test_total_study_time_includes_mock_exam(self, service):
+        """Total study time should include mock exam time."""
+        user_id = uuid4()
+
+        # Setup basic mocks
+        service.progress_repo.get_total_cards_studied = AsyncMock(return_value=0)
+        service.progress_repo.get_total_cards_mastered = AsyncMock(return_value=0)
+        service.progress_repo.count_user_decks = AsyncMock(return_value=0)
+        service.progress_repo.get_user_progress = AsyncMock(return_value=[])
+        service.review_repo.count_reviews_today = AsyncMock(return_value=0)
+        service.review_repo.get_study_time_today = AsyncMock(return_value=0)
+        service.review_repo.get_daily_stats = AsyncMock(return_value=[])
+        service.review_repo.get_accuracy_stats = AsyncMock(return_value={"correct": 0, "total": 0})
+        service.stats_repo.count_by_status = AsyncMock(return_value={})
+        service.culture_stats_repo.count_mastered_questions = AsyncMock(return_value=0)
+        service.culture_stats_repo.get_culture_accuracy_stats = AsyncMock(
+            return_value={"correct": 0, "total": 0}
+        )
+
+        # Vocab total study time: 3600 seconds
+        service.review_repo.get_total_study_time = AsyncMock(return_value=3600)
+
+        # Culture total study time: 1800 seconds
+        service.culture_answer_repo.get_total_study_time = AsyncMock(return_value=1800)
+
+        # Mock exam total study time: 900 seconds
+        service.mock_exam_repo.get_total_study_time = AsyncMock(return_value=900)
+
+        result = await service.get_dashboard_stats(user_id)
+
+        # Total should be vocab + culture + mock exam = 3600 + 1800 + 900 = 6300
+        assert result.overview.total_study_time_seconds == 6300
+
+    async def test_total_study_time_without_mock_exam(self, service):
+        """Total study time should work when no mock exam time."""
+        user_id = uuid4()
+
+        # Setup basic mocks
+        service.progress_repo.get_total_cards_studied = AsyncMock(return_value=0)
+        service.progress_repo.get_total_cards_mastered = AsyncMock(return_value=0)
+        service.progress_repo.count_user_decks = AsyncMock(return_value=0)
+        service.progress_repo.get_user_progress = AsyncMock(return_value=[])
+        service.review_repo.count_reviews_today = AsyncMock(return_value=0)
+        service.review_repo.get_study_time_today = AsyncMock(return_value=0)
+        service.review_repo.get_daily_stats = AsyncMock(return_value=[])
+        service.review_repo.get_accuracy_stats = AsyncMock(return_value={"correct": 0, "total": 0})
+        service.stats_repo.count_by_status = AsyncMock(return_value={})
+        service.culture_stats_repo.count_mastered_questions = AsyncMock(return_value=0)
+        service.culture_stats_repo.get_culture_accuracy_stats = AsyncMock(
+            return_value={"correct": 0, "total": 0}
+        )
+
+        # Vocab total study time: 3600 seconds
+        service.review_repo.get_total_study_time = AsyncMock(return_value=3600)
+
+        # Culture total study time: 1800 seconds
+        service.culture_answer_repo.get_total_study_time = AsyncMock(return_value=1800)
+
+        # Mock exam total study time: 0
+        service.mock_exam_repo.get_total_study_time = AsyncMock(return_value=0)
+
+        result = await service.get_dashboard_stats(user_id)
+
+        # Total should be vocab + culture = 3600 + 1800 = 5400
+        assert result.overview.total_study_time_seconds == 5400

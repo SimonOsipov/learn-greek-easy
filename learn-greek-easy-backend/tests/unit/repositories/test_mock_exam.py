@@ -692,3 +692,865 @@ class TestGetRandomQuestions:
 
         # Should return only available questions
         assert len(questions) == 5
+
+
+# =============================================================================
+# Test get_unique_dates (EXAMSTREAK feature)
+# =============================================================================
+
+
+class TestGetUniqueDates:
+    """Tests for get_unique_dates method - EXAMSTREAK feature.
+
+    This method is used for streak calculation and should:
+    - Return unique dates based on started_at (not completed_at)
+    - Include ALL session states (ACTIVE, COMPLETED, ABANDONED)
+    - Not filter by status
+    """
+
+    @pytest.mark.asyncio
+    async def test_get_unique_dates_empty(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+    ):
+        """Should return empty list for user with no mock exam sessions."""
+        repo = MockExamRepository(db_session)
+
+        dates = await repo.get_unique_dates(test_user.id, days=30)
+
+        assert dates == []
+
+    @pytest.mark.asyncio
+    async def test_get_unique_dates_completed_sessions(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+    ):
+        """Should return dates for completed sessions."""
+        repo = MockExamRepository(db_session)
+
+        # Create completed sessions on different days
+        for i in range(3):
+            session = MockExamSession(
+                user_id=test_user.id,
+                total_questions=25,
+                status=MockExamStatus.COMPLETED,
+                score=20,
+                passed=True,
+                time_taken_seconds=600,
+                started_at=datetime.utcnow() - timedelta(days=i),
+                completed_at=datetime.utcnow() - timedelta(days=i),
+            )
+            db_session.add(session)
+        await db_session.flush()
+
+        dates = await repo.get_unique_dates(test_user.id, days=30)
+
+        assert len(dates) == 3
+
+    @pytest.mark.asyncio
+    async def test_get_unique_dates_includes_active_sessions(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+    ):
+        """CRITICAL: Should include ACTIVE (in-progress) sessions.
+
+        This is a key requirement for EXAMSTREAK - any exam attempt counts,
+        including sessions the user started but hasn't finished yet.
+        """
+        repo = MockExamRepository(db_session)
+
+        # Create an ACTIVE session (started today)
+        session = MockExamSession(
+            user_id=test_user.id,
+            total_questions=25,
+            status=MockExamStatus.ACTIVE,
+            score=0,
+            passed=False,
+            time_taken_seconds=0,
+            started_at=datetime.utcnow(),
+        )
+        db_session.add(session)
+        await db_session.flush()
+
+        dates = await repo.get_unique_dates(test_user.id, days=30)
+
+        # ACTIVE session should be counted
+        assert len(dates) == 1
+
+    @pytest.mark.asyncio
+    async def test_get_unique_dates_includes_abandoned_sessions(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+    ):
+        """CRITICAL: Should include ABANDONED sessions.
+
+        Users who start but don't finish an exam should still get streak credit.
+        """
+        repo = MockExamRepository(db_session)
+
+        # Create an ABANDONED session
+        session = MockExamSession(
+            user_id=test_user.id,
+            total_questions=25,
+            status=MockExamStatus.ABANDONED,
+            score=0,
+            passed=False,
+            time_taken_seconds=300,
+            started_at=datetime.utcnow(),
+            completed_at=datetime.utcnow(),
+        )
+        db_session.add(session)
+        await db_session.flush()
+
+        dates = await repo.get_unique_dates(test_user.id, days=30)
+
+        # ABANDONED session should be counted
+        assert len(dates) == 1
+
+    @pytest.mark.asyncio
+    async def test_get_unique_dates_all_statuses_combined(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+    ):
+        """Should include sessions of all statuses (ACTIVE, COMPLETED, ABANDONED)."""
+        repo = MockExamRepository(db_session)
+
+        # Create one session of each status on different days
+        statuses = [MockExamStatus.ACTIVE, MockExamStatus.COMPLETED, MockExamStatus.ABANDONED]
+        for i, status in enumerate(statuses):
+            session = MockExamSession(
+                user_id=test_user.id,
+                total_questions=25,
+                status=status,
+                score=20 if status == MockExamStatus.COMPLETED else 0,
+                passed=status == MockExamStatus.COMPLETED,
+                time_taken_seconds=600 if status != MockExamStatus.ACTIVE else 0,
+                started_at=datetime.utcnow() - timedelta(days=i),
+                completed_at=(
+                    datetime.utcnow() - timedelta(days=i)
+                    if status != MockExamStatus.ACTIVE
+                    else None
+                ),
+            )
+            db_session.add(session)
+        await db_session.flush()
+
+        dates = await repo.get_unique_dates(test_user.id, days=30)
+
+        # All three statuses should be counted
+        assert len(dates) == 3
+
+    @pytest.mark.asyncio
+    async def test_get_unique_dates_deduplicates_same_day(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+    ):
+        """Multiple sessions on the same day should only count as one date."""
+        repo = MockExamRepository(db_session)
+
+        # Create multiple sessions on the same day
+        for i in range(3):
+            session = MockExamSession(
+                user_id=test_user.id,
+                total_questions=25,
+                status=MockExamStatus.COMPLETED,
+                score=20,
+                passed=True,
+                time_taken_seconds=600,
+                started_at=datetime.utcnow(),
+                completed_at=datetime.utcnow(),
+            )
+            db_session.add(session)
+        await db_session.flush()
+
+        dates = await repo.get_unique_dates(test_user.id, days=30)
+
+        # Should only return one date even with multiple sessions
+        assert len(dates) == 1
+
+    @pytest.mark.asyncio
+    async def test_get_unique_dates_respects_days_limit(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+    ):
+        """Should only return dates within the specified days limit."""
+        repo = MockExamRepository(db_session)
+
+        # Create sessions: 5 days ago, 15 days ago, 40 days ago
+        for days_ago in [5, 15, 40]:
+            session = MockExamSession(
+                user_id=test_user.id,
+                total_questions=25,
+                status=MockExamStatus.COMPLETED,
+                score=20,
+                passed=True,
+                time_taken_seconds=600,
+                started_at=datetime.utcnow() - timedelta(days=days_ago),
+                completed_at=datetime.utcnow() - timedelta(days=days_ago),
+            )
+            db_session.add(session)
+        await db_session.flush()
+
+        # Request only last 30 days
+        dates = await repo.get_unique_dates(test_user.id, days=30)
+
+        # 40-day-old session should be excluded
+        assert len(dates) == 2
+
+    @pytest.mark.asyncio
+    async def test_get_unique_dates_uses_started_at_not_completed_at(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+    ):
+        """CRITICAL: Should use started_at for date, not completed_at.
+
+        This ensures ACTIVE sessions (no completed_at) are still counted.
+        """
+        repo = MockExamRepository(db_session)
+
+        # Create a session that started yesterday but completed today
+        yesterday = datetime.utcnow() - timedelta(days=1)
+        today = datetime.utcnow()
+        session = MockExamSession(
+            user_id=test_user.id,
+            total_questions=25,
+            status=MockExamStatus.COMPLETED,
+            score=20,
+            passed=True,
+            time_taken_seconds=86400,  # 24 hours
+            started_at=yesterday,
+            completed_at=today,
+        )
+        db_session.add(session)
+        await db_session.flush()
+
+        dates = await repo.get_unique_dates(test_user.id, days=30)
+
+        # Should return yesterday's date (started_at) not today's (completed_at)
+        assert len(dates) == 1
+        assert dates[0] == yesterday.date()
+
+
+# =============================================================================
+# Test get_all_unique_dates (EXAMSTREAK feature)
+# =============================================================================
+
+
+class TestGetAllUniqueDates:
+    """Tests for get_all_unique_dates method - EXAMSTREAK feature.
+
+    This method is used for longest streak calculation and should:
+    - Return ALL unique dates from user's history (no time limit)
+    - Include ALL session states (ACTIVE, COMPLETED, ABANDONED)
+    - Be sorted ascending
+    """
+
+    @pytest.mark.asyncio
+    async def test_get_all_unique_dates_empty(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+    ):
+        """Should return empty list for user with no mock exam sessions."""
+        repo = MockExamRepository(db_session)
+
+        dates = await repo.get_all_unique_dates(test_user.id)
+
+        assert dates == []
+
+    @pytest.mark.asyncio
+    async def test_get_all_unique_dates_includes_all_statuses(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+    ):
+        """Should include sessions of all statuses."""
+        repo = MockExamRepository(db_session)
+
+        # Create sessions with different statuses on different days
+        statuses = [MockExamStatus.ACTIVE, MockExamStatus.COMPLETED, MockExamStatus.ABANDONED]
+        for i, status in enumerate(statuses):
+            session = MockExamSession(
+                user_id=test_user.id,
+                total_questions=25,
+                status=status,
+                score=20 if status == MockExamStatus.COMPLETED else 0,
+                passed=status == MockExamStatus.COMPLETED,
+                time_taken_seconds=600 if status != MockExamStatus.ACTIVE else 0,
+                started_at=datetime.utcnow() - timedelta(days=i * 10),
+                completed_at=(
+                    datetime.utcnow() - timedelta(days=i * 10)
+                    if status != MockExamStatus.ACTIVE
+                    else None
+                ),
+            )
+            db_session.add(session)
+        await db_session.flush()
+
+        dates = await repo.get_all_unique_dates(test_user.id)
+
+        assert len(dates) == 3
+
+    @pytest.mark.asyncio
+    async def test_get_all_unique_dates_no_time_limit(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+    ):
+        """Should return dates from entire history (no time limit)."""
+        repo = MockExamRepository(db_session)
+
+        # Create sessions from far in the past
+        for days_ago in [5, 100, 365]:
+            session = MockExamSession(
+                user_id=test_user.id,
+                total_questions=25,
+                status=MockExamStatus.COMPLETED,
+                score=20,
+                passed=True,
+                time_taken_seconds=600,
+                started_at=datetime.utcnow() - timedelta(days=days_ago),
+                completed_at=datetime.utcnow() - timedelta(days=days_ago),
+            )
+            db_session.add(session)
+        await db_session.flush()
+
+        dates = await repo.get_all_unique_dates(test_user.id)
+
+        # All dates should be included regardless of age
+        assert len(dates) == 3
+
+    @pytest.mark.asyncio
+    async def test_get_all_unique_dates_sorted_ascending(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+    ):
+        """Dates should be sorted in ascending order (oldest first)."""
+        repo = MockExamRepository(db_session)
+
+        # Create sessions in random order
+        days_ago_list = [5, 20, 10, 30, 1]
+        for days_ago in days_ago_list:
+            session = MockExamSession(
+                user_id=test_user.id,
+                total_questions=25,
+                status=MockExamStatus.COMPLETED,
+                score=20,
+                passed=True,
+                time_taken_seconds=600,
+                started_at=datetime.utcnow() - timedelta(days=days_ago),
+                completed_at=datetime.utcnow() - timedelta(days=days_ago),
+            )
+            db_session.add(session)
+        await db_session.flush()
+
+        dates = await repo.get_all_unique_dates(test_user.id)
+
+        # Should be sorted ascending (oldest first)
+        assert len(dates) == 5
+        for i in range(len(dates) - 1):
+            assert dates[i] <= dates[i + 1]
+
+    @pytest.mark.asyncio
+    async def test_get_all_unique_dates_deduplicates(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+    ):
+        """Multiple sessions on the same day should count as one date."""
+        repo = MockExamRepository(db_session)
+
+        # Create 3 sessions on the same day
+        for _ in range(3):
+            session = MockExamSession(
+                user_id=test_user.id,
+                total_questions=25,
+                status=MockExamStatus.COMPLETED,
+                score=20,
+                passed=True,
+                time_taken_seconds=600,
+                started_at=datetime.utcnow(),
+                completed_at=datetime.utcnow(),
+            )
+            db_session.add(session)
+        await db_session.flush()
+
+        dates = await repo.get_all_unique_dates(test_user.id)
+
+        assert len(dates) == 1
+
+
+# =============================================================================
+# Test get_study_time_today (EXAMTIME feature)
+# =============================================================================
+
+
+class TestGetStudyTimeToday:
+    """Tests for get_study_time_today method - EXAMTIME feature.
+
+    This method is used for tracking study time and should:
+    - Return total time_taken_seconds from COMPLETED sessions today
+    - EXCLUDE ACTIVE sessions (incomplete time data)
+    - EXCLUDE ABANDONED sessions (unreliable time data)
+    - Filter by completed_at date (not started_at)
+    - Cap each session at MAX_ANSWER_TIME_SECONDS (180s) for consistency
+    """
+
+    @pytest.mark.asyncio
+    async def test_get_study_time_today_empty(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+    ):
+        """Should return 0 for user with no mock exam sessions."""
+        repo = MockExamRepository(db_session)
+
+        study_time = await repo.get_study_time_today(test_user.id)
+
+        assert study_time == 0
+
+    @pytest.mark.asyncio
+    async def test_get_study_time_today_completed_sessions(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+    ):
+        """Should sum time_taken_seconds from completed sessions today (capped)."""
+        repo = MockExamRepository(db_session)
+
+        # Create 2 completed sessions today with 100 and 50 seconds (under cap)
+        for time_taken in [100, 50]:
+            session = MockExamSession(
+                user_id=test_user.id,
+                total_questions=25,
+                status=MockExamStatus.COMPLETED,
+                score=20,
+                passed=True,
+                time_taken_seconds=time_taken,
+                started_at=datetime.utcnow(),
+                completed_at=datetime.utcnow(),
+            )
+            db_session.add(session)
+        await db_session.flush()
+
+        study_time = await repo.get_study_time_today(test_user.id)
+
+        # Should be 100 + 50 = 150 seconds (both under MAX_ANSWER_TIME_SECONDS cap)
+        assert study_time == 150
+
+    @pytest.mark.asyncio
+    async def test_get_study_time_today_returns_full_session_time(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+    ):
+        """Should return full session time without capping.
+
+        Mock exam sessions typically take 10-15 minutes (25 questions).
+        Unlike per-answer time capping, session time should not be capped
+        because the entire session duration is legitimate study time.
+        """
+        repo = MockExamRepository(db_session)
+
+        # Create a session with realistic exam duration
+        session = MockExamSession(
+            user_id=test_user.id,
+            total_questions=25,
+            status=MockExamStatus.COMPLETED,
+            score=20,
+            passed=True,
+            time_taken_seconds=600,  # 10 minutes - typical exam duration
+            started_at=datetime.utcnow(),
+            completed_at=datetime.utcnow(),
+        )
+        db_session.add(session)
+        await db_session.flush()
+
+        study_time = await repo.get_study_time_today(test_user.id)
+
+        # Should return full session time (no capping)
+        assert study_time == 600
+
+    @pytest.mark.asyncio
+    async def test_get_study_time_today_excludes_active_sessions(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+    ):
+        """CRITICAL: Should NOT include ACTIVE sessions.
+
+        ACTIVE sessions have incomplete time_taken_seconds and would
+        distort the study time metric.
+        """
+        repo = MockExamRepository(db_session)
+
+        # Create an ACTIVE session (should be excluded)
+        active_session = MockExamSession(
+            user_id=test_user.id,
+            total_questions=25,
+            status=MockExamStatus.ACTIVE,
+            score=0,
+            passed=False,
+            time_taken_seconds=0,
+            started_at=datetime.utcnow(),
+        )
+        db_session.add(active_session)
+
+        # Create a COMPLETED session (should be included)
+        completed_session = MockExamSession(
+            user_id=test_user.id,
+            total_questions=25,
+            status=MockExamStatus.COMPLETED,
+            score=20,
+            passed=True,
+            time_taken_seconds=100,  # Under cap
+            started_at=datetime.utcnow(),
+            completed_at=datetime.utcnow(),
+        )
+        db_session.add(completed_session)
+        await db_session.flush()
+
+        study_time = await repo.get_study_time_today(test_user.id)
+
+        # Only the completed session's time should be counted
+        assert study_time == 100
+
+    @pytest.mark.asyncio
+    async def test_get_study_time_today_excludes_abandoned_sessions(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+    ):
+        """CRITICAL: Should NOT include ABANDONED sessions.
+
+        ABANDONED sessions may have unreliable time_taken_seconds data.
+        """
+        repo = MockExamRepository(db_session)
+
+        # Create an ABANDONED session (should be excluded)
+        abandoned_session = MockExamSession(
+            user_id=test_user.id,
+            total_questions=25,
+            status=MockExamStatus.ABANDONED,
+            score=0,
+            passed=False,
+            time_taken_seconds=100,
+            started_at=datetime.utcnow(),
+            completed_at=datetime.utcnow(),
+        )
+        db_session.add(abandoned_session)
+
+        # Create a COMPLETED session (should be included)
+        completed_session = MockExamSession(
+            user_id=test_user.id,
+            total_questions=25,
+            status=MockExamStatus.COMPLETED,
+            score=20,
+            passed=True,
+            time_taken_seconds=120,  # Under cap
+            started_at=datetime.utcnow(),
+            completed_at=datetime.utcnow(),
+        )
+        db_session.add(completed_session)
+        await db_session.flush()
+
+        study_time = await repo.get_study_time_today(test_user.id)
+
+        # Only the completed session's time should be counted
+        assert study_time == 120
+
+    @pytest.mark.asyncio
+    async def test_get_study_time_today_excludes_old_sessions(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+    ):
+        """Should only count sessions completed today, not historical sessions."""
+        repo = MockExamRepository(db_session)
+
+        # Create a session completed yesterday (should be excluded)
+        yesterday = datetime.utcnow() - timedelta(days=1)
+        old_session = MockExamSession(
+            user_id=test_user.id,
+            total_questions=25,
+            status=MockExamStatus.COMPLETED,
+            score=20,
+            passed=True,
+            time_taken_seconds=100,
+            started_at=yesterday,
+            completed_at=yesterday,
+        )
+        db_session.add(old_session)
+
+        # Create a session completed today (should be included)
+        today_session = MockExamSession(
+            user_id=test_user.id,
+            total_questions=25,
+            status=MockExamStatus.COMPLETED,
+            score=20,
+            passed=True,
+            time_taken_seconds=80,  # Under cap
+            started_at=datetime.utcnow(),
+            completed_at=datetime.utcnow(),
+        )
+        db_session.add(today_session)
+        await db_session.flush()
+
+        study_time = await repo.get_study_time_today(test_user.id)
+
+        # Only today's session should be counted
+        assert study_time == 80
+
+    @pytest.mark.asyncio
+    async def test_get_study_time_today_uses_completed_at_for_filtering(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+    ):
+        """Should filter by completed_at date, not started_at.
+
+        A session started yesterday but completed today should be counted
+        in today's study time.
+        """
+        repo = MockExamRepository(db_session)
+
+        # Create a session started yesterday but completed today
+        yesterday = datetime.utcnow() - timedelta(days=1)
+        session = MockExamSession(
+            user_id=test_user.id,
+            total_questions=25,
+            status=MockExamStatus.COMPLETED,
+            score=20,
+            passed=True,
+            time_taken_seconds=90,  # Under cap
+            started_at=yesterday,
+            completed_at=datetime.utcnow(),  # Completed today
+        )
+        db_session.add(session)
+        await db_session.flush()
+
+        study_time = await repo.get_study_time_today(test_user.id)
+
+        # Should be counted because it was completed today
+        assert study_time == 90
+
+
+# =============================================================================
+# Test get_total_study_time (EXAMTIME feature)
+# =============================================================================
+
+
+class TestGetTotalStudyTime:
+    """Tests for get_total_study_time method - EXAMTIME feature.
+
+    This method is used for tracking all-time study time and should:
+    - Return total time_taken_seconds from ALL COMPLETED sessions
+    - EXCLUDE ACTIVE sessions (incomplete time data)
+    - EXCLUDE ABANDONED sessions (unreliable time data)
+    - Include sessions from entire history (no time limit)
+    - Cap each session at MAX_ANSWER_TIME_SECONDS (180s) for consistency
+    """
+
+    @pytest.mark.asyncio
+    async def test_get_total_study_time_empty(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+    ):
+        """Should return 0 for user with no mock exam sessions."""
+        repo = MockExamRepository(db_session)
+
+        total_time = await repo.get_total_study_time(test_user.id)
+
+        assert total_time == 0
+
+    @pytest.mark.asyncio
+    async def test_get_total_study_time_sums_all_completed(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+    ):
+        """Should sum time_taken_seconds from all completed sessions (capped)."""
+        repo = MockExamRepository(db_session)
+
+        # Create sessions over multiple days (all under 180s cap)
+        for days_ago in [0, 5, 30, 100]:
+            session_time = datetime.utcnow() - timedelta(days=days_ago)
+            session = MockExamSession(
+                user_id=test_user.id,
+                total_questions=25,
+                status=MockExamStatus.COMPLETED,
+                score=20,
+                passed=True,
+                time_taken_seconds=100,  # Under cap
+                started_at=session_time,
+                completed_at=session_time,
+            )
+            db_session.add(session)
+        await db_session.flush()
+
+        total_time = await repo.get_total_study_time(test_user.id)
+
+        # 4 sessions * 100 seconds = 400 seconds
+        assert total_time == 400
+
+    @pytest.mark.asyncio
+    async def test_get_total_study_time_returns_full_session_time(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+    ):
+        """Should return full session time without capping.
+
+        Mock exam sessions typically take 10-15 minutes (25 questions).
+        Unlike per-answer time capping, session time should not be capped
+        because the entire session duration is legitimate study time.
+        """
+        repo = MockExamRepository(db_session)
+
+        # Create sessions with realistic exam duration
+        for days_ago in [0, 5]:
+            session_time = datetime.utcnow() - timedelta(days=days_ago)
+            session = MockExamSession(
+                user_id=test_user.id,
+                total_questions=25,
+                status=MockExamStatus.COMPLETED,
+                score=20,
+                passed=True,
+                time_taken_seconds=600,  # 10 minutes - typical exam duration
+                started_at=session_time,
+                completed_at=session_time,
+            )
+            db_session.add(session)
+        await db_session.flush()
+
+        total_time = await repo.get_total_study_time(test_user.id)
+
+        # 2 sessions at 600 seconds each = 1200 seconds (no capping)
+        assert total_time == 1200
+
+    @pytest.mark.asyncio
+    async def test_get_total_study_time_excludes_active_sessions(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+    ):
+        """CRITICAL: Should NOT include ACTIVE sessions."""
+        repo = MockExamRepository(db_session)
+
+        # Create an ACTIVE session (should be excluded)
+        active_session = MockExamSession(
+            user_id=test_user.id,
+            total_questions=25,
+            status=MockExamStatus.ACTIVE,
+            score=0,
+            passed=False,
+            time_taken_seconds=0,
+            started_at=datetime.utcnow(),
+        )
+        db_session.add(active_session)
+
+        # Create a COMPLETED session (should be included)
+        completed_session = MockExamSession(
+            user_id=test_user.id,
+            total_questions=25,
+            status=MockExamStatus.COMPLETED,
+            score=20,
+            passed=True,
+            time_taken_seconds=100,  # Under cap
+            started_at=datetime.utcnow(),
+            completed_at=datetime.utcnow(),
+        )
+        db_session.add(completed_session)
+        await db_session.flush()
+
+        total_time = await repo.get_total_study_time(test_user.id)
+
+        # Only the completed session's time should be counted
+        assert total_time == 100
+
+    @pytest.mark.asyncio
+    async def test_get_total_study_time_excludes_abandoned_sessions(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+    ):
+        """CRITICAL: Should NOT include ABANDONED sessions."""
+        repo = MockExamRepository(db_session)
+
+        # Create an ABANDONED session (should be excluded)
+        abandoned_session = MockExamSession(
+            user_id=test_user.id,
+            total_questions=25,
+            status=MockExamStatus.ABANDONED,
+            score=0,
+            passed=False,
+            time_taken_seconds=100,
+            started_at=datetime.utcnow(),
+            completed_at=datetime.utcnow(),
+        )
+        db_session.add(abandoned_session)
+
+        # Create a COMPLETED session (should be included)
+        completed_session = MockExamSession(
+            user_id=test_user.id,
+            total_questions=25,
+            status=MockExamStatus.COMPLETED,
+            score=20,
+            passed=True,
+            time_taken_seconds=120,  # Under cap
+            started_at=datetime.utcnow(),
+            completed_at=datetime.utcnow(),
+        )
+        db_session.add(completed_session)
+        await db_session.flush()
+
+        total_time = await repo.get_total_study_time(test_user.id)
+
+        # Only the completed session's time should be counted
+        assert total_time == 120
+
+    @pytest.mark.asyncio
+    async def test_get_total_study_time_all_statuses_mixed(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+    ):
+        """Should only count COMPLETED sessions when all statuses present."""
+        repo = MockExamRepository(db_session)
+
+        # Create one session of each status (all under cap)
+        statuses_and_times = [
+            (MockExamStatus.ACTIVE, 50),  # Should be excluded
+            (MockExamStatus.ABANDONED, 60),  # Should be excluded
+            (MockExamStatus.COMPLETED, 100),  # Should be included
+            (MockExamStatus.COMPLETED, 80),  # Should be included
+        ]
+
+        for status, time_taken in statuses_and_times:
+            session = MockExamSession(
+                user_id=test_user.id,
+                total_questions=25,
+                status=status,
+                score=20 if status == MockExamStatus.COMPLETED else 0,
+                passed=status == MockExamStatus.COMPLETED,
+                time_taken_seconds=time_taken,
+                started_at=datetime.utcnow(),
+                completed_at=datetime.utcnow() if status != MockExamStatus.ACTIVE else None,
+            )
+            db_session.add(session)
+        await db_session.flush()
+
+        total_time = await repo.get_total_study_time(test_user.id)
+
+        # Only the two COMPLETED sessions should be counted: 100 + 80 = 180
+        assert total_time == 180

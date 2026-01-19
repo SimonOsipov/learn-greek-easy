@@ -206,7 +206,7 @@ class ProgressService:
         return longest
 
     async def _get_aggregated_study_time_today(self, user_id: UUID) -> int:
-        """Get combined study time from vocabulary and culture sessions today.
+        """Get combined study time from vocabulary, culture, and mock exam sessions today.
 
         Args:
             user_id: User UUID
@@ -216,7 +216,8 @@ class ProgressService:
         """
         vocab_time = await self.review_repo.get_study_time_today(user_id)
         culture_time = await self.culture_answer_repo.get_study_time_today(user_id)
-        return vocab_time + culture_time
+        mock_exam_time = await self.mock_exam_repo.get_study_time_today(user_id)
+        return vocab_time + culture_time + mock_exam_time
 
     async def _get_aggregated_reviews_today(self, user_id: UUID) -> int:
         """Get combined review/answer count from vocabulary and culture sessions today.
@@ -245,7 +246,7 @@ class ProgressService:
         return vocab_reviews + culture_answers
 
     async def _get_aggregated_total_study_time(self, user_id: UUID) -> int:
-        """Get total study time combining vocabulary and culture sessions.
+        """Get total study time combining vocabulary, culture, and mock exam sessions.
 
         Args:
             user_id: User UUID
@@ -255,7 +256,8 @@ class ProgressService:
         """
         vocab_time = await self.review_repo.get_total_study_time(user_id)
         culture_time = await self.culture_answer_repo.get_total_study_time(user_id)
-        return vocab_time + culture_time
+        mock_exam_time = await self.mock_exam_repo.get_total_study_time(user_id)
+        return vocab_time + culture_time + mock_exam_time
 
     async def _get_recent_activity(
         self,
