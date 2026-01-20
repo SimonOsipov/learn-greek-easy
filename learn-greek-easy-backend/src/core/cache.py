@@ -402,6 +402,48 @@ class CacheService:
         logger.info(f"Invalidated progress cache for user {user_id_str} ({deleted} entries)")
         return deleted
 
+    async def invalidate_all_user_data(self, user_id: Union[UUID, str]) -> int:
+        """Clear ALL cache entries for a user, including direct Redis keys.
+
+        This is used when resetting or deleting a user account.
+        Unlike invalidate_user_progress() which targets specific progress data,
+        this method clears everything associated with the user including
+        direct Redis keys that bypass the cache service.
+
+        Args:
+            user_id: The user's UUID
+
+        Returns:
+            Number of cache entries invalidated.
+        """
+        user_id_str = str(user_id)
+        deleted = 0
+
+        # 1. Clear standard cache keys (reuse existing method)
+        deleted += await self.invalidate_user_progress(user_id)
+
+        # 2. Clear direct Redis keys (not through cache prefix)
+        # daily_goal_notified uses direct Redis without cache prefix
+        try:
+            redis = self.redis
+            if redis:
+                daily_goal_pattern = f"daily_goal_notified:{user_id_str}:*"
+                cursor = 0
+                while True:
+                    cursor, keys = await redis.scan(
+                        cursor=cursor, match=daily_goal_pattern, count=100
+                    )
+                    if keys:
+                        await redis.delete(*keys)
+                        deleted += len(keys)
+                    if cursor == 0:
+                        break
+        except Exception as e:
+            logger.warning(f"Failed to clear daily_goal_notified keys for user {user_id_str}: {e}")
+
+        logger.info(f"Invalidated all cache data for user {user_id_str} ({deleted} entries)")
+        return deleted
+
 
 # =============================================================================
 # Global Instance Management

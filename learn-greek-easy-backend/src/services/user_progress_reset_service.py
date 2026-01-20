@@ -12,6 +12,7 @@ from uuid import UUID
 from sqlalchemy import delete, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.cache import get_cache
 from src.db.models import UserAchievement, UserXP, XPTransaction
 from src.repositories import (
     CardStatisticsRepository,
@@ -172,6 +173,14 @@ class UserProgressResetService:
             f"Progress reset complete for user {user_id}. "
             f"Total records deleted: {result.total_deleted}"
         )
+
+        # Clear all user-related Redis cache (non-critical - log warning if fails)
+        try:
+            cache = get_cache()
+            cache_entries_deleted = await cache.invalidate_all_user_data(user_id)
+            logger.debug(f"Cleared {cache_entries_deleted} cache entries for user {user_id}")
+        except Exception as e:
+            logger.warning(f"Failed to clear cache for user {user_id}: {e}")
 
         return result
 
