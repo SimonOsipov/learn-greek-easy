@@ -320,6 +320,217 @@ class MockExamService:
             "duplicate": False,
         }
 
+    async def submit_all_answers(
+        self,
+        user_id: UUID,
+        session_id: UUID,
+        answers: list[dict],
+        total_time_seconds: int,
+    ) -> dict[str, Any]:
+        """Submit all exam answers at once and complete the session atomically.
+
+        This method processes all answers in a single transaction:
+        - Validates session is active and owned by user
+        - Detects and handles duplicate answers (idempotency)
+        - For each new answer: determines correctness, saves to DB, updates SM-2, awards XP
+        - Calculates final score and pass/fail
+        - Completes the session
+
+        Args:
+            user_id: User UUID
+            session_id: Mock exam session UUID
+            answers: List of answer dicts with question_id, selected_option, time_taken_seconds
+            total_time_seconds: Total time taken for the exam
+
+        Returns:
+            Dict with:
+            - session: Updated MockExamSession
+            - passed: Whether the exam was passed
+            - score: Number of correct answers
+            - total_questions: Total questions in exam
+            - percentage: Score percentage
+            - pass_threshold: Required percentage to pass
+            - answer_results: List of per-answer results
+            - total_xp_earned: Total XP earned from all answers
+            - new_answers_count: Number of new answers processed
+            - duplicate_answers_count: Number of duplicate answers skipped
+
+        Raises:
+            MockExamNotFoundException: If session not found
+            MockExamSessionExpiredException: If session is not active
+
+        Use Case:
+            Submitting all answers and completing the exam in one request
+        """
+        logger.debug(
+            "Processing submit-all for mock exam",
+            extra={
+                "user_id": str(user_id),
+                "session_id": str(session_id),
+                "answer_count": len(answers),
+            },
+        )
+
+        # Get and validate session
+        session = await self.repository.get_session(session_id, user_id)
+        if session is None:
+            raise MockExamNotFoundException(str(session_id))
+
+        if session.status != MockExamStatus.ACTIVE:
+            raise MockExamSessionExpiredException(str(session_id))
+
+        # Get existing answers to detect duplicates
+        existing_answers = await self.repository.get_session_answers(session_id)
+        existing_question_ids = {a.question_id for a in existing_answers}
+
+        # Process each answer
+        answer_results: list[dict[str, Any]] = []
+        total_xp_earned = 0
+        new_answers_count = 0
+        duplicate_answers_count = 0
+
+        for answer in answers:
+            question_id = answer["question_id"]
+            selected_option = answer["selected_option"]
+            time_taken_seconds = answer["time_taken_seconds"]
+
+            # Check if already answered (duplicate)
+            if question_id in existing_question_ids:
+                logger.debug(
+                    "Duplicate answer in submit-all",
+                    extra={
+                        "session_id": str(session_id),
+                        "question_id": str(question_id),
+                    },
+                )
+                # Find the existing answer to get correct_option
+                question = await self._get_question(question_id)
+                correct_option = question.correct_option if question else selected_option
+
+                answer_results.append(
+                    {
+                        "question_id": question_id,
+                        "is_correct": False,  # Not re-processed
+                        "correct_option": correct_option,
+                        "selected_option": selected_option,
+                        "xp_earned": 0,
+                        "was_duplicate": True,
+                    }
+                )
+                duplicate_answers_count += 1
+                continue
+
+            # Get the question
+            question = await self._get_question(question_id)
+            if question is None:
+                logger.warning(
+                    "Question not found in submit-all",
+                    extra={
+                        "session_id": str(session_id),
+                        "question_id": str(question_id),
+                    },
+                )
+                # Skip invalid questions but log
+                continue
+
+            # Determine correctness
+            is_correct = selected_option == question.correct_option
+            is_perfect = time_taken_seconds <= PERFECT_RECALL_THRESHOLD_SECONDS
+
+            # Save the answer
+            await self.repository.save_answer(
+                session_id=session_id,
+                question_id=question_id,
+                selected_option=selected_option,
+                is_correct=is_correct,
+                time_taken_seconds=time_taken_seconds,
+            )
+
+            # Update session score if correct
+            if is_correct:
+                session.score += 1
+
+            # Update SM-2 statistics for the question
+            await self._update_sm2_stats(
+                user_id=user_id,
+                question_id=question_id,
+                is_correct=is_correct,
+            )
+
+            # Award XP
+            xp_earned = await self.xp_service.award_culture_answer_xp(
+                user_id=user_id,
+                is_correct=is_correct,
+                is_perfect=is_perfect,
+                source_id=question_id,
+            )
+
+            total_xp_earned += xp_earned
+            new_answers_count += 1
+
+            # Add to existing set to prevent duplicates within same request
+            existing_question_ids.add(question_id)
+
+            answer_results.append(
+                {
+                    "question_id": question_id,
+                    "is_correct": is_correct,
+                    "correct_option": question.correct_option,
+                    "selected_option": selected_option,
+                    "xp_earned": xp_earned,
+                    "was_duplicate": False,
+                }
+            )
+
+        # Calculate final score from all answers (existing + new)
+        all_answers = await self.repository.get_session_answers(session_id)
+        final_score = sum(1 for a in all_answers if a.is_correct)
+
+        # Calculate pass/fail
+        percentage = (final_score / session.total_questions) * 100
+        passed = percentage >= PASS_THRESHOLD_PERCENTAGE
+
+        # Store total_questions before updating session
+        total_questions = session.total_questions
+
+        # Complete the session
+        updated_session = await self.repository.complete_session(
+            session_id=session_id,
+            score=final_score,
+            passed=passed,
+            time_taken_seconds=total_time_seconds,
+        )
+
+        await self.db.commit()
+
+        logger.info(
+            "Mock exam submit-all completed",
+            extra={
+                "user_id": str(user_id),
+                "session_id": str(session_id),
+                "score": final_score,
+                "total_questions": total_questions,
+                "percentage": percentage,
+                "passed": passed,
+                "new_answers": new_answers_count,
+                "duplicates": duplicate_answers_count,
+                "total_xp": total_xp_earned,
+            },
+        )
+
+        return {
+            "session": updated_session,
+            "passed": passed,
+            "score": final_score,
+            "total_questions": total_questions,
+            "percentage": round(percentage, 1),
+            "pass_threshold": PASS_THRESHOLD_PERCENTAGE,
+            "answer_results": answer_results,
+            "total_xp_earned": total_xp_earned,
+            "new_answers_count": new_answers_count,
+            "duplicate_answers_count": duplicate_answers_count,
+        }
+
     async def complete_exam(
         self,
         user_id: UUID,

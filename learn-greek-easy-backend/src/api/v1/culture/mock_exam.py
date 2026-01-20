@@ -26,6 +26,7 @@ from src.db.models import User
 from src.schemas.mock_exam import (
     MockExamAnswerRequest,
     MockExamAnswerResponse,
+    MockExamAnswerResult,
     MockExamCompleteRequest,
     MockExamCompleteResponse,
     MockExamCreateResponse,
@@ -34,6 +35,8 @@ from src.schemas.mock_exam import (
     MockExamQueueResponse,
     MockExamSessionResponse,
     MockExamStatisticsResponse,
+    MockExamSubmitAllRequest,
+    MockExamSubmitAllResponse,
 )
 from src.services import MockExamService
 
@@ -372,6 +375,203 @@ async def submit_mock_exam_answer(
         current_score=result["current_score"],
         answers_count=result["answers_count"],
         duplicate=result["duplicate"],
+    )
+
+
+@router.post(
+    "/sessions/{session_id}/submit-all",
+    response_model=MockExamSubmitAllResponse,
+    summary="Submit all answers and complete exam",
+    description="""
+    Submit all exam answers at once and complete the session atomically.
+
+    **Authentication**: Required
+
+    **Behavior**:
+    - Validates the session is active and owned by user
+    - Processes all answers, determines correctness for each
+    - Updates SM-2 statistics for each question
+    - Awards XP for each answer (10 XP correct, 15 XP perfect, 2 XP incorrect)
+    - Calculates final score and pass/fail status
+    - Completes the session in a single transaction
+
+    **Idempotency**: If some answers were already submitted via the `/answers`
+    endpoint, those duplicates are detected and skipped (no double XP or SM-2 updates).
+    The response indicates which answers were duplicates.
+
+    **Use Case**: Complete the exam in a single request instead of multiple
+    `/answers` calls followed by `/complete`
+    """,
+    responses={
+        200: {
+            "description": "All answers processed and exam completed",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "session": {
+                            "id": "...",
+                            "status": "completed",
+                            "score": 18,
+                            "total_questions": 25,
+                            "passed": True,
+                        },
+                        "passed": True,
+                        "score": 18,
+                        "total_questions": 25,
+                        "percentage": 72.0,
+                        "pass_threshold": 60,
+                        "answer_results": [
+                            {
+                                "question_id": "...",
+                                "is_correct": True,
+                                "correct_option": 2,
+                                "selected_option": 2,
+                                "xp_earned": 10,
+                                "was_duplicate": False,
+                            }
+                        ],
+                        "total_xp_earned": 230,
+                        "new_answers_count": 25,
+                        "duplicate_answers_count": 0,
+                    }
+                }
+            },
+        },
+        400: {
+            "description": "Session is not active",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "success": False,
+                        "error": {
+                            "code": "MOCK_EXAM_SESSION_EXPIRED",
+                            "message": "Mock exam session ... is no longer active",
+                        },
+                    }
+                }
+            },
+        },
+        404: {
+            "description": "Session not found",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "success": False,
+                        "error": {
+                            "code": "NOT_FOUND",
+                            "message": "Mock exam session ... not found",
+                        },
+                    }
+                }
+            },
+        },
+        422: {
+            "description": "Validation error (invalid answers)",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "success": False,
+                        "error": {
+                            "code": "VALIDATION_ERROR",
+                            "message": "Invalid request body",
+                        },
+                    }
+                }
+            },
+        },
+    },
+)
+async def submit_all_mock_exam_answers(
+    session_id: UUID,
+    request: MockExamSubmitAllRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> MockExamSubmitAllResponse:
+    """Submit all answers and complete a mock exam session in one request.
+
+    Processes all answers atomically, updates SM-2 statistics, awards XP,
+    and completes the exam.
+
+    Args:
+        session_id: UUID of the mock exam session
+        request: Submit-all request with answers list and total_time
+        db: Database session (injected)
+        current_user: Authenticated user (injected)
+
+    Returns:
+        MockExamSubmitAllResponse with full results
+
+    Raises:
+        MockExamNotFoundException: If session doesn't exist or not owned by user
+        MockExamSessionExpiredException: If session is not active
+
+    Example:
+        POST /api/v1/culture/mock-exam/sessions/{session_id}/submit-all
+        {
+            "answers": [
+                {"question_id": "...", "selected_option": 2, "time_taken_seconds": 15},
+                ...
+            ],
+            "total_time_seconds": 1200
+        }
+    """
+    service = MockExamService(db)
+
+    # Convert request to dict format for service
+    answers_data = [
+        {
+            "question_id": answer.question_id,
+            "selected_option": answer.selected_option,
+            "time_taken_seconds": answer.time_taken_seconds,
+        }
+        for answer in request.answers
+    ]
+
+    result = await service.submit_all_answers(
+        user_id=current_user.id,
+        session_id=session_id,
+        answers=answers_data,
+        total_time_seconds=request.total_time_seconds,
+    )
+
+    # Convert session to response format
+    session = result["session"]
+    session_response = MockExamSessionResponse(
+        id=session.id,
+        user_id=session.user_id,
+        started_at=session.started_at,
+        completed_at=session.completed_at,
+        score=session.score,
+        total_questions=session.total_questions,
+        passed=session.passed,
+        time_taken_seconds=session.time_taken_seconds,
+        status=session.status.value,
+    )
+
+    # Convert answer results to response format
+    answer_results_response = [
+        MockExamAnswerResult(
+            question_id=ar["question_id"],
+            is_correct=ar["is_correct"],
+            correct_option=ar["correct_option"],
+            selected_option=ar["selected_option"],
+            xp_earned=ar["xp_earned"],
+            was_duplicate=ar["was_duplicate"],
+        )
+        for ar in result["answer_results"]
+    ]
+
+    return MockExamSubmitAllResponse(
+        session=session_response,
+        passed=result["passed"],
+        score=result["score"],
+        total_questions=result["total_questions"],
+        percentage=result["percentage"],
+        pass_threshold=result["pass_threshold"],
+        answer_results=answer_results_response,
+        total_xp_earned=result["total_xp_earned"],
+        new_answers_count=result["new_answers_count"],
+        duplicate_answers_count=result["duplicate_answers_count"],
     )
 
 

@@ -628,3 +628,259 @@ class TestAbandonExam:
                 user_id=test_user.id,
                 session_id=completed_mock_exam.id,
             )
+
+
+# =============================================================================
+# Test submit_all_answers
+# =============================================================================
+
+
+class TestSubmitAllAnswers:
+    """Tests for submit_all_answers method."""
+
+    @pytest.mark.asyncio
+    async def test_submit_all_success_pass(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+        active_mock_exam: MockExamSession,
+        culture_questions: list[CultureQuestion],
+        mock_s3_service,
+    ):
+        """Should process all answers and pass exam with 64% score."""
+        service = MockExamService(db_session, s3_service=mock_s3_service)
+
+        # Build answers: 16 correct, 9 wrong (64% = pass)
+        answers = []
+        for i, question in enumerate(culture_questions[:25]):
+            if i < 16:
+                # Correct answer
+                answers.append(
+                    {
+                        "question_id": question.id,
+                        "selected_option": question.correct_option,
+                        "time_taken_seconds": 10,
+                    }
+                )
+            else:
+                # Wrong answer
+                wrong_option = (question.correct_option % 4) + 1
+                answers.append(
+                    {
+                        "question_id": question.id,
+                        "selected_option": wrong_option,
+                        "time_taken_seconds": 10,
+                    }
+                )
+
+        result = await service.submit_all_answers(
+            user_id=test_user.id,
+            session_id=active_mock_exam.id,
+            answers=answers,
+            total_time_seconds=1200,
+        )
+
+        assert result["passed"] is True
+        assert result["score"] == 16
+        assert result["total_questions"] == 25
+        assert result["percentage"] == 64.0
+        assert result["pass_threshold"] == 60
+        assert len(result["answer_results"]) == 25
+        assert result["new_answers_count"] == 25
+        assert result["duplicate_answers_count"] == 0
+        assert result["total_xp_earned"] > 0
+        assert result["session"].status == MockExamStatus.COMPLETED
+
+    @pytest.mark.asyncio
+    async def test_submit_all_success_fail(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+        active_mock_exam: MockExamSession,
+        culture_questions: list[CultureQuestion],
+        mock_s3_service,
+    ):
+        """Should process all answers and fail exam with 40% score."""
+        service = MockExamService(db_session, s3_service=mock_s3_service)
+
+        # Build answers: 10 correct, 15 wrong (40% = fail)
+        answers = []
+        for i, question in enumerate(culture_questions[:25]):
+            if i < 10:
+                # Correct answer
+                answers.append(
+                    {
+                        "question_id": question.id,
+                        "selected_option": question.correct_option,
+                        "time_taken_seconds": 10,
+                    }
+                )
+            else:
+                # Wrong answer
+                wrong_option = (question.correct_option % 4) + 1
+                answers.append(
+                    {
+                        "question_id": question.id,
+                        "selected_option": wrong_option,
+                        "time_taken_seconds": 10,
+                    }
+                )
+
+        result = await service.submit_all_answers(
+            user_id=test_user.id,
+            session_id=active_mock_exam.id,
+            answers=answers,
+            total_time_seconds=1200,
+        )
+
+        assert result["passed"] is False
+        assert result["score"] == 10
+        assert result["percentage"] == 40.0
+
+    @pytest.mark.asyncio
+    async def test_submit_all_handles_duplicates(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+        active_mock_exam: MockExamSession,
+        culture_questions: list[CultureQuestion],
+        mock_s3_service,
+    ):
+        """Should detect and skip duplicate answers while processing new ones."""
+        service = MockExamService(db_session, s3_service=mock_s3_service)
+
+        # First, submit 5 answers via the individual method
+        for i in range(5):
+            question = culture_questions[i]
+            await service.submit_answer(
+                user_id=test_user.id,
+                session_id=active_mock_exam.id,
+                question_id=question.id,
+                selected_option=question.correct_option,
+                time_taken_seconds=10,
+            )
+
+        # Now submit all 25 via submit_all (5 duplicates + 20 new)
+        answers = []
+        for i, question in enumerate(culture_questions[:25]):
+            answers.append(
+                {
+                    "question_id": question.id,
+                    "selected_option": question.correct_option,
+                    "time_taken_seconds": 10,
+                }
+            )
+
+        result = await service.submit_all_answers(
+            user_id=test_user.id,
+            session_id=active_mock_exam.id,
+            answers=answers,
+            total_time_seconds=1200,
+        )
+
+        assert result["new_answers_count"] == 20  # 25 - 5 duplicates
+        assert result["duplicate_answers_count"] == 5
+        assert result["score"] == 25  # All correct (5 existing + 20 new)
+
+        # Verify duplicates are marked in results
+        duplicate_results = [ar for ar in result["answer_results"] if ar["was_duplicate"]]
+        assert len(duplicate_results) == 5
+
+    @pytest.mark.asyncio
+    async def test_submit_all_invalid_session(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+        culture_questions: list[CultureQuestion],
+        mock_s3_service,
+    ):
+        """Should raise MockExamNotFoundException for invalid session."""
+        service = MockExamService(db_session, s3_service=mock_s3_service)
+
+        answers = [
+            {
+                "question_id": culture_questions[0].id,
+                "selected_option": 1,
+                "time_taken_seconds": 10,
+            }
+        ]
+
+        with pytest.raises(MockExamNotFoundException):
+            await service.submit_all_answers(
+                user_id=test_user.id,
+                session_id=uuid4(),
+                answers=answers,
+                total_time_seconds=1200,
+            )
+
+    @pytest.mark.asyncio
+    async def test_submit_all_expired_session(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+        completed_mock_exam: MockExamSession,
+        culture_questions: list[CultureQuestion],
+        mock_s3_service,
+    ):
+        """Should raise MockExamSessionExpiredException for completed session."""
+        service = MockExamService(db_session, s3_service=mock_s3_service)
+
+        answers = [
+            {
+                "question_id": culture_questions[0].id,
+                "selected_option": 1,
+                "time_taken_seconds": 10,
+            }
+        ]
+
+        with pytest.raises(MockExamSessionExpiredException):
+            await service.submit_all_answers(
+                user_id=test_user.id,
+                session_id=completed_mock_exam.id,
+                answers=answers,
+                total_time_seconds=1200,
+            )
+
+    @pytest.mark.asyncio
+    async def test_submit_all_perfect_recall_xp_bonus(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+        active_mock_exam: MockExamSession,
+        culture_questions: list[CultureQuestion],
+        mock_s3_service,
+    ):
+        """Should award bonus XP for answers in < 2 seconds."""
+        service = MockExamService(db_session, s3_service=mock_s3_service)
+
+        # Submit 2 answers: 1 fast (perfect recall), 1 normal speed
+        answers = [
+            {
+                "question_id": culture_questions[0].id,
+                "selected_option": culture_questions[0].correct_option,
+                "time_taken_seconds": 1,  # Perfect recall (< 2 seconds)
+            },
+            {
+                "question_id": culture_questions[1].id,
+                "selected_option": culture_questions[1].correct_option,
+                "time_taken_seconds": 10,  # Normal speed
+            },
+        ]
+
+        result = await service.submit_all_answers(
+            user_id=test_user.id,
+            session_id=active_mock_exam.id,
+            answers=answers,
+            total_time_seconds=11,
+        )
+
+        # Verify XP was awarded
+        answer_results = result["answer_results"]
+        assert len(answer_results) == 2
+
+        # Perfect recall answer should have bonus XP (15 instead of 10)
+        perfect_result = answer_results[0]
+        normal_result = answer_results[1]
+
+        assert perfect_result["xp_earned"] == 15  # Bonus XP for perfect recall
+        assert normal_result["xp_earned"] == 10  # Normal XP
