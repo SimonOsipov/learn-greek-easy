@@ -235,6 +235,7 @@ export const PreferencesSection: React.FC<PreferencesSectionProps> = ({ user }) 
                 }`}
                 role="switch"
                 aria-checked={preferences.notifications}
+                data-testid="notification-toggle"
               >
                 <span className="sr-only">
                   {t('preferences.notifications.enableNotifications')}
