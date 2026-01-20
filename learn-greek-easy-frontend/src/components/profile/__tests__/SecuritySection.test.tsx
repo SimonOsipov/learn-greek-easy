@@ -8,6 +8,8 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string) => key,
   }),
+  Trans: ({ children, i18nKey }: { children?: React.ReactNode; i18nKey?: string }) =>
+    children || i18nKey || null,
 }));
 
 vi.mock('@/stores/authStore', () => ({
