@@ -6,7 +6,7 @@ import { reportAPIError } from '@/lib/errorReporting';
 import log from '@/lib/logger';
 import { shouldRefreshToken } from '@/lib/tokenUtils';
 import { APIRequestError } from '@/services/api';
-import { authAPI, clearAuthTokens } from '@/services/authAPI';
+import { authAPI, clearAuthTokens, type ProfileUpdateRequest } from '@/services/authAPI';
 import type { User, AuthError } from '@/types/auth';
 
 import { useAnalyticsStore } from './analyticsStore';
@@ -84,8 +84,6 @@ export const useAuthStore = create<AuthState>()(
       },
 
       // Update profile action
-      // Note: Backend doesn't currently support profile updates via API
-      // This is a local-only update for MVP
       updateProfile: async (updates: Partial<User>) => {
         const { user } = get();
 
@@ -96,12 +94,34 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null });
 
         try {
-          // TODO: When backend supports profile updates, call the API here
-          // For now, just update the local state
-          const updatedUser = {
-            ...user,
-            ...updates,
-            updatedAt: new Date(),
+          // Build API request
+          const apiUpdates: ProfileUpdateRequest = {};
+          if (updates.name !== undefined) {
+            apiUpdates.full_name = updates.name;
+          }
+          if (updates.avatar !== undefined) {
+            apiUpdates.avatar_url = updates.avatar;
+          }
+
+          // Call backend API
+          const profileResponse = await authAPI.updateProfile(apiUpdates);
+
+          // Transform response to User type
+          const updatedUser: User = {
+            id: profileResponse.id,
+            email: profileResponse.email,
+            name: profileResponse.full_name || profileResponse.email.split('@')[0],
+            avatar: profileResponse.avatar_url || undefined,
+            role: profileResponse.is_superuser ? 'admin' : 'free',
+            preferences: {
+              language: 'en',
+              dailyGoal: profileResponse.settings?.daily_goal || 20,
+              notifications: profileResponse.settings?.email_notifications ?? true,
+              theme: profileResponse.settings?.theme || 'light',
+            },
+            stats: user.stats, // Preserve existing stats
+            createdAt: new Date(profileResponse.created_at),
+            updatedAt: new Date(profileResponse.updated_at),
           };
 
           set({
@@ -172,11 +192,12 @@ export const useAuthStore = create<AuthState>()(
             id: profileResponse.id,
             email: profileResponse.email,
             name: profileResponse.full_name || profileResponse.email.split('@')[0],
+            avatar: profileResponse.avatar_url || undefined,
             role: profileResponse.is_superuser ? 'admin' : 'free',
             preferences: {
               language: 'en',
               dailyGoal: profileResponse.settings?.daily_goal || 20,
-              notifications: profileResponse.settings?.email_notifications || true,
+              notifications: profileResponse.settings?.email_notifications ?? true,
               theme: profileResponse.settings?.theme || 'light',
             },
             stats: {
@@ -264,11 +285,12 @@ export const useAuthStore = create<AuthState>()(
             id: profileResponse.id,
             email: profileResponse.email,
             name: profileResponse.full_name || profileResponse.email.split('@')[0],
+            avatar: profileResponse.avatar_url || undefined,
             role: profileResponse.is_superuser ? 'admin' : 'free',
             preferences: {
               language: 'en',
               dailyGoal: profileResponse.settings?.daily_goal || 20,
-              notifications: profileResponse.settings?.email_notifications || true,
+              notifications: profileResponse.settings?.email_notifications ?? true,
               theme: profileResponse.settings?.theme || 'light',
             },
             stats: {
