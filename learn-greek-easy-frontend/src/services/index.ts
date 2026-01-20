@@ -22,6 +22,9 @@ export type { APIError } from './api';
 export { authAPI } from './authAPI';
 export type { LogoutResponse, TokenResponse, UserProfileResponse } from './authAPI';
 
+// Users API (Danger Zone)
+export { usersAPI } from './usersAPI';
+
 // Deck API
 export { deckAPI } from './deckAPI';
 export type {
