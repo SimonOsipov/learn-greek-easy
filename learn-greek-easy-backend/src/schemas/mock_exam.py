@@ -87,48 +87,44 @@ class MockExamQueueResponse(BaseModel):
 
 
 # ============================================================================
-# Answer Schemas
+# Submit-All Schemas
 # ============================================================================
 
 
-class MockExamAnswerRequest(BaseModel):
-    """Request for submitting an answer during a mock exam."""
+class MockExamAnswerItem(BaseModel):
+    """Single answer in a submit-all request."""
 
     question_id: UUID = Field(..., description="Question UUID being answered")
     selected_option: int = Field(..., ge=1, le=4, description="Selected answer option (1-4)")
     time_taken_seconds: int = Field(..., ge=0, description="Time taken to answer in seconds")
 
 
-class MockExamAnswerResponse(BaseModel):
-    """Response after submitting an answer."""
+class MockExamSubmitAllRequest(BaseModel):
+    """Request for submitting all exam answers at once."""
 
-    is_correct: Optional[bool] = Field(
-        ..., description="Whether the answer was correct (None if duplicate)"
+    answers: list[MockExamAnswerItem] = Field(
+        ..., min_length=1, max_length=25, description="List of all answers (1-25 items)"
     )
-    correct_option: Optional[int] = Field(
-        ..., ge=1, le=4, description="The correct answer option (None if duplicate)"
-    )
-    xp_earned: int = Field(..., ge=0, description="XP awarded for this answer")
-    current_score: int = Field(..., ge=0, description="Current correct answers in session")
-    answers_count: int = Field(..., ge=0, description="Total questions answered in session")
-    duplicate: bool = Field(..., description="True if this question was already answered")
-
-
-# ============================================================================
-# Complete Exam Schemas
-# ============================================================================
-
-
-class MockExamCompleteRequest(BaseModel):
-    """Request for completing a mock exam."""
-
     total_time_seconds: int = Field(
         ..., ge=0, description="Total time taken for the exam in seconds"
     )
 
 
-class MockExamCompleteResponse(BaseModel):
-    """Response after completing a mock exam."""
+class MockExamAnswerResult(BaseModel):
+    """Result for a single answer in submit-all response."""
+
+    question_id: UUID = Field(..., description="Question UUID")
+    is_correct: bool = Field(..., description="Whether the answer was correct")
+    correct_option: int = Field(..., ge=1, le=4, description="The correct answer option")
+    selected_option: int = Field(..., ge=1, le=4, description="User's selected option")
+    xp_earned: int = Field(..., ge=0, description="XP awarded for this answer")
+    was_duplicate: bool = Field(
+        default=False, description="True if this answer was already submitted"
+    )
+
+
+class MockExamSubmitAllResponse(BaseModel):
+    """Response after submitting all answers at once."""
 
     session: MockExamSessionResponse = Field(..., description="The completed session")
     passed: bool = Field(..., description="Whether the exam was passed (>= 60%)")
@@ -136,6 +132,14 @@ class MockExamCompleteResponse(BaseModel):
     total_questions: int = Field(..., ge=0, description="Total questions in exam")
     percentage: float = Field(..., ge=0, le=100, description="Score percentage")
     pass_threshold: int = Field(..., ge=0, le=100, description="Required percentage to pass (60)")
+    answer_results: list[MockExamAnswerResult] = Field(
+        ..., description="Results for each submitted answer"
+    )
+    total_xp_earned: int = Field(..., ge=0, description="Total XP earned from all answers")
+    new_answers_count: int = Field(..., ge=0, description="Number of new answers processed")
+    duplicate_answers_count: int = Field(
+        ..., ge=0, description="Number of duplicate answers skipped"
+    )
 
 
 # ============================================================================
@@ -178,10 +182,10 @@ __all__ = [
     "MockExamSessionResponse",
     "MockExamCreateResponse",
     "MockExamQueueResponse",
-    "MockExamAnswerRequest",
-    "MockExamAnswerResponse",
-    "MockExamCompleteRequest",
-    "MockExamCompleteResponse",
+    "MockExamAnswerItem",
+    "MockExamSubmitAllRequest",
+    "MockExamAnswerResult",
+    "MockExamSubmitAllResponse",
     "MockExamHistoryItem",
     "MockExamStatisticsResponse",
 ]

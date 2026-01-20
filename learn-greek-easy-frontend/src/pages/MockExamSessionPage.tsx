@@ -231,9 +231,9 @@ export const MockExamSessionPage: React.FC = () => {
   }, [session]);
 
   /**
-   * Handle answer submission
-   * Uses optimistic UI update - immediately advances to next question without waiting for backend.
-   * The API call runs in the background to sync with server.
+   * Handle answer submission.
+   * answerQuestion is now synchronous (updates local state only).
+   * API submission happens when completeExam() is called via nextQuestion().
    */
   const handleAnswer = useCallback(
     (selectedOption: number) => {
@@ -242,65 +242,35 @@ export const MockExamSessionPage: React.FC = () => {
       isSubmittingRef.current = true;
       setIsSubmitting(true);
 
-      // Track answer event immediately (with optimistic is_correct based on local data)
-      // Note: We don't know if correct yet, but we track the selection
+      // Track answer event immediately
+      // Note: We don't know if correct yet - that's determined when exam completes
       trackMockExamQuestionAnswered({
         session_id: session.backendSession.id,
         question_id: currentQuestion.question.id,
         question_number: progress.current,
         selected_option: selectedOption,
-        is_correct: false, // Will be updated by backend, but we don't wait
+        is_correct: false, // Will be determined by backend on exam completion
         timer_remaining_seconds: remainingSeconds,
       });
 
       // Check if this is the last question
       const isLastQuestion = progress.current === progress.total;
 
-      if (isLastQuestion) {
-        // For the last question, wait for API response before completing
-        // This ensures isCorrect is set before completeExam() builds the summary
-        // NOTE: We intentionally do NOT reset isSubmitting for the last question
-        // so the spinner stays visible until navigation to results
-        answerQuestion(selectedOption)
-          .then(() => {
-            nextQuestion(); // This will trigger completeExam()
-          })
-          .catch((err) => {
-            log.error('Failed to submit final answer:', err);
-            toast({
-              title: t('common:error', { defaultValue: 'Error' }),
-              description: t('session.answerSyncError', {
-                defaultValue: 'Answer saved locally but may not sync. Continue with the exam.',
-              }),
-              variant: 'destructive',
-            });
-            // Still advance even on error - let completeExam handle it
-            nextQuestion();
-          });
-      } else {
-        // For non-last questions, use optimistic update (immediate advance)
-        answerQuestion(selectedOption)
-          .catch((err) => {
-            log.error('Failed to submit answer in background:', err);
-            // Show error toast but don't block the user - they can continue
-            toast({
-              title: t('common:error', { defaultValue: 'Error' }),
-              description: t('session.answerSyncError', {
-                defaultValue: 'Answer saved locally but may not sync. Continue with the exam.',
-              }),
-              variant: 'destructive',
-            });
-          })
-          .finally(() => {
-            isSubmittingRef.current = false;
-            setIsSubmitting(false);
-          });
+      // Answer the question (synchronous - updates local state only)
+      answerQuestion(selectedOption);
 
-        // Immediately advance to next question (optimistic update)
+      if (isLastQuestion) {
+        // For the last question, keep isSubmitting true so spinner shows
+        // until navigation to results. nextQuestion() triggers completeExam()
+        nextQuestion();
+      } else {
+        // For non-last questions, reset submitting state and advance
+        isSubmittingRef.current = false;
+        setIsSubmitting(false);
         nextQuestion();
       }
     },
-    [session, currentQuestion, answerQuestion, nextQuestion, remainingSeconds, progress, t]
+    [session, currentQuestion, answerQuestion, nextQuestion, remainingSeconds, progress]
   );
 
   /**

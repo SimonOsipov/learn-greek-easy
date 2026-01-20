@@ -1,14 +1,13 @@
 """Mock Exam API endpoints.
 
 This module provides HTTP endpoints for mock citizenship exam operations including
-creating/resuming exam sessions, submitting answers, completing exams, and
+creating/resuming exam sessions, submitting all answers atomically, and
 retrieving statistics.
 
 Endpoints:
 - GET /mock-exam/queue - Preview available questions and check exam availability
 - POST /mock-exam/sessions - Create or resume a mock exam session
-- POST /mock-exam/sessions/{session_id}/answers - Submit an answer
-- POST /mock-exam/sessions/{session_id}/complete - Complete the exam
+- POST /mock-exam/sessions/{session_id}/submit-all - Submit all answers and complete exam
 - GET /mock-exam/statistics - Get user's exam statistics and history
 - DELETE /mock-exam/sessions/{session_id} - Abandon an active session
 
@@ -24,16 +23,15 @@ from src.core.dependencies import get_current_user
 from src.db.dependencies import get_db
 from src.db.models import User
 from src.schemas.mock_exam import (
-    MockExamAnswerRequest,
-    MockExamAnswerResponse,
-    MockExamCompleteRequest,
-    MockExamCompleteResponse,
+    MockExamAnswerResult,
     MockExamCreateResponse,
     MockExamHistoryItem,
     MockExamQuestionResponse,
     MockExamQueueResponse,
     MockExamSessionResponse,
     MockExamStatisticsResponse,
+    MockExamSubmitAllRequest,
+    MockExamSubmitAllResponse,
 )
 from src.services import MockExamService
 
@@ -262,156 +260,60 @@ async def create_mock_exam_session(
 
 
 @router.post(
-    "/sessions/{session_id}/answers",
-    response_model=MockExamAnswerResponse,
-    summary="Submit an answer during mock exam",
+    "/sessions/{session_id}/submit-all",
+    response_model=MockExamSubmitAllResponse,
+    summary="Submit all answers and complete exam",
     description="""
-    Submit an answer to a question during an active mock exam session.
+    Submit all exam answers at once and complete the session atomically.
 
     **Authentication**: Required
 
     **Behavior**:
     - Validates the session is active and owned by user
-    - Checks answer correctness
-    - Updates SM-2 statistics for the question
-    - Awards XP (10 XP correct, 15 XP perfect, 2 XP incorrect)
-    - Returns feedback with correct answer and current score
+    - Processes all answers, determines correctness for each
+    - Updates SM-2 statistics for each question
+    - Awards XP for each answer (10 XP correct, 15 XP perfect, 2 XP incorrect)
+    - Calculates final score and pass/fail status
+    - Completes the session in a single transaction
 
-    **Duplicate Handling**: If the same question is answered twice,
-    returns is_correct=None and duplicate=True without re-processing.
+    **Idempotency**: If some answers were already submitted via the `/answers`
+    endpoint, those duplicates are detected and skipped (no double XP or SM-2 updates).
+    The response indicates which answers were duplicates.
 
-    **Use Case**: Processing each answer during the exam
+    **Use Case**: Complete the exam in a single request instead of multiple
+    `/answers` calls followed by `/complete`
     """,
     responses={
         200: {
-            "description": "Answer processed successfully",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "is_correct": True,
-                        "correct_option": 2,
-                        "xp_earned": 10,
-                        "current_score": 15,
-                        "answers_count": 20,
-                        "duplicate": False,
-                    }
-                }
-            },
-        },
-        400: {
-            "description": "Session is not active",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "success": False,
-                        "error": {
-                            "code": "MOCK_EXAM_SESSION_EXPIRED",
-                            "message": "Mock exam session ... is no longer active",
-                        },
-                    }
-                }
-            },
-        },
-        404: {
-            "description": "Session not found",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "success": False,
-                        "error": {
-                            "code": "NOT_FOUND",
-                            "message": "Mock exam session ... not found",
-                        },
-                    }
-                }
-            },
-        },
-    },
-)
-async def submit_mock_exam_answer(
-    session_id: UUID,
-    request: MockExamAnswerRequest,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-) -> MockExamAnswerResponse:
-    """Submit an answer during a mock exam session.
-
-    Processes the answer, updates SM-2 statistics, and awards XP.
-
-    Args:
-        session_id: UUID of the mock exam session
-        request: Answer request with question_id, selected_option, time_taken
-        db: Database session (injected)
-        current_user: Authenticated user (injected)
-
-    Returns:
-        MockExamAnswerResponse with correctness and score update
-
-    Raises:
-        MockExamNotFoundException: If session doesn't exist or not owned by user
-        MockExamSessionExpiredException: If session is not active
-
-    Example:
-        POST /api/v1/culture/mock-exam/sessions/{session_id}/answers
-        {"question_id": "...", "selected_option": 2, "time_taken_seconds": 15}
-    """
-    service = MockExamService(db)
-
-    result = await service.submit_answer(
-        user_id=current_user.id,
-        session_id=session_id,
-        question_id=request.question_id,
-        selected_option=request.selected_option,
-        time_taken_seconds=request.time_taken_seconds,
-    )
-
-    return MockExamAnswerResponse(
-        is_correct=result["is_correct"],
-        correct_option=result["correct_option"],
-        xp_earned=result["xp_earned"],
-        current_score=result["current_score"],
-        answers_count=result["answers_count"],
-        duplicate=result["duplicate"],
-    )
-
-
-@router.post(
-    "/sessions/{session_id}/complete",
-    response_model=MockExamCompleteResponse,
-    summary="Complete a mock exam session",
-    description="""
-    Complete a mock exam session and get final results.
-
-    **Authentication**: Required
-
-    **Pass Threshold**: 60% (16/25 correct answers)
-
-    **Response includes**:
-    - Final session details
-    - Pass/fail status
-    - Score and percentage
-    - Pass threshold for reference
-
-    **Use Case**: Finishing the exam and displaying results
-    """,
-    responses={
-        200: {
-            "description": "Exam completed successfully",
+            "description": "All answers processed and exam completed",
             "content": {
                 "application/json": {
                     "example": {
                         "session": {
                             "id": "...",
                             "status": "completed",
-                            "score": 22,
+                            "score": 18,
                             "total_questions": 25,
                             "passed": True,
                         },
                         "passed": True,
-                        "score": 22,
+                        "score": 18,
                         "total_questions": 25,
-                        "percentage": 88.0,
-                        "pass_threshold": 80,
+                        "percentage": 72.0,
+                        "pass_threshold": 60,
+                        "answer_results": [
+                            {
+                                "question_id": "...",
+                                "is_correct": True,
+                                "correct_option": 2,
+                                "selected_option": 2,
+                                "xp_earned": 10,
+                                "was_duplicate": False,
+                            }
+                        ],
+                        "total_xp_earned": 230,
+                        "new_answers_count": 25,
+                        "duplicate_answers_count": 0,
                     }
                 }
             },
@@ -444,40 +346,72 @@ async def submit_mock_exam_answer(
                 }
             },
         },
+        422: {
+            "description": "Validation error (invalid answers)",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "success": False,
+                        "error": {
+                            "code": "VALIDATION_ERROR",
+                            "message": "Invalid request body",
+                        },
+                    }
+                }
+            },
+        },
     },
 )
-async def complete_mock_exam_session(
+async def submit_all_mock_exam_answers(
     session_id: UUID,
-    request: MockExamCompleteRequest,
+    request: MockExamSubmitAllRequest,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
-) -> MockExamCompleteResponse:
-    """Complete a mock exam session and calculate final results.
+) -> MockExamSubmitAllResponse:
+    """Submit all answers and complete a mock exam session in one request.
 
-    Marks the session as completed and determines pass/fail status.
+    Processes all answers atomically, updates SM-2 statistics, awards XP,
+    and completes the exam.
 
     Args:
         session_id: UUID of the mock exam session
-        request: Complete request with total_time_seconds
+        request: Submit-all request with answers list and total_time
         db: Database session (injected)
         current_user: Authenticated user (injected)
 
     Returns:
-        MockExamCompleteResponse with final results
+        MockExamSubmitAllResponse with full results
 
     Raises:
         MockExamNotFoundException: If session doesn't exist or not owned by user
         MockExamSessionExpiredException: If session is not active
 
     Example:
-        POST /api/v1/culture/mock-exam/sessions/{session_id}/complete
-        {"total_time_seconds": 1200}
+        POST /api/v1/culture/mock-exam/sessions/{session_id}/submit-all
+        {
+            "answers": [
+                {"question_id": "...", "selected_option": 2, "time_taken_seconds": 15},
+                ...
+            ],
+            "total_time_seconds": 1200
+        }
     """
     service = MockExamService(db)
 
-    result = await service.complete_exam(
+    # Convert request to dict format for service
+    answers_data = [
+        {
+            "question_id": answer.question_id,
+            "selected_option": answer.selected_option,
+            "time_taken_seconds": answer.time_taken_seconds,
+        }
+        for answer in request.answers
+    ]
+
+    result = await service.submit_all_answers(
         user_id=current_user.id,
         session_id=session_id,
+        answers=answers_data,
         total_time_seconds=request.total_time_seconds,
     )
 
@@ -495,13 +429,30 @@ async def complete_mock_exam_session(
         status=session.status.value,
     )
 
-    return MockExamCompleteResponse(
+    # Convert answer results to response format
+    answer_results_response = [
+        MockExamAnswerResult(
+            question_id=ar["question_id"],
+            is_correct=ar["is_correct"],
+            correct_option=ar["correct_option"],
+            selected_option=ar["selected_option"],
+            xp_earned=ar["xp_earned"],
+            was_duplicate=ar["was_duplicate"],
+        )
+        for ar in result["answer_results"]
+    ]
+
+    return MockExamSubmitAllResponse(
         session=session_response,
         passed=result["passed"],
         score=result["score"],
         total_questions=result["total_questions"],
         percentage=result["percentage"],
         pass_threshold=result["pass_threshold"],
+        answer_results=answer_results_response,
+        total_xp_earned=result["total_xp_earned"],
+        new_answers_count=result["new_answers_count"],
+        duplicate_answers_count=result["duplicate_answers_count"],
     )
 
 
