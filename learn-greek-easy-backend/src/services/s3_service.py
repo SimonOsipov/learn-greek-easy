@@ -34,6 +34,18 @@ if TYPE_CHECKING:
 
 logger = get_logger(__name__)
 
+# Avatar upload constraints
+ALLOWED_AVATAR_CONTENT_TYPES = frozenset(["image/jpeg", "image/png", "image/webp"])
+MAX_AVATAR_SIZE_BYTES = 5 * 1024 * 1024  # 5MB
+AVATAR_UPLOAD_URL_EXPIRY = 600  # 10 minutes
+
+# Content type to extension mapping
+CONTENT_TYPE_TO_EXT = {
+    "image/jpeg": "jpg",
+    "image/png": "png",
+    "image/webp": "webp",
+}
+
 
 class S3Service:
     """Service for S3 operations related to culture question images."""
@@ -223,6 +235,116 @@ class S3Service:
                 },
             )
             return False
+
+    def generate_presigned_upload_url(
+        self,
+        s3_key: str,
+        content_type: str,
+        expiry_seconds: int = AVATAR_UPLOAD_URL_EXPIRY,
+    ) -> Optional[str]:
+        """Generate a pre-signed URL for uploading to S3.
+
+        Args:
+            s3_key: The S3 object key to upload to
+            content_type: The Content-Type of the file being uploaded
+            expiry_seconds: URL expiry in seconds. Defaults to 10 minutes.
+
+        Returns:
+            Pre-signed URL string if successful, None otherwise.
+        """
+        client = self._get_client()
+        if not client:
+            return None
+
+        try:
+            bucket_name = settings.effective_s3_bucket_name
+            assert bucket_name is not None
+
+            url: str = client.generate_presigned_url(
+                "put_object",
+                Params={
+                    "Bucket": bucket_name,
+                    "Key": s3_key,
+                    "ContentType": content_type,
+                },
+                ExpiresIn=expiry_seconds,
+            )
+            logger.debug(
+                "Generated pre-signed upload URL",
+                extra={
+                    "s3_key": s3_key,
+                    "content_type": content_type,
+                    "expiry_seconds": expiry_seconds,
+                },
+            )
+            return url
+        except (BotoCoreError, ClientError) as e:
+            logger.warning(
+                "Failed to generate pre-signed upload URL",
+                extra={
+                    "s3_key": s3_key,
+                    "error": str(e),
+                },
+            )
+            return None
+
+    def delete_object(self, s3_key: str) -> bool:
+        """Delete an object from S3.
+
+        Args:
+            s3_key: The S3 object key to delete
+
+        Returns:
+            True if deleted successfully (or object didn't exist), False on error
+        """
+        if not s3_key:
+            return True  # Nothing to delete
+
+        client = self._get_client()
+        if not client:
+            logger.warning(
+                "Cannot delete S3 object - client not initialized",
+                extra={"s3_key": s3_key},
+            )
+            return False
+
+        try:
+            bucket_name = settings.effective_s3_bucket_name
+            assert bucket_name is not None
+
+            client.delete_object(
+                Bucket=bucket_name,
+                Key=s3_key,
+            )
+            logger.info(
+                "Deleted S3 object",
+                extra={"s3_key": s3_key},
+            )
+            return True
+        except (BotoCoreError, ClientError) as e:
+            logger.error(
+                "Failed to delete S3 object",
+                extra={
+                    "s3_key": s3_key,
+                    "error": str(e),
+                },
+            )
+            return False
+
+    @staticmethod
+    def validate_avatar_content_type(content_type: str) -> bool:
+        """Check if content type is allowed for avatar uploads."""
+        return content_type in ALLOWED_AVATAR_CONTENT_TYPES
+
+    @staticmethod
+    def validate_avatar_size(size_bytes: int) -> bool:
+        """Check if file size is within allowed limit."""
+        return 0 < size_bytes <= MAX_AVATAR_SIZE_BYTES
+
+    @staticmethod
+    def get_extension_for_content_type(content_type: str) -> Optional[str]:
+        """Get file extension for a content type."""
+        return CONTENT_TYPE_TO_EXT.get(content_type)
 
 
 # Singleton instance for use across the application
