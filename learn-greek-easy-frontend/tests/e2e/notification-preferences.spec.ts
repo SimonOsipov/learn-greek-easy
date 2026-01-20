@@ -30,9 +30,9 @@ test.describe('Notification Preferences', () => {
     // Wait for preferences section to load
     await expect(page.getByTestId('preferences-section')).toBeVisible({ timeout: 10000 });
 
-    // Find the notification toggle
+    // Find the notification toggle - wait for it to be visible with timeout
     const notificationToggle = page.getByTestId('notification-toggle');
-    await expect(notificationToggle).toBeVisible();
+    await expect(notificationToggle).toBeVisible({ timeout: 10000 });
 
     // Check if notifications are currently on, and turn them off if so
     const isChecked = await notificationToggle.getAttribute('aria-checked');
@@ -65,9 +65,9 @@ test.describe('Notification Preferences', () => {
     // Wait for preferences section to load
     await expect(page.getByTestId('preferences-section')).toBeVisible({ timeout: 10000 });
 
-    // Find the notification toggle
+    // Find the notification toggle - wait for it to be visible with timeout
     const notificationToggle = page.getByTestId('notification-toggle');
-    await expect(notificationToggle).toBeVisible();
+    await expect(notificationToggle).toBeVisible({ timeout: 10000 });
 
     // Check if notifications are currently off, and turn them on if so
     const isChecked = await notificationToggle.getAttribute('aria-checked');
@@ -98,8 +98,9 @@ test.describe('Notification Preferences', () => {
     await preferencesTab.click();
     await expect(page.getByTestId('preferences-section')).toBeVisible({ timeout: 10000 });
 
-    // Find the notification toggle
+    // Find the notification toggle - wait for it to be visible with timeout
     const notificationToggle = page.getByTestId('notification-toggle');
+    await expect(notificationToggle).toBeVisible({ timeout: 10000 });
 
     // First ensure notifications are ON
     let isChecked = await notificationToggle.getAttribute('aria-checked');
@@ -122,7 +123,9 @@ test.describe('Notification Preferences', () => {
     await page.getByRole('button', { name: /preferences/i }).click();
     await expect(page.getByTestId('preferences-section')).toBeVisible({ timeout: 10000 });
 
+    // Wait for notification toggle to be visible before clicking
     const toggleAgain = page.getByTestId('notification-toggle');
+    await expect(toggleAgain).toBeVisible({ timeout: 10000 });
     await toggleAgain.click();
     await page.waitForTimeout(1500);
 
