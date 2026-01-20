@@ -18,6 +18,8 @@ import type {
   MockExamCreateResponse,
   MockExamQueueResponse,
   MockExamStatisticsResponse,
+  MockExamSubmitAllRequest,
+  MockExamSubmitAllResponse,
 } from '@/types/mockExam';
 
 import { api } from './api';
@@ -55,6 +57,26 @@ export const mockExamAPI = {
   ): Promise<MockExamAnswerResponse> => {
     return api.post<MockExamAnswerResponse>(
       `${MOCK_EXAM_BASE}/sessions/${sessionId}/answers`,
+      request
+    );
+  },
+
+  /**
+   * Submit all answers and complete the exam in a single request.
+   * This is the preferred method for exam completion as it:
+   * - Processes all answers atomically
+   * - Handles any previously submitted answers (marks as duplicates)
+   * - Completes the session in one transaction
+   *
+   * @param sessionId - UUID of the mock exam session
+   * @param request - Submit-all request with answers array and total_time_seconds
+   */
+  submitAll: async (
+    sessionId: string,
+    request: MockExamSubmitAllRequest
+  ): Promise<MockExamSubmitAllResponse> => {
+    return api.post<MockExamSubmitAllResponse>(
+      `${MOCK_EXAM_BASE}/sessions/${sessionId}/submit-all`,
       request
     );
   },

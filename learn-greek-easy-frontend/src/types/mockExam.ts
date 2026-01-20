@@ -63,6 +63,43 @@ export interface MockExamAnswerResponse {
   duplicate: boolean;
 }
 
+// Submit-all answer item (matches MockExamAnswerItem from backend)
+export interface MockExamAnswerItem {
+  question_id: string;
+  selected_option: number; // 1-4
+  time_taken_seconds: number;
+}
+
+// Submit-all request (matches MockExamSubmitAllRequest from backend)
+export interface MockExamSubmitAllRequest {
+  answers: MockExamAnswerItem[]; // 1-25 items
+  total_time_seconds: number;
+}
+
+// Individual answer result in submit-all response (matches MockExamAnswerResult from backend)
+export interface MockExamAnswerResult {
+  question_id: string;
+  is_correct: boolean;
+  correct_option: number; // 1-4
+  selected_option: number; // 1-4
+  xp_earned: number;
+  was_duplicate: boolean;
+}
+
+// Submit-all response (matches MockExamSubmitAllResponse from backend)
+export interface MockExamSubmitAllResponse {
+  session: MockExamSession;
+  passed: boolean;
+  score: number;
+  total_questions: number;
+  percentage: number; // 0-100
+  pass_threshold: number; // 60
+  answer_results: MockExamAnswerResult[];
+  total_xp_earned: number;
+  new_answers_count: number;
+  duplicate_answers_count: number;
+}
+
 // Complete request
 export interface MockExamCompleteRequest {
   total_time_seconds: number;
