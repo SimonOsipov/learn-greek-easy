@@ -113,33 +113,6 @@
       "error": "Error",
       "errorDescription": "Failed to change password. Please try again."
     },
-    "subscription": {
-      "title": "Subscription",
-      "description": "Manage your subscription plan",
-      "currentPlan": "Current plan",
-      "premium": "Premium",
-      "free": "Free Plan",
-      "upgrade": "Upgrade to Premium",
-      "upgradeTitle": "Premium upgrade",
-      "upgradeDescription": "Payment integration coming soon!",
-      "memberSince": "Member since {{date}}"
-    },
-    "twoFactor": {
-      "title": "Two-Factor Authentication",
-      "description": "Add an extra layer of security to your account",
-      "comingSoon": "Coming Soon",
-      "enable": "Enable",
-      "enable2FA": "Enable 2FA",
-      "enable2FADescription": "Protect your account with SMS or authenticator app verification"
-    },
-    "sessions": {
-      "title": "Active Sessions",
-      "description": "View and manage where you're logged in",
-      "currentDevice": "Current Device",
-      "activeNow": "Active Now",
-      "lastActive": "Last active:",
-      "comingSoonDescription": "Session management will be available in a future update. You'll be able to see all active sessions and log out from other devices."
-    },
     "dangerZone": {
       "title": "Danger Zone",
       "description": "Irreversible actions that affect your account",
