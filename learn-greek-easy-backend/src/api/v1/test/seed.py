@@ -524,3 +524,45 @@ async def create_test_user(
         user_id=str(user.id),
         email=user.email,
     )
+
+
+@router.post(
+    "/danger-zone",
+    response_model=SeedResultResponse,
+    summary="Seed danger zone test users",
+    description="Create test users for danger zone E2E tests. "
+    "Creates e2e_danger_reset@test.com (full data) and "
+    "e2e_danger_delete@test.com (minimal data). "
+    "Requires /seed/content and /seed/culture to be called first.",
+    dependencies=[Depends(verify_seed_access)],
+)
+async def seed_danger_zone(
+    db: AsyncSession = Depends(get_db),
+) -> SeedResultResponse:
+    """Create danger zone test users with appropriate data states.
+
+    Creates two test users for E2E testing:
+    - e2e_danger_reset@test.com: Full progress data for reset testing
+    - e2e_danger_delete@test.com: Minimal data for deletion testing
+
+    This endpoint is idempotent - it deletes existing users before recreating.
+    Requires /seed/content and /seed/culture to be called first for full data.
+
+    Returns:
+        SeedResultResponse with user creation results and timing
+    """
+    start_time = perf_counter()
+
+    seed_service = SeedService(db)
+    result = await seed_service.seed_danger_zone_users()
+    await db.commit()
+
+    duration_ms = (perf_counter() - start_time) * 1000
+
+    return SeedResultResponse(
+        success=result.get("success", False),
+        operation="danger-zone",
+        timestamp=datetime.now(timezone.utc),
+        duration_ms=duration_ms,
+        results=result,
+    )

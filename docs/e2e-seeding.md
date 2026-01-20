@@ -21,6 +21,7 @@ The seeding infrastructure provides deterministic test data for E2E tests, enabl
 | `/api/v1/test/seed/content` | POST | Create decks/cards only |
 | `/api/v1/test/seed/culture` | POST | Create culture decks/questions only |
 | `/api/v1/test/seed/mock-exams` | POST | Create mock exam history for learner |
+| `/api/v1/test/seed/danger-zone` | POST | Create danger zone test users |
 
 ## Test Users Created
 
@@ -56,6 +57,29 @@ The seed data creates mock exam history for `e2e_learner@test.com` with the foll
 | 15/25 | 60% | Fail | 18.3 min | 1 day ago |
 
 **Note**: The pass threshold is 80% (20/25 correct answers).
+
+## Danger Zone Test Users
+
+Seed endpoint: `POST /api/v1/test/seed/danger-zone`
+
+**Note**: Requires `/seed/content` and `/seed/culture` to be called first (or use `/seed/all`).
+
+| Email | Password | Purpose |
+|-------|----------|---------|
+| e2e_danger_reset@test.com | TestPassword123! | User with full progress for reset testing |
+| e2e_danger_delete@test.com | TestPassword123! | User with minimal data for deletion testing |
+
+### Data Seeded for Reset User
+
+- 2 UserDeckProgress records
+- CardStatistics for studied cards (10 cards: 6 mastered, 2 learning, 2 new)
+- Reviews with progression pattern (40 reviews total)
+- 500 XP (Level 3)
+- 5 XPTransaction records
+- 3 UserAchievements (streak_first_flame, learning_first_word, session_quick_study)
+- 2 MockExamSessions with answers (1 passed, 1 failed)
+- 10 CultureQuestionStats with history
+- 5 Notifications (2 unread, 3 read)
 
 ## CLI Usage
 
