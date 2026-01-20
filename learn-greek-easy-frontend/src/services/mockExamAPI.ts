@@ -46,6 +46,10 @@ export const mockExamAPI = {
 
   /**
    * Submit an answer for a question during the exam.
+   *
+   * @deprecated Use {@link submitAll} instead. This method calls a deprecated
+   * backend endpoint that will be removed in a future version.
+   *
    * Processes the answer, updates SM-2 statistics, and awards XP.
    *
    * @param sessionId - UUID of the mock exam session
@@ -83,6 +87,10 @@ export const mockExamAPI = {
 
   /**
    * Complete the mock exam and get final results.
+   *
+   * @deprecated Use {@link submitAll} instead. This method calls a deprecated
+   * backend endpoint that will be removed in a future version.
+   *
    * Marks the session as completed and determines pass/fail status.
    * Pass threshold is 80% (20/25 correct answers).
    *

@@ -267,8 +267,12 @@ async def create_mock_exam_session(
 @router.post(
     "/sessions/{session_id}/answers",
     response_model=MockExamAnswerResponse,
-    summary="Submit an answer during mock exam",
+    deprecated=True,
+    summary="[DEPRECATED] Submit an answer during mock exam",
     description="""
+    **DEPRECATED**: Use POST /sessions/{session_id}/submit-all instead.
+    This endpoint will be removed in a future version.
+
     Submit an answer to a question during an active mock exam session.
 
     **Authentication**: Required
@@ -338,6 +342,10 @@ async def submit_mock_exam_answer(
     current_user: User = Depends(get_current_user),
 ) -> MockExamAnswerResponse:
     """Submit an answer during a mock exam session.
+
+    .. deprecated::
+        Use POST /sessions/{session_id}/submit-all instead.
+        This endpoint will be removed in a future version.
 
     Processes the answer, updates SM-2 statistics, and awards XP.
 
@@ -578,8 +586,12 @@ async def submit_all_mock_exam_answers(
 @router.post(
     "/sessions/{session_id}/complete",
     response_model=MockExamCompleteResponse,
-    summary="Complete a mock exam session",
+    deprecated=True,
+    summary="[DEPRECATED] Complete a mock exam session",
     description="""
+    **DEPRECATED**: Use POST /sessions/{session_id}/submit-all instead.
+    This endpoint will be removed in a future version.
+
     Complete a mock exam session and get final results.
 
     **Authentication**: Required
@@ -653,6 +665,10 @@ async def complete_mock_exam_session(
     current_user: User = Depends(get_current_user),
 ) -> MockExamCompleteResponse:
     """Complete a mock exam session and calculate final results.
+
+    .. deprecated::
+        Use POST /sessions/{session_id}/submit-all instead.
+        This endpoint will be removed in a future version.
 
     Marks the session as completed and determines pass/fail status.
 
