@@ -11,7 +11,7 @@ from datetime import date, datetime, timedelta
 from typing import Optional
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -490,6 +490,39 @@ class MockExamRepository(BaseRepository[MockExamSession]):
         )
         result = await self.db.execute(query)
         return int(result.scalar_one())
+
+    async def delete_all_by_user_id(self, user_id: UUID) -> tuple[int, int]:
+        """Delete all mock exam sessions and answers for a user.
+
+        Note: MockExamAnswer has CASCADE delete on session_id, but we delete
+        answers first to get accurate counts.
+
+        Args:
+            user_id: User UUID
+
+        Returns:
+            Tuple of (sessions_deleted, answers_deleted)
+        """
+        # First, get session IDs for this user
+        session_ids_query = select(MockExamSession.id).where(MockExamSession.user_id == user_id)
+        session_result = await self.db.execute(session_ids_query)
+        session_ids = [row[0] for row in session_result.all()]
+
+        answers_deleted = 0
+        if session_ids:
+            # Delete answers first to get count
+            delete_answers = delete(MockExamAnswer).where(
+                MockExamAnswer.session_id.in_(session_ids)
+            )
+            answers_result = await self.db.execute(delete_answers)
+            answers_deleted = int(answers_result.rowcount) if answers_result.rowcount else 0  # type: ignore[attr-defined]
+
+        # Delete sessions
+        delete_sessions = delete(MockExamSession).where(MockExamSession.user_id == user_id)
+        sessions_result = await self.db.execute(delete_sessions)
+        sessions_deleted = int(sessions_result.rowcount) if sessions_result.rowcount else 0  # type: ignore[attr-defined]
+
+        return sessions_deleted, answers_deleted
 
 
 # ============================================================================
