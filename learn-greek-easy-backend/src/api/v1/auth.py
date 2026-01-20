@@ -7,6 +7,7 @@ Legacy email/password and Google OAuth endpoints have been removed.
 All authentication now flows through Auth0.
 """
 
+import uuid as uuid_module
 from typing import Any
 from uuid import UUID
 
@@ -32,6 +33,9 @@ from src.repositories.user import UserSettingsRepository
 from src.schemas.user import (
     Auth0AuthRequest,
     Auth0LoginResponse,
+    AvatarDeleteResponse,
+    AvatarUploadRequest,
+    AvatarUploadResponse,
     LogoutAllResponse,
     LogoutResponse,
     SessionInfo,
@@ -42,6 +46,12 @@ from src.schemas.user import (
     UserWithSettingsUpdate,
 )
 from src.services.auth_service import AuthService
+from src.services.s3_service import (
+    ALLOWED_AVATAR_CONTENT_TYPES,
+    AVATAR_UPLOAD_URL_EXPIRY,
+    MAX_AVATAR_SIZE_BYTES,
+    get_s3_service,
+)
 
 logger = get_logger(__name__)
 
@@ -774,9 +784,13 @@ async def update_me(
         HTTPException(422): If validation fails (e.g., invalid language code)
     """
     settings_repo = UserSettingsRepository(db)
+    s3_service = get_s3_service()
 
     # Separate user fields from settings fields
-    user_fields: dict[str, Any] = {"full_name": update_data.full_name}
+    user_fields: dict[str, Any] = {
+        "full_name": update_data.full_name,
+        "avatar_url": update_data.avatar_url,
+    }
     settings_fields: dict[str, Any] = {
         "daily_goal": update_data.daily_goal,
         "email_notifications": update_data.email_notifications,
@@ -787,6 +801,22 @@ async def update_me(
     # Filter out None values (only update provided fields)
     user_updates: dict[str, Any] = {k: v for k, v in user_fields.items() if v is not None}
     settings_updates: dict[str, Any] = {k: v for k, v in settings_fields.items() if v is not None}
+
+    # Handle avatar_url update with ownership validation and old avatar cleanup
+    if "avatar_url" in user_updates:
+        new_avatar_url = user_updates["avatar_url"]
+
+        # Validate the avatar key belongs to this user
+        expected_prefix = f"avatars/{current_user.id}/"
+        if not new_avatar_url.startswith(expected_prefix):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid avatar URL: must be in user's avatar folder",
+            )
+
+        # Delete old avatar from S3 if replacing
+        if current_user.avatar_url and current_user.avatar_url != new_avatar_url:
+            s3_service.delete_object(current_user.avatar_url)
 
     # Update user if there are user field changes
     if user_updates:
@@ -810,3 +840,97 @@ async def update_me(
         await db.refresh(current_user.settings)
 
     return UserProfileResponse.model_validate(current_user)
+
+
+@router.post(
+    "/avatar/upload-url",
+    response_model=AvatarUploadResponse,
+    summary="Get presigned URL for avatar upload",
+    responses={
+        200: {"description": "Presigned upload URL generated"},
+        400: {"description": "Invalid content type or file size"},
+        401: {"description": "Authentication required"},
+        503: {"description": "S3 service unavailable"},
+    },
+)
+async def get_avatar_upload_url(
+    request_data: AvatarUploadRequest,
+    current_user: User = Depends(get_current_user),
+) -> AvatarUploadResponse:
+    """Generate a presigned URL for uploading a new avatar.
+
+    The URL is valid for 10 minutes. After uploading to S3,
+    call PATCH /me with the avatar_key to save it to your profile.
+    """
+    s3_service = get_s3_service()
+
+    # Validate content type
+    if not s3_service.validate_avatar_content_type(request_data.content_type):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid content type. Allowed: {', '.join(sorted(ALLOWED_AVATAR_CONTENT_TYPES))}",
+        )
+
+    # Validate file size
+    if not s3_service.validate_avatar_size(request_data.file_size):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"File size must be between 1 byte and {MAX_AVATAR_SIZE_BYTES // (1024 * 1024)}MB",
+        )
+
+    # Generate S3 key
+    ext = s3_service.get_extension_for_content_type(request_data.content_type)
+    avatar_key = f"avatars/{current_user.id}/{uuid_module.uuid4()}.{ext}"
+
+    # Generate presigned URL
+    upload_url = s3_service.generate_presigned_upload_url(
+        s3_key=avatar_key,
+        content_type=request_data.content_type,
+        expiry_seconds=AVATAR_UPLOAD_URL_EXPIRY,
+    )
+
+    if not upload_url:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Unable to generate upload URL. S3 service may be unavailable.",
+        )
+
+    return AvatarUploadResponse(
+        upload_url=upload_url,
+        avatar_key=avatar_key,
+        expires_in=AVATAR_UPLOAD_URL_EXPIRY,
+    )
+
+
+@router.delete(
+    "/avatar",
+    response_model=AvatarDeleteResponse,
+    summary="Remove current avatar",
+    responses={
+        200: {"description": "Avatar removed successfully"},
+        401: {"description": "Authentication required"},
+    },
+)
+async def delete_avatar(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> AvatarDeleteResponse:
+    """Remove the current user's avatar.
+
+    Deletes the avatar from S3 and clears avatar_url from the profile.
+    """
+    s3_service = get_s3_service()
+
+    # Delete from S3 if exists
+    if current_user.avatar_url:
+        s3_service.delete_object(current_user.avatar_url)
+
+    # Clear avatar_url
+    current_user.avatar_url = None
+    db.add(current_user)
+    await db.commit()
+
+    return AvatarDeleteResponse(
+        success=True,
+        message="Avatar removed successfully",
+    )

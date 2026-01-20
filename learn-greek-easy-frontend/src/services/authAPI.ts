@@ -35,6 +35,7 @@ export interface UserProfileResponse {
   id: string;
   email: string;
   full_name: string | null;
+  avatar_url: string | null;
   is_active: boolean;
   is_superuser: boolean;
   email_verified_at: string | null;
@@ -49,6 +50,43 @@ export interface UserProfileResponse {
     created_at: string;
     updated_at: string;
   };
+}
+
+/**
+ * Request for avatar upload URL
+ */
+export interface AvatarUploadRequest {
+  content_type: string;
+  file_size: number;
+}
+
+/**
+ * Response with presigned upload URL
+ */
+export interface AvatarUploadResponse {
+  upload_url: string;
+  avatar_key: string;
+  expires_in: number;
+}
+
+/**
+ * Response for avatar deletion
+ */
+export interface AvatarDeleteResponse {
+  success: boolean;
+  message: string;
+}
+
+/**
+ * Profile update request (partial)
+ */
+export interface ProfileUpdateRequest {
+  full_name?: string;
+  avatar_url?: string;
+  daily_goal?: number;
+  email_notifications?: boolean;
+  preferred_language?: string;
+  theme?: 'light' | 'dark';
 }
 
 /**
@@ -95,6 +133,44 @@ export const authAPI = {
    */
   getProfile: async (options?: { signal?: AbortSignal }): Promise<UserProfileResponse> => {
     return api.get<UserProfileResponse>('/api/v1/auth/me', { signal: options?.signal });
+  },
+
+  /**
+   * Get presigned URL for avatar upload
+   */
+  getAvatarUploadUrl: async (request: AvatarUploadRequest): Promise<AvatarUploadResponse> => {
+    return api.post<AvatarUploadResponse>('/api/v1/auth/avatar/upload-url', request);
+  },
+
+  /**
+   * Upload file directly to S3 using presigned URL
+   */
+  uploadToS3: async (presignedUrl: string, file: File): Promise<void> => {
+    const response = await fetch(presignedUrl, {
+      method: 'PUT',
+      body: file,
+      headers: {
+        'Content-Type': file.type,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`S3 upload failed: ${response.status} ${response.statusText}`);
+    }
+  },
+
+  /**
+   * Update user profile
+   */
+  updateProfile: async (updates: ProfileUpdateRequest): Promise<UserProfileResponse> => {
+    return api.patch<UserProfileResponse>('/api/v1/auth/me', updates);
+  },
+
+  /**
+   * Remove avatar
+   */
+  removeAvatar: async (): Promise<AvatarDeleteResponse> => {
+    return api.delete<AvatarDeleteResponse>('/api/v1/auth/avatar');
   },
 
   /**

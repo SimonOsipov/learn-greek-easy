@@ -38,6 +38,11 @@ class UserUpdate(BaseModel):
     """Schema for updating user profile."""
 
     full_name: Optional[str] = Field(None, min_length=1, max_length=255)
+    avatar_url: Optional[str] = Field(
+        None,
+        max_length=500,
+        description="S3 key for user avatar",
+    )
 
 
 class UserResponse(UserBase):
@@ -49,6 +54,7 @@ class UserResponse(UserBase):
     is_active: bool
     is_superuser: bool
     email_verified_at: Optional[datetime]
+    avatar_url: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 
@@ -108,6 +114,11 @@ class UserWithSettingsUpdate(BaseModel):
 
     # User fields
     full_name: Optional[str] = Field(None, min_length=1, max_length=255)
+    avatar_url: Optional[str] = Field(
+        None,
+        max_length=500,
+        description="S3 key for user avatar",
+    )
 
     # Settings fields (flattened for convenience)
     daily_goal: Optional[int] = Field(None, ge=1, le=200)
@@ -231,3 +242,38 @@ class Auth0AuthRequest(BaseModel):
         min_length=10,
         description="Auth0 ID token (JWT) - contains email and profile claims",
     )
+
+
+# ============================================================================
+# Avatar Upload Schemas
+# ============================================================================
+
+
+class AvatarUploadRequest(BaseModel):
+    """Request schema for avatar upload URL generation."""
+
+    content_type: str = Field(
+        ...,
+        description="MIME type of the image (image/jpeg, image/png, image/webp)",
+    )
+    file_size: int = Field(
+        ...,
+        gt=0,
+        le=5 * 1024 * 1024,  # 5MB
+        description="File size in bytes (max 5MB)",
+    )
+
+
+class AvatarUploadResponse(BaseModel):
+    """Response schema for avatar upload URL."""
+
+    upload_url: str = Field(..., description="Presigned S3 PUT URL")
+    avatar_key: str = Field(..., description="S3 key to use in PATCH /me")
+    expires_in: int = Field(..., description="URL expiry in seconds")
+
+
+class AvatarDeleteResponse(BaseModel):
+    """Response schema for avatar deletion."""
+
+    success: bool
+    message: str
