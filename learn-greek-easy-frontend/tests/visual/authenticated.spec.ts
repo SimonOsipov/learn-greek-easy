@@ -96,4 +96,19 @@ test.describe('Authenticated Pages Visual Tests', () => {
     await takeSnapshot(page, 'Statistics Page', testInfo);
   });
 
+  test('Profile Dropdown Menu - Open State', async ({ page }, testInfo) => {
+    await page.goto('/dashboard');
+    await waitForPageReady(page);
+
+    // Open the user menu dropdown
+    const userMenuButton = page.getByTestId('user-menu-trigger');
+    await userMenuButton.click();
+
+    // Wait for dropdown to be visible with Premium menu item
+    await expect(page.getByTestId('premium-menu-item')).toBeVisible();
+    await page.waitForTimeout(300); // Allow dropdown animation to complete
+
+    await takeSnapshot(page, 'Profile Dropdown Menu - Open State', testInfo);
+  });
+
 });
