@@ -16,14 +16,17 @@ import { devtools } from 'zustand/middleware';
 import log from '@/lib/logger';
 import { mockExamAPI } from '@/services/mockExamAPI';
 import { useAuthStore } from '@/stores/authStore';
-import type { MockExamQuestion, MockExamAnswerResponse } from '@/types/mockExam';
+import type {
+  MockExamQuestion,
+  MockExamAnswerItem,
+  MockExamSubmitAllResponse,
+} from '@/types/mockExam';
 import type {
   MockExamSessionData,
   MockExamSessionState,
   MockExamSessionSummary,
   MockExamQuestionState,
   MockExamTimerState,
-  MockExamSessionStats,
   MockExamSessionRecoveryData,
   MockExamTimerWarningLevel,
 } from '@/types/mockExamSession';
@@ -95,12 +98,6 @@ function clearSessionStorage(): void {
     log.warn('Failed to clear mock exam session from sessionStorage:', error);
   }
 }
-
-// Module-level Set for atomic duplicate prevention across async boundaries
-const submittedQuestionIds = new Set<string>();
-
-// Module-level Map to track pending answer API promises
-const pendingAnswerPromises = new Map<string, Promise<void>>();
 
 // Flag to prevent multiple completeExam calls
 let isCompletingExam = false;
@@ -234,9 +231,7 @@ export const useMockExamSessionStore = create<MockExamSessionState>()(
           // Save to sessionStorage for recovery
           saveToSessionStorage(session);
 
-          // Clear any stale submitted IDs, pending promises, and completion flag from previous session
-          submittedQuestionIds.clear();
-          pendingAnswerPromises.clear();
+          // Reset completion flag for new session
           isCompletingExam = false;
 
           log.info(
@@ -253,11 +248,11 @@ export const useMockExamSessionStore = create<MockExamSessionState>()(
       },
 
       /**
-       * Submit answer for current question
-       * Uses optimistic update: local state is updated IMMEDIATELY before API call.
-       * API call runs in background to sync with server.
+       * Submit answer for current question.
+       * SYNCHRONOUS: Updates local state only, no API call.
+       * All answers are submitted together when completeExam() is called.
        */
-      answerQuestion: async (selectedOption: number) => {
+      answerQuestion: (selectedOption: number) => {
         const { session } = get();
         if (!session || session.status !== 'active') {
           log.warn('No active session to answer question');
@@ -270,16 +265,7 @@ export const useMockExamSessionStore = create<MockExamSessionState>()(
           return;
         }
 
-        // ATOMIC DUPLICATE PREVENTION: Check synchronously before any async work
-        const questionId = currentQuestion.question.id;
-        if (submittedQuestionIds.has(questionId)) {
-          log.warn('Question already submitted (atomic guard)', { questionId });
-          return;
-        }
-        // Add immediately (synchronous) - prevents race conditions
-        submittedQuestionIds.add(questionId);
-
-        // Skip if already answered (optimistic duplicate prevention)
+        // Skip if already answered
         if (currentQuestion.selectedOption !== null) {
           log.warn('Question already answered locally, skipping');
           return;
@@ -292,118 +278,30 @@ export const useMockExamSessionStore = create<MockExamSessionState>()(
         const answeredAt = new Date();
         const timeTakenSeconds = Math.round((answeredAt.getTime() - startedAt.getTime()) / 1000);
 
-        // OPTIMISTIC UPDATE: Update local state IMMEDIATELY (before API call)
+        // Update local state ONLY - no API call
         const updatedQuestions = [...session.questions];
         updatedQuestions[session.currentIndex] = {
           ...currentQuestion,
           selectedOption,
-          // These will be updated when API responds, but we set placeholder values
-          correctOption: null,
-          isCorrect: null,
-          xpEarned: 0,
           timeTaken: timeTakenSeconds,
           answeredAt: answeredAt.toISOString(),
         };
 
-        // Optimistically increment questionsAnswered
-        const optimisticStats: MockExamSessionStats = {
-          ...session.stats,
-          questionsAnswered: session.stats.questionsAnswered + 1,
-        };
-
-        const optimisticSession: MockExamSessionData = {
+        const updatedSession: MockExamSessionData = {
           ...session,
           questions: updatedQuestions,
-          stats: optimisticStats,
+          stats: {
+            ...session.stats,
+            questionsAnswered: session.stats.questionsAnswered + 1,
+          },
         };
 
-        // Update state immediately (optimistic)
         set({
-          session: optimisticSession,
+          session: updatedSession,
           currentQuestion: updatedQuestions[session.currentIndex],
         });
 
-        // Save optimistic state to sessionStorage
-        saveToSessionStorage(optimisticSession);
-
-        // Create and track the API call promise
-        const answerPromise = (async () => {
-          try {
-            const response: MockExamAnswerResponse = await mockExamAPI.submitAnswer(
-              session.backendSession.id,
-              {
-                question_id: currentQuestion.question.id,
-                selected_option: selectedOption,
-                time_taken_seconds: timeTakenSeconds,
-              }
-            );
-
-            // Handle duplicate answer from backend
-            if (response.duplicate) {
-              log.warn('Duplicate answer detected by backend', {
-                questionId: currentQuestion.question.id,
-              });
-              // Duplicate means backend already recorded this answer.
-              // The optimistic update set selectedOption. Backend's complete_exam
-              // will return correct score. No further action needed.
-              return;
-            }
-
-            // Update with actual response data from backend
-            const currentState = get();
-            if (!currentState.session) return;
-
-            const finalQuestions = [...currentState.session.questions];
-            const questionIndex = finalQuestions.findIndex(
-              (q) => q.question.id === currentQuestion.question.id
-            );
-
-            if (questionIndex !== -1) {
-              finalQuestions[questionIndex] = {
-                ...finalQuestions[questionIndex],
-                correctOption: response.correct_option,
-                isCorrect: response.is_correct,
-                xpEarned: response.xp_earned,
-              };
-
-              // Update stats with actual correctness
-              const isCorrect = response.is_correct ?? false;
-              const finalStats: MockExamSessionStats = {
-                ...currentState.session.stats,
-                correctCount: currentState.session.stats.correctCount + (isCorrect ? 1 : 0),
-                accuracy:
-                  currentState.session.stats.questionsAnswered > 0
-                    ? Math.round(
-                        ((currentState.session.stats.correctCount + (isCorrect ? 1 : 0)) /
-                          currentState.session.stats.questionsAnswered) *
-                          100
-                      )
-                    : 0,
-                xpEarned: currentState.session.stats.xpEarned + response.xp_earned,
-              };
-
-              const finalSession: MockExamSessionData = {
-                ...currentState.session,
-                questions: finalQuestions,
-                stats: finalStats,
-              };
-
-              set({ session: finalSession });
-              saveToSessionStorage(finalSession);
-            }
-          } catch (error) {
-            // Log error but don't disrupt user - local state is already saved
-            log.error('Failed to sync answer with backend:', error);
-            // Don't set error state - user can continue with optimistic local state
-            // The answer is saved locally and will be in sessionStorage for recovery
-          } finally {
-            // Remove from pending when done
-            pendingAnswerPromises.delete(questionId);
-          }
-        })();
-
-        // Track the promise
-        pendingAnswerPromises.set(questionId, answerPromise);
+        saveToSessionStorage(updatedSession);
       },
 
       /**
@@ -489,7 +387,8 @@ export const useMockExamSessionStore = create<MockExamSessionState>()(
       },
 
       /**
-       * Complete the exam and get final results
+       * Complete the exam and get final results.
+       * Uses submitAll API to send all answers in a single request.
        */
       completeExam: async (timerExpired = false) => {
         // Prevent duplicate completion calls
@@ -506,53 +405,71 @@ export const useMockExamSessionStore = create<MockExamSessionState>()(
           return;
         }
 
-        // Wait for all pending answer API calls to complete
-        if (pendingAnswerPromises.size > 0) {
-          log.info(`Waiting for ${pendingAnswerPromises.size} pending answer(s) to complete...`);
-          await Promise.allSettled(Array.from(pendingAnswerPromises.values()));
-        }
-
-        // Re-fetch session state after all answers have been processed
-        const freshState = get();
-        const freshSession = freshState.session;
-        if (!freshSession) {
-          log.warn('Session lost while waiting for answers');
-          isCompletingExam = false;
-          return;
-        }
-
-        // Stop the timer
         const completedAt = new Date().toISOString();
-        const totalTimeSeconds = MOCK_EXAM_TIME_LIMIT_SECONDS - freshSession.timer.remainingSeconds;
+        const totalTimeSeconds = MOCK_EXAM_TIME_LIMIT_SECONDS - session.timer.remainingSeconds;
+
+        // Collect all answered questions
+        const answers: MockExamAnswerItem[] = session.questions
+          .filter((q) => q.selectedOption !== null)
+          .map((q) => ({
+            question_id: q.question.id,
+            selected_option: q.selectedOption!,
+            time_taken_seconds: q.timeTaken ?? 0,
+          }));
 
         set({ isLoading: true });
 
         try {
-          // Complete on backend
-          const response = await mockExamAPI.completeSession(freshSession.backendSession.id, {
-            total_time_seconds: totalTimeSeconds,
+          // Submit all answers and complete in one API call
+          const response: MockExamSubmitAllResponse = await mockExamAPI.submitAll(
+            session.backendSession.id,
+            {
+              answers,
+              total_time_seconds: totalTimeSeconds,
+            }
+          );
+
+          // Update questions with results from backend
+          const updatedQuestions = session.questions.map((q) => {
+            const result = response.answer_results.find((r) => r.question_id === q.question.id);
+            if (result) {
+              return {
+                ...q,
+                correctOption: result.correct_option,
+                isCorrect: result.is_correct,
+                xpEarned: result.xp_earned,
+              };
+            }
+            return q;
           });
 
-          // Build summary using fresh session data
+          // Build summary from response
           const summary: MockExamSessionSummary = {
-            sessionId: freshSession.backendSession.id,
+            sessionId: session.backendSession.id,
             passed: response.passed,
             score: response.score,
             totalQuestions: response.total_questions,
             percentage: response.percentage,
             passThreshold: response.pass_threshold,
-            xpEarned: freshSession.stats.xpEarned,
+            xpEarned: response.total_xp_earned,
             timeTakenSeconds: totalTimeSeconds,
-            questionResults: freshSession.questions,
+            questionResults: updatedQuestions,
             timerExpired,
             completedAt,
           };
 
-          // Update session status
+          // Update session with results
           const completedSession: MockExamSessionData = {
-            ...freshSession,
+            ...session,
+            questions: updatedQuestions,
             status: 'completed',
-            timer: { ...freshSession.timer, isRunning: false },
+            timer: { ...session.timer, isRunning: false },
+            stats: {
+              ...session.stats,
+              correctCount: response.score,
+              accuracy: response.percentage,
+              xpEarned: response.total_xp_earned,
+            },
           };
 
           set({
@@ -564,7 +481,7 @@ export const useMockExamSessionStore = create<MockExamSessionState>()(
           // Clear sessionStorage (no need to recover completed session)
           clearSessionStorage();
 
-          log.info('Mock exam completed:', freshSession.backendSession.id, {
+          log.info('Mock exam completed:', session.backendSession.id, {
             passed: response.passed,
             score: response.score,
             timerExpired,
@@ -783,9 +700,7 @@ export const useMockExamSessionStore = create<MockExamSessionState>()(
        * Reset session state completely
        */
       resetSession: () => {
-        // Clear atomic duplicate prevention set, pending promises, and completion flag
-        submittedQuestionIds.clear();
-        pendingAnswerPromises.clear();
+        // Reset completion flag
         isCompletingExam = false;
 
         set({

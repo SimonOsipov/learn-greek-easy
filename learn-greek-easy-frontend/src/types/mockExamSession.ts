@@ -187,8 +187,8 @@ export interface MockExamSessionState {
   /** Start a new exam or resume an existing one */
   startExam: () => Promise<void>;
 
-  /** Submit answer for current question */
-  answerQuestion: (selectedOption: number) => Promise<void>;
+  /** Submit answer for current question (synchronous - updates local state only) */
+  answerQuestion: (selectedOption: number) => void;
 
   /** Move to next question */
   nextQuestion: () => void;
