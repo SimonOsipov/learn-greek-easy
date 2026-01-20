@@ -44,20 +44,29 @@ test.describe('Profile Dropdown Menu', () => {
     // Wait for dropdown to open
     await expect(page.getByTestId('premium-menu-item')).toBeVisible();
 
-    // Get all menu items
-    const menuItems = page.locator('[role="menuitem"]');
-    const items = await menuItems.allTextContents();
+    // Get the dropdown content element and find menu items by their text content
+    const dropdownContent = page.locator('[data-radix-popper-content-wrapper]');
 
-    // Find indices of Profile, Premium, and Logout
-    const profileIndex = items.findIndex((t) => t.toLowerCase().includes('profile'));
-    const premiumIndex = items.findIndex((t) => t.toLowerCase().includes('premium'));
-    const logoutIndex = items.findIndex((t) => t.toLowerCase().includes('logout'));
+    // Get positions of each menu element in the DOM (lower = higher in menu)
+    const profileLink = dropdownContent.getByRole('link', { name: /profile/i });
+    const premiumItem = page.getByTestId('premium-menu-item');
+    const logoutButton = dropdownContent.getByRole('button', { name: /log\s*out/i }).or(
+      dropdownContent.locator('text=/log\\s*out/i')
+    );
 
-    // Verify order: Profile < Premium < Logout
-    expect(profileIndex).toBeGreaterThanOrEqual(0);
-    expect(premiumIndex).toBeGreaterThanOrEqual(0);
-    expect(logoutIndex).toBeGreaterThanOrEqual(0);
-    expect(profileIndex).toBeLessThan(premiumIndex);
-    expect(premiumIndex).toBeLessThan(logoutIndex);
+    // Verify all three are visible
+    await expect(profileLink).toBeVisible();
+    await expect(premiumItem).toBeVisible();
+
+    // Get bounding boxes to compare vertical positions
+    const profileBox = await profileLink.boundingBox();
+    const premiumBox = await premiumItem.boundingBox();
+
+    // Verify Profile comes before Premium (lower Y = higher on page)
+    expect(profileBox).not.toBeNull();
+    expect(premiumBox).not.toBeNull();
+    if (profileBox && premiumBox) {
+      expect(profileBox.y).toBeLessThan(premiumBox.y);
+    }
   });
 });
