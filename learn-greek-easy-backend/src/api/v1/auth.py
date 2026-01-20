@@ -55,6 +55,37 @@ from src.services.s3_service import (
 
 logger = get_logger(__name__)
 
+
+def _build_user_profile_response(user: User) -> UserProfileResponse:
+    """Build UserProfileResponse with presigned avatar URL.
+
+    Converts the raw avatar_url (S3 key) to a presigned GET URL
+    so the frontend can display the avatar image.
+
+    Args:
+        user: User model with avatar_url as S3 key
+
+    Returns:
+        UserProfileResponse with avatar_url as presigned URL (or None)
+    """
+    s3_service = get_s3_service()
+
+    # Convert S3 key to presigned URL if avatar exists
+    avatar_presigned_url = None
+    if user.avatar_url:
+        avatar_presigned_url = s3_service.generate_presigned_url(
+            user.avatar_url,
+            expiry_seconds=3600,  # 1 hour expiry for avatar URLs
+        )
+
+    # Build response with presigned URL
+    response = UserProfileResponse.model_validate(user)
+    # Override avatar_url with presigned URL
+    response.avatar_url = avatar_presigned_url
+
+    return response
+
+
 router = APIRouter(
     # Note: prefix is set by parent router in v1/router.py
     # This router is mounted at /auth under the /api/v1 prefix
@@ -191,7 +222,7 @@ async def auth0_login(
             refresh_token=token_response.refresh_token,
             token_type=token_response.token_type,
             expires_in=token_response.expires_in,
-            user=UserProfileResponse.model_validate(user),
+            user=_build_user_profile_response(user),
         )
 
     except Auth0DisabledException as e:
@@ -720,7 +751,7 @@ async def get_me(
             }
         }
     """
-    return UserProfileResponse.model_validate(current_user)
+    return _build_user_profile_response(current_user)
 
 
 @router.patch(
@@ -839,7 +870,7 @@ async def update_me(
     if current_user.settings:
         await db.refresh(current_user.settings)
 
-    return UserProfileResponse.model_validate(current_user)
+    return _build_user_profile_response(current_user)
 
 
 @router.post(
