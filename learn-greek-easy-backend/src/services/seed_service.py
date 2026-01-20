@@ -13,7 +13,7 @@ from datetime import date, datetime, timedelta, timezone
 from typing import Any, TypedDict
 from uuid import UUID
 
-from sqlalchemy import select, text, update
+from sqlalchemy import delete, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config import settings
@@ -23,6 +23,7 @@ from src.db.models import (
     CardDifficulty,
     CardStatistics,
     CardStatus,
+    CultureAnswerHistory,
     CultureDeck,
     CultureQuestion,
     CultureQuestionStats,
@@ -44,6 +45,7 @@ from src.db.models import (
     UserSettings,
     UserXP,
     VoteType,
+    XPTransaction,
 )
 from src.services.achievement_definitions import ACHIEVEMENTS as ACHIEVEMENT_DEFS
 from src.services.xp_constants import get_level_from_xp
@@ -225,6 +227,28 @@ class SeedService:
             },
         ],
     }
+
+    # Danger zone test users for E2E testing
+    # These users are created separately from main seed users
+    # Reset user has full progress data, delete user has minimal data
+    DANGER_ZONE_USERS = [
+        {
+            "email": "e2e_danger_reset@test.com",
+            "full_name": "E2E Danger Reset User",
+            "is_superuser": False,
+            "is_active": True,
+            "auth0_id": None,
+            "has_progress": True,
+        },
+        {
+            "email": "e2e_danger_delete@test.com",
+            "full_name": "E2E Danger Delete User",
+            "is_superuser": False,
+            "is_active": True,
+            "auth0_id": None,
+            "has_progress": False,
+        },
+    ]
 
     # Mock exam session configurations for E2E testing
     # 80% pass threshold (20/25 correct)
@@ -2413,6 +2437,385 @@ class SeedService:
             "success": True,
             "notifications_created": len(created),
             "unread_count": sum(1 for n in created if not n["read"]),
+        }
+
+    # =====================
+    # Danger Zone User Seeding
+    # =====================
+
+    async def seed_danger_zone_users(self) -> dict[str, Any]:  # noqa: C901
+        """Create danger zone test users for E2E testing.
+
+        Creates two test users:
+        - e2e_danger_reset@test.com: Full progress data for reset testing
+        - e2e_danger_delete@test.com: Minimal data for deletion testing
+
+        This method is idempotent - it deletes existing users before recreating.
+        Requires /seed/content and /seed/culture to be called first.
+
+        Returns:
+            dict with created users and data counts
+
+        Raises:
+            RuntimeError: If seeding not allowed
+        """
+        self._check_can_seed()
+
+        now = datetime.now(timezone.utc)
+        created_users: list[dict[str, Any]] = []
+        data_counts: dict[str, int] = {
+            "deck_progress": 0,
+            "card_statistics": 0,
+            "reviews": 0,
+            "xp_transactions": 0,
+            "achievements": 0,
+            "mock_exam_sessions": 0,
+            "mock_exam_answers": 0,
+            "culture_stats": 0,
+            "culture_history": 0,
+            "notifications": 0,
+        }
+
+        for user_data in self.DANGER_ZONE_USERS:
+            email = user_data["email"]
+
+            # Check if user exists
+            result = await self.db.execute(select(User).where(User.email == email))
+            existing_user = result.scalar_one_or_none()
+
+            # Delete existing user and all their data in FK-safe order
+            if existing_user:
+                user_id = existing_user.id
+
+                # Delete in FK-safe order (children first)
+                # 1. Reviews
+                await self.db.execute(delete(Review).where(Review.user_id == user_id))
+                # 2. Card statistics
+                await self.db.execute(
+                    delete(CardStatistics).where(CardStatistics.user_id == user_id)
+                )
+                # 3. User deck progress
+                await self.db.execute(
+                    delete(UserDeckProgress).where(UserDeckProgress.user_id == user_id)
+                )
+                # 4. Culture answer history
+                await self.db.execute(
+                    delete(CultureAnswerHistory).where(CultureAnswerHistory.user_id == user_id)
+                )
+                # 5. Culture question stats
+                await self.db.execute(
+                    delete(CultureQuestionStats).where(CultureQuestionStats.user_id == user_id)
+                )
+                # 6. Mock exam answers (via session cascade won't work, delete explicitly)
+                await self.db.execute(
+                    delete(MockExamAnswer).where(
+                        MockExamAnswer.session_id.in_(
+                            select(MockExamSession.id).where(MockExamSession.user_id == user_id)
+                        )
+                    )
+                )
+                # 7. Mock exam sessions
+                await self.db.execute(
+                    delete(MockExamSession).where(MockExamSession.user_id == user_id)
+                )
+                # 8. XP transactions
+                await self.db.execute(delete(XPTransaction).where(XPTransaction.user_id == user_id))
+                # 9. User achievements
+                await self.db.execute(
+                    delete(UserAchievement).where(UserAchievement.user_id == user_id)
+                )
+                # 10. Notifications
+                await self.db.execute(delete(Notification).where(Notification.user_id == user_id))
+                # 11. User XP
+                await self.db.execute(delete(UserXP).where(UserXP.user_id == user_id))
+                # 12. User settings
+                await self.db.execute(delete(UserSettings).where(UserSettings.user_id == user_id))
+                # 13. Finally, delete the user
+                await self.db.execute(delete(User).where(User.id == user_id))
+                await self.db.flush()
+
+            # Create fresh user
+            user = User(
+                email=email,
+                full_name=user_data["full_name"],
+                password_hash=None,  # Auth0 users don't have password
+                auth0_id=user_data["auth0_id"],
+                is_superuser=user_data["is_superuser"],
+                is_active=user_data["is_active"],
+                email_verified_at=now,
+            )
+            self.db.add(user)
+            await self.db.flush()
+
+            # Create user settings
+            user_settings = UserSettings(
+                user_id=user.id,
+                daily_goal=20,
+                email_notifications=True,
+            )
+            self.db.add(user_settings)
+            await self.db.flush()
+
+            user_info: dict[str, Any] = {
+                "id": str(user.id),
+                "email": email,
+                "full_name": user_data["full_name"],
+            }
+
+            # Create progress data for the "reset" user
+            if user_data.get("has_progress"):
+                # Get existing decks (require /seed/content called first)
+                decks_result = await self.db.execute(select(Deck).order_by(Deck.level).limit(2))
+                decks = decks_result.scalars().all()
+
+                if len(decks) < 2:
+                    user_info["error"] = "Insufficient decks. Run /seed/content first."
+                    created_users.append(user_info)
+                    continue
+
+                # Create UserDeckProgress for 2 decks
+                for deck in decks:
+                    deck_progress = UserDeckProgress(
+                        user_id=user.id,
+                        deck_id=deck.id,
+                        cards_studied=5,
+                        cards_mastered=3,
+                        total_reviews=15,
+                        current_streak=3,
+                        longest_streak=5,
+                        last_studied_at=now - timedelta(hours=2),
+                    )
+                    self.db.add(deck_progress)
+                    data_counts["deck_progress"] += 1
+
+                # Get cards from those decks for statistics
+                cards_result = await self.db.execute(
+                    select(Card).where(Card.deck_id.in_([d.id for d in decks])).limit(10)
+                )
+                cards = cards_result.scalars().all()
+
+                # Create CardStatistics for cards in those decks
+                today = date.today()
+                for i, card in enumerate(cards):
+                    # 60% mastered, 20% learning, 20% new
+                    if i < 6:
+                        status = CardStatus.MASTERED
+                        ef = 2.8
+                        interval = 21
+                        reps = 5
+                    elif i < 8:
+                        status = CardStatus.LEARNING
+                        ef = 2.3
+                        interval = 3
+                        reps = 2
+                    else:
+                        status = CardStatus.NEW
+                        ef = 2.5
+                        interval = 0
+                        reps = 0
+
+                    card_stat = CardStatistics(
+                        user_id=user.id,
+                        card_id=card.id,
+                        easiness_factor=ef,
+                        interval=interval,
+                        repetitions=reps,
+                        next_review_date=today + timedelta(days=interval),
+                        status=status,
+                    )
+                    self.db.add(card_stat)
+                    data_counts["card_statistics"] += 1
+
+                # Create Reviews for studied cards
+                for card in cards[:8]:  # Reviews for non-new cards
+                    for j in range(5):  # 5 reviews per card
+                        review = Review(
+                            user_id=user.id,
+                            card_id=card.id,
+                            rating=4 if j % 2 == 0 else 3,  # Mix of ratings
+                            reviewed_at=now - timedelta(days=10 - j * 2),
+                        )
+                        self.db.add(review)
+                        data_counts["reviews"] += 1
+
+                # Create UserXP with 500 XP, level 3
+                user_xp = UserXP(
+                    user_id=user.id,
+                    total_xp=500,
+                    current_level=3,
+                )
+                self.db.add(user_xp)
+
+                # Create 5 XPTransaction records
+                xp_reasons = [
+                    ("correct_answer", 10),
+                    ("daily_goal", 50),
+                    ("correct_answer", 10),
+                    ("streak_bonus", 30),
+                    ("correct_answer", 10),
+                ]
+                for reason, amount in xp_reasons:
+                    xp_tx = XPTransaction(
+                        user_id=user.id,
+                        amount=amount,
+                        reason=reason,
+                        earned_at=now - timedelta(hours=len(xp_reasons)),
+                    )
+                    self.db.add(xp_tx)
+                    data_counts["xp_transactions"] += 1
+
+                # Unlock 3 achievements via UserAchievement
+                achievement_ids = [
+                    "streak_first_flame",
+                    "learning_first_word",
+                    "session_quick_study",
+                ]
+                for ach_id in achievement_ids:
+                    user_ach = UserAchievement(
+                        user_id=user.id,
+                        achievement_id=ach_id,
+                        unlocked_at=now - timedelta(days=1),
+                    )
+                    self.db.add(user_ach)
+                    data_counts["achievements"] += 1
+
+                # Create mock exam sessions (require /seed/culture called first)
+                culture_questions_result = await self.db.execute(select(CultureQuestion).limit(25))
+                culture_questions = culture_questions_result.scalars().all()
+
+                if len(culture_questions) >= 25:
+                    # Create 2 MockExamSession with MockExamAnswer
+                    exam_configs = [
+                        {"score": 22, "passed": True, "days_ago": 3},
+                        {"score": 18, "passed": False, "days_ago": 1},
+                    ]
+                    for config in exam_configs:
+                        exam_time = now - timedelta(days=config["days_ago"])
+                        session = MockExamSession(
+                            user_id=user.id,
+                            started_at=exam_time,
+                            completed_at=exam_time + timedelta(minutes=20),
+                            score=config["score"],
+                            total_questions=25,
+                            passed=config["passed"],
+                            time_taken_seconds=1200,
+                            status=MockExamStatus.COMPLETED,
+                        )
+                        self.db.add(session)
+                        await self.db.flush()
+                        data_counts["mock_exam_sessions"] += 1
+
+                        # Create answers for this session
+                        for i, question in enumerate(culture_questions[:25]):
+                            is_correct = i < config["score"]
+                            answer = MockExamAnswer(
+                                session_id=session.id,
+                                question_id=question.id,
+                                selected_option=1 if is_correct else 2,
+                                is_correct=is_correct,
+                                time_taken_seconds=48,
+                                answered_at=exam_time + timedelta(seconds=48 * (i + 1)),
+                            )
+                            self.db.add(answer)
+                            data_counts["mock_exam_answers"] += 1
+                else:
+                    user_info["mock_exam_warning"] = (
+                        "Insufficient culture questions for mock exams. " "Run /seed/culture first."
+                    )
+
+                # Create CultureQuestionStats with CultureAnswerHistory
+                if len(culture_questions) >= 10:
+                    # Get deck info for the category
+                    culture_deck_result = await self.db.execute(select(CultureDeck).limit(1))
+                    culture_deck = culture_deck_result.scalar_one_or_none()
+                    category = culture_deck.category if culture_deck else "history"
+
+                    for i, question in enumerate(culture_questions[:10]):
+                        # 60% mastered, 30% learning, 10% new
+                        if i < 6:
+                            status = CardStatus.MASTERED
+                            ef = 2.8
+                            interval = 14
+                            reps = 4
+                        elif i < 9:
+                            status = CardStatus.LEARNING
+                            ef = 2.3
+                            interval = 2
+                            reps = 1
+                        else:
+                            status = CardStatus.NEW
+                            ef = 2.5
+                            interval = 0
+                            reps = 0
+
+                        culture_stat = CultureQuestionStats(
+                            user_id=user.id,
+                            question_id=question.id,
+                            easiness_factor=ef,
+                            interval=interval,
+                            repetitions=reps,
+                            next_review_date=today + timedelta(days=interval),
+                            status=status,
+                        )
+                        self.db.add(culture_stat)
+                        data_counts["culture_stats"] += 1
+
+                        # Create answer history for non-new questions
+                        if status != CardStatus.NEW:
+                            history = CultureAnswerHistory(
+                                user_id=user.id,
+                                question_id=question.id,
+                                language="en",
+                                is_correct=status == CardStatus.MASTERED,
+                                selected_option=1 if status == CardStatus.MASTERED else 2,
+                                time_taken_seconds=30,
+                                deck_category=category,
+                            )
+                            self.db.add(history)
+                            data_counts["culture_history"] += 1
+
+                # Create 5 Notifications
+                notification_types = [
+                    (NotificationType.ACHIEVEMENT_UNLOCKED, "Achievement Unlocked!", False),
+                    (NotificationType.DAILY_GOAL_COMPLETE, "Daily Goal Complete!", False),
+                    (NotificationType.LEVEL_UP, "Level Up!", True),
+                    (NotificationType.STREAK_AT_RISK, "Streak at Risk!", True),
+                    (NotificationType.WELCOME, "Welcome!", True),
+                ]
+                for notif_type, title, is_read in notification_types:
+                    notification = Notification(
+                        user_id=user.id,
+                        type=notif_type,
+                        title=title,
+                        message=f"Test notification: {title}",
+                        icon="bell",
+                        action_url="/",
+                        read=is_read,
+                        read_at=now if is_read else None,
+                    )
+                    self.db.add(notification)
+                    data_counts["notifications"] += 1
+
+                user_info["has_progress"] = True
+            else:
+                # For delete user - just create minimal UserXP
+                user_xp = UserXP(
+                    user_id=user.id,
+                    total_xp=0,
+                    current_level=1,
+                )
+                self.db.add(user_xp)
+                user_info["has_progress"] = False
+
+            created_users.append(user_info)
+
+        await self.db.flush()
+
+        return {
+            "success": True,
+            "users_created": len(created_users),
+            "users": created_users,
+            "data_counts": data_counts,
         }
 
     # =====================

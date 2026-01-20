@@ -1,1 +1,1 @@
-"""Unit tests for core module (dependencies, security utilities)."""
+"""Unit tests for core module."""

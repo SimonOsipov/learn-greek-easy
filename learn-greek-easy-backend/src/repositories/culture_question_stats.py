@@ -4,7 +4,7 @@ from datetime import date, datetime, timedelta
 from typing import Optional
 from uuid import UUID
 
-from sqlalchemy import Date, cast, func, select
+from sqlalchemy import Date, cast, delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.db.models import CardStatus, CultureAnswerHistory, CultureQuestion, CultureQuestionStats
@@ -516,6 +516,20 @@ class CultureQuestionStatsRepository(BaseRepository[CultureQuestionStats]):
             }
             for row in rows
         }
+
+    async def delete_all_by_user_id(self, user_id: UUID) -> int:
+        """Delete all culture question stats for a user.
+
+        Args:
+            user_id: User UUID
+
+        Returns:
+            Number of deleted records
+        """
+        result = await self.db.execute(
+            delete(CultureQuestionStats).where(CultureQuestionStats.user_id == user_id)
+        )
+        return int(result.rowcount) if result.rowcount else 0  # type: ignore[attr-defined]
 
 
 # ============================================================================

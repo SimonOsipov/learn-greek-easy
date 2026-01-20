@@ -11,7 +11,7 @@ into the dashboard, including:
 from datetime import date, datetime, timedelta
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.constants import MAX_ANSWER_TIME_SECONDS
@@ -227,6 +227,20 @@ class CultureAnswerHistoryRepository(BaseRepository[CultureAnswerHistory]):
             }
             for row in result.all()
         ]
+
+    async def delete_all_by_user_id(self, user_id: UUID) -> int:
+        """Delete all culture answer history for a user.
+
+        Args:
+            user_id: User UUID
+
+        Returns:
+            Number of deleted records
+        """
+        result = await self.db.execute(
+            delete(CultureAnswerHistory).where(CultureAnswerHistory.user_id == user_id)
+        )
+        return int(result.rowcount) if result.rowcount else 0  # type: ignore[attr-defined]
 
 
 # ============================================================================

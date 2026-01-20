@@ -159,6 +159,7 @@ export const SecuritySection: React.FC = () => {
                 variant="outline"
                 className="ml-4 border-red-300 text-red-700 hover:bg-red-100 hover:text-red-800 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-900"
                 onClick={() => setShowResetDialog(true)}
+                data-testid="reset-progress-button"
               >
                 {t('security.dangerZone.resetProgress.button')}
               </Button>
@@ -181,6 +182,7 @@ export const SecuritySection: React.FC = () => {
                 variant="destructive"
                 className="ml-4"
                 onClick={() => setShowDeleteDialog(true)}
+                data-testid="delete-account-button"
               >
                 {t('security.dangerZone.deleteAccount.button')}
               </Button>

@@ -335,6 +335,20 @@ class Auth0TokenInvalidException(BaseAPIException):
         )
 
 
+class Auth0ManagementError(BaseAPIException):
+    """Auth0 Management API operation failed."""
+
+    def __init__(
+        self,
+        detail: str = "Auth0 Management API operation failed",
+    ) -> None:
+        super().__init__(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=detail,
+            error_code="AUTH0_MANAGEMENT_ERROR",
+        )
+
+
 # ============================================================================
 # Seed API Exceptions
 # ============================================================================

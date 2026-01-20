@@ -16,6 +16,8 @@ from src.services.progress_service import ProgressService
 from src.services.s3_service import S3Service, get_s3_service
 from src.services.seed_service import SeedService
 from src.services.sm2_service import SM2Service
+from src.services.user_deletion_service import DeletionResult, UserDeletionService
+from src.services.user_progress_reset_service import UserProgressResetService
 from src.services.xp_service import XPService
 
 __all__ = [
@@ -23,6 +25,7 @@ __all__ = [
     "AuthService",
     "CultureDeckService",
     "CultureQuestionService",
+    "DeletionResult",
     "FeedbackAdminService",
     "MockExamService",
     "NotificationService",
@@ -30,6 +33,8 @@ __all__ = [
     "S3Service",
     "SeedService",
     "SM2Service",
+    "UserDeletionService",
+    "UserProgressResetService",
     "XPService",
     "get_s3_service",
 ]

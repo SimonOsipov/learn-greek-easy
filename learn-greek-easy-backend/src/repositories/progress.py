@@ -3,7 +3,7 @@
 from datetime import date, datetime
 from uuid import UUID
 
-from sqlalchemy import Date, cast, func, not_, select
+from sqlalchemy import Date, cast, delete, func, not_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -159,6 +159,20 @@ class UserDeckProgressRepository(BaseRepository[UserDeckProgress]):
         )
         result = await self.db.execute(query)
         return result.scalar() or 0
+
+    async def delete_all_by_user_id(self, user_id: UUID) -> int:
+        """Delete all deck progress records for a user.
+
+        Args:
+            user_id: User UUID
+
+        Returns:
+            Number of deleted records
+        """
+        result = await self.db.execute(
+            delete(UserDeckProgress).where(UserDeckProgress.user_id == user_id)
+        )
+        return int(result.rowcount) if result.rowcount else 0  # type: ignore[attr-defined]
 
 
 class CardStatisticsRepository(BaseRepository[CardStatistics]):
@@ -709,3 +723,17 @@ class CardStatisticsRepository(BaseRepository[CardStatistics]):
             elif row.status == CardStatus.MASTERED:
                 counts[day]["mastered"] += count_val
         return counts
+
+    async def delete_all_by_user_id(self, user_id: UUID) -> int:
+        """Delete all card statistics for a user.
+
+        Args:
+            user_id: User UUID
+
+        Returns:
+            Number of deleted records
+        """
+        result = await self.db.execute(
+            delete(CardStatistics).where(CardStatistics.user_id == user_id)
+        )
+        return int(result.rowcount) if result.rowcount else 0  # type: ignore[attr-defined]
