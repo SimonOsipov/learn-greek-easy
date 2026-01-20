@@ -46,23 +46,6 @@ export interface MockExamQueueResponse {
   sample_questions: MockExamQuestion[];
 }
 
-// Answer request
-export interface MockExamAnswerRequest {
-  question_id: string;
-  selected_option: number;
-  time_taken_seconds: number;
-}
-
-// Answer response
-export interface MockExamAnswerResponse {
-  is_correct: boolean | null;
-  correct_option: number | null;
-  xp_earned: number;
-  current_score: number;
-  answers_count?: number; // Optional - frontend uses optimistic local tracking
-  duplicate: boolean;
-}
-
 // Submit-all answer item (matches MockExamAnswerItem from backend)
 export interface MockExamAnswerItem {
   question_id: string;
@@ -98,21 +81,6 @@ export interface MockExamSubmitAllResponse {
   total_xp_earned: number;
   new_answers_count: number;
   duplicate_answers_count: number;
-}
-
-// Complete request
-export interface MockExamCompleteRequest {
-  total_time_seconds: number;
-}
-
-// Complete response
-export interface MockExamCompleteResponse {
-  session: MockExamSession;
-  passed: boolean;
-  score: number;
-  total_questions: number;
-  percentage: number;
-  pass_threshold: number;
 }
 
 // Statistics

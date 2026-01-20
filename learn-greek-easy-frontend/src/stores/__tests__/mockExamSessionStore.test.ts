@@ -25,10 +25,8 @@ import { useMockExamSessionStore } from '../mockExamSessionStore';
 vi.mock('@/services/mockExamAPI', () => ({
   mockExamAPI: {
     createSession: vi.fn(),
-    submitAnswer: vi.fn(),
     submitAll: vi.fn(),
     abandonSession: vi.fn(),
-    completeSession: vi.fn(),
     getStatistics: vi.fn(),
     getQuestionQueue: vi.fn(),
   },
@@ -274,7 +272,7 @@ describe('mockExamSessionStore', () => {
       });
 
       // Verify NO API call was made (the key behavior of the simplified architecture)
-      expect(mockExamAPI.submitAnswer).not.toHaveBeenCalled();
+      // submitAll is only called when completing the exam
       expect(mockExamAPI.submitAll).not.toHaveBeenCalled();
 
       // Verify local state was updated
@@ -354,8 +352,8 @@ describe('mockExamSessionStore', () => {
         result.current.answerQuestion(1);
       });
 
-      // Should not throw, just log warning
-      expect(mockExamAPI.submitAnswer).not.toHaveBeenCalled();
+      // Should not throw, just log warning - no API calls made
+      expect(mockExamAPI.submitAll).not.toHaveBeenCalled();
     });
   });
 

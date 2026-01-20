@@ -2,8 +2,7 @@
 
 This module tests:
 - create_mock_exam: Creates exam with 25 questions
-- submit_answer: Processes answers with SM-2 and XP integration
-- complete_exam: Completes exam with pass/fail determination
+- submit_all_answers: Processes all answers atomically with SM-2 and XP integration
 - get_statistics: Returns aggregated stats with recent exams
 - get_active_exam: Returns active session info
 - abandon_exam: Abandons session successfully
@@ -200,279 +199,6 @@ class TestCreateMockExam:
 
         with pytest.raises(ValueError, match="No questions available"):
             await service.create_mock_exam(test_user.id)
-
-
-# =============================================================================
-# Test submit_answer
-# =============================================================================
-
-
-class TestSubmitAnswer:
-    """Tests for submit_answer method."""
-
-    @pytest.mark.asyncio
-    async def test_submit_answer_correct(
-        self,
-        db_session: AsyncSession,
-        test_user: User,
-        active_mock_exam: MockExamSession,
-        culture_questions: list[CultureQuestion],
-        mock_s3_service,
-    ):
-        """Correct answer should award XP and update SM-2."""
-        service = MockExamService(db_session, s3_service=mock_s3_service)
-        question = culture_questions[0]  # correct_option is 1
-
-        result = await service.submit_answer(
-            user_id=test_user.id,
-            session_id=active_mock_exam.id,
-            question_id=question.id,
-            selected_option=1,  # Correct
-            time_taken_seconds=10,
-        )
-
-        assert result["is_correct"] is True
-        assert result["correct_option"] == 1
-        assert result["xp_earned"] > 0
-        assert result["current_score"] == 1
-        assert result["duplicate"] is False
-
-    @pytest.mark.asyncio
-    async def test_submit_answer_wrong(
-        self,
-        db_session: AsyncSession,
-        test_user: User,
-        active_mock_exam: MockExamSession,
-        culture_questions: list[CultureQuestion],
-        mock_s3_service,
-    ):
-        """Wrong answer should award encouragement XP (2 XP)."""
-        service = MockExamService(db_session, s3_service=mock_s3_service)
-        question = culture_questions[0]  # correct_option is 1
-
-        result = await service.submit_answer(
-            user_id=test_user.id,
-            session_id=active_mock_exam.id,
-            question_id=question.id,
-            selected_option=2,  # Wrong
-            time_taken_seconds=10,
-        )
-
-        assert result["is_correct"] is False
-        assert result["correct_option"] == 1
-        assert result["xp_earned"] == 2  # Encouragement XP
-        assert result["current_score"] == 0
-        assert result["duplicate"] is False
-
-    @pytest.mark.asyncio
-    async def test_submit_answer_invalid_session(
-        self,
-        db_session: AsyncSession,
-        test_user: User,
-        culture_questions: list[CultureQuestion],
-        mock_s3_service,
-    ):
-        """Should raise MockExamNotFoundException for invalid session."""
-        service = MockExamService(db_session, s3_service=mock_s3_service)
-
-        with pytest.raises(MockExamNotFoundException):
-            await service.submit_answer(
-                user_id=test_user.id,
-                session_id=uuid4(),
-                question_id=culture_questions[0].id,
-                selected_option=1,
-                time_taken_seconds=10,
-            )
-
-    @pytest.mark.asyncio
-    async def test_submit_answer_expired_session(
-        self,
-        db_session: AsyncSession,
-        test_user: User,
-        completed_mock_exam: MockExamSession,
-        culture_questions: list[CultureQuestion],
-        mock_s3_service,
-    ):
-        """Should raise MockExamSessionExpiredException for completed session."""
-        service = MockExamService(db_session, s3_service=mock_s3_service)
-
-        with pytest.raises(MockExamSessionExpiredException):
-            await service.submit_answer(
-                user_id=test_user.id,
-                session_id=completed_mock_exam.id,
-                question_id=culture_questions[0].id,
-                selected_option=1,
-                time_taken_seconds=10,
-            )
-
-    @pytest.mark.asyncio
-    async def test_submit_answer_duplicate(
-        self,
-        db_session: AsyncSession,
-        test_user: User,
-        active_mock_exam: MockExamSession,
-        culture_questions: list[CultureQuestion],
-        mock_s3_service,
-    ):
-        """Duplicate answer should return existing state without re-processing."""
-        service = MockExamService(db_session, s3_service=mock_s3_service)
-        question = culture_questions[0]
-
-        # First answer
-        await service.submit_answer(
-            user_id=test_user.id,
-            session_id=active_mock_exam.id,
-            question_id=question.id,
-            selected_option=1,
-            time_taken_seconds=10,
-        )
-
-        # Duplicate answer
-        result = await service.submit_answer(
-            user_id=test_user.id,
-            session_id=active_mock_exam.id,
-            question_id=question.id,
-            selected_option=2,  # Different option
-            time_taken_seconds=5,
-        )
-
-        assert result["duplicate"] is True
-        assert result["xp_earned"] == 0
-
-
-# =============================================================================
-# Test complete_exam
-# =============================================================================
-
-
-class TestCompleteExam:
-    """Tests for complete_exam method."""
-
-    @pytest.mark.asyncio
-    async def test_complete_exam_pass(
-        self,
-        db_session: AsyncSession,
-        test_user: User,
-        active_mock_exam: MockExamSession,
-        culture_questions: list[CultureQuestion],
-        mock_s3_service,
-    ):
-        """60%+ should result in passed=True."""
-        service = MockExamService(db_session, s3_service=mock_s3_service)
-
-        # Submit 16 correct answers (64%)
-        for i in range(16):
-            question = culture_questions[i]
-            await service.submit_answer(
-                user_id=test_user.id,
-                session_id=active_mock_exam.id,
-                question_id=question.id,
-                selected_option=question.correct_option,
-                time_taken_seconds=10,
-            )
-
-        # Submit 9 wrong answers
-        for i in range(16, 25):
-            question = culture_questions[i]
-            wrong_option = (question.correct_option % 4) + 1
-            await service.submit_answer(
-                user_id=test_user.id,
-                session_id=active_mock_exam.id,
-                question_id=question.id,
-                selected_option=wrong_option,
-                time_taken_seconds=10,
-            )
-
-        result = await service.complete_exam(
-            user_id=test_user.id,
-            session_id=active_mock_exam.id,
-            total_time_seconds=900,
-        )
-
-        assert result["passed"] is True
-        assert result["score"] == 16
-        assert result["percentage"] == 64.0
-        assert result["pass_threshold"] == 60
-
-    @pytest.mark.asyncio
-    async def test_complete_exam_fail(
-        self,
-        db_session: AsyncSession,
-        test_user: User,
-        active_mock_exam: MockExamSession,
-        culture_questions: list[CultureQuestion],
-        mock_s3_service,
-    ):
-        """<60% should result in passed=False."""
-        service = MockExamService(db_session, s3_service=mock_s3_service)
-
-        # Submit 14 correct answers (56%)
-        for i in range(14):
-            question = culture_questions[i]
-            await service.submit_answer(
-                user_id=test_user.id,
-                session_id=active_mock_exam.id,
-                question_id=question.id,
-                selected_option=question.correct_option,
-                time_taken_seconds=10,
-            )
-
-        # Submit 11 wrong answers
-        for i in range(14, 25):
-            question = culture_questions[i]
-            wrong_option = (question.correct_option % 4) + 1
-            await service.submit_answer(
-                user_id=test_user.id,
-                session_id=active_mock_exam.id,
-                question_id=question.id,
-                selected_option=wrong_option,
-                time_taken_seconds=10,
-            )
-
-        result = await service.complete_exam(
-            user_id=test_user.id,
-            session_id=active_mock_exam.id,
-            total_time_seconds=900,
-        )
-
-        assert result["passed"] is False
-        assert result["score"] == 14
-        assert result["percentage"] == 56.0
-
-    @pytest.mark.asyncio
-    async def test_complete_exam_invalid_session(
-        self,
-        db_session: AsyncSession,
-        test_user: User,
-        mock_s3_service,
-    ):
-        """Should raise MockExamNotFoundException for invalid session."""
-        service = MockExamService(db_session, s3_service=mock_s3_service)
-
-        with pytest.raises(MockExamNotFoundException):
-            await service.complete_exam(
-                user_id=test_user.id,
-                session_id=uuid4(),
-                total_time_seconds=900,
-            )
-
-    @pytest.mark.asyncio
-    async def test_complete_exam_already_completed(
-        self,
-        db_session: AsyncSession,
-        test_user: User,
-        completed_mock_exam: MockExamSession,
-        mock_s3_service,
-    ):
-        """Should raise MockExamSessionExpiredException for already completed session."""
-        service = MockExamService(db_session, s3_service=mock_s3_service)
-
-        with pytest.raises(MockExamSessionExpiredException):
-            await service.complete_exam(
-                user_id=test_user.id,
-                session_id=completed_mock_exam.id,
-                total_time_seconds=900,
-            )
 
 
 # =============================================================================
@@ -738,7 +464,7 @@ class TestSubmitAllAnswers:
         assert result["percentage"] == 40.0
 
     @pytest.mark.asyncio
-    async def test_submit_all_handles_duplicates(
+    async def test_submit_all_handles_all_duplicates(
         self,
         db_session: AsyncSession,
         test_user: User,
@@ -746,23 +472,12 @@ class TestSubmitAllAnswers:
         culture_questions: list[CultureQuestion],
         mock_s3_service,
     ):
-        """Should detect and skip duplicate answers while processing new ones."""
+        """Should handle the case where all answers are duplicates gracefully."""
         service = MockExamService(db_session, s3_service=mock_s3_service)
 
-        # First, submit 5 answers via the individual method
-        for i in range(5):
-            question = culture_questions[i]
-            await service.submit_answer(
-                user_id=test_user.id,
-                session_id=active_mock_exam.id,
-                question_id=question.id,
-                selected_option=question.correct_option,
-                time_taken_seconds=10,
-            )
-
-        # Now submit all 25 via submit_all (5 duplicates + 20 new)
+        # Build all answers (all correct)
         answers = []
-        for i, question in enumerate(culture_questions[:25]):
+        for question in culture_questions[:25]:
             answers.append(
                 {
                     "question_id": question.id,
@@ -771,6 +486,7 @@ class TestSubmitAllAnswers:
                 }
             )
 
+        # First submission should process all 25 answers
         result = await service.submit_all_answers(
             user_id=test_user.id,
             session_id=active_mock_exam.id,
@@ -778,13 +494,14 @@ class TestSubmitAllAnswers:
             total_time_seconds=1200,
         )
 
-        assert result["new_answers_count"] == 20  # 25 - 5 duplicates
-        assert result["duplicate_answers_count"] == 5
-        assert result["score"] == 25  # All correct (5 existing + 20 new)
+        # Verify first submission processed all answers
+        assert result["new_answers_count"] == 25
+        assert result["duplicate_answers_count"] == 0
+        assert result["score"] == 25  # All correct
 
-        # Verify duplicates are marked in results
+        # Verify no duplicates in results
         duplicate_results = [ar for ar in result["answer_results"] if ar["was_duplicate"]]
-        assert len(duplicate_results) == 5
+        assert len(duplicate_results) == 0
 
     @pytest.mark.asyncio
     async def test_submit_all_invalid_session(

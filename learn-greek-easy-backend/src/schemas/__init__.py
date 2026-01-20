@@ -49,16 +49,16 @@ from src.schemas.feedback import (
 
 # Mock Exam schemas
 from src.schemas.mock_exam import (
-    MockExamAnswerRequest,
-    MockExamAnswerResponse,
-    MockExamCompleteRequest,
-    MockExamCompleteResponse,
+    MockExamAnswerItem,
+    MockExamAnswerResult,
     MockExamCreateResponse,
     MockExamHistoryItem,
     MockExamQuestionResponse,
     MockExamQueueResponse,
     MockExamSessionResponse,
     MockExamStatisticsResponse,
+    MockExamSubmitAllRequest,
+    MockExamSubmitAllResponse,
 )
 
 # Notification schemas
@@ -235,10 +235,10 @@ __all__ = [
     "MockExamSessionResponse",
     "MockExamCreateResponse",
     "MockExamQueueResponse",
-    "MockExamAnswerRequest",
-    "MockExamAnswerResponse",
-    "MockExamCompleteRequest",
-    "MockExamCompleteResponse",
+    "MockExamAnswerItem",
+    "MockExamSubmitAllRequest",
+    "MockExamAnswerResult",
+    "MockExamSubmitAllResponse",
     "MockExamHistoryItem",
     "MockExamStatisticsResponse",
 ]

@@ -3,8 +3,7 @@
 This module tests:
 - GET /api/v1/culture/mock-exam/queue - Preview questions
 - POST /api/v1/culture/mock-exam/sessions - Create/resume exam
-- POST /api/v1/culture/mock-exam/sessions/{session_id}/answers - Submit answer
-- POST /api/v1/culture/mock-exam/sessions/{session_id}/complete - Complete exam
+- POST /api/v1/culture/mock-exam/sessions/{session_id}/submit-all - Submit all answers and complete
 - GET /api/v1/culture/mock-exam/statistics - User statistics
 - DELETE /api/v1/culture/mock-exam/sessions/{session_id} - Abandon exam
 
@@ -245,384 +244,6 @@ class TestMockExamCreateEndpoint:
 
 
 # =============================================================================
-# Test Mock Exam Answer Endpoint
-# =============================================================================
-
-
-class TestMockExamAnswerEndpoint:
-    """Test suite for POST /api/v1/culture/mock-exam/sessions/{id}/answers endpoint."""
-
-    @pytest.mark.asyncio
-    async def test_answer_unauthenticated_returns_401(self, client: AsyncClient):
-        """Test unauthenticated request returns 401."""
-        session_id = uuid4()
-        response = await client.post(
-            f"/api/v1/culture/mock-exam/sessions/{session_id}/answers",
-            json={"question_id": str(uuid4()), "selected_option": 1, "time_taken_seconds": 10},
-        )
-
-        assert response.status_code == 401
-
-    @pytest.mark.asyncio
-    async def test_answer_session_not_found(
-        self,
-        client: AsyncClient,
-        auth_headers: dict,
-    ):
-        """Test answering with non-existent session returns 404."""
-        non_existent_id = uuid4()
-
-        response = await client.post(
-            f"/api/v1/culture/mock-exam/sessions/{non_existent_id}/answers",
-            headers=auth_headers,
-            json={"question_id": str(uuid4()), "selected_option": 1, "time_taken_seconds": 10},
-        )
-
-        assert response.status_code == 404
-        data = response.json()
-        assert data["success"] is False
-        assert data["error"]["code"] == "NOT_FOUND"
-
-    @pytest.mark.asyncio
-    async def test_answer_correct(
-        self,
-        client: AsyncClient,
-        auth_headers: dict,
-        culture_deck_with_questions: tuple,
-    ):
-        """Test submitting a correct answer."""
-        deck, questions = culture_deck_with_questions
-
-        # Create session
-        create_response = await client.post(
-            "/api/v1/culture/mock-exam/sessions",
-            headers=auth_headers,
-        )
-        session_id = create_response.json()["session"]["id"]
-        exam_questions = create_response.json()["questions"]
-
-        # Get the first question and its correct answer
-        question = exam_questions[0]
-        question_id = question["id"]
-
-        # Find the correct option for this question from the database
-        db_question = next(q for q in questions if str(q.id) == question_id)
-        correct_option = db_question.correct_option
-
-        # Submit correct answer
-        response = await client.post(
-            f"/api/v1/culture/mock-exam/sessions/{session_id}/answers",
-            headers=auth_headers,
-            json={
-                "question_id": question_id,
-                "selected_option": correct_option,
-                "time_taken_seconds": 10,
-            },
-        )
-
-        assert response.status_code == 200
-        data = response.json()
-        assert data["is_correct"] is True
-        assert data["correct_option"] == correct_option
-        assert data["xp_earned"] > 0
-        assert data["current_score"] == 1
-        assert data["answers_count"] == 1
-        assert data["duplicate"] is False
-
-    @pytest.mark.asyncio
-    async def test_answer_wrong(
-        self,
-        client: AsyncClient,
-        auth_headers: dict,
-        culture_deck_with_questions: tuple,
-    ):
-        """Test submitting a wrong answer."""
-        deck, questions = culture_deck_with_questions
-
-        # Create session
-        create_response = await client.post(
-            "/api/v1/culture/mock-exam/sessions",
-            headers=auth_headers,
-        )
-        session_id = create_response.json()["session"]["id"]
-        exam_questions = create_response.json()["questions"]
-
-        # Get the first question
-        question = exam_questions[0]
-        question_id = question["id"]
-
-        # Find the correct option and pick a wrong one
-        db_question = next(q for q in questions if str(q.id) == question_id)
-        correct_option = db_question.correct_option
-        wrong_option = (correct_option % 4) + 1  # Pick a different option
-
-        # Submit wrong answer
-        response = await client.post(
-            f"/api/v1/culture/mock-exam/sessions/{session_id}/answers",
-            headers=auth_headers,
-            json={
-                "question_id": question_id,
-                "selected_option": wrong_option,
-                "time_taken_seconds": 10,
-            },
-        )
-
-        assert response.status_code == 200
-        data = response.json()
-        assert data["is_correct"] is False
-        assert data["correct_option"] == correct_option
-        assert data["xp_earned"] >= 0  # Still get encouragement XP
-        assert data["current_score"] == 0  # Wrong answer doesn't increase score
-        assert data["duplicate"] is False
-
-    @pytest.mark.asyncio
-    async def test_answer_duplicate_handling(
-        self,
-        client: AsyncClient,
-        auth_headers: dict,
-        culture_deck_with_questions: tuple,
-    ):
-        """Test that duplicate answers are handled gracefully."""
-        deck, questions = culture_deck_with_questions
-
-        # Create session
-        create_response = await client.post(
-            "/api/v1/culture/mock-exam/sessions",
-            headers=auth_headers,
-        )
-        session_id = create_response.json()["session"]["id"]
-        exam_questions = create_response.json()["questions"]
-
-        question_id = exam_questions[0]["id"]
-
-        # Submit first answer
-        await client.post(
-            f"/api/v1/culture/mock-exam/sessions/{session_id}/answers",
-            headers=auth_headers,
-            json={
-                "question_id": question_id,
-                "selected_option": 1,
-                "time_taken_seconds": 10,
-            },
-        )
-
-        # Submit duplicate answer
-        response = await client.post(
-            f"/api/v1/culture/mock-exam/sessions/{session_id}/answers",
-            headers=auth_headers,
-            json={
-                "question_id": question_id,
-                "selected_option": 2,  # Different option
-                "time_taken_seconds": 5,
-            },
-        )
-
-        assert response.status_code == 200
-        data = response.json()
-        assert data["duplicate"] is True
-        assert data["is_correct"] is None
-        assert data["correct_option"] is None
-        assert data["xp_earned"] == 0
-
-
-# =============================================================================
-# Test Mock Exam Complete Endpoint
-# =============================================================================
-
-
-class TestMockExamCompleteEndpoint:
-    """Test suite for POST /api/v1/culture/mock-exam/sessions/{id}/complete endpoint."""
-
-    @pytest.mark.asyncio
-    async def test_complete_unauthenticated_returns_401(self, client: AsyncClient):
-        """Test unauthenticated request returns 401."""
-        session_id = uuid4()
-        response = await client.post(
-            f"/api/v1/culture/mock-exam/sessions/{session_id}/complete",
-            json={"total_time_seconds": 1200},
-        )
-
-        assert response.status_code == 401
-
-    @pytest.mark.asyncio
-    async def test_complete_session_not_found(
-        self,
-        client: AsyncClient,
-        auth_headers: dict,
-    ):
-        """Test completing non-existent session returns 404."""
-        non_existent_id = uuid4()
-
-        response = await client.post(
-            f"/api/v1/culture/mock-exam/sessions/{non_existent_id}/complete",
-            headers=auth_headers,
-            json={"total_time_seconds": 1200},
-        )
-
-        assert response.status_code == 404
-        data = response.json()
-        assert data["error"]["code"] == "NOT_FOUND"
-
-    @pytest.mark.asyncio
-    async def test_complete_success_pass(
-        self,
-        client: AsyncClient,
-        auth_headers: dict,
-        culture_deck_with_questions: tuple,
-    ):
-        """Test completing exam with passing score."""
-        deck, questions = culture_deck_with_questions
-
-        # Create session
-        create_response = await client.post(
-            "/api/v1/culture/mock-exam/sessions",
-            headers=auth_headers,
-        )
-        session_id = create_response.json()["session"]["id"]
-        exam_questions = create_response.json()["questions"]
-
-        # Answer 16 questions correctly (64% - above 60% pass threshold)
-        for i, question in enumerate(exam_questions[:16]):
-            question_id = question["id"]
-            db_question = next(q for q in questions if str(q.id) == question_id)
-            await client.post(
-                f"/api/v1/culture/mock-exam/sessions/{session_id}/answers",
-                headers=auth_headers,
-                json={
-                    "question_id": question_id,
-                    "selected_option": db_question.correct_option,
-                    "time_taken_seconds": 5,
-                },
-            )
-
-        # Answer remaining 9 questions incorrectly
-        for question in exam_questions[16:]:
-            question_id = question["id"]
-            db_question = next(q for q in questions if str(q.id) == question_id)
-            wrong_option = (db_question.correct_option % 4) + 1
-            await client.post(
-                f"/api/v1/culture/mock-exam/sessions/{session_id}/answers",
-                headers=auth_headers,
-                json={
-                    "question_id": question_id,
-                    "selected_option": wrong_option,
-                    "time_taken_seconds": 5,
-                },
-            )
-
-        # Complete the exam
-        response = await client.post(
-            f"/api/v1/culture/mock-exam/sessions/{session_id}/complete",
-            headers=auth_headers,
-            json={"total_time_seconds": 1200},
-        )
-
-        assert response.status_code == 200
-        data = response.json()
-        assert data["passed"] is True
-        assert data["score"] == 16
-        assert data["total_questions"] == 25
-        assert data["percentage"] == 64.0
-        assert data["pass_threshold"] == 60
-        assert data["session"]["status"] == "completed"
-
-    @pytest.mark.asyncio
-    async def test_complete_success_fail(
-        self,
-        client: AsyncClient,
-        auth_headers: dict,
-        culture_deck_with_questions: tuple,
-    ):
-        """Test completing exam with failing score."""
-        deck, questions = culture_deck_with_questions
-
-        # Create session
-        create_response = await client.post(
-            "/api/v1/culture/mock-exam/sessions",
-            headers=auth_headers,
-        )
-        session_id = create_response.json()["session"]["id"]
-        exam_questions = create_response.json()["questions"]
-
-        # Answer only 10 questions correctly (40% - failing)
-        for i, question in enumerate(exam_questions[:10]):
-            question_id = question["id"]
-            db_question = next(q for q in questions if str(q.id) == question_id)
-            await client.post(
-                f"/api/v1/culture/mock-exam/sessions/{session_id}/answers",
-                headers=auth_headers,
-                json={
-                    "question_id": question_id,
-                    "selected_option": db_question.correct_option,
-                    "time_taken_seconds": 5,
-                },
-            )
-
-        # Answer remaining questions incorrectly
-        for question in exam_questions[10:]:
-            question_id = question["id"]
-            db_question = next(q for q in questions if str(q.id) == question_id)
-            wrong_option = (db_question.correct_option % 4) + 1
-            await client.post(
-                f"/api/v1/culture/mock-exam/sessions/{session_id}/answers",
-                headers=auth_headers,
-                json={
-                    "question_id": question_id,
-                    "selected_option": wrong_option,
-                    "time_taken_seconds": 5,
-                },
-            )
-
-        # Complete the exam
-        response = await client.post(
-            f"/api/v1/culture/mock-exam/sessions/{session_id}/complete",
-            headers=auth_headers,
-            json={"total_time_seconds": 1200},
-        )
-
-        assert response.status_code == 200
-        data = response.json()
-        assert data["passed"] is False
-        assert data["score"] == 10
-        assert data["percentage"] == 40.0
-
-    @pytest.mark.asyncio
-    async def test_complete_already_completed_returns_400(
-        self,
-        client: AsyncClient,
-        auth_headers: dict,
-        culture_deck_with_questions: tuple,
-    ):
-        """Test completing an already completed session returns 400."""
-        deck, questions = culture_deck_with_questions
-
-        # Create and complete session
-        create_response = await client.post(
-            "/api/v1/culture/mock-exam/sessions",
-            headers=auth_headers,
-        )
-        session_id = create_response.json()["session"]["id"]
-
-        # Complete it first
-        await client.post(
-            f"/api/v1/culture/mock-exam/sessions/{session_id}/complete",
-            headers=auth_headers,
-            json={"total_time_seconds": 1200},
-        )
-
-        # Try to complete again
-        response = await client.post(
-            f"/api/v1/culture/mock-exam/sessions/{session_id}/complete",
-            headers=auth_headers,
-            json={"total_time_seconds": 1300},
-        )
-
-        assert response.status_code == 400
-        data = response.json()
-        assert data["error"]["code"] == "MOCK_EXAM_SESSION_EXPIRED"
-
-
-# =============================================================================
 # Test Mock Exam Statistics Endpoint
 # =============================================================================
 
@@ -672,25 +293,24 @@ class TestMockExamStatisticsEndpoint:
         session_id = create_response.json()["session"]["id"]
         exam_questions = create_response.json()["questions"]
 
-        # Answer 20 questions correctly (passing score)
+        # Build answers: 20 correct (passing score)
+        answers = []
         for question in exam_questions[:20]:
             question_id = question["id"]
             db_question = next(q for q in questions if str(q.id) == question_id)
-            await client.post(
-                f"/api/v1/culture/mock-exam/sessions/{session_id}/answers",
-                headers=auth_headers,
-                json={
+            answers.append(
+                {
                     "question_id": question_id,
                     "selected_option": db_question.correct_option,
                     "time_taken_seconds": 5,
-                },
+                }
             )
 
-        # Complete the exam
+        # Submit all and complete the exam
         await client.post(
-            f"/api/v1/culture/mock-exam/sessions/{session_id}/complete",
+            f"/api/v1/culture/mock-exam/sessions/{session_id}/submit-all",
             headers=auth_headers,
-            json={"total_time_seconds": 1200},
+            json={"answers": answers, "total_time_seconds": 1200},
         )
 
         # Get statistics
@@ -792,12 +412,25 @@ class TestMockExamAbandonEndpoint:
             headers=auth_headers,
         )
         session_id = create_response.json()["session"]["id"]
+        exam_questions = create_response.json()["questions"]
 
-        # Complete it
+        # Complete it using submit-all
+        answers = []
+        for question in exam_questions[:10]:
+            question_id = question["id"]
+            db_question = next(q for q in questions if str(q.id) == question_id)
+            answers.append(
+                {
+                    "question_id": question_id,
+                    "selected_option": db_question.correct_option,
+                    "time_taken_seconds": 5,
+                }
+            )
+
         await client.post(
-            f"/api/v1/culture/mock-exam/sessions/{session_id}/complete",
+            f"/api/v1/culture/mock-exam/sessions/{session_id}/submit-all",
             headers=auth_headers,
-            json={"total_time_seconds": 1200},
+            json={"answers": answers, "total_time_seconds": 1200},
         )
 
         # Try to abandon
@@ -988,13 +621,13 @@ class TestMockExamSubmitAllEndpoint:
         assert data["percentage"] == 40.0
 
     @pytest.mark.asyncio
-    async def test_submit_all_handles_partial_retry(
+    async def test_submit_all_all_answers_processed(
         self,
         client: AsyncClient,
         auth_headers: dict,
         culture_deck_with_questions: tuple,
     ):
-        """Test submit-all handles previous answers as duplicates (idempotency)."""
+        """Test submit-all processes all answers correctly with no duplicates."""
         deck, questions = culture_deck_with_questions
 
         # Create session
@@ -1005,22 +638,7 @@ class TestMockExamSubmitAllEndpoint:
         session_id = create_response.json()["session"]["id"]
         exam_questions = create_response.json()["questions"]
 
-        # Submit 5 answers via individual endpoint first
-        for i in range(5):
-            question = exam_questions[i]
-            question_id = question["id"]
-            db_question = next(q for q in questions if str(q.id) == question_id)
-            await client.post(
-                f"/api/v1/culture/mock-exam/sessions/{session_id}/answers",
-                headers=auth_headers,
-                json={
-                    "question_id": question_id,
-                    "selected_option": db_question.correct_option,
-                    "time_taken_seconds": 10,
-                },
-            )
-
-        # Now submit all 25 via submit-all (5 duplicates + 20 new)
+        # Submit all 25 answers via submit-all
         answers = []
         for question in exam_questions:
             question_id = question["id"]
@@ -1045,14 +663,14 @@ class TestMockExamSubmitAllEndpoint:
         assert response.status_code == 200
         data = response.json()
 
-        assert data["new_answers_count"] == 20  # 25 - 5 duplicates
-        assert data["duplicate_answers_count"] == 5
+        assert data["new_answers_count"] == 25  # All new
+        assert data["duplicate_answers_count"] == 0
         assert data["score"] == 25  # All correct
         assert data["passed"] is True
 
-        # Verify duplicates are marked in results
+        # Verify no duplicates in results
         duplicate_results = [ar for ar in data["answer_results"] if ar["was_duplicate"]]
-        assert len(duplicate_results) == 5
+        assert len(duplicate_results) == 0
 
     @pytest.mark.asyncio
     async def test_submit_all_already_completed_returns_400(
@@ -1072,18 +690,30 @@ class TestMockExamSubmitAllEndpoint:
         session_id = create_response.json()["session"]["id"]
         exam_questions = create_response.json()["questions"]
 
-        # Complete it first via complete endpoint
+        # Complete it first via submit-all
+        first_answers = []
+        for question in exam_questions[:10]:
+            question_id = question["id"]
+            db_question = next(q for q in questions if str(q.id) == question_id)
+            first_answers.append(
+                {
+                    "question_id": question_id,
+                    "selected_option": db_question.correct_option,
+                    "time_taken_seconds": 5,
+                }
+            )
+
         await client.post(
-            f"/api/v1/culture/mock-exam/sessions/{session_id}/complete",
+            f"/api/v1/culture/mock-exam/sessions/{session_id}/submit-all",
             headers=auth_headers,
-            json={"total_time_seconds": 1200},
+            json={"answers": first_answers, "total_time_seconds": 1200},
         )
 
-        # Try to submit-all
-        answers = []
+        # Try to submit-all again
+        second_answers = []
         for question in exam_questions:
             question_id = question["id"]
-            answers.append(
+            second_answers.append(
                 {
                     "question_id": question_id,
                     "selected_option": 1,
@@ -1095,7 +725,7 @@ class TestMockExamSubmitAllEndpoint:
             f"/api/v1/culture/mock-exam/sessions/{session_id}/submit-all",
             headers=auth_headers,
             json={
-                "answers": answers,
+                "answers": second_answers,
                 "total_time_seconds": 1200,
             },
         )

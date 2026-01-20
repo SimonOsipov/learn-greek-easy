@@ -2,8 +2,7 @@
 
 This service handles the business logic for mock exams:
 - Creating exam sessions with random questions
-- Processing answers with SM-2 and XP integration
-- Completing exams with pass/fail determination
+- Processing all answers atomically with SM-2 and XP integration
 - Statistics aggregation
 
 Key Features:
@@ -19,19 +18,11 @@ Example Usage:
         # Create a new exam
         exam = await service.create_mock_exam(user_id)
 
-        # Submit an answer
-        result = await service.submit_answer(
+        # Submit all answers and complete
+        result = await service.submit_all_answers(
             user_id=user_id,
             session_id=exam.session.id,
-            question_id=question_id,
-            selected_option=2,
-            time_taken_seconds=15,
-        )
-
-        # Complete the exam
-        completed = await service.complete_exam(
-            user_id=user_id,
-            session_id=exam.session.id,
+            answers=[...],
             total_time_seconds=1200,
         )
 """
@@ -182,142 +173,6 @@ class MockExamService:
             "session": session,
             "questions": question_data,
             "is_resumed": False,
-        }
-
-    async def submit_answer(
-        self,
-        user_id: UUID,
-        session_id: UUID,
-        question_id: UUID,
-        selected_option: int,
-        time_taken_seconds: int,
-    ) -> dict[str, Any]:
-        """Process an answer submission with SM-2 and XP integration.
-
-        Updates the user's SM-2 statistics for the question and awards XP:
-        - Correct: 10 XP (15 XP if answered in < 2 seconds)
-        - Wrong: 2 XP (encouragement)
-
-        Args:
-            user_id: User UUID
-            session_id: Mock exam session UUID
-            question_id: Question UUID
-            selected_option: Selected answer option (1-4)
-            time_taken_seconds: Time taken to answer
-
-        Returns:
-            Dict with:
-            - is_correct: Whether the answer was correct
-            - correct_option: The correct option number
-            - xp_earned: XP awarded for this answer
-            - current_score: Updated score in session
-            - answers_count: Number of questions answered
-
-        Raises:
-            MockExamNotFoundException: If session not found
-            MockExamSessionExpiredException: If session is not active
-            ValueError: If question not valid for this session
-
-        Use Case:
-            Processing each answer during the exam
-        """
-        logger.debug(
-            "Processing mock exam answer",
-            extra={
-                "user_id": str(user_id),
-                "session_id": str(session_id),
-                "question_id": str(question_id),
-            },
-        )
-
-        # Get and validate session
-        session = await self.repository.get_session(session_id, user_id)
-        if session is None:
-            raise MockExamNotFoundException(str(session_id))
-
-        if session.status != MockExamStatus.ACTIVE:
-            raise MockExamSessionExpiredException(str(session_id))
-
-        # Check if already answered
-        if await self.repository.answer_exists(session_id, question_id):
-            logger.warning(
-                "Duplicate answer submission",
-                extra={
-                    "session_id": str(session_id),
-                    "question_id": str(question_id),
-                },
-            )
-            # Return existing state without re-processing
-            answers = await self.repository.get_session_answers(session_id)
-            return {
-                "is_correct": None,
-                "correct_option": None,
-                "xp_earned": 0,
-                "current_score": sum(1 for a in answers if a.is_correct),
-                "answers_count": len(answers),
-                "duplicate": True,
-            }
-
-        # Get the question
-        question = await self._get_question(question_id)
-        if question is None:
-            raise ValueError(f"Question {question_id} not found")
-
-        # Determine correctness
-        is_correct = selected_option == question.correct_option
-        is_perfect = time_taken_seconds <= PERFECT_RECALL_THRESHOLD_SECONDS
-
-        # Save the answer
-        await self.repository.save_answer(
-            session_id=session_id,
-            question_id=question_id,
-            selected_option=selected_option,
-            is_correct=is_correct,
-            time_taken_seconds=time_taken_seconds,
-        )
-
-        # Update session score if correct
-        if is_correct:
-            session.score += 1
-
-        # Update SM-2 statistics for the question
-        await self._update_sm2_stats(
-            user_id=user_id,
-            question_id=question_id,
-            is_correct=is_correct,
-        )
-
-        # Award XP
-        xp_earned = await self.xp_service.award_culture_answer_xp(
-            user_id=user_id,
-            is_correct=is_correct,
-            is_perfect=is_perfect,
-            source_id=question_id,
-        )
-
-        await self.db.commit()
-
-        # Get answer count for response (required by API contract)
-        answers = await self.repository.get_session_answers(session_id)
-
-        logger.info(
-            "Mock exam answer processed",
-            extra={
-                "user_id": str(user_id),
-                "session_id": str(session_id),
-                "is_correct": is_correct,
-                "xp_earned": xp_earned,
-                "current_score": session.score,
-            },
-        )
-
-        return {
-            "is_correct": is_correct,
-            "correct_option": question.correct_option,
-            "xp_earned": xp_earned,
-            "current_score": session.score,
-            "answers_count": len(answers),
-            "duplicate": False,
         }
 
     async def submit_all_answers(
@@ -529,95 +384,6 @@ class MockExamService:
             "total_xp_earned": total_xp_earned,
             "new_answers_count": new_answers_count,
             "duplicate_answers_count": duplicate_answers_count,
-        }
-
-    async def complete_exam(
-        self,
-        user_id: UUID,
-        session_id: UUID,
-        total_time_seconds: int,
-    ) -> dict[str, Any]:
-        """Complete a mock exam session and calculate final results.
-
-        Pass threshold: 60% (16/25 correct)
-
-        Args:
-            user_id: User UUID
-            session_id: Mock exam session UUID
-            total_time_seconds: Total time taken for the exam
-
-        Returns:
-            Dict with:
-            - session: Updated MockExamSession
-            - passed: Whether the exam was passed
-            - score: Number of correct answers
-            - total_questions: Total questions in exam
-            - percentage: Score percentage
-            - pass_threshold: Required percentage to pass
-
-        Raises:
-            MockExamNotFoundException: If session not found
-            MockExamSessionExpiredException: If session is not active
-
-        Use Case:
-            Finishing the exam
-        """
-        logger.debug(
-            "Completing mock exam",
-            extra={
-                "user_id": str(user_id),
-                "session_id": str(session_id),
-            },
-        )
-
-        # Get and validate session
-        session = await self.repository.get_session(session_id, user_id)
-        if session is None:
-            raise MockExamNotFoundException(str(session_id))
-
-        if session.status != MockExamStatus.ACTIVE:
-            raise MockExamSessionExpiredException(str(session_id))
-
-        # Calculate final score from answers
-        answers = await self.repository.get_session_answers(session_id)
-        final_score = sum(1 for a in answers if a.is_correct)
-
-        # Calculate pass/fail
-        percentage = (final_score / session.total_questions) * 100
-        passed = percentage >= PASS_THRESHOLD_PERCENTAGE
-
-        # Store total_questions before updating session
-        total_questions = session.total_questions
-
-        # Complete the session
-        updated_session = await self.repository.complete_session(
-            session_id=session_id,
-            score=final_score,
-            passed=passed,
-            time_taken_seconds=total_time_seconds,
-        )
-
-        await self.db.commit()
-
-        logger.info(
-            "Mock exam completed",
-            extra={
-                "user_id": str(user_id),
-                "session_id": str(session_id),
-                "score": final_score,
-                "total_questions": total_questions,
-                "percentage": percentage,
-                "passed": passed,
-            },
-        )
-
-        return {
-            "session": updated_session,
-            "passed": passed,
-            "score": final_score,
-            "total_questions": total_questions,
-            "percentage": round(percentage, 1),
-            "pass_threshold": PASS_THRESHOLD_PERCENTAGE,
         }
 
     async def get_statistics(self, user_id: UUID) -> dict[str, Any]:
