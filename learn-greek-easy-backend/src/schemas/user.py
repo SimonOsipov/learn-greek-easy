@@ -38,6 +38,11 @@ class UserUpdate(BaseModel):
     """Schema for updating user profile."""
 
     full_name: Optional[str] = Field(None, min_length=1, max_length=255)
+    avatar_url: Optional[str] = Field(
+        None,
+        max_length=500,
+        description="S3 key for user avatar",
+    )
 
 
 class UserResponse(UserBase):
@@ -49,6 +54,7 @@ class UserResponse(UserBase):
     is_active: bool
     is_superuser: bool
     email_verified_at: Optional[datetime]
+    avatar_url: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 
@@ -108,6 +114,11 @@ class UserWithSettingsUpdate(BaseModel):
 
     # User fields
     full_name: Optional[str] = Field(None, min_length=1, max_length=255)
+    avatar_url: Optional[str] = Field(
+        None,
+        max_length=500,
+        description="S3 key for user avatar",
+    )
 
     # Settings fields (flattened for convenience)
     daily_goal: Optional[int] = Field(None, ge=1, le=200)

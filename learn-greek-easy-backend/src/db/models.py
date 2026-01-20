@@ -175,6 +175,11 @@ class User(Base, TimestampMixin):
 
     # Profile
     full_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    avatar_url: Mapped[str | None] = mapped_column(
+        String(500),
+        nullable=True,
+        comment="S3 key for user avatar (e.g., avatars/{user_id}/{uuid}.jpg)",
+    )
 
     # Status flags
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
