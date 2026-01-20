@@ -1,17 +1,7 @@
 import React, { useState } from 'react';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { format } from 'date-fns';
-import {
-  Shield,
-  Lock,
-  Key,
-  AlertTriangle,
-  Smartphone,
-  RotateCcw,
-  Trash2,
-  Crown,
-} from 'lucide-react';
+import { Key, AlertTriangle, RotateCcw, Trash2 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
@@ -20,7 +10,6 @@ import { PasswordField } from '@/components/forms/PasswordField';
 import { SubmitButton } from '@/components/forms/SubmitButton';
 import { DeleteAccountDialog } from '@/components/settings/DeleteAccountDialog';
 import { ResetProgressDialog } from '@/components/settings/ResetProgressDialog';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -64,7 +53,7 @@ type PasswordFormData = z.infer<ReturnType<typeof createPasswordSchema>>;
 export const SecuritySection: React.FC = () => {
   const { t } = useTranslation('profile');
   const { toast } = useToast();
-  const { user, updatePassword } = useAuthStore();
+  const { updatePassword } = useAuthStore();
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
   const [showResetDialog, setShowResetDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -139,132 +128,6 @@ export const SecuritySection: React.FC = () => {
               >
                 {t('security.changePassword.update')}
               </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Subscription Section */}
-        {user && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <Crown className="h-5 w-5 text-amber-500" />
-                {t('security.subscription.title')}
-              </CardTitle>
-              <CardDescription>{t('security.subscription.description')}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3 rounded-lg bg-muted/50 p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">
-                      {t('security.subscription.currentPlan')}
-                    </p>
-                    <div className="mt-1 flex items-center gap-2">
-                      {user.role === 'premium' ? (
-                        <Badge className="border-0 bg-gradient-to-r from-purple-500 to-purple-700 text-white">
-                          {t('security.subscription.premium')}
-                        </Badge>
-                      ) : (
-                        <Badge variant="secondary">{t('security.subscription.free')}</Badge>
-                      )}
-                    </div>
-                  </div>
-
-                  {user.role === 'free' && (
-                    <Button
-                      variant="default"
-                      size="sm"
-                      className="bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800"
-                      onClick={() => {
-                        toast({
-                          title: t('security.subscription.upgradeTitle'),
-                          description: t('security.subscription.upgradeDescription'),
-                        });
-                      }}
-                    >
-                      {t('security.subscription.upgrade')}
-                    </Button>
-                  )}
-                </div>
-
-                <div className="border-t pt-3">
-                  <p className="text-sm text-muted-foreground">
-                    {t('security.subscription.memberSince', {
-                      date: format(new Date(user.createdAt), 'MMMM yyyy'),
-                    })}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Two-Factor Authentication (Coming Soon) */}
-        <Card className="opacity-60">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Smartphone className="h-5 w-5 text-green-600" />
-              {t('security.twoFactor.title')}
-              <span className="ml-auto rounded-full bg-muted px-2 py-1 text-xs font-medium text-muted-foreground">
-                {t('security.twoFactor.comingSoon')}
-              </span>
-            </CardTitle>
-            <CardDescription>{t('security.twoFactor.description')}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="rounded-lg border border-border p-4 opacity-50">
-              <div className="flex items-start gap-4">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
-                  <Shield className="h-5 w-5 text-muted-foreground" />
-                </div>
-                <div className="flex-1">
-                  <p className="font-medium text-foreground">{t('security.twoFactor.enable2FA')}</p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {t('security.twoFactor.enable2FADescription')}
-                  </p>
-                </div>
-                <Button disabled variant="outline" size="sm">
-                  {t('security.twoFactor.enable')}
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Active Sessions */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Lock className="h-5 w-5 text-purple-600" />
-              {t('security.sessions.title')}
-            </CardTitle>
-            <CardDescription>{t('security.sessions.description')}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <div className="flex items-start justify-between rounded-lg border border-border p-4">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <p className="font-medium text-foreground">
-                      {t('security.sessions.currentDevice')}
-                    </p>
-                    <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900 dark:text-green-300">
-                      {t('security.sessions.activeNow')}
-                    </span>
-                  </div>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {navigator.userAgent.includes('Mac') ? 'macOS' : 'Unknown'} •{' '}
-                    {navigator.userAgent.includes('Chrome') ? 'Chrome' : 'Unknown Browser'}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {t('security.sessions.lastActive')} {new Date().toLocaleString()}
-                  </p>
-                </div>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                {t('security.sessions.comingSoonDescription')}
-              </p>
             </div>
           </CardContent>
         </Card>

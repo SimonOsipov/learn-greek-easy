@@ -81,6 +81,7 @@ vi.mock('react-i18next', () => ({
         'nav.achievements': 'Achievements',
         'nav.feedback': 'Feedback & Support',
         'nav.profile': 'Profile',
+        'nav.premium': 'Premium',
         'nav.logout': 'Logout',
         'nav.toggleMenu': 'Toggle Menu',
         'nav.userMenu': 'User Menu',
@@ -234,6 +235,56 @@ describe('Header', () => {
       await waitFor(() => {
         expect(screen.getByText('Profile')).toBeInTheDocument();
       });
+    });
+  });
+
+  describe('Premium Menu Item', () => {
+    it('should display Premium menu item in dropdown', async () => {
+      const user = userEvent.setup();
+      renderHeader();
+
+      const userMenuButton = screen.getByTestId('user-menu-trigger');
+      await user.click(userMenuButton);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('premium-menu-item')).toBeInTheDocument();
+      });
+    });
+
+    it('should display Premium text', async () => {
+      const user = userEvent.setup();
+      renderHeader();
+
+      const userMenuButton = screen.getByTestId('user-menu-trigger');
+      await user.click(userMenuButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('Premium')).toBeInTheDocument();
+      });
+    });
+
+    it('should display menu items in correct order (Profile before Premium)', async () => {
+      const user = userEvent.setup();
+      renderHeader();
+
+      const userMenuButton = screen.getByTestId('user-menu-trigger');
+      await user.click(userMenuButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('Profile')).toBeInTheDocument();
+      });
+
+      // Get all menu items and check their order
+      // Note: LogoutDialog is mocked so we only check Profile vs Premium order
+      const menuItems = screen.getAllByRole('menuitem');
+      const menuTexts = menuItems.map((item) => item.textContent);
+
+      const profileIndex = menuTexts.findIndex((text) => text?.includes('Profile'));
+      const premiumIndex = menuTexts.findIndex((text) => text?.includes('Premium'));
+
+      expect(profileIndex).toBeGreaterThanOrEqual(0);
+      expect(premiumIndex).toBeGreaterThanOrEqual(0);
+      expect(profileIndex).toBeLessThan(premiumIndex);
     });
   });
 });

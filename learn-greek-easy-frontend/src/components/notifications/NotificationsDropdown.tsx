@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useNotifications } from '@/contexts/NotificationContext';
 
 import { NotificationItem } from './NotificationItem';
@@ -26,6 +27,7 @@ export const NotificationsDropdown: React.FC = () => {
     isLoading,
     error,
     hasMore,
+    notificationsEnabled,
     loadMore,
     markAsRead,
     markAllAsRead,
@@ -53,6 +55,31 @@ export const NotificationsDropdown: React.FC = () => {
     await fetchNotifications(true);
   };
 
+  // Show disabled state when notifications are turned off in preferences
+  if (!notificationsEnabled) {
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="relative"
+              disabled
+              aria-label={t('notifications.disabled', 'Notifications disabled')}
+              data-testid="notifications-trigger"
+            >
+              <Bell className="h-5 w-5 text-muted-foreground" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>{t('notifications.disabledTooltip', 'Notifications are disabled in preferences')}</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  }
+
   return (
     <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
       <DropdownMenuTrigger asChild>
@@ -61,6 +88,7 @@ export const NotificationsDropdown: React.FC = () => {
           size="icon"
           className="relative"
           aria-label={t('notifications.title', 'Notifications')}
+          data-testid="notifications-trigger"
         >
           <Bell className="h-5 w-5" />
           {unreadCount > 0 && (

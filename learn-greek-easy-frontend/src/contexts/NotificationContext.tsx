@@ -14,6 +14,9 @@ import { useAppStore } from '@/stores/appStore';
 import { useAuthStore, useHasHydrated } from '@/stores/authStore';
 import type { Notification } from '@/types/notification';
 
+// Export for testing purposes
+export const NOTIFICATIONS_ENABLED_DEFAULT = true;
+
 interface NotificationContextValue {
   // State
   notifications: Notification[];
@@ -21,6 +24,7 @@ interface NotificationContextValue {
   isLoading: boolean;
   error: Error | null;
   hasMore: boolean;
+  notificationsEnabled: boolean;
 
   // Actions
   fetchNotifications: (reset?: boolean) => Promise<void>;
@@ -53,11 +57,25 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   // Wait for auth to be validated with backend before making API calls
   const authInitialized = useAppStore((state) => state.authInitialized);
 
+  // Get notification preference from user settings
+  const notificationsEnabled = useAuthStore(
+    (state) => state.user?.preferences?.notifications ?? NOTIFICATIONS_ENABLED_DEFAULT
+  );
+
   // Fetch notifications
   const fetchNotifications = useCallback(
     async (reset = false) => {
       // Don't fetch if not hydrated, not authenticated, or already fetching
       if (!hasHydrated || !isAuthenticated || isFetchingRef.current) return;
+
+      // If notifications are disabled, clear and return early
+      if (!notificationsEnabled) {
+        setNotifications([]);
+        setUnreadCount(0);
+        setHasMore(false);
+        setOffset(0);
+        return;
+      }
 
       try {
         isFetchingRef.current = true;
@@ -89,7 +107,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         isFetchingRef.current = false;
       }
     },
-    [hasHydrated, isAuthenticated, offset]
+    [hasHydrated, isAuthenticated, notificationsEnabled, offset]
   );
 
   // Load more notifications
@@ -101,6 +119,12 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   // Refresh unread count only (for polling)
   const refreshUnreadCount = useCallback(async () => {
     if (!hasHydrated || !isAuthenticated || !authInitialized) return;
+
+    // If notifications are disabled, ensure count is 0 and return
+    if (!notificationsEnabled) {
+      setUnreadCount(0);
+      return;
+    }
 
     try {
       const count = await notificationAPI.fetchUnreadCount();
@@ -116,7 +140,14 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         endpoint: '/notifications/unread-count',
       });
     }
-  }, [hasHydrated, isAuthenticated, authInitialized, unreadCount, fetchNotifications]);
+  }, [
+    hasHydrated,
+    isAuthenticated,
+    authInitialized,
+    notificationsEnabled,
+    unreadCount,
+    fetchNotifications,
+  ]);
 
   // Mark single notification as read
   const markAsRead = useCallback(async (id: string) => {
@@ -174,6 +205,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   }, []);
 
   // Initial fetch when authenticated, hydrated, and auth validated with backend
+  // Also re-fetch when notifications preference changes
   useEffect(() => {
     if (hasHydrated && isAuthenticated && authInitialized) {
       fetchNotifications(true);
@@ -186,7 +218,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       previousUnreadCountRef.current = 0;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasHydrated, isAuthenticated, authInitialized]); // Depend on hydration, auth state, and auth validation
+  }, [hasHydrated, isAuthenticated, authInitialized, notificationsEnabled]); // Depend on hydration, auth state, auth validation, and notification preference
 
   // Polling for new notifications - use ref to avoid recreating interval
   const refreshUnreadCountRef = useRef(refreshUnreadCount);
@@ -209,6 +241,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       isLoading,
       error,
       hasMore,
+      notificationsEnabled,
       fetchNotifications,
       loadMore,
       markAsRead,
@@ -223,6 +256,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       isLoading,
       error,
       hasMore,
+      notificationsEnabled,
       fetchNotifications,
       loadMore,
       markAsRead,

@@ -86,6 +86,19 @@ test.describe('Authenticated Pages Visual Tests', () => {
     await takeSnapshot(page, 'Profile Page - Preferences Tab - Intensive Goal', testInfo);
   });
 
+  test('Profile Page - Security Tab', async ({ page }, testInfo) => {
+    await page.goto('/profile');
+    await waitForPageReady(page);
+    await expect(page.getByTestId('profile-page')).toBeVisible();
+
+    // Navigate to Security tab
+    await page.getByRole('button', { name: /security/i }).click();
+    await expect(page.getByTestId('security-section')).toBeVisible();
+    await page.waitForTimeout(500);
+
+    await takeSnapshot(page, 'Profile Page - Security Tab', testInfo);
+  });
+
   test('Statistics Page', async ({ page }, testInfo) => {
     await page.goto('/statistics');
     await waitForPageReady(page);
@@ -94,6 +107,21 @@ test.describe('Authenticated Pages Visual Tests', () => {
     await expect(page.getByTestId('statistics-page')).toBeVisible();
     await page.waitForTimeout(1000); // Wait for charts to render
     await takeSnapshot(page, 'Statistics Page', testInfo);
+  });
+
+  test('Profile Dropdown Menu - Open State', async ({ page }, testInfo) => {
+    await page.goto('/dashboard');
+    await waitForPageReady(page);
+
+    // Open the user menu dropdown
+    const userMenuButton = page.getByTestId('user-menu-trigger');
+    await userMenuButton.click();
+
+    // Wait for dropdown to be visible with Premium menu item
+    await expect(page.getByTestId('premium-menu-item')).toBeVisible();
+    await page.waitForTimeout(300); // Allow dropdown animation to complete
+
+    await takeSnapshot(page, 'Profile Dropdown Menu - Open State', testInfo);
   });
 
 });
