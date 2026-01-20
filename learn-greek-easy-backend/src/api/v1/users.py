@@ -4,10 +4,16 @@ This module provides endpoints for user account management,
 including dangerous operations like resetting progress and deleting accounts.
 """
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.dependencies import get_current_user
+from src.core.logging import get_logger
+from src.db.dependencies import get_db
 from src.db.models import User
+from src.services.user_progress_reset_service import UserProgressResetService
+
+logger = get_logger(__name__)
 
 router = APIRouter(
     # Note: prefix is set by parent router in v1/router.py
@@ -43,6 +49,7 @@ router = APIRouter(
 )
 async def reset_user_progress(
     current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
 ) -> None:
     """Reset all learning progress for the current user.
 
@@ -51,12 +58,43 @@ async def reset_user_progress(
 
     Args:
         current_user: Authenticated user (injected)
+        db: Database session (injected)
 
     Returns:
         None (204 No Content on success)
     """
-    # TODO: Implement in DANGER-04
-    pass
+    logger.info(
+        "Reset progress requested",
+        extra={"user_id": str(current_user.id)},
+    )
+
+    try:
+        service = UserProgressResetService(db)
+        result = await service.reset_all_progress(current_user.id)
+
+        logger.info(
+            "Progress reset completed",
+            extra={
+                "user_id": str(current_user.id),
+                "total_deleted": result.total_deleted,
+            },
+        )
+        # Return None for 204 No Content - get_db auto-commits
+
+    except Exception as e:
+        logger.error(
+            "Failed to reset user progress",
+            extra={
+                "user_id": str(current_user.id),
+                "error": str(e),
+                "error_type": type(e).__name__,
+            },
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to reset progress. Please try again.",
+        )
 
 
 @router.delete(
