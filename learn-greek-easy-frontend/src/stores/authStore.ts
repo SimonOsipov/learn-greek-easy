@@ -102,6 +102,21 @@ export const useAuthStore = create<AuthState>()(
           if (updates.avatar !== undefined) {
             apiUpdates.avatar_url = updates.avatar;
           }
+          // Handle preferences updates
+          if (updates.preferences !== undefined) {
+            if (updates.preferences.notifications !== undefined) {
+              apiUpdates.email_notifications = updates.preferences.notifications;
+            }
+            if (updates.preferences.dailyGoal !== undefined) {
+              apiUpdates.daily_goal = updates.preferences.dailyGoal;
+            }
+            if (updates.preferences.language !== undefined) {
+              apiUpdates.preferred_language = updates.preferences.language;
+            }
+            if (updates.preferences.theme !== undefined) {
+              apiUpdates.theme = updates.preferences.theme;
+            }
+          }
 
           // Call backend API
           const profileResponse = await authAPI.updateProfile(apiUpdates);
@@ -114,7 +129,8 @@ export const useAuthStore = create<AuthState>()(
             avatar: profileResponse.avatar_url || undefined,
             role: profileResponse.is_superuser ? 'admin' : 'free',
             preferences: {
-              language: 'en',
+              // Preserve current language (backend doesn't store it yet)
+              language: updates.preferences?.language ?? user.preferences.language,
               dailyGoal: profileResponse.settings?.daily_goal || 20,
               notifications: profileResponse.settings?.email_notifications ?? true,
               theme: profileResponse.settings?.theme || 'light',
