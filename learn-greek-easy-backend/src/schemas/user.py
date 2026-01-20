@@ -242,3 +242,38 @@ class Auth0AuthRequest(BaseModel):
         min_length=10,
         description="Auth0 ID token (JWT) - contains email and profile claims",
     )
+
+
+# ============================================================================
+# Avatar Upload Schemas
+# ============================================================================
+
+
+class AvatarUploadRequest(BaseModel):
+    """Request schema for avatar upload URL generation."""
+
+    content_type: str = Field(
+        ...,
+        description="MIME type of the image (image/jpeg, image/png, image/webp)",
+    )
+    file_size: int = Field(
+        ...,
+        gt=0,
+        le=5 * 1024 * 1024,  # 5MB
+        description="File size in bytes (max 5MB)",
+    )
+
+
+class AvatarUploadResponse(BaseModel):
+    """Response schema for avatar upload URL."""
+
+    upload_url: str = Field(..., description="Presigned S3 PUT URL")
+    avatar_key: str = Field(..., description="S3 key to use in PATCH /me")
+    expires_in: int = Field(..., description="URL expiry in seconds")
+
+
+class AvatarDeleteResponse(BaseModel):
+    """Response schema for avatar deletion."""
+
+    success: bool
+    message: str
