@@ -97,13 +97,84 @@
   "actions": {
     "retry": "Retry",
     "retrying": "Retrying...",
-    "edit": "Edit"
+    "edit": "Edit",
+    "delete": "Delete"
   },
   "states": {
     "noStats": "No statistics available",
     "noDecks": "No vocabulary decks available",
     "noCultureDecks": "No culture decks available",
     "noDecksFound": "No decks found matching your search"
+  },
+  "sources": {
+    "sectionTitle": "News Sources",
+    "sectionDescription": "Manage news website sources for AI question generation",
+    "addSource": "Add Source",
+    "active": "Active",
+    "inactive": "Inactive",
+    "table": {
+      "name": "Name",
+      "url": "URL",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "form": {
+      "addTitle": "Add News Source",
+      "addDescription": "Add a new news website source for question generation",
+      "editTitle": "Edit News Source",
+      "editDescription": "Update news source details",
+      "name": "Name",
+      "namePlaceholder": "e.g., Greek News Daily",
+      "url": "URL",
+      "urlPlaceholder": "https://example.com",
+      "urlHint": "Enter the base URL of the news website",
+      "isActive": "Active",
+      "isActiveDescription": "Active sources are used for question generation",
+      "cancel": "Cancel",
+      "add": "Add Source",
+      "save": "Save Changes",
+      "saving": "Saving...",
+      "success": {
+        "createTitle": "Source Created",
+        "createMessage": "The news source has been created successfully.",
+        "updateTitle": "Source Updated",
+        "updateMessage": "The news source has been updated successfully."
+      },
+      "error": {
+        "title": "Error",
+        "message": "Failed to save the news source. Please try again."
+      },
+      "errors": {
+        "duplicateUrl": "This URL is already registered"
+      }
+    },
+    "delete": {
+      "title": "Delete News Source",
+      "sourceName": "You are about to delete \"{{name}}\"",
+      "description": "This action will permanently remove the source:",
+      "impact": {
+        "removed": "The source will be removed from the scraping list",
+        "articlesUnaffected": "Existing articles will not be affected",
+        "cannotUndo": "This action cannot be undone"
+      },
+      "cancel": "Cancel",
+      "confirm": "Delete",
+      "deleting": "Deleting...",
+      "success": {
+        "title": "Source Deleted",
+        "message": "The news source has been deleted successfully."
+      },
+      "error": {
+        "title": "Error",
+        "message": "Failed to delete the news source. Please try again."
+      }
+    },
+    "errors": {
+      "loadingTitle": "Error Loading Sources"
+    },
+    "states": {
+      "noSources": "No news sources configured. Add your first source to get started."
+    }
   },
   "feedback": {
     "sectionTitle": "User Feedback",
