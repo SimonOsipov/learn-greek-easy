@@ -190,6 +190,7 @@ markers = [
     "workflow: User journey tests",
     "scenario: Business scenario tests",
     "edge_case: Edge case tests",
+    "pgvector: Tests requiring pgvector extension",
 ]
 
 # Filter warnings for cleaner output
