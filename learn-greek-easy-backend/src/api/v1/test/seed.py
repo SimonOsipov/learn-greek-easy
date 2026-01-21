@@ -400,6 +400,41 @@ async def seed_mock_exams(
 
 
 @router.post(
+    "/news-sources",
+    response_model=SeedResultResponse,
+    summary="Seed news sources only",
+    description="Create test news sources for E2E testing. "
+    "Creates 2 active and 1 inactive news source.",
+    dependencies=[Depends(verify_seed_access)],
+)
+async def seed_news_sources(
+    db: AsyncSession = Depends(get_db),
+) -> SeedResultResponse:
+    """Create test news sources.
+
+    Creates:
+    - 2 active news sources (Greek Reporter, Kathimerini English)
+    - 1 inactive news source (test placeholder)
+
+    Returns:
+        SeedResultResponse with creation results and timing
+    """
+    start_time = perf_counter()
+    service = SeedService(db)
+    result = await service.seed_news_sources()
+    await db.commit()
+    duration_ms = (perf_counter() - start_time) * 1000
+
+    return SeedResultResponse(
+        success=True,
+        operation="news-sources",
+        timestamp=datetime.now(timezone.utc),
+        duration_ms=duration_ms,
+        results=result,
+    )
+
+
+@router.post(
     "/auth",
     response_model=TestAuthResponse,
     summary="Get auth tokens for test user",
