@@ -129,6 +129,59 @@ export interface CultureDeckUpdatePayload {
 }
 
 // ============================================
+// News Source Types
+// ============================================
+
+/**
+ * News source response from API
+ */
+export interface NewsSourceResponse {
+  id: string;
+  name: string;
+  url: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Paginated news source list response
+ */
+export interface NewsSourceListResponse {
+  sources: NewsSourceResponse[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+/**
+ * Parameters for listing news sources
+ */
+export interface ListNewsSourcesParams {
+  page?: number;
+  page_size?: number;
+  is_active?: boolean;
+}
+
+/**
+ * Payload for creating a news source
+ */
+export interface NewsSourceCreatePayload {
+  name: string;
+  url: string;
+  is_active?: boolean;
+}
+
+/**
+ * Payload for updating a news source
+ */
+export interface NewsSourceUpdatePayload {
+  name?: string;
+  url?: string;
+  is_active?: boolean;
+}
+
+// ============================================
 // Admin API Methods
 // ============================================
 
@@ -151,25 +204,13 @@ export const adminAPI = {
    * Requires superuser authentication.
    */
   listDecks: async (params: ListDecksParams = {}): Promise<DeckListResponse> => {
-    const queryParams = new URLSearchParams();
-
-    if (params.page !== undefined) {
-      queryParams.append('page', params.page.toString());
-    }
-    if (params.page_size !== undefined) {
-      queryParams.append('page_size', params.page_size.toString());
-    }
-    if (params.search) {
-      queryParams.append('search', params.search);
-    }
-    if (params.type) {
-      queryParams.append('type', params.type);
-    }
-
-    const queryString = queryParams.toString();
-    const url = queryString ? `/api/v1/admin/decks?${queryString}` : '/api/v1/admin/decks';
-
-    return api.get<DeckListResponse>(url);
+    const queryString = buildQueryString({
+      page: params.page,
+      page_size: params.page_size,
+      search: params.search,
+      type: params.type,
+    });
+    return api.get<DeckListResponse>(`/api/v1/admin/decks${queryString}`);
   },
 
   /**
@@ -226,5 +267,66 @@ export const adminAPI = {
     data: AdminFeedbackUpdateRequest
   ): Promise<AdminFeedbackItem> => {
     return api.patch<AdminFeedbackItem>(`/api/v1/admin/feedback/${feedbackId}`, data);
+  },
+
+  // ============================================
+  // News Source Management
+  // ============================================
+
+  /**
+   * List all news sources with pagination and optional filtering
+   *
+   * Returns a paginated list of news sources for culture content scraping.
+   * Requires superuser authentication.
+   */
+  listNewsSources: async (params: ListNewsSourcesParams = {}): Promise<NewsSourceListResponse> => {
+    const queryString = buildQueryString({
+      page: params.page,
+      page_size: params.page_size,
+      is_active: params.is_active,
+    });
+    return api.get<NewsSourceListResponse>(`/api/v1/admin/culture/sources${queryString}`);
+  },
+
+  /**
+   * Get a single news source by ID
+   *
+   * Requires superuser authentication.
+   */
+  getNewsSource: async (sourceId: string): Promise<NewsSourceResponse> => {
+    return api.get<NewsSourceResponse>(`/api/v1/admin/culture/sources/${sourceId}`);
+  },
+
+  /**
+   * Create a new news source
+   *
+   * Requires superuser authentication.
+   * Returns 409 Conflict if URL already exists.
+   */
+  createNewsSource: async (data: NewsSourceCreatePayload): Promise<NewsSourceResponse> => {
+    return api.post<NewsSourceResponse>('/api/v1/admin/culture/sources', data);
+  },
+
+  /**
+   * Update an existing news source
+   *
+   * Requires superuser authentication.
+   * Returns 404 if source not found, 409 if URL already exists.
+   */
+  updateNewsSource: async (
+    sourceId: string,
+    data: NewsSourceUpdatePayload
+  ): Promise<NewsSourceResponse> => {
+    return api.patch<NewsSourceResponse>(`/api/v1/admin/culture/sources/${sourceId}`, data);
+  },
+
+  /**
+   * Delete a news source
+   *
+   * Requires superuser authentication.
+   * Returns 204 No Content on success, 404 if not found.
+   */
+  deleteNewsSource: async (sourceId: string): Promise<void> => {
+    return api.delete<void>(`/api/v1/admin/culture/sources/${sourceId}`);
   },
 };
