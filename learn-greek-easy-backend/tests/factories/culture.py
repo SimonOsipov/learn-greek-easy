@@ -5,6 +5,7 @@ This module provides factories for culture-related models:
 - CultureQuestionFactory: Multiple-choice questions
 - CultureQuestionStatsFactory: SM-2 progress tracking
 - CultureAnswerHistoryFactory: Answer history for analytics
+- NewsSourceFactory: News sources for AI culture question generation
 
 Usage:
     # Create a culture deck
@@ -25,6 +26,12 @@ Usage:
     history = await CultureAnswerHistoryFactory.create(
         user_id=user.id, question_id=question.id, wrong=True
     )
+
+    # Create a news source
+    source = await NewsSourceFactory.create()
+
+    # Create an inactive news source
+    source = await NewsSourceFactory.create(inactive=True)
 """
 
 from datetime import date
@@ -37,6 +44,7 @@ from src.db.models import (
     CultureDeck,
     CultureQuestion,
     CultureQuestionStats,
+    NewsSource,
 )
 from tests.factories.base import BaseFactory
 
@@ -286,3 +294,31 @@ class CultureAnswerHistoryFactory(BaseFactory):
 
         # Politics category
         politics = factory.Trait(deck_category="politics")
+
+
+class NewsSourceFactory(BaseFactory):
+    """Factory for NewsSource model.
+
+    Creates news website sources for AI culture question generation.
+
+    Traits:
+        inactive: Deactivated source
+
+    Example:
+        source = await NewsSourceFactory.create()
+        inactive_source = await NewsSourceFactory.create(inactive=True)
+    """
+
+    class Meta:
+        model = NewsSource
+
+    # Source information - unique URL via sequence
+    name = factory.Sequence(lambda n: f"News Source {n}")
+    url = factory.Sequence(lambda n: f"https://news-source-{n}.example.com/")
+    is_active = True
+
+    class Params:
+        """Factory traits for common variations."""
+
+        # Inactive source
+        inactive = factory.Trait(is_active=False)

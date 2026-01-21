@@ -240,6 +240,9 @@ class NewsSourceService:
         # Update source using repository
         updated_source = await self.repo.update(source, update_dict)
 
+        # Refresh to get server-generated updated_at timestamp
+        await self.db.refresh(updated_source)
+
         logger.info(
             "News source updated",
             extra={
