@@ -113,9 +113,12 @@ export const NewsSourceFormDialog: React.FC<NewsSourceFormDialogProps> = ({
       onSuccess();
     } catch (error) {
       // Check for duplicate URL error (409 Conflict)
+      // Use duck typing for status check to handle bundling edge cases
+      const errorStatus =
+        error instanceof APIRequestError ? error.status : (error as { status?: number }).status;
+      const errorMessage = error instanceof Error ? error.message : '';
       const isDuplicateError =
-        (error instanceof APIRequestError && error.status === 409) ||
-        (error instanceof Error && error.message.toLowerCase().includes('already exists'));
+        errorStatus === 409 || errorMessage.toLowerCase().includes('already exists');
 
       if (isDuplicateError) {
         form.setError('url', {
@@ -123,7 +126,6 @@ export const NewsSourceFormDialog: React.FC<NewsSourceFormDialogProps> = ({
           message: t('sources.form.errors.duplicateUrl'),
         });
       } else {
-        const errorMessage = error instanceof Error ? error.message : '';
         toast({
           title: t('sources.form.error.title'),
           description: errorMessage || t('sources.form.error.message'),

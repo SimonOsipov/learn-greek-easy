@@ -159,18 +159,30 @@ test.describe('Admin News Sources', () => {
   });
 
   test('E2E-SOURCES-08: Shows error for duplicate URL', async ({ page }) => {
-    await page.getByTestId('sources-add-btn').click();
-    await expect(page.getByTestId('source-form-dialog')).toBeVisible();
+    // Wait for add button to be ready and click
+    const addBtn = page.getByTestId('sources-add-btn');
+    await expect(addBtn).toBeEnabled();
+    await addBtn.click();
+
+    // Wait for dialog with increased timeout for WebKit
+    const dialog = page.getByTestId('source-form-dialog');
+    await expect(dialog).toBeVisible({ timeout: 10000 });
 
     // Try to add existing URL (from seeded data)
-    await page.getByTestId('source-name-input').fill('Duplicate Test');
-    await page.getByTestId('source-url-input').fill('https://greekreporter.com');
+    const nameInput = page.getByTestId('source-name-input');
+    const urlInput = page.getByTestId('source-url-input');
+    await expect(nameInput).toBeVisible();
+    await nameInput.fill('Duplicate Test');
+    await urlInput.fill('https://greekreporter.com');
 
-    // Submit
+    // Submit and wait for API response
     await page.getByTestId('source-form-submit').click();
 
-    // Verify duplicate error message
-    await expect(page.getByText(/already registered/i)).toBeVisible({ timeout: 10000 });
+    // Verify duplicate error message appears (form stays open with error)
+    await expect(page.getByText(/already registered/i)).toBeVisible({ timeout: 15000 });
+
+    // Dialog should still be visible (not closed on error)
+    await expect(dialog).toBeVisible();
   });
 
   // =============================================================================
