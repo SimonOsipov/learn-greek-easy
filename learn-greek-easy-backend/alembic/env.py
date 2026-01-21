@@ -82,10 +82,25 @@ def run_migrations_offline() -> None:
         dialect_opts={"paramstyle": "named"},
         compare_type=True,  # Enable type comparison (for enums)
         compare_server_default=True,  # Compare server defaults
+        include_name=include_name,  # Filter out pgvector indexes
     )
 
     with context.begin_transaction():
         context.run_migrations()
+
+
+def include_name(name: str | None, type_: str, parent_names: dict) -> bool:
+    """Filter to exclude pgvector indexes from Alembic comparison.
+
+    pgvector IVFFlat indexes are created via raw SQL and cannot be
+    represented in SQLAlchemy model metadata. This filter excludes
+    them from autogenerate comparison to prevent false positives.
+    """
+    if type_ == "index" and name is not None:
+        # Exclude pgvector embedding indexes (created via raw SQL in migration)
+        if name.startswith("idx_") and "embedding" in name:
+            return False
+    return True
 
 
 def do_run_migrations(connection: Connection) -> None:
@@ -95,6 +110,7 @@ def do_run_migrations(connection: Connection) -> None:
         target_metadata=target_metadata,
         compare_type=True,  # Enable type comparison (critical for enums)
         compare_server_default=True,
+        include_name=include_name,  # Filter out pgvector indexes
     )
 
     with context.begin_transaction():

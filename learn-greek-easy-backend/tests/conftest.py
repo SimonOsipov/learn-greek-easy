@@ -257,6 +257,8 @@ def pytest_configure(config: pytest.Config) -> None:
     config.addinivalue_line("markers", "workflow: User journey tests")
     config.addinivalue_line("markers", "scenario: Business scenario tests")
     config.addinivalue_line("markers", "edge_case: Edge case tests")
+    # pgvector marker
+    config.addinivalue_line("markers", "pgvector: Tests requiring pgvector extension")
 
 
 def pytest_collection_modifyitems(  # noqa: C901
