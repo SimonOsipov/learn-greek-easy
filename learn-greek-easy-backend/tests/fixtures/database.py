@@ -176,7 +176,7 @@ async def ensure_database_ready(engine: AsyncEngine) -> None:
 
     Checks:
     1. Connection works
-    2. Required extensions are installed
+    2. Required extensions are installed (uuid-ossp, vector)
 
     Args:
         engine: Database engine to check.
@@ -211,6 +211,26 @@ async def ensure_database_ready(engine: AsyncEngine) -> None:
                 await conn.commit()
             except Exception as e:
                 raise RuntimeError(f"uuid-ossp extension not installed and cannot create: {e}")
+
+        # Check vector extension (required for pgvector embeddings)
+        result = await conn.execute(
+            text(
+                """
+                SELECT EXISTS (
+                    SELECT 1 FROM pg_extension WHERE extname = 'vector'
+                )
+                """
+            )
+        )
+        has_vector_extension = result.scalar()
+
+        if not has_vector_extension:
+            # Try to create it
+            try:
+                await conn.execute(text('CREATE EXTENSION IF NOT EXISTS "vector"'))
+                await conn.commit()
+            except Exception as e:
+                raise RuntimeError(f"vector extension not installed and cannot create: {e}")
 
 
 # =============================================================================
