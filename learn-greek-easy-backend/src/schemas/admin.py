@@ -11,7 +11,7 @@ from datetime import datetime
 from typing import List, Optional
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl
 
 from src.db.models import DeckLevel
 
@@ -99,3 +99,46 @@ class AdminDeckListResponse(BaseModel):
     total: int = Field(..., ge=0, description="Total number of matching decks")
     page: int = Field(..., ge=1, description="Current page number")
     page_size: int = Field(..., ge=1, le=100, description="Number of items per page")
+
+
+# ============================================================================
+# News Source Schemas
+# ============================================================================
+
+
+class NewsSourceCreate(BaseModel):
+    """Request schema for creating a news source."""
+
+    name: str = Field(..., min_length=1, max_length=255, description="Display name")
+    url: HttpUrl = Field(..., description="Base URL (must be unique)")
+    is_active: bool = Field(default=True, description="Whether source is active")
+
+
+class NewsSourceUpdate(BaseModel):
+    """Request schema for updating a news source."""
+
+    name: Optional[str] = Field(None, min_length=1, max_length=255, description="Display name")
+    url: Optional[HttpUrl] = Field(None, description="Base URL (must be unique)")
+    is_active: Optional[bool] = Field(None, description="Whether source is active")
+
+
+class NewsSourceResponse(BaseModel):
+    """Response schema for a news source."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID = Field(..., description="Source UUID")
+    name: str = Field(..., description="Display name")
+    url: str = Field(..., description="Base URL")
+    is_active: bool = Field(..., description="Whether source is active")
+    created_at: datetime = Field(..., description="Creation timestamp")
+    updated_at: datetime = Field(..., description="Last update timestamp")
+
+
+class NewsSourceListResponse(BaseModel):
+    """Response schema for paginated news source listing."""
+
+    sources: list[NewsSourceResponse] = Field(..., description="List of sources")
+    total: int = Field(..., ge=0, description="Total number of sources")
+    page: int = Field(..., ge=1, description="Current page number")
+    page_size: int = Field(..., ge=1, le=100, description="Items per page")

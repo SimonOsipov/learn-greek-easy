@@ -29,6 +29,7 @@ from pathlib import Path
 import pytest
 import pytest_asyncio
 from sqlalchemy import text
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
@@ -209,6 +210,9 @@ async def ensure_database_ready(engine: AsyncEngine) -> None:
             try:
                 await conn.execute(text('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"'))
                 await conn.commit()
+            except IntegrityError:
+                # Another parallel worker created the extension - this is fine
+                await conn.rollback()
             except Exception as e:
                 raise RuntimeError(f"uuid-ossp extension not installed and cannot create: {e}")
 
@@ -229,6 +233,9 @@ async def ensure_database_ready(engine: AsyncEngine) -> None:
             try:
                 await conn.execute(text('CREATE EXTENSION IF NOT EXISTS "vector"'))
                 await conn.commit()
+            except IntegrityError:
+                # Another parallel worker created the extension - this is fine
+                await conn.rollback()
             except Exception as e:
                 raise RuntimeError(f"vector extension not installed and cannot create: {e}")
 

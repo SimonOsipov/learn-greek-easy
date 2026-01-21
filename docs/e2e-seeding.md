@@ -21,6 +21,7 @@ The seeding infrastructure provides deterministic test data for E2E tests, enabl
 | `/api/v1/test/seed/content` | POST | Create decks/cards only |
 | `/api/v1/test/seed/culture` | POST | Create culture decks/questions only |
 | `/api/v1/test/seed/mock-exams` | POST | Create mock exam history for learner |
+| `/api/v1/test/seed/news-sources` | POST | Create news sources for admin testing |
 | `/api/v1/test/seed/danger-zone` | POST | Create danger zone test users |
 
 ## Test Users Created
@@ -43,6 +44,7 @@ The seeding infrastructure provides deterministic test data for E2E tests, enabl
 - **50 Culture Questions**: 10 trilingual questions per deck (el, en, ru)
 - **5 Mock Exam Sessions**: 3 passed, 2 failed (for learner user)
 - **125 Mock Exam Answers**: 25 answers per session
+- **3 News Sources**: 2 active, 1 inactive (for admin testing)
 
 ### Mock Exam History
 
@@ -57,6 +59,16 @@ The seed data creates mock exam history for `e2e_learner@test.com` with the foll
 | 15/25 | 60% | Fail | 18.3 min | 1 day ago |
 
 **Note**: The pass threshold is 80% (20/25 correct answers).
+
+### News Sources
+
+The seed data creates news sources for admin panel testing:
+
+| Name | URL | Status |
+|------|-----|--------|
+| Greek Reporter | https://greekreporter.com | Active |
+| Kathimerini English | https://www.ekathimerini.com | Active |
+| Inactive Test Source | https://inactive-test-source.example.com | Inactive |
 
 ## Danger Zone Test Users
 

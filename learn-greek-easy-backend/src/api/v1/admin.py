@@ -32,6 +32,10 @@ from src.schemas.admin import (
     AdminStatsResponse,
     CultureDeckStatsItem,
     DeckStatsItem,
+    NewsSourceCreate,
+    NewsSourceListResponse,
+    NewsSourceResponse,
+    NewsSourceUpdate,
     UnifiedDeckItem,
 )
 from src.schemas.feedback import (
@@ -41,6 +45,7 @@ from src.schemas.feedback import (
     AuthorBriefResponse,
 )
 from src.services.feedback_admin_service import FeedbackAdminService
+from src.services.news_source_service import DuplicateURLException, NewsSourceService
 
 router = APIRouter(
     tags=["Admin"],
@@ -628,3 +633,145 @@ async def update_feedback(
         created_at=feedback.created_at,
         updated_at=feedback.updated_at,
     )
+
+
+# ============================================================================
+# News Source Endpoints
+# ============================================================================
+
+
+@router.get(
+    "/culture/sources",
+    response_model=NewsSourceListResponse,
+    summary="List all news sources",
+    description="Get a paginated list of news sources with optional active filter.",
+    responses={
+        200: {"description": "Paginated source list"},
+        401: {"description": "Not authenticated"},
+        403: {"description": "Not authorized (requires superuser)"},
+    },
+)
+async def list_news_sources(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+    page: int = Query(1, ge=1, description="Page number"),
+    page_size: int = Query(10, ge=1, le=100, description="Items per page"),
+    is_active: Optional[bool] = Query(None, description="Filter by active status"),
+) -> NewsSourceListResponse:
+    """List all news sources with pagination."""
+    service = NewsSourceService(db)
+    return await service.list_sources(
+        page=page,
+        page_size=page_size,
+        is_active=is_active,
+    )
+
+
+@router.post(
+    "/culture/sources",
+    response_model=NewsSourceResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create a news source",
+    description="Create a new news source. URL must be unique.",
+    responses={
+        201: {"description": "Source created"},
+        401: {"description": "Not authenticated"},
+        403: {"description": "Not authorized (requires superuser)"},
+        409: {"description": "URL already exists"},
+    },
+)
+async def create_news_source(
+    data: NewsSourceCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> NewsSourceResponse:
+    """Create a new news source."""
+    service = NewsSourceService(db)
+
+    try:
+        result = await service.create_source(data)
+        await db.commit()
+        return result
+    except DuplicateURLException as e:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"URL already exists: {e.url}",
+        )
+
+
+@router.get(
+    "/culture/sources/{source_id}",
+    response_model=NewsSourceResponse,
+    summary="Get a news source",
+    description="Get details for a specific news source.",
+    responses={
+        200: {"description": "Source details"},
+        401: {"description": "Not authenticated"},
+        403: {"description": "Not authorized (requires superuser)"},
+        404: {"description": "Source not found"},
+    },
+)
+async def get_news_source(
+    source_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> NewsSourceResponse:
+    """Get a news source by ID."""
+    service = NewsSourceService(db)
+    return await service.get_source(source_id)
+
+
+@router.patch(
+    "/culture/sources/{source_id}",
+    response_model=NewsSourceResponse,
+    summary="Update a news source",
+    description="Update news source details. URL must remain unique.",
+    responses={
+        200: {"description": "Source updated"},
+        401: {"description": "Not authenticated"},
+        403: {"description": "Not authorized (requires superuser)"},
+        404: {"description": "Source not found"},
+        409: {"description": "URL already exists"},
+    },
+)
+async def update_news_source(
+    source_id: UUID,
+    data: NewsSourceUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> NewsSourceResponse:
+    """Update a news source."""
+    service = NewsSourceService(db)
+
+    try:
+        result = await service.update_source(source_id, data)
+        await db.commit()
+        return result
+    except DuplicateURLException as e:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"URL already exists: {e.url}",
+        )
+
+
+@router.delete(
+    "/culture/sources/{source_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete a news source",
+    description="Permanently delete a news source.",
+    responses={
+        204: {"description": "Source deleted"},
+        401: {"description": "Not authenticated"},
+        403: {"description": "Not authorized (requires superuser)"},
+        404: {"description": "Source not found"},
+    },
+)
+async def delete_news_source(
+    source_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> None:
+    """Delete a news source."""
+    service = NewsSourceService(db)
+    await service.delete_source(source_id)
+    await db.commit()

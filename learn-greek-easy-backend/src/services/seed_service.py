@@ -36,6 +36,7 @@ from src.db.models import (
     MockExamAnswer,
     MockExamSession,
     MockExamStatus,
+    NewsSource,
     Notification,
     NotificationType,
     Review,
@@ -103,6 +104,8 @@ class SeedService:
         "culture_question_stats",
         "culture_questions",
         "culture_decks",
+        # News sources (standalone, no FK dependencies)
+        "news_sources",
         # Existing tables
         "reviews",
         "card_statistics",
@@ -2231,6 +2234,73 @@ class SeedService:
         }
 
     # =====================
+    # News Sources Seeding
+    # =====================
+
+    async def seed_news_sources(self) -> dict[str, Any]:
+        """Seed news sources for E2E testing.
+
+        Creates 3 news sources:
+        - 2 active sources (real Greek news sites)
+        - 1 inactive source (test placeholder)
+
+        This method is idempotent - it skips existing URLs.
+
+        Returns:
+            dict with 'count' and 'sources' list
+
+        Raises:
+            RuntimeError: If seeding not allowed
+        """
+        self._check_can_seed()
+
+        sources_data = [
+            {
+                "name": "Greek Reporter",
+                "url": "https://greekreporter.com",
+                "is_active": True,
+            },
+            {
+                "name": "Kathimerini English",
+                "url": "https://www.ekathimerini.com",
+                "is_active": True,
+            },
+            {
+                "name": "Inactive Test Source",
+                "url": "https://inactive-test-source.example.com",
+                "is_active": False,
+            },
+        ]
+
+        created_sources = []
+
+        for source_data in sources_data:
+            # Check if source already exists by URL
+            existing = await self.db.execute(
+                select(NewsSource).where(NewsSource.url == source_data["url"])
+            )
+            if existing.scalar_one_or_none():
+                continue
+
+            source = NewsSource(**source_data)
+            self.db.add(source)
+            await self.db.flush()
+
+            created_sources.append(
+                {
+                    "id": str(source.id),
+                    "name": source.name,
+                    "url": source.url,
+                    "is_active": source.is_active,
+                }
+            )
+
+        return {
+            "count": len(created_sources),
+            "sources": created_sources,
+        }
+
+    # =====================
     # XP & Achievement Seeding
     # =====================
 
@@ -3051,6 +3121,9 @@ class SeedService:
         if learner_id:
             mock_exam_result = await self.seed_mock_exam_history(user_id=learner_id)
 
+        # Step 13: Create news sources
+        news_sources_result = await self.seed_news_sources()
+
         # Commit all changes
         await self.db.commit()
 
@@ -3070,4 +3143,5 @@ class SeedService:
             "culture_statistics": culture_stats_result,
             "culture_advanced_stats": advanced_culture_stats,
             "mock_exams": mock_exam_result,
+            "news_sources": news_sources_result,
         }
