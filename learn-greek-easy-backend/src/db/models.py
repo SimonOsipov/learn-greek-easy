@@ -8,6 +8,7 @@ This module contains all SQLAlchemy models for the application:
 - XP and Achievements (UserXP, XPTransaction, Achievement, UserAchievement)
 - Notifications (Notification)
 - Culture Exam (CultureDeck, CultureQuestion, CultureQuestionStats, CultureAnswerHistory)
+- News Sources (NewsSource)
 
 All models use:
 - UUID primary keys with server-side generation
@@ -1601,3 +1602,46 @@ class MockExamAnswer(Base, TimestampMixin):
 
     def __repr__(self) -> str:
         return f"<MockExamAnswer(id={self.id}, session_id={self.session_id}, question_id={self.question_id}, correct={self.is_correct})>"
+
+
+# ============================================================================
+# News Source Models
+# ============================================================================
+
+
+class NewsSource(Base, TimestampMixin):
+    """News website source for AI culture question generation."""
+
+    __tablename__ = "news_sources"
+
+    # Primary key
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True,
+        server_default=func.uuid_generate_v4(),
+    )
+
+    # Source information
+    name: Mapped[str] = mapped_column(
+        String(255),
+        nullable=False,
+        comment="Display name for the source",
+    )
+    url: Mapped[str] = mapped_column(
+        String(500),
+        unique=True,
+        nullable=False,
+        index=True,
+        comment="Base URL of the news source (must be unique)",
+    )
+
+    # Status
+    is_active: Mapped[bool] = mapped_column(
+        Boolean,
+        default=True,
+        nullable=False,
+        index=True,
+        comment="Whether source is used for question generation",
+    )
+
+    def __repr__(self) -> str:
+        return f"<NewsSource(id={self.id}, name={self.name}, url={self.url[:30]}...)>"
