@@ -30,6 +30,7 @@ import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { adminAPI } from '@/services/adminAPI';
 import type { NewsSourceResponse } from '@/services/adminAPI';
+import { APIRequestError } from '@/services/api';
 
 const newsSourceSchema = z.object({
   name: z.string().min(1, 'Name is required').max(255, 'Name must be 255 characters or less'),
@@ -112,13 +113,17 @@ export const NewsSourceFormDialog: React.FC<NewsSourceFormDialogProps> = ({
       onSuccess();
     } catch (error) {
       // Check for duplicate URL error (409 Conflict)
-      const errorMessage = error instanceof Error ? error.message : '';
-      if (errorMessage.includes('409') || errorMessage.toLowerCase().includes('already exists')) {
+      const isDuplicateError =
+        (error instanceof APIRequestError && error.status === 409) ||
+        (error instanceof Error && error.message.toLowerCase().includes('already exists'));
+
+      if (isDuplicateError) {
         form.setError('url', {
           type: 'manual',
           message: t('sources.form.errors.duplicateUrl'),
         });
       } else {
+        const errorMessage = error instanceof Error ? error.message : '';
         toast({
           title: t('sources.form.error.title'),
           description: errorMessage || t('sources.form.error.message'),
@@ -170,7 +175,7 @@ export const NewsSourceFormDialog: React.FC<NewsSourceFormDialogProps> = ({
                   <FormLabel>{t('sources.form.url')}</FormLabel>
                   <FormControl>
                     <Input
-                      type="url"
+                      type="text"
                       placeholder={t('sources.form.urlPlaceholder')}
                       data-testid="source-url-input"
                       {...field}
