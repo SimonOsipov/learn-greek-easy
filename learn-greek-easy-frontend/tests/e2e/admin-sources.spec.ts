@@ -250,10 +250,10 @@ test.describe('Admin News Sources', () => {
     });
     await inactiveRow.locator('[data-testid^="delete-source-"]').click();
 
-    // Verify confirmation dialog
+    // Verify confirmation dialog shows the source name
     const deleteDialog = page.getByTestId('source-delete-dialog');
     await expect(deleteDialog).toBeVisible();
-    await expect(page.getByText('Inactive Test Source')).toBeVisible();
+    await expect(deleteDialog.getByText('Inactive Test Source')).toBeVisible();
 
     // Confirm deletion
     await page.getByTestId('source-delete-confirm').click();
@@ -309,11 +309,14 @@ test.describe('Admin News Sources', () => {
   });
 
   test('E2E-SOURCES-14: Pagination controls visible when data exists', async ({ page }) => {
-    const table = page.getByTestId('sources-table');
+    const sourcesSection = page.getByTestId('news-sources-section');
+    await expect(sourcesSection).toBeVisible({ timeout: 10000 });
+
+    const table = sourcesSection.getByTestId('sources-table');
     await expect(table).toBeVisible({ timeout: 10000 });
 
-    // Pagination showing text should be visible
-    const paginationText = page.getByText(/showing \d+-\d+ of \d+/i);
+    // Pagination showing text should be visible (scoped to sources section)
+    const paginationText = sourcesSection.getByText(/showing \d+-\d+ of \d+/i);
     await expect(paginationText).toBeVisible();
 
     // Previous button should exist (may be disabled on first page)
@@ -328,25 +331,44 @@ test.describe('Admin News Sources - Empty State', () => {
   // Use admin storage state
   test.use({ storageState: 'playwright/.auth/admin.json' });
 
-  test('E2E-SOURCES-15: Shows empty state when no sources exist', async ({ page, request }) => {
-    // First truncate news sources via seed endpoint
-    const apiBaseUrl = process.env.E2E_API_URL || process.env.VITE_API_URL || 'http://localhost:8000';
-
-    // Truncate all data (this is a test environment)
-    await request.post(`${apiBaseUrl}/api/v1/test/seed/truncate`);
-
-    // Re-seed users only (to keep admin auth working)
-    await request.post(`${apiBaseUrl}/api/v1/test/seed/users`);
-
-    // Navigate to admin
+  test('E2E-SOURCES-15: Shows empty state when no sources exist', async ({ page }) => {
+    // Navigate to admin page
     await page.goto('/admin');
     await verifyAuthSucceeded(page, '/admin');
     await waitForAppReady(page);
 
-    // Wait for sources section
+    // Wait for sources section to load
     await expect(page.getByTestId('news-sources-section')).toBeVisible({ timeout: 15000 });
 
-    // Should show empty state message
+    // Check what state we're in
+    const table = page.getByTestId('sources-table');
+    const emptyState = page.getByTestId('sources-empty-state');
+
+    // Wait for either table or empty state to appear
+    await expect(table.or(emptyState)).toBeVisible({ timeout: 10000 });
+
+    // If we got the table with data (seeded), delete all sources to reach empty state
+    const hasTable = await table.isVisible();
+    if (hasTable) {
+      // Delete sources one by one until we reach empty state
+      while (await page.locator('[data-testid^="source-row-"]').count() > 0) {
+        // Click delete on first source
+        const firstRow = page.locator('[data-testid^="source-row-"]').first();
+        await firstRow.locator('[data-testid^="delete-source-"]').click();
+
+        // Confirm deletion
+        await expect(page.getByTestId('source-delete-dialog')).toBeVisible();
+        await page.getByTestId('source-delete-confirm').click();
+
+        // Wait for dialog to close
+        await expect(page.getByTestId('source-delete-dialog')).not.toBeVisible({ timeout: 5000 });
+
+        // Small wait for table to update
+        await page.waitForTimeout(500);
+      }
+    }
+
+    // Now we should see empty state
     await expect(page.getByTestId('sources-empty-state')).toBeVisible({ timeout: 10000 });
   });
 });
