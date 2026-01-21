@@ -21,6 +21,7 @@ from datetime import date, datetime
 from typing import List
 from uuid import UUID
 
+from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
     JSON,
     Boolean,
@@ -1282,6 +1283,23 @@ class CultureQuestion(Base, TimestampMixin):
         default=0,
         nullable=False,
         comment="Display order within deck",
+    )
+
+    # Vector embedding for semantic similarity search
+    embedding: Mapped[list[float] | None] = mapped_column(
+        Vector(1024),
+        nullable=True,
+        comment="Voyage AI voyage-3 embedding (1024 dimensions) for semantic similarity",
+    )
+    embedding_model: Mapped[str | None] = mapped_column(
+        String(50),
+        nullable=True,
+        comment="Embedding model used (e.g., 'voyage-3')",
+    )
+    embedding_updated_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        comment="Timestamp when embedding was last generated/updated",
     )
 
     # Relationships
