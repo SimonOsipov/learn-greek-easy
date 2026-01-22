@@ -40,6 +40,7 @@ from src.db.models import (
     Notification,
     NotificationType,
     Review,
+    SourceFetchHistory,
     User,
     UserAchievement,
     UserDeckProgress,
@@ -76,6 +77,16 @@ class NotificationSeedData(TypedDict, total=False):
     created_at: datetime
 
 
+class FetchHistorySeedData(TypedDict, total=False):
+    """Type definition for fetch history seed data items."""
+
+    status: str
+    html_content: str
+    error_message: str
+    trigger_type: str
+    days_ago: int
+
+
 class SeedService:
     """Service for seeding E2E test database with deterministic data.
 
@@ -104,7 +115,8 @@ class SeedService:
         "culture_question_stats",
         "culture_questions",
         "culture_decks",
-        # News sources (standalone, no FK dependencies)
+        # News sources and fetch history (children first)
+        "source_fetch_history",
         "news_sources",
         # Existing tables
         "reviews",
@@ -2300,6 +2312,93 @@ class SeedService:
             "sources": created_sources,
         }
 
+    # Fetch history data for seeding
+    FETCH_HISTORY_DATA: list[FetchHistorySeedData] = [
+        {
+            "status": "success",
+            "html_content": "<!DOCTYPE html><html><head><title>Test</title></head><body><h1>Test News</h1></body></html>",
+            "trigger_type": "scheduled",
+            "days_ago": 1,
+        },
+        {
+            "status": "success",
+            "html_content": "<!DOCTYPE html><html><head><title>Test 2</title></head><body><h1>More News</h1></body></html>",
+            "trigger_type": "scheduled",
+            "days_ago": 2,
+        },
+        {
+            "status": "success",
+            "html_content": "<!DOCTYPE html><html><head><title>Manual</title></head><body><p>Manual fetch</p></body></html>",
+            "trigger_type": "manual",
+            "days_ago": 0,
+        },
+        {
+            "status": "error",
+            "error_message": "Connection timeout after 30s",
+            "trigger_type": "scheduled",
+            "days_ago": 3,
+        },
+    ]
+
+    async def seed_fetch_history(self) -> dict[str, Any]:
+        """Seed fetch history for news sources.
+
+        Creates fetch history entries for E2E testing:
+        - 3 successful fetches (2 scheduled, 1 manual)
+        - 1 failed fetch
+
+        Requires news sources to be seeded first.
+
+        Returns:
+            dict with 'count' and 'entries' list
+        """
+        self._check_can_seed()
+
+        from src.repositories.news_source import NewsSourceRepository
+
+        source_repo = NewsSourceRepository(self.db)
+        sources = await source_repo.list_all(limit=2)
+
+        if not sources:
+            return {"count": 0, "entries": [], "error": "No news sources found"}
+
+        entries_created = []
+        source = sources[0]  # Use first source for history
+
+        for data in self.FETCH_HISTORY_DATA:
+            days_ago: int = data.get("days_ago", 0)
+            fetched_at = datetime.now(timezone.utc) - timedelta(days=days_ago)
+            html_content: str | None = data.get("html_content")
+            status: str = data.get("status", "success")
+            trigger_type: str = data.get("trigger_type", "manual")
+            error_message: str | None = data.get("error_message")
+
+            entry = SourceFetchHistory(
+                source_id=source.id,
+                fetched_at=fetched_at,
+                status=status,
+                html_content=html_content,
+                html_size_bytes=(len(html_content.encode("utf-8")) if html_content else None),
+                error_message=error_message,
+                trigger_type=trigger_type,
+                final_url=source.url if status == "success" else None,
+            )
+            self.db.add(entry)
+            entries_created.append(
+                {
+                    "status": data["status"],
+                    "trigger_type": data["trigger_type"],
+                }
+            )
+
+        await self.db.flush()
+
+        return {
+            "count": len(entries_created),
+            "entries": entries_created,
+            "source_id": str(source.id),
+        }
+
     # =====================
     # XP & Achievement Seeding
     # =====================
@@ -3124,6 +3223,9 @@ class SeedService:
         # Step 13: Create news sources
         news_sources_result = await self.seed_news_sources()
 
+        # Step 14: Create fetch history for news sources
+        fetch_history_result = await self.seed_fetch_history()
+
         # Commit all changes
         await self.db.commit()
 
@@ -3144,4 +3246,5 @@ class SeedService:
             "culture_advanced_stats": advanced_culture_stats,
             "mock_exams": mock_exam_result,
             "news_sources": news_sources_result,
+            "fetch_history": fetch_history_result,
         }

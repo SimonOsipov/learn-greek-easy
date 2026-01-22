@@ -22,6 +22,7 @@ The seeding infrastructure provides deterministic test data for E2E tests, enabl
 | `/api/v1/test/seed/culture` | POST | Create culture decks/questions only |
 | `/api/v1/test/seed/mock-exams` | POST | Create mock exam history for learner |
 | `/api/v1/test/seed/news-sources` | POST | Create news sources for admin testing |
+| `/api/v1/test/seed/fetch-history` | POST | Create fetch history for news sources |
 | `/api/v1/test/seed/danger-zone` | POST | Create danger zone test users |
 
 ## Test Users Created
@@ -45,6 +46,7 @@ The seeding infrastructure provides deterministic test data for E2E tests, enabl
 - **5 Mock Exam Sessions**: 3 passed, 2 failed (for learner user)
 - **125 Mock Exam Answers**: 25 answers per session
 - **3 News Sources**: 2 active, 1 inactive (for admin testing)
+- **4 Fetch History Entries**: 3 successful, 1 failed (for first news source)
 
 ### Mock Exam History
 
@@ -69,6 +71,26 @@ The seed data creates news sources for admin panel testing:
 | Greek Reporter | https://greekreporter.com | Active |
 | Kathimerini English | https://www.ekathimerini.com | Active |
 | Inactive Test Source | https://inactive-test-source.example.com | Inactive |
+
+### Fetch History
+
+Seed endpoint: `POST /api/v1/test/seed/fetch-history`
+
+**Note**: Requires `/seed/news-sources` to be called first (or use `/seed/all`).
+
+The seed data creates fetch history entries for the first news source (Greek Reporter):
+
+| Status | Trigger Type | Content | Age |
+|--------|--------------|---------|-----|
+| Success | scheduled | HTML test content | 1 day ago |
+| Success | scheduled | HTML test content | 2 days ago |
+| Success | manual | HTML test content | Today |
+| Error | scheduled | Connection timeout error | 3 days ago |
+
+This data is used for E2E testing of:
+- Fetch history accordion display
+- Success/error status badges
+- HTML viewer modal
 
 ## Danger Zone Test Users
 

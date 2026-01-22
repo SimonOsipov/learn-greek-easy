@@ -435,6 +435,43 @@ async def seed_news_sources(
 
 
 @router.post(
+    "/fetch-history",
+    response_model=SeedResultResponse,
+    summary="Seed fetch history",
+    description="Create fetch history entries for E2E testing. "
+    "Requires news sources to be seeded first.",
+    dependencies=[Depends(verify_seed_access)],
+)
+async def seed_fetch_history(
+    db: AsyncSession = Depends(get_db),
+) -> SeedResultResponse:
+    """Create fetch history entries for testing.
+
+    Creates 4 fetch history entries for E2E testing:
+    - 3 successful fetches (2 scheduled, 1 manual)
+    - 1 failed fetch with error message
+
+    Requires news sources to be seeded first (use /seed/news-sources or /seed/all).
+
+    Returns:
+        SeedResultResponse with fetch history creation results and timing
+    """
+    start_time = perf_counter()
+    service = SeedService(db)
+    result = await service.seed_fetch_history()
+    await db.commit()
+    duration_ms = (perf_counter() - start_time) * 1000
+
+    return SeedResultResponse(
+        success=True,
+        operation="fetch-history",
+        timestamp=datetime.now(timezone.utc),
+        duration_ms=duration_ms,
+        results=result,
+    )
+
+
+@router.post(
     "/auth",
     response_model=TestAuthResponse,
     summary="Get auth tokens for test user",
