@@ -112,6 +112,47 @@
     "addSource": "Add Source",
     "active": "Active",
     "inactive": "Inactive",
+    "fetchNow": "Fetch Now",
+    "fetching": "Fetching...",
+    "tabs": {
+      "decks": "Decks",
+      "news": "News"
+    },
+    "history": {
+      "title": "Fetch History",
+      "empty": "No fetch history yet",
+      "viewHtml": "View HTML",
+      "status": {
+        "success": "Success",
+        "error": "Error"
+      },
+      "trigger": {
+        "manual": "Manual",
+        "scheduled": "Scheduled"
+      },
+      "columns": {
+        "timestamp": "Timestamp",
+        "status": "Status",
+        "size": "Size",
+        "trigger": "Trigger"
+      }
+    },
+    "htmlViewer": {
+      "title": "Raw HTML Content",
+      "close": "Close",
+      "copy": "Copy",
+      "copied": "Copied!"
+    },
+    "fetch": {
+      "success": {
+        "title": "Fetch Complete",
+        "message": "HTML fetched successfully ({{size}} KB)"
+      },
+      "error": {
+        "title": "Fetch Failed",
+        "message": "{{error}}"
+      }
+    },
     "table": {
       "name": "Name",
       "url": "URL",

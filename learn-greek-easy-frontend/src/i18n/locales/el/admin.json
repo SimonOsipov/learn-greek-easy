@@ -112,6 +112,47 @@
     "addSource": "Προσθήκη Πηγής",
     "active": "Ενεργή",
     "inactive": "Ανενεργή",
+    "fetchNow": "Λήψη Τώρα",
+    "fetching": "Λήψη...",
+    "tabs": {
+      "decks": "Τράπουλες",
+      "news": "Ειδήσεις"
+    },
+    "history": {
+      "title": "Ιστορικό Λήψεων",
+      "empty": "Δεν υπάρχει ιστορικό λήψεων ακόμα",
+      "viewHtml": "Προβολή HTML",
+      "status": {
+        "success": "Επιτυχία",
+        "error": "Σφάλμα"
+      },
+      "trigger": {
+        "manual": "Χειροκίνητη",
+        "scheduled": "Προγραμματισμένη"
+      },
+      "columns": {
+        "timestamp": "Χρονοσήμανση",
+        "status": "Κατάσταση",
+        "size": "Μέγεθος",
+        "trigger": "Τύπος"
+      }
+    },
+    "htmlViewer": {
+      "title": "Ακατέργαστο Περιεχόμενο HTML",
+      "close": "Κλείσιμο",
+      "copy": "Αντιγραφή",
+      "copied": "Αντιγράφηκε!"
+    },
+    "fetch": {
+      "success": {
+        "title": "Λήψη Ολοκληρώθηκε",
+        "message": "Το HTML λήφθηκε επιτυχώς ({{size}} KB)"
+      },
+      "error": {
+        "title": "Αποτυχία Λήψης",
+        "message": "{{error}}"
+      }
+    },
     "table": {
       "name": "Όνομα",
       "url": "URL",

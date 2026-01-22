@@ -36,6 +36,9 @@ from src.schemas.admin import (
     NewsSourceListResponse,
     NewsSourceResponse,
     NewsSourceUpdate,
+    SourceFetchHistoryItem,
+    SourceFetchHistoryListResponse,
+    SourceFetchHtmlResponse,
     UnifiedDeckItem,
 )
 from src.schemas.feedback import (
@@ -46,6 +49,7 @@ from src.schemas.feedback import (
 )
 from src.services.feedback_admin_service import FeedbackAdminService
 from src.services.news_source_service import DuplicateURLException, NewsSourceService
+from src.services.source_fetch_service import SourceFetchService
 
 router = APIRouter(
     tags=["Admin"],
@@ -775,3 +779,83 @@ async def delete_news_source(
     service = NewsSourceService(db)
     await service.delete_source(source_id)
     await db.commit()
+
+
+# ============================================================================
+# Source Fetch History Endpoints
+# ============================================================================
+
+
+@router.post(
+    "/culture/sources/{source_id}/fetch",
+    response_model=SourceFetchHistoryItem,
+    status_code=status.HTTP_201_CREATED,
+    summary="Trigger manual fetch for a source",
+    description="Fetch HTML from a news source immediately. Works on both active and inactive sources.",
+    responses={
+        201: {"description": "Fetch completed (success or error recorded)"},
+        401: {"description": "Not authenticated"},
+        403: {"description": "Not authorized (requires superuser)"},
+        404: {"description": "Source not found"},
+    },
+)
+async def trigger_fetch(
+    source_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> SourceFetchHistoryItem:
+    """Trigger manual HTML fetch for a news source."""
+    service = SourceFetchService(db)
+    history = await service.fetch_source(source_id, trigger_type="manual")
+    await db.commit()
+    return SourceFetchHistoryItem.model_validate(history)
+
+
+@router.get(
+    "/culture/sources/{source_id}/history",
+    response_model=SourceFetchHistoryListResponse,
+    summary="Get fetch history for a source",
+    description="Get paginated fetch history for a news source.",
+    responses={
+        200: {"description": "Fetch history"},
+        401: {"description": "Not authenticated"},
+        403: {"description": "Not authorized (requires superuser)"},
+        404: {"description": "Source not found"},
+    },
+)
+async def get_fetch_history(
+    source_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+    limit: int = Query(10, ge=1, le=50, description="Max results"),
+) -> SourceFetchHistoryListResponse:
+    """Get fetch history for a news source."""
+    service = SourceFetchService(db)
+    items, total = await service.get_history(source_id, limit=limit)
+    return SourceFetchHistoryListResponse(
+        items=[SourceFetchHistoryItem.model_validate(item) for item in items],
+        total=total,
+    )
+
+
+@router.get(
+    "/culture/sources/history/{history_id}/html",
+    response_model=SourceFetchHtmlResponse,
+    summary="Get HTML content from fetch history",
+    description="Get the raw HTML content from a successful fetch.",
+    responses={
+        200: {"description": "HTML content"},
+        401: {"description": "Not authenticated"},
+        403: {"description": "Not authorized (requires superuser)"},
+        404: {"description": "History entry not found or has no HTML"},
+    },
+)
+async def get_fetch_html(
+    history_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> SourceFetchHtmlResponse:
+    """Get raw HTML content from a fetch history entry."""
+    service = SourceFetchService(db)
+    history = await service.get_history_html(history_id)
+    return SourceFetchHtmlResponse.model_validate(history)

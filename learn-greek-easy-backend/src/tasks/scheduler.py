@@ -104,7 +104,12 @@ def setup_scheduler() -> None:
 
     # Register scheduled jobs (implemented in 12.07-12.09)
     # Import here to avoid circular imports
-    from src.tasks.scheduled import session_cleanup_task, stats_aggregate_task, streak_reset_task
+    from src.tasks.scheduled import (
+        fetch_all_sources_task,
+        session_cleanup_task,
+        stats_aggregate_task,
+        streak_reset_task,
+    )
 
     # Daily streak reset at configured hour (default: midnight UTC)
     _scheduler.add_job(
@@ -128,6 +133,14 @@ def setup_scheduler() -> None:
         CronTrigger(hour=0, minute=30),
         id="stats_aggregate",
         name="Daily Stats Aggregation",
+    )
+
+    # Daily news source fetch at 06:00 EET (04:00 UTC)
+    _scheduler.add_job(
+        fetch_all_sources_task,
+        CronTrigger(hour=4, minute=0),
+        id="fetch_news_sources",
+        name="Daily News Source Fetch",
     )
 
     _scheduler.start()

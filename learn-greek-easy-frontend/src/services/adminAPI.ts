@@ -182,6 +182,41 @@ export interface NewsSourceUpdatePayload {
 }
 
 // ============================================
+// Fetch History Types
+// ============================================
+
+/**
+ * A single fetch history item
+ */
+export interface FetchHistoryItem {
+  id: string;
+  fetched_at: string;
+  status: 'success' | 'error';
+  html_size_bytes: number | null;
+  error_message: string | null;
+  trigger_type: 'manual' | 'scheduled';
+  final_url: string | null;
+}
+
+/**
+ * Paginated fetch history response
+ */
+export interface FetchHistoryResponse {
+  items: FetchHistoryItem[];
+  total: number;
+}
+
+/**
+ * Response containing HTML content for a fetch history item
+ */
+export interface FetchHtmlResponse {
+  id: string;
+  html_content: string;
+  fetched_at: string;
+  final_url: string | null;
+}
+
+// ============================================
 // Admin API Methods
 // ============================================
 
@@ -328,5 +363,42 @@ export const adminAPI = {
    */
   deleteNewsSource: async (sourceId: string): Promise<void> => {
     return api.delete<void>(`/api/v1/admin/culture/sources/${sourceId}`);
+  },
+
+  // ============================================
+  // Fetch History Management
+  // ============================================
+
+  /**
+   * Trigger a manual fetch for a news source
+   *
+   * Works on both active and inactive sources.
+   * Requires superuser authentication.
+   */
+  triggerFetch: async (sourceId: string): Promise<FetchHistoryItem> => {
+    return api.post<FetchHistoryItem>(`/api/v1/admin/culture/sources/${sourceId}/fetch`);
+  },
+
+  /**
+   * Get fetch history for a news source
+   *
+   * Returns the most recent fetch history items for the source.
+   * Requires superuser authentication.
+   */
+  getFetchHistory: async (sourceId: string, limit = 10): Promise<FetchHistoryResponse> => {
+    const queryString = buildQueryString({ limit });
+    return api.get<FetchHistoryResponse>(
+      `/api/v1/admin/culture/sources/${sourceId}/history${queryString}`
+    );
+  },
+
+  /**
+   * Get raw HTML content for a fetch history item
+   *
+   * Requires superuser authentication.
+   * Returns 404 if history item not found.
+   */
+  getFetchHtml: async (historyId: string): Promise<FetchHtmlResponse> => {
+    return api.get<FetchHtmlResponse>(`/api/v1/admin/culture/sources/history/${historyId}/html`);
   },
 };

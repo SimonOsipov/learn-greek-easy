@@ -142,3 +142,40 @@ class NewsSourceListResponse(BaseModel):
     total: int = Field(..., ge=0, description="Total number of sources")
     page: int = Field(..., ge=1, description="Current page number")
     page_size: int = Field(..., ge=1, le=100, description="Items per page")
+
+
+# ============================================================================
+# Source Fetch History Schemas
+# ============================================================================
+
+
+class SourceFetchHistoryItem(BaseModel):
+    """Fetch history item (without HTML content)."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID = Field(..., description="History entry UUID")
+    fetched_at: datetime = Field(..., description="When fetch occurred")
+    status: str = Field(..., description="'success' or 'error'")
+    html_size_bytes: Optional[int] = Field(None, description="Size of HTML content")
+    error_message: Optional[str] = Field(None, description="Error message if failed")
+    trigger_type: str = Field(..., description="'manual' or 'scheduled'")
+    final_url: Optional[str] = Field(None, description="Final URL after redirects")
+
+
+class SourceFetchHistoryListResponse(BaseModel):
+    """Response for fetch history list."""
+
+    items: list[SourceFetchHistoryItem] = Field(..., description="History entries")
+    total: int = Field(..., ge=0, description="Total count")
+
+
+class SourceFetchHtmlResponse(BaseModel):
+    """Response for HTML content retrieval."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID = Field(..., description="History entry UUID")
+    html_content: str = Field(..., description="Raw HTML content")
+    fetched_at: datetime = Field(..., description="When fetch occurred")
+    final_url: Optional[str] = Field(None, description="Final URL")
