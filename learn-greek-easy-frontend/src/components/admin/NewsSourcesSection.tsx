@@ -6,6 +6,7 @@ import {
   AlertCircle,
   ChevronLeft,
   ChevronRight,
+  Download,
   ExternalLink,
   Pencil,
   Plus,
@@ -14,23 +15,22 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { adminAPI } from '@/services/adminAPI';
 import type { NewsSourceListResponse, NewsSourceResponse } from '@/services/adminAPI';
 
+import { FetchHistoryTable } from './FetchHistoryTable';
 import { NewsSourceDeleteDialog } from './NewsSourceDeleteDialog';
 import { NewsSourceFormDialog } from './NewsSourceFormDialog';
 
@@ -43,6 +43,8 @@ import { NewsSourceFormDialog } from './NewsSourceFormDialog';
  * - Edit and delete actions per source
  * - Active/inactive status badges
  * - URL displayed as clickable link
+ * - Fetch Now button per source
+ * - Expandable fetch history per source
  */
 export const NewsSourcesSection: React.FC = () => {
   const { t } = useTranslation('admin');
@@ -63,6 +65,10 @@ export const NewsSourcesSection: React.FC = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedSource, setSelectedSource] = useState<NewsSourceResponse | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Fetch operation state
+  const [fetchingSourceId, setFetchingSourceId] = useState<string | null>(null);
+  const [historyRefreshTriggers, setHistoryRefreshTriggers] = useState<Record<string, number>>({});
 
   // Fetch sources
   const fetchSources = useCallback(async () => {
@@ -145,6 +151,34 @@ export const NewsSourcesSection: React.FC = () => {
       });
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  const handleFetchNow = async (source: NewsSourceResponse) => {
+    setFetchingSourceId(source.id);
+    try {
+      const result = await adminAPI.triggerFetch(source.id);
+      const sizeKb = result.html_size_bytes ? (result.html_size_bytes / 1024).toFixed(1) : '0';
+
+      toast({
+        title: t('sources.fetch.success.title'),
+        description: t('sources.fetch.success.message', { size: sizeKb }),
+      });
+
+      // Trigger history refresh for this source
+      setHistoryRefreshTriggers((prev) => ({
+        ...prev,
+        [source.id]: (prev[source.id] || 0) + 1,
+      }));
+    } catch (err) {
+      const message = err instanceof Error ? err.message : t('errors.failed');
+      toast({
+        title: t('sources.fetch.error.title'),
+        description: t('sources.fetch.error.message', { error: message }),
+        variant: 'destructive',
+      });
+    } finally {
+      setFetchingSourceId(null);
     }
   };
 
@@ -238,20 +272,17 @@ export const NewsSourcesSection: React.FC = () => {
                   {t('sources.states.noSources')}
                 </p>
               ) : (
-                <Table data-testid="sources-table">
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>{t('sources.table.name')}</TableHead>
-                      <TableHead>{t('sources.table.url')}</TableHead>
-                      <TableHead>{t('sources.table.status')}</TableHead>
-                      <TableHead className="text-right">{t('sources.table.actions')}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {data.sources.map((source) => (
-                      <TableRow key={source.id} data-testid={`source-row-${source.id}`}>
-                        <TableCell className="font-medium">{source.name}</TableCell>
-                        <TableCell>
+                <Accordion type="multiple" className="w-full">
+                  {data.sources.map((source) => (
+                    <AccordionItem
+                      key={source.id}
+                      value={source.id}
+                      data-testid={`source-row-${source.id}`}
+                    >
+                      <div className="flex items-center justify-between py-2">
+                        {/* Source info */}
+                        <div className="flex flex-1 items-center gap-4">
+                          <span className="min-w-[120px] font-medium">{source.name}</span>
                           <a
                             href={source.url}
                             target="_blank"
@@ -261,13 +292,32 @@ export const NewsSourcesSection: React.FC = () => {
                             {getHostname(source.url)}
                             <ExternalLink className="h-3 w-3" />
                           </a>
-                        </TableCell>
-                        <TableCell>
                           <Badge variant={source.is_active ? 'default' : 'secondary'}>
                             {source.is_active ? t('sources.active') : t('sources.inactive')}
                           </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleFetchNow(source)}
+                            disabled={fetchingSourceId === source.id}
+                            data-testid={`fetch-source-${source.id}`}
+                          >
+                            {fetchingSourceId === source.id ? (
+                              <>
+                                <RefreshCw className="mr-1 h-4 w-4 animate-spin" />
+                                {t('sources.fetching')}
+                              </>
+                            ) : (
+                              <>
+                                <Download className="mr-1 h-4 w-4" />
+                                {t('sources.fetchNow')}
+                              </>
+                            )}
+                          </Button>
                           <Button
                             variant="ghost"
                             size="sm"
@@ -287,11 +337,23 @@ export const NewsSourcesSection: React.FC = () => {
                             <Trash2 className="h-4 w-4" />
                             <span className="sr-only">{t('actions.delete')}</span>
                           </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                          <AccordionTrigger className="py-0 hover:no-underline">
+                            <span className="sr-only">{t('sources.history.title')}</span>
+                          </AccordionTrigger>
+                        </div>
+                      </div>
+                      <AccordionContent>
+                        <div className="border-t pt-4">
+                          <h4 className="mb-3 text-sm font-medium">{t('sources.history.title')}</h4>
+                          <FetchHistoryTable
+                            sourceId={source.id}
+                            refreshTrigger={historyRefreshTriggers[source.id] || 0}
+                          />
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  ))}
+                </Accordion>
               )}
 
               {/* Pagination */}

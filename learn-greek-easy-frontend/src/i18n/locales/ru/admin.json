@@ -116,6 +116,47 @@
     "addSource": "Добавить источник",
     "active": "Активен",
     "inactive": "Неактивен",
+    "fetchNow": "Загрузить сейчас",
+    "fetching": "Загрузка...",
+    "tabs": {
+      "decks": "Колоды",
+      "news": "Новости"
+    },
+    "history": {
+      "title": "История загрузок",
+      "empty": "История загрузок пока пуста",
+      "viewHtml": "Просмотр HTML",
+      "status": {
+        "success": "Успешно",
+        "error": "Ошибка"
+      },
+      "trigger": {
+        "manual": "Вручную",
+        "scheduled": "Запланировано"
+      },
+      "columns": {
+        "timestamp": "Время",
+        "status": "Статус",
+        "size": "Размер",
+        "trigger": "Тип"
+      }
+    },
+    "htmlViewer": {
+      "title": "Исходный HTML-код",
+      "close": "Закрыть",
+      "copy": "Копировать",
+      "copied": "Скопировано!"
+    },
+    "fetch": {
+      "success": {
+        "title": "Загрузка завершена",
+        "message": "HTML успешно загружен ({{size}} КБ)"
+      },
+      "error": {
+        "title": "Ошибка загрузки",
+        "message": "{{error}}"
+      }
+    },
     "table": {
       "name": "Название",
       "url": "URL",

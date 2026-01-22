@@ -24,8 +24,8 @@ import { useTranslation } from 'react-i18next';
 
 import {
   AdminFeedbackSection,
+  CultureAdminTabs,
   DeckEditModal,
-  NewsSourcesSection,
   type DeckEditFormData,
 } from '@/components/admin';
 import { CultureBadge, type CultureCategory } from '@/components/culture';
@@ -56,7 +56,6 @@ import {
 import { adminAPI } from '@/services/adminAPI';
 import type {
   ContentStatsResponse,
-  CultureDeckStats,
   CultureDeckUpdatePayload,
   DeckListResponse,
   DeckStats,
@@ -226,27 +225,6 @@ function getLocalizedName(name: string | MultilingualName, locale: string): stri
   const key = localeMap[locale] || 'en';
   return name[key] || name.en || Object.values(name)[0] || '';
 }
-
-/**
- * Culture deck list item component
- */
-interface CultureDeckListItemProps {
-  deck: CultureDeckStats;
-  locale: string;
-  t: (key: string, options?: { count: number }) => string;
-}
-
-const CultureDeckListItem: React.FC<CultureDeckListItemProps> = ({ deck, locale, t }) => (
-  <div className="flex items-center justify-between rounded-lg border p-4 transition-colors hover:bg-muted/50">
-    <div className="flex items-center gap-3">
-      <CultureBadge category={deck.category as CultureCategory} />
-      <span className="font-medium">{getLocalizedName(deck.name, locale)}</span>
-    </div>
-    <span className="text-sm text-muted-foreground">
-      {t('deck.questionCount', { count: deck.question_count })}
-    </span>
-  </div>
-);
 
 /**
  * Unified deck list item for All Decks section
@@ -878,29 +856,9 @@ const AdminPage: React.FC = () => {
         </Card>
       </section>
 
-      {/* Culture Deck List */}
-      <section aria-labelledby="culture-decks-heading">
-        <Card>
-          <CardHeader>
-            <CardTitle id="culture-decks-heading" data-testid="culture-decks-title">
-              {t('sections.cultureDecks')}
-            </CardTitle>
-            <CardDescription data-testid="culture-decks-description">
-              {t('sections.cultureDecksDescription')}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {stats.culture_decks.length === 0 ? (
-              <p className="py-4 text-center text-muted-foreground">{t('states.noCultureDecks')}</p>
-            ) : (
-              <div className="space-y-3">
-                {stats.culture_decks.map((deck) => (
-                  <CultureDeckListItem key={deck.id} deck={deck} locale={locale} t={t} />
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+      {/* Culture Section with Tabs (Decks/News) */}
+      <section aria-labelledby="culture-admin-heading">
+        <CultureAdminTabs cultureDecks={stats.culture_decks} locale={locale} t={t} />
       </section>
 
       {/* All Decks List with Search and Pagination */}
@@ -911,11 +869,6 @@ const AdminPage: React.FC = () => {
       {/* User Feedback Management */}
       <section aria-labelledby="feedback-heading">
         <AdminFeedbackSection />
-      </section>
-
-      {/* News Sources Management */}
-      <section aria-labelledby="news-sources-heading">
-        <NewsSourcesSection />
       </section>
 
       {/* Deck Edit Modal */}
