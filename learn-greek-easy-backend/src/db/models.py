@@ -8,7 +8,7 @@ This module contains all SQLAlchemy models for the application:
 - XP and Achievements (UserXP, XPTransaction, Achievement, UserAchievement)
 - Notifications (Notification)
 - Culture Exam (CultureDeck, CultureQuestion, CultureQuestionStats, CultureAnswerHistory)
-- News Sources (NewsSource)
+- News Sources (NewsSource, SourceFetchHistory)
 
 All models use:
 - UUID primary keys with server-side generation
@@ -1643,5 +1643,75 @@ class NewsSource(Base, TimestampMixin):
         comment="Whether source is used for question generation",
     )
 
+    # Relationships
+    fetch_history: Mapped[List["SourceFetchHistory"]] = relationship(
+        back_populates="source",
+        lazy="selectin",
+        cascade="all, delete-orphan",
+    )
+
     def __repr__(self) -> str:
         return f"<NewsSource(id={self.id}, name={self.name}, url={self.url[:30]}...)>"
+
+
+class SourceFetchHistory(Base, TimestampMixin):
+    """HTML fetch history for news sources."""
+
+    __tablename__ = "source_fetch_history"
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True,
+        server_default=func.uuid_generate_v4(),
+    )
+    source_id: Mapped[UUID] = mapped_column(
+        ForeignKey("news_sources.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    fetched_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+    status: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        comment="'success' or 'error'",
+    )
+    html_content: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        comment="Raw HTML content (null if error)",
+    )
+    html_size_bytes: Mapped[int | None] = mapped_column(
+        Integer,
+        nullable=True,
+    )
+    error_message: Mapped[str | None] = mapped_column(
+        String(500),
+        nullable=True,
+    )
+    trigger_type: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        comment="'manual' or 'scheduled'",
+    )
+    final_url: Mapped[str | None] = mapped_column(
+        String(500),
+        nullable=True,
+        comment="Final URL after redirects",
+    )
+
+    # Relationship
+    source: Mapped["NewsSource"] = relationship(
+        back_populates="fetch_history",
+        lazy="selectin",
+    )
+
+    # Composite index for efficient history queries
+    __table_args__ = (Index("idx_fetch_history_source_fetched", "source_id", fetched_at.desc()),)
+
+    def __repr__(self) -> str:
+        return (
+            f"<SourceFetchHistory(id={self.id}, source_id={self.source_id}, status={self.status})>"
+        )
