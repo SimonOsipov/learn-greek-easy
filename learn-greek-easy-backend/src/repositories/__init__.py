@@ -14,6 +14,7 @@ from src.repositories.notification import NotificationRepository
 from src.repositories.progress import CardStatisticsRepository, UserDeckProgressRepository
 from src.repositories.review import ReviewRepository
 from src.repositories.session import SessionRepository
+from src.repositories.source_fetch_history import SourceFetchHistoryRepository
 from src.repositories.user import RefreshTokenRepository, UserRepository, UserSettingsRepository
 
 __all__ = [
@@ -46,4 +47,5 @@ __all__ = [
     "MockExamRepository",
     # News Sources
     "NewsSourceRepository",
+    "SourceFetchHistoryRepository",
 ]
