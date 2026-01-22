@@ -91,9 +91,10 @@ test.describe('Admin Fetch History', () => {
     await expect(fetchBtn).toContainText(/fetching/i, { timeout: 5000 });
 
     // Wait for toast notification (success or error)
-    // Toast appears with role="status" from Sonner
-    const toast = page.locator('[data-sonner-toast]').first();
-    await expect(toast).toBeVisible({ timeout: 30000 });
+    // shadcn/ui toast uses Radix which renders a Toast with data-state="open"
+    // Look for toast title text from translations (Fetch Complete or Fetch Failed)
+    const toastTitle = page.getByText(/fetch complete|fetch failed/i).first();
+    await expect(toastTitle).toBeVisible({ timeout: 30000 });
   });
 
   // =============================================================================
