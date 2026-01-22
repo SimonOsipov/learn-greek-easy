@@ -26,6 +26,12 @@ test.describe('Admin News Sources', () => {
     // Wait for app to be ready
     await waitForAppReady(page);
 
+    // Wait for culture tabs to load
+    await expect(page.getByTestId('culture-admin-tabs')).toBeVisible({ timeout: 15000 });
+
+    // Click on the News tab to show news sources section
+    await page.getByTestId('culture-tab-news').click();
+
     // Wait for news sources section to load
     await expect(page.getByTestId('news-sources-section')).toBeVisible({ timeout: 15000 });
   });
@@ -49,10 +55,10 @@ test.describe('Admin News Sources', () => {
     await expect(page.getByTestId('sources-refresh-btn')).toBeVisible();
   });
 
-  test('E2E-SOURCES-02: Displays seeded news sources in table', async ({ page }) => {
-    // Wait for table to be visible
-    const table = page.getByTestId('sources-table');
-    await expect(table).toBeVisible({ timeout: 10000 });
+  test('E2E-SOURCES-02: Displays seeded news sources in list', async ({ page }) => {
+    // Wait for source rows to be visible (Accordion items)
+    const sourceRows = page.locator('[data-testid^="source-row-"]');
+    await expect(sourceRows.first()).toBeVisible({ timeout: 10000 });
 
     // Verify seeded sources appear (from seed_news_sources)
     await expect(page.getByText('Greek Reporter')).toBeVisible();
@@ -63,8 +69,9 @@ test.describe('Admin News Sources', () => {
   });
 
   test('E2E-SOURCES-03: Displays active and inactive status badges', async ({ page }) => {
-    const table = page.getByTestId('sources-table');
-    await expect(table).toBeVisible({ timeout: 10000 });
+    // Wait for source rows to be visible
+    const sourceRows = page.locator('[data-testid^="source-row-"]');
+    await expect(sourceRows.first()).toBeVisible({ timeout: 10000 });
 
     // Should have Active badges
     const activeBadges = page.getByText('Active', { exact: true });
@@ -191,8 +198,8 @@ test.describe('Admin News Sources', () => {
 
   test('E2E-SOURCES-09: Can edit an existing source', async ({ page }) => {
     // Wait for table
-    const table = page.getByTestId('sources-table');
-    await expect(table).toBeVisible({ timeout: 10000 });
+    const sourceRows = page.locator('[data-testid^="source-row-"]');
+    await expect(sourceRows.first()).toBeVisible({ timeout: 10000 });
 
     // Find and click edit button for first source
     const firstRow = page.locator('[data-testid^="source-row-"]').first();
@@ -221,8 +228,8 @@ test.describe('Admin News Sources', () => {
   });
 
   test('E2E-SOURCES-10: Can toggle source active status', async ({ page }) => {
-    const table = page.getByTestId('sources-table');
-    await expect(table).toBeVisible({ timeout: 10000 });
+    const sourceRows = page.locator('[data-testid^="source-row-"]');
+    await expect(sourceRows.first()).toBeVisible({ timeout: 10000 });
 
     // Find and click edit button for first source
     const firstRow = page.locator('[data-testid^="source-row-"]').first();
@@ -242,7 +249,7 @@ test.describe('Admin News Sources', () => {
     await expect(page.getByTestId('source-form-dialog')).not.toBeVisible({ timeout: 10000 });
 
     // Page should reload and still function
-    await expect(page.getByTestId('sources-table')).toBeVisible();
+    await expect(page.locator('[data-testid^="source-row-"]').first()).toBeVisible();
   });
 
   // =============================================================================
@@ -250,8 +257,8 @@ test.describe('Admin News Sources', () => {
   // =============================================================================
 
   test('E2E-SOURCES-11: Can delete a source', async ({ page }) => {
-    const table = page.getByTestId('sources-table');
-    await expect(table).toBeVisible({ timeout: 10000 });
+    const sourceRows = page.locator('[data-testid^="source-row-"]');
+    await expect(sourceRows.first()).toBeVisible({ timeout: 10000 });
 
     // Get initial source count
     const sourcesBefore = await page.locator('[data-testid^="source-row-"]').count();
@@ -280,8 +287,8 @@ test.describe('Admin News Sources', () => {
   });
 
   test('E2E-SOURCES-12: Can cancel delete operation', async ({ page }) => {
-    const table = page.getByTestId('sources-table');
-    await expect(table).toBeVisible({ timeout: 10000 });
+    const sourceRows = page.locator('[data-testid^="source-row-"]');
+    await expect(sourceRows.first()).toBeVisible({ timeout: 10000 });
 
     // Get initial source count
     const sourcesBefore = await page.locator('[data-testid^="source-row-"]').count();
@@ -308,8 +315,8 @@ test.describe('Admin News Sources', () => {
   // =============================================================================
 
   test('E2E-SOURCES-13: Refresh button reloads data', async ({ page }) => {
-    const table = page.getByTestId('sources-table');
-    await expect(table).toBeVisible({ timeout: 10000 });
+    const sourceRows = page.locator('[data-testid^="source-row-"]');
+    await expect(sourceRows.first()).toBeVisible({ timeout: 10000 });
 
     // Click refresh
     await page.getByTestId('sources-refresh-btn').click();
@@ -324,8 +331,8 @@ test.describe('Admin News Sources', () => {
     const sourcesSection = page.getByTestId('news-sources-section');
     await expect(sourcesSection).toBeVisible({ timeout: 10000 });
 
-    const table = sourcesSection.getByTestId('sources-table');
-    await expect(table).toBeVisible({ timeout: 10000 });
+    const sourceRows = sourcesSection.locator('[data-testid^="source-row-"]');
+    await expect(sourceRows.first()).toBeVisible({ timeout: 10000 });
 
     // Pagination showing text should be visible (scoped to sources section)
     const paginationText = sourcesSection.getByText(/showing \d+-\d+ of \d+/i);
@@ -349,19 +356,25 @@ test.describe('Admin News Sources - Empty State', () => {
     await verifyAuthSucceeded(page, '/admin');
     await waitForAppReady(page);
 
+    // Wait for culture tabs to load
+    await expect(page.getByTestId('culture-admin-tabs')).toBeVisible({ timeout: 15000 });
+
+    // Click on the News tab to show news sources section
+    await page.getByTestId('culture-tab-news').click();
+
     // Wait for sources section to load
     await expect(page.getByTestId('news-sources-section')).toBeVisible({ timeout: 15000 });
 
     // Check what state we're in
-    const table = page.getByTestId('sources-table');
+    const sourceRows = page.locator('[data-testid^="source-row-"]');
     const emptyState = page.getByTestId('sources-empty-state');
 
-    // Wait for either table or empty state to appear
-    await expect(table.or(emptyState)).toBeVisible({ timeout: 10000 });
+    // Wait for either source rows or empty state to appear
+    await expect(sourceRows.first().or(emptyState)).toBeVisible({ timeout: 10000 });
 
-    // If we got the table with data (seeded), delete all sources to reach empty state
-    const hasTable = await table.isVisible();
-    if (hasTable) {
+    // If we got source rows with data (seeded), delete all sources to reach empty state
+    const hasSources = await sourceRows.first().isVisible();
+    if (hasSources) {
       // Delete sources one by one until we reach empty state
       while (await page.locator('[data-testid^="source-row-"]').count() > 0) {
         // Click delete on first source
