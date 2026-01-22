@@ -323,7 +323,7 @@ test.describe('Admin News Sources', () => {
 
     // Button should show loading state (spinning icon)
     // Data should still be visible after refresh
-    await expect(table).toBeVisible({ timeout: 10000 });
+    await expect(sourceRows.first()).toBeVisible({ timeout: 10000 });
     await expect(page.getByTestId('sources-section-title')).toBeVisible();
   });
 
