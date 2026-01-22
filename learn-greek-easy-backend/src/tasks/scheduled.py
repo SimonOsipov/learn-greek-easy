@@ -399,3 +399,81 @@ async def stats_aggregate_task() -> None:
         # Always dispose of the engine to clean up connections
         if engine is not None:
             await engine.dispose()
+
+
+async def fetch_all_sources_task() -> None:
+    """Fetch HTML from all active news sources.
+
+    This task runs daily at 06:00 EET (04:00 UTC) to fetch HTML
+    from all active news sources sequentially.
+
+    Each source is fetched independently - one failure doesn't
+    stop others from being processed.
+    """
+    logger.info("Starting daily news source fetch task")
+    start_time = datetime.now(timezone.utc)
+    engine = None
+
+    try:
+        # Create dedicated engine for this scheduled task
+        engine = create_async_engine(settings.database_url, pool_pre_ping=True)
+        async_session_factory = async_sessionmaker(
+            engine, class_=AsyncSession, expire_on_commit=False
+        )
+
+        async with async_session_factory() as session:
+            from src.repositories.news_source import NewsSourceRepository
+            from src.services.source_fetch_service import SourceFetchService
+
+            # Get all active sources
+            source_repo = NewsSourceRepository(session)
+            sources = await source_repo.list_all(is_active=True)
+
+            if not sources:
+                logger.info("No active news sources to fetch")
+                return
+
+            logger.info(
+                "Fetching active news sources",
+                extra={"source_count": len(sources)},
+            )
+
+            # Fetch each source sequentially to avoid overwhelming targets
+            results = {"success": 0, "error": 0}
+            fetch_service = SourceFetchService(session)
+
+            for source in sources:
+                try:
+                    history = await fetch_service.fetch_source(source.id, trigger_type="scheduled")
+                    if history.status == "success":
+                        results["success"] += 1
+                    else:
+                        results["error"] += 1
+                except Exception as e:
+                    logger.error(
+                        f"Failed to fetch source {source.name}: {e}",
+                        extra={"source_id": str(source.id), "error": str(e)},
+                    )
+                    results["error"] += 1
+
+            await session.commit()
+
+            duration_ms = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
+
+            logger.info(
+                "Daily news source fetch complete",
+                extra={
+                    "total_sources": len(sources),
+                    "success_count": results["success"],
+                    "error_count": results["error"],
+                    "duration_ms": duration_ms,
+                },
+            )
+
+    except Exception as e:
+        logger.error(f"Daily news source fetch task failed: {e}", exc_info=True)
+        raise
+
+    finally:
+        if engine is not None:
+            await engine.dispose()
