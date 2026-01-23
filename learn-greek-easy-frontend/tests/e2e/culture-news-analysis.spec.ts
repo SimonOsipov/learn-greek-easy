@@ -10,8 +10,51 @@
  * Uses Playwright's storageState pattern for admin authentication.
  */
 
-import { test, expect } from '@playwright/test';
+import { test, expect, Page } from '@playwright/test';
 import { verifyAuthSucceeded, waitForAppReady } from './helpers/auth-helpers';
+
+/**
+ * Helper function to navigate to News tab and optionally expand a source accordion.
+ * This is called explicitly by tests that need it, keeping beforeEach simple.
+ *
+ * @param page - Playwright page object
+ * @param options - Optional configuration
+ * @param options.expandFirstSource - If true, expands the first source accordion (default: true)
+ * @returns Object with historyTable locator for convenience
+ */
+async function navigateToNewsAndExpandSource(
+  page: Page,
+  options: { expandFirstSource?: boolean } = {}
+): Promise<{ historyTable: ReturnType<Page['getByTestId']> }> {
+  const { expandFirstSource = true } = options;
+
+  // Click on the News tab to show news sources section
+  await page.getByTestId('admin-tab-news').click();
+
+  // Wait for news sources section to load
+  await expect(page.getByTestId('news-sources-section')).toBeVisible({ timeout: 15000 });
+
+  // Wait for sources to load
+  const sourceRows = page.locator('[data-testid^="source-row-"]');
+  await expect(sourceRows.first()).toBeVisible({ timeout: 20000 });
+
+  if (expandFirstSource) {
+    // Expand first source to see fetch history
+    const firstSourceRow = sourceRows.first();
+    const accordionTrigger = firstSourceRow.locator('[data-radix-collection-item]');
+    await accordionTrigger.click();
+
+    // Wait for fetch history table to load
+    const historyTable = page.getByTestId('fetch-history-table');
+    await expect(historyTable.or(page.getByTestId('fetch-history-empty'))).toBeVisible({
+      timeout: 15000,
+    });
+
+    return { historyTable };
+  }
+
+  return { historyTable: page.getByTestId('fetch-history-table') };
+}
 
 test.describe('Article Analysis Feature', () => {
   // Use admin storage state (superuser)
@@ -28,27 +71,6 @@ test.describe('Article Analysis Feature', () => {
 
     // Wait for admin tab switcher to load
     await expect(page.getByTestId('admin-tab-switcher')).toBeVisible({ timeout: 15000 });
-
-    // Click on the News tab to show news sources section
-    await page.getByTestId('admin-tab-news').click();
-
-    // Wait for news sources section to load
-    await expect(page.getByTestId('news-sources-section')).toBeVisible({ timeout: 15000 });
-
-    // Wait for sources to load and expand first source
-    const sourceRows = page.locator('[data-testid^="source-row-"]');
-    await expect(sourceRows.first()).toBeVisible({ timeout: 20000 });
-
-    // Expand first source to see fetch history
-    const firstSourceRow = sourceRows.first();
-    const accordionTrigger = firstSourceRow.locator('[data-radix-collection-item]');
-    await accordionTrigger.click();
-
-    // Wait for fetch history table to load
-    const historyTable = page.getByTestId('fetch-history-table');
-    await expect(historyTable.or(page.getByTestId('fetch-history-empty'))).toBeVisible({
-      timeout: 15000,
-    });
   });
 
   // =============================================================================
@@ -58,8 +80,9 @@ test.describe('Article Analysis Feature', () => {
   test('E2E-ANALYSIS-01: Displays completed analysis with discovered articles', async ({
     page,
   }) => {
-    // Find history table
-    const historyTable = page.getByTestId('fetch-history-table');
+    // Navigate to news tab and expand first source
+    const { historyTable } = await navigateToNewsAndExpandSource(page);
+
     if (!(await historyTable.isVisible())) {
       test.skip(true, 'No fetch history available');
       return;
@@ -129,7 +152,9 @@ test.describe('Article Analysis Feature', () => {
     // This test verifies the empty state works correctly
     // The seed data includes an entry with analysis_status=completed but discovered_articles=[]
 
-    const historyTable = page.getByTestId('fetch-history-table');
+    // Navigate to news tab and expand first source
+    const { historyTable } = await navigateToNewsAndExpandSource(page);
+
     if (!(await historyTable.isVisible())) {
       test.skip(true, 'No fetch history available');
       return;
@@ -182,7 +207,9 @@ test.describe('Article Analysis Feature', () => {
   });
 
   test('E2E-ANALYSIS-03: Displays failed analysis with retry option', async ({ page }) => {
-    const historyTable = page.getByTestId('fetch-history-table');
+    // Navigate to news tab and expand first source
+    const { historyTable } = await navigateToNewsAndExpandSource(page);
+
     if (!(await historyTable.isVisible())) {
       test.skip(true, 'No fetch history available');
       return;
@@ -223,7 +250,9 @@ test.describe('Article Analysis Feature', () => {
   test('E2E-ANALYSIS-04: Pending analysis shows disabled button with spinner', async ({
     page,
   }) => {
-    const historyTable = page.getByTestId('fetch-history-table');
+    // Navigate to news tab and expand first source
+    const { historyTable } = await navigateToNewsAndExpandSource(page);
+
     if (!(await historyTable.isVisible())) {
       test.skip(true, 'No fetch history available');
       return;
@@ -248,7 +277,9 @@ test.describe('Article Analysis Feature', () => {
   });
 
   test('E2E-ANALYSIS-05: Article links open in new tab', async ({ page, context }) => {
-    const historyTable = page.getByTestId('fetch-history-table');
+    // Navigate to news tab and expand first source
+    const { historyTable } = await navigateToNewsAndExpandSource(page);
+
     if (!(await historyTable.isVisible())) {
       test.skip(true, 'No fetch history available');
       return;
@@ -294,7 +325,9 @@ test.describe('Article Analysis Feature', () => {
   });
 
   test('E2E-ANALYSIS-06: Modal shows token usage for completed analysis', async ({ page }) => {
-    const historyTable = page.getByTestId('fetch-history-table');
+    // Navigate to news tab and expand first source
+    const { historyTable } = await navigateToNewsAndExpandSource(page);
+
     if (!(await historyTable.isVisible())) {
       test.skip(true, 'No fetch history available');
       return;
@@ -336,26 +369,22 @@ test.describe('Article Analysis Feature', () => {
 test.describe('Article Analysis - Retry Functionality', () => {
   test.use({ storageState: 'playwright/.auth/admin.json' });
 
-  test('E2E-ANALYSIS-07: Can retry failed analysis', async ({ page }) => {
+  test.beforeEach(async ({ page }) => {
     await page.goto('/admin');
+
+    // Fail fast with clear error if auth failed
     await verifyAuthSucceeded(page, '/admin');
+
+    // Wait for app to be ready
     await waitForAppReady(page);
 
-    // Navigate to News tab
-    await page.getByTestId('admin-tab-news').click();
-    await expect(page.getByTestId('news-sources-section')).toBeVisible({ timeout: 15000 });
+    // Wait for admin tab switcher to load
+    await expect(page.getByTestId('admin-tab-switcher')).toBeVisible({ timeout: 15000 });
+  });
 
-    // Expand first source
-    const sourceRows = page.locator('[data-testid^="source-row-"]');
-    await expect(sourceRows.first()).toBeVisible({ timeout: 10000 });
-    const accordionTrigger = sourceRows.first().locator('[data-radix-collection-item]');
-    await accordionTrigger.click();
-
-    // Wait for history to load
-    const historyTable = page.getByTestId('fetch-history-table');
-    await expect(historyTable.or(page.getByTestId('fetch-history-empty'))).toBeVisible({
-      timeout: 10000,
-    });
+  test('E2E-ANALYSIS-07: Can retry failed analysis', async ({ page }) => {
+    // Navigate to news tab and expand first source
+    const { historyTable } = await navigateToNewsAndExpandSource(page);
 
     if (!(await historyTable.isVisible())) {
       test.skip(true, 'No fetch history available');
