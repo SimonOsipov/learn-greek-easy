@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 
 import { format } from 'date-fns';
-import { AlertCircle, Eye, FileText, Loader2, RefreshCw } from 'lucide-react';
+import { AlertCircle, Eye, FileText, Loader2, RefreshCw, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -18,10 +18,12 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { useToast } from '@/hooks/use-toast';
 import { adminAPI } from '@/services/adminAPI';
 import type { FetchHistoryItem, FetchHtmlResponse } from '@/services/adminAPI';
 
 import { DiscoveredArticlesModal } from './DiscoveredArticlesModal';
+import { FetchHistoryDeleteDialog } from './FetchHistoryDeleteDialog';
 import { HtmlViewerModal } from './HtmlViewerModal';
 
 interface FetchHistoryTableProps {
@@ -67,6 +69,13 @@ export const FetchHistoryTable: React.FC<FetchHistoryTableProps> = ({
   // Articles modal state
   const [articlesModalOpen, setArticlesModalOpen] = useState(false);
   const [selectedHistoryItem, setSelectedHistoryItem] = useState<FetchHistoryItem | null>(null);
+
+  // Delete dialog state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<FetchHistoryItem | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const { toast } = useToast();
 
   const fetchHistory = useCallback(async () => {
     try {
@@ -115,6 +124,43 @@ export const FetchHistoryTable: React.FC<FetchHistoryTableProps> = ({
     setArticlesModalOpen(open);
     if (!open) {
       setSelectedHistoryItem(null);
+    }
+  };
+
+  const handleDeleteClick = (item: FetchHistoryItem) => {
+    setItemToDelete(item);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!itemToDelete) return;
+
+    setIsDeleting(true);
+    try {
+      await adminAPI.deleteFetchHistory(itemToDelete.id);
+      toast({
+        title: t('sources.history.delete.success.title'),
+        description: t('sources.history.delete.success.message'),
+      });
+      setDeleteDialogOpen(false);
+      setItemToDelete(null);
+      // Refresh the history list
+      fetchHistory();
+    } catch {
+      toast({
+        title: t('sources.history.delete.error.title'),
+        description: t('sources.history.delete.error.message'),
+        variant: 'destructive',
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleDeleteDialogClose = (open: boolean) => {
+    setDeleteDialogOpen(open);
+    if (!open) {
+      setItemToDelete(null);
     }
   };
 
@@ -198,45 +244,56 @@ export const FetchHistoryTable: React.FC<FetchHistoryTableProps> = ({
                 </Badge>
               </TableCell>
               <TableCell className="text-right">
-                {item.status === 'success' && (
-                  <div className="flex items-center justify-end gap-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleViewHtml(item.id)}
-                      disabled={isLoadingHtml === item.id}
-                      data-testid={`view-html-${item.id}`}
-                    >
-                      {isLoadingHtml === item.id ? (
-                        <RefreshCw className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Eye className="h-4 w-4" />
-                      )}
-                      <span className="ml-1">{t('sources.history.viewHtml')}</span>
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleViewArticles(item)}
-                      disabled={item.analysis_status === 'pending'}
-                      data-testid={`view-articles-${item.id}`}
-                      className={
-                        item.analysis_status === 'failed'
-                          ? 'text-destructive hover:text-destructive'
-                          : ''
-                      }
-                    >
-                      {item.analysis_status === 'pending' ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : item.analysis_status === 'failed' ? (
-                        <AlertCircle className="h-4 w-4" />
-                      ) : (
-                        <FileText className="h-4 w-4" />
-                      )}
-                      <span className="ml-1">{t('sources.history.viewArticles')}</span>
-                    </Button>
-                  </div>
-                )}
+                <div className="flex items-center justify-end gap-1">
+                  {item.status === 'success' && (
+                    <>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleViewHtml(item.id)}
+                        disabled={isLoadingHtml === item.id}
+                        data-testid={`view-html-${item.id}`}
+                      >
+                        {isLoadingHtml === item.id ? (
+                          <RefreshCw className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                        <span className="ml-1">{t('sources.history.viewHtml')}</span>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleViewArticles(item)}
+                        disabled={item.analysis_status === 'pending'}
+                        data-testid={`view-articles-${item.id}`}
+                        className={
+                          item.analysis_status === 'failed'
+                            ? 'text-destructive hover:text-destructive'
+                            : ''
+                        }
+                      >
+                        {item.analysis_status === 'pending' ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : item.analysis_status === 'failed' ? (
+                          <AlertCircle className="h-4 w-4" />
+                        ) : (
+                          <FileText className="h-4 w-4" />
+                        )}
+                        <span className="ml-1">{t('sources.history.viewArticles')}</span>
+                      </Button>
+                    </>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleDeleteClick(item)}
+                    data-testid={`delete-history-${item.id}`}
+                    className="text-muted-foreground hover:text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
               </TableCell>
             </TableRow>
           ))}
@@ -258,6 +315,15 @@ export const FetchHistoryTable: React.FC<FetchHistoryTableProps> = ({
         onOpenChange={handleArticlesModalClose}
         historyItem={selectedHistoryItem}
         sourceName=""
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <FetchHistoryDeleteDialog
+        open={deleteDialogOpen}
+        onOpenChange={handleDeleteDialogClose}
+        item={itemToDelete}
+        onConfirm={handleDeleteConfirm}
+        isDeleting={isDeleting}
       />
     </>
   );

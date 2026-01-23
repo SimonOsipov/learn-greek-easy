@@ -875,6 +875,29 @@ async def get_fetch_html(
     return SourceFetchHtmlResponse.model_validate(history)
 
 
+@router.delete(
+    "/culture/sources/history/{history_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete a fetch history record",
+    description="Delete a fetch history record and its HTML content.",
+    responses={
+        204: {"description": "History record deleted"},
+        401: {"description": "Not authenticated"},
+        403: {"description": "Not authorized (requires superuser)"},
+        404: {"description": "History entry not found"},
+    },
+)
+async def delete_fetch_history(
+    history_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> None:
+    """Delete a fetch history record and its HTML content."""
+    service = SourceFetchService(db)
+    await service.delete_history(history_id)
+    await db.commit()
+
+
 # ============================================================================
 # Article Analysis Endpoints
 # ============================================================================

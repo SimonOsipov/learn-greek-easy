@@ -449,6 +449,17 @@ export const adminAPI = {
     return api.get<FetchHtmlResponse>(`/api/v1/admin/culture/sources/history/${historyId}/html`);
   },
 
+  /**
+   * Delete a fetch history record
+   *
+   * Deletes the fetch history entry and its HTML content.
+   * Requires superuser authentication.
+   * Returns 204 No Content on success, 404 if not found.
+   */
+  deleteFetchHistory: async (historyId: string): Promise<void> => {
+    return api.delete<void>(`/api/v1/admin/culture/sources/history/${historyId}`);
+  },
+
   // ============================================
   // Article Analysis
   // ============================================
