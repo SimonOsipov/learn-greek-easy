@@ -56,10 +56,7 @@ test.describe('Admin Fetch History', () => {
     // Click News tab
     await page.getByTestId('admin-tab-news').click();
 
-    // Wait for news content to be visible
-    await expect(page.getByTestId('culture-news-content')).toBeVisible({ timeout: 10000 });
-
-    // News sources section should be visible
+    // News sources section should be visible (news content is now at top level, not inside CultureAdminTabs)
     await expect(page.getByTestId('news-sources-section')).toBeVisible({ timeout: 10000 });
 
     // Should display seeded sources (from seed_news_sources)
