@@ -26,11 +26,11 @@ test.describe('Admin News Sources', () => {
     // Wait for app to be ready
     await waitForAppReady(page);
 
-    // Wait for culture tabs to load
-    await expect(page.getByTestId('culture-admin-tabs')).toBeVisible({ timeout: 15000 });
+    // Wait for admin tab switcher to load
+    await expect(page.getByTestId('admin-tab-switcher')).toBeVisible({ timeout: 15000 });
 
     // Click on the News tab to show news sources section
-    await page.getByTestId('culture-tab-news').click();
+    await page.getByTestId('admin-tab-news').click();
 
     // Wait for news sources section to load
     await expect(page.getByTestId('news-sources-section')).toBeVisible({ timeout: 15000 });
@@ -356,11 +356,11 @@ test.describe('Admin News Sources - Empty State', () => {
     await verifyAuthSucceeded(page, '/admin');
     await waitForAppReady(page);
 
-    // Wait for culture tabs to load
-    await expect(page.getByTestId('culture-admin-tabs')).toBeVisible({ timeout: 15000 });
+    // Wait for admin tab switcher to load
+    await expect(page.getByTestId('admin-tab-switcher')).toBeVisible({ timeout: 15000 });
 
     // Click on the News tab to show news sources section
-    await page.getByTestId('culture-tab-news').click();
+    await page.getByTestId('admin-tab-news').click();
 
     // Wait for sources section to load
     await expect(page.getByTestId('news-sources-section')).toBeVisible({ timeout: 15000 });

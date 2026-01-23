@@ -27,24 +27,24 @@ test.describe('Admin Fetch History', () => {
     // Wait for app to be ready
     await waitForAppReady(page);
 
-    // Wait for culture admin tabs to load
-    await expect(page.getByTestId('culture-admin-tabs')).toBeVisible({ timeout: 15000 });
+    // Wait for admin tab switcher to load
+    await expect(page.getByTestId('admin-tab-switcher')).toBeVisible({ timeout: 15000 });
   });
 
   // =============================================================================
   // Tab Navigation Tests
   // =============================================================================
 
-  test('E2E-FETCH-01: Can view Culture section tabs (Decks and News)', async ({ page }) => {
-    // Verify tab buttons container is visible
-    await expect(page.getByTestId('culture-admin-tab-buttons')).toBeVisible();
+  test('E2E-FETCH-01: Can view Admin panel tabs (Decks, News, Feedback)', async ({ page }) => {
+    // Verify tab switcher container is visible
+    await expect(page.getByTestId('admin-tab-switcher')).toBeVisible();
 
     // Verify Decks tab is visible
-    const decksTab = page.getByTestId('culture-tab-decks');
+    const decksTab = page.getByTestId('admin-tab-decks');
     await expect(decksTab).toBeVisible();
 
     // Verify News tab is visible
-    const newsTab = page.getByTestId('culture-tab-news');
+    const newsTab = page.getByTestId('admin-tab-news');
     await expect(newsTab).toBeVisible();
 
     // Default should be Decks tab (pressed)
@@ -54,7 +54,7 @@ test.describe('Admin Fetch History', () => {
 
   test('E2E-FETCH-02: News tab shows sources when clicked', async ({ page }) => {
     // Click News tab
-    await page.getByTestId('culture-tab-news').click();
+    await page.getByTestId('admin-tab-news').click();
 
     // Wait for news content to be visible
     await expect(page.getByTestId('culture-news-content')).toBeVisible({ timeout: 10000 });
@@ -72,7 +72,7 @@ test.describe('Admin Fetch History', () => {
 
   test('E2E-FETCH-03: Can trigger manual fetch', async ({ page }) => {
     // Navigate to News tab
-    await page.getByTestId('culture-tab-news').click();
+    await page.getByTestId('admin-tab-news').click();
     await expect(page.getByTestId('news-sources-section')).toBeVisible({ timeout: 10000 });
 
     // Wait for sources table to load
@@ -103,7 +103,7 @@ test.describe('Admin Fetch History', () => {
 
   test('E2E-FETCH-04: Can view fetch history (expand accordion)', async ({ page }) => {
     // Navigate to News tab
-    await page.getByTestId('culture-tab-news').click();
+    await page.getByTestId('admin-tab-news').click();
     await expect(page.getByTestId('news-sources-section')).toBeVisible({ timeout: 10000 });
 
     // Wait for sources to load
@@ -138,7 +138,7 @@ test.describe('Admin Fetch History', () => {
 
   test('E2E-FETCH-05: Can view HTML content in modal', async ({ page }) => {
     // Navigate to News tab
-    await page.getByTestId('culture-tab-news').click();
+    await page.getByTestId('admin-tab-news').click();
     await expect(page.getByTestId('news-sources-section')).toBeVisible({ timeout: 10000 });
 
     // Wait for sources to load
@@ -191,7 +191,7 @@ test.describe('Admin Fetch History - Status Display', () => {
     await waitForAppReady(page);
 
     // Navigate to News tab
-    await page.getByTestId('culture-tab-news').click();
+    await page.getByTestId('admin-tab-news').click();
     await expect(page.getByTestId('news-sources-section')).toBeVisible({ timeout: 10000 });
 
     // Wait for sources to load and expand first
