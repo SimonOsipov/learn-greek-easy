@@ -144,7 +144,10 @@ class ClaudeService:
             )
 
             tokens_used = response.usage.input_tokens + response.usage.output_tokens
-            content = response.content[0].text
+            content_block = response.content[0]
+            if not hasattr(content_block, "text"):
+                raise ClaudeServiceError("Unexpected response format from Claude API")
+            content = content_block.text
 
             logger.info(
                 "Claude API call successful",
