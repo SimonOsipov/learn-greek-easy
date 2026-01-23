@@ -19,56 +19,51 @@ const colorClasses = {
   muted: 'text-muted-foreground',
 };
 
-export const MetricCard: React.FC<MetricCardProps> = ({
-  label,
-  value,
-  sublabel,
-  color = 'primary',
-  icon,
-  loading,
-  onClick,
-  tooltip,
-}) => {
-  if (loading) {
-    return (
-      <Card className="p-6">
-        <CardContent className="space-y-2 p-0">
-          <Skeleton className="h-4 w-24" />
-          <Skeleton className="h-8 w-16" />
-          <Skeleton className="h-3 w-32" />
+export const MetricCard = React.memo<MetricCardProps>(
+  ({ label, value, sublabel, color = 'primary', icon, loading, onClick, tooltip }) => {
+    if (loading) {
+      return (
+        <Card className="p-6">
+          <CardContent className="space-y-2 p-0">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-8 w-16" />
+            <Skeleton className="h-3 w-32" />
+          </CardContent>
+        </Card>
+      );
+    }
+
+    const content = (
+      <Card
+        className="cursor-pointer transition-all hover:-translate-y-0.5 hover:shadow-md"
+        onClick={onClick}
+      >
+        <CardContent className="p-6">
+          <div className="mb-2 flex items-center justify-between">
+            <span className="text-sm text-muted-foreground">{label}</span>
+            {icon && <span className="text-2xl">{icon}</span>}
+          </div>
+          <div className={`text-2xl font-bold md:text-3xl ${colorClasses[color]}`}>{value}</div>
+          <p className="mt-1 text-xs text-muted-foreground">{sublabel}</p>
         </CardContent>
       </Card>
     );
+
+    if (tooltip) {
+      return (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>{content}</TooltipTrigger>
+            <TooltipContent>
+              <p>{tooltip}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      );
+    }
+
+    return content;
   }
+);
 
-  const content = (
-    <Card
-      className="cursor-pointer transition-all hover:-translate-y-0.5 hover:shadow-md"
-      onClick={onClick}
-    >
-      <CardContent className="p-6">
-        <div className="mb-2 flex items-center justify-between">
-          <span className="text-sm text-muted-foreground">{label}</span>
-          {icon && <span className="text-2xl">{icon}</span>}
-        </div>
-        <div className={`text-2xl font-bold md:text-3xl ${colorClasses[color]}`}>{value}</div>
-        <p className="mt-1 text-xs text-muted-foreground">{sublabel}</p>
-      </CardContent>
-    </Card>
-  );
-
-  if (tooltip) {
-    return (
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>{content}</TooltipTrigger>
-          <TooltipContent>
-            <p>{tooltip}</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-    );
-  }
-
-  return content;
-};
+MetricCard.displayName = 'MetricCard';
