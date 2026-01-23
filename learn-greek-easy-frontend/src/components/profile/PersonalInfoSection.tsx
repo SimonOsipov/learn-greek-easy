@@ -162,8 +162,10 @@ export const PersonalInfoSection: React.FC<PersonalInfoSectionProps> = ({ user }
 
     try {
       await authAPI.removeAvatar();
-      // Refresh the user state by calling checkAuth
-      await useAuthStore.getState().checkAuth();
+      // Update user state directly instead of calling checkAuth to avoid triggering full-page loader
+      useAuthStore.setState((state) => ({
+        user: state.user ? { ...state.user, avatar: undefined } : null,
+      }));
 
       toast({
         title: t('personalInfo.avatarRemoved'),

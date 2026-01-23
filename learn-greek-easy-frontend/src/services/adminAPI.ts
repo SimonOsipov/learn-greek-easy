@@ -52,7 +52,7 @@ export interface DeckStats {
  */
 export interface CultureDeckStats {
   id: string;
-  name: MultilingualName;
+  name: string;
   category: string;
   question_count: number;
 }

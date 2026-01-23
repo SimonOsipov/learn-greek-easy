@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { Menu, ChevronDown, Crown } from 'lucide-react';
+import { Menu, ChevronDown, Crown, User } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation } from 'react-router-dom';
 
@@ -201,7 +201,10 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
-                  <Link to="/profile">{t('nav.profile')}</Link>
+                  <Link to="/profile" className="flex items-center gap-2">
+                    <User className="h-4 w-4 text-muted-foreground" />
+                    {t('nav.profile')}
+                  </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   data-testid="premium-menu-item"

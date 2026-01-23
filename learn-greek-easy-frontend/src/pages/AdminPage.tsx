@@ -27,6 +27,7 @@ import {
   CultureAdminTabs,
   DeckEditModal,
   type DeckEditFormData,
+  NewsSourcesSection,
 } from '@/components/admin';
 import { CultureBadge, type CultureCategory } from '@/components/culture';
 import { DeckBadge } from '@/components/decks';
@@ -53,6 +54,7 @@ import {
   trackAdminDeckPremiumEnabled,
   trackAdminDeckReactivated,
 } from '@/lib/analytics/adminAnalytics';
+import { cn } from '@/lib/utils';
 import { adminAPI } from '@/services/adminAPI';
 import type {
   ContentStatsResponse,
@@ -512,6 +514,11 @@ const AllDecksList = forwardRef<AllDecksListHandle, AllDecksListProps>(
 AllDecksList.displayName = 'AllDecksList';
 
 /**
+ * Top-level admin tab type
+ */
+type AdminTabType = 'decks' | 'news' | 'feedback';
+
+/**
  * Admin Page
  *
  * Displays content statistics for administrators:
@@ -528,6 +535,9 @@ const AdminPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isRetrying, setIsRetrying] = useState(false);
+
+  // Top-level tab state
+  const [activeTab, setActiveTab] = useState<AdminTabType>('decks');
 
   // Deck edit modal state
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -810,66 +820,103 @@ const AdminPage: React.FC = () => {
         </p>
       </div>
 
-      {/* Summary Cards */}
-      <section aria-labelledby="summary-heading">
-        <h2 id="summary-heading" className="sr-only">
-          {t('sections.contentSummary')}
-        </h2>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <SummaryCard
-            title={t('stats.totalDecks')}
-            value={stats.total_decks}
-            icon={<Layers className="h-5 w-5 text-muted-foreground" />}
-            testId="total-decks-card"
-          />
-          <SummaryCard
-            title={t('stats.totalCards')}
-            value={stats.total_cards}
-            icon={<Database className="h-5 w-5 text-muted-foreground" />}
-            testId="total-cards-card"
-          />
+      {/* Top-Level Tab Switcher */}
+      <div className="w-full" data-testid="admin-tab-switcher">
+        <div className="flex gap-2 rounded-lg bg-muted p-1">
+          {(['decks', 'news', 'feedback'] as AdminTabType[]).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={cn(
+                'flex-1 rounded-md px-4 py-2 text-sm font-medium transition-all',
+                activeTab === tab
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:bg-background/50 hover:text-foreground'
+              )}
+              aria-pressed={activeTab === tab}
+              type="button"
+              data-testid={`admin-tab-${tab}`}
+            >
+              {t(`sources.tabs.${tab}`)}
+            </button>
+          ))}
         </div>
-      </section>
+      </div>
 
-      {/* Vocabulary Deck List */}
-      <section aria-labelledby="vocab-decks-heading">
-        <Card>
-          <CardHeader>
-            <CardTitle id="vocab-decks-heading" data-testid="decks-by-level-title">
-              {t('sections.decksByLevel')}
-            </CardTitle>
-            <CardDescription data-testid="decks-by-level-description">
-              {t('sections.decksByLevelDescription')}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {sortedDecks.length === 0 ? (
-              <p className="py-4 text-center text-muted-foreground">{t('states.noDecks')}</p>
-            ) : (
-              <div className="space-y-3">
-                {sortedDecks.map((deck) => (
-                  <DeckListItem key={deck.id} deck={deck} t={t} />
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </section>
+      {/* Decks Tab Content */}
+      {activeTab === 'decks' && (
+        <>
+          {/* Summary Cards */}
+          <section aria-labelledby="summary-heading">
+            <h2 id="summary-heading" className="sr-only">
+              {t('sections.contentSummary')}
+            </h2>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <SummaryCard
+                title={t('stats.totalDecks')}
+                value={stats.total_decks}
+                icon={<Layers className="h-5 w-5 text-muted-foreground" />}
+                testId="total-decks-card"
+              />
+              <SummaryCard
+                title={t('stats.totalCards')}
+                value={stats.total_cards}
+                icon={<Database className="h-5 w-5 text-muted-foreground" />}
+                testId="total-cards-card"
+              />
+            </div>
+          </section>
 
-      {/* Culture Section with Tabs (Decks/News) */}
-      <section aria-labelledby="culture-admin-heading">
-        <CultureAdminTabs cultureDecks={stats.culture_decks} locale={locale} t={t} />
-      </section>
+          {/* Vocabulary Deck List */}
+          <section aria-labelledby="vocab-decks-heading">
+            <Card>
+              <CardHeader>
+                <CardTitle id="vocab-decks-heading" data-testid="decks-by-level-title">
+                  {t('sections.decksByLevel')}
+                </CardTitle>
+                <CardDescription data-testid="decks-by-level-description">
+                  {t('sections.decksByLevelDescription')}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {sortedDecks.length === 0 ? (
+                  <p className="py-4 text-center text-muted-foreground">{t('states.noDecks')}</p>
+                ) : (
+                  <div className="space-y-3">
+                    {sortedDecks.map((deck) => (
+                      <DeckListItem key={deck.id} deck={deck} t={t} />
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </section>
 
-      {/* All Decks List with Search and Pagination */}
-      <section aria-labelledby="all-decks-heading">
-        <AllDecksList ref={allDecksListRef} t={t} locale={locale} onEditDeck={handleEditDeck} />
-      </section>
+          {/* Culture Decks List */}
+          <section aria-labelledby="culture-admin-heading">
+            <CultureAdminTabs cultureDecks={stats.culture_decks} t={t} />
+          </section>
 
-      {/* User Feedback Management */}
-      <section aria-labelledby="feedback-heading">
-        <AdminFeedbackSection />
-      </section>
+          {/* All Decks List with Search and Pagination */}
+          <section aria-labelledby="all-decks-heading">
+            <AllDecksList ref={allDecksListRef} t={t} locale={locale} onEditDeck={handleEditDeck} />
+          </section>
+        </>
+      )}
+
+      {/* News Tab Content */}
+      {activeTab === 'news' && (
+        <section aria-labelledby="news-sources-heading">
+          <NewsSourcesSection />
+        </section>
+      )}
+
+      {/* Feedback Tab Content */}
+      {activeTab === 'feedback' && (
+        <section aria-labelledby="feedback-heading">
+          <AdminFeedbackSection />
+        </section>
+      )}
 
       {/* Deck Edit Modal */}
       <DeckEditModal

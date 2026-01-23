@@ -17,7 +17,10 @@ interface AuthState {
   token: string | null;
   refreshToken: string | null;
   isAuthenticated: boolean;
+  // isLoading: true during auth operations (initial check, login, logout) - triggers full-page loader
   isLoading: boolean;
+  // isProfileUpdating: true during profile operations (update profile, change password) - no full-page loader
+  isProfileUpdating: boolean;
   error: AuthError | null;
   rememberMe: boolean;
   _hasHydrated: boolean;
@@ -40,6 +43,7 @@ export const useAuthStore = create<AuthState>()(
       refreshToken: null,
       isAuthenticated: false,
       isLoading: false,
+      isProfileUpdating: false,
       error: null,
       rememberMe: false,
       _hasHydrated: false,
@@ -91,7 +95,7 @@ export const useAuthStore = create<AuthState>()(
           throw new Error('No user logged in');
         }
 
-        set({ isLoading: true, error: null });
+        set({ isProfileUpdating: true, error: null });
 
         try {
           // Build API request
@@ -142,12 +146,12 @@ export const useAuthStore = create<AuthState>()(
 
           set({
             user: updatedUser,
-            isLoading: false,
+            isProfileUpdating: false,
             error: null,
           });
         } catch (error) {
           set({
-            isLoading: false,
+            isProfileUpdating: false,
             error: error as AuthError,
           });
           throw error;
@@ -162,7 +166,7 @@ export const useAuthStore = create<AuthState>()(
           throw new Error('No user logged in');
         }
 
-        set({ isLoading: true, error: null });
+        set({ isProfileUpdating: true, error: null });
 
         try {
           // TODO: In production, verify currentPassword and update via backend API
@@ -173,12 +177,12 @@ export const useAuthStore = create<AuthState>()(
           // await mockAuthAPI.updatePassword(user.id, currentPassword, newPassword);
 
           set({
-            isLoading: false,
+            isProfileUpdating: false,
             error: null,
           });
         } catch (error) {
           set({
-            isLoading: false,
+            isProfileUpdating: false,
             error: error as AuthError,
           });
           throw error;
