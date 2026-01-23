@@ -133,8 +133,14 @@ export type {
 // Admin API
 export { adminAPI } from './adminAPI';
 export type {
+  AnalysisStartedResponse,
   ContentStatsResponse,
   DeckStats,
+  DiscoveredArticle,
+  FetchHistoryDetailResponse,
+  FetchHistoryItem,
+  FetchHistoryResponse,
+  FetchHtmlResponse,
   ListNewsSourcesParams,
   NewsSourceCreatePayload,
   NewsSourceListResponse,

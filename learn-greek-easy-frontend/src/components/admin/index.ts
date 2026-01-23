@@ -7,6 +7,7 @@ export { CultureAdminTabs } from './CultureAdminTabs';
 export { CultureDeckEditForm, type CultureDeckFormData } from './CultureDeckEditForm';
 export { DeactivationWarningDialog } from './DeactivationWarningDialog';
 export { DeckEditModal, type DeckEditFormData } from './DeckEditModal';
+export { DiscoveredArticlesModal } from './DiscoveredArticlesModal';
 export { FetchHistoryTable } from './FetchHistoryTable';
 export { HtmlViewerModal } from './HtmlViewerModal';
 export { NewsSourceDeleteDialog } from './NewsSourceDeleteDialog';

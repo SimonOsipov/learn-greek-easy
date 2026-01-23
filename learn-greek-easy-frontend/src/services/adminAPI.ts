@@ -196,6 +196,11 @@ export interface FetchHistoryItem {
   error_message: string | null;
   trigger_type: 'manual' | 'scheduled';
   final_url: string | null;
+  // Analysis fields
+  analysis_status: 'pending' | 'completed' | 'failed' | null;
+  analysis_error: string | null;
+  analysis_tokens_used: number | null;
+  analyzed_at: string | null;
 }
 
 /**
@@ -214,6 +219,48 @@ export interface FetchHtmlResponse {
   html_content: string;
   fetched_at: string;
   final_url: string | null;
+}
+
+// ============================================
+// Article Analysis Types
+// ============================================
+
+/**
+ * A discovered article from AI analysis
+ */
+export interface DiscoveredArticle {
+  url: string;
+  title: string;
+  reasoning: string;
+}
+
+/**
+ * Detailed fetch history response including discovered articles
+ */
+export interface FetchHistoryDetailResponse {
+  id: string;
+  source_id: string;
+  fetched_at: string;
+  status: 'success' | 'error';
+  html_size_bytes: number | null;
+  error_message: string | null;
+  trigger_type: 'manual' | 'scheduled';
+  final_url: string | null;
+  analysis_status: 'pending' | 'completed' | 'failed' | null;
+  analysis_error: string | null;
+  analysis_tokens_used: number | null;
+  analyzed_at: string | null;
+  discovered_articles: DiscoveredArticle[] | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Response when triggering analysis
+ */
+export interface AnalysisStartedResponse {
+  message: string;
+  history_id: string;
 }
 
 // ============================================
@@ -400,5 +447,33 @@ export const adminAPI = {
    */
   getFetchHtml: async (historyId: string): Promise<FetchHtmlResponse> => {
     return api.get<FetchHtmlResponse>(`/api/v1/admin/culture/sources/history/${historyId}/html`);
+  },
+
+  // ============================================
+  // Article Analysis
+  // ============================================
+
+  /**
+   * Trigger AI analysis for a fetch history record
+   *
+   * Starts background analysis of the HTML content to discover articles.
+   * Requires superuser authentication.
+   */
+  triggerAnalysis: async (historyId: string): Promise<AnalysisStartedResponse> => {
+    return api.post<AnalysisStartedResponse>(
+      `/api/v1/admin/culture/sources/history/${historyId}/analyze`
+    );
+  },
+
+  /**
+   * Get analysis results (discovered articles) for a fetch history record
+   *
+   * Returns the full history record including discovered articles.
+   * Requires superuser authentication.
+   */
+  getAnalysisResults: async (historyId: string): Promise<FetchHistoryDetailResponse> => {
+    return api.get<FetchHistoryDetailResponse>(
+      `/api/v1/admin/culture/sources/history/${historyId}/articles`
+    );
   },
 };

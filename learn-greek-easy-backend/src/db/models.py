@@ -38,6 +38,7 @@ from sqlalchemy import (
     func,
     text,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.db.base import Base, TimestampMixin
@@ -1700,6 +1701,33 @@ class SourceFetchHistory(Base, TimestampMixin):
         String(500),
         nullable=True,
         comment="Final URL after redirects",
+    )
+
+    # AI Analysis fields
+    analysis_status: Mapped[str | None] = mapped_column(
+        String(20),
+        nullable=True,
+        comment="Analysis status: pending, completed, failed (null if not started)",
+    )
+    discovered_articles: Mapped[dict | None] = mapped_column(
+        JSONB,
+        nullable=True,
+        comment="Array of discovered articles from AI analysis",
+    )
+    analysis_error: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        comment="Error message if analysis failed",
+    )
+    analysis_tokens_used: Mapped[int | None] = mapped_column(
+        Integer,
+        nullable=True,
+        comment="Number of API tokens consumed during analysis",
+    )
+    analyzed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        comment="Timestamp when analysis completed",
     )
 
     # Relationship

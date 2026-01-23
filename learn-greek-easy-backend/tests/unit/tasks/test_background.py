@@ -66,6 +66,7 @@ class TestModuleImports:
         expected_exports = [
             # Background tasks (API-side)
             "ANALYTICS_EVENTS",
+            "analyze_fetch_for_articles_task",
             "check_achievements_task",
             "check_culture_achievements_task",
             "invalidate_cache_task",
@@ -74,6 +75,7 @@ class TestModuleImports:
             "process_answer_side_effects_task",
             "process_culture_answer_full_async",
             "recalculate_progress_task",
+            "trigger_article_analysis",
             # Scheduler (dedicated service)
             "get_scheduler",
             "setup_scheduler",

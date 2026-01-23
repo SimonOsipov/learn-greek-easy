@@ -455,6 +455,30 @@ class Settings(BaseSettings):
     )
 
     # =========================================================================
+    # Claude API (Anthropic)
+    # =========================================================================
+    anthropic_api_key: str = Field(
+        default="",
+        description="Anthropic Claude API key for AI-powered article analysis",
+    )
+    claude_model: str = Field(
+        default="claude-sonnet-4-20250514",
+        description="Claude model to use for article analysis",
+    )
+    claude_max_tokens: int = Field(
+        default=4096,
+        description="Maximum response tokens for Claude API calls",
+    )
+    claude_temperature: float = Field(
+        default=0.0,
+        description="Temperature for Claude API calls (0.0 = deterministic)",
+    )
+    claude_timeout: int = Field(
+        default=120,
+        description="Timeout in seconds for Claude API calls",
+    )
+
+    # =========================================================================
     # Business Logic
     # =========================================================================
     srs_initial_ease_factor: float = Field(default=2.5, description="Initial ease factor")

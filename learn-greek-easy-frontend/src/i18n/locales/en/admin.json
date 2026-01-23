@@ -123,6 +123,7 @@
       "title": "Fetch History",
       "empty": "No fetch history yet",
       "viewHtml": "View HTML",
+      "viewArticles": "View Articles",
       "status": {
         "success": "Success",
         "error": "Error"
@@ -216,6 +217,17 @@
     },
     "states": {
       "noSources": "No news sources configured. Add your first source to get started."
+    },
+    "articles": {
+      "title": "Discovered Articles",
+      "analyzing": "Analyzing content...",
+      "failed": "Analysis Failed",
+      "retry": "Retry Analysis",
+      "noArticles": "No Articles Found",
+      "noArticlesDesc": "No suitable articles for Cypriot culture questions were found in this content.",
+      "found": "{{count}} articles found",
+      "tokens": "tokens",
+      "reasoning": "Why"
     }
   },
   "feedback": {

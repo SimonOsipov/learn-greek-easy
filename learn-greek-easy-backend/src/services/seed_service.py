@@ -85,6 +85,12 @@ class FetchHistorySeedData(TypedDict, total=False):
     error_message: str
     trigger_type: str
     days_ago: int
+    # Analysis fields
+    analysis_status: str  # pending, completed, failed
+    discovered_articles: list[dict[str, str]] | None
+    analysis_error: str
+    analysis_tokens_used: int
+    analyzed_minutes_after: int  # Minutes after fetched_at
 
 
 class SeedService:
@@ -2314,38 +2320,77 @@ class SeedService:
 
     # Fetch history data for seeding
     FETCH_HISTORY_DATA: list[FetchHistorySeedData] = [
+        # Entry 1: Scheduled fetch 1 day ago - completed analysis with 2 articles
         {
             "status": "success",
-            "html_content": "<!DOCTYPE html><html><head><title>Test</title></head><body><h1>Test News</h1></body></html>",
+            "html_content": "<!DOCTYPE html><html><head><title>Greek News</title></head><body><h1>Latest from Cyprus</h1><article><a href='/news/cypriot-culture'>Cypriot Culture Event</a></article></body></html>",
             "trigger_type": "scheduled",
             "days_ago": 1,
+            "analysis_status": "completed",
+            "discovered_articles": [
+                {
+                    "url": "https://e2e-source.test/news/cypriot-independence",
+                    "title": "Cypriot Independence Day Celebrations 2026",
+                    "reasoning": "Relevant for citizenship exam: covers national holidays and historical events",
+                },
+                {
+                    "url": "https://e2e-source.test/news/traditional-easter",
+                    "title": "Παραδοσιακό Πάσχα στην Κύπρο",
+                    "reasoning": "Relevant for citizenship exam: covers religious traditions and customs",
+                },
+            ],
+            "analysis_tokens_used": 15420,
+            "analyzed_minutes_after": 5,
         },
+        # Entry 2: Scheduled fetch 2 days ago - completed analysis with 0 articles
         {
             "status": "success",
-            "html_content": "<!DOCTYPE html><html><head><title>Test 2</title></head><body><h1>More News</h1></body></html>",
+            "html_content": "<!DOCTYPE html><html><head><title>Sports</title></head><body><h1>Football Results</h1><p>Match scores...</p></body></html>",
             "trigger_type": "scheduled",
             "days_ago": 2,
+            "analysis_status": "completed",
+            "discovered_articles": [],  # No relevant articles found
+            "analysis_tokens_used": 8500,
+            "analyzed_minutes_after": 5,
         },
+        # Entry 3: Manual fetch today - pending analysis (still analyzing)
         {
             "status": "success",
-            "html_content": "<!DOCTYPE html><html><head><title>Manual</title></head><body><p>Manual fetch</p></body></html>",
+            "html_content": "<!DOCTYPE html><html><head><title>Breaking</title></head><body><p>New content being analyzed...</p></body></html>",
             "trigger_type": "manual",
             "days_ago": 0,
+            "analysis_status": "pending",
+            # No discovered_articles, analysis_tokens_used, or analyzed_at for pending
         },
+        # Entry 4: Scheduled fetch 3 days ago - fetch error (no analysis)
         {
             "status": "error",
             "error_message": "Connection timeout after 30s",
             "trigger_type": "scheduled",
             "days_ago": 3,
+            # No analysis fields - fetch failed so analysis never started
+        },
+        # Entry 5: Scheduled fetch 4 days ago - fetch succeeded but analysis failed
+        {
+            "status": "success",
+            "html_content": "<!DOCTYPE html><html><head><title>News</title></head><body><p>Content that caused API timeout</p></body></html>",
+            "trigger_type": "scheduled",
+            "days_ago": 4,
+            "analysis_status": "failed",
+            "analysis_error": "Claude API timeout after 120 seconds",
+            # No discovered_articles or analysis_tokens_used for failed analysis
         },
     ]
 
     async def seed_fetch_history(self) -> dict[str, Any]:
         """Seed fetch history for news sources.
 
-        Creates fetch history entries for E2E testing:
-        - 3 successful fetches (2 scheduled, 1 manual)
-        - 1 failed fetch
+        Creates fetch history entries for E2E testing with various analysis states:
+        - Completed analysis with articles found
+        - Completed analysis with no articles found (empty)
+        - Pending analysis (still processing)
+        - Fetch error (no analysis attempted)
+        - Fetch succeeded but analysis failed
 
         Requires news sources to be seeded first.
 
@@ -2373,6 +2418,18 @@ class SeedService:
             trigger_type: str = data.get("trigger_type", "manual")
             error_message: str | None = data.get("error_message")
 
+            # Analysis fields
+            analysis_status: str | None = data.get("analysis_status")
+            discovered_articles: list[dict[str, str]] | None = data.get("discovered_articles")
+            analysis_error: str | None = data.get("analysis_error")
+            analysis_tokens_used: int | None = data.get("analysis_tokens_used")
+            analyzed_minutes_after: int | None = data.get("analyzed_minutes_after")
+
+            # Calculate analyzed_at from fetched_at + minutes offset
+            analyzed_at = None
+            if analyzed_minutes_after is not None:
+                analyzed_at = fetched_at + timedelta(minutes=analyzed_minutes_after)
+
             entry = SourceFetchHistory(
                 source_id=source.id,
                 fetched_at=fetched_at,
@@ -2382,12 +2439,19 @@ class SeedService:
                 error_message=error_message,
                 trigger_type=trigger_type,
                 final_url=source.url if status == "success" else None,
+                # Analysis fields
+                analysis_status=analysis_status,
+                discovered_articles=discovered_articles,
+                analysis_error=analysis_error,
+                analysis_tokens_used=analysis_tokens_used,
+                analyzed_at=analyzed_at,
             )
             self.db.add(entry)
             entries_created.append(
                 {
                     "status": data["status"],
                     "trigger_type": data["trigger_type"],
+                    "analysis_status": analysis_status,
                 }
             )
 

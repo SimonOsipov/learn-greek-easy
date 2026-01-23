@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 
 import { format } from 'date-fns';
-import { AlertCircle, Eye, RefreshCw } from 'lucide-react';
+import { AlertCircle, Eye, FileText, Loader2, RefreshCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -21,6 +21,7 @@ import {
 import { adminAPI } from '@/services/adminAPI';
 import type { FetchHistoryItem, FetchHtmlResponse } from '@/services/adminAPI';
 
+import { DiscoveredArticlesModal } from './DiscoveredArticlesModal';
 import { HtmlViewerModal } from './HtmlViewerModal';
 
 interface FetchHistoryTableProps {
@@ -63,6 +64,10 @@ export const FetchHistoryTable: React.FC<FetchHistoryTableProps> = ({
   const [htmlContent, setHtmlContent] = useState<FetchHtmlResponse | null>(null);
   const [isLoadingHtml, setIsLoadingHtml] = useState<string | null>(null);
 
+  // Articles modal state
+  const [articlesModalOpen, setArticlesModalOpen] = useState(false);
+  const [selectedHistoryItem, setSelectedHistoryItem] = useState<FetchHistoryItem | null>(null);
+
   const fetchHistory = useCallback(async () => {
     try {
       setError(null);
@@ -98,6 +103,18 @@ export const FetchHistoryTable: React.FC<FetchHistoryTableProps> = ({
     setHtmlModalOpen(open);
     if (!open) {
       setHtmlContent(null);
+    }
+  };
+
+  const handleViewArticles = (item: FetchHistoryItem) => {
+    setSelectedHistoryItem(item);
+    setArticlesModalOpen(true);
+  };
+
+  const handleArticlesModalClose = (open: boolean) => {
+    setArticlesModalOpen(open);
+    if (!open) {
+      setSelectedHistoryItem(null);
     }
   };
 
@@ -182,20 +199,43 @@ export const FetchHistoryTable: React.FC<FetchHistoryTableProps> = ({
               </TableCell>
               <TableCell className="text-right">
                 {item.status === 'success' && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleViewHtml(item.id)}
-                    disabled={isLoadingHtml === item.id}
-                    data-testid={`view-html-${item.id}`}
-                  >
-                    {isLoadingHtml === item.id ? (
-                      <RefreshCw className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
-                    <span className="ml-1">{t('sources.history.viewHtml')}</span>
-                  </Button>
+                  <div className="flex items-center justify-end gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleViewHtml(item.id)}
+                      disabled={isLoadingHtml === item.id}
+                      data-testid={`view-html-${item.id}`}
+                    >
+                      {isLoadingHtml === item.id ? (
+                        <RefreshCw className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                      <span className="ml-1">{t('sources.history.viewHtml')}</span>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleViewArticles(item)}
+                      disabled={item.analysis_status === 'pending'}
+                      data-testid={`view-articles-${item.id}`}
+                      className={
+                        item.analysis_status === 'failed'
+                          ? 'text-destructive hover:text-destructive'
+                          : ''
+                      }
+                    >
+                      {item.analysis_status === 'pending' ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : item.analysis_status === 'failed' ? (
+                        <AlertCircle className="h-4 w-4" />
+                      ) : (
+                        <FileText className="h-4 w-4" />
+                      )}
+                      <span className="ml-1">{t('sources.history.viewArticles')}</span>
+                    </Button>
+                  </div>
                 )}
               </TableCell>
             </TableRow>
@@ -210,6 +250,14 @@ export const FetchHistoryTable: React.FC<FetchHistoryTableProps> = ({
         htmlContent={htmlContent?.html_content || null}
         fetchedAt={htmlContent?.fetched_at || null}
         finalUrl={htmlContent?.final_url || null}
+      />
+
+      {/* Discovered Articles Modal */}
+      <DiscoveredArticlesModal
+        open={articlesModalOpen}
+        onOpenChange={handleArticlesModalClose}
+        historyItem={selectedHistoryItem}
+        sourceName=""
       />
     </>
   );
