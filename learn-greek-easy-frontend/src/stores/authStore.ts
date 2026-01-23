@@ -370,16 +370,16 @@ export const useAuthStore = create<AuthState>()(
     {
       name: 'auth-storage',
       storage: createJSONStorage(() => localStorage),
-      partialize: (state) =>
-        state.rememberMe
-          ? ({
-              user: state.user,
-              token: state.token,
-              refreshToken: state.refreshToken,
-              rememberMe: true,
-              isAuthenticated: state.isAuthenticated,
-            } as Partial<AuthState>)
-          : ({} as Partial<AuthState>),
+      // Always persist auth state to localStorage regardless of rememberMe.
+      // The rememberMe flag affects token expiration on the backend, not frontend storage.
+      // Users should stay logged in during their browser session.
+      partialize: (state) => ({
+        user: state.user,
+        token: state.token,
+        refreshToken: state.refreshToken,
+        rememberMe: state.rememberMe,
+        isAuthenticated: state.isAuthenticated,
+      }),
       onRehydrateStorage: () => (state) => {
         if (state) {
           state._hasHydrated = true;

@@ -15,10 +15,11 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   children,
 }) => {
   const location = useLocation();
-  const { isAuthenticated, user, isLoading } = useAuthStore();
+  const { isAuthenticated, user, isLoading, _hasHydrated } = useAuthStore();
 
-  // Show loading state while checking auth
-  if (isLoading) {
+  // Show loading state while checking auth or waiting for hydration
+  // Wait for hydration to prevent flash redirect before localStorage is read
+  if (isLoading || !_hasHydrated) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="space-y-4 text-center">
