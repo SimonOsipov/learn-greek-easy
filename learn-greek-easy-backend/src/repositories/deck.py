@@ -229,3 +229,26 @@ class DeckRepository(BaseRepository[Deck]):
             query = query.where(Deck.level == level)
         result = await self.db.execute(query)
         return result.scalar() or 0
+
+    async def get_batch_card_counts(self, deck_ids: list[UUID]) -> dict[UUID, int]:
+        """Get card counts for multiple decks efficiently.
+
+        Args:
+            deck_ids: List of deck UUIDs to count cards for
+
+        Returns:
+            Dict mapping deck_id to card count
+
+        Use Case:
+            Batch loading deck statistics to avoid N+1 queries
+        """
+        if not deck_ids:
+            return {}
+
+        query = (
+            select(Card.deck_id, func.count(Card.id).label("count"))
+            .where(Card.deck_id.in_(deck_ids))
+            .group_by(Card.deck_id)
+        )
+        result = await self.db.execute(query)
+        return {row[0]: row[1] for row in result.all()}

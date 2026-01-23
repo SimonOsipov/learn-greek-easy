@@ -531,6 +531,62 @@ class CultureQuestionStatsRepository(BaseRepository[CultureQuestionStats]):
         )
         return int(result.rowcount) if result.rowcount else 0  # type: ignore[attr-defined]
 
+    async def get_batch_deck_stats(self, user_id: UUID, deck_ids: list[UUID]) -> dict[UUID, dict]:
+        """Get aggregated culture stats for multiple decks in one query.
+
+        IMPORTANT: Must JOIN CultureQuestion table to access deck_id since
+        CultureQuestionStats only has question_id, not deck_id directly.
+
+        Args:
+            user_id: User UUID
+            deck_ids: List of culture deck UUIDs to get stats for
+
+        Returns:
+            Dict mapping deck_id to stats dict with keys:
+            - has_started: True (if in results, user has started)
+            - total: total questions with stats
+            - mastered: count of mastered questions
+            - last_practiced: last review timestamp (updated_at)
+            - due_count: count of questions due for review
+
+        Use Case:
+            Batch loading culture deck statistics to avoid N+1 queries
+        """
+        if not deck_ids:
+            return {}
+
+        today = date.today()
+
+        query = (
+            select(
+                CultureQuestion.deck_id,
+                func.count(CultureQuestionStats.id).label("total"),
+                func.count()
+                .filter(CultureQuestionStats.status == CardStatus.MASTERED)
+                .label("mastered"),
+                func.max(CultureQuestionStats.updated_at).label("last_practiced"),
+                func.count()
+                .filter(CultureQuestionStats.next_review_date <= today)
+                .label("due_count"),
+            )
+            .join(CultureQuestion, CultureQuestionStats.question_id == CultureQuestion.id)
+            .where(CultureQuestionStats.user_id == user_id)
+            .where(CultureQuestion.deck_id.in_(deck_ids))
+            .group_by(CultureQuestion.deck_id)
+        )
+
+        result = await self.db.execute(query)
+        return {
+            row.deck_id: {
+                "has_started": True,  # If in results, user has started
+                "total": row.total,
+                "mastered": row.mastered,
+                "last_practiced": row.last_practiced,
+                "due_count": row.due_count,
+            }
+            for row in result.all()
+        }
+
 
 # ============================================================================
 # Module Exports

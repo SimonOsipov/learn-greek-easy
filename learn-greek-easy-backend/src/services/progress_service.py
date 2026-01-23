@@ -548,10 +548,23 @@ class ProgressService:
         all_deck_summaries: list[DeckProgressSummary] = []
 
         # =====================================================================
-        # 1. Get vocabulary deck progress (existing logic)
+        # 1. Get vocabulary deck progress (batch optimized)
         # =====================================================================
         progress_records = await self.progress_repo.get_user_progress(
             user_id, skip=0, limit=1000  # Get all, we'll paginate combined list
+        )
+
+        # Extract deck IDs for batch queries
+        vocab_deck_ids = [p.deck_id for p in progress_records if p.deck]
+
+        # Batch fetch all data BEFORE the loop (reduces N+1 queries)
+        batch_card_counts = (
+            await self.deck_repo.get_batch_card_counts(vocab_deck_ids) if vocab_deck_ids else {}
+        )
+        batch_stats = (
+            await self.stats_repo.get_batch_stats_by_deck(user_id, vocab_deck_ids)
+            if vocab_deck_ids
+            else {}
         )
 
         for progress in progress_records:
@@ -559,15 +572,15 @@ class ProgressService:
             if not deck:
                 continue
 
-            # Get total cards in deck
-            total_cards = await self.deck_repo.count_cards(deck.id)
+            # Use pre-fetched batch data instead of individual queries
+            total_cards = batch_card_counts.get(deck.id, 0)
+            stats = batch_stats.get(
+                deck.id, {"new": 0, "learning": 0, "mastered": 0, "due": 0, "avg_ef": 2.5}
+            )
 
-            # Get due cards for this deck
-            status_counts = await self.stats_repo.count_by_status(user_id, deck_id=deck.id)
-            cards_due = status_counts.get("due", 0)
-
-            # Get average EF
-            avg_ef = await self.stats_repo.get_average_easiness_factor(user_id, deck_id=deck.id)
+            # Get cards due from batch stats (next_review_date <= today)
+            cards_due = stats.get("due", 0)
+            avg_ef = stats.get("avg_ef", 2.5)
 
             # Calculate percentages
             mastery_pct = 0.0
@@ -597,37 +610,39 @@ class ProgressService:
             )
 
         # =====================================================================
-        # 2. Get culture deck progress
+        # 2. Get culture deck progress (batch optimized)
         # =====================================================================
         culture_decks = await self.culture_deck_repo.list_active(skip=0, limit=1000)
 
+        # Extract culture deck IDs for batch queries
+        culture_deck_ids = [cd.id for cd in culture_decks]
+
+        # Batch fetch all culture deck data BEFORE the loop (reduces N+1 queries)
+        batch_culture_stats = (
+            await self.culture_stats_repo.get_batch_deck_stats(user_id, culture_deck_ids)
+            if culture_deck_ids
+            else {}
+        )
+        batch_question_counts = (
+            await self.culture_deck_repo.get_batch_question_counts(culture_deck_ids)
+            if culture_deck_ids
+            else {}
+        )
+
         for culture_deck in culture_decks:
-            # Check if user has started this deck
-            has_started = await self.culture_stats_repo.has_user_started_deck(
-                user_id, culture_deck.id
-            )
-            if not has_started:
-                continue  # Only include decks user has practiced
+            # Use pre-fetched batch data to check if user has started this deck
+            deck_stats = batch_culture_stats.get(culture_deck.id)
+            if not deck_stats:
+                continue  # User hasn't started this deck, skip it
 
-            # Get progress stats for this culture deck
-            deck_progress = await self.culture_stats_repo.get_deck_progress(
-                user_id, culture_deck.id
-            )
+            # Get total questions from batch data
+            total_cards = batch_question_counts.get(culture_deck.id, 0)
 
-            # Get last practiced timestamp
-            last_practiced = await self.culture_stats_repo.get_last_practiced_at(
-                user_id, culture_deck.id
-            )
-
-            # Get due questions for this deck
-            cards_due = await self.culture_stats_repo.count_due_questions(
-                user_id, deck_id=culture_deck.id
-            )
-
-            # Map culture deck progress to DeckProgressSummary
-            total_cards = deck_progress["questions_total"]
-            cards_mastered = deck_progress["questions_mastered"]
-            cards_studied = deck_progress["questions_learning"] + cards_mastered
+            # Extract stats from batch data
+            cards_mastered = deck_stats.get("mastered", 0)
+            cards_studied = deck_stats.get("total", 0)  # total stats = total studied
+            cards_due = deck_stats.get("due_count", 0)
+            last_practiced = deck_stats.get("last_practiced")
 
             # Calculate percentages
             mastery_pct = 0.0
