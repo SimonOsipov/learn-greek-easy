@@ -1344,7 +1344,15 @@ class CultureQuestionStats(Base, TimestampMixin):
     """
 
     __tablename__ = "culture_question_stats"
-    __table_args__ = (UniqueConstraint("user_id", "question_id", name="uq_user_culture_question"),)
+    __table_args__ = (
+        UniqueConstraint("user_id", "question_id", name="uq_user_culture_question"),
+        Index(
+            "ix_culture_question_stats_user_due_questions",
+            "user_id",
+            "next_review_date",
+            "status",
+        ),
+    )
 
     # Primary key
     id: Mapped[UUID] = mapped_column(
