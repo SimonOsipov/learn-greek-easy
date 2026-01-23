@@ -53,6 +53,7 @@ class TestAuthResponse(BaseModel):
     token_type: str = "Bearer"
     user_id: str
     email: str
+    is_superuser: bool
 
 
 router = APIRouter(
@@ -525,6 +526,7 @@ async def get_test_auth(
         refresh_token=refresh_token,
         user_id=str(user.id),
         email=user.email,
+        is_superuser=user.is_superuser,
     )
 
 
@@ -595,6 +597,7 @@ async def create_test_user(
         refresh_token=refresh_token,
         user_id=str(user.id),
         email=user.email,
+        is_superuser=user.is_superuser,
     )
 
 

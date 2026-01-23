@@ -236,7 +236,7 @@ async function authenticateViaSeedAPI(
       id: tokens.user_id,
       email: userEmail,
       name: userName,  // Frontend uses 'name', not 'full_name'
-      role: userEmail.includes('admin') ? 'admin' : 'free',
+      role: tokens.is_superuser ? 'admin' : 'free',
       preferences: {
         language: 'en',
         dailyGoal: 20,
