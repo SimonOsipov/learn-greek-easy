@@ -7,6 +7,7 @@ business rules validation, and domain logic.
 
 from src.services.achievement_service import AchievementService
 from src.services.auth_service import AuthService
+from src.services.claude_service import ClaudeService, ClaudeServiceError, claude_service
 from src.services.culture_deck_service import CultureDeckService
 from src.services.culture_question_service import CultureQuestionService
 from src.services.feedback_admin_service import FeedbackAdminService
@@ -25,6 +26,8 @@ from src.services.xp_service import XPService
 __all__ = [
     "AchievementService",
     "AuthService",
+    "ClaudeService",
+    "ClaudeServiceError",
     "CultureDeckService",
     "CultureQuestionService",
     "DeletionResult",
@@ -41,5 +44,6 @@ __all__ = [
     "UserDeletionService",
     "UserProgressResetService",
     "XPService",
+    "claude_service",
     "get_s3_service",
 ]
