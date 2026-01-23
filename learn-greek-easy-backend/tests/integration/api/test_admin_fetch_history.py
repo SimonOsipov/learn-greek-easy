@@ -4,6 +4,7 @@ This module tests the admin fetch history endpoints:
 - POST /api/v1/admin/culture/sources/{id}/fetch - Trigger manual fetch
 - GET /api/v1/admin/culture/sources/{id}/history - Get fetch history
 - GET /api/v1/admin/culture/sources/history/{id}/html - Get HTML content
+- DELETE /api/v1/admin/culture/sources/history/{id} - Delete history entry
 
 Tests cover:
 - Authentication requirements (401 without auth)
@@ -431,3 +432,151 @@ class TestGetFetchHtmlEndpoint:
         assert "html_content" in data
         assert "fetched_at" in data
         assert "final_url" in data
+
+
+# =============================================================================
+# Delete Fetch History Endpoint Tests
+# =============================================================================
+
+
+class TestDeleteFetchHistoryEndpoint:
+    """Test suite for DELETE /api/v1/admin/culture/sources/history/{id} endpoint."""
+
+    @pytest.mark.asyncio
+    async def test_delete_history_returns_401_without_auth(
+        self,
+        client: AsyncClient,
+    ):
+        """Test that unauthenticated request returns 401 Unauthorized."""
+        fake_id = uuid4()
+        response = await client.delete(f"/api/v1/admin/culture/sources/history/{fake_id}")
+
+        assert response.status_code == 401
+
+    @pytest.mark.asyncio
+    async def test_delete_history_returns_403_for_regular_user(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+    ):
+        """Test that non-superuser gets 403 Forbidden."""
+        fake_id = uuid4()
+        response = await client.delete(
+            f"/api/v1/admin/culture/sources/history/{fake_id}",
+            headers=auth_headers,
+        )
+
+        assert response.status_code == 403
+        error = response.json()
+        assert error.get("success") is False
+        assert error.get("error", {}).get("code") == "FORBIDDEN"
+
+    @pytest.mark.asyncio
+    async def test_delete_history_not_found(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+    ):
+        """Test that deleting non-existent history returns 404."""
+        fake_id = uuid4()
+        response = await client.delete(
+            f"/api/v1/admin/culture/sources/history/{fake_id}",
+            headers=superuser_auth_headers,
+        )
+
+        assert response.status_code == 404
+
+    @pytest.mark.asyncio
+    async def test_delete_history_success(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        db_session: AsyncSession,
+    ):
+        """Test successfully deleting a fetch history record."""
+        # Arrange - Create a source with fetch history
+        source = await NewsSourceFactory.create(name="Delete Test Source")
+        history = await SourceFetchHistoryFactory.create(
+            source_id=source.id,
+            html_content="<html><body>Test</body></html>",
+        )
+        history_id = history.id
+
+        # Act
+        response = await client.delete(
+            f"/api/v1/admin/culture/sources/history/{history_id}",
+            headers=superuser_auth_headers,
+        )
+
+        # Assert
+        assert response.status_code == 204
+
+        # Verify the history entry is deleted
+        verify_response = await client.get(
+            f"/api/v1/admin/culture/sources/history/{history_id}/html",
+            headers=superuser_auth_headers,
+        )
+        assert verify_response.status_code == 404
+
+    @pytest.mark.asyncio
+    async def test_delete_history_error_entry(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        db_session: AsyncSession,
+    ):
+        """Test successfully deleting an error fetch history record."""
+        # Arrange - Create a source with error fetch history
+        source = await NewsSourceFactory.create(name="Delete Error Test Source")
+        history = await SourceFetchHistoryFactory.create(
+            source_id=source.id,
+            error=True,  # This sets html_content to None
+        )
+        history_id = history.id
+
+        # Act
+        response = await client.delete(
+            f"/api/v1/admin/culture/sources/history/{history_id}",
+            headers=superuser_auth_headers,
+        )
+
+        # Assert
+        assert response.status_code == 204
+
+    @pytest.mark.asyncio
+    async def test_delete_history_removes_from_list(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        db_session: AsyncSession,
+    ):
+        """Test that deleted history is removed from the history list."""
+        # Arrange - Create a source with multiple history entries
+        source = await NewsSourceFactory.create(name="Delete List Test Source")
+        history1 = await SourceFetchHistoryFactory.create(source_id=source.id)
+        history2 = await SourceFetchHistoryFactory.create(source_id=source.id)
+
+        # Verify both entries exist
+        list_response = await client.get(
+            f"/api/v1/admin/culture/sources/{source.id}/history",
+            headers=superuser_auth_headers,
+        )
+        assert list_response.status_code == 200
+        assert list_response.json()["total"] == 2
+
+        # Act - Delete one entry
+        response = await client.delete(
+            f"/api/v1/admin/culture/sources/history/{history1.id}",
+            headers=superuser_auth_headers,
+        )
+        assert response.status_code == 204
+
+        # Assert - Only one entry remains
+        verify_response = await client.get(
+            f"/api/v1/admin/culture/sources/{source.id}/history",
+            headers=superuser_auth_headers,
+        )
+        assert verify_response.status_code == 200
+        data = verify_response.json()
+        assert data["total"] == 1
+        assert data["items"][0]["id"] == str(history2.id)
