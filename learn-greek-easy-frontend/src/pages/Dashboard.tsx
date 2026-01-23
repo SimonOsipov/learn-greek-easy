@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
@@ -92,8 +92,8 @@ export const Dashboard: React.FC = () => {
     }
   };
 
-  // Build metrics from analytics data
-  const buildMetrics = (): Metric[] => {
+  // Build metrics from analytics data (memoized)
+  const metrics = useMemo((): Metric[] => {
     if (!analyticsData) {
       return [];
     }
@@ -145,13 +145,17 @@ export const Dashboard: React.FC = () => {
         icon: '⏱️',
       },
     ];
-  };
+  }, [analyticsData, t]);
 
   // formatStudyTime is now imported from '@/lib/timeFormatUtils' with day support
 
-  // Get active decks (in-progress or with progress)
-  const activeDecks = decks.filter(
-    (deck) => deck.progress?.status === 'in-progress' || (deck.progress?.cardsReview ?? 0) > 0
+  // Get active decks (in-progress or with progress) - memoized
+  const activeDecks = useMemo(
+    () =>
+      decks.filter(
+        (deck) => deck.progress?.status === 'in-progress' || (deck.progress?.cardsReview ?? 0) > 0
+      ),
+    [decks]
   );
 
   // Loading state
@@ -167,9 +171,6 @@ export const Dashboard: React.FC = () => {
 
   // Get streak for welcome section
   const currentStreak = analyticsData?.streak.currentStreak || 0;
-
-  // Build metrics
-  const metrics = buildMetrics();
 
   return (
     <div className="space-y-6 pb-8" data-testid="dashboard">
