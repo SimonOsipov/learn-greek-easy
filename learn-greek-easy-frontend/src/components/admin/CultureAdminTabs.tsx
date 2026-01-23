@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import type { CultureDeckStats, MultilingualName } from '@/services/adminAPI';
+import type { CultureDeckStats } from '@/services/adminAPI';
 
 import { CultureBadge, type CultureCategory } from '../culture';
 import { NewsSourcesSection } from './NewsSourcesSection';
@@ -15,21 +15,7 @@ type TabType = 'decks' | 'news';
 
 interface CultureAdminTabsProps {
   cultureDecks: CultureDeckStats[];
-  locale: string;
   t: (key: string, options?: { count: number }) => string;
-}
-
-/**
- * Get localized name from multilingual object
- */
-function getLocalizedName(name: MultilingualName, locale: string): string {
-  const localeMap: Record<string, keyof MultilingualName> = {
-    en: 'en',
-    el: 'el',
-    ru: 'ru',
-  };
-  const key = localeMap[locale] || 'en';
-  return name[key] || name.en || Object.values(name)[0] || '';
 }
 
 /**
@@ -37,15 +23,14 @@ function getLocalizedName(name: MultilingualName, locale: string): string {
  */
 interface CultureDeckListItemProps {
   deck: CultureDeckStats;
-  locale: string;
   t: (key: string, options?: { count: number }) => string;
 }
 
-const CultureDeckListItem: React.FC<CultureDeckListItemProps> = ({ deck, locale, t }) => (
+const CultureDeckListItem: React.FC<CultureDeckListItemProps> = ({ deck, t }) => (
   <div className="flex items-center justify-between rounded-lg border p-4 transition-colors hover:bg-muted/50">
     <div className="flex items-center gap-3">
       <CultureBadge category={deck.category as CultureCategory} />
-      <span className="font-medium">{getLocalizedName(deck.name, locale)}</span>
+      <span className="font-medium">{deck.name}</span>
     </div>
     <span className="text-sm text-muted-foreground">
       {t('deck.questionCount', { count: deck.question_count })}
@@ -62,7 +47,7 @@ const CultureDeckListItem: React.FC<CultureDeckListItemProps> = ({ deck, locale,
  * - Button-based tab pattern (like TenseTabs)
  * - Default to "Decks" tab (no persistence)
  */
-export const CultureAdminTabs: React.FC<CultureAdminTabsProps> = ({ cultureDecks, locale, t }) => {
+export const CultureAdminTabs: React.FC<CultureAdminTabsProps> = ({ cultureDecks, t }) => {
   const { t: adminT } = useTranslation('admin');
   const [selectedTab, setSelectedTab] = useState<TabType>('decks');
 
@@ -116,7 +101,7 @@ export const CultureAdminTabs: React.FC<CultureAdminTabsProps> = ({ cultureDecks
             ) : (
               <div className="space-y-3">
                 {cultureDecks.map((deck) => (
-                  <CultureDeckListItem key={deck.id} deck={deck} locale={locale} t={t} />
+                  <CultureDeckListItem key={deck.id} deck={deck} t={t} />
                 ))}
               </div>
             )}

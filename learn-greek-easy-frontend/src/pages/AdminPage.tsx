@@ -858,7 +858,7 @@ const AdminPage: React.FC = () => {
 
       {/* Culture Section with Tabs (Decks/News) */}
       <section aria-labelledby="culture-admin-heading">
-        <CultureAdminTabs cultureDecks={stats.culture_decks} locale={locale} t={t} />
+        <CultureAdminTabs cultureDecks={stats.culture_decks} t={t} />
       </section>
 
       {/* All Decks List with Search and Pagination */}
