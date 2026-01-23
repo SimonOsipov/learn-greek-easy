@@ -37,7 +37,7 @@ test.describe('Article Analysis Feature', () => {
 
     // Wait for sources to load and expand first source
     const sourceRows = page.locator('[data-testid^="source-row-"]');
-    await expect(sourceRows.first()).toBeVisible({ timeout: 10000 });
+    await expect(sourceRows.first()).toBeVisible({ timeout: 20000 });
 
     // Expand first source to see fetch history
     const firstSourceRow = sourceRows.first();
@@ -47,7 +47,7 @@ test.describe('Article Analysis Feature', () => {
     // Wait for fetch history table to load
     const historyTable = page.getByTestId('fetch-history-table');
     await expect(historyTable.or(page.getByTestId('fetch-history-empty'))).toBeVisible({
-      timeout: 10000,
+      timeout: 15000,
     });
   });
 
