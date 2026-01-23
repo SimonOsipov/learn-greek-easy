@@ -30,8 +30,9 @@ from uuid import UUID, uuid4
 
 import pytest
 from httpx import AsyncClient, Response
-from sqlalchemy import text
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from src.core.security import create_access_token
 from src.db.models import Card, CardDifficulty, Deck, DeckLevel, User, UserSettings
@@ -109,7 +110,11 @@ class BaseTestCase:
         )
         db_session.add(settings)
         await db_session.commit()
-        await db_session.refresh(user)
+
+        # Reload user with settings using selectinload (required for lazy="raise")
+        stmt = select(User).options(selectinload(User.settings)).where(User.id == user.id)
+        result = await db_session.execute(stmt)
+        user = result.scalar_one()
 
         return user
 

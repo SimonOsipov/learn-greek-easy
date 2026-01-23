@@ -31,7 +31,9 @@ from uuid import uuid4
 
 import pytest
 import pytest_asyncio
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from src.core.security import create_access_token, create_refresh_token
 from src.db.models import RefreshToken, User, UserSettings
@@ -132,7 +134,11 @@ async def create_user_with_settings(
     )
     db_session.add(settings)
     await db_session.commit()
-    await db_session.refresh(user)
+
+    # Reload user with settings using selectinload (required for lazy="raise")
+    stmt = select(User).options(selectinload(User.settings)).where(User.id == user.id)
+    result = await db_session.execute(stmt)
+    user = result.scalar_one()
 
     return user
 
