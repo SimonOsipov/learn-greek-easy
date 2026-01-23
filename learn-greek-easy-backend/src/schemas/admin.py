@@ -239,3 +239,10 @@ class SourceFetchHtmlResponse(BaseModel):
     html_content: str = Field(..., description="Raw HTML content")
     fetched_at: datetime = Field(..., description="When fetch occurred")
     final_url: Optional[str] = Field(None, description="Final URL")
+
+
+class AnalysisStartedResponse(BaseModel):
+    """Response when AI analysis is triggered."""
+
+    message: str = Field(..., description="Status message")
+    history_id: UUID = Field(..., description="History entry UUID being analyzed")

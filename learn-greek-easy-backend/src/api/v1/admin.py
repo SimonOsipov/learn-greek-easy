@@ -11,7 +11,7 @@ All endpoints require superuser authentication.
 from typing import Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -30,12 +30,14 @@ from src.db.models import (
 from src.schemas.admin import (
     AdminDeckListResponse,
     AdminStatsResponse,
+    AnalysisStartedResponse,
     CultureDeckStatsItem,
     DeckStatsItem,
     NewsSourceCreate,
     NewsSourceListResponse,
     NewsSourceResponse,
     NewsSourceUpdate,
+    SourceFetchHistoryDetailResponse,
     SourceFetchHistoryItem,
     SourceFetchHistoryListResponse,
     SourceFetchHtmlResponse,
@@ -859,3 +861,138 @@ async def get_fetch_html(
     service = SourceFetchService(db)
     history = await service.get_history_html(history_id)
     return SourceFetchHtmlResponse.model_validate(history)
+
+
+# ============================================================================
+# Article Analysis Endpoints
+# ============================================================================
+
+
+@router.post(
+    "/culture/sources/history/{history_id}/analyze",
+    response_model=AnalysisStartedResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="Trigger AI analysis",
+    description="Manually trigger AI analysis for a fetch history record. Useful if automatic analysis failed or needs to be re-run.",
+    responses={
+        202: {"description": "Analysis started"},
+        400: {"description": "No HTML content available for analysis"},
+        401: {"description": "Not authenticated"},
+        403: {"description": "Not authorized (requires superuser)"},
+        404: {"description": "Fetch history not found"},
+    },
+)
+async def trigger_analysis(
+    history_id: UUID,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> AnalysisStartedResponse:
+    """Trigger manual AI analysis of fetched HTML.
+
+    Manually triggers AI analysis for a fetch history record. This is useful when:
+    - Automatic analysis failed due to transient errors
+    - You want to re-analyze content with updated AI logic
+    - Analysis was never triggered for older fetch records
+
+    The analysis runs asynchronously in the background. Use the
+    GET /culture/sources/history/{history_id}/articles endpoint to check
+    the status and retrieve discovered articles.
+
+    Args:
+        history_id: UUID of the fetch history record to analyze
+        background_tasks: FastAPI background tasks (injected)
+        db: Database session (injected)
+        current_user: Authenticated superuser (injected)
+
+    Returns:
+        AnalysisStartedResponse with confirmation message
+
+    Raises:
+        404: If fetch history record not found
+        400: If no HTML content available for analysis
+    """
+    from src.db.models import SourceFetchHistory
+    from src.tasks import trigger_article_analysis
+
+    result = await db.execute(select(SourceFetchHistory).where(SourceFetchHistory.id == history_id))
+    history = result.scalar_one_or_none()
+
+    if not history:
+        raise NotFoundException(
+            resource="Fetch history", detail=f"Fetch history with ID '{history_id}' not found"
+        )
+
+    if not history.html_content:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No HTML content available for analysis",
+        )
+
+    # Mark as pending and clear any previous error
+    history.analysis_status = "pending"
+    history.analysis_error = None
+    await db.commit()
+
+    # Queue the background analysis task
+    trigger_article_analysis(history_id, background_tasks)
+
+    return AnalysisStartedResponse(
+        message="Analysis started",
+        history_id=history_id,
+    )
+
+
+@router.get(
+    "/culture/sources/history/{history_id}/articles",
+    response_model=SourceFetchHistoryDetailResponse,
+    summary="Get analysis results",
+    description="Retrieve discovered articles from AI analysis of a fetch history record.",
+    responses={
+        200: {"description": "Analysis results with discovered articles"},
+        401: {"description": "Not authenticated"},
+        403: {"description": "Not authorized (requires superuser)"},
+        404: {"description": "Fetch history not found"},
+    },
+)
+async def get_analysis_results(
+    history_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> SourceFetchHistoryDetailResponse:
+    """Get discovered articles from AI analysis.
+
+    Retrieves the results of AI analysis for a fetch history record, including:
+    - Analysis status (pending, completed, failed)
+    - Discovered articles with URLs, titles, and AI reasoning
+    - Token usage and timing information
+    - Error details if analysis failed
+
+    Args:
+        history_id: UUID of the fetch history record
+        db: Database session (injected)
+        current_user: Authenticated superuser (injected)
+
+    Returns:
+        SourceFetchHistoryDetailResponse with analysis status and articles
+
+    Raises:
+        404: If fetch history record not found
+    """
+    from sqlalchemy.orm import selectinload
+
+    from src.db.models import SourceFetchHistory
+
+    result = await db.execute(
+        select(SourceFetchHistory)
+        .options(selectinload(SourceFetchHistory.source))
+        .where(SourceFetchHistory.id == history_id)
+    )
+    history = result.scalar_one_or_none()
+
+    if not history:
+        raise NotFoundException(
+            resource="Fetch history", detail=f"Fetch history with ID '{history_id}' not found"
+        )
+
+    return SourceFetchHistoryDetailResponse.model_validate(history)
