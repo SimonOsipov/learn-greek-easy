@@ -793,7 +793,7 @@ async def delete_news_source(
     response_model=SourceFetchHistoryItem,
     status_code=status.HTTP_201_CREATED,
     summary="Trigger manual fetch for a source",
-    description="Fetch HTML from a news source immediately. Works on both active and inactive sources.",
+    description="Fetch HTML from a news source immediately. Works on both active and inactive sources. On success, automatically triggers AI analysis.",
     responses={
         201: {"description": "Fetch completed (success or error recorded)"},
         401: {"description": "Not authenticated"},
@@ -803,13 +803,25 @@ async def delete_news_source(
 )
 async def trigger_fetch(
     source_id: UUID,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_superuser),
 ) -> SourceFetchHistoryItem:
-    """Trigger manual HTML fetch for a news source."""
+    """Trigger manual HTML fetch for a news source.
+
+    On successful fetch, automatically triggers AI analysis in the background
+    to discover articles suitable for Cypriot culture exam questions.
+    """
+    from src.tasks import trigger_article_analysis
+
     service = SourceFetchService(db)
     history = await service.fetch_source(source_id, trigger_type="manual")
     await db.commit()
+
+    # Auto-trigger analysis on successful fetch
+    if history.status == "success":
+        trigger_article_analysis(history.id, background_tasks)
+
     return SourceFetchHistoryItem.model_validate(history)
 
 

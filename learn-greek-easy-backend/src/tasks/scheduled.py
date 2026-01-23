@@ -11,6 +11,7 @@ Tasks:
 
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING
+from uuid import UUID
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -401,6 +402,30 @@ async def stats_aggregate_task() -> None:
             await engine.dispose()
 
 
+async def _trigger_analyses_for_fetches(history_ids: list[UUID]) -> int:
+    """Trigger AI analysis for a list of fetch history IDs.
+
+    Args:
+        history_ids: List of SourceFetchHistory UUIDs to analyze
+
+    Returns:
+        Number of successful analysis triggers
+    """
+    from src.tasks.background import analyze_fetch_for_articles_task
+
+    success_count = 0
+    for history_id in history_ids:
+        try:
+            await analyze_fetch_for_articles_task(history_id)
+            success_count += 1
+        except Exception as e:
+            logger.error(
+                f"Failed to analyze fetch history {history_id}: {e}",
+                extra={"history_id": str(history_id), "error": str(e)},
+            )
+    return success_count
+
+
 async def fetch_all_sources_task() -> None:
     """Fetch HTML from all active news sources.
 
@@ -409,10 +434,16 @@ async def fetch_all_sources_task() -> None:
 
     Each source is fetched independently - one failure doesn't
     stop others from being processed.
+
+    After each successful fetch, AI analysis is automatically triggered
+    to discover articles suitable for Cypriot culture exam questions.
     """
     logger.info("Starting daily news source fetch task")
     start_time = datetime.now(timezone.utc)
     engine = None
+    history_ids_to_analyze: list[UUID] = []
+    results = {"success": 0, "error": 0}
+    source_count = 0
 
     try:
         # Create dedicated engine for this scheduled task
@@ -428,18 +459,15 @@ async def fetch_all_sources_task() -> None:
             # Get all active sources
             source_repo = NewsSourceRepository(session)
             sources = await source_repo.list_all(is_active=True)
+            source_count = len(sources)
 
             if not sources:
                 logger.info("No active news sources to fetch")
                 return
 
-            logger.info(
-                "Fetching active news sources",
-                extra={"source_count": len(sources)},
-            )
+            logger.info("Fetching active news sources", extra={"source_count": source_count})
 
             # Fetch each source sequentially to avoid overwhelming targets
-            results = {"success": 0, "error": 0}
             fetch_service = SourceFetchService(session)
 
             for source in sources:
@@ -447,6 +475,7 @@ async def fetch_all_sources_task() -> None:
                     history = await fetch_service.fetch_source(source.id, trigger_type="scheduled")
                     if history.status == "success":
                         results["success"] += 1
+                        history_ids_to_analyze.append(history.id)
                     else:
                         results["error"] += 1
                 except Exception as e:
@@ -458,17 +487,19 @@ async def fetch_all_sources_task() -> None:
 
             await session.commit()
 
-            duration_ms = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
+        # Trigger analysis for all successful fetches (outside session context)
+        await _trigger_analyses_for_fetches(history_ids_to_analyze)
 
-            logger.info(
-                "Daily news source fetch complete",
-                extra={
-                    "total_sources": len(sources),
-                    "success_count": results["success"],
-                    "error_count": results["error"],
-                    "duration_ms": duration_ms,
-                },
-            )
+        duration_ms = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
+        logger.info(
+            "Daily news source fetch complete",
+            extra={
+                "total_sources": source_count,
+                "success_count": results["success"],
+                "error_count": results["error"],
+                "duration_ms": duration_ms,
+            },
+        )
 
     except Exception as e:
         logger.error(f"Daily news source fetch task failed: {e}", exc_info=True)
