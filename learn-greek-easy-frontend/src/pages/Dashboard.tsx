@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo } from 'react';
 
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
@@ -10,7 +10,6 @@ import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import { reportAPIError } from '@/lib/errorReporting';
-import log from '@/lib/logger';
 import { formatStudyTime } from '@/lib/timeFormatUtils';
 import { useAuthStore } from '@/stores/authStore';
 import { useDeckStore } from '@/stores/deckStore';
@@ -53,6 +52,11 @@ export const Dashboard: React.FC = () => {
     });
   }, [fetchDecks]);
 
+  // Memoized navigation handler for decks page
+  const handleNavigateToDecks = useCallback(() => {
+    navigate('/decks');
+  }, [navigate]);
+
   // Navigate to review session
   const handleStartReview = () => {
     // Navigate to first deck with due cards, or decks page
@@ -80,17 +84,20 @@ export const Dashboard: React.FC = () => {
     }
   };
 
-  // Navigate to deck study
-  const handleContinueDeck = (deckId: string) => {
-    const deck = decks.find((d) => d.id === deckId);
-    // Culture decks go to /culture/{id}/practice, vocabulary decks go to /decks/{id}/review
-    const isCultureDeck = deck?.category === 'culture';
-    if (isCultureDeck) {
-      navigate(`/culture/${deckId}/practice`);
-    } else {
-      navigate(`/decks/${deckId}/review`);
-    }
-  };
+  // Navigate to deck study - memoized for stable reference
+  const handleContinueDeck = useCallback(
+    (deckId: string) => {
+      const deck = decks.find((d) => d.id === deckId);
+      // Culture decks go to /culture/{id}/practice, vocabulary decks go to /decks/{id}/review
+      const isCultureDeck = deck?.category === 'culture';
+      if (isCultureDeck) {
+        navigate(`/culture/${deckId}/practice`);
+      } else {
+        navigate(`/decks/${deckId}/review`);
+      }
+    },
+    [decks, navigate]
+  );
 
   // Build metrics from analytics data (memoized)
   const metrics = useMemo((): Metric[] => {
@@ -158,6 +165,37 @@ export const Dashboard: React.FC = () => {
     [decks]
   );
 
+  // Memoize deck card data transformation to avoid inline objects in render
+  const deckCardsData = useMemo(
+    () =>
+      activeDecks.map((deck) => ({
+        id: deck.id,
+        title: deck.titleGreek || deck.title,
+        description: deck.description,
+        status: deck.progress?.status ?? 'not-started',
+        level: deck.level,
+        progress: {
+          current: (deck.progress?.cardsLearning ?? 0) + (deck.progress?.cardsMastered ?? 0),
+          total: deck.cardCount,
+          percentage:
+            deck.progress && deck.progress.cardsTotal > 0
+              ? Math.round(
+                  ((deck.progress.cardsLearning + deck.progress.cardsMastered) /
+                    deck.progress.cardsTotal) *
+                    100
+                )
+              : 0,
+        },
+        stats: {
+          due: deck.progress?.dueToday ?? 0,
+          mastered: deck.progress?.cardsMastered ?? 0,
+          learning: deck.progress?.cardsLearning ?? 0,
+        },
+        lastStudied: deck.progress?.lastStudied,
+      })),
+    [activeDecks]
+  );
+
   // Loading state
   const isLoading = analyticsLoading || decksLoading;
 
@@ -212,7 +250,6 @@ export const Dashboard: React.FC = () => {
                 key={metric.id}
                 {...metric}
                 tooltip={t('dashboard.metrics.tooltip', { label: metric.label.toLowerCase() })}
-                onClick={() => log.debug(`Clicked metric: ${metric.label}`)}
               />
             ))}
           </div>
@@ -231,10 +268,7 @@ export const Dashboard: React.FC = () => {
           <h2 className="text-lg font-semibold text-foreground">
             {t('dashboard.activeDecks.title')}
           </h2>
-          <button
-            className="text-sm text-primary hover:underline"
-            onClick={() => navigate('/decks')}
-          >
+          <button className="text-sm text-primary hover:underline" onClick={handleNavigateToDecks}>
             {t('dashboard.activeDecks.viewAll')} →
           </button>
         </div>
@@ -244,39 +278,10 @@ export const Dashboard: React.FC = () => {
               <Skeleton key={i} className="h-48 rounded-lg" />
             ))}
           </div>
-        ) : activeDecks.length > 0 ? (
+        ) : deckCardsData.length > 0 ? (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {activeDecks.map((deck) => (
-              <DeckCard
-                key={deck.id}
-                deck={{
-                  id: deck.id,
-                  title: deck.titleGreek || deck.title,
-                  description: deck.description,
-                  status: deck.progress?.status ?? 'not-started',
-                  level: deck.level,
-                  progress: {
-                    current:
-                      (deck.progress?.cardsLearning ?? 0) + (deck.progress?.cardsMastered ?? 0),
-                    total: deck.cardCount,
-                    percentage:
-                      deck.progress && deck.progress.cardsTotal > 0
-                        ? Math.round(
-                            ((deck.progress.cardsLearning + deck.progress.cardsMastered) /
-                              deck.progress.cardsTotal) *
-                              100
-                          )
-                        : 0,
-                  },
-                  stats: {
-                    due: deck.progress?.dueToday ?? 0,
-                    mastered: deck.progress?.cardsMastered ?? 0,
-                    learning: deck.progress?.cardsLearning ?? 0,
-                  },
-                  lastStudied: deck.progress?.lastStudied,
-                }}
-                onContinue={() => handleContinueDeck(deck.id)}
-              />
+            {deckCardsData.map((deck) => (
+              <DeckCard key={deck.id} deck={deck} onContinue={() => handleContinueDeck(deck.id)} />
             ))}
           </div>
         ) : (
@@ -284,7 +289,7 @@ export const Dashboard: React.FC = () => {
             <p className="text-muted-foreground">{t('dashboard.activeDecks.empty')}</p>
             <button
               className="mt-4 text-sm text-primary hover:underline"
-              onClick={() => navigate('/decks')}
+              onClick={handleNavigateToDecks}
             >
               {t('dashboard.activeDecks.browseDecks')} →
             </button>
