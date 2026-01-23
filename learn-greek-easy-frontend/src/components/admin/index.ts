@@ -8,6 +8,7 @@ export { CultureDeckEditForm, type CultureDeckFormData } from './CultureDeckEdit
 export { DeactivationWarningDialog } from './DeactivationWarningDialog';
 export { DeckEditModal, type DeckEditFormData } from './DeckEditModal';
 export { DiscoveredArticlesModal } from './DiscoveredArticlesModal';
+export { FetchHistoryDeleteDialog } from './FetchHistoryDeleteDialog';
 export { FetchHistoryTable } from './FetchHistoryTable';
 export { HtmlViewerModal } from './HtmlViewerModal';
 export { NewsSourceDeleteDialog } from './NewsSourceDeleteDialog';

@@ -4,6 +4,7 @@ This module tests:
 - fetch_source: Fetch HTML and store result (success and error cases)
 - get_history: Get fetch history for a source
 - get_history_html: Get specific history entry with HTML content
+- delete_history: Delete a fetch history record
 
 All tests use mocked dependencies for isolation.
 """
@@ -403,3 +404,62 @@ class TestGetHistoryHtml:
             assert result.id == history_id
             assert result.html_content is not None
             mock_get.assert_awaited_once_with(history_id)
+
+
+# =============================================================================
+# Test delete_history
+# =============================================================================
+
+
+@pytest.mark.unit
+class TestDeleteHistory:
+    """Tests for delete_history method."""
+
+    @pytest.mark.asyncio
+    async def test_raises_not_found_when_history_missing(self, mock_db_session):
+        """Should raise NotFoundException when history entry doesn't exist."""
+        service = SourceFetchService(mock_db_session)
+        history_id = uuid4()
+
+        with patch.object(service.history_repo, "get", new_callable=AsyncMock) as mock_get:
+            mock_get.return_value = None
+
+            with pytest.raises(NotFoundException) as exc_info:
+                await service.delete_history(history_id)
+
+            assert "History" in str(exc_info.value.detail)
+            assert str(history_id) in str(exc_info.value.detail)
+
+    @pytest.mark.asyncio
+    async def test_deletes_history_entry_success(self, mock_db_session, mock_history_success):
+        """Should delete history entry when found."""
+        service = SourceFetchService(mock_db_session)
+        history_id = mock_history_success.id
+
+        with (
+            patch.object(service.history_repo, "get", new_callable=AsyncMock) as mock_get,
+            patch.object(service.history_repo, "delete", new_callable=AsyncMock) as mock_delete,
+        ):
+            mock_get.return_value = mock_history_success
+
+            await service.delete_history(history_id)
+
+            mock_get.assert_awaited_once_with(history_id)
+            mock_delete.assert_awaited_once_with(mock_history_success)
+
+    @pytest.mark.asyncio
+    async def test_deletes_history_entry_error(self, mock_db_session, mock_history_error):
+        """Should delete error history entry when found."""
+        service = SourceFetchService(mock_db_session)
+        history_id = mock_history_error.id
+
+        with (
+            patch.object(service.history_repo, "get", new_callable=AsyncMock) as mock_get,
+            patch.object(service.history_repo, "delete", new_callable=AsyncMock) as mock_delete,
+        ):
+            mock_get.return_value = mock_history_error
+
+            await service.delete_history(history_id)
+
+            mock_get.assert_awaited_once_with(history_id)
+            mock_delete.assert_awaited_once_with(mock_history_error)

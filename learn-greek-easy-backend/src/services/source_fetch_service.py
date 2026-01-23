@@ -218,6 +218,24 @@ class SourceFetchService:
             )
         return history
 
+    async def delete_history(self, history_id: UUID) -> None:
+        """Delete a fetch history record.
+
+        Args:
+            history_id: UUID of the fetch history record to delete
+
+        Raises:
+            NotFoundException: If history entry not found
+        """
+        history = await self.history_repo.get(history_id)
+        if not history:
+            raise NotFoundException(
+                resource="SourceFetchHistory",
+                detail=f"History entry with ID '{history_id}' not found",
+            )
+
+        await self.history_repo.delete(history)
+
 
 # ============================================================================
 # Module Exports
