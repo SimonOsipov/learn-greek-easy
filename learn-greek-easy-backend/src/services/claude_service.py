@@ -179,6 +179,67 @@ class ClaudeService:
             logger.error("Claude API error", extra={"error": str(e)})
             raise ClaudeServiceError(f"API error: {str(e)}") from e
 
+    def _find_matching_bracket(self, content: str, start_idx: int = 0) -> str | None:
+        """Find JSON array by matching brackets from start position.
+
+        Args:
+            content: String to search
+            start_idx: Position of opening bracket
+
+        Returns:
+            Extracted JSON string or None if no match found
+        """
+        bracket_count = 0
+        for i in range(start_idx, len(content)):
+            if content[i] == "[":
+                bracket_count += 1
+            elif content[i] == "]":
+                bracket_count -= 1
+                if bracket_count == 0:
+                    return content[start_idx : i + 1]
+        return None
+
+    def _extract_json_from_response(self, content: str) -> str:
+        """Extract JSON array from Claude's response.
+
+        Handles various response formats:
+        1. Pure JSON array
+        2. JSON within markdown code blocks (```json ... ```)
+        3. JSON array embedded in natural language text
+
+        Args:
+            content: Raw response text from Claude
+
+        Returns:
+            Extracted JSON string
+        """
+        import re
+
+        content = content.strip()
+
+        # Try 1: Direct JSON array (starts with '[')
+        if content.startswith("["):
+            result = self._find_matching_bracket(content, 0)
+            return result if result else content
+
+        # Try 2: Extract from markdown code block
+        code_block_pattern = r"```(?:json)?\s*\n?([\s\S]*?)\n?```"
+        match = re.search(code_block_pattern, content)
+        if match:
+            extracted = match.group(1).strip()
+            if extracted.startswith("["):
+                return extracted
+
+        # Try 3: Find JSON array anywhere in the text
+        start_idx = content.find("[")
+        if start_idx != -1:
+            result = self._find_matching_bracket(content, start_idx)
+            if result:
+                return result
+
+        # Fallback: return original content
+        return content
+
     def _parse_response(
         self,
         content: str,
@@ -196,18 +257,11 @@ class ClaudeService:
         Raises:
             ClaudeServiceError: If JSON is invalid
         """
-        # Strip markdown code blocks if present
-        content = content.strip()
-        if content.startswith("```json"):
-            content = content[7:]
-        if content.startswith("```"):
-            content = content[3:]
-        if content.endswith("```"):
-            content = content[:-3]
-        content = content.strip()
+        # Extract JSON from response (handles markdown blocks, preamble text, etc.)
+        json_content = self._extract_json_from_response(content)
 
         try:
-            raw_articles = json.loads(content)
+            raw_articles = json.loads(json_content)
         except json.JSONDecodeError as e:
             logger.error(
                 "Invalid JSON from Claude",
