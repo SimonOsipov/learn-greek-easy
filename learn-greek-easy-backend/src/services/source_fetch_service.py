@@ -104,6 +104,8 @@ class SourceFetchService:
                 html_size_bytes=len(html_content.encode("utf-8")),
                 trigger_type=trigger_type,
                 final_url=final_url,
+                # Set analysis as pending (will be triggered by API endpoint)
+                analysis_status="pending",
             )
             logger.info(
                 "Fetch successful",

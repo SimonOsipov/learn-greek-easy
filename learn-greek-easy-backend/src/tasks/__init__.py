@@ -38,6 +38,7 @@ Example usage for scheduler (in scheduler_main.py):
 
 from src.tasks.background import (
     ANALYTICS_EVENTS,
+    analyze_fetch_for_articles_task,
     check_achievements_task,
     check_culture_achievements_task,
     invalidate_cache_task,
@@ -46,12 +47,14 @@ from src.tasks.background import (
     process_answer_side_effects_task,
     process_culture_answer_full_async,
     recalculate_progress_task,
+    trigger_article_analysis,
 )
 from src.tasks.scheduler import get_scheduler, setup_scheduler, shutdown_scheduler
 
 __all__ = [
     # Background tasks (API-side, fire-and-forget)
     "ANALYTICS_EVENTS",
+    "analyze_fetch_for_articles_task",
     "check_achievements_task",
     "check_culture_achievements_task",
     "invalidate_cache_task",
@@ -60,6 +63,7 @@ __all__ = [
     "process_answer_side_effects_task",
     "process_culture_answer_full_async",
     "recalculate_progress_task",
+    "trigger_article_analysis",
     # Scheduler (dedicated service)
     "get_scheduler",
     "setup_scheduler",

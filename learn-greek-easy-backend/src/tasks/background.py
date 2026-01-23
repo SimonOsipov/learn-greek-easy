@@ -15,13 +15,16 @@ Usage:
 """
 
 from datetime import datetime, timezone
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from src.config import settings
 from src.core.logging import get_logger
+
+if TYPE_CHECKING:
+    from fastapi import BackgroundTasks
 
 logger = get_logger(__name__)
 
@@ -867,3 +870,162 @@ async def check_culture_achievements_task(
     finally:
         if engine is not None:
             await engine.dispose()
+
+
+async def analyze_fetch_for_articles_task(history_id: UUID) -> None:
+    """Background task to analyze fetched HTML for suitable articles.
+
+    Called after a successful HTML fetch to identify articles suitable
+    for Cypriot culture exam questions using Claude AI.
+
+    This task creates its own database connection to avoid issues with
+    connection sharing across async contexts.
+
+    Args:
+        history_id: UUID of the SourceFetchHistory record to analyze
+    """
+    from sqlalchemy import select
+
+    from src.db.models import NewsSource, SourceFetchHistory
+    from src.services.claude_service import ClaudeServiceError, claude_service
+
+    logger.info(
+        "Starting article analysis",
+        extra={"history_id": str(history_id), "task": "analyze_fetch_for_articles"},
+    )
+
+    engine = None
+    try:
+        engine = create_async_engine(settings.database_url, pool_pre_ping=True)
+        async_session_factory = async_sessionmaker(
+            engine, class_=AsyncSession, expire_on_commit=False
+        )
+
+        async with async_session_factory() as session:
+            # Get the history record
+            history_result = await session.execute(
+                select(SourceFetchHistory).where(SourceFetchHistory.id == history_id)
+            )
+            history: SourceFetchHistory | None = history_result.scalar_one_or_none()
+
+            if not history:
+                logger.error(
+                    "History record not found",
+                    extra={"history_id": str(history_id)},
+                )
+                return
+
+            if not history.html_content:
+                logger.error(
+                    "No HTML content available",
+                    extra={"history_id": str(history_id)},
+                )
+                history.analysis_status = "failed"
+                history.analysis_error = "No HTML content available"
+                await session.commit()
+                return
+
+            # Get source for base URL
+            source_result = await session.execute(
+                select(NewsSource).where(NewsSource.id == history.source_id)
+            )
+            source: NewsSource | None = source_result.scalar_one_or_none()
+
+            if not source:
+                logger.error(
+                    "Source not found",
+                    extra={"history_id": str(history_id), "source_id": str(history.source_id)},
+                )
+                history.analysis_status = "failed"
+                history.analysis_error = "Source not found"
+                await session.commit()
+                return
+
+            # Log HTML size for monitoring
+            html_size = len(history.html_content)
+            logger.info(
+                "Analyzing HTML content",
+                extra={
+                    "history_id": str(history_id),
+                    "source_name": source.name,
+                    "html_size_bytes": html_size,
+                },
+            )
+
+            # Warn if HTML is very large (>150K tokens estimated at ~4 chars/token)
+            if html_size > 600000:
+                logger.warning(
+                    "Large HTML content may exceed context window",
+                    extra={
+                        "history_id": str(history_id),
+                        "html_size_bytes": html_size,
+                    },
+                )
+
+            try:
+                # Analyze HTML with Claude
+                articles, tokens_used = claude_service.analyze_html_for_articles(
+                    html_content=history.html_content,
+                    source_base_url=source.url,
+                )
+
+                # Update history with results
+                history.analysis_status = "completed"
+                # Note: discovered_articles is JSONB which can hold lists, but model type is dict
+                history.discovered_articles = [a.model_dump() for a in articles]  # type: ignore[assignment]
+                history.analysis_tokens_used = tokens_used
+                history.analyzed_at = datetime.now(timezone.utc)
+                history.analysis_error = None
+
+                await session.commit()
+
+                logger.info(
+                    "Article analysis complete",
+                    extra={
+                        "history_id": str(history_id),
+                        "articles_count": len(articles),
+                        "tokens_used": tokens_used,
+                    },
+                )
+
+            except ClaudeServiceError as e:
+                logger.error(
+                    "Claude service error during analysis",
+                    extra={"history_id": str(history_id), "error": str(e)},
+                )
+                history.analysis_status = "failed"
+                history.analysis_error = str(e)
+                await session.commit()
+
+    except Exception as e:
+        logger.exception(
+            "Article analysis failed",
+            extra={"history_id": str(history_id), "error": str(e)},
+        )
+    finally:
+        if engine is not None:
+            await engine.dispose()
+
+
+def trigger_article_analysis(
+    history_id: UUID,
+    background_tasks: "BackgroundTasks",
+) -> None:
+    """Queue article analysis as a background task.
+
+    This is a helper function to be called from the fetch API endpoint
+    after a successful fetch.
+
+    Args:
+        history_id: UUID of the SourceFetchHistory to analyze
+        background_tasks: FastAPI BackgroundTasks instance
+
+    Note:
+        The background_tasks type hint is a forward reference to avoid
+        circular imports since FastAPI is not imported at module level.
+    """
+    background_tasks.add_task(analyze_fetch_for_articles_task, history_id)
+    logger.info(
+        "Queued article analysis task",
+        extra={"history_id": str(history_id)},
+    )
