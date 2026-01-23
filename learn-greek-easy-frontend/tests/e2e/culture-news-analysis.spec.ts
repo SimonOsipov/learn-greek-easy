@@ -12,7 +12,7 @@
 
 // TODO: These tests are skipped due to CI test isolation issues with admin-sources.spec.ts
 // The news sources are being modified by earlier tests causing source-row elements not to be found.
-// See: https://github.com/SimonOsipov/learn-greek-easy/issues/XXX (create issue later)
+// Tracked in Vibe Kanban: [BUG] Fix flaky culture-news-analysis E2E tests (task: 720d08fc-4021-45df-82c7-990ce2f4ec13)
 // The feature works correctly - manual testing confirms View Articles functionality.
 
 import { test, expect, Page } from '@playwright/test';
