@@ -17,9 +17,10 @@ Example Usage:
         print(f"Cards mastered: {stats.overview.total_cards_mastered}")
 """
 
+import asyncio
 import math
 from datetime import date, datetime, timedelta
-from typing import Optional
+from typing import Any, Optional, cast
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -119,8 +120,14 @@ class ProgressService:
         Returns:
             Number of consecutive days with study activity
         """
-        # Get unique dates from vocabulary reviews (last 30 days)
-        review_dates_raw = await self.review_repo.get_user_reviews(user_id, skip=0, limit=1000)
+        # Fetch all three data sources in parallel
+        review_dates_raw, culture_dates, mock_exam_dates = await asyncio.gather(
+            self.review_repo.get_user_reviews(user_id, skip=0, limit=1000),
+            self.culture_answer_repo.get_unique_dates(user_id, days=30),
+            self.mock_exam_repo.get_unique_dates(user_id, days=30),
+        )
+
+        # Process vocabulary reviews (last 30 days)
         review_dates = set()
         thirty_days_ago = date.today() - timedelta(days=30)
         for review in review_dates_raw:
@@ -128,13 +135,8 @@ class ProgressService:
             if review_date >= thirty_days_ago:
                 review_dates.add(review_date)
 
-        # Get unique dates from culture answers (last 30 days)
-        culture_dates = await self.culture_answer_repo.get_unique_dates(user_id, days=30)
+        # Convert culture dates to set
         culture_dates_set = set(culture_dates)
-
-        # Get unique dates from mock exam sessions (last 30 days)
-        # Includes ALL session states (ACTIVE, COMPLETED, ABANDONED)
-        mock_exam_dates = await self.mock_exam_repo.get_unique_dates(user_id, days=30)
 
         # Combine all sets
         all_study_dates = review_dates | culture_dates_set | set(mock_exam_dates)
@@ -175,17 +177,18 @@ class ProgressService:
         Returns:
             Longest streak in days
         """
-        # Get all unique dates from vocabulary reviews
-        review_dates_raw = await self.review_repo.get_user_reviews(user_id, skip=0, limit=10000)
+        # Fetch all three data sources in parallel
+        review_dates_raw, culture_dates, mock_exam_dates = await asyncio.gather(
+            self.review_repo.get_user_reviews(user_id, skip=0, limit=10000),
+            self.culture_answer_repo.get_all_unique_dates(user_id),
+            self.mock_exam_repo.get_all_unique_dates(user_id),
+        )
+
+        # Process vocabulary review dates
         review_dates = {review.reviewed_at.date() for review in review_dates_raw}
 
-        # Get all unique dates from culture answers
-        culture_dates = await self.culture_answer_repo.get_all_unique_dates(user_id)
+        # Convert culture dates to set
         culture_dates_set = set(culture_dates)
-
-        # Get all unique dates from mock exam sessions
-        # Includes ALL session states (ACTIVE, COMPLETED, ABANDONED)
-        mock_exam_dates = await self.mock_exam_repo.get_all_unique_dates(user_id)
 
         # Combine and sort
         all_dates = sorted(review_dates | culture_dates_set | set(mock_exam_dates))
@@ -214,9 +217,11 @@ class ProgressService:
         Returns:
             Total study time in seconds for today
         """
-        vocab_time = await self.review_repo.get_study_time_today(user_id)
-        culture_time = await self.culture_answer_repo.get_study_time_today(user_id)
-        mock_exam_time = await self.mock_exam_repo.get_study_time_today(user_id)
+        vocab_time, culture_time, mock_exam_time = await asyncio.gather(
+            self.review_repo.get_study_time_today(user_id),
+            self.culture_answer_repo.get_study_time_today(user_id),
+            self.mock_exam_repo.get_study_time_today(user_id),
+        )
         return vocab_time + culture_time + mock_exam_time
 
     async def _get_aggregated_reviews_today(self, user_id: UUID) -> int:
@@ -228,8 +233,10 @@ class ProgressService:
         Returns:
             Total reviews/answers today
         """
-        vocab_reviews = await self.review_repo.count_reviews_today(user_id)
-        culture_answers = await self.culture_answer_repo.count_answers_today(user_id)
+        vocab_reviews, culture_answers = await asyncio.gather(
+            self.review_repo.count_reviews_today(user_id),
+            self.culture_answer_repo.count_answers_today(user_id),
+        )
         return vocab_reviews + culture_answers
 
     async def _get_aggregated_total_reviews(self, user_id: UUID) -> int:
@@ -241,8 +248,10 @@ class ProgressService:
         Returns:
             Total reviews + culture answers
         """
-        vocab_reviews = await self.review_repo.get_total_reviews(user_id)
-        culture_answers = await self.culture_answer_repo.get_total_answers(user_id)
+        vocab_reviews, culture_answers = await asyncio.gather(
+            self.review_repo.get_total_reviews(user_id),
+            self.culture_answer_repo.get_total_answers(user_id),
+        )
         return vocab_reviews + culture_answers
 
     async def _get_aggregated_total_study_time(self, user_id: UUID) -> int:
@@ -254,9 +263,11 @@ class ProgressService:
         Returns:
             Total study time in seconds
         """
-        vocab_time = await self.review_repo.get_total_study_time(user_id)
-        culture_time = await self.culture_answer_repo.get_total_study_time(user_id)
-        mock_exam_time = await self.mock_exam_repo.get_total_study_time(user_id)
+        vocab_time, culture_time, mock_exam_time = await asyncio.gather(
+            self.review_repo.get_total_study_time(user_id),
+            self.culture_answer_repo.get_total_study_time(user_id),
+            self.mock_exam_repo.get_total_study_time(user_id),
+        )
         return vocab_time + culture_time + mock_exam_time
 
     async def _get_recent_activity(
@@ -364,11 +375,11 @@ class ProgressService:
         Returns:
             Combined accuracy percentage (0.0-100.0)
         """
-        # Get vocab accuracy stats
-        vocab_stats = await self.review_repo.get_accuracy_stats(user_id, days=days)
-
-        # Get culture accuracy stats
-        culture_stats = await self.culture_stats_repo.get_culture_accuracy_stats(user_id, days=days)
+        # Get vocab and culture accuracy stats in parallel
+        vocab_stats, culture_stats = await asyncio.gather(
+            self.review_repo.get_accuracy_stats(user_id, days=days),
+            self.culture_stats_repo.get_culture_accuracy_stats(user_id, days=days),
+        )
 
         # Combine totals
         total_correct = vocab_stats["correct"] + culture_stats["correct"]
@@ -392,8 +403,10 @@ class ProgressService:
         Returns:
             Dict with combined counts: {new, learning, review, mastered, due}
         """
-        vocab_counts = await self.stats_repo.count_by_status(user_id)
-        culture_counts = await self.culture_stats_repo.count_all_by_status(user_id)
+        vocab_counts, culture_counts = await asyncio.gather(
+            self.stats_repo.count_by_status(user_id),
+            self.culture_stats_repo.count_all_by_status(user_id),
+        )
 
         return {
             "new": vocab_counts.get("new", 0) + culture_counts.get("new", 0),
@@ -429,13 +442,37 @@ class ProgressService:
             extra={"user_id": str(user_id)},
         )
 
-        # Get vocab overview stats
-        vocab_studied = await self.progress_repo.get_total_cards_studied(user_id)
-        vocab_mastered = await self.progress_repo.get_total_cards_mastered(user_id)
-        total_decks = await self.progress_repo.count_user_decks(user_id)
+        # Run all independent queries in parallel using asyncio.gather
+        results = await asyncio.gather(
+            self.progress_repo.get_total_cards_studied(user_id),
+            self.progress_repo.get_total_cards_mastered(user_id),
+            self.progress_repo.count_user_decks(user_id),
+            self.culture_stats_repo.count_mastered_questions(user_id),
+            self._calculate_combined_accuracy(user_id, days=30),
+            self._get_aggregated_total_study_time(user_id),
+            self._get_aggregated_reviews_today(user_id),
+            self._get_aggregated_study_time_today(user_id),
+            self._get_combined_status_counts(user_id),
+            self._get_aggregated_streak(user_id),
+            self._get_aggregated_longest_streak(user_id),
+            self.progress_repo.get_user_progress(user_id, skip=0, limit=1),
+            self._get_recent_activity(user_id, days=7),
+        )
 
-        # Get culture stats for aggregation
-        culture_mastered = await self.culture_stats_repo.count_mastered_questions(user_id)
+        # Unpack results with type casts for mypy
+        vocab_studied = cast(int, results[0])
+        vocab_mastered = cast(int, results[1])
+        total_decks = cast(int, results[2])
+        culture_mastered = cast(int, results[3])
+        accuracy_percentage = cast(float, results[4])
+        total_study_time = cast(int, results[5])
+        reviews_today = cast(int, results[6])
+        study_time_today = cast(int, results[7])
+        status_counts = cast(dict[str, int], results[8])
+        current_streak = cast(int, results[9])
+        longest_streak = cast(int, results[10])
+        progress_records = cast(list[Any], results[11])
+        recent_activity = cast(list[RecentActivity], results[12])
 
         # Combine vocab + culture totals
         total_mastered = vocab_mastered + culture_mastered
@@ -443,12 +480,6 @@ class ProgressService:
         mastery_percentage = 0.0
         if vocab_studied > 0:
             mastery_percentage = min((total_mastered / vocab_studied) * 100, 100.0)
-
-        # Calculate combined accuracy
-        accuracy_percentage = await self._calculate_combined_accuracy(user_id, days=30)
-
-        # Get total study time from all sessions
-        total_study_time = await self._get_aggregated_total_study_time(user_id)
 
         overview = OverviewStats(
             total_cards_studied=vocab_studied,
@@ -460,12 +491,7 @@ class ProgressService:
             total_study_time_seconds=total_study_time,
         )
 
-        # Get today's stats - AGGREGATED from vocabulary + culture
-        reviews_today = await self._get_aggregated_reviews_today(user_id)
-        study_time_today = await self._get_aggregated_study_time_today(user_id)
-
-        # Get combined status counts (vocab + culture) for Stage Distribution chart
-        status_counts = await self._get_combined_status_counts(user_id)
+        # Get cards due from status counts
         cards_due = status_counts.get("due", 0)
 
         goal_progress = min((reviews_today / self.DEFAULT_DAILY_GOAL) * 100, 100.0)
@@ -478,12 +504,7 @@ class ProgressService:
             study_time_seconds=study_time_today,
         )
 
-        # Get streak stats - AGGREGATED from vocabulary + culture
-        current_streak = await self._get_aggregated_streak(user_id)
-        longest_streak = await self._get_aggregated_longest_streak(user_id)
-
         # Get last study date from progress records
-        progress_records = await self.progress_repo.get_user_progress(user_id, skip=0, limit=1)
         last_study_date: Optional[date] = None
         if progress_records and progress_records[0].last_studied_at:
             last_study_date = progress_records[0].last_studied_at.date()
@@ -493,9 +514,6 @@ class ProgressService:
             longest_streak=longest_streak,
             last_study_date=last_study_date,
         )
-
-        # Get recent activity
-        recent_activity = await self._get_recent_activity(user_id, days=7)
 
         logger.info(
             "Dashboard stats built successfully",

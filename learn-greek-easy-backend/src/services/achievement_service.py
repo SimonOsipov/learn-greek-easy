@@ -8,7 +8,8 @@ This service handles:
 - Culture exam achievement checking
 """
 
-from typing import Optional, TypedDict
+import asyncio
+from typing import Optional, TypedDict, cast
 from uuid import UUID
 
 from sqlalchemy import case, func, select
@@ -457,62 +458,80 @@ class AchievementService:
             - questions_in_russian: int
             - languages_used: set[str] (unique languages from history)
         """
-        # === Query CultureAnswerHistory for accurate stats ===
 
-        # Total answered and correct (from history)
-        result = await self.db.execute(
-            select(
-                func.count(CultureAnswerHistory.id).label("total"),
-                func.sum(case((CultureAnswerHistory.is_correct.is_(True), 1), else_=0)).label(
-                    "correct"
-                ),
-            ).where(CultureAnswerHistory.user_id == user_id)
+        # Define the three main stat queries as coroutines with type annotations
+        async def get_total_and_correct() -> tuple[int, int]:
+            result = await self.db.execute(
+                select(
+                    func.count(CultureAnswerHistory.id).label("total"),
+                    func.sum(case((CultureAnswerHistory.is_correct.is_(True), 1), else_=0)).label(
+                        "correct"
+                    ),
+                ).where(CultureAnswerHistory.user_id == user_id)
+            )
+            row = result.one()
+            return (row.total or 0, row.correct or 0)
+
+        async def get_language_counts() -> dict[str, int]:
+            result = await self.db.execute(
+                select(
+                    CultureAnswerHistory.language,
+                    func.count(CultureAnswerHistory.id).label("lang_count"),
+                )
+                .where(CultureAnswerHistory.user_id == user_id)
+                .group_by(CultureAnswerHistory.language)
+            )
+            return {str(row.language): int(row.lang_count) for row in result.all()}
+
+        async def get_recent_answers() -> list[bool]:
+            result = await self.db.execute(
+                select(CultureAnswerHistory.is_correct)
+                .where(CultureAnswerHistory.user_id == user_id)
+                .order_by(CultureAnswerHistory.created_at.desc())
+                .limit(100)  # Check last 100 answers max
+            )
+            return [row.is_correct for row in result.all()]
+
+        # Run all queries in parallel: 3 stat queries + 5 category mastery checks
+        results = await asyncio.gather(
+            get_total_and_correct(),
+            get_language_counts(),
+            get_recent_answers(),
+            self._is_category_mastered(user_id, "history"),
+            self._is_category_mastered(user_id, "geography"),
+            self._is_category_mastered(user_id, "politics"),
+            self._is_category_mastered(user_id, "culture"),
+            self._is_category_mastered(user_id, "traditions"),
         )
-        row = result.one()
-        total_answered = row.total or 0
-        total_correct = row.correct or 0
 
-        # Accuracy calculation
+        # Unpack results with type casts for mypy
+        total_correct_tuple = cast(tuple[int, int], results[0])
+        language_counts = cast(dict[str, int], results[1])
+        recent_answers = cast(list[bool], results[2])
+        history_mastered = cast(bool, results[3])
+        geography_mastered = cast(bool, results[4])
+        politics_mastered = cast(bool, results[5])
+        culture_mastered = cast(bool, results[6])
+        traditions_mastered = cast(bool, results[7])
+
+        # Process total/correct stats
+        total_answered = total_correct_tuple[0]
+        total_correct = total_correct_tuple[1]
         accuracy_percent = (total_correct / total_answered * 100) if total_answered > 0 else 0.0
 
-        # === Language counts from CultureAnswerHistory ===
-        result = await self.db.execute(
-            select(
-                CultureAnswerHistory.language, func.count(CultureAnswerHistory.id).label("count")
-            )
-            .where(CultureAnswerHistory.user_id == user_id)
-            .group_by(CultureAnswerHistory.language)
-        )
-        language_counts = {row.language: row.count for row in result.all()}
-
+        # Process language counts
         questions_in_greek = language_counts.get("el", 0)
         questions_in_english = language_counts.get("en", 0)
         questions_in_russian = language_counts.get("ru", 0)
         languages_used = set(language_counts.keys())
 
-        # === Consecutive streak from CultureAnswerHistory ===
-        # Get recent answers ordered by time, count consecutive correct from most recent
-        result = await self.db.execute(
-            select(CultureAnswerHistory.is_correct)
-            .where(CultureAnswerHistory.user_id == user_id)
-            .order_by(CultureAnswerHistory.created_at.desc())
-            .limit(100)  # Check last 100 answers max
-        )
-        recent_answers = [row.is_correct for row in result.all()]
-
+        # Calculate consecutive streak from recent answers
         current_streak = 0
         for is_correct in recent_answers:
             if is_correct:
                 current_streak += 1
             else:
                 break  # Streak broken
-
-        # === Category mastery checks (from CultureQuestionStats) ===
-        history_mastered = await self._is_category_mastered(user_id, "history")
-        geography_mastered = await self._is_category_mastered(user_id, "geography")
-        politics_mastered = await self._is_category_mastered(user_id, "politics")
-        culture_mastered = await self._is_category_mastered(user_id, "culture")
-        traditions_mastered = await self._is_category_mastered(user_id, "traditions")
 
         all_mastered = all(
             [
