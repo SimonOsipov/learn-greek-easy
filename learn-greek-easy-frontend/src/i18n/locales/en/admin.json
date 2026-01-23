@@ -123,6 +123,7 @@
       "title": "Fetch History",
       "empty": "No fetch history yet",
       "viewHtml": "View HTML",
+      "viewArticles": "View Articles",
       "status": {
         "success": "Success",
         "error": "Error"
