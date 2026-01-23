@@ -8,10 +8,10 @@ This module contains schemas for:
 """
 
 from datetime import datetime
-from typing import List, Optional
+from typing import Any, List, Optional
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, HttpUrl
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_validator
 
 from src.db.models import DeckLevel
 
@@ -149,6 +149,14 @@ class NewsSourceListResponse(BaseModel):
 # ============================================================================
 
 
+class DiscoveredArticle(BaseModel):
+    """Schema for an article discovered by AI analysis."""
+
+    url: str = Field(..., description="URL of the discovered article")
+    title: str = Field(..., description="Title/headline of the article")
+    reasoning: str = Field(..., description="AI's reasoning for including this article")
+
+
 class SourceFetchHistoryItem(BaseModel):
     """Fetch history item (without HTML content)."""
 
@@ -161,6 +169,15 @@ class SourceFetchHistoryItem(BaseModel):
     error_message: Optional[str] = Field(None, description="Error message if failed")
     trigger_type: str = Field(..., description="'manual' or 'scheduled'")
     final_url: Optional[str] = Field(None, description="Final URL after redirects")
+    # AI Analysis fields
+    analysis_status: Optional[str] = Field(
+        None, description="Analysis status: pending, completed, failed"
+    )
+    analysis_error: Optional[str] = Field(None, description="Error message if analysis failed")
+    analysis_tokens_used: Optional[int] = Field(
+        None, description="Number of tokens used for analysis"
+    )
+    analyzed_at: Optional[datetime] = Field(None, description="When analysis completed")
 
 
 class SourceFetchHistoryListResponse(BaseModel):
@@ -168,6 +185,49 @@ class SourceFetchHistoryListResponse(BaseModel):
 
     items: list[SourceFetchHistoryItem] = Field(..., description="History entries")
     total: int = Field(..., ge=0, description="Total count")
+
+
+class SourceFetchHistoryDetailResponse(BaseModel):
+    """Detailed response for a fetch history entry including discovered articles."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID = Field(..., description="History entry UUID")
+    source_id: UUID = Field(..., description="Source UUID")
+    fetched_at: datetime = Field(..., description="When fetch occurred")
+    status: str = Field(..., description="'success' or 'error'")
+    html_size_bytes: Optional[int] = Field(None, description="Size of HTML content")
+    error_message: Optional[str] = Field(None, description="Error message if failed")
+    trigger_type: str = Field(..., description="'manual' or 'scheduled'")
+    final_url: Optional[str] = Field(None, description="Final URL after redirects")
+    # AI Analysis fields
+    analysis_status: Optional[str] = Field(
+        None, description="Analysis status: pending, completed, failed"
+    )
+    discovered_articles: Optional[List[DiscoveredArticle]] = Field(
+        None, description="List of articles discovered by AI analysis"
+    )
+    analysis_error: Optional[str] = Field(None, description="Error message if analysis failed")
+    analysis_tokens_used: Optional[int] = Field(
+        None, description="Number of tokens used for analysis"
+    )
+    analyzed_at: Optional[datetime] = Field(None, description="When analysis completed")
+    created_at: datetime = Field(..., description="Creation timestamp")
+    updated_at: datetime = Field(..., description="Last update timestamp")
+
+    @field_validator("discovered_articles", mode="before")
+    @classmethod
+    def validate_discovered_articles(cls, v: Any) -> Optional[List[DiscoveredArticle]]:
+        """Convert raw JSONB data to DiscoveredArticle objects."""
+        if v is None:
+            return None
+        if isinstance(v, list):
+            articles: List[DiscoveredArticle] = [
+                DiscoveredArticle(**item) if isinstance(item, dict) else item for item in v
+            ]
+            return articles
+        # Pydantic will handle validation errors for unexpected types
+        return None
 
 
 class SourceFetchHtmlResponse(BaseModel):
