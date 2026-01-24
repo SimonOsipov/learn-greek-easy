@@ -541,6 +541,49 @@ class TestTokenEstimation:
 
 
 @pytest.mark.unit
+class TestTokenReduction:
+    """Tests for verifying token reduction from raw HTML to extracted content."""
+
+    def test_token_reduction_from_noisy_html(
+        self, extractor: HTMLContentExtractor, noise_heavy_html: str
+    ):
+        """Verify that extraction significantly reduces token count from noisy HTML."""
+        # Calculate raw HTML token estimate
+        raw_tokens = len(noise_heavy_html) // CHARS_PER_TOKEN_ENGLISH
+
+        # Extract clean content
+        result = extractor.extract(noise_heavy_html, "https://example.com")
+
+        # Extracted content should use fewer tokens
+        assert result.estimated_tokens < raw_tokens
+
+        # Should achieve at least 50% reduction on noisy HTML
+        reduction_ratio = 1 - (result.estimated_tokens / raw_tokens)
+        assert reduction_ratio >= 0.5, f"Expected >= 50% reduction, got {reduction_ratio:.1%}"
+
+    def test_token_reduction_preserves_content(
+        self, extractor: HTMLContentExtractor, noise_heavy_html: str
+    ):
+        """Verify that token reduction doesn't lose essential article content."""
+        result = extractor.extract(noise_heavy_html, "https://example.com")
+
+        # Essential content keywords should be preserved
+        assert "actual article content" in result.main_text.lower()
+        assert result.title  # Title should be extracted
+
+    def test_sigmalive_token_reduction(self, extractor: HTMLContentExtractor, sigmalive_html: str):
+        """Verify token reduction on real site fixture (site-specific extraction)."""
+        raw_tokens = len(sigmalive_html) // CHARS_PER_TOKEN_GREEK
+
+        result = extractor.extract(sigmalive_html, "https://sigmalive.com/article")
+
+        # Site-specific extraction should be efficient
+        assert result.estimated_tokens < raw_tokens
+        # Should use site-specific method
+        assert result.extraction_method == "site_specific"
+
+
+@pytest.mark.unit
 class TestEdgeCases:
     """Tests for edge cases."""
 
