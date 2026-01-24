@@ -129,13 +129,8 @@ class RateLimitingMiddleware:
             await self.app(scope, receive, send)
             return
 
-        # Skip if rate limiting is disabled, in test mode, or during E2E testing
-        # E2E tests run rapidly and would otherwise hit rate limits
-        if (
-            not settings.feature_rate_limiting
-            or settings.is_testing
-            or settings.test_seed_enabled  # E2E test mode with seeding enabled
-        ):
+        # Skip if rate limiting is disabled or in test mode
+        if not settings.feature_rate_limiting or settings.is_testing:
             await self.app(scope, receive, send)
             return
 
