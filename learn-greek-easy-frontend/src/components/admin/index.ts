@@ -14,4 +14,5 @@ export { HtmlViewerModal } from './HtmlViewerModal';
 export { NewsSourceDeleteDialog } from './NewsSourceDeleteDialog';
 export { NewsSourceFormDialog, type NewsSourceFormData } from './NewsSourceFormDialog';
 export { NewsSourcesSection } from './NewsSourcesSection';
+export { QuestionReviewModal } from './QuestionReviewModal';
 export { VocabularyDeckEditForm, type VocabularyDeckFormData } from './VocabularyDeckEditForm';
