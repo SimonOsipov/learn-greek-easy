@@ -4,6 +4,8 @@
 from datetime import date, datetime
 
 import pytest
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
 from src.db.models import (
     Card,
@@ -54,7 +56,11 @@ async def sample_user_with_settings(db_session):
     )
     db_session.add(settings)
     await db_session.commit()
-    await db_session.refresh(user)
+
+    # Reload user with settings using selectinload (required for lazy="raise")
+    stmt = select(User).options(selectinload(User.settings)).where(User.id == user.id)
+    result = await db_session.execute(stmt)
+    user = result.scalar_one()
     return user
 
 

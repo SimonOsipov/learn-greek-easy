@@ -221,62 +221,63 @@ class User(Base, TimestampMixin):
         comment="IP address of last successful login",
     )
 
-    # Relationships (lazy="selectin" for async queries)
+    # Relationships (lazy="raise" to prevent accidental lazy loading)
+    # Use selectinload() explicitly when relationships are needed
     settings: Mapped["UserSettings"] = relationship(
         back_populates="user",
-        lazy="selectin",
+        lazy="raise",
         cascade="all, delete-orphan",
         uselist=False,  # One-to-one relationship
     )
     refresh_tokens: Mapped[List["RefreshToken"]] = relationship(
         back_populates="user",
-        lazy="selectin",
+        lazy="raise",
         cascade="all, delete-orphan",
     )
     deck_progress: Mapped[List["UserDeckProgress"]] = relationship(
         back_populates="user",
-        lazy="selectin",
+        lazy="raise",
         cascade="all, delete-orphan",
     )
     card_statistics: Mapped[List["CardStatistics"]] = relationship(
         back_populates="user",
-        lazy="selectin",
+        lazy="raise",
         cascade="all, delete-orphan",
     )
     reviews: Mapped[List["Review"]] = relationship(
         back_populates="user",
-        lazy="selectin",
+        lazy="raise",
         cascade="all, delete-orphan",
     )
     feedback_items: Mapped[List["Feedback"]] = relationship(
         back_populates="user",
-        lazy="selectin",
+        lazy="raise",
         cascade="all, delete-orphan",
     )
     feedback_votes: Mapped[List["FeedbackVote"]] = relationship(
-        lazy="selectin",
+        lazy="raise",
         cascade="all, delete-orphan",
     )
     xp: Mapped["UserXP"] = relationship(
         back_populates="user",
-        lazy="selectin",
+        lazy="raise",
         cascade="all, delete-orphan",
         uselist=False,  # One-to-one relationship
     )
     achievements: Mapped[List["UserAchievement"]] = relationship(
-        lazy="selectin",
+        lazy="raise",
         cascade="all, delete-orphan",
     )
     xp_transactions: Mapped[List["XPTransaction"]] = relationship(
-        lazy="selectin",
+        lazy="raise",
         cascade="all, delete-orphan",
     )
     notifications: Mapped[List["Notification"]] = relationship(
-        lazy="selectin",
+        lazy="raise",
         cascade="all, delete-orphan",
     )
     mock_exam_sessions: Mapped[List["MockExamSession"]] = relationship(
-        lazy="selectin",
+        lazy="raise",
         cascade="all, delete-orphan",
     )
 
@@ -1343,7 +1344,15 @@ class CultureQuestionStats(Base, TimestampMixin):
     """
 
     __tablename__ = "culture_question_stats"
-    __table_args__ = (UniqueConstraint("user_id", "question_id", name="uq_user_culture_question"),)
+    __table_args__ = (
+        UniqueConstraint("user_id", "question_id", name="uq_user_culture_question"),
+        Index(
+            "ix_culture_question_stats_user_due_questions",
+            "user_id",
+            "next_review_date",
+            "status",
+        ),
+    )
 
     # Primary key
     id: Mapped[UUID] = mapped_column(

@@ -11,40 +11,39 @@ interface WelcomeSectionProps {
   onStartReview?: () => void;
 }
 
-export const WelcomeSection: React.FC<WelcomeSectionProps> = ({
-  userName,
-  dueCount,
-  streak,
-  onStartReview,
-}) => {
-  const { t } = useTranslation('common');
+export const WelcomeSection = React.memo<WelcomeSectionProps>(
+  ({ userName, dueCount, streak, onStartReview }) => {
+    const { t } = useTranslation('common');
 
-  const getEncouragement = () => {
-    if (streak > 7) return t('welcome.encouragement.incredible', { count: streak }) + ' 🔥';
-    if (streak > 3) return t('welcome.encouragement.great', { count: streak });
-    if (streak > 0) return t('welcome.encouragement.keepItUp', { count: streak });
-    return t('welcome.encouragement.readyToStart');
-  };
+    const getEncouragement = () => {
+      if (streak > 7) return t('welcome.encouragement.incredible', { count: streak }) + ' 🔥';
+      if (streak > 3) return t('welcome.encouragement.great', { count: streak });
+      if (streak > 0) return t('welcome.encouragement.keepItUp', { count: streak });
+      return t('welcome.encouragement.readyToStart');
+    };
 
-  return (
-    <div className="mb-8 flex flex-col md:flex-row md:items-center md:justify-between">
-      <div>
-        <h2 className="mb-2 text-xl font-semibold text-foreground md:text-2xl">
-          {t('welcome.greeting', { name: userName })} 👋
-        </h2>
-        <p className="text-muted-foreground">
-          <Trans
-            i18nKey="welcome.cardsToReview"
-            ns="common"
-            values={{ count: dueCount }}
-            components={{ strong: <span className="font-semibold text-primary" /> }}
-          />{' '}
-          {getEncouragement()}
-        </p>
+    return (
+      <div className="mb-8 flex flex-col md:flex-row md:items-center md:justify-between">
+        <div>
+          <h2 className="mb-2 text-xl font-semibold text-foreground md:text-2xl">
+            {t('welcome.greeting', { name: userName })} 👋
+          </h2>
+          <p className="text-muted-foreground">
+            <Trans
+              i18nKey="welcome.cardsToReview"
+              ns="common"
+              values={{ count: dueCount }}
+              components={{ strong: <span className="font-semibold text-primary" /> }}
+            />{' '}
+            {getEncouragement()}
+          </p>
+        </div>
+        <Button variant="hero" size="lg" className="mt-4 md:mt-0" onClick={onStartReview}>
+          {t('welcome.startReview')}
+        </Button>
       </div>
-      <Button variant="hero" size="lg" className="mt-4 md:mt-0" onClick={onStartReview}>
-        {t('welcome.startReview')}
-      </Button>
-    </div>
-  );
-};
+    );
+  }
+);
+
+WelcomeSection.displayName = 'WelcomeSection';

@@ -138,6 +138,29 @@ class CultureDeckRepository(BaseRepository[CultureDeck]):
         result = await self.db.execute(query)
         return list(result.scalars().all())
 
+    async def get_batch_question_counts(self, deck_ids: list[UUID]) -> dict[UUID, int]:
+        """Get total question counts for multiple culture decks.
+
+        Args:
+            deck_ids: List of culture deck UUIDs to count questions for
+
+        Returns:
+            Dict mapping deck_id to question count
+
+        Use Case:
+            Batch loading deck statistics to avoid N+1 queries
+        """
+        if not deck_ids:
+            return {}
+
+        query = (
+            select(CultureQuestion.deck_id, func.count(CultureQuestion.id).label("count"))
+            .where(CultureQuestion.deck_id.in_(deck_ids))
+            .group_by(CultureQuestion.deck_id)
+        )
+        result = await self.db.execute(query)
+        return {row[0]: row[1] for row in result.all()}
+
 
 # ============================================================================
 # Module Exports

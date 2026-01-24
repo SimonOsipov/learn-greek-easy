@@ -27,7 +27,9 @@ from datetime import timedelta
 from uuid import uuid4
 
 import factory
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from src.core.security import create_refresh_token
 from src.db.models import RefreshToken, User, UserSettings
@@ -123,7 +125,11 @@ class UserFactory(BaseFactory):
         )
         db_session.add(settings)
         await db_session.flush()
-        await db_session.refresh(user)
+
+        # Reload user with settings using selectinload (required for lazy="raise")
+        stmt = select(User).options(selectinload(User.settings)).where(User.id == user.id)
+        result = await db_session.execute(stmt)
+        user = result.scalar_one()
 
         return user
 

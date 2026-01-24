@@ -12,7 +12,9 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from src.config import settings
 from src.core.dependencies import get_current_user
@@ -865,12 +867,13 @@ async def update_me(
 
     await db.commit()
 
-    # Refresh to get updated timestamps
-    await db.refresh(current_user)
-    if current_user.settings:
-        await db.refresh(current_user.settings)
+    # Reload user with settings to get updated timestamps
+    # (required for lazy="raise" relationships)
+    stmt = select(User).options(selectinload(User.settings)).where(User.id == current_user.id)
+    result = await db.execute(stmt)
+    updated_user = result.scalar_one()
 
-    return _build_user_profile_response(current_user)
+    return _build_user_profile_response(updated_user)
 
 
 @router.post(

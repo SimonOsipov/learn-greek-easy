@@ -100,6 +100,11 @@ def service(mock_db_session):
     # Mock mock_exam_repo study time methods (only COMPLETED sessions contribute)
     svc.mock_exam_repo.get_study_time_today = AsyncMock(return_value=0)
     svc.mock_exam_repo.get_total_study_time = AsyncMock(return_value=0)
+    # Mock batch methods for N+1 query optimization
+    svc.deck_repo.get_batch_card_counts = AsyncMock(return_value={})
+    svc.stats_repo.get_batch_stats_by_deck = AsyncMock(return_value={})
+    svc.culture_stats_repo.get_batch_deck_stats = AsyncMock(return_value={})
+    svc.culture_deck_repo.get_batch_question_counts = AsyncMock(return_value={})
     return svc
 
 
@@ -649,9 +654,22 @@ class TestProgressServiceDeckList:
         service.progress_repo.get_user_progress = AsyncMock(
             return_value=[mock_user_deck_progress, mock_progress2]
         )
-        service.deck_repo.count_cards = AsyncMock(return_value=100)
-        service.stats_repo.count_by_status = AsyncMock(return_value={"due": 10})
-        service.stats_repo.get_average_easiness_factor = AsyncMock(return_value=2.35)
+        # Mock batch methods for N+1 query optimization
+        service.deck_repo.get_batch_card_counts = AsyncMock(
+            return_value={mock_deck.id: 100, mock_deck2.id: 100}
+        )
+        service.stats_repo.get_batch_stats_by_deck = AsyncMock(
+            return_value={
+                mock_deck.id: {"new": 0, "learning": 5, "mastered": 30, "due": 10, "avg_ef": 2.35},
+                mock_deck2.id: {
+                    "new": 0,
+                    "learning": 10,
+                    "mastered": 20,
+                    "due": 10,
+                    "avg_ef": 2.35,
+                },
+            }
+        )
 
         result = await service.get_deck_progress_list(user_id, page=1, page_size=2)
 
@@ -674,9 +692,13 @@ class TestProgressServiceDeckList:
 
         service.progress_repo.count_user_decks = AsyncMock(return_value=1)
         service.progress_repo.get_user_progress = AsyncMock(return_value=[mock_user_deck_progress])
-        service.deck_repo.count_cards = AsyncMock(return_value=100)
-        service.stats_repo.count_by_status = AsyncMock(return_value={"due": 15})
-        service.stats_repo.get_average_easiness_factor = AsyncMock(return_value=2.4)
+        # Mock batch methods for N+1 query optimization
+        service.deck_repo.get_batch_card_counts = AsyncMock(return_value={mock_deck.id: 100})
+        service.stats_repo.get_batch_stats_by_deck = AsyncMock(
+            return_value={
+                mock_deck.id: {"new": 0, "learning": 10, "mastered": 30, "due": 15, "avg_ef": 2.4}
+            }
+        )
 
         result = await service.get_deck_progress_list(user_id, page=1, page_size=10)
 
@@ -695,11 +717,15 @@ class TestProgressServiceDeckList:
 
         service.progress_repo.count_user_decks = AsyncMock(return_value=1)
         service.progress_repo.get_user_progress = AsyncMock(return_value=[mock_user_deck_progress])
-        service.deck_repo.count_cards = AsyncMock(return_value=100)
+        # Mock batch methods for N+1 query optimization
+        service.deck_repo.get_batch_card_counts = AsyncMock(return_value={mock_deck.id: 100})
         # 15 due cards, AVG_TIME_PER_CARD_SECONDS = 15 seconds
         # 15 * 15 = 225 seconds = 3.75 minutes -> ceil = 4 minutes
-        service.stats_repo.count_by_status = AsyncMock(return_value={"due": 15})
-        service.stats_repo.get_average_easiness_factor = AsyncMock(return_value=2.5)
+        service.stats_repo.get_batch_stats_by_deck = AsyncMock(
+            return_value={
+                mock_deck.id: {"new": 0, "learning": 10, "mastered": 30, "due": 15, "avg_ef": 2.5}
+            }
+        )
 
         result = await service.get_deck_progress_list(user_id, page=1, page_size=10)
 
@@ -714,9 +740,13 @@ class TestProgressServiceDeckList:
 
         service.progress_repo.count_user_decks = AsyncMock(return_value=1)
         service.progress_repo.get_user_progress = AsyncMock(return_value=[mock_user_deck_progress])
-        service.deck_repo.count_cards = AsyncMock(return_value=100)
-        service.stats_repo.count_by_status = AsyncMock(return_value={"due": 10})
-        service.stats_repo.get_average_easiness_factor = AsyncMock(return_value=2.35)
+        # Mock batch methods for N+1 query optimization
+        service.deck_repo.get_batch_card_counts = AsyncMock(return_value={mock_deck.id: 100})
+        service.stats_repo.get_batch_stats_by_deck = AsyncMock(
+            return_value={
+                mock_deck.id: {"new": 0, "learning": 10, "mastered": 30, "due": 10, "avg_ef": 2.35}
+            }
+        )
 
         result = await service.get_deck_progress_list(user_id, page=1, page_size=10)
 

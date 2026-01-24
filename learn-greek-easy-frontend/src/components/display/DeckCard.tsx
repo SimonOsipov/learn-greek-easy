@@ -21,7 +21,7 @@ const statusVariants = {
   'not-started': 'bg-muted text-muted-foreground hover:bg-muted/80',
 };
 
-export const DeckCard: React.FC<DeckCardProps> = ({ deck, onContinue }) => {
+export const DeckCard = React.memo<DeckCardProps>(({ deck, onContinue }) => {
   const { t } = useTranslation('deck');
 
   const getStatusLabel = (status: string) => {
@@ -94,4 +94,6 @@ export const DeckCard: React.FC<DeckCardProps> = ({ deck, onContinue }) => {
       </CardContent>
     </Card>
   );
-};
+});
+
+DeckCard.displayName = 'DeckCard';

@@ -737,3 +737,65 @@ class CardStatisticsRepository(BaseRepository[CardStatistics]):
             delete(CardStatistics).where(CardStatistics.user_id == user_id)
         )
         return int(result.rowcount) if result.rowcount else 0  # type: ignore[attr-defined]
+
+    async def get_batch_stats_by_deck(
+        self, user_id: UUID, deck_ids: list[UUID]
+    ) -> dict[UUID, dict]:
+        """Get aggregated stats for multiple decks in one query.
+
+        IMPORTANT: Must JOIN Card table to access deck_id since CardStatistics
+        only has card_id, not deck_id directly.
+
+        Args:
+            user_id: User UUID
+            deck_ids: List of deck UUIDs to get stats for
+
+        Returns:
+            Dict mapping deck_id to stats dict with keys:
+            - total: total cards with stats
+            - new: count of NEW status cards
+            - learning: count of LEARNING status cards
+            - mastered: count of MASTERED status cards
+            - due: count of cards due for review (next_review_date <= today)
+            - avg_ef: average easiness factor
+
+        Use Case:
+            Batch loading deck statistics to avoid N+1 queries
+        """
+        if not deck_ids:
+            return {}
+
+        today = date.today()
+
+        query = (
+            select(
+                Card.deck_id,
+                func.count(CardStatistics.id).label("total"),
+                func.count().filter(CardStatistics.status == CardStatus.NEW).label("new_count"),
+                func.count()
+                .filter(CardStatistics.status == CardStatus.LEARNING)
+                .label("learning_count"),
+                func.count()
+                .filter(CardStatistics.status == CardStatus.MASTERED)
+                .label("mastered_count"),
+                func.count().filter(CardStatistics.next_review_date <= today).label("due_count"),
+                func.avg(CardStatistics.easiness_factor).label("avg_ef"),
+            )
+            .join(Card, CardStatistics.card_id == Card.id)
+            .where(CardStatistics.user_id == user_id)
+            .where(Card.deck_id.in_(deck_ids))
+            .group_by(Card.deck_id)
+        )
+
+        result = await self.db.execute(query)
+        return {
+            row.deck_id: {
+                "total": row.total,
+                "new": row.new_count,
+                "learning": row.learning_count,
+                "mastered": row.mastered_count,
+                "due": row.due_count,
+                "avg_ef": float(row.avg_ef) if row.avg_ef else 2.5,
+            }
+            for row in result.all()
+        }
