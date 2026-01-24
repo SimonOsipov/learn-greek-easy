@@ -11,6 +11,12 @@ from src.services.claude_service import ClaudeService, ClaudeServiceError, claud
 from src.services.culture_deck_service import CultureDeckService
 from src.services.culture_question_service import CultureQuestionService
 from src.services.feedback_admin_service import FeedbackAdminService
+from src.services.html_extractor import (
+    ExtractedContent,
+    HTMLContentExtractor,
+    HTMLContentExtractorError,
+    html_extractor,
+)
 from src.services.mock_exam_service import MockExamService
 from src.services.news_source_service import DuplicateURLException, NewsSourceService
 from src.services.notification_service import NotificationService
@@ -32,7 +38,10 @@ __all__ = [
     "CultureQuestionService",
     "DeletionResult",
     "DuplicateURLException",
+    "ExtractedContent",
     "FeedbackAdminService",
+    "HTMLContentExtractor",
+    "HTMLContentExtractorError",
     "MockExamService",
     "NewsSourceService",
     "NotificationService",
@@ -46,4 +55,5 @@ __all__ = [
     "XPService",
     "claude_service",
     "get_s3_service",
+    "html_extractor",
 ]
