@@ -100,11 +100,14 @@ test.describe('Admin Question Review', () => {
     }
 
     // Ensure no review modal is already open (dismiss if present)
+    // Wait a moment for any animations to settle after navigation
+    await page.waitForTimeout(500);
     const existingModal = page.getByTestId('question-review-modal');
-    if (await existingModal.isVisible({ timeout: 500 }).catch(() => false)) {
+    if (await existingModal.isVisible({ timeout: 2000 }).catch(() => false)) {
+      // Use force:true to handle potential overlay issues with nested modals
       const closeBtn = existingModal.getByRole('button', { name: 'Close' });
-      await closeBtn.click();
-      await expect(existingModal).not.toBeVisible({ timeout: 3000 });
+      await closeBtn.click({ force: true });
+      await expect(existingModal).not.toBeVisible({ timeout: 5000 });
     }
 
     // Look for a Review Question button (indicates generated question ready for review)
@@ -147,11 +150,14 @@ test.describe('Admin Question Review', () => {
     }
 
     // Ensure no review modal is already open (dismiss if present)
+    // Wait a moment for any animations to settle after navigation
+    await page.waitForTimeout(500);
     const existingModal = page.getByTestId('question-review-modal');
-    if (await existingModal.isVisible({ timeout: 500 }).catch(() => false)) {
+    if (await existingModal.isVisible({ timeout: 2000 }).catch(() => false)) {
+      // Use force:true to handle potential overlay issues with nested modals
       const closeBtn = existingModal.getByRole('button', { name: 'Close' });
-      await closeBtn.click();
-      await expect(existingModal).not.toBeVisible({ timeout: 3000 });
+      await closeBtn.click({ force: true });
+      await expect(existingModal).not.toBeVisible({ timeout: 5000 });
     }
 
     // Look for or create a review button
@@ -206,11 +212,14 @@ test.describe('Admin Question Review', () => {
     }
 
     // Ensure no review modal is already open (dismiss if present)
+    // Wait a moment for any animations to settle after navigation
+    await page.waitForTimeout(500);
     const existingModal = page.getByTestId('question-review-modal');
-    if (await existingModal.isVisible({ timeout: 500 }).catch(() => false)) {
+    if (await existingModal.isVisible({ timeout: 2000 }).catch(() => false)) {
+      // Use force:true to handle potential overlay issues with nested modals
       const closeBtn = existingModal.getByRole('button', { name: 'Close' });
-      await closeBtn.click();
-      await expect(existingModal).not.toBeVisible({ timeout: 3000 });
+      await closeBtn.click({ force: true });
+      await expect(existingModal).not.toBeVisible({ timeout: 5000 });
     }
 
     // Look for or create a review button
@@ -256,12 +265,14 @@ test.describe('Admin Question Review', () => {
     }
 
     // Ensure no review modal is already open (dismiss if present)
-    // Use the Close button inside the modal for reliable dismissal
+    // Wait a moment for any animations to settle after navigation
+    await page.waitForTimeout(500);
     const existingModal = page.getByTestId('question-review-modal');
-    if (await existingModal.isVisible({ timeout: 500 }).catch(() => false)) {
+    if (await existingModal.isVisible({ timeout: 2000 }).catch(() => false)) {
+      // Use force:true to handle potential overlay issues with nested modals
       const closeBtn = existingModal.getByRole('button', { name: 'Close' });
-      await closeBtn.click();
-      await expect(existingModal).not.toBeVisible({ timeout: 3000 });
+      await closeBtn.click({ force: true });
+      await expect(existingModal).not.toBeVisible({ timeout: 5000 });
     }
 
     // Look for or create a review button
@@ -306,13 +317,14 @@ test.describe('Admin Question Review', () => {
     }
 
     // Ensure no review modal is already open (dismiss if present)
-    // Use the Close button inside the modal for reliable dismissal
+    // Wait a moment for any animations to settle after navigation
+    await page.waitForTimeout(500);
     const existingModal = page.getByTestId('question-review-modal');
-    if (await existingModal.isVisible({ timeout: 500 }).catch(() => false)) {
-      // Click the Close button inside the modal (Radix dialogs have a close button)
+    if (await existingModal.isVisible({ timeout: 2000 }).catch(() => false)) {
+      // Use force:true to handle potential overlay issues with nested modals
       const closeBtn = existingModal.getByRole('button', { name: 'Close' });
-      await closeBtn.click();
-      await expect(existingModal).not.toBeVisible({ timeout: 3000 });
+      await closeBtn.click({ force: true });
+      await expect(existingModal).not.toBeVisible({ timeout: 5000 });
     }
 
     // Look for or create a review button
