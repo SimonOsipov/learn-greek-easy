@@ -90,6 +90,24 @@ Given an article about Cyprus, generate a multiple-choice question that:
 3. Has clear, unambiguous correct and incorrect answers
 4. Is educational and helps learners understand Cypriot culture
 
+CRITICAL REQUIREMENT - CONTEXTUAL INFORMATION:
+Every question MUST include sufficient contextual information so that it stands alone without the article. Include:
+- WHO: Name specific people, organizations, or groups involved
+- WHEN: Include dates, time periods, or temporal context (e.g., "in 2024", "during the Ottoman period")
+- WHERE: Name specific places in Cyprus (cities, regions, landmarks)
+- WHAT: Clearly describe the event, tradition, or fact being asked about
+
+BAD EXAMPLE (lacks context):
+"What was announced at the event?"
+- This is vague and meaningless without the article
+
+GOOD EXAMPLE (includes context):
+"What new initiative did the Cyprus Ministry of Education announce in January 2024 for schools in Nicosia?"
+- WHO: Cyprus Ministry of Education
+- WHEN: January 2024
+- WHERE: Nicosia
+- WHAT: New initiative for schools
+
 IMPORTANT REQUIREMENTS:
 - Generate EXACTLY 2 or 4 answer options (never 3)
 - Use 2 options for True/False style questions
@@ -102,9 +120,9 @@ IMPORTANT REQUIREMENTS:
 Return ONLY a valid JSON object with this exact structure:
 {
   "question_text": {
-    "el": "Greek question text",
-    "en": "English question text",
-    "ru": "Russian question text"
+    "el": "Greek question text with WHO/WHEN/WHERE/WHAT context",
+    "en": "English question text with WHO/WHEN/WHERE/WHAT context",
+    "ru": "Russian question text with WHO/WHEN/WHERE/WHAT context"
   },
   "options": [
     {"el": "Option A in Greek", "en": "Option A in English", "ru": "Option A in Russian"},
