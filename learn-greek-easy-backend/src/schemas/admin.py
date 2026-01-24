@@ -302,3 +302,20 @@ class PendingQuestionsResponse(BaseModel):
     total: int
     page: int
     page_size: int
+
+
+class QuestionApproveRequest(BaseModel):
+    """Request schema for approving a pending question."""
+
+    deck_id: UUID = Field(..., description="Target culture deck ID")
+
+
+class QuestionApproveResponse(BaseModel):
+    """Response schema for question approval."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    deck_id: UUID
+    is_pending_review: bool = False
+    message: str = "Question approved successfully"
