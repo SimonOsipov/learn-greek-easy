@@ -66,6 +66,10 @@ test.describe('Admin Question Review', () => {
   // Use admin storage state (superuser)
   test.use({ storageState: 'playwright/.auth/admin.json' });
 
+  // Run tests serially to avoid race conditions when seeding the pending question
+  // Each test's beforeEach seeds a new pending question, which requires exclusive DB access
+  test.describe.configure({ mode: 'serial' });
+
   test.beforeEach(async ({ page, request }) => {
     // Seed pending question for each test
     const seedResponse = await request.post(
@@ -227,6 +231,15 @@ test.describe('Admin Question Review', () => {
       return;
     }
 
+    // Ensure no review modal is already open (dismiss if present)
+    // Use the Close button inside the modal for reliable dismissal
+    const existingModal = page.getByTestId('question-review-modal');
+    if (await existingModal.isVisible({ timeout: 500 }).catch(() => false)) {
+      const closeBtn = existingModal.getByRole('button', { name: 'Close' });
+      await closeBtn.click();
+      await expect(existingModal).not.toBeVisible({ timeout: 3000 });
+    }
+
     // Look for or create a review button
     let reviewBtn = page.locator('[data-testid^="review-question-btn-"]').first();
     if (!(await reviewBtn.isVisible({ timeout: 3000 }).catch(() => false))) {
@@ -266,6 +279,16 @@ test.describe('Admin Question Review', () => {
     if (!navResult.success) {
       test.skip(true, navResult.reason || 'Could not navigate to review modal');
       return;
+    }
+
+    // Ensure no review modal is already open (dismiss if present)
+    // Use the Close button inside the modal for reliable dismissal
+    const existingModal = page.getByTestId('question-review-modal');
+    if (await existingModal.isVisible({ timeout: 500 }).catch(() => false)) {
+      // Click the Close button inside the modal (Radix dialogs have a close button)
+      const closeBtn = existingModal.getByRole('button', { name: 'Close' });
+      await closeBtn.click();
+      await expect(existingModal).not.toBeVisible({ timeout: 3000 });
     }
 
     // Look for or create a review button

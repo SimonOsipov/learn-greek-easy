@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 
 import { format } from 'date-fns';
 import { Check, ExternalLink, Loader2 } from 'lucide-react';
-import { toast } from 'sonner';
 
 import { AlertDialog } from '@/components/dialogs';
 import { Button } from '@/components/ui/button';
@@ -22,6 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { adminAPI, type CultureDeckListItem, type PendingQuestion } from '@/services/adminAPI';
 
@@ -44,6 +44,8 @@ export const QuestionReviewModal: React.FC<QuestionReviewModalProps> = ({
   onApproved,
   onRejected,
 }) => {
+  const { toast } = useToast();
+
   // Data state
   const [question, setQuestion] = useState<PendingQuestion | null>(null);
   const [decks, setDecks] = useState<CultureDeckListItem[]>([]);
@@ -98,12 +100,18 @@ export const QuestionReviewModal: React.FC<QuestionReviewModalProps> = ({
     setIsApproving(true);
     try {
       await adminAPI.approveQuestion(question.id, selectedDeckId);
-      toast.success('Question approved successfully');
+      toast({
+        title: 'Question approved successfully',
+      });
       onApproved();
       onOpenChange(false);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to approve question';
-      toast.error(message);
+      toast({
+        title: 'Error',
+        description: message,
+        variant: 'destructive',
+      });
     } finally {
       setIsApproving(false);
     }
@@ -115,12 +123,18 @@ export const QuestionReviewModal: React.FC<QuestionReviewModalProps> = ({
     setIsRejecting(true);
     try {
       await adminAPI.rejectQuestion(question.id);
-      toast.success('Question deleted successfully');
+      toast({
+        title: 'Question deleted successfully',
+      });
       onRejected();
       onOpenChange(false);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to delete question';
-      toast.error(message);
+      toast({
+        title: 'Error',
+        description: message,
+        variant: 'destructive',
+      });
     } finally {
       setIsRejecting(false);
       setShowRejectConfirm(false);

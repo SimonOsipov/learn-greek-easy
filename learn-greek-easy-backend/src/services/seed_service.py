@@ -2469,10 +2469,23 @@ class SeedService:
         Creates a question with is_pending_review=True and deck_id=None.
         This simulates an AI-generated question awaiting admin approval.
 
+        This method is idempotent - if a question with the same source_article_url
+        exists, it will be deleted and recreated to ensure a fresh pending state.
+
+        The question is linked to one of the seeded discovered articles so that
+        the "Review Question" button appears in the Discovered Articles modal.
+
         Returns:
             dict with question_id and source_article_url
         """
         self._check_can_seed()
+
+        # Use a URL that matches one of the seeded discovered articles
+        # This ensures the "Review Question" button appears in the E2E tests
+        source_url = "https://e2e-source.test/news/cypriot-independence"
+        await self.db.execute(
+            delete(CultureQuestion).where(CultureQuestion.source_article_url == source_url)
+        )
 
         # Create pending question without deck assignment
         question = CultureQuestion(
@@ -2504,7 +2517,7 @@ class SeedService:
             },
             correct_option=2,
             is_pending_review=True,
-            source_article_url="https://example.com/cyprus-history/first-president",
+            source_article_url=source_url,
         )
 
         self.db.add(question)
