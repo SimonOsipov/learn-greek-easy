@@ -247,7 +247,13 @@
       "noArticlesDesc": "No suitable articles for Cypriot culture questions were found in this content.",
       "found": "{{count}} articles found",
       "tokens": "tokens",
-      "reasoning": "Why"
+      "reasoning": "Why",
+      "generateQuestion": "Generate Question",
+      "generating": "Generating...",
+      "alreadyGenerated": "Already Generated",
+      "generateError": "Failed - Retry?",
+      "generateTooltip": "Generate a culture question from this article using AI",
+      "alreadyGeneratedTooltip": "A question has already been generated from this article"
     }
   },
   "feedback": {

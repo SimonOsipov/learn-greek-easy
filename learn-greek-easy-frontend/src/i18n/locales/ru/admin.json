@@ -231,7 +231,13 @@
       "noArticlesDesc": "В этом содержимом не найдено подходящих статей для вопросов о кипрской культуре.",
       "found": "Найдено {{count}} статей",
       "tokens": "токенов",
-      "reasoning": "Почему"
+      "reasoning": "Почему",
+      "generateQuestion": "Создать вопрос",
+      "generating": "Создание...",
+      "alreadyGenerated": "Уже создан",
+      "generateError": "Ошибка - Повторить?",
+      "generateTooltip": "Создать вопрос о культуре из этой статьи с помощью ИИ",
+      "alreadyGeneratedTooltip": "Вопрос из этой статьи уже был создан"
     }
   },
   "feedback": {
