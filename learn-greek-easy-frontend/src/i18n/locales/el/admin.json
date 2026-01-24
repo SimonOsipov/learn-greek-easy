@@ -233,7 +233,10 @@
       "alreadyGenerated": "Ήδη Δημιουργήθηκε",
       "generateError": "Αποτυχία - Επανάληψη;",
       "generateTooltip": "Δημιουργήστε μια ερώτηση πολιτισμού από αυτό το άρθρο χρησιμοποιώντας AI",
-      "alreadyGeneratedTooltip": "Μια ερώτηση έχει ήδη δημιουργηθεί από αυτό το άρθρο"
+      "alreadyGeneratedTooltip": "Μια ερώτηση έχει ήδη δημιουργηθεί από αυτό το άρθρο",
+      "reviewQuestion": "Έλεγχος Ερώτησης",
+      "reviewQuestionTooltip": "Ελέγξτε και εγκρίνετε ή απορρίψτε την ερώτηση",
+      "approved": "Εγκρίθηκε"
     }
   },
   "feedback": {

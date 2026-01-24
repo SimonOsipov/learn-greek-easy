@@ -253,7 +253,10 @@
       "alreadyGenerated": "Already Generated",
       "generateError": "Failed - Retry?",
       "generateTooltip": "Generate a culture question from this article using AI",
-      "alreadyGeneratedTooltip": "A question has already been generated from this article"
+      "alreadyGeneratedTooltip": "A question has already been generated from this article",
+      "reviewQuestion": "Review Question",
+      "reviewQuestionTooltip": "Review and approve or reject the generated question",
+      "approved": "Approved"
     }
   },
   "feedback": {
