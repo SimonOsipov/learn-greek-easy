@@ -99,6 +99,14 @@ test.describe('Admin Question Review', () => {
       return;
     }
 
+    // Ensure no review modal is already open (dismiss if present)
+    const existingModal = page.getByTestId('question-review-modal');
+    if (await existingModal.isVisible({ timeout: 500 }).catch(() => false)) {
+      const closeBtn = existingModal.getByRole('button', { name: 'Close' });
+      await closeBtn.click();
+      await expect(existingModal).not.toBeVisible({ timeout: 3000 });
+    }
+
     // Look for a Review Question button (indicates generated question ready for review)
     const reviewBtns = page.locator('[data-testid^="review-question-btn-"]');
     if ((await reviewBtns.count()) === 0) {
@@ -136,6 +144,14 @@ test.describe('Admin Question Review', () => {
     if (!navResult.success) {
       test.skip(true, navResult.reason || 'Could not navigate to review modal');
       return;
+    }
+
+    // Ensure no review modal is already open (dismiss if present)
+    const existingModal = page.getByTestId('question-review-modal');
+    if (await existingModal.isVisible({ timeout: 500 }).catch(() => false)) {
+      const closeBtn = existingModal.getByRole('button', { name: 'Close' });
+      await closeBtn.click();
+      await expect(existingModal).not.toBeVisible({ timeout: 3000 });
     }
 
     // Look for or create a review button
@@ -187,6 +203,14 @@ test.describe('Admin Question Review', () => {
     if (!navResult.success) {
       test.skip(true, navResult.reason || 'Could not navigate to review modal');
       return;
+    }
+
+    // Ensure no review modal is already open (dismiss if present)
+    const existingModal = page.getByTestId('question-review-modal');
+    if (await existingModal.isVisible({ timeout: 500 }).catch(() => false)) {
+      const closeBtn = existingModal.getByRole('button', { name: 'Close' });
+      await closeBtn.click();
+      await expect(existingModal).not.toBeVisible({ timeout: 3000 });
     }
 
     // Look for or create a review button
