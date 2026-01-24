@@ -2463,6 +2463,58 @@ class SeedService:
             "source_id": str(source.id),
         }
 
+    async def seed_pending_question(self) -> dict[str, Any]:
+        """Seed a pending culture question for admin review E2E tests.
+
+        Creates a question with is_pending_review=True and deck_id=None.
+        This simulates an AI-generated question awaiting admin approval.
+
+        Returns:
+            dict with question_id and source_article_url
+        """
+        self._check_can_seed()
+
+        # Create pending question without deck assignment
+        question = CultureQuestion(
+            deck_id=None,
+            question_text={
+                "el": "Ποιος ήταν ο πρώτος πρόεδρος της Κυπριακής Δημοκρατίας;",
+                "en": "Who was the first president of the Republic of Cyprus?",
+                "ru": "Кто был первым президентом Республики Кипр?",
+            },
+            option_a={
+                "el": "Γλαύκος Κληρίδης",
+                "en": "Glafcos Clerides",
+                "ru": "Глафкос Клиридис",
+            },
+            option_b={
+                "el": "Μακάριος Γ΄",
+                "en": "Makarios III",
+                "ru": "Макариос III",
+            },
+            option_c={
+                "el": "Σπύρος Κυπριανού",
+                "en": "Spyros Kyprianou",
+                "ru": "Спирос Киприану",
+            },
+            option_d={
+                "el": "Τάσσος Παπαδόπουλος",
+                "en": "Tassos Papadopoulos",
+                "ru": "Тассос Пападопулос",
+            },
+            correct_option=2,
+            is_pending_review=True,
+            source_article_url="https://example.com/cyprus-history/first-president",
+        )
+
+        self.db.add(question)
+        await self.db.flush()
+
+        return {
+            "question_id": str(question.id),
+            "source_article_url": question.source_article_url,
+        }
+
     # =====================
     # XP & Achievement Seeding
     # =====================

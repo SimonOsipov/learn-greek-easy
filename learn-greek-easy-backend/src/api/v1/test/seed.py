@@ -473,6 +473,34 @@ async def seed_fetch_history(
 
 
 @router.post(
+    "/pending-question",
+    response_model=SeedResultResponse,
+    summary="Seed a pending culture question",
+    description="Creates a pending review question for testing the review UI.",
+)
+async def seed_pending_question(
+    db: AsyncSession = Depends(get_db),
+    _: None = Depends(verify_seed_access),
+) -> SeedResultResponse:
+    """Seed a pending culture question for review testing."""
+    start = perf_counter()
+
+    service = SeedService(db)
+    result = await service.seed_pending_question()
+    await db.commit()
+
+    duration_ms = (perf_counter() - start) * 1000
+
+    return SeedResultResponse(
+        success=True,
+        operation="pending-question",
+        timestamp=datetime.now(timezone.utc),
+        duration_ms=round(duration_ms, 2),
+        results=result,
+    )
+
+
+@router.post(
     "/auth",
     response_model=TestAuthResponse,
     summary="Get auth tokens for test user",
