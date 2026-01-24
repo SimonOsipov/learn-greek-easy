@@ -1230,10 +1230,10 @@ class CultureQuestion(Base, TimestampMixin):
         server_default=func.uuid_generate_v4(),
     )
 
-    # Foreign key
-    deck_id: Mapped[UUID] = mapped_column(
+    # Foreign key (nullable for AI-generated questions pending review)
+    deck_id: Mapped[UUID | None] = mapped_column(
         ForeignKey("culture_decks.id", ondelete="CASCADE"),
-        nullable=False,
+        nullable=True,
         index=True,
     )
 
@@ -1305,12 +1305,36 @@ class CultureQuestion(Base, TimestampMixin):
         comment="Timestamp when embedding was last generated/updated",
     )
 
+    # Pending review status for AI-generated questions
+    is_pending_review: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        server_default=text("false"),
+        nullable=False,
+        index=True,
+        comment="True for AI-generated questions awaiting admin review",
+    )
+
+    # Source article URL for duplicate prevention
+    source_article_url: Mapped[str | None] = mapped_column(
+        String(500),
+        nullable=True,
+        unique=True,
+        index=True,
+        comment="URL of the source article used to generate this question",
+    )
+
     # Relationships
     # Note: lazy="raise" prevents N+1 queries by forcing explicit loading.
     # Use selectinload() or joinedload() when you actually need these relationships.
-    deck: Mapped["CultureDeck"] = relationship(
+    deck: Mapped["CultureDeck | None"] = relationship(
         back_populates="questions",
         lazy="raise",
+    )
+    generation_log: Mapped["QuestionGenerationLog | None"] = relationship(
+        back_populates="question",
+        lazy="raise",
+        uselist=False,
     )
     statistics: Mapped[List["CultureQuestionStats"]] = relationship(
         back_populates="question",
@@ -1739,10 +1763,15 @@ class SourceFetchHistory(Base, TimestampMixin):
         comment="Timestamp when analysis completed",
     )
 
-    # Relationship
+    # Relationships
     source: Mapped["NewsSource"] = relationship(
         back_populates="fetch_history",
         lazy="selectin",
+    )
+    generation_logs: Mapped[List["QuestionGenerationLog"]] = relationship(
+        back_populates="source_fetch_history",
+        lazy="raise",
+        cascade="all, delete-orphan",
     )
 
     # Composite index for efficient history queries
@@ -1751,4 +1780,88 @@ class SourceFetchHistory(Base, TimestampMixin):
     def __repr__(self) -> str:
         return (
             f"<SourceFetchHistory(id={self.id}, source_id={self.source_id}, status={self.status})>"
+        )
+
+
+class QuestionGenerationLog(Base, TimestampMixin):
+    """Log of question generation attempts for debugging and monitoring."""
+
+    __tablename__ = "question_generation_logs"
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True,
+        server_default=func.uuid_generate_v4(),
+    )
+
+    # Source tracking
+    source_fetch_history_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("source_fetch_history.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+        comment="Reference to the fetch history entry",
+    )
+    article_url: Mapped[str] = mapped_column(
+        String(500),
+        nullable=False,
+        index=True,
+        comment="URL of the article used for generation",
+    )
+    article_title: Mapped[str] = mapped_column(
+        String(500),
+        nullable=False,
+        comment="Title of the article",
+    )
+
+    # Result tracking
+    status: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        index=True,
+        comment="'success' or 'failed'",
+    )
+    question_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("culture_questions.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+        comment="Reference to generated question (if successful)",
+    )
+    error_message: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        comment="Error details if generation failed",
+    )
+
+    # Token usage tracking
+    tokens_used: Mapped[int | None] = mapped_column(
+        Integer,
+        nullable=True,
+        comment="Total tokens consumed for generation",
+    )
+
+    # Timing
+    started_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+    completed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+    # Relationships
+    source_fetch_history: Mapped["SourceFetchHistory | None"] = relationship(
+        back_populates="generation_logs",
+        lazy="raise",
+    )
+    question: Mapped["CultureQuestion | None"] = relationship(
+        back_populates="generation_log",
+        lazy="raise",
+    )
+
+    def __repr__(self) -> str:
+        return (
+            f"<QuestionGenerationLog(id={self.id}, "
+            f"article_url={self.article_url[:30] if self.article_url else 'N/A'}..., "
+            f"status={self.status})>"
         )

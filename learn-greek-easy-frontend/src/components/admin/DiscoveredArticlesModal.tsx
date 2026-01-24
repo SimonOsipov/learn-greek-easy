@@ -3,7 +3,15 @@
 import React, { useState, useEffect, useCallback } from 'react';
 
 import { format } from 'date-fns';
-import { FileText, ExternalLink, AlertCircle, RefreshCw, Loader2 } from 'lucide-react';
+import {
+  FileText,
+  ExternalLink,
+  AlertCircle,
+  RefreshCw,
+  Loader2,
+  CheckCircle,
+  Sparkles,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -17,11 +25,14 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   adminAPI,
   type FetchHistoryItem,
   type FetchHistoryDetailResponse,
+  type DiscoveredArticle,
 } from '@/services/adminAPI';
+import { APIRequestError } from '@/services/api';
 
 interface DiscoveredArticlesModalProps {
   open: boolean;
@@ -54,6 +65,10 @@ export const DiscoveredArticlesModal: React.FC<DiscoveredArticlesModalProps> = (
   const [isRetrying, setIsRetrying] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // State for generate question buttons
+  type GenerateButtonState = 'idle' | 'loading' | 'success' | 'error';
+  const [generateStates, setGenerateStates] = useState<Record<string, GenerateButtonState>>({});
+
   const fetchResults = useCallback(async () => {
     if (!historyItem) return;
     setIsLoading(true);
@@ -77,6 +92,7 @@ export const DiscoveredArticlesModal: React.FC<DiscoveredArticlesModalProps> = (
     if (!open) {
       setData(null);
       setError(null);
+      setGenerateStates({});
     }
   }, [open, historyItem, fetchResults]);
 
@@ -86,6 +102,60 @@ export const DiscoveredArticlesModal: React.FC<DiscoveredArticlesModalProps> = (
     const interval = setInterval(fetchResults, 3000);
     return () => clearInterval(interval);
   }, [open, data?.analysis_status, fetchResults]);
+
+  // Check article usage status when articles load
+  useEffect(() => {
+    if (!data?.discovered_articles || data.discovered_articles.length === 0) return;
+
+    const checkUsage = async () => {
+      const initialStates: Record<string, GenerateButtonState> = {};
+
+      await Promise.all(
+        data.discovered_articles!.map(async (article) => {
+          try {
+            const result = await adminAPI.checkArticleUsage(article.url);
+            initialStates[article.url] = result.used ? 'success' : 'idle';
+          } catch {
+            initialStates[article.url] = 'idle';
+          }
+        })
+      );
+
+      setGenerateStates(initialStates);
+    };
+
+    checkUsage();
+  }, [data?.discovered_articles]);
+
+  /**
+   * Handle generating a question from an article
+   */
+  const handleGenerateQuestion = async (article: DiscoveredArticle) => {
+    if (!historyItem) return;
+
+    setGenerateStates((prev) => ({ ...prev, [article.url]: 'loading' }));
+
+    try {
+      await adminAPI.generateQuestion({
+        article_url: article.url,
+        article_title: article.title,
+        fetch_history_id: historyItem.id,
+      });
+
+      setGenerateStates((prev) => ({ ...prev, [article.url]: 'success' }));
+    } catch (err: unknown) {
+      // Check if it's a 409 Conflict (already used)
+      if (err instanceof APIRequestError && err.status === 409) {
+        setGenerateStates((prev) => ({ ...prev, [article.url]: 'success' }));
+      } else {
+        setGenerateStates((prev) => ({ ...prev, [article.url]: 'error' }));
+        // Revert to idle after 3 seconds
+        setTimeout(() => {
+          setGenerateStates((prev) => ({ ...prev, [article.url]: 'idle' }));
+        }, 3000);
+      }
+    }
+  };
 
   const handleRetry = async () => {
     if (!historyItem) return;
@@ -260,6 +330,52 @@ export const DiscoveredArticlesModal: React.FC<DiscoveredArticlesModalProps> = (
                           {t('sources.articles.reasoning')}
                         </Badge>
                         <p className="text-sm text-muted-foreground">{article.reasoning}</p>
+                      </div>
+
+                      {/* Generate Question Button */}
+                      <div className="mt-3 flex justify-end">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant={
+                                generateStates[article.url] === 'error' ? 'destructive' : 'outline'
+                              }
+                              size="sm"
+                              onClick={() => handleGenerateQuestion(article)}
+                              disabled={
+                                generateStates[article.url] === 'loading' ||
+                                generateStates[article.url] === 'success'
+                              }
+                              data-testid={`generate-question-btn-${index}`}
+                            >
+                              {generateStates[article.url] === 'loading' && (
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              )}
+                              {generateStates[article.url] === 'success' && (
+                                <CheckCircle className="mr-2 h-4 w-4 text-green-500" />
+                              )}
+                              {generateStates[article.url] === 'error' && (
+                                <AlertCircle className="mr-2 h-4 w-4" />
+                              )}
+                              {(!generateStates[article.url] ||
+                                generateStates[article.url] === 'idle') && (
+                                <Sparkles className="mr-2 h-4 w-4" />
+                              )}
+                              {generateStates[article.url] === 'success'
+                                ? t('sources.articles.alreadyGenerated')
+                                : generateStates[article.url] === 'loading'
+                                  ? t('sources.articles.generating')
+                                  : generateStates[article.url] === 'error'
+                                    ? t('sources.articles.generateError')
+                                    : t('sources.articles.generateQuestion')}
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {generateStates[article.url] === 'success'
+                              ? t('sources.articles.alreadyGeneratedTooltip')
+                              : t('sources.articles.generateTooltip')}
+                          </TooltipContent>
+                        </Tooltip>
                       </div>
                     </div>
                   </div>

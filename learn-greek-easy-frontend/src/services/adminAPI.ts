@@ -264,6 +264,60 @@ export interface AnalysisStartedResponse {
 }
 
 // ============================================
+// Question Generation Types
+// ============================================
+
+/**
+ * Request payload for generating a culture question from an article
+ */
+export interface GenerateQuestionRequest {
+  article_url: string;
+  article_title: string;
+  fetch_history_id: string;
+}
+
+/**
+ * Response from successful question generation
+ */
+export interface GenerateQuestionResponse {
+  question_id: string;
+  message: string;
+}
+
+/**
+ * Response from article usage check
+ */
+export interface CheckArticleResponse {
+  used: boolean;
+  question_id: string | null;
+}
+
+/**
+ * A single pending review question
+ */
+export interface PendingQuestion {
+  id: string;
+  question_text: Record<string, string>;
+  option_a: Record<string, string>;
+  option_b: Record<string, string>;
+  option_c: Record<string, string> | null;
+  option_d: Record<string, string> | null;
+  correct_option: number;
+  source_article_url: string | null;
+  created_at: string;
+}
+
+/**
+ * Paginated response for pending questions list
+ */
+export interface PendingQuestionsResponse {
+  questions: PendingQuestion[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+// ============================================
 // Admin API Methods
 // ============================================
 
@@ -485,6 +539,57 @@ export const adminAPI = {
   getAnalysisResults: async (historyId: string): Promise<FetchHistoryDetailResponse> => {
     return api.get<FetchHistoryDetailResponse>(
       `/api/v1/admin/culture/sources/history/${historyId}/articles`
+    );
+  },
+
+  // ============================================
+  // Question Generation
+  // ============================================
+
+  /**
+   * Generate a culture question from an article using AI
+   *
+   * Fetches the article HTML, sends to Claude for question generation,
+   * and creates a new pending review question.
+   * Requires superuser authentication.
+   *
+   * @returns Generated question ID and success message
+   * @throws 400 if article fetch fails
+   * @throws 409 if article already used for question generation
+   * @throws 500 if AI generation fails
+   */
+  generateQuestion: async (data: GenerateQuestionRequest): Promise<GenerateQuestionResponse> => {
+    return api.post<GenerateQuestionResponse>('/api/v1/admin/culture/questions/generate', data);
+  },
+
+  /**
+   * Check if an article URL has already been used for question generation
+   *
+   * Requires superuser authentication.
+   *
+   * @param url - The article URL to check
+   * @returns Whether the article is used and the existing question ID if so
+   */
+  checkArticleUsage: async (url: string): Promise<CheckArticleResponse> => {
+    const queryString = buildQueryString({ url });
+    return api.get<CheckArticleResponse>(
+      `/api/v1/admin/culture/questions/check-article${queryString}`
+    );
+  },
+
+  /**
+   * Get a paginated list of AI-generated questions awaiting admin review
+   *
+   * Requires superuser authentication.
+   *
+   * @param page - Page number (1-indexed, default: 1)
+   * @param pageSize - Items per page (1-100, default: 20)
+   * @returns Paginated list of pending questions
+   */
+  getPendingQuestions: async (page = 1, pageSize = 20): Promise<PendingQuestionsResponse> => {
+    const queryString = buildQueryString({ page, page_size: pageSize });
+    return api.get<PendingQuestionsResponse>(
+      `/api/v1/admin/culture/questions/pending${queryString}`
     );
   },
 };

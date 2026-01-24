@@ -246,3 +246,59 @@ class AnalysisStartedResponse(BaseModel):
 
     message: str = Field(..., description="Status message")
     history_id: UUID = Field(..., description="History entry UUID being analyzed")
+
+
+# ============================================================================
+# Question Generation Schemas
+# ============================================================================
+
+
+class QuestionGenerateRequest(BaseModel):
+    """Request schema for generating a culture question from an article."""
+
+    article_url: HttpUrl = Field(..., description="URL of the article")
+    article_title: str = Field(
+        ..., min_length=1, max_length=500, description="Title of the article"
+    )
+    fetch_history_id: UUID = Field(..., description="ID of the fetch history entry")
+
+
+class QuestionGenerateResponse(BaseModel):
+    """Response schema for successful question generation."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    question_id: UUID = Field(..., description="ID of the generated question")
+    message: str = Field(default="Question generated successfully")
+
+
+class ArticleCheckResponse(BaseModel):
+    """Response schema for article usage check."""
+
+    used: bool = Field(..., description="Whether article has been used")
+    question_id: Optional[UUID] = Field(None, description="ID of existing question if used")
+
+
+class PendingQuestionItem(BaseModel):
+    """Single pending review question."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    question_text: dict[str, str]
+    option_a: dict[str, str]
+    option_b: dict[str, str]
+    option_c: Optional[dict[str, str]] = None
+    option_d: Optional[dict[str, str]] = None
+    correct_option: int
+    source_article_url: Optional[str] = None
+    created_at: datetime
+
+
+class PendingQuestionsResponse(BaseModel):
+    """Response schema for listing pending questions."""
+
+    questions: list[PendingQuestionItem]
+    total: int
+    page: int
+    page_size: int

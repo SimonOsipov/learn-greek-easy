@@ -8,7 +8,7 @@ This module contains schemas for:
 """
 
 from datetime import date, datetime
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -26,6 +26,39 @@ class MultilingualText(BaseModel):
     el: str = Field(..., min_length=1, description="Greek text")
     en: str = Field(..., min_length=1, description="English text")
     ru: str = Field(..., min_length=1, description="Russian text")
+
+
+class GeneratedQuestionResponse(BaseModel):
+    """Response schema for AI-generated culture question from Claude."""
+
+    question_text: MultilingualText = Field(..., description="The question in all three languages")
+    options: list[MultilingualText] = Field(..., description="Answer options (2 or 4)")
+    correct_option: int = Field(..., ge=1, le=4, description="Correct answer index (1-based)")
+    category: Literal["history", "geography", "politics", "culture", "traditions", "practical"] = (
+        Field(..., description="Question category")
+    )
+    difficulty: Literal["easy", "medium", "hard"] = Field(..., description="Difficulty level")
+    explanation: MultilingualText = Field(..., description="Explanation of the correct answer")
+    source_context: str = Field(..., description="Brief context about the source article used")
+
+    @field_validator("options")
+    @classmethod
+    def validate_options_count(cls, v: list[MultilingualText]) -> list[MultilingualText]:
+        """Ensure exactly 2 or 4 options are provided."""
+        if len(v) not in (2, 4):
+            raise ValueError(
+                f"Options must be exactly 2 (True/False) or 4 (multiple choice), got {len(v)}"
+            )
+        return v
+
+    @model_validator(mode="after")
+    def validate_correct_option_range(self) -> "GeneratedQuestionResponse":
+        """Ensure correct_option is within options range."""
+        if self.correct_option > len(self.options):
+            raise ValueError(
+                f"correct_option ({self.correct_option}) exceeds option count ({len(self.options)})"
+            )
+        return self
 
 
 # ============================================================================

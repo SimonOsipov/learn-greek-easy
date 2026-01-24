@@ -16,6 +16,7 @@ Example Usage:
 """
 
 import json
+import re
 from typing import List, Tuple
 from urllib.parse import parse_qs, urlencode, urljoin, urlparse
 
@@ -25,6 +26,7 @@ from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_ex
 from src.config import settings
 from src.core.logging import get_logger
 from src.schemas.admin import DiscoveredArticle
+from src.schemas.culture import GeneratedQuestionResponse
 
 logger = get_logger(__name__)
 
@@ -78,6 +80,46 @@ TRACKING_PARAMS = {
     "twclid",
     "li_fat_id",
 }
+
+# System prompt for generating culture exam questions from article content
+QUESTION_GENERATION_SYSTEM_PROMPT = """You are an expert at creating educational multiple-choice questions about Cypriot culture for an exam preparation application.
+
+Given an article about Cyprus, generate a multiple-choice question that:
+1. Tests knowledge that would be relevant for the Cypriot citizenship exam
+2. Is based on factual information from the article
+3. Has clear, unambiguous correct and incorrect answers
+4. Is educational and helps learners understand Cypriot culture
+
+IMPORTANT REQUIREMENTS:
+- Generate EXACTLY 2 or 4 answer options (never 3)
+- Use 2 options for True/False style questions
+- Use 4 options for factual multiple-choice questions
+- All text must be provided in three languages: Greek (el), English (en), and Russian (ru)
+- The correct_option is 1-indexed (1 for first option, 2 for second, etc.)
+- Category must be one of: history, geography, politics, culture, traditions, practical
+- Difficulty must be one of: easy, medium, hard
+
+Return ONLY a valid JSON object with this exact structure:
+{
+  "question_text": {
+    "el": "Greek question text",
+    "en": "English question text",
+    "ru": "Russian question text"
+  },
+  "options": [
+    {"el": "Option A in Greek", "en": "Option A in English", "ru": "Option A in Russian"},
+    {"el": "Option B in Greek", "en": "Option B in English", "ru": "Option B in Russian"}
+  ],
+  "correct_option": 1,
+  "category": "culture",
+  "difficulty": "medium",
+  "explanation": {
+    "el": "Greek explanation of correct answer",
+    "en": "English explanation of correct answer",
+    "ru": "Russian explanation of correct answer"
+  },
+  "source_context": "Brief context about what aspect of the article was used"
+}"""
 
 
 class ClaudeServiceError(Exception):
@@ -213,8 +255,6 @@ class ClaudeService:
         Returns:
             Extracted JSON string
         """
-        import re
-
         content = content.strip()
 
         # Try 1: Direct JSON array (starts with '[')
@@ -336,6 +376,239 @@ class ClaudeService:
             clean_url += f"?{clean_query}"
 
         return clean_url
+
+    def _find_matching_brace(self, content: str, start_idx: int = 0) -> str | None:
+        """Find JSON object by matching braces from start position.
+
+        Args:
+            content: String to search
+            start_idx: Position of opening brace
+
+        Returns:
+            Extracted JSON string or None if no match found
+        """
+        brace_count = 0
+        in_string = False
+        escape_next = False
+
+        for i in range(start_idx, len(content)):
+            char = content[i]
+
+            if escape_next:
+                escape_next = False
+                continue
+
+            if char == "\\" and in_string:
+                escape_next = True
+                continue
+
+            if char == '"' and not escape_next:
+                in_string = not in_string
+                continue
+
+            if in_string:
+                continue
+
+            if char == "{":
+                brace_count += 1
+            elif char == "}":
+                brace_count -= 1
+                if brace_count == 0:
+                    return content[start_idx : i + 1]
+
+        return None
+
+    def _extract_json_object_from_response(self, content: str) -> str:
+        """Extract JSON object from Claude's response.
+
+        Handles various response formats:
+        1. Pure JSON object
+        2. JSON within markdown code blocks
+        3. JSON object embedded in natural language text
+
+        Args:
+            content: Raw response text from Claude
+
+        Returns:
+            Extracted JSON string
+        """
+        content = content.strip()
+
+        # Try 1: Direct JSON object (starts with '{')
+        if content.startswith("{"):
+            result = self._find_matching_brace(content, 0)
+            return result if result else content
+
+        # Try 2: Extract from markdown code block
+        code_block_pattern = r"```(?:json)?\s*\n?([\s\S]*?)\n?```"
+        match = re.search(code_block_pattern, content)
+        if match:
+            extracted = match.group(1).strip()
+            if extracted.startswith("{"):
+                return extracted
+
+        # Try 3: Find JSON object anywhere in the text
+        start_idx = content.find("{")
+        if start_idx != -1:
+            result = self._find_matching_brace(content, start_idx)
+            if result:
+                return result
+
+        # Fallback: return original content
+        return content
+
+    def _parse_question_response(self, content: str) -> GeneratedQuestionResponse:
+        """Parse Claude's JSON response for question generation.
+
+        Args:
+            content: Raw response text from Claude
+
+        Returns:
+            Validated GeneratedQuestionResponse object
+
+        Raises:
+            ClaudeServiceError: If JSON is invalid or doesn't match schema
+        """
+        json_content = self._extract_json_object_from_response(content)
+
+        try:
+            raw_question = json.loads(json_content)
+        except json.JSONDecodeError as e:
+            logger.error(
+                "Invalid JSON from Claude for question generation",
+                extra={"content_preview": content[:500], "error": str(e)},
+            )
+            raise ClaudeServiceError(f"Invalid JSON response: {str(e)}") from e
+
+        if not isinstance(raw_question, dict):
+            logger.error(
+                "Claude question response is not an object",
+                extra={"type": type(raw_question).__name__},
+            )
+            raise ClaudeServiceError("Response is not a JSON object")
+
+        try:
+            question = GeneratedQuestionResponse(**raw_question)
+        except Exception as e:
+            logger.error(
+                "Failed to validate question response",
+                extra={"error": str(e), "raw_question": raw_question},
+            )
+            raise ClaudeServiceError(f"Invalid question response: {str(e)}") from e
+
+        logger.info(
+            "Parsed question from Claude response",
+            extra={
+                "category": question.category,
+                "difficulty": question.difficulty,
+                "options_count": len(question.options),
+            },
+        )
+
+        return question
+
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=4, max=60),
+        retry=retry_if_exception_type(RateLimitError),
+    )
+    def generate_culture_question(
+        self,
+        html_content: str,
+        article_url: str,
+        article_title: str,
+    ) -> tuple[GeneratedQuestionResponse, int]:
+        """Generate a culture question from article HTML content.
+
+        Uses Claude to analyze the article and create an educational
+        multiple-choice question suitable for the Cypriot culture exam.
+
+        Args:
+            html_content: Raw HTML content of the article
+            article_url: URL of the source article (for reference)
+            article_title: Title of the article
+
+        Returns:
+            Tuple of (generated question response, tokens used)
+
+        Raises:
+            ClaudeServiceError: On API timeout, invalid response, or other API errors
+            RateLimitError: On rate limit (will be retried by tenacity)
+        """
+        # Log warning for large HTML content
+        html_size_kb = len(html_content.encode("utf-8")) / 1024
+        if html_size_kb > 100:
+            logger.warning(
+                "Large HTML content for question generation",
+                extra={
+                    "html_size_kb": round(html_size_kb, 2),
+                    "article_url": article_url,
+                    "article_title": article_title,
+                },
+            )
+
+        user_prompt = (
+            f"Generate a culture exam question based on this article.\n\n"
+            f"Article Title: {article_title}\n"
+            f"Article URL: {article_url}\n\n"
+            f"<article>\n{html_content}\n</article>"
+        )
+
+        try:
+            response = self.client.messages.create(
+                model=settings.claude_model,
+                max_tokens=settings.claude_max_tokens,
+                temperature=settings.claude_temperature,
+                timeout=settings.claude_timeout,
+                system=QUESTION_GENERATION_SYSTEM_PROMPT,
+                messages=[{"role": "user", "content": user_prompt}],
+            )
+
+            tokens_used = response.usage.input_tokens + response.usage.output_tokens
+            content_block = response.content[0]
+            if not hasattr(content_block, "text"):
+                raise ClaudeServiceError("Unexpected response format from Claude API")
+            content = content_block.text
+
+            logger.info(
+                "Claude question generation API call successful",
+                extra={
+                    "model": settings.claude_model,
+                    "input_tokens": response.usage.input_tokens,
+                    "output_tokens": response.usage.output_tokens,
+                    "total_tokens": tokens_used,
+                    "article_url": article_url,
+                },
+            )
+
+            question = self._parse_question_response(content)
+
+            return question, tokens_used
+
+        except APITimeoutError as e:
+            logger.error(
+                "Claude API timeout during question generation",
+                extra={
+                    "timeout": settings.claude_timeout,
+                    "article_url": article_url,
+                    "error": str(e),
+                },
+            )
+            raise ClaudeServiceError(f"API timeout after {settings.claude_timeout} seconds") from e
+
+        except RateLimitError:
+            logger.warning(
+                "Claude API rate limit hit during question generation, will retry",
+                extra={"article_url": article_url},
+            )
+            raise  # Will be retried by tenacity
+
+        except APIError as e:
+            logger.error(
+                "Claude API error during question generation",
+                extra={"article_url": article_url, "error": str(e)},
+            )
+            raise ClaudeServiceError(f"API error: {str(e)}") from e
 
 
 # Singleton instance for easy import
