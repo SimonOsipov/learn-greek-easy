@@ -11,6 +11,7 @@ All endpoints require superuser authentication.
 from typing import Optional
 from uuid import UUID
 
+import httpx
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -25,18 +26,24 @@ from src.db.models import (
     Deck,
     FeedbackCategory,
     FeedbackStatus,
+    QuestionGenerationLog,
     User,
 )
 from src.schemas.admin import (
     AdminDeckListResponse,
     AdminStatsResponse,
     AnalysisStartedResponse,
+    ArticleCheckResponse,
     CultureDeckStatsItem,
     DeckStatsItem,
     NewsSourceCreate,
     NewsSourceListResponse,
     NewsSourceResponse,
     NewsSourceUpdate,
+    PendingQuestionItem,
+    PendingQuestionsResponse,
+    QuestionGenerateRequest,
+    QuestionGenerateResponse,
     SourceFetchHistoryDetailResponse,
     SourceFetchHistoryItem,
     SourceFetchHistoryListResponse,
@@ -49,6 +56,7 @@ from src.schemas.feedback import (
     AdminFeedbackUpdate,
     AuthorBriefResponse,
 )
+from src.services.claude_service import ClaudeServiceError, claude_service
 from src.services.feedback_admin_service import FeedbackAdminService
 from src.services.news_source_service import DuplicateURLException, NewsSourceService
 from src.services.source_fetch_service import SourceFetchService
@@ -1031,3 +1039,188 @@ async def get_analysis_results(
         )
 
     return SourceFetchHistoryDetailResponse.model_validate(history)
+
+
+# ============================================================================
+# Culture Question Generation Endpoints
+# ============================================================================
+
+
+@router.post(
+    "/culture/questions/generate",
+    response_model=QuestionGenerateResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Generate a culture question from an article",
+    responses={
+        201: {"description": "Question generated successfully"},
+        400: {"description": "Failed to fetch article HTML"},
+        409: {"description": "Article already used for question generation"},
+        500: {"description": "AI generation failed"},
+    },
+)
+async def generate_culture_question(
+    request: QuestionGenerateRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> QuestionGenerateResponse:
+    """Generate a culture exam question from an article using AI."""
+    from datetime import datetime, timezone
+
+    article_url_str = str(request.article_url)
+    started_at = datetime.now(timezone.utc)
+
+    # Check if article already used (before calling Claude to save tokens)
+    existing = await db.execute(
+        select(CultureQuestion).where(CultureQuestion.source_article_url == article_url_str)
+    )
+    if existing.scalar_one_or_none():
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="A question has already been generated from this article",
+        )
+
+    # Fetch article HTML
+    try:
+        async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
+            response = await client.get(article_url_str)
+            response.raise_for_status()
+            html_content = response.text
+    except httpx.HTTPError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Failed to fetch article: {str(e)}",
+        )
+
+    # Create log entry (in_progress)
+    log_entry = QuestionGenerationLog(
+        source_fetch_history_id=request.fetch_history_id,
+        article_url=article_url_str,
+        article_title=request.article_title,
+        status="in_progress",
+        started_at=started_at,
+    )
+    db.add(log_entry)
+    await db.flush()
+
+    try:
+        # Generate question using Claude
+        result, tokens_used = claude_service.generate_culture_question(
+            html_content=html_content,
+            article_url=article_url_str,
+            article_title=request.article_title,
+        )
+
+        # Build options from result
+        options = [opt.model_dump() for opt in result.options]
+
+        # Create CultureQuestion
+        question = CultureQuestion(
+            deck_id=None,
+            question_text=result.question_text.model_dump(),
+            option_a=options[0] if len(options) > 0 else {"el": "", "en": "", "ru": ""},
+            option_b=options[1] if len(options) > 1 else {"el": "", "en": "", "ru": ""},
+            option_c=options[2] if len(options) > 2 else None,
+            option_d=options[3] if len(options) > 3 else None,
+            correct_option=result.correct_option,
+            is_pending_review=True,
+            source_article_url=article_url_str,
+        )
+        db.add(question)
+        await db.flush()
+
+        # Update log entry (success)
+        log_entry.status = "success"
+        log_entry.question_id = question.id
+        log_entry.tokens_used = tokens_used
+        log_entry.completed_at = datetime.now(timezone.utc)
+
+        await db.commit()
+
+        return QuestionGenerateResponse(
+            question_id=question.id,
+            message="Question generated successfully",
+        )
+
+    except ClaudeServiceError as e:
+        # Update log entry (failed)
+        log_entry.status = "failed"
+        log_entry.error_message = str(e)
+        log_entry.completed_at = datetime.now(timezone.utc)
+        await db.commit()
+
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate question: {str(e)}",
+        )
+
+
+@router.get(
+    "/culture/questions/check-article",
+    response_model=ArticleCheckResponse,
+    summary="Check if article URL is already used",
+)
+async def check_article_usage(
+    url: str = Query(..., description="URL of the article to check"),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> ArticleCheckResponse:
+    """Check if an article URL has been used for question generation."""
+    result = await db.execute(
+        select(CultureQuestion.id).where(CultureQuestion.source_article_url == url)
+    )
+    question_id = result.scalar_one_or_none()
+
+    return ArticleCheckResponse(
+        used=question_id is not None,
+        question_id=question_id,
+    )
+
+
+@router.get(
+    "/culture/questions/pending",
+    response_model=PendingQuestionsResponse,
+    summary="List pending review questions",
+)
+async def list_pending_questions(
+    page: int = Query(1, ge=1, description="Page number"),
+    page_size: int = Query(20, ge=1, le=100, description="Items per page"),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> PendingQuestionsResponse:
+    """Get a paginated list of AI-generated questions awaiting admin review."""
+    # Count total
+    count_result = await db.execute(
+        select(func.count(CultureQuestion.id)).where(CultureQuestion.is_pending_review.is_(True))
+    )
+    total = count_result.scalar() or 0
+
+    # Get paginated results
+    offset = (page - 1) * page_size
+    result = await db.execute(
+        select(CultureQuestion)
+        .where(CultureQuestion.is_pending_review.is_(True))
+        .order_by(CultureQuestion.created_at.desc())
+        .offset(offset)
+        .limit(page_size)
+    )
+    questions = result.scalars().all()
+
+    return PendingQuestionsResponse(
+        questions=[
+            PendingQuestionItem(
+                id=q.id,
+                question_text=q.question_text,
+                option_a=q.option_a,
+                option_b=q.option_b,
+                option_c=q.option_c,
+                option_d=q.option_d,
+                correct_option=q.correct_option,
+                source_article_url=q.source_article_url,
+                created_at=q.created_at,
+            )
+            for q in questions
+        ],
+        total=total,
+        page=page,
+        page_size=page_size,
+    )

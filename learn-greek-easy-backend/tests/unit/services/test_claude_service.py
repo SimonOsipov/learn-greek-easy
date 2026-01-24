@@ -277,3 +277,408 @@ class TestNormalizeUrl:
 
         assert result.startswith("http://")
         assert result == "http://example.com/article"
+
+
+# ============================================================================
+# Test: Question Generation Helpers
+# ============================================================================
+
+
+class TestFindMatchingBrace:
+    """Tests for ClaudeService._find_matching_brace method."""
+
+    def test_find_simple_object(self, claude_service):
+        """Simple JSON object is extracted correctly."""
+        content = '{"key": "value"}'
+        result = claude_service._find_matching_brace(content, 0)
+        assert result == '{"key": "value"}'
+
+    def test_find_nested_object(self, claude_service):
+        """Nested JSON objects are extracted correctly."""
+        content = '{"outer": {"inner": "value"}}'
+        result = claude_service._find_matching_brace(content, 0)
+        assert result == '{"outer": {"inner": "value"}}'
+
+    def test_find_object_with_string_braces(self, claude_service):
+        """Braces inside strings are ignored."""
+        content = '{"key": "value with { and }"}'
+        result = claude_service._find_matching_brace(content, 0)
+        assert result == '{"key": "value with { and }"}'
+
+    def test_find_object_with_escaped_quotes(self, claude_service):
+        """Escaped quotes in strings are handled correctly."""
+        content = '{"key": "value with \\"escaped\\" quotes"}'
+        result = claude_service._find_matching_brace(content, 0)
+        assert result == '{"key": "value with \\"escaped\\" quotes"}'
+
+    def test_find_object_with_backslash(self, claude_service):
+        """Backslashes in strings are handled correctly."""
+        content = '{"path": "C:\\\\Users\\\\test"}'
+        result = claude_service._find_matching_brace(content, 0)
+        assert result == '{"path": "C:\\\\Users\\\\test"}'
+
+    def test_find_no_matching_brace(self, claude_service):
+        """Returns None when no matching brace found."""
+        content = '{"incomplete": "object"'
+        result = claude_service._find_matching_brace(content, 0)
+        assert result is None
+
+
+class TestExtractJsonObjectFromResponse:
+    """Tests for ClaudeService._extract_json_object_from_response method."""
+
+    def test_extract_direct_json(self, claude_service):
+        """Direct JSON object is extracted correctly."""
+        content = '{"question": "What is Cyprus known for?"}'
+        result = claude_service._extract_json_object_from_response(content)
+        assert result == '{"question": "What is Cyprus known for?"}'
+
+    def test_extract_from_markdown_block(self, claude_service):
+        """JSON is extracted from markdown code block."""
+        content = """```json
+{"question": "What is the capital?"}
+```"""
+        result = claude_service._extract_json_object_from_response(content)
+        assert result == '{"question": "What is the capital?"}'
+
+    def test_extract_from_plain_markdown(self, claude_service):
+        """JSON is extracted from plain markdown block."""
+        content = """```
+{"answer": "Nicosia"}
+```"""
+        result = claude_service._extract_json_object_from_response(content)
+        assert result == '{"answer": "Nicosia"}'
+
+    def test_extract_from_preamble(self, claude_service):
+        """JSON is extracted when preceded by preamble text."""
+        content = """Here is the generated question:
+
+{"category": "history"}"""
+        result = claude_service._extract_json_object_from_response(content)
+        assert result == '{"category": "history"}'
+
+    def test_extract_from_preamble_with_markdown(self, claude_service):
+        """JSON is extracted from markdown after preamble text."""
+        content = """I've analyzed the article and generated this question:
+
+```json
+{"difficulty": "medium"}
+```
+
+Let me know if you need adjustments."""
+        result = claude_service._extract_json_object_from_response(content)
+        assert result == '{"difficulty": "medium"}'
+
+    def test_extract_complex_nested_json(self, claude_service):
+        """Complex nested JSON objects are extracted correctly."""
+        content = (
+            """{"question_text": {"el": "Greek", "en": "English"}, "options": [{"el": "A"}]}"""
+        )
+        result = claude_service._extract_json_object_from_response(content)
+        assert '"question_text"' in result
+        assert '"options"' in result
+
+
+class TestParseQuestionResponse:
+    """Tests for ClaudeService._parse_question_response method."""
+
+    def test_parse_valid_2_option_question(self, claude_service):
+        """Valid 2-option question is parsed correctly."""
+        content = """{
+            "question_text": {"el": "Greek Q", "en": "English Q", "ru": "Russian Q"},
+            "options": [
+                {"el": "True", "en": "True", "ru": "True"},
+                {"el": "False", "en": "False", "ru": "False"}
+            ],
+            "correct_option": 1,
+            "category": "history",
+            "difficulty": "easy",
+            "explanation": {"el": "E", "en": "E", "ru": "E"},
+            "source_context": "From article about Cyprus"
+        }"""
+
+        result = claude_service._parse_question_response(content)
+
+        assert len(result.options) == 2
+        assert result.correct_option == 1
+        assert result.category == "history"
+        assert result.difficulty == "easy"
+
+    def test_parse_valid_4_option_question(self, claude_service):
+        """Valid 4-option question is parsed correctly."""
+        content = """{
+            "question_text": {"el": "Q", "en": "Q", "ru": "Q"},
+            "options": [
+                {"el": "A", "en": "A", "ru": "A"},
+                {"el": "B", "en": "B", "ru": "B"},
+                {"el": "C", "en": "C", "ru": "C"},
+                {"el": "D", "en": "D", "ru": "D"}
+            ],
+            "correct_option": 3,
+            "category": "geography",
+            "difficulty": "hard",
+            "explanation": {"el": "E", "en": "E", "ru": "E"},
+            "source_context": "Geographic facts"
+        }"""
+
+        result = claude_service._parse_question_response(content)
+
+        assert len(result.options) == 4
+        assert result.correct_option == 3
+        assert result.category == "geography"
+
+    def test_parse_invalid_3_option_question(self, claude_service):
+        """3-option question raises ClaudeServiceError."""
+        content = """{
+            "question_text": {"el": "Q", "en": "Q", "ru": "Q"},
+            "options": [
+                {"el": "A", "en": "A", "ru": "A"},
+                {"el": "B", "en": "B", "ru": "B"},
+                {"el": "C", "en": "C", "ru": "C"}
+            ],
+            "correct_option": 2,
+            "category": "culture",
+            "difficulty": "medium",
+            "explanation": {"el": "E", "en": "E", "ru": "E"},
+            "source_context": "Test"
+        }"""
+
+        with pytest.raises(ClaudeServiceError) as exc_info:
+            claude_service._parse_question_response(content)
+
+        assert "Options must be exactly 2" in str(exc_info.value)
+
+    def test_parse_correct_option_exceeds_count(self, claude_service):
+        """correct_option exceeding options count raises ClaudeServiceError."""
+        content = """{
+            "question_text": {"el": "Q", "en": "Q", "ru": "Q"},
+            "options": [
+                {"el": "A", "en": "A", "ru": "A"},
+                {"el": "B", "en": "B", "ru": "B"}
+            ],
+            "correct_option": 3,
+            "category": "politics",
+            "difficulty": "easy",
+            "explanation": {"el": "E", "en": "E", "ru": "E"},
+            "source_context": "Test"
+        }"""
+
+        with pytest.raises(ClaudeServiceError) as exc_info:
+            claude_service._parse_question_response(content)
+
+        assert "correct_option" in str(exc_info.value)
+        assert "exceeds" in str(exc_info.value)
+
+    def test_parse_invalid_json(self, claude_service):
+        """Invalid JSON raises ClaudeServiceError."""
+        content = "not valid json {"
+
+        with pytest.raises(ClaudeServiceError) as exc_info:
+            claude_service._parse_question_response(content)
+
+        assert "Invalid JSON response" in str(exc_info.value)
+
+    def test_parse_not_object(self, claude_service):
+        """Non-object JSON raises ClaudeServiceError."""
+        content = '["array", "instead", "of", "object"]'
+
+        with pytest.raises(ClaudeServiceError) as exc_info:
+            claude_service._parse_question_response(content)
+
+        assert "not a JSON object" in str(exc_info.value)
+
+    def test_parse_missing_required_field(self, claude_service):
+        """Missing required field raises ClaudeServiceError."""
+        content = """{
+            "question_text": {"el": "Q", "en": "Q", "ru": "Q"},
+            "options": [
+                {"el": "A", "en": "A", "ru": "A"},
+                {"el": "B", "en": "B", "ru": "B"}
+            ],
+            "correct_option": 1,
+            "category": "history"
+        }"""
+        # Missing: difficulty, explanation, source_context
+
+        with pytest.raises(ClaudeServiceError) as exc_info:
+            claude_service._parse_question_response(content)
+
+        assert "Invalid question response" in str(exc_info.value)
+
+    def test_parse_invalid_category(self, claude_service):
+        """Invalid category value raises ClaudeServiceError."""
+        content = """{
+            "question_text": {"el": "Q", "en": "Q", "ru": "Q"},
+            "options": [
+                {"el": "A", "en": "A", "ru": "A"},
+                {"el": "B", "en": "B", "ru": "B"}
+            ],
+            "correct_option": 1,
+            "category": "invalid_category",
+            "difficulty": "easy",
+            "explanation": {"el": "E", "en": "E", "ru": "E"},
+            "source_context": "Test"
+        }"""
+
+        with pytest.raises(ClaudeServiceError) as exc_info:
+            claude_service._parse_question_response(content)
+
+        assert "Invalid question response" in str(exc_info.value)
+
+    def test_parse_invalid_difficulty(self, claude_service):
+        """Invalid difficulty value raises ClaudeServiceError."""
+        content = """{
+            "question_text": {"el": "Q", "en": "Q", "ru": "Q"},
+            "options": [
+                {"el": "A", "en": "A", "ru": "A"},
+                {"el": "B", "en": "B", "ru": "B"}
+            ],
+            "correct_option": 1,
+            "category": "history",
+            "difficulty": "super_hard",
+            "explanation": {"el": "E", "en": "E", "ru": "E"},
+            "source_context": "Test"
+        }"""
+
+        with pytest.raises(ClaudeServiceError) as exc_info:
+            claude_service._parse_question_response(content)
+
+        assert "Invalid question response" in str(exc_info.value)
+
+    def test_parse_from_markdown_with_preamble(self, claude_service):
+        """JSON in markdown block after preamble is parsed correctly."""
+        content = """Here is the generated culture question based on the article:
+
+```json
+{
+    "question_text": {"el": "G", "en": "E", "ru": "R"},
+    "options": [
+        {"el": "O1", "en": "O1", "ru": "O1"},
+        {"el": "O2", "en": "O2", "ru": "O2"}
+    ],
+    "correct_option": 2,
+    "category": "traditions",
+    "difficulty": "medium",
+    "explanation": {"el": "Ex", "en": "Ex", "ru": "Ex"},
+    "source_context": "From the traditional festivals section"
+}
+```
+
+I hope this question captures the cultural significance described in the article."""
+
+        result = claude_service._parse_question_response(content)
+
+        assert len(result.options) == 2
+        assert result.correct_option == 2
+        assert result.category == "traditions"
+        assert result.source_context == "From the traditional festivals section"
+
+    def test_parse_all_valid_categories(self, claude_service):
+        """All valid category values are accepted."""
+        valid_categories = [
+            "history",
+            "geography",
+            "politics",
+            "culture",
+            "traditions",
+            "practical",
+        ]
+
+        for category in valid_categories:
+            content = f"""{{
+                "question_text": {{"el": "Q", "en": "Q", "ru": "Q"}},
+                "options": [
+                    {{"el": "A", "en": "A", "ru": "A"}},
+                    {{"el": "B", "en": "B", "ru": "B"}}
+                ],
+                "correct_option": 1,
+                "category": "{category}",
+                "difficulty": "easy",
+                "explanation": {{"el": "E", "en": "E", "ru": "E"}},
+                "source_context": "Test"
+            }}"""
+
+            result = claude_service._parse_question_response(content)
+            assert result.category == category
+
+    def test_parse_all_valid_difficulties(self, claude_service):
+        """All valid difficulty values are accepted."""
+        valid_difficulties = ["easy", "medium", "hard"]
+
+        for difficulty in valid_difficulties:
+            content = f"""{{
+                "question_text": {{"el": "Q", "en": "Q", "ru": "Q"}},
+                "options": [
+                    {{"el": "A", "en": "A", "ru": "A"}},
+                    {{"el": "B", "en": "B", "ru": "B"}}
+                ],
+                "correct_option": 1,
+                "category": "history",
+                "difficulty": "{difficulty}",
+                "explanation": {{"el": "E", "en": "E", "ru": "E"}},
+                "source_context": "Test"
+            }}"""
+
+            result = claude_service._parse_question_response(content)
+            assert result.difficulty == difficulty
+
+
+# ============================================================================
+# Test: Question Generation System Prompt
+# ============================================================================
+
+
+class TestQuestionGenerationPrompt:
+    """Tests for QUESTION_GENERATION_SYSTEM_PROMPT constant."""
+
+    def test_prompt_is_defined(self):
+        """System prompt constant is defined."""
+        from src.services.claude_service import QUESTION_GENERATION_SYSTEM_PROMPT
+
+        assert QUESTION_GENERATION_SYSTEM_PROMPT is not None
+        assert len(QUESTION_GENERATION_SYSTEM_PROMPT) > 100
+
+    def test_prompt_specifies_option_count_rule(self):
+        """Prompt specifies the 2 or 4 options rule."""
+        from src.services.claude_service import QUESTION_GENERATION_SYSTEM_PROMPT
+
+        assert (
+            "2 or 4" in QUESTION_GENERATION_SYSTEM_PROMPT
+            or "EXACTLY 2 or 4" in QUESTION_GENERATION_SYSTEM_PROMPT
+        )
+
+    def test_prompt_specifies_multilingual(self):
+        """Prompt specifies multilingual requirements."""
+        from src.services.claude_service import QUESTION_GENERATION_SYSTEM_PROMPT
+
+        assert "Greek" in QUESTION_GENERATION_SYSTEM_PROMPT
+        assert "English" in QUESTION_GENERATION_SYSTEM_PROMPT
+        assert "Russian" in QUESTION_GENERATION_SYSTEM_PROMPT
+
+    def test_prompt_specifies_categories(self):
+        """Prompt specifies valid category values."""
+        from src.services.claude_service import QUESTION_GENERATION_SYSTEM_PROMPT
+
+        assert "history" in QUESTION_GENERATION_SYSTEM_PROMPT
+        assert "geography" in QUESTION_GENERATION_SYSTEM_PROMPT
+        assert "politics" in QUESTION_GENERATION_SYSTEM_PROMPT
+        assert "culture" in QUESTION_GENERATION_SYSTEM_PROMPT
+        assert "traditions" in QUESTION_GENERATION_SYSTEM_PROMPT
+        assert "practical" in QUESTION_GENERATION_SYSTEM_PROMPT
+
+    def test_prompt_specifies_difficulties(self):
+        """Prompt specifies valid difficulty values."""
+        from src.services.claude_service import QUESTION_GENERATION_SYSTEM_PROMPT
+
+        assert "easy" in QUESTION_GENERATION_SYSTEM_PROMPT
+        assert "medium" in QUESTION_GENERATION_SYSTEM_PROMPT
+        assert "hard" in QUESTION_GENERATION_SYSTEM_PROMPT
+
+    def test_prompt_specifies_1_indexed_correct_option(self):
+        """Prompt specifies that correct_option is 1-indexed."""
+        from src.services.claude_service import QUESTION_GENERATION_SYSTEM_PROMPT
+
+        assert (
+            "1-indexed" in QUESTION_GENERATION_SYSTEM_PROMPT
+            or "1 for first" in QUESTION_GENERATION_SYSTEM_PROMPT
+        )
