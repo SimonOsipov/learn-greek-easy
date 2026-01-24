@@ -38,6 +38,7 @@ from src.db.models import (  # noqa: F401
     NewsSource,
     Notification,
     NotificationType,
+    QuestionGenerationLog,
     RefreshToken,
     Review,
     ReviewRating,
