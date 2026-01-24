@@ -2463,6 +2463,71 @@ class SeedService:
             "source_id": str(source.id),
         }
 
+    async def seed_pending_question(self) -> dict[str, Any]:
+        """Seed a pending culture question for admin review E2E tests.
+
+        Creates a question with is_pending_review=True and deck_id=None.
+        This simulates an AI-generated question awaiting admin approval.
+
+        This method is idempotent - if a question with the same source_article_url
+        exists, it will be deleted and recreated to ensure a fresh pending state.
+
+        The question is linked to one of the seeded discovered articles so that
+        the "Review Question" button appears in the Discovered Articles modal.
+
+        Returns:
+            dict with question_id and source_article_url
+        """
+        self._check_can_seed()
+
+        # Use a URL that matches one of the seeded discovered articles
+        # This ensures the "Review Question" button appears in the E2E tests
+        source_url = "https://e2e-source.test/news/cypriot-independence"
+        await self.db.execute(
+            delete(CultureQuestion).where(CultureQuestion.source_article_url == source_url)
+        )
+
+        # Create pending question without deck assignment
+        question = CultureQuestion(
+            deck_id=None,
+            question_text={
+                "el": "Ποιος ήταν ο πρώτος πρόεδρος της Κυπριακής Δημοκρατίας;",
+                "en": "Who was the first president of the Republic of Cyprus?",
+                "ru": "Кто был первым президентом Республики Кипр?",
+            },
+            option_a={
+                "el": "Γλαύκος Κληρίδης",
+                "en": "Glafcos Clerides",
+                "ru": "Глафкос Клиридис",
+            },
+            option_b={
+                "el": "Μακάριος Γ΄",
+                "en": "Makarios III",
+                "ru": "Макариос III",
+            },
+            option_c={
+                "el": "Σπύρος Κυπριανού",
+                "en": "Spyros Kyprianou",
+                "ru": "Спирос Киприану",
+            },
+            option_d={
+                "el": "Τάσσος Παπαδόπουλος",
+                "en": "Tassos Papadopoulos",
+                "ru": "Тассос Пападопулос",
+            },
+            correct_option=2,
+            is_pending_review=True,
+            source_article_url=source_url,
+        )
+
+        self.db.add(question)
+        await self.db.flush()
+
+        return {
+            "question_id": str(question.id),
+            "source_article_url": question.source_article_url,
+        }
+
     # =====================
     # XP & Achievement Seeding
     # =====================

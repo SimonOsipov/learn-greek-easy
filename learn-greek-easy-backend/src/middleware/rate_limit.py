@@ -98,6 +98,7 @@ class RateLimitingMiddleware:
     # Paths exempt from rate limiting
     # Health checks must always be accessible for monitoring
     # Docs/OpenAPI are static and don't need protection
+    # Test seed endpoints need frequent calls during E2E tests
     EXEMPT_PATHS: list[str] = [
         "/health",
         "/health/live",
@@ -105,6 +106,7 @@ class RateLimitingMiddleware:
         "/docs",
         "/redoc",
         "/openapi.json",
+        "/api/v1/test/seed",  # Test seed endpoints (only available in non-prod)
     ]
 
     def __init__(self, app: ASGIApp) -> None:

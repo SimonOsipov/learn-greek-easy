@@ -237,7 +237,10 @@
       "alreadyGenerated": "Уже создан",
       "generateError": "Ошибка - Повторить?",
       "generateTooltip": "Создать вопрос о культуре из этой статьи с помощью ИИ",
-      "alreadyGeneratedTooltip": "Вопрос из этой статьи уже был создан"
+      "alreadyGeneratedTooltip": "Вопрос из этой статьи уже был создан",
+      "reviewQuestion": "Проверить вопрос",
+      "reviewQuestionTooltip": "Проверьте и одобрите или отклоните вопрос",
+      "approved": "Одобрено"
     }
   },
   "feedback": {

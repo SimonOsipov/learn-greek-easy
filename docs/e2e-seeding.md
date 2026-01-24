@@ -23,6 +23,7 @@ The seeding infrastructure provides deterministic test data for E2E tests, enabl
 | `/api/v1/test/seed/mock-exams` | POST | Create mock exam history for learner |
 | `/api/v1/test/seed/news-sources` | POST | Create news sources for admin testing |
 | `/api/v1/test/seed/fetch-history` | POST | Create fetch history for news sources |
+| `/api/v1/test/seed/pending-question` | POST | Create pending question for review testing |
 | `/api/v1/test/seed/danger-zone` | POST | Create danger zone test users |
 
 ## Test Users Created
@@ -91,6 +92,32 @@ This data is used for E2E testing of:
 - Fetch history accordion display
 - Success/error status badges
 - HTML viewer modal
+
+### Pending Question Seeding
+
+Seeds a pending culture question for testing the admin review workflow.
+
+**Endpoint:** `POST /api/v1/test/seed/pending-question`
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Created pending question {uuid}",
+  "duration_ms": 15.5,
+  "data": {
+    "question_id": "uuid",
+    "source_article_url": "https://example.com/..."
+  }
+}
+```
+
+**Use Cases:**
+- Testing the QuestionReviewModal component
+- Testing approve/reject workflows
+- E2E tests for admin question management
+
+The seeded question asks "Who was the first president of the Republic of Cyprus?" with options for four Cypriot presidents. The correct answer is Makarios III (option B).
 
 ## Danger Zone Test Users
 

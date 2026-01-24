@@ -42,6 +42,8 @@ from src.schemas.admin import (
     NewsSourceUpdate,
     PendingQuestionItem,
     PendingQuestionsResponse,
+    QuestionApproveRequest,
+    QuestionApproveResponse,
     QuestionGenerateRequest,
     QuestionGenerateResponse,
     SourceFetchHistoryDetailResponse,
@@ -1223,4 +1225,110 @@ async def list_pending_questions(
         total=total,
         page=page,
         page_size=page_size,
+    )
+
+
+@router.get(
+    "/culture/questions/{question_id}",
+    response_model=PendingQuestionItem,
+    summary="Get a single pending question",
+    responses={
+        200: {"description": "Pending question details"},
+        401: {"description": "Not authenticated"},
+        403: {"description": "Not authorized (requires superuser)"},
+        404: {"description": "Question not found or not pending"},
+    },
+)
+async def get_pending_question(
+    question_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> PendingQuestionItem:
+    """Get a single pending question by ID."""
+    result = await db.execute(
+        select(CultureQuestion).where(
+            CultureQuestion.id == question_id,
+            CultureQuestion.is_pending_review.is_(True),
+        )
+    )
+    question = result.scalar_one_or_none()
+
+    if not question:
+        raise NotFoundException(
+            resource="Question",
+            detail=f"Pending question with ID '{question_id}' not found",
+        )
+
+    return PendingQuestionItem(
+        id=question.id,
+        question_text=question.question_text,
+        option_a=question.option_a,
+        option_b=question.option_b,
+        option_c=question.option_c,
+        option_d=question.option_d,
+        correct_option=question.correct_option,
+        source_article_url=question.source_article_url,
+        created_at=question.created_at,
+    )
+
+
+@router.post(
+    "/culture/questions/{question_id}/approve",
+    response_model=QuestionApproveResponse,
+    summary="Approve a pending question and assign to deck",
+    responses={
+        200: {"description": "Question approved successfully"},
+        400: {"description": "Invalid deck_id or deck not active"},
+        401: {"description": "Not authenticated"},
+        403: {"description": "Not authorized (requires superuser)"},
+        404: {"description": "Question not found or already approved"},
+    },
+)
+async def approve_question(
+    question_id: UUID,
+    request: QuestionApproveRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> QuestionApproveResponse:
+    """Approve a pending question and assign to a deck."""
+    # Verify deck exists and is active
+    deck_result = await db.execute(
+        select(CultureDeck).where(
+            CultureDeck.id == request.deck_id,
+            CultureDeck.is_active.is_(True),
+        )
+    )
+    deck = deck_result.scalar_one_or_none()
+    if not deck:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid deck_id or deck is not active",
+        )
+
+    # Get question
+    result = await db.execute(
+        select(CultureQuestion).where(
+            CultureQuestion.id == question_id,
+            CultureQuestion.is_pending_review.is_(True),
+        )
+    )
+    question = result.scalar_one_or_none()
+
+    if not question:
+        raise NotFoundException(
+            resource="Question",
+            detail=f"Pending question with ID '{question_id}' not found",
+        )
+
+    # Update question
+    question.deck_id = request.deck_id
+    question.is_pending_review = False
+
+    await db.commit()
+
+    return QuestionApproveResponse(
+        id=question.id,
+        deck_id=question.deck_id,
+        is_pending_review=False,
+        message="Question approved successfully",
     )
