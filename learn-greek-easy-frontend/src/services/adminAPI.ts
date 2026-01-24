@@ -317,6 +317,27 @@ export interface PendingQuestionsResponse {
   page_size: number;
 }
 
+/**
+ * Response from question approval
+ */
+export interface QuestionApproveResponse {
+  id: string;
+  deck_id: string;
+  is_pending_review: boolean;
+  message: string;
+}
+
+/**
+ * Culture deck item for approval dropdown
+ */
+export interface CultureDeckListItem {
+  id: string;
+  name: string;
+  category: string;
+  question_count: number;
+  is_active: boolean;
+}
+
 // ============================================
 // Admin API Methods
 // ============================================
@@ -591,5 +612,69 @@ export const adminAPI = {
     return api.get<PendingQuestionsResponse>(
       `/api/v1/admin/culture/questions/pending${queryString}`
     );
+  },
+
+  // ============================================
+  // Question Review Methods
+  // ============================================
+
+  /**
+   * Get a single pending question by ID
+   *
+   * Requires superuser authentication.
+   *
+   * @param questionId - UUID of the question
+   * @returns Full pending question details
+   * @throws 404 if question not found or already approved
+   */
+  getQuestion: async (questionId: string): Promise<PendingQuestion> => {
+    return api.get<PendingQuestion>(`/api/v1/admin/culture/questions/${questionId}`);
+  },
+
+  /**
+   * Approve a pending question and assign to a deck
+   *
+   * Sets the question's deck_id and clears is_pending_review flag.
+   * Requires superuser authentication.
+   *
+   * @param questionId - UUID of the question to approve
+   * @param deckId - UUID of the target culture deck
+   * @returns Success message with updated question info
+   * @throws 400 if deck_id is invalid or deck is inactive
+   * @throws 404 if question not found or already approved
+   */
+  approveQuestion: async (questionId: string, deckId: string): Promise<QuestionApproveResponse> => {
+    return api.post<QuestionApproveResponse>(
+      `/api/v1/admin/culture/questions/${questionId}/approve`,
+      { deck_id: deckId }
+    );
+  },
+
+  /**
+   * Reject (permanently delete) a pending question
+   *
+   * This is a hard delete. The source article becomes available
+   * for new question generation.
+   * Requires superuser authentication.
+   *
+   * @param questionId - UUID of the question to delete
+   * @throws 404 if question not found
+   */
+  rejectQuestion: async (questionId: string): Promise<void> => {
+    return api.delete<void>(`/api/v1/culture/questions/${questionId}`);
+  },
+
+  /**
+   * Get all active culture decks for approval dropdown
+   *
+   * Uses the public culture decks endpoint.
+   *
+   * @returns Array of active culture decks
+   */
+  getCultureDecks: async (): Promise<CultureDeckListItem[]> => {
+    const response = await api.get<{ decks: CultureDeckListItem[]; total: number }>(
+      '/api/v1/culture/decks?page_size=100'
+    );
+    return response.decks;
   },
 };
