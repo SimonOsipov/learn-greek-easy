@@ -67,7 +67,8 @@
     "questionCount_one": "{{count}} вопрос",
     "questionCount_few": "{{count}} вопроса",
     "questionCount_many": "{{count}} вопросов",
-    "questionCount_other": "{{count}} вопросов"
+    "questionCount_other": "{{count}} вопросов",
+    "byOwner": "от {{owner}}"
   },
   "deckTypes": {
     "vocabulary": "Словарь",

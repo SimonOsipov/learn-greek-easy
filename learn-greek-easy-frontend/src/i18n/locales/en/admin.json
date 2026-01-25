@@ -63,7 +63,8 @@
     "cardCount_one": "{{count}} card",
     "cardCount_other": "{{count}} cards",
     "questionCount_one": "{{count}} question",
-    "questionCount_other": "{{count}} questions"
+    "questionCount_other": "{{count}} questions",
+    "byOwner": "by {{owner}}"
   },
   "deckTypes": {
     "vocabulary": "Vocabulary",

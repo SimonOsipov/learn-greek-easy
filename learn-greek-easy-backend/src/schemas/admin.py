@@ -55,6 +55,10 @@ class UnifiedDeckItem(BaseModel):
     is_active: bool = Field(..., description="Whether deck is active")
     is_premium: bool = Field(..., description="Whether deck requires premium subscription")
     created_at: datetime = Field(..., description="Creation timestamp")
+    owner_id: Optional[UUID] = Field(None, description="Owner user ID (None for system decks)")
+    owner_name: Optional[str] = Field(
+        None, description="Owner display name (None for system decks)"
+    )
 
 
 class AdminDeckListResponse(BaseModel):

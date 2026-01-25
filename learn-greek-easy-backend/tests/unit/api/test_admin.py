@@ -375,6 +375,9 @@ class TestAdminDecks:
         assert "is_active" in deck_data
         assert "is_premium" in deck_data
         assert "created_at" in deck_data
+        # Verify owner fields exist (may be null for system decks)
+        assert "owner_id" in deck_data
+        assert "owner_name" in deck_data
 
     @pytest.mark.asyncio
     async def test_culture_deck_response_structure(
@@ -411,6 +414,9 @@ class TestAdminDecks:
         assert "is_active" in deck_data
         assert "is_premium" in deck_data
         assert "created_at" in deck_data
+        # Culture decks should always have null owner fields (no owner concept)
+        assert deck_data["owner_id"] is None
+        assert deck_data["owner_name"] is None
 
     # =========================================================================
     # P1 - High Priority Tests (7 tests)

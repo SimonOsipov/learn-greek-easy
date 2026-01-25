@@ -63,7 +63,8 @@
     "cardCount_one": "{{count}} κάρτα",
     "cardCount_other": "{{count}} κάρτες",
     "questionCount_one": "{{count}} ερώτηση",
-    "questionCount_other": "{{count}} ερωτήσεις"
+    "questionCount_other": "{{count}} ερωτήσεις",
+    "byOwner": "από {{owner}}"
   },
   "deckTypes": {
     "vocabulary": "Λεξιλόγιο",

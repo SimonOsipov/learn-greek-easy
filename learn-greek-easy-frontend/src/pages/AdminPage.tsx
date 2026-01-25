@@ -185,7 +185,7 @@ function getLocalizedName(name: string | MultilingualName, locale: string): stri
 interface UnifiedDeckListItemProps {
   deck: UnifiedDeckItem;
   locale: string;
-  t: (key: string, options?: { count: number }) => string;
+  t: (key: string, options?: Record<string, unknown>) => string;
   onEdit: (deck: UnifiedDeckItem) => void;
 }
 
@@ -200,7 +200,14 @@ const UnifiedDeckListItem: React.FC<UnifiedDeckListItemProps> = ({ deck, locale,
         {deck.type === 'culture' && deck.category && (
           <CultureBadge category={deck.category as CultureCategory} />
         )}
-        <span className="font-medium">{displayName}</span>
+        <div className="flex flex-col">
+          <span className="font-medium">{displayName}</span>
+          {deck.owner_name && (
+            <span className="text-xs text-muted-foreground">
+              {t('deck.byOwner', { owner: deck.owner_name })}
+            </span>
+          )}
+        </div>
         {deck.is_premium && (
           <Crown
             className="h-4 w-4 text-amber-500"

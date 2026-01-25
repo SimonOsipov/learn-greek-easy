@@ -60,6 +60,8 @@ export interface UnifiedDeckItem {
   is_active: boolean;
   is_premium: boolean;
   created_at: string;
+  owner_id: string | null;
+  owner_name: string | null;
 }
 
 /**

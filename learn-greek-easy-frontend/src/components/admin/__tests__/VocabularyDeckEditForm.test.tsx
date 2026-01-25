@@ -33,6 +33,8 @@ const createMockDeck = (overrides: Partial<UnifiedDeckItem> = {}): UnifiedDeckIt
   is_active: true,
   is_premium: false,
   created_at: '2026-01-01T00:00:00Z',
+  owner_id: null,
+  owner_name: null,
   ...overrides,
 });
 

@@ -228,9 +228,12 @@ async def list_decks(
                 Deck.is_active,
                 Deck.is_premium,
                 Deck.created_at,
+                Deck.owner_id,
+                User.full_name.label("owner_name"),
                 func.coalesce(vocab_card_count_subquery.c.card_count, 0).label("item_count"),
             )
             .outerjoin(vocab_card_count_subquery, Deck.id == vocab_card_count_subquery.c.deck_id)
+            .outerjoin(User, Deck.owner_id == User.id)
             .where(Deck.is_active.is_(True))
         )
 
@@ -258,6 +261,8 @@ async def list_decks(
                     is_active=row.is_active,
                     is_premium=row.is_premium,
                     created_at=row.created_at,
+                    owner_id=row.owner_id,
+                    owner_name=row.owner_name,
                 )
             )
 
@@ -318,6 +323,8 @@ async def list_decks(
                     is_active=row.is_active,
                     is_premium=row.is_premium,
                     created_at=row.created_at,
+                    owner_id=None,
+                    owner_name=None,
                 )
             )
 
