@@ -138,6 +138,36 @@
     "deleting": "Удаление...",
     "error": "Не удалось удалить колоду"
   },
+  "deckDetail": {
+    "title": "Содержимое колоды",
+    "cardsCount_one": "{{count}} карточка",
+    "cardsCount_few": "{{count}} карточки",
+    "cardsCount_many": "{{count}} карточек",
+    "cardsCount_other": "{{count}} карточек",
+    "questionsCount_one": "{{count}} вопрос",
+    "questionsCount_few": "{{count}} вопроса",
+    "questionsCount_many": "{{count}} вопросов",
+    "questionsCount_other": "{{count}} вопросов",
+    "noCards": "В этой колоде нет карточек",
+    "noQuestions": "В этой колоде нет вопросов",
+    "close": "Закрыть",
+    "loading": "Загрузка содержимого..."
+  },
+  "cardDelete": {
+    "title": "Безвозвратно удалить карточку",
+    "titleQuestion": "Безвозвратно удалить вопрос",
+    "warning": "Это навсегда удалит этот элемент и ВСЕ связанные пользовательские данные, включая:",
+    "dataLost1": "Прогресс обучения и уровни освоения",
+    "dataLost2": "Историю повторений и статистику",
+    "dataLost3": "Данные интервального повторения",
+    "irreversible": "Это действие нельзя отменить.",
+    "cancel": "Отмена",
+    "confirm": "Удалить навсегда",
+    "deleting": "Удаление...",
+    "successCard": "Карточка безвозвратно удалена",
+    "successQuestion": "Вопрос безвозвратно удалён",
+    "error": "Не удалось удалить элемент"
+  },
   "actions": {
     "retry": "Повторить",
     "retrying": "Повторная попытка...",

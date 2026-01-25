@@ -134,6 +134,32 @@
     "deleting": "Deleting...",
     "error": "Failed to delete deck"
   },
+  "deckDetail": {
+    "title": "Deck Contents",
+    "cardsCount_one": "{{count}} card",
+    "cardsCount_other": "{{count}} cards",
+    "questionsCount_one": "{{count}} question",
+    "questionsCount_other": "{{count}} questions",
+    "noCards": "No cards in this deck",
+    "noQuestions": "No questions in this deck",
+    "close": "Close",
+    "loading": "Loading contents..."
+  },
+  "cardDelete": {
+    "title": "Permanently Delete Card",
+    "titleQuestion": "Permanently Delete Question",
+    "warning": "This will permanently delete this item and ALL associated user data including:",
+    "dataLost1": "Learning progress and mastery levels",
+    "dataLost2": "Review history and statistics",
+    "dataLost3": "Spaced repetition scheduling data",
+    "irreversible": "This action cannot be undone.",
+    "cancel": "Cancel",
+    "confirm": "Delete Permanently",
+    "deleting": "Deleting...",
+    "successCard": "Card deleted permanently",
+    "successQuestion": "Question deleted permanently",
+    "error": "Failed to delete item"
+  },
   "actions": {
     "retry": "Retry",
     "retrying": "Retrying...",

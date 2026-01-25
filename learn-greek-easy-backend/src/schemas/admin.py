@@ -288,3 +288,35 @@ class QuestionApproveResponse(BaseModel):
     deck_id: UUID
     is_pending_review: bool = False
     message: str = "Question approved successfully"
+
+
+# ============================================================================
+# Admin Deck Questions Schemas
+# ============================================================================
+
+
+class AdminCultureQuestionItem(BaseModel):
+    """Culture question item for admin deck detail view."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    question_text: dict[str, str]
+    option_a: dict[str, str]
+    option_b: dict[str, str]
+    option_c: Optional[dict[str, str]] = None
+    option_d: Optional[dict[str, str]] = None
+    correct_option: int
+    source_article_url: Optional[str] = None
+    is_pending_review: bool = False
+    created_at: datetime
+
+
+class AdminCultureQuestionsResponse(BaseModel):
+    """Response schema for listing culture questions in a deck."""
+
+    questions: list[AdminCultureQuestionItem]
+    total: int
+    page: int
+    page_size: int
+    deck_id: UUID

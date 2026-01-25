@@ -29,6 +29,7 @@ import {
   DeckCreateModal,
   type DeckCreateFormData,
   DeckDeleteDialog,
+  DeckDetailModal,
   DeckEditModal,
   type DeckEditFormData,
   type DeckType,
@@ -205,6 +206,7 @@ interface UnifiedDeckListItemProps {
   t: (key: string, options?: Record<string, unknown>) => string;
   onEdit: (deck: UnifiedDeckItem) => void;
   onDelete: (deck: UnifiedDeckItem) => void;
+  onViewDetail: (deck: UnifiedDeckItem) => void;
 }
 
 const UnifiedDeckListItem: React.FC<UnifiedDeckListItemProps> = ({
@@ -213,12 +215,32 @@ const UnifiedDeckListItem: React.FC<UnifiedDeckListItemProps> = ({
   t,
   onEdit,
   onDelete,
+  onViewDetail,
 }) => {
   const displayName = getLocalizedName(deck.name, locale);
   const itemCountKey = deck.type === 'vocabulary' ? 'deck.cardCount' : 'deck.questionCount';
 
+  const handleRowClick = (e: React.MouseEvent) => {
+    // Don't trigger view detail if clicking on action buttons
+    const target = e.target as HTMLElement;
+    if (target.closest('button')) return;
+    onViewDetail(deck);
+  };
+
   return (
-    <div className="flex items-center justify-between rounded-lg border p-4 transition-colors hover:bg-muted/50">
+    <div
+      className="flex cursor-pointer items-center justify-between rounded-lg border p-4 transition-colors hover:bg-muted/50"
+      onClick={handleRowClick}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onViewDetail(deck);
+        }
+      }}
+      data-testid={`deck-row-${deck.id}`}
+    >
       <div className="flex items-center gap-3">
         {deck.type === 'vocabulary' && deck.level && <DeckBadge type="level" level={deck.level} />}
         {deck.type === 'culture' && deck.category && (
@@ -250,7 +272,10 @@ const UnifiedDeckListItem: React.FC<UnifiedDeckListItemProps> = ({
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => onEdit(deck)}
+          onClick={(e) => {
+            e.stopPropagation();
+            onEdit(deck);
+          }}
           data-testid={`edit-deck-${deck.id}`}
         >
           <Pencil className="h-4 w-4" />
@@ -259,7 +284,10 @@ const UnifiedDeckListItem: React.FC<UnifiedDeckListItemProps> = ({
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => onDelete(deck)}
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete(deck);
+          }}
           className="text-destructive hover:bg-destructive/10 hover:text-destructive"
           data-testid={`delete-deck-${deck.id}`}
         >
@@ -298,6 +326,7 @@ interface AllDecksListProps {
   locale: string;
   onEditDeck: (deck: UnifiedDeckItem) => void;
   onDeleteDeck: (deck: UnifiedDeckItem) => void;
+  onViewDeckDetail: (deck: UnifiedDeckItem) => void;
 }
 
 export interface AllDecksListHandle {
@@ -305,7 +334,7 @@ export interface AllDecksListHandle {
 }
 
 const AllDecksList = forwardRef<AllDecksListHandle, AllDecksListProps>(
-  ({ t, locale, onEditDeck, onDeleteDeck }, ref) => {
+  ({ t, locale, onEditDeck, onDeleteDeck, onViewDeckDetail }, ref) => {
     const [deckList, setDeckList] = useState<DeckListResponse | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -455,6 +484,7 @@ const AllDecksList = forwardRef<AllDecksListHandle, AllDecksListProps>(
                       t={t}
                       onEdit={onEditDeck}
                       onDelete={onDeleteDeck}
+                      onViewDetail={onViewDeckDetail}
                     />
                   ))}
                 </div>
@@ -547,6 +577,10 @@ const AdminPage: React.FC = () => {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deckToDelete, setDeckToDelete] = useState<UnifiedDeckItem | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Deck detail modal state
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [detailDeck, setDetailDeck] = useState<UnifiedDeckItem | null>(null);
 
   // Ref for refreshing the deck list
   const allDecksListRef = useRef<AllDecksListHandle>(null);
@@ -932,6 +966,33 @@ const AdminPage: React.FC = () => {
     }
   };
 
+  /**
+   * Handle opening the deck detail modal
+   */
+  const handleViewDeckDetail = (deck: UnifiedDeckItem) => {
+    setDetailDeck(deck);
+    setDetailModalOpen(true);
+  };
+
+  /**
+   * Handle closing the deck detail modal
+   */
+  const handleDetailModalClose = (open: boolean) => {
+    setDetailModalOpen(open);
+    if (!open) {
+      setDetailDeck(null);
+    }
+  };
+
+  /**
+   * Handle item deleted from deck detail modal
+   * Refreshes deck list and stats to update counts
+   */
+  const handleItemDeleted = () => {
+    allDecksListRef.current?.refresh();
+    fetchStats();
+  };
+
   // Show loading skeleton while fetching
   if (isLoading) {
     return (
@@ -1077,6 +1138,7 @@ const AdminPage: React.FC = () => {
               locale={locale}
               onEditDeck={handleEditDeck}
               onDeleteDeck={handleDeleteDeck}
+              onViewDeckDetail={handleViewDeckDetail}
             />
           </section>
         </>
@@ -1120,6 +1182,14 @@ const AdminPage: React.FC = () => {
         deck={deckToDelete}
         onConfirm={handleConfirmDelete}
         isDeleting={isDeleting}
+      />
+
+      {/* Deck Detail Modal */}
+      <DeckDetailModal
+        open={detailModalOpen}
+        onOpenChange={handleDetailModalClose}
+        deck={detailDeck}
+        onItemDeleted={handleItemDeleted}
       />
     </div>
   );

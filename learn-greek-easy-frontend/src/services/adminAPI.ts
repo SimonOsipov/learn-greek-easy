@@ -369,6 +369,64 @@ export interface CultureDeckListItem {
 }
 
 // ============================================
+// Admin Deck Detail Types
+// ============================================
+
+/**
+ * Vocabulary card item for admin deck detail view
+ */
+export interface AdminVocabularyCard {
+  id: string;
+  deck_id: string;
+  front_text: string;
+  back_text: string;
+  example_sentence: string | null;
+  pronunciation: string | null;
+  difficulty: 'easy' | 'medium' | 'hard';
+  order_index: number;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Paginated vocabulary card list response
+ */
+export interface AdminVocabularyCardsResponse {
+  total: number;
+  page: number;
+  page_size: number;
+  deck_id: string;
+  cards: AdminVocabularyCard[];
+}
+
+/**
+ * Culture question item for admin deck detail view
+ */
+export interface AdminCultureQuestion {
+  id: string;
+  question_text: Record<string, string>;
+  option_a: Record<string, string>;
+  option_b: Record<string, string>;
+  option_c: Record<string, string> | null;
+  option_d: Record<string, string> | null;
+  correct_option: number;
+  source_article_url: string | null;
+  is_pending_review: boolean;
+  created_at: string;
+}
+
+/**
+ * Paginated culture questions response
+ */
+export interface AdminCultureQuestionsResponse {
+  questions: AdminCultureQuestion[];
+  total: number;
+  page: number;
+  page_size: number;
+  deck_id: string;
+}
+
+// ============================================
 // Admin API Methods
 // ============================================
 
@@ -752,5 +810,79 @@ export const adminAPI = {
       '/api/v1/culture/decks?page_size=100'
     );
     return response.decks;
+  },
+
+  // ============================================
+  // Admin Deck Detail Methods
+  // ============================================
+
+  /**
+   * List vocabulary cards in a deck
+   *
+   * Uses the existing cards endpoint with deck_id filter.
+   * Requires superuser authentication.
+   *
+   * @param deckId - UUID of the vocabulary deck
+   * @param page - Page number (1-indexed)
+   * @param pageSize - Items per page
+   * @returns Paginated list of cards
+   */
+  listVocabularyCards: async (
+    deckId: string,
+    page = 1,
+    pageSize = 20
+  ): Promise<AdminVocabularyCardsResponse> => {
+    const queryString = buildQueryString({
+      deck_id: deckId,
+      page,
+      page_size: pageSize,
+    });
+    return api.get<AdminVocabularyCardsResponse>(`/api/v1/cards${queryString}`);
+  },
+
+  /**
+   * List culture questions in a deck
+   *
+   * Admin-only endpoint that returns all questions in a deck.
+   * Requires superuser authentication.
+   *
+   * @param deckId - UUID of the culture deck
+   * @param page - Page number (1-indexed)
+   * @param pageSize - Items per page
+   * @returns Paginated list of questions
+   */
+  listCultureQuestions: async (
+    deckId: string,
+    page = 1,
+    pageSize = 20
+  ): Promise<AdminCultureQuestionsResponse> => {
+    const queryString = buildQueryString({ page, page_size: pageSize });
+    return api.get<AdminCultureQuestionsResponse>(
+      `/api/v1/admin/culture/decks/${deckId}/questions${queryString}`
+    );
+  },
+
+  /**
+   * Delete a vocabulary card (HARD DELETE)
+   *
+   * Permanently removes the card and all associated user data.
+   * Requires superuser authentication.
+   *
+   * @param cardId - UUID of the card to delete
+   */
+  deleteVocabularyCard: async (cardId: string): Promise<void> => {
+    return api.delete<void>(`/api/v1/cards/${cardId}`);
+  },
+
+  /**
+   * Delete a culture question (HARD DELETE)
+   *
+   * Permanently removes the question and all associated user data.
+   * Requires superuser authentication.
+   *
+   * @param questionId - UUID of the question to delete
+   */
+  deleteCultureQuestion: async (questionId: string): Promise<void> => {
+    return api.delete<void>(`/api/v1/culture/questions/${questionId}`);
   },
 };

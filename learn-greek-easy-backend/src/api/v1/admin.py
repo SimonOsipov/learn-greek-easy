@@ -31,6 +31,8 @@ from src.db.models import (
     User,
 )
 from src.schemas.admin import (
+    AdminCultureQuestionItem,
+    AdminCultureQuestionsResponse,
     AdminDeckListResponse,
     AdminStatsResponse,
     AnalysisStartedResponse,
@@ -1280,4 +1282,95 @@ async def approve_question(
         deck_id=question.deck_id,
         is_pending_review=False,
         message="Question approved successfully",
+    )
+
+
+# ============================================================================
+# Admin Deck Questions Endpoint
+# ============================================================================
+
+
+@router.get(
+    "/culture/decks/{deck_id}/questions",
+    response_model=AdminCultureQuestionsResponse,
+    summary="List culture questions in a deck",
+    description="Get a paginated list of all culture questions in a specific deck for admin management.",
+    responses={
+        200: {"description": "Paginated list of questions"},
+        401: {"description": "Not authenticated"},
+        403: {"description": "Not authorized (requires superuser)"},
+        404: {"description": "Deck not found"},
+    },
+)
+async def list_deck_questions(
+    deck_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+    page: int = Query(1, ge=1, description="Page number"),
+    page_size: int = Query(20, ge=1, le=100, description="Items per page"),
+) -> AdminCultureQuestionsResponse:
+    """List all culture questions in a deck for admin management.
+
+    Returns a paginated list of all questions (not just active/approved) in the deck.
+    Used for admin deck detail view to enable card/question deletion.
+
+    Args:
+        deck_id: UUID of the culture deck
+        db: Database session (injected)
+        current_user: Authenticated superuser (injected)
+        page: Page number (1-indexed)
+        page_size: Number of items per page (max 100)
+
+    Returns:
+        AdminCultureQuestionsResponse with paginated questions
+
+    Raises:
+        404: If deck not found
+    """
+    # Verify deck exists
+    deck_result = await db.execute(select(CultureDeck).where(CultureDeck.id == deck_id))
+    deck = deck_result.scalar_one_or_none()
+
+    if not deck:
+        raise NotFoundException(
+            resource="Culture deck", detail=f"Culture deck with ID '{deck_id}' not found"
+        )
+
+    # Count total questions in deck (including pending)
+    count_result = await db.execute(
+        select(func.count(CultureQuestion.id)).where(CultureQuestion.deck_id == deck_id)
+    )
+    total = count_result.scalar() or 0
+
+    # Get paginated questions
+    offset = (page - 1) * page_size
+    result = await db.execute(
+        select(CultureQuestion)
+        .where(CultureQuestion.deck_id == deck_id)
+        .order_by(CultureQuestion.created_at.desc())
+        .offset(offset)
+        .limit(page_size)
+    )
+    questions = result.scalars().all()
+
+    return AdminCultureQuestionsResponse(
+        questions=[
+            AdminCultureQuestionItem(
+                id=q.id,
+                question_text=q.question_text,
+                option_a=q.option_a,
+                option_b=q.option_b,
+                option_c=q.option_c,
+                option_d=q.option_d,
+                correct_option=q.correct_option,
+                source_article_url=q.source_article_url,
+                is_pending_review=q.is_pending_review,
+                created_at=q.created_at,
+            )
+            for q in questions
+        ],
+        total=total,
+        page=page,
+        page_size=page_size,
+        deck_id=deck_id,
     )
