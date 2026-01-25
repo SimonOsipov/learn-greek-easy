@@ -24,7 +24,6 @@ import { useTranslation } from 'react-i18next';
 
 import {
   AdminFeedbackSection,
-  CultureAdminTabs,
   DeckEditModal,
   type DeckEditFormData,
   NewsSourcesSection,
@@ -890,11 +889,6 @@ const AdminPage: React.FC = () => {
                 )}
               </CardContent>
             </Card>
-          </section>
-
-          {/* Culture Decks List */}
-          <section aria-labelledby="culture-admin-heading">
-            <CultureAdminTabs cultureDecks={stats.culture_decks} t={t} />
           </section>
 
           {/* All Decks List with Search and Pagination */}

@@ -48,27 +48,14 @@ export interface DeckStats {
 }
 
 /**
- * Culture deck statistics in admin response
- */
-export interface CultureDeckStats {
-  id: string;
-  name: string;
-  category: string;
-  question_count: number;
-}
-
-/**
  * Content statistics response from admin endpoint
  */
 export interface ContentStatsResponse {
   total_decks: number;
   total_cards: number;
   total_vocabulary_decks: number;
-  total_culture_decks: number;
   total_vocabulary_cards: number;
-  total_culture_questions: number;
   decks: DeckStats[];
-  culture_decks: CultureDeckStats[];
 }
 
 /**

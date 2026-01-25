@@ -35,7 +35,6 @@ from src.schemas.admin import (
     AdminStatsResponse,
     AnalysisStartedResponse,
     ArticleCheckResponse,
-    CultureDeckStatsItem,
     DeckStatsItem,
     NewsSourceCreate,
     NewsSourceListResponse,
@@ -88,26 +87,16 @@ router = APIRouter(
             "content": {
                 "application/json": {
                     "example": {
-                        "total_decks": 8,
-                        "total_cards": 450,
+                        "total_decks": 6,
+                        "total_cards": 360,
                         "total_vocabulary_decks": 6,
-                        "total_culture_decks": 2,
                         "total_vocabulary_cards": 360,
-                        "total_culture_questions": 90,
                         "decks": [
                             {
                                 "id": "550e8400-e29b-41d4-a716-446655440000",
                                 "name": "A1 Vocabulary",
                                 "level": "A1",
                                 "card_count": 60,
-                            }
-                        ],
-                        "culture_decks": [
-                            {
-                                "id": "660e8400-e29b-41d4-a716-446655440000",
-                                "name": "History",
-                                "category": "history",
-                                "question_count": 45,
                             }
                         ],
                     }
@@ -123,8 +112,8 @@ async def get_admin_stats(
     """Get admin dashboard statistics.
 
     Returns content statistics for the admin dashboard including:
-    - Total number of active decks (vocabulary + culture)
-    - Total number of items across all active decks (cards + questions)
+    - Total number of active vocabulary decks
+    - Total number of vocabulary cards
     - Per-deck breakdown with counts
 
     Only active decks are included in the statistics.
@@ -183,67 +172,17 @@ async def get_admin_stats(
     total_vocabulary_cards = sum(deck.card_count for deck in deck_stats)
 
     # ========================================
-    # Culture Decks Statistics
+    # Combined Totals (vocabulary only)
     # ========================================
-
-    # Subquery to count questions per culture deck (only from active decks)
-    question_count_subquery = (
-        select(
-            CultureQuestion.deck_id,
-            func.count(CultureQuestion.id).label("question_count"),
-        )
-        .join(CultureDeck, CultureQuestion.deck_id == CultureDeck.id)
-        .where(CultureDeck.is_active.is_(True))
-        .group_by(CultureQuestion.deck_id)
-        .subquery()
-    )
-
-    # Main query: get active culture decks with question counts
-    culture_query = (
-        select(
-            CultureDeck.id,
-            CultureDeck.name,
-            CultureDeck.category,
-            func.coalesce(question_count_subquery.c.question_count, 0).label("question_count"),
-        )
-        .outerjoin(question_count_subquery, CultureDeck.id == question_count_subquery.c.deck_id)
-        .where(CultureDeck.is_active.is_(True))
-        .order_by(CultureDeck.category, CultureDeck.order_index)
-    )
-
-    culture_result = await db.execute(culture_query)
-    culture_rows = culture_result.all()
-
-    # Build culture deck stats list
-    culture_deck_stats = [
-        CultureDeckStatsItem(
-            id=row.id,
-            name=row.name,
-            category=row.category,
-            question_count=row.question_count,
-        )
-        for row in culture_rows
-    ]
-
-    # Calculate culture totals
-    total_culture_decks = len(culture_deck_stats)
-    total_culture_questions = sum(deck.question_count for deck in culture_deck_stats)
-
-    # ========================================
-    # Combined Totals
-    # ========================================
-    total_decks = total_vocabulary_decks + total_culture_decks
-    total_cards = total_vocabulary_cards + total_culture_questions
+    total_decks = total_vocabulary_decks
+    total_cards = total_vocabulary_cards
 
     return AdminStatsResponse(
         total_decks=total_decks,
         total_cards=total_cards,
         total_vocabulary_decks=total_vocabulary_decks,
-        total_culture_decks=total_culture_decks,
         total_vocabulary_cards=total_vocabulary_cards,
-        total_culture_questions=total_culture_questions,
         decks=deck_stats,
-        culture_decks=culture_deck_stats,
     )
 
 
