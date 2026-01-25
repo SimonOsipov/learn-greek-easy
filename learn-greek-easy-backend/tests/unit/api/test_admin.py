@@ -1027,21 +1027,21 @@ class TestAdminDecks:
         assert culture_idx < vocab_idx
 
     @pytest.mark.asyncio
-    async def test_inactive_decks_excluded(
+    async def test_list_decks_includes_inactive_vocabulary_decks(
         self,
         client: AsyncClient,
         superuser_auth_headers: dict,
         db_session: AsyncSession,
     ):
-        """Test that inactive decks are excluded from results."""
+        """Test that inactive vocabulary decks are included in results for admin."""
         active_deck = await DeckFactory.create(
             session=db_session,
-            name="Active Deck",
+            name="Active Vocab Deck",
             is_active=True,
         )
         inactive_deck = await DeckFactory.create(
             session=db_session,
-            name="Inactive Deck",
+            name="Inactive Vocab Deck",
             is_active=False,
         )
 
@@ -1054,8 +1054,57 @@ class TestAdminDecks:
         data = response.json()
 
         deck_ids = [d["id"] for d in data["decks"]]
+        # Both active and inactive decks should be included
         assert str(active_deck.id) in deck_ids
-        assert str(inactive_deck.id) not in deck_ids
+        assert str(inactive_deck.id) in deck_ids
+
+        # Verify is_active field is correctly returned
+        active_deck_data = next((d for d in data["decks"] if d["id"] == str(active_deck.id)), None)
+        inactive_deck_data = next(
+            (d for d in data["decks"] if d["id"] == str(inactive_deck.id)), None
+        )
+        assert active_deck_data["is_active"] is True
+        assert inactive_deck_data["is_active"] is False
+
+    @pytest.mark.asyncio
+    async def test_list_decks_includes_inactive_culture_decks(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        db_session: AsyncSession,
+    ):
+        """Test that inactive culture decks are included in results for admin."""
+        active_deck = await CultureDeckFactory.create(
+            session=db_session,
+            name="Active Culture Deck",
+            is_active=True,
+        )
+        inactive_deck = await CultureDeckFactory.create(
+            session=db_session,
+            name="Inactive Culture Deck",
+            is_active=False,
+        )
+
+        response = await client.get(
+            "/api/v1/admin/decks",
+            headers=superuser_auth_headers,
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+
+        deck_ids = [d["id"] for d in data["decks"]]
+        # Both active and inactive decks should be included
+        assert str(active_deck.id) in deck_ids
+        assert str(inactive_deck.id) in deck_ids
+
+        # Verify is_active field is correctly returned
+        active_deck_data = next((d for d in data["decks"] if d["id"] == str(active_deck.id)), None)
+        inactive_deck_data = next(
+            (d for d in data["decks"] if d["id"] == str(inactive_deck.id)), None
+        )
+        assert active_deck_data["is_active"] is True
+        assert inactive_deck_data["is_active"] is False
 
     @pytest.mark.asyncio
     async def test_deck_with_zero_items_shows_item_count_zero(

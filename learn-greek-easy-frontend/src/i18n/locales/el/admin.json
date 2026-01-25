@@ -87,7 +87,8 @@
     "cardCount_other": "{{count}} κάρτες",
     "questionCount_one": "{{count}} ερώτηση",
     "questionCount_other": "{{count}} ερωτήσεις",
-    "byOwner": "από {{owner}}"
+    "byOwner": "από {{owner}}",
+    "deactivated": "Απενεργοποιημένο"
   },
   "deckTypes": {
     "vocabulary": "Λεξιλόγιο",

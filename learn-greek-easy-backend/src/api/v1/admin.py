@@ -240,7 +240,6 @@ async def list_decks(
             )
             .outerjoin(vocab_card_count_subquery, Deck.id == vocab_card_count_subquery.c.deck_id)
             .outerjoin(User, Deck.owner_id == User.id)
-            .where(Deck.is_active.is_(True))
         )
 
         # Apply search filter
@@ -286,23 +285,17 @@ async def list_decks(
             .subquery()
         )
 
-        culture_query = (
-            select(
-                CultureDeck.id,
-                CultureDeck.name,
-                CultureDeck.category,
-                CultureDeck.is_active,
-                CultureDeck.is_premium,
-                CultureDeck.created_at,
-                func.coalesce(culture_question_count_subquery.c.question_count, 0).label(
-                    "item_count"
-                ),
-            )
-            .outerjoin(
-                culture_question_count_subquery,
-                CultureDeck.id == culture_question_count_subquery.c.deck_id,
-            )
-            .where(CultureDeck.is_active.is_(True))
+        culture_query = select(
+            CultureDeck.id,
+            CultureDeck.name,
+            CultureDeck.category,
+            CultureDeck.is_active,
+            CultureDeck.is_premium,
+            CultureDeck.created_at,
+            func.coalesce(culture_question_count_subquery.c.question_count, 0).label("item_count"),
+        ).outerjoin(
+            culture_question_count_subquery,
+            CultureDeck.id == culture_question_count_subquery.c.deck_id,
         )
 
         # Apply search filter

@@ -87,7 +87,8 @@
     "cardCount_other": "{{count}} cards",
     "questionCount_one": "{{count}} question",
     "questionCount_other": "{{count}} questions",
-    "byOwner": "by {{owner}}"
+    "byOwner": "by {{owner}}",
+    "deactivated": "Deactivated"
   },
   "deckTypes": {
     "vocabulary": "Vocabulary",
