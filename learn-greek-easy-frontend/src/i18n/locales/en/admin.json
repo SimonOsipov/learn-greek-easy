@@ -34,6 +34,29 @@
       "confirm": "Deactivate"
     }
   },
+  "deckCreate": {
+    "title": "Create Deck",
+    "typeLabel": "Deck Type",
+    "typeVocabulary": "Vocabulary",
+    "typeCulture": "Culture",
+    "name": "Name",
+    "namePlaceholder": "Enter deck name",
+    "description": "Description",
+    "descriptionPlaceholder": "Optional deck description",
+    "level": "CEFR Level",
+    "levelPlaceholder": "Select level",
+    "category": "Category",
+    "categoryPlaceholder": "Select category",
+    "icon": "Icon",
+    "iconPlaceholder": "Emoji or icon name",
+    "colorAccent": "Accent Color",
+    "colorPlaceholder": "#4CAF50",
+    "isPremium": "Premium Deck",
+    "isPremiumDescription": "Premium decks require a subscription",
+    "cancel": "Cancel",
+    "create": "Create",
+    "creating": "Creating..."
+  },
   "categories": {
     "history": "History",
     "geography": "Geography",
@@ -89,170 +112,71 @@
     "loadingStats": "Error loading admin statistics",
     "loadingDecks": "Error loading decks",
     "failed": "Failed to load statistics",
-    "saveFailed": "Failed to save changes. Please try again."
+    "saveFailed": "Failed to save changes. Please try again.",
+    "createFailed": "Failed to create deck"
+  },
+  "toast": {
+    "deckCreated": "Deck created successfully",
+    "deckDeleted": "Deck deleted successfully"
+  },
+  "deckDelete": {
+    "title": "Delete Deck",
+    "deckInfo": "Deck: {{name}} ({{type}})",
+    "explanation": "This will deactivate the deck, hiding it from all users. The deck and its content will be preserved but no longer accessible. Learner progress data will be retained.",
+    "warning": "This action cannot be easily undone from the UI.",
+    "impact": {
+      "hidden": "The deck will be hidden from all learners",
+      "progressPreserved": "All user progress will be preserved",
+      "canReactivate": "You can reactivate the deck through the edit modal"
+    },
+    "cancel": "Cancel",
+    "confirm": "Delete Deck",
+    "deleting": "Deleting...",
+    "error": "Failed to delete deck"
+  },
+  "deckDetail": {
+    "title": "Deck Contents",
+    "cardsCount_one": "{{count}} card",
+    "cardsCount_other": "{{count}} cards",
+    "questionsCount_one": "{{count}} question",
+    "questionsCount_other": "{{count}} questions",
+    "noCards": "No cards in this deck",
+    "noQuestions": "No questions in this deck",
+    "close": "Close",
+    "loading": "Loading contents..."
+  },
+  "cardDelete": {
+    "title": "Permanently Delete Card",
+    "titleQuestion": "Permanently Delete Question",
+    "warning": "This will permanently delete this item and ALL associated user data including:",
+    "dataLost1": "Learning progress and mastery levels",
+    "dataLost2": "Review history and statistics",
+    "dataLost3": "Spaced repetition scheduling data",
+    "irreversible": "This action cannot be undone.",
+    "cancel": "Cancel",
+    "confirm": "Delete Permanently",
+    "deleting": "Deleting...",
+    "successCard": "Card deleted permanently",
+    "successQuestion": "Question deleted permanently",
+    "error": "Failed to delete item"
   },
   "actions": {
     "retry": "Retry",
     "retrying": "Retrying...",
     "edit": "Edit",
-    "delete": "Delete"
+    "delete": "Delete",
+    "createDeck": "Create Deck"
   },
   "states": {
     "noStats": "No statistics available",
     "noDecksFound": "No decks found matching your search"
   },
-  "sources": {
-    "sectionTitle": "News Sources",
-    "sectionDescription": "Manage news website sources for AI question generation",
-    "addSource": "Add Source",
-    "active": "Active",
-    "inactive": "Inactive",
-    "fetchNow": "Fetch Now",
-    "fetching": "Fetching...",
-    "tabs": {
-      "decks": "Decks",
-      "news": "News",
-      "feedback": "Feedback"
-    },
-    "history": {
-      "title": "Fetch History",
-      "empty": "No fetch history yet",
-      "viewHtml": "View HTML",
-      "viewArticles": "View Articles",
-      "status": {
-        "success": "Success",
-        "error": "Error"
-      },
-      "trigger": {
-        "manual": "Manual",
-        "scheduled": "Scheduled"
-      },
-      "columns": {
-        "timestamp": "Timestamp",
-        "status": "Status",
-        "size": "Size",
-        "trigger": "Trigger"
-      },
-      "delete": {
-        "title": "Delete Fetch Record",
-        "description": "Are you sure you want to delete this fetch record?",
-        "impact": {
-          "htmlDeleted": "The HTML content will be permanently deleted",
-          "questionsPreserved": "Questions created from this fetch will NOT be affected",
-          "cannotUndo": "This action cannot be undone"
-        },
-        "cancel": "Cancel",
-        "confirm": "Delete",
-        "deleting": "Deleting...",
-        "success": {
-          "title": "Record Deleted",
-          "message": "The fetch record has been deleted successfully."
-        },
-        "error": {
-          "title": "Error",
-          "message": "Failed to delete the fetch record. Please try again."
-        }
-      }
-    },
-    "htmlViewer": {
-      "title": "Raw HTML Content",
-      "close": "Close",
-      "copy": "Copy",
-      "copied": "Copied!"
-    },
-    "fetch": {
-      "success": {
-        "title": "Fetch Complete",
-        "message": "HTML fetched successfully ({{size}} KB)"
-      },
-      "error": {
-        "title": "Fetch Failed",
-        "message": "{{error}}"
-      }
-    },
-    "table": {
-      "name": "Name",
-      "url": "URL",
-      "status": "Status",
-      "actions": "Actions"
-    },
-    "form": {
-      "addTitle": "Add News Source",
-      "addDescription": "Add a new news website source for question generation",
-      "editTitle": "Edit News Source",
-      "editDescription": "Update news source details",
-      "name": "Name",
-      "namePlaceholder": "e.g., Greek News Daily",
-      "url": "URL",
-      "urlPlaceholder": "https://example.com",
-      "urlHint": "Enter the base URL of the news website",
-      "isActive": "Active",
-      "isActiveDescription": "Active sources are used for question generation",
-      "cancel": "Cancel",
-      "add": "Add Source",
-      "save": "Save Changes",
-      "saving": "Saving...",
-      "success": {
-        "createTitle": "Source Created",
-        "createMessage": "The news source has been created successfully.",
-        "updateTitle": "Source Updated",
-        "updateMessage": "The news source has been updated successfully."
-      },
-      "error": {
-        "title": "Error",
-        "message": "Failed to save the news source. Please try again."
-      },
-      "errors": {
-        "duplicateUrl": "This URL is already registered"
-      }
-    },
-    "delete": {
-      "title": "Delete News Source",
-      "sourceName": "You are about to delete \"{{name}}\"",
-      "description": "This action will permanently remove the source:",
-      "impact": {
-        "removed": "The source will be removed from the scraping list",
-        "articlesUnaffected": "Existing articles will not be affected",
-        "cannotUndo": "This action cannot be undone"
-      },
-      "cancel": "Cancel",
-      "confirm": "Delete",
-      "deleting": "Deleting...",
-      "success": {
-        "title": "Source Deleted",
-        "message": "The news source has been deleted successfully."
-      },
-      "error": {
-        "title": "Error",
-        "message": "Failed to delete the news source. Please try again."
-      }
-    },
-    "errors": {
-      "loadingTitle": "Error Loading Sources"
-    },
-    "states": {
-      "noSources": "No news sources configured. Add your first source to get started."
-    },
-    "articles": {
-      "title": "Discovered Articles",
-      "analyzing": "Analyzing content...",
-      "failed": "Analysis Failed",
-      "retry": "Retry Analysis",
-      "noArticles": "No Articles Found",
-      "noArticlesDesc": "No suitable articles for Cypriot culture questions were found in this content.",
-      "found": "{{count}} articles found",
-      "tokens": "tokens",
-      "reasoning": "Why",
-      "generateQuestion": "Generate Question",
-      "generating": "Generating...",
-      "alreadyGenerated": "Already Generated",
-      "generateError": "Failed - Retry?",
-      "generateTooltip": "Generate a culture question from this article using AI",
-      "alreadyGeneratedTooltip": "A question has already been generated from this article",
-      "reviewQuestion": "Review Question",
-      "reviewQuestionTooltip": "Review and approve or reject the generated question",
-      "approved": "Approved"
-    }
+  "tabs": {
+    "decks": "Decks",
+    "news": "News",
+    "feedback": "Feedback",
+    "newsComingSoon": "Coming Soon",
+    "newsComingSoonDescription": "The News tab is being redesigned. Check back soon for new features."
   },
   "feedback": {
     "sectionTitle": "User Feedback",

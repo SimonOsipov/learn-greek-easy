@@ -11,8 +11,7 @@ All endpoints require superuser authentication.
 from typing import Optional
 from uuid import UUID
 
-import httpx
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -27,28 +26,18 @@ from src.db.models import (
     Deck,
     FeedbackCategory,
     FeedbackStatus,
-    QuestionGenerationLog,
     User,
 )
 from src.schemas.admin import (
+    AdminCultureQuestionItem,
+    AdminCultureQuestionsResponse,
     AdminDeckListResponse,
     AdminStatsResponse,
-    AnalysisStartedResponse,
     ArticleCheckResponse,
-    NewsSourceCreate,
-    NewsSourceListResponse,
-    NewsSourceResponse,
-    NewsSourceUpdate,
     PendingQuestionItem,
     PendingQuestionsResponse,
     QuestionApproveRequest,
     QuestionApproveResponse,
-    QuestionGenerateRequest,
-    QuestionGenerateResponse,
-    SourceFetchHistoryDetailResponse,
-    SourceFetchHistoryItem,
-    SourceFetchHistoryListResponse,
-    SourceFetchHtmlResponse,
     UnifiedDeckItem,
 )
 from src.schemas.feedback import (
@@ -57,11 +46,7 @@ from src.schemas.feedback import (
     AdminFeedbackUpdate,
     AuthorBriefResponse,
 )
-from src.services import HTMLContentExtractorError, html_extractor
-from src.services.claude_service import ClaudeServiceError, claude_service
 from src.services.feedback_admin_service import FeedbackAdminService
-from src.services.news_source_service import DuplicateURLException, NewsSourceService
-from src.services.source_fetch_service import SourceFetchService
 
 logger = get_logger(__name__)
 
@@ -557,552 +542,8 @@ async def update_feedback(
 
 
 # ============================================================================
-# News Source Endpoints
+# Culture Question Review Endpoints
 # ============================================================================
-
-
-@router.get(
-    "/culture/sources",
-    response_model=NewsSourceListResponse,
-    summary="List all news sources",
-    description="Get a paginated list of news sources with optional active filter.",
-    responses={
-        200: {"description": "Paginated source list"},
-        401: {"description": "Not authenticated"},
-        403: {"description": "Not authorized (requires superuser)"},
-    },
-)
-async def list_news_sources(
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_superuser),
-    page: int = Query(1, ge=1, description="Page number"),
-    page_size: int = Query(10, ge=1, le=100, description="Items per page"),
-    is_active: Optional[bool] = Query(None, description="Filter by active status"),
-) -> NewsSourceListResponse:
-    """List all news sources with pagination."""
-    service = NewsSourceService(db)
-    return await service.list_sources(
-        page=page,
-        page_size=page_size,
-        is_active=is_active,
-    )
-
-
-@router.post(
-    "/culture/sources",
-    response_model=NewsSourceResponse,
-    status_code=status.HTTP_201_CREATED,
-    summary="Create a news source",
-    description="Create a new news source. URL must be unique.",
-    responses={
-        201: {"description": "Source created"},
-        401: {"description": "Not authenticated"},
-        403: {"description": "Not authorized (requires superuser)"},
-        409: {"description": "URL already exists"},
-    },
-)
-async def create_news_source(
-    data: NewsSourceCreate,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_superuser),
-) -> NewsSourceResponse:
-    """Create a new news source."""
-    service = NewsSourceService(db)
-
-    try:
-        result = await service.create_source(data)
-        await db.commit()
-        return result
-    except DuplicateURLException as e:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=f"URL already exists: {e.url}",
-        )
-
-
-@router.get(
-    "/culture/sources/{source_id}",
-    response_model=NewsSourceResponse,
-    summary="Get a news source",
-    description="Get details for a specific news source.",
-    responses={
-        200: {"description": "Source details"},
-        401: {"description": "Not authenticated"},
-        403: {"description": "Not authorized (requires superuser)"},
-        404: {"description": "Source not found"},
-    },
-)
-async def get_news_source(
-    source_id: UUID,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_superuser),
-) -> NewsSourceResponse:
-    """Get a news source by ID."""
-    service = NewsSourceService(db)
-    return await service.get_source(source_id)
-
-
-@router.patch(
-    "/culture/sources/{source_id}",
-    response_model=NewsSourceResponse,
-    summary="Update a news source",
-    description="Update news source details. URL must remain unique.",
-    responses={
-        200: {"description": "Source updated"},
-        401: {"description": "Not authenticated"},
-        403: {"description": "Not authorized (requires superuser)"},
-        404: {"description": "Source not found"},
-        409: {"description": "URL already exists"},
-    },
-)
-async def update_news_source(
-    source_id: UUID,
-    data: NewsSourceUpdate,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_superuser),
-) -> NewsSourceResponse:
-    """Update a news source."""
-    service = NewsSourceService(db)
-
-    try:
-        result = await service.update_source(source_id, data)
-        await db.commit()
-        return result
-    except DuplicateURLException as e:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=f"URL already exists: {e.url}",
-        )
-
-
-@router.delete(
-    "/culture/sources/{source_id}",
-    status_code=status.HTTP_204_NO_CONTENT,
-    summary="Delete a news source",
-    description="Permanently delete a news source.",
-    responses={
-        204: {"description": "Source deleted"},
-        401: {"description": "Not authenticated"},
-        403: {"description": "Not authorized (requires superuser)"},
-        404: {"description": "Source not found"},
-    },
-)
-async def delete_news_source(
-    source_id: UUID,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_superuser),
-) -> None:
-    """Delete a news source."""
-    service = NewsSourceService(db)
-    await service.delete_source(source_id)
-    await db.commit()
-
-
-# ============================================================================
-# Source Fetch History Endpoints
-# ============================================================================
-
-
-@router.post(
-    "/culture/sources/{source_id}/fetch",
-    response_model=SourceFetchHistoryItem,
-    status_code=status.HTTP_201_CREATED,
-    summary="Trigger manual fetch for a source",
-    description="Fetch HTML from a news source immediately. Works on both active and inactive sources. On success, automatically triggers AI analysis.",
-    responses={
-        201: {"description": "Fetch completed (success or error recorded)"},
-        401: {"description": "Not authenticated"},
-        403: {"description": "Not authorized (requires superuser)"},
-        404: {"description": "Source not found"},
-    },
-)
-async def trigger_fetch(
-    source_id: UUID,
-    background_tasks: BackgroundTasks,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_superuser),
-) -> SourceFetchHistoryItem:
-    """Trigger manual HTML fetch for a news source.
-
-    On successful fetch, automatically triggers AI analysis in the background
-    to discover articles suitable for Cypriot culture exam questions.
-    """
-    from src.tasks import trigger_article_analysis
-
-    service = SourceFetchService(db)
-    history = await service.fetch_source(source_id, trigger_type="manual")
-    await db.commit()
-
-    # Auto-trigger analysis on successful fetch
-    if history.status == "success":
-        trigger_article_analysis(history.id, background_tasks)
-
-    return SourceFetchHistoryItem.model_validate(history)
-
-
-@router.get(
-    "/culture/sources/{source_id}/history",
-    response_model=SourceFetchHistoryListResponse,
-    summary="Get fetch history for a source",
-    description="Get paginated fetch history for a news source.",
-    responses={
-        200: {"description": "Fetch history"},
-        401: {"description": "Not authenticated"},
-        403: {"description": "Not authorized (requires superuser)"},
-        404: {"description": "Source not found"},
-    },
-)
-async def get_fetch_history(
-    source_id: UUID,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_superuser),
-    limit: int = Query(10, ge=1, le=50, description="Max results"),
-) -> SourceFetchHistoryListResponse:
-    """Get fetch history for a news source."""
-    service = SourceFetchService(db)
-    items, total = await service.get_history(source_id, limit=limit)
-    return SourceFetchHistoryListResponse(
-        items=[SourceFetchHistoryItem.model_validate(item) for item in items],
-        total=total,
-    )
-
-
-@router.get(
-    "/culture/sources/history/{history_id}/html",
-    response_model=SourceFetchHtmlResponse,
-    summary="Get HTML content from fetch history",
-    description="Get the raw HTML content from a successful fetch.",
-    responses={
-        200: {"description": "HTML content"},
-        401: {"description": "Not authenticated"},
-        403: {"description": "Not authorized (requires superuser)"},
-        404: {"description": "History entry not found or has no HTML"},
-    },
-)
-async def get_fetch_html(
-    history_id: UUID,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_superuser),
-) -> SourceFetchHtmlResponse:
-    """Get raw HTML content from a fetch history entry."""
-    service = SourceFetchService(db)
-    history = await service.get_history_html(history_id)
-    return SourceFetchHtmlResponse.model_validate(history)
-
-
-@router.delete(
-    "/culture/sources/history/{history_id}",
-    status_code=status.HTTP_204_NO_CONTENT,
-    summary="Delete a fetch history record",
-    description="Delete a fetch history record and its HTML content.",
-    responses={
-        204: {"description": "History record deleted"},
-        401: {"description": "Not authenticated"},
-        403: {"description": "Not authorized (requires superuser)"},
-        404: {"description": "History entry not found"},
-    },
-)
-async def delete_fetch_history(
-    history_id: UUID,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_superuser),
-) -> None:
-    """Delete a fetch history record and its HTML content."""
-    service = SourceFetchService(db)
-    await service.delete_history(history_id)
-    await db.commit()
-
-
-# ============================================================================
-# Article Analysis Endpoints
-# ============================================================================
-
-
-@router.post(
-    "/culture/sources/history/{history_id}/analyze",
-    response_model=AnalysisStartedResponse,
-    status_code=status.HTTP_202_ACCEPTED,
-    summary="Trigger AI analysis",
-    description="Manually trigger AI analysis for a fetch history record. Useful if automatic analysis failed or needs to be re-run.",
-    responses={
-        202: {"description": "Analysis started"},
-        400: {"description": "No HTML content available for analysis"},
-        401: {"description": "Not authenticated"},
-        403: {"description": "Not authorized (requires superuser)"},
-        404: {"description": "Fetch history not found"},
-    },
-)
-async def trigger_analysis(
-    history_id: UUID,
-    background_tasks: BackgroundTasks,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_superuser),
-) -> AnalysisStartedResponse:
-    """Trigger manual AI analysis of fetched HTML.
-
-    Manually triggers AI analysis for a fetch history record. This is useful when:
-    - Automatic analysis failed due to transient errors
-    - You want to re-analyze content with updated AI logic
-    - Analysis was never triggered for older fetch records
-
-    The analysis runs asynchronously in the background. Use the
-    GET /culture/sources/history/{history_id}/articles endpoint to check
-    the status and retrieve discovered articles.
-
-    Args:
-        history_id: UUID of the fetch history record to analyze
-        background_tasks: FastAPI background tasks (injected)
-        db: Database session (injected)
-        current_user: Authenticated superuser (injected)
-
-    Returns:
-        AnalysisStartedResponse with confirmation message
-
-    Raises:
-        404: If fetch history record not found
-        400: If no HTML content available for analysis
-    """
-    from src.db.models import SourceFetchHistory
-    from src.tasks import trigger_article_analysis
-
-    result = await db.execute(select(SourceFetchHistory).where(SourceFetchHistory.id == history_id))
-    history = result.scalar_one_or_none()
-
-    if not history:
-        raise NotFoundException(
-            resource="Fetch history", detail=f"Fetch history with ID '{history_id}' not found"
-        )
-
-    if not history.html_content:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No HTML content available for analysis",
-        )
-
-    # Mark as pending and clear any previous error
-    history.analysis_status = "pending"
-    history.analysis_error = None
-    await db.commit()
-
-    # Queue the background analysis task
-    trigger_article_analysis(history_id, background_tasks)
-
-    return AnalysisStartedResponse(
-        message="Analysis started",
-        history_id=history_id,
-    )
-
-
-@router.get(
-    "/culture/sources/history/{history_id}/articles",
-    response_model=SourceFetchHistoryDetailResponse,
-    summary="Get analysis results",
-    description="Retrieve discovered articles from AI analysis of a fetch history record.",
-    responses={
-        200: {"description": "Analysis results with discovered articles"},
-        401: {"description": "Not authenticated"},
-        403: {"description": "Not authorized (requires superuser)"},
-        404: {"description": "Fetch history not found"},
-    },
-)
-async def get_analysis_results(
-    history_id: UUID,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_superuser),
-) -> SourceFetchHistoryDetailResponse:
-    """Get discovered articles from AI analysis.
-
-    Retrieves the results of AI analysis for a fetch history record, including:
-    - Analysis status (pending, completed, failed)
-    - Discovered articles with URLs, titles, and AI reasoning
-    - Token usage and timing information
-    - Error details if analysis failed
-
-    Args:
-        history_id: UUID of the fetch history record
-        db: Database session (injected)
-        current_user: Authenticated superuser (injected)
-
-    Returns:
-        SourceFetchHistoryDetailResponse with analysis status and articles
-
-    Raises:
-        404: If fetch history record not found
-    """
-    from sqlalchemy.orm import selectinload
-
-    from src.db.models import SourceFetchHistory
-
-    result = await db.execute(
-        select(SourceFetchHistory)
-        .options(selectinload(SourceFetchHistory.source))
-        .where(SourceFetchHistory.id == history_id)
-    )
-    history = result.scalar_one_or_none()
-
-    if not history:
-        raise NotFoundException(
-            resource="Fetch history", detail=f"Fetch history with ID '{history_id}' not found"
-        )
-
-    return SourceFetchHistoryDetailResponse.model_validate(history)
-
-
-# ============================================================================
-# Culture Question Generation Endpoints
-# ============================================================================
-
-
-@router.post(
-    "/culture/questions/generate",
-    response_model=QuestionGenerateResponse,
-    status_code=status.HTTP_201_CREATED,
-    summary="Generate a culture question from an article",
-    responses={
-        201: {"description": "Question generated successfully"},
-        400: {"description": "Failed to fetch article HTML"},
-        409: {"description": "Article already used for question generation"},
-        500: {"description": "AI generation failed"},
-    },
-)
-async def generate_culture_question(
-    request: QuestionGenerateRequest,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_superuser),
-) -> QuestionGenerateResponse:
-    """Generate a culture exam question from an article using AI."""
-    from datetime import datetime, timezone
-
-    article_url_str = str(request.article_url)
-    started_at = datetime.now(timezone.utc)
-
-    # Check if article already used (before calling Claude to save tokens)
-    existing = await db.execute(
-        select(CultureQuestion).where(CultureQuestion.source_article_url == article_url_str)
-    )
-    if existing.scalar_one_or_none():
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="A question has already been generated from this article",
-        )
-
-    # Fetch article HTML
-    try:
-        async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
-            response = await client.get(article_url_str)
-            response.raise_for_status()
-            raw_html = response.text
-    except httpx.HTTPError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Failed to fetch article: {str(e)}",
-        )
-
-    # Extract clean content from HTML
-    try:
-        extracted = html_extractor.extract(
-            html_content=raw_html,
-            source_url=article_url_str,
-        )
-
-        # Log extraction statistics
-        logger.info(
-            "Article content extracted",
-            extra={
-                "article_url": article_url_str,
-                "extraction_method": extracted.extraction_method,
-                "estimated_tokens": extracted.estimated_tokens,
-                "title_from_extraction": extracted.title[:100] if extracted.title else None,
-                "raw_html_size_kb": round(len(raw_html.encode("utf-8")) / 1024, 2),
-                "extracted_text_size_kb": round(len(extracted.main_text.encode("utf-8")) / 1024, 2),
-            },
-        )
-
-        # Use extracted text instead of raw HTML
-        content_for_claude = extracted.main_text
-
-        # Validate extraction produced sufficient content (at least 100 chars)
-        if not content_for_claude or len(content_for_claude.strip()) < 100:
-            logger.warning(
-                "Extraction produced minimal content, using raw HTML fallback",
-                extra={
-                    "article_url": article_url_str,
-                    "extracted_length": len(content_for_claude) if content_for_claude else 0,
-                },
-            )
-            content_for_claude = raw_html
-
-    except HTMLContentExtractorError as e:
-        logger.warning(
-            "HTML extraction failed, using raw HTML",
-            extra={
-                "article_url": article_url_str,
-                "error": str(e),
-            },
-        )
-        content_for_claude = raw_html
-
-    # Create log entry (in_progress)
-    log_entry = QuestionGenerationLog(
-        source_fetch_history_id=request.fetch_history_id,
-        article_url=article_url_str,
-        article_title=request.article_title,
-        status="in_progress",
-        started_at=started_at,
-    )
-    db.add(log_entry)
-    await db.flush()
-
-    try:
-        # Generate question using Claude
-        result, tokens_used = claude_service.generate_culture_question(
-            html_content=content_for_claude,
-            article_url=article_url_str,
-            article_title=request.article_title,
-        )
-
-        # Build options from result
-        options = [opt.model_dump() for opt in result.options]
-
-        # Create CultureQuestion
-        question = CultureQuestion(
-            deck_id=None,
-            question_text=result.question_text.model_dump(),
-            option_a=options[0] if len(options) > 0 else {"el": "", "en": "", "ru": ""},
-            option_b=options[1] if len(options) > 1 else {"el": "", "en": "", "ru": ""},
-            option_c=options[2] if len(options) > 2 else None,
-            option_d=options[3] if len(options) > 3 else None,
-            correct_option=result.correct_option,
-            is_pending_review=True,
-            source_article_url=article_url_str,
-        )
-        db.add(question)
-        await db.flush()
-
-        # Update log entry (success)
-        log_entry.status = "success"
-        log_entry.question_id = question.id
-        log_entry.tokens_used = tokens_used
-        log_entry.completed_at = datetime.now(timezone.utc)
-
-        await db.commit()
-
-        return QuestionGenerateResponse(
-            question_id=question.id,
-            message="Question generated successfully",
-        )
-
-    except ClaudeServiceError as e:
-        # Update log entry (failed)
-        log_entry.status = "failed"
-        log_entry.error_message = str(e)
-        log_entry.completed_at = datetime.now(timezone.utc)
-        await db.commit()
-
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to generate question: {str(e)}",
-        )
 
 
 @router.get(
@@ -1280,4 +721,95 @@ async def approve_question(
         deck_id=question.deck_id,
         is_pending_review=False,
         message="Question approved successfully",
+    )
+
+
+# ============================================================================
+# Admin Deck Questions Endpoint
+# ============================================================================
+
+
+@router.get(
+    "/culture/decks/{deck_id}/questions",
+    response_model=AdminCultureQuestionsResponse,
+    summary="List culture questions in a deck",
+    description="Get a paginated list of all culture questions in a specific deck for admin management.",
+    responses={
+        200: {"description": "Paginated list of questions"},
+        401: {"description": "Not authenticated"},
+        403: {"description": "Not authorized (requires superuser)"},
+        404: {"description": "Deck not found"},
+    },
+)
+async def list_deck_questions(
+    deck_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+    page: int = Query(1, ge=1, description="Page number"),
+    page_size: int = Query(20, ge=1, le=100, description="Items per page"),
+) -> AdminCultureQuestionsResponse:
+    """List all culture questions in a deck for admin management.
+
+    Returns a paginated list of all questions (not just active/approved) in the deck.
+    Used for admin deck detail view to enable card/question deletion.
+
+    Args:
+        deck_id: UUID of the culture deck
+        db: Database session (injected)
+        current_user: Authenticated superuser (injected)
+        page: Page number (1-indexed)
+        page_size: Number of items per page (max 100)
+
+    Returns:
+        AdminCultureQuestionsResponse with paginated questions
+
+    Raises:
+        404: If deck not found
+    """
+    # Verify deck exists
+    deck_result = await db.execute(select(CultureDeck).where(CultureDeck.id == deck_id))
+    deck = deck_result.scalar_one_or_none()
+
+    if not deck:
+        raise NotFoundException(
+            resource="Culture deck", detail=f"Culture deck with ID '{deck_id}' not found"
+        )
+
+    # Count total questions in deck (including pending)
+    count_result = await db.execute(
+        select(func.count(CultureQuestion.id)).where(CultureQuestion.deck_id == deck_id)
+    )
+    total = count_result.scalar() or 0
+
+    # Get paginated questions
+    offset = (page - 1) * page_size
+    result = await db.execute(
+        select(CultureQuestion)
+        .where(CultureQuestion.deck_id == deck_id)
+        .order_by(CultureQuestion.created_at.desc())
+        .offset(offset)
+        .limit(page_size)
+    )
+    questions = result.scalars().all()
+
+    return AdminCultureQuestionsResponse(
+        questions=[
+            AdminCultureQuestionItem(
+                id=q.id,
+                question_text=q.question_text,
+                option_a=q.option_a,
+                option_b=q.option_b,
+                option_c=q.option_c,
+                option_d=q.option_d,
+                correct_option=q.correct_option,
+                source_article_url=q.source_article_url,
+                is_pending_review=q.is_pending_review,
+                created_at=q.created_at,
+            )
+            for q in questions
+        ],
+        total=total,
+        page=page,
+        page_size=page_size,
+        deck_id=deck_id,
     )

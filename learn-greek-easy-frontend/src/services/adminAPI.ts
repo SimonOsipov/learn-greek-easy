@@ -106,161 +106,61 @@ export interface CultureDeckUpdatePayload {
   is_premium?: boolean;
 }
 
-// ============================================
-// News Source Types
-// ============================================
+/**
+ * Payload for creating a vocabulary deck
+ */
+export interface VocabularyDeckCreatePayload {
+  name: string;
+  description?: string | null;
+  level: DeckLevel;
+  is_premium?: boolean;
+  is_system_deck: true;
+}
 
 /**
- * News source response from API
+ * Payload for creating a culture deck
  */
-export interface NewsSourceResponse {
+export interface CultureDeckCreatePayload {
+  name: string;
+  description?: string | null;
+  category: string;
+  icon: string;
+  color_accent: string;
+  is_premium?: boolean;
+}
+
+/**
+ * Response from creating a vocabulary deck
+ */
+export interface VocabularyDeckCreateResponse {
   id: string;
   name: string;
-  url: string;
+  description: string | null;
+  level: DeckLevel;
   is_active: boolean;
+  is_premium: boolean;
+  is_system_deck: boolean;
   created_at: string;
-  updated_at: string;
 }
 
 /**
- * Paginated news source list response
+ * Response from creating a culture deck
  */
-export interface NewsSourceListResponse {
-  sources: NewsSourceResponse[];
-  total: number;
-  page: number;
-  page_size: number;
-}
-
-/**
- * Parameters for listing news sources
- */
-export interface ListNewsSourcesParams {
-  page?: number;
-  page_size?: number;
-  is_active?: boolean;
-}
-
-/**
- * Payload for creating a news source
- */
-export interface NewsSourceCreatePayload {
+export interface CultureDeckCreateResponse {
+  id: string;
   name: string;
-  url: string;
-  is_active?: boolean;
-}
-
-/**
- * Payload for updating a news source
- */
-export interface NewsSourceUpdatePayload {
-  name?: string;
-  url?: string;
-  is_active?: boolean;
-}
-
-// ============================================
-// Fetch History Types
-// ============================================
-
-/**
- * A single fetch history item
- */
-export interface FetchHistoryItem {
-  id: string;
-  fetched_at: string;
-  status: 'success' | 'error';
-  html_size_bytes: number | null;
-  error_message: string | null;
-  trigger_type: 'manual' | 'scheduled';
-  final_url: string | null;
-  // Analysis fields
-  analysis_status: 'pending' | 'completed' | 'failed' | null;
-  analysis_error: string | null;
-  analysis_tokens_used: number | null;
-  analyzed_at: string | null;
-}
-
-/**
- * Paginated fetch history response
- */
-export interface FetchHistoryResponse {
-  items: FetchHistoryItem[];
-  total: number;
-}
-
-/**
- * Response containing HTML content for a fetch history item
- */
-export interface FetchHtmlResponse {
-  id: string;
-  html_content: string;
-  fetched_at: string;
-  final_url: string | null;
-}
-
-// ============================================
-// Article Analysis Types
-// ============================================
-
-/**
- * A discovered article from AI analysis
- */
-export interface DiscoveredArticle {
-  url: string;
-  title: string;
-  reasoning: string;
-}
-
-/**
- * Detailed fetch history response including discovered articles
- */
-export interface FetchHistoryDetailResponse {
-  id: string;
-  source_id: string;
-  fetched_at: string;
-  status: 'success' | 'error';
-  html_size_bytes: number | null;
-  error_message: string | null;
-  trigger_type: 'manual' | 'scheduled';
-  final_url: string | null;
-  analysis_status: 'pending' | 'completed' | 'failed' | null;
-  analysis_error: string | null;
-  analysis_tokens_used: number | null;
-  analyzed_at: string | null;
-  discovered_articles: DiscoveredArticle[] | null;
+  description: string | null;
+  category: string;
+  icon: string;
+  color_accent: string;
+  is_active: boolean;
+  is_premium: boolean;
   created_at: string;
-  updated_at: string;
-}
-
-/**
- * Response when triggering analysis
- */
-export interface AnalysisStartedResponse {
-  message: string;
-  history_id: string;
 }
 
 // ============================================
-// Question Generation Types
+// Question Review Types
 // ============================================
-
-/**
- * Request payload for generating a culture question from an article
- */
-export interface GenerateQuestionRequest {
-  article_url: string;
-  article_title: string;
-  fetch_history_id: string;
-}
-
-/**
- * Response from successful question generation
- */
-export interface GenerateQuestionResponse {
-  question_id: string;
-  message: string;
-}
 
 /**
  * Response from article usage check
@@ -317,6 +217,64 @@ export interface CultureDeckListItem {
 }
 
 // ============================================
+// Admin Deck Detail Types
+// ============================================
+
+/**
+ * Vocabulary card item for admin deck detail view
+ */
+export interface AdminVocabularyCard {
+  id: string;
+  deck_id: string;
+  front_text: string;
+  back_text: string;
+  example_sentence: string | null;
+  pronunciation: string | null;
+  difficulty: 'easy' | 'medium' | 'hard';
+  order_index: number;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Paginated vocabulary card list response
+ */
+export interface AdminVocabularyCardsResponse {
+  total: number;
+  page: number;
+  page_size: number;
+  deck_id: string;
+  cards: AdminVocabularyCard[];
+}
+
+/**
+ * Culture question item for admin deck detail view
+ */
+export interface AdminCultureQuestion {
+  id: string;
+  question_text: Record<string, string>;
+  option_a: Record<string, string>;
+  option_b: Record<string, string>;
+  option_c: Record<string, string> | null;
+  option_d: Record<string, string> | null;
+  correct_option: number;
+  source_article_url: string | null;
+  is_pending_review: boolean;
+  created_at: string;
+}
+
+/**
+ * Paginated culture questions response
+ */
+export interface AdminCultureQuestionsResponse {
+  questions: AdminCultureQuestion[];
+  total: number;
+  page: number;
+  page_size: number;
+  deck_id: string;
+}
+
+// ============================================
 // Admin API Methods
 // ============================================
 
@@ -368,6 +326,52 @@ export const adminAPI = {
     return api.patch(`/api/v1/culture/decks/${deckId}`, data);
   },
 
+  /**
+   * Create a new vocabulary deck
+   *
+   * Creates a system vocabulary deck with the specified metadata.
+   * Requires superuser authentication.
+   */
+  createVocabularyDeck: async (
+    data: VocabularyDeckCreatePayload
+  ): Promise<VocabularyDeckCreateResponse> => {
+    return api.post<VocabularyDeckCreateResponse>('/api/v1/decks', data);
+  },
+
+  /**
+   * Create a new culture deck
+   *
+   * Creates a culture deck with the specified metadata.
+   * Requires superuser authentication.
+   */
+  createCultureDeck: async (data: CultureDeckCreatePayload): Promise<CultureDeckCreateResponse> => {
+    return api.post<CultureDeckCreateResponse>('/api/v1/culture/decks', data);
+  },
+
+  /**
+   * Delete (soft-delete) a vocabulary deck
+   *
+   * Sets is_active = false, hiding the deck from learners.
+   * User progress is preserved. Can be reactivated via edit.
+   * Requires superuser authentication.
+   * Returns 204 No Content on success.
+   */
+  deleteVocabularyDeck: async (deckId: string): Promise<void> => {
+    return api.delete<void>(`/api/v1/decks/${deckId}`);
+  },
+
+  /**
+   * Delete (soft-delete) a culture deck
+   *
+   * Sets is_active = false, hiding the deck from learners.
+   * User progress is preserved. Can be reactivated via edit.
+   * Requires superuser authentication.
+   * Returns 204 No Content on success.
+   */
+  deleteCultureDeck: async (deckId: string): Promise<void> => {
+    return api.delete<void>(`/api/v1/culture/decks/${deckId}`);
+  },
+
   // ============================================
   // Feedback Management
   // ============================================
@@ -405,161 +409,8 @@ export const adminAPI = {
   },
 
   // ============================================
-  // News Source Management
+  // Question Review Methods
   // ============================================
-
-  /**
-   * List all news sources with pagination and optional filtering
-   *
-   * Returns a paginated list of news sources for culture content scraping.
-   * Requires superuser authentication.
-   */
-  listNewsSources: async (params: ListNewsSourcesParams = {}): Promise<NewsSourceListResponse> => {
-    const queryString = buildQueryString({
-      page: params.page,
-      page_size: params.page_size,
-      is_active: params.is_active,
-    });
-    return api.get<NewsSourceListResponse>(`/api/v1/admin/culture/sources${queryString}`);
-  },
-
-  /**
-   * Get a single news source by ID
-   *
-   * Requires superuser authentication.
-   */
-  getNewsSource: async (sourceId: string): Promise<NewsSourceResponse> => {
-    return api.get<NewsSourceResponse>(`/api/v1/admin/culture/sources/${sourceId}`);
-  },
-
-  /**
-   * Create a new news source
-   *
-   * Requires superuser authentication.
-   * Returns 409 Conflict if URL already exists.
-   */
-  createNewsSource: async (data: NewsSourceCreatePayload): Promise<NewsSourceResponse> => {
-    return api.post<NewsSourceResponse>('/api/v1/admin/culture/sources', data);
-  },
-
-  /**
-   * Update an existing news source
-   *
-   * Requires superuser authentication.
-   * Returns 404 if source not found, 409 if URL already exists.
-   */
-  updateNewsSource: async (
-    sourceId: string,
-    data: NewsSourceUpdatePayload
-  ): Promise<NewsSourceResponse> => {
-    return api.patch<NewsSourceResponse>(`/api/v1/admin/culture/sources/${sourceId}`, data);
-  },
-
-  /**
-   * Delete a news source
-   *
-   * Requires superuser authentication.
-   * Returns 204 No Content on success, 404 if not found.
-   */
-  deleteNewsSource: async (sourceId: string): Promise<void> => {
-    return api.delete<void>(`/api/v1/admin/culture/sources/${sourceId}`);
-  },
-
-  // ============================================
-  // Fetch History Management
-  // ============================================
-
-  /**
-   * Trigger a manual fetch for a news source
-   *
-   * Works on both active and inactive sources.
-   * Requires superuser authentication.
-   */
-  triggerFetch: async (sourceId: string): Promise<FetchHistoryItem> => {
-    return api.post<FetchHistoryItem>(`/api/v1/admin/culture/sources/${sourceId}/fetch`);
-  },
-
-  /**
-   * Get fetch history for a news source
-   *
-   * Returns the most recent fetch history items for the source.
-   * Requires superuser authentication.
-   */
-  getFetchHistory: async (sourceId: string, limit = 10): Promise<FetchHistoryResponse> => {
-    const queryString = buildQueryString({ limit });
-    return api.get<FetchHistoryResponse>(
-      `/api/v1/admin/culture/sources/${sourceId}/history${queryString}`
-    );
-  },
-
-  /**
-   * Get raw HTML content for a fetch history item
-   *
-   * Requires superuser authentication.
-   * Returns 404 if history item not found.
-   */
-  getFetchHtml: async (historyId: string): Promise<FetchHtmlResponse> => {
-    return api.get<FetchHtmlResponse>(`/api/v1/admin/culture/sources/history/${historyId}/html`);
-  },
-
-  /**
-   * Delete a fetch history record
-   *
-   * Deletes the fetch history entry and its HTML content.
-   * Requires superuser authentication.
-   * Returns 204 No Content on success, 404 if not found.
-   */
-  deleteFetchHistory: async (historyId: string): Promise<void> => {
-    return api.delete<void>(`/api/v1/admin/culture/sources/history/${historyId}`);
-  },
-
-  // ============================================
-  // Article Analysis
-  // ============================================
-
-  /**
-   * Trigger AI analysis for a fetch history record
-   *
-   * Starts background analysis of the HTML content to discover articles.
-   * Requires superuser authentication.
-   */
-  triggerAnalysis: async (historyId: string): Promise<AnalysisStartedResponse> => {
-    return api.post<AnalysisStartedResponse>(
-      `/api/v1/admin/culture/sources/history/${historyId}/analyze`
-    );
-  },
-
-  /**
-   * Get analysis results (discovered articles) for a fetch history record
-   *
-   * Returns the full history record including discovered articles.
-   * Requires superuser authentication.
-   */
-  getAnalysisResults: async (historyId: string): Promise<FetchHistoryDetailResponse> => {
-    return api.get<FetchHistoryDetailResponse>(
-      `/api/v1/admin/culture/sources/history/${historyId}/articles`
-    );
-  },
-
-  // ============================================
-  // Question Generation
-  // ============================================
-
-  /**
-   * Generate a culture question from an article using AI
-   *
-   * Fetches the article HTML, sends to Claude for question generation,
-   * and creates a new pending review question.
-   * Requires superuser authentication.
-   *
-   * @returns Generated question ID and success message
-   * @throws 400 if article fetch fails
-   * @throws 409 if article already used for question generation
-   * @throws 500 if AI generation fails
-   */
-  generateQuestion: async (data: GenerateQuestionRequest): Promise<GenerateQuestionResponse> => {
-    return api.post<GenerateQuestionResponse>('/api/v1/admin/culture/questions/generate', data);
-  },
 
   /**
    * Check if an article URL has already been used for question generation
@@ -591,10 +442,6 @@ export const adminAPI = {
       `/api/v1/admin/culture/questions/pending${queryString}`
     );
   },
-
-  // ============================================
-  // Question Review Methods
-  // ============================================
 
   /**
    * Get a single pending question by ID
@@ -654,5 +501,79 @@ export const adminAPI = {
       '/api/v1/culture/decks?page_size=100'
     );
     return response.decks;
+  },
+
+  // ============================================
+  // Admin Deck Detail Methods
+  // ============================================
+
+  /**
+   * List vocabulary cards in a deck
+   *
+   * Uses the existing cards endpoint with deck_id filter.
+   * Requires superuser authentication.
+   *
+   * @param deckId - UUID of the vocabulary deck
+   * @param page - Page number (1-indexed)
+   * @param pageSize - Items per page
+   * @returns Paginated list of cards
+   */
+  listVocabularyCards: async (
+    deckId: string,
+    page = 1,
+    pageSize = 20
+  ): Promise<AdminVocabularyCardsResponse> => {
+    const queryString = buildQueryString({
+      deck_id: deckId,
+      page,
+      page_size: pageSize,
+    });
+    return api.get<AdminVocabularyCardsResponse>(`/api/v1/cards${queryString}`);
+  },
+
+  /**
+   * List culture questions in a deck
+   *
+   * Admin-only endpoint that returns all questions in a deck.
+   * Requires superuser authentication.
+   *
+   * @param deckId - UUID of the culture deck
+   * @param page - Page number (1-indexed)
+   * @param pageSize - Items per page
+   * @returns Paginated list of questions
+   */
+  listCultureQuestions: async (
+    deckId: string,
+    page = 1,
+    pageSize = 20
+  ): Promise<AdminCultureQuestionsResponse> => {
+    const queryString = buildQueryString({ page, page_size: pageSize });
+    return api.get<AdminCultureQuestionsResponse>(
+      `/api/v1/admin/culture/decks/${deckId}/questions${queryString}`
+    );
+  },
+
+  /**
+   * Delete a vocabulary card (HARD DELETE)
+   *
+   * Permanently removes the card and all associated user data.
+   * Requires superuser authentication.
+   *
+   * @param cardId - UUID of the card to delete
+   */
+  deleteVocabularyCard: async (cardId: string): Promise<void> => {
+    return api.delete<void>(`/api/v1/cards/${cardId}`);
+  },
+
+  /**
+   * Delete a culture question (HARD DELETE)
+   *
+   * Permanently removes the question and all associated user data.
+   * Requires superuser authentication.
+   *
+   * @param questionId - UUID of the question to delete
+   */
+  deleteCultureQuestion: async (questionId: string): Promise<void> => {
+    return api.delete<void>(`/api/v1/culture/questions/${questionId}`);
   },
 };

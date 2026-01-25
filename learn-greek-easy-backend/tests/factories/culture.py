@@ -5,7 +5,6 @@ This module provides factories for culture-related models:
 - CultureQuestionFactory: Multiple-choice questions
 - CultureQuestionStatsFactory: SM-2 progress tracking
 - CultureAnswerHistoryFactory: Answer history for analytics
-- NewsSourceFactory: News sources for AI culture question generation
 
 Usage:
     # Create a culture deck
@@ -26,15 +25,9 @@ Usage:
     history = await CultureAnswerHistoryFactory.create(
         user_id=user.id, question_id=question.id, wrong=True
     )
-
-    # Create a news source
-    source = await NewsSourceFactory.create()
-
-    # Create an inactive news source
-    source = await NewsSourceFactory.create(inactive=True)
 """
 
-from datetime import date, datetime, timezone
+from datetime import date
 
 import factory
 
@@ -44,8 +37,6 @@ from src.db.models import (
     CultureDeck,
     CultureQuestion,
     CultureQuestionStats,
-    NewsSource,
-    SourceFetchHistory,
 )
 from tests.factories.base import BaseFactory
 
@@ -295,74 +286,3 @@ class CultureAnswerHistoryFactory(BaseFactory):
 
         # Politics category
         politics = factory.Trait(deck_category="politics")
-
-
-class NewsSourceFactory(BaseFactory):
-    """Factory for NewsSource model.
-
-    Creates news website sources for AI culture question generation.
-
-    Traits:
-        inactive: Deactivated source
-
-    Example:
-        source = await NewsSourceFactory.create()
-        inactive_source = await NewsSourceFactory.create(inactive=True)
-    """
-
-    class Meta:
-        model = NewsSource
-
-    # Source information - unique URL via sequence
-    name = factory.Sequence(lambda n: f"News Source {n}")
-    url = factory.Sequence(lambda n: f"https://news-source-{n}.example.com/")
-    is_active = True
-
-    class Params:
-        """Factory traits for common variations."""
-
-        # Inactive source
-        inactive = factory.Trait(is_active=False)
-
-
-class SourceFetchHistoryFactory(BaseFactory):
-    """Factory for SourceFetchHistory model.
-
-    Creates fetch history entries for news sources.
-
-    Traits:
-        error: Failed fetch with error message
-        scheduled: Scheduled fetch trigger type
-
-    Example:
-        history = await SourceFetchHistoryFactory.create(source_id=source.id)
-        error_history = await SourceFetchHistoryFactory.create(source_id=source.id, error=True)
-    """
-
-    class Meta:
-        model = SourceFetchHistory
-
-    source_id = None  # Must be set by caller
-    fetched_at = factory.LazyFunction(lambda: datetime.now(timezone.utc))
-    status = "success"
-    html_content = "<html><head><title>Test</title></head><body>Test content</body></html>"
-    html_size_bytes = factory.LazyAttribute(
-        lambda o: len(o.html_content.encode("utf-8")) if o.html_content else None
-    )
-    error_message = None
-    trigger_type = "manual"
-    final_url = None
-
-    class Params:
-        """Factory traits for common variations."""
-
-        # Error fetch
-        error = factory.Trait(
-            status="error",
-            html_content=None,
-            html_size_bytes=None,
-            error_message="Connection timeout after 30.0s",
-        )
-
-        # Scheduled fetch
-        scheduled = factory.Trait(trigger_type="scheduled")

@@ -16,17 +16,24 @@ import {
   Crown,
   Database,
   Layers,
+  Newspaper,
   Pencil,
+  Plus,
   RefreshCw,
   Search,
+  Trash2,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import {
   AdminFeedbackSection,
+  DeckCreateModal,
+  type DeckCreateFormData,
+  DeckDeleteDialog,
+  DeckDetailModal,
   DeckEditModal,
   type DeckEditFormData,
-  NewsSourcesSection,
+  type DeckType,
 } from '@/components/admin';
 import { CultureBadge, type CultureCategory } from '@/components/culture';
 import { DeckBadge } from '@/components/decks';
@@ -43,8 +50,17 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
+import { toast } from '@/hooks/use-toast';
 import {
+  trackAdminDeckCreateCancelled,
+  trackAdminDeckCreated,
+  trackAdminDeckCreateFailed,
+  trackAdminDeckCreateOpened,
   trackAdminDeckDeactivated,
+  trackAdminDeckDeleteCancelled,
+  trackAdminDeckDeleted,
+  trackAdminDeckDeleteFailed,
+  trackAdminDeckDeleteOpened,
   trackAdminDeckEditCancelled,
   trackAdminDeckEditFailed,
   trackAdminDeckEditOpened,
@@ -57,10 +73,12 @@ import { cn } from '@/lib/utils';
 import { adminAPI } from '@/services/adminAPI';
 import type {
   ContentStatsResponse,
+  CultureDeckCreatePayload,
   CultureDeckUpdatePayload,
   DeckListResponse,
   MultilingualName,
   UnifiedDeckItem,
+  VocabularyDeckCreatePayload,
   VocabularyDeckUpdatePayload,
 } from '@/services/adminAPI';
 
@@ -187,14 +205,42 @@ interface UnifiedDeckListItemProps {
   locale: string;
   t: (key: string, options?: Record<string, unknown>) => string;
   onEdit: (deck: UnifiedDeckItem) => void;
+  onDelete: (deck: UnifiedDeckItem) => void;
+  onViewDetail: (deck: UnifiedDeckItem) => void;
 }
 
-const UnifiedDeckListItem: React.FC<UnifiedDeckListItemProps> = ({ deck, locale, t, onEdit }) => {
+const UnifiedDeckListItem: React.FC<UnifiedDeckListItemProps> = ({
+  deck,
+  locale,
+  t,
+  onEdit,
+  onDelete,
+  onViewDetail,
+}) => {
   const displayName = getLocalizedName(deck.name, locale);
   const itemCountKey = deck.type === 'vocabulary' ? 'deck.cardCount' : 'deck.questionCount';
 
+  const handleRowClick = (e: React.MouseEvent) => {
+    // Don't trigger view detail if clicking on action buttons
+    const target = e.target as HTMLElement;
+    if (target.closest('button')) return;
+    onViewDetail(deck);
+  };
+
   return (
-    <div className="flex items-center justify-between rounded-lg border p-4 transition-colors hover:bg-muted/50">
+    <div
+      className="flex cursor-pointer items-center justify-between rounded-lg border p-4 transition-colors hover:bg-muted/50"
+      onClick={handleRowClick}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onViewDetail(deck);
+        }
+      }}
+      data-testid={`deck-row-${deck.id}`}
+    >
       <div className="flex items-center gap-3">
         {deck.type === 'vocabulary' && deck.level && <DeckBadge type="level" level={deck.level} />}
         {deck.type === 'culture' && deck.category && (
@@ -219,18 +265,34 @@ const UnifiedDeckListItem: React.FC<UnifiedDeckListItemProps> = ({ deck, locale,
           {t(`deckTypes.${deck.type}`)}
         </Badge>
       </div>
-      <div className="flex items-center gap-3">
-        <span className="text-sm text-muted-foreground">
+      <div className="flex items-center gap-2">
+        <span className="mr-1 text-sm text-muted-foreground">
           {t(itemCountKey, { count: deck.item_count })}
         </span>
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => onEdit(deck)}
+          onClick={(e) => {
+            e.stopPropagation();
+            onEdit(deck);
+          }}
           data-testid={`edit-deck-${deck.id}`}
         >
           <Pencil className="h-4 w-4" />
           <span className="sr-only">{t('actions.edit')}</span>
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete(deck);
+          }}
+          className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+          data-testid={`delete-deck-${deck.id}`}
+        >
+          <Trash2 className="h-4 w-4" />
+          <span className="sr-only">{t('actions.delete')}</span>
         </Button>
       </div>
     </div>
@@ -263,6 +325,8 @@ interface AllDecksListProps {
   t: (key: string, options?: Record<string, unknown>) => string;
   locale: string;
   onEditDeck: (deck: UnifiedDeckItem) => void;
+  onDeleteDeck: (deck: UnifiedDeckItem) => void;
+  onViewDeckDetail: (deck: UnifiedDeckItem) => void;
 }
 
 export interface AllDecksListHandle {
@@ -270,7 +334,7 @@ export interface AllDecksListHandle {
 }
 
 const AllDecksList = forwardRef<AllDecksListHandle, AllDecksListProps>(
-  ({ t, locale, onEditDeck }, ref) => {
+  ({ t, locale, onEditDeck, onDeleteDeck, onViewDeckDetail }, ref) => {
     const [deckList, setDeckList] = useState<DeckListResponse | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -419,6 +483,8 @@ const AllDecksList = forwardRef<AllDecksListHandle, AllDecksListProps>(
                       locale={locale}
                       t={t}
                       onEdit={onEditDeck}
+                      onDelete={onDeleteDeck}
+                      onViewDetail={onViewDeckDetail}
                     />
                   ))}
                 </div>
@@ -501,6 +567,20 @@ const AdminPage: React.FC = () => {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [selectedDeck, setSelectedDeck] = useState<UnifiedDeckItem | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Deck create modal state
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [createDeckType, setCreateDeckType] = useState<DeckType>('vocabulary');
+
+  // Deck delete modal state
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deckToDelete, setDeckToDelete] = useState<UnifiedDeckItem | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Deck detail modal state
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [detailDeck, setDetailDeck] = useState<UnifiedDeckItem | null>(null);
 
   // Ref for refreshing the deck list
   const allDecksListRef = useRef<AllDecksListHandle>(null);
@@ -694,6 +774,225 @@ const AdminPage: React.FC = () => {
     }
   };
 
+  /**
+   * Handle opening the create deck modal
+   */
+  const handleOpenCreateModal = () => {
+    setCreateModalOpen(true);
+    trackAdminDeckCreateOpened({ deck_type: 'vocabulary' });
+  };
+
+  /**
+   * Handle creating a new deck
+   */
+  const handleCreateDeck = async (type: DeckType, data: DeckCreateFormData) => {
+    setIsCreating(true);
+    setCreateDeckType(type);
+
+    try {
+      let deckId: string;
+      let deckName: string;
+
+      if (type === 'vocabulary') {
+        const vocabularyData = data as {
+          name: string;
+          description?: string;
+          level: 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
+          is_premium: boolean;
+        };
+        const payload: VocabularyDeckCreatePayload = {
+          name: vocabularyData.name,
+          description: vocabularyData.description || null,
+          level: vocabularyData.level,
+          is_premium: vocabularyData.is_premium,
+          is_system_deck: true,
+        };
+        const result = await adminAPI.createVocabularyDeck(payload);
+        deckId = result.id;
+        deckName = result.name;
+      } else {
+        const cultureData = data as {
+          name: string;
+          description?: string;
+          category: string;
+          icon: string;
+          color_accent: string;
+          is_premium: boolean;
+        };
+        const payload: CultureDeckCreatePayload = {
+          name: cultureData.name,
+          description: cultureData.description || null,
+          category: cultureData.category,
+          icon: cultureData.icon,
+          color_accent: cultureData.color_accent,
+          is_premium: cultureData.is_premium,
+        };
+        const result = await adminAPI.createCultureDeck(payload);
+        deckId = result.id;
+        deckName = result.name;
+      }
+
+      // Track success
+      trackAdminDeckCreated({
+        deck_id: deckId,
+        deck_type: type,
+        deck_name: deckName,
+      });
+
+      // Show success toast
+      toast({
+        title: t('toast.deckCreated'),
+      });
+
+      // Close modal and refresh deck list
+      setCreateModalOpen(false);
+      allDecksListRef.current?.refresh();
+      fetchStats(); // Refresh stats to update counts
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : t('errors.createFailed');
+
+      // Track failure
+      trackAdminDeckCreateFailed({
+        deck_type: type,
+        error_message: errorMessage,
+      });
+
+      // Show error toast
+      toast({
+        title: t('errors.createFailed'),
+        description: errorMessage,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  /**
+   * Handle create modal close (track cancel if not creating)
+   */
+  const handleCreateModalClose = (open: boolean) => {
+    if (!open && !isCreating) {
+      trackAdminDeckCreateCancelled({
+        deck_type: createDeckType,
+      });
+    }
+    setCreateModalOpen(open);
+  };
+
+  /**
+   * Handle opening the delete confirmation dialog for a deck
+   */
+  const handleDeleteDeck = (deck: UnifiedDeckItem) => {
+    setDeckToDelete(deck);
+    setDeleteModalOpen(true);
+
+    // Track analytics event
+    trackAdminDeckDeleteOpened({
+      deck_id: deck.id,
+      deck_type: deck.type,
+      deck_name: getDeckDisplayName(deck),
+    });
+  };
+
+  /**
+   * Handle confirming deck deletion
+   */
+  const handleConfirmDelete = async () => {
+    if (!deckToDelete) return;
+
+    setIsDeleting(true);
+
+    try {
+      // Call appropriate API based on deck type
+      if (deckToDelete.type === 'vocabulary') {
+        await adminAPI.deleteVocabularyDeck(deckToDelete.id);
+      } else {
+        await adminAPI.deleteCultureDeck(deckToDelete.id);
+      }
+
+      // Track success analytics
+      trackAdminDeckDeleted({
+        deck_id: deckToDelete.id,
+        deck_type: deckToDelete.type,
+        deck_name: getDeckDisplayName(deckToDelete),
+      });
+
+      // Show success toast
+      toast({
+        title: t('toast.deckDeleted'),
+      });
+
+      // Close modal and refresh deck list
+      setDeleteModalOpen(false);
+      setDeckToDelete(null);
+      allDecksListRef.current?.refresh();
+      fetchStats(); // Refresh stats to update counts
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : t('deckDelete.error');
+
+      // Track failure analytics
+      trackAdminDeckDeleteFailed({
+        deck_id: deckToDelete.id,
+        deck_type: deckToDelete.type,
+        error_message: errorMessage,
+      });
+
+      // Show error toast
+      toast({
+        title: t('deckDelete.error'),
+        description: errorMessage,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  /**
+   * Handle delete modal close (track cancel if not deleting)
+   */
+  const handleDeleteModalClose = (open: boolean) => {
+    if (!open && deckToDelete && !isDeleting) {
+      // Modal was closed without deleting
+      trackAdminDeckDeleteCancelled({
+        deck_id: deckToDelete.id,
+        deck_type: deckToDelete.type,
+      });
+    }
+    setDeleteModalOpen(open);
+    if (!open) {
+      setDeckToDelete(null);
+    }
+  };
+
+  /**
+   * Handle opening the deck detail modal
+   */
+  const handleViewDeckDetail = (deck: UnifiedDeckItem) => {
+    setDetailDeck(deck);
+    setDetailModalOpen(true);
+  };
+
+  /**
+   * Handle closing the deck detail modal
+   */
+  const handleDetailModalClose = (open: boolean) => {
+    setDetailModalOpen(open);
+    if (!open) {
+      setDetailDeck(null);
+    }
+  };
+
+  /**
+   * Handle item deleted from deck detail modal
+   * Refreshes deck list and stats to update counts
+   */
+  const handleItemDeleted = () => {
+    allDecksListRef.current?.refresh();
+    fetchStats();
+  };
+
   // Show loading skeleton while fetching
   if (isLoading) {
     return (
@@ -793,7 +1092,7 @@ const AdminPage: React.FC = () => {
               type="button"
               data-testid={`admin-tab-${tab}`}
             >
-              {t(`sources.tabs.${tab}`)}
+              {t(`tabs.${tab}`)}
             </button>
           ))}
         </div>
@@ -823,9 +1122,24 @@ const AdminPage: React.FC = () => {
             </div>
           </section>
 
+          {/* Create Deck Button */}
+          <div className="flex justify-end">
+            <Button onClick={handleOpenCreateModal} data-testid="create-deck-button">
+              <Plus className="mr-2 h-4 w-4" />
+              {t('actions.createDeck')}
+            </Button>
+          </div>
+
           {/* All Decks List with Search and Pagination */}
           <section aria-labelledby="all-decks-heading">
-            <AllDecksList ref={allDecksListRef} t={t} locale={locale} onEditDeck={handleEditDeck} />
+            <AllDecksList
+              ref={allDecksListRef}
+              t={t}
+              locale={locale}
+              onEditDeck={handleEditDeck}
+              onDeleteDeck={handleDeleteDeck}
+              onViewDeckDetail={handleViewDeckDetail}
+            />
           </section>
         </>
       )}
@@ -833,7 +1147,15 @@ const AdminPage: React.FC = () => {
       {/* News Tab Content */}
       {activeTab === 'news' && (
         <section aria-labelledby="news-sources-heading">
-          <NewsSourcesSection />
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-12">
+              <Newspaper className="mb-4 h-12 w-12 text-muted-foreground" />
+              <h3 className="text-lg font-medium">{t('tabs.newsComingSoon')}</h3>
+              <p className="mt-2 text-sm text-muted-foreground">
+                {t('tabs.newsComingSoonDescription')}
+              </p>
+            </CardContent>
+          </Card>
         </section>
       )}
 
@@ -851,6 +1173,31 @@ const AdminPage: React.FC = () => {
         deck={selectedDeck}
         onSave={handleSaveDeck}
         isLoading={isSaving}
+      />
+
+      {/* Deck Create Modal */}
+      <DeckCreateModal
+        open={createModalOpen}
+        onOpenChange={handleCreateModalClose}
+        onSubmit={handleCreateDeck}
+        isLoading={isCreating}
+      />
+
+      {/* Deck Delete Dialog */}
+      <DeckDeleteDialog
+        open={deleteModalOpen}
+        onOpenChange={handleDeleteModalClose}
+        deck={deckToDelete}
+        onConfirm={handleConfirmDelete}
+        isDeleting={isDeleting}
+      />
+
+      {/* Deck Detail Modal */}
+      <DeckDetailModal
+        open={detailModalOpen}
+        onOpenChange={handleDetailModalClose}
+        deck={detailDeck}
+        onItemDeleted={handleItemDeleted}
       />
     </div>
   );

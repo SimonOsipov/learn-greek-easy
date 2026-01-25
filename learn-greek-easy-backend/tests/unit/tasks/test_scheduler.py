@@ -96,15 +96,14 @@ class TestSchedulerSetup:
 
             setup_scheduler()
 
-            # Should have 4 add_job calls
-            assert mock_scheduler_instance.add_job.call_count == 4
+            # Should have 3 add_job calls
+            assert mock_scheduler_instance.add_job.call_count == 3
 
             # Verify job IDs
             job_ids = [call[1]["id"] for call in mock_scheduler_instance.add_job.call_args_list]
             assert "streak_reset" in job_ids
             assert "session_cleanup" in job_ids
             assert "stats_aggregate" in job_ids
-            assert "fetch_news_sources" in job_ids
 
     def test_scheduler_configuration(self):
         """Test that scheduler is configured with correct defaults."""

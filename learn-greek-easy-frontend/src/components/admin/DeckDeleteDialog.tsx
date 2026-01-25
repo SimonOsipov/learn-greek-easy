@@ -1,4 +1,4 @@
-// src/components/admin/NewsSourceDeleteDialog.tsx
+// src/components/admin/DeckDeleteDialog.tsx
 
 import React from 'react';
 
@@ -14,55 +14,63 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import type { NewsSourceResponse } from '@/services/adminAPI';
+import type { UnifiedDeckItem } from '@/services/adminAPI';
 
-interface NewsSourceDeleteDialogProps {
+interface DeckDeleteDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  source: NewsSourceResponse | null;
+  deck: UnifiedDeckItem | null;
   onConfirm: () => void;
   isDeleting: boolean;
 }
 
 /**
- * Confirmation dialog for deleting a news source.
+ * Confirmation dialog for deleting (soft-delete) a deck.
  *
  * Displays:
  * - Warning icon and title
- * - Source name being deleted
- * - Description of what happens (source removed, articles unaffected)
+ * - Deck name and type being deleted
+ * - Description of soft-delete behavior (hidden, not permanently deleted)
+ * - Impact list (hidden from users, progress preserved, can reactivate)
  * - Cancel and Delete buttons
  */
-export const NewsSourceDeleteDialog: React.FC<NewsSourceDeleteDialogProps> = ({
+export const DeckDeleteDialog: React.FC<DeckDeleteDialogProps> = ({
   open,
   onOpenChange,
-  source,
+  deck,
   onConfirm,
   isDeleting,
 }) => {
   const { t } = useTranslation('admin');
 
-  if (!source) return null;
+  if (!deck) return null;
+
+  // Get display name for the deck
+  const deckName = typeof deck.name === 'string' ? deck.name : deck.name.en;
+  const deckType = t(`deckTypes.${deck.type}`);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md" data-testid="source-delete-dialog">
+      <DialogContent className="sm:max-w-md" data-testid="deck-delete-dialog">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-destructive">
             <AlertTriangle className="h-5 w-5" />
-            {t('sources.delete.title')}
+            {t('deckDelete.title')}
           </DialogTitle>
           <DialogDescription asChild>
             <div className="space-y-3 pt-2">
               <p className="font-medium text-foreground">
-                {t('sources.delete.sourceName', { name: source.name })}
+                {t('deckDelete.deckInfo', { name: deckName, type: deckType })}
               </p>
-              <p>{t('sources.delete.description')}</p>
+              <p>{t('deckDelete.explanation')}</p>
               <ul className="list-inside list-disc space-y-1 text-sm">
-                <li>{t('sources.delete.impact.removed')}</li>
-                <li>{t('sources.delete.impact.articlesUnaffected')}</li>
-                <li>{t('sources.delete.impact.cannotUndo')}</li>
+                <li>{t('deckDelete.impact.hidden')}</li>
+                <li>{t('deckDelete.impact.progressPreserved')}</li>
+                <li>{t('deckDelete.impact.canReactivate')}</li>
               </ul>
+              <p className="text-sm font-medium text-amber-600 dark:text-amber-500">
+                {t('deckDelete.warning')}
+              </p>
             </div>
           </DialogDescription>
         </DialogHeader>
@@ -71,17 +79,17 @@ export const NewsSourceDeleteDialog: React.FC<NewsSourceDeleteDialogProps> = ({
             variant="outline"
             onClick={() => onOpenChange(false)}
             disabled={isDeleting}
-            data-testid="source-delete-cancel"
+            data-testid="deck-delete-cancel"
           >
-            {t('sources.delete.cancel')}
+            {t('deckDelete.cancel')}
           </Button>
           <Button
             variant="destructive"
             onClick={onConfirm}
             disabled={isDeleting}
-            data-testid="source-delete-confirm"
+            data-testid="deck-delete-confirm"
           >
-            {isDeleting ? t('sources.delete.deleting') : t('sources.delete.confirm')}
+            {isDeleting ? t('deckDelete.deleting') : t('deckDelete.confirm')}
           </Button>
         </DialogFooter>
       </DialogContent>
