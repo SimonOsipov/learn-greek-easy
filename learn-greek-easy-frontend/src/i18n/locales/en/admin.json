@@ -171,9 +171,48 @@
   "tabs": {
     "decks": "Decks",
     "news": "News",
-    "feedback": "Feedback",
-    "newsComingSoon": "Coming Soon",
-    "newsComingSoonDescription": "The News tab is being redesigned. Check back soon for new features."
+    "feedback": "Feedback"
+  },
+  "news": {
+    "create": {
+      "title": "Create News Item",
+      "description": "Enter news item data as JSON. The backend will download and store the image from source_image_url.",
+      "hint": "Image download may take 2-5 seconds after submission.",
+      "submit": "Create News Item",
+      "submitting": "Creating...",
+      "success": "News item created successfully",
+      "error": "Failed to create news item",
+      "validationError": "Invalid JSON",
+      "duplicateUrl": "This article URL has already been used",
+      "imageDownloadFailed": "Failed to download image from the provided URL"
+    },
+    "table": {
+      "title": "News Items",
+      "description": "Manage existing news items",
+      "empty": "No news items yet",
+      "published": "Published",
+      "created": "Created"
+    },
+    "edit": {
+      "title": "Edit News Item",
+      "hint": "To change the image, add a valid URL to source_image_url. Leave it as the placeholder text to keep the current image.",
+      "save": "Save Changes",
+      "saving": "Saving...",
+      "cancel": "Cancel",
+      "success": "News item updated successfully",
+      "error": "Failed to update news item",
+      "validationError": "Invalid JSON"
+    },
+    "delete": {
+      "title": "Delete News Item",
+      "warning": "This will permanently delete this news item and its image from storage.",
+      "irreversible": "This action cannot be undone.",
+      "cancel": "Cancel",
+      "confirm": "Delete",
+      "deleting": "Deleting...",
+      "success": "News item deleted successfully",
+      "error": "Failed to delete news item"
+    }
   },
   "feedback": {
     "sectionTitle": "User Feedback",
