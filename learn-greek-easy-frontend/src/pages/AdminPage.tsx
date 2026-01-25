@@ -16,6 +16,7 @@ import {
   Crown,
   Database,
   Layers,
+  Newspaper,
   Pencil,
   Plus,
   RefreshCw,
@@ -33,7 +34,6 @@ import {
   DeckEditModal,
   type DeckEditFormData,
   type DeckType,
-  NewsSourcesSection,
 } from '@/components/admin';
 import { CultureBadge, type CultureCategory } from '@/components/culture';
 import { DeckBadge } from '@/components/decks';
@@ -1092,7 +1092,7 @@ const AdminPage: React.FC = () => {
               type="button"
               data-testid={`admin-tab-${tab}`}
             >
-              {t(`sources.tabs.${tab}`)}
+              {t(`tabs.${tab}`)}
             </button>
           ))}
         </div>
@@ -1147,7 +1147,15 @@ const AdminPage: React.FC = () => {
       {/* News Tab Content */}
       {activeTab === 'news' && (
         <section aria-labelledby="news-sources-heading">
-          <NewsSourcesSection />
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-12">
+              <Newspaper className="mb-4 h-12 w-12 text-muted-foreground" />
+              <h3 className="text-lg font-medium">{t('tabs.newsComingSoon')}</h3>
+              <p className="mt-2 text-sm text-muted-foreground">
+                {t('tabs.newsComingSoonDescription')}
+              </p>
+            </CardContent>
+          </Card>
         </section>
       )}
 

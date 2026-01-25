@@ -36,11 +36,9 @@ from src.db.models import (
     MockExamAnswer,
     MockExamSession,
     MockExamStatus,
-    NewsSource,
     Notification,
     NotificationType,
     Review,
-    SourceFetchHistory,
     User,
     UserAchievement,
     UserDeckProgress,
@@ -77,22 +75,6 @@ class NotificationSeedData(TypedDict, total=False):
     created_at: datetime
 
 
-class FetchHistorySeedData(TypedDict, total=False):
-    """Type definition for fetch history seed data items."""
-
-    status: str
-    html_content: str
-    error_message: str
-    trigger_type: str
-    days_ago: int
-    # Analysis fields
-    analysis_status: str  # pending, completed, failed
-    discovered_articles: list[dict[str, str]] | None
-    analysis_error: str
-    analysis_tokens_used: int
-    analyzed_minutes_after: int  # Minutes after fetched_at
-
-
 class SeedService:
     """Service for seeding E2E test database with deterministic data.
 
@@ -121,9 +103,6 @@ class SeedService:
         "culture_question_stats",
         "culture_questions",
         "culture_decks",
-        # News sources and fetch history (children first)
-        "source_fetch_history",
-        "news_sources",
         # Existing tables
         "reviews",
         "card_statistics",
@@ -2252,237 +2231,25 @@ class SeedService:
         }
 
     # =====================
-    # News Sources Seeding
+    # Question Review Seeding
     # =====================
-
-    async def seed_news_sources(self) -> dict[str, Any]:
-        """Seed news sources for E2E testing.
-
-        Creates 3 news sources:
-        - 2 active sources (real Greek news sites)
-        - 1 inactive source (test placeholder)
-
-        This method is idempotent - it skips existing URLs.
-
-        Returns:
-            dict with 'count' and 'sources' list
-
-        Raises:
-            RuntimeError: If seeding not allowed
-        """
-        self._check_can_seed()
-
-        sources_data = [
-            {
-                "name": "Greek Reporter",
-                "url": "https://greekreporter.com",
-                "is_active": True,
-            },
-            {
-                "name": "Kathimerini English",
-                "url": "https://www.ekathimerini.com",
-                "is_active": True,
-            },
-            {
-                "name": "Inactive Test Source",
-                "url": "https://inactive-test-source.example.com",
-                "is_active": False,
-            },
-        ]
-
-        created_sources = []
-
-        for source_data in sources_data:
-            # Check if source already exists by URL
-            existing = await self.db.execute(
-                select(NewsSource).where(NewsSource.url == source_data["url"])
-            )
-            if existing.scalar_one_or_none():
-                continue
-
-            source = NewsSource(**source_data)
-            self.db.add(source)
-            await self.db.flush()
-
-            created_sources.append(
-                {
-                    "id": str(source.id),
-                    "name": source.name,
-                    "url": source.url,
-                    "is_active": source.is_active,
-                }
-            )
-
-        return {
-            "count": len(created_sources),
-            "sources": created_sources,
-        }
-
-    # Fetch history data for seeding
-    FETCH_HISTORY_DATA: list[FetchHistorySeedData] = [
-        # Entry 1: Scheduled fetch 1 day ago - completed analysis with 2 articles
-        {
-            "status": "success",
-            "html_content": "<!DOCTYPE html><html><head><title>Greek News</title></head><body><h1>Latest from Cyprus</h1><article><a href='/news/cypriot-culture'>Cypriot Culture Event</a></article></body></html>",
-            "trigger_type": "scheduled",
-            "days_ago": 1,
-            "analysis_status": "completed",
-            "discovered_articles": [
-                {
-                    "url": "https://e2e-source.test/news/cypriot-independence",
-                    "title": "Cypriot Independence Day Celebrations 2026",
-                    "reasoning": "Relevant for citizenship exam: covers national holidays and historical events",
-                },
-                {
-                    "url": "https://e2e-source.test/news/traditional-easter",
-                    "title": "Παραδοσιακό Πάσχα στην Κύπρο",
-                    "reasoning": "Relevant for citizenship exam: covers religious traditions and customs",
-                },
-            ],
-            "analysis_tokens_used": 15420,
-            "analyzed_minutes_after": 5,
-        },
-        # Entry 2: Scheduled fetch 2 days ago - completed analysis with 0 articles
-        {
-            "status": "success",
-            "html_content": "<!DOCTYPE html><html><head><title>Sports</title></head><body><h1>Football Results</h1><p>Match scores...</p></body></html>",
-            "trigger_type": "scheduled",
-            "days_ago": 2,
-            "analysis_status": "completed",
-            "discovered_articles": [],  # No relevant articles found
-            "analysis_tokens_used": 8500,
-            "analyzed_minutes_after": 5,
-        },
-        # Entry 3: Manual fetch today - pending analysis (still analyzing)
-        {
-            "status": "success",
-            "html_content": "<!DOCTYPE html><html><head><title>Breaking</title></head><body><p>New content being analyzed...</p></body></html>",
-            "trigger_type": "manual",
-            "days_ago": 0,
-            "analysis_status": "pending",
-            # No discovered_articles, analysis_tokens_used, or analyzed_at for pending
-        },
-        # Entry 4: Scheduled fetch 3 days ago - fetch error (no analysis)
-        {
-            "status": "error",
-            "error_message": "Connection timeout after 30s",
-            "trigger_type": "scheduled",
-            "days_ago": 3,
-            # No analysis fields - fetch failed so analysis never started
-        },
-        # Entry 5: Scheduled fetch 4 days ago - fetch succeeded but analysis failed
-        {
-            "status": "success",
-            "html_content": "<!DOCTYPE html><html><head><title>News</title></head><body><p>Content that caused API timeout</p></body></html>",
-            "trigger_type": "scheduled",
-            "days_ago": 4,
-            "analysis_status": "failed",
-            "analysis_error": "Claude API timeout after 120 seconds",
-            # No discovered_articles or analysis_tokens_used for failed analysis
-        },
-    ]
-
-    async def seed_fetch_history(self) -> dict[str, Any]:
-        """Seed fetch history for news sources.
-
-        Creates fetch history entries for E2E testing with various analysis states:
-        - Completed analysis with articles found
-        - Completed analysis with no articles found (empty)
-        - Pending analysis (still processing)
-        - Fetch error (no analysis attempted)
-        - Fetch succeeded but analysis failed
-
-        Requires news sources to be seeded first.
-
-        Returns:
-            dict with 'count' and 'entries' list
-        """
-        self._check_can_seed()
-
-        from src.repositories.news_source import NewsSourceRepository
-
-        source_repo = NewsSourceRepository(self.db)
-        sources = await source_repo.list_all(limit=2)
-
-        if not sources:
-            return {"count": 0, "entries": [], "error": "No news sources found"}
-
-        entries_created = []
-        source = sources[0]  # Use first source for history
-
-        for data in self.FETCH_HISTORY_DATA:
-            days_ago: int = data.get("days_ago", 0)
-            fetched_at = datetime.now(timezone.utc) - timedelta(days=days_ago)
-            html_content: str | None = data.get("html_content")
-            status: str = data.get("status", "success")
-            trigger_type: str = data.get("trigger_type", "manual")
-            error_message: str | None = data.get("error_message")
-
-            # Analysis fields
-            analysis_status: str | None = data.get("analysis_status")
-            discovered_articles: list[dict[str, str]] | None = data.get("discovered_articles")
-            analysis_error: str | None = data.get("analysis_error")
-            analysis_tokens_used: int | None = data.get("analysis_tokens_used")
-            analyzed_minutes_after: int | None = data.get("analyzed_minutes_after")
-
-            # Calculate analyzed_at from fetched_at + minutes offset
-            analyzed_at = None
-            if analyzed_minutes_after is not None:
-                analyzed_at = fetched_at + timedelta(minutes=analyzed_minutes_after)
-
-            entry = SourceFetchHistory(
-                source_id=source.id,
-                fetched_at=fetched_at,
-                status=status,
-                html_content=html_content,
-                html_size_bytes=(len(html_content.encode("utf-8")) if html_content else None),
-                error_message=error_message,
-                trigger_type=trigger_type,
-                final_url=source.url if status == "success" else None,
-                # Analysis fields
-                analysis_status=analysis_status,
-                discovered_articles=discovered_articles,
-                analysis_error=analysis_error,
-                analysis_tokens_used=analysis_tokens_used,
-                analyzed_at=analyzed_at,
-            )
-            self.db.add(entry)
-            entries_created.append(
-                {
-                    "status": data["status"],
-                    "trigger_type": data["trigger_type"],
-                    "analysis_status": analysis_status,
-                }
-            )
-
-        await self.db.flush()
-
-        return {
-            "count": len(entries_created),
-            "entries": entries_created,
-            "source_id": str(source.id),
-        }
 
     async def seed_pending_question(self) -> dict[str, Any]:
         """Seed a pending culture question for admin review E2E tests.
 
         Creates a question with is_pending_review=True and deck_id=None.
-        This simulates an AI-generated question awaiting admin approval.
+        This simulates a question awaiting admin approval.
 
         This method is idempotent - if a question with the same source_article_url
         exists, it will be deleted and recreated to ensure a fresh pending state.
-
-        The question is linked to one of the seeded discovered articles so that
-        the "Review Question" button appears in the Discovered Articles modal.
 
         Returns:
             dict with question_id and source_article_url
         """
         self._check_can_seed()
 
-        # Use a URL that matches one of the seeded discovered articles
-        # This ensures the "Review Question" button appears in the E2E tests
-        source_url = "https://e2e-source.test/news/cypriot-independence"
+        # Use a test URL for the pending question
+        source_url = "https://e2e-test.example.com/cypriot-culture-article"
         await self.db.execute(
             delete(CultureQuestion).where(CultureQuestion.source_article_url == source_url)
         )
@@ -3349,12 +3116,6 @@ class SeedService:
         if learner_id:
             mock_exam_result = await self.seed_mock_exam_history(user_id=learner_id)
 
-        # Step 13: Create news sources
-        news_sources_result = await self.seed_news_sources()
-
-        # Step 14: Create fetch history for news sources
-        fetch_history_result = await self.seed_fetch_history()
-
         # Commit all changes
         await self.db.commit()
 
@@ -3374,6 +3135,4 @@ class SeedService:
             "culture_statistics": culture_stats_result,
             "culture_advanced_stats": advanced_culture_stats,
             "mock_exams": mock_exam_result,
-            "news_sources": news_sources_result,
-            "fetch_history": fetch_history_result,
         }

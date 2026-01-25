@@ -67,8 +67,6 @@ from tests.factories.culture import (
     CultureDeckFactory,
     CultureQuestionFactory,
     CultureQuestionStatsFactory,
-    NewsSourceFactory,
-    SourceFetchHistoryFactory,
 )
 
 # Feedback factories
@@ -132,8 +130,6 @@ __all__ = [
     "CultureQuestionFactory",
     "CultureQuestionStatsFactory",
     "CultureAnswerHistoryFactory",
-    "NewsSourceFactory",
-    "SourceFetchHistoryFactory",
     # Constants
     "SM2_DEFAULT_EASINESS_FACTOR",
     "SM2_MIN_EASINESS_FACTOR",
