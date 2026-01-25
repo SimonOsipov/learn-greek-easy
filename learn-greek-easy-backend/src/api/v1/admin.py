@@ -35,7 +35,6 @@ from src.schemas.admin import (
     AdminStatsResponse,
     AnalysisStartedResponse,
     ArticleCheckResponse,
-    DeckStatsItem,
     NewsSourceCreate,
     NewsSourceListResponse,
     NewsSourceResponse,
@@ -91,14 +90,6 @@ router = APIRouter(
                         "total_cards": 360,
                         "total_vocabulary_decks": 6,
                         "total_vocabulary_cards": 360,
-                        "decks": [
-                            {
-                                "id": "550e8400-e29b-41d4-a716-446655440000",
-                                "name": "A1 Vocabulary",
-                                "level": "A1",
-                                "card_count": 60,
-                            }
-                        ],
                     }
                 }
             },
@@ -114,7 +105,6 @@ async def get_admin_stats(
     Returns content statistics for the admin dashboard including:
     - Total number of active vocabulary decks
     - Total number of vocabulary cards
-    - Per-deck breakdown with counts
 
     Only active decks are included in the statistics.
 
@@ -129,60 +119,25 @@ async def get_admin_stats(
         401: If not authenticated
         403: If authenticated but not superuser
     """
-    # ========================================
-    # Vocabulary Decks Statistics
-    # ========================================
-
-    # Subquery to count cards per vocabulary deck
-    card_count_subquery = (
-        select(Card.deck_id, func.count(Card.id).label("card_count"))
-        .group_by(Card.deck_id)
-        .subquery()
+    # Count active vocabulary decks
+    deck_count_result = await db.execute(
+        select(func.count(Deck.id)).where(Deck.is_active.is_(True))
     )
+    total_vocabulary_decks = deck_count_result.scalar() or 0
 
-    # Main query: get active vocabulary decks with card counts
-    vocab_query = (
-        select(
-            Deck.id,
-            Deck.name,
-            Deck.level,
-            func.coalesce(card_count_subquery.c.card_count, 0).label("card_count"),
-        )
-        .outerjoin(card_count_subquery, Deck.id == card_count_subquery.c.deck_id)
+    # Count cards in active vocabulary decks
+    card_count_result = await db.execute(
+        select(func.count(Card.id))
+        .join(Deck, Card.deck_id == Deck.id)
         .where(Deck.is_active.is_(True))
-        .order_by(Deck.level, Deck.name)
     )
-
-    vocab_result = await db.execute(vocab_query)
-    vocab_rows = vocab_result.all()
-
-    # Build vocabulary deck stats list
-    deck_stats = [
-        DeckStatsItem(
-            id=row.id,
-            name=row.name,
-            level=row.level,
-            card_count=row.card_count,
-        )
-        for row in vocab_rows
-    ]
-
-    # Calculate vocabulary totals
-    total_vocabulary_decks = len(deck_stats)
-    total_vocabulary_cards = sum(deck.card_count for deck in deck_stats)
-
-    # ========================================
-    # Combined Totals (vocabulary only)
-    # ========================================
-    total_decks = total_vocabulary_decks
-    total_cards = total_vocabulary_cards
+    total_vocabulary_cards = card_count_result.scalar() or 0
 
     return AdminStatsResponse(
-        total_decks=total_decks,
-        total_cards=total_cards,
+        total_decks=total_vocabulary_decks,
+        total_cards=total_vocabulary_cards,
         total_vocabulary_decks=total_vocabulary_decks,
         total_vocabulary_cards=total_vocabulary_cards,
-        decks=deck_stats,
     )
 
 

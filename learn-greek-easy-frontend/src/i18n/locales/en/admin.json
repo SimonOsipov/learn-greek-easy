@@ -52,8 +52,6 @@
   },
   "sections": {
     "contentSummary": "Content Summary",
-    "decksByLevel": "Vocabulary Decks by Level",
-    "decksByLevelDescription": "All active vocabulary decks sorted by CEFR level (A1 to C2)",
     "allDecks": "All Decks",
     "allDecksDescription": "Search and browse all vocabulary and culture decks"
   },
@@ -100,7 +98,6 @@
   },
   "states": {
     "noStats": "No statistics available",
-    "noDecks": "No vocabulary decks available",
     "noDecksFound": "No decks found matching your search"
   },
   "sources": {

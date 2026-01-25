@@ -20,24 +20,12 @@ from src.db.models import DeckLevel
 # ============================================================================
 
 
-class DeckStatsItem(BaseModel):
-    """Statistics for a single vocabulary deck."""
-
-    model_config = ConfigDict(from_attributes=True)
-
-    id: UUID = Field(..., description="Deck UUID")
-    name: str = Field(..., description="Deck name")
-    level: DeckLevel = Field(..., description="CEFR level (A1-C2)")
-    card_count: int = Field(..., ge=0, description="Number of cards in deck")
-
-
 class AdminStatsResponse(BaseModel):
     """Response schema for admin dashboard statistics.
 
     Provides overview of content statistics including:
     - Total count of active vocabulary decks
     - Total count of vocabulary cards
-    - Per-deck breakdown with counts
     """
 
     total_decks: int = Field(..., ge=0, description="Total number of active vocabulary decks")
@@ -46,10 +34,6 @@ class AdminStatsResponse(BaseModel):
         ..., ge=0, description="Total number of active vocabulary decks"
     )
     total_vocabulary_cards: int = Field(..., ge=0, description="Total vocabulary cards")
-    decks: List[DeckStatsItem] = Field(
-        ...,
-        description="List of vocabulary deck statistics sorted by level",
-    )
 
 
 # ============================================================================

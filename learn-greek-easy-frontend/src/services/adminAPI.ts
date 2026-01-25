@@ -38,16 +38,6 @@ export interface MultilingualName {
 }
 
 /**
- * Vocabulary deck statistics in admin response
- */
-export interface DeckStats {
-  id: string;
-  name: string;
-  level: DeckLevel;
-  card_count: number;
-}
-
-/**
  * Content statistics response from admin endpoint
  */
 export interface ContentStatsResponse {
@@ -55,7 +45,6 @@ export interface ContentStatsResponse {
   total_cards: number;
   total_vocabulary_decks: number;
   total_vocabulary_cards: number;
-  decks: DeckStats[];
 }
 
 /**

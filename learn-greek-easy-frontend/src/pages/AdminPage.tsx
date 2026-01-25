@@ -59,23 +59,10 @@ import type {
   ContentStatsResponse,
   CultureDeckUpdatePayload,
   DeckListResponse,
-  DeckStats,
   MultilingualName,
   UnifiedDeckItem,
   VocabularyDeckUpdatePayload,
 } from '@/services/adminAPI';
-
-/**
- * CEFR level order for sorting decks
- */
-const CEFR_LEVEL_ORDER: Record<string, number> = {
-  A1: 1,
-  A2: 2,
-  B1: 3,
-  B2: 4,
-  C1: 5,
-  C2: 6,
-};
 
 /**
  * Loading skeleton for the admin page
@@ -174,41 +161,6 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ title, value, icon, testId })
     </CardContent>
   </Card>
 );
-
-/**
- * Deck list item component
- */
-interface DeckListItemProps {
-  deck: DeckStats;
-  t: (key: string, options?: { count: number }) => string;
-}
-
-const DeckListItem: React.FC<DeckListItemProps> = ({ deck, t }) => (
-  <div className="flex items-center justify-between rounded-lg border p-4 transition-colors hover:bg-muted/50">
-    <div className="flex items-center gap-3">
-      <DeckBadge type="level" level={deck.level} />
-      <span className="font-medium">{deck.name}</span>
-    </div>
-    <span className="text-sm text-muted-foreground">
-      {t('deck.cardCount', { count: deck.card_count })}
-    </span>
-  </div>
-);
-
-/**
- * Sort decks by CEFR level (A1 -> C2)
- */
-function sortDecksByLevel(decks: DeckStats[]): DeckStats[] {
-  return [...decks].sort((a, b) => {
-    const levelA = CEFR_LEVEL_ORDER[a.level] ?? 99;
-    const levelB = CEFR_LEVEL_ORDER[b.level] ?? 99;
-    if (levelA !== levelB) {
-      return levelA - levelB;
-    }
-    // Same level - sort by name
-    return a.name.localeCompare(b.name);
-  });
-}
 
 /**
  * Get localized name from multilingual object
@@ -802,8 +754,6 @@ const AdminPage: React.FC = () => {
     );
   }
 
-  const sortedDecks = sortDecksByLevel(stats.decks);
-
   return (
     <div className="space-y-6 pb-8" data-testid="admin-page">
       {/* Page Header */}
@@ -864,31 +814,6 @@ const AdminPage: React.FC = () => {
                 testId="total-cards-card"
               />
             </div>
-          </section>
-
-          {/* Vocabulary Deck List */}
-          <section aria-labelledby="vocab-decks-heading">
-            <Card>
-              <CardHeader>
-                <CardTitle id="vocab-decks-heading" data-testid="decks-by-level-title">
-                  {t('sections.decksByLevel')}
-                </CardTitle>
-                <CardDescription data-testid="decks-by-level-description">
-                  {t('sections.decksByLevelDescription')}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {sortedDecks.length === 0 ? (
-                  <p className="py-4 text-center text-muted-foreground">{t('states.noDecks')}</p>
-                ) : (
-                  <div className="space-y-3">
-                    {sortedDecks.map((deck) => (
-                      <DeckListItem key={deck.id} deck={deck} t={t} />
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
           </section>
 
           {/* All Decks List with Search and Pagination */}

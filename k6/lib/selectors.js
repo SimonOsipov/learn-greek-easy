@@ -148,10 +148,6 @@ export const admin = {
   adminTitle: 'admin-title',
   adminSubtitle: 'admin-subtitle',
 
-  // Deck management
-  decksByLevelTitle: 'decks-by-level-title',
-  decksByLevelDescription: 'decks-by-level-description',
-
   // All decks list
   allDecksTitle: 'all-decks-title',
   allDecksDescription: 'all-decks-description',
