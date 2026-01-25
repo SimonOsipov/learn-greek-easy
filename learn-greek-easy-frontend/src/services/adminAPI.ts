@@ -45,6 +45,8 @@ export interface ContentStatsResponse {
   total_cards: number;
   total_vocabulary_decks: number;
   total_vocabulary_cards: number;
+  total_culture_decks: number;
+  total_culture_questions: number;
 }
 
 /**
@@ -124,8 +126,6 @@ export interface CultureDeckCreatePayload {
   name: string;
   description?: string | null;
   category: string;
-  icon: string;
-  color_accent: string;
   is_premium?: boolean;
 }
 
@@ -151,8 +151,6 @@ export interface CultureDeckCreateResponse {
   name: string;
   description: string | null;
   category: string;
-  icon: string;
-  color_accent: string;
   is_active: boolean;
   is_premium: boolean;
   created_at: string;

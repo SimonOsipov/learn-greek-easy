@@ -47,10 +47,6 @@
     "levelPlaceholder": "Επιλέξτε επίπεδο",
     "category": "Κατηγορία",
     "categoryPlaceholder": "Επιλέξτε κατηγορία",
-    "icon": "Εικονίδιο",
-    "iconPlaceholder": "Emoji ή όνομα εικονιδίου",
-    "colorAccent": "Χρώμα Έμφασης",
-    "colorPlaceholder": "#4CAF50",
     "isPremium": "Premium Τράπουλα",
     "isPremiumDescription": "Οι premium τράπουλες απαιτούν συνδρομή",
     "cancel": "Ακύρωση",
@@ -87,7 +83,8 @@
     "cardCount_other": "{{count}} κάρτες",
     "questionCount_one": "{{count}} ερώτηση",
     "questionCount_other": "{{count}} ερωτήσεις",
-    "byOwner": "από {{owner}}"
+    "byOwner": "από {{owner}}",
+    "deactivated": "Απενεργοποιημένο"
   },
   "deckTypes": {
     "vocabulary": "Λεξιλόγιο",

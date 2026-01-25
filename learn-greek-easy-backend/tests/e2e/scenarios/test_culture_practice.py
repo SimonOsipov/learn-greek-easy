@@ -80,8 +80,6 @@ class TestCultureDecksList(E2ETestCase):
             "id",
             "name",
             "description",
-            "icon",
-            "color_accent",
             "category",
             "question_count",
             "progress",
@@ -274,7 +272,6 @@ class TestCultureDeckDetail(E2ETestCase):
         data = response.json()
         assert data["id"] == str(deck.id)
         assert data["category"] == deck.category
-        assert data["icon"] == deck.icon
 
     @pytest.mark.asyncio
     async def test_get_deck_response_structure(
@@ -297,8 +294,6 @@ class TestCultureDeckDetail(E2ETestCase):
             "id",
             "name",
             "description",
-            "icon",
-            "color_accent",
             "category",
             "question_count",
             "progress",

@@ -34,8 +34,6 @@ def valid_culture_deck_data():
     return {
         "name": "Test Deck",
         "description": "Test description",
-        "icon": "book-open",
-        "color_accent": "#4F46E5",
         "category": "history",
         "order_index": 0,
     }
@@ -62,8 +60,6 @@ async def culture_deck_for_tests(db_session):
         id=uuid4(),
         name="Test Deck",
         description="Test description",
-        icon="test-icon",
-        color_accent="#FF0000",
         category="history",
         is_active=True,
         order_index=0,
@@ -116,8 +112,6 @@ class TestCreateCultureDeck:
         assert response.status_code == 201
         data = response.json()
         assert data["category"] == "history"
-        assert data["icon"] == "book-open"
-        assert data["color_accent"] == "#4F46E5"
         assert data["is_active"] is True
         assert data["question_count"] == 0
         assert "id" in data
@@ -144,19 +138,6 @@ class TestCreateCultureDeck:
         assert response.status_code == 403
 
     @pytest.mark.asyncio
-    async def test_create_deck_invalid_color_returns_422(
-        self, client: AsyncClient, superuser_auth_headers: dict, valid_culture_deck_data
-    ):
-        """Test invalid color_accent format returns 422."""
-        invalid_data = {**valid_culture_deck_data, "color_accent": "not-a-hex"}
-        response = await client.post(
-            "/api/v1/culture/decks",
-            json=invalid_data,
-            headers=superuser_auth_headers,
-        )
-        assert response.status_code == 422
-
-    @pytest.mark.asyncio
     async def test_create_deck_empty_name_returns_422(
         self, client: AsyncClient, superuser_auth_headers: dict, valid_culture_deck_data
     ):
@@ -179,7 +160,7 @@ class TestUpdateCultureDeck:
         self, client: AsyncClient, superuser_auth_headers: dict, culture_deck_for_tests
     ):
         """Test superuser can update a culture deck."""
-        update_data = {"category": "geography", "icon": "map"}
+        update_data = {"category": "geography", "name": "Updated Deck"}
 
         response = await client.patch(
             f"/api/v1/culture/decks/{culture_deck_for_tests.id}",
@@ -190,9 +171,7 @@ class TestUpdateCultureDeck:
         assert response.status_code == 200
         data = response.json()
         assert data["category"] == "geography"
-        assert data["icon"] == "map"
-        # Unchanged fields should remain
-        assert data["color_accent"] == "#FF0000"
+        assert data["name"] == "Updated Deck"
 
     @pytest.mark.asyncio
     async def test_update_deck_not_found_returns_404(
@@ -727,8 +706,6 @@ class TestCultureDeckIsPremiumIntegration:
             "id",
             "name",
             "description",
-            "icon",
-            "color_accent",
             "category",
             "is_premium",
             "question_count",

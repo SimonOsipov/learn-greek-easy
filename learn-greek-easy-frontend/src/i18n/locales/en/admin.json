@@ -47,10 +47,6 @@
     "levelPlaceholder": "Select level",
     "category": "Category",
     "categoryPlaceholder": "Select category",
-    "icon": "Icon",
-    "iconPlaceholder": "Emoji or icon name",
-    "colorAccent": "Accent Color",
-    "colorPlaceholder": "#4CAF50",
     "isPremium": "Premium Deck",
     "isPremiumDescription": "Premium decks require a subscription",
     "cancel": "Cancel",
@@ -87,7 +83,8 @@
     "cardCount_other": "{{count}} cards",
     "questionCount_one": "{{count}} question",
     "questionCount_other": "{{count}} questions",
-    "byOwner": "by {{owner}}"
+    "byOwner": "by {{owner}}",
+    "deactivated": "Deactivated"
   },
   "deckTypes": {
     "vocabulary": "Vocabulary",

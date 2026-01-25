@@ -32,8 +32,6 @@ def get_valid_deck_data() -> dict:
     return {
         "name": "Greek History Test",
         "description": "Test description for E2E",
-        "icon": "book-open",
-        "color_accent": "#4F46E5",
         "category": "history",
     }
 
@@ -85,7 +83,6 @@ class TestAdminDeckCreate(E2ETestCase):
 
         assert data["name"] == "Greek History Test"
         assert data["category"] == "history"
-        assert data["icon"] == "book-open"
         assert data["is_active"] is True
 
     @pytest.mark.asyncio
@@ -111,8 +108,6 @@ class TestAdminDeckCreate(E2ETestCase):
             "id",
             "name",
             "description",
-            "icon",
-            "color_accent",
             "category",
             "question_count",
             "is_active",
@@ -223,16 +218,16 @@ class TestAdminDeckUpdate(E2ETestCase):
 
         original_name = deck.name
 
-        # Update only color
+        # Update only category
         response = await client.patch(
             f"/api/v1/culture/decks/{deck.id}",
-            json={"color_accent": "#FF0000"},
+            json={"category": "geography"},
             headers=admin_session.headers,
         )
 
         assert response.status_code == 200
         data = response.json()
-        assert data["color_accent"] == "#FF0000"
+        assert data["category"] == "geography"
         # Name should remain unchanged
         assert data["name"] == original_name
 

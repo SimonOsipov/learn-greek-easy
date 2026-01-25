@@ -44,8 +44,6 @@ class TestCultureDeckCreate(E2ETestCase):
         deck_data = {
             "name": "Greek History",
             "description": "Learn about Greek history",
-            "icon": "book-open",
-            "color_accent": "#4F46E5",
             "category": "history",
         }
 
@@ -74,8 +72,6 @@ class TestCultureDeckCreate(E2ETestCase):
         deck_data = {
             "name": "Test Deck",
             "description": "Description",
-            "icon": "star",
-            "color_accent": "#10B981",
             "category": "geography",
             "order_index": 100,
         }
@@ -100,8 +96,6 @@ class TestCultureDeckCreate(E2ETestCase):
         deck_data = {
             "name": "Test",
             "description": "Desc",
-            "icon": "book",
-            "color_accent": "#000000",
             "category": "test",
         }
 
@@ -122,8 +116,6 @@ class TestCultureDeckCreate(E2ETestCase):
         deck_data = {
             "name": "Test",
             "description": "Desc",
-            "icon": "book",
-            "color_accent": "#000000",
             "category": "test",
         }
 
@@ -151,7 +143,7 @@ class TestCultureDeckUpdate(E2ETestCase):
 
         update_data = {
             "category": "updated_category",
-            "color_accent": "#FF0000",
+            "name": "Updated Name",
         }
 
         response = await client.patch(
@@ -163,7 +155,7 @@ class TestCultureDeckUpdate(E2ETestCase):
         assert response.status_code == 200
         data = response.json()
         assert data["category"] == "updated_category"
-        assert data["color_accent"] == "#FF0000"
+        assert data["name"] == "Updated Name"
 
     @pytest.mark.asyncio
     async def test_update_deck_partial_update(
@@ -182,13 +174,13 @@ class TestCultureDeckUpdate(E2ETestCase):
 
         response = await client.patch(
             f"/api/v1/culture/decks/{deck.id}",
-            json={"icon": "new-icon"},
+            json={"description": "new-description"},
             headers=admin_session.headers,
         )
 
         assert response.status_code == 200
         data = response.json()
-        assert data["icon"] == "new-icon"
+        assert data["description"] == "new-description"
         assert data["category"] == "original_category"
         # Name should be unchanged
         assert data["name"] == original_name
@@ -755,8 +747,6 @@ class TestCultureAdminExtended(E2ETestCase):
         update_data = {
             "name": "New Name",
             "description": "New Description",
-            "icon": "star",
-            "color_accent": "#FF5733",
             "category": "traditions",
         }
 
@@ -767,8 +757,8 @@ class TestCultureAdminExtended(E2ETestCase):
         )
         assert response.status_code == 200
         data = response.json()
-        assert data["icon"] == "star"
-        assert data["color_accent"] == "#FF5733"
+        assert data["name"] == "New Name"
+        assert data["category"] == "traditions"
 
     @pytest.mark.asyncio
     async def test_create_multiple_questions_same_deck(
@@ -937,8 +927,6 @@ class TestCultureAdminExtended(E2ETestCase):
             deck_data = {
                 "name": f"Deck {category}",
                 "description": "Desc",
-                "icon": "book",
-                "color_accent": "#123456",
                 "category": category,
             }
 
@@ -963,8 +951,6 @@ class TestCultureAdminExtended(E2ETestCase):
             deck_data = {
                 "name": f"List Deck {i}",
                 "description": "Desc",
-                "icon": "star",
-                "color_accent": "#ABCDEF",
                 "category": "history",
             }
             await client.post(
@@ -1025,8 +1011,6 @@ class TestCultureAdminExtended(E2ETestCase):
         new_deck_data = {
             "name": "New History",
             "description": "Desc",
-            "icon": "clock",
-            "color_accent": "#112233",
             "category": "history",
         }
         create_response = await client.post(

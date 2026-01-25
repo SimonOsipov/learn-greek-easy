@@ -32,8 +32,6 @@ export interface CultureDeckResponse {
   id: string;
   name: string;
   description: string | null;
-  icon: string;
-  color_accent: string;
   category: CultureCategory;
   question_count: number;
   progress: CultureDeckProgress | null;

@@ -56,8 +56,6 @@ async def culture_deck_for_variable_tests(db_session: AsyncSession) -> CultureDe
     deck = CultureDeck(
         name="Variable Options Test Deck",
         description="Testing 2, 3, and 4 option questions",
-        icon="book-open",
-        color_accent="#4F46E5",
         category="history",
         is_active=True,
         order_index=999,

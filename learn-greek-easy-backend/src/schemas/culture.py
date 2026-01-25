@@ -91,10 +91,6 @@ class CultureDeckResponse(BaseModel):
     id: UUID = Field(..., description="Deck unique identifier")
     name: str = Field(..., min_length=1, max_length=255, description="Deck name")
     description: Optional[str] = Field(None, description="Deck description")
-    icon: str = Field(..., max_length=50, description="Icon identifier (e.g., 'book-open', 'map')")
-    color_accent: str = Field(
-        ..., pattern=r"^#[0-9A-Fa-f]{6}$", description="Hex color (e.g., '#4F46E5')"
-    )
     category: str = Field(
         ...,
         max_length=50,
@@ -384,10 +380,6 @@ class CultureDeckCreate(BaseModel):
 
     name: str = Field(..., min_length=1, max_length=255, description="Deck name")
     description: Optional[str] = Field(None, description="Deck description")
-    icon: str = Field(..., max_length=50, description="Icon identifier (e.g., 'book-open', 'map')")
-    color_accent: str = Field(
-        ..., pattern=r"^#[0-9A-Fa-f]{6}$", description="Hex color (e.g., '#4F46E5')"
-    )
     category: str = Field(
         ...,
         max_length=50,
@@ -404,12 +396,6 @@ class CultureDeckUpdate(BaseModel):
 
     name: Optional[str] = Field(None, min_length=1, max_length=255, description="Deck name")
     description: Optional[str] = Field(None, description="Deck description")
-    icon: Optional[str] = Field(
-        None, max_length=50, description="Icon identifier (e.g., 'book-open', 'map')"
-    )
-    color_accent: Optional[str] = Field(
-        None, pattern=r"^#[0-9A-Fa-f]{6}$", description="Hex color (e.g., '#4F46E5')"
-    )
     category: Optional[str] = Field(
         None,
         max_length=50,

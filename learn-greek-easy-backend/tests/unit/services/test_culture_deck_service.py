@@ -54,10 +54,9 @@ class TestCultureDeckServiceList:
         mock_deck.id = uuid4()
         mock_deck.name = "Greek History"
         mock_deck.description = "History deck"
-        mock_deck.icon = "book"
-        mock_deck.color_accent = "#4F46E5"
         mock_deck.category = "history"
         mock_deck.is_active = True
+        mock_deck.is_premium = False
 
         with (
             patch.object(service.deck_repo, "list_active", new_callable=AsyncMock) as mock_list,
@@ -123,10 +122,9 @@ class TestCultureDeckServiceList:
         mock_deck.id = uuid4()
         mock_deck.name = "Test"
         mock_deck.description = "Test desc"
-        mock_deck.icon = "test"
-        mock_deck.color_accent = "#000000"
         mock_deck.category = "culture"
         mock_deck.is_active = True
+        mock_deck.is_premium = False
 
         with (
             patch.object(service.deck_repo, "list_active", new_callable=AsyncMock) as mock_list,
@@ -171,10 +169,9 @@ class TestCultureDeckServiceList:
         mock_deck.id = uuid4()
         mock_deck.name = "Test"
         mock_deck.description = "Test desc"
-        mock_deck.icon = "test"
-        mock_deck.color_accent = "#000000"
         mock_deck.category = "culture"
         mock_deck.is_active = True
+        mock_deck.is_premium = False
 
         with (
             patch.object(service.deck_repo, "list_active", new_callable=AsyncMock) as mock_list,
@@ -206,10 +203,9 @@ class TestCultureDeckServiceGetDeck:
         mock_deck.id = deck_id
         mock_deck.name = "Greek History"
         mock_deck.description = "Learn about Greek history"
-        mock_deck.icon = "book"
-        mock_deck.color_accent = "#4F46E5"
         mock_deck.category = "history"
         mock_deck.is_active = True
+        mock_deck.is_premium = False
         mock_deck.created_at = datetime(2024, 1, 1)
         mock_deck.updated_at = datetime(2024, 1, 15)
 
@@ -273,10 +269,9 @@ class TestCultureDeckServiceGetDeck:
         mock_deck.id = deck_id
         mock_deck.name = "Test"
         mock_deck.description = "Test desc"
-        mock_deck.icon = "test"
-        mock_deck.color_accent = "#000000"
         mock_deck.category = "culture"
         mock_deck.is_active = True
+        mock_deck.is_premium = False
         mock_deck.created_at = datetime(2024, 1, 1)
         mock_deck.updated_at = datetime(2024, 1, 15)
 
@@ -416,8 +411,6 @@ class TestCreateDeck:
         deck_data = CultureDeckCreate(
             name="New deck",
             description="Description",
-            icon="book",
-            color_accent="#4F46E5",
             category="history",
             order_index=0,
         )
@@ -426,10 +419,9 @@ class TestCreateDeck:
         mock_deck.id = uuid4()
         mock_deck.name = "New deck"
         mock_deck.description = "Description"
-        mock_deck.icon = "book"
-        mock_deck.color_accent = "#4F46E5"
         mock_deck.category = "history"
         mock_deck.is_active = True
+        mock_deck.is_premium = False
         mock_deck.created_at = datetime(2024, 1, 1)
         mock_deck.updated_at = datetime(2024, 1, 1)
 
@@ -442,8 +434,6 @@ class TestCreateDeck:
             assert result.id == mock_deck.id
             assert result.name == mock_deck.name
             assert result.description == mock_deck.description
-            assert result.icon == "book"
-            assert result.color_accent == "#4F46E5"
             assert result.category == "history"
             assert result.question_count == 0  # New deck has no questions
             assert result.is_active is True
@@ -458,8 +448,6 @@ class TestCreateDeck:
         deck_data = CultureDeckCreate(
             name="Test",
             description="Desc",
-            icon="test",
-            color_accent="#000000",
             category="culture",
             order_index=10,
         )
@@ -468,10 +456,9 @@ class TestCreateDeck:
         mock_deck.id = uuid4()
         mock_deck.name = "Test"
         mock_deck.description = "Desc"
-        mock_deck.icon = "test"
-        mock_deck.color_accent = "#000000"
         mock_deck.category = "culture"
         mock_deck.is_active = True
+        mock_deck.is_premium = False
         mock_deck.created_at = datetime(2024, 1, 1)
         mock_deck.updated_at = datetime(2024, 1, 1)
 
@@ -498,20 +485,17 @@ class TestUpdateDeck:
 
         update_data = CultureDeckUpdate(
             name="Updated name",
-            icon="new-icon",
         )
 
         mock_deck = MagicMock()
         mock_deck.id = deck_id
         mock_deck.name = "Old"
         mock_deck.description = "Desc"
-        mock_deck.icon = "old-icon"
         mock_deck.is_active = True
 
         mock_updated_deck = MagicMock()
         mock_updated_deck.id = deck_id
         mock_updated_deck.name = "Updated name"
-        mock_updated_deck.icon = "new-icon"
 
         with (
             patch.object(service.deck_repo, "get", new_callable=AsyncMock) as mock_get,
@@ -524,7 +508,6 @@ class TestUpdateDeck:
 
             assert result.id == deck_id
             assert result.name == mock_updated_deck.name
-            assert result.icon == "new-icon"
             mock_get.assert_awaited_once_with(deck_id)
             mock_update.assert_awaited_once()
 
@@ -537,7 +520,7 @@ class TestUpdateDeck:
         deck_id = uuid4()
 
         update_data = CultureDeckUpdate(
-            color_accent="#FF0000",
+            category="geography",
         )
 
         mock_deck = MagicMock()
@@ -546,7 +529,7 @@ class TestUpdateDeck:
 
         mock_updated_deck = MagicMock()
         mock_updated_deck.id = deck_id
-        mock_updated_deck.color_accent = "#FF0000"
+        mock_updated_deck.category = "geography"
 
         with (
             patch.object(service.deck_repo, "get", new_callable=AsyncMock) as mock_get,
@@ -557,10 +540,10 @@ class TestUpdateDeck:
 
             await service.update_deck(deck_id, update_data)
 
-            # Verify update was called with only color_accent
+            # Verify update was called with only category
             call_args = mock_update.call_args[0][1]
-            assert "color_accent" in call_args
-            assert call_args["color_accent"] == "#FF0000"
+            assert "category" in call_args
+            assert call_args["category"] == "geography"
 
     @pytest.mark.asyncio
     async def test_update_deck_can_update_inactive_deck(self, mock_db_session: MagicMock):
@@ -603,7 +586,7 @@ class TestUpdateDeck:
         deck_id = uuid4()
 
         update_data = CultureDeckUpdate(
-            icon="new-icon",
+            name="new-name",
         )
 
         with patch.object(service.deck_repo, "get", new_callable=AsyncMock) as mock_get:
