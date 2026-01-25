@@ -11,6 +11,7 @@ from src.services.culture_deck_service import CultureDeckService
 from src.services.culture_question_service import CultureQuestionService
 from src.services.feedback_admin_service import FeedbackAdminService
 from src.services.mock_exam_service import MockExamService
+from src.services.news_item_service import NewsItemService
 from src.services.notification_service import NotificationService
 from src.services.progress_service import ProgressService
 from src.services.s3_service import S3Service, get_s3_service
@@ -28,6 +29,7 @@ __all__ = [
     "DeletionResult",
     "FeedbackAdminService",
     "MockExamService",
+    "NewsItemService",
     "NotificationService",
     "ProgressService",
     "S3Service",
