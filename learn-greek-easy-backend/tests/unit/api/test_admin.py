@@ -80,6 +80,8 @@ class TestAdminStats:
         assert "total_cards" in data
         assert "total_vocabulary_decks" in data
         assert "total_vocabulary_cards" in data
+        assert "total_culture_decks" in data
+        assert "total_culture_questions" in data
         assert data["total_decks"] >= 1
         assert data["total_cards"] >= 5
 
@@ -132,6 +134,8 @@ class TestAdminStats:
         assert data["total_cards"] == 0
         assert data["total_vocabulary_decks"] == 0
         assert data["total_vocabulary_cards"] == 0
+        assert data["total_culture_decks"] == 0
+        assert data["total_culture_questions"] == 0
 
     @pytest.mark.asyncio
     async def test_get_stats_response_structure(
@@ -163,8 +167,127 @@ class TestAdminStats:
         assert isinstance(data["total_cards"], int)
         assert isinstance(data["total_vocabulary_decks"], int)
         assert isinstance(data["total_vocabulary_cards"], int)
+        assert isinstance(data["total_culture_decks"], int)
+        assert isinstance(data["total_culture_questions"], int)
         # Verify no decks array is returned
         assert "decks" not in data
+
+    @pytest.mark.asyncio
+    async def test_get_stats_includes_culture_decks(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        db_session: AsyncSession,
+    ):
+        """Test that culture decks are included in stats."""
+        # Create vocabulary deck with cards
+        vocab_deck = await DeckFactory.create(session=db_session, is_active=True)
+        for _ in range(3):
+            await CardFactory.create(session=db_session, deck_id=vocab_deck.id)
+
+        # Create culture deck with approved questions
+        culture_deck = await CultureDeckFactory.create(session=db_session, is_active=True)
+        for _ in range(4):
+            await CultureQuestionFactory.create(
+                session=db_session,
+                deck_id=culture_deck.id,
+                is_pending_review=False,
+            )
+
+        response = await client.get(
+            "/api/v1/admin/stats",
+            headers=superuser_auth_headers,
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+
+        # Check individual counts
+        assert data["total_vocabulary_decks"] == 1
+        assert data["total_vocabulary_cards"] == 3
+        assert data["total_culture_decks"] == 1
+        assert data["total_culture_questions"] == 4
+
+        # Check combined counts
+        assert data["total_decks"] == 2
+        assert data["total_cards"] == 7
+
+    @pytest.mark.asyncio
+    async def test_get_stats_excludes_pending_culture_questions(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        db_session: AsyncSession,
+    ):
+        """Test that pending (unapproved) culture questions are excluded from stats."""
+        culture_deck = await CultureDeckFactory.create(session=db_session, is_active=True)
+
+        # Create approved questions
+        for _ in range(3):
+            await CultureQuestionFactory.create(
+                session=db_session,
+                deck_id=culture_deck.id,
+                is_pending_review=False,
+            )
+
+        # Create pending questions (should be excluded)
+        for _ in range(2):
+            await CultureQuestionFactory.create(
+                session=db_session,
+                deck_id=culture_deck.id,
+                is_pending_review=True,
+            )
+
+        response = await client.get(
+            "/api/v1/admin/stats",
+            headers=superuser_auth_headers,
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+
+        # Only approved questions should be counted
+        assert data["total_culture_questions"] == 3
+        assert data["total_cards"] == 3
+
+    @pytest.mark.asyncio
+    async def test_get_stats_excludes_inactive_culture_decks(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        db_session: AsyncSession,
+    ):
+        """Test that inactive culture decks and their questions are excluded from stats."""
+        # Create active culture deck
+        active_deck = await CultureDeckFactory.create(session=db_session, is_active=True)
+        for _ in range(2):
+            await CultureQuestionFactory.create(
+                session=db_session,
+                deck_id=active_deck.id,
+                is_pending_review=False,
+            )
+
+        # Create inactive culture deck
+        inactive_deck = await CultureDeckFactory.create(session=db_session, is_active=False)
+        for _ in range(5):
+            await CultureQuestionFactory.create(
+                session=db_session,
+                deck_id=inactive_deck.id,
+                is_pending_review=False,
+            )
+
+        response = await client.get(
+            "/api/v1/admin/stats",
+            headers=superuser_auth_headers,
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+
+        # Only active deck should be counted
+        assert data["total_culture_decks"] == 1
+        # Only questions from active deck should be counted
+        assert data["total_culture_questions"] == 2
 
 
 # =============================================================================

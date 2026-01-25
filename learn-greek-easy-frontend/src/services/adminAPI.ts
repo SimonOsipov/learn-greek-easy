@@ -45,6 +45,8 @@ export interface ContentStatsResponse {
   total_cards: number;
   total_vocabulary_decks: number;
   total_vocabulary_cards: number;
+  total_culture_decks: number;
+  total_culture_questions: number;
 }
 
 /**

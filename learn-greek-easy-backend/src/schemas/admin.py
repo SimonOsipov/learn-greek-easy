@@ -25,16 +25,25 @@ class AdminStatsResponse(BaseModel):
     """Response schema for admin dashboard statistics.
 
     Provides overview of content statistics including:
-    - Total count of active vocabulary decks
-    - Total count of vocabulary cards
+    - Total count of active decks (vocabulary + culture)
+    - Total count of items (vocabulary cards + culture questions)
+    - Breakdown by deck type
     """
 
-    total_decks: int = Field(..., ge=0, description="Total number of active vocabulary decks")
-    total_cards: int = Field(..., ge=0, description="Total number of vocabulary cards")
+    total_decks: int = Field(
+        ..., ge=0, description="Total number of active decks (vocabulary + culture)"
+    )
+    total_cards: int = Field(
+        ..., ge=0, description="Total number of items (vocabulary cards + culture questions)"
+    )
     total_vocabulary_decks: int = Field(
         ..., ge=0, description="Total number of active vocabulary decks"
     )
     total_vocabulary_cards: int = Field(..., ge=0, description="Total vocabulary cards")
+    total_culture_decks: int = Field(..., ge=0, description="Total number of active culture decks")
+    total_culture_questions: int = Field(
+        ..., ge=0, description="Total number of approved culture questions"
+    )
 
 
 # ============================================================================

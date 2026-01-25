@@ -71,10 +71,12 @@ router = APIRouter(
             "content": {
                 "application/json": {
                     "example": {
-                        "total_decks": 6,
-                        "total_cards": 360,
+                        "total_decks": 8,
+                        "total_cards": 410,
                         "total_vocabulary_decks": 6,
                         "total_vocabulary_cards": 360,
+                        "total_culture_decks": 2,
+                        "total_culture_questions": 50,
                     }
                 }
             },
@@ -88,10 +90,12 @@ async def get_admin_stats(
     """Get admin dashboard statistics.
 
     Returns content statistics for the admin dashboard including:
-    - Total number of active vocabulary decks
-    - Total number of vocabulary cards
+    - Total number of active decks (vocabulary + culture)
+    - Total number of items (vocabulary cards + culture questions)
+    - Breakdown by deck type
 
     Only active decks are included in the statistics.
+    Only approved (non-pending) culture questions are counted.
 
     Args:
         db: Database session (injected)
@@ -118,11 +122,28 @@ async def get_admin_stats(
     )
     total_vocabulary_cards = card_count_result.scalar() or 0
 
+    # Count active culture decks
+    culture_deck_result = await db.execute(
+        select(func.count(CultureDeck.id)).where(CultureDeck.is_active.is_(True))
+    )
+    total_culture_decks = culture_deck_result.scalar() or 0
+
+    # Count approved questions in active culture decks
+    culture_question_result = await db.execute(
+        select(func.count(CultureQuestion.id))
+        .join(CultureDeck, CultureQuestion.deck_id == CultureDeck.id)
+        .where(CultureDeck.is_active.is_(True))
+        .where(CultureQuestion.is_pending_review.is_(False))
+    )
+    total_culture_questions = culture_question_result.scalar() or 0
+
     return AdminStatsResponse(
-        total_decks=total_vocabulary_decks,
-        total_cards=total_vocabulary_cards,
+        total_decks=total_vocabulary_decks + total_culture_decks,
+        total_cards=total_vocabulary_cards + total_culture_questions,
         total_vocabulary_decks=total_vocabulary_decks,
         total_vocabulary_cards=total_vocabulary_cards,
+        total_culture_decks=total_culture_decks,
+        total_culture_questions=total_culture_questions,
     )
 
 
