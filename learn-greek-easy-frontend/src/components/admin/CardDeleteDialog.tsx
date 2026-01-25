@@ -49,7 +49,7 @@ export const CardDeleteDialog: React.FC<CardDeleteDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md" data-testid="card-delete-dialog">
+      <DialogContent className="sm:max-w-lg" data-testid="card-delete-dialog">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-destructive">
             <AlertTriangle className="h-5 w-5" />
@@ -59,8 +59,10 @@ export const CardDeleteDialog: React.FC<CardDeleteDialogProps> = ({
             <div className="space-y-4 pt-2">
               {/* Item Preview */}
               {itemPreview && (
-                <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3">
-                  <p className="break-words text-sm font-medium text-foreground">{itemPreview}</p>
+                <div className="max-w-full overflow-hidden rounded-md border border-destructive/30 bg-destructive/5 p-3">
+                  <p className="whitespace-pre-wrap break-words text-sm font-medium text-foreground">
+                    {itemPreview}
+                  </p>
                 </div>
               )}
 
