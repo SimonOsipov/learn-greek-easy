@@ -61,8 +61,6 @@ class CultureDeckFactory(BaseFactory):
 
     name = "History"
     description = "Greek history questions"
-    icon = "book-open"
-    color_accent = "#4F46E5"
     category = "history"
     is_active = True
     order_index = factory.Sequence(lambda n: n)
@@ -76,8 +74,6 @@ class CultureDeckFactory(BaseFactory):
         # Geography category deck
         geography = factory.Trait(
             category="geography",
-            icon="map",
-            color_accent="#10B981",
             name="Geography",
             description="Geography questions",
         )
@@ -85,8 +81,6 @@ class CultureDeckFactory(BaseFactory):
         # Politics category deck
         politics = factory.Trait(
             category="politics",
-            icon="landmark",
-            color_accent="#F59E0B",
             name="Politics",
             description="Politics questions",
         )
@@ -94,8 +88,6 @@ class CultureDeckFactory(BaseFactory):
         # Culture category deck
         culture = factory.Trait(
             category="culture",
-            icon="music",
-            color_accent="#EC4899",
             name="Culture",
             description="Culture questions",
         )

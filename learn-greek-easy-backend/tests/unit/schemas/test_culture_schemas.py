@@ -117,8 +117,6 @@ class TestCultureDeckResponse:
             id="12345678-1234-1234-1234-123456789abc",
             name="History",
             description="Learn about Greek history",
-            icon="book-open",
-            color_accent="#4F46E5",
             category="history",
             question_count=25,
             progress=None,
@@ -138,56 +136,12 @@ class TestCultureDeckResponse:
             id=uuid4(),
             name="Test Deck",
             description="Test description",
-            icon="test",
-            color_accent="#FFFFFF",
             category="history",
             question_count=50,
             progress=progress,
         )
         assert deck.progress is not None
         assert deck.progress.questions_total == 50
-
-    def test_invalid_color_format(self):
-        """Test invalid hex color format."""
-        with pytest.raises(ValidationError) as exc_info:
-            CultureDeckResponse(
-                id="12345678-1234-1234-1234-123456789abc",
-                name="Test Deck",
-                description="Test description",
-                icon="test",
-                color_accent="invalid",  # Not hex format
-                category="history",
-                question_count=10,
-            )
-        assert "pattern" in str(exc_info.value).lower()
-
-    def test_invalid_color_short(self):
-        """Test invalid short hex color."""
-        with pytest.raises(ValidationError) as exc_info:
-            CultureDeckResponse(
-                id=uuid4(),
-                name="Test Deck",
-                description="Test description",
-                icon="test",
-                color_accent="#FFF",  # Short form not allowed
-                category="history",
-                question_count=10,
-            )
-        assert "pattern" in str(exc_info.value).lower()
-
-    def test_invalid_color_missing_hash(self):
-        """Test hex color without hash prefix."""
-        with pytest.raises(ValidationError) as exc_info:
-            CultureDeckResponse(
-                id=uuid4(),
-                name="Test Deck",
-                description="Test description",
-                icon="test",
-                color_accent="4F46E5",  # Missing #
-                category="history",
-                question_count=10,
-            )
-        assert "pattern" in str(exc_info.value).lower()
 
     def test_negative_question_count_rejected(self):
         """Test negative question count rejected."""
@@ -196,8 +150,6 @@ class TestCultureDeckResponse:
                 id=uuid4(),
                 name="Test Deck",
                 description="Test description",
-                icon="test",
-                color_accent="#4F46E5",
                 category="history",
                 question_count=-1,
             )
@@ -578,8 +530,6 @@ class TestCultureDeckResponseIsPremium:
             id=uuid4(),
             name="Test Deck",
             description="Test description",
-            icon="book-open",
-            color_accent="#4F46E5",
             category="history",
             question_count=10,
             progress=None,
@@ -592,8 +542,6 @@ class TestCultureDeckResponseIsPremium:
             id=uuid4(),
             name="Premium Deck",
             description="Premium content",
-            icon="star",
-            color_accent="#FFD700",
             category="history",
             question_count=20,
             is_premium=True,
@@ -607,8 +555,6 @@ class TestCultureDeckResponseIsPremium:
             id=uuid4(),
             name="Free Deck",
             description="Free content",
-            icon="book",
-            color_accent="#4F46E5",
             category="geography",
             question_count=15,
             is_premium=False,
@@ -628,8 +574,6 @@ class TestCultureDeckResponseIsPremium:
             id=uuid4(),
             name="Premium with Progress",
             description="Test",
-            icon="crown",
-            color_accent="#9333EA",
             category="politics",
             question_count=50,
             is_premium=True,
@@ -647,8 +591,6 @@ class TestCultureDeckCreate:
         deck_data = CultureDeckCreate(
             name="New Culture Deck",
             description="Learn Greek culture",
-            icon="book-open",
-            color_accent="#4F46E5",
             category="history",
             order_index=0,
         )
@@ -659,8 +601,6 @@ class TestCultureDeckCreate:
         deck_data = CultureDeckCreate(
             name="Premium Culture Deck",
             description="Premium Greek culture content",
-            icon="crown",
-            color_accent="#9333EA",
             category="traditions",
             order_index=0,
             is_premium=True,
@@ -672,8 +612,6 @@ class TestCultureDeckCreate:
         deck_data = CultureDeckCreate(
             name="Free Culture Deck",
             description="Free content",
-            icon="book",
-            color_accent="#22C55E",
             category="geography",
             order_index=0,
             is_premium=False,
@@ -718,8 +656,6 @@ class TestCultureDeckUpdate:
         update = CultureDeckUpdate(
             name="Updated Name",
             description="New description",
-            icon="map",
-            color_accent="#FF5733",
             category="geography",
             order_index=5,
             is_active=True,
@@ -734,8 +670,6 @@ class TestCultureDeckUpdate:
         update = CultureDeckUpdate()
         assert update.name is None
         assert update.description is None
-        assert update.icon is None
-        assert update.color_accent is None
         assert update.category is None
         assert update.order_index is None
         assert update.is_active is None

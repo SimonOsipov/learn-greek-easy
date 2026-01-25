@@ -126,8 +126,6 @@ export interface CultureDeckCreatePayload {
   name: string;
   description?: string | null;
   category: string;
-  icon: string;
-  color_accent: string;
   is_premium?: boolean;
 }
 
@@ -153,8 +151,6 @@ export interface CultureDeckCreateResponse {
   name: string;
   description: string | null;
   category: string;
-  icon: string;
-  color_accent: string;
   is_active: boolean;
   is_premium: boolean;
   created_at: string;

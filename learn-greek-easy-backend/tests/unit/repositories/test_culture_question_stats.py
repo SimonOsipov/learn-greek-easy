@@ -31,8 +31,6 @@ async def culture_deck(db_session: AsyncSession) -> CultureDeck:
     deck = CultureDeck(
         name="Greek History",
         description="Learn about Greek history",
-        icon="book-open",
-        color_accent="#4F46E5",
         category="history",
         is_active=True,
     )

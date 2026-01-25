@@ -32,8 +32,6 @@ async def culture_deck_with_questions(
     deck = CultureDeck(
         name="Greek History",
         description="Learn about Greek history",
-        icon="book-open",
-        color_accent="#4F46E5",
         category="history",
         is_active=True,
     )
@@ -73,8 +71,6 @@ async def few_questions_deck(db_session: AsyncSession) -> tuple[CultureDeck, lis
     deck = CultureDeck(
         name="Small Deck",
         description="Small deck for testing",
-        icon="archive",
-        color_accent="#6B7280",
         category="culture",
         is_active=True,
     )

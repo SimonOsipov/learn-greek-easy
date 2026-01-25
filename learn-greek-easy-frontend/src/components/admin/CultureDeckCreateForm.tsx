@@ -52,8 +52,6 @@ const cultureDeckCreateSchema = z.object({
     .optional()
     .or(z.literal('')),
   category: z.enum(CULTURE_CATEGORIES),
-  icon: z.string().min(1, 'Icon is required').max(50, 'Icon must be at most 50 characters'),
-  color_accent: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Invalid hex color'),
   is_premium: z.boolean(),
 });
 
@@ -90,8 +88,6 @@ export const CultureDeckCreateForm: React.FC<CultureDeckCreateFormProps> = ({
       name: '',
       description: '',
       category: 'culture',
-      icon: '',
-      color_accent: '#4CAF50',
       is_premium: false,
     },
   });
@@ -168,51 +164,6 @@ export const CultureDeckCreateForm: React.FC<CultureDeckCreateFormProps> = ({
             </FormItem>
           )}
         />
-
-        <div className="grid grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="icon"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>{t('deckCreate.icon')}</FormLabel>
-                <FormControl>
-                  <Input
-                    placeholder={t('deckCreate.iconPlaceholder')}
-                    data-testid="deck-create-icon"
-                    {...field}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="color_accent"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>{t('deckCreate.colorAccent')}</FormLabel>
-                <FormControl>
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder={t('deckCreate.colorPlaceholder')}
-                      data-testid="deck-create-color"
-                      {...field}
-                    />
-                    <div
-                      className="h-10 w-10 rounded border"
-                      style={{ backgroundColor: field.value }}
-                      aria-hidden="true"
-                    />
-                  </div>
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
 
         <FormField
           control={form.control}

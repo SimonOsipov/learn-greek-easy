@@ -28,8 +28,6 @@ async def culture_deck(db_session: AsyncSession) -> CultureDeck:
     deck = CultureDeck(
         name="Greek History",
         description="Learn about Greek history",
-        icon="book-open",
-        color_accent="#4F46E5",
         category="history",
         is_active=True,
     )
@@ -75,8 +73,6 @@ async def inactive_culture_deck(db_session: AsyncSession) -> CultureDeck:
     deck = CultureDeck(
         name="Archived Deck",
         description="This deck is archived",
-        icon="archive",
-        color_accent="#6B7280",
         category="history",
         is_active=False,
     )
@@ -96,8 +92,6 @@ async def multiple_culture_decks(db_session: AsyncSession) -> list[CultureDeck]:
         deck = CultureDeck(
             name=f"{category.title()} Deck",
             description=f"Deck about {category}",
-            icon=f"icon-{i}",
-            color_accent=f"#{i:02x}4F46",
             category=category,
             is_active=True,
         )
@@ -227,8 +221,6 @@ class TestListCultureDecksEndpoint:
             "id",
             "name",
             "description",
-            "icon",
-            "color_accent",
             "category",
             "question_count",
             "progress",
@@ -354,8 +346,6 @@ class TestGetCultureDeckEndpoint:
             "id",
             "name",
             "description",
-            "icon",
-            "color_accent",
             "category",
             "question_count",
             "progress",

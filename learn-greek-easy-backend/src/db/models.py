@@ -1159,18 +1159,6 @@ class CultureDeck(Base, TimestampMixin):
         comment="Deck description (English, optional)",
     )
 
-    # Display properties
-    icon: Mapped[str] = mapped_column(
-        String(50),
-        nullable=False,
-        comment="Icon identifier (e.g., emoji or icon name)",
-    )
-    color_accent: Mapped[str] = mapped_column(
-        String(7),
-        nullable=False,
-        comment="Hex color code for deck accent (e.g., #4CAF50)",
-    )
-
     # Classification
     category: Mapped[str] = mapped_column(
         String(50),

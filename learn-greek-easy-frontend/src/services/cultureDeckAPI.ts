@@ -40,8 +40,6 @@ export interface CultureDeckResponse {
   id: string;
   name: string;
   description: string | null;
-  icon: string;
-  color_accent: string;
   category: string; // "history", "geography", "politics", "culture", "traditions"
   question_count: number;
   is_premium?: boolean;

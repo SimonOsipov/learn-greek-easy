@@ -29,8 +29,6 @@ async def culture_deck(db_session: AsyncSession) -> CultureDeck:
     deck = CultureDeck(
         name="Greek History",
         description="Learn about Greek history",
-        icon="book-open",
-        color_accent="#4F46E5",
         category="history",
         is_active=True,
     )
@@ -46,8 +44,6 @@ async def inactive_culture_deck(db_session: AsyncSession) -> CultureDeck:
     deck = CultureDeck(
         name="Archived Deck",
         description="Archived deck",
-        icon="archive",
-        color_accent="#6B7280",
         category="archived_category",
         is_active=False,
     )
@@ -63,8 +59,6 @@ async def second_culture_deck(db_session: AsyncSession) -> CultureDeck:
     deck = CultureDeck(
         name="Greek Geography",
         description="Learn about Greek geography",
-        icon="globe",
-        color_accent="#10B981",
         category="geography",
         is_active=True,
     )

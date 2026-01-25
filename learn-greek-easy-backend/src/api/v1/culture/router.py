@@ -718,8 +718,6 @@ async def update_culture_deck(
         id=updated_deck.id,
         name=updated_deck.name,
         description=updated_deck.description,
-        icon=updated_deck.icon,
-        color_accent=updated_deck.color_accent,
         category=updated_deck.category,
         question_count=question_count,
         is_premium=updated_deck.is_premium,

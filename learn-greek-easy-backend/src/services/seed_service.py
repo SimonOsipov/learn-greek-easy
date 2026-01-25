@@ -296,32 +296,22 @@ class SeedService:
         "history": {
             "name": "Greek History",
             "description": "Questions about Greek history",
-            "icon": "book-open",
-            "color_accent": "#8B4513",
         },
         "geography": {
             "name": "Greek Geography",
             "description": "Questions about Greek geography",
-            "icon": "map",
-            "color_accent": "#228B22",
         },
         "politics": {
             "name": "Political System",
             "description": "Questions about the political system",
-            "icon": "landmark",
-            "color_accent": "#4169E1",
         },
         "culture": {
             "name": "Greek Culture",
             "description": "Questions about Greek culture",
-            "icon": "palette",
-            "color_accent": "#9932CC",
         },
         "traditions": {
             "name": "Traditions and Customs",
             "description": "Questions about Greek traditions",
-            "icon": "star",
-            "color_accent": "#DAA520",
         },
     }
 
@@ -1988,8 +1978,6 @@ class SeedService:
             deck = CultureDeck(
                 name=deck_data["name"],
                 description=deck_data["description"],
-                icon=deck_data["icon"],
-                color_accent=deck_data["color_accent"],
                 category=category,
                 is_active=True,
                 is_premium=is_premium,

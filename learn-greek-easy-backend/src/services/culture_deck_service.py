@@ -123,8 +123,6 @@ class CultureDeckService:
             id=deck.id,
             name=deck.name,
             description=deck.description,
-            icon=deck.icon,
-            color_accent=deck.color_accent,
             category=deck.category,
             question_count=question_count,
             is_premium=deck.is_premium,
@@ -252,8 +250,6 @@ class CultureDeckService:
             id=deck.id,
             name=deck.name,
             description=deck.description,
-            icon=deck.icon,
-            color_accent=deck.color_accent,
             category=deck.category,
             question_count=question_count,
             is_premium=deck.is_premium,
@@ -303,7 +299,6 @@ class CultureDeckService:
             "Creating culture deck",
             extra={
                 "category": deck_data.category,
-                "icon": deck_data.icon,
             },
         )
 
@@ -311,8 +306,6 @@ class CultureDeckService:
         deck_dict = {
             "name": deck_data.name,
             "description": deck_data.description,
-            "icon": deck_data.icon,
-            "color_accent": deck_data.color_accent,
             "category": deck_data.category,
             "order_index": deck_data.order_index,
             "is_active": True,
@@ -334,8 +327,6 @@ class CultureDeckService:
             id=deck.id,
             name=deck.name,
             description=deck.description,
-            icon=deck.icon,
-            color_accent=deck.color_accent,
             category=deck.category,
             question_count=0,  # New deck has no questions
             is_premium=deck.is_premium,

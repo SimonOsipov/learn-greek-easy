@@ -197,8 +197,6 @@ class TestCultureDeckModelIsPremium:
         deck = CultureDeck(
             name="Culture Test",
             description="Culture test description",
-            icon="book-open",
-            color_accent="#4F46E5",
             category="history",
             is_premium=False,
         )
@@ -209,8 +207,6 @@ class TestCultureDeckModelIsPremium:
         deck = CultureDeck(
             name="Premium Culture Deck",
             description="Premium culture content",
-            icon="crown",
-            color_accent="#9333EA",
             category="traditions",
             is_premium=True,
         )
@@ -221,8 +217,6 @@ class TestCultureDeckModelIsPremium:
         deck = CultureDeck(
             name="Free Culture Deck",
             description="Free culture content",
-            icon="book",
-            color_accent="#22C55E",
             category="geography",
             is_premium=False,
         )
@@ -233,8 +227,6 @@ class TestCultureDeckModelIsPremium:
         # Active and premium
         deck1 = CultureDeck(
             name="Active Premium Culture",
-            icon="crown",
-            color_accent="#FFD700",
             category="history",
             is_active=True,
             is_premium=True,
@@ -245,8 +237,6 @@ class TestCultureDeckModelIsPremium:
         # Active and not premium
         deck2 = CultureDeck(
             name="Active Free Culture",
-            icon="book",
-            color_accent="#4F46E5",
             category="history",
             is_active=True,
             is_premium=False,
@@ -257,8 +247,6 @@ class TestCultureDeckModelIsPremium:
         # Inactive and premium
         deck3 = CultureDeck(
             name="Inactive Premium Culture",
-            icon="crown",
-            color_accent="#9333EA",
             category="history",
             is_active=False,
             is_premium=True,
@@ -269,8 +257,6 @@ class TestCultureDeckModelIsPremium:
         # Inactive and not premium
         deck4 = CultureDeck(
             name="Inactive Free Culture",
-            icon="book",
-            color_accent="#22C55E",
             category="history",
             is_active=False,
             is_premium=False,
@@ -288,8 +274,6 @@ class TestCultureDeckModelIsPremiumDatabase:
         deck = CultureDeck(
             name="Free Culture DB",
             description="Test persistence",
-            icon="book-open",
-            color_accent="#4F46E5",
             category="history",
             is_premium=False,
         )
@@ -306,8 +290,6 @@ class TestCultureDeckModelIsPremiumDatabase:
         deck = CultureDeck(
             name="Premium Culture DB",
             description="Premium test",
-            icon="crown",
-            color_accent="#9333EA",
             category="traditions",
             is_premium=True,
         )
@@ -324,8 +306,6 @@ class TestCultureDeckModelIsPremiumDatabase:
         deck = CultureDeck(
             name="Default Premium Culture",
             description="Default test",
-            icon="book",
-            color_accent="#22C55E",
             category="geography",
         )
         db_session.add(deck)
@@ -339,8 +319,6 @@ class TestCultureDeckModelIsPremiumDatabase:
         """Test updating is_premium does not affect is_active."""
         deck = CultureDeck(
             name="Update Culture Test",
-            icon="book",
-            color_accent="#4F46E5",
             category="history",
             is_active=True,
             is_premium=False,
@@ -361,8 +339,6 @@ class TestCultureDeckModelIsPremiumDatabase:
         """Test updating is_active does not affect is_premium."""
         deck = CultureDeck(
             name="Active Culture Update Test",
-            icon="crown",
-            color_accent="#9333EA",
             category="traditions",
             is_active=True,
             is_premium=True,
