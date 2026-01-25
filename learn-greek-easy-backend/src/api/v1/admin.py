@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.dependencies import get_current_superuser
 from src.core.exceptions import NotFoundException
+from src.core.logging import get_logger
 from src.db.dependencies import get_db
 from src.db.models import (
     Card,
@@ -58,10 +59,13 @@ from src.schemas.feedback import (
     AdminFeedbackUpdate,
     AuthorBriefResponse,
 )
+from src.services import HTMLContentExtractorError, html_extractor
 from src.services.claude_service import ClaudeServiceError, claude_service
 from src.services.feedback_admin_service import FeedbackAdminService
 from src.services.news_source_service import DuplicateURLException, NewsSourceService
 from src.services.source_fetch_service import SourceFetchService
+
+logger = get_logger(__name__)
 
 router = APIRouter(
     tags=["Admin"],
@@ -1086,12 +1090,56 @@ async def generate_culture_question(
         async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
             response = await client.get(article_url_str)
             response.raise_for_status()
-            html_content = response.text
+            raw_html = response.text
     except httpx.HTTPError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Failed to fetch article: {str(e)}",
         )
+
+    # Extract clean content from HTML
+    try:
+        extracted = html_extractor.extract(
+            html_content=raw_html,
+            source_url=article_url_str,
+        )
+
+        # Log extraction statistics
+        logger.info(
+            "Article content extracted",
+            extra={
+                "article_url": article_url_str,
+                "extraction_method": extracted.extraction_method,
+                "estimated_tokens": extracted.estimated_tokens,
+                "title_from_extraction": extracted.title[:100] if extracted.title else None,
+                "raw_html_size_kb": round(len(raw_html.encode("utf-8")) / 1024, 2),
+                "extracted_text_size_kb": round(len(extracted.main_text.encode("utf-8")) / 1024, 2),
+            },
+        )
+
+        # Use extracted text instead of raw HTML
+        content_for_claude = extracted.main_text
+
+        # Validate extraction produced sufficient content (at least 100 chars)
+        if not content_for_claude or len(content_for_claude.strip()) < 100:
+            logger.warning(
+                "Extraction produced minimal content, using raw HTML fallback",
+                extra={
+                    "article_url": article_url_str,
+                    "extracted_length": len(content_for_claude) if content_for_claude else 0,
+                },
+            )
+            content_for_claude = raw_html
+
+    except HTMLContentExtractorError as e:
+        logger.warning(
+            "HTML extraction failed, using raw HTML",
+            extra={
+                "article_url": article_url_str,
+                "error": str(e),
+            },
+        )
+        content_for_claude = raw_html
 
     # Create log entry (in_progress)
     log_entry = QuestionGenerationLog(
@@ -1107,7 +1155,7 @@ async def generate_culture_question(
     try:
         # Generate question using Claude
         result, tokens_used = claude_service.generate_culture_question(
-            html_content=html_content,
+            html_content=content_for_claude,
             article_url=article_url_str,
             article_title=request.article_title,
         )
