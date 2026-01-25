@@ -26,12 +26,14 @@ class TestSeedConfigurationDefaults:
         settings = Settings()
         assert settings.test_seed_enabled is False
 
-    def test_seed_secret_none_by_default(self):
-        """Seed secret should be None by default."""
+    def test_seed_secret_empty_by_default(self, monkeypatch):
+        """Seed secret should be empty string by default."""
         from src.config import Settings
 
+        # Remove TEST_SEED_SECRET to test the true default
+        monkeypatch.delenv("TEST_SEED_SECRET", raising=False)
         settings = Settings()
-        assert settings.test_seed_secret is None
+        assert settings.test_seed_secret == ""
 
     def test_seed_on_deploy_disabled_by_default(self):
         """Seed on deploy should be disabled by default."""
