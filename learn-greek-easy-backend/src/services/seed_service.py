@@ -2359,6 +2359,9 @@ class SeedService:
         - Admin news tab functionality
         - Pagination
 
+        This method is idempotent - it deletes existing E2E test news items
+        before creating new ones.
+
         Returns:
             dict with seeding summary including created items
 
@@ -2366,6 +2369,13 @@ class SeedService:
             RuntimeError: If seeding not allowed
         """
         self._check_can_seed()
+
+        # Delete existing E2E test news items (idempotent)
+        await self.db.execute(
+            delete(NewsItem).where(
+                NewsItem.original_article_url.like("https://example.com/e2e-test-article-%")
+            )
+        )
 
         created_items = []
         today = date.today()
