@@ -41,7 +41,7 @@ interface NewsItemEditModalProps {
  * Excludes id, created_at, updated_at, and image_url (read-only fields)
  * Includes source_image_url as optional placeholder for changing the image
  */
-function itemToEditableJson(item: NewsItemResponse): string {
+function itemToEditableJson(item: NewsItemResponse, imageUrlPlaceholder: string): string {
   const editable = {
     title_el: item.title_el,
     title_en: item.title_en,
@@ -51,7 +51,7 @@ function itemToEditableJson(item: NewsItemResponse): string {
     original_article_url: item.original_article_url,
     // Include source_image_url as empty to show it's optional
     // User can add a URL here to replace the image
-    source_image_url: '(optional - add URL to change image)',
+    source_image_url: imageUrlPlaceholder,
   };
   return JSON.stringify(editable, null, 2);
 }
@@ -155,9 +155,9 @@ export const NewsItemEditModal: React.FC<NewsItemEditModalProps> = ({
   // Initialize JSON input when item changes
   useEffect(() => {
     if (item) {
-      setJsonInput(itemToEditableJson(item));
+      setJsonInput(itemToEditableJson(item, t('news.edit.imageUrlPlaceholder')));
     }
-  }, [item]);
+  }, [item, t]);
 
   const handleSave = async () => {
     if (!item) return;

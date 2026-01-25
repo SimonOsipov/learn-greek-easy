@@ -191,7 +191,8 @@
       "description": "Manage existing news items",
       "empty": "No news items yet",
       "published": "Published",
-      "created": "Created"
+      "created": "Created",
+      "noImage": "N/A"
     },
     "edit": {
       "title": "Edit News Item",
@@ -201,7 +202,8 @@
       "cancel": "Cancel",
       "success": "News item updated successfully",
       "error": "Failed to update news item",
-      "validationError": "Invalid JSON"
+      "validationError": "Invalid JSON",
+      "imageUrlPlaceholder": "(optional - add URL to change image)"
     },
     "delete": {
       "title": "Delete News Item",
