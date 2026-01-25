@@ -34,6 +34,29 @@
       "confirm": "Деактивировать"
     }
   },
+  "deckCreate": {
+    "title": "Создать колоду",
+    "typeLabel": "Тип колоды",
+    "typeVocabulary": "Словарь",
+    "typeCulture": "Культура",
+    "name": "Название",
+    "namePlaceholder": "Введите название колоды",
+    "description": "Описание",
+    "descriptionPlaceholder": "Необязательное описание",
+    "level": "Уровень CEFR",
+    "levelPlaceholder": "Выберите уровень",
+    "category": "Категория",
+    "categoryPlaceholder": "Выберите категорию",
+    "icon": "Иконка",
+    "iconPlaceholder": "Эмодзи или название иконки",
+    "colorAccent": "Акцентный цвет",
+    "colorPlaceholder": "#4CAF50",
+    "isPremium": "Премиум колода",
+    "isPremiumDescription": "Премиум колоды требуют подписку",
+    "cancel": "Отмена",
+    "create": "Создать",
+    "creating": "Создание..."
+  },
   "categories": {
     "history": "История",
     "geography": "География",
@@ -93,13 +116,18 @@
     "loadingStats": "Ошибка загрузки статистики администратора",
     "loadingDecks": "Ошибка загрузки колод",
     "failed": "Не удалось загрузить статистику",
-    "saveFailed": "Не удалось сохранить изменения. Попробуйте ещё раз."
+    "saveFailed": "Не удалось сохранить изменения. Попробуйте ещё раз.",
+    "createFailed": "Не удалось создать колоду"
+  },
+  "toast": {
+    "deckCreated": "Колода успешно создана"
   },
   "actions": {
     "retry": "Повторить",
     "retrying": "Повторная попытка...",
     "edit": "Редактировать",
-    "delete": "Удалить"
+    "delete": "Удалить",
+    "createDeck": "Создать колоду"
   },
   "states": {
     "noStats": "Статистика недоступна",

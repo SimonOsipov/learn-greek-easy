@@ -34,6 +34,29 @@
       "confirm": "Deactivate"
     }
   },
+  "deckCreate": {
+    "title": "Create Deck",
+    "typeLabel": "Deck Type",
+    "typeVocabulary": "Vocabulary",
+    "typeCulture": "Culture",
+    "name": "Name",
+    "namePlaceholder": "Enter deck name",
+    "description": "Description",
+    "descriptionPlaceholder": "Optional deck description",
+    "level": "CEFR Level",
+    "levelPlaceholder": "Select level",
+    "category": "Category",
+    "categoryPlaceholder": "Select category",
+    "icon": "Icon",
+    "iconPlaceholder": "Emoji or icon name",
+    "colorAccent": "Accent Color",
+    "colorPlaceholder": "#4CAF50",
+    "isPremium": "Premium Deck",
+    "isPremiumDescription": "Premium decks require a subscription",
+    "cancel": "Cancel",
+    "create": "Create",
+    "creating": "Creating..."
+  },
   "categories": {
     "history": "History",
     "geography": "Geography",
@@ -89,13 +112,18 @@
     "loadingStats": "Error loading admin statistics",
     "loadingDecks": "Error loading decks",
     "failed": "Failed to load statistics",
-    "saveFailed": "Failed to save changes. Please try again."
+    "saveFailed": "Failed to save changes. Please try again.",
+    "createFailed": "Failed to create deck"
+  },
+  "toast": {
+    "deckCreated": "Deck created successfully"
   },
   "actions": {
     "retry": "Retry",
     "retrying": "Retrying...",
     "edit": "Edit",
-    "delete": "Delete"
+    "delete": "Delete",
+    "createDeck": "Create Deck"
   },
   "states": {
     "noStats": "No statistics available",

@@ -60,6 +60,25 @@ export interface AdminDeckPremiumDisabledProperties {
   deck_name: string;
 }
 
+export interface AdminDeckCreateOpenedProperties {
+  deck_type: string;
+}
+
+export interface AdminDeckCreatedProperties {
+  deck_id: string;
+  deck_type: string;
+  deck_name: string;
+}
+
+export interface AdminDeckCreateCancelledProperties {
+  deck_type: string;
+}
+
+export interface AdminDeckCreateFailedProperties {
+  deck_type: string;
+  error_message: string;
+}
+
 // ============================================================================
 // Tracking Functions
 // ============================================================================
@@ -135,5 +154,43 @@ export function trackAdminDeckPremiumDisabled(
 ): void {
   if (typeof posthog?.capture === 'function') {
     posthog.capture('admin_deck_premium_disabled', properties);
+  }
+}
+
+/**
+ * Track when admin opens the deck create modal.
+ */
+export function trackAdminDeckCreateOpened(properties: AdminDeckCreateOpenedProperties): void {
+  if (typeof posthog?.capture === 'function') {
+    posthog.capture('admin_deck_create_opened', properties);
+  }
+}
+
+/**
+ * Track when admin successfully creates a new deck.
+ */
+export function trackAdminDeckCreated(properties: AdminDeckCreatedProperties): void {
+  if (typeof posthog?.capture === 'function') {
+    posthog.capture('admin_deck_created', properties);
+  }
+}
+
+/**
+ * Track when admin cancels/closes the create modal without creating.
+ */
+export function trackAdminDeckCreateCancelled(
+  properties: AdminDeckCreateCancelledProperties
+): void {
+  if (typeof posthog?.capture === 'function') {
+    posthog.capture('admin_deck_create_cancelled', properties);
+  }
+}
+
+/**
+ * Track when deck creation fails due to API error.
+ */
+export function trackAdminDeckCreateFailed(properties: AdminDeckCreateFailedProperties): void {
+  if (typeof posthog?.capture === 'function') {
+    posthog.capture('admin_deck_create_failed', properties);
   }
 }

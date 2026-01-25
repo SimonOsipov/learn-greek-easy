@@ -106,6 +106,58 @@ export interface CultureDeckUpdatePayload {
   is_premium?: boolean;
 }
 
+/**
+ * Payload for creating a vocabulary deck
+ */
+export interface VocabularyDeckCreatePayload {
+  name: string;
+  description?: string | null;
+  level: DeckLevel;
+  is_premium?: boolean;
+  is_system_deck: true;
+}
+
+/**
+ * Payload for creating a culture deck
+ */
+export interface CultureDeckCreatePayload {
+  name: string;
+  description?: string | null;
+  category: string;
+  icon: string;
+  color_accent: string;
+  is_premium?: boolean;
+}
+
+/**
+ * Response from creating a vocabulary deck
+ */
+export interface VocabularyDeckCreateResponse {
+  id: string;
+  name: string;
+  description: string | null;
+  level: DeckLevel;
+  is_active: boolean;
+  is_premium: boolean;
+  is_system_deck: boolean;
+  created_at: string;
+}
+
+/**
+ * Response from creating a culture deck
+ */
+export interface CultureDeckCreateResponse {
+  id: string;
+  name: string;
+  description: string | null;
+  category: string;
+  icon: string;
+  color_accent: string;
+  is_active: boolean;
+  is_premium: boolean;
+  created_at: string;
+}
+
 // ============================================
 // News Source Types
 // ============================================
@@ -366,6 +418,28 @@ export const adminAPI = {
    */
   updateCultureDeck: async (deckId: string, data: CultureDeckUpdatePayload) => {
     return api.patch(`/api/v1/culture/decks/${deckId}`, data);
+  },
+
+  /**
+   * Create a new vocabulary deck
+   *
+   * Creates a system vocabulary deck with the specified metadata.
+   * Requires superuser authentication.
+   */
+  createVocabularyDeck: async (
+    data: VocabularyDeckCreatePayload
+  ): Promise<VocabularyDeckCreateResponse> => {
+    return api.post<VocabularyDeckCreateResponse>('/api/v1/decks', data);
+  },
+
+  /**
+   * Create a new culture deck
+   *
+   * Creates a culture deck with the specified metadata.
+   * Requires superuser authentication.
+   */
+  createCultureDeck: async (data: CultureDeckCreatePayload): Promise<CultureDeckCreateResponse> => {
+    return api.post<CultureDeckCreateResponse>('/api/v1/culture/decks', data);
   },
 
   // ============================================

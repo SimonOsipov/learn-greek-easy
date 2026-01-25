@@ -34,6 +34,29 @@
       "confirm": "Απενεργοποίηση"
     }
   },
+  "deckCreate": {
+    "title": "Δημιουργία Τράπουλας",
+    "typeLabel": "Τύπος Τράπουλας",
+    "typeVocabulary": "Λεξιλόγιο",
+    "typeCulture": "Πολιτισμός",
+    "name": "Όνομα",
+    "namePlaceholder": "Εισάγετε όνομα τράπουλας",
+    "description": "Περιγραφή",
+    "descriptionPlaceholder": "Προαιρετική περιγραφή",
+    "level": "Επίπεδο CEFR",
+    "levelPlaceholder": "Επιλέξτε επίπεδο",
+    "category": "Κατηγορία",
+    "categoryPlaceholder": "Επιλέξτε κατηγορία",
+    "icon": "Εικονίδιο",
+    "iconPlaceholder": "Emoji ή όνομα εικονιδίου",
+    "colorAccent": "Χρώμα Έμφασης",
+    "colorPlaceholder": "#4CAF50",
+    "isPremium": "Premium Τράπουλα",
+    "isPremiumDescription": "Οι premium τράπουλες απαιτούν συνδρομή",
+    "cancel": "Ακύρωση",
+    "create": "Δημιουργία",
+    "creating": "Δημιουργία..."
+  },
   "categories": {
     "history": "Ιστορία",
     "geography": "Γεωγραφία",
@@ -89,13 +112,18 @@
     "loadingStats": "Σφάλμα φόρτωσης στατιστικών διαχείρισης",
     "loadingDecks": "Σφάλμα φόρτωσης τραπουλών",
     "failed": "Αποτυχία φόρτωσης στατιστικών",
-    "saveFailed": "Αποτυχία αποθήκευσης αλλαγών. Παρακαλώ δοκιμάστε ξανά."
+    "saveFailed": "Αποτυχία αποθήκευσης αλλαγών. Παρακαλώ δοκιμάστε ξανά.",
+    "createFailed": "Αποτυχία δημιουργίας τράπουλας"
+  },
+  "toast": {
+    "deckCreated": "Η τράπουλα δημιουργήθηκε επιτυχώς"
   },
   "actions": {
     "retry": "Επανάληψη",
     "retrying": "Επαναλαμβάνεται...",
     "edit": "Επεξεργασία",
-    "delete": "Διαγραφή"
+    "delete": "Διαγραφή",
+    "createDeck": "Δημιουργία Τράπουλας"
   },
   "states": {
     "noStats": "Δεν υπάρχουν διαθέσιμα στατιστικά",

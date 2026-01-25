@@ -17,6 +17,7 @@ import {
   Database,
   Layers,
   Pencil,
+  Plus,
   RefreshCw,
   Search,
 } from 'lucide-react';
@@ -24,8 +25,11 @@ import { useTranslation } from 'react-i18next';
 
 import {
   AdminFeedbackSection,
+  DeckCreateModal,
+  type DeckCreateFormData,
   DeckEditModal,
   type DeckEditFormData,
+  type DeckType,
   NewsSourcesSection,
 } from '@/components/admin';
 import { CultureBadge, type CultureCategory } from '@/components/culture';
@@ -43,7 +47,12 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
+import { toast } from '@/hooks/use-toast';
 import {
+  trackAdminDeckCreateCancelled,
+  trackAdminDeckCreated,
+  trackAdminDeckCreateFailed,
+  trackAdminDeckCreateOpened,
   trackAdminDeckDeactivated,
   trackAdminDeckEditCancelled,
   trackAdminDeckEditFailed,
@@ -57,10 +66,12 @@ import { cn } from '@/lib/utils';
 import { adminAPI } from '@/services/adminAPI';
 import type {
   ContentStatsResponse,
+  CultureDeckCreatePayload,
   CultureDeckUpdatePayload,
   DeckListResponse,
   MultilingualName,
   UnifiedDeckItem,
+  VocabularyDeckCreatePayload,
   VocabularyDeckUpdatePayload,
 } from '@/services/adminAPI';
 
@@ -502,6 +513,11 @@ const AdminPage: React.FC = () => {
   const [selectedDeck, setSelectedDeck] = useState<UnifiedDeckItem | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
+  // Deck create modal state
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [createDeckType, setCreateDeckType] = useState<DeckType>('vocabulary');
+
   // Ref for refreshing the deck list
   const allDecksListRef = useRef<AllDecksListHandle>(null);
 
@@ -694,6 +710,112 @@ const AdminPage: React.FC = () => {
     }
   };
 
+  /**
+   * Handle opening the create deck modal
+   */
+  const handleOpenCreateModal = () => {
+    setCreateModalOpen(true);
+    trackAdminDeckCreateOpened({ deck_type: 'vocabulary' });
+  };
+
+  /**
+   * Handle creating a new deck
+   */
+  const handleCreateDeck = async (type: DeckType, data: DeckCreateFormData) => {
+    setIsCreating(true);
+    setCreateDeckType(type);
+
+    try {
+      let deckId: string;
+      let deckName: string;
+
+      if (type === 'vocabulary') {
+        const vocabularyData = data as {
+          name: string;
+          description?: string;
+          level: 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
+          is_premium: boolean;
+        };
+        const payload: VocabularyDeckCreatePayload = {
+          name: vocabularyData.name,
+          description: vocabularyData.description || null,
+          level: vocabularyData.level,
+          is_premium: vocabularyData.is_premium,
+          is_system_deck: true,
+        };
+        const result = await adminAPI.createVocabularyDeck(payload);
+        deckId = result.id;
+        deckName = result.name;
+      } else {
+        const cultureData = data as {
+          name: string;
+          description?: string;
+          category: string;
+          icon: string;
+          color_accent: string;
+          is_premium: boolean;
+        };
+        const payload: CultureDeckCreatePayload = {
+          name: cultureData.name,
+          description: cultureData.description || null,
+          category: cultureData.category,
+          icon: cultureData.icon,
+          color_accent: cultureData.color_accent,
+          is_premium: cultureData.is_premium,
+        };
+        const result = await adminAPI.createCultureDeck(payload);
+        deckId = result.id;
+        deckName = result.name;
+      }
+
+      // Track success
+      trackAdminDeckCreated({
+        deck_id: deckId,
+        deck_type: type,
+        deck_name: deckName,
+      });
+
+      // Show success toast
+      toast({
+        title: t('toast.deckCreated'),
+      });
+
+      // Close modal and refresh deck list
+      setCreateModalOpen(false);
+      allDecksListRef.current?.refresh();
+      fetchStats(); // Refresh stats to update counts
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : t('errors.createFailed');
+
+      // Track failure
+      trackAdminDeckCreateFailed({
+        deck_type: type,
+        error_message: errorMessage,
+      });
+
+      // Show error toast
+      toast({
+        title: t('errors.createFailed'),
+        description: errorMessage,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  /**
+   * Handle create modal close (track cancel if not creating)
+   */
+  const handleCreateModalClose = (open: boolean) => {
+    if (!open && !isCreating) {
+      trackAdminDeckCreateCancelled({
+        deck_type: createDeckType,
+      });
+    }
+    setCreateModalOpen(open);
+  };
+
   // Show loading skeleton while fetching
   if (isLoading) {
     return (
@@ -823,6 +945,14 @@ const AdminPage: React.FC = () => {
             </div>
           </section>
 
+          {/* Create Deck Button */}
+          <div className="flex justify-end">
+            <Button onClick={handleOpenCreateModal} data-testid="create-deck-button">
+              <Plus className="mr-2 h-4 w-4" />
+              {t('actions.createDeck')}
+            </Button>
+          </div>
+
           {/* All Decks List with Search and Pagination */}
           <section aria-labelledby="all-decks-heading">
             <AllDecksList ref={allDecksListRef} t={t} locale={locale} onEditDeck={handleEditDeck} />
@@ -851,6 +981,14 @@ const AdminPage: React.FC = () => {
         deck={selectedDeck}
         onSave={handleSaveDeck}
         isLoading={isSaving}
+      />
+
+      {/* Deck Create Modal */}
+      <DeckCreateModal
+        open={createModalOpen}
+        onOpenChange={handleCreateModalClose}
+        onSubmit={handleCreateDeck}
+        isLoading={isCreating}
       />
     </div>
   );
