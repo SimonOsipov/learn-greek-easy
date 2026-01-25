@@ -72,6 +72,9 @@ from tests.factories.culture import (
 # Feedback factories
 from tests.factories.feedback import FeedbackFactory, FeedbackVoteFactory
 
+# News factories
+from tests.factories.news import NewsItemFactory
+
 # Notification factories
 from tests.factories.notification import NotificationFactory
 
@@ -114,6 +117,8 @@ __all__ = [
     # Feedback
     "FeedbackFactory",
     "FeedbackVoteFactory",
+    # News
+    "NewsItemFactory",
     # Progress
     "UserDeckProgressFactory",
     "CardStatisticsFactory",
