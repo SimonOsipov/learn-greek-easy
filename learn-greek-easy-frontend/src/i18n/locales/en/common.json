@@ -46,6 +46,10 @@
       "viewAll": "View all decks",
       "empty": "No active decks yet.",
       "browseDecks": "Browse available decks"
+    },
+    "news": {
+      "title": "Greek Learning News",
+      "readMore": "Read article"
     }
   },
   "welcome": {

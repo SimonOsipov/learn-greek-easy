@@ -3,6 +3,7 @@ import React, { useCallback, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 
+import { NewsSection } from '@/components/dashboard/NewsSection';
 import { DeckCard } from '@/components/display/DeckCard';
 import { MetricCard } from '@/components/display/MetricCard';
 import { WelcomeSection } from '@/components/display/WelcomeSection';
@@ -261,6 +262,9 @@ export const Dashboard: React.FC = () => {
       </section>
 
       <Separator className="my-6" />
+
+      {/* News Section */}
+      <NewsSection />
 
       {/* Active Decks Section */}
       <section>

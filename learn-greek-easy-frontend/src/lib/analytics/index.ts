@@ -76,3 +76,9 @@ export {
   trackMockExamIncorrectReviewExpanded,
   trackMockExamRetryClicked,
 } from './mockExamAnalytics';
+export {
+  // Type interfaces
+  type NewsArticleClickedProperties,
+  // Tracking functions
+  trackNewsArticleClicked,
+} from './newsAnalytics';
