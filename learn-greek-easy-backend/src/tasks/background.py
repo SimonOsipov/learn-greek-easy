@@ -22,6 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from src.config import settings
 from src.core.logging import get_logger
+from src.services import HTMLContentExtractorError, html_extractor
 
 if TYPE_CHECKING:
     from fastapi import BackgroundTasks
@@ -872,7 +873,7 @@ async def check_culture_achievements_task(
             await engine.dispose()
 
 
-async def analyze_fetch_for_articles_task(history_id: UUID) -> None:
+async def analyze_fetch_for_articles_task(history_id: UUID) -> None:  # noqa: C901
     """Background task to analyze fetched HTML for suitable articles.
 
     Called after a successful HTML fetch to identify articles suitable
@@ -962,10 +963,56 @@ async def analyze_fetch_for_articles_task(history_id: UUID) -> None:
                     },
                 )
 
+            # Extract clean content from HTML before sending to Claude
+            content_for_claude = history.html_content  # Default to raw HTML
             try:
-                # Analyze HTML with Claude
-                articles, tokens_used = claude_service.analyze_html_for_articles(
+                extracted = html_extractor.extract(
                     html_content=history.html_content,
+                    source_url=source.url,
+                )
+
+                # Log extraction statistics
+                logger.info(
+                    "HTML content extracted for analysis",
+                    extra={
+                        "history_id": str(history_id),
+                        "source_name": source.name,
+                        "extraction_method": extracted.extraction_method,
+                        "estimated_tokens": extracted.estimated_tokens,
+                        "raw_html_size_bytes": len(history.html_content),
+                        "extracted_text_size_bytes": len(extracted.main_text),
+                    },
+                )
+
+                content_for_claude = extracted.main_text
+
+                # Validate extraction produced sufficient content
+                if not content_for_claude or len(content_for_claude.strip()) < 100:
+                    logger.warning(
+                        "Extraction produced minimal content, using raw HTML fallback",
+                        extra={
+                            "history_id": str(history_id),
+                            "extracted_length": (
+                                len(content_for_claude) if content_for_claude else 0
+                            ),
+                        },
+                    )
+                    content_for_claude = history.html_content
+
+            except HTMLContentExtractorError as e:
+                logger.warning(
+                    "HTML extraction failed, using raw HTML",
+                    extra={
+                        "history_id": str(history_id),
+                        "error": str(e),
+                    },
+                )
+                content_for_claude = history.html_content
+
+            try:
+                # Analyze extracted content with Claude
+                articles, tokens_used = claude_service.analyze_html_for_articles(
+                    html_content=content_for_claude,
                     source_base_url=source.url,
                 )
 
