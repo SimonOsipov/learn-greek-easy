@@ -20,55 +20,20 @@ from src.db.models import DeckLevel
 # ============================================================================
 
 
-class DeckStatsItem(BaseModel):
-    """Statistics for a single vocabulary deck."""
-
-    model_config = ConfigDict(from_attributes=True)
-
-    id: UUID = Field(..., description="Deck UUID")
-    name: str = Field(..., description="Deck name")
-    level: DeckLevel = Field(..., description="CEFR level (A1-C2)")
-    card_count: int = Field(..., ge=0, description="Number of cards in deck")
-
-
-class CultureDeckStatsItem(BaseModel):
-    """Statistics for a single culture deck."""
-
-    model_config = ConfigDict(from_attributes=True)
-
-    id: UUID = Field(..., description="Culture deck UUID")
-    name: str = Field(..., description="Deck name")
-    category: str = Field(..., description="Deck category (history, geography, etc.)")
-    question_count: int = Field(..., ge=0, description="Number of questions in deck")
-
-
 class AdminStatsResponse(BaseModel):
     """Response schema for admin dashboard statistics.
 
     Provides overview of content statistics including:
-    - Total count of active decks (vocabulary + culture)
-    - Total count of items across all active decks (cards + questions)
-    - Per-deck breakdown with counts
+    - Total count of active vocabulary decks
+    - Total count of vocabulary cards
     """
 
-    total_decks: int = Field(
-        ..., ge=0, description="Total number of active decks (vocabulary + culture)"
-    )
-    total_cards: int = Field(..., ge=0, description="Total number of items (cards + questions)")
+    total_decks: int = Field(..., ge=0, description="Total number of active vocabulary decks")
+    total_cards: int = Field(..., ge=0, description="Total number of vocabulary cards")
     total_vocabulary_decks: int = Field(
         ..., ge=0, description="Total number of active vocabulary decks"
     )
-    total_culture_decks: int = Field(..., ge=0, description="Total number of active culture decks")
     total_vocabulary_cards: int = Field(..., ge=0, description="Total vocabulary cards")
-    total_culture_questions: int = Field(..., ge=0, description="Total culture questions")
-    decks: List[DeckStatsItem] = Field(
-        ...,
-        description="List of vocabulary deck statistics sorted by level",
-    )
-    culture_decks: List[CultureDeckStatsItem] = Field(
-        ...,
-        description="List of culture deck statistics sorted by category",
-    )
 
 
 # ============================================================================
@@ -90,6 +55,10 @@ class UnifiedDeckItem(BaseModel):
     is_active: bool = Field(..., description="Whether deck is active")
     is_premium: bool = Field(..., description="Whether deck requires premium subscription")
     created_at: datetime = Field(..., description="Creation timestamp")
+    owner_id: Optional[UUID] = Field(None, description="Owner user ID (None for system decks)")
+    owner_name: Optional[str] = Field(
+        None, description="Owner display name (None for system decks)"
+    )
 
 
 class AdminDeckListResponse(BaseModel):

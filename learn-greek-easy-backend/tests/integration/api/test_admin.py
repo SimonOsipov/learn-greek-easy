@@ -78,8 +78,8 @@ class TestAdminStatsIntegration:
         data = response.json()
         assert "total_decks" in data
         assert "total_cards" in data
-        assert "decks" in data
-        assert isinstance(data["decks"], list)
+        assert "total_vocabulary_decks" in data
+        assert "total_vocabulary_cards" in data
 
     @pytest.mark.asyncio
     async def test_admin_stats_with_test_data(
@@ -125,11 +125,6 @@ class TestAdminStatsIntegration:
         assert data["total_decks"] >= 2
         assert data["total_cards"] >= 8
 
-        # Find our decks in the response
-        deck_ids = [d["id"] for d in data["decks"]]
-        assert str(deck1.id) in deck_ids
-        assert str(deck2.id) in deck_ids
-
     @pytest.mark.asyncio
     async def test_admin_stats_excludes_inactive_decks(
         self,
@@ -152,6 +147,12 @@ class TestAdminStatsIntegration:
             is_active=False,
         )
 
+        # Create cards for both
+        for _ in range(3):
+            await CardFactory.create(session=db_session, deck_id=active_deck.id)
+        for _ in range(5):
+            await CardFactory.create(session=db_session, deck_id=inactive_deck.id)
+
         # Act
         response = await client.get(
             "/api/v1/admin/stats",
@@ -162,9 +163,9 @@ class TestAdminStatsIntegration:
         assert response.status_code == 200
         data = response.json()
 
-        deck_ids = [d["id"] for d in data["decks"]]
-        assert str(active_deck.id) in deck_ids
-        assert str(inactive_deck.id) not in deck_ids
+        # Should count only active deck and its cards
+        assert data["total_decks"] >= 1
+        assert data["total_cards"] >= 3
 
     @pytest.mark.asyncio
     async def test_admin_stats_response_structure(
@@ -193,111 +194,13 @@ class TestAdminStatsIntegration:
         assert response.status_code == 200
         data = response.json()
 
-        # Verify top-level structure
+        # Verify top-level structure (only totals, no decks array)
         assert isinstance(data["total_decks"], int)
         assert isinstance(data["total_cards"], int)
-        assert isinstance(data["decks"], list)
-
-        # Verify deck item structure
-        deck_item = next(d for d in data["decks"] if d["id"] == str(deck.id))
-        assert "id" in deck_item
-        assert "name" in deck_item
-        assert "level" in deck_item
-        assert "card_count" in deck_item
-        assert deck_item["level"] == "C1"
-        assert deck_item["name"] == "Schema Test Deck"
-
-    @pytest.mark.asyncio
-    async def test_admin_stats_decks_sorted_by_level(
-        self,
-        client: AsyncClient,
-        superuser_auth_headers: dict,
-        db_session: AsyncSession,
-    ):
-        """Test that decks are sorted by CEFR level (A1 -> C2)."""
-        # Arrange - Create decks in non-level order
-        deck_c2 = await DeckFactory.create(
-            session=db_session,
-            name="C2 Deck",
-            c2=True,
-            is_active=True,
-        )
-        deck_a1 = await DeckFactory.create(
-            session=db_session,
-            name="A1 Deck",
-            a1=True,
-            is_active=True,
-        )
-        deck_b1 = await DeckFactory.create(
-            session=db_session,
-            name="B1 Deck",
-            b1=True,
-            is_active=True,
-        )
-
-        # Act
-        response = await client.get(
-            "/api/v1/admin/stats",
-            headers=superuser_auth_headers,
-        )
-
-        # Assert
-        assert response.status_code == 200
-        data = response.json()
-
-        # Find positions of our decks
-        a1_index = next(
-            (i for i, d in enumerate(data["decks"]) if d["id"] == str(deck_a1.id)),
-            None,
-        )
-        b1_index = next(
-            (i for i, d in enumerate(data["decks"]) if d["id"] == str(deck_b1.id)),
-            None,
-        )
-        c2_index = next(
-            (i for i, d in enumerate(data["decks"]) if d["id"] == str(deck_c2.id)),
-            None,
-        )
-
-        # Verify order: A1 < B1 < C2
-        assert a1_index is not None
-        assert b1_index is not None
-        assert c2_index is not None
-        assert a1_index < b1_index < c2_index
-
-    @pytest.mark.asyncio
-    async def test_admin_stats_deck_with_zero_cards(
-        self,
-        client: AsyncClient,
-        superuser_auth_headers: dict,
-        db_session: AsyncSession,
-    ):
-        """Test that decks with no cards show card_count=0."""
-        # Arrange - Create a deck without cards
-        empty_deck = await DeckFactory.create(
-            session=db_session,
-            name="Empty Deck",
-            a1=True,
-            is_active=True,
-        )
-
-        # Act
-        response = await client.get(
-            "/api/v1/admin/stats",
-            headers=superuser_auth_headers,
-        )
-
-        # Assert
-        assert response.status_code == 200
-        data = response.json()
-
-        # Find our empty deck
-        deck_data = next(
-            (d for d in data["decks"] if d["id"] == str(empty_deck.id)),
-            None,
-        )
-        assert deck_data is not None
-        assert deck_data["card_count"] == 0
+        assert isinstance(data["total_vocabulary_decks"], int)
+        assert isinstance(data["total_vocabulary_cards"], int)
+        # Verify no decks array is returned
+        assert "decks" not in data
 
     @pytest.mark.asyncio
     async def test_admin_stats_with_expired_token(

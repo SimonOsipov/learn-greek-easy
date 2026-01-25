@@ -52,10 +52,6 @@
   },
   "sections": {
     "contentSummary": "Сводка контента",
-    "decksByLevel": "Колоды словаря по уровням",
-    "decksByLevelDescription": "Все активные колоды словаря, отсортированные по уровню CEFR (от A1 до C2)",
-    "cultureDecks": "Колоды культуры по категориям",
-    "cultureDecksDescription": "Все активные колоды культуры, организованные по категориям",
     "allDecks": "Все колоды",
     "allDecksDescription": "Поиск и просмотр всех колод словаря и культуры"
   },
@@ -71,7 +67,8 @@
     "questionCount_one": "{{count}} вопрос",
     "questionCount_few": "{{count}} вопроса",
     "questionCount_many": "{{count}} вопросов",
-    "questionCount_other": "{{count}} вопросов"
+    "questionCount_other": "{{count}} вопросов",
+    "byOwner": "от {{owner}}"
   },
   "deckTypes": {
     "vocabulary": "Словарь",
@@ -106,8 +103,6 @@
   },
   "states": {
     "noStats": "Статистика недоступна",
-    "noDecks": "Колоды словаря недоступны",
-    "noCultureDecks": "Колоды культуры недоступны",
     "noDecksFound": "Колоды, соответствующие вашему поиску, не найдены"
   },
   "sources": {

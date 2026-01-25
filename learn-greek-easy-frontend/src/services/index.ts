@@ -135,7 +135,6 @@ export { adminAPI } from './adminAPI';
 export type {
   AnalysisStartedResponse,
   ContentStatsResponse,
-  DeckStats,
   DiscoveredArticle,
   FetchHistoryDetailResponse,
   FetchHistoryItem,

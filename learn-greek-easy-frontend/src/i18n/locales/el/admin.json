@@ -52,10 +52,6 @@
   },
   "sections": {
     "contentSummary": "Περίληψη Περιεχομένου",
-    "decksByLevel": "Τράπουλες Λεξιλογίου ανά Επίπεδο",
-    "decksByLevelDescription": "Όλες οι ενεργές τράπουλες λεξιλογίου ταξινομημένες κατά επίπεδο CEFR (A1 έως C2)",
-    "cultureDecks": "Τράπουλες Πολιτισμού ανά Κατηγορία",
-    "cultureDecksDescription": "Όλες οι ενεργές τράπουλες πολιτισμού οργανωμένες ανά κατηγορία",
     "allDecks": "Όλες οι Τράπουλες",
     "allDecksDescription": "Αναζήτηση και περιήγηση σε όλες τις τράπουλες λεξιλογίου και πολιτισμού"
   },
@@ -67,7 +63,8 @@
     "cardCount_one": "{{count}} κάρτα",
     "cardCount_other": "{{count}} κάρτες",
     "questionCount_one": "{{count}} ερώτηση",
-    "questionCount_other": "{{count}} ερωτήσεις"
+    "questionCount_other": "{{count}} ερωτήσεις",
+    "byOwner": "από {{owner}}"
   },
   "deckTypes": {
     "vocabulary": "Λεξιλόγιο",
@@ -102,8 +99,6 @@
   },
   "states": {
     "noStats": "Δεν υπάρχουν διαθέσιμα στατιστικά",
-    "noDecks": "Δεν υπάρχουν διαθέσιμες τράπουλες λεξιλογίου",
-    "noCultureDecks": "Δεν υπάρχουν διαθέσιμες τράπουλες πολιτισμού",
     "noDecksFound": "Δεν βρέθηκαν τράπουλες που να ταιριάζουν με την αναζήτησή σας"
   },
   "sources": {

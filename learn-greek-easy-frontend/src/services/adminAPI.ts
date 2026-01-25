@@ -38,37 +38,13 @@ export interface MultilingualName {
 }
 
 /**
- * Vocabulary deck statistics in admin response
- */
-export interface DeckStats {
-  id: string;
-  name: string;
-  level: DeckLevel;
-  card_count: number;
-}
-
-/**
- * Culture deck statistics in admin response
- */
-export interface CultureDeckStats {
-  id: string;
-  name: string;
-  category: string;
-  question_count: number;
-}
-
-/**
  * Content statistics response from admin endpoint
  */
 export interface ContentStatsResponse {
   total_decks: number;
   total_cards: number;
   total_vocabulary_decks: number;
-  total_culture_decks: number;
   total_vocabulary_cards: number;
-  total_culture_questions: number;
-  decks: DeckStats[];
-  culture_decks: CultureDeckStats[];
 }
 
 /**
@@ -84,6 +60,8 @@ export interface UnifiedDeckItem {
   is_active: boolean;
   is_premium: boolean;
   created_at: string;
+  owner_id: string | null;
+  owner_name: string | null;
 }
 
 /**
