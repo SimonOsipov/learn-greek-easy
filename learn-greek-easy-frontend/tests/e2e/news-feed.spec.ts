@@ -100,8 +100,8 @@ test.describe('News Feed - Admin Tests', () => {
     const submitButton = page.getByTestId('news-submit-button');
     await submitButton.click();
 
-    // Should show error toast
-    const toast = page.locator('[data-testid="toast"]').or(page.locator('[role="alert"]'));
+    // Should show error toast (Radix UI Toast uses data-state="open" for visible toasts)
+    const toast = page.locator('[data-state="open"]').filter({ hasText: /validation|error|invalid|json/i });
     await expect(toast).toBeVisible({ timeout: 5000 });
   });
 
@@ -124,8 +124,8 @@ test.describe('News Feed - Admin Tests', () => {
     const submitButton = page.getByTestId('news-submit-button');
     await submitButton.click();
 
-    // Should show error toast about missing fields
-    const toast = page.locator('[data-testid="toast"]').or(page.locator('[role="alert"]'));
+    // Should show error toast about missing fields (Radix UI Toast uses data-state="open" for visible toasts)
+    const toast = page.locator('[data-state="open"]').filter({ hasText: /validation|error|invalid|required|missing/i });
     await expect(toast).toBeVisible({ timeout: 5000 });
   });
 
