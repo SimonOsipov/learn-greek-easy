@@ -36,6 +36,7 @@ from src.db.models import (
     MockExamAnswer,
     MockExamSession,
     MockExamStatus,
+    NewsItem,
     Notification,
     NotificationType,
     Review,
@@ -75,6 +76,18 @@ class NotificationSeedData(TypedDict, total=False):
     created_at: datetime
 
 
+class NewsItemSeedData(TypedDict):
+    """Type definition for news item seed data items."""
+
+    title_el: str
+    title_en: str
+    title_ru: str
+    description_el: str
+    description_en: str
+    description_ru: str
+    days_ago: int
+
+
 class SeedService:
     """Service for seeding E2E test database with deterministic data.
 
@@ -92,6 +105,8 @@ class SeedService:
         # Mock Exam tables (children first)
         "mock_exam_answers",
         "mock_exam_sessions",
+        # News items (no FK dependencies)
+        "news_items",
         # XP & Achievement tables (children first)
         "xp_transactions",
         "user_achievements",
@@ -289,6 +304,55 @@ class SeedService:
             "time_taken_seconds": 1100,
             "days_ago": 1,
         },  # 60% Fail
+    ]
+
+    # News items for E2E testing (5 items with varied publication dates)
+    NEWS_ITEMS: list[NewsItemSeedData] = [
+        {
+            "title_el": "Ελληνικά Νέα: Νέα Πολιτιστική Πρωτοβουλία",
+            "title_en": "Greek News: New Cultural Initiative",
+            "title_ru": "Греческие новости: Новая культурная инициатива",
+            "description_el": "Η κυβέρνηση ανακοίνωσε νέα πολιτιστική πρωτοβουλία για την προώθηση της ελληνικής γλώσσας.",
+            "description_en": "The government announced a new cultural initiative to promote the Greek language.",
+            "description_ru": "Правительство объявило о новой культурной инициативе по продвижению греческого языка.",
+            "days_ago": 0,
+        },
+        {
+            "title_el": "Ιστορική Ανακάλυψη στην Αθήνα",
+            "title_en": "Historical Discovery in Athens",
+            "title_ru": "Историческое открытие в Афинах",
+            "description_el": "Αρχαιολόγοι ανακάλυψαν σημαντικά ευρήματα στο κέντρο της Αθήνας.",
+            "description_en": "Archaeologists discovered significant artifacts in central Athens.",
+            "description_ru": "Археологи обнаружили значительные артефакты в центре Афин.",
+            "days_ago": 1,
+        },
+        {
+            "title_el": "Οικονομική Ανάπτυξη στην Ελλάδα",
+            "title_en": "Economic Growth in Greece",
+            "title_ru": "Экономический рост в Греции",
+            "description_el": "Νέα οικονομικά στοιχεία δείχνουν σημαντική ανάπτυξη.",
+            "description_en": "New economic data shows significant growth.",
+            "description_ru": "Новые экономические данные показывают значительный рост.",
+            "days_ago": 2,
+        },
+        {
+            "title_el": "Τουριστική Σεζόν 2026",
+            "title_en": "Tourism Season 2026",
+            "title_ru": "Туристический сезон 2026",
+            "description_el": "Οι προβλέψεις για την τουριστική σεζόν είναι αισιόδοξες.",
+            "description_en": "Predictions for the tourism season are optimistic.",
+            "description_ru": "Прогнозы на туристический сезон оптимистичны.",
+            "days_ago": 7,
+        },
+        {
+            "title_el": "Πολιτιστικά Γεγονότα Ιανουαρίου",
+            "title_en": "January Cultural Events",
+            "title_ru": "Культурные события января",
+            "description_el": "Τα σημαντικότερα πολιτιστικά γεγονότα του μήνα.",
+            "description_en": "The most important cultural events of the month.",
+            "description_ru": "Самые важные культурные события месяца.",
+            "days_ago": 30,
+        },
     ]
 
     # Culture categories with deck definitions (simple English strings)
@@ -2284,6 +2348,60 @@ class SeedService:
         }
 
     # =====================
+    # News Feed Seeding
+    # =====================
+
+    async def seed_news_items(self) -> dict[str, Any]:
+        """Create news items for E2E testing.
+
+        Creates 5 news items with varied publication dates for testing:
+        - News section display on dashboard
+        - Admin news tab functionality
+        - Pagination
+
+        Returns:
+            dict with seeding summary including created items
+
+        Raises:
+            RuntimeError: If seeding not allowed
+        """
+        self._check_can_seed()
+
+        created_items = []
+        today = date.today()
+
+        for i, item_data in enumerate(self.NEWS_ITEMS, start=1):
+            publication_date = today - timedelta(days=item_data["days_ago"])
+
+            news_item = NewsItem(
+                title_el=item_data["title_el"],
+                title_en=item_data["title_en"],
+                title_ru=item_data["title_ru"],
+                description_el=item_data["description_el"],
+                description_en=item_data["description_en"],
+                description_ru=item_data["description_ru"],
+                publication_date=publication_date,
+                original_article_url=f"https://example.com/e2e-test-article-{i}",
+                image_s3_key=f"news/e2e-test-image-{i}.jpg",
+            )
+            self.db.add(news_item)
+            await self.db.flush()
+
+            created_items.append(
+                {
+                    "id": str(news_item.id),
+                    "title_en": news_item.title_en,
+                    "publication_date": str(news_item.publication_date),
+                }
+            )
+
+        return {
+            "success": True,
+            "news_items": created_items,
+            "count": len(created_items),
+        }
+
+    # =====================
     # XP & Achievement Seeding
     # =====================
 
@@ -3104,6 +3222,9 @@ class SeedService:
         if learner_id:
             mock_exam_result = await self.seed_mock_exam_history(user_id=learner_id)
 
+        # Step 13: Create news items for dashboard and admin testing
+        news_result = await self.seed_news_items()
+
         # Commit all changes
         await self.db.commit()
 
@@ -3123,4 +3244,5 @@ class SeedService:
             "culture_statistics": culture_stats_result,
             "culture_advanced_stats": advanced_culture_stats,
             "mock_exams": mock_exam_result,
+            "news": news_result,
         }

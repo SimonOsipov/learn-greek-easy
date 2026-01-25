@@ -150,7 +150,10 @@ export const NewsSection: React.FC = () => {
     <section data-testid="news-section">
       <h2 className="mb-4 text-lg font-semibold text-foreground">{t('dashboard.news.title')}</h2>
       {loading ? (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div
+          className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3"
+          data-testid="news-section-loading"
+        >
           {[1, 2, 3].map((i) => (
             <NewsCardSkeleton key={i} />
           ))}

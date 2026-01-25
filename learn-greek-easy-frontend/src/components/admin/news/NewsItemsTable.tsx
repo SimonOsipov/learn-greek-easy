@@ -177,7 +177,9 @@ export const NewsItemsTable: React.FC<NewsItemsTableProps> = ({
 
         {/* Empty State */}
         {!isLoading && newsItems.length === 0 && (
-          <p className="py-8 text-center text-muted-foreground">{t('news.table.empty')}</p>
+          <p className="py-8 text-center text-muted-foreground" data-testid="news-table-empty">
+            {t('news.table.empty')}
+          </p>
         )}
 
         {/* News Items List */}

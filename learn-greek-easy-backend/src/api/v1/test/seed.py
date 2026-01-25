@@ -429,6 +429,34 @@ async def seed_pending_question(
 
 
 @router.post(
+    "/news-feed",
+    response_model=SeedResultResponse,
+    summary="Seed news feed items",
+    description="Create test news items for E2E testing.",
+    dependencies=[Depends(verify_seed_access)],
+)
+async def seed_news_feed(
+    db: AsyncSession = Depends(get_db),
+) -> SeedResultResponse:
+    """Create news feed test items for E2E testing."""
+    start_time = perf_counter()
+
+    seed_service = SeedService(db)
+    result = await seed_service.seed_news_items()
+    await db.commit()
+
+    duration_ms = (perf_counter() - start_time) * 1000
+
+    return SeedResultResponse(
+        success=result.get("success", False),
+        operation="news-feed",
+        timestamp=datetime.now(timezone.utc),
+        duration_ms=duration_ms,
+        results=result,
+    )
+
+
+@router.post(
     "/auth",
     response_model=TestAuthResponse,
     summary="Get auth tokens for test user",
