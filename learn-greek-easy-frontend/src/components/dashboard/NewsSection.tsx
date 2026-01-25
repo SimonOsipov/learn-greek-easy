@@ -8,7 +8,7 @@
  * - Returns null if no items or on error (hides section gracefully)
  * - Responsive grid layout (1/2/3 columns)
  * - Cards with semi-transparent image backgrounds
- * - Language-aware content (el/en, Russian falls back to English)
+ * - Language-aware content (el/en/ru - all 3 languages supported)
  * - PostHog analytics tracking on click
  */
 
@@ -28,14 +28,25 @@ import { adminAPI, type NewsItemResponse } from '@/services/adminAPI';
  */
 interface NewsCardProps {
   item: NewsItemResponse;
-  newsLang: 'el' | 'en';
+  newsLang: 'el' | 'en' | 'ru';
 }
 
 const NewsCard: React.FC<NewsCardProps> = ({ item, newsLang }) => {
   const { t } = useTranslation('common');
 
-  const title = newsLang === 'el' ? item.title_el : item.title_en;
-  const description = newsLang === 'el' ? item.description_el : item.description_en;
+  // Now all 3 languages are supported in backend
+  const getLocalizedContent = () => {
+    switch (newsLang) {
+      case 'el':
+        return { title: item.title_el, description: item.description_el };
+      case 'ru':
+        return { title: item.title_ru, description: item.description_ru };
+      default: // 'en'
+        return { title: item.title_en, description: item.description_en };
+    }
+  };
+
+  const { title, description } = getLocalizedContent();
 
   const handleClick = () => {
     try {
@@ -102,9 +113,10 @@ export const NewsSection: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
 
-  // For news content, only el/en available from backend
-  // Russian falls back to English
-  const newsLang: 'el' | 'en' = currentLanguage === 'el' ? 'el' : 'en';
+  // All 3 languages are now supported in backend
+  const newsLang: 'el' | 'en' | 'ru' = (
+    ['el', 'en', 'ru'].includes(currentLanguage) ? currentLanguage : 'en'
+  ) as 'el' | 'en' | 'ru';
 
   useEffect(() => {
     const fetchNews = async () => {

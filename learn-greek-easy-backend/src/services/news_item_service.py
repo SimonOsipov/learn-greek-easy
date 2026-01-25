@@ -117,8 +117,10 @@ class NewsItemService:
         news_item_dict = {
             "title_el": data.title_el,
             "title_en": data.title_en,
+            "title_ru": data.title_ru,
             "description_el": data.description_el,
             "description_en": data.description_en,
+            "description_ru": data.description_ru,
             "publication_date": data.publication_date,
             "original_article_url": str(data.original_article_url),
             "image_s3_key": s3_key,
@@ -297,10 +299,14 @@ class NewsItemService:
             update_dict["title_el"] = data.title_el
         if data.title_en is not None:
             update_dict["title_en"] = data.title_en
+        if data.title_ru is not None:
+            update_dict["title_ru"] = data.title_ru
         if data.description_el is not None:
             update_dict["description_el"] = data.description_el
         if data.description_en is not None:
             update_dict["description_en"] = data.description_en
+        if data.description_ru is not None:
+            update_dict["description_ru"] = data.description_ru
         if data.publication_date is not None:
             update_dict["publication_date"] = data.publication_date
         if data.original_article_url is not None:
@@ -412,8 +418,10 @@ class NewsItemService:
             id=news_item.id,
             title_el=news_item.title_el,
             title_en=news_item.title_en,
+            title_ru=news_item.title_ru,
             description_el=news_item.description_el,
             description_en=news_item.description_en,
+            description_ru=news_item.description_ru,
             publication_date=news_item.publication_date,
             original_article_url=news_item.original_article_url,
             image_url=image_url,

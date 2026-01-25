@@ -25,13 +25,15 @@ from tests.factories.base import BaseFactory
 class NewsItemFactory(BaseFactory):
     """Factory for NewsItem model.
 
-    Creates news items with bilingual titles and descriptions.
+    Creates news items with trilingual titles and descriptions.
 
     Attributes:
         title_el: Greek title (sequential)
         title_en: English title (sequential)
+        title_ru: Russian title (sequential)
         description_el: Greek description (sequential)
         description_en: English description (sequential)
+        description_ru: Russian description (sequential)
         publication_date: Today's date by default
         original_article_url: Unique URL with sequential number
         image_s3_key: S3 key for the news image
@@ -45,8 +47,10 @@ class NewsItemFactory(BaseFactory):
 
     title_el = factory.Sequence(lambda n: f"Ελληνικός Τίτλος {n}")
     title_en = factory.Sequence(lambda n: f"English Title {n}")
+    title_ru = factory.Sequence(lambda n: f"Русский Заголовок {n}")
     description_el = factory.Sequence(lambda n: f"Ελληνική περιγραφή για το άρθρο {n}")
     description_en = factory.Sequence(lambda n: f"English description for article {n}")
+    description_ru = factory.Sequence(lambda n: f"Русское описание для статьи {n}")
     publication_date = factory.LazyFunction(date.today)
     original_article_url = factory.Sequence(
         lambda n: f"https://example.com/article-{n}-{uuid4().hex[:8]}"

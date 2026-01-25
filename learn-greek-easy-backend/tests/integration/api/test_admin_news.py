@@ -57,8 +57,10 @@ def valid_news_create_data():
     return {
         "title_el": "Ελληνικός Τίτλος Δοκιμής",
         "title_en": "Test English Title",
+        "title_ru": "Тестовый Русский Заголовок",
         "description_el": "Ελληνική περιγραφή για δοκιμή",
         "description_en": "English description for testing",
+        "description_ru": "Русское описание для тестирования",
         "publication_date": str(date.today()),
         "original_article_url": f"https://example.com/article-{uuid4().hex[:8]}",
         "source_image_url": "https://example.com/image.jpg",
@@ -153,8 +155,10 @@ class TestCreateNewsItemEndpoint:
         data = {
             "title_el": "Νέος Τίτλος",
             "title_en": "New Title",
+            "title_ru": "Новый Заголовок",
             "description_el": "Νέα περιγραφή",
             "description_en": "New description",
+            "description_ru": "Новое описание",
             "publication_date": str(date.today()),
             "original_article_url": existing.original_article_url,
             "source_image_url": "https://example.com/new-image.jpg",

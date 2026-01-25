@@ -114,8 +114,10 @@ class TestListNewsEndpoint:
         assert "id" in item
         assert "title_el" in item
         assert "title_en" in item
+        assert "title_ru" in item
         assert "description_el" in item
         assert "description_en" in item
+        assert "description_ru" in item
         assert "publication_date" in item
         assert "original_article_url" in item
         assert "image_url" in item
@@ -211,8 +213,10 @@ class TestGetNewsItemEndpoint:
         assert "id" in data
         assert "title_el" in data
         assert "title_en" in data
+        assert "title_ru" in data
         assert "description_el" in data
         assert "description_en" in data
+        assert "description_ru" in data
         assert "publication_date" in data
         assert "original_article_url" in data
         assert "image_url" in data

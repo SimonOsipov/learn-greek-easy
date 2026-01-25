@@ -1663,6 +1663,18 @@ class NewsItem(Base, TimestampMixin):
         comment="Article description in English (max 1000 chars enforced at app level)",
     )
 
+    # Russian content
+    title_ru: Mapped[str] = mapped_column(
+        String(500),
+        nullable=False,
+        comment="Article title in Russian",
+    )
+    description_ru: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+        comment="Article description in Russian (max 1000 chars enforced at app level)",
+    )
+
     # Media
     image_s3_key: Mapped[str] = mapped_column(
         String(255),

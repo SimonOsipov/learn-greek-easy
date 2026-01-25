@@ -33,8 +33,10 @@ async def news_items(db_session: AsyncSession) -> list[NewsItem]:
         item = NewsItem(
             title_el=f"Greek Title {i + 1}",
             title_en=f"English Title {i + 1}",
+            title_ru=f"Russian Title {i + 1}",
             description_el=f"Greek description for news item {i + 1}",
             description_en=f"English description for news item {i + 1}",
+            description_ru=f"Russian description for news item {i + 1}",
             publication_date=base_date - timedelta(days=i),  # Newest first
             original_article_url=f"https://example.com/article-{i + 1}",
             image_s3_key=f"news-images/{uuid4()}.jpg",
@@ -55,8 +57,10 @@ async def single_news_item(db_session: AsyncSession) -> NewsItem:
     item = NewsItem(
         title_el="Test Greek Title",
         title_en="Test English Title",
+        title_ru="Test Russian Title",
         description_el="Test Greek description",
         description_en="Test English description",
+        description_ru="Test Russian description",
         publication_date=date.today(),
         original_article_url="https://example.com/test-article",
         image_s3_key=f"news-images/{uuid4()}.jpg",
@@ -259,8 +263,10 @@ class TestCreate:
         news_item_data = {
             "title_el": "New Greek Title",
             "title_en": "New English Title",
+            "title_ru": "New Russian Title",
             "description_el": "New Greek description",
             "description_en": "New English description",
+            "description_ru": "New Russian description",
             "publication_date": date.today(),
             "original_article_url": "https://example.com/new-article",
             "image_s3_key": f"news-images/{uuid4()}.jpg",
@@ -271,6 +277,7 @@ class TestCreate:
         assert result.id is not None
         assert result.title_el == "New Greek Title"
         assert result.title_en == "New English Title"
+        assert result.title_ru == "New Russian Title"
 
 
 class TestGetById:

@@ -33,8 +33,10 @@ import { NewsItemsTable } from './NewsItemsTable';
 const JSON_PLACEHOLDER = `{
   "title_el": "Greek title",
   "title_en": "English title",
+  "title_ru": "Russian title",
   "description_el": "Greek description",
   "description_en": "English description",
+  "description_ru": "Russian description",
   "publication_date": "2024-01-15",
   "original_article_url": "https://example.com/article",
   "source_image_url": "https://example.com/image.jpg"
@@ -46,8 +48,10 @@ const JSON_PLACEHOLDER = `{
 const REQUIRED_FIELDS = [
   'title_el',
   'title_en',
+  'title_ru',
   'description_el',
   'description_en',
+  'description_ru',
   'publication_date',
   'original_article_url',
   'source_image_url',
@@ -105,8 +109,10 @@ function validateNewsItemJson(json: string): {
     data: {
       title_el: parsed.title_el as string,
       title_en: parsed.title_en as string,
+      title_ru: parsed.title_ru as string,
       description_el: parsed.description_el as string,
       description_en: parsed.description_en as string,
+      description_ru: parsed.description_ru as string,
       publication_date: parsed.publication_date as string,
       original_article_url: parsed.original_article_url as string,
       source_image_url: parsed.source_image_url as string,

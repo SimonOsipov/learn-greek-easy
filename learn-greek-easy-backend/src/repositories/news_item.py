@@ -33,11 +33,15 @@ class NewsItemRepository(BaseRepository[NewsItem]):
 
         Returns:
             List of news items ordered by publication date (newest first),
-            then by created_at as tiebreaker
+            then by created_at and id as tiebreakers for stable pagination
         """
         query = (
             select(NewsItem)
-            .order_by(desc(NewsItem.publication_date), desc(NewsItem.created_at))
+            .order_by(
+                desc(NewsItem.publication_date),
+                desc(NewsItem.created_at),
+                desc(NewsItem.id),  # Final tiebreaker for stable ordering
+            )
             .offset(skip)
             .limit(limit)
         )
@@ -55,7 +59,11 @@ class NewsItemRepository(BaseRepository[NewsItem]):
         """
         query = (
             select(NewsItem)
-            .order_by(desc(NewsItem.publication_date), desc(NewsItem.created_at))
+            .order_by(
+                desc(NewsItem.publication_date),
+                desc(NewsItem.created_at),
+                desc(NewsItem.id),  # Final tiebreaker for stable ordering
+            )
             .limit(limit)
         )
         result = await self.db.execute(query)

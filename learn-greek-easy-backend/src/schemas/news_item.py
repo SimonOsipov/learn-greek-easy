@@ -21,8 +21,10 @@ class NewsItemCreate(BaseModel):
 
     title_el: str = Field(..., min_length=1, max_length=500)
     title_en: str = Field(..., min_length=1, max_length=500)
+    title_ru: str = Field(..., min_length=1, max_length=500)
     description_el: str = Field(..., min_length=1, max_length=1000)
     description_en: str = Field(..., min_length=1, max_length=1000)
+    description_ru: str = Field(..., min_length=1, max_length=1000)
     publication_date: date
     original_article_url: HttpUrl = Field(..., max_length=500)
     source_image_url: HttpUrl = Field(..., description="URL to download the image from")
@@ -37,8 +39,10 @@ class NewsItemUpdate(BaseModel):
 
     title_el: Optional[str] = Field(None, min_length=1, max_length=500)
     title_en: Optional[str] = Field(None, min_length=1, max_length=500)
+    title_ru: Optional[str] = Field(None, min_length=1, max_length=500)
     description_el: Optional[str] = Field(None, min_length=1, max_length=1000)
     description_en: Optional[str] = Field(None, min_length=1, max_length=1000)
+    description_ru: Optional[str] = Field(None, min_length=1, max_length=1000)
     publication_date: Optional[date] = None
     original_article_url: Optional[HttpUrl] = Field(None, max_length=500)
     source_image_url: Optional[HttpUrl] = Field(
@@ -57,8 +61,10 @@ class NewsItemResponse(BaseModel):
     id: UUID
     title_el: str
     title_en: str
+    title_ru: str
     description_el: str
     description_en: str
+    description_ru: str
     publication_date: date
     original_article_url: str
     image_url: Optional[str] = Field(None, description="Presigned S3 URL for the image")

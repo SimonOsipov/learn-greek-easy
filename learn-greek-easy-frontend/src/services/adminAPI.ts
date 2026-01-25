@@ -282,8 +282,10 @@ export interface AdminCultureQuestionsResponse {
 export interface NewsItemCreate {
   title_el: string;
   title_en: string;
+  title_ru: string;
   description_el: string;
   description_en: string;
+  description_ru: string;
   publication_date: string;
   original_article_url: string;
   source_image_url: string;
@@ -295,8 +297,10 @@ export interface NewsItemCreate {
 export interface NewsItemUpdate {
   title_el?: string;
   title_en?: string;
+  title_ru?: string;
   description_el?: string;
   description_en?: string;
+  description_ru?: string;
   publication_date?: string;
   original_article_url?: string;
   source_image_url?: string;
@@ -309,8 +313,10 @@ export interface NewsItemResponse {
   id: string;
   title_el: string;
   title_en: string;
+  title_ru: string;
   description_el: string;
   description_en: string;
+  description_ru: string;
   publication_date: string;
   original_article_url: string;
   image_url: string | null;
