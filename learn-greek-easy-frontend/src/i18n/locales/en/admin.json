@@ -116,7 +116,23 @@
     "createFailed": "Failed to create deck"
   },
   "toast": {
-    "deckCreated": "Deck created successfully"
+    "deckCreated": "Deck created successfully",
+    "deckDeleted": "Deck deleted successfully"
+  },
+  "deckDelete": {
+    "title": "Delete Deck",
+    "deckInfo": "Deck: {{name}} ({{type}})",
+    "explanation": "This will deactivate the deck, hiding it from all users. The deck and its content will be preserved but no longer accessible. Learner progress data will be retained.",
+    "warning": "This action cannot be easily undone from the UI.",
+    "impact": {
+      "hidden": "The deck will be hidden from all learners",
+      "progressPreserved": "All user progress will be preserved",
+      "canReactivate": "You can reactivate the deck through the edit modal"
+    },
+    "cancel": "Cancel",
+    "confirm": "Delete Deck",
+    "deleting": "Deleting...",
+    "error": "Failed to delete deck"
   },
   "actions": {
     "retry": "Retry",

@@ -7,6 +7,7 @@ export { CultureDeckCreateForm, type CultureDeckCreateFormData } from './Culture
 export { CultureDeckEditForm, type CultureDeckFormData } from './CultureDeckEditForm';
 export { DeactivationWarningDialog } from './DeactivationWarningDialog';
 export { DeckCreateModal, type DeckCreateFormData, type DeckType } from './DeckCreateModal';
+export { DeckDeleteDialog } from './DeckDeleteDialog';
 export { DeckEditModal, type DeckEditFormData } from './DeckEditModal';
 export { DiscoveredArticlesModal } from './DiscoveredArticlesModal';
 export { FetchHistoryDeleteDialog } from './FetchHistoryDeleteDialog';

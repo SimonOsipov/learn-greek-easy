@@ -442,6 +442,30 @@ export const adminAPI = {
     return api.post<CultureDeckCreateResponse>('/api/v1/culture/decks', data);
   },
 
+  /**
+   * Delete (soft-delete) a vocabulary deck
+   *
+   * Sets is_active = false, hiding the deck from learners.
+   * User progress is preserved. Can be reactivated via edit.
+   * Requires superuser authentication.
+   * Returns 204 No Content on success.
+   */
+  deleteVocabularyDeck: async (deckId: string): Promise<void> => {
+    return api.delete<void>(`/api/v1/decks/${deckId}`);
+  },
+
+  /**
+   * Delete (soft-delete) a culture deck
+   *
+   * Sets is_active = false, hiding the deck from learners.
+   * User progress is preserved. Can be reactivated via edit.
+   * Requires superuser authentication.
+   * Returns 204 No Content on success.
+   */
+  deleteCultureDeck: async (deckId: string): Promise<void> => {
+    return api.delete<void>(`/api/v1/culture/decks/${deckId}`);
+  },
+
   // ============================================
   // Feedback Management
   // ============================================
