@@ -212,6 +212,14 @@
       "deleting": "Deleting...",
       "success": "News item deleted successfully",
       "error": "Failed to delete news item"
+    },
+    "validation": {
+      "invalidJson": "Invalid JSON format",
+      "missingFields": "Missing or invalid fields: {{fields}}",
+      "invalidArticleUrl": "Invalid original_article_url format",
+      "invalidImageUrl": "Invalid source_image_url format",
+      "invalidDate": "Invalid publication_date format (use YYYY-MM-DD)",
+      "noFieldsToUpdate": "No fields to update"
     }
   },
   "feedback": {

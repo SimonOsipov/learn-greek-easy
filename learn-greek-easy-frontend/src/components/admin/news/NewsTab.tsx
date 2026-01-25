@@ -58,19 +58,30 @@ const REQUIRED_FIELDS = [
 ] as const;
 
 /**
+ * Validation error types for translation
+ */
+type ValidationErrorType =
+  | 'invalidJson'
+  | 'missingFields'
+  | 'invalidArticleUrl'
+  | 'invalidImageUrl'
+  | 'invalidDate';
+
+/**
  * Validates JSON input for news item creation
  */
 function validateNewsItemJson(json: string): {
   valid: boolean;
   data?: NewsItemCreate;
-  error?: string;
+  errorType?: ValidationErrorType;
+  errorParams?: Record<string, string>;
 } {
   // Try to parse JSON
   let parsed: Record<string, unknown>;
   try {
     parsed = JSON.parse(json);
   } catch {
-    return { valid: false, error: 'Invalid JSON format' };
+    return { valid: false, errorType: 'invalidJson' };
   }
 
   // Check for required fields
@@ -81,7 +92,8 @@ function validateNewsItemJson(json: string): {
   if (missingFields.length > 0) {
     return {
       valid: false,
-      error: `Missing or invalid fields: ${missingFields.join(', ')}`,
+      errorType: 'missingFields',
+      errorParams: { fields: missingFields.join(', ') },
     };
   }
 
@@ -89,19 +101,19 @@ function validateNewsItemJson(json: string): {
   try {
     new URL(parsed.original_article_url as string);
   } catch {
-    return { valid: false, error: 'Invalid original_article_url format' };
+    return { valid: false, errorType: 'invalidArticleUrl' };
   }
 
   try {
     new URL(parsed.source_image_url as string);
   } catch {
-    return { valid: false, error: 'Invalid source_image_url format' };
+    return { valid: false, errorType: 'invalidImageUrl' };
   }
 
   // Validate date format (YYYY-MM-DD)
   const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
   if (!dateRegex.test(parsed.publication_date as string)) {
-    return { valid: false, error: 'Invalid publication_date format (use YYYY-MM-DD)' };
+    return { valid: false, errorType: 'invalidDate' };
   }
 
   return {
@@ -158,7 +170,9 @@ export const NewsTab: React.FC = () => {
     if (!validation.valid || !validation.data) {
       toast({
         title: t('news.create.validationError'),
-        description: validation.error,
+        description: validation.errorType
+          ? t(`news.validation.${validation.errorType}`, validation.errorParams)
+          : undefined,
         variant: 'destructive',
       });
       return;

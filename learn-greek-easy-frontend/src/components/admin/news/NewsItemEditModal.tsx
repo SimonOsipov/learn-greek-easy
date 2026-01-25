@@ -57,18 +57,28 @@ function itemToEditableJson(item: NewsItemResponse): string {
 }
 
 /**
+ * Validation error types for translation
+ */
+type ValidationErrorType =
+  | 'invalidJson'
+  | 'invalidArticleUrl'
+  | 'invalidImageUrl'
+  | 'invalidDate'
+  | 'noFieldsToUpdate';
+
+/**
  * Validate and parse the edited JSON
  */
 function parseEditJson(json: string): {
   valid: boolean;
   data?: NewsItemUpdate;
-  error?: string;
+  errorType?: ValidationErrorType;
 } {
   let parsed: Record<string, unknown>;
   try {
     parsed = JSON.parse(json);
   } catch {
-    return { valid: false, error: 'Invalid JSON format' };
+    return { valid: false, errorType: 'invalidJson' };
   }
 
   const update: NewsItemUpdate = {};
@@ -101,7 +111,7 @@ function parseEditJson(json: string): {
       new URL(sourceImageUrl);
       update.source_image_url = sourceImageUrl.trim();
     } catch {
-      return { valid: false, error: 'Invalid source_image_url format' };
+      return { valid: false, errorType: 'invalidImageUrl' };
     }
   }
 
@@ -110,7 +120,7 @@ function parseEditJson(json: string): {
     try {
       new URL(update.original_article_url);
     } catch {
-      return { valid: false, error: 'Invalid original_article_url format' };
+      return { valid: false, errorType: 'invalidArticleUrl' };
     }
   }
 
@@ -118,13 +128,13 @@ function parseEditJson(json: string): {
   if (update.publication_date) {
     const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
     if (!dateRegex.test(update.publication_date)) {
-      return { valid: false, error: 'Invalid publication_date format (use YYYY-MM-DD)' };
+      return { valid: false, errorType: 'invalidDate' };
     }
   }
 
   // Check that at least one field is being updated
   if (Object.keys(update).length === 0) {
-    return { valid: false, error: 'No fields to update' };
+    return { valid: false, errorType: 'noFieldsToUpdate' };
   }
 
   return { valid: true, data: update };
@@ -157,7 +167,9 @@ export const NewsItemEditModal: React.FC<NewsItemEditModalProps> = ({
     if (!validation.valid || !validation.data) {
       toast({
         title: t('news.edit.validationError'),
-        description: validation.error,
+        description: validation.errorType
+          ? t(`news.validation.${validation.errorType}`)
+          : undefined,
         variant: 'destructive',
       });
       return;
