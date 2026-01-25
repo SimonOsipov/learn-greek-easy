@@ -35,6 +35,7 @@ from src.db.models import (  # noqa: F401
     MockExamAnswer,
     MockExamSession,
     MockExamStatus,
+    NewsItem,
     Notification,
     NotificationType,
     RefreshToken,
