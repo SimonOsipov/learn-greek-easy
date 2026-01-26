@@ -16,6 +16,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, Header
 from pydantic import BaseModel, EmailStr
+from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config import settings
@@ -26,6 +27,7 @@ from src.core.exceptions import (
 )
 from src.core.security import create_access_token, create_refresh_token
 from src.db.dependencies import get_db
+from src.db.models import NewsItem
 from src.repositories.user import UserRepository
 from src.schemas.seed import SeedRequest, SeedResultResponse, SeedStatusResponse
 from src.services.seed_service import SeedService
@@ -453,6 +455,41 @@ async def seed_news_feed(
         timestamp=datetime.now(timezone.utc),
         duration_ms=duration_ms,
         results=result,
+    )
+
+
+@router.post(
+    "/news-feed/clear",
+    response_model=SeedResultResponse,
+    summary="Clear news items only",
+    description="Clear only news items without affecting other data.",
+    dependencies=[Depends(verify_seed_access)],
+)
+async def clear_news_items(
+    db: AsyncSession = Depends(get_db),
+) -> SeedResultResponse:
+    """Clear only news items from the database.
+
+    Unlike /truncate, this only affects the news_items table,
+    leaving users, decks, cards, and other data intact.
+
+    Returns:
+        SeedResultResponse with clear operation results and timing
+    """
+    start_time = perf_counter()
+
+    # Delete only news items
+    await db.execute(delete(NewsItem))
+    await db.commit()
+
+    duration_ms = (perf_counter() - start_time) * 1000
+
+    return SeedResultResponse(
+        success=True,
+        operation="clear_news",
+        timestamp=datetime.now(timezone.utc),
+        duration_ms=duration_ms,
+        results={"cleared": True, "table": "news_items"},
     )
 
 

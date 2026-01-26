@@ -30,15 +30,14 @@ async function seedNewsItems(request: APIRequestContext): Promise<void> {
 }
 
 /**
- * Clear news items by truncating (via seed/all which clears everything)
- * We use a targeted approach by just not seeding news or clearing via API if available
+ * Clear only news items (does not affect other test data)
  */
 async function clearNewsItems(request: APIRequestContext): Promise<void> {
   const apiBaseUrl = getApiBaseUrl();
-  // Truncate tables to clear all data including news items
-  const response = await request.post(`${apiBaseUrl}/api/v1/test/seed/truncate`);
+  // Use the dedicated news-clear endpoint that only affects news_items table
+  const response = await request.post(`${apiBaseUrl}/api/v1/test/seed/news-feed/clear`);
   if (!response.ok()) {
-    console.warn('Failed to truncate tables:', response.status());
+    console.warn('Failed to clear news items:', response.status());
   }
 }
 
