@@ -127,13 +127,21 @@ class TestCreateNewsItemEndpoint:
 
         assert response.status_code == 201
         data = response.json()
-        assert data["title_el"] == valid_news_create_data["title_el"]
-        assert data["title_en"] == valid_news_create_data["title_en"]
-        assert data["description_el"] == valid_news_create_data["description_el"]
-        assert data["description_en"] == valid_news_create_data["description_en"]
-        assert "id" in data
-        assert "image_url" in data
-        assert "created_at" in data
+
+        # Verify response structure (NewsItemWithCardResponse)
+        assert "news_item" in data
+        assert "card" in data
+        assert data["message"] == "News item created successfully"
+
+        # Verify news_item fields
+        news_item = data["news_item"]
+        assert news_item["title_el"] == valid_news_create_data["title_el"]
+        assert news_item["title_en"] == valid_news_create_data["title_en"]
+        assert news_item["description_el"] == valid_news_create_data["description_el"]
+        assert news_item["description_en"] == valid_news_create_data["description_en"]
+        assert "id" in news_item
+        assert "image_url" in news_item
+        assert "created_at" in news_item
 
         # Verify S3 upload was called
         mock_s3_service.upload_object.assert_called_once()
