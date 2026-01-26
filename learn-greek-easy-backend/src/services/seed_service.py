@@ -2411,6 +2411,163 @@ class SeedService:
             "count": len(created_items),
         }
 
+    async def seed_news_questions(self) -> dict[str, Any]:
+        """Create news items with linked culture questions for E2E testing.
+
+        Creates:
+        - 2 NewsItems WITH associated CultureQuestions
+        - 1 NewsItem WITHOUT associated question
+        - Uses/creates "E2E News Questions" culture deck
+
+        This method is idempotent - deletes existing E2E test data first.
+
+        Returns:
+            dict with seeding summary including created items
+
+        Raises:
+            RuntimeError: If seeding not allowed
+        """
+        self._check_can_seed()
+
+        # Delete existing E2E news-questions test data (questions first for FK safety)
+        await self.db.execute(
+            delete(CultureQuestion).where(
+                CultureQuestion.original_article_url.like("https://example.com/e2e-news-question-%")
+            )
+        )
+        await self.db.execute(
+            delete(NewsItem).where(
+                NewsItem.original_article_url.like("https://example.com/e2e-news-question-%")
+            )
+        )
+
+        # Find or create E2E culture deck
+        result = await self.db.execute(
+            select(CultureDeck).where(CultureDeck.name == "E2E News Questions")
+        )
+        deck = result.scalar_one_or_none()
+
+        if not deck:
+            deck = CultureDeck(
+                name="E2E News Questions",
+                description="Deck for E2E testing news-linked questions",
+                category="culture",
+                is_active=True,
+                is_premium=False,
+            )
+            self.db.add(deck)
+            await self.db.flush()
+
+        news_items_data = []
+        questions_data = []
+
+        # News item 1 - WITH question
+        news_1 = NewsItem(
+            title_el="Κυπριακή κουλτούρα: Παραδόσεις",
+            title_en="Cypriot Culture: Traditions",
+            title_ru="Кипрская культура: Традиции",
+            description_el="Ανακαλύψτε τις παραδόσεις της Κύπρου.",
+            description_en="Discover the traditions of Cyprus.",
+            description_ru="Откройте для себя традиции Кипра.",
+            image_s3_key="news-images/e2e-placeholder.jpg",
+            publication_date=date.today(),
+            original_article_url="https://example.com/e2e-news-question-1",
+        )
+        self.db.add(news_1)
+
+        question_1 = CultureQuestion(
+            deck_id=deck.id,
+            question_text={
+                "el": "Ποια είναι η παραδοσιακή κυπριακή γιορτή την άνοιξη;",
+                "en": "What is the traditional Cypriot spring festival?",
+            },
+            option_a={"el": "Κατακλυσμός", "en": "Kataklysmos"},
+            option_b={"el": "Ανθεστήρια", "en": "Anthestiria"},
+            option_c={"el": "Πάσχα", "en": "Easter"},
+            option_d={"el": "Καρναβάλι", "en": "Carnival"},
+            correct_option=2,
+            original_article_url="https://example.com/e2e-news-question-1",
+            is_pending_review=False,
+        )
+        self.db.add(question_1)
+
+        # News item 2 - WITH question
+        news_2 = NewsItem(
+            title_el="Ιστορία της Κύπρου",
+            title_en="History of Cyprus",
+            title_ru="История Кипра",
+            description_el="Μάθετε για την πλούσια ιστορία.",
+            description_en="Learn about the rich history.",
+            description_ru="Узнайте о богатой истории.",
+            image_s3_key="news-images/e2e-placeholder.jpg",
+            publication_date=date.today() - timedelta(days=1),
+            original_article_url="https://example.com/e2e-news-question-2",
+        )
+        self.db.add(news_2)
+
+        question_2 = CultureQuestion(
+            deck_id=deck.id,
+            question_text={
+                "el": "Πότε έγινε η Κύπρος ανεξάρτητη;",
+                "en": "When did Cyprus become independent?",
+            },
+            option_a={"el": "1950", "en": "1950"},
+            option_b={"el": "1960", "en": "1960"},
+            option_c={"el": "1970", "en": "1970"},
+            option_d={"el": "1974", "en": "1974"},
+            correct_option=2,
+            original_article_url="https://example.com/e2e-news-question-2",
+            is_pending_review=False,
+        )
+        self.db.add(question_2)
+
+        # News item 3 - WITHOUT question
+        news_3 = NewsItem(
+            title_el="Τρέχοντα νέα",
+            title_en="Current News",
+            title_ru="Текущие новости",
+            description_el="Τελευταία νέα από την Κύπρο.",
+            description_en="Latest news from Cyprus.",
+            description_ru="Последние новости с Кипра.",
+            image_s3_key="news-images/e2e-placeholder.jpg",
+            publication_date=date.today() - timedelta(days=2),
+            original_article_url="https://example.com/e2e-news-question-3-no-question",
+        )
+        self.db.add(news_3)
+
+        await self.db.flush()
+
+        news_items_data = [
+            {
+                "id": str(news_1.id),
+                "has_question": True,
+                "url": news_1.original_article_url,
+            },
+            {
+                "id": str(news_2.id),
+                "has_question": True,
+                "url": news_2.original_article_url,
+            },
+            {
+                "id": str(news_3.id),
+                "has_question": False,
+                "url": news_3.original_article_url,
+            },
+        ]
+        questions_data = [
+            {"id": str(question_1.id), "deck_id": str(deck.id)},
+            {"id": str(question_2.id), "deck_id": str(deck.id)},
+        ]
+
+        return {
+            "success": True,
+            "deck_id": str(deck.id),
+            "news_items_created": 3,
+            "questions_created": 2,
+            "news_items": news_items_data,
+            "questions": questions_data,
+        }
+
     # =====================
     # XP & Achievement Seeding
     # =====================
@@ -3235,6 +3392,9 @@ class SeedService:
         # Step 13: Create news items for dashboard and admin testing
         news_result = await self.seed_news_items()
 
+        # Step 14: Create news items with linked culture questions
+        news_questions_result = await self.seed_news_questions()
+
         # Commit all changes
         await self.db.commit()
 
@@ -3255,4 +3415,5 @@ class SeedService:
             "culture_advanced_stats": advanced_culture_stats,
             "mock_exams": mock_exam_result,
             "news": news_result,
+            "news_questions": news_questions_result,
         }
