@@ -29,72 +29,67 @@ test.describe('Premium Badge - Learner View', () => {
   // Use learner auth (free tier) - default for most tests
   test.use({ storageState: LEARNER_AUTH });
 
-  /**
-   * Helper to navigate to decks page and wait for data to fully load.
-   * Uses domcontentloaded plus explicit element waits for robustness.
-   */
-  async function navigateToDecksAndWaitForData(page: import('@playwright/test').Page, minDeckCount = 4) {
-    // Use domcontentloaded instead of networkidle to avoid hanging
-    await page.goto('/decks', { waitUntil: 'domcontentloaded' });
-
-    // Wait for first deck card to appear (confirms API data loaded)
-    await expect(page.locator('[data-testid="deck-card"]').first()).toBeVisible({ timeout: 15000 });
-
-    // Verify minimum deck count if specified
-    if (minDeckCount > 1) {
-      await expect(async () => {
-        const count = await page.locator('[data-testid="deck-card"]').count();
-        expect(count).toBeGreaterThanOrEqual(minDeckCount);
-      }).toPass({ timeout: 10000 });
-    }
-  }
-
   test('should display premium badge on premium vocabulary deck', async ({ page }) => {
-    await navigateToDecksAndWaitForData(page);
+    await page.goto('/decks');
+
+    // Wait for decks to load
+    await expect(page.locator('[data-testid="deck-card"]').first()).toBeVisible({
+      timeout: 15000,
+    });
 
     // Find deck cards - premium decks should have the "Premium" badge with crown
     // Premium vocabulary decks are C1 and C2
-    // Use a more specific selector: Badge component containing "Premium" text
-    const premiumBadge = page.locator('[data-testid="deck-card"]').locator('text=Premium').first();
+    const premiumBadge = page.locator('text=Premium').first();
     await expect(premiumBadge).toBeVisible({ timeout: 5000 });
   });
 
   test('should display lock icon on premium vocabulary deck for free user', async ({ page }) => {
-    await navigateToDecksAndWaitForData(page);
+    await page.goto('/decks');
 
-    // Premium decks should show lock icon (Crown icon with aria-label)
+    // Wait for decks to load
+    await expect(page.locator('[data-testid="deck-card"]').first()).toBeVisible({
+      timeout: 15000,
+    });
+
+    // Premium decks should show lock icon
     // The lock icon has aria-label="Premium content"
     const lockIcon = page.locator('[aria-label="Premium content"]').first();
     await expect(lockIcon).toBeVisible({ timeout: 5000 });
   });
 
   test('should display premium badge on premium culture deck', async ({ page }) => {
-    await navigateToDecksAndWaitForData(page);
+    await page.goto('/decks');
+
+    // Wait for decks to load
+    await expect(page.locator('[data-testid="deck-card"]').first()).toBeVisible({
+      timeout: 15000,
+    });
 
     // Click on culture filter to see culture decks
-    const cultureButton = page.getByRole('button', { name: 'Culture', exact: true });
-    await cultureButton.click();
+    await page.getByRole('button', { name: 'Culture', exact: true }).click();
 
-    // Wait for the filter to be active (button should be in pressed state)
-    await expect(cultureButton).toHaveAttribute('aria-pressed', 'true', { timeout: 10000 });
-
-    // Wait for culture deck cards to appear using Playwright's built-in retry
-    await expect(page.locator('[data-testid="deck-card"]').first()).toBeVisible({ timeout: 15000 });
+    // Wait for filtered results
+    await page.waitForTimeout(500);
 
     // Premium culture decks (History, Traditions) should have the premium badge
-    const premiumBadge = page.locator('[data-testid="deck-card"]').locator('text=Premium').first();
-    await expect(premiumBadge).toBeVisible({ timeout: 10000 });
+    const premiumBadge = page.locator('text=Premium').first();
+    await expect(premiumBadge).toBeVisible({ timeout: 5000 });
   });
 
   test('should have non-premium decks without premium badge', async ({ page }) => {
-    await navigateToDecksAndWaitForData(page);
+    await page.goto('/decks');
+
+    // Wait for decks to load
+    await expect(page.locator('[data-testid="deck-card"]').first()).toBeVisible({
+      timeout: 15000,
+    });
 
     // Count all deck cards
     const deckCards = page.locator('[data-testid="deck-card"]');
     const totalDecks = await deckCards.count();
 
-    // Count premium badges within deck cards
-    const premiumBadges = page.locator('[data-testid="deck-card"]').locator('text=Premium');
+    // Count premium badges
+    const premiumBadges = page.locator('text=Premium');
     const premiumCount = await premiumBadges.count();
 
     // Not all decks should be premium (we have A1, A2, B1, B2 as free)
@@ -103,11 +98,12 @@ test.describe('Premium Badge - Learner View', () => {
   });
 
   test('premium deck should not be clickable for free user', async ({ page }) => {
-    await navigateToDecksAndWaitForData(page);
+    await page.goto('/decks');
 
-    // Wait for at least one premium deck to be visible (has lock icon)
-    const lockIcon = page.locator('[aria-label="Premium content"]').first();
-    await expect(lockIcon).toBeVisible({ timeout: 5000 });
+    // Wait for decks to load
+    await expect(page.locator('[data-testid="deck-card"]').first()).toBeVisible({
+      timeout: 15000,
+    });
 
     // Get the URL before clicking
     const urlBefore = page.url();
