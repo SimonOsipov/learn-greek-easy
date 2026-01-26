@@ -31,15 +31,27 @@ import { NewsItemsTable } from './NewsItemsTable';
  * Example JSON for the placeholder
  */
 const JSON_PLACEHOLDER = `{
-  "title_el": "Greek title",
-  "title_en": "English title",
-  "title_ru": "Russian title",
-  "description_el": "Greek description",
-  "description_en": "English description",
-  "description_ru": "Russian description",
+  "title_el": "Τίτλος ειδήσεων",
+  "title_en": "News title",
+  "title_ru": "Заголовок новости",
+  "description_el": "Περιγραφή στα ελληνικά",
+  "description_en": "Description in English",
+  "description_ru": "Описание на русском",
   "publication_date": "2024-01-15",
   "original_article_url": "https://example.com/article",
-  "source_image_url": "https://example.com/image.jpg"
+  "source_image_url": "https://example.com/image.jpg",
+  "question": {
+    "deck_id": "uuid-of-target-deck",
+    "question_el": "Ερώτηση στα ελληνικά;",
+    "question_en": "Question in English?",
+    "options": [
+      { "text_el": "Επιλογή Α", "text_en": "Option A" },
+      { "text_el": "Επιλογή Β", "text_en": "Option B" },
+      { "text_el": "Επιλογή Γ", "text_en": "Option C" },
+      { "text_el": "Επιλογή Δ", "text_en": "Option D" }
+    ],
+    "correct_answer_index": 0
+  }
 }`;
 
 /**
@@ -276,7 +288,7 @@ export const NewsTab: React.FC = () => {
                 value={jsonInput}
                 onChange={(e) => setJsonInput(e.target.value)}
                 placeholder={JSON_PLACEHOLDER}
-                className="min-h-[200px] font-mono text-sm"
+                className="min-h-[400px] font-mono text-sm"
                 data-testid="news-json-input"
               />
               <div className="flex items-center justify-between">
