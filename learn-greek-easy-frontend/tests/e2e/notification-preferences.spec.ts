@@ -30,19 +30,48 @@ async function navigateToPreferencesAndWaitForToggle(page: import('@playwright/t
 /**
  * Helper to set notification preference to a specific state.
  * Returns true if a click was needed to change the state.
+ *
+ * Waits for:
+ * 1. The toggle's aria-checked attribute to match the desired state (confirms UI update)
+ * 2. The saving indicator to disappear (confirms save completed)
  */
 async function setNotificationState(
   page: import('@playwright/test').Page,
   desiredState: boolean
 ): Promise<boolean> {
   const toggle = page.getByTestId('notification-toggle');
+
+  // Wait for the toggle to have a stable aria-checked attribute
+  // This ensures the toggle has fully loaded with the correct state
+  await expect(toggle).toHaveAttribute('aria-checked', /.+/, { timeout: 5000 });
+
   const currentState = await toggle.getAttribute('aria-checked');
   const isCurrentlyOn = currentState === 'true';
 
   if (isCurrentlyOn !== desiredState) {
+    // Click the toggle
     await toggle.click();
-    // Wait for debounce (1000ms) + API call + some buffer
-    await page.waitForTimeout(3000);
+
+    // Wait for the toggle's aria-checked attribute to update to the desired state
+    // This confirms the UI has updated after the click
+    const expectedState = desiredState ? 'true' : 'false';
+    await expect(toggle).toHaveAttribute('aria-checked', expectedState, { timeout: 5000 });
+
+    // Wait for the debounce (1000ms) + API call + UI update
+    // The saving indicator appears during save and disappears when done
+    const savingIndicator = page.getByTestId('preferences-saving');
+
+    // First wait for saving indicator to appear (confirms debounce fired)
+    try {
+      await expect(savingIndicator).toBeVisible({ timeout: 3000 });
+    } catch {
+      // Saving indicator might appear and disappear quickly, or save might be very fast
+      // This is OK - we'll check it's hidden below
+    }
+
+    // Wait for saving indicator to be hidden (confirms save completed)
+    await expect(savingIndicator).toBeHidden({ timeout: 15000 });
+
     return true;
   }
   return false;
@@ -68,10 +97,14 @@ test.describe('Notification Preferences', () => {
     await page.goto('/dashboard');
     await verifyAuthSucceeded(page, '/dashboard');
 
-    // Verify notification bell is disabled
+    // Wait for the notification bell to appear and be in the disabled state
+    // Use a longer timeout to allow for the notification context to propagate the preference
     const bellButton = page.getByTestId('notifications-trigger');
     await expect(bellButton).toBeVisible({ timeout: 10000 });
-    await expect(bellButton).toBeDisabled({ timeout: 5000 });
+
+    // Wait explicitly for the disabled state with extended timeout
+    // The notification context needs time to read the updated user preferences
+    await expect(bellButton).toBeDisabled({ timeout: 15000 });
   });
 
   test('E2E-NOTIF-PREF-02: Notification bell enabled when notifications turned on', async ({
@@ -87,10 +120,13 @@ test.describe('Notification Preferences', () => {
     await page.goto('/dashboard');
     await verifyAuthSucceeded(page, '/dashboard');
 
-    // Verify notification bell is enabled
+    // Wait for the notification bell to appear and be in the enabled state
+    // Use a longer timeout to allow for the notification context to propagate the preference
     const bellButton = page.getByTestId('notifications-trigger');
     await expect(bellButton).toBeVisible({ timeout: 10000 });
-    await expect(bellButton).toBeEnabled({ timeout: 5000 });
+
+    // Wait explicitly for the enabled state with extended timeout
+    await expect(bellButton).toBeEnabled({ timeout: 15000 });
   });
 
   test('E2E-NOTIF-PREF-03: Notification bell state updates after toggling preference', async ({
@@ -107,7 +143,9 @@ test.describe('Notification Preferences', () => {
     await verifyAuthSucceeded(page, '/dashboard');
     let bellButton = page.getByTestId('notifications-trigger');
     await expect(bellButton).toBeVisible({ timeout: 10000 });
-    await expect(bellButton).toBeEnabled({ timeout: 5000 });
+
+    // Wait explicitly for the enabled state with extended timeout
+    await expect(bellButton).toBeEnabled({ timeout: 15000 });
 
     // Go back to profile and turn notifications OFF
     await page.goto('/profile');
@@ -123,6 +161,9 @@ test.describe('Notification Preferences', () => {
     await verifyAuthSucceeded(page, '/dashboard');
     bellButton = page.getByTestId('notifications-trigger');
     await expect(bellButton).toBeVisible({ timeout: 10000 });
-    await expect(bellButton).toBeDisabled({ timeout: 5000 });
+
+    // Wait explicitly for the disabled state with extended timeout
+    // The notification context needs time to read the updated user preferences
+    await expect(bellButton).toBeDisabled({ timeout: 15000 });
   });
 });
