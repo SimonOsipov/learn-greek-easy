@@ -92,7 +92,7 @@ const NewsCard: React.FC<NewsCardProps> = ({ item, newsLang }) => {
         href={item.original_article_url}
         target="_blank"
         rel="noopener noreferrer"
-        className="block h-48"
+        className="relative block h-48"
         onClick={handleClick}
         data-testid={`news-card-${item.id}`}
         aria-label={`${title} - ${t('dashboard.news.readMore')}`}

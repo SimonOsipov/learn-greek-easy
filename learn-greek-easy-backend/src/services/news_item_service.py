@@ -259,10 +259,9 @@ class NewsItemService:
                     extra={"question_id": str(culture_question.id)},
                 )
             else:
-                message = "News item created. Question skipped: deck not found"
-                logger.warning(
-                    "Deck not found for question creation",
-                    extra={"deck_id": str(data.question.deck_id)},
+                raise ValueError(
+                    f"Cannot create question: Culture deck '{data.question.deck_id}' not found or is inactive. "
+                    f"Please select an active deck or create the news item without a question."
                 )
 
         await self.db.commit()
