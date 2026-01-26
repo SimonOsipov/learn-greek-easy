@@ -352,6 +352,10 @@ async def get_question_queue(
     new_questions_limit: int = Query(
         default=5, ge=0, le=20, description="Max new questions if include_new=True"
     ),
+    force_practice: bool = Query(
+        default=False,
+        description="Force practice mode: return weakest questions when no due/new available",
+    ),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> CultureQuestionQueue:
@@ -387,6 +391,7 @@ async def get_question_queue(
         limit=limit,
         include_new=include_new,
         new_questions_limit=new_questions_limit,
+        force_practice=force_practice,
     )
 
 

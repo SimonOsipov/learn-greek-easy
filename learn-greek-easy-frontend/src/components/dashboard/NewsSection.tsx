@@ -8,7 +8,8 @@
  * - Returns null if no items or on error (hides section gracefully)
  * - Responsive grid layout (1/2/3 columns)
  * - Cards with semi-transparent image backgrounds
- * - Language-aware content (el/en/ru - all 3 languages supported)
+ * - News content always displays in Greek (learning material)
+ * - UI buttons follow user's language preference via i18n
  * - PostHog analytics tracking on click
  */
 
@@ -21,7 +22,6 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { useLanguage } from '@/hooks/useLanguage';
 import {
   trackNewsArticleClicked,
   trackNewsQuestionsButtonClicked,
@@ -92,7 +92,7 @@ const NewsCard: React.FC<NewsCardProps> = ({ item, newsLang }) => {
         href={item.original_article_url}
         target="_blank"
         rel="noopener noreferrer"
-        className="block h-48"
+        className="relative block h-48"
         onClick={handleClick}
         data-testid={`news-card-${item.id}`}
         aria-label={`${title} - ${t('dashboard.news.readMore')}`}
@@ -172,16 +172,13 @@ const NewsCardSkeleton: React.FC = () => (
  */
 export const NewsSection: React.FC = () => {
   const { t } = useTranslation('common');
-  const { currentLanguage } = useLanguage();
 
   const [items, setItems] = useState<NewsItemResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
 
-  // All 3 languages are now supported in backend
-  const newsLang: 'el' | 'en' | 'ru' = (
-    ['el', 'en', 'ru'].includes(currentLanguage) ? currentLanguage : 'en'
-  ) as 'el' | 'en' | 'ru';
+  // News content always displays in Greek - this is learning material
+  const newsLang: 'el' | 'en' | 'ru' = 'el';
 
   useEffect(() => {
     const fetchNews = async () => {

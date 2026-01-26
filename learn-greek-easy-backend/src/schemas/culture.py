@@ -306,6 +306,10 @@ class CultureQuestionQueue(BaseModel):
     total_due: int = Field(..., ge=0, description="Number of due questions in queue")
     total_new: int = Field(..., ge=0, description="Number of new questions in queue")
     total_in_queue: int = Field(..., ge=0, description="Total questions in this queue")
+    has_studied_questions: bool = Field(
+        default=False,
+        description="Whether the user has studied any questions in this deck before",
+    )
     questions: list[CultureQuestionQueueItem] = Field(..., description="Questions for practice")
 
 

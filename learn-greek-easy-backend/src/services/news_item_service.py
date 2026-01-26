@@ -16,8 +16,9 @@ from typing import Any, Optional
 from uuid import UUID, uuid4
 
 import httpx
-from sqlalchemy import select
+from sqlalchemy import String, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased
 
 from src.core.exceptions import NewsItemNotFoundException, NotFoundException
 from src.core.logging import get_logger
@@ -259,10 +260,9 @@ class NewsItemService:
                     extra={"question_id": str(culture_question.id)},
                 )
             else:
-                message = "News item created. Question skipped: deck not found"
-                logger.warning(
-                    "Deck not found for question creation",
-                    extra={"deck_id": str(data.question.deck_id)},
+                raise ValueError(
+                    f"Cannot create question: Culture deck '{data.question.deck_id}' not found or is inactive. "
+                    f"Please select an active deck or create the news item without a question."
                 )
 
         await self.db.commit()
@@ -454,7 +454,8 @@ class NewsItemService:
     ) -> NewsItemListWithCardsResponse:
         """Get paginated list of news items with card associations.
 
-        Uses LEFT JOIN to efficiently fetch card info in single query.
+        Uses a subquery to efficiently fetch the first matching card info
+        per news item, preventing duplicate rows from the JOIN.
 
         Args:
             page: Page number (1-indexed)
@@ -465,16 +466,37 @@ class NewsItemService:
         """
         skip = (page - 1) * page_size
 
-        # Query with LEFT JOIN to culture_questions
+        # Subquery: Get the first (MIN id) CultureQuestion per original_article_url
+        # This ensures each NewsItem maps to at most one question row
+        # Note: We cast UUID to text for MIN aggregation, then cast back when joining
+        first_question_subq = (
+            select(
+                CultureQuestion.original_article_url,
+                func.min(CultureQuestion.id.cast(String)).label("first_question_id"),
+            )
+            .where(CultureQuestion.original_article_url.isnot(None))  # CRITICAL: filter nulls
+            .group_by(CultureQuestion.original_article_url)
+            .subquery()
+        )
+
+        # Alias for the CultureQuestion we'll join to get card details
+        QuestionAlias = aliased(CultureQuestion)
+
+        # Main query: NewsItem LEFT JOIN subquery LEFT JOIN CultureQuestion
+        # Cast subquery's text ID back to UUID for proper comparison
         query = (
             select(
                 NewsItem,
-                CultureQuestion.id.label("card_id"),
-                CultureQuestion.deck_id.label("deck_id"),
+                QuestionAlias.id.label("card_id"),
+                QuestionAlias.deck_id.label("deck_id"),
             )
             .outerjoin(
-                CultureQuestion,
-                CultureQuestion.original_article_url == NewsItem.original_article_url,
+                first_question_subq,
+                first_question_subq.c.original_article_url == NewsItem.original_article_url,
+            )
+            .outerjoin(
+                QuestionAlias,
+                QuestionAlias.id.cast(String) == first_question_subq.c.first_question_id,
             )
             .order_by(
                 NewsItem.publication_date.desc(),
@@ -488,6 +510,7 @@ class NewsItemService:
         result = await self.db.execute(query)
         rows = result.all()
 
+        # Total count - counts unique NewsItems (unchanged)
         total = await self.repo.count_all()
 
         items = []
