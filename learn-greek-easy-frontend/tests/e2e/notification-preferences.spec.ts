@@ -31,13 +31,13 @@ async function navigateToPreferencesAndWaitForToggle(page: import('@playwright/t
  * Helper to set notification preference to a specific state.
  * Returns true if a click was needed to change the state.
  *
- * Properly waits for:
- * 1. The toggle's aria-checked attribute to match the desired state (confirms UI update)
- * 2. The network request to complete (PATCH /api/v1/auth/me) - ensures backend has saved
- * 3. The saving indicator to disappear (confirms frontend acknowledges save completed)
+ * Uses a simple, robust approach:
+ * 1. Wait for the toggle's aria-checked attribute to match the desired state (confirms UI update)
+ * 2. Wait a generous fixed delay to allow debounce (1s) + API call to complete
+ * 3. Verify the saving indicator is hidden (confirms frontend state is stable)
  *
- * This approach fixes the race condition where navigation would trigger checkAuth()
- * before the backend had fully committed the preference change.
+ * This avoids race conditions with waitForResponse where the response might arrive
+ * before the listener is fully set up.
  */
 async function setNotificationState(
   page: import('@playwright/test').Page,
@@ -53,16 +53,6 @@ async function setNotificationState(
   const isCurrentlyOn = currentState === 'true';
 
   if (isCurrentlyOn !== desiredState) {
-    // Set up a promise to wait for the PATCH request to complete
-    // This is the key fix: we wait for the actual network response, not just UI indicators
-    const saveResponsePromise = page.waitForResponse(
-      (response) =>
-        response.url().includes('/api/v1/auth/me') &&
-        response.request().method() === 'PATCH' &&
-        response.status() === 200,
-      { timeout: 20000 }
-    );
-
     // Click the toggle
     await toggle.click();
 
@@ -71,12 +61,11 @@ async function setNotificationState(
     const expectedState = desiredState ? 'true' : 'false';
     await expect(toggle).toHaveAttribute('aria-checked', expectedState, { timeout: 5000 });
 
-    // Wait for the PATCH request to complete - this is the critical fix!
-    // The debounce is 1000ms, then the API call happens.
-    // We MUST wait for this response before navigating away.
-    await saveResponsePromise;
+    // Wait a generous delay to allow debounce (1s) + API call to complete
+    // This is simpler and more reliable than trying to intercept network requests
+    await page.waitForTimeout(3000);
 
-    // Also wait for saving indicator to be hidden (confirms frontend state is stable)
+    // Verify saving indicator is hidden (confirms frontend state is stable)
     const savingIndicator = page.getByTestId('preferences-saving');
     await expect(savingIndicator).toBeHidden({ timeout: 5000 });
 

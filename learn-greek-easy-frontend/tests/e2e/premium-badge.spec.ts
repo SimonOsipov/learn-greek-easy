@@ -31,17 +31,12 @@ test.describe('Premium Badge - Learner View', () => {
 
   /**
    * Helper to navigate to decks page and wait for data to fully load.
-   * Waits for the decks API response and deck cards to render.
+   * Uses networkidle to wait for all network activity to settle, then waits for deck cards.
+   * This is simpler and more reliable than trying to intercept specific API responses.
    */
   async function navigateToDecksAndWaitForData(page: import('@playwright/test').Page, minDeckCount = 4) {
-    // Start navigation and wait for the decks API response
-    const responsePromise = page.waitForResponse(
-      (response) => response.url().includes('/api/v1/decks') && response.status() === 200,
-      { timeout: 30000 }
-    );
-
-    await page.goto('/decks');
-    await responsePromise;
+    // Navigate and wait for all network activity to settle
+    await page.goto('/decks', { waitUntil: 'networkidle' });
 
     // Wait for the expected number of deck cards to be rendered
     await page.waitForFunction(
@@ -49,9 +44,6 @@ test.describe('Premium Badge - Learner View', () => {
       minDeckCount,
       { timeout: 15000 }
     );
-
-    // Additional small wait for React to finish all rendering
-    await page.waitForTimeout(100);
   }
 
   test('should display premium badge on premium vocabulary deck', async ({ page }) => {
