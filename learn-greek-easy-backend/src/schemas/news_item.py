@@ -10,7 +10,7 @@ from datetime import date, datetime
 from typing import Optional
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, HttpUrl
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_validator
 
 
 class NewsItemCreate(BaseModel):
@@ -82,6 +82,62 @@ class NewsItemListResponse(BaseModel):
 
 
 # ============================================================================
+# News Item with Question Schemas
+# ============================================================================
+
+
+class QuestionOption(BaseModel):
+    """Single option for a multiple-choice question."""
+
+    text_el: str = Field(..., min_length=1)
+    text_en: str = Field(..., min_length=1)
+
+
+class QuestionCreate(BaseModel):
+    """Question data for creating a culture question from news."""
+
+    deck_id: UUID
+    question_el: str = Field(..., min_length=1)
+    question_en: str = Field(..., min_length=1)
+    options: list[QuestionOption] = Field(..., min_length=4, max_length=4)
+    correct_answer_index: int = Field(..., ge=0, le=3)
+
+    @field_validator("options")
+    @classmethod
+    def validate_unique_options(cls, v: list[QuestionOption]) -> list[QuestionOption]:
+        """Ensure all options are unique within each language."""
+        el_texts = [opt.text_el for opt in v]
+        en_texts = [opt.text_en for opt in v]
+        if len(el_texts) != len(set(el_texts)):
+            raise ValueError("All Greek options must be unique")
+        if len(en_texts) != len(set(en_texts)):
+            raise ValueError("All English options must be unique")
+        return v
+
+
+class NewsItemWithQuestionCreate(NewsItemCreate):
+    """Extended news item creation with optional question."""
+
+    question: QuestionCreate | None = None
+
+
+class CardBrief(BaseModel):
+    """Brief card info for news creation response."""
+
+    id: UUID
+    deck_id: UUID
+    question_text: dict
+
+
+class NewsItemWithCardResponse(BaseModel):
+    """Response for news creation with optional card."""
+
+    news_item: NewsItemResponse
+    card: CardBrief | None = None
+    message: str
+
+
+# ============================================================================
 # Module Exports
 # ============================================================================
 
@@ -90,4 +146,9 @@ __all__ = [
     "NewsItemUpdate",
     "NewsItemResponse",
     "NewsItemListResponse",
+    "QuestionOption",
+    "QuestionCreate",
+    "NewsItemWithQuestionCreate",
+    "CardBrief",
+    "NewsItemWithCardResponse",
 ]

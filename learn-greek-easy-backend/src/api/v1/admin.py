@@ -46,7 +46,12 @@ from src.schemas.feedback import (
     AdminFeedbackUpdate,
     AuthorBriefResponse,
 )
-from src.schemas.news_item import NewsItemCreate, NewsItemResponse, NewsItemUpdate
+from src.schemas.news_item import (
+    NewsItemResponse,
+    NewsItemUpdate,
+    NewsItemWithCardResponse,
+    NewsItemWithQuestionCreate,
+)
 from src.services.feedback_admin_service import FeedbackAdminService
 from src.services.news_item_service import NewsItemService
 
@@ -838,59 +843,70 @@ async def list_deck_questions(
 
 @router.post(
     "/news",
-    response_model=NewsItemResponse,
+    response_model=NewsItemWithCardResponse,
     status_code=status.HTTP_201_CREATED,
-    summary="Create news item",
-    description="Create a new news item. Requires superuser privileges.",
+    summary="Create news item with optional question",
+    description="Create a new news item, optionally with a linked culture question. Requires superuser privileges.",
     responses={
         201: {
             "description": "News item created successfully",
             "content": {
                 "application/json": {
                     "example": {
-                        "id": "550e8400-e29b-41d4-a716-446655440000",
-                        "title_el": "Ελληνικός Τίτλος",
-                        "title_en": "English Title",
-                        "description_el": "Ελληνική περιγραφή",
-                        "description_en": "English description",
-                        "publication_date": "2024-01-15",
-                        "original_article_url": "https://example.com/article",
-                        "image_url": "https://s3.amazonaws.com/...",
-                        "created_at": "2024-01-15T10:30:00Z",
-                        "updated_at": "2024-01-15T10:30:00Z",
+                        "news_item": {
+                            "id": "550e8400-e29b-41d4-a716-446655440000",
+                            "title_el": "Ελληνικός Τίτλος",
+                            "title_en": "English Title",
+                            "title_ru": "Русский заголовок",
+                            "description_el": "Ελληνική περιγραφή",
+                            "description_en": "English description",
+                            "description_ru": "Русское описание",
+                            "publication_date": "2024-01-15",
+                            "original_article_url": "https://example.com/article",
+                            "image_url": "https://s3.amazonaws.com/...",
+                            "created_at": "2024-01-15T10:30:00Z",
+                            "updated_at": "2024-01-15T10:30:00Z",
+                        },
+                        "card": {
+                            "id": "660e8400-e29b-41d4-a716-446655440001",
+                            "deck_id": "770e8400-e29b-41d4-a716-446655440002",
+                            "question_text": {"el": "Ερώτηση", "en": "Question"},
+                        },
+                        "message": "News item and question created successfully",
                     }
                 }
             },
         },
-        400: {"description": "Invalid request (image download failed, etc.)"},
+        400: {"description": "Invalid request (image download failed, invalid question data)"},
         409: {"description": "News item with this URL already exists"},
     },
 )
 async def create_news_item(
-    data: NewsItemCreate,
+    data: NewsItemWithQuestionCreate,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_superuser),
-) -> NewsItemResponse:
-    """Create a new news item (admin only).
+) -> NewsItemWithCardResponse:
+    """Create a new news item with optional question (admin only).
 
     Downloads the image from source_image_url, uploads to S3, and creates
-    the news item in the database.
+    the news item in the database. If question data is provided, creates
+    a linked CultureQuestion in the specified deck.
 
     Args:
-        data: News item creation data
+        data: News item creation data with optional question
         db: Database session (injected)
         current_user: Authenticated superuser (injected)
 
     Returns:
-        Created NewsItemResponse
+        NewsItemWithCardResponse with news item, optional card, and message
 
     Raises:
-        400: If image download fails or validation error
+        400: If image download fails or question validation error
         409: If original_article_url already exists
     """
     service = NewsItemService(db)
     try:
-        return await service.create(data)
+        return await service.create_with_question(data)
     except ValueError as e:
         error_msg = str(e)
         if "already exists" in error_msg:
