@@ -117,6 +117,8 @@ export function CulturePracticePage() {
   const [lastAnswerResponse, setLastAnswerResponse] = useState<CultureAnswerResponse | null>(null);
   const [isCompleting, setIsCompleting] = useState(false);
   const [hasNoQuestionsDue, setHasNoQuestionsDue] = useState(false);
+  const [hasStudiedQuestions, setHasStudiedQuestions] = useState(false);
+  const [isPracticeAnywayLoading, setIsPracticeAnywayLoading] = useState(false);
 
   // Refs for tracking
   const hasTrackedStart = useRef(false);
@@ -225,6 +227,9 @@ export function CulturePracticePage() {
         include_new: true,
         new_questions_limit: 20,
       });
+
+      // Track if user has studied questions (for "Practice Anyway" feature)
+      setHasStudiedQuestions(queue.has_studied_questions);
 
       if (queue.questions.length === 0) {
         // Handle empty queue - user has no due questions
@@ -389,6 +394,61 @@ export function CulturePracticePage() {
     [setLanguage]
   );
 
+  /**
+   * Handle "Practice Anyway" - fetch weakest questions when no questions are due
+   */
+  const handlePracticeAnyway = useCallback(async () => {
+    if (!deckId) return;
+
+    setIsPracticeAnywayLoading(true);
+
+    try {
+      // Fetch weakest questions with force_practice mode
+      const queue = await cultureDeckAPI.getQuestionQueue(deckId, {
+        limit: 50,
+        include_new: false, // Don't include new questions in practice anyway mode
+        force_practice: true,
+      });
+
+      if (queue.questions.length === 0) {
+        // Should not happen if has_studied_questions is true, but handle gracefully
+        log.warn('Practice Anyway returned no questions');
+        return;
+      }
+
+      // Map backend response to frontend format
+      const questions: CultureQuestionResponse[] = queue.questions.map((q) => ({
+        id: q.id,
+        question_text: q.question_text,
+        options: q.options,
+        option_count: q.option_count,
+        image_url: q.image_url,
+        order_index: q.order_index,
+        original_article_url: q.original_article_url,
+      }));
+
+      const config: CultureSessionConfig = {
+        ...DEFAULT_SESSION_CONFIG,
+        questionCount: questions.length,
+      };
+
+      // Get deck name in current language (fallback to 'en')
+      const lang = (i18n.language as keyof LocalizedText) || 'en';
+      const deckName = queue.deck_name[lang] || queue.deck_name.en;
+
+      // Reset the "no questions due" state and start session
+      setHasNoQuestionsDue(false);
+      startSession(deckId, deckName, queue.category, questions, config);
+    } catch (err) {
+      reportAPIError(err, {
+        operation: 'handlePracticeAnyway',
+        endpoint: `/culture/${deckId}/queue?force_practice=true`,
+      });
+    } finally {
+      setIsPracticeAnywayLoading(false);
+    }
+  }, [deckId, startSession]);
+
   // Completing state - full screen loader to hide progress bar and language picker during transition
   if (isCompleting) {
     return (
@@ -460,13 +520,36 @@ export function CulturePracticePage() {
                   'Great job! You have no questions due for review right now. Come back later or explore other decks.'
                 )}
               </p>
-              <div className="flex justify-center gap-3">
-                <Button variant="outline" onClick={() => navigate('/decks')}>
-                  {t('practice.browseDecks', 'Browse Decks')}
-                </Button>
-                <Button onClick={() => navigate(`/culture/decks/${deckId}`)}>
-                  {t('practice.returnToDeck', 'Return to Deck')}
-                </Button>
+              <div className="flex flex-col items-center gap-3">
+                {/* Practice Anyway button - only show if user has studied questions before */}
+                {hasStudiedQuestions && (
+                  <Button
+                    onClick={handlePracticeAnyway}
+                    disabled={isPracticeAnywayLoading}
+                    className="w-full max-w-xs"
+                    data-testid="practice-anyway-button"
+                  >
+                    {isPracticeAnywayLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        {t('common:loading', 'Loading...')}
+                      </>
+                    ) : (
+                      t('practice.practiceAnyway', 'Practice Anyway')
+                    )}
+                  </Button>
+                )}
+                <div className="flex justify-center gap-3">
+                  <Button variant="outline" onClick={() => navigate('/decks')}>
+                    {t('practice.browseDecks', 'Browse Decks')}
+                  </Button>
+                  <Button
+                    variant={hasStudiedQuestions ? 'outline' : 'default'}
+                    onClick={() => navigate(`/culture/decks/${deckId}`)}
+                  >
+                    {t('practice.returnToDeck', 'Return to Deck')}
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>

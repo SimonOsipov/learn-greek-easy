@@ -97,6 +97,7 @@ export interface CultureQuestionQueue {
   total_due: number;
   total_new: number;
   total_in_queue: number;
+  has_studied_questions: boolean;
   questions: CultureQuestionQueueItem[];
 }
 
@@ -150,6 +151,7 @@ export const cultureDeckAPI = {
       limit?: number;
       include_new?: boolean;
       new_questions_limit?: number;
+      force_practice?: boolean;
     }
   ): Promise<CultureQuestionQueue> => {
     const params = new URLSearchParams();
@@ -158,6 +160,8 @@ export const cultureDeckAPI = {
       params.append('include_new', String(options.include_new));
     if (options?.new_questions_limit)
       params.append('new_questions_limit', String(options.new_questions_limit));
+    if (options?.force_practice !== undefined)
+      params.append('force_practice', String(options.force_practice));
 
     const query = params.toString() ? `?${params.toString()}` : '';
     return api.get<CultureQuestionQueue>(`/api/v1/culture/decks/${deckId}/questions${query}`);

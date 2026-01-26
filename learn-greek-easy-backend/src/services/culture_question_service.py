@@ -110,6 +110,7 @@ class CultureQuestionService:
         limit: int = 10,
         include_new: bool = True,
         new_questions_limit: int = 5,
+        force_practice: bool = False,
     ) -> CultureQuestionQueue:
         """Get questions due for review plus new questions.
 
@@ -117,6 +118,7 @@ class CultureQuestionService:
         1. Overdue questions (past next_review_date) - oldest first
         2. Questions due today
         3. New questions (if include_new=True)
+        4. Weakest questions (if force_practice=True and no due/new available)
 
         Args:
             user_id: User requesting the queue
@@ -124,6 +126,7 @@ class CultureQuestionService:
             limit: Maximum total questions to return (1-50)
             include_new: Whether to include new (unstudied) questions
             new_questions_limit: Maximum new questions if include_new=True
+            force_practice: If True and no due/new questions, return weakest studied questions
 
         Returns:
             CultureQuestionQueue with questions for practice
@@ -170,6 +173,22 @@ class CultureQuestionService:
                     },
                 )
 
+        # Step 3.5: Check if user has studied any questions in this deck
+        has_studied = await self._has_studied_questions(user_id, deck_id)
+
+        # Step 3.6: Get weakest questions if force_practice and no due/new available
+        weakest_stats: list[CultureQuestionStats] = []
+        if force_practice and len(due_stats) == 0 and len(new_questions) == 0 and has_studied:
+            weakest_stats = await self._get_weakest_questions(user_id, deck_id, limit)
+
+            logger.debug(
+                "Force practice mode: fetched weakest questions",
+                extra={
+                    "user_id": str(user_id),
+                    "weakest_count": len(weakest_stats),
+                },
+            )
+
         # Step 4: Build queue items with presigned image URLs
         queue_items: list[CultureQuestionQueueItem] = []
 
@@ -182,6 +201,11 @@ class CultureQuestionService:
         for question in new_questions:
             queue_items.append(self._build_queue_item(question, stats=None))
 
+        # Add weakest questions (for force_practice mode)
+        for stats in weakest_stats:
+            question = stats.question  # Eager loaded
+            queue_items.append(self._build_queue_item(question, stats))
+
         logger.info(
             "Question queue built successfully",
             extra={
@@ -190,6 +214,8 @@ class CultureQuestionService:
                 "total_due": len(due_stats),
                 "total_new": len(new_questions),
                 "total_in_queue": len(queue_items),
+                "force_practice": force_practice,
+                "has_studied": has_studied,
             },
         )
 
@@ -200,6 +226,7 @@ class CultureQuestionService:
             total_due=len(due_stats),
             total_new=len(new_questions),
             total_in_queue=len(queue_items),
+            has_studied_questions=has_studied,
             questions=queue_items,
         )
 
@@ -728,6 +755,69 @@ class CultureQuestionService:
                 ~CultureQuestion.id.in_(studied_subq),
             )
             .order_by(CultureQuestion.order_index)
+            .limit(limit)
+        )
+        result = await self.db.execute(query)
+        return list(result.scalars().all())
+
+    async def _has_studied_questions(self, user_id: UUID, deck_id: UUID) -> bool:
+        """Check if user has any stats records for questions in this deck.
+
+        Used to determine whether to show "Practice Anyway" option when
+        no questions are due for review.
+
+        Args:
+            user_id: User ID
+            deck_id: Deck to check
+
+        Returns:
+            True if user has studied at least one question in this deck
+        """
+        query = (
+            select(func.count())
+            .select_from(CultureQuestionStats)
+            .join(CultureQuestion, CultureQuestionStats.question_id == CultureQuestion.id)
+            .where(
+                CultureQuestionStats.user_id == user_id,
+                CultureQuestion.deck_id == deck_id,
+            )
+        )
+        result = await self.db.execute(query)
+        count = result.scalar() or 0
+        return count > 0
+
+    async def _get_weakest_questions(
+        self,
+        user_id: UUID,
+        deck_id: UUID,
+        limit: int,
+    ) -> list[CultureQuestionStats]:
+        """Get user's weakest (hardest) questions ordered by ease factor.
+
+        Returns questions the user has studied, sorted by easiness_factor ascending
+        (lowest = most difficult). Excludes questions that are already due.
+
+        Used for "Practice Anyway" feature when no questions are due for review.
+
+        Args:
+            user_id: User ID
+            deck_id: Deck to filter by
+            limit: Maximum number of questions
+
+        Returns:
+            List of CultureQuestionStats with question eager loaded, ordered by
+            easiness_factor ascending (weakest first)
+        """
+        query = (
+            select(CultureQuestionStats)
+            .join(CultureQuestion, CultureQuestionStats.question_id == CultureQuestion.id)
+            .where(
+                CultureQuestionStats.user_id == user_id,
+                CultureQuestion.deck_id == deck_id,
+                CultureQuestionStats.next_review_date > date.today(),  # Exclude already due
+            )
+            .options(selectinload(CultureQuestionStats.question))
+            .order_by(CultureQuestionStats.easiness_factor.asc())
             .limit(limit)
         )
         result = await self.db.execute(query)
