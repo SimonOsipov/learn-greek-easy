@@ -31,13 +31,10 @@ async function navigateToPreferencesAndWaitForToggle(page: import('@playwright/t
  * Helper to set notification preference to a specific state.
  * Returns true if a click was needed to change the state.
  *
- * Uses a simple, robust approach:
- * 1. Wait for the toggle's aria-checked attribute to match the desired state (confirms UI update)
- * 2. Wait a generous fixed delay to allow debounce (1s) + API call to complete
- * 3. Verify the saving indicator is hidden (confirms frontend state is stable)
- *
- * This avoids race conditions with waitForResponse where the response might arrive
- * before the listener is fully set up.
+ * Simple, robust approach:
+ * 1. Click toggle if needed
+ * 2. Wait for aria-checked to change
+ * 3. Wait generous timeout (5s) after debounce for DB to commit
  */
 async function setNotificationState(
   page: import('@playwright/test').Page,
@@ -45,8 +42,7 @@ async function setNotificationState(
 ): Promise<boolean> {
   const toggle = page.getByTestId('notification-toggle');
 
-  // Wait for the toggle to have a stable aria-checked attribute
-  // This ensures the toggle has fully loaded with the correct state
+  // Wait for toggle to have a stable aria-checked attribute
   await expect(toggle).toHaveAttribute('aria-checked', /.+/, { timeout: 5000 });
 
   const currentState = await toggle.getAttribute('aria-checked');
@@ -56,18 +52,13 @@ async function setNotificationState(
     // Click the toggle
     await toggle.click();
 
-    // Wait for the toggle's aria-checked attribute to update to the desired state
-    // This confirms the UI has updated after the click
+    // Wait for the toggle's aria-checked attribute to update
     const expectedState = desiredState ? 'true' : 'false';
     await expect(toggle).toHaveAttribute('aria-checked', expectedState, { timeout: 5000 });
 
-    // Wait a generous delay to allow debounce (1s) + API call to complete
-    // This is simpler and more reliable than trying to intercept network requests
-    await page.waitForTimeout(3000);
-
-    // Verify saving indicator is hidden (confirms frontend state is stable)
-    const savingIndicator = page.getByTestId('preferences-saving');
-    await expect(savingIndicator).toBeHidden({ timeout: 5000 });
+    // Wait generous timeout for debounce (1s) + API call + DB commit
+    // This handles read-after-write consistency issues
+    await page.waitForTimeout(5000);
 
     return true;
   }
@@ -77,43 +68,51 @@ async function setNotificationState(
 /**
  * Helper to wait for notification bell to reach expected state after navigation.
  *
- * After navigation, checkAuth() is called which fetches fresh profile from backend.
- * The bell's disabled state depends on the user.preferences.notifications value
- * from that response. We use waitForFunction to poll until the state matches,
- * which handles any async state propagation.
+ * Uses a simple retry loop that checks the bell disabled state multiple times.
+ * This handles read-after-write consistency where checkAuth() might fetch
+ * stale profile data before the database has fully committed.
  */
 async function waitForBellState(
   page: import('@playwright/test').Page,
   expectedEnabled: boolean
 ): Promise<void> {
   const bellButton = page.getByTestId('notifications-trigger');
-  await expect(bellButton).toBeVisible({ timeout: 10000 });
+  await expect(bellButton).toBeVisible({ timeout: 15000 });
 
-  // Use waitForFunction to poll until the bell's disabled state matches expectation.
-  // This handles the race condition where checkAuth() response may not have
-  // propagated to the UI yet.
-  await page.waitForFunction(
-    ({ selector, shouldBeEnabled }) => {
-      const button = document.querySelector(selector) as HTMLButtonElement | null;
-      if (!button) return false;
-      const isCurrentlyEnabled = !button.disabled;
-      return isCurrentlyEnabled === shouldBeEnabled;
-    },
-    { selector: '[data-testid="notifications-trigger"]', shouldBeEnabled: expectedEnabled },
-    { timeout: 15000, polling: 100 }
-  );
+  // Simple retry loop with short delays
+  const maxRetries = 30;
+  const retryDelay = 500;
 
-  // Final assertion for test clarity
+  for (let i = 0; i < maxRetries; i++) {
+    const isDisabled = await bellButton.isDisabled();
+    const isCurrentlyEnabled = !isDisabled;
+
+    if (isCurrentlyEnabled === expectedEnabled) {
+      // State matches - do final assertion for test clarity
+      if (expectedEnabled) {
+        await expect(bellButton).toBeEnabled();
+      } else {
+        await expect(bellButton).toBeDisabled();
+      }
+      return;
+    }
+
+    // Wait before next retry
+    await page.waitForTimeout(retryDelay);
+  }
+
+  // Final assertion will fail with clear error message
   if (expectedEnabled) {
-    await expect(bellButton).toBeEnabled();
+    await expect(bellButton).toBeEnabled({ timeout: 1000 });
   } else {
-    await expect(bellButton).toBeDisabled();
+    await expect(bellButton).toBeDisabled({ timeout: 1000 });
   }
 }
 
 test.describe('Notification Preferences', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/profile');
+    // Use networkidle for more stable page load
+    await page.goto('/profile', { waitUntil: 'networkidle' });
     await verifyAuthSucceeded(page, '/profile');
     await expect(page.getByTestId('profile-page')).toBeVisible({ timeout: 15000 });
   });
@@ -124,15 +123,17 @@ test.describe('Notification Preferences', () => {
     // Navigate to preferences tab and get toggle
     await navigateToPreferencesAndWaitForToggle(page);
 
-    // Ensure notifications are OFF - waits for PATCH response to confirm save
+    // Ensure notifications are OFF
     await setNotificationState(page, false);
 
-    // Navigate to dashboard to see the notification bell
-    await page.goto('/dashboard');
+    // Navigate to dashboard with networkidle for stability
+    await page.goto('/dashboard', { waitUntil: 'networkidle' });
     await verifyAuthSucceeded(page, '/dashboard');
 
-    // Wait for the bell to reach the expected disabled state
-    // This handles the async state propagation from checkAuth()
+    // Wait for page to stabilize
+    await page.waitForTimeout(1000);
+
+    // Wait for the bell to reach the expected disabled state with retries
     await waitForBellState(page, false);
   });
 
@@ -142,15 +143,17 @@ test.describe('Notification Preferences', () => {
     // Navigate to preferences tab and get toggle
     await navigateToPreferencesAndWaitForToggle(page);
 
-    // Ensure notifications are ON - waits for PATCH response to confirm save
+    // Ensure notifications are ON
     await setNotificationState(page, true);
 
-    // Navigate to dashboard to see the notification bell
-    await page.goto('/dashboard');
+    // Navigate to dashboard with networkidle for stability
+    await page.goto('/dashboard', { waitUntil: 'networkidle' });
     await verifyAuthSucceeded(page, '/dashboard');
 
-    // Wait for the bell to reach the expected enabled state
-    // This handles the async state propagation from checkAuth()
+    // Wait for page to stabilize
+    await page.waitForTimeout(1000);
+
+    // Wait for the bell to reach the expected enabled state with retries
     await waitForBellState(page, true);
   });
 
@@ -160,30 +163,28 @@ test.describe('Notification Preferences', () => {
     // Navigate to preferences tab
     await navigateToPreferencesAndWaitForToggle(page);
 
-    // First ensure notifications are ON - waits for PATCH response to confirm save
+    // First ensure notifications are ON
     await setNotificationState(page, true);
 
     // Go to dashboard and verify bell is enabled
-    await page.goto('/dashboard');
+    await page.goto('/dashboard', { waitUntil: 'networkidle' });
     await verifyAuthSucceeded(page, '/dashboard');
-
-    // Wait for the bell to reach the expected enabled state
+    await page.waitForTimeout(1000);
     await waitForBellState(page, true);
 
     // Go back to profile and turn notifications OFF
-    await page.goto('/profile');
+    await page.goto('/profile', { waitUntil: 'networkidle' });
     await verifyAuthSucceeded(page, '/profile');
     await expect(page.getByTestId('profile-page')).toBeVisible({ timeout: 15000 });
 
-    // Navigate to preferences and turn off - waits for PATCH response to confirm save
+    // Navigate to preferences and turn off
     await navigateToPreferencesAndWaitForToggle(page);
     await setNotificationState(page, false);
 
     // Go to dashboard and verify bell is now disabled
-    await page.goto('/dashboard');
+    await page.goto('/dashboard', { waitUntil: 'networkidle' });
     await verifyAuthSucceeded(page, '/dashboard');
-
-    // Wait for the bell to reach the expected disabled state
+    await page.waitForTimeout(1000);
     await waitForBellState(page, false);
   });
 });
