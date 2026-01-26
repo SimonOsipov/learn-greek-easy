@@ -84,6 +84,7 @@ export interface CultureQuestionQueueItem {
   is_new: boolean;
   due_date: string | null;
   status: 'new' | 'learning' | 'review' | 'mastered';
+  original_article_url: string | null; // Source news article URL
 }
 
 /**

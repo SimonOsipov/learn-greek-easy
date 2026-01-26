@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 
 import { motion } from 'framer-motion';
-import { CheckCircle, XCircle, ArrowRight, BarChart3 } from 'lucide-react';
+import { CheckCircle, XCircle, ArrowRight, BarChart3, ExternalLink } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
@@ -38,6 +38,9 @@ export interface QuestionFeedbackProps {
 
   /** Additional CSS classes */
   className?: string;
+
+  /** Source article URL for news-sourced questions */
+  sourceArticleUrl?: string | null;
 }
 
 /**
@@ -88,6 +91,7 @@ export const QuestionFeedback: React.FC<QuestionFeedbackProps> = ({
   onNextQuestion,
   isLastQuestion = false,
   className,
+  sourceArticleUrl,
 }) => {
   const { t } = useTranslation('culture');
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -179,6 +183,20 @@ export const QuestionFeedback: React.FC<QuestionFeedbackProps> = ({
                 })}
               </p>
             </div>
+          )}
+
+          {/* Source article link - only show if valid URL */}
+          {sourceArticleUrl && sourceArticleUrl.startsWith('http') && (
+            <a
+              href={sourceArticleUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-4 flex items-center gap-2 text-sm text-primary hover:underline"
+              data-testid="source-article-link"
+            >
+              <ExternalLink className="h-4 w-4" />
+              {t('feedback.sourceArticle', 'Source article')}
+            </a>
           )}
 
           {/* Action button */}

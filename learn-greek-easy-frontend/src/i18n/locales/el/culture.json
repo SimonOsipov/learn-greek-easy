@@ -23,7 +23,8 @@
     "nextQuestion": "Επομενη Ερωτηση",
     "viewSummary": "Προβολη Συνοψης",
     "srCorrect": "Σωστα! Κερδισατε {{xp}} XP.",
-    "srWrong": "Λαθος. Η σωστη απαντηση ηταν {{label}}: {{answer}}. Κερδισατε {{xp}} XP."
+    "srWrong": "Λαθος. Η σωστη απαντηση ηταν {{label}}: {{answer}}. Κερδισατε {{xp}} XP.",
+    "sourceArticle": "Πηγή άρθρου"
   },
   "language": {
     "selectLanguage": "Γλωσσα Ερωτησης",

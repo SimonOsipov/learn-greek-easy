@@ -239,6 +239,7 @@ export function CulturePracticePage() {
         option_count: q.option_count,
         image_url: q.image_url,
         order_index: q.order_index,
+        original_article_url: q.original_article_url,
       }));
 
       const config: CultureSessionConfig = {
@@ -535,6 +536,7 @@ export function CulturePracticePage() {
               onNextQuestion={handleNextQuestion}
               isLastQuestion={progress.current >= progress.total}
               className="w-full max-w-2xl"
+              sourceArticleUrl={currentQuestion.question.original_article_url}
             />
           ) : (
             <MCQComponent
