@@ -307,7 +307,7 @@ export interface NewsItemUpdate {
 }
 
 /**
- * Response from news item API endpoints
+ * Response from news item API endpoints (extended with card info)
  */
 export interface NewsItemResponse {
   id: string;
@@ -322,6 +322,9 @@ export interface NewsItemResponse {
   image_url: string | null;
   created_at: string;
   updated_at: string;
+  // New fields for card association
+  card_id: string | null;
+  deck_id: string | null;
 }
 
 /**

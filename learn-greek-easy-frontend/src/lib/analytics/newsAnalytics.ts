@@ -25,3 +25,22 @@ export function trackNewsArticleClicked(properties: NewsArticleClickedProperties
     posthog.capture('news_article_clicked', properties);
   }
 }
+
+/**
+ * Properties for tracking news questions button clicks
+ */
+export interface NewsQuestionsButtonClickedProperties {
+  news_item_id: string;
+  deck_id: string;
+}
+
+/**
+ * Track when user clicks Questions button on a news card
+ */
+export function trackNewsQuestionsButtonClicked(
+  properties: NewsQuestionsButtonClickedProperties
+): void {
+  if (typeof posthog?.capture === 'function') {
+    posthog.capture('news_questions_button_clicked', properties);
+  }
+}

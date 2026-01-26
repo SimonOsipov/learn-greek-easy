@@ -49,7 +49,14 @@
     },
     "news": {
       "title": "Greek Learning News",
-      "readMore": "Read article"
+      "readMore": "Read article",
+      "buttons": {
+        "audio": "Audio",
+        "audioTooltip": "Coming soon",
+        "audioDisabled": "Audio - Coming soon",
+        "questions": "Questions",
+        "questionsLabel": "Practice questions for this article"
+      }
     }
   },
   "welcome": {
