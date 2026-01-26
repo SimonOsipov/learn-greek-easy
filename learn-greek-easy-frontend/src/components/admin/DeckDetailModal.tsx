@@ -209,7 +209,7 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent
-          className="max-h-[85vh] overflow-y-auto sm:max-w-2xl"
+          className="max-h-[85vh] overflow-y-auto sm:max-w-4xl"
           data-testid="deck-detail-modal"
         >
           <DialogHeader>
@@ -281,8 +281,8 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
                   className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50"
                   data-testid={`question-item-${question.id}`}
                 >
-                  <div className="flex-1 overflow-hidden pr-2">
-                    <p className="truncate font-medium">
+                  <div className="min-w-0 flex-1 pr-2">
+                    <p className="break-words font-medium">
                       {question.question_text[locale] || question.question_text.en}
                     </p>
                     {question.is_pending_review && (
