@@ -16,7 +16,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 
-import { AlertCircle, ChevronLeft, Loader2 } from 'lucide-react';
+import { AlertCircle, CheckCircle, ChevronLeft, Loader2 } from 'lucide-react';
 import posthog from 'posthog-js';
 import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -116,6 +116,7 @@ export function CulturePracticePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [lastAnswerResponse, setLastAnswerResponse] = useState<CultureAnswerResponse | null>(null);
   const [isCompleting, setIsCompleting] = useState(false);
+  const [hasNoQuestionsDue, setHasNoQuestionsDue] = useState(false);
 
   // Refs for tracking
   const hasTrackedStart = useRef(false);
@@ -228,6 +229,7 @@ export function CulturePracticePage() {
       if (queue.questions.length === 0) {
         // Handle empty queue - user has no due questions
         log.info('No questions due for review');
+        setHasNoQuestionsDue(true);
         return;
       }
 
@@ -427,6 +429,44 @@ export function CulturePracticePage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+      </div>
+    );
+  }
+
+  // No questions due for review state
+  if (hasNoQuestionsDue) {
+    return (
+      <div className="min-h-screen bg-background p-4 md:p-8">
+        <div className="mx-auto max-w-2xl">
+          <Button variant="ghost" onClick={() => navigate(`/culture/${deckId}`)} className="mb-4">
+            <ChevronLeft className="mr-2 h-4 w-4" />
+            {t('practice.backToDeck', 'Back to Deck')}
+          </Button>
+          <Card className="bg-card">
+            <CardContent className="py-12 text-center">
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
+                <CheckCircle className="h-8 w-8 text-green-600 dark:text-green-400" />
+              </div>
+              <h2 className="mb-2 text-xl font-semibold text-foreground">
+                {t('practice.allCaughtUp', 'All Caught Up!')}
+              </h2>
+              <p className="mx-auto mb-6 max-w-md text-sm text-muted-foreground">
+                {t(
+                  'practice.noQuestionsDueDescription',
+                  'Great job! You have no questions due for review right now. Come back later or explore other decks.'
+                )}
+              </p>
+              <div className="flex justify-center gap-3">
+                <Button variant="outline" onClick={() => navigate('/decks')}>
+                  {t('practice.browseDecks', 'Browse Decks')}
+                </Button>
+                <Button onClick={() => navigate(`/culture/${deckId}`)}>
+                  {t('practice.returnToDeck', 'Return to Deck')}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }

@@ -52,7 +52,12 @@
       "description": "You have an unfinished practice session. Would you like to continue where you left off?",
       "startNew": "Start New",
       "resume": "Resume Session"
-    }
+    },
+    "allCaughtUp": "All Caught Up!",
+    "noQuestionsDueDescription": "Great job! You have no questions due for review right now. Come back later or explore other decks.",
+    "browseDecks": "Browse Decks",
+    "backToDeck": "Back to Deck",
+    "returnToDeck": "Return to Deck"
   },
   "summary": {
     "practiceComplete": "Practice Complete",
