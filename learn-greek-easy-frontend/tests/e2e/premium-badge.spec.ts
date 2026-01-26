@@ -16,11 +16,6 @@
  * - Premium vocabulary decks: C1, C2
  * - Premium culture decks: History, Traditions
  * - Free decks: A1, A2, B1, B2, Geography, Politics, Culture
- *
- * TODO: These tests are temporarily skipped due to CI flakiness.
- * They pass locally but fail in CI due to timing/race conditions.
- * Need to investigate and fix in a follow-up ticket.
- * See: deck card rendering and premium badge visibility timing issues
  */
 
 import { test, expect } from '@playwright/test';
@@ -30,90 +25,88 @@ import { STORAGE_STATE } from '../../playwright.config';
 const ADMIN_AUTH = 'playwright/.auth/admin.json';
 const LEARNER_AUTH = 'playwright/.auth/learner.json';
 
-test.describe.skip('Premium Badge - Learner View', () => {
+test.describe('Premium Badge - Learner View', () => {
   // Use learner auth (free tier) - default for most tests
   test.use({ storageState: LEARNER_AUTH });
 
-  test('should display premium badge on premium vocabulary deck', async ({ page }) => {
-    // Navigate and wait for network to settle
-    await page.goto('/decks', { waitUntil: 'networkidle' });
-
-    // Wait for decks to load - use longer timeout for CI stability
-    const deckCards = page.locator('[data-testid="deck-card"]');
-    await expect(deckCards.first()).toBeVisible({ timeout: 30000 });
-
-    // Wait for all deck cards to be rendered (allow time for React to finish rendering)
-    await page.waitForFunction(
-      () => document.querySelectorAll('[data-testid="deck-card"]').length >= 1,
-      { timeout: 10000 }
+  /**
+   * Helper to navigate to decks page and wait for data to fully load.
+   * Waits for the decks API response and deck cards to render.
+   */
+  async function navigateToDecksAndWaitForData(page: import('@playwright/test').Page, minDeckCount = 4) {
+    // Start navigation and wait for the decks API response
+    const responsePromise = page.waitForResponse(
+      (response) => response.url().includes('/api/v1/decks') && response.status() === 200,
+      { timeout: 30000 }
     );
+
+    await page.goto('/decks');
+    await responsePromise;
+
+    // Wait for the expected number of deck cards to be rendered
+    await page.waitForFunction(
+      (minCount) => document.querySelectorAll('[data-testid="deck-card"]').length >= minCount,
+      minDeckCount,
+      { timeout: 15000 }
+    );
+
+    // Additional small wait for React to finish all rendering
+    await page.waitForTimeout(100);
+  }
+
+  test('should display premium badge on premium vocabulary deck', async ({ page }) => {
+    await navigateToDecksAndWaitForData(page);
 
     // Find deck cards - premium decks should have the "Premium" badge with crown
     // Premium vocabulary decks are C1 and C2
     // Use a more specific selector: Badge component containing "Premium" text
     const premiumBadge = page.locator('[data-testid="deck-card"]').locator('text=Premium').first();
-    await expect(premiumBadge).toBeVisible({ timeout: 15000 });
+    await expect(premiumBadge).toBeVisible({ timeout: 5000 });
   });
 
   test('should display lock icon on premium vocabulary deck for free user', async ({ page }) => {
-    // Navigate and wait for network to settle
-    await page.goto('/decks', { waitUntil: 'networkidle' });
+    await navigateToDecksAndWaitForData(page);
 
-    // Wait for decks to load - use longer timeout for CI stability
-    const deckCards = page.locator('[data-testid="deck-card"]');
-    await expect(deckCards.first()).toBeVisible({ timeout: 30000 });
+    // Premium decks should show lock icon (Crown icon with aria-label)
+    // The lock icon has aria-label="Premium content"
+    const lockIcon = page.locator('[aria-label="Premium content"]').first();
+    await expect(lockIcon).toBeVisible({ timeout: 5000 });
+  });
 
-    // Wait for all deck cards to be rendered
+  test('should display premium badge on premium culture deck', async ({ page }) => {
+    await navigateToDecksAndWaitForData(page);
+
+    // Click on culture filter to see culture decks
+    const cultureButton = page.getByRole('button', { name: 'Culture', exact: true });
+
+    // Wait for the culture decks API response after clicking
+    const cultureResponsePromise = page.waitForResponse(
+      (response) => response.url().includes('/api/v1/decks') && response.status() === 200,
+      { timeout: 15000 }
+    );
+
+    await cultureButton.click();
+    await cultureResponsePromise;
+
+    // Wait for the filter to be active (button should be in pressed state)
+    await expect(cultureButton).toHaveAttribute('aria-pressed', 'true', { timeout: 5000 });
+
+    // Wait for culture deck cards to render
     await page.waitForFunction(
       () => document.querySelectorAll('[data-testid="deck-card"]').length >= 1,
       { timeout: 10000 }
     );
 
-    // Premium decks should show lock icon (Crown icon with aria-label)
-    // The lock icon has aria-label="Premium content"
-    const lockIcon = page.locator('[aria-label="Premium content"]').first();
-    await expect(lockIcon).toBeVisible({ timeout: 15000 });
-  });
-
-  test('should display premium badge on premium culture deck', async ({ page }) => {
-    // Navigate and wait for network to settle
-    await page.goto('/decks', { waitUntil: 'networkidle' });
-
-    // Wait for decks to load - use longer timeout for CI stability
-    const deckCards = page.locator('[data-testid="deck-card"]');
-    await expect(deckCards.first()).toBeVisible({ timeout: 30000 });
-
-    // Click on culture filter to see culture decks
-    const cultureButton = page.getByRole('button', { name: 'Culture', exact: true });
-    await cultureButton.click();
-
-    // Wait for the filter to be active (button should be in pressed state)
-    await expect(cultureButton).toHaveAttribute('aria-pressed', 'true', { timeout: 10000 });
-
-    // Wait for the deck list to update - culture decks should have culture badges
-    const cultureBadge = page.locator('[data-testid="culture-badge"]');
-    await expect(cultureBadge.first()).toBeVisible({ timeout: 15000 });
-
     // Premium culture decks (History, Traditions) should have the premium badge
     const premiumBadge = page.locator('[data-testid="deck-card"]').locator('text=Premium').first();
-    await expect(premiumBadge).toBeVisible({ timeout: 15000 });
+    await expect(premiumBadge).toBeVisible({ timeout: 5000 });
   });
 
   test('should have non-premium decks without premium badge', async ({ page }) => {
-    // Navigate and wait for network to settle
-    await page.goto('/decks', { waitUntil: 'networkidle' });
-
-    // Wait for decks to load - use longer timeout for CI stability
-    const deckCards = page.locator('[data-testid="deck-card"]');
-    await expect(deckCards.first()).toBeVisible({ timeout: 30000 });
-
-    // Wait for multiple deck cards to load (we expect at least A1, A2, B1, B2, C1, C2)
-    await page.waitForFunction(
-      () => document.querySelectorAll('[data-testid="deck-card"]').length >= 2,
-      { timeout: 15000 }
-    );
+    await navigateToDecksAndWaitForData(page);
 
     // Count all deck cards
+    const deckCards = page.locator('[data-testid="deck-card"]');
     const totalDecks = await deckCards.count();
 
     // Count premium badges within deck cards
@@ -126,16 +119,11 @@ test.describe.skip('Premium Badge - Learner View', () => {
   });
 
   test('premium deck should not be clickable for free user', async ({ page }) => {
-    // Navigate and wait for network to settle
-    await page.goto('/decks', { waitUntil: 'networkidle' });
-
-    // Wait for decks to load - use longer timeout for CI stability
-    const deckCards = page.locator('[data-testid="deck-card"]');
-    await expect(deckCards.first()).toBeVisible({ timeout: 30000 });
+    await navigateToDecksAndWaitForData(page);
 
     // Wait for at least one premium deck to be visible (has lock icon)
     const lockIcon = page.locator('[aria-label="Premium content"]').first();
-    await expect(lockIcon).toBeVisible({ timeout: 15000 });
+    await expect(lockIcon).toBeVisible({ timeout: 5000 });
 
     // Get the URL before clicking
     const urlBefore = page.url();
