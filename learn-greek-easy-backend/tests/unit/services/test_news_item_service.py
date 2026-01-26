@@ -674,3 +674,192 @@ class TestCreateWithQuestion:
 
             # Verify success message without question
             assert result.message == "News item created successfully"
+
+
+# =============================================================================
+# Test Get List With Cards
+# =============================================================================
+
+
+class TestGetListWithCards:
+    """Tests for get_list_with_cards method."""
+
+    @pytest.mark.asyncio
+    async def test_returns_single_item_when_multiple_questions_match(
+        self,
+        db_session: AsyncSession,
+        mock_s3_service: MagicMock,
+        active_culture_deck: CultureDeck,
+    ):
+        """Should return one news item even when multiple questions share same URL."""
+        from src.db.models import CultureQuestion
+
+        # Create a single news item
+        news_item = NewsItem(
+            title_el="Greek News",
+            title_en="English News",
+            title_ru="Russian News",
+            description_el="Greek description",
+            description_en="English description",
+            description_ru="Russian description",
+            publication_date=date.today(),
+            original_article_url="https://example.com/article-with-many-questions",
+            image_s3_key="news-images/test.jpg",
+        )
+        db_session.add(news_item)
+        await db_session.flush()
+
+        # Create 3 CultureQuestions that share the same original_article_url
+        for i in range(3):
+            question = CultureQuestion(
+                deck_id=active_culture_deck.id,
+                question_text={"el": f"Question {i}", "en": f"Question {i}"},
+                option_a={"el": "A", "en": "A"},
+                option_b={"el": "B", "en": "B"},
+                option_c={"el": "C", "en": "C"},
+                option_d={"el": "D", "en": "D"},
+                correct_option=1,
+                original_article_url="https://example.com/article-with-many-questions",
+            )
+            db_session.add(question)
+
+        await db_session.commit()
+
+        service = NewsItemService(db_session, s3_service=mock_s3_service)
+
+        result = await service.get_list_with_cards(page=1, page_size=10)
+
+        # Should return exactly 1 item, not 3 duplicates
+        assert len(result.items) == 1
+        assert result.total == 1
+        assert result.items[0].title_en == "English News"
+
+    @pytest.mark.asyncio
+    async def test_returns_card_info_for_linked_questions(
+        self,
+        db_session: AsyncSession,
+        mock_s3_service: MagicMock,
+        active_culture_deck: CultureDeck,
+    ):
+        """Should include card_id and deck_id when questions are linked."""
+        from src.db.models import CultureQuestion
+
+        # Create news item
+        news_item = NewsItem(
+            title_el="Greek News",
+            title_en="English News",
+            title_ru="Russian News",
+            description_el="Greek description",
+            description_en="English description",
+            description_ru="Russian description",
+            publication_date=date.today(),
+            original_article_url="https://example.com/article-with-card",
+            image_s3_key="news-images/test.jpg",
+        )
+        db_session.add(news_item)
+        await db_session.flush()
+
+        # Create linked question
+        question = CultureQuestion(
+            deck_id=active_culture_deck.id,
+            question_text={"el": "Question", "en": "Question"},
+            option_a={"el": "A", "en": "A"},
+            option_b={"el": "B", "en": "B"},
+            option_c={"el": "C", "en": "C"},
+            option_d={"el": "D", "en": "D"},
+            correct_option=1,
+            original_article_url="https://example.com/article-with-card",
+        )
+        db_session.add(question)
+        await db_session.commit()
+        await db_session.refresh(question)
+
+        service = NewsItemService(db_session, s3_service=mock_s3_service)
+
+        result = await service.get_list_with_cards(page=1, page_size=10)
+
+        assert len(result.items) == 1
+        assert result.items[0].card_id == question.id
+        assert result.items[0].deck_id == active_culture_deck.id
+
+    @pytest.mark.asyncio
+    async def test_returns_none_card_info_when_no_linked_questions(
+        self,
+        db_session: AsyncSession,
+        mock_s3_service: MagicMock,
+    ):
+        """Should return card_id=None when no questions are linked."""
+        # Create news item without any linked questions
+        news_item = NewsItem(
+            title_el="Greek News",
+            title_en="English News",
+            title_ru="Russian News",
+            description_el="Greek description",
+            description_en="English description",
+            description_ru="Russian description",
+            publication_date=date.today(),
+            original_article_url="https://example.com/article-no-questions",
+            image_s3_key="news-images/test.jpg",
+        )
+        db_session.add(news_item)
+        await db_session.commit()
+
+        service = NewsItemService(db_session, s3_service=mock_s3_service)
+
+        result = await service.get_list_with_cards(page=1, page_size=10)
+
+        assert len(result.items) == 1
+        assert result.items[0].card_id is None
+        assert result.items[0].deck_id is None
+
+    @pytest.mark.asyncio
+    async def test_pagination_total_matches_unique_items(
+        self,
+        db_session: AsyncSession,
+        mock_s3_service: MagicMock,
+        active_culture_deck: CultureDeck,
+    ):
+        """Should report total matching unique NewsItems, not JOIN rows."""
+        from src.db.models import CultureQuestion
+
+        # Create 3 distinct news items
+        for i in range(3):
+            news_item = NewsItem(
+                title_el=f"Greek News {i}",
+                title_en=f"English News {i}",
+                title_ru=f"Russian News {i}",
+                description_el="Greek description",
+                description_en="English description",
+                description_ru="Russian description",
+                publication_date=date.today(),
+                original_article_url=f"https://example.com/article-{i}",
+                image_s3_key=f"news-images/test-{i}.jpg",
+            )
+            db_session.add(news_item)
+
+        await db_session.flush()
+
+        # Create multiple questions for the first news item (to test JOIN doesn't inflate count)
+        for j in range(5):
+            question = CultureQuestion(
+                deck_id=active_culture_deck.id,
+                question_text={"el": f"Question {j}", "en": f"Question {j}"},
+                option_a={"el": "A", "en": "A"},
+                option_b={"el": "B", "en": "B"},
+                option_c={"el": "C", "en": "C"},
+                option_d={"el": "D", "en": "D"},
+                correct_option=1,
+                original_article_url="https://example.com/article-0",
+            )
+            db_session.add(question)
+
+        await db_session.commit()
+
+        service = NewsItemService(db_session, s3_service=mock_s3_service)
+
+        result = await service.get_list_with_cards(page=1, page_size=10)
+
+        # Should have exactly 3 items (not 3 + 4 extra from JOIN)
+        assert len(result.items) == 3
+        # Total should match the number of unique news items
+        assert result.total == 3
