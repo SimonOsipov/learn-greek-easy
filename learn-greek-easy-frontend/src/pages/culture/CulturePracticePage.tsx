@@ -438,7 +438,11 @@ export function CulturePracticePage() {
     return (
       <div className="min-h-screen bg-background p-4 md:p-8">
         <div className="mx-auto max-w-2xl">
-          <Button variant="ghost" onClick={() => navigate(`/culture/${deckId}`)} className="mb-4">
+          <Button
+            variant="ghost"
+            onClick={() => navigate(`/culture/decks/${deckId}`)}
+            className="mb-4"
+          >
             <ChevronLeft className="mr-2 h-4 w-4" />
             {t('practice.backToDeck', 'Back to Deck')}
           </Button>
@@ -460,7 +464,7 @@ export function CulturePracticePage() {
                 <Button variant="outline" onClick={() => navigate('/decks')}>
                   {t('practice.browseDecks', 'Browse Decks')}
                 </Button>
-                <Button onClick={() => navigate(`/culture/${deckId}`)}>
+                <Button onClick={() => navigate(`/culture/decks/${deckId}`)}>
                   {t('practice.returnToDeck', 'Return to Deck')}
                 </Button>
               </div>
