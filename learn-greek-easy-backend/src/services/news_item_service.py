@@ -19,16 +19,19 @@ import httpx
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.exceptions import NewsItemNotFoundException
+from src.core.exceptions import NewsItemNotFoundException, NotFoundException
 from src.core.logging import get_logger
 from src.db.models import CultureDeck, CultureQuestion, NewsItem
 from src.repositories.news_item import NewsItemRepository
 from src.schemas.news_item import (
     CardBrief,
+    NewsCardInfo,
     NewsItemCreate,
     NewsItemListResponse,
+    NewsItemListWithCardsResponse,
     NewsItemResponse,
     NewsItemUpdate,
+    NewsItemWithCardInfo,
     NewsItemWithCardResponse,
     NewsItemWithQuestionCreate,
 )
@@ -418,6 +421,95 @@ class NewsItemService:
         logger.info(
             "News item deleted successfully",
             extra={"news_item_id": str(news_item_id)},
+        )
+
+    async def get_card_for_news(self, news_item_id: UUID) -> NewsCardInfo:
+        """Get card associated with a news item.
+
+        Args:
+            news_item_id: UUID of the news item
+
+        Returns:
+            NewsCardInfo with card_id and deck_id
+
+        Raises:
+            NewsItemNotFoundException: If news item doesn't exist
+            NotFoundException: If no associated card
+        """
+        news_item = await self.repo.get(news_item_id)
+        if news_item is None:
+            raise NewsItemNotFoundException(news_item_id=str(news_item_id))
+
+        card_info = await self.repo.get_card_for_news_item(news_item.original_article_url)
+        if card_info is None:
+            raise NotFoundException(
+                resource="Card",
+                detail=f"No card associated with news item '{news_item_id}'",
+            )
+
+        return NewsCardInfo(card_id=card_info[0], deck_id=card_info[1])
+
+    async def get_list_with_cards(
+        self, *, page: int = 1, page_size: int = 20
+    ) -> NewsItemListWithCardsResponse:
+        """Get paginated list of news items with card associations.
+
+        Uses LEFT JOIN to efficiently fetch card info in single query.
+
+        Args:
+            page: Page number (1-indexed)
+            page_size: Number of items per page
+
+        Returns:
+            NewsItemListWithCardsResponse with paginated news items and card info
+        """
+        skip = (page - 1) * page_size
+
+        # Query with LEFT JOIN to culture_questions
+        query = (
+            select(
+                NewsItem,
+                CultureQuestion.id.label("card_id"),
+                CultureQuestion.deck_id.label("deck_id"),
+            )
+            .outerjoin(
+                CultureQuestion,
+                CultureQuestion.original_article_url == NewsItem.original_article_url,
+            )
+            .order_by(
+                NewsItem.publication_date.desc(),
+                NewsItem.created_at.desc(),
+                NewsItem.id.desc(),
+            )
+            .offset(skip)
+            .limit(page_size)
+        )
+
+        result = await self.db.execute(query)
+        rows = result.all()
+
+        total = await self.repo.count_all()
+
+        items = []
+        for row in rows:
+            news_item = row[0]  # NewsItem object
+            card_id = row[1]  # UUID or None
+            deck_id = row[2]  # UUID or None
+
+            response = self._to_response(news_item)
+            items.append(
+                NewsItemWithCardInfo(
+                    **response.model_dump(),
+                    card_id=card_id,
+                    deck_id=deck_id,
+                )
+            )
+
+        return NewsItemListWithCardsResponse(
+            total=total,
+            page=page,
+            page_size=page_size,
+            items=items,
         )
 
     # =========================================================================

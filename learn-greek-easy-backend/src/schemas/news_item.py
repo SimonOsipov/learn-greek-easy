@@ -138,6 +138,34 @@ class NewsItemWithCardResponse(BaseModel):
 
 
 # ============================================================================
+# News Card Lookup Schemas
+# ============================================================================
+
+
+class NewsCardInfo(BaseModel):
+    """Card info associated with a news item."""
+
+    card_id: UUID
+    deck_id: UUID | None  # Can be None for pending review cards
+
+
+class NewsItemWithCardInfo(NewsItemResponse):
+    """News item response with optional card association."""
+
+    card_id: UUID | None = None
+    deck_id: UUID | None = None
+
+
+class NewsItemListWithCardsResponse(BaseModel):
+    """Paginated list of news items with card info."""
+
+    total: int = Field(..., ge=0)
+    page: int = Field(..., ge=1)
+    page_size: int = Field(..., ge=1, le=50)
+    items: list[NewsItemWithCardInfo]
+
+
+# ============================================================================
 # Module Exports
 # ============================================================================
 
@@ -151,4 +179,7 @@ __all__ = [
     "NewsItemWithQuestionCreate",
     "CardBrief",
     "NewsItemWithCardResponse",
+    "NewsCardInfo",
+    "NewsItemWithCardInfo",
+    "NewsItemListWithCardsResponse",
 ]
