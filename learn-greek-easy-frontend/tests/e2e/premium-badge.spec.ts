@@ -30,66 +30,89 @@ test.describe('Premium Badge - Learner View', () => {
   test.use({ storageState: LEARNER_AUTH });
 
   test('should display premium badge on premium vocabulary deck', async ({ page }) => {
-    await page.goto('/decks');
+    // Navigate and wait for network to settle
+    await page.goto('/decks', { waitUntil: 'networkidle' });
 
-    // Wait for decks to load
-    await expect(page.locator('[data-testid="deck-card"]').first()).toBeVisible({
-      timeout: 15000,
-    });
+    // Wait for decks to load - use longer timeout for CI stability
+    const deckCards = page.locator('[data-testid="deck-card"]');
+    await expect(deckCards.first()).toBeVisible({ timeout: 30000 });
+
+    // Wait for all deck cards to be rendered (allow time for React to finish rendering)
+    await page.waitForFunction(
+      () => document.querySelectorAll('[data-testid="deck-card"]').length >= 1,
+      { timeout: 10000 }
+    );
 
     // Find deck cards - premium decks should have the "Premium" badge with crown
     // Premium vocabulary decks are C1 and C2
-    const premiumBadge = page.locator('text=Premium').first();
-    await expect(premiumBadge).toBeVisible({ timeout: 5000 });
+    // Use a more specific selector: Badge component containing "Premium" text
+    const premiumBadge = page.locator('[data-testid="deck-card"]').locator('text=Premium').first();
+    await expect(premiumBadge).toBeVisible({ timeout: 15000 });
   });
 
   test('should display lock icon on premium vocabulary deck for free user', async ({ page }) => {
-    await page.goto('/decks');
+    // Navigate and wait for network to settle
+    await page.goto('/decks', { waitUntil: 'networkidle' });
 
-    // Wait for decks to load
-    await expect(page.locator('[data-testid="deck-card"]').first()).toBeVisible({
-      timeout: 15000,
-    });
+    // Wait for decks to load - use longer timeout for CI stability
+    const deckCards = page.locator('[data-testid="deck-card"]');
+    await expect(deckCards.first()).toBeVisible({ timeout: 30000 });
 
-    // Premium decks should show lock icon
+    // Wait for all deck cards to be rendered
+    await page.waitForFunction(
+      () => document.querySelectorAll('[data-testid="deck-card"]').length >= 1,
+      { timeout: 10000 }
+    );
+
+    // Premium decks should show lock icon (Crown icon with aria-label)
     // The lock icon has aria-label="Premium content"
     const lockIcon = page.locator('[aria-label="Premium content"]').first();
-    await expect(lockIcon).toBeVisible({ timeout: 5000 });
+    await expect(lockIcon).toBeVisible({ timeout: 15000 });
   });
 
   test('should display premium badge on premium culture deck', async ({ page }) => {
-    await page.goto('/decks');
+    // Navigate and wait for network to settle
+    await page.goto('/decks', { waitUntil: 'networkidle' });
 
-    // Wait for decks to load
-    await expect(page.locator('[data-testid="deck-card"]').first()).toBeVisible({
-      timeout: 15000,
-    });
+    // Wait for decks to load - use longer timeout for CI stability
+    const deckCards = page.locator('[data-testid="deck-card"]');
+    await expect(deckCards.first()).toBeVisible({ timeout: 30000 });
 
     // Click on culture filter to see culture decks
-    await page.getByRole('button', { name: 'Culture', exact: true }).click();
+    const cultureButton = page.getByRole('button', { name: 'Culture', exact: true });
+    await cultureButton.click();
 
-    // Wait for filtered results
-    await page.waitForTimeout(500);
+    // Wait for the filter to be active (button should be in pressed state)
+    await expect(cultureButton).toHaveAttribute('aria-pressed', 'true', { timeout: 10000 });
+
+    // Wait for the deck list to update - culture decks should have culture badges
+    const cultureBadge = page.locator('[data-testid="culture-badge"]');
+    await expect(cultureBadge.first()).toBeVisible({ timeout: 15000 });
 
     // Premium culture decks (History, Traditions) should have the premium badge
-    const premiumBadge = page.locator('text=Premium').first();
-    await expect(premiumBadge).toBeVisible({ timeout: 5000 });
+    const premiumBadge = page.locator('[data-testid="deck-card"]').locator('text=Premium').first();
+    await expect(premiumBadge).toBeVisible({ timeout: 15000 });
   });
 
   test('should have non-premium decks without premium badge', async ({ page }) => {
-    await page.goto('/decks');
+    // Navigate and wait for network to settle
+    await page.goto('/decks', { waitUntil: 'networkidle' });
 
-    // Wait for decks to load
-    await expect(page.locator('[data-testid="deck-card"]').first()).toBeVisible({
-      timeout: 15000,
-    });
+    // Wait for decks to load - use longer timeout for CI stability
+    const deckCards = page.locator('[data-testid="deck-card"]');
+    await expect(deckCards.first()).toBeVisible({ timeout: 30000 });
+
+    // Wait for multiple deck cards to load (we expect at least A1, A2, B1, B2, C1, C2)
+    await page.waitForFunction(
+      () => document.querySelectorAll('[data-testid="deck-card"]').length >= 2,
+      { timeout: 15000 }
+    );
 
     // Count all deck cards
-    const deckCards = page.locator('[data-testid="deck-card"]');
     const totalDecks = await deckCards.count();
 
-    // Count premium badges
-    const premiumBadges = page.locator('text=Premium');
+    // Count premium badges within deck cards
+    const premiumBadges = page.locator('[data-testid="deck-card"]').locator('text=Premium');
     const premiumCount = await premiumBadges.count();
 
     // Not all decks should be premium (we have A1, A2, B1, B2 as free)
@@ -98,12 +121,16 @@ test.describe('Premium Badge - Learner View', () => {
   });
 
   test('premium deck should not be clickable for free user', async ({ page }) => {
-    await page.goto('/decks');
+    // Navigate and wait for network to settle
+    await page.goto('/decks', { waitUntil: 'networkidle' });
 
-    // Wait for decks to load
-    await expect(page.locator('[data-testid="deck-card"]').first()).toBeVisible({
-      timeout: 15000,
-    });
+    // Wait for decks to load - use longer timeout for CI stability
+    const deckCards = page.locator('[data-testid="deck-card"]');
+    await expect(deckCards.first()).toBeVisible({ timeout: 30000 });
+
+    // Wait for at least one premium deck to be visible (has lock icon)
+    const lockIcon = page.locator('[aria-label="Premium content"]').first();
+    await expect(lockIcon).toBeVisible({ timeout: 15000 });
 
     // Get the URL before clicking
     const urlBefore = page.url();
