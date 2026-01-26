@@ -46,7 +46,9 @@ from src.schemas.feedback import (
     AdminFeedbackUpdate,
     AuthorBriefResponse,
 )
+from src.schemas.news_item import NewsItemCreate, NewsItemResponse, NewsItemUpdate
 from src.services.feedback_admin_service import FeedbackAdminService
+from src.services.news_item_service import NewsItemService
 
 logger = get_logger(__name__)
 
@@ -827,3 +829,141 @@ async def list_deck_questions(
         page_size=page_size,
         deck_id=deck_id,
     )
+
+
+# ============================================================================
+# News Admin Endpoints
+# ============================================================================
+
+
+@router.post(
+    "/news",
+    response_model=NewsItemResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create news item",
+    description="Create a new news item. Requires superuser privileges.",
+    responses={
+        201: {
+            "description": "News item created successfully",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "id": "550e8400-e29b-41d4-a716-446655440000",
+                        "title_el": "Ελληνικός Τίτλος",
+                        "title_en": "English Title",
+                        "description_el": "Ελληνική περιγραφή",
+                        "description_en": "English description",
+                        "publication_date": "2024-01-15",
+                        "original_article_url": "https://example.com/article",
+                        "image_url": "https://s3.amazonaws.com/...",
+                        "created_at": "2024-01-15T10:30:00Z",
+                        "updated_at": "2024-01-15T10:30:00Z",
+                    }
+                }
+            },
+        },
+        400: {"description": "Invalid request (image download failed, etc.)"},
+        409: {"description": "News item with this URL already exists"},
+    },
+)
+async def create_news_item(
+    data: NewsItemCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> NewsItemResponse:
+    """Create a new news item (admin only).
+
+    Downloads the image from source_image_url, uploads to S3, and creates
+    the news item in the database.
+
+    Args:
+        data: News item creation data
+        db: Database session (injected)
+        current_user: Authenticated superuser (injected)
+
+    Returns:
+        Created NewsItemResponse
+
+    Raises:
+        400: If image download fails or validation error
+        409: If original_article_url already exists
+    """
+    service = NewsItemService(db)
+    try:
+        return await service.create(data)
+    except ValueError as e:
+        error_msg = str(e)
+        if "already exists" in error_msg:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=error_msg)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error_msg)
+
+
+@router.put(
+    "/news/{news_item_id}",
+    response_model=NewsItemResponse,
+    summary="Update news item",
+    description="Update an existing news item. Requires superuser privileges.",
+    responses={
+        200: {"description": "News item updated successfully"},
+        400: {"description": "Invalid request (image download failed, etc.)"},
+        404: {"description": "News item not found"},
+    },
+)
+async def update_news_item(
+    news_item_id: UUID,
+    data: NewsItemUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> NewsItemResponse:
+    """Update an existing news item (admin only).
+
+    If source_image_url is provided, downloads the new image and replaces
+    the existing one in S3.
+
+    Args:
+        news_item_id: UUID of the news item to update
+        data: Fields to update (all optional)
+        db: Database session (injected)
+        current_user: Authenticated superuser (injected)
+
+    Returns:
+        Updated NewsItemResponse
+
+    Raises:
+        400: If new image download fails
+        404: If news item not found
+    """
+    service = NewsItemService(db)
+    try:
+        return await service.update(news_item_id, data)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.delete(
+    "/news/{news_item_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete news item",
+    description="Delete a news item and its S3 image. Requires superuser privileges.",
+    responses={
+        204: {"description": "News item deleted successfully"},
+        404: {"description": "News item not found"},
+    },
+)
+async def delete_news_item(
+    news_item_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> None:
+    """Delete a news item and its S3 image (admin only).
+
+    Args:
+        news_item_id: UUID of the news item to delete
+        db: Database session (injected)
+        current_user: Authenticated superuser (injected)
+
+    Raises:
+        404: If news item not found
+    """
+    service = NewsItemService(db)
+    await service.delete(news_item_id)

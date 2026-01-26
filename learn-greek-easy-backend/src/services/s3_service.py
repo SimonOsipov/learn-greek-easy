@@ -331,6 +331,56 @@ class S3Service:
             )
             return False
 
+    def upload_object(
+        self,
+        s3_key: str,
+        data: bytes,
+        content_type: str,
+    ) -> bool:
+        """Upload bytes directly to S3.
+
+        Args:
+            s3_key: The S3 object key
+            data: Raw bytes to upload
+            content_type: MIME type of the content
+
+        Returns:
+            True if upload successful, False otherwise
+        """
+        client = self._get_client()
+        if not client:
+            logger.warning(
+                "Cannot upload to S3 - client not initialized",
+                extra={"s3_key": s3_key},
+            )
+            return False
+
+        try:
+            bucket_name = settings.effective_s3_bucket_name
+            assert bucket_name is not None
+
+            client.put_object(
+                Bucket=bucket_name,
+                Key=s3_key,
+                Body=data,
+                ContentType=content_type,
+            )
+            logger.info(
+                "Uploaded object to S3",
+                extra={
+                    "s3_key": s3_key,
+                    "content_type": content_type,
+                    "size_bytes": len(data),
+                },
+            )
+            return True
+        except (BotoCoreError, ClientError) as e:
+            logger.error(
+                "Failed to upload object to S3",
+                extra={"s3_key": s3_key, "error": str(e)},
+            )
+            return False
+
     @staticmethod
     def validate_avatar_content_type(content_type: str) -> bool:
         """Check if content type is allowed for avatar uploads."""

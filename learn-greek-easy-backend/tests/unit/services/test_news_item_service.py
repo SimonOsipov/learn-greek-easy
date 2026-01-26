@@ -1,0 +1,468 @@
+"""Unit tests for NewsItemService.
+
+This module tests:
+- create: Download image, upload to S3, create news item
+- get_by_id: Get news item with presigned URL
+- get_list: Paginated news items
+- get_recent: Recent news items for widget
+- update: Update fields and optionally replace image
+- delete: Delete news item and S3 image
+
+Tests use mocked S3 and HTTP to isolate service logic.
+"""
+
+from datetime import date, timedelta
+from unittest.mock import AsyncMock, MagicMock, patch
+from uuid import uuid4
+
+import pytest
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from src.core.exceptions import NewsItemNotFoundException
+from src.db.models import NewsItem
+from src.schemas.news_item import NewsItemCreate, NewsItemUpdate
+from src.services.news_item_service import NewsItemService
+
+# =============================================================================
+# Test Fixtures
+# =============================================================================
+
+
+@pytest.fixture
+def mock_s3_service():
+    """Mock S3 service for tests."""
+    mock = MagicMock()
+    mock.upload_object.return_value = True
+    mock.delete_object.return_value = True
+    mock.generate_presigned_url.return_value = "https://s3.example.com/presigned-url"
+    return mock
+
+
+@pytest.fixture
+def mock_httpx_response():
+    """Create a mock HTTP response for image download."""
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.headers = {"content-type": "image/jpeg"}
+    # 1KB test image
+    mock_response.content = b"\xff\xd8\xff" + b"\x00" * 1024
+    return mock_response
+
+
+@pytest.fixture
+async def sample_news_item(db_session: AsyncSession) -> NewsItem:
+    """Create a sample news item in the database."""
+    item = NewsItem(
+        title_el="Test Greek Title",
+        title_en="Test English Title",
+        title_ru="Test Russian Title",
+        description_el="Test Greek description",
+        description_en="Test English description",
+        description_ru="Test Russian description",
+        publication_date=date.today(),
+        original_article_url="https://example.com/test-article",
+        image_s3_key="news-images/test-uuid.jpg",
+    )
+    db_session.add(item)
+    await db_session.commit()
+    await db_session.refresh(item)
+    return item
+
+
+@pytest.fixture
+async def multiple_news_items(db_session: AsyncSession) -> list[NewsItem]:
+    """Create multiple news items."""
+    items = []
+    base_date = date.today()
+
+    for i in range(5):
+        item = NewsItem(
+            title_el=f"Greek Title {i}",
+            title_en=f"English Title {i}",
+            title_ru=f"Russian Title {i}",
+            description_el=f"Greek description {i}",
+            description_en=f"English description {i}",
+            description_ru=f"Russian description {i}",
+            publication_date=base_date - timedelta(days=i),
+            original_article_url=f"https://example.com/article-{i}",
+            image_s3_key=f"news-images/test-{i}.jpg",
+        )
+        db_session.add(item)
+        items.append(item)
+
+    await db_session.commit()
+    for item in items:
+        await db_session.refresh(item)
+
+    return items
+
+
+# =============================================================================
+# Test Create
+# =============================================================================
+
+
+class TestCreate:
+    """Tests for create method."""
+
+    @pytest.mark.asyncio
+    async def test_downloads_and_uploads_image(
+        self,
+        db_session: AsyncSession,
+        mock_s3_service: MagicMock,
+        mock_httpx_response: MagicMock,
+    ):
+        """Should download image from URL and upload to S3."""
+        with patch("src.services.news_item_service.httpx.AsyncClient") as mock_client:
+            mock_client_instance = AsyncMock()
+            mock_client_instance.get = AsyncMock(return_value=mock_httpx_response)
+            mock_client.return_value.__aenter__.return_value = mock_client_instance
+
+            service = NewsItemService(db_session, s3_service=mock_s3_service)
+
+            create_data = NewsItemCreate(
+                title_el="Greek Title",
+                title_en="English Title",
+                title_ru="Russian Title",
+                description_el="Greek description",
+                description_en="English description",
+                description_ru="Russian description",
+                publication_date=date.today(),
+                original_article_url="https://example.com/new-article",
+                source_image_url="https://example.com/image.jpg",
+            )
+
+            result = await service.create(create_data)
+
+            # Verify HTTP call was made
+            mock_client_instance.get.assert_called_once_with("https://example.com/image.jpg")
+
+            # Verify S3 upload was called
+            mock_s3_service.upload_object.assert_called_once()
+            call_args = mock_s3_service.upload_object.call_args
+            assert call_args[0][0].startswith("news-images/")
+            assert call_args[0][0].endswith(".jpg")
+            assert call_args[0][2] == "image/jpeg"
+
+            # Verify result
+            assert result.title_el == "Greek Title"
+            assert result.image_url == "https://s3.example.com/presigned-url"
+
+    @pytest.mark.asyncio
+    async def test_rejects_duplicate_url(
+        self,
+        db_session: AsyncSession,
+        mock_s3_service: MagicMock,
+        sample_news_item: NewsItem,
+    ):
+        """Should reject news items with duplicate article URLs."""
+        service = NewsItemService(db_session, s3_service=mock_s3_service)
+
+        create_data = NewsItemCreate(
+            title_el="Greek Title",
+            title_en="English Title",
+            title_ru="Russian Title",
+            description_el="Greek description",
+            description_en="English description",
+            description_ru="Russian description",
+            publication_date=date.today(),
+            original_article_url=sample_news_item.original_article_url,
+            source_image_url="https://example.com/image.jpg",
+        )
+
+        with pytest.raises(ValueError, match="already exists"):
+            await service.create(create_data)
+
+    @pytest.mark.asyncio
+    async def test_validates_image_content_type(
+        self,
+        db_session: AsyncSession,
+        mock_s3_service: MagicMock,
+    ):
+        """Should reject invalid image content types."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.headers = {"content-type": "text/html"}
+        mock_response.content = b"<html>Not an image</html>"
+
+        with patch("src.services.news_item_service.httpx.AsyncClient") as mock_client:
+            mock_client_instance = AsyncMock()
+            mock_client_instance.get = AsyncMock(return_value=mock_response)
+            mock_client.return_value.__aenter__.return_value = mock_client_instance
+
+            service = NewsItemService(db_session, s3_service=mock_s3_service)
+
+            create_data = NewsItemCreate(
+                title_el="Greek Title",
+                title_en="English Title",
+                title_ru="Russian Title",
+                description_el="Greek description",
+                description_en="English description",
+                description_ru="Russian description",
+                publication_date=date.today(),
+                original_article_url="https://example.com/new-article",
+                source_image_url="https://example.com/fake-image.html",
+            )
+
+            with pytest.raises(ValueError, match="Invalid image content-type"):
+                await service.create(create_data)
+
+    @pytest.mark.asyncio
+    async def test_rejects_oversized_image(
+        self,
+        db_session: AsyncSession,
+        mock_s3_service: MagicMock,
+    ):
+        """Should reject images exceeding 5MB size limit."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.headers = {"content-type": "image/jpeg"}
+        # 6MB image (exceeds 5MB limit)
+        mock_response.content = b"\xff\xd8\xff" + b"\x00" * (6 * 1024 * 1024)
+
+        with patch("src.services.news_item_service.httpx.AsyncClient") as mock_client:
+            mock_client_instance = AsyncMock()
+            mock_client_instance.get = AsyncMock(return_value=mock_response)
+            mock_client.return_value.__aenter__.return_value = mock_client_instance
+
+            service = NewsItemService(db_session, s3_service=mock_s3_service)
+
+            create_data = NewsItemCreate(
+                title_el="Greek Title",
+                title_en="English Title",
+                title_ru="Russian Title",
+                description_el="Greek description",
+                description_en="English description",
+                description_ru="Russian description",
+                publication_date=date.today(),
+                original_article_url="https://example.com/new-article",
+                source_image_url="https://example.com/huge-image.jpg",
+            )
+
+            with pytest.raises(ValueError, match="exceeds maximum"):
+                await service.create(create_data)
+
+
+# =============================================================================
+# Test Get By ID
+# =============================================================================
+
+
+class TestGetById:
+    """Tests for get_by_id method."""
+
+    @pytest.mark.asyncio
+    async def test_returns_with_presigned_url(
+        self,
+        db_session: AsyncSession,
+        mock_s3_service: MagicMock,
+        sample_news_item: NewsItem,
+    ):
+        """Should return news item with presigned S3 URL."""
+        service = NewsItemService(db_session, s3_service=mock_s3_service)
+
+        result = await service.get_by_id(sample_news_item.id)
+
+        assert result.id == sample_news_item.id
+        assert result.title_el == sample_news_item.title_el
+        assert result.image_url == "https://s3.example.com/presigned-url"
+        mock_s3_service.generate_presigned_url.assert_called_with(sample_news_item.image_s3_key)
+
+    @pytest.mark.asyncio
+    async def test_raises_not_found(
+        self,
+        db_session: AsyncSession,
+        mock_s3_service: MagicMock,
+    ):
+        """Should raise NewsItemNotFoundException for non-existent ID."""
+        service = NewsItemService(db_session, s3_service=mock_s3_service)
+
+        with pytest.raises(NewsItemNotFoundException):
+            await service.get_by_id(uuid4())
+
+
+# =============================================================================
+# Test Get List
+# =============================================================================
+
+
+class TestGetList:
+    """Tests for get_list method."""
+
+    @pytest.mark.asyncio
+    async def test_returns_paginated_items(
+        self,
+        db_session: AsyncSession,
+        mock_s3_service: MagicMock,
+        multiple_news_items: list[NewsItem],
+    ):
+        """Should return paginated news items."""
+        service = NewsItemService(db_session, s3_service=mock_s3_service)
+
+        result = await service.get_list(page=1, page_size=3)
+
+        assert result.total == 5
+        assert result.page == 1
+        assert result.page_size == 3
+        assert len(result.items) == 3
+
+    @pytest.mark.asyncio
+    async def test_respects_pagination(
+        self,
+        db_session: AsyncSession,
+        mock_s3_service: MagicMock,
+        multiple_news_items: list[NewsItem],
+    ):
+        """Should respect page and page_size parameters."""
+        service = NewsItemService(db_session, s3_service=mock_s3_service)
+
+        result = await service.get_list(page=2, page_size=2)
+
+        assert result.page == 2
+        assert len(result.items) == 2
+
+
+# =============================================================================
+# Test Get Recent
+# =============================================================================
+
+
+class TestGetRecent:
+    """Tests for get_recent method."""
+
+    @pytest.mark.asyncio
+    async def test_returns_recent_items(
+        self,
+        db_session: AsyncSession,
+        mock_s3_service: MagicMock,
+        multiple_news_items: list[NewsItem],
+    ):
+        """Should return most recent news items."""
+        service = NewsItemService(db_session, s3_service=mock_s3_service)
+
+        result = await service.get_recent(limit=3)
+
+        assert len(result) == 3
+        # All should have presigned URLs
+        for item in result:
+            assert item.image_url == "https://s3.example.com/presigned-url"
+
+
+# =============================================================================
+# Test Update
+# =============================================================================
+
+
+class TestUpdate:
+    """Tests for update method."""
+
+    @pytest.mark.asyncio
+    async def test_replaces_image_on_s3(
+        self,
+        db_session: AsyncSession,
+        mock_s3_service: MagicMock,
+        mock_httpx_response: MagicMock,
+        sample_news_item: NewsItem,
+    ):
+        """Should replace S3 image when source_image_url provided."""
+        old_s3_key = sample_news_item.image_s3_key
+
+        with patch("src.services.news_item_service.httpx.AsyncClient") as mock_client:
+            mock_client_instance = AsyncMock()
+            mock_client_instance.get = AsyncMock(return_value=mock_httpx_response)
+            mock_client.return_value.__aenter__.return_value = mock_client_instance
+
+            service = NewsItemService(db_session, s3_service=mock_s3_service)
+
+            update_data = NewsItemUpdate(source_image_url="https://example.com/new-image.jpg")
+
+            result = await service.update(sample_news_item.id, update_data)
+
+            # Verify new image was uploaded
+            mock_s3_service.upload_object.assert_called_once()
+
+            # Verify old image was deleted
+            mock_s3_service.delete_object.assert_called_once_with(old_s3_key)
+
+            # Verify result has presigned URL
+            assert result.image_url == "https://s3.example.com/presigned-url"
+
+    @pytest.mark.asyncio
+    async def test_partial_update_without_image(
+        self,
+        db_session: AsyncSession,
+        mock_s3_service: MagicMock,
+        sample_news_item: NewsItem,
+    ):
+        """Should update text fields without touching image."""
+        service = NewsItemService(db_session, s3_service=mock_s3_service)
+
+        update_data = NewsItemUpdate(
+            title_en="Updated English Title",
+            description_en="Updated English description",
+        )
+
+        result = await service.update(sample_news_item.id, update_data)
+
+        assert result.title_en == "Updated English Title"
+        assert result.description_en == "Updated English description"
+        # S3 should not be called
+        mock_s3_service.upload_object.assert_not_called()
+        mock_s3_service.delete_object.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_raises_not_found(
+        self,
+        db_session: AsyncSession,
+        mock_s3_service: MagicMock,
+    ):
+        """Should raise NewsItemNotFoundException for non-existent ID."""
+        service = NewsItemService(db_session, s3_service=mock_s3_service)
+
+        update_data = NewsItemUpdate(title_en="New Title")
+
+        with pytest.raises(NewsItemNotFoundException):
+            await service.update(uuid4(), update_data)
+
+
+# =============================================================================
+# Test Delete
+# =============================================================================
+
+
+class TestDelete:
+    """Tests for delete method."""
+
+    @pytest.mark.asyncio
+    async def test_removes_s3_image(
+        self,
+        db_session: AsyncSession,
+        mock_s3_service: MagicMock,
+        sample_news_item: NewsItem,
+    ):
+        """Should delete S3 image when deleting news item."""
+        s3_key = sample_news_item.image_s3_key
+        item_id = sample_news_item.id
+
+        service = NewsItemService(db_session, s3_service=mock_s3_service)
+
+        await service.delete(item_id)
+
+        # Verify S3 delete was called
+        mock_s3_service.delete_object.assert_called_once_with(s3_key)
+
+        # Verify item is deleted from database
+        with pytest.raises(NewsItemNotFoundException):
+            await service.get_by_id(item_id)
+
+    @pytest.mark.asyncio
+    async def test_raises_not_found(
+        self,
+        db_session: AsyncSession,
+        mock_s3_service: MagicMock,
+    ):
+        """Should raise NewsItemNotFoundException for non-existent ID."""
+        service = NewsItemService(db_session, s3_service=mock_s3_service)
+
+        with pytest.raises(NewsItemNotFoundException):
+            await service.delete(uuid4())

@@ -273,6 +273,68 @@ export interface AdminCultureQuestionsResponse {
 }
 
 // ============================================
+// News Item Types
+// ============================================
+
+/**
+ * Payload for creating a news item
+ */
+export interface NewsItemCreate {
+  title_el: string;
+  title_en: string;
+  title_ru: string;
+  description_el: string;
+  description_en: string;
+  description_ru: string;
+  publication_date: string;
+  original_article_url: string;
+  source_image_url: string;
+}
+
+/**
+ * Payload for updating a news item (all fields optional)
+ */
+export interface NewsItemUpdate {
+  title_el?: string;
+  title_en?: string;
+  title_ru?: string;
+  description_el?: string;
+  description_en?: string;
+  description_ru?: string;
+  publication_date?: string;
+  original_article_url?: string;
+  source_image_url?: string;
+}
+
+/**
+ * Response from news item API endpoints
+ */
+export interface NewsItemResponse {
+  id: string;
+  title_el: string;
+  title_en: string;
+  title_ru: string;
+  description_el: string;
+  description_en: string;
+  description_ru: string;
+  publication_date: string;
+  original_article_url: string;
+  image_url: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Paginated list of news items
+ */
+export interface NewsItemListResponse {
+  total: number;
+  page: number;
+  page_size: number;
+  items: NewsItemResponse[];
+}
+
+// ============================================
 // Admin API Methods
 // ============================================
 
@@ -573,5 +635,70 @@ export const adminAPI = {
    */
   deleteCultureQuestion: async (questionId: string): Promise<void> => {
     return api.delete<void>(`/api/v1/culture/questions/${questionId}`);
+  },
+
+  // ============================================
+  // News Item Management
+  // ============================================
+
+  /**
+   * Get a paginated list of news items
+   *
+   * Public endpoint, sorted by publication date descending.
+   *
+   * @param page - Page number (1-indexed, default: 1)
+   * @param pageSize - Items per page (1-50, default: 10)
+   * @returns Paginated list of news items
+   */
+  getNewsItems: async (page = 1, pageSize = 10): Promise<NewsItemListResponse> => {
+    const queryString = buildQueryString({ page, page_size: pageSize });
+    return api.get<NewsItemListResponse>(`/api/v1/news${queryString}`);
+  },
+
+  /**
+   * Create a new news item
+   *
+   * Admin provides source_image_url; backend downloads and uploads to S3.
+   * Image download/upload can take 2-5 seconds.
+   * Requires superuser authentication.
+   *
+   * @param data - News item creation payload
+   * @returns Created news item with presigned S3 image URL
+   * @throws 400 if image download fails
+   * @throws 409 if original_article_url is already used
+   */
+  createNewsItem: async (data: NewsItemCreate): Promise<NewsItemResponse> => {
+    return api.post<NewsItemResponse>('/api/v1/admin/news', data);
+  },
+
+  /**
+   * Update an existing news item
+   *
+   * If source_image_url is provided, backend downloads new image and
+   * replaces the existing one in S3. All fields are optional.
+   * Requires superuser authentication.
+   *
+   * @param id - UUID of the news item to update
+   * @param data - Partial news item update payload
+   * @returns Updated news item
+   * @throws 404 if news item not found
+   * @throws 400 if image download fails
+   */
+  updateNewsItem: async (id: string, data: NewsItemUpdate): Promise<NewsItemResponse> => {
+    return api.put<NewsItemResponse>(`/api/v1/admin/news/${id}`, data);
+  },
+
+  /**
+   * Delete a news item (HARD DELETE)
+   *
+   * Permanently removes the news item from database and its image from S3.
+   * This action cannot be undone.
+   * Requires superuser authentication.
+   *
+   * @param id - UUID of the news item to delete
+   * @throws 404 if news item not found
+   */
+  deleteNewsItem: async (id: string): Promise<void> => {
+    return api.delete<void>(`/api/v1/admin/news/${id}`);
   },
 };

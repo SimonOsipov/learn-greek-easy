@@ -1617,3 +1617,85 @@ class MockExamAnswer(Base, TimestampMixin):
 
     def __repr__(self) -> str:
         return f"<MockExamAnswer(id={self.id}, session_id={self.session_id}, question_id={self.question_id}, correct={self.is_correct})>"
+
+
+# ============================================================================
+# News Feed Models
+# ============================================================================
+
+
+class NewsItem(Base, TimestampMixin):
+    """News item for the Greek news feed.
+
+    Stores bilingual news articles (Greek/English) with image references.
+    Articles are displayed in the news feed, sorted by publication date.
+    """
+
+    __tablename__ = "news_items"
+
+    # Primary key
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True,
+        server_default=func.uuid_generate_v4(),
+    )
+
+    # Greek content
+    title_el: Mapped[str] = mapped_column(
+        String(500),
+        nullable=False,
+        comment="Article title in Greek",
+    )
+    description_el: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+        comment="Article description in Greek (max 1000 chars enforced at app level)",
+    )
+
+    # English content
+    title_en: Mapped[str] = mapped_column(
+        String(500),
+        nullable=False,
+        comment="Article title in English",
+    )
+    description_en: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+        comment="Article description in English (max 1000 chars enforced at app level)",
+    )
+
+    # Russian content
+    title_ru: Mapped[str] = mapped_column(
+        String(500),
+        nullable=False,
+        comment="Article title in Russian",
+    )
+    description_ru: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+        comment="Article description in Russian (max 1000 chars enforced at app level)",
+    )
+
+    # Media
+    image_s3_key: Mapped[str] = mapped_column(
+        String(255),
+        nullable=False,
+        comment="S3 key for news item image (e.g., news/{uuid}.jpg)",
+    )
+
+    # Publication metadata
+    publication_date: Mapped[date] = mapped_column(
+        Date,
+        nullable=False,
+        index=True,
+        comment="Date the article was published",
+    )
+    original_article_url: Mapped[str] = mapped_column(
+        String(500),
+        nullable=False,
+        unique=True,
+        index=True,
+        comment="URL of the original source article",
+    )
+
+    def __repr__(self) -> str:
+        return f"<NewsItem(id={self.id}, title_en={self.title_en[:30] if self.title_en else ''}, publication_date={self.publication_date})>"

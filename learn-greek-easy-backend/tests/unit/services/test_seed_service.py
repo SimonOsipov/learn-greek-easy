@@ -1331,3 +1331,188 @@ class TestSeedServiceUserDecks:
 
         for text in a2_front_texts:
             assert text in card_front_texts, f"A2 word '{text}' not found in cards"
+
+
+# ============================================================================
+# News Items Seeding Tests
+# ============================================================================
+
+
+class TestSeedServiceNewsItems:
+    """Tests for news items seeding."""
+
+    @pytest.fixture
+    def mock_db_with_ids(self):
+        """Create mock database that assigns IDs to added objects."""
+        db = AsyncMock()
+
+        def track_add(obj):
+            if not hasattr(obj, "id") or obj.id is None:
+                obj.id = uuid4()
+
+        db.add = MagicMock(side_effect=track_add)
+        db.flush = AsyncMock()
+        db.commit = AsyncMock()
+        db.execute = AsyncMock()
+        return db
+
+    @pytest.mark.asyncio
+    async def test_seed_news_items_blocked_in_production(
+        self, seed_service, mock_settings_cannot_seed
+    ):
+        """seed_news_items should raise RuntimeError in production."""
+        with pytest.raises(RuntimeError) as exc_info:
+            await seed_service.seed_news_items()
+
+        assert "Database seeding not allowed" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_creates_five_news_items(self, mock_db_with_ids, mock_settings_can_seed):
+        """seed_news_items should create exactly 5 news items."""
+        seed_service = SeedService(mock_db_with_ids)
+
+        result = await seed_service.seed_news_items()
+
+        assert result["success"] is True
+        assert result["count"] == 5
+        assert len(result["news_items"]) == 5
+
+    @pytest.mark.asyncio
+    async def test_news_items_have_trilingual_titles(
+        self, mock_db_with_ids, mock_settings_can_seed
+    ):
+        """Verify news items have Greek, English, and Russian titles."""
+        seed_service = SeedService(mock_db_with_ids)
+
+        # Track added news items
+        added_items = []
+        original_add = mock_db_with_ids.add.side_effect
+
+        def track_news(obj):
+            original_add(obj)
+            if hasattr(obj, "title_el") and hasattr(obj, "title_en") and hasattr(obj, "title_ru"):
+                added_items.append(obj)
+
+        mock_db_with_ids.add = MagicMock(side_effect=track_news)
+
+        await seed_service.seed_news_items()
+
+        # Verify each item has all three language titles
+        for item in added_items:
+            assert item.title_el is not None and len(item.title_el) > 0
+            assert item.title_en is not None and len(item.title_en) > 0
+            assert item.title_ru is not None and len(item.title_ru) > 0
+
+    @pytest.mark.asyncio
+    async def test_news_items_have_trilingual_descriptions(
+        self, mock_db_with_ids, mock_settings_can_seed
+    ):
+        """Verify news items have Greek, English, and Russian descriptions."""
+        seed_service = SeedService(mock_db_with_ids)
+
+        # Track added news items
+        added_items = []
+        original_add = mock_db_with_ids.add.side_effect
+
+        def track_news(obj):
+            original_add(obj)
+            if hasattr(obj, "description_el") and hasattr(obj, "description_en"):
+                added_items.append(obj)
+
+        mock_db_with_ids.add = MagicMock(side_effect=track_news)
+
+        await seed_service.seed_news_items()
+
+        # Verify each item has all three language descriptions
+        for item in added_items:
+            assert item.description_el is not None and len(item.description_el) > 0
+            assert item.description_en is not None and len(item.description_en) > 0
+            assert item.description_ru is not None and len(item.description_ru) > 0
+
+    @pytest.mark.asyncio
+    async def test_news_items_have_valid_urls(self, mock_db_with_ids, mock_settings_can_seed):
+        """Verify news items have valid original article URLs."""
+        seed_service = SeedService(mock_db_with_ids)
+
+        # Track added news items
+        added_items = []
+        original_add = mock_db_with_ids.add.side_effect
+
+        def track_news(obj):
+            original_add(obj)
+            if hasattr(obj, "original_article_url"):
+                added_items.append(obj)
+
+        mock_db_with_ids.add = MagicMock(side_effect=track_news)
+
+        await seed_service.seed_news_items()
+
+        # Verify URLs start with https://
+        for item in added_items:
+            assert item.original_article_url.startswith("https://")
+
+    @pytest.mark.asyncio
+    async def test_news_items_have_s3_keys(self, mock_db_with_ids, mock_settings_can_seed):
+        """Verify news items have S3 image keys."""
+        seed_service = SeedService(mock_db_with_ids)
+
+        # Track added news items
+        added_items = []
+        original_add = mock_db_with_ids.add.side_effect
+
+        def track_news(obj):
+            original_add(obj)
+            if hasattr(obj, "image_s3_key"):
+                added_items.append(obj)
+
+        mock_db_with_ids.add = MagicMock(side_effect=track_news)
+
+        await seed_service.seed_news_items()
+
+        # Verify S3 keys are present and follow expected pattern
+        for item in added_items:
+            assert item.image_s3_key is not None
+            assert item.image_s3_key.startswith("news/")
+            assert item.image_s3_key.endswith(".jpg")
+
+    @pytest.mark.asyncio
+    async def test_news_items_constant_has_correct_structure(self, seed_service):
+        """Verify NEWS_ITEMS constant has correct structure."""
+        news_items = SeedService.NEWS_ITEMS
+
+        assert len(news_items) == 5
+
+        for item in news_items:
+            assert "title_el" in item
+            assert "title_en" in item
+            assert "title_ru" in item
+            assert "description_el" in item
+            assert "description_en" in item
+            assert "description_ru" in item
+            assert "days_ago" in item
+            assert isinstance(item["days_ago"], int)
+            assert item["days_ago"] >= 0
+
+    @pytest.mark.asyncio
+    async def test_seed_news_items_deletes_existing_e2e_items_first(
+        self, mock_db_with_ids, mock_settings_can_seed
+    ):
+        """seed_news_items should delete existing E2E items before creating new ones (idempotency)."""
+        seed_service = SeedService(mock_db_with_ids)
+
+        await seed_service.seed_news_items()
+
+        # Verify execute was called (for delete statement)
+        mock_db_with_ids.execute.assert_called()
+
+        # Get the delete call (should be first execute call)
+        delete_call = mock_db_with_ids.execute.call_args_list[0]
+        delete_stmt = delete_call[0][0]
+
+        # Verify it's a delete statement targeting news items
+        stmt_str = str(delete_stmt).upper()
+        assert "DELETE" in stmt_str or hasattr(delete_stmt, "is_delete")
+        assert "NEWS_ITEMS" in stmt_str
+        # The LIKE clause is used to match e2e test articles
+        assert "LIKE" in stmt_str
+        assert "ORIGINAL_ARTICLE_URL" in stmt_str

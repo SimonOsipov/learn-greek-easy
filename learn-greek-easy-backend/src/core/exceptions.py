@@ -411,3 +411,20 @@ class MockExamSessionExpiredException(BaseAPIException):
             detail=f"Mock exam session {session_id} is no longer active",
             error_code="MOCK_EXAM_SESSION_EXPIRED",
         )
+
+
+# ============================================================================
+# News Item Exceptions
+# ============================================================================
+
+
+class NewsItemNotFoundException(NotFoundException):
+    """Raised when a news item is not found."""
+
+    def __init__(self, news_item_id: Optional[str] = None) -> None:
+        detail = (
+            f"News item with ID '{news_item_id}' not found"
+            if news_item_id
+            else "News item not found"
+        )
+        super().__init__(resource="NewsItem", detail=detail)

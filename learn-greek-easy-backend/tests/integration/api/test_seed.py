@@ -135,12 +135,14 @@ class TestSeedAllIntegration:
         assert user_count == 7
 
         # Verify decks created
+        # 6 CEFR decks + 4 user decks (3 for learner + 1 for admin) = 10 total
         deck_count = await db_session.scalar(select(func.count(Deck.id)))
-        assert deck_count == 6
+        assert deck_count == 10
 
         # Verify cards created
+        # 60 CEFR cards + 10 user deck cards (5+3+0+2) = 70 total
         card_count = await db_session.scalar(select(func.count(Card.id)))
-        assert card_count == 60
+        assert card_count == 70
 
     @pytest.mark.asyncio
     async def test_seed_all_returns_403_when_disabled(
@@ -432,3 +434,177 @@ class TestSeedResponseFormat:
         assert isinstance(data["environment"], str)
         assert isinstance(data["requires_secret"], bool)
         assert isinstance(data["validation_errors"], list)
+
+
+# ============================================================================
+# POST /test/seed/news-feed Tests
+# ============================================================================
+
+
+@pytest.mark.no_parallel
+class TestSeedNewsFeedIntegration:
+    """Integration tests for news-feed seeding endpoint."""
+
+    @pytest.mark.asyncio
+    async def test_seed_news_feed_creates_news_items(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        seed_url: str,
+        enable_seeding,
+        enable_seeding_service,
+    ):
+        """POST /test/seed/news-feed should create 5 news items."""
+        from sqlalchemy import func, select
+
+        from src.db.models import NewsItem
+
+        # First truncate to ensure clean state
+        await client.post(f"{seed_url}/truncate")
+
+        response = await client.post(f"{seed_url}/news-feed")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert data["operation"] == "news-feed"
+        assert data["results"]["count"] == 5
+
+        # Verify news items created in database
+        news_count = await db_session.scalar(select(func.count(NewsItem.id)))
+        assert news_count == 5
+
+    @pytest.mark.asyncio
+    async def test_seed_news_feed_returns_403_when_disabled(
+        self,
+        client: AsyncClient,
+        seed_url: str,
+    ):
+        """POST /test/seed/news-feed should return 403 when disabled."""
+        with patch("src.api.v1.test.seed.settings") as mock_settings:
+            mock_settings.is_production = False
+            mock_settings.test_seed_enabled = False
+
+            response = await client.post(f"{seed_url}/news-feed")
+
+            assert response.status_code == 403
+
+    @pytest.mark.asyncio
+    async def test_seed_news_feed_response_format(
+        self,
+        client: AsyncClient,
+        seed_url: str,
+        enable_seeding,
+        enable_seeding_service,
+    ):
+        """Response should match SeedResultResponse schema."""
+        response = await client.post(f"{seed_url}/news-feed")
+
+        assert response.status_code == 200
+        data = response.json()
+
+        # Required fields
+        assert "success" in data
+        assert "operation" in data
+        assert "timestamp" in data
+        assert "duration_ms" in data
+        assert "results" in data
+
+        # Results structure
+        assert "news_items" in data["results"]
+        assert "count" in data["results"]
+        assert isinstance(data["results"]["news_items"], list)
+
+
+# ============================================================================
+# POST /test/seed/news-feed/clear Tests
+# ============================================================================
+
+
+@pytest.mark.no_parallel
+class TestClearNewsFeedIntegration:
+    """Integration tests for news-feed clear endpoint."""
+
+    @pytest.mark.asyncio
+    async def test_clear_news_feed_deletes_only_news_items(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        seed_url: str,
+        enable_seeding,
+        enable_seeding_service,
+    ):
+        """POST /test/seed/news-feed/clear should delete only news items.
+
+        This is critical for test isolation - unlike /truncate which clears
+        ALL tables, this endpoint only clears news_items table.
+        """
+        from sqlalchemy import func, select
+
+        from src.db.models import NewsItem
+
+        # First seed users and news items
+        await client.post(f"{seed_url}/users")
+        await client.post(f"{seed_url}/news-feed")
+
+        # Verify both users and news items exist
+        user_count_before = await db_session.scalar(select(func.count(User.id)))
+        news_count_before = await db_session.scalar(select(func.count(NewsItem.id)))
+        assert user_count_before == 4
+        assert news_count_before == 5
+
+        # Clear news items only
+        response = await client.post(f"{seed_url}/news-feed/clear")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert data["operation"] == "clear_news"
+        assert data["results"]["cleared"] is True
+        assert data["results"]["table"] == "news_items"
+
+        # Refresh session to see changes
+        db_session.expire_all()
+
+        # Verify news items are cleared but users remain
+        news_count_after = await db_session.scalar(select(func.count(NewsItem.id)))
+        user_count_after = await db_session.scalar(select(func.count(User.id)))
+
+        assert news_count_after == 0, "News items should be cleared"
+        assert user_count_after == 4, "Users should NOT be affected"
+
+    @pytest.mark.asyncio
+    async def test_clear_news_feed_returns_403_when_disabled(
+        self,
+        client: AsyncClient,
+        seed_url: str,
+    ):
+        """POST /test/seed/news-feed/clear should return 403 when disabled."""
+        with patch("src.api.v1.test.seed.settings") as mock_settings:
+            mock_settings.is_production = False
+            mock_settings.test_seed_enabled = False
+
+            response = await client.post(f"{seed_url}/news-feed/clear")
+
+            assert response.status_code == 403
+
+    @pytest.mark.asyncio
+    async def test_clear_news_feed_is_idempotent(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        seed_url: str,
+        enable_seeding,
+        enable_seeding_service,
+    ):
+        """POST /test/seed/news-feed/clear should be safe to call multiple times."""
+        # Clear without seeding first (empty table)
+        response = await client.post(f"{seed_url}/news-feed/clear")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+
+        # Call again (still empty)
+        response = await client.post(f"{seed_url}/news-feed/clear")
+        assert response.status_code == 200
