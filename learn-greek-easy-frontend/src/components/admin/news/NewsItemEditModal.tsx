@@ -27,8 +27,23 @@ import {
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/hooks/use-toast';
+import { useLanguage } from '@/hooks/useLanguage';
 import type { NewsItemResponse, NewsItemUpdate } from '@/services/adminAPI';
 import { useAdminNewsStore } from '@/stores/adminNewsStore';
+
+/**
+ * Get localized title based on current interface language
+ */
+function getLocalizedTitle(item: NewsItemResponse, lang: string): string {
+  switch (lang) {
+    case 'el':
+      return item.title_el;
+    case 'ru':
+      return item.title_ru;
+    default: // 'en'
+      return item.title_en;
+  }
+}
 
 interface NewsItemEditModalProps {
   open: boolean;
@@ -45,8 +60,10 @@ function itemToEditableJson(item: NewsItemResponse, imageUrlPlaceholder: string)
   const editable = {
     title_el: item.title_el,
     title_en: item.title_en,
+    title_ru: item.title_ru,
     description_el: item.description_el,
     description_en: item.description_en,
+    description_ru: item.description_ru,
     publication_date: item.publication_date,
     original_article_url: item.original_article_url,
     // Include source_image_url as empty to show it's optional
@@ -87,8 +104,10 @@ function parseEditJson(json: string): {
   const stringFields = [
     'title_el',
     'title_en',
+    'title_ru',
     'description_el',
     'description_en',
+    'description_ru',
     'publication_date',
     'original_article_url',
   ] as const;
@@ -149,6 +168,7 @@ export const NewsItemEditModal: React.FC<NewsItemEditModalProps> = ({
   item,
 }) => {
   const { t } = useTranslation('admin');
+  const { currentLanguage } = useLanguage();
   const [jsonInput, setJsonInput] = useState('');
   const { updateNewsItem, isUpdating } = useAdminNewsStore();
 
@@ -208,7 +228,7 @@ export const NewsItemEditModal: React.FC<NewsItemEditModalProps> = ({
       <DialogContent className="sm:max-w-[600px]" data-testid="news-edit-modal">
         <DialogHeader>
           <DialogTitle>{t('news.edit.title')}</DialogTitle>
-          <DialogDescription>{item.title_el}</DialogDescription>
+          <DialogDescription>{getLocalizedTitle(item, currentLanguage)}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">

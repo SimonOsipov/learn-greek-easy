@@ -5,7 +5,7 @@
  *
  * Displays a paginated table of news items with:
  * - Thumbnail image (40x40)
- * - Title (Greek)
+ * - Title (localized based on interface language)
  * - Publication date
  * - Created date
  * - Edit/Delete actions
@@ -19,7 +19,25 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useLanguage } from '@/hooks/useLanguage';
 import type { NewsItemResponse } from '@/services/adminAPI';
+
+/**
+ * Get localized title and description based on current interface language
+ */
+function getLocalizedContent(
+  item: NewsItemResponse,
+  lang: string
+): { title: string; description: string } {
+  switch (lang) {
+    case 'el':
+      return { title: item.title_el, description: item.description_el };
+    case 'ru':
+      return { title: item.title_ru, description: item.description_ru };
+    default: // 'en'
+      return { title: item.title_en, description: item.description_en };
+  }
+}
 
 interface NewsItemsTableProps {
   newsItems: NewsItemResponse[];
@@ -76,66 +94,71 @@ interface NewsItemRowProps {
   onEdit: (item: NewsItemResponse) => void;
   onDelete: (item: NewsItemResponse) => void;
   t: (key: string) => string;
+  lang: string;
 }
 
-const NewsItemRow: React.FC<NewsItemRowProps> = ({ item, onEdit, onDelete, t }) => (
-  <div
-    className="flex items-center justify-between rounded-lg border p-4 hover:bg-muted/50"
-    data-testid={`news-item-row-${item.id}`}
-  >
-    <div className="flex items-center gap-3">
-      {/* Thumbnail */}
-      {item.image_url ? (
-        <img
-          src={item.image_url}
-          alt=""
-          className="h-10 w-10 rounded object-cover"
-          loading="lazy"
-        />
-      ) : (
-        <div className="flex h-10 w-10 items-center justify-center rounded bg-muted text-muted-foreground">
-          <span className="text-xs">{t('news.table.noImage')}</span>
-        </div>
-      )}
+const NewsItemRow: React.FC<NewsItemRowProps> = ({ item, onEdit, onDelete, t, lang }) => {
+  const { title } = getLocalizedContent(item, lang);
 
-      {/* Title and dates */}
-      <div>
-        <p className="font-medium">{item.title_el}</p>
-        <div className="flex gap-3 text-xs text-muted-foreground">
-          <span>
-            {t('news.table.published')}: {formatDate(item.publication_date)}
-          </span>
-          <span>
-            {t('news.table.created')}: {formatDate(item.created_at)}
-          </span>
+  return (
+    <div
+      className="flex items-center justify-between rounded-lg border p-4 hover:bg-muted/50"
+      data-testid={`news-item-row-${item.id}`}
+    >
+      <div className="flex items-center gap-3">
+        {/* Thumbnail */}
+        {item.image_url ? (
+          <img
+            src={item.image_url}
+            alt=""
+            className="h-10 w-10 rounded object-cover"
+            loading="lazy"
+          />
+        ) : (
+          <div className="flex h-10 w-10 items-center justify-center rounded bg-muted text-muted-foreground">
+            <span className="text-xs">{t('news.table.noImage')}</span>
+          </div>
+        )}
+
+        {/* Title and dates */}
+        <div>
+          <p className="font-medium">{title}</p>
+          <div className="flex gap-3 text-xs text-muted-foreground">
+            <span>
+              {t('news.table.published')}: {formatDate(item.publication_date)}
+            </span>
+            <span>
+              {t('news.table.created')}: {formatDate(item.created_at)}
+            </span>
+          </div>
         </div>
       </div>
-    </div>
 
-    {/* Actions */}
-    <div className="flex items-center gap-2">
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => onEdit(item)}
-        data-testid={`edit-news-${item.id}`}
-      >
-        <Pencil className="h-4 w-4" />
-        <span className="sr-only">{t('actions.edit')}</span>
-      </Button>
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => onDelete(item)}
-        className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-        data-testid={`delete-news-${item.id}`}
-      >
-        <Trash2 className="h-4 w-4" />
-        <span className="sr-only">{t('actions.delete')}</span>
-      </Button>
+      {/* Actions */}
+      <div className="flex items-center gap-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => onEdit(item)}
+          data-testid={`edit-news-${item.id}`}
+        >
+          <Pencil className="h-4 w-4" />
+          <span className="sr-only">{t('actions.edit')}</span>
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => onDelete(item)}
+          className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+          data-testid={`delete-news-${item.id}`}
+        >
+          <Trash2 className="h-4 w-4" />
+          <span className="sr-only">{t('actions.delete')}</span>
+        </Button>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 /**
  * NewsItemsTable component
@@ -152,6 +175,7 @@ export const NewsItemsTable: React.FC<NewsItemsTableProps> = ({
   onDelete,
 }) => {
   const { t } = useTranslation('admin');
+  const { currentLanguage } = useLanguage();
 
   const handlePreviousPage = () => {
     if (page > 1) {
@@ -187,7 +211,14 @@ export const NewsItemsTable: React.FC<NewsItemsTableProps> = ({
           <>
             <div className="space-y-3">
               {newsItems.map((item) => (
-                <NewsItemRow key={item.id} item={item} onEdit={onEdit} onDelete={onDelete} t={t} />
+                <NewsItemRow
+                  key={item.id}
+                  item={item}
+                  onEdit={onEdit}
+                  onDelete={onDelete}
+                  t={t}
+                  lang={currentLanguage}
+                />
               ))}
             </div>
 
