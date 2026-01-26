@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import type { SupportedLanguage } from '@/i18n';
+import { trackNewsSourceLinkClicked } from '@/lib/analytics';
 import { cn } from '@/lib/utils';
 
 /**
@@ -41,6 +42,9 @@ export interface QuestionFeedbackProps {
 
   /** Source article URL for news-sourced questions */
   sourceArticleUrl?: string | null;
+
+  /** Card ID for analytics tracking (required when sourceArticleUrl is provided) */
+  cardId?: string;
 }
 
 /**
@@ -92,6 +96,7 @@ export const QuestionFeedback: React.FC<QuestionFeedbackProps> = ({
   isLastQuestion = false,
   className,
   sourceArticleUrl,
+  cardId,
 }) => {
   const { t } = useTranslation('culture');
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -126,6 +131,25 @@ export const QuestionFeedback: React.FC<QuestionFeedbackProps> = ({
         answer: correctAnswerText,
         defaultValue: `Wrong. The correct answer was ${correctOption.label}: ${correctAnswerText}.`,
       });
+
+  /**
+   * Handle source article link click - track analytics
+   */
+  const handleSourceLinkClick = () => {
+    if (!sourceArticleUrl || !cardId) return;
+
+    let domain = 'unknown';
+    try {
+      domain = new URL(sourceArticleUrl).hostname;
+    } catch {
+      // URL parsing failed, use fallback
+    }
+
+    trackNewsSourceLinkClicked({
+      card_id: cardId,
+      article_domain: domain,
+    });
+  };
 
   return (
     <>
@@ -193,6 +217,7 @@ export const QuestionFeedback: React.FC<QuestionFeedbackProps> = ({
               rel="noopener noreferrer"
               className="mt-4 flex items-center gap-2 text-sm text-primary hover:underline"
               data-testid="source-article-link"
+              onClick={handleSourceLinkClick}
             >
               <ExternalLink className="h-4 w-4" />
               {t('feedback.sourceArticle', 'Source article')}

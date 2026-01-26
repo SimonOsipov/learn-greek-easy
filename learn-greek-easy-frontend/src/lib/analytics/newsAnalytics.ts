@@ -44,3 +44,22 @@ export function trackNewsQuestionsButtonClicked(
     posthog.capture('news_questions_button_clicked', properties);
   }
 }
+
+/**
+ * Properties for tracking source article link clicks from question feedback
+ */
+export interface NewsSourceLinkClickedProperties {
+  /** UUID of the culture question card */
+  card_id: string;
+  /** Domain of the source article (e.g., "ekathimerini.com") */
+  article_domain: string;
+}
+
+/**
+ * Track when user clicks source article link in question feedback
+ */
+export function trackNewsSourceLinkClicked(properties: NewsSourceLinkClickedProperties): void {
+  if (typeof posthog?.capture === 'function') {
+    posthog.capture('news_source_link_clicked', properties);
+  }
+}

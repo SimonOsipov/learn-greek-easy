@@ -537,6 +537,7 @@ export function CulturePracticePage() {
               isLastQuestion={progress.current >= progress.total}
               className="w-full max-w-2xl"
               sourceArticleUrl={currentQuestion.question.original_article_url}
+              cardId={currentQuestion.question.id}
             />
           ) : (
             <MCQComponent
