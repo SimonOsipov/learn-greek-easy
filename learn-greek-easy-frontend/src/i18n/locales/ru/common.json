@@ -49,7 +49,14 @@
     },
     "news": {
       "title": "Новости изучения греческого",
-      "readMore": "Читать статью"
+      "readMore": "Читать статью",
+      "buttons": {
+        "audio": "Аудио",
+        "audioTooltip": "Скоро",
+        "audioDisabled": "Аудио - Скоро",
+        "questions": "Вопросы",
+        "questionsLabel": "Практика вопросов по этой статье"
+      }
     }
   },
   "welcome": {

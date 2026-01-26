@@ -1,9 +1,11 @@
 """NewsItem repository for news feed operations."""
 
+from uuid import UUID
+
 from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.db.models import NewsItem
+from src.db.models import CultureQuestion, NewsItem
 from src.repositories.base import BaseRepository
 
 
@@ -89,6 +91,25 @@ class NewsItemRepository(BaseRepository[NewsItem]):
         query = select(func.count()).select_from(NewsItem)
         result = await self.db.execute(query)
         return result.scalar_one()
+
+    async def get_card_for_news_item(
+        self, original_article_url: str
+    ) -> tuple[UUID, UUID | None] | None:
+        """Find card associated with news item by URL match.
+
+        Returns (card_id, deck_id) tuple if found, None otherwise.
+        Uses LIMIT 1 ordered by created_at DESC for multiple matches.
+        """
+        result = await self.db.execute(
+            select(CultureQuestion.id, CultureQuestion.deck_id)
+            .where(CultureQuestion.original_article_url == original_article_url)
+            .order_by(desc(CultureQuestion.created_at))
+            .limit(1)
+        )
+        row = result.first()
+        if row:
+            return (row.id, row.deck_id)
+        return None
 
 
 # ============================================================================

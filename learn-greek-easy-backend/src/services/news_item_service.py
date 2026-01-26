@@ -16,17 +16,24 @@ from typing import Any, Optional
 from uuid import UUID, uuid4
 
 import httpx
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.exceptions import NewsItemNotFoundException
+from src.core.exceptions import NewsItemNotFoundException, NotFoundException
 from src.core.logging import get_logger
-from src.db.models import NewsItem
+from src.db.models import CultureDeck, CultureQuestion, NewsItem
 from src.repositories.news_item import NewsItemRepository
 from src.schemas.news_item import (
+    CardBrief,
+    NewsCardInfo,
     NewsItemCreate,
     NewsItemListResponse,
+    NewsItemListWithCardsResponse,
     NewsItemResponse,
     NewsItemUpdate,
+    NewsItemWithCardInfo,
+    NewsItemWithCardResponse,
+    NewsItemWithQuestionCreate,
 )
 from src.services.s3_service import S3Service, get_s3_service
 
@@ -139,6 +146,141 @@ class NewsItemService:
         )
 
         return self._to_response(news_item)
+
+    async def create_with_question(
+        self, data: NewsItemWithQuestionCreate
+    ) -> NewsItemWithCardResponse:
+        """Create news item with optional linked culture question.
+
+        If question data is provided:
+        - Validates deck_id exists and is active
+        - Creates CultureQuestion in same transaction
+        - Returns both in response
+
+        If deck_id is invalid, creates NewsItem only with warning message.
+
+        Args:
+            data: News item creation data with optional question
+
+        Returns:
+            NewsItemWithCardResponse with news item, optional card, and message
+
+        Raises:
+            ValueError: If image download fails, content-type invalid, or size exceeds limit
+        """
+        logger.info(
+            "Creating news item with optional question",
+            extra={
+                "has_question": data.question is not None,
+                "original_article_url": str(data.original_article_url),
+            },
+        )
+
+        card = None
+        message = "News item created successfully"
+
+        # Check for duplicate article URL
+        if await self.repo.exists_by_url(str(data.original_article_url)):
+            raise ValueError(f"News item with URL '{data.original_article_url}' already exists")
+
+        # Download and validate image
+        image_data, content_type = await self._download_image(str(data.source_image_url))
+        ext = CONTENT_TYPE_TO_EXT.get(content_type, "jpg")
+        s3_key = f"{NEWS_IMAGES_PREFIX}/{uuid4()}.{ext}"
+
+        # Upload to S3
+        upload_success = self.s3_service.upload_object(s3_key, image_data, content_type)
+        if not upload_success:
+            raise ValueError("Failed to upload image to S3")
+
+        # Create news item
+        news_item_dict = {
+            "title_el": data.title_el,
+            "title_en": data.title_en,
+            "title_ru": data.title_ru,
+            "description_el": data.description_el,
+            "description_en": data.description_en,
+            "description_ru": data.description_ru,
+            "publication_date": data.publication_date,
+            "original_article_url": str(data.original_article_url),
+            "image_s3_key": s3_key,
+        }
+
+        news_item = await self.repo.create(news_item_dict)
+
+        # Handle question creation if provided
+        if data.question:
+            deck_result = await self.db.execute(
+                select(CultureDeck).where(
+                    CultureDeck.id == data.question.deck_id,
+                    CultureDeck.is_active.is_(True),
+                )
+            )
+            deck = deck_result.scalar_one_or_none()
+
+            if deck:
+                culture_question = CultureQuestion(
+                    deck_id=deck.id,
+                    question_text={
+                        "el": data.question.question_el,
+                        "en": data.question.question_en,
+                    },
+                    option_a={
+                        "el": data.question.options[0].text_el,
+                        "en": data.question.options[0].text_en,
+                    },
+                    option_b={
+                        "el": data.question.options[1].text_el,
+                        "en": data.question.options[1].text_en,
+                    },
+                    option_c={
+                        "el": data.question.options[2].text_el,
+                        "en": data.question.options[2].text_en,
+                    },
+                    option_d={
+                        "el": data.question.options[3].text_el,
+                        "en": data.question.options[3].text_en,
+                    },
+                    correct_option=data.question.correct_answer_index + 1,  # 0-indexed to 1-indexed
+                    original_article_url=str(data.original_article_url),
+                    is_pending_review=False,  # Admin-created = auto-approved
+                )
+                self.db.add(culture_question)
+                await self.db.flush()
+
+                card = CardBrief(
+                    id=culture_question.id,
+                    deck_id=culture_question.deck_id,
+                    question_text=culture_question.question_text,
+                )
+                message = "News item and question created successfully"
+                logger.info(
+                    "Created linked culture question",
+                    extra={"question_id": str(culture_question.id)},
+                )
+            else:
+                message = "News item created. Question skipped: deck not found"
+                logger.warning(
+                    "Deck not found for question creation",
+                    extra={"deck_id": str(data.question.deck_id)},
+                )
+
+        await self.db.commit()
+        await self.db.refresh(news_item)
+
+        logger.info(
+            "News item with question created successfully",
+            extra={
+                "news_item_id": str(news_item.id),
+                "has_card": card is not None,
+            },
+        )
+
+        return NewsItemWithCardResponse(
+            news_item=self._to_response(news_item),
+            card=card,
+            message=message,
+        )
 
     async def get_by_id(self, news_item_id: UUID) -> NewsItemResponse:
         """Get a news item by ID.
@@ -279,6 +421,95 @@ class NewsItemService:
         logger.info(
             "News item deleted successfully",
             extra={"news_item_id": str(news_item_id)},
+        )
+
+    async def get_card_for_news(self, news_item_id: UUID) -> NewsCardInfo:
+        """Get card associated with a news item.
+
+        Args:
+            news_item_id: UUID of the news item
+
+        Returns:
+            NewsCardInfo with card_id and deck_id
+
+        Raises:
+            NewsItemNotFoundException: If news item doesn't exist
+            NotFoundException: If no associated card
+        """
+        news_item = await self.repo.get(news_item_id)
+        if news_item is None:
+            raise NewsItemNotFoundException(news_item_id=str(news_item_id))
+
+        card_info = await self.repo.get_card_for_news_item(news_item.original_article_url)
+        if card_info is None:
+            raise NotFoundException(
+                resource="Card",
+                detail=f"No card associated with news item '{news_item_id}'",
+            )
+
+        return NewsCardInfo(card_id=card_info[0], deck_id=card_info[1])
+
+    async def get_list_with_cards(
+        self, *, page: int = 1, page_size: int = 20
+    ) -> NewsItemListWithCardsResponse:
+        """Get paginated list of news items with card associations.
+
+        Uses LEFT JOIN to efficiently fetch card info in single query.
+
+        Args:
+            page: Page number (1-indexed)
+            page_size: Number of items per page
+
+        Returns:
+            NewsItemListWithCardsResponse with paginated news items and card info
+        """
+        skip = (page - 1) * page_size
+
+        # Query with LEFT JOIN to culture_questions
+        query = (
+            select(
+                NewsItem,
+                CultureQuestion.id.label("card_id"),
+                CultureQuestion.deck_id.label("deck_id"),
+            )
+            .outerjoin(
+                CultureQuestion,
+                CultureQuestion.original_article_url == NewsItem.original_article_url,
+            )
+            .order_by(
+                NewsItem.publication_date.desc(),
+                NewsItem.created_at.desc(),
+                NewsItem.id.desc(),
+            )
+            .offset(skip)
+            .limit(page_size)
+        )
+
+        result = await self.db.execute(query)
+        rows = result.all()
+
+        total = await self.repo.count_all()
+
+        items = []
+        for row in rows:
+            news_item = row[0]  # NewsItem object
+            card_id = row[1]  # UUID or None
+            deck_id = row[2]  # UUID or None
+
+            response = self._to_response(news_item)
+            items.append(
+                NewsItemWithCardInfo(
+                    **response.model_dump(),
+                    card_id=card_id,
+                    deck_id=deck_id,
+                )
+            )
+
+        return NewsItemListWithCardsResponse(
+            total=total,
+            page=page,
+            page_size=page_size,
+            items=items,
         )
 
     # =========================================================================

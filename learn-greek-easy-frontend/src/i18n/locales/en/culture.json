@@ -23,7 +23,8 @@
     "nextQuestion": "Next Question",
     "viewSummary": "View Summary",
     "srCorrect": "Correct! You earned {{xp}} XP.",
-    "srWrong": "Wrong. The correct answer was {{label}}: {{answer}}. You earned {{xp}} XP."
+    "srWrong": "Wrong. The correct answer was {{label}}: {{answer}}. You earned {{xp}} XP.",
+    "sourceArticle": "Source article"
   },
   "language": {
     "selectLanguage": "Question Language",

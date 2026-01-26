@@ -290,6 +290,7 @@ class CultureQuestionQueueItem(BaseModel):
     is_new: bool = Field(..., description="True if user hasn't studied this question yet")
     due_date: Optional[date] = Field(None, description="Next review date (null for new questions)")
     status: str = Field(..., description="Card status: new, learning, review, mastered")
+    original_article_url: Optional[str] = Field(None, description="Source news article URL")
 
 
 class CultureQuestionQueue(BaseModel):

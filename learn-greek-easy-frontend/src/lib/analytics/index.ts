@@ -79,6 +79,10 @@ export {
 export {
   // Type interfaces
   type NewsArticleClickedProperties,
+  type NewsQuestionsButtonClickedProperties,
+  type NewsSourceLinkClickedProperties,
   // Tracking functions
   trackNewsArticleClicked,
+  trackNewsQuestionsButtonClicked,
+  trackNewsSourceLinkClicked,
 } from './newsAnalytics';

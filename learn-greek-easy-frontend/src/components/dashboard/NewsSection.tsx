@@ -14,12 +14,18 @@
 
 import React, { useEffect, useState } from 'react';
 
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, HelpCircle, Volume2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 
+import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useLanguage } from '@/hooks/useLanguage';
-import { trackNewsArticleClicked } from '@/lib/analytics/newsAnalytics';
+import {
+  trackNewsArticleClicked,
+  trackNewsQuestionsButtonClicked,
+} from '@/lib/analytics/newsAnalytics';
 import { reportAPIError } from '@/lib/errorReporting';
 import { adminAPI, type NewsItemResponse } from '@/services/adminAPI';
 
@@ -33,6 +39,9 @@ interface NewsCardProps {
 
 const NewsCard: React.FC<NewsCardProps> = ({ item, newsLang }) => {
   const { t } = useTranslation('common');
+  const navigate = useNavigate();
+
+  const hasQuestion = item.card_id !== null && item.deck_id !== null;
 
   // Now all 3 languages are supported in backend
   const getLocalizedContent = () => {
@@ -64,32 +73,88 @@ const NewsCard: React.FC<NewsCardProps> = ({ item, newsLang }) => {
     }
   };
 
+  const handleQuestionsClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (item.deck_id) {
+      trackNewsQuestionsButtonClicked({
+        news_item_id: item.id,
+        deck_id: item.deck_id,
+      });
+      navigate(`/culture/${item.deck_id}/practice`);
+    }
+  };
+
   return (
-    <a
-      href={item.original_article_url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="group relative block h-48 overflow-hidden rounded-lg"
-      onClick={handleClick}
-      data-testid={`news-card-${item.id}`}
-      aria-label={`${title} - ${t('dashboard.news.readMore')}`}
-    >
-      {/* Background Image */}
-      <div
-        className="absolute inset-0 bg-cover bg-center transition-transform group-hover:scale-105"
-        style={{ backgroundImage: item.image_url ? `url(${item.image_url})` : undefined }}
-      />
+    <div className="group relative overflow-hidden rounded-lg bg-card">
+      {/* Clickable article link */}
+      <a
+        href={item.original_article_url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="block h-48"
+        onClick={handleClick}
+        data-testid={`news-card-${item.id}`}
+        aria-label={`${title} - ${t('dashboard.news.readMore')}`}
+      >
+        {/* Background Image */}
+        <div
+          className="absolute inset-0 bg-cover bg-center transition-transform group-hover:scale-105"
+          style={{ backgroundImage: item.image_url ? `url(${item.image_url})` : undefined }}
+        />
 
-      {/* Semi-transparent Overlay */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-black/30" />
+        {/* Semi-transparent Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-black/30" />
 
-      {/* Content */}
-      <div className="relative z-10 flex h-full flex-col justify-end p-4">
-        <h3 className="mb-1 line-clamp-2 text-lg font-semibold text-white">{title}</h3>
-        <p className="line-clamp-2 text-sm text-gray-200">{description}</p>
-        <ExternalLink className="absolute right-3 top-3 h-4 w-4 text-white/70 group-hover:text-white" />
-      </div>
-    </a>
+        {/* Content */}
+        <div className="relative z-10 flex h-full flex-col justify-end p-4">
+          <h3 className="mb-1 line-clamp-2 text-lg font-semibold text-white">{title}</h3>
+          <p className="line-clamp-2 text-sm text-gray-200">{description}</p>
+          <ExternalLink className="absolute right-3 top-3 h-4 w-4 text-white/70 group-hover:text-white" />
+        </div>
+      </a>
+
+      {/* Action Buttons - only show if news has associated question */}
+      {hasQuestion && (
+        <div className="flex gap-2 border-t border-border p-3">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled
+                  className="flex-1"
+                  aria-label={t('dashboard.news.buttons.audioDisabled', 'Audio - Coming soon')}
+                  data-testid={`news-audio-button-${item.id}`}
+                >
+                  <Volume2 className="mr-2 h-4 w-4" />
+                  {t('dashboard.news.buttons.audio', 'Audio')}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{t('dashboard.news.buttons.audioTooltip', 'Coming soon')}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
+          <Button
+            variant="default"
+            size="sm"
+            className="flex-1"
+            onClick={handleQuestionsClick}
+            aria-label={t(
+              'dashboard.news.buttons.questionsLabel',
+              'Practice questions for this article'
+            )}
+            data-testid={`news-questions-button-${item.id}`}
+          >
+            <HelpCircle className="mr-2 h-4 w-4" />
+            {t('dashboard.news.buttons.questions', 'Questions')}
+          </Button>
+        </div>
+      )}
+    </div>
   );
 };
 

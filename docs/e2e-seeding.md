@@ -24,6 +24,7 @@ The seeding infrastructure provides deterministic test data for E2E tests, enabl
 | `/api/v1/test/seed/news-sources` | POST | Create news sources for admin testing |
 | `/api/v1/test/seed/fetch-history` | POST | Create fetch history for news sources |
 | `/api/v1/test/seed/pending-question` | POST | Create pending question for review testing |
+| `/api/v1/test/seed/news-questions` | POST | Seed news items with linked culture questions |
 | `/api/v1/test/seed/danger-zone` | POST | Create danger zone test users |
 
 ## Test Users Created
@@ -118,6 +119,27 @@ Seeds a pending culture question for testing the admin review workflow.
 - E2E tests for admin question management
 
 The seeded question asks "Who was the first president of the Republic of Cyprus?" with options for four Cypriot presidents. The correct answer is Makarios III (option B).
+
+### News Questions
+
+Seed endpoint: `POST /api/v1/test/seed/news-questions`
+
+Creates news items with associated culture questions for testing the news-to-practice flow:
+
+| News Item | Has Question | Description |
+|-----------|--------------|-------------|
+| Cypriot Culture: Traditions | Yes | Links to spring festival question |
+| History of Cyprus | Yes | Links to independence question |
+| Current News | No | No associated question |
+
+Questions are created in "E2E News Questions" culture deck (created if not exists).
+
+This data is used for E2E testing of:
+- Dashboard news card buttons (Questions button enabled when question exists)
+- Questions button navigation to culture practice
+- Source article link display during review
+
+Note: This seeding is also included in `/seed/all`.
 
 ## Danger Zone Test Users
 

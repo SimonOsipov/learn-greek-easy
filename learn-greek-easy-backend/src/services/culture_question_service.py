@@ -805,6 +805,7 @@ class CultureQuestionService:
             is_new=stats is None,
             due_date=stats.next_review_date if stats else None,
             status=stats.status.value if stats else CardStatus.NEW.value,
+            original_article_url=question.original_article_url,
         )
 
     def _get_feedback_message(

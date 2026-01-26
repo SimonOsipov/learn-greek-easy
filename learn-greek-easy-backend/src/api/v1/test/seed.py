@@ -459,6 +459,40 @@ async def seed_news_feed(
 
 
 @router.post(
+    "/news-questions",
+    response_model=SeedResultResponse,
+    summary="Seed news items with questions",
+    description="Create test news items with and without associated culture questions for E2E testing.",
+    dependencies=[Depends(verify_seed_access)],
+)
+async def seed_news_questions(
+    db: AsyncSession = Depends(get_db),
+) -> SeedResultResponse:
+    """Seed news items with culture questions for E2E testing.
+
+    Creates:
+    - 2 NewsItems WITH associated CultureQuestions
+    - 1 NewsItem WITHOUT associated question
+    - Uses/creates 'E2E News Questions' culture deck
+    """
+    start_time = perf_counter()
+
+    service = SeedService(db)
+    result = await service.seed_news_questions()
+    await db.commit()
+
+    duration_ms = (perf_counter() - start_time) * 1000
+
+    return SeedResultResponse(
+        success=result.get("success", False),
+        operation="news-questions",
+        timestamp=datetime.now(timezone.utc),
+        duration_ms=duration_ms,
+        results=result,
+    )
+
+
+@router.post(
     "/news-feed/clear",
     response_model=SeedResultResponse,
     summary="Clear news items only",

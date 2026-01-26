@@ -23,7 +23,8 @@
     "nextQuestion": "Следующий Вопрос",
     "viewSummary": "Показать Итоги",
     "srCorrect": "Правильно! Вы заработали {{xp}} XP.",
-    "srWrong": "Неправильно. Правильный ответ был {{label}}: {{answer}}. Вы заработали {{xp}} XP."
+    "srWrong": "Неправильно. Правильный ответ был {{label}}: {{answer}}. Вы заработали {{xp}} XP.",
+    "sourceArticle": "Источник статьи"
   },
   "language": {
     "selectLanguage": "Язык Вопроса",

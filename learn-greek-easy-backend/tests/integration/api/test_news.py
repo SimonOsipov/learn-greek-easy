@@ -101,7 +101,7 @@ class TestListNewsEndpoint:
         client: AsyncClient,
         db_session: AsyncSession,
     ):
-        """Test that response has all expected fields."""
+        """Test that response has all expected fields including card info."""
         await NewsItemFactory.create()
 
         response = await client.get("/api/v1/news")
@@ -123,6 +123,9 @@ class TestListNewsEndpoint:
         assert "image_url" in item
         assert "created_at" in item
         assert "updated_at" in item
+        # Card info fields (may be null if no associated card)
+        assert "card_id" in item
+        assert "deck_id" in item
 
     @pytest.mark.asyncio
     async def test_list_news_page_size_validation(

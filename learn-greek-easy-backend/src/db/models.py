@@ -1301,13 +1301,23 @@ class CultureQuestion(Base, TimestampMixin):
         comment="True for AI-generated questions awaiting admin review",
     )
 
-    # Source article URL for duplicate prevention
+    # Source article URL for duplicate prevention (unique constraint for AI deduplication)
     source_article_url: Mapped[str | None] = mapped_column(
         String(500),
         nullable=True,
         unique=True,
         index=True,
         comment="URL of the source article used to generate this question",
+    )
+
+    # Source news article URL for displaying link during review
+    # NOTE: Different from source_article_url which is unique and used for AI deduplication.
+    # This field stores the news article URL for cards created from news items.
+    original_article_url: Mapped[str | None] = mapped_column(
+        String(500),
+        nullable=True,
+        index=False,  # Index created in migration with partial condition
+        comment="URL of source news article for cards created from news items",
     )
 
     # Relationships
