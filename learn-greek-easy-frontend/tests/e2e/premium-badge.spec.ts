@@ -31,29 +31,22 @@ test.describe('Premium Badge - Learner View', () => {
 
   /**
    * Helper to navigate to decks page and wait for data to fully load.
-   * Uses networkidle plus explicit waits and retry logic for robustness.
+   * Uses domcontentloaded plus explicit element waits for robustness.
    */
   async function navigateToDecksAndWaitForData(page: import('@playwright/test').Page, minDeckCount = 4) {
-    // Navigate with networkidle to wait for all network activity to settle
-    await page.goto('/decks', { waitUntil: 'networkidle' });
+    // Use domcontentloaded instead of networkidle to avoid hanging
+    await page.goto('/decks', { waitUntil: 'domcontentloaded' });
 
-    // Wait for page to stabilize after navigation
-    await page.waitForTimeout(2000);
+    // Wait for first deck card to appear (confirms API data loaded)
+    await expect(page.locator('[data-testid="deck-card"]').first()).toBeVisible({ timeout: 15000 });
 
-    // Retry loop for deck cards to appear (handles slow database queries)
-    const maxRetries = 20;
-    const retryDelay = 500;
-
-    for (let i = 0; i < maxRetries; i++) {
-      const deckCardCount = await page.locator('[data-testid="deck-card"]').count();
-      if (deckCardCount >= minDeckCount) {
-        return;
-      }
-      await page.waitForTimeout(retryDelay);
+    // Verify minimum deck count if specified
+    if (minDeckCount > 1) {
+      await expect(async () => {
+        const count = await page.locator('[data-testid="deck-card"]').count();
+        expect(count).toBeGreaterThanOrEqual(minDeckCount);
+      }).toPass({ timeout: 10000 });
     }
-
-    // Final check with assertion for clear error message
-    await expect(page.locator('[data-testid="deck-card"]').first()).toBeVisible({ timeout: 5000 });
   }
 
   test('should display premium badge on premium vocabulary deck', async ({ page }) => {
@@ -85,20 +78,8 @@ test.describe('Premium Badge - Learner View', () => {
     // Wait for the filter to be active (button should be in pressed state)
     await expect(cultureButton).toHaveAttribute('aria-pressed', 'true', { timeout: 10000 });
 
-    // Wait for page to stabilize after filter change
-    await page.waitForTimeout(2000);
-
-    // Retry loop for culture deck cards to appear
-    const maxRetries = 15;
-    const retryDelay = 500;
-
-    for (let i = 0; i < maxRetries; i++) {
-      const deckCardCount = await page.locator('[data-testid="deck-card"]').count();
-      if (deckCardCount >= 1) {
-        break;
-      }
-      await page.waitForTimeout(retryDelay);
-    }
+    // Wait for culture deck cards to appear using Playwright's built-in retry
+    await expect(page.locator('[data-testid="deck-card"]').first()).toBeVisible({ timeout: 15000 });
 
     // Premium culture decks (History, Traditions) should have the premium badge
     const premiumBadge = page.locator('[data-testid="deck-card"]').locator('text=Premium').first();
