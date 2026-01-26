@@ -11,7 +11,12 @@ import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 
 import { adminAPI } from '@/services/adminAPI';
-import type { NewsItemCreate, NewsItemResponse, NewsItemUpdate } from '@/services/adminAPI';
+import type {
+  NewsItemResponse,
+  NewsItemUpdate,
+  NewsItemWithCardResponse,
+  NewsItemWithQuestionCreate,
+} from '@/services/adminAPI';
 
 /**
  * Admin News Store State Interface
@@ -38,7 +43,7 @@ interface AdminNewsState {
 
   // Actions
   fetchNewsItems: () => Promise<void>;
-  createNewsItem: (data: NewsItemCreate) => Promise<NewsItemResponse>;
+  createNewsItem: (data: NewsItemWithQuestionCreate) => Promise<NewsItemWithCardResponse>;
   updateNewsItem: (id: string, data: NewsItemUpdate) => Promise<NewsItemResponse>;
   deleteNewsItem: (id: string) => Promise<void>;
   setPage: (page: number) => void;
@@ -89,19 +94,19 @@ export const useAdminNewsStore = create<AdminNewsState>()(
       },
 
       /**
-       * Create a new news item
+       * Create a new news item with optional question
        */
-      createNewsItem: async (data: NewsItemCreate) => {
+      createNewsItem: async (data: NewsItemWithQuestionCreate) => {
         set({ isCreating: true, error: null });
 
         try {
-          const newItem = await adminAPI.createNewsItem(data);
+          const response = await adminAPI.createNewsItem(data);
 
           // Re-fetch the list to get updated data
           await get().fetchNewsItems();
 
           set({ isCreating: false });
-          return newItem;
+          return response;
         } catch (error) {
           const message = error instanceof Error ? error.message : 'Failed to create news item';
           set({ isCreating: false, error: message });

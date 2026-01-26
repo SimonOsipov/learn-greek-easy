@@ -292,6 +292,51 @@ export interface NewsItemCreate {
 }
 
 /**
+ * Single option for a multiple-choice question
+ */
+export interface QuestionOption {
+  text_el: string;
+  text_en: string;
+}
+
+/**
+ * Question data for creating a culture question from news
+ */
+export interface QuestionCreate {
+  deck_id: string;
+  question_el: string;
+  question_en: string;
+  options: QuestionOption[]; // EXACTLY 4 options required by backend
+  correct_answer_index: number; // 0-3
+}
+
+/**
+ * Payload for creating a news item with optional question
+ * Matches backend NewsItemWithQuestionCreate schema
+ */
+export interface NewsItemWithQuestionCreate extends NewsItemCreate {
+  question?: QuestionCreate;
+}
+
+/**
+ * Brief card info returned after news creation
+ */
+export interface CardBrief {
+  id: string;
+  deck_id: string;
+  question_text: Record<string, string>;
+}
+
+/**
+ * Response from creating a news item with optional question
+ */
+export interface NewsItemWithCardResponse {
+  news_item: NewsItemResponse;
+  card: CardBrief | null;
+  message: string;
+}
+
+/**
  * Payload for updating a news item (all fields optional)
  */
 export interface NewsItemUpdate {
@@ -659,19 +704,20 @@ export const adminAPI = {
   },
 
   /**
-   * Create a new news item
+   * Create a new news item with optional question
    *
    * Admin provides source_image_url; backend downloads and uploads to S3.
    * Image download/upload can take 2-5 seconds.
+   * If question data is included, a culture question is also created.
    * Requires superuser authentication.
    *
-   * @param data - News item creation payload
-   * @returns Created news item with presigned S3 image URL
-   * @throws 400 if image download fails
+   * @param data - News item creation payload with optional question
+   * @returns Created news item with optional card info
+   * @throws 400 if image download fails or question validation fails
    * @throws 409 if original_article_url is already used
    */
-  createNewsItem: async (data: NewsItemCreate): Promise<NewsItemResponse> => {
-    return api.post<NewsItemResponse>('/api/v1/admin/news', data);
+  createNewsItem: async (data: NewsItemWithQuestionCreate): Promise<NewsItemWithCardResponse> => {
+    return api.post<NewsItemWithCardResponse>('/api/v1/admin/news', data);
   },
 
   /**

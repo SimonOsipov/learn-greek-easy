@@ -20,7 +20,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/hooks/use-toast';
-import type { NewsItemCreate } from '@/services/adminAPI';
+import type { NewsItemWithQuestionCreate, QuestionCreate } from '@/services/adminAPI';
 import { useAdminNewsStore } from '@/stores/adminNewsStore';
 
 import { NewsItemDeleteDialog } from './NewsItemDeleteDialog';
@@ -72,7 +72,7 @@ type ValidationErrorType =
  */
 function validateNewsItemJson(json: string): {
   valid: boolean;
-  data?: NewsItemCreate;
+  data?: NewsItemWithQuestionCreate;
   errorType?: ValidationErrorType;
   errorParams?: Record<string, string>;
 } {
@@ -116,19 +116,27 @@ function validateNewsItemJson(json: string): {
     return { valid: false, errorType: 'invalidDate' };
   }
 
+  // Build the data object
+  const data: NewsItemWithQuestionCreate = {
+    title_el: parsed.title_el as string,
+    title_en: parsed.title_en as string,
+    title_ru: parsed.title_ru as string,
+    description_el: parsed.description_el as string,
+    description_en: parsed.description_en as string,
+    description_ru: parsed.description_ru as string,
+    publication_date: parsed.publication_date as string,
+    original_article_url: parsed.original_article_url as string,
+    source_image_url: parsed.source_image_url as string,
+  };
+
+  // Include question if present (optional field - backend will validate structure)
+  if (parsed.question !== undefined && parsed.question !== null) {
+    data.question = parsed.question as QuestionCreate;
+  }
+
   return {
     valid: true,
-    data: {
-      title_el: parsed.title_el as string,
-      title_en: parsed.title_en as string,
-      title_ru: parsed.title_ru as string,
-      description_el: parsed.description_el as string,
-      description_en: parsed.description_en as string,
-      description_ru: parsed.description_ru as string,
-      publication_date: parsed.publication_date as string,
-      original_article_url: parsed.original_article_url as string,
-      source_image_url: parsed.source_image_url as string,
-    },
+    data,
   };
 }
 
