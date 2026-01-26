@@ -91,15 +91,22 @@ def run_migrations_offline() -> None:
 
 
 def include_name(name: str | None, type_: str, parent_names: dict) -> bool:
-    """Filter to exclude pgvector indexes from Alembic comparison.
+    """Filter to exclude certain indexes from Alembic comparison.
 
-    pgvector IVFFlat indexes are created via raw SQL and cannot be
-    represented in SQLAlchemy model metadata. This filter excludes
-    them from autogenerate comparison to prevent false positives.
+    Some indexes cannot be represented in SQLAlchemy model metadata:
+    - pgvector IVFFlat indexes (created via raw SQL)
+    - PostgreSQL partial indexes (use WHERE clause)
+
+    This filter excludes them from autogenerate comparison to prevent
+    false positives during `alembic check`.
     """
     if type_ == "index" and name is not None:
         # Exclude pgvector embedding indexes (created via raw SQL in migration)
         if name.startswith("idx_") and "embedding" in name:
+            return False
+        # Exclude partial index on culture_questions.original_article_url
+        # This index uses postgresql_where which cannot be expressed in model metadata
+        if name == "ix_culture_questions_original_article_url":
             return False
     return True
 
