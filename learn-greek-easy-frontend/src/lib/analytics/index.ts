@@ -95,3 +95,13 @@ export {
   trackNewsPageQuestionsClicked,
   trackNewsPageSeeAllClicked,
 } from './newsAnalytics';
+export {
+  // Type interfaces
+  type ChangelogPageViewedProperties,
+  type ChangelogPagePaginatedProperties,
+  type ChangelogEntryViewedProperties,
+  // Tracking functions
+  trackChangelogPageViewed,
+  trackChangelogPagePaginated,
+  trackChangelogEntryViewed,
+} from './changelogAnalytics';
