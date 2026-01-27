@@ -180,5 +180,20 @@
   "theme": {
     "switchToDark": "Switch to dark mode",
     "switchToLight": "Switch to light mode"
+  },
+  "changelog": {
+    "page": {
+      "title": "What's New",
+      "subtitle": "See the latest updates and improvements to Learn Greek Easy"
+    },
+    "empty": {
+      "title": "No updates yet",
+      "description": "Check back later for news and updates"
+    },
+    "pagination": {
+      "showing": "Showing {{from}}-{{to}} of {{total}} entries",
+      "previous": "Previous",
+      "next": "Next"
+    }
   }
 }
