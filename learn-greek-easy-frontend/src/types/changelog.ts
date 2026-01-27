@@ -88,3 +88,26 @@ export const CHANGELOG_TAG_CONFIG: Record<
     colorClass: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
   },
 };
+
+/** Languages supported for changelog content */
+export type ChangelogLanguage = 'en' | 'el' | 'ru';
+
+/** Language options for admin form tabs */
+export const CHANGELOG_LANGUAGES: readonly ChangelogLanguage[] = ['en', 'el', 'ru'];
+
+/** Tag options for admin form select */
+export const CHANGELOG_TAG_OPTIONS: readonly ChangelogTag[] = [
+  'new_feature',
+  'bug_fix',
+  'announcement',
+];
+
+/** Get title field name for a specific language */
+export function getTitleField(lang: ChangelogLanguage): keyof ChangelogEntryAdmin {
+  return `title_${lang}` as keyof ChangelogEntryAdmin;
+}
+
+/** Get content field name for a specific language */
+export function getContentField(lang: ChangelogLanguage): keyof ChangelogEntryAdmin {
+  return `content_${lang}` as keyof ChangelogEntryAdmin;
+}

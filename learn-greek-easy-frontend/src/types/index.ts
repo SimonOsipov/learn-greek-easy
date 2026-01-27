@@ -95,10 +95,17 @@ export type {
   ChangelogCreateRequest,
   ChangelogUpdateRequest,
   ChangelogAdminListResponse,
+  ChangelogLanguage,
 } from './changelog';
 
 // Export changelog constants
-export { CHANGELOG_TAG_CONFIG } from './changelog';
+export {
+  CHANGELOG_TAG_CONFIG,
+  CHANGELOG_LANGUAGES,
+  CHANGELOG_TAG_OPTIONS,
+  getTitleField,
+  getContentField,
+} from './changelog';
 
 // Component prop types (to be expanded as components are built)
 export interface BaseComponentProps {
