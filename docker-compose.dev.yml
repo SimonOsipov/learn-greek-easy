@@ -54,6 +54,7 @@ services:
       - API_V1_PREFIX=/api/v1
       - TEST_SEED_ENABLED=true
       - FEATURE_RATE_LIMITING=false
+      - FEATURE_BACKGROUND_TASKS=true
     volumes:
       - ./learn-greek-easy-backend/src:/app/src
       - ./learn-greek-easy-backend/alembic:/app/alembic

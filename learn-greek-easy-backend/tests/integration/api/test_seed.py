@@ -926,3 +926,160 @@ class TestSeedNewsFeedPageIntegration:
 
         assert deck is not None
         assert data["results"]["deck_id"] == str(deck.id)
+
+
+# ============================================================================
+# POST /test/seed/announcements Tests
+# ============================================================================
+
+
+@pytest.mark.no_parallel
+class TestSeedAnnouncementsIntegration:
+    """Integration tests for announcements seeding endpoint."""
+
+    @pytest.mark.asyncio
+    async def test_seed_announcements_creates_campaigns(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        seed_url: str,
+        enable_seeding,
+        enable_seeding_service,
+    ):
+        """POST /test/seed/announcements should create 4 announcement campaigns."""
+        from sqlalchemy import func, select
+
+        from src.db.models import AnnouncementCampaign
+
+        # First seed users (required for announcements)
+        await client.post(f"{seed_url}/users")
+
+        response = await client.post(f"{seed_url}/announcements")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert data["operation"] == "announcements"
+        assert data["results"]["campaigns_created"] == 4
+
+        # Verify campaigns created in database
+        campaign_count = await db_session.scalar(select(func.count(AnnouncementCampaign.id)))
+        assert campaign_count == 4
+
+    @pytest.mark.asyncio
+    async def test_seed_announcements_requires_users(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        seed_url: str,
+        enable_seeding,
+        enable_seeding_service,
+    ):
+        """POST /test/seed/announcements should fail without users."""
+        # Truncate first to ensure no users exist
+        await client.post(f"{seed_url}/truncate")
+
+        response = await client.post(f"{seed_url}/announcements")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is False
+        assert "error" in data["results"]
+        assert "Test users not found" in data["results"]["error"]
+
+    @pytest.mark.asyncio
+    async def test_seed_announcements_returns_403_when_disabled(
+        self,
+        client: AsyncClient,
+        seed_url: str,
+    ):
+        """POST /test/seed/announcements should return 403 when disabled."""
+        with patch("src.api.v1.test.seed.settings") as mock_settings:
+            mock_settings.is_production = False
+            mock_settings.test_seed_enabled = False
+
+            response = await client.post(f"{seed_url}/announcements")
+
+            assert response.status_code == 403
+
+    @pytest.mark.asyncio
+    async def test_seed_announcements_response_format(
+        self,
+        client: AsyncClient,
+        seed_url: str,
+        enable_seeding,
+        enable_seeding_service,
+    ):
+        """Response should match SeedResultResponse schema."""
+        # First seed users
+        await client.post(f"{seed_url}/users")
+
+        response = await client.post(f"{seed_url}/announcements")
+
+        assert response.status_code == 200
+        data = response.json()
+
+        # Required fields
+        assert "success" in data
+        assert "operation" in data
+        assert "timestamp" in data
+        assert "duration_ms" in data
+        assert "results" in data
+
+        # Results structure
+        assert "campaigns_created" in data["results"]
+        assert "campaigns" in data["results"]
+        assert isinstance(data["results"]["campaigns"], list)
+
+    @pytest.mark.asyncio
+    async def test_seed_announcements_is_idempotent(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        seed_url: str,
+        enable_seeding,
+        enable_seeding_service,
+    ):
+        """POST /test/seed/announcements should be idempotent (safe to call multiple times)."""
+        from sqlalchemy import func, select
+
+        from src.db.models import AnnouncementCampaign
+
+        # First seed users
+        await client.post(f"{seed_url}/users")
+
+        # Call seed twice
+        await client.post(f"{seed_url}/announcements")
+        response = await client.post(f"{seed_url}/announcements")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+
+        # Refresh session to see changes
+        db_session.expire_all()
+
+        # Should still have exactly 4 campaigns (not 8)
+        campaign_count = await db_session.scalar(select(func.count(AnnouncementCampaign.id)))
+        assert campaign_count == 4
+
+    @pytest.mark.asyncio
+    async def test_seed_all_includes_announcements(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        seed_url: str,
+        enable_seeding,
+        enable_seeding_service,
+    ):
+        """POST /test/seed/all should include announcements in results."""
+        response = await client.post(f"{seed_url}/all")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+
+        # Verify announcements section in results
+        assert "announcements" in data["results"]
+        assert data["results"]["announcements"]["success"] is True
+        assert data["results"]["announcements"]["campaigns_created"] == 4

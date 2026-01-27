@@ -68,6 +68,7 @@ class TestModuleImports:
             "ANALYTICS_EVENTS",
             "check_achievements_task",
             "check_culture_achievements_task",
+            "create_announcement_notifications_task",
             "invalidate_cache_task",
             "is_background_tasks_enabled",
             "log_analytics_task",
