@@ -1,5 +1,16 @@
 """Pydantic schemas for API request/response validation."""
 
+# Announcement schemas
+from src.schemas.announcement import (
+    AnnouncementCreate,
+    AnnouncementCreateResponse,
+    AnnouncementDetailResponse,
+    AnnouncementListResponse,
+    AnnouncementResponse,
+    AnnouncementWithCreatorResponse,
+    CreatorBriefResponse,
+)
+
 # Card schemas
 from src.schemas.card import (
     CardCreate,
@@ -132,6 +143,14 @@ from src.schemas.user import (
 )
 
 __all__ = [
+    # Announcement
+    "AnnouncementCreate",
+    "AnnouncementCreateResponse",
+    "AnnouncementDetailResponse",
+    "AnnouncementListResponse",
+    "AnnouncementResponse",
+    "AnnouncementWithCreatorResponse",
+    "CreatorBriefResponse",
     # User
     "UserUpdate",
     "UserResponse",

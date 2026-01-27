@@ -867,3 +867,135 @@ async def check_culture_achievements_task(
     finally:
         if engine is not None:
             await engine.dispose()
+
+
+async def create_announcement_notifications_task(
+    campaign_id: UUID,
+    campaign_title: str,
+    campaign_message: str,
+    link_url: str | None,
+    db_url: str,
+) -> None:
+    """Create notification records for all active users for an announcement campaign.
+
+    This task runs asynchronously after the announcement creation response is sent.
+    It creates a Notification record for each active user, stores the campaign_id
+    in extra_data, and updates the campaign's total_recipients count.
+
+    The task creates its own database connection to avoid issues with
+    connection sharing across async contexts.
+
+    Args:
+        campaign_id: UUID of the announcement campaign
+        campaign_title: Title for the notification
+        campaign_message: Message for the notification
+        link_url: Optional URL for the notification action
+        db_url: Database connection URL
+    """
+    if not is_background_tasks_enabled():
+        logger.debug("Background tasks disabled, skipping create_announcement_notifications_task")
+        return
+
+    logger.info(
+        "Starting announcement notification creation",
+        extra={
+            "campaign_id": str(campaign_id),
+            "task": "create_announcement_notifications",
+        },
+    )
+
+    start_time = datetime.now(timezone.utc)
+    engine = None
+    total_created = 0
+    batch_size = 100
+
+    try:
+        # Create dedicated engine for this background task
+        engine = create_async_engine(db_url, pool_pre_ping=True)
+        async_session_factory = async_sessionmaker(
+            engine, class_=AsyncSession, expire_on_commit=False
+        )
+
+        async with async_session_factory() as session:
+            # Import here to avoid circular imports
+            from sqlalchemy import select
+
+            from src.db.models import Notification, NotificationType, User
+            from src.repositories.announcement import AnnouncementCampaignRepository
+
+            # Get all active user IDs
+            query = select(User.id).where(User.is_active.is_(True))
+            result = await session.execute(query)
+            user_ids = list(result.scalars().all())
+
+            logger.info(
+                "Found active users for announcement",
+                extra={
+                    "campaign_id": str(campaign_id),
+                    "user_count": len(user_ids),
+                },
+            )
+
+            # Create notifications in batches
+            for i in range(0, len(user_ids), batch_size):
+                batch = user_ids[i : i + batch_size]
+
+                for user_id in batch:
+                    notification = Notification(
+                        user_id=user_id,
+                        type=NotificationType.ADMIN_ANNOUNCEMENT,
+                        title=campaign_title,
+                        message=campaign_message,
+                        icon="megaphone",
+                        action_url=link_url,
+                        extra_data={"campaign_id": str(campaign_id)},
+                    )
+                    session.add(notification)
+                    total_created += 1
+
+                # Flush after each batch to avoid memory buildup
+                await session.flush()
+
+                logger.debug(
+                    "Notification batch created",
+                    extra={
+                        "campaign_id": str(campaign_id),
+                        "batch_number": (i // batch_size) + 1,
+                        "batch_size": len(batch),
+                        "total_created": total_created,
+                    },
+                )
+
+            # Update campaign with total recipients
+            repo = AnnouncementCampaignRepository(session)
+            campaign = await repo.get(campaign_id)
+            if campaign:
+                campaign.total_recipients = total_created
+                await session.flush()
+
+            # Commit all changes
+            await session.commit()
+
+        duration_ms = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
+        logger.info(
+            "Announcement notifications created successfully",
+            extra={
+                "campaign_id": str(campaign_id),
+                "total_created": total_created,
+                "duration_ms": duration_ms,
+            },
+        )
+
+    except Exception as e:
+        logger.error(
+            "Announcement notification creation failed",
+            extra={
+                "campaign_id": str(campaign_id),
+                "total_created": total_created,
+                "error": str(e),
+            },
+            exc_info=True,
+        )
+    finally:
+        if engine is not None:
+            await engine.dispose()

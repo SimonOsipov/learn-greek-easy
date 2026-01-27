@@ -1,5 +1,6 @@
 """Repository layer for database operations."""
 
+from src.repositories.announcement import AnnouncementCampaignRepository
 from src.repositories.base import BaseRepository
 from src.repositories.card import CardRepository
 from src.repositories.culture_answer_history import CultureAnswerHistoryRepository
@@ -17,6 +18,8 @@ from src.repositories.session import SessionRepository
 from src.repositories.user import RefreshTokenRepository, UserRepository, UserSettingsRepository
 
 __all__ = [
+    # Announcement
+    "AnnouncementCampaignRepository",
     # Base
     "BaseRepository",
     # User
