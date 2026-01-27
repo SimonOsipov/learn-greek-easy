@@ -19,6 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.config import settings
 from src.db.models import (
     Achievement,
+    AnnouncementCampaign,
     Card,
     CardDifficulty,
     CardStatistics,
@@ -88,6 +89,16 @@ class NewsItemSeedData(TypedDict):
     days_ago: int
 
 
+class AnnouncementCampaignSeedData(TypedDict):
+    """Type definition for announcement campaign seed data items."""
+
+    title: str
+    message: str
+    link_url: str | None
+    hours_ago: float
+    read_by_learner: bool
+
+
 class SeedService:
     """Service for seeding E2E test database with deterministic data.
 
@@ -114,6 +125,7 @@ class SeedService:
         "achievements",
         # Notification tables
         "notifications",
+        "announcement_campaigns",
         # Culture tables (children first)
         "culture_question_stats",
         "culture_questions",
@@ -352,6 +364,38 @@ class SeedService:
             "description_en": "The most important cultural events of the month.",
             "description_ru": "Самые важные культурные события месяца.",
             "days_ago": 30,
+        },
+    ]
+
+    # Announcement campaigns for E2E testing (4 scenarios with varied states)
+    ANNOUNCEMENT_CAMPAIGNS: list[AnnouncementCampaignSeedData] = [
+        {
+            "title": "E2E Test Announcement - Welcome",
+            "message": "Welcome to the new platform! Check out our latest features.",
+            "link_url": None,
+            "hours_ago": 0.5,  # 30 min - fresh/unread
+            "read_by_learner": False,
+        },
+        {
+            "title": "E2E Test Announcement - New Feature",
+            "message": "We've added exciting new learning tools. Click the link to explore!",
+            "link_url": "https://example.com/new-features",
+            "hours_ago": 2,  # 2 hours - with link
+            "read_by_learner": True,
+        },
+        {
+            "title": "E2E Test Announcement - Weekly Update",
+            "message": "Here's what's new this week in Greek learning.",
+            "link_url": None,
+            "hours_ago": 24,  # 1 day ago
+            "read_by_learner": True,
+        },
+        {
+            "title": "E2E Test Announcement - Maintenance Complete",
+            "message": "Scheduled maintenance has been completed successfully.",
+            "link_url": None,
+            "hours_ago": 168,  # 7 days ago
+            "read_by_learner": False,
         },
     ]
 
@@ -2411,6 +2455,112 @@ class SeedService:
             "count": len(created_items),
         }
 
+    async def seed_announcement_campaigns(
+        self,
+        admin_id: UUID,
+        learner_id: UUID,
+    ) -> dict[str, Any]:
+        """Create announcement campaigns and notifications for E2E testing.
+
+        Creates 4 announcement campaigns with varying states:
+        - Fresh announcement (30 min ago, unread)
+        - Recent with link (2 hours ago, read)
+        - Day-old announcement (24 hours ago, read)
+        - Week-old announcement (7 days ago, unread)
+
+        This method is idempotent - it deletes existing E2E test announcements
+        before creating new ones.
+
+        Args:
+            admin_id: UUID of the admin user who creates announcements
+            learner_id: UUID of the learner user who receives notifications
+
+        Returns:
+            dict with seeding summary including created campaigns
+
+        Raises:
+            RuntimeError: If seeding not allowed
+        """
+        self._check_can_seed()
+
+        now = datetime.now(timezone.utc)
+
+        # Delete existing E2E test announcements (idempotent)
+        await self.db.execute(
+            delete(AnnouncementCampaign).where(
+                AnnouncementCampaign.title.like("E2E Test Announcement%")
+            )
+        )
+        # Delete related notifications
+        await self.db.execute(
+            delete(Notification).where(
+                Notification.type == NotificationType.ADMIN_ANNOUNCEMENT,
+                Notification.title.like("E2E Test Announcement%"),
+            )
+        )
+
+        created_campaigns = []
+
+        for config in self.ANNOUNCEMENT_CAMPAIGNS:
+            campaign_time = now - timedelta(hours=config["hours_ago"])
+
+            # Create campaign
+            campaign = AnnouncementCampaign(
+                title=config["title"],
+                message=config["message"],
+                link_url=config.get("link_url"),
+                created_by=admin_id,
+                total_recipients=1,
+                read_count=1 if config["read_by_learner"] else 0,
+            )
+            self.db.add(campaign)
+            await self.db.flush()
+
+            # Backdate created_at
+            await self.db.execute(
+                update(AnnouncementCampaign)
+                .where(AnnouncementCampaign.id == campaign.id)
+                .values(created_at=campaign_time)
+            )
+
+            # Create notification for learner
+            notification = Notification(
+                user_id=learner_id,
+                type=NotificationType.ADMIN_ANNOUNCEMENT,
+                title=config["title"],
+                message=config["message"],
+                icon="megaphone",
+                action_url=config.get("link_url"),
+                extra_data={"campaign_id": str(campaign.id)},
+                read=config["read_by_learner"],
+                read_at=(
+                    campaign_time + timedelta(minutes=30) if config["read_by_learner"] else None
+                ),
+            )
+            self.db.add(notification)
+            await self.db.flush()
+
+            # Backdate notification created_at
+            await self.db.execute(
+                update(Notification)
+                .where(Notification.id == notification.id)
+                .values(created_at=campaign_time)
+            )
+
+            created_campaigns.append(
+                {
+                    "id": str(campaign.id),
+                    "title": config["title"],
+                    "read_by_learner": config["read_by_learner"],
+                }
+            )
+
+        return {
+            "success": True,
+            "campaigns_created": len(created_campaigns),
+            "campaigns": created_campaigns,
+        }
+
     async def seed_news_questions(self) -> dict[str, Any]:
         """Create news items with linked culture questions for E2E testing.
 
@@ -3788,6 +3938,18 @@ class SeedService:
         # Step 14: Create news items with linked culture questions
         news_questions_result = await self.seed_news_questions()
 
+        # Step 15: Create announcement campaigns
+        announcements_result: dict[str, Any] = {"success": True, "campaigns_created": 0}
+        admin_id = next(
+            (UUID(u["id"]) for u in users_result["users"] if u["email"] == "e2e_admin@test.com"),
+            None,
+        )
+        if admin_id and learner_id:
+            announcements_result = await self.seed_announcement_campaigns(
+                admin_id=admin_id,
+                learner_id=learner_id,
+            )
+
         # Commit all changes
         await self.db.commit()
 
@@ -3809,4 +3971,5 @@ class SeedService:
             "mock_exams": mock_exam_result,
             "news": news_result,
             "news_questions": news_questions_result,
+            "announcements": announcements_result,
         }

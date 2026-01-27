@@ -7,6 +7,7 @@
  */
 export type NotificationType =
   | 'achievement_unlocked'
+  | 'admin_announcement'
   | 'daily_goal_complete'
   | 'level_up'
   | 'streak_at_risk'
@@ -77,6 +78,7 @@ export interface NotificationIconConfig {
  */
 export const NOTIFICATION_CONFIG: Record<NotificationType, NotificationIconConfig> = {
   achievement_unlocked: { icon: 'Trophy', colorClass: 'text-warning' },
+  admin_announcement: { icon: 'Megaphone', colorClass: 'text-blue-500' },
   daily_goal_complete: { icon: 'CheckCircle', colorClass: 'text-success' },
   level_up: { icon: 'ArrowUp', colorClass: 'text-primary' },
   streak_at_risk: { icon: 'Flame', colorClass: 'text-warning' },

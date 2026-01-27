@@ -10,6 +10,7 @@ import {
   Hand,
   HeartCrack,
   Info,
+  Megaphone,
   MessageSquareText,
   RefreshCw,
   Trophy,
@@ -26,6 +27,7 @@ import type { Notification, NotificationType } from '@/types/notification';
  */
 const notificationConfig: Record<NotificationType, { icon: LucideIcon; colorClass: string }> = {
   achievement_unlocked: { icon: Trophy, colorClass: 'text-warning' },
+  admin_announcement: { icon: Megaphone, colorClass: 'text-blue-500' },
   daily_goal_complete: { icon: CheckCircle, colorClass: 'text-success' },
   level_up: { icon: ArrowUp, colorClass: 'text-primary' },
   streak_at_risk: { icon: Flame, colorClass: 'text-warning' },
@@ -37,6 +39,13 @@ const notificationConfig: Record<NotificationType, { icon: LucideIcon; colorClas
 
 // Fallback for unknown types
 const defaultConfig = { icon: Info, colorClass: 'text-muted-foreground' };
+
+/**
+ * Check if a URL is external (starts with http:// or https://)
+ */
+const isExternalUrl = (url: string): boolean => {
+  return url.startsWith('http://') || url.startsWith('https://');
+};
 
 interface NotificationItemProps {
   notification: Notification;
@@ -72,7 +81,12 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
     }
 
     if (notification.action_url) {
-      navigate(notification.action_url);
+      // External URLs open in new tab, internal URLs use React Router
+      if (isExternalUrl(notification.action_url)) {
+        window.open(notification.action_url, '_blank', 'noopener,noreferrer');
+      } else {
+        navigate(notification.action_url);
+      }
       onClose?.();
     }
   };
@@ -100,6 +114,7 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
       role={notification.action_url ? 'button' : undefined}
       tabIndex={notification.action_url ? 0 : undefined}
       aria-label={notification.action_url ? `${notification.title} - Click to view` : undefined}
+      data-testid={`notification-item-${notification.id}`}
     >
       {/* Icon */}
       <div className={cn('mt-0.5 flex-shrink-0', config.colorClass)}>
@@ -108,14 +123,23 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
 
       {/* Content */}
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium text-foreground">{notification.title}</p>
-        <p className="mt-0.5 line-clamp-2 text-sm text-muted-foreground">{notification.message}</p>
-        <p className="mt-1 text-xs text-muted-foreground">{relativeTime}</p>
+        <p className="text-sm font-medium text-foreground" data-testid="notification-title">
+          {notification.title}
+        </p>
+        <p
+          className="mt-0.5 line-clamp-2 text-sm text-muted-foreground"
+          data-testid="notification-message"
+        >
+          {notification.message}
+        </p>
+        <p className="mt-1 text-xs text-muted-foreground" data-testid="notification-timestamp">
+          {relativeTime}
+        </p>
       </div>
 
       {/* Unread indicator */}
       {!notification.read && (
-        <div className="mt-1.5 flex-shrink-0">
+        <div className="mt-1.5 flex-shrink-0" data-testid="notification-unread-indicator">
           <div className="h-2 w-2 rounded-full bg-primary" />
         </div>
       )}

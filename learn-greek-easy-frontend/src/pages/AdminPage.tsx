@@ -26,6 +26,7 @@ import { useTranslation } from 'react-i18next';
 
 import {
   AdminFeedbackSection,
+  AnnouncementsTab,
   DeckCreateModal,
   type DeckCreateFormData,
   DeckDeleteDialog,
@@ -553,7 +554,7 @@ AllDecksList.displayName = 'AllDecksList';
 /**
  * Top-level admin tab type
  */
-type AdminTabType = 'decks' | 'news' | 'feedback';
+type AdminTabType = 'decks' | 'news' | 'announcements' | 'feedback';
 
 /**
  * Admin Page
@@ -1091,7 +1092,7 @@ const AdminPage: React.FC = () => {
       {/* Top-Level Tab Switcher */}
       <div className="w-full" data-testid="admin-tab-switcher">
         <div className="flex gap-2 rounded-lg bg-muted p-1">
-          {(['decks', 'news', 'feedback'] as AdminTabType[]).map((tab) => (
+          {(['decks', 'news', 'announcements', 'feedback'] as AdminTabType[]).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -1161,6 +1162,13 @@ const AdminPage: React.FC = () => {
       {activeTab === 'news' && (
         <section aria-labelledby="news-heading">
           <NewsTab />
+        </section>
+      )}
+
+      {/* Announcements Tab Content */}
+      {activeTab === 'announcements' && (
+        <section aria-labelledby="announcements-heading">
+          <AnnouncementsTab />
         </section>
       )}
 

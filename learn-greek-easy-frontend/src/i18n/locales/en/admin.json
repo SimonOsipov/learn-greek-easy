@@ -171,7 +171,53 @@
   "tabs": {
     "decks": "Decks",
     "news": "News",
+    "announcements": "Announcements",
     "feedback": "Feedback"
+  },
+  "announcements": {
+    "create": {
+      "title": "Create Announcement",
+      "description": "Send a notification to all active users",
+      "titleLabel": "Title",
+      "titlePlaceholder": "Enter announcement title",
+      "messageLabel": "Message",
+      "messagePlaceholder": "Enter the announcement message...",
+      "linkLabel": "Link URL",
+      "linkPlaceholder": "https://example.com/page",
+      "linkDescription": "Users can click this link in their notification",
+      "optional": "optional",
+      "preview": "Preview",
+      "success": "Announcement sent successfully",
+      "error": "Failed to send announcement"
+    },
+    "preview": {
+      "title": "Preview Announcement",
+      "description": "Review before sending to all users",
+      "warningTitle": "This action cannot be undone",
+      "warningMessage": "Once sent, this announcement will create notifications for all active users.",
+      "cancel": "Edit",
+      "send": "Send to All Users",
+      "sending": "Sending..."
+    },
+    "history": {
+      "title": "Announcement History",
+      "description": "View all past announcements and their statistics",
+      "empty": "No announcements yet",
+      "emptyHint": "Create your first announcement above",
+      "by": "by",
+      "unknownAdmin": "Unknown Admin",
+      "viewDetail": "View Details"
+    },
+    "detail": {
+      "title": "Announcement Details",
+      "message": "Message",
+      "link": "Link URL",
+      "statistics": "Statistics",
+      "sent": "Sent to",
+      "read": "Read by",
+      "readProgress": "Read Progress",
+      "close": "Close"
+    }
   },
   "news": {
     "create": {

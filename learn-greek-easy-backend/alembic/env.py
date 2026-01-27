@@ -18,6 +18,7 @@ from src.db.base import Base
 from src.db.models import (  # noqa: F401
     Achievement,
     AchievementCategory,
+    AnnouncementCampaign,
     Card,
     CardDifficulty,
     CardStatistics,
@@ -96,6 +97,7 @@ def include_name(name: str | None, type_: str, parent_names: dict) -> bool:
     Some indexes cannot be represented in SQLAlchemy model metadata:
     - pgvector IVFFlat indexes (created via raw SQL)
     - PostgreSQL partial indexes (use WHERE clause)
+    - Indexes with expression ordering (DESC/ASC expressions)
 
     This filter excludes them from autogenerate comparison to prevent
     false positives during `alembic check`.
@@ -107,6 +109,10 @@ def include_name(name: str | None, type_: str, parent_names: dict) -> bool:
         # Exclude partial index on culture_questions.original_article_url
         # This index uses postgresql_where which cannot be expressed in model metadata
         if name == "ix_culture_questions_original_article_url":
+            return False
+        # Exclude announcement_campaigns created_at DESC index
+        # This index uses expression ordering which cannot be expressed in model metadata
+        if name == "ix_announcement_campaigns_created_at":
             return False
     return True
 

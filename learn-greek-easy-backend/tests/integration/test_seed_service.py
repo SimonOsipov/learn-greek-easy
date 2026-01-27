@@ -207,11 +207,13 @@ class TestSeedServiceTruncation:
         await db_session.commit()
 
         assert result["success"] is True
-        # 18 tables: xp_transactions, user_achievements, user_xp, achievements,
-        # notifications, culture_question_stats, culture_questions, culture_decks,
-        # reviews, card_statistics, user_deck_progress, feedback_votes,
-        # feedback, refresh_tokens, user_settings, cards, users, decks
-        assert len(result["truncated_tables"]) == 18
+        # 22 tables: mock_exam_answers, mock_exam_sessions, news_items,
+        # xp_transactions, user_achievements, user_xp, achievements,
+        # notifications, announcement_campaigns, culture_question_stats,
+        # culture_questions, culture_decks, reviews, card_statistics,
+        # user_deck_progress, feedback_votes, feedback, refresh_tokens,
+        # user_settings, cards, users, decks
+        assert len(result["truncated_tables"]) == 22
 
 
 # ============================================================================
@@ -560,14 +562,20 @@ class TestSeedServiceNotifications:
 
     @pytest.mark.asyncio
     async def test_seed_creates_notifications(self, db_session: AsyncSession, enable_seeding):
-        """seed_all creates notifications for learner user."""
+        """seed_all creates notifications for learner user.
+
+        Creates:
+        - 5 base notifications (achievement, daily_goal, level_up, streak_at_risk, welcome)
+        - 4 announcement notifications (from seed_announcement_campaigns)
+        Total: 9 notifications
+        """
         seed_service = SeedService(db_session)
 
         await seed_service.seed_all()
 
-        # Verify 5 notifications were created
+        # Verify 9 notifications were created (5 base + 4 announcements)
         notification_count = await db_session.scalar(select(func.count(Notification.id)))
-        assert notification_count == 5
+        assert notification_count == 9
 
     @pytest.mark.asyncio
     async def test_notifications_linked_to_learner(self, db_session: AsyncSession, enable_seeding):
@@ -590,26 +598,31 @@ class TestSeedServiceNotifications:
     async def test_notifications_have_correct_read_status(
         self, db_session: AsyncSession, enable_seeding
     ):
-        """Verify 3 unread and 2 read notifications are created."""
+        """Verify correct read/unread notification counts.
+
+        Base notifications: 3 unread, 2 read
+        Announcement notifications: 2 unread (Welcome, Maintenance), 2 read (Feature, Weekly)
+        Total: 5 unread, 4 read
+        """
         seed_service = SeedService(db_session)
 
         await seed_service.seed_all()
 
-        # Count unread
+        # Count unread (3 base + 2 announcements)
         unread_count = await db_session.scalar(
             select(func.count(Notification.id)).where(Notification.read == False)  # noqa: E712
         )
-        assert unread_count == 3
+        assert unread_count == 5
 
-        # Count read
+        # Count read (2 base + 2 announcements)
         read_count = await db_session.scalar(
             select(func.count(Notification.id)).where(Notification.read == True)  # noqa: E712
         )
-        assert read_count == 2
+        assert read_count == 4
 
     @pytest.mark.asyncio
     async def test_notifications_have_various_types(self, db_session: AsyncSession, enable_seeding):
-        """Verify notifications have various types."""
+        """Verify notifications have various types including announcements."""
         seed_service = SeedService(db_session)
 
         await seed_service.seed_all()
@@ -618,19 +631,20 @@ class TestSeedServiceNotifications:
 
         types = {n.type for n in notifications}
 
-        # Should have 5 different notification types
-        assert len(types) == 5
+        # Should have 6 different notification types (5 base + admin_announcement)
+        assert len(types) == 6
         assert NotificationType.ACHIEVEMENT_UNLOCKED in types
         assert NotificationType.DAILY_GOAL_COMPLETE in types
         assert NotificationType.LEVEL_UP in types
         assert NotificationType.STREAK_AT_RISK in types
         assert NotificationType.WELCOME in types
+        assert NotificationType.ADMIN_ANNOUNCEMENT in types
 
     @pytest.mark.asyncio
     async def test_notifications_have_correct_titles(
         self, db_session: AsyncSession, enable_seeding
     ):
-        """Verify notifications have expected titles."""
+        """Verify notifications have expected titles including announcements."""
         seed_service = SeedService(db_session)
 
         await seed_service.seed_all()
@@ -639,13 +653,19 @@ class TestSeedServiceNotifications:
 
         titles = {n.title for n in notifications}
 
-        # Check for expected titles
+        # Check for expected titles (5 base + 4 announcements)
         expected_titles = {
+            # Base notification titles
             "Achievement Unlocked: First Flame",
             "Daily Goal Complete!",
             "Level Up!",
             "Streak at Risk!",
             "Welcome to Greekly!",
+            # Announcement notification titles
+            "E2E Test Announcement - Welcome",
+            "E2E Test Announcement - New Feature",
+            "E2E Test Announcement - Weekly Update",
+            "E2E Test Announcement - Maintenance Complete",
         }
 
         assert titles == expected_titles
@@ -677,15 +697,15 @@ class TestSeedServiceNotifications:
 
     @pytest.mark.asyncio
     async def test_truncation_clears_notifications(self, db_session: AsyncSession, enable_seeding):
-        """Verify truncation clears notifications table."""
+        """Verify truncation clears notifications table including announcements."""
         seed_service = SeedService(db_session)
 
         # First seed
         await seed_service.seed_all()
 
-        # Verify notifications exist
+        # Verify notifications exist (5 base + 4 announcements = 9)
         count_before = await db_session.scalar(select(func.count(Notification.id)))
-        assert count_before == 5
+        assert count_before == 9
 
         # Truncate
         await seed_service.truncate_tables()
@@ -944,3 +964,235 @@ class TestSeedServiceCultureTruncationOrder:
         assert "culture_question_stats" in result["truncated_tables"]
         assert "culture_questions" in result["truncated_tables"]
         assert "culture_decks" in result["truncated_tables"]
+
+
+# ============================================================================
+# Announcement Seeding Tests
+# ============================================================================
+
+
+@pytest.mark.no_parallel
+class TestSeedServiceAnnouncements:
+    """Integration tests for announcement campaign seeding with real database."""
+
+    @pytest.mark.asyncio
+    async def test_seed_creates_announcement_campaigns(
+        self, db_session: AsyncSession, enable_seeding
+    ):
+        """seed_all creates 4 announcement campaigns."""
+        from sqlalchemy import func, select
+
+        from src.db.models import AnnouncementCampaign
+
+        seed_service = SeedService(db_session)
+
+        await seed_service.seed_all()
+
+        # Verify 4 announcement campaigns were created
+        campaign_count = await db_session.scalar(select(func.count(AnnouncementCampaign.id)))
+        assert campaign_count == 4
+
+    @pytest.mark.asyncio
+    async def test_announcement_campaigns_have_correct_titles(
+        self, db_session: AsyncSession, enable_seeding
+    ):
+        """Verify announcement campaigns have expected titles."""
+        from sqlalchemy import select
+
+        from src.db.models import AnnouncementCampaign
+
+        seed_service = SeedService(db_session)
+
+        await seed_service.seed_all()
+
+        campaigns = (await db_session.execute(select(AnnouncementCampaign))).scalars().all()
+
+        titles = {c.title for c in campaigns}
+
+        expected_titles = {
+            "E2E Test Announcement - Welcome",
+            "E2E Test Announcement - New Feature",
+            "E2E Test Announcement - Weekly Update",
+            "E2E Test Announcement - Maintenance Complete",
+        }
+
+        assert titles == expected_titles
+
+    @pytest.mark.asyncio
+    async def test_announcement_campaigns_created_by_admin(
+        self, db_session: AsyncSession, enable_seeding
+    ):
+        """Verify all campaigns are created by the admin user."""
+        from sqlalchemy import select
+
+        from src.db.models import AnnouncementCampaign, User
+
+        seed_service = SeedService(db_session)
+
+        await seed_service.seed_all()
+
+        # Get admin user
+        admin = await db_session.scalar(select(User).where(User.email == "e2e_admin@test.com"))
+        assert admin is not None
+
+        # All campaigns should be created by admin
+        campaigns = (await db_session.execute(select(AnnouncementCampaign))).scalars().all()
+
+        for campaign in campaigns:
+            assert campaign.created_by == admin.id
+
+    @pytest.mark.asyncio
+    async def test_announcement_campaign_with_link(self, db_session: AsyncSession, enable_seeding):
+        """Verify one campaign has a link URL."""
+        from sqlalchemy import select
+
+        from src.db.models import AnnouncementCampaign
+
+        seed_service = SeedService(db_session)
+
+        await seed_service.seed_all()
+
+        # Find campaign with link
+        campaign_with_link = await db_session.scalar(
+            select(AnnouncementCampaign).where(
+                AnnouncementCampaign.title == "E2E Test Announcement - New Feature"
+            )
+        )
+
+        assert campaign_with_link is not None
+        assert campaign_with_link.link_url == "https://example.com/new-features"
+
+    @pytest.mark.asyncio
+    async def test_announcement_campaigns_have_different_timestamps(
+        self, db_session: AsyncSession, enable_seeding
+    ):
+        """Verify campaigns have different created_at timestamps."""
+        from sqlalchemy import select
+
+        from src.db.models import AnnouncementCampaign
+
+        seed_service = SeedService(db_session)
+
+        await seed_service.seed_all()
+
+        campaigns = (await db_session.execute(select(AnnouncementCampaign))).scalars().all()
+
+        # All timestamps should be different
+        timestamps = [c.created_at for c in campaigns]
+        assert len(set(timestamps)) == 4, "All campaigns should have different timestamps"
+
+    @pytest.mark.asyncio
+    async def test_announcement_notifications_linked_to_campaigns(
+        self, db_session: AsyncSession, enable_seeding
+    ):
+        """Verify announcement notifications have campaign_id in extra_data."""
+        from sqlalchemy import select
+
+        from src.db.models import AnnouncementCampaign, Notification, NotificationType
+
+        seed_service = SeedService(db_session)
+
+        await seed_service.seed_all()
+
+        # Get all announcement notifications
+        notifications = (
+            (
+                await db_session.execute(
+                    select(Notification).where(
+                        Notification.type == NotificationType.ADMIN_ANNOUNCEMENT
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+
+        assert len(notifications) == 4
+
+        # Get all campaign IDs
+        campaigns = (await db_session.execute(select(AnnouncementCampaign))).scalars().all()
+        campaign_ids = {str(c.id) for c in campaigns}
+
+        # Each notification should reference a valid campaign
+        for notification in notifications:
+            assert notification.extra_data is not None
+            assert "campaign_id" in notification.extra_data
+            assert notification.extra_data["campaign_id"] in campaign_ids
+
+    @pytest.mark.asyncio
+    async def test_announcement_read_counts_match_notifications(
+        self, db_session: AsyncSession, enable_seeding
+    ):
+        """Verify campaign read_count matches notification read status."""
+        from sqlalchemy import select
+
+        from src.db.models import AnnouncementCampaign, Notification, NotificationType
+
+        seed_service = SeedService(db_session)
+
+        await seed_service.seed_all()
+
+        campaigns = (await db_session.execute(select(AnnouncementCampaign))).scalars().all()
+
+        for campaign in campaigns:
+            # Get notification for this campaign
+            notification = await db_session.scalar(
+                select(Notification).where(
+                    Notification.type == NotificationType.ADMIN_ANNOUNCEMENT,
+                    Notification.title == campaign.title,
+                )
+            )
+
+            assert notification is not None
+
+            # Read count should match notification read status
+            expected_read_count = 1 if notification.read else 0
+            assert campaign.read_count == expected_read_count
+
+    @pytest.mark.asyncio
+    async def test_truncation_clears_announcement_campaigns(
+        self, db_session: AsyncSession, enable_seeding
+    ):
+        """Verify truncation clears announcement_campaigns table."""
+        from sqlalchemy import func, select
+
+        from src.db.models import AnnouncementCampaign
+
+        seed_service = SeedService(db_session)
+
+        # First seed
+        await seed_service.seed_all()
+
+        # Verify campaigns exist
+        count_before = await db_session.scalar(select(func.count(AnnouncementCampaign.id)))
+        assert count_before == 4
+
+        # Truncate
+        await seed_service.truncate_tables()
+        await db_session.commit()
+
+        # Verify campaigns are cleared
+        count_after = await db_session.scalar(select(func.count(AnnouncementCampaign.id)))
+        assert count_after == 0
+
+    @pytest.mark.asyncio
+    async def test_announcement_seeding_is_idempotent(
+        self, db_session: AsyncSession, enable_seeding
+    ):
+        """Verify announcement seeding is idempotent (can run multiple times)."""
+        from sqlalchemy import func, select
+
+        from src.db.models import AnnouncementCampaign
+
+        seed_service = SeedService(db_session)
+
+        # First seed
+        await seed_service.seed_all()
+        count1 = await db_session.scalar(select(func.count(AnnouncementCampaign.id)))
+
+        # Second seed (should truncate and recreate)
+        await seed_service.seed_all()
+        count2 = await db_session.scalar(select(func.count(AnnouncementCampaign.id)))
+
+        # Counts should be identical
+        assert count1 == count2 == 4
