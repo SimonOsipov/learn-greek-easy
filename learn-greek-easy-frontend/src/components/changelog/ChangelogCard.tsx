@@ -43,7 +43,7 @@ function TagBadge({ tag }: { tag: ChangelogTag }) {
   const config = CHANGELOG_TAG_CONFIG[tag];
 
   return (
-    <Badge variant="secondary" className={config.colorClass}>
+    <Badge variant="secondary" className={config.colorClass} data-testid="tag-badge">
       {t(config.labelKey)}
     </Badge>
   );
@@ -60,7 +60,7 @@ export function ChangelogCard({ entry }: ChangelogCardProps) {
   });
 
   return (
-    <Card className="w-full">
+    <Card className="w-full" data-testid="changelog-card">
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 space-y-1">
