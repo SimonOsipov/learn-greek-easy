@@ -108,6 +108,11 @@ const Statistics = lazyWithRetry(() => import('@/pages/Statistics'));
 // Achievements page
 const AchievementsPage = lazyWithRetry(() => import('@/pages/AchievementsPage'));
 
+// News page (paginated news articles)
+const NewsPage = lazyWithRetry(() =>
+  import('@/pages/NewsPage').then((m) => ({ default: m.NewsPage }))
+);
+
 // Admin page (requires admin role)
 const AdminPage = lazyWithRetry(() => import('@/pages/AdminPage'));
 
@@ -219,6 +224,10 @@ function AppContent() {
                 <Route path="/practice/culture-exam/session" element={<MockExamSessionPage />} />
                 {/* Mock exam results page outside AppLayout for full-screen experience */}
                 <Route path="/practice/culture-exam/results" element={<MockExamResultsPage />} />
+                {/* News feed page */}
+                <Route path="/news" element={<AppLayout />}>
+                  <Route index element={<NewsPage />} />
+                </Route>
               </Route>
 
               {/* Admin Routes - require admin role */}
