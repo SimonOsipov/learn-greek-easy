@@ -98,6 +98,7 @@ export const Callback: React.FC = () => {
           id: data.user?.id || '',
           email: data.user?.email || '',
           name: data.user?.full_name || data.user?.email?.split('@')[0] || 'User',
+          avatar: data.user?.avatar_url || undefined,
           role: determineUserRole(data.user?.is_superuser, auth0Roles),
           preferences: {
             language: 'en',
