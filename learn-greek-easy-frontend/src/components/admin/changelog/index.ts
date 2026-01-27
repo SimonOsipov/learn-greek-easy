@@ -1,0 +1,1 @@
+export { ChangelogTable } from './ChangelogTable';
