@@ -2,7 +2,7 @@
 
 from uuid import UUID
 
-from sqlalchemy import String, cast, desc, func, select
+from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -44,13 +44,17 @@ class AnnouncementCampaignRepository(BaseRepository[AnnouncementCampaign]):
         return result.scalar_one_or_none()
 
     async def get_read_count_from_notifications(self, campaign_id: UUID) -> int:
-        """Calculate read count from notifications table."""
+        """Calculate read count from notifications table.
+
+        Uses PostgreSQL ->> operator to extract text value from JSONB extra_data,
+        which returns the value without JSON quotes for proper string comparison.
+        """
         query = (
             select(func.count())
             .select_from(Notification)
             .where(
                 Notification.type == NotificationType.ADMIN_ANNOUNCEMENT,
-                cast(Notification.extra_data["campaign_id"], String) == str(campaign_id),
+                Notification.extra_data.op("->>")("campaign_id") == str(campaign_id),
                 Notification.read.is_(True),
             )
         )

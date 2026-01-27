@@ -11,10 +11,11 @@ All endpoints require superuser authentication.
 from typing import Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.config import settings
 from src.core.dependencies import get_current_superuser
 from src.core.exceptions import NotFoundException
 from src.core.logging import get_logger
@@ -40,6 +41,14 @@ from src.schemas.admin import (
     QuestionApproveResponse,
     UnifiedDeckItem,
 )
+from src.schemas.announcement import (
+    AnnouncementCreate,
+    AnnouncementCreateResponse,
+    AnnouncementDetailResponse,
+    AnnouncementListResponse,
+    AnnouncementWithCreatorResponse,
+    CreatorBriefResponse,
+)
 from src.schemas.feedback import (
     AdminFeedbackListResponse,
     AdminFeedbackResponse,
@@ -52,8 +61,10 @@ from src.schemas.news_item import (
     NewsItemWithCardResponse,
     NewsItemWithQuestionCreate,
 )
+from src.services.announcement_service import AnnouncementService
 from src.services.feedback_admin_service import FeedbackAdminService
 from src.services.news_item_service import NewsItemService
+from src.tasks import create_announcement_notifications_task
 
 logger = get_logger(__name__)
 
@@ -983,3 +994,280 @@ async def delete_news_item(
     """
     service = NewsItemService(db)
     await service.delete(news_item_id)
+
+
+# ============================================================================
+# Announcement Admin Endpoints
+# ============================================================================
+
+
+@router.post(
+    "/announcements",
+    response_model=AnnouncementCreateResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create a new announcement",
+    description="Create a new announcement campaign and broadcast to all active users. Requires superuser privileges.",
+    responses={
+        201: {
+            "description": "Announcement created successfully",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "id": "550e8400-e29b-41d4-a716-446655440000",
+                        "title": "New Feature Released",
+                        "total_recipients": 0,
+                        "message": "Announcement created and notifications are being sent",
+                    }
+                }
+            },
+        },
+        400: {"description": "Invalid request"},
+        422: {"description": "Validation error"},
+    },
+)
+async def create_announcement(
+    data: AnnouncementCreate,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> AnnouncementCreateResponse:
+    """Create a new announcement campaign (admin only).
+
+    Creates an announcement campaign record and schedules background task
+    to create notification records for all active users.
+
+    Args:
+        data: Announcement creation data (title, message, optional link)
+        background_tasks: FastAPI background tasks handler
+        db: Database session (injected)
+        current_user: Authenticated superuser (injected)
+
+    Returns:
+        AnnouncementCreateResponse with campaign ID and initial stats
+
+    Raises:
+        400: If creation fails
+        422: If validation fails
+    """
+    service = AnnouncementService(db)
+
+    # Create the campaign
+    campaign = await service.create_campaign(
+        title=data.title,
+        message=data.message,
+        created_by=current_user.id,
+        link_url=data.link_url,
+    )
+
+    # Commit the transaction before scheduling background task
+    await db.commit()
+
+    # Schedule background task to create notifications for all users
+    background_tasks.add_task(
+        create_announcement_notifications_task,
+        campaign_id=campaign.id,
+        campaign_title=campaign.title,
+        campaign_message=campaign.message,
+        link_url=campaign.link_url,
+        db_url=settings.database_url,
+    )
+
+    logger.info(
+        "Announcement campaign created, notifications scheduled",
+        extra={
+            "campaign_id": str(campaign.id),
+            "created_by": str(current_user.id),
+            "title": campaign.title[:50],
+        },
+    )
+
+    return AnnouncementCreateResponse(
+        id=campaign.id,
+        title=campaign.title,
+        total_recipients=campaign.total_recipients,
+    )
+
+
+@router.get(
+    "/announcements",
+    response_model=AnnouncementListResponse,
+    summary="List all announcements",
+    description="Get a paginated list of all announcement campaigns. Requires superuser privileges.",
+    responses={
+        200: {
+            "description": "Paginated announcement list",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "total": 5,
+                        "page": 1,
+                        "page_size": 20,
+                        "items": [
+                            {
+                                "id": "550e8400-e29b-41d4-a716-446655440000",
+                                "title": "New Feature Released",
+                                "message": "We've added new vocabulary decks!",
+                                "link_url": "https://example.com/features",
+                                "total_recipients": 150,
+                                "read_count": 75,
+                                "created_at": "2024-01-15T10:30:00Z",
+                                "creator": {
+                                    "id": "660e8400-e29b-41d4-a716-446655440000",
+                                    "display_name": "Admin User",
+                                },
+                            }
+                        ],
+                    }
+                }
+            },
+        },
+    },
+)
+async def list_announcements(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+    page: int = Query(1, ge=1, description="Page number"),
+    page_size: int = Query(20, ge=1, le=100, description="Items per page"),
+) -> AnnouncementListResponse:
+    """List all announcement campaigns with pagination (admin only).
+
+    Returns a paginated list of all announcements with creator info.
+
+    Args:
+        db: Database session (injected)
+        current_user: Authenticated superuser (injected)
+        page: Page number (1-indexed)
+        page_size: Number of items per page (max 100)
+
+    Returns:
+        AnnouncementListResponse with paginated campaign list
+
+    Raises:
+        401: If not authenticated
+        403: If authenticated but not superuser
+    """
+    service = AnnouncementService(db)
+    campaigns, total = await service.get_campaign_list(page=page, page_size=page_size)
+
+    # Convert to response schema with creator info
+    items = [
+        AnnouncementWithCreatorResponse(
+            id=campaign.id,
+            title=campaign.title,
+            message=campaign.message,
+            link_url=campaign.link_url,
+            total_recipients=campaign.total_recipients,
+            read_count=campaign.read_count,
+            created_at=campaign.created_at,
+            creator=(
+                CreatorBriefResponse(
+                    id=campaign.creator.id,
+                    display_name=campaign.creator.full_name,
+                )
+                if campaign.creator
+                else None
+            ),
+        )
+        for campaign in campaigns
+    ]
+
+    return AnnouncementListResponse(
+        total=total,
+        page=page,
+        page_size=page_size,
+        items=items,
+    )
+
+
+@router.get(
+    "/announcements/{announcement_id}",
+    response_model=AnnouncementDetailResponse,
+    summary="Get announcement details",
+    description="Get detailed information about a specific announcement including read statistics. Requires superuser privileges.",
+    responses={
+        200: {
+            "description": "Announcement details with read stats",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "id": "550e8400-e29b-41d4-a716-446655440000",
+                        "title": "New Feature Released",
+                        "message": "We've added new vocabulary decks!",
+                        "link_url": "https://example.com/features",
+                        "total_recipients": 150,
+                        "read_count": 75,
+                        "read_percentage": 50.0,
+                        "created_at": "2024-01-15T10:30:00Z",
+                        "creator": {
+                            "id": "660e8400-e29b-41d4-a716-446655440000",
+                            "display_name": "Admin User",
+                        },
+                    }
+                }
+            },
+        },
+        404: {"description": "Announcement not found"},
+    },
+)
+async def get_announcement(
+    announcement_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> AnnouncementDetailResponse:
+    """Get announcement details with read statistics (admin only).
+
+    Refreshes the read count from notifications table and returns
+    detailed campaign information including read percentage.
+
+    Args:
+        announcement_id: UUID of the announcement campaign
+        db: Database session (injected)
+        current_user: Authenticated superuser (injected)
+
+    Returns:
+        AnnouncementDetailResponse with full campaign details and stats
+
+    Raises:
+        401: If not authenticated
+        403: If authenticated but not superuser
+        404: If announcement not found
+    """
+    service = AnnouncementService(db)
+
+    # Refresh read count from notifications table
+    await service.refresh_read_count(announcement_id)
+    await db.commit()
+
+    # Get campaign with updated stats
+    campaign = await service.get_campaign(announcement_id)
+
+    if not campaign:
+        raise NotFoundException(
+            resource="Announcement",
+            detail=f"Announcement with ID '{announcement_id}' not found",
+        )
+
+    # Calculate read percentage
+    read_percentage = service.calculate_read_percentage(
+        total_recipients=campaign.total_recipients,
+        read_count=campaign.read_count,
+    )
+
+    return AnnouncementDetailResponse(
+        id=campaign.id,
+        title=campaign.title,
+        message=campaign.message,
+        link_url=campaign.link_url,
+        total_recipients=campaign.total_recipients,
+        read_count=campaign.read_count,
+        read_percentage=read_percentage,
+        created_at=campaign.created_at,
+        creator=(
+            CreatorBriefResponse(
+                id=campaign.creator.id,
+                display_name=campaign.creator.full_name,
+            )
+            if campaign.creator
+            else None
+        ),
+    )
