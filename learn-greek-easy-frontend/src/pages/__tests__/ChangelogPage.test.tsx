@@ -21,7 +21,10 @@ import {
   selectChangelogItems,
   selectChangelogLoading,
   selectChangelogError,
-  selectChangelogPagination,
+  selectChangelogPage,
+  selectChangelogPageSize,
+  selectChangelogTotal,
+  selectChangelogTotalPages,
 } from '@/stores/changelogStore';
 import * as changelogAnalytics from '@/lib/analytics/changelogAnalytics';
 
@@ -31,12 +34,10 @@ vi.mock('@/stores/changelogStore', () => ({
   selectChangelogItems: vi.fn((state) => state.items),
   selectChangelogLoading: vi.fn((state) => state.isLoading),
   selectChangelogError: vi.fn((state) => state.error),
-  selectChangelogPagination: vi.fn((state) => ({
-    page: state.page,
-    pageSize: state.pageSize,
-    total: state.total,
-    totalPages: state.totalPages,
-  })),
+  selectChangelogPage: vi.fn((state) => state.page),
+  selectChangelogPageSize: vi.fn((state) => state.pageSize),
+  selectChangelogTotal: vi.fn((state) => state.total),
+  selectChangelogTotalPages: vi.fn((state) => state.totalPages),
 }));
 
 // Mock analytics

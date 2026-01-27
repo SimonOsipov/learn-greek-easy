@@ -19,7 +19,10 @@ import {
   selectChangelogError,
   selectChangelogItems,
   selectChangelogLoading,
-  selectChangelogPagination,
+  selectChangelogPage,
+  selectChangelogPageSize,
+  selectChangelogTotal,
+  selectChangelogTotalPages,
   useChangelogStore,
 } from '@/stores/changelogStore';
 
@@ -30,7 +33,10 @@ export function ChangelogPage() {
   const items = useChangelogStore(selectChangelogItems);
   const isLoading = useChangelogStore(selectChangelogLoading);
   const error = useChangelogStore(selectChangelogError);
-  const { page, pageSize, total, totalPages } = useChangelogStore(selectChangelogPagination);
+  const page = useChangelogStore(selectChangelogPage);
+  const pageSize = useChangelogStore(selectChangelogPageSize);
+  const total = useChangelogStore(selectChangelogTotal);
+  const totalPages = useChangelogStore(selectChangelogTotalPages);
   const fetchChangelog = useChangelogStore((state) => state.fetchChangelog);
   const setPage = useChangelogStore((state) => state.setPage);
   const reset = useChangelogStore((state) => state.reset);

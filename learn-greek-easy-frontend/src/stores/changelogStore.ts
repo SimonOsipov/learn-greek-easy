@@ -104,9 +104,7 @@ export const useChangelogStore = create<ChangelogState>()(
 export const selectChangelogItems = (state: ChangelogState) => state.items;
 export const selectChangelogLoading = (state: ChangelogState) => state.isLoading;
 export const selectChangelogError = (state: ChangelogState) => state.error;
-export const selectChangelogPagination = (state: ChangelogState) => ({
-  page: state.page,
-  pageSize: state.pageSize,
-  total: state.total,
-  totalPages: state.totalPages,
-});
+export const selectChangelogPage = (state: ChangelogState) => state.page;
+export const selectChangelogPageSize = (state: ChangelogState) => state.pageSize;
+export const selectChangelogTotal = (state: ChangelogState) => state.total;
+export const selectChangelogTotalPages = (state: ChangelogState) => state.totalPages;
