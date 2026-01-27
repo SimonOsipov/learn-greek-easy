@@ -122,7 +122,11 @@
       "cultureExam": "Экзамен по культуре",
       "newsFeed": "Лента новостей"
     },
-    "premium": "Премиум"
+    "premium": "Премиум",
+    "feedbackDropdown": {
+      "feedback": "Отправить отзыв",
+      "changelog": "Новые функции и изменения"
+    }
   },
   "language": {
     "select": "Выбрать язык",

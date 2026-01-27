@@ -122,7 +122,11 @@
       "cultureExam": "Culture Exam",
       "newsFeed": "News Feed"
     },
-    "premium": "Premium"
+    "premium": "Premium",
+    "feedbackDropdown": {
+      "feedback": "Submit Feedback",
+      "changelog": "New Features & Changes"
+    }
   },
   "language": {
     "select": "Select language",

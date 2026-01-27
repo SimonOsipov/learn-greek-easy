@@ -122,7 +122,11 @@
       "cultureExam": "Εξέταση Πολιτισμού",
       "newsFeed": "Ροή Ειδήσεων"
     },
-    "premium": "Premium"
+    "premium": "Premium",
+    "feedbackDropdown": {
+      "feedback": "Υποβολή Σχολίων",
+      "changelog": "Νέες Λειτουργίες & Αλλαγές"
+    }
   },
   "language": {
     "select": "Επιλέξτε γλώσσα",
