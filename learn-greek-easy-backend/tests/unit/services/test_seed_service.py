@@ -1774,3 +1774,178 @@ class TestSeedServiceNewsFeedPage:
         # All URLs should follow the e2e-news-feed-page pattern
         for item in added_items:
             assert "e2e-news-feed-page" in item.original_article_url
+
+
+# ============================================================================
+# Changelog Seeding Tests
+# ============================================================================
+
+
+class TestSeedServiceChangelog:
+    """Tests for changelog entries seeding."""
+
+    @pytest.fixture
+    def mock_db_with_ids(self):
+        """Create mock database that assigns IDs to added objects."""
+        db = AsyncMock()
+
+        def track_add(obj):
+            if not hasattr(obj, "id") or obj.id is None:
+                obj.id = uuid4()
+
+        db.add = MagicMock(side_effect=track_add)
+        db.flush = AsyncMock()
+        db.commit = AsyncMock()
+        db.execute = AsyncMock()
+        return db
+
+    @pytest.mark.asyncio
+    async def test_creates_twelve_changelog_entries(self, mock_db_with_ids, mock_settings_can_seed):
+        """seed_changelog_entries should create exactly 12 entries."""
+        seed_service = SeedService(mock_db_with_ids)
+
+        result = await seed_service.seed_changelog_entries()
+
+        assert result["success"] is True
+        assert result["entries_created"] == 12
+
+    @pytest.mark.asyncio
+    async def test_creates_four_entries_per_tag_type(
+        self, mock_db_with_ids, mock_settings_can_seed
+    ):
+        """seed_changelog_entries should create 4 entries per tag type."""
+        seed_service = SeedService(mock_db_with_ids)
+
+        result = await seed_service.seed_changelog_entries()
+
+        assert result["by_tag"]["new_feature"] == 4
+        assert result["by_tag"]["bug_fix"] == 4
+        assert result["by_tag"]["announcement"] == 4
+
+    @pytest.mark.asyncio
+    async def test_entries_have_varied_dates(self, mock_db_with_ids, mock_settings_can_seed):
+        """Entries should have created_at dates spread over ~25 days."""
+        from src.db.models import ChangelogEntry
+
+        seed_service = SeedService(mock_db_with_ids)
+
+        # Track added entries
+        added_entries = []
+        original_add = mock_db_with_ids.add.side_effect
+
+        def track_entries(obj):
+            original_add(obj)
+            if isinstance(obj, ChangelogEntry):
+                added_entries.append(obj)
+
+        mock_db_with_ids.add = MagicMock(side_effect=track_entries)
+
+        await seed_service.seed_changelog_entries()
+
+        # Get unique dates
+        dates = set(entry.created_at.date() for entry in added_entries)
+        # Expected days_ago: 1,5,10,15,3,8,12,20,2,7,14,25 = 12 unique values
+        assert len(dates) == 12
+
+    @pytest.mark.asyncio
+    async def test_entries_have_markdown_content(self, mock_db_with_ids, mock_settings_can_seed):
+        """Entries should have markdown formatting in content fields."""
+        from src.db.models import ChangelogEntry
+
+        seed_service = SeedService(mock_db_with_ids)
+
+        # Track added entries
+        added_entries = []
+        original_add = mock_db_with_ids.add.side_effect
+
+        def track_entries(obj):
+            original_add(obj)
+            if isinstance(obj, ChangelogEntry):
+                added_entries.append(obj)
+
+        mock_db_with_ids.add = MagicMock(side_effect=track_entries)
+
+        await seed_service.seed_changelog_entries()
+
+        # Count entries with markdown
+        entries_with_bold = 0
+        entries_with_italic = 0
+
+        for entry in added_entries:
+            if "**" in entry.content_en:
+                entries_with_bold += 1
+            if "*" in entry.content_en and "**" not in entry.content_en.replace("**", ""):
+                entries_with_italic += 1
+
+        # At least some entries should have bold formatting
+        assert entries_with_bold >= 3, "Expected at least 3 entries with **bold** formatting"
+
+    @pytest.mark.asyncio
+    async def test_entries_have_trilingual_content(self, mock_db_with_ids, mock_settings_can_seed):
+        """Entries should have English, Greek, and Russian content."""
+        from src.db.models import ChangelogEntry
+
+        seed_service = SeedService(mock_db_with_ids)
+
+        # Track added entries
+        added_entries = []
+        original_add = mock_db_with_ids.add.side_effect
+
+        def track_entries(obj):
+            original_add(obj)
+            if isinstance(obj, ChangelogEntry):
+                added_entries.append(obj)
+
+        mock_db_with_ids.add = MagicMock(side_effect=track_entries)
+
+        await seed_service.seed_changelog_entries()
+
+        for entry in added_entries:
+            # Check all 3 languages have content
+            assert entry.title_en and len(entry.title_en) > 0
+            assert entry.title_el and len(entry.title_el) > 0
+            assert entry.title_ru and len(entry.title_ru) > 0
+            assert entry.content_en and len(entry.content_en) > 0
+            assert entry.content_el and len(entry.content_el) > 0
+            assert entry.content_ru and len(entry.content_ru) > 0
+
+    @pytest.mark.asyncio
+    async def test_entries_have_valid_tags(self, mock_db_with_ids, mock_settings_can_seed):
+        """Entries should have valid ChangelogTag values."""
+        from src.db.models import ChangelogEntry, ChangelogTag
+
+        seed_service = SeedService(mock_db_with_ids)
+
+        # Track added entries
+        added_entries = []
+        original_add = mock_db_with_ids.add.side_effect
+
+        def track_entries(obj):
+            original_add(obj)
+            if isinstance(obj, ChangelogEntry):
+                added_entries.append(obj)
+
+        mock_db_with_ids.add = MagicMock(side_effect=track_entries)
+
+        await seed_service.seed_changelog_entries()
+
+        # All entries should have valid tags
+        for entry in added_entries:
+            assert entry.tag in [
+                ChangelogTag.NEW_FEATURE,
+                ChangelogTag.BUG_FIX,
+                ChangelogTag.ANNOUNCEMENT,
+            ]
+
+        # Count by tag
+        tag_counts = {}
+        for entry in added_entries:
+            tag_counts[entry.tag] = tag_counts.get(entry.tag, 0) + 1
+
+        assert tag_counts[ChangelogTag.NEW_FEATURE] == 4
+        assert tag_counts[ChangelogTag.BUG_FIX] == 4
+        assert tag_counts[ChangelogTag.ANNOUNCEMENT] == 4
+
+    def test_truncation_order_includes_changelog_entries(self):
+        """TRUNCATION_ORDER should include changelog_entries table."""
+        assert "changelog_entries" in SeedService.TRUNCATION_ORDER
