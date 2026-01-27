@@ -49,6 +49,12 @@ from src.schemas.announcement import (
     AnnouncementWithCreatorResponse,
     CreatorBriefResponse,
 )
+from src.schemas.changelog import (
+    ChangelogAdminListResponse,
+    ChangelogEntryAdminResponse,
+    ChangelogEntryCreate,
+    ChangelogEntryUpdate,
+)
 from src.schemas.feedback import (
     AdminFeedbackListResponse,
     AdminFeedbackResponse,
@@ -62,6 +68,7 @@ from src.schemas.news_item import (
     NewsItemWithQuestionCreate,
 )
 from src.services.announcement_service import AnnouncementService
+from src.services.changelog_service import ChangelogService
 from src.services.feedback_admin_service import FeedbackAdminService
 from src.services.news_item_service import NewsItemService
 from src.tasks import create_announcement_notifications_task
@@ -1271,3 +1278,91 @@ async def get_announcement(
             else None
         ),
     )
+
+
+# ============================================================================
+# Changelog Admin Endpoints
+# ============================================================================
+
+
+@router.get(
+    "/changelog",
+    response_model=ChangelogAdminListResponse,
+    summary="List all changelog entries (admin)",
+    description="Get a paginated list of all changelog entries with all languages. Requires superuser privileges.",
+)
+async def admin_list_changelog(
+    page: int = Query(default=1, ge=1, description="Page number"),
+    page_size: int = Query(default=10, ge=1, le=50, description="Items per page"),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> ChangelogAdminListResponse:
+    """Get all changelog entries with all language fields for admin management."""
+    service = ChangelogService(db)
+    return await service.get_admin_list(page=page, page_size=page_size)
+
+
+@router.get(
+    "/changelog/{entry_id}",
+    response_model=ChangelogEntryAdminResponse,
+    summary="Get single changelog entry (admin)",
+    description="Get a single changelog entry with all languages. Requires superuser privileges.",
+)
+async def admin_get_changelog(
+    entry_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> ChangelogEntryAdminResponse:
+    """Get a single changelog entry with all fields."""
+    service = ChangelogService(db)
+    return await service.get_by_id(entry_id)
+
+
+@router.post(
+    "/changelog",
+    response_model=ChangelogEntryAdminResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create changelog entry",
+    description="Create a new changelog entry with multilingual content. Requires superuser privileges.",
+)
+async def admin_create_changelog(
+    data: ChangelogEntryCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> ChangelogEntryAdminResponse:
+    """Create a new changelog entry. All language fields required."""
+    service = ChangelogService(db)
+    return await service.create(data)
+
+
+@router.put(
+    "/changelog/{entry_id}",
+    response_model=ChangelogEntryAdminResponse,
+    summary="Update changelog entry",
+    description="Update an existing changelog entry. All fields optional. Requires superuser privileges.",
+)
+async def admin_update_changelog(
+    entry_id: UUID,
+    data: ChangelogEntryUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> ChangelogEntryAdminResponse:
+    """Update an existing changelog entry. Only provided fields are updated."""
+    service = ChangelogService(db)
+    return await service.update(entry_id, data)
+
+
+@router.delete(
+    "/changelog/{entry_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete changelog entry",
+    description="Delete a changelog entry permanently. Requires superuser privileges.",
+)
+async def admin_delete_changelog(
+    entry_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> None:
+    """Delete a changelog entry permanently."""
+    service = ChangelogService(db)
+    await service.delete(entry_id)
