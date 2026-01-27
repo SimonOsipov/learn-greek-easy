@@ -171,7 +171,34 @@
   "tabs": {
     "decks": "Decks",
     "news": "News",
+    "announcements": "Announcements",
     "feedback": "Feedback"
+  },
+  "announcements": {
+    "create": {
+      "title": "Create Announcement",
+      "description": "Send a notification to all active users",
+      "titleLabel": "Title",
+      "titlePlaceholder": "Enter announcement title",
+      "messageLabel": "Message",
+      "messagePlaceholder": "Enter the announcement message...",
+      "linkLabel": "Link URL",
+      "linkPlaceholder": "https://example.com/page",
+      "linkDescription": "Users can click this link in their notification",
+      "optional": "optional",
+      "preview": "Preview",
+      "success": "Announcement sent successfully",
+      "error": "Failed to send announcement"
+    },
+    "preview": {
+      "title": "Preview Announcement",
+      "description": "Review before sending to all users",
+      "warningTitle": "This action cannot be undone",
+      "warningMessage": "Once sent, this announcement will create notifications for all active users.",
+      "cancel": "Edit",
+      "send": "Send to All Users",
+      "sending": "Sending..."
+    }
   },
   "news": {
     "create": {

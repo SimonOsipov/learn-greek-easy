@@ -273,6 +273,29 @@ export interface AdminCultureQuestionsResponse {
 }
 
 // ============================================
+// Announcement Types
+// ============================================
+
+/**
+ * Payload for creating an announcement
+ */
+export interface AnnouncementCreate {
+  title: string;
+  message: string;
+  link_url?: string;
+}
+
+/**
+ * Response from creating an announcement
+ */
+export interface AnnouncementCreateResponse {
+  id: string;
+  title: string;
+  message: string;
+  total_recipients: number;
+}
+
+// ============================================
 // News Item Types
 // ============================================
 
@@ -749,5 +772,23 @@ export const adminAPI = {
    */
   deleteNewsItem: async (id: string): Promise<void> => {
     return api.delete<void>(`/api/v1/admin/news/${id}`);
+  },
+
+  // ============================================
+  // Announcement Management
+  // ============================================
+
+  /**
+   * Create a new announcement and send to all active users
+   *
+   * Creates an announcement campaign and generates notifications for all
+   * active learners. This action cannot be undone.
+   * Requires superuser authentication.
+   *
+   * @param data - Announcement creation payload
+   * @returns Created announcement with recipient count
+   */
+  createAnnouncement: async (data: AnnouncementCreate): Promise<AnnouncementCreateResponse> => {
+    return api.post<AnnouncementCreateResponse>('/api/v1/admin/announcements', data);
   },
 };
