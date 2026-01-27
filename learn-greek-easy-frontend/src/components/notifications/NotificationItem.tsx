@@ -114,6 +114,7 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
       role={notification.action_url ? 'button' : undefined}
       tabIndex={notification.action_url ? 0 : undefined}
       aria-label={notification.action_url ? `${notification.title} - Click to view` : undefined}
+      data-testid={`notification-item-${notification.id}`}
     >
       {/* Icon */}
       <div className={cn('mt-0.5 flex-shrink-0', config.colorClass)}>
@@ -122,14 +123,23 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
 
       {/* Content */}
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium text-foreground">{notification.title}</p>
-        <p className="mt-0.5 line-clamp-2 text-sm text-muted-foreground">{notification.message}</p>
-        <p className="mt-1 text-xs text-muted-foreground">{relativeTime}</p>
+        <p className="text-sm font-medium text-foreground" data-testid="notification-title">
+          {notification.title}
+        </p>
+        <p
+          className="mt-0.5 line-clamp-2 text-sm text-muted-foreground"
+          data-testid="notification-message"
+        >
+          {notification.message}
+        </p>
+        <p className="mt-1 text-xs text-muted-foreground" data-testid="notification-timestamp">
+          {relativeTime}
+        </p>
       </div>
 
       {/* Unread indicator */}
       {!notification.read && (
-        <div className="mt-1.5 flex-shrink-0">
+        <div className="mt-1.5 flex-shrink-0" data-testid="notification-unread-indicator">
           <div className="h-2 w-2 rounded-full bg-primary" />
         </div>
       )}
