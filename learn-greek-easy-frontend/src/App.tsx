@@ -67,6 +67,9 @@ const Profile = lazyWithRetry(() =>
 const FeedbackPage = lazyWithRetry(() =>
   import('@/pages/FeedbackPage').then((m) => ({ default: m.FeedbackPage }))
 );
+const ChangelogPage = lazyWithRetry(() =>
+  import('@/pages/ChangelogPage').then((m) => ({ default: m.ChangelogPage }))
+);
 
 // Review/practice pages (full-screen experience)
 const FlashcardReviewPage = lazyWithRetry(() =>
@@ -196,6 +199,9 @@ function AppContent() {
                 </Route>
                 <Route path="/feedback" element={<AppLayout />}>
                   <Route index element={<FeedbackPage />} />
+                </Route>
+                <Route path="/changelog" element={<AppLayout />}>
+                  <Route index element={<ChangelogPage />} />
                 </Route>
                 <Route path="/activity-feed-test" element={<AppLayout />}>
                   <Route index element={<ActivityFeedTest />} />
