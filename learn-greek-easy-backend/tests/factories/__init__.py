@@ -2,6 +2,9 @@
 
 This package provides factory-boy based factories for test data generation:
 
+Announcement Factories:
+    - AnnouncementCampaignFactory: Admin announcement campaigns
+
 Auth Factories:
     - UserFactory: User accounts with traits (admin, inactive, verified, oauth)
     - UserSettingsFactory: User preferences
@@ -51,6 +54,9 @@ Usage:
 Note: All factories require a database session. Either pass it explicitly
 or use the factory_session fixture which binds the session automatically.
 """
+
+# Announcement factories
+from tests.factories.announcement import AnnouncementCampaignFactory
 
 # Auth factories
 from tests.factories.auth import RefreshTokenFactory, UserFactory, UserSettingsFactory
@@ -107,6 +113,8 @@ __all__ = [
     "unique_email",
     "unique_token",
     "utc_now",
+    # Announcements
+    "AnnouncementCampaignFactory",
     # Auth
     "UserFactory",
     "UserSettingsFactory",

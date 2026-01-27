@@ -8,6 +8,7 @@ This module contains all SQLAlchemy models for the application:
 - XP and Achievements (UserXP, XPTransaction, Achievement, UserAchievement)
 - Notifications (Notification)
 - Culture Exam (CultureDeck, CultureQuestion, CultureQuestionStats, CultureAnswerHistory)
+- Announcement Campaigns (AnnouncementCampaign)
 
 All models use:
 - UUID primary keys with server-side generation
@@ -126,6 +127,7 @@ class NotificationType(str, enum.Enum):
     """Types of in-app notifications."""
 
     ACHIEVEMENT_UNLOCKED = "achievement_unlocked"
+    ADMIN_ANNOUNCEMENT = "admin_announcement"
     DAILY_GOAL_COMPLETE = "daily_goal_complete"
     LEVEL_UP = "level_up"
     STREAK_AT_RISK = "streak_at_risk"
@@ -1709,3 +1711,76 @@ class NewsItem(Base, TimestampMixin):
 
     def __repr__(self) -> str:
         return f"<NewsItem(id={self.id}, title_en={self.title_en[:30] if self.title_en else ''}, publication_date={self.publication_date})>"
+
+
+# ============================================================================
+# Announcement Campaign Models
+# ============================================================================
+
+
+class AnnouncementCampaign(Base, TimestampMixin):
+    """Admin announcement campaign for broadcasting messages to users.
+
+    Tracks announcement broadcasts with recipient and read statistics.
+    Each campaign creates individual Notification records for each recipient.
+    """
+
+    __tablename__ = "announcement_campaigns"
+
+    # Primary key
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True,
+        server_default=func.uuid_generate_v4(),
+    )
+
+    # Content
+    title: Mapped[str] = mapped_column(
+        String(100),
+        nullable=False,
+        comment="Announcement title (max 100 chars)",
+    )
+    message: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+        comment="Announcement message content",
+    )
+    link_url: Mapped[str | None] = mapped_column(
+        String(500),
+        nullable=True,
+        comment="Optional URL for users to click",
+    )
+
+    # Author
+    created_by: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+        comment="Admin user who created the announcement",
+    )
+
+    # Statistics (denormalized for efficient queries)
+    total_recipients: Mapped[int] = mapped_column(
+        Integer,
+        default=0,
+        server_default=text("0"),
+        nullable=False,
+        comment="Total number of users who received the announcement",
+    )
+    read_count: Mapped[int] = mapped_column(
+        Integer,
+        default=0,
+        server_default=text("0"),
+        nullable=False,
+        comment="Number of users who read the announcement",
+    )
+
+    # Relationships
+    creator: Mapped["User"] = relationship(
+        lazy="selectin",
+        foreign_keys=[created_by],
+    )
+
+    def __repr__(self) -> str:
+        return (
+            f"<AnnouncementCampaign(id={self.id}, title={self.title[:30] if self.title else ''})>"
+        )
