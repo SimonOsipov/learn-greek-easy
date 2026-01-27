@@ -493,6 +493,47 @@ async def seed_news_questions(
 
 
 @router.post(
+    "/news-feed-page",
+    response_model=SeedResultResponse,
+    summary="Seed news feed page",
+    description="Create comprehensive test news items for E2E testing of the News Feed Page. "
+    "Creates 25 news items (10 with questions, 15 without) with varied categories and difficulty levels.",
+    dependencies=[Depends(verify_seed_access)],
+)
+async def seed_news_feed_page(
+    db: AsyncSession = Depends(get_db),
+) -> SeedResultResponse:
+    """Seed news items for E2E testing of the News Feed Page.
+
+    Creates:
+    - 25 NewsItems with varied categories and difficulty levels
+    - 10 items WITH associated CultureQuestions (3-5 questions each)
+    - 15 items WITHOUT associated questions
+    - Publication dates spread over the last 30 days
+
+    This endpoint is idempotent - it clears existing test data before seeding.
+
+    Returns:
+        SeedResultResponse with news item and question creation results
+    """
+    start_time = perf_counter()
+
+    service = SeedService(db)
+    result = await service.seed_news_feed_page()
+    await db.commit()
+
+    duration_ms = (perf_counter() - start_time) * 1000
+
+    return SeedResultResponse(
+        success=result.get("success", False),
+        operation="news-feed-page",
+        timestamp=datetime.now(timezone.utc),
+        duration_ms=duration_ms,
+        results=result,
+    )
+
+
+@router.post(
     "/news-feed/clear",
     response_model=SeedResultResponse,
     summary="Clear news items only",

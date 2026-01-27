@@ -81,8 +81,17 @@ export {
   type NewsArticleClickedProperties,
   type NewsQuestionsButtonClickedProperties,
   type NewsSourceLinkClickedProperties,
+  type NewsPageViewedProperties,
+  type NewsPagePaginatedProperties,
+  type NewsPageArticleClickedProperties,
+  type NewsPageQuestionsClickedProperties,
   // Tracking functions
   trackNewsArticleClicked,
   trackNewsQuestionsButtonClicked,
   trackNewsSourceLinkClicked,
+  trackNewsPageViewed,
+  trackNewsPagePaginated,
+  trackNewsPageArticleClicked,
+  trackNewsPageQuestionsClicked,
+  trackNewsPageSeeAllClicked,
 } from './newsAnalytics';

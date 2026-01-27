@@ -63,3 +63,96 @@ export function trackNewsSourceLinkClicked(properties: NewsSourceLinkClickedProp
     posthog.capture('news_source_link_clicked', properties);
   }
 }
+
+// =============================================================================
+// News Page Analytics (for dedicated /news page)
+// =============================================================================
+
+/**
+ * Properties for tracking when user views the News page
+ */
+export interface NewsPageViewedProperties {
+  /** Total number of articles available */
+  total_articles: number;
+}
+
+/**
+ * Properties for tracking pagination on the News page
+ */
+export interface NewsPagePaginatedProperties {
+  /** Page number user navigated from (1-indexed) */
+  from_page: number;
+  /** Page number user navigated to (1-indexed) */
+  to_page: number;
+  /** Total number of pages available */
+  total_pages: number;
+}
+
+/**
+ * Properties for tracking article clicks on the News page
+ */
+export interface NewsPageArticleClickedProperties {
+  /** UUID of the clicked article */
+  article_id: string;
+  /** Title of the clicked article */
+  article_title: string;
+  /** 0-indexed position in the grid */
+  position: number;
+}
+
+/**
+ * Properties for tracking questions button clicks on the News page
+ */
+export interface NewsPageQuestionsClickedProperties {
+  /** UUID of the article */
+  article_id: string;
+  /** Whether the article has associated questions */
+  has_questions: boolean;
+}
+
+/**
+ * Track when user views the News page
+ */
+export function trackNewsPageViewed(properties: NewsPageViewedProperties): void {
+  if (typeof posthog?.capture === 'function') {
+    posthog.capture('news_page_viewed', properties);
+  }
+}
+
+/**
+ * Track when user navigates between pages on the News page
+ */
+export function trackNewsPagePaginated(properties: NewsPagePaginatedProperties): void {
+  if (typeof posthog?.capture === 'function') {
+    posthog.capture('news_page_paginated', properties);
+  }
+}
+
+/**
+ * Track when user clicks on an article on the News page
+ */
+export function trackNewsPageArticleClicked(properties: NewsPageArticleClickedProperties): void {
+  if (typeof posthog?.capture === 'function') {
+    posthog.capture('news_page_article_clicked', properties);
+  }
+}
+
+/**
+ * Track when user clicks the Questions button on the News page
+ */
+export function trackNewsPageQuestionsClicked(
+  properties: NewsPageQuestionsClickedProperties
+): void {
+  if (typeof posthog?.capture === 'function') {
+    posthog.capture('news_page_questions_clicked', properties);
+  }
+}
+
+/**
+ * Track when user clicks "See All News" link from dashboard
+ */
+export function trackNewsPageSeeAllClicked(): void {
+  if (typeof posthog?.capture === 'function') {
+    posthog.capture('news_page_see_all_clicked');
+  }
+}

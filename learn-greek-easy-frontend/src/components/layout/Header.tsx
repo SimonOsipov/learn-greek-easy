@@ -67,7 +67,10 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
     {
       path: '/practice',
       labelKey: 'nav.practice',
-      children: [{ path: '/practice/culture-exam', labelKey: 'nav.practiceDropdown.cultureExam' }],
+      children: [
+        { path: '/practice/culture-exam', labelKey: 'nav.practiceDropdown.cultureExam' },
+        { path: '/news', labelKey: 'nav.practiceDropdown.newsFeed' },
+      ],
     },
     {
       path: '/statistics',
