@@ -25,6 +25,7 @@ from fastapi import APIRouter
 from src.api.v1.admin import router as admin_router
 from src.api.v1.auth import router as auth_router
 from src.api.v1.cards import router as card_router
+from src.api.v1.changelog import router as changelog_router
 from src.api.v1.culture import router as culture_router
 from src.api.v1.decks import router as deck_router
 from src.api.v1.feedback import router as feedback_router
@@ -142,6 +143,15 @@ v1_router.include_router(
     news_router,
     prefix="/news",
     tags=["News"],
+)
+
+# =============================================================================
+# Changelog Routes
+# =============================================================================
+v1_router.include_router(
+    changelog_router,
+    prefix="/changelog",
+    tags=["Changelog"],
 )
 
 # =============================================================================
