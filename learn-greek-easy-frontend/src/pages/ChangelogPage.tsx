@@ -38,7 +38,7 @@ export function ChangelogPage() {
   // Track page view once
   const hasTrackedPageView = useRef(false);
 
-  // Initial fetch
+  // Fetch on mount and when language changes
   useEffect(() => {
     fetchChangelog().catch(() => {
       // Error handled by store
@@ -47,14 +47,6 @@ export function ChangelogPage() {
     return () => {
       reset();
     };
-  }, [fetchChangelog, reset]);
-
-  // Re-fetch on language change
-  useEffect(() => {
-    reset();
-    fetchChangelog().catch(() => {
-      // Error handled by store
-    });
   }, [i18n.language, fetchChangelog, reset]);
 
   // Track page view on first successful load
