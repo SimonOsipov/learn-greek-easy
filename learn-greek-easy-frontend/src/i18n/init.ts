@@ -26,6 +26,7 @@ import {
 import enAchievements from './locales/en/achievements.json';
 import enAdmin from './locales/en/admin.json';
 import enAuth from './locales/en/auth.json';
+import enChangelog from './locales/en/changelog.json';
 import enCommon from './locales/en/common.json';
 import enCulture from './locales/en/culture.json';
 import enDeck from './locales/en/deck.json';
@@ -47,6 +48,7 @@ const englishResources = {
     achievements: enAchievements,
     admin: enAdmin,
     auth: enAuth,
+    changelog: enChangelog,
     common: enCommon,
     culture: enCulture,
     deck: enDeck,
@@ -93,6 +95,7 @@ async function loadGreekBundle(): Promise<Record<string, unknown>> {
     achievements,
     admin,
     auth,
+    changelog,
     common,
     culture,
     deck,
@@ -107,6 +110,7 @@ async function loadGreekBundle(): Promise<Record<string, unknown>> {
     import('./locales/el/achievements.json'),
     import('./locales/el/admin.json'),
     import('./locales/el/auth.json'),
+    import('./locales/el/changelog.json'),
     import('./locales/el/common.json'),
     import('./locales/el/culture.json'),
     import('./locales/el/deck.json'),
@@ -123,6 +127,7 @@ async function loadGreekBundle(): Promise<Record<string, unknown>> {
     achievements: achievements.default,
     admin: admin.default,
     auth: auth.default,
+    changelog: changelog.default,
     common: common.default,
     culture: culture.default,
     deck: deck.default,
@@ -146,6 +151,7 @@ async function loadRussianBundle(): Promise<Record<string, unknown>> {
     achievements,
     admin,
     auth,
+    changelog,
     common,
     culture,
     deck,
@@ -160,6 +166,7 @@ async function loadRussianBundle(): Promise<Record<string, unknown>> {
     import('./locales/ru/achievements.json'),
     import('./locales/ru/admin.json'),
     import('./locales/ru/auth.json'),
+    import('./locales/ru/changelog.json'),
     import('./locales/ru/common.json'),
     import('./locales/ru/culture.json'),
     import('./locales/ru/deck.json'),
@@ -176,6 +183,7 @@ async function loadRussianBundle(): Promise<Record<string, unknown>> {
     achievements: achievements.default,
     admin: admin.default,
     auth: auth.default,
+    changelog: changelog.default,
     common: common.default,
     culture: culture.default,
     deck: deck.default,

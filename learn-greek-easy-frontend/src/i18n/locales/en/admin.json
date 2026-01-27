@@ -172,7 +172,8 @@
     "decks": "Decks",
     "news": "News",
     "announcements": "Announcements",
-    "feedback": "Feedback"
+    "feedback": "Feedback",
+    "changelog": "Changelog"
   },
   "announcements": {
     "create": {
@@ -320,6 +321,28 @@
     "states": {
       "noFeedback": "No feedback submitted yet",
       "noFilteredResults": "No feedback matches the selected filters"
+    }
+  },
+  "changelog": {
+    "title": "Changelog",
+    "addNew": "Add New",
+    "delete": {
+      "title": "Delete Update",
+      "warning": "Are you sure you want to delete this update?",
+      "irreversible": "This action cannot be undone.",
+      "cancel": "Cancel",
+      "confirm": "Delete",
+      "deleting": "Deleting...",
+      "success": "Update deleted successfully",
+      "error": "Failed to delete update"
+    },
+    "toast": {
+      "created": "Changelog entry created successfully",
+      "updated": "Changelog entry updated successfully",
+      "deleted": "Changelog entry deleted successfully",
+      "createError": "Failed to create changelog entry",
+      "updateError": "Failed to update changelog entry",
+      "deleteError": "Failed to delete changelog entry"
     }
   }
 }
