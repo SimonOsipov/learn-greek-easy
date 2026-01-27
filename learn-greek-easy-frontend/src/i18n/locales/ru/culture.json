@@ -12,7 +12,8 @@
     "questionOf": "Вопрос {{current}} из {{total}}",
     "timeRemaining": "{{seconds}}с осталось",
     "selectAnswer": "Выберите ответ для продолжения",
-    "optionLabel": "Вариант {{letter}}: {{text}}"
+    "optionLabel": "Вариант {{letter}}: {{text}}",
+    "readSourceArticle": "Читать исходную статью"
   },
   "feedback": {
     "correct": "Правильно!",
