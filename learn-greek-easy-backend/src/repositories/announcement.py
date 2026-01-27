@@ -2,7 +2,7 @@
 
 from uuid import UUID
 
-from sqlalchemy import desc, func, select
+from sqlalchemy import String, cast, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -50,7 +50,7 @@ class AnnouncementCampaignRepository(BaseRepository[AnnouncementCampaign]):
             .select_from(Notification)
             .where(
                 Notification.type == NotificationType.ADMIN_ANNOUNCEMENT,
-                Notification.extra_data["campaign_id"].astext == str(campaign_id),
+                cast(Notification.extra_data["campaign_id"], String) == str(campaign_id),
                 Notification.read.is_(True),
             )
         )

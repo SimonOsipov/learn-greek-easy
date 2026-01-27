@@ -1516,3 +1516,261 @@ class TestSeedServiceNewsItems:
         # The LIKE clause is used to match e2e test articles
         assert "LIKE" in stmt_str
         assert "ORIGINAL_ARTICLE_URL" in stmt_str
+
+
+# ============================================================================
+# News Feed Page Seeding Tests
+# ============================================================================
+
+
+class TestSeedServiceNewsFeedPage:
+    """Tests for news feed page seeding (25 items, 10 with questions)."""
+
+    @pytest.fixture
+    def mock_db_with_ids(self):
+        """Create mock database that assigns IDs and simulates deck lookup."""
+        db = AsyncMock()
+
+        def track_add(obj):
+            if not hasattr(obj, "id") or obj.id is None:
+                obj.id = uuid4()
+
+        db.add = MagicMock(side_effect=track_add)
+        db.flush = AsyncMock()
+        db.commit = AsyncMock()
+
+        # Mock execute for deck lookup - return None to trigger deck creation
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none.return_value = None
+        db.execute = AsyncMock(return_value=mock_result)
+
+        return db
+
+    @pytest.mark.asyncio
+    async def test_seed_news_feed_page_blocked_in_production(
+        self, seed_service, mock_settings_cannot_seed
+    ):
+        """seed_news_feed_page should raise RuntimeError in production."""
+        with pytest.raises(RuntimeError) as exc_info:
+            await seed_service.seed_news_feed_page()
+
+        assert "Database seeding not allowed" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_creates_25_news_items(self, mock_db_with_ids, mock_settings_can_seed):
+        """seed_news_feed_page should create exactly 25 news items."""
+        seed_service = SeedService(mock_db_with_ids)
+
+        result = await seed_service.seed_news_feed_page()
+
+        assert result["success"] is True
+        assert result["news_items_created"] == 25
+
+    @pytest.mark.asyncio
+    async def test_creates_10_items_with_questions(self, mock_db_with_ids, mock_settings_can_seed):
+        """seed_news_feed_page should create 10 items with questions."""
+        seed_service = SeedService(mock_db_with_ids)
+
+        result = await seed_service.seed_news_feed_page()
+
+        assert result["items_with_questions"] == 10
+        assert result["items_without_questions"] == 15
+
+    @pytest.mark.asyncio
+    async def test_creates_correct_number_of_questions(
+        self, mock_db_with_ids, mock_settings_can_seed
+    ):
+        """seed_news_feed_page should create 39 questions total (3-5 per item)."""
+        seed_service = SeedService(mock_db_with_ids)
+
+        result = await seed_service.seed_news_feed_page()
+
+        # Items 0-9 have questions: 3+4+5+3+4+5+3+4+5+3 = 39
+        assert result["questions_created"] == 39
+
+    @pytest.mark.asyncio
+    async def test_news_items_have_greek_titles(self, mock_db_with_ids, mock_settings_can_seed):
+        """News items should have Greek titles with Greek characters."""
+        seed_service = SeedService(mock_db_with_ids)
+
+        # Track added news items
+        added_items = []
+        original_add = mock_db_with_ids.add.side_effect
+
+        def track_news(obj):
+            original_add(obj)
+            if hasattr(obj, "title_el") and hasattr(obj, "title_en") and hasattr(obj, "title_ru"):
+                added_items.append(obj)
+
+        mock_db_with_ids.add = MagicMock(side_effect=track_news)
+
+        await seed_service.seed_news_feed_page()
+
+        # Verify Greek titles have Greek characters
+        for item in added_items:
+            assert item.title_el is not None and len(item.title_el) > 0
+            # Greek Unicode range: \u0370-\u03FF (basic) or \u1F00-\u1FFF (extended)
+            assert any(
+                "\u0370" <= char <= "\u03FF" or "\u1F00" <= char <= "\u1FFF"
+                for char in item.title_el
+            )
+
+    @pytest.mark.asyncio
+    async def test_news_items_have_trilingual_summaries(
+        self, mock_db_with_ids, mock_settings_can_seed
+    ):
+        """News items should have Greek, English, and Russian descriptions."""
+        seed_service = SeedService(mock_db_with_ids)
+
+        # Track added news items
+        added_items = []
+        original_add = mock_db_with_ids.add.side_effect
+
+        def track_news(obj):
+            original_add(obj)
+            if hasattr(obj, "description_el"):
+                added_items.append(obj)
+
+        mock_db_with_ids.add = MagicMock(side_effect=track_news)
+
+        await seed_service.seed_news_feed_page()
+
+        for item in added_items:
+            assert item.description_el is not None and len(item.description_el) > 0
+            assert item.description_en is not None and len(item.description_en) > 0
+            assert item.description_ru is not None and len(item.description_ru) > 0
+
+    @pytest.mark.asyncio
+    async def test_questions_linked_via_original_article_url(
+        self, mock_db_with_ids, mock_settings_can_seed
+    ):
+        """Questions should be linked to news items via original_article_url."""
+        seed_service = SeedService(mock_db_with_ids)
+
+        # Track added objects
+        added_news = []
+        added_questions = []
+        original_add = mock_db_with_ids.add.side_effect
+
+        def track_objects(obj):
+            original_add(obj)
+            if hasattr(obj, "title_el") and hasattr(obj, "original_article_url"):
+                added_news.append(obj)
+            elif hasattr(obj, "question_text") and hasattr(obj, "original_article_url"):
+                added_questions.append(obj)
+
+        mock_db_with_ids.add = MagicMock(side_effect=track_objects)
+
+        await seed_service.seed_news_feed_page()
+
+        # Get all news item URLs that should have questions (first 10)
+        news_urls_with_questions = [
+            item.original_article_url for i, item in enumerate(added_news) if i < 10
+        ]
+
+        # Verify all questions have URLs matching news items
+        for question in added_questions:
+            assert question.original_article_url in news_urls_with_questions
+
+    @pytest.mark.asyncio
+    async def test_deletes_existing_data_before_seeding(
+        self, mock_db_with_ids, mock_settings_can_seed
+    ):
+        """seed_news_feed_page should delete existing test data first (idempotency)."""
+        seed_service = SeedService(mock_db_with_ids)
+
+        await seed_service.seed_news_feed_page()
+
+        # Verify execute was called for delete statements
+        calls = mock_db_with_ids.execute.call_args_list
+
+        # Should have at least 2 delete calls (questions first, then news items)
+        delete_calls = [
+            call
+            for call in calls
+            if "DELETE" in str(call[0][0]).upper() or hasattr(call[0][0], "is_delete")
+        ]
+        assert len(delete_calls) >= 2
+
+    @pytest.mark.asyncio
+    async def test_creates_culture_deck_if_not_exists(
+        self, mock_db_with_ids, mock_settings_can_seed
+    ):
+        """seed_news_feed_page should create E2E News Feed Page deck if not exists."""
+        seed_service = SeedService(mock_db_with_ids)
+
+        # Track added decks
+        added_decks = []
+        original_add = mock_db_with_ids.add.side_effect
+
+        def track_decks(obj):
+            original_add(obj)
+            if hasattr(obj, "name") and hasattr(obj, "category") and hasattr(obj, "is_active"):
+                added_decks.append(obj)
+
+        mock_db_with_ids.add = MagicMock(side_effect=track_decks)
+
+        result = await seed_service.seed_news_feed_page()
+
+        # Verify deck was created
+        assert len(added_decks) == 1
+        assert added_decks[0].name == "E2E News Feed Page"
+        assert "deck_id" in result
+
+    @pytest.mark.asyncio
+    async def test_returns_deck_id_in_results(self, mock_db_with_ids, mock_settings_can_seed):
+        """seed_news_feed_page should return deck_id in results."""
+        seed_service = SeedService(mock_db_with_ids)
+
+        result = await seed_service.seed_news_feed_page()
+
+        assert "deck_id" in result
+        # UUID should be a valid string
+        assert len(result["deck_id"]) > 0
+
+    @pytest.mark.asyncio
+    async def test_news_items_have_varied_publication_dates(
+        self, mock_db_with_ids, mock_settings_can_seed
+    ):
+        """News items should have publication dates spread across 25 days."""
+        seed_service = SeedService(mock_db_with_ids)
+
+        # Track added news items
+        added_items = []
+        original_add = mock_db_with_ids.add.side_effect
+
+        def track_news(obj):
+            original_add(obj)
+            if hasattr(obj, "publication_date"):
+                added_items.append(obj)
+
+        mock_db_with_ids.add = MagicMock(side_effect=track_news)
+
+        await seed_service.seed_news_feed_page()
+
+        # Get unique dates
+        dates = set(item.publication_date for item in added_items)
+        # Should have at least 20 unique dates (25 items with 0-24 days ago)
+        assert len(dates) >= 20
+
+    @pytest.mark.asyncio
+    async def test_news_items_have_e2e_urls(self, mock_db_with_ids, mock_settings_can_seed):
+        """News items should have e2e-news-feed-page URLs for idempotency."""
+        seed_service = SeedService(mock_db_with_ids)
+
+        # Track added news items
+        added_items = []
+        original_add = mock_db_with_ids.add.side_effect
+
+        def track_news(obj):
+            original_add(obj)
+            if hasattr(obj, "original_article_url") and hasattr(obj, "title_el"):
+                added_items.append(obj)
+
+        mock_db_with_ids.add = MagicMock(side_effect=track_news)
+
+        await seed_service.seed_news_feed_page()
+
+        # All URLs should follow the e2e-news-feed-page pattern
+        for item in added_items:
+            assert "e2e-news-feed-page" in item.original_article_url

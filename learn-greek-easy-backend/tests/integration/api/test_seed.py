@@ -608,3 +608,321 @@ class TestClearNewsFeedIntegration:
         # Call again (still empty)
         response = await client.post(f"{seed_url}/news-feed/clear")
         assert response.status_code == 200
+
+
+# ============================================================================
+# POST /test/seed/news-feed-page Tests
+# ============================================================================
+
+
+@pytest.mark.no_parallel
+class TestSeedNewsFeedPageIntegration:
+    """Integration tests for news-feed-page seeding endpoint."""
+
+    @pytest.mark.asyncio
+    async def test_seed_news_feed_page_creates_25_news_items(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        seed_url: str,
+        enable_seeding,
+        enable_seeding_service,
+    ):
+        """POST /test/seed/news-feed-page should create 25 news items."""
+        from sqlalchemy import func, select
+
+        from src.db.models import NewsItem
+
+        # First truncate to ensure clean state
+        await client.post(f"{seed_url}/truncate")
+
+        response = await client.post(f"{seed_url}/news-feed-page")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert data["operation"] == "news-feed-page"
+        assert data["results"]["news_items_created"] == 25
+
+        # Verify news items created in database
+        news_count = await db_session.scalar(select(func.count(NewsItem.id)))
+        assert news_count == 25
+
+    @pytest.mark.asyncio
+    async def test_seed_news_feed_page_creates_questions_for_10_items(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        seed_url: str,
+        enable_seeding,
+        enable_seeding_service,
+    ):
+        """POST /test/seed/news-feed-page should create questions for 10 items."""
+        from sqlalchemy import func, select
+
+        from src.db.models import CultureQuestion
+
+        # Truncate and seed
+        await client.post(f"{seed_url}/truncate")
+        response = await client.post(f"{seed_url}/news-feed-page")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["results"]["items_with_questions"] == 10
+        assert data["results"]["items_without_questions"] == 15
+
+        # Verify questions created - should be 3+4+5+3+4+5+3+4+5+3 = 39 questions
+        # (items 0-9 get 3+(i%3) questions each)
+        questions_count = await db_session.scalar(
+            select(func.count(CultureQuestion.id)).where(
+                CultureQuestion.original_article_url.like(
+                    "https://example.com/e2e-news-feed-page-%"
+                )
+            )
+        )
+        assert questions_count == 39
+
+    @pytest.mark.asyncio
+    async def test_seed_news_feed_page_links_questions_via_original_url(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        seed_url: str,
+        enable_seeding,
+        enable_seeding_service,
+    ):
+        """Questions should be linked to news items via original_article_url."""
+        from sqlalchemy import select
+
+        from src.db.models import CultureQuestion, NewsItem
+
+        # Truncate and seed
+        await client.post(f"{seed_url}/truncate")
+        await client.post(f"{seed_url}/news-feed-page")
+
+        # Get a news item with questions (first 10 have questions)
+        news_item = (
+            await db_session.execute(
+                select(NewsItem).where(
+                    NewsItem.original_article_url == "https://example.com/e2e-news-feed-page-1"
+                )
+            )
+        ).scalar_one_or_none()
+
+        assert news_item is not None
+
+        # Find questions for this news item
+        questions = (
+            (
+                await db_session.execute(
+                    select(CultureQuestion).where(
+                        CultureQuestion.original_article_url == news_item.original_article_url
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+
+        # Item 0 should have 3 questions (3 + (0 % 3))
+        assert len(questions) == 3
+
+    @pytest.mark.asyncio
+    async def test_seed_news_feed_page_is_idempotent(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        seed_url: str,
+        enable_seeding,
+        enable_seeding_service,
+    ):
+        """POST /test/seed/news-feed-page should be idempotent (safe to call multiple times)."""
+        from sqlalchemy import func, select
+
+        from src.db.models import CultureQuestion, NewsItem
+
+        # Truncate first
+        await client.post(f"{seed_url}/truncate")
+
+        # Call seed twice
+        await client.post(f"{seed_url}/news-feed-page")
+        response = await client.post(f"{seed_url}/news-feed-page")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+
+        # Refresh session to see changes
+        db_session.expire_all()
+
+        # Should still have exactly 25 news items (not 50)
+        news_count = await db_session.scalar(
+            select(func.count(NewsItem.id)).where(
+                NewsItem.original_article_url.like("https://example.com/e2e-news-feed-page-%")
+            )
+        )
+        assert news_count == 25
+
+        # Should still have exactly 39 questions (not 78)
+        questions_count = await db_session.scalar(
+            select(func.count(CultureQuestion.id)).where(
+                CultureQuestion.original_article_url.like(
+                    "https://example.com/e2e-news-feed-page-%"
+                )
+            )
+        )
+        assert questions_count == 39
+
+    @pytest.mark.asyncio
+    async def test_seed_news_feed_page_has_greek_titles(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        seed_url: str,
+        enable_seeding,
+        enable_seeding_service,
+    ):
+        """News items should have Greek titles."""
+        from sqlalchemy import select
+
+        from src.db.models import NewsItem
+
+        # Truncate and seed
+        await client.post(f"{seed_url}/truncate")
+        await client.post(f"{seed_url}/news-feed-page")
+
+        # Get a sample news item
+        news_item = (
+            (
+                await db_session.execute(
+                    select(NewsItem).where(
+                        NewsItem.original_article_url.like(
+                            "https://example.com/e2e-news-feed-page-%"
+                        )
+                    )
+                )
+            )
+            .scalars()
+            .first()
+        )
+
+        assert news_item is not None
+        assert news_item.title_el is not None and len(news_item.title_el) > 0
+        # Verify Greek characters present
+        assert any(
+            "\u0370" <= char <= "\u03FF" or "\u1F00" <= char <= "\u1FFF"
+            for char in news_item.title_el
+        )
+
+    @pytest.mark.asyncio
+    async def test_seed_news_feed_page_has_trilingual_summaries(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        seed_url: str,
+        enable_seeding,
+        enable_seeding_service,
+    ):
+        """News items should have Greek, English, and Russian summaries."""
+        from sqlalchemy import select
+
+        from src.db.models import NewsItem
+
+        # Truncate and seed
+        await client.post(f"{seed_url}/truncate")
+        await client.post(f"{seed_url}/news-feed-page")
+
+        # Get all news items and verify trilingual content
+        news_items = (
+            (
+                await db_session.execute(
+                    select(NewsItem).where(
+                        NewsItem.original_article_url.like(
+                            "https://example.com/e2e-news-feed-page-%"
+                        )
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
+
+        for item in news_items:
+            # Check all three languages present
+            assert item.description_el is not None and len(item.description_el) > 0
+            assert item.description_en is not None and len(item.description_en) > 0
+            assert item.description_ru is not None and len(item.description_ru) > 0
+
+    @pytest.mark.asyncio
+    async def test_seed_news_feed_page_returns_403_when_disabled(
+        self,
+        client: AsyncClient,
+        seed_url: str,
+    ):
+        """POST /test/seed/news-feed-page should return 403 when disabled."""
+        with patch("src.api.v1.test.seed.settings") as mock_settings:
+            mock_settings.is_production = False
+            mock_settings.test_seed_enabled = False
+
+            response = await client.post(f"{seed_url}/news-feed-page")
+
+            assert response.status_code == 403
+
+    @pytest.mark.asyncio
+    async def test_seed_news_feed_page_response_format(
+        self,
+        client: AsyncClient,
+        seed_url: str,
+        enable_seeding,
+        enable_seeding_service,
+    ):
+        """Response should match SeedResultResponse schema."""
+        response = await client.post(f"{seed_url}/news-feed-page")
+
+        assert response.status_code == 200
+        data = response.json()
+
+        # Required fields
+        assert "success" in data
+        assert "operation" in data
+        assert "timestamp" in data
+        assert "duration_ms" in data
+        assert "results" in data
+
+        # Results structure
+        assert "news_items_created" in data["results"]
+        assert "questions_created" in data["results"]
+        assert "items_with_questions" in data["results"]
+        assert "items_without_questions" in data["results"]
+        assert "deck_id" in data["results"]
+
+    @pytest.mark.asyncio
+    async def test_seed_news_feed_page_creates_culture_deck(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        seed_url: str,
+        enable_seeding,
+        enable_seeding_service,
+    ):
+        """POST /test/seed/news-feed-page should create E2E News Feed Page deck."""
+        from sqlalchemy import select
+
+        from src.db.models import CultureDeck
+
+        # Truncate and seed
+        await client.post(f"{seed_url}/truncate")
+        response = await client.post(f"{seed_url}/news-feed-page")
+
+        assert response.status_code == 200
+        data = response.json()
+
+        # Verify deck was created
+        deck = (
+            await db_session.execute(
+                select(CultureDeck).where(CultureDeck.name == "E2E News Feed Page")
+            )
+        ).scalar_one_or_none()
+
+        assert deck is not None
+        assert data["results"]["deck_id"] == str(deck.id)
