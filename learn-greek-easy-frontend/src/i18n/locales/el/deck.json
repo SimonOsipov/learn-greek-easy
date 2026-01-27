@@ -110,6 +110,7 @@
     "cardsCount": "{{count}} κάρτες",
     "premium": "Premium",
     "progress": "{{current}} από {{total}} λέξεις",
+    "progressCulture": "{{current}} από {{total}} πολιτιστικές ερωτήσεις",
     "stats": {
       "due": "{{count}} για σήμερα",
       "mastered": "{{count}} κατακτημένες",

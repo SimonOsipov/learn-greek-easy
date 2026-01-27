@@ -84,6 +84,7 @@ export interface Deck {
   stats: DeckStats;
   level?: string;
   lastStudied?: Date;
+  isCulture?: boolean;
 }
 
 // Dashboard user types (simplified for dashboard display)
