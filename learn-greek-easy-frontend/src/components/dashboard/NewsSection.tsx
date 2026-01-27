@@ -74,7 +74,7 @@ export const NewsSection: React.FC = () => {
           className="text-sm text-primary hover:underline"
           data-testid="news-section-see-all"
         >
-          {t('dashboard.news.seeAll')}
+          {t('dashboard.news.seeAll')} &rarr;
         </Link>
       </div>
       {loading ? (
