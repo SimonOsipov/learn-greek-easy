@@ -57,7 +57,8 @@
         "audioDisabled": "Audio - Coming soon",
         "questions": "Questions",
         "questionsLabel": "Practice questions for this article"
-      }
+      },
+      "seeAll": "See All News"
     }
   },
   "welcome": {
@@ -118,7 +119,8 @@
     },
     "practice": "Practice",
     "practiceDropdown": {
-      "cultureExam": "Culture Exam"
+      "cultureExam": "Culture Exam",
+      "newsFeed": "News Feed"
     },
     "premium": "Premium"
   },
@@ -142,6 +144,27 @@
     "page": "Page {{current}} of {{total}}",
     "showing": "Showing {{from}}-{{to}} of {{total}}",
     "itemsPerPage": "Items per page"
+  },
+  "news": {
+    "page": {
+      "title": "Cyprus News",
+      "subtitle": "Practice reading with real news articles"
+    },
+    "empty": {
+      "title": "No news articles yet",
+      "description": "Check back later for new content to practice with"
+    },
+    "error": {
+      "title": "Unable to load news",
+      "description": "We couldn't load the news articles. Please try again.",
+      "retry": "Try Again"
+    },
+    "pagination": {
+      "showing": "Showing {{from}}-{{to}} of {{total}} articles",
+      "previous": "Previous",
+      "next": "Next",
+      "page": "Page {{current}} of {{total}}"
+    }
   },
   "notifications": {
     "title": "Notifications",
