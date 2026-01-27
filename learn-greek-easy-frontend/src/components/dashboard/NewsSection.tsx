@@ -15,10 +15,11 @@
 
 import React, { useEffect, useState } from 'react';
 
-import { ExternalLink, HelpCircle, Volume2 } from 'lucide-react';
+import { Crown, ExternalLink, HelpCircle, Volume2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -135,7 +136,10 @@ const NewsCard: React.FC<NewsCardProps> = ({ item, newsLang }) => {
                   data-testid={`news-audio-button-${item.id}`}
                 >
                   <Volume2 className="mr-2 h-4 w-4" />
-                  {t('dashboard.news.buttons.audio', 'Audio')}
+                  {t('dashboard.news.buttons.audioComingSoon', 'Audio (coming soon)')}
+                  <Badge className="ml-2 inline-flex items-center gap-0.5 border-0 bg-gradient-to-r from-amber-400 to-amber-500 px-1.5 py-0 text-[10px] text-black">
+                    <Crown className="h-2.5 w-2.5" />
+                  </Badge>
                 </Button>
               </TooltipTrigger>
               <TooltipContent>

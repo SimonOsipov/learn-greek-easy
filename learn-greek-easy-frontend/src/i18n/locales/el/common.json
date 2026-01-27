@@ -52,6 +52,7 @@
       "readMore": "Διαβάστε το άρθρο",
       "buttons": {
         "audio": "Ήχος",
+        "audioComingSoon": "Ήχος (σύντομα)",
         "audioTooltip": "Σύντομα διαθέσιμο",
         "audioDisabled": "Ήχος - Σύντομα διαθέσιμο",
         "questions": "Ερωτήσεις",

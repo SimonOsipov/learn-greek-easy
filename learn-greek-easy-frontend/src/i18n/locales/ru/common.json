@@ -52,6 +52,7 @@
       "readMore": "Читать статью",
       "buttons": {
         "audio": "Аудио",
+        "audioComingSoon": "Аудио (скоро)",
         "audioTooltip": "Скоро",
         "audioDisabled": "Аудио - Скоро",
         "questions": "Вопросы",
