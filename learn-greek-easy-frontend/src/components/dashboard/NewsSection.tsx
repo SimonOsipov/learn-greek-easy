@@ -16,8 +16,10 @@
 import React, { useEffect, useState } from 'react';
 
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 
 import { NewsCard, NewsCardSkeleton } from '@/components/news';
+import { trackNewsPageSeeAllClicked } from '@/lib/analytics';
 import { reportAPIError } from '@/lib/errorReporting';
 import { adminAPI, type NewsItemResponse } from '@/services/adminAPI';
 
@@ -64,7 +66,17 @@ export const NewsSection: React.FC = () => {
 
   return (
     <section data-testid="news-section">
-      <h2 className="mb-4 text-lg font-semibold text-foreground">{t('dashboard.news.title')}</h2>
+      <div className="mb-4 flex items-center justify-between">
+        <h2 className="text-lg font-semibold text-foreground">{t('dashboard.news.title')}</h2>
+        <Link
+          to="/news"
+          onClick={() => trackNewsPageSeeAllClicked()}
+          className="text-sm text-primary hover:underline"
+          data-testid="news-section-see-all"
+        >
+          {t('dashboard.news.seeAll')}
+        </Link>
+      </div>
       {loading ? (
         <div
           className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3"
