@@ -13,6 +13,11 @@ import {
   trackNewsArticleClicked,
   trackNewsQuestionsButtonClicked,
   trackNewsSourceLinkClicked,
+  trackNewsPageViewed,
+  trackNewsPagePaginated,
+  trackNewsPageArticleClicked,
+  trackNewsPageQuestionsClicked,
+  trackNewsPageSeeAllClicked,
 } from '../newsAnalytics';
 
 // Mock posthog-js
@@ -214,6 +219,286 @@ describe('newsAnalytics', () => {
   });
 
   // ==========================================================================
+  // trackNewsPageViewed
+  // ==========================================================================
+
+  describe('trackNewsPageViewed', () => {
+    it('should call posthog.capture with correct event name and properties', () => {
+      trackNewsPageViewed({
+        total_articles: 25,
+      });
+
+      expect(posthog.capture).toHaveBeenCalledWith('news_page_viewed', {
+        total_articles: 25,
+      });
+    });
+
+    it('should track with different article counts', () => {
+      trackNewsPageViewed({
+        total_articles: 100,
+      });
+
+      expect(posthog.capture).toHaveBeenCalledWith('news_page_viewed', {
+        total_articles: 100,
+      });
+    });
+
+    it('should not throw if posthog.capture is undefined', () => {
+      const originalCapture = posthog.capture;
+      (posthog as Record<string, unknown>).capture = undefined;
+
+      expect(() => {
+        trackNewsPageViewed({
+          total_articles: 50,
+        });
+      }).not.toThrow();
+
+      (posthog as Record<string, unknown>).capture = originalCapture;
+    });
+
+    it('should not throw if posthog.capture is null', () => {
+      const originalCapture = posthog.capture;
+      (posthog as Record<string, unknown>).capture = null;
+
+      expect(() => {
+        trackNewsPageViewed({
+          total_articles: 0,
+        });
+      }).not.toThrow();
+
+      (posthog as Record<string, unknown>).capture = originalCapture;
+    });
+  });
+
+  // ==========================================================================
+  // trackNewsPagePaginated
+  // ==========================================================================
+
+  describe('trackNewsPagePaginated', () => {
+    it('should call posthog.capture with correct event name and properties', () => {
+      trackNewsPagePaginated({
+        from_page: 1,
+        to_page: 2,
+        total_pages: 5,
+      });
+
+      expect(posthog.capture).toHaveBeenCalledWith('news_page_paginated', {
+        from_page: 1,
+        to_page: 2,
+        total_pages: 5,
+      });
+    });
+
+    it('should track navigating backwards', () => {
+      trackNewsPagePaginated({
+        from_page: 3,
+        to_page: 2,
+        total_pages: 10,
+      });
+
+      expect(posthog.capture).toHaveBeenCalledWith('news_page_paginated', {
+        from_page: 3,
+        to_page: 2,
+        total_pages: 10,
+      });
+    });
+
+    it('should not throw if posthog.capture is undefined', () => {
+      const originalCapture = posthog.capture;
+      (posthog as Record<string, unknown>).capture = undefined;
+
+      expect(() => {
+        trackNewsPagePaginated({
+          from_page: 1,
+          to_page: 2,
+          total_pages: 3,
+        });
+      }).not.toThrow();
+
+      (posthog as Record<string, unknown>).capture = originalCapture;
+    });
+
+    it('should not throw if posthog.capture is null', () => {
+      const originalCapture = posthog.capture;
+      (posthog as Record<string, unknown>).capture = null;
+
+      expect(() => {
+        trackNewsPagePaginated({
+          from_page: 2,
+          to_page: 1,
+          total_pages: 5,
+        });
+      }).not.toThrow();
+
+      (posthog as Record<string, unknown>).capture = originalCapture;
+    });
+  });
+
+  // ==========================================================================
+  // trackNewsPageArticleClicked
+  // ==========================================================================
+
+  describe('trackNewsPageArticleClicked', () => {
+    it('should call posthog.capture with correct event name and properties', () => {
+      trackNewsPageArticleClicked({
+        article_id: '550e8400-e29b-41d4-a716-446655440000',
+        article_title: 'Greek Economy Update',
+        position: 0,
+      });
+
+      expect(posthog.capture).toHaveBeenCalledWith('news_page_article_clicked', {
+        article_id: '550e8400-e29b-41d4-a716-446655440000',
+        article_title: 'Greek Economy Update',
+        position: 0,
+      });
+    });
+
+    it('should track articles at different positions', () => {
+      trackNewsPageArticleClicked({
+        article_id: '6ba7b810-9dad-11d1-80b4-00c04fd430c8',
+        article_title: 'Athens Festival News',
+        position: 5,
+      });
+
+      expect(posthog.capture).toHaveBeenCalledWith('news_page_article_clicked', {
+        article_id: '6ba7b810-9dad-11d1-80b4-00c04fd430c8',
+        article_title: 'Athens Festival News',
+        position: 5,
+      });
+    });
+
+    it('should not throw if posthog.capture is undefined', () => {
+      const originalCapture = posthog.capture;
+      (posthog as Record<string, unknown>).capture = undefined;
+
+      expect(() => {
+        trackNewsPageArticleClicked({
+          article_id: 'test-id',
+          article_title: 'Test Article',
+          position: 0,
+        });
+      }).not.toThrow();
+
+      (posthog as Record<string, unknown>).capture = originalCapture;
+    });
+
+    it('should not throw if posthog.capture is null', () => {
+      const originalCapture = posthog.capture;
+      (posthog as Record<string, unknown>).capture = null;
+
+      expect(() => {
+        trackNewsPageArticleClicked({
+          article_id: 'test-id-2',
+          article_title: 'Test Article 2',
+          position: 3,
+        });
+      }).not.toThrow();
+
+      (posthog as Record<string, unknown>).capture = originalCapture;
+    });
+  });
+
+  // ==========================================================================
+  // trackNewsPageQuestionsClicked
+  // ==========================================================================
+
+  describe('trackNewsPageQuestionsClicked', () => {
+    it('should call posthog.capture with correct event name and properties', () => {
+      trackNewsPageQuestionsClicked({
+        article_id: '550e8400-e29b-41d4-a716-446655440000',
+        has_questions: true,
+      });
+
+      expect(posthog.capture).toHaveBeenCalledWith('news_page_questions_clicked', {
+        article_id: '550e8400-e29b-41d4-a716-446655440000',
+        has_questions: true,
+      });
+    });
+
+    it('should track when article has no questions', () => {
+      trackNewsPageQuestionsClicked({
+        article_id: '6ba7b810-9dad-11d1-80b4-00c04fd430c8',
+        has_questions: false,
+      });
+
+      expect(posthog.capture).toHaveBeenCalledWith('news_page_questions_clicked', {
+        article_id: '6ba7b810-9dad-11d1-80b4-00c04fd430c8',
+        has_questions: false,
+      });
+    });
+
+    it('should not throw if posthog.capture is undefined', () => {
+      const originalCapture = posthog.capture;
+      (posthog as Record<string, unknown>).capture = undefined;
+
+      expect(() => {
+        trackNewsPageQuestionsClicked({
+          article_id: 'test-id',
+          has_questions: true,
+        });
+      }).not.toThrow();
+
+      (posthog as Record<string, unknown>).capture = originalCapture;
+    });
+
+    it('should not throw if posthog.capture is null', () => {
+      const originalCapture = posthog.capture;
+      (posthog as Record<string, unknown>).capture = null;
+
+      expect(() => {
+        trackNewsPageQuestionsClicked({
+          article_id: 'test-id-2',
+          has_questions: false,
+        });
+      }).not.toThrow();
+
+      (posthog as Record<string, unknown>).capture = originalCapture;
+    });
+  });
+
+  // ==========================================================================
+  // trackNewsPageSeeAllClicked
+  // ==========================================================================
+
+  describe('trackNewsPageSeeAllClicked', () => {
+    it('should call posthog.capture with correct event name', () => {
+      trackNewsPageSeeAllClicked();
+
+      expect(posthog.capture).toHaveBeenCalledWith('news_page_see_all_clicked');
+    });
+
+    it('should call posthog.capture without properties', () => {
+      trackNewsPageSeeAllClicked();
+
+      // Verify it was called with only the event name (no second argument)
+      expect(posthog.capture).toHaveBeenCalledTimes(1);
+      expect(posthog.capture).toHaveBeenLastCalledWith('news_page_see_all_clicked');
+    });
+
+    it('should not throw if posthog.capture is undefined', () => {
+      const originalCapture = posthog.capture;
+      (posthog as Record<string, unknown>).capture = undefined;
+
+      expect(() => {
+        trackNewsPageSeeAllClicked();
+      }).not.toThrow();
+
+      (posthog as Record<string, unknown>).capture = originalCapture;
+    });
+
+    it('should not throw if posthog.capture is null', () => {
+      const originalCapture = posthog.capture;
+      (posthog as Record<string, unknown>).capture = null;
+
+      expect(() => {
+        trackNewsPageSeeAllClicked();
+      }).not.toThrow();
+
+      (posthog as Record<string, unknown>).capture = originalCapture;
+    });
+  });
+
+  // ==========================================================================
   // PostHog Null Safety Tests
   // ==========================================================================
 
@@ -243,6 +528,30 @@ describe('newsAnalytics', () => {
         });
       }).not.toThrow();
 
+      expect(() => {
+        trackNewsPageViewed({ total_articles: 10 });
+      }).not.toThrow();
+
+      expect(() => {
+        trackNewsPagePaginated({ from_page: 1, to_page: 2, total_pages: 5 });
+      }).not.toThrow();
+
+      expect(() => {
+        trackNewsPageArticleClicked({
+          article_id: 'id',
+          article_title: 'Title',
+          position: 0,
+        });
+      }).not.toThrow();
+
+      expect(() => {
+        trackNewsPageQuestionsClicked({ article_id: 'id', has_questions: true });
+      }).not.toThrow();
+
+      expect(() => {
+        trackNewsPageSeeAllClicked();
+      }).not.toThrow();
+
       (posthog as Record<string, unknown>).capture = originalCapture;
     });
 
@@ -264,6 +573,15 @@ describe('newsAnalytics', () => {
           card_id: 'card-1',
           article_domain: 'test.com',
         });
+        trackNewsPageViewed({ total_articles: 10 });
+        trackNewsPagePaginated({ from_page: 1, to_page: 2, total_pages: 5 });
+        trackNewsPageArticleClicked({
+          article_id: 'id',
+          article_title: 'Title',
+          position: 0,
+        });
+        trackNewsPageQuestionsClicked({ article_id: 'id', has_questions: true });
+        trackNewsPageSeeAllClicked();
       }).not.toThrow();
 
       (posthog as Record<string, unknown>).capture = originalCapture;
