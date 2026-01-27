@@ -27,6 +27,7 @@ import {
   trackNewsQuestionsButtonClicked,
 } from '@/lib/analytics/newsAnalytics';
 import { reportAPIError } from '@/lib/errorReporting';
+import { cn } from '@/lib/utils';
 import { adminAPI, type NewsItemResponse } from '@/services/adminAPI';
 
 /**
@@ -107,7 +108,12 @@ const NewsCard: React.FC<NewsCardProps> = ({ item, newsLang }) => {
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-black/30" />
 
         {/* Content */}
-        <div className="relative z-10 flex h-full flex-col justify-end p-4">
+        <div
+          className={cn(
+            'relative z-10 flex h-full flex-col justify-end p-4',
+            hasQuestion && 'pb-16'
+          )}
+        >
           <h3 className="mb-1 line-clamp-2 text-lg font-semibold text-white">{title}</h3>
           <p className="line-clamp-2 text-sm text-gray-200">{description}</p>
           <ExternalLink className="absolute right-3 top-3 h-4 w-4 text-white/70 group-hover:text-white" />
@@ -116,7 +122,7 @@ const NewsCard: React.FC<NewsCardProps> = ({ item, newsLang }) => {
 
       {/* Action Buttons - only show if news has associated question */}
       {hasQuestion && (
-        <div className="flex gap-2 border-t border-border p-3">
+        <div className="absolute bottom-0 left-0 right-0 z-20 flex gap-2 bg-gradient-to-t from-black/90 via-black/60 to-transparent p-3 pt-8">
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -124,7 +130,7 @@ const NewsCard: React.FC<NewsCardProps> = ({ item, newsLang }) => {
                   variant="outline"
                   size="sm"
                   disabled
-                  className="flex-1"
+                  className="flex-1 border-white/50 bg-white/10 text-white hover:bg-white/20 disabled:border-white/30 disabled:text-white/50"
                   aria-label={t('dashboard.news.buttons.audioDisabled', 'Audio - Coming soon')}
                   data-testid={`news-audio-button-${item.id}`}
                 >
@@ -141,7 +147,7 @@ const NewsCard: React.FC<NewsCardProps> = ({ item, newsLang }) => {
           <Button
             variant="default"
             size="sm"
-            className="flex-1"
+            className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90"
             onClick={handleQuestionsClick}
             aria-label={t(
               'dashboard.news.buttons.questionsLabel',
