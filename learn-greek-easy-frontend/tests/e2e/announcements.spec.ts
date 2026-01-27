@@ -355,26 +355,28 @@ test.describe('Announcements - Learner Notification Center', () => {
 test.describe('Announcements - Empty States', () => {
   test.use({ storageState: 'playwright/.auth/admin.json' });
 
-  test('ANNOUNCE-E2E-08: History table shows empty state when no announcements', async ({
+  test('ANNOUNCE-E2E-08: History table shows either data or empty state', async ({
     page,
   }) => {
-    // Navigate directly without seeding (to test empty state)
-    // Note: This test might not show empty state if announcements persist
-    // from other tests. In a real environment, you'd clear data first.
+    // Navigate to announcements tab
     await navigateToAdminAnnouncementsTab(page);
 
     const historyTable = page.getByTestId('announcement-history-table');
     await expect(historyTable).toBeVisible({ timeout: 10000 });
 
-    // Either we have announcements or we see the empty state
-    const announcementRows = page.locator('[data-testid^="announcement-row-"]');
-    const rowCount = await announcementRows.count();
+    // Wait a moment for data to potentially load
+    await page.waitForTimeout(1000);
 
-    if (rowCount === 0) {
-      // Should show empty state messaging
-      const emptyMessage = historyTable.getByText(/no announcements/i);
-      await expect(emptyMessage).toBeVisible();
-    }
-    // If rows exist, that's also valid - test passes either way
+    // Check for either: rows with data OR empty state message
+    // This handles both scenarios: seeded data present OR fresh environment
+    const announcementRows = page.locator('[data-testid^="announcement-row-"]');
+    const emptyMessage = historyTable.getByText(/no announcements/i);
+
+    // At least one of these should be true
+    const hasRows = (await announcementRows.count()) > 0;
+    const hasEmptyMessage = await emptyMessage.isVisible().catch(() => false);
+
+    // Either we have rows OR we have empty state - both are valid
+    expect(hasRows || hasEmptyMessage).toBe(true);
   });
 });
