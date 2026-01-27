@@ -52,10 +52,15 @@ export function ChangelogPage() {
   // Track page view on first successful load
   useEffect(() => {
     if (!isLoading && items.length > 0 && !hasTrackedPageView.current) {
-      trackChangelogPageViewed({ total_entries: total });
+      trackChangelogPageViewed({
+        page_number: page,
+        total_items: total,
+        items_on_page: items.length,
+        language: i18n.language,
+      });
       hasTrackedPageView.current = true;
     }
-  }, [isLoading, items.length, total]);
+  }, [isLoading, items.length, total, page, i18n.language]);
 
   const handlePageChange = useCallback(
     (newPage: number) => {
