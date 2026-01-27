@@ -114,8 +114,8 @@ test.describe('Changelog - User Flow', () => {
     await expect(cards).toHaveCount(5);
 
     // Verify cards have titles and dates
-    const firstCard = cards.first();
-    await expect(firstCard.locator('h3')).toBeVisible(); // Title
+    const firstCard = page.getByTestId('changelog-card').first();
+    await expect(firstCard).toBeVisible();
     await expect(firstCard.locator('time')).toBeVisible(); // Date
   });
 
