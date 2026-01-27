@@ -7,19 +7,24 @@
  * Features:
  * - Create announcement form
  * - Preview modal before sending
+ * - History table with past announcements
+ * - Detail modal for viewing announcement stats
  * - Success/error toasts
  * - Form reset on success
  */
 
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 
 import { useTranslation } from 'react-i18next';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
 import { adminAPI } from '@/services/adminAPI';
+import { useAdminAnnouncementStore } from '@/stores/adminAnnouncementStore';
 
 import { AnnouncementCreateForm, type AnnouncementCreateFormData } from './AnnouncementCreateForm';
+import { AnnouncementDetailModal } from './AnnouncementDetailModal';
+import { AnnouncementHistoryTable } from './AnnouncementHistoryTable';
 import { AnnouncementPreviewModal } from './AnnouncementPreviewModal';
 
 /**
@@ -33,8 +38,31 @@ export const AnnouncementsTab: React.FC = () => {
   const [previewData, setPreviewData] = useState<AnnouncementCreateFormData | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Detail modal state
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
+
   // Form key for forcing re-render/reset
   const [formKey, setFormKey] = useState(0);
+
+  // Store state and actions
+  const {
+    announcements,
+    selectedAnnouncement,
+    page,
+    totalPages,
+    isLoading,
+    isLoadingDetail,
+    fetchAnnouncements,
+    fetchAnnouncementDetail,
+    setPage,
+    clearSelectedAnnouncement,
+    refresh,
+  } = useAdminAnnouncementStore();
+
+  // Fetch announcements on mount
+  useEffect(() => {
+    fetchAnnouncements();
+  }, [fetchAnnouncements]);
 
   /**
    * Handle preview button click from form
@@ -67,6 +95,9 @@ export const AnnouncementsTab: React.FC = () => {
       setIsPreviewOpen(false);
       setPreviewData(null);
       setFormKey((prev) => prev + 1); // Force form re-render to reset
+
+      // Refresh the announcements list
+      await refresh();
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       toast({
@@ -77,7 +108,7 @@ export const AnnouncementsTab: React.FC = () => {
     } finally {
       setIsSubmitting(false);
     }
-  }, [previewData, t]);
+  }, [previewData, t, refresh]);
 
   /**
    * Handle preview modal close
@@ -94,8 +125,43 @@ export const AnnouncementsTab: React.FC = () => {
     [isSubmitting]
   );
 
+  /**
+   * Handle view detail click
+   */
+  const handleViewDetail = useCallback(
+    async (id: string) => {
+      setIsDetailOpen(true);
+      await fetchAnnouncementDetail(id);
+    },
+    [fetchAnnouncementDetail]
+  );
+
+  /**
+   * Handle detail modal close
+   */
+  const handleDetailClose = useCallback(
+    (open: boolean) => {
+      setIsDetailOpen(open);
+      if (!open) {
+        clearSelectedAnnouncement();
+      }
+    },
+    [clearSelectedAnnouncement]
+  );
+
+  /**
+   * Handle page change
+   */
+  const handlePageChange = useCallback(
+    (newPage: number) => {
+      setPage(newPage);
+    },
+    [setPage]
+  );
+
   return (
-    <>
+    <div className="space-y-6">
+      {/* Create Form */}
       <Card data-testid="announcements-tab">
         <CardHeader>
           <CardTitle>{t('announcements.create.title')}</CardTitle>
@@ -110,6 +176,17 @@ export const AnnouncementsTab: React.FC = () => {
         </CardContent>
       </Card>
 
+      {/* History Table */}
+      <AnnouncementHistoryTable
+        announcements={announcements}
+        isLoading={isLoading}
+        page={page}
+        totalPages={totalPages}
+        onPageChange={handlePageChange}
+        onViewDetail={handleViewDetail}
+      />
+
+      {/* Preview Modal */}
       <AnnouncementPreviewModal
         open={isPreviewOpen}
         onOpenChange={handlePreviewClose}
@@ -117,6 +194,14 @@ export const AnnouncementsTab: React.FC = () => {
         onConfirm={handleConfirm}
         isSubmitting={isSubmitting}
       />
-    </>
+
+      {/* Detail Modal */}
+      <AnnouncementDetailModal
+        open={isDetailOpen}
+        onOpenChange={handleDetailClose}
+        announcement={selectedAnnouncement}
+        isLoading={isLoadingDetail}
+      />
+    </div>
   );
 };

@@ -295,6 +295,45 @@ export interface AnnouncementCreateResponse {
   total_recipients: number;
 }
 
+/**
+ * Brief creator information for announcement items
+ */
+export interface AnnouncementCreator {
+  id: string;
+  display_name: string | null;
+}
+
+/**
+ * Announcement item in list response
+ */
+export interface AnnouncementItem {
+  id: string;
+  title: string;
+  message: string;
+  link_url: string | null;
+  total_recipients: number;
+  read_count: number;
+  created_at: string;
+  creator: AnnouncementCreator | null;
+}
+
+/**
+ * Paginated announcement list response
+ */
+export interface AnnouncementListResponse {
+  total: number;
+  page: number;
+  page_size: number;
+  items: AnnouncementItem[];
+}
+
+/**
+ * Announcement detail response with computed stats
+ */
+export interface AnnouncementDetailResponse extends AnnouncementItem {
+  read_percentage: number;
+}
+
 // ============================================
 // News Item Types
 // ============================================
@@ -790,5 +829,34 @@ export const adminAPI = {
    */
   createAnnouncement: async (data: AnnouncementCreate): Promise<AnnouncementCreateResponse> => {
     return api.post<AnnouncementCreateResponse>('/api/v1/admin/announcements', data);
+  },
+
+  /**
+   * Get paginated list of announcements
+   *
+   * Returns announcements sorted by created_at DESC (newest first).
+   * Requires superuser authentication.
+   *
+   * @param page - Page number (1-indexed, default: 1)
+   * @param pageSize - Items per page (1-100, default: 10)
+   * @returns Paginated list of announcements with creator info
+   */
+  getAnnouncements: async (page = 1, pageSize = 10): Promise<AnnouncementListResponse> => {
+    const queryString = buildQueryString({ page, page_size: pageSize });
+    return api.get<AnnouncementListResponse>(`/api/v1/admin/announcements${queryString}`);
+  },
+
+  /**
+   * Get single announcement details
+   *
+   * Returns full announcement details including computed read percentage.
+   * Requires superuser authentication.
+   *
+   * @param id - UUID of the announcement
+   * @returns Announcement details with stats
+   * @throws 404 if announcement not found
+   */
+  getAnnouncementDetail: async (id: string): Promise<AnnouncementDetailResponse> => {
+    return api.get<AnnouncementDetailResponse>(`/api/v1/admin/announcements/${id}`);
   },
 };

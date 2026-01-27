@@ -198,6 +198,25 @@
       "cancel": "Edit",
       "send": "Send to All Users",
       "sending": "Sending..."
+    },
+    "history": {
+      "title": "Announcement History",
+      "description": "View all past announcements and their statistics",
+      "empty": "No announcements yet",
+      "emptyHint": "Create your first announcement above",
+      "by": "by",
+      "unknownAdmin": "Unknown Admin",
+      "viewDetail": "View Details"
+    },
+    "detail": {
+      "title": "Announcement Details",
+      "message": "Message",
+      "link": "Link URL",
+      "statistics": "Statistics",
+      "sent": "Sent to",
+      "read": "Read by",
+      "readProgress": "Read Progress",
+      "close": "Close"
     }
   },
   "news": {
