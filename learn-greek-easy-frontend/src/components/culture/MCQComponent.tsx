@@ -1,10 +1,12 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
+import { ExternalLink } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { useMCQKeyboardShortcuts } from '@/hooks/useMCQKeyboardShortcuts';
+import { trackNewsSourceLinkClicked } from '@/lib/analytics';
 import type { CultureLanguage, CultureQuestionResponse, MultilingualText } from '@/types/culture';
 
 import { AnswerOption, type OptionLetter } from './AnswerOption';
@@ -109,6 +111,24 @@ export const MCQComponent: React.FC<MCQComponentProps> = ({
     (e.target as HTMLImageElement).style.display = 'none';
   };
 
+  // Handle source article link click - track analytics
+  const handleSourceLinkClick = useCallback(() => {
+    const sourceUrl = question.original_article_url;
+    if (!sourceUrl) return;
+
+    let domain = 'unknown';
+    try {
+      domain = new URL(sourceUrl).hostname;
+    } catch {
+      // URL parsing failed, use fallback
+    }
+
+    trackNewsSourceLinkClicked({
+      card_id: question.id,
+      article_domain: domain,
+    });
+  }, [question.id, question.original_article_url]);
+
   return (
     <Card
       className="w-full max-w-2xl"
@@ -144,6 +164,21 @@ export const MCQComponent: React.FC<MCQComponentProps> = ({
         >
           {questionText}
         </h2>
+
+        {/* Source article link - show before answering if available */}
+        {question.original_article_url && question.original_article_url.startsWith('http') && (
+          <a
+            href={question.original_article_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-2 flex items-center gap-2 text-sm text-primary hover:underline"
+            data-testid="source-article-link"
+            onClick={handleSourceLinkClick}
+          >
+            <ExternalLink className="h-4 w-4" />
+            {t('mcq.readSourceArticle', 'Read source article')}
+          </a>
+        )}
       </CardHeader>
 
       <CardContent className="space-y-4">

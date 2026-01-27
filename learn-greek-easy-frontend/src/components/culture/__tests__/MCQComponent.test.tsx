@@ -39,6 +39,7 @@ const mockQuestion: CultureQuestionResponse = {
   option_count: 4,
   image_url: null,
   order_index: 1,
+  original_article_url: null,
 };
 
 const mockQuestionWithImage: CultureQuestionResponse = {
@@ -63,6 +64,7 @@ const mockQuestionWithMissingTranslation: CultureQuestionResponse = {
   option_count: 4,
   image_url: null,
   order_index: 1,
+  original_article_url: null,
 };
 
 // Mock question data for variable option count tests
@@ -80,6 +82,7 @@ const mockQuestion2Options: CultureQuestionResponse = {
   option_count: 2,
   image_url: null,
   order_index: 1,
+  original_article_url: null,
 };
 
 const mockQuestion3Options: CultureQuestionResponse = {
@@ -97,6 +100,19 @@ const mockQuestion3Options: CultureQuestionResponse = {
   option_count: 3,
   image_url: null,
   order_index: 1,
+  original_article_url: null,
+};
+
+const mockQuestionWithSourceUrl: CultureQuestionResponse = {
+  ...mockQuestion,
+  id: 'test-question-with-source',
+  original_article_url: 'https://example.com/news/article',
+};
+
+const mockQuestionWithInvalidSourceUrl: CultureQuestionResponse = {
+  ...mockQuestion,
+  id: 'test-question-invalid-source',
+  original_article_url: 'javascript:alert("xss")',
 };
 
 describe('MCQComponent', () => {
@@ -577,6 +593,40 @@ describe('MCQComponent', () => {
       await user.click(submitButton);
 
       expect(mockOnAnswer).toHaveBeenCalledWith(2);
+    });
+  });
+
+  describe('Source Article Link', () => {
+    it('should render source article link when original_article_url is provided', () => {
+      renderWithProviders(
+        <MCQComponent question={mockQuestionWithSourceUrl} language="en" onAnswer={mockOnAnswer} />
+      );
+
+      const sourceLink = screen.getByTestId('source-article-link');
+      expect(sourceLink).toBeInTheDocument();
+      expect(sourceLink).toHaveAttribute('href', 'https://example.com/news/article');
+      expect(sourceLink).toHaveAttribute('target', '_blank');
+      expect(sourceLink).toHaveAttribute('rel', 'noopener noreferrer');
+    });
+
+    it('should not render source article link when original_article_url is null', () => {
+      renderWithProviders(
+        <MCQComponent question={mockQuestion} language="en" onAnswer={mockOnAnswer} />
+      );
+
+      expect(screen.queryByTestId('source-article-link')).not.toBeInTheDocument();
+    });
+
+    it('should not render source article link for non-http URLs', () => {
+      renderWithProviders(
+        <MCQComponent
+          question={mockQuestionWithInvalidSourceUrl}
+          language="en"
+          onAnswer={mockOnAnswer}
+        />
+      );
+
+      expect(screen.queryByTestId('source-article-link')).not.toBeInTheDocument();
     });
   });
 });

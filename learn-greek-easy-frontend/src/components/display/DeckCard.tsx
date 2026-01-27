@@ -55,7 +55,10 @@ export const DeckCard = React.memo<DeckCardProps>(({ deck, onContinue }) => {
         <div>
           <div className="mb-2 flex justify-between text-sm">
             <span className="text-muted-foreground">
-              {t('card.progress', { current: deck.progress.current, total: deck.progress.total })}
+              {t(deck.isCulture ? 'card.progressCulture' : 'card.progress', {
+                current: deck.progress.current,
+                total: deck.progress.total,
+              })}
             </span>
             <span className="font-medium">{deck.progress.percentage}%</span>
           </div>

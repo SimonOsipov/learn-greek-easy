@@ -110,6 +110,7 @@
     "cardsCount": "{{count}} cards",
     "premium": "Premium",
     "progress": "{{current}} of {{total}} words",
+    "progressCulture": "{{current}} of {{total}} cultural questions",
     "stats": {
       "due": "{{count}} due",
       "mastered": "{{count}} mastered",

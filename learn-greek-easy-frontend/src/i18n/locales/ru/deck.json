@@ -110,6 +110,7 @@
     "cardsCount": "{{count}} карточек",
     "premium": "Премиум",
     "progress": "{{current}} из {{total}} слов",
+    "progressCulture": "{{current}} из {{total}} культурных вопросов",
     "stats": {
       "due": "{{count}} на повторение",
       "mastered": "{{count}} освоено",

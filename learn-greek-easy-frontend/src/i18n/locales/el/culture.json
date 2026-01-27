@@ -12,7 +12,8 @@
     "questionOf": "Ερωτηση {{current}} απο {{total}}",
     "timeRemaining": "{{seconds}}δ απομενουν",
     "selectAnswer": "Επιλεξτε μια απαντηση για να συνεχισετε",
-    "optionLabel": "Επιλογη {{letter}}: {{text}}"
+    "optionLabel": "Επιλογη {{letter}}: {{text}}",
+    "readSourceArticle": "Διαβάστε το άρθρο πηγής"
   },
   "feedback": {
     "correct": "Σωστα!",

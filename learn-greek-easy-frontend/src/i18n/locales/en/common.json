@@ -52,6 +52,7 @@
       "readMore": "Read article",
       "buttons": {
         "audio": "Audio",
+        "audioComingSoon": "Audio (coming soon)",
         "audioTooltip": "Coming soon",
         "audioDisabled": "Audio - Coming soon",
         "questions": "Questions",

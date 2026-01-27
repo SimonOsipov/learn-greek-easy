@@ -193,6 +193,7 @@ export const Dashboard: React.FC = () => {
           learning: deck.progress?.cardsLearning ?? 0,
         },
         lastStudied: deck.progress?.lastStudied,
+        isCulture: deck.category === 'culture',
       })),
     [activeDecks]
   );
