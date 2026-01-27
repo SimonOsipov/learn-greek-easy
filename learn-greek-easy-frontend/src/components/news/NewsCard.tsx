@@ -1,0 +1,168 @@
+/**
+ * NewsCard Component
+ *
+ * Reusable news card component that displays a news article with:
+ * - Background image with gradient overlay
+ * - Localized title and description
+ * - Optional audio and questions action buttons
+ * - Configurable height for different layouts
+ * - PostHog analytics tracking
+ */
+
+import React from 'react';
+
+import { Crown, ExternalLink, HelpCircle, Volume2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
+
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  trackNewsArticleClicked,
+  trackNewsQuestionsButtonClicked,
+} from '@/lib/analytics/newsAnalytics';
+import { cn } from '@/lib/utils';
+import { type NewsItemResponse } from '@/services/adminAPI';
+
+export type NewsCardHeight = 'default' | 'tall';
+
+export interface NewsCardProps {
+  article: NewsItemResponse;
+  newsLang: 'el' | 'en' | 'ru';
+  height?: NewsCardHeight;
+}
+
+const heightClasses: Record<NewsCardHeight, string> = {
+  default: 'h-48',
+  tall: 'h-[300px]',
+};
+
+export const NewsCard: React.FC<NewsCardProps> = ({ article, newsLang, height = 'default' }) => {
+  const { t } = useTranslation('common');
+  const navigate = useNavigate();
+
+  const hasQuestion = article.card_id !== null && article.deck_id !== null;
+
+  // Now all 3 languages are supported in backend
+  const getLocalizedContent = () => {
+    switch (newsLang) {
+      case 'el':
+        return { title: article.title_el, description: article.description_el };
+      case 'ru':
+        return { title: article.title_ru, description: article.description_ru };
+      default: // 'en'
+        return { title: article.title_en, description: article.description_en };
+    }
+  };
+
+  const { title, description } = getLocalizedContent();
+
+  const handleClick = () => {
+    try {
+      const domain = new URL(article.original_article_url).hostname;
+      trackNewsArticleClicked({
+        item_id: article.id,
+        article_domain: domain,
+      });
+    } catch {
+      // If URL parsing fails, still track but without domain
+      trackNewsArticleClicked({
+        item_id: article.id,
+        article_domain: 'unknown',
+      });
+    }
+  };
+
+  const handleQuestionsClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (article.deck_id) {
+      trackNewsQuestionsButtonClicked({
+        news_item_id: article.id,
+        deck_id: article.deck_id,
+      });
+      navigate(`/culture/${article.deck_id}/practice`);
+    }
+  };
+
+  return (
+    <div className="group relative overflow-hidden rounded-lg bg-card">
+      {/* Clickable article link */}
+      <a
+        href={article.original_article_url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={cn('relative block overflow-hidden', heightClasses[height])}
+        onClick={handleClick}
+        data-testid={`news-card-${article.id}`}
+        aria-label={`${title} - ${t('dashboard.news.readMore')}`}
+      >
+        {/* Background Image */}
+        <div
+          className="absolute inset-0 bg-cover bg-center transition-transform group-hover:scale-105"
+          style={{ backgroundImage: article.image_url ? `url(${article.image_url})` : undefined }}
+        />
+
+        {/* Semi-transparent Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-black/30" />
+
+        {/* Content */}
+        <div
+          className={cn(
+            'relative z-10 flex h-full flex-col justify-end p-4',
+            hasQuestion && 'pb-16'
+          )}
+        >
+          <h3 className="mb-1 line-clamp-2 text-lg font-semibold text-white">{title}</h3>
+          <p className="line-clamp-2 text-sm text-gray-200">{description}</p>
+          <ExternalLink className="absolute right-3 top-3 h-4 w-4 text-white/70 group-hover:text-white" />
+        </div>
+      </a>
+
+      {/* Action Buttons - only show if news has associated question */}
+      {hasQuestion && (
+        <div className="absolute bottom-0 left-0 right-0 z-20 flex gap-2 bg-gradient-to-t from-black/90 via-black/60 to-transparent p-3 pt-8">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled
+                  className="flex-1 border-white/50 bg-white/10 text-white hover:bg-white/20 disabled:border-white/30 disabled:text-white/50"
+                  aria-label={t('dashboard.news.buttons.audioDisabled', 'Audio - Coming soon')}
+                  data-testid={`news-audio-button-${article.id}`}
+                >
+                  <Volume2 className="mr-2 h-4 w-4" />
+                  {t('dashboard.news.buttons.audioComingSoon', 'Audio (coming soon)')}
+                  <Badge className="ml-2 inline-flex items-center gap-0.5 border-0 bg-gradient-to-r from-amber-400 to-amber-500 px-1.5 py-0 text-[10px] text-black">
+                    <Crown className="h-2.5 w-2.5" />
+                  </Badge>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{t('dashboard.news.buttons.audioTooltip', 'Coming soon')}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
+          <Button
+            variant="default"
+            size="sm"
+            className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90"
+            onClick={handleQuestionsClick}
+            aria-label={t(
+              'dashboard.news.buttons.questionsLabel',
+              'Practice questions for this article'
+            )}
+            data-testid={`news-questions-button-${article.id}`}
+          >
+            <HelpCircle className="mr-2 h-4 w-4" />
+            {t('dashboard.news.buttons.questions', 'Questions')}
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+};
