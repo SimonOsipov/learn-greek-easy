@@ -2568,6 +2568,399 @@ class SeedService:
             "questions": questions_data,
         }
 
+    async def seed_news_feed_page(self) -> dict[str, Any]:
+        """Create comprehensive news items for E2E testing of the News Feed Page.
+
+        Creates:
+        - 25 NewsItems with varied categories and difficulty levels
+        - 10 items WITH associated CultureQuestions (3-5 questions each)
+        - 15 items WITHOUT associated questions
+        - Uses/creates "E2E News Feed Page" culture deck
+
+        This method is idempotent - deletes existing E2E test data first.
+
+        Returns:
+            dict with seeding summary including created items and questions
+
+        Raises:
+            RuntimeError: If seeding not allowed
+        """
+        self._check_can_seed()
+
+        # Delete existing E2E news-feed-page test data (questions first for FK safety)
+        await self.db.execute(
+            delete(CultureQuestion).where(
+                CultureQuestion.original_article_url.like(
+                    "https://example.com/e2e-news-feed-page-%"
+                )
+            )
+        )
+        await self.db.execute(
+            delete(NewsItem).where(
+                NewsItem.original_article_url.like("https://example.com/e2e-news-feed-page-%")
+            )
+        )
+
+        # Find or create E2E culture deck for news page questions
+        result = await self.db.execute(
+            select(CultureDeck).where(CultureDeck.name == "E2E News Feed Page")
+        )
+        deck = result.scalar_one_or_none()
+
+        if not deck:
+            deck = CultureDeck(
+                name="E2E News Feed Page",
+                description="Deck for E2E testing news feed page questions",
+                category="culture",
+                is_active=True,
+                is_premium=False,
+            )
+            self.db.add(deck)
+            await self.db.flush()
+
+        # Define categories and difficulty levels for variety
+        categories = ["politics", "culture", "sports", "economy", "science", "technology"]
+        difficulty_levels = ["A1", "A2", "B1", "B2"]
+
+        # News items data - 25 items total
+        # Greek titles with variety of topics
+        news_titles = [
+            (
+                "Η Ελλάδα γιορτάζει την Εθνική Επέτειο",
+                "Greece Celebrates National Anniversary",
+                "Греция празднует национальную годовщину",
+            ),
+            (
+                "Νέα ανακάλυψη στην αρχαία Ολυμπία",
+                "New Discovery at Ancient Olympia",
+                "Новое открытие в древней Олимпии",
+            ),
+            (
+                "Οικονομική ανάπτυξη στην Ελλάδα",
+                "Economic Growth in Greece",
+                "Экономический рост в Греции",
+            ),
+            ("Ο τουρισμός σπάει ρεκόρ", "Tourism Breaks Records", "Туризм бьет рекорды"),
+            (
+                "Νέα τεχνολογική επένδυση στην Αθήνα",
+                "New Tech Investment in Athens",
+                "Новые технологические инвестиции в Афины",
+            ),
+            (
+                "Αθλητικές επιτυχίες για την Ελλάδα",
+                "Athletic Successes for Greece",
+                "Спортивные успехи Греции",
+            ),
+            (
+                "Πολιτιστικό φεστιβάλ στη Θεσσαλονίκη",
+                "Cultural Festival in Thessaloniki",
+                "Культурный фестиваль в Салониках",
+            ),
+            (
+                "Νέο πανεπιστημιακό πρόγραμμα",
+                "New University Program",
+                "Новая университетская программа",
+            ),
+            (
+                "Περιβαλλοντική πρωτοβουλία στα νησιά",
+                "Environmental Initiative on the Islands",
+                "Экологическая инициатива на островах",
+            ),
+            (
+                "Διεθνής συνεργασία στην έρευνα",
+                "International Research Collaboration",
+                "Международное сотрудничество в исследованиях",
+            ),
+            ("Νέο μουσείο στην Κρήτη", "New Museum in Crete", "Новый музей на Крите"),
+            (
+                "Οι Έλληνες επιστήμονες διακρίνονται",
+                "Greek Scientists Excel",
+                "Греческие ученые отличаются",
+            ),
+            (
+                "Αγροτική καινοτομία στη Μακεδονία",
+                "Agricultural Innovation in Macedonia",
+                "Сельскохозяйственные инновации в Македонии",
+            ),
+            (
+                "Νέα έργα υποδομής στην Πελοπόννησο",
+                "New Infrastructure Projects in Peloponnese",
+                "Новые инфраструктурные проекты на Пелопоннесе",
+            ),
+            (
+                "Διπλωματικές εξελίξεις στην Ανατολική Μεσόγειο",
+                "Diplomatic Developments in Eastern Mediterranean",
+                "Дипломатические события в Восточном Средиземноморье",
+            ),
+            ("Νέα μέτρα για την ενέργεια", "New Energy Measures", "Новые энергетические меры"),
+            (
+                "Φεστιβάλ κινηματογράφου στην Αθήνα",
+                "Film Festival in Athens",
+                "Кинофестиваль в Афинах",
+            ),
+            (
+                "Πρόοδος στην ψηφιακή μετάβαση",
+                "Progress in Digital Transition",
+                "Прогресс в цифровой трансформации",
+            ),
+            (
+                "Νέες τουριστικές διαδρομές στα Δωδεκάνησα",
+                "New Tourist Routes in Dodecanese",
+                "Новые туристические маршруты на Додеканесе",
+            ),
+            (
+                "Ελληνική γαστρονομία στο επίκεντρο",
+                "Greek Gastronomy in Focus",
+                "Греческая гастрономия в центре внимания",
+            ),
+            (
+                "Συνέδριο για την κλιματική αλλαγή",
+                "Climate Change Conference",
+                "Конференция по изменению климата",
+            ),
+            (
+                "Νέα θέατρα στην περιφέρεια",
+                "New Theaters in the Regions",
+                "Новые театры в регионах",
+            ),
+            (
+                "Επιτυχίες στον ναυτιλιακό τομέα",
+                "Successes in the Shipping Sector",
+                "Успехи в судоходном секторе",
+            ),
+            (
+                "Καινοτομία στην ελληνική βιομηχανία",
+                "Innovation in Greek Industry",
+                "Инновации в греческой промышленности",
+            ),
+            (
+                "Διεθνείς βραβεύσεις για ελληνικά προϊόντα",
+                "International Awards for Greek Products",
+                "Международные награды для греческих продуктов",
+            ),
+        ]
+
+        # Summaries in Greek/English/Russian
+        summary_templates = [
+            (
+                "Σημαντικές εξελίξεις στον τομέα αυτό που επηρεάζουν την καθημερινότητα.",
+                "Important developments in this sector affecting daily life.",
+                "Важные события в этой области, влияющие на повседневную жизнь.",
+            ),
+            (
+                "Νέα πρωτοβουλία που υπόσχεται σημαντικές αλλαγές.",
+                "A new initiative promising significant changes.",
+                "Новая инициатива, обещающая значительные изменения.",
+            ),
+            (
+                "Ανακοινώθηκαν νέα μέτρα από τις αρμόδιες αρχές.",
+                "New measures announced by the relevant authorities.",
+                "Объявлены новые меры соответствующими органами.",
+            ),
+            (
+                "Θετικές εξελίξεις που ενισχύουν την ανάπτυξη.",
+                "Positive developments strengthening growth.",
+                "Положительные события, способствующие росту.",
+            ),
+            (
+                "Σημαντική πρόοδος καταγράφηκε τις τελευταίες ημέρες.",
+                "Significant progress recorded in recent days.",
+                "Значительный прогресс зафиксирован в последние дни.",
+            ),
+        ]
+
+        today = date.today()
+        news_items_data = []
+        questions_data = []
+
+        # Items with questions (indices 0-9)
+        items_with_questions = set(range(10))
+
+        # Question templates for news items
+        # TypedDict would be better, but inline type annotation is simpler
+        question_templates: list[dict[str, Any]] = [
+            {
+                "question": {
+                    "el": "Ποιο είναι το κύριο θέμα του άρθρου;",
+                    "en": "What is the main topic of the article?",
+                    "ru": "Какова основная тема статьи?",
+                },
+                "options": [
+                    {"el": "Πολιτική", "en": "Politics", "ru": "Политика"},
+                    {"el": "Οικονομία", "en": "Economy", "ru": "Экономика"},
+                    {"el": "Πολιτισμός", "en": "Culture", "ru": "Культура"},
+                    {"el": "Αθλητισμός", "en": "Sports", "ru": "Спорт"},
+                ],
+                "correct": 3,
+            },
+            {
+                "question": {
+                    "el": "Πού αναφέρεται το άρθρο;",
+                    "en": "Where does the article refer to?",
+                    "ru": "О каком месте идет речь в статье?",
+                },
+                "options": [
+                    {"el": "Αθήνα", "en": "Athens", "ru": "Афины"},
+                    {"el": "Θεσσαλονίκη", "en": "Thessaloniki", "ru": "Салоники"},
+                    {"el": "Κρήτη", "en": "Crete", "ru": "Крит"},
+                    {"el": "Πελοπόννησος", "en": "Peloponnese", "ru": "Пелопоннес"},
+                ],
+                "correct": 1,
+            },
+            {
+                "question": {
+                    "el": "Τι είδους ανάπτυξη περιγράφεται;",
+                    "en": "What type of development is described?",
+                    "ru": "Какой тип развития описывается?",
+                },
+                "options": [
+                    {"el": "Οικονομική", "en": "Economic", "ru": "Экономическое"},
+                    {"el": "Τεχνολογική", "en": "Technological", "ru": "Технологическое"},
+                    {"el": "Πολιτιστική", "en": "Cultural", "ru": "Культурное"},
+                    {"el": "Περιβαλλοντική", "en": "Environmental", "ru": "Экологическое"},
+                ],
+                "correct": 2,
+            },
+            {
+                "question": {
+                    "el": "Ποιος είναι ο στόχος της πρωτοβουλίας;",
+                    "en": "What is the goal of the initiative?",
+                    "ru": "Какова цель инициативы?",
+                },
+                "options": [
+                    {
+                        "el": "Βελτίωση της ποιότητας ζωής",
+                        "en": "Improving quality of life",
+                        "ru": "Улучшение качества жизни",
+                    },
+                    {
+                        "el": "Οικονομική ανάπτυξη",
+                        "en": "Economic growth",
+                        "ru": "Экономический рост",
+                    },
+                    {
+                        "el": "Προστασία περιβάλλοντος",
+                        "en": "Environmental protection",
+                        "ru": "Защита окружающей среды",
+                    },
+                    {
+                        "el": "Πολιτιστική προώθηση",
+                        "en": "Cultural promotion",
+                        "ru": "Продвижение культуры",
+                    },
+                ],
+                "correct": 1,
+            },
+            {
+                "question": {
+                    "el": "Ποιο είναι το αναμενόμενο αποτέλεσμα;",
+                    "en": "What is the expected outcome?",
+                    "ru": "Каков ожидаемый результат?",
+                },
+                "options": [
+                    {
+                        "el": "Αύξηση επισκεπτών",
+                        "en": "Increase in visitors",
+                        "ru": "Увеличение посетителей",
+                    },
+                    {"el": "Νέες θέσεις εργασίας", "en": "New jobs", "ru": "Новые рабочие места"},
+                    {
+                        "el": "Βελτίωση υποδομών",
+                        "en": "Infrastructure improvement",
+                        "ru": "Улучшение инфраструктуры",
+                    },
+                    {
+                        "el": "Διεθνής αναγνώριση",
+                        "en": "International recognition",
+                        "ru": "Международное признание",
+                    },
+                ],
+                "correct": 4,
+            },
+        ]
+
+        for i, (title_el, title_en, title_ru) in enumerate(news_titles):
+            # Calculate publication date spread over 30 days
+            days_ago = i  # Items spread across 0-24 days ago
+            publication_date = today - timedelta(days=days_ago)
+
+            # Rotate through categories and difficulty levels
+            category = categories[i % len(categories)]
+            difficulty = difficulty_levels[i % len(difficulty_levels)]
+
+            # Get summary from templates
+            summary_el, summary_en, summary_ru = summary_templates[i % len(summary_templates)]
+
+            # Create URL for this item
+            article_url = f"https://example.com/e2e-news-feed-page-{i + 1}"
+
+            news_item = NewsItem(
+                title_el=title_el,
+                title_en=title_en,
+                title_ru=title_ru,
+                description_el=summary_el,
+                description_en=summary_en,
+                description_ru=summary_ru,
+                image_s3_key=f"news-images/e2e-news-feed-page-{i + 1}.jpg",
+                publication_date=publication_date,
+                original_article_url=article_url,
+            )
+            self.db.add(news_item)
+            await self.db.flush()
+
+            has_questions = i in items_with_questions
+            news_items_data.append(
+                {
+                    "id": str(news_item.id),
+                    "title_en": title_en,
+                    "publication_date": str(publication_date),
+                    "category": category,
+                    "difficulty": difficulty,
+                    "has_questions": has_questions,
+                }
+            )
+
+            # Create questions for items 0-9 (10 items with 3-5 questions each)
+            if has_questions:
+                # Number of questions varies: 3, 4, or 5
+                num_questions = 3 + (i % 3)  # 3, 4, 5, 3, 4, 5, 3, 4, 5, 3
+
+                for q_idx in range(num_questions):
+                    template = question_templates[q_idx % len(question_templates)]
+
+                    question = CultureQuestion(
+                        deck_id=deck.id,
+                        question_text=template["question"],
+                        option_a=template["options"][0],
+                        option_b=template["options"][1],
+                        option_c=template["options"][2],
+                        option_d=template["options"][3],
+                        correct_option=template["correct"],
+                        original_article_url=article_url,
+                        is_pending_review=False,
+                    )
+                    self.db.add(question)
+                    await self.db.flush()
+
+                    questions_data.append(
+                        {
+                            "id": str(question.id),
+                            "news_item_id": str(news_item.id),
+                            "article_url": article_url,
+                        }
+                    )
+
+        return {
+            "success": True,
+            "deck_id": str(deck.id),
+            "news_items_created": len(news_items_data),
+            "questions_created": len(questions_data),
+            "items_with_questions": len(items_with_questions),
+            "items_without_questions": len(news_items_data) - len(items_with_questions),
+            "news_items": news_items_data,
+            "questions": questions_data,
+        }
+
     # =====================
     # XP & Achievement Seeding
     # =====================
