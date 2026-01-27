@@ -432,7 +432,10 @@ describe('ChangelogPage', () => {
 
       await waitFor(() => {
         expect(changelogAnalytics.trackChangelogPageViewed).toHaveBeenCalledWith({
-          total_entries: 10,
+          page_number: 1,
+          total_items: 10,
+          items_on_page: 1,
+          language: 'en',
         });
       });
     });
