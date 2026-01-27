@@ -737,3 +737,59 @@ async def seed_danger_zone(
         duration_ms=duration_ms,
         results=result,
     )
+
+
+@router.post(
+    "/announcements",
+    response_model=SeedResultResponse,
+    summary="Seed announcement campaigns",
+    description="Create announcement campaigns and notifications for E2E testing. "
+    "Creates 4 campaigns with varied states (read/unread, with/without links, "
+    "different ages). Requires test users to be seeded first.",
+    dependencies=[Depends(verify_seed_access)],
+)
+async def seed_announcements(
+    db: AsyncSession = Depends(get_db),
+) -> SeedResultResponse:
+    """Create announcement campaigns for E2E testing.
+
+    Creates 4 announcement campaigns with varying states:
+    - Fresh announcement (30 min ago, unread)
+    - Recent with link (2 hours ago, read)
+    - Day-old announcement (24 hours ago, read)
+    - Week-old announcement (7 days ago, unread)
+
+    Requires test users to be seeded first (seed_all or seed_users).
+
+    Returns:
+        SeedResultResponse with campaign creation results and timing
+    """
+    start_time = perf_counter()
+
+    user_repo = UserRepository(db)
+    admin = await user_repo.get_by_email("e2e_admin@test.com")
+    learner = await user_repo.get_by_email("e2e_learner@test.com")
+
+    if not admin or not learner:
+        return SeedResultResponse(
+            success=False,
+            operation="announcements",
+            timestamp=datetime.now(timezone.utc),
+            duration_ms=(perf_counter() - start_time) * 1000,
+            results={"error": "Test users not found. Run /seed/users first."},
+        )
+
+    service = SeedService(db)
+    result = await service.seed_announcement_campaigns(
+        admin_id=admin.id,
+        learner_id=learner.id,
+    )
+    await db.commit()
+
+    return SeedResultResponse(
+        success=result.get("success", False),
+        operation="announcements",
+        timestamp=datetime.now(timezone.utc),
+        duration_ms=(perf_counter() - start_time) * 1000,
+        results=result,
+    )
