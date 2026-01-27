@@ -86,6 +86,20 @@ export type {
 // Export notification config
 export { NOTIFICATION_CONFIG } from './notification';
 
+// Export changelog types explicitly
+export type {
+  ChangelogTag,
+  ChangelogItem,
+  ChangelogListResponse,
+  ChangelogEntryAdmin,
+  ChangelogCreateRequest,
+  ChangelogUpdateRequest,
+  ChangelogAdminListResponse,
+} from './changelog';
+
+// Export changelog constants
+export { CHANGELOG_TAG_CONFIG } from './changelog';
+
 // Component prop types (to be expanded as components are built)
 export interface BaseComponentProps {
   className?: string;
