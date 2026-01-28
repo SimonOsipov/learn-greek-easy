@@ -122,8 +122,8 @@ test.describe('Admin Culture Cards - Create from Action Bar', () => {
     // Click create button
     await page.getByTestId('create-btn').click();
 
-    // Success state should appear
-    await expect(page.getByText(/success/i)).toBeVisible({ timeout: 10000 });
+    // Success state should appear - dialog shows "Card Created" heading
+    await expect(page.getByRole('heading', { name: /card created/i })).toBeVisible({ timeout: 10000 });
 
     // "Create Another" and "Done" buttons should be visible
     await expect(page.getByTestId('create-another-btn')).toBeVisible();
@@ -216,8 +216,8 @@ test.describe('Admin Culture Cards - Create from Deck Detail', () => {
     // Click create button
     await page.getByTestId('create-btn').click();
 
-    // Success state should appear
-    await expect(page.getByText(/success/i)).toBeVisible({ timeout: 10000 });
+    // Success state should appear - dialog shows "Card Created" heading
+    await expect(page.getByRole('heading', { name: /card created/i })).toBeVisible({ timeout: 10000 });
 
     // Click "Done" to close
     await page.getByTestId('done-btn').click();
@@ -452,16 +452,17 @@ test.describe('Admin Culture Cards - Delete Answer', () => {
     await expect(page.getByTestId('answer-input-A-ru')).toBeVisible();
     await expect(page.getByTestId('answer-input-B-ru')).toBeVisible();
 
-    // Add answer C
-    await page.getByTestId('add-answer-btn').click();
+    // Add answer C - use .first() since button exists on all language tabs but only one is visible
+    await page.getByTestId('add-answer-btn').first().click();
     await expect(page.getByTestId('answer-input-C-ru')).toBeVisible();
 
     // Add answer D
-    await page.getByTestId('add-answer-btn').click();
+    await page.getByTestId('add-answer-btn').first().click();
     await expect(page.getByTestId('answer-input-D-ru')).toBeVisible();
 
     // Now we have 4 answers, delete button should be enabled
-    const deleteD = page.getByTestId('delete-answer-D');
+    // Use .first() since delete buttons also exist on all language tabs
+    const deleteD = page.getByTestId('delete-answer-D').first();
     await expect(deleteD).toBeEnabled();
 
     // Delete answer D
@@ -469,14 +470,14 @@ test.describe('Admin Culture Cards - Delete Answer', () => {
     await expect(page.getByTestId('answer-input-D-ru')).not.toBeVisible();
 
     // Delete answer C
-    const deleteC = page.getByTestId('delete-answer-C');
+    const deleteC = page.getByTestId('delete-answer-C').first();
     await expect(deleteC).toBeEnabled();
     await deleteC.click();
     await expect(page.getByTestId('answer-input-C-ru')).not.toBeVisible();
 
     // Now we're at minimum (2 answers), delete buttons should be disabled
-    const deleteA = page.getByTestId('delete-answer-A');
-    const deleteB = page.getByTestId('delete-answer-B');
+    const deleteA = page.getByTestId('delete-answer-A').first();
+    const deleteB = page.getByTestId('delete-answer-B').first();
 
     await expect(deleteA).toBeDisabled();
     await expect(deleteB).toBeDisabled();
