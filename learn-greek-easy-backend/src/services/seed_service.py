@@ -3661,20 +3661,25 @@ class SeedService:
 
                 # Create 5 Notifications
                 notification_types = [
-                    (NotificationType.ACHIEVEMENT_UNLOCKED, "Achievement Unlocked!", False),
-                    (NotificationType.DAILY_GOAL_COMPLETE, "Daily Goal Complete!", False),
-                    (NotificationType.LEVEL_UP, "Level Up!", True),
-                    (NotificationType.STREAK_AT_RISK, "Streak at Risk!", True),
-                    (NotificationType.WELCOME, "Welcome!", True),
+                    (
+                        NotificationType.ACHIEVEMENT_UNLOCKED,
+                        "Achievement Unlocked!",
+                        False,
+                        "/achievements",
+                    ),
+                    (NotificationType.DAILY_GOAL_COMPLETE, "Daily Goal Complete!", False, "/"),
+                    (NotificationType.LEVEL_UP, "Level Up!", True, "/achievements"),
+                    (NotificationType.STREAK_AT_RISK, "Streak at Risk!", True, "/decks"),
+                    (NotificationType.WELCOME, "Welcome!", True, "/decks"),
                 ]
-                for notif_type, title, is_read in notification_types:
+                for notif_type, title, is_read, action_url in notification_types:
                     notification = Notification(
                         user_id=user.id,
                         type=notif_type,
                         title=title,
                         message=f"Test notification: {title}",
                         icon="bell",
-                        action_url="/",
+                        action_url=action_url,
                         read=is_read,
                         read_at=now if is_read else None,
                     )
