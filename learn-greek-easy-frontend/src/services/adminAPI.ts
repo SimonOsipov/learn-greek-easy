@@ -359,6 +359,7 @@ export interface NewsItemCreate {
 export interface QuestionOption {
   text_el: string;
   text_en: string;
+  text_ru: string;
 }
 
 /**
@@ -368,6 +369,7 @@ export interface QuestionCreate {
   deck_id: string;
   question_el: string;
   question_en: string;
+  question_ru: string;
   options: QuestionOption[]; // EXACTLY 4 options required by backend
   correct_answer_index: number; // 0-3
 }
