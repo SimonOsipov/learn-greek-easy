@@ -179,7 +179,9 @@
     "loadMore": "Load more",
     "error": "Failed to load notifications",
     "retry": "Retry",
-    "dismiss": "Dismiss notification"
+    "dismiss": "Dismiss notification",
+    "readMore": "Read more",
+    "showLess": "Show less"
   },
   "theme": {
     "switchToDark": "Switch to dark mode",

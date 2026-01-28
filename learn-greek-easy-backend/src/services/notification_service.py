@@ -181,7 +181,7 @@ class NotificationService:
             title="Level Up!",
             message=f"You reached Level {new_level}: {level_name}",
             icon="arrow-up",
-            action_url="/profile",
+            action_url="/achievements",
             extra_data={"new_level": new_level, "level_name": level_name},
         )
 

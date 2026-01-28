@@ -142,6 +142,7 @@ export const useAuthStore = create<AuthState>()(
             stats: user.stats, // Preserve existing stats
             createdAt: new Date(profileResponse.created_at),
             updatedAt: new Date(profileResponse.updated_at),
+            authProvider: profileResponse.auth_provider ?? undefined,
           };
 
           set({
@@ -228,6 +229,7 @@ export const useAuthStore = create<AuthState>()(
             },
             createdAt: new Date(profileResponse.created_at),
             updatedAt: new Date(profileResponse.updated_at),
+            authProvider: profileResponse.auth_provider ?? undefined,
           };
 
           set({
@@ -321,6 +323,7 @@ export const useAuthStore = create<AuthState>()(
             },
             createdAt: new Date(profileResponse.created_at),
             updatedAt: new Date(profileResponse.updated_at),
+            authProvider: profileResponse.auth_provider ?? undefined,
           };
 
           // Re-identify user to ensure PostHog session continuity

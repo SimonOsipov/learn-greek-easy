@@ -520,13 +520,13 @@ export function CulturePracticePage() {
                   'Great job! You have no questions due for review right now. Come back later or explore other decks.'
                 )}
               </p>
-              <div className="flex flex-col items-center gap-3">
+              <div className="flex w-full max-w-xs flex-col gap-3">
                 {/* Practice Anyway button - only show if user has studied questions before */}
                 {hasStudiedQuestions && (
                   <Button
                     onClick={handlePracticeAnyway}
                     disabled={isPracticeAnywayLoading}
-                    className="w-full max-w-xs"
+                    className="w-full"
                     data-testid="practice-anyway-button"
                   >
                     {isPracticeAnywayLoading ? (
@@ -539,11 +539,12 @@ export function CulturePracticePage() {
                     )}
                   </Button>
                 )}
-                <div className="flex justify-center gap-3">
-                  <Button variant="outline" onClick={() => navigate('/decks')}>
+                <div className="flex gap-3">
+                  <Button className="flex-1" variant="outline" onClick={() => navigate('/decks')}>
                     {t('practice.browseDecks', 'Browse Decks')}
                   </Button>
                   <Button
+                    className="flex-1"
                     variant={hasStudiedQuestions ? 'outline' : 'default'}
                     onClick={() => navigate(`/culture/decks/${deckId}`)}
                   >

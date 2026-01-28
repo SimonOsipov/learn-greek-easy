@@ -22,7 +22,10 @@ import {
   selectAdminChangelogItems,
   selectAdminChangelogIsLoading,
   selectAdminChangelogIsSaving,
-  selectAdminChangelogPagination,
+  selectAdminChangelogPage,
+  selectAdminChangelogPageSize,
+  selectAdminChangelogTotal,
+  selectAdminChangelogTotalPages,
 } from '@/stores/adminChangelogStore';
 import type { ChangelogEntryAdmin, ChangelogCreateRequest } from '@/types/changelog';
 
@@ -40,9 +43,10 @@ export function ChangelogTab() {
   const items = useAdminChangelogStore(selectAdminChangelogItems);
   const isLoading = useAdminChangelogStore(selectAdminChangelogIsLoading);
   const isSaving = useAdminChangelogStore(selectAdminChangelogIsSaving);
-  const { page, pageSize, total, totalPages } = useAdminChangelogStore(
-    selectAdminChangelogPagination
-  );
+  const page = useAdminChangelogStore(selectAdminChangelogPage);
+  const pageSize = useAdminChangelogStore(selectAdminChangelogPageSize);
+  const total = useAdminChangelogStore(selectAdminChangelogTotal);
+  const totalPages = useAdminChangelogStore(selectAdminChangelogTotalPages);
 
   // Store actions
   const { fetchList, createEntry, updateEntry, setPage, reset } = useAdminChangelogStore();

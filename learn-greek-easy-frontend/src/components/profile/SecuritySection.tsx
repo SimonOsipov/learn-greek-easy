@@ -53,10 +53,14 @@ type PasswordFormData = z.infer<ReturnType<typeof createPasswordSchema>>;
 export const SecuritySection: React.FC = () => {
   const { t } = useTranslation('profile');
   const { toast } = useToast();
-  const { updatePassword } = useAuthStore();
+  const { updatePassword, user } = useAuthStore();
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
   const [showResetDialog, setShowResetDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+
+  // Check if user is a social login user (Google OAuth, etc.)
+  // 'auth0' provider means email/password login, others are social logins
+  const isSocialLoginUser = user?.authProvider && user.authProvider !== 'auth0';
 
   const passwordSchema = createPasswordSchema(t);
 
@@ -117,17 +121,25 @@ export const SecuritySection: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="rounded-lg bg-muted/50 p-4">
-              <p className="mb-3 text-sm text-muted-foreground">
-                {t('security.changePassword.description')}
-              </p>
-              <Button
-                data-testid="change-password-button"
-                variant="outline"
-                size="sm"
-                onClick={() => setPasswordDialogOpen(true)}
-              >
-                {t('security.changePassword.update')}
-              </Button>
+              {isSocialLoginUser ? (
+                <p className="text-sm text-muted-foreground" data-testid="social-login-message">
+                  {t('security.changePassword.socialLoginMessage')}
+                </p>
+              ) : (
+                <>
+                  <p className="mb-3 text-sm text-muted-foreground">
+                    {t('security.changePassword.description')}
+                  </p>
+                  <Button
+                    data-testid="change-password-button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPasswordDialogOpen(true)}
+                  >
+                    {t('security.changePassword.update')}
+                  </Button>
+                </>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -191,98 +203,104 @@ export const SecuritySection: React.FC = () => {
         </Card>
       </div>
 
-      {/* Password Change Dialog */}
-      <Dialog open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen}>
-        <DialogContent data-testid="password-dialog">
-          <DialogHeader>
-            <DialogTitle data-testid="password-change-title">
-              {t('security.changePassword.dialogTitle')}
-            </DialogTitle>
-            <DialogDescription>{t('security.changePassword.dialogDescription')}</DialogDescription>
-          </DialogHeader>
+      {/* Password Change Dialog - only rendered for non-social login users */}
+      {!isSocialLoginUser && (
+        <Dialog open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen}>
+          <DialogContent data-testid="password-dialog">
+            <DialogHeader>
+              <DialogTitle data-testid="password-change-title">
+                {t('security.changePassword.dialogTitle')}
+              </DialogTitle>
+              <DialogDescription>
+                {t('security.changePassword.dialogDescription')}
+              </DialogDescription>
+            </DialogHeader>
 
-          <form
-            data-testid="password-change-form"
-            onSubmit={handlePasswordSubmit(onPasswordChange)}
-            className="space-y-4"
-          >
-            <PasswordField
-              data-testid="current-password-input"
-              label={t('security.changePassword.currentPassword')}
-              name="currentPassword"
-              value={watchPassword('currentPassword')}
-              onChange={(value) =>
-                registerPassword('currentPassword').onChange({ target: { value } })
-              }
-              error={passwordErrors.currentPassword?.message}
-              placeholder={t('security.changePassword.currentPasswordPlaceholder')}
-              required
-              autoComplete="current-password"
-            />
+            <form
+              data-testid="password-change-form"
+              onSubmit={handlePasswordSubmit(onPasswordChange)}
+              className="space-y-4"
+            >
+              <PasswordField
+                data-testid="current-password-input"
+                label={t('security.changePassword.currentPassword')}
+                name="currentPassword"
+                value={watchPassword('currentPassword')}
+                onChange={(value) =>
+                  registerPassword('currentPassword').onChange({ target: { value } })
+                }
+                error={passwordErrors.currentPassword?.message}
+                placeholder={t('security.changePassword.currentPasswordPlaceholder')}
+                required
+                autoComplete="current-password"
+              />
 
-            <PasswordField
-              data-testid="new-password-input"
-              label={t('security.changePassword.newPassword')}
-              name="newPassword"
-              value={watchPassword('newPassword')}
-              onChange={(value) => registerPassword('newPassword').onChange({ target: { value } })}
-              error={passwordErrors.newPassword?.message}
-              placeholder={t('security.changePassword.newPasswordPlaceholder')}
-              required
-              showStrength
-              autoComplete="new-password"
-            />
+              <PasswordField
+                data-testid="new-password-input"
+                label={t('security.changePassword.newPassword')}
+                name="newPassword"
+                value={watchPassword('newPassword')}
+                onChange={(value) =>
+                  registerPassword('newPassword').onChange({ target: { value } })
+                }
+                error={passwordErrors.newPassword?.message}
+                placeholder={t('security.changePassword.newPasswordPlaceholder')}
+                required
+                showStrength
+                autoComplete="new-password"
+              />
 
-            <PasswordField
-              data-testid="confirm-password-input"
-              label={t('security.changePassword.confirmPassword')}
-              name="confirmPassword"
-              value={watchPassword('confirmPassword')}
-              onChange={(value) =>
-                registerPassword('confirmPassword').onChange({ target: { value } })
-              }
-              error={passwordErrors.confirmPassword?.message}
-              placeholder={t('security.changePassword.confirmPasswordPlaceholder')}
-              required
-              autoComplete="new-password"
-            />
+              <PasswordField
+                data-testid="confirm-password-input"
+                label={t('security.changePassword.confirmPassword')}
+                name="confirmPassword"
+                value={watchPassword('confirmPassword')}
+                onChange={(value) =>
+                  registerPassword('confirmPassword').onChange({ target: { value } })
+                }
+                error={passwordErrors.confirmPassword?.message}
+                placeholder={t('security.changePassword.confirmPasswordPlaceholder')}
+                required
+                autoComplete="new-password"
+              />
 
-            {/* Password Requirements */}
-            <div className="rounded-lg bg-blue-50 p-4 dark:bg-blue-950">
-              <p className="mb-2 text-sm font-medium text-blue-900 dark:text-blue-100">
-                {t('security.changePassword.requirements')}
-              </p>
-              <ul className="space-y-1 text-sm text-blue-700 dark:text-blue-300">
-                <li>• {t('security.changePassword.requirementLength')}</li>
-                <li>• {t('security.changePassword.requirementCase')}</li>
-                <li>• {t('security.changePassword.requirementNumber')}</li>
-              </ul>
-            </div>
+              {/* Password Requirements */}
+              <div className="rounded-lg bg-blue-50 p-4 dark:bg-blue-950">
+                <p className="mb-2 text-sm font-medium text-blue-900 dark:text-blue-100">
+                  {t('security.changePassword.requirements')}
+                </p>
+                <ul className="space-y-1 text-sm text-blue-700 dark:text-blue-300">
+                  <li>• {t('security.changePassword.requirementLength')}</li>
+                  <li>• {t('security.changePassword.requirementCase')}</li>
+                  <li>• {t('security.changePassword.requirementNumber')}</li>
+                </ul>
+              </div>
 
-            <DialogFooter>
-              <Button
-                data-testid="password-change-cancel"
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  setPasswordDialogOpen(false);
-                  resetPasswordForm();
-                }}
-                disabled={isPasswordSubmitting}
-              >
-                {t('security.changePassword.cancel')}
-              </Button>
-              <SubmitButton
-                data-testid="password-change-submit"
-                loading={isPasswordSubmitting}
-                loadingText={t('security.changePassword.updating')}
-              >
-                {t('security.changePassword.update')}
-              </SubmitButton>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+              <DialogFooter>
+                <Button
+                  data-testid="password-change-cancel"
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setPasswordDialogOpen(false);
+                    resetPasswordForm();
+                  }}
+                  disabled={isPasswordSubmitting}
+                >
+                  {t('security.changePassword.cancel')}
+                </Button>
+                <SubmitButton
+                  data-testid="password-change-submit"
+                  loading={isPasswordSubmitting}
+                  loadingText={t('security.changePassword.updating')}
+                >
+                  {t('security.changePassword.update')}
+                </SubmitButton>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+      )}
 
       <ResetProgressDialog open={showResetDialog} onOpenChange={setShowResetDialog} />
       <DeleteAccountDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog} />

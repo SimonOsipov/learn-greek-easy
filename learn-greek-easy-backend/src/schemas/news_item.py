@@ -91,6 +91,7 @@ class QuestionOption(BaseModel):
 
     text_el: str = Field(..., min_length=1)
     text_en: str = Field(..., min_length=1)
+    text_ru: str = Field(..., min_length=1)
 
 
 class QuestionCreate(BaseModel):
@@ -99,6 +100,7 @@ class QuestionCreate(BaseModel):
     deck_id: UUID
     question_el: str = Field(..., min_length=1)
     question_en: str = Field(..., min_length=1)
+    question_ru: str = Field(..., min_length=1)
     options: list[QuestionOption] = Field(..., min_length=4, max_length=4)
     correct_answer_index: int = Field(..., ge=0, le=3)
 
@@ -108,10 +110,13 @@ class QuestionCreate(BaseModel):
         """Ensure all options are unique within each language."""
         el_texts = [opt.text_el for opt in v]
         en_texts = [opt.text_en for opt in v]
+        ru_texts = [opt.text_ru for opt in v]
         if len(el_texts) != len(set(el_texts)):
             raise ValueError("All Greek options must be unique")
         if len(en_texts) != len(set(en_texts)):
             raise ValueError("All English options must be unique")
+        if len(ru_texts) != len(set(ru_texts)):
+            raise ValueError("All Russian options must be unique")
         return v
 
 

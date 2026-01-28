@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 import { formatDistanceToNow } from 'date-fns';
 import { el } from 'date-fns/locale/el';
@@ -40,6 +40,9 @@ const notificationConfig: Record<NotificationType, { icon: LucideIcon; colorClas
 // Fallback for unknown types
 const defaultConfig = { icon: Info, colorClass: 'text-muted-foreground' };
 
+// Threshold for showing "Read more" toggle
+const MESSAGE_TRUNCATION_THRESHOLD = 100;
+
 /**
  * Check if a URL is external (starts with http:// or https://)
  */
@@ -59,9 +62,17 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
   onMarkAsRead,
 }) => {
   const navigate = useNavigate();
-  const { i18n } = useTranslation();
+  const { i18n, t } = useTranslation();
+  const [isExpanded, setIsExpanded] = useState(false);
   const config = notificationConfig[notification.type] || defaultConfig;
   const Icon = config.icon;
+
+  const needsTruncation = notification.message.length > MESSAGE_TRUNCATION_THRESHOLD;
+
+  const handleToggleExpand = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsExpanded(!isExpanded);
+  };
 
   const getDateLocale = () => {
     switch (i18n.language) {
@@ -127,11 +138,25 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
           {notification.title}
         </p>
         <p
-          className="mt-0.5 line-clamp-2 text-sm text-muted-foreground"
+          className={cn(
+            'mt-0.5 text-sm text-muted-foreground',
+            !isExpanded && needsTruncation && 'line-clamp-2'
+          )}
           data-testid="notification-message"
+          aria-expanded={needsTruncation ? isExpanded : undefined}
         >
           {notification.message}
         </p>
+        {needsTruncation && (
+          <button
+            type="button"
+            onClick={handleToggleExpand}
+            className="mt-1 text-xs font-medium text-primary hover:underline"
+            data-testid="notification-toggle-expand"
+          >
+            {isExpanded ? t('notifications.showLess') : t('notifications.readMore')}
+          </button>
+        )}
         <p className="mt-1 text-xs text-muted-foreground" data-testid="notification-timestamp">
           {relativeTime}
         </p>

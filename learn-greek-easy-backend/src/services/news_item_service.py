@@ -225,22 +225,27 @@ class NewsItemService:
                     question_text={
                         "el": data.question.question_el,
                         "en": data.question.question_en,
+                        "ru": data.question.question_ru,
                     },
                     option_a={
                         "el": data.question.options[0].text_el,
                         "en": data.question.options[0].text_en,
+                        "ru": data.question.options[0].text_ru,
                     },
                     option_b={
                         "el": data.question.options[1].text_el,
                         "en": data.question.options[1].text_en,
+                        "ru": data.question.options[1].text_ru,
                     },
                     option_c={
                         "el": data.question.options[2].text_el,
                         "en": data.question.options[2].text_en,
+                        "ru": data.question.options[2].text_ru,
                     },
                     option_d={
                         "el": data.question.options[3].text_el,
                         "en": data.question.options[3].text_en,
+                        "ru": data.question.options[3].text_ru,
                     },
                     correct_option=data.question.correct_answer_index + 1,  # 0-indexed to 1-indexed
                     original_article_url=str(data.original_article_url),

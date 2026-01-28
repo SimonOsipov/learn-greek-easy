@@ -3264,7 +3264,7 @@ class SeedService:
                 "title": "Level Up!",
                 "message": "You reached Level 3: Apprentice",
                 "icon": "arrow-up",
-                "action_url": "/profile",
+                "action_url": "/achievements",
                 "extra_data": {"new_level": 3, "level_name": "Apprentice"},
                 "read": False,
                 "created_at": now - timedelta(days=1),

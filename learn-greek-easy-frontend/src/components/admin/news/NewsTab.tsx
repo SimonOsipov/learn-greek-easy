@@ -44,11 +44,12 @@ const JSON_PLACEHOLDER = `{
     "deck_id": "uuid-of-target-deck",
     "question_el": "Ερώτηση στα ελληνικά;",
     "question_en": "Question in English?",
+    "question_ru": "Вопрос на русском?",
     "options": [
-      { "text_el": "Επιλογή Α", "text_en": "Option A" },
-      { "text_el": "Επιλογή Β", "text_en": "Option B" },
-      { "text_el": "Επιλογή Γ", "text_en": "Option C" },
-      { "text_el": "Επιλογή Δ", "text_en": "Option D" }
+      { "text_el": "Επιλογή Α", "text_en": "Option A", "text_ru": "Вариант А" },
+      { "text_el": "Επιλογή Β", "text_en": "Option B", "text_ru": "Вариант Б" },
+      { "text_el": "Επιλογή Γ", "text_en": "Option C", "text_ru": "Вариант В" },
+      { "text_el": "Επιλογή Δ", "text_en": "Option D", "text_ru": "Вариант Г" }
     ],
     "correct_answer_index": 0
   }

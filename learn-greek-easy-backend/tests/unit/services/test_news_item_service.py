@@ -517,11 +517,12 @@ def make_question_create(deck_id: UUID) -> QuestionCreate:
         deck_id=deck_id,
         question_el="Ποια είναι η πρωτεύουσα της Ελλάδας;",
         question_en="What is the capital of Greece?",
+        question_ru="Какая столица Греции?",
         options=[
-            QuestionOption(text_el="Αθήνα", text_en="Athens"),
-            QuestionOption(text_el="Θεσσαλονίκη", text_en="Thessaloniki"),
-            QuestionOption(text_el="Πάτρα", text_en="Patras"),
-            QuestionOption(text_el="Ηράκλειο", text_en="Heraklion"),
+            QuestionOption(text_el="Αθήνα", text_en="Athens", text_ru="Афины"),
+            QuestionOption(text_el="Θεσσαλονίκη", text_en="Thessaloniki", text_ru="Салоники"),
+            QuestionOption(text_el="Πάτρα", text_en="Patras", text_ru="Патры"),
+            QuestionOption(text_el="Ηράκλειο", text_en="Heraklion", text_ru="Ираклион"),
         ],
         correct_answer_index=0,
     )

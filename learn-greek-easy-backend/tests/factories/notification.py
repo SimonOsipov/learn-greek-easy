@@ -80,7 +80,7 @@ class NotificationFactory(BaseFactory):
             title="Level Up!",
             message="You reached Level 5: Intermediate",
             icon="arrow-up",
-            action_url="/profile",
+            action_url="/achievements",
             extra_data={"new_level": 5, "level_name": "Intermediate"},
         )
 

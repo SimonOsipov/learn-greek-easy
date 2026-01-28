@@ -58,6 +58,25 @@ from src.services.s3_service import (
 logger = get_logger(__name__)
 
 
+def _extract_auth_provider(auth0_id: str | None) -> str | None:
+    """Extract authentication provider from auth0_id.
+
+    Auth0 IDs follow the format 'provider|user_id', e.g.:
+    - 'google-oauth2|123456789' -> 'google-oauth2'
+    - 'auth0|abc123def456' -> 'auth0'
+
+    Args:
+        auth0_id: The Auth0 user ID string
+
+    Returns:
+        The provider portion of the auth0_id, or None if not available
+    """
+    if not auth0_id:
+        return None
+    parts = auth0_id.split("|", 1)
+    return parts[0] if parts else None
+
+
 def _build_user_profile_response(user: User) -> UserProfileResponse:
     """Build UserProfileResponse with presigned avatar URL.
 
@@ -80,10 +99,12 @@ def _build_user_profile_response(user: User) -> UserProfileResponse:
             expiry_seconds=3600,  # 1 hour expiry for avatar URLs
         )
 
-    # Build response with presigned URL
+    # Build response with presigned URL and auth_provider
     response = UserProfileResponse.model_validate(user)
     # Override avatar_url with presigned URL
     response.avatar_url = avatar_presigned_url
+    # Extract auth_provider from auth0_id
+    response.auth_provider = _extract_auth_provider(user.auth0_id)
 
     return response
 
