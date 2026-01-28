@@ -163,6 +163,7 @@
     "retrying": "Retrying...",
     "edit": "Edit",
     "delete": "Delete",
+    "createCard": "Create Card",
     "createDeck": "Create Deck"
   },
   "states": {
