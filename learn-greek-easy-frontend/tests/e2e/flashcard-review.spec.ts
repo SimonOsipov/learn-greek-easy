@@ -17,10 +17,10 @@ test.describe('Flashcard Review Session', () => {
     await expect(decksDropdown).toBeVisible();
     await decksDropdown.click();
 
-    // Click "All Decks" in the dropdown menu
-    const allDecksLink = page.getByRole('menuitem', { name: /all decks/i });
-    await expect(allDecksLink).toBeVisible();
-    await allDecksLink.click();
+    // Click "Public Decks" in the dropdown menu
+    const publicDecksLink = page.getByRole('menuitem', { name: /public decks/i });
+    await expect(publicDecksLink).toBeVisible();
+    await publicDecksLink.click();
 
     // Wait for navigation to complete
     await page.waitForURL(/\/decks/);
