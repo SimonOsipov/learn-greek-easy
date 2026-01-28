@@ -86,7 +86,7 @@ describe('NewsGrid Component', () => {
       expect(grid).toHaveClass('gap-4');
       expect(grid).toHaveClass('sm:grid-cols-2');
       expect(grid).toHaveClass('lg:grid-cols-3');
-      expect(grid).toHaveClass('xl:grid-cols-4');
+      expect(grid).not.toHaveClass('xl:grid-cols-4');
     });
   });
 
@@ -171,7 +171,7 @@ describe('NewsGrid Component', () => {
       expect(loadingGrid).toHaveClass('gap-4');
       expect(loadingGrid).toHaveClass('sm:grid-cols-2');
       expect(loadingGrid).toHaveClass('lg:grid-cols-3');
-      expect(loadingGrid).toHaveClass('xl:grid-cols-4');
+      expect(loadingGrid).not.toHaveClass('xl:grid-cols-4');
     });
   });
 
