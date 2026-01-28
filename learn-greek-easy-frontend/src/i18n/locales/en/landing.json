@@ -111,7 +111,7 @@
       "restaurantPhrases": "Restaurant Phrases",
       "progress80": "80%",
       "progress65": "65%",
-      "independenceQuestion": "When did Greece gain independence from the Ottoman Empire?",
+      "independenceQuestion": "When did Cyprus gain independence from Britain?",
       "newsHeadline": "The government announced new measures for the economy, focusing on support for small businesses."
     }
   },
@@ -188,8 +188,8 @@
     "subtitle": "Everything you need to know about Greekly and the citizenship exam",
     "items": {
       "exam": {
-        "question": "What is the Greek citizenship language exam?",
-        "answer": "The Greek citizenship language exam tests your ability to communicate in Greek at a B1 or B2 level (depending on your application category). It includes reading comprehension, writing, listening, and speaking sections. You will need to demonstrate that you can handle everyday situations, understand main points of clear texts, and express yourself on familiar topics."
+        "question": "What is the Cypriot citizenship language exam?",
+        "answer": "The Cypriot citizenship language exam tests your ability to communicate in Greek at a B1 or B2 level (depending on your application category). It includes reading comprehension, writing, listening, and speaking sections. You will need to demonstrate that you can handle everyday situations, understand main points of clear texts, and express yourself on familiar topics."
       },
       "level": {
         "question": "What level of Greek do I need to pass?",
@@ -197,7 +197,7 @@
       },
       "difference": {
         "question": "How is Greekly different from other language apps?",
-        "answer": "Greekly is built specifically for the Greek citizenship exam. Unlike general language apps, we focus on the vocabulary, grammar, and cultural knowledge you will actually be tested on. Our content includes themed vocabulary for real-life situations (banking, medical visits, bureaucracy), history and culture questions, and authentic audio from Greek media."
+        "answer": "Greekly is built specifically for the Cypriot citizenship exam. Unlike general language apps, we focus on the vocabulary, grammar, and cultural knowledge you will actually be tested on. Our content includes themed vocabulary for real-life situations (banking, medical visits, bureaucracy), history and culture questions, and authentic audio from Greek media."
       },
       "customCards": {
         "question": "Can I create my own flashcards?",
@@ -240,7 +240,7 @@
       "founder": {
         "text": "Built by someone actively preparing for the same exam you are taking. I understand the journey because I am on it too.",
         "author": "Greekly Founder",
-        "role": "Greek Citizenship Applicant"
+        "role": "Cypriot Citizenship Applicant"
       },
       "mariaK": {
         "text": "The themed vocabulary cards are exactly what I needed. Real-world topics like banking and medical visits prepared me for actual conversations.",
