@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 
-import { AlertCircle, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
+import { AlertCircle, ChevronLeft, ChevronRight, Pencil, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -25,6 +25,7 @@ import type {
 } from '@/services/adminAPI';
 
 import { CardDeleteDialog } from './CardDeleteDialog';
+import { CardEditModal } from './CardEditModal';
 
 interface DeckDetailModalProps {
   open: boolean;
@@ -97,6 +98,9 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
     AdminVocabularyCard | AdminCultureQuestion | null
   >(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Edit modal state
+  const [editingCard, setEditingCard] = useState<AdminCultureQuestion | null>(null);
 
   const fetchItems = useCallback(async () => {
     if (!deck) return;
@@ -291,16 +295,27 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
                       </span>
                     )}
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDeleteClick(question)}
-                    className="shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                    data-testid={`delete-question-${question.id}`}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    <span className="sr-only">{t('actions.delete')}</span>
-                  </Button>
+                  <div className="flex shrink-0 items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setEditingCard(question)}
+                      data-testid={`edit-question-${question.id}`}
+                    >
+                      <Pencil className="h-4 w-4" />
+                      <span className="sr-only">{t('actions.edit')}</span>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDeleteClick(question)}
+                      className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                      data-testid={`delete-question-${question.id}`}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      <span className="sr-only">{t('actions.delete')}</span>
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -365,6 +380,19 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
         itemType={isVocabulary ? 'card' : 'question'}
         onConfirm={handleConfirmDelete}
         isDeleting={isDeleting}
+      />
+
+      {/* Culture Question Edit Modal */}
+      <CardEditModal
+        open={!!editingCard}
+        onOpenChange={(open) => {
+          if (!open) setEditingCard(null);
+        }}
+        onSuccess={() => {
+          setEditingCard(null);
+          fetchItems();
+        }}
+        question={editingCard}
       />
     </>
   );
