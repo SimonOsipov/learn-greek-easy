@@ -140,26 +140,30 @@ export const DeckCard: React.FC<DeckCardProps> = ({
             <p className="truncate text-sm text-muted-foreground">{title}</p>
           </div>
 
-          {/* Level Badge and Premium Icon */}
-          <div className="flex flex-shrink-0 items-center gap-2">
-            {isLocked && <Crown className="h-4 w-4 text-amber-500" aria-label="Premium content" />}
-            {!isCultureDeck && <DeckBadge type="level" level={level} />}
-          </div>
+          {/* Premium Icon (level badge moved to badge row) */}
+          {isLocked && (
+            <div className="flex-shrink-0">
+              <Crown className="h-4 w-4 text-amber-500" aria-label="Premium content" />
+            </div>
+          )}
         </div>
 
-        {/* Badge Row - Premium + Category/Culture displayed side-by-side */}
+        {/* Badge Row - Category + Level + Premium displayed together */}
         <div className="mt-2 flex min-h-6 flex-wrap items-center gap-2">
+          {isCultureDeck && <CultureBadge category={cultureCategory} showLabel={true} />}
+
+          {!isCultureDeck && category !== 'culture' && (
+            <DeckBadge type="category" category={category} />
+          )}
+
+          {/* Level badge - moved from title row to be next to category */}
+          {!isCultureDeck && <DeckBadge type="level" level={level} />}
+
           {isPremium && (
             <Badge className="inline-flex items-center gap-1 border-0 bg-gradient-to-r from-purple-500 to-purple-700 text-white">
               <Crown className="h-3 w-3" />
               {t('card.premium')}
             </Badge>
-          )}
-
-          {isCultureDeck && <CultureBadge category={cultureCategory} showLabel={true} />}
-
-          {!isCultureDeck && category !== 'culture' && (
-            <DeckBadge type="category" category={category} />
           )}
         </div>
       </CardHeader>
