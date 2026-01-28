@@ -31,7 +31,7 @@ interface ChangelogState {
   error: string | null;
 
   // Actions
-  fetchChangelog: () => Promise<void>;
+  fetchChangelog: (language?: string) => Promise<void>;
   setPage: (page: number) => void;
   reset: () => void;
 }
@@ -60,12 +60,12 @@ export const useChangelogStore = create<ChangelogState>()(
       /**
        * Fetch paginated changelog entries from public API
        */
-      fetchChangelog: async () => {
+      fetchChangelog: async (language?: string) => {
         const { page, pageSize } = get();
         set({ isLoading: true, error: null });
 
         try {
-          const response = await changelogAPI.getList(page, pageSize);
+          const response = await changelogAPI.getList(page, pageSize, language);
 
           set({
             items: response.items,

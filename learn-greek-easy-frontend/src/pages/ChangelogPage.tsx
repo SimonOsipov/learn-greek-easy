@@ -46,7 +46,7 @@ export function ChangelogPage() {
 
   // Fetch on mount and when language changes
   useEffect(() => {
-    fetchChangelog().catch(() => {
+    fetchChangelog(i18n.language).catch(() => {
       // Error handled by store
     });
 
@@ -84,10 +84,10 @@ export function ChangelogPage() {
   );
 
   const handleRetry = useCallback(() => {
-    fetchChangelog().catch(() => {
+    fetchChangelog(i18n.language).catch(() => {
       // Error handled by store
     });
-  }, [fetchChangelog]);
+  }, [fetchChangelog, i18n.language]);
 
   return (
     <div className="space-y-6 pb-8" data-testid="changelog-page">
