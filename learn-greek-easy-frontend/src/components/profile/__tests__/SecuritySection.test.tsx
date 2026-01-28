@@ -42,7 +42,8 @@ describe('SecuritySection', () => {
     expect(screen.getByTestId('security-section')).toBeInTheDocument();
   });
 
-  it('should render change password section', () => {
+  it('should render change password section for auth0 users', () => {
+    mockAuthStore.user = { authProvider: 'auth0' };
     renderSecuritySection();
     expect(screen.getByTestId('change-password-button')).toBeInTheDocument();
   });
@@ -84,20 +85,20 @@ describe('SecuritySection', () => {
       expect(screen.getByTestId('social-login-message')).toBeInTheDocument();
     });
 
-    it('should show password change button when authProvider is undefined', () => {
+    it('should show social login message when authProvider is undefined', () => {
       mockAuthStore.user = { authProvider: undefined };
       renderSecuritySection();
 
-      expect(screen.getByTestId('change-password-button')).toBeInTheDocument();
-      expect(screen.queryByTestId('social-login-message')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('change-password-button')).not.toBeInTheDocument();
+      expect(screen.getByTestId('social-login-message')).toBeInTheDocument();
     });
 
-    it('should show password change button when user is null', () => {
+    it('should show social login message when user is null', () => {
       mockAuthStore.user = null;
       renderSecuritySection();
 
-      expect(screen.getByTestId('change-password-button')).toBeInTheDocument();
-      expect(screen.queryByTestId('social-login-message')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('change-password-button')).not.toBeInTheDocument();
+      expect(screen.getByTestId('social-login-message')).toBeInTheDocument();
     });
   });
 });
