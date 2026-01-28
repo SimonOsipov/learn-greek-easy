@@ -41,6 +41,7 @@ export const NAMESPACES = [
   'admin', // Admin dashboard and statistics
   'landing', // Landing page
   'achievements', // Achievement cards and categories
+  'changelog', // Changelog tag labels
 ] as const;
 
 export type Namespace = (typeof NAMESPACES)[number];

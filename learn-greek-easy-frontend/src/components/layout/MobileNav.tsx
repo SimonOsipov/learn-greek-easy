@@ -65,7 +65,17 @@ const navItems: NavItem[] = [
     href: '/statistics',
     additionalActivePaths: ['/achievements'],
   },
-  { id: 'feedback', labelKey: 'nav.feedback', icon: MessageSquare, href: '/feedback' },
+  {
+    id: 'feedback',
+    labelKey: 'nav.feedback',
+    icon: MessageSquare,
+    href: '/feedback',
+    additionalActivePaths: ['/changelog'],
+    children: [
+      { labelKey: 'nav.feedbackDropdown.feedback', href: '/feedback' },
+      { labelKey: 'nav.feedbackDropdown.changelog', href: '/changelog' },
+    ],
+  },
   { id: 'profile', labelKey: 'nav.profile', icon: User, href: '/profile' },
 ];
 

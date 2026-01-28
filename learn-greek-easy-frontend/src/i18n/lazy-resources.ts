@@ -35,6 +35,7 @@ async function loadGreekResources(): Promise<void> {
     achievements,
     admin,
     auth,
+    changelog,
     common,
     culture,
     deck,
@@ -49,6 +50,7 @@ async function loadGreekResources(): Promise<void> {
     import('./locales/el/achievements.json'),
     import('./locales/el/admin.json'),
     import('./locales/el/auth.json'),
+    import('./locales/el/changelog.json'),
     import('./locales/el/common.json'),
     import('./locales/el/culture.json'),
     import('./locales/el/deck.json'),
@@ -64,6 +66,7 @@ async function loadGreekResources(): Promise<void> {
   i18n.addResourceBundle('el', 'achievements', achievements.default, true, true);
   i18n.addResourceBundle('el', 'admin', admin.default, true, true);
   i18n.addResourceBundle('el', 'auth', auth.default, true, true);
+  i18n.addResourceBundle('el', 'changelog', changelog.default, true, true);
   i18n.addResourceBundle('el', 'common', common.default, true, true);
   i18n.addResourceBundle('el', 'culture', culture.default, true, true);
   i18n.addResourceBundle('el', 'deck', deck.default, true, true);
@@ -86,6 +89,7 @@ async function loadRussianResources(): Promise<void> {
     achievements,
     admin,
     auth,
+    changelog,
     common,
     culture,
     deck,
@@ -100,6 +104,7 @@ async function loadRussianResources(): Promise<void> {
     import('./locales/ru/achievements.json'),
     import('./locales/ru/admin.json'),
     import('./locales/ru/auth.json'),
+    import('./locales/ru/changelog.json'),
     import('./locales/ru/common.json'),
     import('./locales/ru/culture.json'),
     import('./locales/ru/deck.json'),
@@ -115,6 +120,7 @@ async function loadRussianResources(): Promise<void> {
   i18n.addResourceBundle('ru', 'achievements', achievements.default, true, true);
   i18n.addResourceBundle('ru', 'admin', admin.default, true, true);
   i18n.addResourceBundle('ru', 'auth', auth.default, true, true);
+  i18n.addResourceBundle('ru', 'changelog', changelog.default, true, true);
   i18n.addResourceBundle('ru', 'common', common.default, true, true);
   i18n.addResourceBundle('ru', 'culture', culture.default, true, true);
   i18n.addResourceBundle('ru', 'deck', deck.default, true, true);

@@ -122,7 +122,11 @@
       "cultureExam": "Экзамен по культуре",
       "newsFeed": "Лента новостей"
     },
-    "premium": "Премиум"
+    "premium": "Премиум",
+    "feedbackDropdown": {
+      "feedback": "Отправить отзыв",
+      "changelog": "Новые функции и изменения"
+    }
   },
   "language": {
     "select": "Выбрать язык",
@@ -180,5 +184,20 @@
   "theme": {
     "switchToDark": "Переключить на тёмную тему",
     "switchToLight": "Переключить на светлую тему"
+  },
+  "changelog": {
+    "page": {
+      "title": "Что нового",
+      "subtitle": "Смотрите последние обновления и улучшения Learn Greek Easy"
+    },
+    "empty": {
+      "title": "Обновлений пока нет",
+      "description": "Загляните позже за новостями и обновлениями"
+    },
+    "pagination": {
+      "showing": "Показаны {{from}}-{{to}} из {{total}} записей",
+      "previous": "Назад",
+      "next": "Далее"
+    }
   }
 }

@@ -9,6 +9,7 @@ This module contains all SQLAlchemy models for the application:
 - Notifications (Notification)
 - Culture Exam (CultureDeck, CultureQuestion, CultureQuestionStats, CultureAnswerHistory)
 - Announcement Campaigns (AnnouncementCampaign)
+- Changelog (ChangelogEntry)
 
 All models use:
 - UUID primary keys with server-side generation
@@ -143,6 +144,14 @@ class MockExamStatus(str, enum.Enum):
     ACTIVE = "active"
     COMPLETED = "completed"
     ABANDONED = "abandoned"
+
+
+class ChangelogTag(str, enum.Enum):
+    """Tag type for changelog entries."""
+
+    NEW_FEATURE = "new_feature"
+    BUG_FIX = "bug_fix"
+    ANNOUNCEMENT = "announcement"
 
 
 # ============================================================================
@@ -1784,3 +1793,71 @@ class AnnouncementCampaign(Base, TimestampMixin):
         return (
             f"<AnnouncementCampaign(id={self.id}, title={self.title[:30] if self.title else ''})>"
         )
+
+
+# ============================================================================
+# Changelog Models
+# ============================================================================
+
+
+class ChangelogEntry(Base, TimestampMixin):
+    """Changelog entry for app updates and announcements.
+
+    Stores multilingual content (EN, EL, RU) for title and content.
+    Content supports basic markdown (bold/italic).
+    """
+
+    __tablename__ = "changelog_entries"
+    __table_args__ = (Index("ix_changelog_entries_created_at_desc", text("created_at DESC")),)
+
+    # Primary key
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True,
+        server_default=func.uuid_generate_v4(),
+    )
+
+    # English content
+    title_en: Mapped[str] = mapped_column(
+        String(500),
+        nullable=False,
+        comment="Title in English",
+    )
+    content_en: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+        comment="Content in English (supports bold/italic markdown)",
+    )
+
+    # Greek content
+    title_el: Mapped[str] = mapped_column(
+        String(500),
+        nullable=False,
+        comment="Title in Greek",
+    )
+    content_el: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+        comment="Content in Greek (supports bold/italic markdown)",
+    )
+
+    # Russian content
+    title_ru: Mapped[str] = mapped_column(
+        String(500),
+        nullable=False,
+        comment="Title in Russian",
+    )
+    content_ru: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+        comment="Content in Russian (supports bold/italic markdown)",
+    )
+
+    # Tag classification
+    tag: Mapped[ChangelogTag] = mapped_column(
+        nullable=False,
+        index=True,
+        comment="Entry type: new_feature, bug_fix, announcement",
+    )
+
+    def __repr__(self) -> str:
+        return f"<ChangelogEntry(id={self.id}, tag={self.tag}, title_en={self.title_en[:30] if self.title_en else ''})>"

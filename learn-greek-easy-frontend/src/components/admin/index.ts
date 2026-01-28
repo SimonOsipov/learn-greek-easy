@@ -10,6 +10,7 @@ export {
   AnnouncementsTab,
 } from './announcements';
 export { CardDeleteDialog } from './CardDeleteDialog';
+export * from './changelog';
 export { CultureDeckCreateForm, type CultureDeckCreateFormData } from './CultureDeckCreateForm';
 export { CultureDeckEditForm, type CultureDeckFormData } from './CultureDeckEditForm';
 export { DeactivationWarningDialog } from './DeactivationWarningDialog';

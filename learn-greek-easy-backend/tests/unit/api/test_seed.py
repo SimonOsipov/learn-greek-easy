@@ -466,6 +466,58 @@ class TestSeedContentEndpoint:
 # ============================================================================
 
 
+# ============================================================================
+# POST /test/seed/changelog Endpoint Tests
+# ============================================================================
+
+
+class TestSeedChangelogEndpoint:
+    """Tests for POST /test/seed/changelog."""
+
+    def test_returns_403_when_disabled(self, client: TestClient):
+        """Should return 403 when seeding is disabled."""
+        with patch("src.api.v1.test.seed.settings") as mock_settings:
+            mock_settings.is_production = False
+            mock_settings.test_seed_enabled = False
+
+            response = client.post("/test/seed/changelog")
+
+            assert response.status_code == 403
+
+    def test_seeds_changelog_successfully(self, client: TestClient):
+        """Should seed changelog entries and return results."""
+        mock_result = {
+            "success": True,
+            "entries_created": 12,
+            "by_tag": {
+                "new_feature": 4,
+                "bug_fix": 4,
+                "announcement": 4,
+            },
+        }
+
+        with patch("src.api.v1.test.seed.settings") as mock_settings:
+            mock_settings.is_production = False
+            mock_settings.test_seed_enabled = True
+            mock_settings.seed_requires_secret = False
+
+            with patch("src.api.v1.test.seed.SeedService") as mock_service_class:
+                mock_service = AsyncMock()
+                mock_service.seed_changelog_entries.return_value = mock_result
+                mock_service_class.return_value = mock_service
+
+                response = client.post("/test/seed/changelog")
+
+                assert response.status_code == 200
+                data = response.json()
+                assert data["success"] is True
+                assert data["operation"] == "changelog"
+                assert data["results"]["entries_created"] == 12
+                assert data["results"]["by_tag"]["new_feature"] == 4
+                assert data["results"]["by_tag"]["bug_fix"] == 4
+                assert data["results"]["by_tag"]["announcement"] == 4
+
+
 class TestHeaderValidation:
     """Tests for X-Test-Seed-Secret header handling."""
 

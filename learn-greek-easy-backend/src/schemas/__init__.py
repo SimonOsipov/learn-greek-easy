@@ -21,6 +21,16 @@ from src.schemas.card import (
     CardWithStatisticsResponse,
 )
 
+# Changelog schemas
+from src.schemas.changelog import (
+    ChangelogAdminListResponse,
+    ChangelogEntryAdminResponse,
+    ChangelogEntryCreate,
+    ChangelogEntryUpdate,
+    ChangelogItemResponse,
+    ChangelogListResponse,
+)
+
 # Culture schemas
 from src.schemas.culture import (
     CultureAnswerRequest,
@@ -175,6 +185,13 @@ __all__ = [
     "CardStudyResponse",
     "CardStudyResultResponse",
     "CardWithStatisticsResponse",
+    # Changelog
+    "ChangelogAdminListResponse",
+    "ChangelogEntryAdminResponse",
+    "ChangelogEntryCreate",
+    "ChangelogEntryUpdate",
+    "ChangelogItemResponse",
+    "ChangelogListResponse",
     # Progress
     "UserDeckProgressResponse",
     "CardStatisticsResponse",

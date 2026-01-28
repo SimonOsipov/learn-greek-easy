@@ -18,6 +18,7 @@ import { afterEach, beforeAll, vi } from 'vitest';
 // Import all translation resources for test i18n setup
 import enAdmin from '@/i18n/locales/en/admin.json';
 import enAuth from '@/i18n/locales/en/auth.json';
+import enChangelog from '@/i18n/locales/en/changelog.json';
 import enCommon from '@/i18n/locales/en/common.json';
 import enCulture from '@/i18n/locales/en/culture.json';
 import enDeck from '@/i18n/locales/en/deck.json';
@@ -34,6 +35,7 @@ i18n.use(initReactI18next).init({
     en: {
       common: enCommon,
       auth: enAuth,
+      changelog: enChangelog,
       deck: enDeck,
       review: enReview,
       settings: enSettings,
@@ -50,6 +52,7 @@ i18n.use(initReactI18next).init({
   ns: [
     'common',
     'auth',
+    'changelog',
     'deck',
     'review',
     'settings',

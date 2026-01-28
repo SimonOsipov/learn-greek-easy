@@ -8,6 +8,7 @@ business rules validation, and domain logic.
 from src.services.achievement_service import AchievementService
 from src.services.announcement_service import AnnouncementService
 from src.services.auth_service import AuthService
+from src.services.changelog_service import ChangelogService
 from src.services.culture_deck_service import CultureDeckService
 from src.services.culture_question_service import CultureQuestionService
 from src.services.feedback_admin_service import FeedbackAdminService
@@ -26,6 +27,7 @@ __all__ = [
     "AchievementService",
     "AnnouncementService",
     "AuthService",
+    "ChangelogService",
     "CultureDeckService",
     "CultureQuestionService",
     "DeletionResult",

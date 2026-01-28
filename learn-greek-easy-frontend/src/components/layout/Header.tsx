@@ -80,7 +80,14 @@ export const Header: React.FC<HeaderProps> = ({ className }) => {
         { path: '/achievements', labelKey: 'nav.achievements' },
       ],
     },
-    { path: '/feedback', labelKey: 'nav.feedback' },
+    {
+      path: '/feedback',
+      labelKey: 'nav.feedback',
+      children: [
+        { path: '/feedback', labelKey: 'nav.feedbackDropdown.feedback' },
+        { path: '/changelog', labelKey: 'nav.feedbackDropdown.changelog' },
+      ],
+    },
   ];
 
   const isActiveRoute = (path: string) => {

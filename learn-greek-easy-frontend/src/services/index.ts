@@ -149,3 +149,6 @@ export type {
 
 // Mock Exam API
 export { mockExamAPI } from './mockExamAPI';
+
+// Changelog API
+export { changelogAPI } from './changelogAPI';

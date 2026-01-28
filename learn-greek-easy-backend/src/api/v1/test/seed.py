@@ -740,6 +740,34 @@ async def seed_danger_zone(
 
 
 @router.post(
+    "/changelog",
+    response_model=SeedResultResponse,
+    summary="Seed changelog entries",
+    description="Create test changelog entries for E2E testing. Creates 12 entries with varied tags and dates.",
+    dependencies=[Depends(verify_seed_access)],
+)
+async def seed_changelog(
+    db: AsyncSession = Depends(get_db),
+) -> SeedResultResponse:
+    """Seed changelog entries for E2E testing."""
+    start_time = perf_counter()
+
+    service = SeedService(db)
+    result = await service.seed_changelog_entries()
+    await db.commit()
+
+    duration_ms = (perf_counter() - start_time) * 1000
+
+    return SeedResultResponse(
+        success=result.get("success", False),
+        operation="changelog",
+        timestamp=datetime.now(timezone.utc),
+        duration_ms=duration_ms,
+        results=result,
+    )
+
+
+@router.post(
     "/announcements",
     response_model=SeedResultResponse,
     summary="Seed announcement campaigns",
