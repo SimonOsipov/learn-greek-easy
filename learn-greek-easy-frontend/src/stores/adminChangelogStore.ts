@@ -180,9 +180,7 @@ export const selectAdminChangelogIsLoading = (state: AdminChangelogState) => sta
 export const selectAdminChangelogIsSaving = (state: AdminChangelogState) => state.isSaving;
 export const selectAdminChangelogIsDeleting = (state: AdminChangelogState) => state.isDeleting;
 export const selectAdminChangelogError = (state: AdminChangelogState) => state.error;
-export const selectAdminChangelogPagination = (state: AdminChangelogState) => ({
-  page: state.page,
-  pageSize: state.pageSize,
-  total: state.total,
-  totalPages: state.totalPages,
-});
+export const selectAdminChangelogPage = (state: AdminChangelogState) => state.page;
+export const selectAdminChangelogPageSize = (state: AdminChangelogState) => state.pageSize;
+export const selectAdminChangelogTotal = (state: AdminChangelogState) => state.total;
+export const selectAdminChangelogTotalPages = (state: AdminChangelogState) => state.totalPages;
