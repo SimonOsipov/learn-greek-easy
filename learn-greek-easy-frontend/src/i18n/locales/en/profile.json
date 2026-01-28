@@ -123,7 +123,8 @@
       "success": "Password updated",
       "successDescription": "Your password has been successfully changed.",
       "error": "Error",
-      "errorDescription": "Failed to change password. Please try again."
+      "errorDescription": "Failed to change password. Please try again.",
+      "socialLoginMessage": "Password change is not available for Google sign-in accounts. Your account is secured through Google."
     },
     "dangerZone": {
       "title": "Danger Zone",

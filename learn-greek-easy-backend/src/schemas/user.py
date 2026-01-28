@@ -55,6 +55,10 @@ class UserResponse(UserBase):
     is_superuser: bool
     email_verified_at: Optional[datetime]
     avatar_url: Optional[str] = None
+    auth_provider: Optional[str] = Field(
+        None,
+        description="Authentication provider extracted from auth0_id (e.g., 'google-oauth2', 'auth0')",
+    )
     created_at: datetime
     updated_at: datetime
 

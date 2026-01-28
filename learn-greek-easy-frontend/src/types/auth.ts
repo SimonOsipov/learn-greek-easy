@@ -29,6 +29,7 @@ export interface User {
   stats: UserStats;
   createdAt: Date;
   updatedAt: Date;
+  authProvider?: string; // e.g., 'auth0', 'google-oauth2'
 }
 
 // Registration data
