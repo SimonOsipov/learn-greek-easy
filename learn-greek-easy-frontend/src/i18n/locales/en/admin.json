@@ -344,6 +344,18 @@
     "keepEditing": "Keep Editing",
     "discard": "Discard"
   },
+  "cardEdit": {
+    "title": "Edit Card",
+    "description": "Modify the question and answers",
+    "cancel": "Cancel",
+    "save": "Save",
+    "saving": "Saving...",
+    "success": "Card updated successfully",
+    "discardTitle": "Discard Changes?",
+    "discardMessage": "You have unsaved changes that will be lost.",
+    "keepEditing": "Keep Editing",
+    "discard": "Discard"
+  },
   "changelog": {
     "title": "Changelog",
     "addNew": "Add New",
