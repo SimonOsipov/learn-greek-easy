@@ -323,6 +323,27 @@
       "noFilteredResults": "No feedback matches the selected filters"
     }
   },
+  "cardCreate": {
+    "title": "Create Card",
+    "description": "Add a new question to a culture deck",
+    "cardType": "Card Type",
+    "culture": "Culture",
+    "vocabulary": "Vocabulary",
+    "selectDeck": "Select Deck",
+    "selectDeckPlaceholder": "Choose a deck",
+    "noDecks": "No culture decks available",
+    "cancel": "Cancel",
+    "create": "Create",
+    "creating": "Creating...",
+    "successTitle": "Card Created",
+    "successMessage": "The question was added to the deck.",
+    "createAnother": "Create Another",
+    "done": "Done",
+    "discardTitle": "Discard Changes?",
+    "discardMessage": "You have unsaved changes that will be lost.",
+    "keepEditing": "Keep Editing",
+    "discard": "Discard"
+  },
   "changelog": {
     "title": "Changelog",
     "addNew": "Add New",
