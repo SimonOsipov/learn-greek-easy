@@ -194,4 +194,39 @@ describe('ChangelogCard', () => {
       expect(boldElement.tagName).toBe('STRONG');
     });
   });
+
+  describe('Whitespace Handling', () => {
+    it('should have whitespace-pre-wrap class applied to content', () => {
+      const entry = createMockEntry({ content: 'Test content' });
+      render(<ChangelogCard entry={entry} />);
+
+      const contentElement = screen.getByTestId('changelog-content');
+      expect(contentElement).toHaveClass('whitespace-pre-wrap');
+    });
+
+    it('should preserve line breaks in multiline content', () => {
+      const entry = createMockEntry({ content: 'Line one\nLine two\nLine three' });
+      render(<ChangelogCard entry={entry} />);
+
+      const contentElement = screen.getByTestId('changelog-content');
+      // The whitespace-pre-wrap class ensures newlines are preserved
+      expect(contentElement).toHaveClass('whitespace-pre-wrap');
+      expect(contentElement).toHaveTextContent('Line one');
+      expect(contentElement).toHaveTextContent('Line two');
+      expect(contentElement).toHaveTextContent('Line three');
+    });
+
+    it('should handle markdown combined with line breaks', () => {
+      const entry = createMockEntry({
+        content: '**Bold line**\n*Italic line*\nPlain line',
+      });
+      render(<ChangelogCard entry={entry} />);
+
+      const contentElement = screen.getByTestId('changelog-content');
+      expect(contentElement).toHaveClass('whitespace-pre-wrap');
+      expect(screen.getByText('Bold line').tagName).toBe('STRONG');
+      expect(screen.getByText('Italic line').tagName).toBe('EM');
+      expect(contentElement).toHaveTextContent('Plain line');
+    });
+  });
 });

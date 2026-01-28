@@ -73,7 +73,10 @@ export function ChangelogCard({ entry }: ChangelogCardProps) {
         </div>
       </CardHeader>
       <CardContent>
-        <p className="text-sm leading-relaxed text-muted-foreground">
+        <p
+          className="whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground"
+          data-testid="changelog-content"
+        >
           {renderMarkdown(entry.content)}
         </p>
       </CardContent>
