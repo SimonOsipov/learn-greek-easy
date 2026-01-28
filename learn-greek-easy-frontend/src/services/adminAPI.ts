@@ -273,6 +273,63 @@ export interface AdminCultureQuestionsResponse {
 }
 
 // ============================================
+// Culture Question CRUD Types
+// ============================================
+
+/**
+ * Payload for creating a culture question
+ * Supports 2, 3, or 4 answer options
+ * @note option_d requires option_c (no gaps allowed)
+ * @note correct_option must be <= number of options provided
+ */
+export interface CultureQuestionCreatePayload {
+  deck_id: string;
+  question_text: MultilingualName;
+  option_a: MultilingualName;
+  option_b: MultilingualName;
+  option_c?: MultilingualName | null;
+  option_d?: MultilingualName | null;
+  correct_option: 1 | 2 | 3 | 4;
+  image_key?: string | null;
+  order_index?: number;
+}
+
+/**
+ * Payload for updating a culture question
+ * All fields optional - only provided fields are updated
+ * Cannot change deck_id
+ */
+export interface CultureQuestionUpdatePayload {
+  question_text?: MultilingualName;
+  option_a?: MultilingualName;
+  option_b?: MultilingualName;
+  option_c?: MultilingualName | null;
+  option_d?: MultilingualName | null;
+  correct_option?: 1 | 2 | 3 | 4;
+  image_key?: string | null;
+  order_index?: number;
+}
+
+/**
+ * Response from culture question create/update endpoints
+ */
+export interface CultureQuestionAdminResponse {
+  id: string;
+  deck_id: string;
+  question_text: Record<string, string>;
+  option_a: Record<string, string>;
+  option_b: Record<string, string>;
+  option_c: Record<string, string> | null;
+  option_d: Record<string, string> | null;
+  correct_option: number;
+  option_count: number;
+  image_key: string | null;
+  order_index: number;
+  created_at: string;
+  updated_at: string;
+}
+
+// ============================================
 // Announcement Types
 // ============================================
 
@@ -747,6 +804,27 @@ export const adminAPI = {
    */
   deleteCultureQuestion: async (questionId: string): Promise<void> => {
     return api.delete<void>(`/api/v1/culture/questions/${questionId}`);
+  },
+
+  /**
+   * Create a new culture question
+   * Requires superuser authentication.
+   */
+  createCultureQuestion: async (
+    data: CultureQuestionCreatePayload
+  ): Promise<CultureQuestionAdminResponse> => {
+    return api.post<CultureQuestionAdminResponse>('/api/v1/culture/questions', data);
+  },
+
+  /**
+   * Update an existing culture question
+   * Requires superuser authentication.
+   */
+  updateCultureQuestion: async (
+    questionId: string,
+    data: CultureQuestionUpdatePayload
+  ): Promise<CultureQuestionAdminResponse> => {
+    return api.patch<CultureQuestionAdminResponse>(`/api/v1/culture/questions/${questionId}`, data);
   },
 
   // ============================================
