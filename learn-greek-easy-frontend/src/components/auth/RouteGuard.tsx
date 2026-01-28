@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { useAuth0 } from '@auth0/auth0-react';
 import { Loader2 } from 'lucide-react';
@@ -36,19 +36,51 @@ function AuthLoadingScreen() {
 /**
  * RouteGuard for Auth0 authentication.
  * Uses Auth0's isLoading state to determine when auth is ready.
+ * Refreshes user profile to get fresh presigned URLs for profile pictures.
  */
 function Auth0RouteGuard({ children }: RouteGuardProps) {
-  const { isLoading } = useAuth0();
+  const { isLoading: auth0Loading, isAuthenticated } = useAuth0();
+  const checkAuth = useAuthStore((state) => state.checkAuth);
   const setAuthInitialized = useAppStore((state) => state.setAuthInitialized);
+  const [isRefreshingProfile, setIsRefreshingProfile] = useState(false);
+  const hasRefreshedRef = useRef(false);
 
   useEffect(() => {
-    // Mark auth as initialized when Auth0 finishes loading
-    if (!isLoading) {
-      setAuthInitialized();
-    }
-  }, [isLoading, setAuthInitialized]);
+    // Wait for Auth0 to finish loading
+    if (auth0Loading) return;
 
-  if (isLoading) {
+    const abortController = new AbortController();
+
+    const refreshProfile = async () => {
+      // If authenticated and haven't refreshed yet, fetch fresh profile
+      if (isAuthenticated && !hasRefreshedRef.current) {
+        hasRefreshedRef.current = true;
+        setIsRefreshingProfile(true);
+        try {
+          await checkAuth({ signal: abortController.signal });
+        } catch {
+          // Profile refresh failed - user can still proceed with stale data
+          // No logging needed - error is visible in network tab and non-critical
+        } finally {
+          if (!abortController.signal.aborted) {
+            setIsRefreshingProfile(false);
+            setAuthInitialized();
+          }
+        }
+      } else {
+        // Not authenticated or already refreshed
+        setAuthInitialized();
+      }
+    };
+
+    refreshProfile();
+
+    return () => {
+      abortController.abort();
+    };
+  }, [auth0Loading, isAuthenticated, checkAuth, setAuthInitialized]);
+
+  if (auth0Loading || isRefreshingProfile) {
     return <AuthLoadingScreen />;
   }
 
