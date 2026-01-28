@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 
-import { AlertCircle, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
+import { AlertCircle, ChevronLeft, ChevronRight, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -24,7 +24,9 @@ import type {
   UnifiedDeckItem,
 } from '@/services/adminAPI';
 
+import { CardCreateModal } from './CardCreateModal';
 import { CardDeleteDialog } from './CardDeleteDialog';
+import { CardEditModal } from './CardEditModal';
 
 interface DeckDetailModalProps {
   open: boolean;
@@ -97,6 +99,12 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
     AdminVocabularyCard | AdminCultureQuestion | null
   >(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Edit modal state
+  const [editingCard, setEditingCard] = useState<AdminCultureQuestion | null>(null);
+
+  // Create modal state
+  const [createModalOpen, setCreateModalOpen] = useState(false);
 
   const fetchItems = useCallback(async () => {
     if (!deck) return;
@@ -213,8 +221,22 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
           data-testid="deck-detail-modal"
         >
           <DialogHeader>
-            <DialogTitle data-testid="deck-detail-title">{deckName}</DialogTitle>
-            <DialogDescription>{t(itemCountKey, { count: total })}</DialogDescription>
+            <div className="flex items-start justify-between">
+              <div>
+                <DialogTitle data-testid="deck-detail-title">{deckName}</DialogTitle>
+                <DialogDescription>{t(itemCountKey, { count: total })}</DialogDescription>
+              </div>
+              {!isVocabulary && (
+                <Button
+                  size="sm"
+                  onClick={() => setCreateModalOpen(true)}
+                  data-testid="create-card-btn"
+                >
+                  <Plus className="mr-1 h-4 w-4" />
+                  {t('deckDetail.createCard')}
+                </Button>
+              )}
+            </div>
           </DialogHeader>
 
           {/* Loading State */}
@@ -291,16 +313,27 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
                       </span>
                     )}
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDeleteClick(question)}
-                    className="shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                    data-testid={`delete-question-${question.id}`}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    <span className="sr-only">{t('actions.delete')}</span>
-                  </Button>
+                  <div className="flex shrink-0 items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setEditingCard(question)}
+                      data-testid={`edit-question-${question.id}`}
+                    >
+                      <Pencil className="h-4 w-4" />
+                      <span className="sr-only">{t('actions.edit')}</span>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDeleteClick(question)}
+                      className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                      data-testid={`delete-question-${question.id}`}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      <span className="sr-only">{t('actions.delete')}</span>
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -366,6 +399,32 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
         onConfirm={handleConfirmDelete}
         isDeleting={isDeleting}
       />
+
+      {/* Culture Question Edit Modal */}
+      <CardEditModal
+        open={!!editingCard}
+        onOpenChange={(open) => {
+          if (!open) setEditingCard(null);
+        }}
+        onSuccess={() => {
+          setEditingCard(null);
+          fetchItems();
+        }}
+        question={editingCard}
+      />
+
+      {/* Culture Card Create Modal */}
+      {!isVocabulary && deck && (
+        <CardCreateModal
+          open={createModalOpen}
+          onOpenChange={setCreateModalOpen}
+          deckId={deck.id}
+          onSuccess={() => {
+            fetchItems();
+            onItemDeleted?.(); // Refresh parent deck counts
+          }}
+        />
+      )}
     </>
   );
 };

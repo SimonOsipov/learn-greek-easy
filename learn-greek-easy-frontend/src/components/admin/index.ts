@@ -3,6 +3,7 @@
 export { AdminFeedbackCard } from './AdminFeedbackCard';
 export { AdminFeedbackResponseDialog } from './AdminFeedbackResponseDialog';
 export { AdminFeedbackSection } from './AdminFeedbackSection';
+export { CardCreateModal, type CardCreateModalProps } from './CardCreateModal';
 export {
   AnnouncementCreateForm,
   type AnnouncementCreateFormData,
