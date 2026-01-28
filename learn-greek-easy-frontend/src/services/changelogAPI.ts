@@ -17,9 +17,10 @@ export const changelogAPI = {
    * Get paginated changelog entries (public, localized).
    * Content language determined by Accept-Language header.
    */
-  getList: async (page = 1, pageSize = 5): Promise<ChangelogListResponse> => {
+  getList: async (page = 1, pageSize = 5, language?: string): Promise<ChangelogListResponse> => {
     const query = buildQueryString({ page, page_size: pageSize });
-    return api.get<ChangelogListResponse>(`/api/v1/changelog${query}`);
+    const options = language ? { headers: { 'Accept-Language': language } } : {};
+    return api.get<ChangelogListResponse>(`/api/v1/changelog${query}`, options);
   },
 
   /**

@@ -373,7 +373,7 @@ describe('ChangelogPage', () => {
       const page2Button = screen.getByTestId('changelog-pagination-page-2');
       await user.click(page2Button);
 
-      expect(mockSetPage).toHaveBeenCalledWith(2);
+      expect(mockSetPage).toHaveBeenCalledWith(2, 'en');
     });
 
     it('should scroll to top when page changes', async () => {

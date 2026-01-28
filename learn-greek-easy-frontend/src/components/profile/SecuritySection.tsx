@@ -58,9 +58,9 @@ export const SecuritySection: React.FC = () => {
   const [showResetDialog, setShowResetDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
-  // Check if user is a social login user (Google OAuth, etc.)
-  // 'auth0' provider means email/password login, others are social logins
-  const isSocialLoginUser = user?.authProvider && user.authProvider !== 'auth0';
+  // Only auth0 (email/password) users can change password
+  // All other auth providers (google-oauth2, etc.) or undefined use social/OAuth login
+  const canChangePassword = user?.authProvider === 'auth0';
 
   const passwordSchema = createPasswordSchema(t);
 
@@ -121,11 +121,7 @@ export const SecuritySection: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="rounded-lg bg-muted/50 p-4">
-              {isSocialLoginUser ? (
-                <p className="text-sm text-muted-foreground" data-testid="social-login-message">
-                  {t('security.changePassword.socialLoginMessage')}
-                </p>
-              ) : (
+              {canChangePassword ? (
                 <>
                   <p className="mb-3 text-sm text-muted-foreground">
                     {t('security.changePassword.description')}
@@ -139,6 +135,10 @@ export const SecuritySection: React.FC = () => {
                     {t('security.changePassword.update')}
                   </Button>
                 </>
+              ) : (
+                <p className="text-sm text-muted-foreground" data-testid="social-login-message">
+                  {t('security.changePassword.socialLoginMessage')}
+                </p>
               )}
             </div>
           </CardContent>
@@ -203,8 +203,8 @@ export const SecuritySection: React.FC = () => {
         </Card>
       </div>
 
-      {/* Password Change Dialog - only rendered for non-social login users */}
-      {!isSocialLoginUser && (
+      {/* Password Change Dialog - only rendered for auth0 (email/password) users */}
+      {canChangePassword && (
         <Dialog open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen}>
           <DialogContent data-testid="password-dialog">
             <DialogHeader>

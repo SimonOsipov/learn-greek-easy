@@ -520,7 +520,7 @@ export function CulturePracticePage() {
                   'Great job! You have no questions due for review right now. Come back later or explore other decks.'
                 )}
               </p>
-              <div className="flex w-full max-w-xs flex-col gap-3">
+              <div className="mx-auto flex w-full max-w-xs flex-col gap-3">
                 {/* Practice Anyway button - only show if user has studied questions before */}
                 {hasStudiedQuestions && (
                   <Button

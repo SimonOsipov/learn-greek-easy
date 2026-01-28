@@ -46,7 +46,7 @@ export function ChangelogPage() {
 
   // Fetch on mount and when language changes
   useEffect(() => {
-    fetchChangelog().catch(() => {
+    fetchChangelog(i18n.language).catch(() => {
       // Error handled by store
     });
 
@@ -76,18 +76,18 @@ export function ChangelogPage() {
           to_page: newPage,
           total_pages: totalPages,
         });
-        setPage(newPage);
+        setPage(newPage, i18n.language);
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
     },
-    [page, totalPages, setPage]
+    [page, totalPages, setPage, i18n.language]
   );
 
   const handleRetry = useCallback(() => {
-    fetchChangelog().catch(() => {
+    fetchChangelog(i18n.language).catch(() => {
       // Error handled by store
     });
-  }, [fetchChangelog]);
+  }, [fetchChangelog, i18n.language]);
 
   return (
     <div className="space-y-6 pb-8" data-testid="changelog-page">
