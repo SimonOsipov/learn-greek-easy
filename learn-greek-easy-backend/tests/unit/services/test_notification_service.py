@@ -253,7 +253,7 @@ class TestNotificationTriggerHelpers:
         assert notification.type == NotificationType.LEVEL_UP
         assert "Level 5" in notification.message
         assert "Intermediate" in notification.message
-        assert notification.action_url == "/profile"
+        assert notification.action_url == "/achievements"
 
     @pytest.mark.asyncio
     async def test_notify_daily_goal_complete(self, mock_db_session):
