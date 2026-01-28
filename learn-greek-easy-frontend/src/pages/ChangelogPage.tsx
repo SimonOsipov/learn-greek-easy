@@ -76,11 +76,11 @@ export function ChangelogPage() {
           to_page: newPage,
           total_pages: totalPages,
         });
-        setPage(newPage);
+        setPage(newPage, i18n.language);
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
     },
-    [page, totalPages, setPage]
+    [page, totalPages, setPage, i18n.language]
   );
 
   const handleRetry = useCallback(() => {

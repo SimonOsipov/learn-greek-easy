@@ -32,7 +32,7 @@ interface ChangelogState {
 
   // Actions
   fetchChangelog: (language?: string) => Promise<void>;
-  setPage: (page: number) => void;
+  setPage: (page: number, language?: string) => void;
   reset: () => void;
 }
 
@@ -83,9 +83,9 @@ export const useChangelogStore = create<ChangelogState>()(
       /**
        * Set current page and re-fetch
        */
-      setPage: (page: number) => {
+      setPage: (page: number, language?: string) => {
         set({ page });
-        get().fetchChangelog();
+        get().fetchChangelog(language);
       },
 
       /**
