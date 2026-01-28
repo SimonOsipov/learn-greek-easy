@@ -19,7 +19,7 @@ def upgrade() -> None:
         """
         UPDATE notifications
         SET action_url = '/achievements'
-        WHERE type = 'level_up'
+        WHERE type = 'LEVEL_UP'
         AND (action_url = '/profile' OR action_url IS NULL OR action_url = '/')
         """
     )
