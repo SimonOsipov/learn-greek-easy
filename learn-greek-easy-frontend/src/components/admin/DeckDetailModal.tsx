@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 
-import { AlertCircle, ChevronLeft, ChevronRight, Pencil, Trash2 } from 'lucide-react';
+import { AlertCircle, ChevronLeft, ChevronRight, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -24,6 +24,7 @@ import type {
   UnifiedDeckItem,
 } from '@/services/adminAPI';
 
+import { CardCreateModal } from './CardCreateModal';
 import { CardDeleteDialog } from './CardDeleteDialog';
 import { CardEditModal } from './CardEditModal';
 
@@ -101,6 +102,9 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
 
   // Edit modal state
   const [editingCard, setEditingCard] = useState<AdminCultureQuestion | null>(null);
+
+  // Create modal state
+  const [createModalOpen, setCreateModalOpen] = useState(false);
 
   const fetchItems = useCallback(async () => {
     if (!deck) return;
@@ -217,8 +221,22 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
           data-testid="deck-detail-modal"
         >
           <DialogHeader>
-            <DialogTitle data-testid="deck-detail-title">{deckName}</DialogTitle>
-            <DialogDescription>{t(itemCountKey, { count: total })}</DialogDescription>
+            <div className="flex items-start justify-between">
+              <div>
+                <DialogTitle data-testid="deck-detail-title">{deckName}</DialogTitle>
+                <DialogDescription>{t(itemCountKey, { count: total })}</DialogDescription>
+              </div>
+              {!isVocabulary && (
+                <Button
+                  size="sm"
+                  onClick={() => setCreateModalOpen(true)}
+                  data-testid="create-card-btn"
+                >
+                  <Plus className="mr-1 h-4 w-4" />
+                  {t('deckDetail.createCard')}
+                </Button>
+              )}
+            </div>
           </DialogHeader>
 
           {/* Loading State */}
@@ -394,6 +412,19 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
         }}
         question={editingCard}
       />
+
+      {/* Culture Card Create Modal */}
+      {!isVocabulary && deck && (
+        <CardCreateModal
+          open={createModalOpen}
+          onOpenChange={setCreateModalOpen}
+          deckId={deck.id}
+          onSuccess={() => {
+            fetchItems();
+            onItemDeleted?.(); // Refresh parent deck counts
+          }}
+        />
+      )}
     </>
   );
 };

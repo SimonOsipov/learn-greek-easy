@@ -140,7 +140,8 @@
     "noCards": "No cards in this deck",
     "noQuestions": "No questions in this deck",
     "close": "Close",
-    "loading": "Loading contents..."
+    "loading": "Loading contents...",
+    "createCard": "Create Card"
   },
   "cardDelete": {
     "title": "Permanently Delete Card",
