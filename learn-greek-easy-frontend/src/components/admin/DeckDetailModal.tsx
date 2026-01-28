@@ -219,6 +219,7 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
         <DialogContent
           className="max-h-[85vh] overflow-y-auto sm:max-w-4xl"
           data-testid="deck-detail-modal"
+          hideCloseButton
         >
           <DialogHeader>
             <div className="flex items-start justify-between">
