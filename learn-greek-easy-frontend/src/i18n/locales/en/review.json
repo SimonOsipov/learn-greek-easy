@@ -67,5 +67,13 @@
     "escKey": "Esc",
     "tip": "Tip:",
     "tipMessage": "You can use your keyboard to review cards without touching your mouse!"
+  },
+  "grammar": {
+    "partOfSpeech": {
+      "noun": "Noun",
+      "verb": "Verb",
+      "adjective": "Adjective",
+      "adverb": "Adverb"
+    }
   }
 }
