@@ -108,6 +108,18 @@
         "plural": "Plural"
       },
       "notAvailable": "N/A"
+    },
+    "adjectiveDeclension": {
+      "genders": {
+        "masculine": "Masculine",
+        "feminine": "Feminine",
+        "neuter": "Neuter"
+      },
+      "comparison": {
+        "title": "Comparison",
+        "comparative": "Comparative",
+        "superlative": "Superlative"
+      }
     }
   }
 }

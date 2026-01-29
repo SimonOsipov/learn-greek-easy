@@ -103,6 +103,18 @@
         "plural": "Πληθυντικός"
       },
       "notAvailable": "Δ/Υ"
+    },
+    "adjectiveDeclension": {
+      "genders": {
+        "masculine": "Αρσενικό",
+        "feminine": "Θηλυκό",
+        "neuter": "Ουδέτερο"
+      },
+      "comparison": {
+        "title": "Σύγκριση",
+        "comparative": "Συγκριτικός",
+        "superlative": "Υπερθετικός"
+      }
     }
   }
 }

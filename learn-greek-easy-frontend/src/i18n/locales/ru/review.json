@@ -103,6 +103,18 @@
         "plural": "Множественное"
       },
       "notAvailable": "Н/Д"
+    },
+    "adjectiveDeclension": {
+      "genders": {
+        "masculine": "Мужской",
+        "feminine": "Женский",
+        "neuter": "Средний"
+      },
+      "comparison": {
+        "title": "Сравнение",
+        "comparative": "Сравнительная",
+        "superlative": "Превосходная"
+      }
     }
   }
 }
