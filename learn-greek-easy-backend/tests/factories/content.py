@@ -171,6 +171,8 @@ class CardFactory(BaseFactory):
     # Search fields
     searchable_forms = None
     searchable_forms_normalized = None
+    # Embedding
+    embedding = None
 
     class Params:
         """Factory traits for common variations."""

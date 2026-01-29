@@ -554,6 +554,13 @@ class Card(Base, TimestampMixin):
         comment="Accent-stripped forms for fuzzy matching",
     )
 
+    # Embedding for semantic search
+    embedding: Mapped[list[float] | None] = mapped_column(
+        Vector(1024),
+        nullable=True,
+        comment="VoyageAI embedding for semantic similarity search",
+    )
+
     # Relationships
     deck: Mapped["Deck"] = relationship(
         back_populates="cards",

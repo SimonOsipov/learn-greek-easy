@@ -167,6 +167,8 @@ class CardBase(BaseModel):
     # Search fields
     searchable_forms: Optional[list[str]] = None
     searchable_forms_normalized: Optional[list[str]] = None
+    # Embedding for semantic search
+    embedding: Optional[list[float]] = None
 
 
 class CardCreate(CardBase):
@@ -197,6 +199,8 @@ class CardUpdate(BaseModel):
     # Search fields
     searchable_forms: Optional[list[str]] = None
     searchable_forms_normalized: Optional[list[str]] = None
+    # Embedding for semantic search
+    embedding: Optional[list[float]] = None
 
 
 class CardResponse(CardBase):
