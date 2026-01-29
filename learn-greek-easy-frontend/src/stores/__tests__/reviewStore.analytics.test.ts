@@ -1,6 +1,6 @@
 // src/stores/__tests__/reviewStore.analytics.test.ts
 
-import { act, renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
 import posthog from 'posthog-js';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -38,17 +38,23 @@ vi.mock('../analyticsStore');
 describe('reviewStore analytics', () => {
   const mockUserId = 'test-user-123';
   const mockDeckId = 'deck-a1-basics';
-  const mockSessionId = expect.stringMatching(/^[a-f0-9-]{36}$/);
 
   const mockStudyQueueCards: StudyQueueCard[] = [
     {
       card_id: 'card-1',
       front_text: 'Hello',
       back_text: 'Γειά σου',
+      back_text_ru: null,
       pronunciation: 'yia sou',
       example_sentence: 'Hello, how are you?',
+      part_of_speech: null,
+      level: null,
+      examples: null,
+      noun_data: null,
+      verb_data: null,
+      adjective_data: null,
+      adverb_data: null,
       status: 'new',
-      difficulty: 'easy',
       easiness_factor: 2.5,
       interval: 0,
       is_new: true,
@@ -59,10 +65,17 @@ describe('reviewStore analytics', () => {
       card_id: 'card-2',
       front_text: 'Goodbye',
       back_text: 'Αντίο',
+      back_text_ru: null,
       pronunciation: 'adio',
       example_sentence: 'Goodbye, see you later',
+      part_of_speech: null,
+      level: null,
+      examples: null,
+      noun_data: null,
+      verb_data: null,
+      adjective_data: null,
+      adverb_data: null,
       status: 'learning',
-      difficulty: 'medium',
       easiness_factor: 2.3,
       interval: 1,
       is_new: false,
@@ -100,9 +113,9 @@ describe('reviewStore analytics', () => {
       canRate: false,
     });
 
-    // Mock auth store
+    // Mock auth store - cast to any to avoid full User type requirements in tests
     vi.mocked(useAuthStore.getState).mockReturnValue({
-      user: { id: mockUserId, email: 'test@test.com', created_at: new Date().toISOString() },
+      user: { id: mockUserId, email: 'test@test.com', name: 'Test User' } as any,
       isAuthenticated: true,
       isLoading: false,
       error: null,
@@ -112,18 +125,22 @@ describe('reviewStore analytics', () => {
       checkAuth: vi.fn(),
       clearError: vi.fn(),
       setUser: vi.fn(),
-    });
+    } as any);
 
-    // Mock analytics store
+    // Mock analytics store - cast to any to avoid full state type requirements in tests
     vi.mocked(useAnalyticsStore.getState).mockReturnValue({
-      snapshot: null,
-      isLoading: false,
+      dashboardData: null,
+      dateRange: 'week',
+      loading: false,
+      refreshing: false,
       error: null,
-      loadSnapshot: vi.fn(),
+      lastFetch: null,
+      loadAnalytics: vi.fn(),
+      setDateRange: vi.fn(),
+      refreshAnalytics: vi.fn(),
       updateSnapshot: vi.fn(),
-      clearSnapshot: vi.fn(),
-      refreshAllAnalytics: vi.fn(),
-    });
+      clearAnalytics: vi.fn(),
+    } as any);
 
     // Mock study API to return test cards
     vi.mocked(studyAPI.getDeckQueue).mockResolvedValue({
@@ -139,9 +156,15 @@ describe('reviewStore analytics', () => {
     // Mock review API submit
     vi.mocked(reviewAPI.submit).mockResolvedValue({
       success: true,
+      card_id: 'card-1',
+      quality: 4,
+      previous_status: 'new',
+      new_status: 'learning',
+      easiness_factor: 2.5,
+      interval: 1,
+      repetitions: 1,
       next_review_date: new Date().toISOString(),
-      new_interval: 1,
-      new_easiness_factor: 2.5,
+      message: 'Review submitted successfully',
     });
   });
 
@@ -402,7 +425,7 @@ describe('reviewStore analytics', () => {
     it('should not break review flow if PostHog is undefined', async () => {
       // Temporarily make posthog.capture undefined
       const originalCapture = posthog.capture;
-      (posthog as Record<string, unknown>).capture = undefined;
+      (posthog as unknown as Record<string, unknown>).capture = undefined;
 
       const { result } = renderHook(() => useReviewStore());
 
@@ -423,7 +446,7 @@ describe('reviewStore analytics', () => {
       expect(result.current.currentCardIndex).toBe(1);
 
       // Restore
-      (posthog as Record<string, unknown>).capture = originalCapture;
+      (posthog as unknown as Record<string, unknown>).capture = originalCapture;
     });
   });
 });

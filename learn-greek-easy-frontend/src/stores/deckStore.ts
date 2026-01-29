@@ -15,7 +15,7 @@ import { reportAPIError } from '@/lib/errorReporting';
 import { cultureDeckAPI } from '@/services/cultureDeckAPI';
 import type { CultureDeckResponse } from '@/services/cultureDeckAPI';
 import { deckAPI } from '@/services/deckAPI';
-import type { DeckDetailResponse, DeckResponse } from '@/services/deckAPI';
+import type { DeckDetailResponse, DeckLevel, DeckResponse } from '@/services/deckAPI';
 import { progressAPI } from '@/services/progressAPI';
 import type { DeckProgressSummary } from '@/services/progressAPI';
 import { studyAPI } from '@/services/studyAPI';
@@ -99,32 +99,14 @@ const transformDeckResponse = (deck: DeckResponse, progressData?: DeckProgressSu
 };
 
 /**
- * Transform detailed deck response with cards
+ * Transform detailed deck response
+ * Note: Cards are fetched separately via studyAPI, not included in deck detail
  */
 const transformDeckDetailResponse = (
   deck: DeckDetailResponse,
   progressData?: DeckProgressSummary
 ): Deck => {
-  const baseDeck = transformDeckResponse(deck, progressData);
-
-  // Add cards if available
-  if (deck.cards) {
-    baseDeck.cards = deck.cards.map((card) => ({
-      id: card.id,
-      deckId: deck.id,
-      front: card.greek_word,
-      back: card.english_translation,
-      pronunciation: card.pronunciation || '',
-      example: card.example_sentence || '',
-      exampleTranslation: card.example_translation || '',
-      notes: card.notes || '',
-      difficulty: card.difficulty as 'easy' | 'medium' | 'hard',
-      createdAt: new Date(card.created_at),
-      updatedAt: new Date(card.updated_at),
-    }));
-  }
-
-  return baseDeck;
+  return transformDeckResponse(deck, progressData);
 };
 
 /**
@@ -255,7 +237,7 @@ export const useDeckStore = create<DeckState>()(
           const params: {
             page?: number;
             page_size?: number;
-            level?: string;
+            level?: DeckLevel;
             search?: string;
           } = {
             page: 1,
@@ -264,7 +246,7 @@ export const useDeckStore = create<DeckState>()(
 
           // Add level filter if specified
           if (filters.levels.length === 1) {
-            params.level = filters.levels[0];
+            params.level = filters.levels[0] as DeckLevel;
           }
 
           // Add search filter
@@ -365,6 +347,7 @@ export const useDeckStore = create<DeckState>()(
               deck_id: progressResponse.deck_id,
               deck_name: progressResponse.deck_name,
               deck_level: progressResponse.deck_level,
+              deck_type: 'vocabulary', // Decks from deckAPI are vocabulary decks
               total_cards: progressResponse.progress.total_cards,
               cards_studied: progressResponse.progress.cards_studied,
               cards_mastered: progressResponse.progress.cards_mastered,
