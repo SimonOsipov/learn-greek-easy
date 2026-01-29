@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 
+import { cn } from '@/lib/utils';
 import type { CardReview } from '@/types/review';
 
 import {
@@ -17,9 +18,6 @@ interface CardContentProps {
 
 export function CardContent({ card, isFlipped }: CardContentProps) {
   const { t } = useTranslation('review');
-
-  if (!isFlipped) return null;
-
   const partOfSpeech = card.part_of_speech || card.partOfSpeech;
 
   // Get grammar data from API (snake_case) or legacy (camelCase) fields
@@ -49,7 +47,12 @@ export function CardContent({ card, isFlipped }: CardContentProps) {
   const grammarTable = renderGrammarTable();
 
   return (
-    <div className="grid gap-6 md:grid-cols-2">
+    <div
+      className={cn(
+        'grid gap-6 transition-[filter] duration-200 md:grid-cols-2',
+        !isFlipped && 'pointer-events-none select-none blur-md'
+      )}
+    >
       {/* Left column: Translations + Examples */}
       <div className="space-y-4">
         {/* Translations */}
