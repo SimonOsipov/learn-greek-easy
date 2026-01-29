@@ -11,6 +11,7 @@ Part of: [SEEDGRAM] Enrich Seed Data with Grammar
 
 import subprocess
 import sys
+from pathlib import Path
 from typing import Any
 from unittest.mock import patch
 
@@ -491,10 +492,14 @@ class TestSeedScriptDryRun:
         This tests the CLI script without actually seeding the database.
         The --dry-run flag should show what would be done and exit with code 0.
         """
+        # Compute script path relative to this test file:
+        # tests/integration/test_seed_grammar_integration.py -> scripts/seed_e2e_data.py
+        script_path = Path(__file__).parent.parent.parent / "scripts" / "seed_e2e_data.py"
+
         result = subprocess.run(
             [
                 sys.executable,
-                "/home/dev/learn-greek-easy/learn-greek-easy-backend/scripts/seed_e2e_data.py",
+                str(script_path),
                 "--dry-run",
             ],
             capture_output=True,
