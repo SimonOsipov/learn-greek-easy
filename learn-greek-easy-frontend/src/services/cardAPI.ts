@@ -9,6 +9,16 @@
  * - Getting card details
  */
 
+import type {
+  PartOfSpeech,
+  DeckLevel,
+  Example,
+  NounData,
+  VerbData,
+  AdjectiveData,
+  AdverbData,
+} from '@/types/grammar';
+
 import { api, buildQueryString } from './api';
 
 // ============================================
@@ -16,22 +26,26 @@ import { api, buildQueryString } from './api';
 // ============================================
 
 /**
- * Card difficulty levels
- */
-export type CardDifficulty = 'easy' | 'medium' | 'hard';
-
-/**
  * Card response from backend
+ *
+ * Matches the CardResponse schema in src/schemas/card.py.
+ * Fields use snake_case to match API responses.
  */
 export interface CardResponse {
   id: string;
   deck_id: string;
   front_text: string;
-  back_text: string;
+  back_text_en: string;
+  back_text_ru: string | null;
   example_sentence: string | null;
   pronunciation: string | null;
-  difficulty: CardDifficulty;
-  order_index: number;
+  part_of_speech: PartOfSpeech | null;
+  level: DeckLevel | null;
+  examples: Example[] | null;
+  noun_data: NounData | null;
+  verb_data: VerbData | null;
+  adjective_data: AdjectiveData | null;
+  adverb_data: AdverbData | null;
   created_at: string;
   updated_at: string;
 }
@@ -64,7 +78,6 @@ export interface CardSearchResponse {
  */
 export interface ListCardsParams {
   deck_id: string;
-  difficulty?: CardDifficulty;
   page?: number;
   page_size?: number;
 }
@@ -85,12 +98,11 @@ export interface SearchCardsParams {
 
 export const cardAPI = {
   /**
-   * List cards for a specific deck with pagination and optional difficulty filtering
+   * List cards for a specific deck with pagination
    */
   listByDeck: async (params: ListCardsParams): Promise<CardListResponse> => {
     const queryString = buildQueryString({
       deck_id: params.deck_id,
-      difficulty: params.difficulty,
       page: params.page || 1,
       page_size: params.page_size || 50,
     });

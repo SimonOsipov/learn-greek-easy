@@ -27,6 +27,30 @@ from src.schemas.sm2 import StudyQueueRequest
 from src.services.sm2_service import SM2Service
 
 
+def _create_mock_card(
+    front_text: str = "Test front",
+    back_text_en: str = "Test back",
+    deck_id=None,
+) -> MagicMock:
+    """Create a mock Card with all required fields for study queue."""
+    card = MagicMock(spec=Card)
+    card.id = uuid4()
+    card.deck_id = deck_id or uuid4()
+    card.front_text = front_text
+    card.back_text_en = back_text_en
+    card.back_text_ru = None
+    card.example_sentence = None
+    card.pronunciation = None
+    card.part_of_speech = None
+    card.level = None
+    card.examples = None
+    card.noun_data = None
+    card.verb_data = None
+    card.adjective_data = None
+    card.adverb_data = None
+    return card
+
+
 @pytest.fixture
 def mock_db_session():
     """Create a mock database session."""
@@ -71,9 +95,16 @@ def mock_card(mock_deck):
     card.deck_id = mock_deck.id
     card.front_text = "Test front"
     card.back_text_en = "Test back"
+    card.back_text_ru = None
     card.example_sentence = "Example sentence"
     card.pronunciation = "Pronunciation"
+    card.part_of_speech = None
+    card.level = None
     card.examples = [{"greek": "Example sentence", "english": "", "russian": ""}]
+    card.noun_data = None
+    card.verb_data = None
+    card.adjective_data = None
+    card.adverb_data = None
     return card
 
 
@@ -432,13 +463,7 @@ class TestGetStudyQueue:
         due_stats_2.next_review_date = date.today()
         due_stats_2.easiness_factor = 2.4
         due_stats_2.interval = 6
-        mock_card_2 = MagicMock(spec=Card)
-        mock_card_2.id = uuid4()
-        mock_card_2.front_text = "Card 2"
-        mock_card_2.back_text_en = "Back 2"
-        mock_card_2.examples = None
-        mock_card_2.example_sentence = None
-        mock_card_2.pronunciation = None
+        mock_card_2 = _create_mock_card(front_text="Card 2", back_text_en="Back 2")
         due_stats_2.card = mock_card_2
 
         service.deck_repo.get = AsyncMock(return_value=mock_deck)
@@ -492,13 +517,7 @@ class TestGetStudyQueue:
             stats.next_review_date = date.today()
             stats.easiness_factor = 2.5
             stats.interval = 1
-            card = MagicMock(spec=Card)
-            card.id = uuid4()
-            card.front_text = f"Card {i}"
-            card.back_text_en = f"Back {i}"
-            card.examples = None
-            card.example_sentence = None
-            card.pronunciation = None
+            card = _create_mock_card(front_text=f"Card {i}", back_text_en=f"Back {i}")
             stats.card = card
             due_cards.append(stats)
 
@@ -612,13 +631,7 @@ class TestGetStudyQueue:
             stats.next_review_date = date.today() + timedelta(days=i + 1)
             stats.easiness_factor = 2.5
             stats.interval = 6
-            card = MagicMock(spec=Card)
-            card.id = uuid4()
-            card.front_text = f"Card {i}"
-            card.back_text_en = f"Back {i}"
-            card.examples = None
-            card.example_sentence = None
-            card.pronunciation = None
+            card = _create_mock_card(front_text=f"Card {i}", back_text_en=f"Back {i}")
             stats.card = card
             early_stats_list.append(stats)
 
@@ -649,13 +662,7 @@ class TestGetStudyQueue:
         service = SM2Service(mock_db_session)
 
         # Due card
-        due_card = MagicMock(spec=Card)
-        due_card.id = uuid4()
-        due_card.front_text = "Due"
-        due_card.back_text_en = "Due Back"
-        due_card.examples = None
-        due_card.example_sentence = None
-        due_card.pronunciation = None
+        due_card = _create_mock_card(front_text="Due", back_text_en="Due Back")
         due_stats = MagicMock()
         due_stats.status = CardStatus.REVIEW
         due_stats.next_review_date = date.today()
@@ -664,22 +671,10 @@ class TestGetStudyQueue:
         due_stats.card = due_card
 
         # New card
-        new_card = MagicMock(spec=Card)
-        new_card.id = uuid4()
-        new_card.front_text = "New"
-        new_card.back_text_en = "New Back"
-        new_card.examples = None
-        new_card.example_sentence = None
-        new_card.pronunciation = None
+        new_card = _create_mock_card(front_text="New", back_text_en="New Back")
 
         # Early practice card
-        early_card = MagicMock(spec=Card)
-        early_card.id = uuid4()
-        early_card.front_text = "Early"
-        early_card.back_text_en = "Early Back"
-        early_card.examples = None
-        early_card.example_sentence = None
-        early_card.pronunciation = None
+        early_card = _create_mock_card(front_text="Early", back_text_en="Early Back")
 
         early_stats = MagicMock()
         early_stats.status = CardStatus.LEARNING

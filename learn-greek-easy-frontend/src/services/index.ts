@@ -42,7 +42,6 @@ export type {
 // Card API
 export { cardAPI } from './cardAPI';
 export type {
-  CardDifficulty,
   CardListResponse,
   CardResponse,
   CardSearchResponse,

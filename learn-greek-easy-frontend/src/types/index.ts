@@ -1,6 +1,19 @@
 // Barrel export for all type definitions
 import type { ReactNode } from 'react';
 
+// Export grammar types explicitly
+export type {
+  PartOfSpeech,
+  DeckLevel,
+  NounGender,
+  NounData,
+  VerbVoice,
+  VerbData,
+  AdjectiveData,
+  AdverbData,
+  Example,
+} from './grammar';
+
 // Export auth types explicitly
 export type {
   UserRole,
