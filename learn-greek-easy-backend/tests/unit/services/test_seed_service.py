@@ -313,7 +313,7 @@ class TestSeedServiceContent:
         """Verify vocabulary contains Greek characters."""
         # Check that vocabulary data contains Greek text
         for level, words in SeedService.VOCABULARY.items():
-            for greek, english, category in words:
+            for greek, english, category, part_of_speech in words:
                 # Greek text should contain Greek characters
                 assert any(
                     "\u0370" <= char <= "\u03FF" or "\u1F00" <= char <= "\u1FFF" for char in greek

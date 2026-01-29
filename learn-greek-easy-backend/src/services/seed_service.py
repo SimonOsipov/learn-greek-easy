@@ -41,6 +41,7 @@ from src.db.models import (
     NewsItem,
     Notification,
     NotificationType,
+    PartOfSpeech,
     Review,
     User,
     UserAchievement,
@@ -150,78 +151,80 @@ class SeedService:
     DEFAULT_PASSWORD = "TestPassword123!"
 
     # Greek vocabulary by CEFR level
-    VOCABULARY = {
+    # Each tuple: (greek, english, category, part_of_speech)
+    # part_of_speech is None for interjections (greetings) and particles (ναι/όχι)
+    VOCABULARY: dict[DeckLevel, list[tuple[str, str, str, PartOfSpeech | None]]] = {
         DeckLevel.A1: [
-            ("γεια", "hello", "Common greeting"),
-            ("ναι", "yes", "Affirmative"),
-            ("όχι", "no", "Negative"),
-            ("ευχαριστώ", "thank you", "Gratitude"),
-            ("παρακαλώ", "please/you're welcome", "Politeness"),
-            ("νερό", "water", "Basic noun"),
-            ("ψωμί", "bread", "Basic noun"),
-            ("σπίτι", "house", "Basic noun"),
-            ("καλημέρα", "good morning", "Morning greeting"),
-            ("καληνύχτα", "good night", "Night greeting"),
+            ("γεια", "hello", "Common greeting", None),
+            ("ναι", "yes", "Affirmative", None),
+            ("όχι", "no", "Negative", None),
+            ("ευχαριστώ", "thank you", "Gratitude", PartOfSpeech.VERB),
+            ("παρακαλώ", "please/you're welcome", "Politeness", PartOfSpeech.VERB),
+            ("νερό", "water", "Basic noun", PartOfSpeech.NOUN),
+            ("ψωμί", "bread", "Basic noun", PartOfSpeech.NOUN),
+            ("σπίτι", "house", "Basic noun", PartOfSpeech.NOUN),
+            ("καλημέρα", "good morning", "Morning greeting", None),
+            ("καληνύχτα", "good night", "Night greeting", None),
         ],
         DeckLevel.A2: [
-            ("δουλειά", "work/job", "Employment"),
-            ("οικογένεια", "family", "Relations"),
-            ("φίλος", "friend", "Relations"),
-            ("αγαπώ", "I love", "Emotion verb"),
-            ("θέλω", "I want", "Desire verb"),
-            ("μπορώ", "I can", "Ability verb"),
-            ("πρέπει", "must/should", "Obligation"),
-            ("χρόνια", "years", "Time"),
-            ("σήμερα", "today", "Time"),
-            ("αύριο", "tomorrow", "Time"),
+            ("δουλειά", "work/job", "Employment", PartOfSpeech.NOUN),
+            ("οικογένεια", "family", "Relations", PartOfSpeech.NOUN),
+            ("φίλος", "friend", "Relations", PartOfSpeech.NOUN),
+            ("αγαπώ", "I love", "Emotion verb", PartOfSpeech.VERB),
+            ("θέλω", "I want", "Desire verb", PartOfSpeech.VERB),
+            ("μπορώ", "I can", "Ability verb", PartOfSpeech.VERB),
+            ("πρέπει", "must/should", "Impersonal modal verb", PartOfSpeech.VERB),
+            ("χρόνια", "years", "Time", PartOfSpeech.NOUN),
+            ("σήμερα", "today", "Time adverb", PartOfSpeech.ADVERB),
+            ("αύριο", "tomorrow", "Time adverb", PartOfSpeech.ADVERB),
         ],
         DeckLevel.B1: [
-            ("συζήτηση", "discussion", "Communication"),
-            ("απόφαση", "decision", "Abstract noun"),
-            ("εμπειρία", "experience", "Abstract noun"),
-            ("προσπαθώ", "I try", "Effort verb"),
-            ("επιτυγχάνω", "I achieve", "Success verb"),
-            ("αναπτύσσω", "I develop", "Growth verb"),
-            ("κατάσταση", "situation", "State noun"),
-            ("σχέση", "relationship", "Connection noun"),
-            ("ευκαιρία", "opportunity", "Chance noun"),
-            ("πρόβλημα", "problem", "Challenge noun"),
+            ("συζήτηση", "discussion", "Communication", PartOfSpeech.NOUN),
+            ("απόφαση", "decision", "Abstract noun", PartOfSpeech.NOUN),
+            ("εμπειρία", "experience", "Abstract noun", PartOfSpeech.NOUN),
+            ("προσπαθώ", "I try", "Effort verb", PartOfSpeech.VERB),
+            ("επιτυγχάνω", "I achieve", "Success verb", PartOfSpeech.VERB),
+            ("αναπτύσσω", "I develop", "Growth verb", PartOfSpeech.VERB),
+            ("κατάσταση", "situation", "State noun", PartOfSpeech.NOUN),
+            ("σχέση", "relationship", "Connection noun", PartOfSpeech.NOUN),
+            ("ευκαιρία", "opportunity", "Chance noun", PartOfSpeech.NOUN),
+            ("πρόβλημα", "problem", "Challenge noun", PartOfSpeech.NOUN),
         ],
         DeckLevel.B2: [
-            ("διαπραγμάτευση", "negotiation", "Business"),
-            ("συμφωνία", "agreement", "Contract"),
-            ("ανάλυση", "analysis", "Examination"),
-            ("επιχείρηση", "enterprise/business", "Commerce"),
-            ("στρατηγική", "strategy", "Planning"),
-            ("αποτέλεσμα", "result/outcome", "Conclusion"),
-            ("επιρροή", "influence", "Impact"),
-            ("παράγοντας", "factor", "Element"),
-            ("προτεραιότητα", "priority", "Importance"),
-            ("αξιολόγηση", "evaluation", "Assessment"),
+            ("διαπραγμάτευση", "negotiation", "Business", PartOfSpeech.NOUN),
+            ("συμφωνία", "agreement", "Contract", PartOfSpeech.NOUN),
+            ("ανάλυση", "analysis", "Examination", PartOfSpeech.NOUN),
+            ("επιχείρηση", "enterprise/business", "Commerce", PartOfSpeech.NOUN),
+            ("στρατηγική", "strategy", "Planning", PartOfSpeech.NOUN),
+            ("αποτέλεσμα", "result/outcome", "Conclusion", PartOfSpeech.NOUN),
+            ("επιρροή", "influence", "Impact", PartOfSpeech.NOUN),
+            ("παράγοντας", "factor", "Element", PartOfSpeech.NOUN),
+            ("προτεραιότητα", "priority", "Importance", PartOfSpeech.NOUN),
+            ("αξιολόγηση", "evaluation", "Assessment", PartOfSpeech.NOUN),
         ],
         DeckLevel.C1: [
-            ("διαφάνεια", "transparency", "Openness"),
-            ("αειφορία", "sustainability", "Environment"),
-            ("διακυβέρνηση", "governance", "Administration"),
-            ("αντικειμενικότητα", "objectivity", "Impartiality"),
-            ("υποκειμενικότητα", "subjectivity", "Personal view"),
-            ("διεπιστημονικός", "interdisciplinary", "Academic"),
-            ("πολυπλοκότητα", "complexity", "Intricacy"),
-            ("ενσωμάτωση", "integration", "Incorporation"),
-            ("διαφοροποίηση", "differentiation", "Distinction"),
-            ("συνεισφορά", "contribution", "Input"),
+            ("διαφάνεια", "transparency", "Openness", PartOfSpeech.NOUN),
+            ("αειφορία", "sustainability", "Environment", PartOfSpeech.NOUN),
+            ("διακυβέρνηση", "governance", "Administration", PartOfSpeech.NOUN),
+            ("αντικειμενικότητα", "objectivity", "Impartiality", PartOfSpeech.NOUN),
+            ("υποκειμενικότητα", "subjectivity", "Personal view", PartOfSpeech.NOUN),
+            ("διεπιστημονικός", "interdisciplinary", "Academic", PartOfSpeech.ADJECTIVE),
+            ("πολυπλοκότητα", "complexity", "Intricacy", PartOfSpeech.NOUN),
+            ("ενσωμάτωση", "integration", "Incorporation", PartOfSpeech.NOUN),
+            ("διαφοροποίηση", "differentiation", "Distinction", PartOfSpeech.NOUN),
+            ("συνεισφορά", "contribution", "Input", PartOfSpeech.NOUN),
         ],
         DeckLevel.C2: [
-            ("μεταμοντερνισμός", "postmodernism", "Philosophy"),
-            ("επιστημολογία", "epistemology", "Theory of knowledge"),
-            ("υπερβατικός", "transcendent", "Beyond experience"),
-            ("διαλεκτική", "dialectic", "Philosophical method"),
-            ("παραδειγματικός", "paradigmatic", "Model example"),
-            ("αποδόμηση", "deconstruction", "Analysis method"),
-            ("ερμηνευτική", "hermeneutics", "Interpretation theory"),
-            ("φαινομενολογία", "phenomenology", "Philosophy branch"),
-            ("οντολογία", "ontology", "Study of being"),
-            ("αισθητική", "aesthetics", "Beauty philosophy"),
+            ("μεταμοντερνισμός", "postmodernism", "Philosophy", PartOfSpeech.NOUN),
+            ("επιστημολογία", "epistemology", "Theory of knowledge", PartOfSpeech.NOUN),
+            ("υπερβατικός", "transcendent", "Beyond experience", PartOfSpeech.ADJECTIVE),
+            ("διαλεκτική", "dialectic", "Philosophical method", PartOfSpeech.NOUN),
+            ("παραδειγματικός", "paradigmatic", "Model example", PartOfSpeech.ADJECTIVE),
+            ("αποδόμηση", "deconstruction", "Analysis method", PartOfSpeech.NOUN),
+            ("ερμηνευτική", "hermeneutics", "Interpretation theory", PartOfSpeech.NOUN),
+            ("φαινομενολογία", "phenomenology", "Philosophy branch", PartOfSpeech.NOUN),
+            ("οντολογία", "ontology", "Study of being", PartOfSpeech.NOUN),
+            ("αισθητική", "aesthetics", "Beauty philosophy", PartOfSpeech.NOUN),
         ],
     }
 
@@ -1588,13 +1591,14 @@ class SeedService:
             await self.db.flush()
 
             # Create cards
-            for i, (greek, english, category) in enumerate(words):
+            for i, (greek, english, category, part_of_speech) in enumerate(words):
                 card = Card(
                     deck_id=deck.id,
                     front_text=greek,
                     back_text_en=english,
                     example_sentence=f"Example sentence with '{greek}'",
                     pronunciation=f"[{greek}]",
+                    part_of_speech=part_of_speech,
                 )
                 self.db.add(card)
 
@@ -1665,13 +1669,14 @@ class SeedService:
                     vocab = self.VOCABULARY.get(deck_config["level"], [])
                     words_to_use = vocab[:card_count]
 
-                    for i, (greek, english, category) in enumerate(words_to_use):
+                    for i, (greek, english, category, part_of_speech) in enumerate(words_to_use):
                         card = Card(
                             deck_id=deck.id,
                             front_text=greek,
                             back_text_en=english,
                             example_sentence=f"User example: '{greek}' in context",
                             pronunciation=f"[{greek}]",
+                            part_of_speech=part_of_speech,
                         )
                         self.db.add(card)
 
