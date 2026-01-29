@@ -411,7 +411,7 @@ class SM2Service:
                 StudyQueueCard(
                     card_id=card.id,
                     front_text=card.front_text,
-                    back_text=card.back_text,
+                    back_text=card.back_text_en,
                     example_sentence=card.example_sentence,
                     pronunciation=card.pronunciation,
                     status=stats.status,
@@ -429,7 +429,7 @@ class SM2Service:
                 StudyQueueCard(
                     card_id=card.id,
                     front_text=card.front_text,
-                    back_text=card.back_text,
+                    back_text=card.back_text_en,
                     example_sentence=card.example_sentence,
                     pronunciation=card.pronunciation,
                     status=CardStatus.NEW,
@@ -448,7 +448,7 @@ class SM2Service:
                 StudyQueueCard(
                     card_id=card.id,
                     front_text=card.front_text,
-                    back_text=card.back_text,
+                    back_text=card.back_text_en,
                     example_sentence=card.example_sentence,
                     pronunciation=card.pronunciation,
                     status=stats.status,

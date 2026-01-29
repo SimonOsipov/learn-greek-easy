@@ -242,8 +242,7 @@ class TestCardEndpointBackgroundTasks:
                 json={
                     "deck_id": str(test_deck.id),
                     "front_text": "New Card Front",
-                    "back_text": "New Card Back",
-                    "difficulty": "easy",
+                    "back_text_en": "New Card Back",
                 },
                 headers=superuser_auth_headers,
             )
@@ -268,8 +267,7 @@ class TestCardEndpointBackgroundTasks:
                 json={
                     "deck_id": str(test_deck.id),
                     "front_text": "Another Card Front",
-                    "back_text": "Another Card Back",
-                    "difficulty": "medium",
+                    "back_text_en": "Another Card Back",
                 },
                 headers=superuser_auth_headers,
             )
@@ -310,7 +308,7 @@ class TestCardEndpointBackgroundTasks:
 
             response = await client.patch(
                 f"/api/v1/cards/{test_card.id}",
-                json={"back_text": "Updated Back Text"},
+                json={"back_text_en": "Updated Back Text"},
                 headers=superuser_auth_headers,
             )
 

@@ -12,6 +12,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from src.db.models import DeckLevel, PartOfSpeech
+
 # ============================================================================
 # Card Schemas
 # ============================================================================
@@ -21,9 +23,12 @@ class CardBase(BaseModel):
     """Base card schema with common fields."""
 
     front_text: str = Field(..., min_length=1)
-    back_text: str = Field(..., min_length=1)
+    back_text_en: str = Field(..., min_length=1)
+    back_text_ru: Optional[str] = Field(None, min_length=1)
     example_sentence: Optional[str] = None
     pronunciation: Optional[str] = Field(None, max_length=255)
+    part_of_speech: Optional[PartOfSpeech] = None
+    level: Optional[DeckLevel] = None
 
 
 class CardCreate(CardBase):
@@ -36,9 +41,12 @@ class CardUpdate(BaseModel):
     """Schema for updating a card (admin only)."""
 
     front_text: Optional[str] = Field(None, min_length=1)
-    back_text: Optional[str] = Field(None, min_length=1)
+    back_text_en: Optional[str] = Field(None, min_length=1)
+    back_text_ru: Optional[str] = Field(None, min_length=1)
     example_sentence: Optional[str] = None
     pronunciation: Optional[str] = Field(None, max_length=255)
+    part_of_speech: Optional[PartOfSpeech] = None
+    level: Optional[DeckLevel] = None
 
 
 class CardResponse(CardBase):
@@ -105,9 +113,12 @@ class CardBulkItemCreate(BaseModel):
     """Single card in bulk create (without deck_id)."""
 
     front_text: str = Field(..., min_length=1)
-    back_text: str = Field(..., min_length=1)
+    back_text_en: str = Field(..., min_length=1)
+    back_text_ru: Optional[str] = Field(None, min_length=1)
     example_sentence: Optional[str] = None
     pronunciation: Optional[str] = Field(None, max_length=255)
+    part_of_speech: Optional[PartOfSpeech] = None
+    level: Optional[DeckLevel] = None
 
 
 class CardBulkCreateRequest(BaseModel):

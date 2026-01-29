@@ -237,7 +237,7 @@ class TestRelationships:
         card = Card(
             deck_id=deck.id,
             front_text="Hello",
-            back_text="Yeia",
+            back_text_en="Yeia",
         )
         db_session.add(card)
         await db_session.commit()
@@ -261,7 +261,7 @@ class TestRelationships:
         card = Card(
             deck_id=deck.id,
             front_text="Hello",
-            back_text="Yeia",
+            back_text_en="Yeia",
         )
         db_session.add(card)
         await db_session.commit()

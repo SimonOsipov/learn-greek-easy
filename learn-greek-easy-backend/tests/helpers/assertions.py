@@ -433,7 +433,7 @@ def assert_valid_card_response(
     *,
     deck_id: str | UUID | None = None,
     front_text: str | None = None,
-    back_text: str | None = None,
+    back_text_en: str | None = None,
 ) -> None:
     """Assert that a card response has valid structure.
 
@@ -441,12 +441,12 @@ def assert_valid_card_response(
         data: Card response data
         deck_id: Expected parent deck ID
         front_text: Expected front text
-        back_text: Expected back text
+        back_text_en: Expected English translation (back text)
 
     Raises:
         AssertionError: If validation fails
     """
-    required_fields = ["id", "deck_id", "front_text", "back_text"]
+    required_fields = ["id", "deck_id", "front_text", "back_text_en"]
     for field in required_fields:
         assert field in data, f"Missing required field: {field}"
 
@@ -466,10 +466,10 @@ def assert_valid_card_response(
         assert (
             data["front_text"] == front_text
         ), f"Expected front_text '{front_text}', got '{data['front_text']}'"
-    if back_text is not None:
+    if back_text_en is not None:
         assert (
-            data["back_text"] == back_text
-        ), f"Expected back_text '{back_text}', got '{data['back_text']}'"
+            data["back_text_en"] == back_text_en
+        ), f"Expected back_text_en '{back_text_en}', got '{data['back_text_en']}'"
 
 
 # =============================================================================

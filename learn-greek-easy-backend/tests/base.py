@@ -181,7 +181,7 @@ class BaseTestCase:
         db_session: AsyncSession,
         deck: Deck,
         front_text: str = "Hello",
-        back_text: str = "Yeia",
+        back_text_en: str = "Yeia",
     ) -> Card:
         """Create a test card in the database.
 
@@ -189,7 +189,7 @@ class BaseTestCase:
             db_session: Database session
             deck: Parent deck
             front_text: Front of card (Greek)
-            back_text: Back of card (English)
+            back_text_en: Back of card (English translation)
 
         Returns:
             Card: Created card
@@ -197,7 +197,7 @@ class BaseTestCase:
         card = Card(
             deck_id=deck.id,
             front_text=front_text,
-            back_text=back_text,
+            back_text_en=back_text_en,
         )
         db_session.add(card)
         await db_session.commit()
@@ -231,7 +231,7 @@ class BaseTestCase:
                 db_session,
                 deck,
                 front_text=f"Greek word {i}",
-                back_text=f"English word {i}",
+                back_text_en=f"English word {i}",
             )
             cards.append(card)
 

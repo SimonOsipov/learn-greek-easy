@@ -422,7 +422,7 @@ async def test_bulk_create(db_session: AsyncSession, sample_deck):
         {
             "deck_id": sample_deck.id,
             "front_text": f"Card {i}",
-            "back_text": f"Karta {i}",
+            "back_text_en": f"Karta {i}",
             "pronunciation": f"Pronunciation {i}",
         }
         for i in range(5)
@@ -992,7 +992,7 @@ async def test_get_new_cards_for_deck_no_deck_filter(
     card = Card(
         deck_id=another_deck.id,
         front_text="Test",
-        back_text="Test",
+        back_text_en="Test",
     )
     db_session.add(card)
     await db_session.commit()

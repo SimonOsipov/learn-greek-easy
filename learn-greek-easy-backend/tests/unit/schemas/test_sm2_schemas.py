@@ -75,7 +75,7 @@ class TestStudyQueueCard:
         card = StudyQueueCard(
             card_id=uuid4(),
             front_text="Greek text",
-            back_text="English text",
+            back_text_en="English text",
             status=CardStatus.NEW,
             is_new=True,
         )
@@ -86,7 +86,7 @@ class TestStudyQueueCard:
         card = StudyQueueCard(
             card_id=uuid4(),
             front_text="Greek text",
-            back_text="English text",
+            back_text_en="English text",
             status=CardStatus.REVIEW,
             is_new=False,
             is_early_practice=True,
@@ -99,7 +99,7 @@ class TestStudyQueueCard:
         card = StudyQueueCard(
             card_id=uuid4(),
             front_text="Greek",
-            back_text="English",
+            back_text_en="English",
             status=CardStatus.LEARNING,
             is_new=False,
             is_early_practice=True,
@@ -112,7 +112,7 @@ class TestStudyQueueCard:
         card = StudyQueueCard(
             card_id=uuid4(),
             front_text="Greek",
-            back_text="English",
+            back_text_en="English",
             status=CardStatus.NEW,
             is_new=True,
             is_early_practice=False,
@@ -126,7 +126,7 @@ class TestStudyQueueCard:
         card = StudyQueueCard(
             card_id=card_id,
             front_text="Front",
-            back_text="Back",
+            back_text_en="Back",
             example_sentence="Example",
             pronunciation="pron",
             status=CardStatus.REVIEW,
@@ -185,7 +185,7 @@ class TestStudyQueue:
         early_card = StudyQueueCard(
             card_id=uuid4(),
             front_text="Early",
-            back_text="Practice",
+            back_text_en="Practice",
             status=CardStatus.LEARNING,
             is_new=False,
             is_early_practice=True,
@@ -193,7 +193,7 @@ class TestStudyQueue:
         due_card = StudyQueueCard(
             card_id=uuid4(),
             front_text="Due",
-            back_text="Card",
+            back_text_en="Card",
             status=CardStatus.REVIEW,
             is_new=False,
             is_early_practice=False,

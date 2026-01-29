@@ -86,7 +86,7 @@ class CardRepository(BaseRepository[Card]):
         skip: int = 0,
         limit: int = 50,
     ) -> list[Card]:
-        """Search cards by text in front_text, back_text, example_sentence.
+        """Search cards by text in front_text, back_text_en, back_text_ru, example_sentence.
 
         Args:
             query_text: Search query (case-insensitive)
@@ -98,13 +98,14 @@ class CardRepository(BaseRepository[Card]):
             List of matching cards ordered by created_at
 
         Use Case:
-            Search functionality for finding cards by Greek or English text
+            Search functionality for finding cards by Greek, English, or Russian text
         """
         search_pattern = f"%{query_text}%"
         query = select(Card).where(
             or_(
                 Card.front_text.ilike(search_pattern),
-                Card.back_text.ilike(search_pattern),
+                Card.back_text_en.ilike(search_pattern),
+                Card.back_text_ru.ilike(search_pattern),
                 Card.example_sentence.ilike(search_pattern),
             )
         )
@@ -140,7 +141,8 @@ class CardRepository(BaseRepository[Card]):
             .where(
                 or_(
                     Card.front_text.ilike(search_pattern),
-                    Card.back_text.ilike(search_pattern),
+                    Card.back_text_en.ilike(search_pattern),
+                    Card.back_text_ru.ilike(search_pattern),
                     Card.example_sentence.ilike(search_pattern),
                 )
             )

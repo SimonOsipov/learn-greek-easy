@@ -68,8 +68,7 @@ class TestDataConsistency(E2ETestCase):
         cards_data = [
             {
                 "front_text": f"Greek word {i}",
-                "back_text": f"English translation {i}",
-                "difficulty": "medium",
+                "back_text_en": f"English translation {i}",
             }
             for i in range(5)
         ]
@@ -101,8 +100,7 @@ class TestDataConsistency(E2ETestCase):
                 json={
                     "deck_id": deck_id,
                     "front_text": f"Additional word {i}",
-                    "back_text": f"Additional translation {i}",
-                    "difficulty": "easy",
+                    "back_text_en": f"Additional translation {i}",
                 },
                 headers=headers,
             )
@@ -386,8 +384,7 @@ class TestDataConsistency(E2ETestCase):
         cards_data = [
             {
                 "front_text": f"Word {i}",
-                "back_text": f"Translation {i}",
-                "difficulty": "medium",
+                "back_text_en": f"Translation {i}",
             }
             for i in range(5)
         ]
@@ -719,7 +716,7 @@ class TestDataIntegrityAfterCRUD(E2ETestCase):
             f"/api/v1/cards/{card_id}",
             json={
                 "front_text": "Updated Greek text",
-                "back_text": "Updated English text",
+                "back_text_en": "Updated English text",
             },
             headers=admin_headers,
         )

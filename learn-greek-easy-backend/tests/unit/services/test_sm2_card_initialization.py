@@ -82,13 +82,13 @@ class TestInitializeCardsForUser:
         card1 = Card(
             deck_id=deck1.id,
             front_text="Card 1",
-            back_text="Back 1",
+            back_text_en="Back 1",
         )
         # Create card for deck2 (different deck)
         card2 = Card(
             deck_id=deck2.id,
             front_text="Card 2",
-            back_text="Back 2",
+            back_text_en="Back 2",
         )
         db_session.add_all([card1, card2])
         await db_session.flush()
@@ -356,9 +356,9 @@ class TestValidateCardsInDeck:
         deck1, deck2 = two_decks
 
         # Create cards in different decks
-        card1 = Card(deck_id=deck1.id, front_text="Card 1", back_text="Back 1")
-        card2 = Card(deck_id=deck1.id, front_text="Card 2", back_text="Back 2")
-        card3 = Card(deck_id=deck2.id, front_text="Card 3", back_text="Back 3")
+        card1 = Card(deck_id=deck1.id, front_text="Card 1", back_text_en="Back 1")
+        card2 = Card(deck_id=deck1.id, front_text="Card 2", back_text_en="Back 2")
+        card3 = Card(deck_id=deck2.id, front_text="Card 3", back_text_en="Back 3")
         db_session.add_all([card1, card2, card3])
         await db_session.flush()
 

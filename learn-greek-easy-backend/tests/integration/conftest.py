@@ -362,9 +362,8 @@ def valid_card_data(test_deck) -> dict:
     return {
         "deck_id": str(test_deck.id),
         "front_text": "Hello",
-        "back_text": "Yeia sou",
+        "back_text_en": "Yeia sou",
         "pronunciation": "Yah soo",
-        "difficulty": "EASY",
     }
 
 

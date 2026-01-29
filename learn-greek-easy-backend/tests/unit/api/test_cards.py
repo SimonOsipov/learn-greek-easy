@@ -35,7 +35,10 @@ class TestListCardsUnit:
             card.id = uuid4()
             card.deck_id = mock_deck.id
             card.front_text = f"Greek {i}"
-            card.back_text = f"English {i}"
+            card.back_text_en = f"English {i}"
+            card.back_text_ru = None
+            card.part_of_speech = None
+            card.level = None
             card.example_sentence = f"Example {i}"
             card.pronunciation = f"pron-{i}"
             card.created_at = MagicMock()
@@ -283,7 +286,10 @@ class TestGetCardUnit:
         card.id = uuid4()
         card.deck_id = uuid4()
         card.front_text = "kalimera"
-        card.back_text = "good morning"
+        card.back_text_en = "good morning"
+        card.back_text_ru = None
+        card.part_of_speech = None
+        card.level = None
         card.example_sentence = "Kalimera! Pos eisai?"
         card.pronunciation = "kah-lee-MEH-rah"
         card.created_at = MagicMock()
@@ -355,7 +361,7 @@ class TestGetCardUnit:
             assert data["id"] == str(mock_card.id)
             assert data["deck_id"] == str(mock_card.deck_id)
             assert data["front_text"] == mock_card.front_text
-            assert data["back_text"] == mock_card.back_text
+            assert data["back_text_en"] == mock_card.back_text_en
             assert data["example_sentence"] == mock_card.example_sentence
             assert data["pronunciation"] == mock_card.pronunciation
 
@@ -372,7 +378,10 @@ class TestSearchCardsUnit:
             card.id = uuid4()
             card.deck_id = uuid4()
             card.front_text = f"kalimera {i}"
-            card.back_text = f"good morning {i}"
+            card.back_text_en = f"good morning {i}"
+            card.back_text_ru = None
+            card.part_of_speech = None
+            card.level = None
             card.example_sentence = f"Example {i}"
             card.pronunciation = f"pron-{i}"
             card.created_at = MagicMock()
@@ -549,7 +558,7 @@ class TestCreateCardUnit:
         card_data = {
             "deck_id": str(uuid4()),
             "front_text": "test",
-            "back_text": "test",
+            "back_text_en": "test",
         }
 
         response = await client.post("/api/v1/cards", json=card_data)
@@ -566,7 +575,7 @@ class TestCreateCardUnit:
         card_data = {
             "deck_id": str(uuid4()),
             "front_text": "test",
-            "back_text": "test",
+            "back_text_en": "test",
         }
 
         response = await client.post("/api/v1/cards", json=card_data, headers=auth_headers)
@@ -582,7 +591,7 @@ class TestCreateCardUnit:
         """Test that missing front_text returns 422."""
         card_data = {
             "deck_id": str(uuid4()),
-            "back_text": "test",
+            "back_text_en": "test",
         }
 
         response = await client.post(
@@ -603,7 +612,7 @@ class TestBulkCreateCardsUnit:
         """Test that unauthenticated request returns 401."""
         cards_data = {
             "deck_id": str(uuid4()),
-            "cards": [{"front_text": "test", "back_text": "test"}],
+            "cards": [{"front_text": "test", "back_text_en": "test"}],
         }
 
         response = await client.post("/api/v1/cards/bulk", json=cards_data)
@@ -619,7 +628,7 @@ class TestBulkCreateCardsUnit:
         """Test that regular user returns 403."""
         cards_data = {
             "deck_id": str(uuid4()),
-            "cards": [{"front_text": "test", "back_text": "test"}],
+            "cards": [{"front_text": "test", "back_text_en": "test"}],
         }
 
         response = await client.post("/api/v1/cards/bulk", json=cards_data, headers=auth_headers)
@@ -654,7 +663,7 @@ class TestBulkCreateCardsUnit:
             "cards": [
                 {
                     "front_text": f"word {i}",
-                    "back_text": f"trans {i}",
+                    "back_text_en": f"trans {i}",
                 }
                 for i in range(101)
             ],

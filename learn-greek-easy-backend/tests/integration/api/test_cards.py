@@ -57,7 +57,7 @@ class TestListCardsIntegration:
                 id=uuid4(),
                 deck_id=active_deck.id,
                 front_text=f"Greek word {i}",
-                back_text=f"English translation {i}",
+                back_text_en=f"English translation {i}",
                 example_sentence=f"Example sentence {i}",
                 pronunciation=f"pronunciation-{i}",
             )
@@ -227,7 +227,7 @@ class TestListCardsIntegration:
         assert "id" in card
         assert "deck_id" in card
         assert "front_text" in card
-        assert "back_text" in card
+        assert "back_text_en" in card
         assert "example_sentence" in card
         assert "pronunciation" in card
         assert "created_at" in card
@@ -335,7 +335,7 @@ class TestGetCardEndpoint:
             id=uuid4(),
             deck_id=active_deck.id,
             front_text="kalimera",
-            back_text="good morning",
+            back_text_en="good morning",
             example_sentence="Kalimera! Pos eisai?",
             pronunciation="kah-lee-MEH-rah",
         )
@@ -351,7 +351,7 @@ class TestGetCardEndpoint:
             id=uuid4(),
             deck_id=inactive_deck.id,
             front_text="kalinihta",
-            back_text="good night",
+            back_text_en="good night",
             example_sentence="Kalinihta! Kali orexi!",
             pronunciation="kah-lee-NEEKH-tah",
         )
@@ -387,7 +387,7 @@ class TestGetCardEndpoint:
         assert data["id"] == str(card.id)
         assert data["deck_id"] == str(card.deck_id)
         assert data["front_text"] == "kalimera"
-        assert data["back_text"] == "good morning"
+        assert data["back_text_en"] == "good morning"
         assert data["example_sentence"] == "Kalimera! Pos eisai?"
         assert data["pronunciation"] == "kah-lee-MEH-rah"
         assert "created_at" in data
@@ -433,7 +433,7 @@ class TestGetCardEndpoint:
             "id",
             "deck_id",
             "front_text",
-            "back_text",
+            "back_text_en",
             "example_sentence",
             "pronunciation",
             "created_at",
@@ -504,7 +504,7 @@ class TestCreateCardEndpoint:
         card_data = {
             "deck_id": str(active_deck_for_create.id),
             "front_text": "efharisto",
-            "back_text": "thank you",
+            "back_text_en": "thank you",
             "example_sentence": "Efharisto poly!",
             "pronunciation": "efharisto",
         }
@@ -518,7 +518,7 @@ class TestCreateCardEndpoint:
         assert response.status_code == 201
         data = response.json()
         assert data["front_text"] == card_data["front_text"]
-        assert data["back_text"] == card_data["back_text"]
+        assert data["back_text_en"] == card_data["back_text_en"]
         assert data["example_sentence"] == card_data["example_sentence"]
         assert data["pronunciation"] == card_data["pronunciation"]
         assert str(data["deck_id"]) == card_data["deck_id"]
@@ -534,7 +534,7 @@ class TestCreateCardEndpoint:
         card_data = {
             "deck_id": str(active_deck_for_create.id),
             "front_text": "kalimera",
-            "back_text": "good morning",
+            "back_text_en": "good morning",
         }
 
         response = await client.post(
@@ -546,7 +546,7 @@ class TestCreateCardEndpoint:
         assert response.status_code == 201
         data = response.json()
         assert data["front_text"] == card_data["front_text"]
-        assert data["back_text"] == card_data["back_text"]
+        assert data["back_text_en"] == card_data["back_text_en"]
         assert data["example_sentence"] is None
         assert data["pronunciation"] is None
 
@@ -558,7 +558,7 @@ class TestCreateCardEndpoint:
         card_data = {
             "deck_id": str(active_deck_for_create.id),
             "front_text": "test",
-            "back_text": "test",
+            "back_text_en": "test",
         }
 
         response = await client.post("/api/v1/cards", json=card_data)
@@ -575,7 +575,7 @@ class TestCreateCardEndpoint:
         card_data = {
             "deck_id": str(active_deck_for_create.id),
             "front_text": "test",
-            "back_text": "test",
+            "back_text_en": "test",
         }
 
         response = await client.post(
@@ -597,7 +597,7 @@ class TestCreateCardEndpoint:
         card_data = {
             "deck_id": str(non_existent_deck_id),
             "front_text": "test",
-            "back_text": "test",
+            "back_text_en": "test",
         }
 
         response = await client.post(
@@ -619,7 +619,7 @@ class TestCreateCardEndpoint:
         """Test missing required front_text field returns 422."""
         card_data = {
             "deck_id": str(active_deck_for_create.id),
-            "back_text": "test",
+            "back_text_en": "test",
         }
 
         response = await client.post(
@@ -634,10 +634,10 @@ class TestCreateCardEndpoint:
         assert data["error"]["code"] == "VALIDATION_ERROR"
 
     @pytest.mark.asyncio
-    async def test_create_card_validation_error_missing_back_text_returns_422(
+    async def test_create_card_validation_error_missing_back_text_en_returns_422(
         self, client: AsyncClient, superuser_auth_headers: dict, active_deck_for_create
     ):
-        """Test missing required back_text field returns 422."""
+        """Test missing required back_text_en field returns 422."""
         card_data = {
             "deck_id": str(active_deck_for_create.id),
             "front_text": "test",
@@ -662,7 +662,7 @@ class TestCreateCardEndpoint:
         card_data = {
             "deck_id": "not-a-valid-uuid",
             "front_text": "test",
-            "back_text": "test",
+            "back_text_en": "test",
         }
 
         response = await client.post(
@@ -684,7 +684,7 @@ class TestCreateCardEndpoint:
         card_data = {
             "deck_id": str(inactive_deck_for_create.id),
             "front_text": "test in inactive",
-            "back_text": "translation",
+            "back_text_en": "translation",
         }
 
         response = await client.post(
@@ -711,7 +711,7 @@ class TestCreateCardEndpoint:
         card_data = {
             "deck_id": str(active_deck_for_create.id),
             "front_text": "persisted test",
-            "back_text": "persisted translation",
+            "back_text_en": "persisted translation",
         }
 
         # Create the card
@@ -732,7 +732,7 @@ class TestCreateCardEndpoint:
         retrieved_card = get_response.json()
         assert retrieved_card["id"] == card_id
         assert retrieved_card["front_text"] == card_data["front_text"]
-        assert retrieved_card["back_text"] == card_data["back_text"]
+        assert retrieved_card["back_text_en"] == card_data["back_text_en"]
 
     @pytest.mark.asyncio
     async def test_create_card_response_fields(
@@ -742,7 +742,7 @@ class TestCreateCardEndpoint:
         card_data = {
             "deck_id": str(active_deck_for_create.id),
             "front_text": "full response test",
-            "back_text": "translation",
+            "back_text_en": "translation",
             "example_sentence": "Example sentence here",
             "pronunciation": "pronunciation",
         }
@@ -761,7 +761,7 @@ class TestCreateCardEndpoint:
             "id",
             "deck_id",
             "front_text",
-            "back_text",
+            "back_text_en",
             "example_sentence",
             "pronunciation",
             "created_at",
@@ -806,7 +806,7 @@ class TestSearchCardsEndpoint:
                 id=uuid4(),
                 deck_id=active_deck_for_search.id,
                 front_text=front,
-                back_text=back,
+                back_text_en=back,
                 example_sentence=example,
                 pronunciation=f"pron-{i}",
             )
@@ -842,8 +842,8 @@ class TestSearchCardsEndpoint:
         assert data["total"] >= 1
         assert data["query"] == "morning"
         assert len(data["cards"]) >= 1
-        # Should find "good morning" in back_text
-        assert any("morning" in card["back_text"].lower() for card in data["cards"])
+        # Should find "good morning" in back_text_en
+        assert any("morning" in card["back_text_en"].lower() for card in data["cards"])
 
     @pytest.mark.asyncio
     async def test_search_cards_in_front_text(
@@ -1060,7 +1060,7 @@ class TestUpdateCardEndpoint:
             id=uuid4(),
             deck_id=active_deck_for_update.id,
             front_text="original_front",
-            back_text="original_back",
+            back_text_en="original_back",
             example_sentence="Original example sentence",
             pronunciation="original-pron",
         )
@@ -1086,7 +1086,7 @@ class TestUpdateCardEndpoint:
         data = response.json()
         assert data["front_text"] == new_front_text
         # Other fields should remain unchanged
-        assert data["back_text"] == "original_back"
+        assert data["back_text_en"] == "original_back"
         assert data["example_sentence"] == "Original example sentence"
         assert data["pronunciation"] == "original-pron"
 
@@ -1097,7 +1097,7 @@ class TestUpdateCardEndpoint:
         """Test updating all card fields."""
         update_data = {
             "front_text": "completely_updated_front",
-            "back_text": "completely_updated_back",
+            "back_text_en": "completely_updated_back",
             "example_sentence": "Completely updated example",
             "pronunciation": "updated-pron",
         }
@@ -1111,7 +1111,7 @@ class TestUpdateCardEndpoint:
         assert response.status_code == 200
         data = response.json()
         assert data["front_text"] == update_data["front_text"]
-        assert data["back_text"] == update_data["back_text"]
+        assert data["back_text_en"] == update_data["back_text_en"]
         assert data["example_sentence"] == update_data["example_sentence"]
         assert data["pronunciation"] == update_data["pronunciation"]
 
@@ -1257,7 +1257,7 @@ class TestUpdateCardEndpoint:
             "id",
             "deck_id",
             "front_text",
-            "back_text",
+            "back_text_en",
             "example_sentence",
             "pronunciation",
             "created_at",
@@ -1292,7 +1292,7 @@ class TestDeleteCardEndpoint:
             id=uuid4(),
             deck_id=active_deck_for_delete.id,
             front_text="delete_me",
-            back_text="to be deleted",
+            back_text_en="to be deleted",
             example_sentence="This card will be deleted",
             pronunciation="del-pron",
         )
@@ -1454,7 +1454,7 @@ class TestCardCRUDFlow:
         create_data = {
             "deck_id": str(deck_for_crud.id),
             "front_text": "CRUD Test Word",
-            "back_text": "Testing full lifecycle",
+            "back_text_en": "Testing full lifecycle",
             "example_sentence": "This is a CRUD test example",
             "pronunciation": "crud-test",
         }
@@ -1472,12 +1472,12 @@ class TestCardCRUDFlow:
         assert get_response.status_code == 200
         fetched_card = get_response.json()
         assert fetched_card["front_text"] == create_data["front_text"]
-        assert fetched_card["back_text"] == create_data["back_text"]
+        assert fetched_card["back_text_en"] == create_data["back_text_en"]
 
         # 3. UPDATE
         update_data = {
             "front_text": "Updated CRUD Word",
-            "back_text": "Updated lifecycle test",
+            "back_text_en": "Updated lifecycle test",
         }
         update_response = await client.patch(
             f"/api/v1/cards/{card_id}",
@@ -1487,7 +1487,7 @@ class TestCardCRUDFlow:
         assert update_response.status_code == 200
         updated_card = update_response.json()
         assert updated_card["front_text"] == update_data["front_text"]
-        assert updated_card["back_text"] == update_data["back_text"]
+        assert updated_card["back_text_en"] == update_data["back_text_en"]
 
         # Verify update persisted (now requires auth)
         verify_response = await client.get(f"/api/v1/cards/{card_id}", headers=auth_headers)
@@ -1514,7 +1514,7 @@ class TestCardCRUDFlow:
         create_data = {
             "deck_id": str(deck_for_crud.id),
             "front_text": "UniqueListTest123",
-            "back_text": "Testing visibility in list",
+            "back_text_en": "Testing visibility in list",
         }
 
         # Create card
@@ -1544,7 +1544,7 @@ class TestCardCRUDFlow:
         create_data = {
             "deck_id": str(deck_for_crud.id),
             "front_text": unique_text,
-            "back_text": "Testing search visibility",
+            "back_text_en": "Testing search visibility",
         }
 
         # Create card
@@ -1573,7 +1573,7 @@ class TestCardCRUDFlow:
         create_data = {
             "deck_id": str(deck_for_crud.id),
             "front_text": "Before Update",
-            "back_text": "Initial translation",
+            "back_text_en": "Initial translation",
         }
         create_response = await client.post(
             "/api/v1/cards",
@@ -1613,7 +1613,7 @@ class TestCardCRUDFlow:
         create_data = {
             "deck_id": str(deck_for_crud.id),
             "front_text": "Auth Test",
-            "back_text": "Test",
+            "back_text_en": "Test",
         }
         create_response = await client.post("/api/v1/cards", json=create_data, headers=auth_headers)
         assert create_response.status_code == 403

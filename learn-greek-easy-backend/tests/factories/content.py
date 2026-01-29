@@ -150,9 +150,12 @@ class CardFactory(BaseFactory):
 
     # Greek vocabulary from Faker provider
     front_text = factory.LazyAttribute(lambda _: fake.greek_word("A1"))
-    back_text = factory.LazyAttribute(lambda _: fake.greek_translation("A1"))
+    back_text_en = factory.LazyAttribute(lambda _: fake.greek_translation("A1"))
+    back_text_ru = None  # Optional Russian translation
     pronunciation = factory.LazyAttribute(lambda _: fake.greek_pronunciation("A1"))
     example_sentence = factory.LazyAttribute(lambda _: fake.greek_example_sentence("A1"))
+    part_of_speech = None  # Optional part of speech
+    level = None  # Optional CEFR level override
 
     class Params:
         """Factory traits for common variations."""
@@ -161,6 +164,9 @@ class CardFactory(BaseFactory):
         minimal = factory.Trait(
             pronunciation=None,
             example_sentence=None,
+            back_text_ru=None,
+            part_of_speech=None,
+            level=None,
         )
 
     @classmethod
@@ -188,7 +194,7 @@ class CardFactory(BaseFactory):
             session=session,
             deck_id=deck_id,
             front_text=vocab["front_text"],
-            back_text=vocab["back_text"],
+            back_text_en=vocab["back_text"],
             pronunciation=vocab.get("pronunciation"),
             example_sentence=vocab.get("example_sentence"),
             **kwargs,

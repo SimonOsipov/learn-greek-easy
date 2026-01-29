@@ -59,6 +59,15 @@ class DeckLevel(str, enum.Enum):
     C2 = "C2"
 
 
+class PartOfSpeech(str, enum.Enum):
+    """Part of speech classification for vocabulary cards."""
+
+    NOUN = "noun"
+    VERB = "verb"
+    ADJECTIVE = "adjective"
+    ADVERB = "adverb"
+
+
 class CardStatus(str, enum.Enum):
     """Learning status of a card for a specific user (SM-2 algorithm)."""
 
@@ -479,12 +488,29 @@ class Card(Base, TimestampMixin):
         Text,
         nullable=False,
     )  # Greek text
-    back_text: Mapped[str] = mapped_column(
+    back_text_en: Mapped[str] = mapped_column(
         Text,
         nullable=False,
     )  # English translation
+    back_text_ru: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        comment="Russian translation",
+    )  # Russian translation
     example_sentence: Mapped[str | None] = mapped_column(Text, nullable=True)
     pronunciation: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
+    # Classification fields
+    part_of_speech: Mapped[PartOfSpeech | None] = mapped_column(
+        nullable=True,
+        index=True,
+        comment="Part of speech: noun, verb, adjective, adverb",
+    )
+    level: Mapped[DeckLevel | None] = mapped_column(
+        nullable=True,
+        index=True,
+        comment="CEFR level override (A1-C2), defaults to deck level if not set",
+    )
 
     # Relationships
     deck: Mapped["Deck"] = relationship(

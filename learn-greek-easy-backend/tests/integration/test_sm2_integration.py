@@ -83,7 +83,7 @@ async def test_deck_with_10_cards(
         card = Card(
             deck_id=test_deck.id,
             front_text=f"Greek Word {i + 1}",
-            back_text=f"English Translation {i + 1}",
+            back_text_en=f"English Translation {i + 1}",
             pronunciation=f"Pronunciation Guide {i + 1}",
         )
         db_session.add(card)
@@ -443,7 +443,7 @@ class TestStudyQueueIntegration:
         card1 = Card(
             deck_id=deck1.id,
             front_text="Deck1 Card",
-            back_text="Translation 1",
+            back_text_en="Translation 1",
         )
         db_session.add(card1)
 
@@ -451,7 +451,7 @@ class TestStudyQueueIntegration:
         card2 = Card(
             deck_id=deck2.id,
             front_text="Deck2 Card",
-            back_text="Translation 2",
+            back_text_en="Translation 2",
         )
         db_session.add(card2)
         await db_session.flush()

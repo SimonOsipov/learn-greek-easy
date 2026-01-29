@@ -8,6 +8,7 @@ from src.db.models import (
     CardStatus,
     Deck,
     DeckLevel,
+    PartOfSpeech,
     RefreshToken,
     Review,
     ReviewRating,
@@ -32,6 +33,7 @@ __all__ = [
     "get_db_transactional",
     # Enums
     "DeckLevel",
+    "PartOfSpeech",
     "CardStatus",
     "ReviewRating",
     # Models - User
