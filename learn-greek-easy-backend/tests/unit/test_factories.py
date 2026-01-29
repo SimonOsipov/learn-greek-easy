@@ -227,7 +227,7 @@ class TestCardFactory:
         assert card is not None
         assert card.deck_id == deck.id
         assert card.front_text is not None  # Greek word
-        assert card.back_text is not None  # English translation
+        assert card.back_text_en is not None  # English translation
 
     async def test_minimal_trait(self, db_session: AsyncSession):
         """Test minimal card trait."""

@@ -154,6 +154,13 @@ class CardFactory(BaseFactory):
     back_text_ru = None  # Optional Russian translation
     pronunciation = factory.LazyAttribute(lambda _: fake.greek_pronunciation("A1"))
     example_sentence = factory.LazyAttribute(lambda _: fake.greek_example_sentence("A1"))
+    examples = factory.LazyAttribute(
+        lambda obj: (
+            [{"greek": obj.example_sentence, "english": "", "russian": ""}]
+            if obj.example_sentence
+            else None
+        )
+    )
     part_of_speech = None  # Optional part of speech
     level = None  # Optional CEFR level override
 
@@ -164,6 +171,7 @@ class CardFactory(BaseFactory):
         minimal = factory.Trait(
             pronunciation=None,
             example_sentence=None,
+            examples=None,
             back_text_ru=None,
             part_of_speech=None,
             level=None,
@@ -189,6 +197,12 @@ class CardFactory(BaseFactory):
             Card with Greek vocabulary
         """
         vocab = fake.greek_vocabulary_card(level)
+        example_sentence = vocab.get("example_sentence")
+        examples = (
+            [{"greek": example_sentence, "english": "", "russian": ""}]
+            if example_sentence
+            else None
+        )
 
         return await cls.create(
             session=session,
@@ -196,6 +210,7 @@ class CardFactory(BaseFactory):
             front_text=vocab["front_text"],
             back_text_en=vocab["back_text"],
             pronunciation=vocab.get("pronunciation"),
-            example_sentence=vocab.get("example_sentence"),
+            example_sentence=example_sentence,
+            examples=examples,
             **kwargs,
         )

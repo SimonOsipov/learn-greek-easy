@@ -174,6 +174,10 @@ class StudyQueueCard(BaseModel):
         default=None,
         description="Pronunciation guide",
     )
+    examples: Optional[list[dict]] = Field(
+        default=None,
+        description="Structured examples with multilingual translations",
+    )
     status: CardStatus = Field(
         ...,
         description="Current learning status",

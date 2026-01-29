@@ -1592,7 +1592,7 @@ class SeedService:
                 card = Card(
                     deck_id=deck.id,
                     front_text=greek,
-                    back_text=english,
+                    back_text_en=english,
                     example_sentence=f"Example sentence with '{greek}'",
                     pronunciation=f"[{greek}]",
                 )
@@ -1669,7 +1669,7 @@ class SeedService:
                         card = Card(
                             deck_id=deck.id,
                             front_text=greek,
-                            back_text=english,
+                            back_text_en=english,
                             example_sentence=f"User example: '{greek}' in context",
                             pronunciation=f"[{greek}]",
                         )

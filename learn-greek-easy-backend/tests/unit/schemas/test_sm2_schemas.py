@@ -75,7 +75,7 @@ class TestStudyQueueCard:
         card = StudyQueueCard(
             card_id=uuid4(),
             front_text="Greek text",
-            back_text_en="English text",
+            back_text="English text",
             status=CardStatus.NEW,
             is_new=True,
         )
@@ -86,7 +86,7 @@ class TestStudyQueueCard:
         card = StudyQueueCard(
             card_id=uuid4(),
             front_text="Greek text",
-            back_text_en="English text",
+            back_text="English text",
             status=CardStatus.REVIEW,
             is_new=False,
             is_early_practice=True,
@@ -99,7 +99,7 @@ class TestStudyQueueCard:
         card = StudyQueueCard(
             card_id=uuid4(),
             front_text="Greek",
-            back_text_en="English",
+            back_text="English",
             status=CardStatus.LEARNING,
             is_new=False,
             is_early_practice=True,
@@ -112,7 +112,7 @@ class TestStudyQueueCard:
         card = StudyQueueCard(
             card_id=uuid4(),
             front_text="Greek",
-            back_text_en="English",
+            back_text="English",
             status=CardStatus.NEW,
             is_new=True,
             is_early_practice=False,
@@ -126,9 +126,10 @@ class TestStudyQueueCard:
         card = StudyQueueCard(
             card_id=card_id,
             front_text="Front",
-            back_text_en="Back",
+            back_text="Back",
             example_sentence="Example",
             pronunciation="pron",
+            examples=[{"greek": "Example", "english": "Translation", "russian": ""}],
             status=CardStatus.REVIEW,
             is_new=False,
             is_early_practice=True,
@@ -139,6 +140,40 @@ class TestStudyQueueCard:
         assert card.card_id == card_id
         assert card.is_early_practice is True
         assert card.due_date == date.today()
+        assert card.examples == [{"greek": "Example", "english": "Translation", "russian": ""}]
+
+    def test_examples_field_optional(self):
+        """Test that examples field is optional."""
+        card = StudyQueueCard(
+            card_id=uuid4(),
+            front_text="Greek text",
+            back_text="English text",
+            status=CardStatus.NEW,
+            is_new=True,
+        )
+        assert card.examples is None
+
+    def test_examples_field_accepts_list(self):
+        """Test that examples field accepts a list of dicts."""
+        examples = [
+            {"greek": "Greek 1", "english": "English 1", "russian": "Russian 1"},
+            {
+                "greek": "Greek 2",
+                "english": "English 2",
+                "russian": "Russian 2",
+                "tense": "present",
+            },
+        ]
+        card = StudyQueueCard(
+            card_id=uuid4(),
+            front_text="Greek text",
+            back_text="English text",
+            status=CardStatus.NEW,
+            is_new=True,
+            examples=examples,
+        )
+        assert card.examples == examples
+        assert len(card.examples) == 2
 
 
 class TestStudyQueue:
@@ -185,7 +220,7 @@ class TestStudyQueue:
         early_card = StudyQueueCard(
             card_id=uuid4(),
             front_text="Early",
-            back_text_en="Practice",
+            back_text="Practice",
             status=CardStatus.LEARNING,
             is_new=False,
             is_early_practice=True,
@@ -193,7 +228,7 @@ class TestStudyQueue:
         due_card = StudyQueueCard(
             card_id=uuid4(),
             front_text="Due",
-            back_text_en="Card",
+            back_text="Card",
             status=CardStatus.REVIEW,
             is_new=False,
             is_early_practice=False,

@@ -2,7 +2,7 @@
 
 from uuid import UUID
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import Text, cast, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.db.models import Card
@@ -86,7 +86,7 @@ class CardRepository(BaseRepository[Card]):
         skip: int = 0,
         limit: int = 50,
     ) -> list[Card]:
-        """Search cards by text in front_text, back_text_en, back_text_ru, example_sentence.
+        """Search cards by text in front_text, back_text_en, back_text_ru, example_sentence, examples.
 
         Args:
             query_text: Search query (case-insensitive)
@@ -107,6 +107,7 @@ class CardRepository(BaseRepository[Card]):
                 Card.back_text_en.ilike(search_pattern),
                 Card.back_text_ru.ilike(search_pattern),
                 Card.example_sentence.ilike(search_pattern),
+                cast(Card.examples, Text).ilike(search_pattern),
             )
         )
 
@@ -144,6 +145,7 @@ class CardRepository(BaseRepository[Card]):
                     Card.back_text_en.ilike(search_pattern),
                     Card.back_text_ru.ilike(search_pattern),
                     Card.example_sentence.ilike(search_pattern),
+                    cast(Card.examples, Text).ilike(search_pattern),
                 )
             )
         )

@@ -224,7 +224,7 @@ class TestGetStudyQueueUnit:
                 StudyQueueCard(
                     card_id=card_id,
                     front_text="kalimera",
-                    back_text_en="good morning",
+                    back_text="good morning",
                     example_sentence="Kalimera, ti kaneis?",
                     pronunciation="kah-lee-MEH-rah",
                     status=CardStatus.REVIEW,
@@ -467,7 +467,7 @@ class TestGetDeckStudyQueueUnit:
                 StudyQueueCard(
                     card_id=card_id,
                     front_text="efcharisto",
-                    back_text_en="thank you",
+                    back_text="thank you",
                     example_sentence="Efcharisto poli!",
                     pronunciation="ef-hah-ree-STOH",
                     status=CardStatus.LEARNING,

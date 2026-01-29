@@ -500,6 +500,13 @@ class Card(Base, TimestampMixin):
     example_sentence: Mapped[str | None] = mapped_column(Text, nullable=True)
     pronunciation: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
+    # Structured examples (replaces example_sentence)
+    examples: Mapped[list[dict] | None] = mapped_column(
+        JSON,
+        nullable=True,
+        comment="Structured examples: [{greek, english, russian, tense?}, ...]",
+    )
+
     # Classification fields
     part_of_speech: Mapped[PartOfSpeech | None] = mapped_column(
         nullable=True,

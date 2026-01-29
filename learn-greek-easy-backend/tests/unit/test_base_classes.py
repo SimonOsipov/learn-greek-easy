@@ -104,7 +104,7 @@ class TestBaseTestCaseDeckCardCreation(BaseTestCase):
         assert card.id is not None
         assert card.deck_id == deck.id
         assert card.front_text == "Hello"
-        assert card.back_text == "Yeia"
+        assert card.back_text_en == "Yeia"
 
     async def test_create_deck_with_cards(self, db_session: AsyncSession):
         """Test creating a deck with multiple cards."""

@@ -41,6 +41,7 @@ class TestListCardsUnit:
             card.level = None
             card.example_sentence = f"Example {i}"
             card.pronunciation = f"pron-{i}"
+            card.examples = [{"greek": f"Example {i}", "english": "", "russian": ""}]
             card.created_at = MagicMock()
             card.updated_at = MagicMock()
             cards.append(card)
@@ -292,6 +293,7 @@ class TestGetCardUnit:
         card.level = None
         card.example_sentence = "Kalimera! Pos eisai?"
         card.pronunciation = "kah-lee-MEH-rah"
+        card.examples = [{"greek": "Kalimera! Pos eisai?", "english": "", "russian": ""}]
         card.created_at = MagicMock()
         card.updated_at = MagicMock()
         return card
@@ -384,6 +386,7 @@ class TestSearchCardsUnit:
             card.level = None
             card.example_sentence = f"Example {i}"
             card.pronunciation = f"pron-{i}"
+            card.examples = [{"greek": f"Example {i}", "english": "", "russian": ""}]
             card.created_at = MagicMock()
             card.updated_at = MagicMock()
             cards.append(card)

@@ -15,6 +15,27 @@ from pydantic import BaseModel, ConfigDict, Field
 from src.db.models import DeckLevel, PartOfSpeech
 
 # ============================================================================
+# Example Schema
+# ============================================================================
+
+
+class Example(BaseModel):
+    """Structured example for a vocabulary card.
+
+    Stores example sentences in multiple languages with optional tense info.
+    """
+
+    greek: str = Field(..., min_length=1, max_length=1000, description="Example in Greek")
+    english: str = Field(default="", max_length=1000, description="English translation")
+    russian: str = Field(default="", max_length=1000, description="Russian translation")
+    tense: Optional[str] = Field(
+        default=None,
+        max_length=50,
+        description="Verb tense (present, past, future, etc.) - for verbs only",
+    )
+
+
+# ============================================================================
 # Card Schemas
 # ============================================================================
 
@@ -29,6 +50,10 @@ class CardBase(BaseModel):
     pronunciation: Optional[str] = Field(None, max_length=255)
     part_of_speech: Optional[PartOfSpeech] = None
     level: Optional[DeckLevel] = None
+    examples: Optional[list[Example]] = Field(
+        default=None,
+        description="Structured examples with multilingual translations",
+    )
 
 
 class CardCreate(CardBase):
@@ -47,6 +72,10 @@ class CardUpdate(BaseModel):
     pronunciation: Optional[str] = Field(None, max_length=255)
     part_of_speech: Optional[PartOfSpeech] = None
     level: Optional[DeckLevel] = None
+    examples: Optional[list[Example]] = Field(
+        default=None,
+        description="Structured examples with multilingual translations",
+    )
 
 
 class CardResponse(CardBase):
@@ -119,6 +148,10 @@ class CardBulkItemCreate(BaseModel):
     pronunciation: Optional[str] = Field(None, max_length=255)
     part_of_speech: Optional[PartOfSpeech] = None
     level: Optional[DeckLevel] = None
+    examples: Optional[list[Example]] = Field(
+        default=None,
+        description="Structured examples with multilingual translations",
+    )
 
 
 class CardBulkCreateRequest(BaseModel):

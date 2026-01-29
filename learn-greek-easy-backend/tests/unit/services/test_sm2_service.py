@@ -70,9 +70,10 @@ def mock_card(mock_deck):
     card.id = uuid4()
     card.deck_id = mock_deck.id
     card.front_text = "Test front"
-    card.back_text = "Test back"
+    card.back_text_en = "Test back"
     card.example_sentence = "Example sentence"
     card.pronunciation = "Pronunciation"
+    card.examples = [{"greek": "Example sentence", "english": "", "russian": ""}]
     return card
 
 
@@ -434,7 +435,8 @@ class TestGetStudyQueue:
         mock_card_2 = MagicMock(spec=Card)
         mock_card_2.id = uuid4()
         mock_card_2.front_text = "Card 2"
-        mock_card_2.back_text = "Back 2"
+        mock_card_2.back_text_en = "Back 2"
+        mock_card_2.examples = None
         mock_card_2.example_sentence = None
         mock_card_2.pronunciation = None
         due_stats_2.card = mock_card_2
@@ -493,7 +495,8 @@ class TestGetStudyQueue:
             card = MagicMock(spec=Card)
             card.id = uuid4()
             card.front_text = f"Card {i}"
-            card.back_text = f"Back {i}"
+            card.back_text_en = f"Back {i}"
+            card.examples = None
             card.example_sentence = None
             card.pronunciation = None
             stats.card = card
@@ -612,7 +615,8 @@ class TestGetStudyQueue:
             card = MagicMock(spec=Card)
             card.id = uuid4()
             card.front_text = f"Card {i}"
-            card.back_text = f"Back {i}"
+            card.back_text_en = f"Back {i}"
+            card.examples = None
             card.example_sentence = None
             card.pronunciation = None
             stats.card = card
@@ -648,7 +652,8 @@ class TestGetStudyQueue:
         due_card = MagicMock(spec=Card)
         due_card.id = uuid4()
         due_card.front_text = "Due"
-        due_card.back_text = "Due Back"
+        due_card.back_text_en = "Due Back"
+        due_card.examples = None
         due_card.example_sentence = None
         due_card.pronunciation = None
         due_stats = MagicMock()
@@ -662,7 +667,8 @@ class TestGetStudyQueue:
         new_card = MagicMock(spec=Card)
         new_card.id = uuid4()
         new_card.front_text = "New"
-        new_card.back_text = "New Back"
+        new_card.back_text_en = "New Back"
+        new_card.examples = None
         new_card.example_sentence = None
         new_card.pronunciation = None
 
@@ -670,7 +676,8 @@ class TestGetStudyQueue:
         early_card = MagicMock(spec=Card)
         early_card.id = uuid4()
         early_card.front_text = "Early"
-        early_card.back_text = "Early Back"
+        early_card.back_text_en = "Early Back"
+        early_card.examples = None
         early_card.example_sentence = None
         early_card.pronunciation = None
 
