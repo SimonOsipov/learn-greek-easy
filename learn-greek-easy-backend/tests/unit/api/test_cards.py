@@ -46,6 +46,8 @@ class TestListCardsUnit:
             card.verb_data = None
             card.adjective_data = None
             card.adverb_data = None
+            card.searchable_forms = None
+            card.searchable_forms_normalized = None
             card.created_at = MagicMock()
             card.updated_at = MagicMock()
             cards.append(card)
@@ -302,6 +304,8 @@ class TestGetCardUnit:
         card.verb_data = None
         card.adjective_data = None
         card.adverb_data = None
+        card.searchable_forms = None
+        card.searchable_forms_normalized = None
         card.created_at = MagicMock()
         card.updated_at = MagicMock()
         return card
@@ -399,6 +403,8 @@ class TestSearchCardsUnit:
             card.verb_data = None
             card.adjective_data = None
             card.adverb_data = None
+            card.searchable_forms = None
+            card.searchable_forms_normalized = None
             card.created_at = MagicMock()
             card.updated_at = MagicMock()
             cards.append(card)

@@ -39,6 +39,7 @@ from sqlalchemy import (
     func,
     text,
 )
+from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.db.base import Base, TimestampMixin
@@ -539,6 +540,18 @@ class Card(Base, TimestampMixin):
         JSON,
         nullable=True,
         comment="Adverb grammar: comparative + superlative",
+    )
+
+    # Search fields
+    searchable_forms: Mapped[list[str] | None] = mapped_column(
+        ARRAY(String),
+        nullable=True,
+        comment="All inflected forms for exact matching",
+    )
+    searchable_forms_normalized: Mapped[list[str] | None] = mapped_column(
+        ARRAY(String),
+        nullable=True,
+        comment="Accent-stripped forms for fuzzy matching",
     )
 
     # Relationships

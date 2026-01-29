@@ -168,6 +168,9 @@ class CardFactory(BaseFactory):
     verb_data = None
     adjective_data = None
     adverb_data = None
+    # Search fields
+    searchable_forms = None
+    searchable_forms_normalized = None
 
     class Params:
         """Factory traits for common variations."""

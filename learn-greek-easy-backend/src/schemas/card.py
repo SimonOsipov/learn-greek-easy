@@ -164,6 +164,9 @@ class CardBase(BaseModel):
     verb_data: Optional[VerbData] = None
     adjective_data: Optional[AdjectiveData] = None
     adverb_data: Optional[AdverbData] = None
+    # Search fields
+    searchable_forms: Optional[list[str]] = None
+    searchable_forms_normalized: Optional[list[str]] = None
 
 
 class CardCreate(CardBase):
@@ -191,6 +194,9 @@ class CardUpdate(BaseModel):
     verb_data: Optional[VerbData] = None
     adjective_data: Optional[AdjectiveData] = None
     adverb_data: Optional[AdverbData] = None
+    # Search fields
+    searchable_forms: Optional[list[str]] = None
+    searchable_forms_normalized: Optional[list[str]] = None
 
 
 class CardResponse(CardBase):
@@ -272,6 +278,9 @@ class CardBulkItemCreate(BaseModel):
     verb_data: Optional[VerbData] = None
     adjective_data: Optional[AdjectiveData] = None
     adverb_data: Optional[AdverbData] = None
+    # Search fields
+    searchable_forms: Optional[list[str]] = None
+    searchable_forms_normalized: Optional[list[str]] = None
 
 
 class CardBulkCreateRequest(BaseModel):
