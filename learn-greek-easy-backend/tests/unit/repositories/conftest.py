@@ -9,7 +9,6 @@ from sqlalchemy.orm import selectinload
 
 from src.db.models import (
     Card,
-    CardDifficulty,
     CardStatistics,
     CardStatus,
     Deck,
@@ -88,24 +87,18 @@ async def sample_cards(db_session, sample_deck):
             front_text="Hello",
             back_text="Yeia sou",
             pronunciation="Yah soo",
-            difficulty=CardDifficulty.EASY,
-            order_index=1,
         ),
         Card(
             deck_id=sample_deck.id,
             front_text="Goodbye",
             back_text="Adio",
             pronunciation="Adio",
-            difficulty=CardDifficulty.EASY,
-            order_index=2,
         ),
         Card(
             deck_id=sample_deck.id,
             front_text="Thank you",
             back_text="Efharisto",
             pronunciation="Efharisto",
-            difficulty=CardDifficulty.MEDIUM,
-            order_index=3,
         ),
     ]
     for card in cards:

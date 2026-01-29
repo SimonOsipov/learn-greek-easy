@@ -6,7 +6,7 @@ from uuid import uuid4
 import pytest
 from pydantic import ValidationError
 
-from src.db.models import CardDifficulty, CardStatus
+from src.db.models import CardStatus
 from src.schemas.sm2 import StudyQueue, StudyQueueCard, StudyQueueRequest
 
 
@@ -76,7 +76,6 @@ class TestStudyQueueCard:
             card_id=uuid4(),
             front_text="Greek text",
             back_text="English text",
-            difficulty=CardDifficulty.EASY,
             status=CardStatus.NEW,
             is_new=True,
         )
@@ -88,7 +87,6 @@ class TestStudyQueueCard:
             card_id=uuid4(),
             front_text="Greek text",
             back_text="English text",
-            difficulty=CardDifficulty.EASY,
             status=CardStatus.REVIEW,
             is_new=False,
             is_early_practice=True,
@@ -102,7 +100,6 @@ class TestStudyQueueCard:
             card_id=uuid4(),
             front_text="Greek",
             back_text="English",
-            difficulty=CardDifficulty.MEDIUM,
             status=CardStatus.LEARNING,
             is_new=False,
             is_early_practice=True,
@@ -116,7 +113,6 @@ class TestStudyQueueCard:
             card_id=uuid4(),
             front_text="Greek",
             back_text="English",
-            difficulty=CardDifficulty.EASY,
             status=CardStatus.NEW,
             is_new=True,
             is_early_practice=False,
@@ -133,7 +129,6 @@ class TestStudyQueueCard:
             back_text="Back",
             example_sentence="Example",
             pronunciation="pron",
-            difficulty=CardDifficulty.HARD,
             status=CardStatus.REVIEW,
             is_new=False,
             is_early_practice=True,
@@ -191,7 +186,6 @@ class TestStudyQueue:
             card_id=uuid4(),
             front_text="Early",
             back_text="Practice",
-            difficulty=CardDifficulty.MEDIUM,
             status=CardStatus.LEARNING,
             is_new=False,
             is_early_practice=True,
@@ -200,7 +194,6 @@ class TestStudyQueue:
             card_id=uuid4(),
             front_text="Due",
             back_text="Card",
-            difficulty=CardDifficulty.EASY,
             status=CardStatus.REVIEW,
             is_new=False,
             is_early_practice=False,

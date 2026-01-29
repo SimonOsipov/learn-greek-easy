@@ -35,7 +35,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from src.core.security import create_access_token
-from src.db.models import Card, CardDifficulty, Deck, DeckLevel, User, UserSettings
+from src.db.models import Card, Deck, DeckLevel, User, UserSettings
 
 
 class BaseTestCase:
@@ -182,8 +182,6 @@ class BaseTestCase:
         deck: Deck,
         front_text: str = "Hello",
         back_text: str = "Yeia",
-        difficulty: CardDifficulty = CardDifficulty.MEDIUM,
-        order_index: int = 0,
     ) -> Card:
         """Create a test card in the database.
 
@@ -192,8 +190,6 @@ class BaseTestCase:
             deck: Parent deck
             front_text: Front of card (Greek)
             back_text: Back of card (English)
-            difficulty: Card difficulty level
-            order_index: Card order within deck
 
         Returns:
             Card: Created card
@@ -202,8 +198,6 @@ class BaseTestCase:
             deck_id=deck.id,
             front_text=front_text,
             back_text=back_text,
-            difficulty=difficulty,
-            order_index=order_index,
         )
         db_session.add(card)
         await db_session.commit()
@@ -238,7 +232,6 @@ class BaseTestCase:
                 deck,
                 front_text=f"Greek word {i}",
                 back_text=f"English word {i}",
-                order_index=i,
             )
             cards.append(card)
 

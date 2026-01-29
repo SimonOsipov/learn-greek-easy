@@ -21,7 +21,7 @@ Usage:
 import factory
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.db.models import Card, CardDifficulty, Deck, DeckLevel
+from src.db.models import Card, Deck, DeckLevel
 from tests.factories.base import BaseFactory, fake
 
 
@@ -126,7 +126,6 @@ class DeckFactory(BaseFactory):
             card = await CardFactory.create(
                 session=session,
                 deck_id=deck.id,
-                order_index=i,
                 # Use level-appropriate vocabulary
             )
             cards.append(card)
@@ -139,12 +138,8 @@ class CardFactory(BaseFactory):
 
     Creates flashcards with Greek vocabulary content.
 
-    Traits:
-        easy, medium, hard: Difficulty levels
-
     Example:
         card = await CardFactory.create(deck_id=deck.id)
-        easy_card = await CardFactory.create(deck_id=deck.id, easy=True)
     """
 
     class Meta:
@@ -159,25 +154,8 @@ class CardFactory(BaseFactory):
     pronunciation = factory.LazyAttribute(lambda _: fake.greek_pronunciation("A1"))
     example_sentence = factory.LazyAttribute(lambda _: fake.greek_example_sentence("A1"))
 
-    # Metadata
-    difficulty = CardDifficulty.MEDIUM
-    order_index = factory.Sequence(lambda n: n)
-
     class Params:
         """Factory traits for common variations."""
-
-        # Difficulty traits
-        easy = factory.Trait(
-            difficulty=CardDifficulty.EASY,
-        )
-
-        medium = factory.Trait(
-            difficulty=CardDifficulty.MEDIUM,
-        )
-
-        hard = factory.Trait(
-            difficulty=CardDifficulty.HARD,
-        )
 
         # Minimal card (no optional fields)
         minimal = factory.Trait(

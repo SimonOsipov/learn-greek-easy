@@ -4,7 +4,6 @@ from src.db.base import Base, SoftDeleteMixin, TimestampMixin
 from src.db.dependencies import get_db, get_db_transactional
 from src.db.models import (
     Card,
-    CardDifficulty,
     CardStatistics,
     CardStatus,
     Deck,
@@ -33,7 +32,6 @@ __all__ = [
     "get_db_transactional",
     # Enums
     "DeckLevel",
-    "CardDifficulty",
     "CardStatus",
     "ReviewRating",
     # Models - User

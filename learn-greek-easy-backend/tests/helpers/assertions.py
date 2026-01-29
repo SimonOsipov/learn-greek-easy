@@ -446,7 +446,7 @@ def assert_valid_card_response(
     Raises:
         AssertionError: If validation fails
     """
-    required_fields = ["id", "deck_id", "front_text", "back_text", "difficulty", "order_index"]
+    required_fields = ["id", "deck_id", "front_text", "back_text"]
     for field in required_fields:
         assert field in data, f"Missing required field: {field}"
 
@@ -456,12 +456,6 @@ def assert_valid_card_response(
             UUID(data[uuid_field])
         except (ValueError, TypeError):
             raise AssertionError(f"Invalid UUID format for {uuid_field}: {data[uuid_field]}")
-
-    # Difficulty validation
-    valid_difficulties = ["easy", "medium", "hard", "EASY", "MEDIUM", "HARD"]
-    assert (
-        data["difficulty"] in valid_difficulties
-    ), f"Invalid difficulty: {data['difficulty']}, expected one of {valid_difficulties}"
 
     # Expected values
     if deck_id is not None:

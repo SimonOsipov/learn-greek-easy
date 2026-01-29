@@ -11,7 +11,7 @@ from uuid import uuid4
 import pytest
 from httpx import AsyncClient
 
-from src.db.models import Card, CardDifficulty, Deck, DeckLevel
+from src.db.models import Card, Deck, DeckLevel
 
 
 class TestListCardsIntegration:
@@ -49,17 +49,10 @@ class TestListCardsIntegration:
 
     @pytest.fixture
     async def deck_with_cards(self, db_session, active_deck):
-        """Create a deck with multiple cards of different difficulties."""
+        """Create a deck with multiple cards."""
         cards = []
-        difficulties = [
-            CardDifficulty.EASY,
-            CardDifficulty.EASY,
-            CardDifficulty.MEDIUM,
-            CardDifficulty.MEDIUM,
-            CardDifficulty.HARD,
-        ]
 
-        for i, difficulty in enumerate(difficulties):
+        for i in range(5):
             card = Card(
                 id=uuid4(),
                 deck_id=active_deck.id,
@@ -67,8 +60,6 @@ class TestListCardsIntegration:
                 back_text=f"English translation {i}",
                 example_sentence=f"Example sentence {i}",
                 pronunciation=f"pronunciation-{i}",
-                difficulty=difficulty,
-                order_index=i,
             )
             db_session.add(card)
             cards.append(card)
@@ -435,8 +426,6 @@ class TestGetCardEndpoint:
             back_text="good morning",
             example_sentence="Kalimera! Pos eisai?",
             pronunciation="kah-lee-MEH-rah",
-            difficulty=CardDifficulty.EASY,
-            order_index=0,
         )
         db_session.add(card)
         await db_session.commit()
@@ -453,8 +442,6 @@ class TestGetCardEndpoint:
             back_text="good night",
             example_sentence="Kalinihta! Kali orexi!",
             pronunciation="kah-lee-NEEKH-tah",
-            difficulty=CardDifficulty.MEDIUM,
-            order_index=0,
         )
         db_session.add(card)
         await db_session.commit()
@@ -1006,8 +993,6 @@ class TestSearchCardsEndpoint:
                 back_text=back,
                 example_sentence=example,
                 pronunciation=f"pron-{i}",
-                difficulty=CardDifficulty.EASY,
-                order_index=i,
             )
             db_session.add(card)
             cards.append(card)
@@ -1262,8 +1247,6 @@ class TestUpdateCardEndpoint:
             back_text="original_back",
             example_sentence="Original example sentence",
             pronunciation="original-pron",
-            difficulty=CardDifficulty.EASY,
-            order_index=0,
         )
         db_session.add(card)
         await db_session.commit()
@@ -1569,8 +1552,6 @@ class TestDeleteCardEndpoint:
             back_text="to be deleted",
             example_sentence="This card will be deleted",
             pronunciation="del-pron",
-            difficulty=CardDifficulty.EASY,
-            order_index=0,
         )
         db_session.add(card)
         await db_session.commit()

@@ -118,7 +118,6 @@ class TestBaseTestCaseDeckCardCreation(BaseTestCase):
         assert len(cards) == 5
         for i, card in enumerate(cards):
             assert card.deck_id == deck.id
-            assert card.order_index == i
 
 
 class TestBaseTestCaseDatabaseHelpers(BaseTestCase):

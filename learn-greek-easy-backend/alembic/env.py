@@ -20,7 +20,6 @@ from src.db.models import (  # noqa: F401
     AchievementCategory,
     AnnouncementCampaign,
     Card,
-    CardDifficulty,
     CardStatistics,
     CardStatus,
     CultureAnswerHistory,

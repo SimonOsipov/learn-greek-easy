@@ -11,7 +11,7 @@ from uuid import uuid4
 import pytest
 from httpx import AsyncClient
 
-from src.db.models import Card, CardDifficulty, Deck
+from src.db.models import Card, Deck
 
 
 class TestListCardsUnit:
@@ -38,8 +38,6 @@ class TestListCardsUnit:
             card.back_text = f"English {i}"
             card.example_sentence = f"Example {i}"
             card.pronunciation = f"pron-{i}"
-            card.difficulty = CardDifficulty.EASY
-            card.order_index = i
             card.created_at = MagicMock()
             card.updated_at = MagicMock()
             cards.append(card)
@@ -201,45 +199,6 @@ class TestListCardsUnit:
         assert response.status_code == 422
 
     @pytest.mark.asyncio
-    async def test_list_cards_invalid_difficulty(self, client: AsyncClient, auth_headers: dict):
-        """Test 422 response for invalid difficulty value."""
-        deck_id = uuid4()
-        response = await client.get(
-            f"/api/v1/cards?deck_id={deck_id}&difficulty=invalid", headers=auth_headers
-        )
-
-        assert response.status_code == 422
-
-    @pytest.mark.asyncio
-    async def test_list_cards_with_difficulty_filter(
-        self, client: AsyncClient, auth_headers: dict, mock_deck, mock_cards
-    ):
-        """Test filtering cards by difficulty."""
-        with (
-            patch("src.api.v1.cards.DeckRepository") as MockDeckRepo,
-            patch("src.api.v1.cards.CardRepository") as MockCardRepo,
-        ):
-            mock_deck_repo = AsyncMock()
-            mock_deck_repo.get.return_value = mock_deck
-            MockDeckRepo.return_value = mock_deck_repo
-
-            # Return only cards that match difficulty
-            mock_card_repo = AsyncMock()
-            mock_card_repo.get_by_difficulty.return_value = mock_cards[:1]
-            MockCardRepo.return_value = mock_card_repo
-
-            response = await client.get(
-                f"/api/v1/cards?deck_id={mock_deck.id}&difficulty=easy", headers=auth_headers
-            )
-
-            assert response.status_code == 200
-            data = response.json()
-            assert data["total"] == 1
-            mock_card_repo.get_by_difficulty.assert_called_once_with(
-                mock_deck.id, CardDifficulty.EASY
-            )
-
-    @pytest.mark.asyncio
     async def test_list_cards_pagination(
         self, client: AsyncClient, auth_headers: dict, mock_deck, mock_cards
     ):
@@ -327,8 +286,6 @@ class TestGetCardUnit:
         card.back_text = "good morning"
         card.example_sentence = "Kalimera! Pos eisai?"
         card.pronunciation = "kah-lee-MEH-rah"
-        card.difficulty = CardDifficulty.EASY
-        card.order_index = 0
         card.created_at = MagicMock()
         card.updated_at = MagicMock()
         return card
@@ -401,8 +358,6 @@ class TestGetCardUnit:
             assert data["back_text"] == mock_card.back_text
             assert data["example_sentence"] == mock_card.example_sentence
             assert data["pronunciation"] == mock_card.pronunciation
-            assert data["difficulty"] == mock_card.difficulty.value
-            assert data["order_index"] == mock_card.order_index
 
 
 class TestSearchCardsUnit:
@@ -420,8 +375,6 @@ class TestSearchCardsUnit:
             card.back_text = f"good morning {i}"
             card.example_sentence = f"Example {i}"
             card.pronunciation = f"pron-{i}"
-            card.difficulty = CardDifficulty.EASY
-            card.order_index = i
             card.created_at = MagicMock()
             card.updated_at = MagicMock()
             cards.append(card)
@@ -597,7 +550,6 @@ class TestCreateCardUnit:
             "deck_id": str(uuid4()),
             "front_text": "test",
             "back_text": "test",
-            "difficulty": "easy",
         }
 
         response = await client.post("/api/v1/cards", json=card_data)
@@ -615,7 +567,6 @@ class TestCreateCardUnit:
             "deck_id": str(uuid4()),
             "front_text": "test",
             "back_text": "test",
-            "difficulty": "easy",
         }
 
         response = await client.post("/api/v1/cards", json=card_data, headers=auth_headers)
@@ -632,7 +583,6 @@ class TestCreateCardUnit:
         card_data = {
             "deck_id": str(uuid4()),
             "back_text": "test",
-            "difficulty": "easy",
         }
 
         response = await client.post(
@@ -644,23 +594,6 @@ class TestCreateCardUnit:
         assert data["success"] is False
         assert data["error"]["code"] == "VALIDATION_ERROR"
 
-    @pytest.mark.asyncio
-    async def test_create_card_missing_difficulty_returns_422(
-        self, client: AsyncClient, superuser_auth_headers: dict
-    ):
-        """Test that missing difficulty returns 422."""
-        card_data = {
-            "deck_id": str(uuid4()),
-            "front_text": "test",
-            "back_text": "test",
-        }
-
-        response = await client.post(
-            "/api/v1/cards", json=card_data, headers=superuser_auth_headers
-        )
-
-        assert response.status_code == 422
-
 
 class TestBulkCreateCardsUnit:
     """Unit tests for POST /api/v1/cards/bulk endpoint."""
@@ -670,9 +603,7 @@ class TestBulkCreateCardsUnit:
         """Test that unauthenticated request returns 401."""
         cards_data = {
             "deck_id": str(uuid4()),
-            "cards": [
-                {"front_text": "test", "back_text": "test", "difficulty": "easy", "order_index": 0}
-            ],
+            "cards": [{"front_text": "test", "back_text": "test"}],
         }
 
         response = await client.post("/api/v1/cards/bulk", json=cards_data)
@@ -688,9 +619,7 @@ class TestBulkCreateCardsUnit:
         """Test that regular user returns 403."""
         cards_data = {
             "deck_id": str(uuid4()),
-            "cards": [
-                {"front_text": "test", "back_text": "test", "difficulty": "easy", "order_index": 0}
-            ],
+            "cards": [{"front_text": "test", "back_text": "test"}],
         }
 
         response = await client.post("/api/v1/cards/bulk", json=cards_data, headers=auth_headers)
@@ -726,8 +655,6 @@ class TestBulkCreateCardsUnit:
                 {
                     "front_text": f"word {i}",
                     "back_text": f"trans {i}",
-                    "difficulty": "easy",
-                    "order_index": i,
                 }
                 for i in range(101)
             ],
@@ -803,28 +730,6 @@ class TestUpdateCardUnit:
         )
 
         assert response.status_code == 422
-
-    @pytest.mark.asyncio
-    async def test_update_card_invalid_difficulty_returns_422(
-        self, client: AsyncClient, superuser_auth_headers: dict
-    ):
-        """Test that invalid difficulty value returns 422."""
-        card_id = uuid4()
-        mock_card = MagicMock(spec=Card)
-        mock_card.id = card_id
-
-        with patch("src.api.v1.cards.CardRepository") as MockCardRepo:
-            mock_card_repo = AsyncMock()
-            mock_card_repo.get.return_value = mock_card
-            MockCardRepo.return_value = mock_card_repo
-
-            response = await client.patch(
-                f"/api/v1/cards/{card_id}",
-                json={"difficulty": "super_hard"},
-                headers=superuser_auth_headers,
-            )
-
-            assert response.status_code == 422
 
 
 class TestDeleteCardUnit:

@@ -7,7 +7,7 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.exceptions import NotFoundException
-from src.db.models import CardDifficulty, CardStatus, DeckLevel, User
+from src.db.models import CardStatus, DeckLevel, User
 from src.repositories import (
     CardRepository,
     CardStatisticsRepository,
@@ -411,20 +411,6 @@ async def test_get_by_deck(db_session: AsyncSession, sample_deck, sample_cards):
     cards = await repo.get_by_deck(sample_deck.id)
 
     assert len(cards) == 3
-    # Verify order
-    assert cards[0].order_index == 1
-    assert cards[1].order_index == 2
-    assert cards[2].order_index == 3
-
-
-@pytest.mark.asyncio
-async def test_get_by_difficulty(db_session: AsyncSession, sample_deck, sample_cards):
-    """Test filtering cards by difficulty."""
-    repo = CardRepository(db_session)
-    easy_cards = await repo.get_by_difficulty(sample_deck.id, CardDifficulty.EASY)
-
-    assert len(easy_cards) == 2
-    assert all(card.difficulty == CardDifficulty.EASY for card in easy_cards)
 
 
 @pytest.mark.asyncio
@@ -438,8 +424,6 @@ async def test_bulk_create(db_session: AsyncSession, sample_deck):
             "front_text": f"Card {i}",
             "back_text": f"Karta {i}",
             "pronunciation": f"Pronunciation {i}",
-            "difficulty": CardDifficulty.EASY,
-            "order_index": i,
         }
         for i in range(5)
     ]
@@ -1009,8 +993,6 @@ async def test_get_new_cards_for_deck_no_deck_filter(
         deck_id=another_deck.id,
         front_text="Test",
         back_text="Test",
-        difficulty=CardDifficulty.EASY,
-        order_index=1,
     )
     db_session.add(card)
     await db_session.commit()

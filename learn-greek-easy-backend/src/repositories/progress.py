@@ -411,7 +411,7 @@ class CardStatisticsRepository(BaseRepository[CardStatistics]):
             .join(Deck, Card.deck_id == Deck.id)
             .where(Deck.is_active == True)  # noqa: E712
             .where(not_(Card.id.in_(studied_cards_subq)))
-            .order_by(Card.order_index, Card.created_at)
+            .order_by(Card.created_at)
             .limit(limit)
         )
 
@@ -540,7 +540,7 @@ class CardStatisticsRepository(BaseRepository[CardStatistics]):
             .where(CardStatistics.user_id == user_id)
             .where(Card.deck_id == deck_id)
             .options(selectinload(CardStatistics.card))
-            .order_by(Card.order_index)
+            .order_by(Card.created_at)
         )
 
         result = await self.db.execute(query)

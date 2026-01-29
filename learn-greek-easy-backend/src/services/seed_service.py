@@ -21,7 +21,6 @@ from src.db.models import (
     Achievement,
     AnnouncementCampaign,
     Card,
-    CardDifficulty,
     CardStatistics,
     CardStatus,
     ChangelogEntry,
@@ -1571,7 +1570,6 @@ class SeedService:
         self._check_can_seed()
 
         created_decks = []
-        difficulties = [CardDifficulty.EASY, CardDifficulty.MEDIUM, CardDifficulty.HARD]
 
         # Premium levels - C1 and C2 are premium content
         premium_levels = {DeckLevel.C1, DeckLevel.C2}
@@ -1597,8 +1595,6 @@ class SeedService:
                     back_text=english,
                     example_sentence=f"Example sentence with '{greek}'",
                     pronunciation=f"[{greek}]",
-                    difficulty=difficulties[i % 3],  # Rotate through difficulties
-                    order_index=i,
                 )
                 self.db.add(card)
 
@@ -1642,7 +1638,6 @@ class SeedService:
         # Build user email -> UUID mapping
         user_map: dict[str, UUID] = {user["email"]: UUID(user["id"]) for user in users}
         created_decks: list[dict[str, Any]] = []
-        difficulties = [CardDifficulty.EASY, CardDifficulty.MEDIUM, CardDifficulty.HARD]
 
         for email, deck_configs in self.USER_DECKS.items():
             user_id = user_map.get(email)
@@ -1677,8 +1672,6 @@ class SeedService:
                             back_text=english,
                             example_sentence=f"User example: '{greek}' in context",
                             pronunciation=f"[{greek}]",
-                            difficulty=difficulties[i % 3],  # Rotate through difficulties
-                            order_index=i,
                         )
                         self.db.add(card)
 
@@ -1732,7 +1725,7 @@ class SeedService:
 
         # Get cards for the deck
         result = await self.db.execute(
-            select(Card.id).where(Card.deck_id == deck_id).order_by(Card.order_index)
+            select(Card.id).where(Card.deck_id == deck_id).order_by(Card.created_at)
         )
         card_ids = [row[0] for row in result.fetchall()]
 

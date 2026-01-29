@@ -5,7 +5,7 @@ from uuid import UUID
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.db.models import Card, CardDifficulty
+from src.db.models import Card
 from src.repositories.base import BaseRepository
 
 
@@ -30,7 +30,7 @@ class CardRepository(BaseRepository[Card]):
             limit: Max results
 
         Returns:
-            List of cards ordered by order_index
+            List of cards ordered by created_at
 
         Use Case:
             Study session, deck review
@@ -38,35 +38,9 @@ class CardRepository(BaseRepository[Card]):
         query = (
             select(Card)
             .where(Card.deck_id == deck_id)
-            .order_by(Card.order_index)
+            .order_by(Card.created_at)
             .offset(skip)
             .limit(limit)
-        )
-        result = await self.db.execute(query)
-        return list(result.scalars().all())
-
-    async def get_by_difficulty(
-        self,
-        deck_id: UUID,
-        difficulty: CardDifficulty,
-    ) -> list[Card]:
-        """Get cards filtered by difficulty level.
-
-        Args:
-            deck_id: Deck UUID
-            difficulty: Card difficulty (easy, medium, hard)
-
-        Returns:
-            List of cards with specified difficulty
-
-        Use Case:
-            Progressive learning (start with easy cards)
-        """
-        query = (
-            select(Card)
-            .where(Card.deck_id == deck_id)
-            .where(Card.difficulty == difficulty)
-            .order_by(Card.order_index)
         )
         result = await self.db.execute(query)
         return list(result.scalars().all())
@@ -121,7 +95,7 @@ class CardRepository(BaseRepository[Card]):
             limit: Max results
 
         Returns:
-            List of matching cards ordered by order_index
+            List of matching cards ordered by created_at
 
         Use Case:
             Search functionality for finding cards by Greek or English text
@@ -138,7 +112,7 @@ class CardRepository(BaseRepository[Card]):
         if deck_id:
             query = query.where(Card.deck_id == deck_id)
 
-        query = query.order_by(Card.order_index).offset(skip).limit(limit)
+        query = query.order_by(Card.created_at).offset(skip).limit(limit)
         result = await self.db.execute(query)
         return list(result.scalars().all())
 

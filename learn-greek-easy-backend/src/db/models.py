@@ -59,14 +59,6 @@ class DeckLevel(str, enum.Enum):
     C2 = "C2"
 
 
-class CardDifficulty(str, enum.Enum):
-    """Difficulty level of individual cards."""
-
-    EASY = "easy"
-    MEDIUM = "medium"
-    HARD = "hard"
-
-
 class CardStatus(str, enum.Enum):
     """Learning status of a card for a specific user (SM-2 algorithm)."""
 
@@ -493,18 +485,6 @@ class Card(Base, TimestampMixin):
     )  # English translation
     example_sentence: Mapped[str | None] = mapped_column(Text, nullable=True)
     pronunciation: Mapped[str | None] = mapped_column(String(255), nullable=True)
-
-    # Metadata
-    difficulty: Mapped[CardDifficulty] = mapped_column(
-        nullable=False,
-        default=CardDifficulty.MEDIUM,
-        index=True,
-    )
-    order_index: Mapped[int] = mapped_column(
-        Integer,
-        nullable=False,
-        default=0,
-    )  # For sequential display within deck
 
     # Relationships
     deck: Mapped["Deck"] = relationship(

@@ -22,7 +22,7 @@ from uuid import uuid4
 import pytest
 
 from src.core.exceptions import DeckNotFoundException
-from src.db.models import Card, CardDifficulty, CardStatistics, CardStatus, Deck
+from src.db.models import Card, CardStatistics, CardStatus, Deck
 from src.schemas.sm2 import StudyQueueRequest
 from src.services.sm2_service import SM2Service
 
@@ -73,7 +73,6 @@ def mock_card(mock_deck):
     card.back_text = "Test back"
     card.example_sentence = "Example sentence"
     card.pronunciation = "Pronunciation"
-    card.difficulty = CardDifficulty.EASY
     return card
 
 
@@ -438,7 +437,6 @@ class TestGetStudyQueue:
         mock_card_2.back_text = "Back 2"
         mock_card_2.example_sentence = None
         mock_card_2.pronunciation = None
-        mock_card_2.difficulty = CardDifficulty.EASY
         due_stats_2.card = mock_card_2
 
         service.deck_repo.get = AsyncMock(return_value=mock_deck)
@@ -498,7 +496,6 @@ class TestGetStudyQueue:
             card.back_text = f"Back {i}"
             card.example_sentence = None
             card.pronunciation = None
-            card.difficulty = CardDifficulty.EASY
             stats.card = card
             due_cards.append(stats)
 
@@ -618,7 +615,6 @@ class TestGetStudyQueue:
             card.back_text = f"Back {i}"
             card.example_sentence = None
             card.pronunciation = None
-            card.difficulty = CardDifficulty.EASY
             stats.card = card
             early_stats_list.append(stats)
 
@@ -655,8 +651,6 @@ class TestGetStudyQueue:
         due_card.back_text = "Due Back"
         due_card.example_sentence = None
         due_card.pronunciation = None
-        due_card.difficulty = CardDifficulty.EASY
-
         due_stats = MagicMock()
         due_stats.status = CardStatus.REVIEW
         due_stats.next_review_date = date.today()
@@ -671,7 +665,6 @@ class TestGetStudyQueue:
         new_card.back_text = "New Back"
         new_card.example_sentence = None
         new_card.pronunciation = None
-        new_card.difficulty = CardDifficulty.EASY
 
         # Early practice card
         early_card = MagicMock(spec=Card)
@@ -680,7 +673,6 @@ class TestGetStudyQueue:
         early_card.back_text = "Early Back"
         early_card.example_sentence = None
         early_card.pronunciation = None
-        early_card.difficulty = CardDifficulty.EASY
 
         early_stats = MagicMock()
         early_stats.status = CardStatus.LEARNING

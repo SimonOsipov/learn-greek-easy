@@ -12,8 +12,6 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from src.db.models import CardDifficulty
-
 # ============================================================================
 # Card Schemas
 # ============================================================================
@@ -26,14 +24,12 @@ class CardBase(BaseModel):
     back_text: str = Field(..., min_length=1)
     example_sentence: Optional[str] = None
     pronunciation: Optional[str] = Field(None, max_length=255)
-    difficulty: CardDifficulty
 
 
 class CardCreate(CardBase):
     """Schema for creating a new card (admin only)."""
 
     deck_id: UUID
-    order_index: int = Field(default=0, ge=0)
 
 
 class CardUpdate(BaseModel):
@@ -43,8 +39,6 @@ class CardUpdate(BaseModel):
     back_text: Optional[str] = Field(None, min_length=1)
     example_sentence: Optional[str] = None
     pronunciation: Optional[str] = Field(None, max_length=255)
-    difficulty: Optional[CardDifficulty] = None
-    order_index: Optional[int] = Field(None, ge=0)
 
 
 class CardResponse(CardBase):
@@ -54,7 +48,6 @@ class CardResponse(CardBase):
 
     id: UUID
     deck_id: UUID
-    order_index: int
     created_at: datetime
     updated_at: datetime
 
@@ -68,7 +61,6 @@ class CardStudyResponse(BaseModel):
     deck_id: UUID
     front_text: str
     pronunciation: Optional[str]
-    difficulty: CardDifficulty
 
 
 class CardStudyResultResponse(CardResponse):
@@ -116,8 +108,6 @@ class CardBulkItemCreate(BaseModel):
     back_text: str = Field(..., min_length=1)
     example_sentence: Optional[str] = None
     pronunciation: Optional[str] = Field(None, max_length=255)
-    difficulty: CardDifficulty
-    order_index: int = Field(default=0, ge=0)
 
 
 class CardBulkCreateRequest(BaseModel):
