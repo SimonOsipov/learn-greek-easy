@@ -1,6 +1,15 @@
 // src/types/review.ts
 
 import type { Card as BaseCard } from './deck';
+import type {
+  PartOfSpeech,
+  DeckLevel,
+  Example,
+  NounData,
+  VerbData,
+  AdjectiveData,
+  AdverbData,
+} from './grammar';
 
 /**
  * Extended card type for vocabulary review with Greek language learning features
@@ -17,8 +26,19 @@ import type { Card as BaseCard } from './deck';
 export interface Card extends BaseCard {
   word?: string; // Greek word/phrase (optional for backward compatibility)
   translation?: string; // English translation (optional for backward compatibility)
+
+  // NEW: API-aligned grammar fields (snake_case from @/types/grammar)
+  part_of_speech?: PartOfSpeech | null;
+  level?: DeckLevel | null;
+  examples?: Example[] | null;
+  noun_data?: NounData | null;
+  verb_data?: VerbData | null;
+  adjective_data?: AdjectiveData | null;
+  adverb_data?: AdverbData | null;
+  back_text_ru?: string | null;
+
+  // Legacy camelCase fields (deprecated - kept for backward compatibility)
   partOfSpeech?: 'noun' | 'verb' | 'adjective' | 'adverb';
-  level?: 'A1' | 'A2' | 'B1' | 'B2';
 
   // Type-specific metadata (legacy camelCase - see NounData in @/types/grammar)
   nounData?: {

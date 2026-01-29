@@ -118,6 +118,17 @@ const transformStudyQueueCard = (card: StudyQueueCard, deckId: string): CardRevi
   timesReviewed: 0,
   successRate: 0,
   isEarlyPractice: card.is_early_practice,
+
+  // Pass through grammar fields from API (snake_case)
+  part_of_speech: card.part_of_speech,
+  level: card.level,
+  examples: card.examples,
+  noun_data: card.noun_data,
+  verb_data: card.verb_data,
+  adjective_data: card.adjective_data,
+  adverb_data: card.adverb_data,
+  back_text_ru: card.back_text_ru,
+
   // Spaced repetition data
   srData: {
     cardId: card.card_id,
