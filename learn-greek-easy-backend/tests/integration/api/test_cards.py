@@ -96,9 +96,8 @@ class TestListCardsIntegration:
         assert str(data["deck_id"]) == str(deck.id)
         assert len(data["cards"]) == 5
 
-        # Verify cards are ordered by order_index
+        # Verify cards are returned (ordered by created_at)
         for i, card_data in enumerate(data["cards"]):
-            assert card_data["order_index"] == i
             assert card_data["front_text"] == f"Greek word {i}"
 
     @pytest.mark.asyncio
@@ -140,54 +139,6 @@ class TestListCardsIntegration:
         assert data["error"]["code"] == "NOT_FOUND"
 
     @pytest.mark.asyncio
-    async def test_list_cards_filter_by_difficulty_easy(
-        self, client: AsyncClient, auth_headers: dict, deck_with_cards
-    ):
-        """Test filtering cards by easy difficulty."""
-        deck, cards = deck_with_cards
-
-        response = await client.get(
-            f"/api/v1/cards?deck_id={deck.id}&difficulty=easy", headers=auth_headers
-        )
-
-        assert response.status_code == 200
-        data = response.json()
-        assert data["total"] == 2  # 2 easy cards
-        assert all(card["difficulty"] == "easy" for card in data["cards"])
-
-    @pytest.mark.asyncio
-    async def test_list_cards_filter_by_difficulty_medium(
-        self, client: AsyncClient, auth_headers: dict, deck_with_cards
-    ):
-        """Test filtering cards by medium difficulty."""
-        deck, cards = deck_with_cards
-
-        response = await client.get(
-            f"/api/v1/cards?deck_id={deck.id}&difficulty=medium", headers=auth_headers
-        )
-
-        assert response.status_code == 200
-        data = response.json()
-        assert data["total"] == 2  # 2 medium cards
-        assert all(card["difficulty"] == "medium" for card in data["cards"])
-
-    @pytest.mark.asyncio
-    async def test_list_cards_filter_by_difficulty_hard(
-        self, client: AsyncClient, auth_headers: dict, deck_with_cards
-    ):
-        """Test filtering cards by hard difficulty."""
-        deck, cards = deck_with_cards
-
-        response = await client.get(
-            f"/api/v1/cards?deck_id={deck.id}&difficulty=hard", headers=auth_headers
-        )
-
-        assert response.status_code == 200
-        data = response.json()
-        assert data["total"] == 1  # 1 hard card
-        assert all(card["difficulty"] == "hard" for card in data["cards"])
-
-    @pytest.mark.asyncio
     async def test_list_cards_pagination_first_page(
         self, client: AsyncClient, auth_headers: dict, deck_with_cards
     ):
@@ -204,9 +155,6 @@ class TestListCardsIntegration:
         assert data["page"] == 1
         assert data["page_size"] == 2
         assert len(data["cards"]) == 2
-        # First page should have cards with order_index 0, 1
-        assert data["cards"][0]["order_index"] == 0
-        assert data["cards"][1]["order_index"] == 1
 
     @pytest.mark.asyncio
     async def test_list_cards_pagination_second_page(
@@ -225,9 +173,6 @@ class TestListCardsIntegration:
         assert data["page"] == 2
         assert data["page_size"] == 2
         assert len(data["cards"]) == 2
-        # Second page should have cards with order_index 2, 3
-        assert data["cards"][0]["order_index"] == 2
-        assert data["cards"][1]["order_index"] == 3
 
     @pytest.mark.asyncio
     async def test_list_cards_pagination_last_page(
@@ -246,7 +191,6 @@ class TestListCardsIntegration:
         assert data["page"] == 3
         assert data["page_size"] == 2
         assert len(data["cards"]) == 1  # Only 1 card on last page
-        assert data["cards"][0]["order_index"] == 4
 
     @pytest.mark.asyncio
     async def test_list_cards_pagination_beyond_last_page(
@@ -264,26 +208,6 @@ class TestListCardsIntegration:
         assert data["total"] == 5
         assert data["page"] == 10
         assert data["cards"] == []
-
-    @pytest.mark.asyncio
-    async def test_list_cards_pagination_with_difficulty_filter(
-        self, client: AsyncClient, auth_headers: dict, deck_with_cards
-    ):
-        """Test pagination combined with difficulty filter."""
-        deck, cards = deck_with_cards
-
-        response = await client.get(
-            f"/api/v1/cards?deck_id={deck.id}&difficulty=easy&page=1&page_size=1",
-            headers=auth_headers,
-        )
-
-        assert response.status_code == 200
-        data = response.json()
-        assert data["total"] == 2  # Total easy cards
-        assert data["page"] == 1
-        assert data["page_size"] == 1
-        assert len(data["cards"]) == 1
-        assert data["cards"][0]["difficulty"] == "easy"
 
     @pytest.mark.asyncio
     async def test_list_cards_card_response_fields(
@@ -306,8 +230,6 @@ class TestListCardsIntegration:
         assert "back_text" in card
         assert "example_sentence" in card
         assert "pronunciation" in card
-        assert "difficulty" in card
-        assert "order_index" in card
         assert "created_at" in card
         assert "updated_at" in card
 
@@ -368,16 +290,6 @@ class TestListCardsValidation:
         deck_id = uuid4()
         response = await client.get(
             f"/api/v1/cards?deck_id={deck_id}&page_size=101", headers=auth_headers
-        )
-
-        assert response.status_code == 422
-
-    @pytest.mark.asyncio
-    async def test_invalid_difficulty_value(self, client: AsyncClient, auth_headers: dict):
-        """Test 422 response for invalid difficulty value."""
-        deck_id = uuid4()
-        response = await client.get(
-            f"/api/v1/cards?deck_id={deck_id}&difficulty=super_hard", headers=auth_headers
         )
 
         assert response.status_code == 422
@@ -478,8 +390,6 @@ class TestGetCardEndpoint:
         assert data["back_text"] == "good morning"
         assert data["example_sentence"] == "Kalimera! Pos eisai?"
         assert data["pronunciation"] == "kah-lee-MEH-rah"
-        assert data["difficulty"] == "easy"
-        assert data["order_index"] == 0
         assert "created_at" in data
         assert "updated_at" in data
 
@@ -526,8 +436,6 @@ class TestGetCardEndpoint:
             "back_text",
             "example_sentence",
             "pronunciation",
-            "difficulty",
-            "order_index",
             "created_at",
             "updated_at",
         ]
@@ -553,7 +461,6 @@ class TestGetCardEndpoint:
         data = response.json()
         assert data["id"] == str(card.id)
         assert data["front_text"] == "kalinihta"
-        assert data["difficulty"] == "medium"
 
 
 class TestCreateCardEndpoint:
@@ -600,8 +507,6 @@ class TestCreateCardEndpoint:
             "back_text": "thank you",
             "example_sentence": "Efharisto poly!",
             "pronunciation": "efharisto",
-            "difficulty": "easy",
-            "order_index": 0,
         }
 
         response = await client.post(
@@ -616,8 +521,6 @@ class TestCreateCardEndpoint:
         assert data["back_text"] == card_data["back_text"]
         assert data["example_sentence"] == card_data["example_sentence"]
         assert data["pronunciation"] == card_data["pronunciation"]
-        assert data["difficulty"] == card_data["difficulty"]
-        assert data["order_index"] == card_data["order_index"]
         assert str(data["deck_id"]) == card_data["deck_id"]
         assert "id" in data
         assert "created_at" in data
@@ -632,7 +535,6 @@ class TestCreateCardEndpoint:
             "deck_id": str(active_deck_for_create.id),
             "front_text": "kalimera",
             "back_text": "good morning",
-            "difficulty": "medium",
         }
 
         response = await client.post(
@@ -645,10 +547,8 @@ class TestCreateCardEndpoint:
         data = response.json()
         assert data["front_text"] == card_data["front_text"]
         assert data["back_text"] == card_data["back_text"]
-        assert data["difficulty"] == card_data["difficulty"]
         assert data["example_sentence"] is None
         assert data["pronunciation"] is None
-        assert data["order_index"] == 0  # Default value
 
     @pytest.mark.asyncio
     async def test_create_card_unauthenticated_returns_401(
@@ -659,7 +559,6 @@ class TestCreateCardEndpoint:
             "deck_id": str(active_deck_for_create.id),
             "front_text": "test",
             "back_text": "test",
-            "difficulty": "easy",
         }
 
         response = await client.post("/api/v1/cards", json=card_data)
@@ -677,7 +576,6 @@ class TestCreateCardEndpoint:
             "deck_id": str(active_deck_for_create.id),
             "front_text": "test",
             "back_text": "test",
-            "difficulty": "easy",
         }
 
         response = await client.post(
@@ -700,7 +598,6 @@ class TestCreateCardEndpoint:
             "deck_id": str(non_existent_deck_id),
             "front_text": "test",
             "back_text": "test",
-            "difficulty": "easy",
         }
 
         response = await client.post(
@@ -723,7 +620,6 @@ class TestCreateCardEndpoint:
         card_data = {
             "deck_id": str(active_deck_for_create.id),
             "back_text": "test",
-            "difficulty": "easy",
         }
 
         response = await client.post(
@@ -745,30 +641,6 @@ class TestCreateCardEndpoint:
         card_data = {
             "deck_id": str(active_deck_for_create.id),
             "front_text": "test",
-            "difficulty": "easy",
-        }
-
-        response = await client.post(
-            "/api/v1/cards",
-            json=card_data,
-            headers=superuser_auth_headers,
-        )
-
-        assert response.status_code == 422
-        data = response.json()
-        assert data["success"] is False
-        assert data["error"]["code"] == "VALIDATION_ERROR"
-
-    @pytest.mark.asyncio
-    async def test_create_card_validation_error_invalid_difficulty_returns_422(
-        self, client: AsyncClient, superuser_auth_headers: dict, active_deck_for_create
-    ):
-        """Test invalid difficulty value returns 422."""
-        card_data = {
-            "deck_id": str(active_deck_for_create.id),
-            "front_text": "test",
-            "back_text": "test",
-            "difficulty": "super_hard",  # Invalid value
         }
 
         response = await client.post(
@@ -791,7 +663,6 @@ class TestCreateCardEndpoint:
             "deck_id": "not-a-valid-uuid",
             "front_text": "test",
             "back_text": "test",
-            "difficulty": "easy",
         }
 
         response = await client.post(
@@ -804,54 +675,6 @@ class TestCreateCardEndpoint:
         data = response.json()
         assert data["success"] is False
         assert data["error"]["code"] == "VALIDATION_ERROR"
-
-    @pytest.mark.asyncio
-    async def test_create_card_validation_error_negative_order_index_returns_422(
-        self, client: AsyncClient, superuser_auth_headers: dict, active_deck_for_create
-    ):
-        """Test negative order_index returns 422."""
-        card_data = {
-            "deck_id": str(active_deck_for_create.id),
-            "front_text": "test",
-            "back_text": "test",
-            "difficulty": "easy",
-            "order_index": -1,
-        }
-
-        response = await client.post(
-            "/api/v1/cards",
-            json=card_data,
-            headers=superuser_auth_headers,
-        )
-
-        assert response.status_code == 422
-        data = response.json()
-        assert data["success"] is False
-        assert data["error"]["code"] == "VALIDATION_ERROR"
-
-    @pytest.mark.asyncio
-    async def test_create_card_all_difficulties(
-        self, client: AsyncClient, superuser_auth_headers: dict, active_deck_for_create
-    ):
-        """Test creating cards with all valid difficulty levels."""
-        difficulties = ["easy", "medium", "hard"]
-
-        for i, difficulty in enumerate(difficulties):
-            card_data = {
-                "deck_id": str(active_deck_for_create.id),
-                "front_text": f"test word {i}",
-                "back_text": f"translation {i}",
-                "difficulty": difficulty,
-            }
-
-            response = await client.post(
-                "/api/v1/cards",
-                json=card_data,
-                headers=superuser_auth_headers,
-            )
-
-            assert response.status_code == 201
-            assert response.json()["difficulty"] == difficulty
 
     @pytest.mark.asyncio
     async def test_create_card_in_inactive_deck_succeeds(
@@ -862,7 +685,6 @@ class TestCreateCardEndpoint:
             "deck_id": str(inactive_deck_for_create.id),
             "front_text": "test in inactive",
             "back_text": "translation",
-            "difficulty": "easy",
         }
 
         response = await client.post(
@@ -890,7 +712,6 @@ class TestCreateCardEndpoint:
             "deck_id": str(active_deck_for_create.id),
             "front_text": "persisted test",
             "back_text": "persisted translation",
-            "difficulty": "hard",
         }
 
         # Create the card
@@ -912,7 +733,6 @@ class TestCreateCardEndpoint:
         assert retrieved_card["id"] == card_id
         assert retrieved_card["front_text"] == card_data["front_text"]
         assert retrieved_card["back_text"] == card_data["back_text"]
-        assert retrieved_card["difficulty"] == card_data["difficulty"]
 
     @pytest.mark.asyncio
     async def test_create_card_response_fields(
@@ -925,8 +745,6 @@ class TestCreateCardEndpoint:
             "back_text": "translation",
             "example_sentence": "Example sentence here",
             "pronunciation": "pronunciation",
-            "difficulty": "easy",
-            "order_index": 5,
         }
 
         response = await client.post(
@@ -946,8 +764,6 @@ class TestCreateCardEndpoint:
             "back_text",
             "example_sentence",
             "pronunciation",
-            "difficulty",
-            "order_index",
             "created_at",
             "updated_at",
         ]
@@ -1273,7 +1089,6 @@ class TestUpdateCardEndpoint:
         assert data["back_text"] == "original_back"
         assert data["example_sentence"] == "Original example sentence"
         assert data["pronunciation"] == "original-pron"
-        assert data["difficulty"] == "easy"
 
     @pytest.mark.asyncio
     async def test_update_card_all_fields(
@@ -1285,8 +1100,6 @@ class TestUpdateCardEndpoint:
             "back_text": "completely_updated_back",
             "example_sentence": "Completely updated example",
             "pronunciation": "updated-pron",
-            "difficulty": "hard",
-            "order_index": 10,
         }
 
         response = await client.patch(
@@ -1301,42 +1114,6 @@ class TestUpdateCardEndpoint:
         assert data["back_text"] == update_data["back_text"]
         assert data["example_sentence"] == update_data["example_sentence"]
         assert data["pronunciation"] == update_data["pronunciation"]
-        assert data["difficulty"] == update_data["difficulty"]
-        assert data["order_index"] == update_data["order_index"]
-
-    @pytest.mark.asyncio
-    async def test_update_card_difficulty_only(
-        self, client: AsyncClient, superuser_auth_headers: dict, card_for_update
-    ):
-        """Test updating only the difficulty."""
-        response = await client.patch(
-            f"/api/v1/cards/{card_for_update.id}",
-            json={"difficulty": "hard"},
-            headers=superuser_auth_headers,
-        )
-
-        assert response.status_code == 200
-        data = response.json()
-        assert data["difficulty"] == "hard"
-        # Other fields unchanged
-        assert data["front_text"] == "original_front"
-
-    @pytest.mark.asyncio
-    async def test_update_card_all_difficulties(
-        self, client: AsyncClient, superuser_auth_headers: dict, card_for_update
-    ):
-        """Test updating card to all valid difficulty levels."""
-        difficulties = ["easy", "medium", "hard"]
-
-        for difficulty in difficulties:
-            response = await client.patch(
-                f"/api/v1/cards/{card_for_update.id}",
-                json={"difficulty": difficulty},
-                headers=superuser_auth_headers,
-            )
-
-            assert response.status_code == 200
-            assert response.json()["difficulty"] == difficulty
 
     @pytest.mark.asyncio
     async def test_update_card_updated_at_changes(
@@ -1425,22 +1202,6 @@ class TestUpdateCardEndpoint:
         assert data["error"]["code"] == "VALIDATION_ERROR"
 
     @pytest.mark.asyncio
-    async def test_update_card_invalid_difficulty_returns_422(
-        self, client: AsyncClient, superuser_auth_headers: dict, card_for_update
-    ):
-        """Test invalid difficulty value returns 422."""
-        response = await client.patch(
-            f"/api/v1/cards/{card_for_update.id}",
-            json={"difficulty": "super_hard"},
-            headers=superuser_auth_headers,
-        )
-
-        assert response.status_code == 422
-        data = response.json()
-        assert data["success"] is False
-        assert data["error"]["code"] == "VALIDATION_ERROR"
-
-    @pytest.mark.asyncio
     async def test_update_card_empty_front_text_returns_422(
         self, client: AsyncClient, superuser_auth_headers: dict, card_for_update
     ):
@@ -1448,22 +1209,6 @@ class TestUpdateCardEndpoint:
         response = await client.patch(
             f"/api/v1/cards/{card_for_update.id}",
             json={"front_text": ""},
-            headers=superuser_auth_headers,
-        )
-
-        assert response.status_code == 422
-        data = response.json()
-        assert data["success"] is False
-        assert data["error"]["code"] == "VALIDATION_ERROR"
-
-    @pytest.mark.asyncio
-    async def test_update_card_negative_order_index_returns_422(
-        self, client: AsyncClient, superuser_auth_headers: dict, card_for_update
-    ):
-        """Test negative order_index returns 422."""
-        response = await client.patch(
-            f"/api/v1/cards/{card_for_update.id}",
-            json={"order_index": -1},
             headers=superuser_auth_headers,
         )
 
@@ -1515,8 +1260,6 @@ class TestUpdateCardEndpoint:
             "back_text",
             "example_sentence",
             "pronunciation",
-            "difficulty",
-            "order_index",
             "created_at",
             "updated_at",
         ]
@@ -1714,8 +1457,6 @@ class TestCardCRUDFlow:
             "back_text": "Testing full lifecycle",
             "example_sentence": "This is a CRUD test example",
             "pronunciation": "crud-test",
-            "difficulty": "easy",
-            "order_index": 0,
         }
         create_response = await client.post(
             "/api/v1/cards",
@@ -1732,13 +1473,11 @@ class TestCardCRUDFlow:
         fetched_card = get_response.json()
         assert fetched_card["front_text"] == create_data["front_text"]
         assert fetched_card["back_text"] == create_data["back_text"]
-        assert fetched_card["difficulty"] == create_data["difficulty"]
 
         # 3. UPDATE
         update_data = {
             "front_text": "Updated CRUD Word",
             "back_text": "Updated lifecycle test",
-            "difficulty": "hard",
         }
         update_response = await client.patch(
             f"/api/v1/cards/{card_id}",
@@ -1749,7 +1488,6 @@ class TestCardCRUDFlow:
         updated_card = update_response.json()
         assert updated_card["front_text"] == update_data["front_text"]
         assert updated_card["back_text"] == update_data["back_text"]
-        assert updated_card["difficulty"] == update_data["difficulty"]
 
         # Verify update persisted (now requires auth)
         verify_response = await client.get(f"/api/v1/cards/{card_id}", headers=auth_headers)
@@ -1777,7 +1515,6 @@ class TestCardCRUDFlow:
             "deck_id": str(deck_for_crud.id),
             "front_text": "UniqueListTest123",
             "back_text": "Testing visibility in list",
-            "difficulty": "medium",
         }
 
         # Create card
@@ -1808,7 +1545,6 @@ class TestCardCRUDFlow:
             "deck_id": str(deck_for_crud.id),
             "front_text": unique_text,
             "back_text": "Testing search visibility",
-            "difficulty": "easy",
         }
 
         # Create card
@@ -1838,7 +1574,6 @@ class TestCardCRUDFlow:
             "deck_id": str(deck_for_crud.id),
             "front_text": "Before Update",
             "back_text": "Initial translation",
-            "difficulty": "easy",
         }
         create_response = await client.post(
             "/api/v1/cards",
@@ -1851,7 +1586,6 @@ class TestCardCRUDFlow:
         # Update card
         update_data = {
             "front_text": "After Update",
-            "difficulty": "hard",
         }
         update_response = await client.patch(
             f"/api/v1/cards/{card_id}",
@@ -1869,7 +1603,6 @@ class TestCardCRUDFlow:
         matching = [c for c in cards if c["id"] == card_id]
         assert len(matching) == 1
         assert matching[0]["front_text"] == "After Update"
-        assert matching[0]["difficulty"] == "hard"
 
     @pytest.mark.asyncio
     async def test_auth_flow_for_card_admin_endpoints(
@@ -1881,7 +1614,6 @@ class TestCardCRUDFlow:
             "deck_id": str(deck_for_crud.id),
             "front_text": "Auth Test",
             "back_text": "Test",
-            "difficulty": "easy",
         }
         create_response = await client.post("/api/v1/cards", json=create_data, headers=auth_headers)
         assert create_response.status_code == 403
