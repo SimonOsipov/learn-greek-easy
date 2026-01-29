@@ -145,10 +145,17 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
     # ========================================================================
     # A1 Level (10 words) - Basic greetings and essentials
     # ========================================================================
-    "γεια": {},  # interjection
-    "ναι": {},  # interjection
-    "όχι": {},  # interjection
+    "γεια": {
+        "back_text_ru": "привет",
+    },  # interjection
+    "ναι": {
+        "back_text_ru": "да",
+    },  # interjection
+    "όχι": {
+        "back_text_ru": "нет",
+    },  # interjection
     "ευχαριστώ": {
+        "back_text_ru": "спасибо",
         "verb_data": {
             "voice": "active",
             "present_1s": "ευχαριστώ",
@@ -186,6 +193,7 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
     },  # verb
     "παρακαλώ": {
+        "back_text_ru": "пожалуйста",
         "verb_data": {
             "voice": "active",
             "present_1s": "παρακαλώ",
@@ -223,6 +231,7 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
     },  # verb
     "νερό": {
+        "back_text_ru": "вода",
         "noun_data": {
             "gender": "neuter",
             "nominative_singular": "το νερό",
@@ -236,6 +245,7 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
     },
     "ψωμί": {
+        "back_text_ru": "хлеб",
         "noun_data": {
             "gender": "neuter",
             "nominative_singular": "το ψωμί",
@@ -249,6 +259,7 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
     },
     "σπίτι": {
+        "back_text_ru": "дом",
         "noun_data": {
             "gender": "neuter",
             "nominative_singular": "το σπίτι",
@@ -261,12 +272,17 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
             "vocative_plural": "σπίτια",
         },
     },
-    "καλημέρα": {},  # interjection
-    "καληνύχτα": {},  # interjection
+    "καλημέρα": {
+        "back_text_ru": "доброе утро",
+    },  # interjection
+    "καληνύχτα": {
+        "back_text_ru": "спокойной ночи",
+    },  # interjection
     # ========================================================================
     # A2 Level (10 words) - Daily life and common verbs
     # ========================================================================
     "δουλειά": {
+        "back_text_ru": "работа",
         "noun_data": {
             "gender": "feminine",
             "nominative_singular": "η δουλειά",
@@ -280,6 +296,7 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
     },
     "οικογένεια": {
+        "back_text_ru": "семья",
         "noun_data": {
             "gender": "feminine",
             "nominative_singular": "η οικογένεια",
@@ -293,6 +310,7 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
     },
     "φίλος": {
+        "back_text_ru": "друг",
         "noun_data": {
             "gender": "masculine",
             "nominative_singular": "ο φίλος",
@@ -306,6 +324,7 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
     },
     "αγαπώ": {
+        "back_text_ru": "любить",
         "verb_data": {
             "voice": "active",
             "present_1s": "αγαπώ",
@@ -343,6 +362,7 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
     },  # verb
     "θέλω": {
+        "back_text_ru": "хотеть",
         "verb_data": {
             "voice": "active",
             "present_1s": "θέλω",
@@ -380,6 +400,7 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
     },  # verb
     "μπορώ": {
+        "back_text_ru": "мочь",
         "verb_data": {
             "voice": "active",
             "present_1s": "μπορώ",
@@ -417,6 +438,7 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
     },  # verb
     "πρέπει": {
+        "back_text_ru": "надо / нужно",
         "verb_data": {
             "voice": "active",
             "present_1s": "",
@@ -454,6 +476,7 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
     },  # verb (impersonal)
     "χρόνια": {
+        "back_text_ru": "годы",
         "noun_data": {
             "gender": "neuter",
             "nominative_singular": "το χρόνο",
@@ -467,12 +490,14 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
     },
     "σήμερα": {
+        "back_text_ru": "сегодня",
         "adverb_data": {
             "comparative": "",
             "superlative": "",
         },
     },  # adverb (time - no comparison)
     "αύριο": {
+        "back_text_ru": "завтра",
         "adverb_data": {
             "comparative": "",
             "superlative": "",
@@ -482,6 +507,7 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
     # B1 Level (10 words) - Intermediate concepts
     # ========================================================================
     "συζήτηση": {
+        "back_text_ru": "обсуждение / дискуссия",
         "noun_data": {
             "gender": "feminine",
             "nominative_singular": "η συζήτηση",
@@ -495,6 +521,7 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
     },
     "απόφαση": {
+        "back_text_ru": "решение",
         "noun_data": {
             "gender": "feminine",
             "nominative_singular": "η απόφαση",
@@ -508,6 +535,7 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
     },
     "εμπειρία": {
+        "back_text_ru": "опыт",
         "noun_data": {
             "gender": "feminine",
             "nominative_singular": "η εμπειρία",
@@ -521,6 +549,7 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
     },
     "προσπαθώ": {
+        "back_text_ru": "пытаться / стараться",
         "verb_data": {
             "voice": "active",
             "present_1s": "προσπαθώ",
@@ -558,6 +587,7 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
     },  # verb
     "επιτυγχάνω": {
+        "back_text_ru": "достигать",
         "verb_data": {
             "voice": "active",
             "present_1s": "επιτυγχάνω",
@@ -595,6 +625,7 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
     },  # verb
     "αναπτύσσω": {
+        "back_text_ru": "развивать",
         "verb_data": {
             "voice": "active",
             "present_1s": "αναπτύσσω",
@@ -632,6 +663,7 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
     },  # verb
     "κατάσταση": {
+        "back_text_ru": "ситуация / положение",
         "noun_data": {
             "gender": "feminine",
             "nominative_singular": "η κατάσταση",
@@ -645,6 +677,7 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
     },
     "σχέση": {
+        "back_text_ru": "отношения / связь",
         "noun_data": {
             "gender": "feminine",
             "nominative_singular": "η σχέση",
@@ -658,6 +691,7 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
     },
     "ευκαιρία": {
+        "back_text_ru": "возможность / шанс",
         "noun_data": {
             "gender": "feminine",
             "nominative_singular": "η ευκαιρία",
@@ -671,6 +705,7 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
     },
     "πρόβλημα": {
+        "back_text_ru": "проблема",
         "noun_data": {
             "gender": "neuter",
             "nominative_singular": "το πρόβλημα",
@@ -687,6 +722,7 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
     # B2 Level (10 words) - Professional and analytical
     # ========================================================================
     "διαπραγμάτευση": {
+        "back_text_ru": "переговоры",
         "noun_data": {
             "gender": "feminine",
             "nominative_singular": "η διαπραγμάτευση",
@@ -700,6 +736,7 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
     },
     "συμφωνία": {
+        "back_text_ru": "соглашение / договор",
         "noun_data": {
             "gender": "feminine",
             "nominative_singular": "η συμφωνία",
@@ -713,6 +750,7 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
     },
     "ανάλυση": {
+        "back_text_ru": "анализ",
         "noun_data": {
             "gender": "feminine",
             "nominative_singular": "η ανάλυση",
@@ -726,6 +764,7 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
     },
     "επιχείρηση": {
+        "back_text_ru": "предприятие / бизнес",
         "noun_data": {
             "gender": "feminine",
             "nominative_singular": "η επιχείρηση",
@@ -739,6 +778,7 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
     },
     "στρατηγική": {
+        "back_text_ru": "стратегия",
         "noun_data": {
             "gender": "feminine",
             "nominative_singular": "η στρατηγική",
@@ -752,6 +792,7 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
     },
     "αποτέλεσμα": {
+        "back_text_ru": "результат / итог",
         "noun_data": {
             "gender": "neuter",
             "nominative_singular": "το αποτέλεσμα",
@@ -765,6 +806,7 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
     },
     "επιρροή": {
+        "back_text_ru": "влияние",
         "noun_data": {
             "gender": "feminine",
             "nominative_singular": "η επιρροή",
@@ -778,6 +820,7 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
     },
     "παράγοντας": {
+        "back_text_ru": "фактор",
         "noun_data": {
             "gender": "masculine",
             "nominative_singular": "ο παράγοντας",
@@ -791,6 +834,7 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
     },
     "προτεραιότητα": {
+        "back_text_ru": "приоритет",
         "noun_data": {
             "gender": "feminine",
             "nominative_singular": "η προτεραιότητα",
@@ -804,6 +848,7 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
     },
     "αξιολόγηση": {
+        "back_text_ru": "оценка",
         "noun_data": {
             "gender": "feminine",
             "nominative_singular": "η αξιολόγηση",
@@ -820,6 +865,7 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
     # C1 Level (10 words) - Advanced academic
     # ========================================================================
     "διαφάνεια": {
+        "back_text_ru": "прозрачность",
         "noun_data": {
             "gender": "feminine",
             "nominative_singular": "η διαφάνεια",
@@ -833,6 +879,7 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
     },
     "αειφορία": {
+        "back_text_ru": "устойчивое развитие",
         "noun_data": {
             "gender": "feminine",
             "nominative_singular": "η αειφορία",
@@ -846,6 +893,7 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
     },
     "διακυβέρνηση": {
+        "back_text_ru": "управление / руководство",
         "noun_data": {
             "gender": "feminine",
             "nominative_singular": "η διακυβέρνηση",
@@ -859,6 +907,7 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
     },
     "αντικειμενικότητα": {
+        "back_text_ru": "объективность",
         "noun_data": {
             "gender": "feminine",
             "nominative_singular": "η αντικειμενικότητα",
@@ -872,6 +921,7 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
     },
     "υποκειμενικότητα": {
+        "back_text_ru": "субъективность",
         "noun_data": {
             "gender": "feminine",
             "nominative_singular": "η υποκειμενικότητα",
@@ -885,6 +935,7 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
     },
     "διεπιστημονικός": {
+        "back_text_ru": "междисциплинарный",
         "adjective_data": {
             "masculine_nom_sg": "διεπιστημονικός",
             "masculine_gen_sg": "διεπιστημονικού",
@@ -915,6 +966,7 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
     },  # adjective
     "πολυπλοκότητα": {
+        "back_text_ru": "сложность",
         "noun_data": {
             "gender": "feminine",
             "nominative_singular": "η πολυπλοκότητα",
@@ -928,6 +980,7 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
     },
     "ενσωμάτωση": {
+        "back_text_ru": "интеграция / включение",
         "noun_data": {
             "gender": "feminine",
             "nominative_singular": "η ενσωμάτωση",
@@ -941,6 +994,7 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
     },
     "διαφοροποίηση": {
+        "back_text_ru": "дифференциация / различение",
         "noun_data": {
             "gender": "feminine",
             "nominative_singular": "η διαφοροποίηση",
@@ -954,6 +1008,7 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
     },
     "συνεισφορά": {
+        "back_text_ru": "вклад",
         "noun_data": {
             "gender": "feminine",
             "nominative_singular": "η συνεισφορά",
@@ -970,6 +1025,7 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
     # C2 Level (10 words) - Mastery level philosophical/academic
     # ========================================================================
     "μεταμοντερνισμός": {
+        "back_text_ru": "постмодернизм",
         "noun_data": {
             "gender": "masculine",
             "nominative_singular": "ο μεταμοντερνισμός",
@@ -983,6 +1039,7 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
     },
     "επιστημολογία": {
+        "back_text_ru": "эпистемология / теория познания",
         "noun_data": {
             "gender": "feminine",
             "nominative_singular": "η επιστημολογία",
@@ -996,6 +1053,7 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
     },
     "υπερβατικός": {
+        "back_text_ru": "трансцендентный",
         "adjective_data": {
             "masculine_nom_sg": "υπερβατικός",
             "masculine_gen_sg": "υπερβατικού",
@@ -1026,6 +1084,7 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
     },  # adjective
     "διαλεκτική": {
+        "back_text_ru": "диалектика",
         "noun_data": {
             "gender": "feminine",
             "nominative_singular": "η διαλεκτική",
@@ -1039,6 +1098,7 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
     },
     "παραδειγματικός": {
+        "back_text_ru": "парадигматический",
         "adjective_data": {
             "masculine_nom_sg": "παραδειγματικός",
             "masculine_gen_sg": "παραδειγματικού",
@@ -1069,6 +1129,7 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
     },  # adjective
     "αποδόμηση": {
+        "back_text_ru": "деконструкция",
         "noun_data": {
             "gender": "feminine",
             "nominative_singular": "η αποδόμηση",
@@ -1082,6 +1143,7 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
     },
     "ερμηνευτική": {
+        "back_text_ru": "герменевтика",
         "noun_data": {
             "gender": "feminine",
             "nominative_singular": "η ερμηνευτική",
@@ -1095,6 +1157,7 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
     },
     "φαινομενολογία": {
+        "back_text_ru": "феноменология",
         "noun_data": {
             "gender": "feminine",
             "nominative_singular": "η φαινομενολογία",
@@ -1108,6 +1171,7 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
     },
     "οντολογία": {
+        "back_text_ru": "онтология",
         "noun_data": {
             "gender": "feminine",
             "nominative_singular": "η οντολογία",
@@ -1121,6 +1185,7 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
     },
     "αισθητική": {
+        "back_text_ru": "эстетика",
         "noun_data": {
             "gender": "feminine",
             "nominative_singular": "η αισθητική",
