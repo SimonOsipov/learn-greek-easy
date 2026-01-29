@@ -466,8 +466,18 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
             "vocative_plural": "χρόνια",
         },
     },
-    "σήμερα": {},  # adverb
-    "αύριο": {},  # adverb
+    "σήμερα": {
+        "adverb_data": {
+            "comparative": "",
+            "superlative": "",
+        },
+    },  # adverb (time - no comparison)
+    "αύριο": {
+        "adverb_data": {
+            "comparative": "",
+            "superlative": "",
+        },
+    },  # adverb (time - no comparison)
     # ========================================================================
     # B1 Level (10 words) - Intermediate concepts
     # ========================================================================
