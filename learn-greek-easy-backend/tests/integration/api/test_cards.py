@@ -64,18 +64,44 @@ VERB_CARD_DATA = {
     ],
     "verb_data": {
         "voice": "active",
+        # Present (6 forms)
         "present_1s": "τρέχω",
         "present_2s": "τρέχεις",
         "present_3s": "τρέχει",
         "present_1p": "τρέχουμε",
         "present_2p": "τρέχετε",
         "present_3p": "τρέχουν",
+        # Imperfect (6 forms)
+        "imperfect_1s": "έτρεχα",
+        "imperfect_2s": "έτρεχες",
+        "imperfect_3s": "έτρεχε",
+        "imperfect_1p": "τρέχαμε",
+        "imperfect_2p": "τρέχατε",
+        "imperfect_3p": "έτρεχαν",
+        # Past/Aorist (6 forms)
         "past_1s": "έτρεξα",
         "past_2s": "έτρεξες",
         "past_3s": "έτρεξε",
         "past_1p": "τρέξαμε",
         "past_2p": "τρέξατε",
         "past_3p": "έτρεξαν",
+        # Future (6 forms)
+        "future_1s": "θα τρέξω",
+        "future_2s": "θα τρέξεις",
+        "future_3s": "θα τρέξει",
+        "future_1p": "θα τρέξουμε",
+        "future_2p": "θα τρέξετε",
+        "future_3p": "θα τρέξουν",
+        # Perfect (6 forms)
+        "perfect_1s": "έχω τρέξει",
+        "perfect_2s": "έχεις τρέξει",
+        "perfect_3s": "έχει τρέξει",
+        "perfect_1p": "έχουμε τρέξει",
+        "perfect_2p": "έχετε τρέξει",
+        "perfect_3p": "έχουν τρέξει",
+        # Imperative (2 forms)
+        "imperative_2s": "τρέξε",
+        "imperative_2p": "τρέξτε",
     },
     "searchable_forms": ["τρέχω", "τρέχεις", "τρέχει", "έτρεξα"],
     "searchable_forms_normalized": ["trecho", "trecheis", "trechei", "etrexa"],
@@ -97,15 +123,34 @@ ADJECTIVE_CARD_DATA = {
         }
     ],
     "adjective_data": {
+        # Masculine (8 forms)
         "masculine_nom_sg": "καλός",
         "masculine_gen_sg": "καλού",
         "masculine_acc_sg": "καλό",
+        "masculine_voc_sg": "καλέ",
+        "masculine_nom_pl": "καλοί",
+        "masculine_gen_pl": "καλών",
+        "masculine_acc_pl": "καλούς",
+        "masculine_voc_pl": "καλοί",
+        # Feminine (8 forms)
         "feminine_nom_sg": "καλή",
         "feminine_gen_sg": "καλής",
         "feminine_acc_sg": "καλή",
+        "feminine_voc_sg": "καλή",
+        "feminine_nom_pl": "καλές",
+        "feminine_gen_pl": "καλών",
+        "feminine_acc_pl": "καλές",
+        "feminine_voc_pl": "καλές",
+        # Neuter (8 forms)
         "neuter_nom_sg": "καλό",
         "neuter_gen_sg": "καλού",
         "neuter_acc_sg": "καλό",
+        "neuter_voc_sg": "καλό",
+        "neuter_nom_pl": "καλά",
+        "neuter_gen_pl": "καλών",
+        "neuter_acc_pl": "καλά",
+        "neuter_voc_pl": "καλά",
+        # Comparison (2 forms)
         "comparative": "καλύτερος",
         "superlative": "κάλλιστος",
     },
@@ -2064,3 +2109,433 @@ class TestCardGrammarFieldsIntegration:
         assert data["noun_data"] is None
         assert data["verb_data"] is None
         assert data["adjective_data"] is None
+
+
+class TestGrammarFieldsCompleteness:
+    """Integration tests verifying all grammar fields are returned from card endpoints."""
+
+    @pytest.fixture
+    async def completeness_deck(self, db_session):
+        """Create a deck for grammar completeness tests."""
+        deck = Deck(
+            id=uuid4(),
+            name="Grammar Completeness Test Deck",
+            description="Deck for testing all grammar fields are returned",
+            level=DeckLevel.A1,
+            is_active=True,
+        )
+        db_session.add(deck)
+        await db_session.commit()
+        await db_session.refresh(deck)
+        return deck
+
+    @pytest.mark.asyncio
+    async def test_noun_data_returns_all_8_case_forms(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        auth_headers: dict,
+        completeness_deck,
+    ):
+        """Test that noun_data returns all 8 case forms plus gender."""
+        card_data = {**NOUN_CARD_DATA, "deck_id": str(completeness_deck.id)}
+        create_response = await client.post(
+            "/api/v1/cards",
+            json=card_data,
+            headers=superuser_auth_headers,
+        )
+        assert create_response.status_code == 201
+        card_id = create_response.json()["id"]
+
+        # GET the card
+        get_response = await client.get(f"/api/v1/cards/{card_id}", headers=auth_headers)
+        assert get_response.status_code == 200
+        data = get_response.json()
+
+        # Verify noun_data is present and has all expected fields
+        assert data["noun_data"] is not None
+        noun_data = data["noun_data"]
+
+        # Expected 9 fields: gender + 8 case forms (4 singular + 4 plural)
+        expected_noun_fields = [
+            "gender",
+            "nominative_singular",
+            "genitive_singular",
+            "accusative_singular",
+            "vocative_singular",
+            "nominative_plural",
+            "genitive_plural",
+            "accusative_plural",
+            "vocative_plural",
+        ]
+        for field in expected_noun_fields:
+            assert field in noun_data, f"Missing noun_data field: {field}"
+
+        # Verify count: 1 gender + 8 case forms = 9 fields
+        assert len(expected_noun_fields) == 9
+        assert noun_data["gender"] == "neuter"
+
+    @pytest.mark.asyncio
+    async def test_verb_data_returns_all_32_conjugation_forms(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        auth_headers: dict,
+        completeness_deck,
+    ):
+        """Test that verb_data returns all 32 conjugation forms plus voice."""
+        card_data = {**VERB_CARD_DATA, "deck_id": str(completeness_deck.id)}
+        create_response = await client.post(
+            "/api/v1/cards",
+            json=card_data,
+            headers=superuser_auth_headers,
+        )
+        assert create_response.status_code == 201
+        card_id = create_response.json()["id"]
+
+        # GET the card
+        get_response = await client.get(f"/api/v1/cards/{card_id}", headers=auth_headers)
+        assert get_response.status_code == 200
+        data = get_response.json()
+
+        # Verify verb_data is present and has all expected fields
+        assert data["verb_data"] is not None
+        verb_data = data["verb_data"]
+
+        # Expected 33 fields: voice + 32 conjugation forms
+        # Present (6) + Imperfect (6) + Past (6) + Future (6) + Perfect (6) + Imperative (2) = 32
+        expected_verb_fields = [
+            "voice",
+            # Present (6)
+            "present_1s",
+            "present_2s",
+            "present_3s",
+            "present_1p",
+            "present_2p",
+            "present_3p",
+            # Imperfect (6)
+            "imperfect_1s",
+            "imperfect_2s",
+            "imperfect_3s",
+            "imperfect_1p",
+            "imperfect_2p",
+            "imperfect_3p",
+            # Past/Aorist (6)
+            "past_1s",
+            "past_2s",
+            "past_3s",
+            "past_1p",
+            "past_2p",
+            "past_3p",
+            # Future (6)
+            "future_1s",
+            "future_2s",
+            "future_3s",
+            "future_1p",
+            "future_2p",
+            "future_3p",
+            # Perfect (6)
+            "perfect_1s",
+            "perfect_2s",
+            "perfect_3s",
+            "perfect_1p",
+            "perfect_2p",
+            "perfect_3p",
+            # Imperative (2)
+            "imperative_2s",
+            "imperative_2p",
+        ]
+        for field in expected_verb_fields:
+            assert field in verb_data, f"Missing verb_data field: {field}"
+
+        # Verify count: 1 voice + 32 conjugation forms = 33 fields
+        assert len(expected_verb_fields) == 33
+        assert verb_data["voice"] == "active"
+        assert verb_data["present_1s"] == "τρέχω"
+        assert verb_data["imperative_2s"] == "τρέξε"
+
+    @pytest.mark.asyncio
+    async def test_adjective_data_returns_24_forms_plus_comparison(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        auth_headers: dict,
+        completeness_deck,
+    ):
+        """Test that adjective_data returns all 24 declension forms plus comparative/superlative."""
+        card_data = {**ADJECTIVE_CARD_DATA, "deck_id": str(completeness_deck.id)}
+        create_response = await client.post(
+            "/api/v1/cards",
+            json=card_data,
+            headers=superuser_auth_headers,
+        )
+        assert create_response.status_code == 201
+        card_id = create_response.json()["id"]
+
+        # GET the card
+        get_response = await client.get(f"/api/v1/cards/{card_id}", headers=auth_headers)
+        assert get_response.status_code == 200
+        data = get_response.json()
+
+        # Verify adjective_data is present and has all expected fields
+        assert data["adjective_data"] is not None
+        adjective_data = data["adjective_data"]
+
+        # Expected 26 fields: 24 declension forms (3 genders * 4 cases * 2 numbers) + 2 comparison
+        expected_adjective_fields = [
+            # Masculine (8 forms)
+            "masculine_nom_sg",
+            "masculine_gen_sg",
+            "masculine_acc_sg",
+            "masculine_voc_sg",
+            "masculine_nom_pl",
+            "masculine_gen_pl",
+            "masculine_acc_pl",
+            "masculine_voc_pl",
+            # Feminine (8 forms)
+            "feminine_nom_sg",
+            "feminine_gen_sg",
+            "feminine_acc_sg",
+            "feminine_voc_sg",
+            "feminine_nom_pl",
+            "feminine_gen_pl",
+            "feminine_acc_pl",
+            "feminine_voc_pl",
+            # Neuter (8 forms)
+            "neuter_nom_sg",
+            "neuter_gen_sg",
+            "neuter_acc_sg",
+            "neuter_voc_sg",
+            "neuter_nom_pl",
+            "neuter_gen_pl",
+            "neuter_acc_pl",
+            "neuter_voc_pl",
+            # Comparison (2 forms)
+            "comparative",
+            "superlative",
+        ]
+        for field in expected_adjective_fields:
+            assert field in adjective_data, f"Missing adjective_data field: {field}"
+
+        # Verify count: 24 declension forms + 2 comparison = 26 fields
+        assert len(expected_adjective_fields) == 26
+        assert adjective_data["masculine_nom_sg"] == "καλός"
+        assert adjective_data["comparative"] == "καλύτερος"
+
+    @pytest.mark.asyncio
+    async def test_adverb_data_returns_comparative_superlative(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        auth_headers: dict,
+        completeness_deck,
+    ):
+        """Test that adverb_data returns comparative and superlative forms."""
+        card_data = {**ADVERB_CARD_DATA, "deck_id": str(completeness_deck.id)}
+        create_response = await client.post(
+            "/api/v1/cards",
+            json=card_data,
+            headers=superuser_auth_headers,
+        )
+        assert create_response.status_code == 201
+        card_id = create_response.json()["id"]
+
+        # GET the card
+        get_response = await client.get(f"/api/v1/cards/{card_id}", headers=auth_headers)
+        assert get_response.status_code == 200
+        data = get_response.json()
+
+        # Verify adverb_data is present and has all expected fields
+        assert data["adverb_data"] is not None
+        adverb_data = data["adverb_data"]
+
+        # Expected 2 fields: comparative and superlative
+        expected_adverb_fields = ["comparative", "superlative"]
+        for field in expected_adverb_fields:
+            assert field in adverb_data, f"Missing adverb_data field: {field}"
+
+        # Verify count: 2 comparison forms
+        assert len(expected_adverb_fields) == 2
+        assert adverb_data["comparative"] == "γρηγορότερα"
+        assert adverb_data["superlative"] == "γρηγορότατα"
+
+    @pytest.mark.asyncio
+    async def test_examples_array_contains_multilingual_objects(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        auth_headers: dict,
+        completeness_deck,
+    ):
+        """Test that examples array contains objects with greek, english, and russian."""
+        card_data = {**NOUN_CARD_DATA, "deck_id": str(completeness_deck.id)}
+        create_response = await client.post(
+            "/api/v1/cards",
+            json=card_data,
+            headers=superuser_auth_headers,
+        )
+        assert create_response.status_code == 201
+        card_id = create_response.json()["id"]
+
+        # GET the card
+        get_response = await client.get(f"/api/v1/cards/{card_id}", headers=auth_headers)
+        assert get_response.status_code == 200
+        data = get_response.json()
+
+        # Verify examples array
+        assert data["examples"] is not None
+        assert isinstance(data["examples"], list)
+        assert len(data["examples"]) >= 1
+
+        # Each example should have greek, english, and russian
+        for example in data["examples"]:
+            assert "greek" in example, "Example missing 'greek' field"
+            assert "english" in example, "Example missing 'english' field"
+            assert "russian" in example, "Example missing 'russian' field"
+
+        # Verify content of first example
+        first_example = data["examples"][0]
+        assert first_example["greek"] == "Το σπίτι είναι μεγάλο."
+        assert first_example["english"] == "The house is big."
+        assert first_example["russian"] == "Дом большой."
+
+    @pytest.mark.asyncio
+    async def test_back_text_ru_russian_translation_is_returned(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        auth_headers: dict,
+        completeness_deck,
+    ):
+        """Test that back_text_ru (Russian translation) is returned."""
+        card_data = {**NOUN_CARD_DATA, "deck_id": str(completeness_deck.id)}
+        create_response = await client.post(
+            "/api/v1/cards",
+            json=card_data,
+            headers=superuser_auth_headers,
+        )
+        assert create_response.status_code == 201
+        card_id = create_response.json()["id"]
+
+        # GET the card
+        get_response = await client.get(f"/api/v1/cards/{card_id}", headers=auth_headers)
+        assert get_response.status_code == 200
+        data = get_response.json()
+
+        # Verify back_text_ru is present and has correct value
+        assert "back_text_ru" in data
+        assert data["back_text_ru"] == "дом"
+
+    @pytest.mark.asyncio
+    async def test_part_of_speech_is_returned(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        auth_headers: dict,
+        completeness_deck,
+    ):
+        """Test that part_of_speech is returned for all 4 types."""
+        # Test all 4 parts of speech
+        test_cases = [
+            (NOUN_CARD_DATA, "noun"),
+            (VERB_CARD_DATA, "verb"),
+            (ADJECTIVE_CARD_DATA, "adjective"),
+            (ADVERB_CARD_DATA, "adverb"),
+        ]
+
+        for card_fixture, expected_pos in test_cases:
+            card_data = {**card_fixture, "deck_id": str(completeness_deck.id)}
+            create_response = await client.post(
+                "/api/v1/cards",
+                json=card_data,
+                headers=superuser_auth_headers,
+            )
+            assert create_response.status_code == 201
+            card_id = create_response.json()["id"]
+
+            # GET the card
+            get_response = await client.get(f"/api/v1/cards/{card_id}", headers=auth_headers)
+            assert get_response.status_code == 200
+            data = get_response.json()
+
+            # Verify part_of_speech
+            assert "part_of_speech" in data, f"Missing part_of_speech for {expected_pos}"
+            assert (
+                data["part_of_speech"] == expected_pos
+            ), f"Expected part_of_speech '{expected_pos}', got '{data['part_of_speech']}'"
+
+    @pytest.mark.asyncio
+    async def test_list_cards_returns_complete_grammar_data(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        auth_headers: dict,
+        completeness_deck,
+    ):
+        """Test that list cards endpoint returns complete grammar data for all cards."""
+        # Create cards with different parts of speech
+        noun_data = {**NOUN_CARD_DATA, "deck_id": str(completeness_deck.id)}
+        verb_data = {**VERB_CARD_DATA, "deck_id": str(completeness_deck.id)}
+
+        await client.post("/api/v1/cards", json=noun_data, headers=superuser_auth_headers)
+        await client.post("/api/v1/cards", json=verb_data, headers=superuser_auth_headers)
+
+        # List cards
+        list_response = await client.get(
+            f"/api/v1/cards?deck_id={completeness_deck.id}", headers=auth_headers
+        )
+        assert list_response.status_code == 200
+        data = list_response.json()
+
+        assert data["total"] == 2
+        cards = data["cards"]
+
+        # Find noun and verb cards
+        noun_card = next((c for c in cards if c["part_of_speech"] == "noun"), None)
+        verb_card = next((c for c in cards if c["part_of_speech"] == "verb"), None)
+
+        assert noun_card is not None, "Noun card not found in list"
+        assert verb_card is not None, "Verb card not found in list"
+
+        # Verify noun has all 9 fields (gender + 8 cases)
+        assert noun_card["noun_data"] is not None
+        assert "gender" in noun_card["noun_data"]
+        assert "vocative_plural" in noun_card["noun_data"]  # Check one of the new fields
+
+        # Verify verb has all 33 fields (voice + 32 conjugations)
+        assert verb_card["verb_data"] is not None
+        assert "voice" in verb_card["verb_data"]
+        assert "imperative_2s" in verb_card["verb_data"]  # Check one of the new fields
+
+    @pytest.mark.asyncio
+    async def test_search_cards_returns_complete_grammar_data(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        auth_headers: dict,
+        completeness_deck,
+    ):
+        """Test that search cards endpoint returns complete grammar data."""
+        # Create a noun card with unique searchable text
+        noun_data = {**NOUN_CARD_DATA, "deck_id": str(completeness_deck.id)}
+        create_response = await client.post(
+            "/api/v1/cards", json=noun_data, headers=superuser_auth_headers
+        )
+        assert create_response.status_code == 201
+
+        # Search for the card
+        search_response = await client.get("/api/v1/cards/search?q=σπίτι", headers=auth_headers)
+        assert search_response.status_code == 200
+        data = search_response.json()
+
+        assert data["total"] >= 1
+        found_card = next((c for c in data["cards"] if c["front_text"] == "σπίτι"), None)
+        assert found_card is not None, "Card not found in search results"
+
+        # Verify complete grammar data is returned
+        assert found_card["noun_data"] is not None
+        assert found_card["noun_data"]["gender"] == "neuter"
+        assert found_card["noun_data"]["vocative_plural"] == "σπίτια"
+        assert found_card["back_text_ru"] == "дом"
+        assert found_card["examples"] is not None
+        assert len(found_card["examples"]) >= 1
