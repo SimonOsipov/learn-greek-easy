@@ -115,6 +115,12 @@
         "comparative": "Συγκριτικός",
         "superlative": "Υπερθετικός"
       }
+    },
+    "adverbForms": {
+      "positive": "Θετικός",
+      "comparative": "Συγκριτικός",
+      "superlative": "Υπερθετικός",
+      "notAvailable": "Δ/Υ"
     }
   }
 }

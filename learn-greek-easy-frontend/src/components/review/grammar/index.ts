@@ -1,5 +1,7 @@
 export { AdjectiveDeclensionTables } from './AdjectiveDeclensionTables';
 export type { AdjectiveDeclensionTablesProps } from './AdjectiveDeclensionTables';
+export { AdverbFormsTable } from './AdverbFormsTable';
+export type { AdverbFormsTableProps } from './AdverbFormsTable';
 export { CasesTable } from './CasesTable';
 export { ConjugationTable } from './ConjugationTable';
 export { NounDeclensionTable } from './NounDeclensionTable';

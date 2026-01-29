@@ -115,6 +115,12 @@
         "comparative": "Сравнительная",
         "superlative": "Превосходная"
       }
+    },
+    "adverbForms": {
+      "positive": "Положительная",
+      "comparative": "Сравнительная",
+      "superlative": "Превосходная",
+      "notAvailable": "Н/Д"
     }
   }
 }

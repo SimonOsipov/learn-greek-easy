@@ -120,6 +120,12 @@
         "comparative": "Comparative",
         "superlative": "Superlative"
       }
+    },
+    "adverbForms": {
+      "positive": "Positive",
+      "comparative": "Comparative",
+      "superlative": "Superlative",
+      "notAvailable": "N/A"
     }
   }
 }
