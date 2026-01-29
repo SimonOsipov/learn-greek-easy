@@ -52,7 +52,9 @@ from src.db.models import (
     XPTransaction,
 )
 from src.services.achievement_definitions import ACHIEVEMENTS as ACHIEVEMENT_DEFS
+from src.services.seed_grammar_data import ENRICHED_VOCABULARY
 from src.services.xp_constants import get_level_from_xp
+from src.utils.greek_text import extract_searchable_forms, generate_normalized_forms
 
 
 class FeedbackSeedData(TypedDict):
@@ -1421,6 +1423,82 @@ class SeedService:
             errors = settings.get_seed_validation_errors()
             raise RuntimeError(f"Database seeding not allowed: {'; '.join(errors)}")
 
+    def _create_enriched_card(
+        self,
+        deck_id: UUID,
+        greek: str,
+        english: str,
+        part_of_speech: PartOfSpeech | None,
+        level: DeckLevel,
+        example_prefix: str = "Example sentence with",
+    ) -> Card:
+        """Create a Card with enriched grammar data from ENRICHED_VOCABULARY.
+
+        Looks up the Greek word in ENRICHED_VOCABULARY and populates:
+        - back_text_ru (Russian translation)
+        - Grammar JSONB fields (noun_data, verb_data, adjective_data, adverb_data)
+        - examples (structured example sentences)
+        - searchable_forms (all inflected word forms)
+        - searchable_forms_normalized (accent-stripped forms)
+        - level (from deck's level)
+
+        Falls back gracefully for words not in ENRICHED_VOCABULARY.
+
+        Args:
+            deck_id: UUID of the deck this card belongs to
+            greek: Greek word (front_text)
+            english: English translation (back_text_en)
+            part_of_speech: Part of speech enum value
+            level: CEFR level for the card
+            example_prefix: Prefix for fallback example_sentence
+
+        Returns:
+            Card instance with all enriched fields populated
+        """
+        # Look up enriched data (cast to dict for extract_searchable_forms)
+        enriched: dict[str, Any] = dict(ENRICHED_VOCABULARY.get(greek, {}))
+
+        # Extract grammar data fields
+        noun_data = enriched.get("noun_data")
+        verb_data = enriched.get("verb_data")
+        adjective_data = enriched.get("adjective_data")
+        adverb_data = enriched.get("adverb_data")
+
+        # Get examples from enriched data
+        examples = enriched.get("examples")
+
+        # Get Russian translation
+        back_text_ru = enriched.get("back_text_ru")
+
+        # Generate searchable forms using utility functions
+        searchable_forms = extract_searchable_forms(enriched, greek)
+        searchable_forms_normalized = generate_normalized_forms(searchable_forms)
+
+        # Build example_sentence for backward compatibility
+        # Use first example's Greek text if available, otherwise use fallback
+        if examples and len(examples) > 0:
+            example_sentence = examples[0].get("greek", f"{example_prefix} '{greek}'")
+        else:
+            example_sentence = f"{example_prefix} '{greek}'"
+
+        return Card(
+            deck_id=deck_id,
+            front_text=greek,
+            back_text_en=english,
+            back_text_ru=back_text_ru,
+            example_sentence=example_sentence,
+            pronunciation=f"[{greek}]",
+            part_of_speech=part_of_speech,
+            level=level,
+            noun_data=noun_data,
+            verb_data=verb_data,
+            adjective_data=adjective_data,
+            adverb_data=adverb_data,
+            examples=examples,
+            searchable_forms=searchable_forms,
+            searchable_forms_normalized=searchable_forms_normalized,
+        )
+
     # =====================
     # Truncation Methods
     # =====================
@@ -1590,15 +1668,15 @@ class SeedService:
             self.db.add(deck)
             await self.db.flush()
 
-            # Create cards
+            # Create cards with enriched grammar data
             for i, (greek, english, category, part_of_speech) in enumerate(words):
-                card = Card(
+                card = self._create_enriched_card(
                     deck_id=deck.id,
-                    front_text=greek,
-                    back_text_en=english,
-                    example_sentence=f"Example sentence with '{greek}'",
-                    pronunciation=f"[{greek}]",
+                    greek=greek,
+                    english=english,
                     part_of_speech=part_of_speech,
+                    level=level,
+                    example_prefix="Example sentence with",
                 )
                 self.db.add(card)
 
@@ -1670,13 +1748,13 @@ class SeedService:
                     words_to_use = vocab[:card_count]
 
                     for i, (greek, english, category, part_of_speech) in enumerate(words_to_use):
-                        card = Card(
+                        card = self._create_enriched_card(
                             deck_id=deck.id,
-                            front_text=greek,
-                            back_text_en=english,
-                            example_sentence=f"User example: '{greek}' in context",
-                            pronunciation=f"[{greek}]",
+                            greek=greek,
+                            english=english,
                             part_of_speech=part_of_speech,
+                            level=deck_config["level"],
+                            example_prefix="User example:",
                         )
                         self.db.add(card)
 
