@@ -41,6 +41,7 @@ from src.db.models import (
     NewsItem,
     Notification,
     NotificationType,
+    PartOfSpeech,
     Review,
     User,
     UserAchievement,
@@ -51,7 +52,9 @@ from src.db.models import (
     XPTransaction,
 )
 from src.services.achievement_definitions import ACHIEVEMENTS as ACHIEVEMENT_DEFS
+from src.services.seed_grammar_data import ENRICHED_VOCABULARY
 from src.services.xp_constants import get_level_from_xp
+from src.utils.greek_text import extract_searchable_forms, generate_normalized_forms
 
 
 class FeedbackSeedData(TypedDict):
@@ -150,78 +153,80 @@ class SeedService:
     DEFAULT_PASSWORD = "TestPassword123!"
 
     # Greek vocabulary by CEFR level
-    VOCABULARY = {
+    # Each tuple: (greek, english, category, part_of_speech)
+    # part_of_speech is None for interjections (greetings) and particles (ναι/όχι)
+    VOCABULARY: dict[DeckLevel, list[tuple[str, str, str, PartOfSpeech | None]]] = {
         DeckLevel.A1: [
-            ("γεια", "hello", "Common greeting"),
-            ("ναι", "yes", "Affirmative"),
-            ("όχι", "no", "Negative"),
-            ("ευχαριστώ", "thank you", "Gratitude"),
-            ("παρακαλώ", "please/you're welcome", "Politeness"),
-            ("νερό", "water", "Basic noun"),
-            ("ψωμί", "bread", "Basic noun"),
-            ("σπίτι", "house", "Basic noun"),
-            ("καλημέρα", "good morning", "Morning greeting"),
-            ("καληνύχτα", "good night", "Night greeting"),
+            ("γεια", "hello", "Common greeting", None),
+            ("ναι", "yes", "Affirmative", None),
+            ("όχι", "no", "Negative", None),
+            ("ευχαριστώ", "thank you", "Gratitude", PartOfSpeech.VERB),
+            ("παρακαλώ", "please/you're welcome", "Politeness", PartOfSpeech.VERB),
+            ("νερό", "water", "Basic noun", PartOfSpeech.NOUN),
+            ("ψωμί", "bread", "Basic noun", PartOfSpeech.NOUN),
+            ("σπίτι", "house", "Basic noun", PartOfSpeech.NOUN),
+            ("καλημέρα", "good morning", "Morning greeting", None),
+            ("καληνύχτα", "good night", "Night greeting", None),
         ],
         DeckLevel.A2: [
-            ("δουλειά", "work/job", "Employment"),
-            ("οικογένεια", "family", "Relations"),
-            ("φίλος", "friend", "Relations"),
-            ("αγαπώ", "I love", "Emotion verb"),
-            ("θέλω", "I want", "Desire verb"),
-            ("μπορώ", "I can", "Ability verb"),
-            ("πρέπει", "must/should", "Obligation"),
-            ("χρόνια", "years", "Time"),
-            ("σήμερα", "today", "Time"),
-            ("αύριο", "tomorrow", "Time"),
+            ("δουλειά", "work/job", "Employment", PartOfSpeech.NOUN),
+            ("οικογένεια", "family", "Relations", PartOfSpeech.NOUN),
+            ("φίλος", "friend", "Relations", PartOfSpeech.NOUN),
+            ("αγαπώ", "I love", "Emotion verb", PartOfSpeech.VERB),
+            ("θέλω", "I want", "Desire verb", PartOfSpeech.VERB),
+            ("μπορώ", "I can", "Ability verb", PartOfSpeech.VERB),
+            ("πρέπει", "must/should", "Impersonal modal verb", PartOfSpeech.VERB),
+            ("χρόνια", "years", "Time", PartOfSpeech.NOUN),
+            ("σήμερα", "today", "Time adverb", PartOfSpeech.ADVERB),
+            ("αύριο", "tomorrow", "Time adverb", PartOfSpeech.ADVERB),
         ],
         DeckLevel.B1: [
-            ("συζήτηση", "discussion", "Communication"),
-            ("απόφαση", "decision", "Abstract noun"),
-            ("εμπειρία", "experience", "Abstract noun"),
-            ("προσπαθώ", "I try", "Effort verb"),
-            ("επιτυγχάνω", "I achieve", "Success verb"),
-            ("αναπτύσσω", "I develop", "Growth verb"),
-            ("κατάσταση", "situation", "State noun"),
-            ("σχέση", "relationship", "Connection noun"),
-            ("ευκαιρία", "opportunity", "Chance noun"),
-            ("πρόβλημα", "problem", "Challenge noun"),
+            ("συζήτηση", "discussion", "Communication", PartOfSpeech.NOUN),
+            ("απόφαση", "decision", "Abstract noun", PartOfSpeech.NOUN),
+            ("εμπειρία", "experience", "Abstract noun", PartOfSpeech.NOUN),
+            ("προσπαθώ", "I try", "Effort verb", PartOfSpeech.VERB),
+            ("επιτυγχάνω", "I achieve", "Success verb", PartOfSpeech.VERB),
+            ("αναπτύσσω", "I develop", "Growth verb", PartOfSpeech.VERB),
+            ("κατάσταση", "situation", "State noun", PartOfSpeech.NOUN),
+            ("σχέση", "relationship", "Connection noun", PartOfSpeech.NOUN),
+            ("ευκαιρία", "opportunity", "Chance noun", PartOfSpeech.NOUN),
+            ("πρόβλημα", "problem", "Challenge noun", PartOfSpeech.NOUN),
         ],
         DeckLevel.B2: [
-            ("διαπραγμάτευση", "negotiation", "Business"),
-            ("συμφωνία", "agreement", "Contract"),
-            ("ανάλυση", "analysis", "Examination"),
-            ("επιχείρηση", "enterprise/business", "Commerce"),
-            ("στρατηγική", "strategy", "Planning"),
-            ("αποτέλεσμα", "result/outcome", "Conclusion"),
-            ("επιρροή", "influence", "Impact"),
-            ("παράγοντας", "factor", "Element"),
-            ("προτεραιότητα", "priority", "Importance"),
-            ("αξιολόγηση", "evaluation", "Assessment"),
+            ("διαπραγμάτευση", "negotiation", "Business", PartOfSpeech.NOUN),
+            ("συμφωνία", "agreement", "Contract", PartOfSpeech.NOUN),
+            ("ανάλυση", "analysis", "Examination", PartOfSpeech.NOUN),
+            ("επιχείρηση", "enterprise/business", "Commerce", PartOfSpeech.NOUN),
+            ("στρατηγική", "strategy", "Planning", PartOfSpeech.NOUN),
+            ("αποτέλεσμα", "result/outcome", "Conclusion", PartOfSpeech.NOUN),
+            ("επιρροή", "influence", "Impact", PartOfSpeech.NOUN),
+            ("παράγοντας", "factor", "Element", PartOfSpeech.NOUN),
+            ("προτεραιότητα", "priority", "Importance", PartOfSpeech.NOUN),
+            ("αξιολόγηση", "evaluation", "Assessment", PartOfSpeech.NOUN),
         ],
         DeckLevel.C1: [
-            ("διαφάνεια", "transparency", "Openness"),
-            ("αειφορία", "sustainability", "Environment"),
-            ("διακυβέρνηση", "governance", "Administration"),
-            ("αντικειμενικότητα", "objectivity", "Impartiality"),
-            ("υποκειμενικότητα", "subjectivity", "Personal view"),
-            ("διεπιστημονικός", "interdisciplinary", "Academic"),
-            ("πολυπλοκότητα", "complexity", "Intricacy"),
-            ("ενσωμάτωση", "integration", "Incorporation"),
-            ("διαφοροποίηση", "differentiation", "Distinction"),
-            ("συνεισφορά", "contribution", "Input"),
+            ("διαφάνεια", "transparency", "Openness", PartOfSpeech.NOUN),
+            ("αειφορία", "sustainability", "Environment", PartOfSpeech.NOUN),
+            ("διακυβέρνηση", "governance", "Administration", PartOfSpeech.NOUN),
+            ("αντικειμενικότητα", "objectivity", "Impartiality", PartOfSpeech.NOUN),
+            ("υποκειμενικότητα", "subjectivity", "Personal view", PartOfSpeech.NOUN),
+            ("διεπιστημονικός", "interdisciplinary", "Academic", PartOfSpeech.ADJECTIVE),
+            ("πολυπλοκότητα", "complexity", "Intricacy", PartOfSpeech.NOUN),
+            ("ενσωμάτωση", "integration", "Incorporation", PartOfSpeech.NOUN),
+            ("διαφοροποίηση", "differentiation", "Distinction", PartOfSpeech.NOUN),
+            ("συνεισφορά", "contribution", "Input", PartOfSpeech.NOUN),
         ],
         DeckLevel.C2: [
-            ("μεταμοντερνισμός", "postmodernism", "Philosophy"),
-            ("επιστημολογία", "epistemology", "Theory of knowledge"),
-            ("υπερβατικός", "transcendent", "Beyond experience"),
-            ("διαλεκτική", "dialectic", "Philosophical method"),
-            ("παραδειγματικός", "paradigmatic", "Model example"),
-            ("αποδόμηση", "deconstruction", "Analysis method"),
-            ("ερμηνευτική", "hermeneutics", "Interpretation theory"),
-            ("φαινομενολογία", "phenomenology", "Philosophy branch"),
-            ("οντολογία", "ontology", "Study of being"),
-            ("αισθητική", "aesthetics", "Beauty philosophy"),
+            ("μεταμοντερνισμός", "postmodernism", "Philosophy", PartOfSpeech.NOUN),
+            ("επιστημολογία", "epistemology", "Theory of knowledge", PartOfSpeech.NOUN),
+            ("υπερβατικός", "transcendent", "Beyond experience", PartOfSpeech.ADJECTIVE),
+            ("διαλεκτική", "dialectic", "Philosophical method", PartOfSpeech.NOUN),
+            ("παραδειγματικός", "paradigmatic", "Model example", PartOfSpeech.ADJECTIVE),
+            ("αποδόμηση", "deconstruction", "Analysis method", PartOfSpeech.NOUN),
+            ("ερμηνευτική", "hermeneutics", "Interpretation theory", PartOfSpeech.NOUN),
+            ("φαινομενολογία", "phenomenology", "Philosophy branch", PartOfSpeech.NOUN),
+            ("οντολογία", "ontology", "Study of being", PartOfSpeech.NOUN),
+            ("αισθητική", "aesthetics", "Beauty philosophy", PartOfSpeech.NOUN),
         ],
     }
 
@@ -1418,6 +1423,82 @@ class SeedService:
             errors = settings.get_seed_validation_errors()
             raise RuntimeError(f"Database seeding not allowed: {'; '.join(errors)}")
 
+    def _create_enriched_card(
+        self,
+        deck_id: UUID,
+        greek: str,
+        english: str,
+        part_of_speech: PartOfSpeech | None,
+        level: DeckLevel,
+        example_prefix: str = "Example sentence with",
+    ) -> Card:
+        """Create a Card with enriched grammar data from ENRICHED_VOCABULARY.
+
+        Looks up the Greek word in ENRICHED_VOCABULARY and populates:
+        - back_text_ru (Russian translation)
+        - Grammar JSONB fields (noun_data, verb_data, adjective_data, adverb_data)
+        - examples (structured example sentences)
+        - searchable_forms (all inflected word forms)
+        - searchable_forms_normalized (accent-stripped forms)
+        - level (from deck's level)
+
+        Falls back gracefully for words not in ENRICHED_VOCABULARY.
+
+        Args:
+            deck_id: UUID of the deck this card belongs to
+            greek: Greek word (front_text)
+            english: English translation (back_text_en)
+            part_of_speech: Part of speech enum value
+            level: CEFR level for the card
+            example_prefix: Prefix for fallback example_sentence
+
+        Returns:
+            Card instance with all enriched fields populated
+        """
+        # Look up enriched data (cast to dict for extract_searchable_forms)
+        enriched: dict[str, Any] = dict(ENRICHED_VOCABULARY.get(greek, {}))
+
+        # Extract grammar data fields
+        noun_data = enriched.get("noun_data")
+        verb_data = enriched.get("verb_data")
+        adjective_data = enriched.get("adjective_data")
+        adverb_data = enriched.get("adverb_data")
+
+        # Get examples from enriched data
+        examples = enriched.get("examples")
+
+        # Get Russian translation
+        back_text_ru = enriched.get("back_text_ru")
+
+        # Generate searchable forms using utility functions
+        searchable_forms = extract_searchable_forms(enriched, greek)
+        searchable_forms_normalized = generate_normalized_forms(searchable_forms)
+
+        # Build example_sentence for backward compatibility
+        # Use first example's Greek text if available, otherwise use fallback
+        if examples and len(examples) > 0:
+            example_sentence = examples[0].get("greek", f"{example_prefix} '{greek}'")
+        else:
+            example_sentence = f"{example_prefix} '{greek}'"
+
+        return Card(
+            deck_id=deck_id,
+            front_text=greek,
+            back_text_en=english,
+            back_text_ru=back_text_ru,
+            example_sentence=example_sentence,
+            pronunciation=f"[{greek}]",
+            part_of_speech=part_of_speech,
+            level=level,
+            noun_data=noun_data,
+            verb_data=verb_data,
+            adjective_data=adjective_data,
+            adverb_data=adverb_data,
+            examples=examples,
+            searchable_forms=searchable_forms,
+            searchable_forms_normalized=searchable_forms_normalized,
+        )
+
     # =====================
     # Truncation Methods
     # =====================
@@ -1587,14 +1668,15 @@ class SeedService:
             self.db.add(deck)
             await self.db.flush()
 
-            # Create cards
-            for i, (greek, english, category) in enumerate(words):
-                card = Card(
+            # Create cards with enriched grammar data
+            for i, (greek, english, category, part_of_speech) in enumerate(words):
+                card = self._create_enriched_card(
                     deck_id=deck.id,
-                    front_text=greek,
-                    back_text_en=english,
-                    example_sentence=f"Example sentence with '{greek}'",
-                    pronunciation=f"[{greek}]",
+                    greek=greek,
+                    english=english,
+                    part_of_speech=part_of_speech,
+                    level=level,
+                    example_prefix="Example sentence with",
                 )
                 self.db.add(card)
 
@@ -1665,13 +1747,14 @@ class SeedService:
                     vocab = self.VOCABULARY.get(deck_config["level"], [])
                     words_to_use = vocab[:card_count]
 
-                    for i, (greek, english, category) in enumerate(words_to_use):
-                        card = Card(
+                    for i, (greek, english, category, part_of_speech) in enumerate(words_to_use):
+                        card = self._create_enriched_card(
                             deck_id=deck.id,
-                            front_text=greek,
-                            back_text_en=english,
-                            example_sentence=f"User example: '{greek}' in context",
-                            pronunciation=f"[{greek}]",
+                            greek=greek,
+                            english=english,
+                            part_of_speech=part_of_speech,
+                            level=deck_config["level"],
+                            example_prefix="User example:",
                         )
                         self.db.add(card)
 

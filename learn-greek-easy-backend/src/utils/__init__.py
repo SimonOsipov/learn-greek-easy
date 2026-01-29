@@ -3,8 +3,14 @@
 This package contains utility functions and helpers for:
 - Request validation (validation.py)
 - Response formatting (responses.py)
+- Greek text processing (greek_text.py)
 """
 
+from src.utils.greek_text import (
+    extract_searchable_forms,
+    generate_normalized_forms,
+    normalize_greek_accents,
+)
 from src.utils.responses import (
     ErrorDetail,
     ErrorResponse,
@@ -40,4 +46,8 @@ __all__ = [
     "create_success_response",
     "create_paginated_response",
     "create_error_response",
+    # Greek text utilities
+    "normalize_greek_accents",
+    "extract_searchable_forms",
+    "generate_normalized_forms",
 ]
