@@ -147,12 +147,32 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
     # ========================================================================
     "γεια": {
         "back_text_ru": "привет",
+        "examples": [
+            {
+                "greek": "Γεια, πώς είσαι;",
+                "english": "Hi, how are you?",
+                "russian": "Привет, как дела?",
+            },
+            {"greek": "Γεια σου, Μαρία!", "english": "Hi, Maria!", "russian": "Привет, Мария!"},
+        ],
     },  # interjection
     "ναι": {
         "back_text_ru": "да",
+        "examples": [
+            {
+                "greek": "Ναι, θέλω καφέ.",
+                "english": "Yes, I want coffee.",
+                "russian": "Да, я хочу кофе.",
+            },
+            {"greek": "Ναι, σωστά!", "english": "Yes, correct!", "russian": "Да, правильно!"},
+        ],
     },  # interjection
     "όχι": {
         "back_text_ru": "нет",
+        "examples": [
+            {"greek": "Όχι, ευχαριστώ.", "english": "No, thank you.", "russian": "Нет, спасибо."},
+            {"greek": "Όχι, δεν μπορώ.", "english": "No, I can't.", "russian": "Нет, я не могу."},
+        ],
     },  # interjection
     "ευχαριστώ": {
         "back_text_ru": "спасибо",
@@ -191,6 +211,20 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
             "imperative_2s": "ευχαρίστησε",
             "imperative_2p": "ευχαριστήστε",
         },
+        "examples": [
+            {
+                "greek": "Σε ευχαριστώ πολύ για τη βοήθεια.",
+                "english": "Thank you very much for your help.",
+                "russian": "Большое спасибо за помощь.",
+                "tense": "present",
+            },
+            {
+                "greek": "Τον ευχαρίστησα για το δώρο.",
+                "english": "I thanked him for the gift.",
+                "russian": "Я поблагодарил его за подарок.",
+                "tense": "past",
+            },
+        ],
     },  # verb
     "παρακαλώ": {
         "back_text_ru": "пожалуйста",
@@ -229,6 +263,20 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
             "imperative_2s": "παρακάλεσε",
             "imperative_2p": "παρακαλέστε",
         },
+        "examples": [
+            {
+                "greek": "Παρακαλώ, κάθισε εδώ.",
+                "english": "Please, sit here.",
+                "russian": "Пожалуйста, садись сюда.",
+                "tense": "present",
+            },
+            {
+                "greek": "Τον παρακάλεσα να με βοηθήσει.",
+                "english": "I asked him to help me.",
+                "russian": "Я попросил его помочь мне.",
+                "tense": "past",
+            },
+        ],
     },  # verb
     "νερό": {
         "back_text_ru": "вода",
@@ -243,6 +291,18 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
             "accusative_plural": "τα νερά",
             "vocative_plural": "νερά",
         },
+        "examples": [
+            {
+                "greek": "Θέλω ένα ποτήρι νερό.",
+                "english": "I want a glass of water.",
+                "russian": "Я хочу стакан воды.",
+            },
+            {
+                "greek": "Το νερό είναι κρύο.",
+                "english": "The water is cold.",
+                "russian": "Вода холодная.",
+            },
+        ],
     },
     "ψωμί": {
         "back_text_ru": "хлеб",
@@ -257,6 +317,18 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
             "accusative_plural": "τα ψωμιά",
             "vocative_plural": "ψωμιά",
         },
+        "examples": [
+            {
+                "greek": "Αγόρασα φρέσκο ψωμί.",
+                "english": "I bought fresh bread.",
+                "russian": "Я купил свежий хлеб.",
+            },
+            {
+                "greek": "Θέλεις ψωμί με βούτυρο;",
+                "english": "Do you want bread with butter?",
+                "russian": "Хочешь хлеб с маслом?",
+            },
+        ],
     },
     "σπίτι": {
         "back_text_ru": "дом",
@@ -271,12 +343,44 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
             "accusative_plural": "τα σπίτια",
             "vocative_plural": "σπίτια",
         },
+        "examples": [
+            {
+                "greek": "Το σπίτι μου είναι κοντά.",
+                "english": "My house is nearby.",
+                "russian": "Мой дом близко.",
+            },
+            {"greek": "Πάμε σπίτι!", "english": "Let's go home!", "russian": "Пойдем домой!"},
+        ],
     },
     "καλημέρα": {
         "back_text_ru": "доброе утро",
+        "examples": [
+            {
+                "greek": "Καλημέρα, τι κάνεις;",
+                "english": "Good morning, how are you?",
+                "russian": "Доброе утро, как дела?",
+            },
+            {
+                "greek": "Καλημέρα σας!",
+                "english": "Good morning! (formal)",
+                "russian": "Доброе утро! (вежливо)",
+            },
+        ],
     },  # interjection
     "καληνύχτα": {
         "back_text_ru": "спокойной ночи",
+        "examples": [
+            {
+                "greek": "Καληνύχτα, όνειρα γλυκά!",
+                "english": "Good night, sweet dreams!",
+                "russian": "Спокойной ночи, сладких снов!",
+            },
+            {
+                "greek": "Πάω για ύπνο. Καληνύχτα!",
+                "english": "I'm going to sleep. Good night!",
+                "russian": "Я иду спать. Спокойной ночи!",
+            },
+        ],
     },  # interjection
     # ========================================================================
     # A2 Level (10 words) - Daily life and common verbs
@@ -294,6 +398,18 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
             "accusative_plural": "τις δουλειές",
             "vocative_plural": "δουλειές",
         },
+        "examples": [
+            {
+                "greek": "Πάω στη δουλειά κάθε μέρα.",
+                "english": "I go to work every day.",
+                "russian": "Я хожу на работу каждый день.",
+            },
+            {
+                "greek": "Έχω πολλή δουλειά σήμερα.",
+                "english": "I have a lot of work today.",
+                "russian": "У меня много работы сегодня.",
+            },
+        ],
     },
     "οικογένεια": {
         "back_text_ru": "семья",
@@ -308,6 +424,18 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
             "accusative_plural": "τις οικογένειες",
             "vocative_plural": "οικογένειες",
         },
+        "examples": [
+            {
+                "greek": "Η οικογένειά μου μένει στην Αθήνα.",
+                "english": "My family lives in Athens.",
+                "russian": "Моя семья живет в Афинах.",
+            },
+            {
+                "greek": "Αγαπώ την οικογένειά μου.",
+                "english": "I love my family.",
+                "russian": "Я люблю свою семью.",
+            },
+        ],
     },
     "φίλος": {
         "back_text_ru": "друг",
@@ -322,6 +450,18 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
             "accusative_plural": "τους φίλους",
             "vocative_plural": "φίλοι",
         },
+        "examples": [
+            {
+                "greek": "Ο Γιάννης είναι ο καλύτερος φίλος μου.",
+                "english": "Yannis is my best friend.",
+                "russian": "Яннис - мой лучший друг.",
+            },
+            {
+                "greek": "Βλέπω τους φίλους μου το Σάββατο.",
+                "english": "I see my friends on Saturday.",
+                "russian": "Я вижусь с друзьями в субботу.",
+            },
+        ],
     },
     "αγαπώ": {
         "back_text_ru": "любить",
@@ -360,6 +500,20 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
             "imperative_2s": "αγάπα",
             "imperative_2p": "αγαπάτε",
         },
+        "examples": [
+            {
+                "greek": "Σε αγαπώ πολύ.",
+                "english": "I love you very much.",
+                "russian": "Я тебя очень люблю.",
+                "tense": "present",
+            },
+            {
+                "greek": "Την αγάπησα από την πρώτη στιγμή.",
+                "english": "I loved her from the first moment.",
+                "russian": "Я полюбил ее с первого момента.",
+                "tense": "past",
+            },
+        ],
     },  # verb
     "θέλω": {
         "back_text_ru": "хотеть",
@@ -398,6 +552,20 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
             "imperative_2s": "",
             "imperative_2p": "",
         },
+        "examples": [
+            {
+                "greek": "Θέλω να μάθω ελληνικά.",
+                "english": "I want to learn Greek.",
+                "russian": "Я хочу выучить греческий.",
+                "tense": "present",
+            },
+            {
+                "greek": "Ήθελα να σου πω κάτι.",
+                "english": "I wanted to tell you something.",
+                "russian": "Я хотел тебе кое-что сказать.",
+                "tense": "imperfect",
+            },
+        ],
     },  # verb
     "μπορώ": {
         "back_text_ru": "мочь",
@@ -436,6 +604,20 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
             "imperative_2s": "",
             "imperative_2p": "",
         },
+        "examples": [
+            {
+                "greek": "Μπορώ να σε βοηθήσω.",
+                "english": "I can help you.",
+                "russian": "Я могу тебе помочь.",
+                "tense": "present",
+            },
+            {
+                "greek": "Δεν μπόρεσα να έρθω χθες.",
+                "english": "I couldn't come yesterday.",
+                "russian": "Я не смог прийти вчера.",
+                "tense": "past",
+            },
+        ],
     },  # verb
     "πρέπει": {
         "back_text_ru": "надо / нужно",
@@ -474,6 +656,20 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
             "imperative_2s": "",
             "imperative_2p": "",
         },
+        "examples": [
+            {
+                "greek": "Πρέπει να φύγω τώρα.",
+                "english": "I must leave now.",
+                "russian": "Мне нужно уйти сейчас.",
+                "tense": "present",
+            },
+            {
+                "greek": "Έπρεπε να το είχα πει νωρίτερα.",
+                "english": "I should have said it earlier.",
+                "russian": "Мне надо было сказать это раньше.",
+                "tense": "imperfect",
+            },
+        ],
     },  # verb (impersonal)
     "χρόνια": {
         "back_text_ru": "годы",
@@ -488,6 +684,18 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
             "accusative_plural": "τα χρόνια",
             "vocative_plural": "χρόνια",
         },
+        "examples": [
+            {
+                "greek": "Μένω εδώ πέντε χρόνια.",
+                "english": "I have been living here for five years.",
+                "russian": "Я живу здесь пять лет.",
+            },
+            {
+                "greek": "Χρόνια πολλά!",
+                "english": "Happy birthday! / Many years!",
+                "russian": "С днем рождения! / Многие лета!",
+            },
+        ],
     },
     "σήμερα": {
         "back_text_ru": "сегодня",
@@ -495,6 +703,18 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
             "comparative": "",
             "superlative": "",
         },
+        "examples": [
+            {
+                "greek": "Σήμερα είναι Δευτέρα.",
+                "english": "Today is Monday.",
+                "russian": "Сегодня понедельник.",
+            },
+            {
+                "greek": "Τι θα κάνεις σήμερα;",
+                "english": "What will you do today?",
+                "russian": "Что ты будешь делать сегодня?",
+            },
+        ],
     },  # adverb (time - no comparison)
     "αύριο": {
         "back_text_ru": "завтра",
@@ -502,6 +722,18 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
             "comparative": "",
             "superlative": "",
         },
+        "examples": [
+            {
+                "greek": "Αύριο θα πάω στη θάλασσα.",
+                "english": "Tomorrow I will go to the sea.",
+                "russian": "Завтра я пойду на море.",
+            },
+            {
+                "greek": "Τα λέμε αύριο!",
+                "english": "See you tomorrow!",
+                "russian": "Увидимся завтра!",
+            },
+        ],
     },  # adverb (time - no comparison)
     # ========================================================================
     # B1 Level (10 words) - Intermediate concepts
@@ -519,6 +751,18 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
             "accusative_plural": "τις συζητήσεις",
             "vocative_plural": "συζητήσεις",
         },
+        "examples": [
+            {
+                "greek": "Είχαμε μια ενδιαφέρουσα συζήτηση.",
+                "english": "We had an interesting discussion.",
+                "russian": "У нас была интересная дискуссия.",
+            },
+            {
+                "greek": "Η συζήτηση κράτησε δύο ώρες.",
+                "english": "The discussion lasted two hours.",
+                "russian": "Обсуждение длилось два часа.",
+            },
+        ],
     },
     "απόφαση": {
         "back_text_ru": "решение",
@@ -533,6 +777,18 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
             "accusative_plural": "τις αποφάσεις",
             "vocative_plural": "αποφάσεις",
         },
+        "examples": [
+            {
+                "greek": "Πήρα μια σημαντική απόφαση.",
+                "english": "I made an important decision.",
+                "russian": "Я принял важное решение.",
+            },
+            {
+                "greek": "Η απόφαση είναι δική σου.",
+                "english": "The decision is yours.",
+                "russian": "Решение за тобой.",
+            },
+        ],
     },
     "εμπειρία": {
         "back_text_ru": "опыт",
@@ -547,6 +803,18 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
             "accusative_plural": "τις εμπειρίες",
             "vocative_plural": "εμπειρίες",
         },
+        "examples": [
+            {
+                "greek": "Έχει πολλή εμπειρία στη δουλειά.",
+                "english": "He has a lot of work experience.",
+                "russian": "У него большой опыт работы.",
+            },
+            {
+                "greek": "Ήταν μια μοναδική εμπειρία.",
+                "english": "It was a unique experience.",
+                "russian": "Это был уникальный опыт.",
+            },
+        ],
     },
     "προσπαθώ": {
         "back_text_ru": "пытаться / стараться",
@@ -585,6 +853,20 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
             "imperative_2s": "προσπάθησε",
             "imperative_2p": "προσπαθήστε",
         },
+        "examples": [
+            {
+                "greek": "Προσπαθώ να μάθω ελληνικά κάθε μέρα.",
+                "english": "I try to learn Greek every day.",
+                "russian": "Я стараюсь учить греческий каждый день.",
+                "tense": "present",
+            },
+            {
+                "greek": "Προσπάθησε να καταλάβει το πρόβλημα.",
+                "english": "He tried to understand the problem.",
+                "russian": "Он попытался понять проблему.",
+                "tense": "past",
+            },
+        ],
     },  # verb
     "επιτυγχάνω": {
         "back_text_ru": "достигать",
@@ -623,6 +905,20 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
             "imperative_2s": "επίτυχε",
             "imperative_2p": "επιτύχετε",
         },
+        "examples": [
+            {
+                "greek": "Θέλω να επιτύχω τους στόχους μου.",
+                "english": "I want to achieve my goals.",
+                "russian": "Я хочу достичь своих целей.",
+                "tense": "present",
+            },
+            {
+                "greek": "Επέτυχε μεγάλη επιτυχία στην καριέρα του.",
+                "english": "He achieved great success in his career.",
+                "russian": "Он добился большого успеха в карьере.",
+                "tense": "past",
+            },
+        ],
     },  # verb
     "αναπτύσσω": {
         "back_text_ru": "развивать",
@@ -661,6 +957,20 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
             "imperative_2s": "ανάπτυξε",
             "imperative_2p": "αναπτύξτε",
         },
+        "examples": [
+            {
+                "greek": "Αναπτύσσουμε νέα προϊόντα.",
+                "english": "We are developing new products.",
+                "russian": "Мы разрабатываем новые продукты.",
+                "tense": "present",
+            },
+            {
+                "greek": "Η εταιρεία ανέπτυξε καινοτόμες λύσεις.",
+                "english": "The company developed innovative solutions.",
+                "russian": "Компания разработала инновационные решения.",
+                "tense": "past",
+            },
+        ],
     },  # verb
     "κατάσταση": {
         "back_text_ru": "ситуация / положение",
@@ -675,6 +985,18 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
             "accusative_plural": "τις καταστάσεις",
             "vocative_plural": "καταστάσεις",
         },
+        "examples": [
+            {
+                "greek": "Η κατάσταση είναι δύσκολη.",
+                "english": "The situation is difficult.",
+                "russian": "Ситуация сложная.",
+            },
+            {
+                "greek": "Πρέπει να βελτιώσουμε την κατάσταση.",
+                "english": "We need to improve the situation.",
+                "russian": "Нам нужно улучшить положение.",
+            },
+        ],
     },
     "σχέση": {
         "back_text_ru": "отношения / связь",
@@ -689,6 +1011,18 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
             "accusative_plural": "τις σχέσεις",
             "vocative_plural": "σχέσεις",
         },
+        "examples": [
+            {
+                "greek": "Έχουμε καλή σχέση με τους γείτονες.",
+                "english": "We have a good relationship with the neighbors.",
+                "russian": "У нас хорошие отношения с соседями.",
+            },
+            {
+                "greek": "Ποια είναι η σχέση αυτών των δύο θεμάτων;",
+                "english": "What is the connection between these two topics?",
+                "russian": "Какая связь между этими двумя темами?",
+            },
+        ],
     },
     "ευκαιρία": {
         "back_text_ru": "возможность / шанс",
@@ -703,6 +1037,18 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
             "accusative_plural": "τις ευκαιρίες",
             "vocative_plural": "ευκαιρίες",
         },
+        "examples": [
+            {
+                "greek": "Αυτή είναι μια μεγάλη ευκαιρία.",
+                "english": "This is a great opportunity.",
+                "russian": "Это отличная возможность.",
+            },
+            {
+                "greek": "Μη χάσεις αυτή την ευκαιρία!",
+                "english": "Don't miss this chance!",
+                "russian": "Не упусти эту возможность!",
+            },
+        ],
     },
     "πρόβλημα": {
         "back_text_ru": "проблема",
@@ -717,6 +1063,18 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
             "accusative_plural": "τα προβλήματα",
             "vocative_plural": "προβλήματα",
         },
+        "examples": [
+            {
+                "greek": "Υπάρχει ένα πρόβλημα με τον υπολογιστή.",
+                "english": "There is a problem with the computer.",
+                "russian": "Есть проблема с компьютером.",
+            },
+            {
+                "greek": "Θα λύσουμε το πρόβλημα μαζί.",
+                "english": "We will solve the problem together.",
+                "russian": "Мы решим проблему вместе.",
+            },
+        ],
     },
     # ========================================================================
     # B2 Level (10 words) - Professional and analytical
@@ -734,6 +1092,18 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
             "accusative_plural": "τις διαπραγματεύσεις",
             "vocative_plural": "διαπραγματεύσεις",
         },
+        "examples": [
+            {
+                "greek": "Οι διαπραγματεύσεις διήρκεσαν πολλές ώρες.",
+                "english": "The negotiations lasted many hours.",
+                "russian": "Переговоры длились много часов.",
+            },
+            {
+                "greek": "Είμαστε σε διαπραγμάτευση με την εταιρεία.",
+                "english": "We are in negotiation with the company.",
+                "russian": "Мы ведем переговоры с компанией.",
+            },
+        ],
     },
     "συμφωνία": {
         "back_text_ru": "соглашение / договор",
@@ -748,6 +1118,18 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
             "accusative_plural": "τις συμφωνίες",
             "vocative_plural": "συμφωνίες",
         },
+        "examples": [
+            {
+                "greek": "Υπογράψαμε τη συμφωνία.",
+                "english": "We signed the agreement.",
+                "russian": "Мы подписали соглашение.",
+            },
+            {
+                "greek": "Καταλήξαμε σε συμφωνία.",
+                "english": "We reached an agreement.",
+                "russian": "Мы пришли к соглашению.",
+            },
+        ],
     },
     "ανάλυση": {
         "back_text_ru": "анализ",
@@ -762,6 +1144,18 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
             "accusative_plural": "τις αναλύσεις",
             "vocative_plural": "αναλύσεις",
         },
+        "examples": [
+            {
+                "greek": "Η ανάλυση των δεδομένων είναι απαραίτητη.",
+                "english": "Data analysis is essential.",
+                "russian": "Анализ данных необходим.",
+            },
+            {
+                "greek": "Κάναμε λεπτομερή ανάλυση του προβλήματος.",
+                "english": "We did a detailed analysis of the problem.",
+                "russian": "Мы провели детальный анализ проблемы.",
+            },
+        ],
     },
     "επιχείρηση": {
         "back_text_ru": "предприятие / бизнес",
@@ -776,6 +1170,18 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
             "accusative_plural": "τις επιχειρήσεις",
             "vocative_plural": "επιχειρήσεις",
         },
+        "examples": [
+            {
+                "greek": "Ξεκίνησε τη δική του επιχείρηση.",
+                "english": "He started his own business.",
+                "russian": "Он открыл свой бизнес.",
+            },
+            {
+                "greek": "Η επιχείρηση αναπτύσσεται γρήγορα.",
+                "english": "The business is growing quickly.",
+                "russian": "Предприятие быстро развивается.",
+            },
+        ],
     },
     "στρατηγική": {
         "back_text_ru": "стратегия",
@@ -790,6 +1196,18 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
             "accusative_plural": "τις στρατηγικές",
             "vocative_plural": "στρατηγικές",
         },
+        "examples": [
+            {
+                "greek": "Χρειαζόμαστε μια νέα στρατηγική.",
+                "english": "We need a new strategy.",
+                "russian": "Нам нужна новая стратегия.",
+            },
+            {
+                "greek": "Η στρατηγική μάρκετινγκ ήταν επιτυχημένη.",
+                "english": "The marketing strategy was successful.",
+                "russian": "Маркетинговая стратегия была успешной.",
+            },
+        ],
     },
     "αποτέλεσμα": {
         "back_text_ru": "результат / итог",
@@ -804,6 +1222,18 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
             "accusative_plural": "τα αποτελέσματα",
             "vocative_plural": "αποτελέσματα",
         },
+        "examples": [
+            {
+                "greek": "Τα αποτελέσματα ήταν εντυπωσιακά.",
+                "english": "The results were impressive.",
+                "russian": "Результаты были впечатляющими.",
+            },
+            {
+                "greek": "Περιμένουμε τα αποτελέσματα των εξετάσεων.",
+                "english": "We are waiting for the exam results.",
+                "russian": "Мы ждем результаты экзаменов.",
+            },
+        ],
     },
     "επιρροή": {
         "back_text_ru": "влияние",
@@ -818,6 +1248,18 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
             "accusative_plural": "τις επιρροές",
             "vocative_plural": "επιρροές",
         },
+        "examples": [
+            {
+                "greek": "Έχει μεγάλη επιρροή στην ομάδα.",
+                "english": "He has a great influence on the team.",
+                "russian": "Он имеет большое влияние на команду.",
+            },
+            {
+                "greek": "Η τεχνολογία έχει επιρροή στη ζωή μας.",
+                "english": "Technology has an influence on our lives.",
+                "russian": "Технологии влияют на нашу жизнь.",
+            },
+        ],
     },
     "παράγοντας": {
         "back_text_ru": "фактор",
@@ -832,6 +1274,18 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
             "accusative_plural": "τους παράγοντες",
             "vocative_plural": "παράγοντες",
         },
+        "examples": [
+            {
+                "greek": "Ο χρόνος είναι σημαντικός παράγοντας.",
+                "english": "Time is an important factor.",
+                "russian": "Время - важный фактор.",
+            },
+            {
+                "greek": "Πολλοί παράγοντες επηρεάζουν την απόφαση.",
+                "english": "Many factors influence the decision.",
+                "russian": "Многие факторы влияют на решение.",
+            },
+        ],
     },
     "προτεραιότητα": {
         "back_text_ru": "приоритет",
@@ -846,6 +1300,18 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
             "accusative_plural": "τις προτεραιότητες",
             "vocative_plural": "προτεραιότητες",
         },
+        "examples": [
+            {
+                "greek": "Η υγεία είναι η πρώτη προτεραιότητα.",
+                "english": "Health is the first priority.",
+                "russian": "Здоровье - первый приоритет.",
+            },
+            {
+                "greek": "Πρέπει να καθορίσουμε τις προτεραιότητες.",
+                "english": "We need to set the priorities.",
+                "russian": "Нам нужно определить приоритеты.",
+            },
+        ],
     },
     "αξιολόγηση": {
         "back_text_ru": "оценка",
@@ -860,6 +1326,18 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
             "accusative_plural": "τις αξιολογήσεις",
             "vocative_plural": "αξιολογήσεις",
         },
+        "examples": [
+            {
+                "greek": "Η αξιολόγηση της απόδοσης είναι σημαντική.",
+                "english": "Performance evaluation is important.",
+                "russian": "Оценка эффективности важна.",
+            },
+            {
+                "greek": "Κάναμε αξιολόγηση του προγράμματος.",
+                "english": "We did an evaluation of the program.",
+                "russian": "Мы провели оценку программы.",
+            },
+        ],
     },
     # ========================================================================
     # C1 Level (10 words) - Advanced academic
@@ -877,6 +1355,18 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
             "accusative_plural": "τις διαφάνειες",
             "vocative_plural": "διαφάνειες",
         },
+        "examples": [
+            {
+                "greek": "Η διαφάνεια είναι απαραίτητη στη δημόσια διοίκηση.",
+                "english": "Transparency is essential in public administration.",
+                "russian": "Прозрачность необходима в государственном управлении.",
+            },
+            {
+                "greek": "Απαιτούμε πλήρη διαφάνεια στις διαδικασίες.",
+                "english": "We demand full transparency in the procedures.",
+                "russian": "Мы требуем полной прозрачности в процедурах.",
+            },
+        ],
     },
     "αειφορία": {
         "back_text_ru": "устойчивое развитие",
@@ -891,6 +1381,18 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
             "accusative_plural": "τις αειφορίες",
             "vocative_plural": "αειφορίες",
         },
+        "examples": [
+            {
+                "greek": "Η αειφορία είναι προτεραιότητα για το περιβάλλον.",
+                "english": "Sustainability is a priority for the environment.",
+                "russian": "Устойчивое развитие - приоритет для окружающей среды.",
+            },
+            {
+                "greek": "Προωθούμε πολιτικές αειφορίας.",
+                "english": "We promote sustainability policies.",
+                "russian": "Мы продвигаем политику устойчивого развития.",
+            },
+        ],
     },
     "διακυβέρνηση": {
         "back_text_ru": "управление / руководство",
@@ -905,6 +1407,18 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
             "accusative_plural": "τις διακυβερνήσεις",
             "vocative_plural": "διακυβερνήσεις",
         },
+        "examples": [
+            {
+                "greek": "Η χρηστή διακυβέρνηση ενισχύει την εμπιστοσύνη.",
+                "english": "Good governance strengthens trust.",
+                "russian": "Хорошее управление укрепляет доверие.",
+            },
+            {
+                "greek": "Η εταιρική διακυβέρνηση έχει βελτιωθεί.",
+                "english": "Corporate governance has improved.",
+                "russian": "Корпоративное управление улучшилось.",
+            },
+        ],
     },
     "αντικειμενικότητα": {
         "back_text_ru": "объективность",
@@ -919,6 +1433,18 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
             "accusative_plural": "τις αντικειμενικότητες",
             "vocative_plural": "αντικειμενικότητες",
         },
+        "examples": [
+            {
+                "greek": "Η αντικειμενικότητα είναι σημαντική στην έρευνα.",
+                "english": "Objectivity is important in research.",
+                "russian": "Объективность важна в исследованиях.",
+            },
+            {
+                "greek": "Προσπαθούμε να διατηρήσουμε την αντικειμενικότητα.",
+                "english": "We try to maintain objectivity.",
+                "russian": "Мы стараемся сохранять объективность.",
+            },
+        ],
     },
     "υποκειμενικότητα": {
         "back_text_ru": "субъективность",
@@ -933,6 +1459,18 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
             "accusative_plural": "τις υποκειμενικότητες",
             "vocative_plural": "υποκειμενικότητες",
         },
+        "examples": [
+            {
+                "greek": "Η υποκειμενικότητα επηρεάζει την κρίση μας.",
+                "english": "Subjectivity affects our judgment.",
+                "russian": "Субъективность влияет на наше суждение.",
+            },
+            {
+                "greek": "Πρέπει να αναγνωρίσουμε την υποκειμενικότητά μας.",
+                "english": "We must recognize our subjectivity.",
+                "russian": "Мы должны признать нашу субъективность.",
+            },
+        ],
     },
     "διεπιστημονικός": {
         "back_text_ru": "междисциплинарный",
@@ -964,6 +1502,18 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
             "comparative": "πιο διεπιστημονικός",
             "superlative": "ο πιο διεπιστημονικός",
         },
+        "examples": [
+            {
+                "greek": "Η έρευνα απαιτεί διεπιστημονική προσέγγιση.",
+                "english": "The research requires an interdisciplinary approach.",
+                "russian": "Исследование требует междисциплинарного подхода.",
+            },
+            {
+                "greek": "Συμμετέχω σε ένα διεπιστημονικό πρόγραμμα.",
+                "english": "I participate in an interdisciplinary program.",
+                "russian": "Я участвую в междисциплинарной программе.",
+            },
+        ],
     },  # adjective
     "πολυπλοκότητα": {
         "back_text_ru": "сложность",
@@ -978,6 +1528,18 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
             "accusative_plural": "τις πολυπλοκότητες",
             "vocative_plural": "πολυπλοκότητες",
         },
+        "examples": [
+            {
+                "greek": "Η πολυπλοκότητα του θέματος απαιτεί χρόνο.",
+                "english": "The complexity of the topic requires time.",
+                "russian": "Сложность темы требует времени.",
+            },
+            {
+                "greek": "Κατανοούμε την πολυπλοκότητα της κατάστασης.",
+                "english": "We understand the complexity of the situation.",
+                "russian": "Мы понимаем сложность ситуации.",
+            },
+        ],
     },
     "ενσωμάτωση": {
         "back_text_ru": "интеграция / включение",
@@ -992,6 +1554,18 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
             "accusative_plural": "τις ενσωματώσεις",
             "vocative_plural": "ενσωματώσεις",
         },
+        "examples": [
+            {
+                "greek": "Η ενσωμάτωση νέων τεχνολογιών είναι απαραίτητη.",
+                "english": "The integration of new technologies is essential.",
+                "russian": "Интеграция новых технологий необходима.",
+            },
+            {
+                "greek": "Προχωρήσαμε στην ενσωμάτωση των δύο τμημάτων.",
+                "english": "We proceeded with the integration of the two departments.",
+                "russian": "Мы провели интеграцию двух отделов.",
+            },
+        ],
     },
     "διαφοροποίηση": {
         "back_text_ru": "дифференциация / различение",
@@ -1006,6 +1580,18 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
             "accusative_plural": "τις διαφοροποιήσεις",
             "vocative_plural": "διαφοροποιήσεις",
         },
+        "examples": [
+            {
+                "greek": "Η διαφοροποίηση των προϊόντων είναι στρατηγική.",
+                "english": "Product differentiation is strategic.",
+                "russian": "Дифференциация продуктов - это стратегия.",
+            },
+            {
+                "greek": "Υπάρχει διαφοροποίηση μεταξύ των δύο μεθόδων.",
+                "english": "There is a differentiation between the two methods.",
+                "russian": "Существует различие между двумя методами.",
+            },
+        ],
     },
     "συνεισφορά": {
         "back_text_ru": "вклад",
@@ -1020,6 +1606,18 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
             "accusative_plural": "τις συνεισφορές",
             "vocative_plural": "συνεισφορές",
         },
+        "examples": [
+            {
+                "greek": "Η συνεισφορά του στην επιστήμη είναι μεγάλη.",
+                "english": "His contribution to science is significant.",
+                "russian": "Его вклад в науку значителен.",
+            },
+            {
+                "greek": "Εκτιμούμε τη συνεισφορά κάθε μέλους.",
+                "english": "We appreciate the contribution of each member.",
+                "russian": "Мы ценим вклад каждого члена.",
+            },
+        ],
     },
     # ========================================================================
     # C2 Level (10 words) - Mastery level philosophical/academic
@@ -1037,6 +1635,18 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
             "accusative_plural": "τους μεταμοντερνισμούς",
             "vocative_plural": "μεταμοντερνισμοί",
         },
+        "examples": [
+            {
+                "greek": "Ο μεταμοντερνισμός αμφισβητεί τις μεγάλες αφηγήσεις.",
+                "english": "Postmodernism challenges the grand narratives.",
+                "russian": "Постмодернизм оспаривает великие нарративы.",
+            },
+            {
+                "greek": "Η επιρροή του μεταμοντερνισμού στην τέχνη είναι εμφανής.",
+                "english": "The influence of postmodernism on art is evident.",
+                "russian": "Влияние постмодернизма на искусство очевидно.",
+            },
+        ],
     },
     "επιστημολογία": {
         "back_text_ru": "эпистемология / теория познания",
@@ -1051,6 +1661,18 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
             "accusative_plural": "τις επιστημολογίες",
             "vocative_plural": "επιστημολογίες",
         },
+        "examples": [
+            {
+                "greek": "Η επιστημολογία μελετά τη φύση της γνώσης.",
+                "english": "Epistemology studies the nature of knowledge.",
+                "russian": "Эпистемология изучает природу знания.",
+            },
+            {
+                "greek": "Τα επιστημολογικά ερωτήματα είναι θεμελιώδη.",
+                "english": "Epistemological questions are fundamental.",
+                "russian": "Эпистемологические вопросы фундаментальны.",
+            },
+        ],
     },
     "υπερβατικός": {
         "back_text_ru": "трансцендентный",
@@ -1082,6 +1704,18 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
             "comparative": "πιο υπερβατικός",
             "superlative": "ο πιο υπερβατικός",
         },
+        "examples": [
+            {
+                "greek": "Η υπερβατική φιλοσοφία εξερευνά τα όρια της εμπειρίας.",
+                "english": "Transcendental philosophy explores the limits of experience.",
+                "russian": "Трансцендентальная философия исследует границы опыта.",
+            },
+            {
+                "greek": "Είχε μια υπερβατική εμπειρία κατά τη διάρκεια του διαλογισμού.",
+                "english": "He had a transcendental experience during meditation.",
+                "russian": "Он пережил трансцендентный опыт во время медитации.",
+            },
+        ],
     },  # adjective
     "διαλεκτική": {
         "back_text_ru": "диалектика",
@@ -1096,6 +1730,18 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
             "accusative_plural": "τις διαλεκτικές",
             "vocative_plural": "διαλεκτικές",
         },
+        "examples": [
+            {
+                "greek": "Η διαλεκτική είναι μέθοδος φιλοσοφικής ανάλυσης.",
+                "english": "Dialectics is a method of philosophical analysis.",
+                "russian": "Диалектика - это метод философского анализа.",
+            },
+            {
+                "greek": "Η εγελιανή διαλεκτική βασίζεται στη σύνθεση αντιθέσεων.",
+                "english": "Hegelian dialectics is based on the synthesis of opposites.",
+                "russian": "Гегелевская диалектика основана на синтезе противоположностей.",
+            },
+        ],
     },
     "παραδειγματικός": {
         "back_text_ru": "парадигматический",
@@ -1127,6 +1773,18 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
             "comparative": "πιο παραδειγματικός",
             "superlative": "ο πιο παραδειγματικός",
         },
+        "examples": [
+            {
+                "greek": "Αυτή η θεωρία αποτελεί παραδειγματική αλλαγή.",
+                "english": "This theory represents a paradigmatic shift.",
+                "russian": "Эта теория представляет собой парадигматический сдвиг.",
+            },
+            {
+                "greek": "Είναι παραδειγματικό παράδειγμα καινοτομίας.",
+                "english": "It is a paradigmatic example of innovation.",
+                "russian": "Это парадигматический пример инновации.",
+            },
+        ],
     },  # adjective
     "αποδόμηση": {
         "back_text_ru": "деконструкция",
@@ -1141,6 +1799,18 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
             "accusative_plural": "τις αποδομήσεις",
             "vocative_plural": "αποδομήσεις",
         },
+        "examples": [
+            {
+                "greek": "Η αποδόμηση αμφισβητεί τις δυαδικές αντιθέσεις.",
+                "english": "Deconstruction challenges binary oppositions.",
+                "russian": "Деконструкция оспаривает бинарные оппозиции.",
+            },
+            {
+                "greek": "Ο Ντεριντά εισήγαγε την έννοια της αποδόμησης.",
+                "english": "Derrida introduced the concept of deconstruction.",
+                "russian": "Деррида ввел понятие деконструкции.",
+            },
+        ],
     },
     "ερμηνευτική": {
         "back_text_ru": "герменевтика",
@@ -1155,6 +1825,18 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
             "accusative_plural": "τις ερμηνευτικές",
             "vocative_plural": "ερμηνευτικές",
         },
+        "examples": [
+            {
+                "greek": "Η ερμηνευτική ασχολείται με την ερμηνεία κειμένων.",
+                "english": "Hermeneutics deals with the interpretation of texts.",
+                "russian": "Герменевтика занимается интерпретацией текстов.",
+            },
+            {
+                "greek": "Η φιλοσοφική ερμηνευτική επηρέασε τις ανθρωπιστικές επιστήμες.",
+                "english": "Philosophical hermeneutics influenced the humanities.",
+                "russian": "Философская герменевтика повлияла на гуманитарные науки.",
+            },
+        ],
     },
     "φαινομενολογία": {
         "back_text_ru": "феноменология",
@@ -1169,6 +1851,18 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
             "accusative_plural": "τις φαινομενολογίες",
             "vocative_plural": "φαινομενολογίες",
         },
+        "examples": [
+            {
+                "greek": "Η φαινομενολογία εξετάζει τη δομή της εμπειρίας.",
+                "english": "Phenomenology examines the structure of experience.",
+                "russian": "Феноменология исследует структуру опыта.",
+            },
+            {
+                "greek": "Ο Χούσερλ θεμελίωσε τη φαινομενολογία.",
+                "english": "Husserl founded phenomenology.",
+                "russian": "Гуссерль основал феноменологию.",
+            },
+        ],
     },
     "οντολογία": {
         "back_text_ru": "онтология",
@@ -1183,6 +1877,18 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
             "accusative_plural": "τις οντολογίες",
             "vocative_plural": "οντολογίες",
         },
+        "examples": [
+            {
+                "greek": "Η οντολογία μελετά τη φύση του είναι.",
+                "english": "Ontology studies the nature of being.",
+                "russian": "Онтология изучает природу бытия.",
+            },
+            {
+                "greek": "Τα οντολογικά ερωτήματα είναι κεντρικά στη μεταφυσική.",
+                "english": "Ontological questions are central to metaphysics.",
+                "russian": "Онтологические вопросы центральны в метафизике.",
+            },
+        ],
     },
     "αισθητική": {
         "back_text_ru": "эстетика",
@@ -1197,5 +1903,17 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
             "accusative_plural": "τις αισθητικές",
             "vocative_plural": "αισθητικές",
         },
+        "examples": [
+            {
+                "greek": "Η αισθητική εξετάζει την έννοια του ωραίου.",
+                "english": "Aesthetics examines the concept of beauty.",
+                "russian": "Эстетика исследует понятие красоты.",
+            },
+            {
+                "greek": "Η σύγχρονη αισθητική επαναπροσδιορίζει την τέχνη.",
+                "english": "Modern aesthetics redefines art.",
+                "russian": "Современная эстетика переопределяет искусство.",
+            },
+        ],
     },
 }
