@@ -1064,66 +1064,66 @@ jobs:
           message: ${{ steps.comment.outputs.body }}
 
   # =============================================================================
-  # JOB 9: Visual Tests (Playwright)
+  # JOB 9: Visual Tests (Playwright) - DISABLED while reorganizing visual tests
   # Purpose: Capture screenshots of pages for visual regression
   # Screenshots are later uploaded to Chromatic for comparison
   # =============================================================================
-  visual-tests:
-    name: Visual Tests (Playwright)
-    needs: [deploy, health-check]
-    if: |
-      needs.health-check.outputs.status == 'success' &&
-      !contains(github.event.pull_request.labels.*.name, 'skip-visual')
-    runs-on: ubuntu-latest
-    env:
-      VITE_ENVIRONMENT: test
-      ENVIRONMENT: test
-    outputs:
-      status: ${{ steps.visual.outputs.status }}
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: learn-greek-easy-frontend/package-lock.json
-
-      - name: Install dependencies
-        working-directory: learn-greek-easy-frontend
-        run: npm ci
-
-      - name: Install Playwright Chromium
-        working-directory: learn-greek-easy-frontend
-        run: npx playwright install chromium
-
-      - name: Run Visual Tests
-        id: visual
-        working-directory: learn-greek-easy-frontend
-        env:
-          VISUAL_TEST_URL: ${{ needs.deploy.outputs.frontend_url }}
-        run: |
-          echo "=== Running Visual Tests ==="
-          echo "Target URL: $VISUAL_TEST_URL"
-
-          if npx playwright test --config=playwright.visual.config.ts; then
-            echo "status=success" >> $GITHUB_OUTPUT
-          else
-            echo "status=failure" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Upload Visual Test Results
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: visual-test-results
-          path: |
-            learn-greek-easy-frontend/test-results/
-            learn-greek-easy-frontend/visual-report/
-          retention-days: 30
+  # visual-tests:
+  #   name: Visual Tests (Playwright)
+  #   needs: [deploy, health-check]
+  #   if: |
+  #     needs.health-check.outputs.status == 'success' &&
+  #     !contains(github.event.pull_request.labels.*.name, 'skip-visual')
+  #   runs-on: ubuntu-latest
+  #   env:
+  #     VITE_ENVIRONMENT: test
+  #     ENVIRONMENT: test
+  #   outputs:
+  #     status: ${{ steps.visual.outputs.status }}
+  #
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
+  #
+  #     - name: Setup Node.js
+  #       uses: actions/setup-node@v4
+  #       with:
+  #         node-version: '20'
+  #         cache: 'npm'
+  #         cache-dependency-path: learn-greek-easy-frontend/package-lock.json
+  #
+  #     - name: Install dependencies
+  #       working-directory: learn-greek-easy-frontend
+  #       run: npm ci
+  #
+  #     - name: Install Playwright Chromium
+  #       working-directory: learn-greek-easy-frontend
+  #       run: npx playwright install chromium
+  #
+  #     - name: Run Visual Tests
+  #       id: visual
+  #       working-directory: learn-greek-easy-frontend
+  #       env:
+  #         VISUAL_TEST_URL: ${{ needs.deploy.outputs.frontend_url }}
+  #       run: |
+  #         echo "=== Running Visual Tests ==="
+  #         echo "Target URL: $VISUAL_TEST_URL"
+  #
+  #         if npx playwright test --config=playwright.visual.config.ts; then
+  #           echo "status=success" >> $GITHUB_OUTPUT
+  #         else
+  #           echo "status=failure" >> $GITHUB_OUTPUT
+  #         fi
+  #
+  #     - name: Upload Visual Test Results
+  #       uses: actions/upload-artifact@v4
+  #       if: always()
+  #       with:
+  #         name: visual-test-results
+  #         path: |
+  #           learn-greek-easy-frontend/test-results/
+  #           learn-greek-easy-frontend/visual-report/
+  #         retention-days: 30
 
   # =============================================================================
   # JOB 10: Chromatic Upload (DISABLED - reorganizing visual tests)
@@ -1296,6 +1296,7 @@ jobs:
               : `Desktop: ${desktopScore}, Mobile: ${mobileScore}`;
 
             // Visual regression (Chromatic) status - DISABLED while reorganizing
+            const visualStatus = 'skipped';  // Hardcoded while visual tests are disabled
             const visualIcon = ':yellow_circle:';
             const visualDetails = 'Disabled (reorganizing visual tests)';
 

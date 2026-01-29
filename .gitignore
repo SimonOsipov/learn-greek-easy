@@ -6,6 +6,9 @@ backlog/
 .claude/
 .mcp.json
 
+# Playwright MCP screenshots
+.playwright-mcp/
+
 # k6 Performance Testing
 k6/reports/*
 !k6/reports/.gitkeep
