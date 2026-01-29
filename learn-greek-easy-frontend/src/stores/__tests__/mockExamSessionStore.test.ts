@@ -11,11 +11,9 @@ import type {
   MockExamSession,
   MockExamSubmitAllResponse,
 } from '@/types/mockExam';
-import type { MockExamQuestionState, MockExamSessionData } from '@/types/mockExamSession';
 import {
   MOCK_EXAM_SESSION_RECOVERY_VERSION,
   MOCK_EXAM_SESSION_STORAGE_KEY,
-  MOCK_EXAM_TIME_LIMIT_SECONDS,
 } from '@/types/mockExamSession';
 
 import { useAuthStore } from '../authStore';
@@ -52,12 +50,12 @@ describe('mockExamSessionStore', () => {
   const mockQuestions: MockExamQuestion[] = [
     {
       id: 'q1',
-      question_text: { el: 'Question 1 Greek', en: 'Question 1 English' },
+      question_text: { el: 'Question 1 Greek', en: 'Question 1 English', ru: 'Question 1 Russian' },
       options: [
-        { el: 'Option 1 Greek', en: 'Option 1 English' },
-        { el: 'Option 2 Greek', en: 'Option 2 English' },
-        { el: 'Option 3 Greek', en: 'Option 3 English' },
-        { el: 'Option 4 Greek', en: 'Option 4 English' },
+        { el: 'Option 1 Greek', en: 'Option 1 English', ru: 'Option 1 Russian' },
+        { el: 'Option 2 Greek', en: 'Option 2 English', ru: 'Option 2 Russian' },
+        { el: 'Option 3 Greek', en: 'Option 3 English', ru: 'Option 3 Russian' },
+        { el: 'Option 4 Greek', en: 'Option 4 English', ru: 'Option 4 Russian' },
       ],
       option_count: 4,
       image_url: null,
@@ -65,12 +63,12 @@ describe('mockExamSessionStore', () => {
     },
     {
       id: 'q2',
-      question_text: { el: 'Question 2 Greek', en: 'Question 2 English' },
+      question_text: { el: 'Question 2 Greek', en: 'Question 2 English', ru: 'Question 2 Russian' },
       options: [
-        { el: 'Option 1 Greek', en: 'Option 1 English' },
-        { el: 'Option 2 Greek', en: 'Option 2 English' },
-        { el: 'Option 3 Greek', en: 'Option 3 English' },
-        { el: 'Option 4 Greek', en: 'Option 4 English' },
+        { el: 'Option 1 Greek', en: 'Option 1 English', ru: 'Option 1 Russian' },
+        { el: 'Option 2 Greek', en: 'Option 2 English', ru: 'Option 2 Russian' },
+        { el: 'Option 3 Greek', en: 'Option 3 English', ru: 'Option 3 Russian' },
+        { el: 'Option 4 Greek', en: 'Option 4 English', ru: 'Option 4 Russian' },
       ],
       option_count: 4,
       image_url: null,
@@ -78,12 +76,12 @@ describe('mockExamSessionStore', () => {
     },
     {
       id: 'q3',
-      question_text: { el: 'Question 3 Greek', en: 'Question 3 English' },
+      question_text: { el: 'Question 3 Greek', en: 'Question 3 English', ru: 'Question 3 Russian' },
       options: [
-        { el: 'Option 1 Greek', en: 'Option 1 English' },
-        { el: 'Option 2 Greek', en: 'Option 2 English' },
-        { el: 'Option 3 Greek', en: 'Option 3 English' },
-        { el: 'Option 4 Greek', en: 'Option 4 English' },
+        { el: 'Option 1 Greek', en: 'Option 1 English', ru: 'Option 1 Russian' },
+        { el: 'Option 2 Greek', en: 'Option 2 English', ru: 'Option 2 Russian' },
+        { el: 'Option 3 Greek', en: 'Option 3 English', ru: 'Option 3 Russian' },
+        { el: 'Option 4 Greek', en: 'Option 4 English', ru: 'Option 4 Russian' },
       ],
       option_count: 4,
       image_url: null,
