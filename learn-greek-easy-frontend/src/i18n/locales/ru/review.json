@@ -69,6 +69,17 @@
       "verb": "Глагол",
       "adjective": "Прилагательное",
       "adverb": "Наречие"
+    },
+    "nounDeclension": {
+      "singular": "Единственное",
+      "plural": "Множественное",
+      "cases": {
+        "nominative": "Именительный",
+        "genitive": "Родительный",
+        "accusative": "Винительный",
+        "vocative": "Звательный"
+      },
+      "notAvailable": "Н/Д"
     }
   }
 }

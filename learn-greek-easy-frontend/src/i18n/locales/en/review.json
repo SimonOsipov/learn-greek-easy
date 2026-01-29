@@ -74,6 +74,17 @@
       "verb": "Verb",
       "adjective": "Adjective",
       "adverb": "Adverb"
+    },
+    "nounDeclension": {
+      "singular": "Singular",
+      "plural": "Plural",
+      "cases": {
+        "nominative": "Nominative",
+        "genitive": "Genitive",
+        "accusative": "Accusative",
+        "vocative": "Vocative"
+      },
+      "notAvailable": "N/A"
     }
   }
 }

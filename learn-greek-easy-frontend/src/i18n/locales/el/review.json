@@ -69,6 +69,17 @@
       "verb": "Ρήμα",
       "adjective": "Επίθετο",
       "adverb": "Επίρρημα"
+    },
+    "nounDeclension": {
+      "singular": "Ενικός",
+      "plural": "Πληθυντικός",
+      "cases": {
+        "nominative": "Ονομαστική",
+        "genitive": "Γενική",
+        "accusative": "Αιτιατική",
+        "vocative": "Κλητική"
+      },
+      "notAvailable": "Δ/Υ"
     }
   }
 }
