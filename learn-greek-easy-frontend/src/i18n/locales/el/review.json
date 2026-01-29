@@ -121,6 +121,10 @@
       "comparative": "Συγκριτικός",
       "superlative": "Υπερθετικός",
       "notAvailable": "Δ/Υ"
+    },
+    "examples": {
+      "title": "Παραδείγματα",
+      "noExamples": "Δεν υπάρχουν παραδείγματα"
     }
   }
 }

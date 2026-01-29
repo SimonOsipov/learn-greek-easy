@@ -126,6 +126,10 @@
       "comparative": "Comparative",
       "superlative": "Superlative",
       "notAvailable": "N/A"
+    },
+    "examples": {
+      "title": "Examples",
+      "noExamples": "No examples available"
     }
   }
 }

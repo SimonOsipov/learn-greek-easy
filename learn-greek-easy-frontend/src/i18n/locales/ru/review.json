@@ -121,6 +121,10 @@
       "comparative": "Сравнительная",
       "superlative": "Превосходная",
       "notAvailable": "Н/Д"
+    },
+    "examples": {
+      "title": "Примеры",
+      "noExamples": "Примеры отсутствуют"
     }
   }
 }

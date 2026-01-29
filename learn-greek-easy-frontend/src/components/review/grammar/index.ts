@@ -3,6 +3,8 @@ export type { AdjectiveDeclensionTablesProps } from './AdjectiveDeclensionTables
 export { AdverbFormsTable } from './AdverbFormsTable';
 export type { AdverbFormsTableProps } from './AdverbFormsTable';
 export { CasesTable } from './CasesTable';
+export { ExampleSentences } from './ExampleSentences';
+export type { ExampleSentencesProps } from './ExampleSentences';
 export { ConjugationTable } from './ConjugationTable';
 export { NounDeclensionTable } from './NounDeclensionTable';
 export type { NounDeclensionTableProps } from './NounDeclensionTable';
