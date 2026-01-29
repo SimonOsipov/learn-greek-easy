@@ -15,6 +15,111 @@ from pydantic import BaseModel, ConfigDict, Field
 from src.db.models import DeckLevel, PartOfSpeech
 
 # ============================================================================
+# Grammar Data Schemas
+# ============================================================================
+
+
+class NounData(BaseModel):
+    """Noun grammar data with gender and case forms."""
+
+    gender: str = Field(..., pattern="^(masculine|feminine|neuter)$")
+    nominative_singular: str = Field(default="")
+    genitive_singular: str = Field(default="")
+    accusative_singular: str = Field(default="")
+    vocative_singular: str = Field(default="")
+    nominative_plural: str = Field(default="")
+    genitive_plural: str = Field(default="")
+    accusative_plural: str = Field(default="")
+    vocative_plural: str = Field(default="")
+
+
+class VerbData(BaseModel):
+    """Verb grammar data with voice and conjugations."""
+
+    voice: str = Field(..., pattern="^(active|passive)$")
+    # Present tense
+    present_1s: str = Field(default="")
+    present_2s: str = Field(default="")
+    present_3s: str = Field(default="")
+    present_1p: str = Field(default="")
+    present_2p: str = Field(default="")
+    present_3p: str = Field(default="")
+    # Imperfect tense
+    imperfect_1s: str = Field(default="")
+    imperfect_2s: str = Field(default="")
+    imperfect_3s: str = Field(default="")
+    imperfect_1p: str = Field(default="")
+    imperfect_2p: str = Field(default="")
+    imperfect_3p: str = Field(default="")
+    # Past (aorist) tense
+    past_1s: str = Field(default="")
+    past_2s: str = Field(default="")
+    past_3s: str = Field(default="")
+    past_1p: str = Field(default="")
+    past_2p: str = Field(default="")
+    past_3p: str = Field(default="")
+    # Future tense
+    future_1s: str = Field(default="")
+    future_2s: str = Field(default="")
+    future_3s: str = Field(default="")
+    future_1p: str = Field(default="")
+    future_2p: str = Field(default="")
+    future_3p: str = Field(default="")
+    # Perfect tense
+    perfect_1s: str = Field(default="")
+    perfect_2s: str = Field(default="")
+    perfect_3s: str = Field(default="")
+    perfect_1p: str = Field(default="")
+    perfect_2p: str = Field(default="")
+    perfect_3p: str = Field(default="")
+    # Imperative
+    imperative_2s: str = Field(default="")
+    imperative_2p: str = Field(default="")
+
+
+class AdjectiveData(BaseModel):
+    """Adjective grammar data with declensions and comparison forms."""
+
+    # Masculine forms
+    masculine_nom_sg: str = Field(default="")
+    masculine_gen_sg: str = Field(default="")
+    masculine_acc_sg: str = Field(default="")
+    masculine_voc_sg: str = Field(default="")
+    masculine_nom_pl: str = Field(default="")
+    masculine_gen_pl: str = Field(default="")
+    masculine_acc_pl: str = Field(default="")
+    masculine_voc_pl: str = Field(default="")
+    # Feminine forms
+    feminine_nom_sg: str = Field(default="")
+    feminine_gen_sg: str = Field(default="")
+    feminine_acc_sg: str = Field(default="")
+    feminine_voc_sg: str = Field(default="")
+    feminine_nom_pl: str = Field(default="")
+    feminine_gen_pl: str = Field(default="")
+    feminine_acc_pl: str = Field(default="")
+    feminine_voc_pl: str = Field(default="")
+    # Neuter forms
+    neuter_nom_sg: str = Field(default="")
+    neuter_gen_sg: str = Field(default="")
+    neuter_acc_sg: str = Field(default="")
+    neuter_voc_sg: str = Field(default="")
+    neuter_nom_pl: str = Field(default="")
+    neuter_gen_pl: str = Field(default="")
+    neuter_acc_pl: str = Field(default="")
+    neuter_voc_pl: str = Field(default="")
+    # Comparison forms
+    comparative: str = Field(default="")
+    superlative: str = Field(default="")
+
+
+class AdverbData(BaseModel):
+    """Adverb grammar data with comparison forms."""
+
+    comparative: str = Field(default="")
+    superlative: str = Field(default="")
+
+
+# ============================================================================
 # Example Schema
 # ============================================================================
 
@@ -54,6 +159,11 @@ class CardBase(BaseModel):
         default=None,
         description="Structured examples with multilingual translations",
     )
+    # Grammar data fields
+    noun_data: Optional[NounData] = None
+    verb_data: Optional[VerbData] = None
+    adjective_data: Optional[AdjectiveData] = None
+    adverb_data: Optional[AdverbData] = None
 
 
 class CardCreate(CardBase):
@@ -76,6 +186,11 @@ class CardUpdate(BaseModel):
         default=None,
         description="Structured examples with multilingual translations",
     )
+    # Grammar data fields
+    noun_data: Optional[NounData] = None
+    verb_data: Optional[VerbData] = None
+    adjective_data: Optional[AdjectiveData] = None
+    adverb_data: Optional[AdverbData] = None
 
 
 class CardResponse(CardBase):
@@ -152,6 +267,11 @@ class CardBulkItemCreate(BaseModel):
         default=None,
         description="Structured examples with multilingual translations",
     )
+    # Grammar data fields
+    noun_data: Optional[NounData] = None
+    verb_data: Optional[VerbData] = None
+    adjective_data: Optional[AdjectiveData] = None
+    adverb_data: Optional[AdverbData] = None
 
 
 class CardBulkCreateRequest(BaseModel):

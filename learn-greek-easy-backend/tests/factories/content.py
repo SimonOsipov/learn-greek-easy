@@ -163,6 +163,11 @@ class CardFactory(BaseFactory):
     )
     part_of_speech = None  # Optional part of speech
     level = None  # Optional CEFR level override
+    # Grammar data fields (all optional)
+    noun_data = None
+    verb_data = None
+    adjective_data = None
+    adverb_data = None
 
     class Params:
         """Factory traits for common variations."""

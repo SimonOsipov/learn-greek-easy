@@ -519,6 +519,28 @@ class Card(Base, TimestampMixin):
         comment="CEFR level override (A1-C2), defaults to deck level if not set",
     )
 
+    # Grammar data fields (JSONB)
+    noun_data: Mapped[dict | None] = mapped_column(
+        JSON,
+        nullable=True,
+        comment="Noun grammar: gender + 8 case forms",
+    )
+    verb_data: Mapped[dict | None] = mapped_column(
+        JSON,
+        nullable=True,
+        comment="Verb grammar: voice + 30 conjugations + 2 imperative",
+    )
+    adjective_data: Mapped[dict | None] = mapped_column(
+        JSON,
+        nullable=True,
+        comment="Adjective grammar: 24 declensions + 2 comparison forms",
+    )
+    adverb_data: Mapped[dict | None] = mapped_column(
+        JSON,
+        nullable=True,
+        comment="Adverb grammar: comparative + superlative",
+    )
+
     # Relationships
     deck: Mapped["Deck"] = relationship(
         back_populates="cards",
