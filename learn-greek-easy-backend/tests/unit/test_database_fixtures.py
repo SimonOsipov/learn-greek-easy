@@ -15,7 +15,7 @@ import pytest
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 
-from src.db.models import Card, CardDifficulty, Deck, DeckLevel, User
+from src.db.models import Card, Deck, DeckLevel, User
 from tests.helpers.database import (
     count_table_rows,
     get_enum_values,
@@ -191,30 +191,6 @@ class TestPostgreSQLFeatures:
         row = result.fetchone()
         assert row[0] == "A1"
 
-    async def test_native_enum_card_difficulty(self, db_session: AsyncSession):
-        """Test that CardDifficulty enum works with PostgreSQL."""
-        deck = Deck(
-            name="Test Deck",
-            description="Testing card difficulty",
-            level=DeckLevel.A1,
-            is_active=True,
-        )
-        db_session.add(deck)
-        await db_session.flush()
-
-        card = Card(
-            deck_id=deck.id,
-            front_text="Hello",
-            back_text="Yeia",
-            difficulty=CardDifficulty.HARD,
-            order_index=1,
-        )
-        db_session.add(card)
-        await db_session.commit()
-        await db_session.refresh(card)
-
-        assert card.difficulty == CardDifficulty.HARD
-
     async def test_enum_values_in_database(self, db_session: AsyncSession):
         """Test that enum values are stored correctly in PostgreSQL."""
         enum_values = await get_enum_values(db_session, "decklevel")
@@ -261,9 +237,7 @@ class TestRelationships:
         card = Card(
             deck_id=deck.id,
             front_text="Hello",
-            back_text="Yeia",
-            difficulty=CardDifficulty.EASY,
-            order_index=1,
+            back_text_en="Yeia",
         )
         db_session.add(card)
         await db_session.commit()
@@ -287,9 +261,7 @@ class TestRelationships:
         card = Card(
             deck_id=deck.id,
             front_text="Hello",
-            back_text="Yeia",
-            difficulty=CardDifficulty.EASY,
-            order_index=1,
+            back_text_en="Yeia",
         )
         db_session.add(card)
         await db_session.commit()

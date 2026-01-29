@@ -69,7 +69,6 @@ from tests.fixtures.database import (
 from tests.fixtures.deck import (  # Type definitions; Core fixtures; Card fixtures; Composite fixtures; User-owned fixtures
     DeckWithCards,
     MultiLevelDecks,
-    cards_by_difficulty,
     deck_with_a2_cards,
     deck_with_all_a1_cards,
     deck_with_b1_cards,

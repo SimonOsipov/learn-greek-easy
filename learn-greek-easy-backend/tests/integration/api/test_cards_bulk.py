@@ -55,15 +55,11 @@ class TestBulkCreateCardsEndpoint:
             "cards": [
                 {
                     "front_text": "kalimera",
-                    "back_text": "good morning",
-                    "difficulty": "easy",
-                    "order_index": 1,
+                    "back_text_en": "good morning",
                 },
                 {
                     "front_text": "kalispera",
-                    "back_text": "good evening",
-                    "difficulty": "easy",
-                    "order_index": 2,
+                    "back_text_en": "good evening",
                 },
             ],
         }
@@ -82,9 +78,9 @@ class TestBulkCreateCardsEndpoint:
 
         # Verify cards data
         assert data["cards"][0]["front_text"] == "kalimera"
-        assert data["cards"][0]["back_text"] == "good morning"
+        assert data["cards"][0]["back_text_en"] == "good morning"
         assert data["cards"][1]["front_text"] == "kalispera"
-        assert data["cards"][1]["back_text"] == "good evening"
+        assert data["cards"][1]["back_text_en"] == "good evening"
 
     @pytest.mark.asyncio
     async def test_bulk_create_cards_with_all_fields(
@@ -96,11 +92,12 @@ class TestBulkCreateCardsEndpoint:
             "cards": [
                 {
                     "front_text": "efharisto",
-                    "back_text": "thank you",
+                    "back_text_en": "thank you",
+                    "back_text_ru": "спасибо",
                     "example_sentence": "Efharisto poly!",
                     "pronunciation": "ef-ha-ri-STO",
-                    "difficulty": "medium",
-                    "order_index": 0,
+                    "part_of_speech": "verb",
+                    "level": "A1",
                 },
             ],
         }
@@ -116,9 +113,12 @@ class TestBulkCreateCardsEndpoint:
         assert data["created_count"] == 1
         card = data["cards"][0]
         assert card["front_text"] == "efharisto"
+        assert card["back_text_en"] == "thank you"
+        assert card["back_text_ru"] == "спасибо"
         assert card["example_sentence"] == "Efharisto poly!"
         assert card["pronunciation"] == "ef-ha-ri-STO"
-        assert card["difficulty"] == "medium"
+        assert card["part_of_speech"] == "verb"
+        assert card["level"] == "A1"
         assert "id" in card
         assert "created_at" in card
         assert "updated_at" in card
@@ -133,9 +133,7 @@ class TestBulkCreateCardsEndpoint:
             "cards": [
                 {
                     "front_text": f"word {i}",
-                    "back_text": f"translation {i}",
-                    "difficulty": "easy",
-                    "order_index": i,
+                    "back_text_en": f"translation {i}",
                 }
                 for i in range(101)  # 101 cards exceeds max_length=100
             ],
@@ -184,9 +182,7 @@ class TestBulkCreateCardsEndpoint:
             "cards": [
                 {
                     "front_text": "test",
-                    "back_text": "test",
-                    "difficulty": "easy",
-                    "order_index": 0,
+                    "back_text_en": "test",
                 },
             ],
         }
@@ -213,9 +209,7 @@ class TestBulkCreateCardsEndpoint:
             "cards": [
                 {
                     "front_text": "test",
-                    "back_text": "test",
-                    "difficulty": "easy",
-                    "order_index": 0,
+                    "back_text_en": "test",
                 },
             ],
         }
@@ -236,9 +230,7 @@ class TestBulkCreateCardsEndpoint:
             "cards": [
                 {
                     "front_text": "test",
-                    "back_text": "test",
-                    "difficulty": "easy",
-                    "order_index": 0,
+                    "back_text_en": "test",
                 },
             ],
         }
@@ -263,9 +255,7 @@ class TestBulkCreateCardsEndpoint:
             "cards": [
                 {
                     "front_text": f"word {i}",
-                    "back_text": f"translation {i}",
-                    "difficulty": "easy",
-                    "order_index": i,
+                    "back_text_en": f"translation {i}",
                 }
                 for i in range(5)
             ],
@@ -295,9 +285,7 @@ class TestBulkCreateCardsEndpoint:
             "cards": [
                 {
                     "front_text": f"word {i}",
-                    "back_text": f"translation {i}",
-                    "difficulty": "medium",
-                    "order_index": i,
+                    "back_text_en": f"translation {i}",
                 }
                 for i in range(num_cards)
             ],
@@ -324,11 +312,12 @@ class TestBulkCreateCardsEndpoint:
             "cards": [
                 {
                     "front_text": "test",
-                    "back_text": "test translation",
+                    "back_text_en": "test translation",
+                    "back_text_ru": "тест перевод",
                     "example_sentence": "Example here",
                     "pronunciation": "test-pron",
-                    "difficulty": "hard",
-                    "order_index": 10,
+                    "part_of_speech": "noun",
+                    "level": "B1",
                 },
             ],
         }
@@ -348,11 +337,12 @@ class TestBulkCreateCardsEndpoint:
             "id",
             "deck_id",
             "front_text",
-            "back_text",
+            "back_text_en",
+            "back_text_ru",
             "example_sentence",
             "pronunciation",
-            "difficulty",
-            "order_index",
+            "part_of_speech",
+            "level",
             "created_at",
             "updated_at",
         ]
@@ -369,13 +359,11 @@ class TestBulkCreateCardsEndpoint:
             "cards": [
                 {
                     "front_text": "valid card",
-                    "back_text": "translation",
-                    "difficulty": "easy",
-                    "order_index": 0,
+                    "back_text_en": "translation",
                 },
                 {
-                    # Missing required fields
-                    "front_text": "missing back_text and difficulty",
+                    # Missing required back_text_en field
+                    "front_text": "missing back_text_en",
                 },
             ],
         }
@@ -392,18 +380,17 @@ class TestBulkCreateCardsEndpoint:
         assert data["error"]["code"] == "VALIDATION_ERROR"
 
     @pytest.mark.asyncio
-    async def test_bulk_create_cards_invalid_difficulty_returns_422(
+    async def test_bulk_create_cards_invalid_part_of_speech_returns_422(
         self, client: AsyncClient, superuser_auth_headers: dict, active_deck_for_bulk
     ):
-        """Test invalid difficulty value in card returns 422."""
+        """Test invalid part_of_speech value in card returns 422."""
         cards_data = {
             "deck_id": str(active_deck_for_bulk.id),
             "cards": [
                 {
                     "front_text": "test",
-                    "back_text": "test",
-                    "difficulty": "super_hard",  # Invalid value
-                    "order_index": 0,
+                    "back_text_en": "test",
+                    "part_of_speech": "invalid_pos",  # Invalid value
                 },
             ],
         }
@@ -420,18 +407,17 @@ class TestBulkCreateCardsEndpoint:
         assert data["error"]["code"] == "VALIDATION_ERROR"
 
     @pytest.mark.asyncio
-    async def test_bulk_create_cards_negative_order_index_returns_422(
+    async def test_bulk_create_cards_invalid_level_returns_422(
         self, client: AsyncClient, superuser_auth_headers: dict, active_deck_for_bulk
     ):
-        """Test negative order_index returns 422."""
+        """Test invalid level value in card returns 422."""
         cards_data = {
             "deck_id": str(active_deck_for_bulk.id),
             "cards": [
                 {
                     "front_text": "test",
-                    "back_text": "test",
-                    "difficulty": "easy",
-                    "order_index": -1,  # Invalid negative value
+                    "back_text_en": "test",
+                    "level": "D1",  # Invalid level
                 },
             ],
         }
@@ -457,9 +443,7 @@ class TestBulkCreateCardsEndpoint:
             "cards": [
                 {
                     "front_text": "test",
-                    "back_text": "test",
-                    "difficulty": "easy",
-                    "order_index": 0,
+                    "back_text_en": "test",
                 },
             ],
         }
@@ -485,9 +469,7 @@ class TestBulkCreateCardsEndpoint:
             "cards": [
                 {
                     "front_text": "test in inactive",
-                    "back_text": "translation",
-                    "difficulty": "easy",
-                    "order_index": 0,
+                    "back_text_en": "translation",
                 },
             ],
         }
@@ -514,9 +496,7 @@ class TestBulkCreateCardsEndpoint:
             "cards": [
                 {
                     "front_text": "persisted bulk test",
-                    "back_text": "persisted translation",
-                    "difficulty": "hard",
-                    "order_index": 0,
+                    "back_text_en": "persisted translation",
                 },
             ],
         }
@@ -539,33 +519,35 @@ class TestBulkCreateCardsEndpoint:
         retrieved_card = get_response.json()
         assert retrieved_card["id"] == card_id
         assert retrieved_card["front_text"] == "persisted bulk test"
-        assert retrieved_card["back_text"] == "persisted translation"
+        assert retrieved_card["back_text_en"] == "persisted translation"
 
     @pytest.mark.asyncio
-    async def test_bulk_create_cards_all_difficulties(
+    async def test_bulk_create_cards_all_parts_of_speech(
         self, client: AsyncClient, superuser_auth_headers: dict, active_deck_for_bulk
     ):
-        """Test bulk creating cards with all valid difficulty levels."""
+        """Test bulk creating cards with all valid part_of_speech values."""
         cards_data = {
             "deck_id": str(active_deck_for_bulk.id),
             "cards": [
                 {
-                    "front_text": "easy word",
-                    "back_text": "translation",
-                    "difficulty": "easy",
-                    "order_index": 0,
+                    "front_text": "spiti",
+                    "back_text_en": "house",
+                    "part_of_speech": "noun",
                 },
                 {
-                    "front_text": "medium word",
-                    "back_text": "translation",
-                    "difficulty": "medium",
-                    "order_index": 1,
+                    "front_text": "trecho",
+                    "back_text_en": "to run",
+                    "part_of_speech": "verb",
                 },
                 {
-                    "front_text": "hard word",
-                    "back_text": "translation",
-                    "difficulty": "hard",
-                    "order_index": 2,
+                    "front_text": "kalos",
+                    "back_text_en": "good",
+                    "part_of_speech": "adjective",
+                },
+                {
+                    "front_text": "grigora",
+                    "back_text_en": "quickly",
+                    "part_of_speech": "adverb",
                 },
             ],
         }
@@ -578,12 +560,13 @@ class TestBulkCreateCardsEndpoint:
 
         assert response.status_code == 201
         data = response.json()
-        assert data["created_count"] == 3
+        assert data["created_count"] == 4
 
-        difficulties = [card["difficulty"] for card in data["cards"]]
-        assert "easy" in difficulties
-        assert "medium" in difficulties
-        assert "hard" in difficulties
+        parts_of_speech = [card["part_of_speech"] for card in data["cards"]]
+        assert "noun" in parts_of_speech
+        assert "verb" in parts_of_speech
+        assert "adjective" in parts_of_speech
+        assert "adverb" in parts_of_speech
 
     @pytest.mark.asyncio
     async def test_bulk_create_cards_empty_front_text_returns_422(
@@ -595,9 +578,7 @@ class TestBulkCreateCardsEndpoint:
             "cards": [
                 {
                     "front_text": "",  # Empty string violates min_length=1
-                    "back_text": "test",
-                    "difficulty": "easy",
-                    "order_index": 0,
+                    "back_text_en": "test",
                 },
             ],
         }
@@ -614,18 +595,16 @@ class TestBulkCreateCardsEndpoint:
         assert data["error"]["code"] == "VALIDATION_ERROR"
 
     @pytest.mark.asyncio
-    async def test_bulk_create_cards_empty_back_text_returns_422(
+    async def test_bulk_create_cards_empty_back_text_en_returns_422(
         self, client: AsyncClient, superuser_auth_headers: dict, active_deck_for_bulk
     ):
-        """Test empty back_text returns 422."""
+        """Test empty back_text_en returns 422."""
         cards_data = {
             "deck_id": str(active_deck_for_bulk.id),
             "cards": [
                 {
                     "front_text": "test",
-                    "back_text": "",  # Empty string violates min_length=1
-                    "difficulty": "easy",
-                    "order_index": 0,
+                    "back_text_en": "",  # Empty string violates min_length=1
                 },
             ],
         }
@@ -651,9 +630,7 @@ class TestBulkCreateCardsEndpoint:
             "cards": [
                 {
                     "front_text": "single card",
-                    "back_text": "translation",
-                    "difficulty": "easy",
-                    "order_index": 0,
+                    "back_text_en": "translation",
                 },
             ],
         }

@@ -12,7 +12,7 @@ from datetime import date
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.db.models import CardDifficulty, CardStatus, DeckLevel, ReviewRating
+from src.db.models import CardStatus, DeckLevel, ReviewRating
 from tests.factories import (
     SM2_DEFAULT_EASINESS_FACTOR,
     SM2_MIN_EASINESS_FACTOR,
@@ -227,18 +227,7 @@ class TestCardFactory:
         assert card is not None
         assert card.deck_id == deck.id
         assert card.front_text is not None  # Greek word
-        assert card.back_text is not None  # English translation
-        assert card.difficulty == CardDifficulty.MEDIUM  # Default
-
-    async def test_difficulty_traits(self, db_session: AsyncSession):
-        """Test difficulty level traits."""
-        deck = await DeckFactory.create(session=db_session)
-
-        easy = await CardFactory.create(session=db_session, deck_id=deck.id, easy=True)
-        hard = await CardFactory.create(session=db_session, deck_id=deck.id, hard=True)
-
-        assert easy.difficulty == CardDifficulty.EASY
-        assert hard.difficulty == CardDifficulty.HARD
+        assert card.back_text_en is not None  # English translation
 
     async def test_minimal_trait(self, db_session: AsyncSession):
         """Test minimal card trait."""
@@ -247,15 +236,6 @@ class TestCardFactory:
 
         assert card.pronunciation is None
         assert card.example_sentence is None
-
-    async def test_order_index_sequence(self, db_session: AsyncSession):
-        """Test that order_index is sequential."""
-        deck = await DeckFactory.create(session=db_session)
-
-        cards = await CardFactory.create_batch(3, session=db_session, deck_id=deck.id)
-
-        indices = [c.order_index for c in cards]
-        assert len(set(indices)) == 3  # All unique
 
 
 # =============================================================================

@@ -19,7 +19,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from src.db.models import CardDifficulty, CardStatus
+from src.db.models import CardStatus
 
 # ============================================================================
 # SM-2 Calculation Schemas
@@ -174,9 +174,9 @@ class StudyQueueCard(BaseModel):
         default=None,
         description="Pronunciation guide",
     )
-    difficulty: CardDifficulty = Field(
-        ...,
-        description="Card difficulty level",
+    examples: Optional[list[dict]] = Field(
+        default=None,
+        description="Structured examples with multilingual translations",
     )
     status: CardStatus = Field(
         ...,

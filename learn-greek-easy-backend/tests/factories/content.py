@@ -21,7 +21,7 @@ Usage:
 import factory
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.db.models import Card, CardDifficulty, Deck, DeckLevel
+from src.db.models import Card, Deck, DeckLevel
 from tests.factories.base import BaseFactory, fake
 
 
@@ -126,7 +126,6 @@ class DeckFactory(BaseFactory):
             card = await CardFactory.create(
                 session=session,
                 deck_id=deck.id,
-                order_index=i,
                 # Use level-appropriate vocabulary
             )
             cards.append(card)
@@ -139,12 +138,8 @@ class CardFactory(BaseFactory):
 
     Creates flashcards with Greek vocabulary content.
 
-    Traits:
-        easy, medium, hard: Difficulty levels
-
     Example:
         card = await CardFactory.create(deck_id=deck.id)
-        easy_card = await CardFactory.create(deck_id=deck.id, easy=True)
     """
 
     class Meta:
@@ -155,34 +150,41 @@ class CardFactory(BaseFactory):
 
     # Greek vocabulary from Faker provider
     front_text = factory.LazyAttribute(lambda _: fake.greek_word("A1"))
-    back_text = factory.LazyAttribute(lambda _: fake.greek_translation("A1"))
+    back_text_en = factory.LazyAttribute(lambda _: fake.greek_translation("A1"))
+    back_text_ru = None  # Optional Russian translation
     pronunciation = factory.LazyAttribute(lambda _: fake.greek_pronunciation("A1"))
     example_sentence = factory.LazyAttribute(lambda _: fake.greek_example_sentence("A1"))
-
-    # Metadata
-    difficulty = CardDifficulty.MEDIUM
-    order_index = factory.Sequence(lambda n: n)
+    examples = factory.LazyAttribute(
+        lambda obj: (
+            [{"greek": obj.example_sentence, "english": "", "russian": ""}]
+            if obj.example_sentence
+            else None
+        )
+    )
+    part_of_speech = None  # Optional part of speech
+    level = None  # Optional CEFR level override
+    # Grammar data fields (all optional)
+    noun_data = None
+    verb_data = None
+    adjective_data = None
+    adverb_data = None
+    # Search fields
+    searchable_forms = None
+    searchable_forms_normalized = None
+    # Embedding
+    embedding = None
 
     class Params:
         """Factory traits for common variations."""
-
-        # Difficulty traits
-        easy = factory.Trait(
-            difficulty=CardDifficulty.EASY,
-        )
-
-        medium = factory.Trait(
-            difficulty=CardDifficulty.MEDIUM,
-        )
-
-        hard = factory.Trait(
-            difficulty=CardDifficulty.HARD,
-        )
 
         # Minimal card (no optional fields)
         minimal = factory.Trait(
             pronunciation=None,
             example_sentence=None,
+            examples=None,
+            back_text_ru=None,
+            part_of_speech=None,
+            level=None,
         )
 
     @classmethod
@@ -205,13 +207,20 @@ class CardFactory(BaseFactory):
             Card with Greek vocabulary
         """
         vocab = fake.greek_vocabulary_card(level)
+        example_sentence = vocab.get("example_sentence")
+        examples = (
+            [{"greek": example_sentence, "english": "", "russian": ""}]
+            if example_sentence
+            else None
+        )
 
         return await cls.create(
             session=session,
             deck_id=deck_id,
             front_text=vocab["front_text"],
-            back_text=vocab["back_text"],
+            back_text_en=vocab["back_text"],
             pronunciation=vocab.get("pronunciation"),
-            example_sentence=vocab.get("example_sentence"),
+            example_sentence=example_sentence,
+            examples=examples,
             **kwargs,
         )

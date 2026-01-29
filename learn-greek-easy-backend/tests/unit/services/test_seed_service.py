@@ -1304,7 +1304,7 @@ class TestSeedServiceUserDecks:
 
         def track_cards(obj):
             original_add(obj)
-            if hasattr(obj, "front_text") and hasattr(obj, "back_text"):
+            if hasattr(obj, "front_text") and hasattr(obj, "back_text_en"):
                 added_cards.append(obj)
 
         mock_db_with_ids.add = MagicMock(side_effect=track_cards)

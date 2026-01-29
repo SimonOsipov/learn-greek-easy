@@ -36,7 +36,6 @@ Available Deck Fixtures:
     deck_with_all_a1_cards: Deck with all 10 A1 vocabulary cards
     deck_with_a2_cards, deck_with_b1_cards: Level-specific decks with cards
     multi_level_decks: A1, A2, B1 decks bundle
-    cards_by_difficulty: Cards grouped by difficulty
     inactive_deck: Deactivated deck
     empty_deck: Deck with no cards
 
@@ -134,7 +133,6 @@ from tests.fixtures.deck import (  # Type definitions; Vocabulary data; Factory 
     GREEK_VOCABULARY_B1,
     DeckWithCards,
     MultiLevelDecks,
-    cards_by_difficulty,
     create_card,
     create_card_data,
     create_deck,
@@ -268,7 +266,6 @@ __all__ = [
     # Card fixtures
     "test_card",
     "test_cards",
-    "cards_by_difficulty",
     # Composite deck fixtures
     "deck_with_cards",
     "deck_with_all_a1_cards",

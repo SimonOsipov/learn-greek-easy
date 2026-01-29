@@ -29,7 +29,7 @@ from uuid import UUID
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.db.models import Card, CardDifficulty, Deck, DeckLevel
+from src.db.models import Card, Deck, DeckLevel
 
 # =============================================================================
 # Type Definitions
@@ -59,73 +59,63 @@ class MultiLevelDecks(NamedTuple):
 GREEK_VOCABULARY_A1: list[dict[str, Any]] = [
     {
         "front_text": "Yeia sou",
-        "back_text": "Hello (informal)",
+        "back_text_en": "Hello (informal)",
         "pronunciation": "YAH-soo",
         "example_sentence": "Yeia sou, ti kaneis?",
-        "difficulty": CardDifficulty.EASY,
     },
     {
         "front_text": "Kalimera",
-        "back_text": "Good morning",
+        "back_text_en": "Good morning",
         "pronunciation": "kah-lee-MEH-rah",
         "example_sentence": "Kalimera! Pos eiste?",
-        "difficulty": CardDifficulty.EASY,
     },
     {
         "front_text": "Efcharisto",
-        "back_text": "Thank you",
+        "back_text_en": "Thank you",
         "pronunciation": "ef-hah-ree-STO",
         "example_sentence": "Efcharisto poli!",
-        "difficulty": CardDifficulty.EASY,
     },
     {
         "front_text": "Parakalo",
-        "back_text": "Please / You're welcome",
+        "back_text_en": "Please / You're welcome",
         "pronunciation": "pah-rah-kah-LO",
         "example_sentence": "Parakalo, boroume na pame?",
-        "difficulty": CardDifficulty.EASY,
     },
     {
         "front_text": "Nero",
-        "back_text": "Water",
+        "back_text_en": "Water",
         "pronunciation": "neh-RO",
         "example_sentence": "Thelo ena nero, parakalo.",
-        "difficulty": CardDifficulty.EASY,
     },
     {
         "front_text": "Psomi",
-        "back_text": "Bread",
+        "back_text_en": "Bread",
         "pronunciation": "pso-MEE",
         "example_sentence": "To psomi einai fresko.",
-        "difficulty": CardDifficulty.MEDIUM,
     },
     {
         "front_text": "Spiti",
-        "back_text": "House / Home",
+        "back_text_en": "House / Home",
         "pronunciation": "SPEE-tee",
         "example_sentence": "To spiti mou einai mikro.",
-        "difficulty": CardDifficulty.MEDIUM,
     },
     {
         "front_text": "Ena",
-        "back_text": "One",
+        "back_text_en": "One",
         "pronunciation": "EH-nah",
         "example_sentence": "Ena kafe, parakalo.",
-        "difficulty": CardDifficulty.EASY,
     },
     {
         "front_text": "Dio",
-        "back_text": "Two",
+        "back_text_en": "Two",
         "pronunciation": "THEE-oh",
         "example_sentence": "Dio nero, parakalo.",
-        "difficulty": CardDifficulty.EASY,
     },
     {
         "front_text": "Tria",
-        "back_text": "Three",
+        "back_text_en": "Three",
         "pronunciation": "TREE-ah",
         "example_sentence": "Tria adelfia echo.",
-        "difficulty": CardDifficulty.EASY,
     },
 ]
 
@@ -133,38 +123,33 @@ GREEK_VOCABULARY_A1: list[dict[str, Any]] = [
 GREEK_VOCABULARY_A2: list[dict[str, Any]] = [
     {
         "front_text": "Troo",
-        "back_text": "I eat",
+        "back_text_en": "I eat",
         "pronunciation": "TRO-oh",
         "example_sentence": "Troo proino stis okto.",
-        "difficulty": CardDifficulty.MEDIUM,
     },
     {
         "front_text": "Pino",
-        "back_text": "I drink",
+        "back_text_en": "I drink",
         "pronunciation": "PEE-no",
         "example_sentence": "Pino kafe kathe proi.",
-        "difficulty": CardDifficulty.MEDIUM,
     },
     {
         "front_text": "Douleo",
-        "back_text": "I work",
+        "back_text_en": "I work",
         "pronunciation": "thoo-LEH-vo",
         "example_sentence": "Douleo se ena grafeio.",
-        "difficulty": CardDifficulty.MEDIUM,
     },
     {
         "front_text": "Oikogeneia",
-        "back_text": "Family",
+        "back_text_en": "Family",
         "pronunciation": "ee-ko-YEH-nee-ah",
         "example_sentence": "I oikogeneia mou einai megali.",
-        "difficulty": CardDifficulty.HARD,
     },
     {
         "front_text": "Filo",
-        "back_text": "Friend",
+        "back_text_en": "Friend",
         "pronunciation": "FEE-lo",
         "example_sentence": "O Yiannis einai o filo mou.",
-        "difficulty": CardDifficulty.MEDIUM,
     },
 ]
 
@@ -172,38 +157,33 @@ GREEK_VOCABULARY_A2: list[dict[str, Any]] = [
 GREEK_VOCABULARY_B1: list[dict[str, Any]] = [
     {
         "front_text": "Agapi",
-        "back_text": "Love",
+        "back_text_en": "Love",
         "pronunciation": "ah-GAH-pee",
         "example_sentence": "I agapi einai to pio simantiko pragma.",
-        "difficulty": CardDifficulty.MEDIUM,
     },
     {
         "front_text": "Elpida",
-        "back_text": "Hope",
+        "back_text_en": "Hope",
         "pronunciation": "el-PEE-thah",
         "example_sentence": "Echo elpida gia to mellon.",
-        "difficulty": CardDifficulty.MEDIUM,
     },
     {
         "front_text": "Epistimi",
-        "back_text": "Science",
+        "back_text_en": "Science",
         "pronunciation": "eh-pee-STEE-mee",
         "example_sentence": "I epistimi proodeui synechos.",
-        "difficulty": CardDifficulty.HARD,
     },
     {
         "front_text": "Politismos",
-        "back_text": "Culture / Civilization",
+        "back_text_en": "Culture / Civilization",
         "pronunciation": "po-lee-tee-SMOS",
         "example_sentence": "O ellinikos politismos einai archaios.",
-        "difficulty": CardDifficulty.HARD,
     },
     {
         "front_text": "Dimokratia",
-        "back_text": "Democracy",
+        "back_text_en": "Democracy",
         "pronunciation": "thee-mo-krah-TEE-ah",
         "example_sentence": "I dimokratia gennithike stin Athina.",
-        "difficulty": CardDifficulty.HARD,
     },
 ]
 
@@ -258,22 +238,18 @@ def create_deck_data(
 def create_card_data(
     deck_id: Any,
     front_text: str = "Yeia",
-    back_text: str = "Hello",
+    back_text_en: str = "Hello",
     pronunciation: str | None = "YAH",
     example_sentence: str | None = None,
-    difficulty: CardDifficulty = CardDifficulty.MEDIUM,
-    order_index: int = 0,
 ) -> dict[str, Any]:
     """Create card data dictionary.
 
     Args:
         deck_id: UUID of parent deck
         front_text: Greek text (front of card)
-        back_text: English translation (back of card)
+        back_text_en: English translation (back of card)
         pronunciation: Phonetic pronunciation guide
         example_sentence: Example usage in Greek
-        difficulty: Card difficulty level
-        order_index: Order within deck
 
     Returns:
         dict: Card data ready for Card model creation
@@ -281,11 +257,9 @@ def create_card_data(
     return {
         "deck_id": deck_id,
         "front_text": front_text,
-        "back_text": back_text,
+        "back_text_en": back_text_en,
         "pronunciation": pronunciation,
         "example_sentence": example_sentence,
-        "difficulty": difficulty,
-        "order_index": order_index,
     }
 
 
@@ -328,11 +302,9 @@ async def create_card(
     db_session: AsyncSession,
     deck: Deck,
     front_text: str = "Yeia",
-    back_text: str = "Hello",
+    back_text_en: str = "Hello",
     pronunciation: str | None = "YAH",
     example_sentence: str | None = None,
-    difficulty: CardDifficulty = CardDifficulty.MEDIUM,
-    order_index: int = 0,
 ) -> Card:
     """Create a card in the database.
 
@@ -340,11 +312,9 @@ async def create_card(
         db_session: Database session
         deck: Parent deck
         front_text: Greek text
-        back_text: English translation
+        back_text_en: English translation
         pronunciation: Phonetic guide
         example_sentence: Example usage
-        difficulty: Card difficulty
-        order_index: Order in deck
 
     Returns:
         Card: Created card
@@ -352,11 +322,9 @@ async def create_card(
     card_data = create_card_data(
         deck_id=deck.id,
         front_text=front_text,
-        back_text=back_text,
+        back_text_en=back_text_en,
         pronunciation=pronunciation,
         example_sentence=example_sentence,
-        difficulty=difficulty,
-        order_index=order_index,
     )
     card = Card(**card_data)
     db_session.add(card)
@@ -402,11 +370,9 @@ async def create_deck_with_vocabulary(
             db_session,
             deck,
             front_text=vocab["front_text"],
-            back_text=vocab["back_text"],
+            back_text_en=vocab["back_text_en"],
             pronunciation=vocab.get("pronunciation"),
             example_sentence=vocab.get("example_sentence"),
-            difficulty=vocab.get("difficulty", CardDifficulty.MEDIUM),
-            order_index=i,
         )
         cards.append(card)
 
@@ -541,10 +507,9 @@ async def test_card(
         db_session,
         test_deck,
         front_text="Yeia sou",
-        back_text="Hello (informal)",
+        back_text_en="Hello (informal)",
         pronunciation="YAH-soo",
         example_sentence="Yeia sou, ti kaneis?",
-        difficulty=CardDifficulty.EASY,
     )
     yield card
 
@@ -571,51 +536,12 @@ async def test_cards(
             db_session,
             test_deck,
             front_text=vocab["front_text"],
-            back_text=vocab["back_text"],
+            back_text_en=vocab["back_text_en"],
             pronunciation=vocab.get("pronunciation"),
             example_sentence=vocab.get("example_sentence"),
-            difficulty=vocab.get("difficulty", CardDifficulty.MEDIUM),
-            order_index=i,
         )
         cards.append(card)
     yield cards
-
-
-@pytest_asyncio.fixture
-async def cards_by_difficulty(
-    db_session: AsyncSession,
-    test_deck: Deck,
-) -> AsyncGenerator[dict[CardDifficulty, list[Card]], None]:
-    """Provide cards grouped by difficulty level.
-
-    Creates 2 cards of each difficulty level (EASY, MEDIUM, HARD).
-
-    Yields:
-        dict: Cards grouped by CardDifficulty
-    """
-    result: dict[CardDifficulty, list[Card]] = {
-        CardDifficulty.EASY: [],
-        CardDifficulty.MEDIUM: [],
-        CardDifficulty.HARD: [],
-    }
-
-    difficulties = [CardDifficulty.EASY, CardDifficulty.MEDIUM, CardDifficulty.HARD]
-    index = 0
-
-    for difficulty in difficulties:
-        for j in range(2):
-            card = await create_card(
-                db_session,
-                test_deck,
-                front_text=f"Word {index}",
-                back_text=f"Translation {index}",
-                difficulty=difficulty,
-                order_index=index,
-            )
-            result[difficulty].append(card)
-            index += 1
-
-    yield result
 
 
 # =============================================================================
@@ -753,14 +679,11 @@ async def deck_with_many_cards(
 
     cards = []
     for i in range(50):
-        difficulty = [CardDifficulty.EASY, CardDifficulty.MEDIUM, CardDifficulty.HARD][i % 3]
         card = await create_card(
             db_session,
             deck,
             front_text=f"Greek word {i}",
-            back_text=f"English translation {i}",
-            difficulty=difficulty,
-            order_index=i,
+            back_text_en=f"English translation {i}",
         )
         cards.append(card)
 

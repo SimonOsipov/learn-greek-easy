@@ -12,7 +12,7 @@ import pytest
 from httpx import AsyncClient
 
 from src.core.exceptions import DeckNotFoundException
-from src.db.models import CardDifficulty, CardStatus
+from src.db.models import CardStatus
 from src.schemas.sm2 import CardInitializationResult, StudyQueue, StudyQueueCard
 
 
@@ -227,7 +227,6 @@ class TestGetStudyQueueUnit:
                     back_text="good morning",
                     example_sentence="Kalimera, ti kaneis?",
                     pronunciation="kah-lee-MEH-rah",
-                    difficulty=CardDifficulty.EASY,
                     status=CardStatus.REVIEW,
                     is_new=False,
                     due_date=date.today(),
@@ -471,7 +470,6 @@ class TestGetDeckStudyQueueUnit:
                     back_text="thank you",
                     example_sentence="Efcharisto poli!",
                     pronunciation="ef-hah-ree-STOH",
-                    difficulty=CardDifficulty.EASY,
                     status=CardStatus.LEARNING,
                     is_new=False,
                     due_date=date.today(),

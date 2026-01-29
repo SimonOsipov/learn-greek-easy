@@ -39,6 +39,7 @@ from sqlalchemy import (
     func,
     text,
 )
+from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.db.base import Base, TimestampMixin
@@ -59,12 +60,13 @@ class DeckLevel(str, enum.Enum):
     C2 = "C2"
 
 
-class CardDifficulty(str, enum.Enum):
-    """Difficulty level of individual cards."""
+class PartOfSpeech(str, enum.Enum):
+    """Part of speech classification for vocabulary cards."""
 
-    EASY = "easy"
-    MEDIUM = "medium"
-    HARD = "hard"
+    NOUN = "noun"
+    VERB = "verb"
+    ADJECTIVE = "adjective"
+    ADVERB = "adverb"
 
 
 class CardStatus(str, enum.Enum):
@@ -487,24 +489,91 @@ class Card(Base, TimestampMixin):
         Text,
         nullable=False,
     )  # Greek text
-    back_text: Mapped[str] = mapped_column(
+    back_text_en: Mapped[str] = mapped_column(
         Text,
         nullable=False,
     )  # English translation
+    back_text_ru: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        comment="Russian translation",
+    )  # Russian translation
     example_sentence: Mapped[str | None] = mapped_column(Text, nullable=True)
     pronunciation: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
-    # Metadata
-    difficulty: Mapped[CardDifficulty] = mapped_column(
-        nullable=False,
-        default=CardDifficulty.MEDIUM,
-        index=True,
+    # Structured examples (replaces example_sentence)
+    examples: Mapped[list[dict] | None] = mapped_column(
+        JSON,
+        nullable=True,
+        comment="Structured examples: [{greek, english, russian, tense?}, ...]",
     )
-    order_index: Mapped[int] = mapped_column(
-        Integer,
-        nullable=False,
-        default=0,
-    )  # For sequential display within deck
+
+    # Classification fields
+    part_of_speech: Mapped[PartOfSpeech | None] = mapped_column(
+        nullable=True,
+        index=True,
+        comment="Part of speech: noun, verb, adjective, adverb",
+    )
+    level: Mapped[DeckLevel | None] = mapped_column(
+        nullable=True,
+        index=True,
+        comment="CEFR level override (A1-C2), defaults to deck level if not set",
+    )
+
+    # Grammar data fields (JSONB)
+    noun_data: Mapped[dict | None] = mapped_column(
+        JSON,
+        nullable=True,
+        comment="Noun grammar: gender + 8 case forms",
+    )
+    verb_data: Mapped[dict | None] = mapped_column(
+        JSON,
+        nullable=True,
+        comment="Verb grammar: voice + 30 conjugations + 2 imperative",
+    )
+    adjective_data: Mapped[dict | None] = mapped_column(
+        JSON,
+        nullable=True,
+        comment="Adjective grammar: 24 declensions + 2 comparison forms",
+    )
+    adverb_data: Mapped[dict | None] = mapped_column(
+        JSON,
+        nullable=True,
+        comment="Adverb grammar: comparative + superlative",
+    )
+
+    # Search fields
+    searchable_forms: Mapped[list[str] | None] = mapped_column(
+        ARRAY(String),
+        nullable=True,
+        comment="All inflected forms for exact matching",
+    )
+    searchable_forms_normalized: Mapped[list[str] | None] = mapped_column(
+        ARRAY(String),
+        nullable=True,
+        comment="Accent-stripped forms for fuzzy matching",
+    )
+
+    # Embedding for semantic search
+    embedding: Mapped[list[float] | None] = mapped_column(
+        Vector(1024),
+        nullable=True,
+        comment="VoyageAI embedding for semantic similarity search",
+    )
+
+    # GIN indexes for array search fields
+    __table_args__ = (
+        Index(
+            "ix_cards_searchable_forms",
+            "searchable_forms",
+            postgresql_using="gin",
+        ),
+        Index(
+            "ix_cards_searchable_forms_normalized",
+            "searchable_forms_normalized",
+            postgresql_using="gin",
+        ),
+    )
 
     # Relationships
     deck: Mapped["Deck"] = relationship(

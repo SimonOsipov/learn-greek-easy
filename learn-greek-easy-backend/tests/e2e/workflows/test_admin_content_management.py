@@ -234,13 +234,11 @@ class TestAdminCardManagement(E2ETestCase):
             "cards": [
                 {
                     "front_text": greek,
-                    "back_text": english,
-                    "difficulty": difficulty,
+                    "back_text_en": english,
                     "example_sentence": f"I have {english} apple(s).",
                     "pronunciation": greek,
-                    "order_index": i,
                 }
-                for i, (greek, english, difficulty) in enumerate(greek_numbers)
+                for greek, english, _unused in greek_numbers
             ],
         }
 
@@ -266,18 +264,12 @@ class TestAdminCardManagement(E2ETestCase):
         assert cards_list.status_code == 200
         assert cards_list.json()["total"] == 10
 
-        # Step 5: Verify difficulty filter works
-        easy_cards = await client.get(
-            f"/api/v1/cards?deck_id={deck_id}&difficulty=easy", headers=superuser_auth_headers
+        # Step 5: Verify cards are searchable
+        search_result = await client.get(
+            f"/api/v1/cards/search?q=ena&deck_id={deck_id}", headers=superuser_auth_headers
         )
-        assert easy_cards.status_code == 200
-        assert easy_cards.json()["total"] == 3  # ena, dio, tria
-
-        hard_cards = await client.get(
-            f"/api/v1/cards?deck_id={deck_id}&difficulty=hard", headers=superuser_auth_headers
-        )
-        assert hard_cards.status_code == 200
-        assert hard_cards.json()["total"] == 3  # okto, ennea, deka
+        assert search_result.status_code == 200
+        assert search_result.json()["total"] >= 1
 
     @pytest.mark.asyncio
     async def test_bulk_creation_edge_cases(
@@ -307,9 +299,7 @@ class TestAdminCardManagement(E2ETestCase):
             "cards": [
                 {
                     "front_text": f"word_{i}",
-                    "back_text": f"translation_{i}",
-                    "difficulty": "easy",
-                    "order_index": i,
+                    "back_text_en": f"translation_{i}",
                 }
                 for i in range(100)
             ],
@@ -333,10 +323,7 @@ class TestAdminCardManagement(E2ETestCase):
         # Test 2: Over maximum (101) - should fail
         over_max_cards = {
             "deck_id": deck2_id,
-            "cards": [
-                {"front_text": f"w{i}", "back_text": f"t{i}", "difficulty": "easy"}
-                for i in range(101)
-            ],
+            "cards": [{"front_text": f"w{i}", "back_text_en": f"t{i}"} for i in range(101)],
         }
         over_response = await client.post(
             "/api/v1/cards/bulk",
@@ -358,8 +345,8 @@ class TestAdminCardManagement(E2ETestCase):
         mixed_cards = {
             "deck_id": deck2_id,
             "cards": [
-                {"front_text": "valid", "back_text": "valid", "difficulty": "easy"},
-                {"front_text": "invalid_no_back", "difficulty": "easy"},  # Missing back_text
+                {"front_text": "valid", "back_text_en": "valid"},
+                {"front_text": "invalid_no_back"},  # Missing back_text_en
             ],
         }
         mixed_response = await client.post(
@@ -414,8 +401,7 @@ class TestContentPropagation(E2ETestCase):
             json={
                 "deck_id": deck_id,
                 "front_text": "kalimera",
-                "back_text": "good morning",
-                "difficulty": "easy",
+                "back_text_en": "good morning",
             },
             headers=superuser_auth_headers,
         )
@@ -431,7 +417,7 @@ class TestContentPropagation(E2ETestCase):
         # Step 5: Admin updates the card
         update_response = await client.patch(
             f"/api/v1/cards/{card_id}",
-            json={"back_text": "good morning (greeting)"},
+            json={"back_text_en": "good morning (greeting)"},
             headers=superuser_auth_headers,
         )
         assert update_response.status_code == 200
@@ -439,7 +425,7 @@ class TestContentPropagation(E2ETestCase):
         # Step 6: Regular user sees updated content immediately (requires auth)
         user_card = await client.get(f"/api/v1/cards/{card_id}", headers=auth_headers)
         assert user_card.status_code == 200
-        assert user_card.json()["back_text"] == "good morning (greeting)"
+        assert user_card.json()["back_text_en"] == "good morning (greeting)"
 
     @pytest.mark.asyncio
     async def test_card_update_affects_study_content(
@@ -467,8 +453,7 @@ class TestContentPropagation(E2ETestCase):
             json={
                 "deck_id": deck_id,
                 "front_text": "original_front",
-                "back_text": "original_back",
-                "difficulty": "easy",
+                "back_text_en": "original_back",
             },
             headers=superuser_auth_headers,
         )
@@ -495,7 +480,7 @@ class TestContentPropagation(E2ETestCase):
         # Step 4: Admin updates card content
         await client.patch(
             f"/api/v1/cards/{card_id}",
-            json={"front_text": "updated_front", "back_text": "updated_back"},
+            json={"front_text": "updated_front", "back_text_en": "updated_back"},
             headers=superuser_auth_headers,
         )
 
@@ -506,6 +491,7 @@ class TestContentPropagation(E2ETestCase):
         )
         updated_card = updated_queue.json()["cards"][0]
         assert updated_card["front_text"] == "updated_front"
+        # Study queue uses "back_text" (mapped from Card.back_text_en)
         assert updated_card["back_text"] == "updated_back"
 
 
@@ -569,8 +555,7 @@ class TestPermissionBoundaries(E2ETestCase):
             json={
                 "deck_id": deck_id,
                 "front_text": "test",
-                "back_text": "test",
-                "difficulty": "easy",
+                "back_text_en": "test",
             },
             headers=auth_headers,
         )
@@ -581,7 +566,7 @@ class TestPermissionBoundaries(E2ETestCase):
             "/api/v1/cards/bulk",
             json={
                 "deck_id": deck_id,
-                "cards": [{"front_text": "t", "back_text": "t", "difficulty": "easy"}],
+                "cards": [{"front_text": "t", "back_text_en": "t"}],
             },
             headers=auth_headers,
         )
@@ -623,8 +608,7 @@ class TestPermissionBoundaries(E2ETestCase):
             json={
                 "deck_id": deck_id,
                 "front_text": "test",
-                "back_text": "test",
-                "difficulty": "easy",
+                "back_text_en": "test",
             },
         )
         assert unauth_card.status_code == 401
@@ -634,7 +618,7 @@ class TestPermissionBoundaries(E2ETestCase):
             "/api/v1/cards/bulk",
             json={
                 "deck_id": deck_id,
-                "cards": [{"front_text": "t", "back_text": "t", "difficulty": "easy"}],
+                "cards": [{"front_text": "t", "back_text_en": "t"}],
             },
         )
         assert unauth_bulk.status_code == 401
@@ -675,8 +659,7 @@ class TestAdminCardDeletion(E2ETestCase):
             json={
                 "deck_id": deck_id,
                 "front_text": "to_be_deleted",
-                "back_text": "will be removed",
-                "difficulty": "easy",
+                "back_text_en": "will be removed",
             },
             headers=superuser_auth_headers,
         )
@@ -755,8 +738,7 @@ class TestAdminCardDeletion(E2ETestCase):
             json={
                 "deck_id": deck_id,
                 "front_text": "protected_card",
-                "back_text": "cannot delete",
-                "difficulty": "easy",
+                "back_text_en": "cannot delete",
             },
             headers=superuser_auth_headers,
         )
@@ -794,8 +776,7 @@ class TestAdminCardDeletion(E2ETestCase):
             json={
                 "deck_id": deck_id,
                 "front_text": "auth_protected",
-                "back_text": "requires auth",
-                "difficulty": "easy",
+                "back_text_en": "requires auth",
             },
             headers=superuser_auth_headers,
         )
@@ -836,8 +817,7 @@ class TestAdminCardDeletion(E2ETestCase):
                 json={
                     "deck_id": deck_id,
                     "front_text": f"card_{i}",
-                    "back_text": f"translation_{i}",
-                    "difficulty": "easy",
+                    "back_text_en": f"translation_{i}",
                 },
                 headers=superuser_auth_headers,
             )
@@ -896,8 +876,7 @@ class TestAdminStatsEndpoint(E2ETestCase):
                 json={
                     "deck_id": deck_id,
                     "front_text": f"stats_word_{i}",
-                    "back_text": f"stats_translation_{i}",
-                    "difficulty": "easy",
+                    "back_text_en": f"stats_translation_{i}",
                 },
                 headers=superuser_auth_headers,
             )

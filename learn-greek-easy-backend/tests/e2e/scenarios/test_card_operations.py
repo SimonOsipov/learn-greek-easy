@@ -57,36 +57,6 @@ class TestCardListing(E2ETestCase):
         assert len(items) <= 2
 
     @pytest.mark.asyncio
-    async def test_list_cards_filter_by_difficulty(
-        self,
-        client: AsyncClient,
-        fresh_user_session: UserSession,
-        db_session: AsyncSession,
-    ) -> None:
-        """Test filtering cards by difficulty level."""
-        deck = await DeckFactory.create(session=db_session)
-        # Create cards with different difficulties
-        await CardFactory.create(session=db_session, deck_id=deck.id, easy=True)
-        await CardFactory.create(session=db_session, deck_id=deck.id, medium=True)
-        await CardFactory.create(session=db_session, deck_id=deck.id, hard=True)
-        await db_session.commit()
-
-        # Filter by easy
-        response = await client.get(
-            "/api/v1/cards",
-            params={"deck_id": str(deck.id), "difficulty": "easy"},
-            headers=fresh_user_session.headers,
-        )
-
-        assert response.status_code == 200
-        data = response.json()
-        items = data.get("items", data.get("cards", []))
-
-        # All returned cards should be easy
-        for card in items:
-            assert card.get("difficulty") == "easy"
-
-    @pytest.mark.asyncio
     async def test_list_cards_response_structure(
         self,
         client: AsyncClient,
@@ -159,13 +129,13 @@ class TestCardSearch(E2ETestCase):
             session=db_session,
             deck_id=deck.id,
             front_text="καλημέρα",  # Good morning
-            back_text="good morning",
+            back_text_en="good morning",
         )
         await CardFactory.create(
             session=db_session,
             deck_id=deck.id,
             front_text="καληνύχτα",  # Good night
-            back_text="good night",
+            back_text_en="good night",
         )
         await db_session.commit()
 
@@ -195,13 +165,13 @@ class TestCardSearch(E2ETestCase):
             session=db_session,
             deck_id=deck.id,
             front_text="σπίτι",
-            back_text="house",
+            back_text_en="house",
         )
         await CardFactory.create(
             session=db_session,
             deck_id=deck.id,
             front_text="αυτοκίνητο",
-            back_text="car",
+            back_text_en="car",
         )
         await db_session.commit()
 
@@ -231,7 +201,7 @@ class TestCardSearch(E2ETestCase):
             session=db_session,
             deck_id=deck.id,
             front_text="σπίτι",
-            back_text="house",
+            back_text_en="house",
         )
         await db_session.commit()
 
@@ -259,7 +229,7 @@ class TestCardSearch(E2ETestCase):
             session=db_session,
             deck_id=deck.id,
             front_text="Ελλάδα",
-            back_text="Greece",
+            back_text_en="Greece",
         )
         await db_session.commit()
 
@@ -291,7 +261,7 @@ class TestCardSearch(E2ETestCase):
                 session=db_session,
                 deck_id=deck.id,
                 front_text=f"λέξη{i}",  # word{i}
-                back_text=f"word{i}",
+                back_text_en=f"word{i}",
             )
         await db_session.commit()
 
@@ -350,8 +320,7 @@ class TestAdminCardCreate(E2ETestCase):
             json={
                 "deck_id": str(deck.id),
                 "front_text": "νερό",
-                "back_text": "water",
-                "difficulty": "easy",
+                "back_text_en": "water",
             },
             headers=admin_session.headers,
         )
@@ -359,7 +328,7 @@ class TestAdminCardCreate(E2ETestCase):
         assert response.status_code == 201
         data = response.json()
         assert data["front_text"] == "νερό"
-        assert data["back_text"] == "water"
+        assert data["back_text_en"] == "water"
 
     @pytest.mark.asyncio
     async def test_create_card_forbidden_for_regular_user(
@@ -377,7 +346,7 @@ class TestAdminCardCreate(E2ETestCase):
             json={
                 "deck_id": str(deck.id),
                 "front_text": "test",
-                "back_text": "test",
+                "back_text_en": "test",
             },
             headers=fresh_user_session.headers,
         )
@@ -398,7 +367,7 @@ class TestAdminCardCreate(E2ETestCase):
             json={
                 "deck_id": fake_deck_id,
                 "front_text": "test",
-                "back_text": "test",
+                "back_text_en": "test",
             },
             headers=admin_session.headers,
         )
@@ -423,10 +392,7 @@ class TestAdminCardBulkCreate(E2ETestCase):
         deck = await DeckFactory.create(session=db_session)
         await db_session.commit()
 
-        cards = [
-            {"front_text": f"word{i}", "back_text": f"λέξη{i}", "difficulty": "easy"}
-            for i in range(5)
-        ]
+        cards = [{"front_text": f"word{i}", "back_text_en": f"λέξη{i}"} for i in range(5)]
 
         response = await client.post(
             "/api/v1/cards/bulk",
@@ -478,7 +444,7 @@ class TestAdminCardBulkCreate(E2ETestCase):
             json={
                 "deck_id": fake_deck_id,
                 "cards": [
-                    {"front_text": "test", "back_text": "test"},
+                    {"front_text": "test", "back_text_en": "test"},
                 ],
             },
             headers=admin_session.headers,
@@ -502,7 +468,7 @@ class TestAdminCardBulkCreate(E2ETestCase):
             "/api/v1/cards/bulk",
             json={
                 "deck_id": str(deck.id),
-                "cards": [{"front_text": "test", "back_text": "test"}],
+                "cards": [{"front_text": "test", "back_text_en": "test"}],
             },
             headers=fresh_user_session.headers,
         )
@@ -535,7 +501,7 @@ class TestCardValidation(E2ETestCase):
             "/api/v1/cards",
             json={
                 "deck_id": str(deck.id),
-                "back_text": "translation",
+                "back_text_en": "translation",
                 # front_text missing
             },
             headers=admin_session.headers,
@@ -567,13 +533,13 @@ class TestCardValidation(E2ETestCase):
         assert response.status_code == 422
 
     @pytest.mark.asyncio
-    async def test_create_card_invalid_difficulty(
+    async def test_create_card_invalid_part_of_speech(
         self,
         client: AsyncClient,
         admin_session: UserSession,
         db_session: AsyncSession,
     ) -> None:
-        """Test that invalid difficulty level is rejected."""
+        """Test that invalid part_of_speech value is rejected."""
         deck = await DeckFactory.create(session=db_session)
         await db_session.commit()
 
@@ -582,8 +548,8 @@ class TestCardValidation(E2ETestCase):
             json={
                 "deck_id": str(deck.id),
                 "front_text": "word",
-                "back_text": "translation",
-                "difficulty": "invalid_difficulty",  # Invalid (must be easy/medium/hard)
+                "back_text_en": "translation",
+                "part_of_speech": "invalid_pos",  # Invalid (must be noun/verb/adjective/adverb)
             },
             headers=admin_session.headers,
         )
