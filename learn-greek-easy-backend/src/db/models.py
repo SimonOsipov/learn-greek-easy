@@ -561,6 +561,20 @@ class Card(Base, TimestampMixin):
         comment="VoyageAI embedding for semantic similarity search",
     )
 
+    # GIN indexes for array search fields
+    __table_args__ = (
+        Index(
+            "ix_cards_searchable_forms",
+            "searchable_forms",
+            postgresql_using="gin",
+        ),
+        Index(
+            "ix_cards_searchable_forms_normalized",
+            "searchable_forms_normalized",
+            postgresql_using="gin",
+        ),
+    )
+
     # Relationships
     deck: Mapped["Deck"] = relationship(
         back_populates="cards",
