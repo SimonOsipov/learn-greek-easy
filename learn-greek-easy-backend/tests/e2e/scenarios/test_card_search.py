@@ -419,4 +419,4 @@ class TestCardSearchResponseFormat(E2ETestCase):
             assert "id" in card
             assert "deck_id" in card
             assert "front_text" in card
-            assert "back_text" in card
+            assert "back_text_en" in card

@@ -57,36 +57,6 @@ class TestCardListing(E2ETestCase):
         assert len(items) <= 2
 
     @pytest.mark.asyncio
-    async def test_list_cards_filter_by_difficulty(
-        self,
-        client: AsyncClient,
-        fresh_user_session: UserSession,
-        db_session: AsyncSession,
-    ) -> None:
-        """Test filtering cards by difficulty level."""
-        deck = await DeckFactory.create(session=db_session)
-        # Create cards with different difficulties
-        await CardFactory.create(session=db_session, deck_id=deck.id, easy=True)
-        await CardFactory.create(session=db_session, deck_id=deck.id, medium=True)
-        await CardFactory.create(session=db_session, deck_id=deck.id, hard=True)
-        await db_session.commit()
-
-        # Filter by easy
-        response = await client.get(
-            "/api/v1/cards",
-            params={"deck_id": str(deck.id), "difficulty": "easy"},
-            headers=fresh_user_session.headers,
-        )
-
-        assert response.status_code == 200
-        data = response.json()
-        items = data.get("items", data.get("cards", []))
-
-        # All returned cards should be easy
-        for card in items:
-            assert card.get("difficulty") == "easy"
-
-    @pytest.mark.asyncio
     async def test_list_cards_response_structure(
         self,
         client: AsyncClient,

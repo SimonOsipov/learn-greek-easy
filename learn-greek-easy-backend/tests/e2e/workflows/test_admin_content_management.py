@@ -491,7 +491,8 @@ class TestContentPropagation(E2ETestCase):
         )
         updated_card = updated_queue.json()["cards"][0]
         assert updated_card["front_text"] == "updated_front"
-        assert updated_card["back_text_en"] == "updated_back"
+        # Study queue uses "back_text" (mapped from Card.back_text_en)
+        assert updated_card["back_text"] == "updated_back"
 
 
 @pytest.mark.e2e
