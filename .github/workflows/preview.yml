@@ -1126,105 +1126,105 @@ jobs:
           retention-days: 30
 
   # =============================================================================
-  # JOB 10: Chromatic Upload
+  # JOB 10: Chromatic Upload (DISABLED - reorganizing visual tests)
   # Purpose: Upload Playwright screenshots to Chromatic for visual comparison
   # Compares against main branch baseline, reports changes in PR
   # =============================================================================
-  chromatic:
-    name: Chromatic Upload
-    needs: [visual-tests]
-    if: needs.visual-tests.result == 'success'
-    runs-on: ubuntu-latest
-    outputs:
-      build_url: ${{ steps.chromatic.outputs.buildUrl }}
-      change_count: ${{ steps.chromatic.outputs.changeCount }}
-      error_count: ${{ steps.chromatic.outputs.errorCount }}
-      storybook_url: ${{ steps.chromatic.outputs.storybookUrl }}
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # Required for Chromatic to detect git history
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: learn-greek-easy-frontend/package-lock.json
-
-      - name: Install dependencies
-        working-directory: learn-greek-easy-frontend
-        run: npm ci
-
-      - name: Download Visual Test Results
-        uses: actions/download-artifact@v4
-        with:
-          name: visual-test-results
-          path: learn-greek-easy-frontend/
-
-      - name: Run Chromatic
-        id: chromatic
-        uses: chromaui/action@latest
-        with:
-          workingDir: learn-greek-easy-frontend
-          projectToken: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
-          playwright: true
-          exitZeroOnChanges: true
-          autoAcceptChanges: main
-        env:
-          CHROMATIC_ARCHIVE_LOCATION: ./test-results
+  # chromatic:
+  #   name: Chromatic Upload
+  #   needs: [visual-tests]
+  #   if: needs.visual-tests.result == 'success'
+  #   runs-on: ubuntu-latest
+  #   outputs:
+  #     build_url: ${{ steps.chromatic.outputs.buildUrl }}
+  #     change_count: ${{ steps.chromatic.outputs.changeCount }}
+  #     error_count: ${{ steps.chromatic.outputs.errorCount }}
+  #     storybook_url: ${{ steps.chromatic.outputs.storybookUrl }}
+  #
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
+  #       with:
+  #         fetch-depth: 0  # Required for Chromatic to detect git history
+  #
+  #     - name: Setup Node.js
+  #       uses: actions/setup-node@v4
+  #       with:
+  #         node-version: '20'
+  #         cache: 'npm'
+  #         cache-dependency-path: learn-greek-easy-frontend/package-lock.json
+  #
+  #     - name: Install dependencies
+  #       working-directory: learn-greek-easy-frontend
+  #       run: npm ci
+  #
+  #     - name: Download Visual Test Results
+  #       uses: actions/download-artifact@v4
+  #       with:
+  #         name: visual-test-results
+  #         path: learn-greek-easy-frontend/
+  #
+  #     - name: Run Chromatic
+  #       id: chromatic
+  #       uses: chromaui/action@latest
+  #       with:
+  #         workingDir: learn-greek-easy-frontend
+  #         projectToken: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
+  #         playwright: true
+  #         exitZeroOnChanges: true
+  #         autoAcceptChanges: main
+  #       env:
+  #         CHROMATIC_ARCHIVE_LOCATION: ./test-results
 
   # =============================================================================
-  # JOB: Visual Test PR Comment
+  # JOB: Visual Test PR Comment (DISABLED - reorganizing visual tests)
   # Purpose: Post detailed visual test report with Chromatic build link
   # =============================================================================
-  visual-test-comment:
-    name: Visual Test PR Comment
-    needs: [chromatic]
-    if: github.event_name == 'pull_request' && needs.chromatic.result == 'success'
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Generate Visual Test Report
-        env:
-          CHROMATIC_BUILD_URL: ${{ needs.chromatic.outputs.build_url }}
-          CHROMATIC_CHANGE_COUNT: ${{ needs.chromatic.outputs.change_count }}
-          CHROMATIC_ERROR_COUNT: ${{ needs.chromatic.outputs.error_count }}
-          CHROMATIC_STORYBOOK_URL: ${{ needs.chromatic.outputs.storybook_url }}
-          GITHUB_RUN_ID: ${{ github.run_id }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
-          GITHUB_SERVER_URL: ${{ github.server_url }}
-        run: |
-          node learn-greek-easy-frontend/scripts/parse-visual-test-results.cjs
-
-      - name: Read Comment Body
-        id: comment
-        run: |
-          if [ -f visual-test-comment.md ]; then
-            {
-              echo 'body<<EOF'
-              cat visual-test-comment.md
-              echo 'EOF'
-            } >> $GITHUB_OUTPUT
-          else
-            echo "body=:warning: Visual test results are not available." >> $GITHUB_OUTPUT
-          fi
-
-      - name: Post Visual Test Comment
-        uses: marocchino/sticky-pull-request-comment@v2
-        with:
-          header: visual-test-report
-          message: ${{ steps.comment.outputs.body }}
+  # visual-test-comment:
+  #   name: Visual Test PR Comment
+  #   needs: [chromatic]
+  #   if: github.event_name == 'pull_request' && needs.chromatic.result == 'success'
+  #   runs-on: ubuntu-latest
+  #
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
+  #
+  #     - name: Setup Node.js
+  #       uses: actions/setup-node@v4
+  #       with:
+  #         node-version: '20'
+  #
+  #     - name: Generate Visual Test Report
+  #       env:
+  #         CHROMATIC_BUILD_URL: ${{ needs.chromatic.outputs.build_url }}
+  #         CHROMATIC_CHANGE_COUNT: ${{ needs.chromatic.outputs.change_count }}
+  #         CHROMATIC_ERROR_COUNT: ${{ needs.chromatic.outputs.error_count }}
+  #         CHROMATIC_STORYBOOK_URL: ${{ needs.chromatic.outputs.storybook_url }}
+  #         GITHUB_RUN_ID: ${{ github.run_id }}
+  #         GITHUB_REPOSITORY: ${{ github.repository }}
+  #         GITHUB_SERVER_URL: ${{ github.server_url }}
+  #       run: |
+  #         node learn-greek-easy-frontend/scripts/parse-visual-test-results.cjs
+  #
+  #     - name: Read Comment Body
+  #       id: comment
+  #       run: |
+  #         if [ -f visual-test-comment.md ]; then
+  #           {
+  #             echo 'body<<EOF'
+  #             cat visual-test-comment.md
+  #             echo 'EOF'
+  #           } >> $GITHUB_OUTPUT
+  #         else
+  #           echo "body=:warning: Visual test results are not available." >> $GITHUB_OUTPUT
+  #         fi
+  #
+  #     - name: Post Visual Test Comment
+  #       uses: marocchino/sticky-pull-request-comment@v2
+  #       with:
+  #         header: visual-test-report
+  #         message: ${{ steps.comment.outputs.body }}
 
   # =============================================================================
   # JOB 11: Report Results
@@ -1233,7 +1233,7 @@ jobs:
   # =============================================================================
   report-results:
     name: Report Results
-    needs: [ci-tests, should-deploy, should-run-full, deploy, health-check, seed-database, k6-performance, accessibility, lighthouse, chromatic]
+    needs: [ci-tests, should-deploy, should-run-full, deploy, health-check, seed-database, k6-performance, accessibility, lighthouse]
     if: always() && needs.should-run-full.outputs.run_full == 'true' && needs.should-deploy.outputs.deploy == 'true'
     runs-on: ubuntu-latest
     steps:
@@ -1295,31 +1295,9 @@ jobs:
               ? `[Desktop: ${desktopScore}, Mobile: ${mobileScore}](${lighthouseReportUrl})`
               : `Desktop: ${desktopScore}, Mobile: ${mobileScore}`;
 
-            // Visual regression (Chromatic) status - derive from change_count
-            const visualChangeCount = '${{ needs.chromatic.outputs.change_count }}' || '0';
-            const visualBuildUrl = '${{ needs.chromatic.outputs.build_url }}';
-            const chromaticResult = '${{ needs.chromatic.result }}';
-
-            // Determine visual status from change count (Chromatic's native status handles auto-update on approval)
-            const visualChangeCountNum = parseInt(visualChangeCount) || 0;
-            const visualStatus = chromaticResult === 'skipped' ? 'skipped'
-              : chromaticResult !== 'success' ? 'failed'
-              : visualChangeCountNum === 0 ? 'success'
-              : 'changes_detected';
-
-            const visualIcon = visualStatus === 'success' ? ':white_check_mark:'
-              : visualStatus === 'skipped' ? ':yellow_circle:'
-              : visualStatus === 'changes_detected' ? ':yellow_circle:'
-              : ':x:';
-            const visualDetails = visualStatus === 'success'
-              ? 'No visual changes'
-              : visualStatus === 'skipped'
-              ? 'Skipped'
-              : visualStatus === 'changes_detected'
-              ? visualBuildUrl
-                ? `[${visualChangeCount} change(s) need review](${visualBuildUrl})`
-                : `${visualChangeCount} change(s) need review`
-              : 'Visual tests failed';
+            // Visual regression (Chromatic) status - DISABLED while reorganizing
+            const visualIcon = ':yellow_circle:';
+            const visualDetails = 'Disabled (reorganizing visual tests)';
 
             // K6 Performance
             const k6Status = '${{ needs.k6-performance.outputs.status }}' || 'skipped';
