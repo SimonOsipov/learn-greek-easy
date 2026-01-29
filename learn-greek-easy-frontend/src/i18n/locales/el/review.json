@@ -79,6 +79,11 @@
         "accusative": "Αιτιατική",
         "vocative": "Κλητική"
       },
+      "genders": {
+        "masculine": "Αρσενικό",
+        "feminine": "Θηλυκό",
+        "neuter": "Ουδέτερο"
+      },
       "notAvailable": "Δ/Υ"
     },
     "verbConjugation": {
@@ -101,6 +106,10 @@
         "title": "Προστακτική",
         "singular": "Ενικός",
         "plural": "Πληθυντικός"
+      },
+      "voice": {
+        "active": "Ενεργητική",
+        "passive": "Παθητική"
       },
       "notAvailable": "Δ/Υ"
     },

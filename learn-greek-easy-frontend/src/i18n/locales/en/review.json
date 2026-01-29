@@ -84,6 +84,11 @@
         "accusative": "Accusative",
         "vocative": "Vocative"
       },
+      "genders": {
+        "masculine": "Masculine",
+        "feminine": "Feminine",
+        "neuter": "Neuter"
+      },
       "notAvailable": "N/A"
     },
     "verbConjugation": {
@@ -106,6 +111,10 @@
         "title": "Imperative",
         "singular": "Singular",
         "plural": "Plural"
+      },
+      "voice": {
+        "active": "Active",
+        "passive": "Passive"
       },
       "notAvailable": "N/A"
     },

@@ -79,6 +79,11 @@
         "accusative": "Винительный",
         "vocative": "Звательный"
       },
+      "genders": {
+        "masculine": "Мужской",
+        "feminine": "Женский",
+        "neuter": "Средний"
+      },
       "notAvailable": "Н/Д"
     },
     "verbConjugation": {
@@ -101,6 +106,10 @@
         "title": "Повелительное",
         "singular": "Единственное",
         "plural": "Множественное"
+      },
+      "voice": {
+        "active": "Действительный",
+        "passive": "Страдательный"
       },
       "notAvailable": "Н/Д"
     },
