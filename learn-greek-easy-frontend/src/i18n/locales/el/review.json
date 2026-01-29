@@ -80,6 +80,29 @@
         "vocative": "Κλητική"
       },
       "notAvailable": "Δ/Υ"
+    },
+    "verbConjugation": {
+      "tenses": {
+        "present": "Ενεστώτας",
+        "imperfect": "Παρατατικός",
+        "past": "Αόριστος",
+        "future": "Μέλλοντας",
+        "perfect": "Παρακείμενος"
+      },
+      "persons": {
+        "firstSingular": "Εγώ",
+        "secondSingular": "Εσύ",
+        "thirdSingular": "Αυτός/ή",
+        "firstPlural": "Εμείς",
+        "secondPlural": "Εσείς",
+        "thirdPlural": "Αυτοί/ές"
+      },
+      "imperative": {
+        "title": "Προστακτική",
+        "singular": "Ενικός",
+        "plural": "Πληθυντικός"
+      },
+      "notAvailable": "Δ/Υ"
     }
   }
 }

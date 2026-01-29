@@ -80,6 +80,29 @@
         "vocative": "Звательный"
       },
       "notAvailable": "Н/Д"
+    },
+    "verbConjugation": {
+      "tenses": {
+        "present": "Настоящее",
+        "imperfect": "Имперфект",
+        "past": "Прошедшее",
+        "future": "Будущее",
+        "perfect": "Перфект"
+      },
+      "persons": {
+        "firstSingular": "Я",
+        "secondSingular": "Ты",
+        "thirdSingular": "Он/Она",
+        "firstPlural": "Мы",
+        "secondPlural": "Вы",
+        "thirdPlural": "Они"
+      },
+      "imperative": {
+        "title": "Повелительное",
+        "singular": "Единственное",
+        "plural": "Множественное"
+      },
+      "notAvailable": "Н/Д"
     }
   }
 }

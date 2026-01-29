@@ -6,4 +6,6 @@ export { NounGrammarSection } from './NounGrammarSection';
 export { PartOfSpeechBadge } from './PartOfSpeechBadge';
 export type { PartOfSpeechBadgeProps } from './PartOfSpeechBadge';
 export { TenseTabs } from './TenseTabs';
+export { VerbConjugationGrid } from './VerbConjugationGrid';
+export type { VerbConjugationGridProps } from './VerbConjugationGrid';
 export { VerbGrammarSection } from './VerbGrammarSection';

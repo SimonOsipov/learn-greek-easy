@@ -85,6 +85,29 @@
         "vocative": "Vocative"
       },
       "notAvailable": "N/A"
+    },
+    "verbConjugation": {
+      "tenses": {
+        "present": "Present",
+        "imperfect": "Imperfect",
+        "past": "Past",
+        "future": "Future",
+        "perfect": "Perfect"
+      },
+      "persons": {
+        "firstSingular": "I",
+        "secondSingular": "You (sg)",
+        "thirdSingular": "He/She",
+        "firstPlural": "We",
+        "secondPlural": "You (pl)",
+        "thirdPlural": "They"
+      },
+      "imperative": {
+        "title": "Imperative",
+        "singular": "Singular",
+        "plural": "Plural"
+      },
+      "notAvailable": "N/A"
     }
   }
 }
