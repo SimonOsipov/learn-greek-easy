@@ -373,13 +373,48 @@ class TestGetCardUnit:
             assert response.status_code == 200
             data = response.json()
 
-            # Verify all CardResponse fields
+            # Verify core CardResponse fields
             assert data["id"] == str(mock_card.id)
             assert data["deck_id"] == str(mock_card.deck_id)
             assert data["front_text"] == mock_card.front_text
             assert data["back_text_en"] == mock_card.back_text_en
             assert data["example_sentence"] == mock_card.example_sentence
             assert data["pronunciation"] == mock_card.pronunciation
+
+            # Verify all CardResponse fields are present (including grammar fields)
+            required_fields = [
+                "id",
+                "deck_id",
+                "front_text",
+                "back_text_en",
+                "back_text_ru",
+                "example_sentence",
+                "pronunciation",
+                "part_of_speech",
+                "level",
+                "examples",
+                "noun_data",
+                "verb_data",
+                "adjective_data",
+                "adverb_data",
+                "searchable_forms",
+                "searchable_forms_normalized",
+                "created_at",
+                "updated_at",
+            ]
+            for field in required_fields:
+                assert field in data, f"Missing required field: {field}"
+
+            # Verify nullable fields default to None for basic mock
+            assert data["back_text_ru"] is None
+            assert data["part_of_speech"] is None
+            assert data["level"] is None
+            assert data["noun_data"] is None
+            assert data["verb_data"] is None
+            assert data["adjective_data"] is None
+            assert data["adverb_data"] is None
+            assert data["searchable_forms"] is None
+            assert data["searchable_forms_normalized"] is None
 
 
 class TestSearchCardsUnit:
@@ -763,6 +798,41 @@ class TestUpdateCardUnit:
         )
 
         assert response.status_code == 422
+
+    @pytest.mark.asyncio
+    async def test_update_card_accepts_grammar_fields_validation(
+        self, client: AsyncClient, superuser_auth_headers: dict
+    ):
+        """Test that PATCH endpoint accepts grammar data fields (validation only).
+
+        This test verifies the request schema allows grammar fields.
+        Full integration testing of grammar updates is in test_cards.py integration tests.
+        """
+        card_id = uuid4()
+
+        with patch("src.api.v1.cards.CardRepository") as MockCardRepo:
+            mock_card_repo = AsyncMock()
+            mock_card_repo.get.return_value = None  # Card not found
+            MockCardRepo.return_value = mock_card_repo
+
+            # The important thing is this request isn't rejected with 422 validation error
+            # It should proceed to card lookup (which returns 404 because card doesn't exist)
+            update_data = {
+                "part_of_speech": "noun",
+                "level": "A1",
+                "noun_data": {"gender": "neuter", "nominative_singular": "σπίτι"},
+                "searchable_forms": ["σπίτι", "σπιτιού"],
+            }
+
+            response = await client.patch(
+                f"/api/v1/cards/{card_id}",
+                json=update_data,
+                headers=superuser_auth_headers,
+            )
+
+            # 404 means the request was validated and proceeded to lookup
+            # If grammar fields were rejected, we'd get 422
+            assert response.status_code == 404
 
 
 class TestDeleteCardUnit:

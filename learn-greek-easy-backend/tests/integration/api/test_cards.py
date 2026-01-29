@@ -13,6 +13,125 @@ from httpx import AsyncClient
 
 from src.db.models import Card, Deck, DeckLevel
 
+# ============================================================================
+# Grammar Card Test Data Fixtures
+# ============================================================================
+
+NOUN_CARD_DATA = {
+    "front_text": "σπίτι",
+    "back_text_en": "house",
+    "back_text_ru": "дом",
+    "part_of_speech": "noun",
+    "level": "A1",
+    "pronunciation": "SPEEtee",
+    "example_sentence": "Το σπίτι είναι μεγάλο.",
+    "examples": [
+        {
+            "greek": "Το σπίτι είναι μεγάλο.",
+            "english": "The house is big.",
+            "russian": "Дом большой.",
+        }
+    ],
+    "noun_data": {
+        "gender": "neuter",
+        "nominative_singular": "σπίτι",
+        "genitive_singular": "σπιτιού",
+        "accusative_singular": "σπίτι",
+        "vocative_singular": "σπίτι",
+        "nominative_plural": "σπίτια",
+        "genitive_plural": "σπιτιών",
+        "accusative_plural": "σπίτια",
+        "vocative_plural": "σπίτια",
+    },
+    "searchable_forms": ["σπίτι", "σπιτιού", "σπίτια", "σπιτιών"],
+    "searchable_forms_normalized": ["spiti", "spitiou", "spitia", "spition"],
+}
+
+VERB_CARD_DATA = {
+    "front_text": "τρέχω",
+    "back_text_en": "to run",
+    "back_text_ru": "бегать",
+    "part_of_speech": "verb",
+    "level": "A2",
+    "pronunciation": "TREho",
+    "example_sentence": "Τρέχω κάθε πρωί.",
+    "examples": [
+        {
+            "greek": "Τρέχω κάθε πρωί.",
+            "english": "I run every morning.",
+            "russian": "Я бегаю каждое утро.",
+        }
+    ],
+    "verb_data": {
+        "voice": "active",
+        "present_1s": "τρέχω",
+        "present_2s": "τρέχεις",
+        "present_3s": "τρέχει",
+        "present_1p": "τρέχουμε",
+        "present_2p": "τρέχετε",
+        "present_3p": "τρέχουν",
+        "past_1s": "έτρεξα",
+        "past_2s": "έτρεξες",
+        "past_3s": "έτρεξε",
+        "past_1p": "τρέξαμε",
+        "past_2p": "τρέξατε",
+        "past_3p": "έτρεξαν",
+    },
+    "searchable_forms": ["τρέχω", "τρέχεις", "τρέχει", "έτρεξα"],
+    "searchable_forms_normalized": ["trecho", "trecheis", "trechei", "etrexa"],
+}
+
+ADJECTIVE_CARD_DATA = {
+    "front_text": "καλός",
+    "back_text_en": "good",
+    "back_text_ru": "хороший",
+    "part_of_speech": "adjective",
+    "level": "A1",
+    "pronunciation": "kaLOS",
+    "example_sentence": "Είναι καλός άνθρωπος.",
+    "examples": [
+        {
+            "greek": "Είναι καλός άνθρωπος.",
+            "english": "He is a good person.",
+            "russian": "Он хороший человек.",
+        }
+    ],
+    "adjective_data": {
+        "masculine_nom_sg": "καλός",
+        "masculine_gen_sg": "καλού",
+        "masculine_acc_sg": "καλό",
+        "feminine_nom_sg": "καλή",
+        "feminine_gen_sg": "καλής",
+        "feminine_acc_sg": "καλή",
+        "neuter_nom_sg": "καλό",
+        "neuter_gen_sg": "καλού",
+        "neuter_acc_sg": "καλό",
+        "comparative": "καλύτερος",
+        "superlative": "κάλλιστος",
+    },
+    "searchable_forms": ["καλός", "καλή", "καλό", "καλύτερος"],
+    "searchable_forms_normalized": ["kalos", "kali", "kalo", "kalyteros"],
+}
+
+ADVERB_CARD_DATA = {
+    "front_text": "γρήγορα",
+    "back_text_en": "quickly",
+    "back_text_ru": "быстро",
+    "part_of_speech": "adverb",
+    "level": "A2",
+    "pronunciation": "GRIgora",
+    "example_sentence": "Τρέχει γρήγορα.",
+    "examples": [
+        {"greek": "Τρέχει γρήγορα.", "english": "He runs quickly.", "russian": "Он бежит быстро."}
+    ],
+    "adverb_data": {
+        "comparative": "γρηγορότερα",
+        "superlative": "γρηγορότατα",
+    },
+    "searchable_forms": ["γρήγορα", "γρηγορότερα", "γρηγορότατα"],
+    "searchable_forms_normalized": ["grigora", "grigorotera", "grigorotata"],
+}
+
 
 class TestListCardsIntegration:
     """Integration tests for GET /api/v1/cards endpoint."""
@@ -223,15 +342,29 @@ class TestListCardsIntegration:
         assert len(data["cards"]) > 0
 
         card = data["cards"][0]
-        # Verify all CardResponse fields
-        assert "id" in card
-        assert "deck_id" in card
-        assert "front_text" in card
-        assert "back_text_en" in card
-        assert "example_sentence" in card
-        assert "pronunciation" in card
-        assert "created_at" in card
-        assert "updated_at" in card
+        # Verify all CardResponse fields (including grammar fields)
+        required_fields = [
+            "id",
+            "deck_id",
+            "front_text",
+            "back_text_en",
+            "back_text_ru",
+            "example_sentence",
+            "pronunciation",
+            "part_of_speech",
+            "level",
+            "examples",
+            "noun_data",
+            "verb_data",
+            "adjective_data",
+            "adverb_data",
+            "searchable_forms",
+            "searchable_forms_normalized",
+            "created_at",
+            "updated_at",
+        ]
+        for field in required_fields:
+            assert field in card, f"Missing required field: {field}"
 
     @pytest.mark.asyncio
     async def test_list_cards_max_page_size(
@@ -428,14 +561,24 @@ class TestGetCardEndpoint:
         assert response.status_code == 200
         data = response.json()
 
-        # Verify all required CardResponse fields are present
+        # Verify all required CardResponse fields are present (including grammar fields)
         required_fields = [
             "id",
             "deck_id",
             "front_text",
             "back_text_en",
+            "back_text_ru",
             "example_sentence",
             "pronunciation",
+            "part_of_speech",
+            "level",
+            "examples",
+            "noun_data",
+            "verb_data",
+            "adjective_data",
+            "adverb_data",
+            "searchable_forms",
+            "searchable_forms_normalized",
             "created_at",
             "updated_at",
         ]
@@ -756,14 +899,24 @@ class TestCreateCardEndpoint:
         assert response.status_code == 201
         data = response.json()
 
-        # Verify all CardResponse fields are present
+        # Verify all CardResponse fields are present (including grammar fields)
         required_fields = [
             "id",
             "deck_id",
             "front_text",
             "back_text_en",
+            "back_text_ru",
             "example_sentence",
             "pronunciation",
+            "part_of_speech",
+            "level",
+            "examples",
+            "noun_data",
+            "verb_data",
+            "adjective_data",
+            "adverb_data",
+            "searchable_forms",
+            "searchable_forms_normalized",
             "created_at",
             "updated_at",
         ]
@@ -1253,13 +1406,24 @@ class TestUpdateCardEndpoint:
         assert response.status_code == 200
         data = response.json()
 
+        # Verify all CardResponse fields are present (including grammar fields)
         required_fields = [
             "id",
             "deck_id",
             "front_text",
             "back_text_en",
+            "back_text_ru",
             "example_sentence",
             "pronunciation",
+            "part_of_speech",
+            "level",
+            "examples",
+            "noun_data",
+            "verb_data",
+            "adjective_data",
+            "adverb_data",
+            "searchable_forms",
+            "searchable_forms_normalized",
             "created_at",
             "updated_at",
         ]
@@ -1668,3 +1832,235 @@ class TestCardCRUDFlow:
 
         search_response = await client.get("/api/v1/cards/search?q=Auth", headers=auth_headers)
         assert search_response.status_code == 200
+
+
+class TestCardGrammarFieldsIntegration:
+    """Integration tests for grammar fields in card responses."""
+
+    @pytest.fixture
+    async def grammar_deck(self, db_session):
+        """Create a deck for grammar field tests."""
+        deck = Deck(
+            id=uuid4(),
+            name="Grammar Test Deck",
+            description="Deck for testing grammar fields",
+            level=DeckLevel.A1,
+            is_active=True,
+        )
+        db_session.add(deck)
+        await db_session.commit()
+        await db_session.refresh(deck)
+        return deck
+
+    @pytest.mark.asyncio
+    async def test_get_noun_card_returns_all_grammar_fields(
+        self, client: AsyncClient, superuser_auth_headers: dict, auth_headers: dict, grammar_deck
+    ):
+        """Test GET single noun card returns all grammar fields correctly."""
+        # Create noun card with all grammar data
+        card_data = {**NOUN_CARD_DATA, "deck_id": str(grammar_deck.id)}
+        create_response = await client.post(
+            "/api/v1/cards",
+            json=card_data,
+            headers=superuser_auth_headers,
+        )
+        assert create_response.status_code == 201
+        card_id = create_response.json()["id"]
+
+        # Get the card
+        get_response = await client.get(f"/api/v1/cards/{card_id}", headers=auth_headers)
+        assert get_response.status_code == 200
+        data = get_response.json()
+
+        # Verify noun-specific fields
+        assert data["part_of_speech"] == "noun"
+        assert data["level"] == "A1"
+        assert data["back_text_ru"] == "дом"
+        assert data["noun_data"] is not None
+        assert data["noun_data"]["gender"] == "neuter"
+        assert data["noun_data"]["nominative_singular"] == "σπίτι"
+        assert data["noun_data"]["genitive_singular"] == "σπιτιού"
+        assert data["verb_data"] is None
+        assert data["adjective_data"] is None
+        assert data["adverb_data"] is None
+        assert data["searchable_forms"] == ["σπίτι", "σπιτιού", "σπίτια", "σπιτιών"]
+        assert data["searchable_forms_normalized"] == ["spiti", "spitiou", "spitia", "spition"]
+        assert data["examples"] is not None
+        assert len(data["examples"]) == 1
+        assert data["examples"][0]["greek"] == "Το σπίτι είναι μεγάλο."
+
+    @pytest.mark.asyncio
+    async def test_get_verb_card_returns_all_grammar_fields(
+        self, client: AsyncClient, superuser_auth_headers: dict, auth_headers: dict, grammar_deck
+    ):
+        """Test GET single verb card returns all grammar fields correctly."""
+        # Create verb card with all grammar data
+        card_data = {**VERB_CARD_DATA, "deck_id": str(grammar_deck.id)}
+        create_response = await client.post(
+            "/api/v1/cards",
+            json=card_data,
+            headers=superuser_auth_headers,
+        )
+        assert create_response.status_code == 201
+        card_id = create_response.json()["id"]
+
+        # Get the card
+        get_response = await client.get(f"/api/v1/cards/{card_id}", headers=auth_headers)
+        assert get_response.status_code == 200
+        data = get_response.json()
+
+        # Verify verb-specific fields
+        assert data["part_of_speech"] == "verb"
+        assert data["level"] == "A2"
+        assert data["verb_data"] is not None
+        assert data["verb_data"]["voice"] == "active"
+        assert data["verb_data"]["present_1s"] == "τρέχω"
+        assert data["verb_data"]["past_1s"] == "έτρεξα"
+        assert data["noun_data"] is None
+        assert data["adjective_data"] is None
+        assert data["adverb_data"] is None
+
+    @pytest.mark.asyncio
+    async def test_list_cards_returns_grammar_fields(
+        self, client: AsyncClient, superuser_auth_headers: dict, auth_headers: dict, grammar_deck
+    ):
+        """Test list cards returns grammar fields for all cards."""
+        # Create multiple cards with different parts of speech
+        noun_data = {**NOUN_CARD_DATA, "deck_id": str(grammar_deck.id)}
+        verb_data = {**VERB_CARD_DATA, "deck_id": str(grammar_deck.id)}
+
+        await client.post("/api/v1/cards", json=noun_data, headers=superuser_auth_headers)
+        await client.post("/api/v1/cards", json=verb_data, headers=superuser_auth_headers)
+
+        # List cards
+        list_response = await client.get(
+            f"/api/v1/cards?deck_id={grammar_deck.id}", headers=auth_headers
+        )
+        assert list_response.status_code == 200
+        data = list_response.json()
+
+        assert data["total"] == 2
+        cards = data["cards"]
+
+        # Find noun and verb cards
+        noun_card = next((c for c in cards if c["part_of_speech"] == "noun"), None)
+        verb_card = next((c for c in cards if c["part_of_speech"] == "verb"), None)
+
+        assert noun_card is not None
+        assert verb_card is not None
+
+        # Verify noun card grammar fields
+        assert noun_card["noun_data"] is not None
+        assert noun_card["noun_data"]["gender"] == "neuter"
+        assert noun_card["verb_data"] is None
+
+        # Verify verb card grammar fields
+        assert verb_card["verb_data"] is not None
+        assert verb_card["verb_data"]["voice"] == "active"
+        assert verb_card["noun_data"] is None
+
+    @pytest.mark.asyncio
+    async def test_create_card_with_grammar_fields(
+        self, client: AsyncClient, superuser_auth_headers: dict, grammar_deck
+    ):
+        """Test creating cards with full grammar data."""
+        # Create adjective card
+        card_data = {**ADJECTIVE_CARD_DATA, "deck_id": str(grammar_deck.id)}
+        response = await client.post(
+            "/api/v1/cards",
+            json=card_data,
+            headers=superuser_auth_headers,
+        )
+
+        assert response.status_code == 201
+        data = response.json()
+
+        # Verify adjective grammar data is returned correctly
+        assert data["part_of_speech"] == "adjective"
+        assert data["adjective_data"] is not None
+        assert data["adjective_data"]["masculine_nom_sg"] == "καλός"
+        assert data["adjective_data"]["feminine_nom_sg"] == "καλή"
+        assert data["adjective_data"]["comparative"] == "καλύτερος"
+        assert data["searchable_forms"] == ["καλός", "καλή", "καλό", "καλύτερος"]
+
+    @pytest.mark.asyncio
+    async def test_update_card_grammar_fields(
+        self, client: AsyncClient, superuser_auth_headers: dict, auth_headers: dict, grammar_deck
+    ):
+        """Test updating grammar fields on existing card."""
+        # Create basic card first
+        basic_card_data = {
+            "deck_id": str(grammar_deck.id),
+            "front_text": "σπίτι",
+            "back_text_en": "house",
+        }
+        create_response = await client.post(
+            "/api/v1/cards",
+            json=basic_card_data,
+            headers=superuser_auth_headers,
+        )
+        assert create_response.status_code == 201
+        card_id = create_response.json()["id"]
+
+        # Verify initial state has no grammar data
+        initial_data = create_response.json()
+        assert initial_data["noun_data"] is None
+        assert initial_data["part_of_speech"] is None
+
+        # Update with grammar fields
+        update_data = {
+            "part_of_speech": "noun",
+            "level": "A1",
+            "back_text_ru": "дом",
+            "noun_data": {
+                "gender": "neuter",
+                "nominative_singular": "σπίτι",
+                "genitive_singular": "σπιτιού",
+            },
+            "searchable_forms": ["σπίτι", "σπιτιού"],
+        }
+        update_response = await client.patch(
+            f"/api/v1/cards/{card_id}",
+            json=update_data,
+            headers=superuser_auth_headers,
+        )
+        assert update_response.status_code == 200
+        updated_data = update_response.json()
+
+        # Verify grammar fields were updated
+        assert updated_data["part_of_speech"] == "noun"
+        assert updated_data["level"] == "A1"
+        assert updated_data["back_text_ru"] == "дом"
+        assert updated_data["noun_data"] is not None
+        assert updated_data["noun_data"]["gender"] == "neuter"
+        assert updated_data["searchable_forms"] == ["σπίτι", "σπιτιού"]
+
+        # Verify persistence via GET
+        get_response = await client.get(f"/api/v1/cards/{card_id}", headers=auth_headers)
+        assert get_response.status_code == 200
+        persisted_data = get_response.json()
+        assert persisted_data["noun_data"]["gender"] == "neuter"
+
+    @pytest.mark.asyncio
+    async def test_create_adverb_card_with_grammar_fields(
+        self, client: AsyncClient, superuser_auth_headers: dict, auth_headers: dict, grammar_deck
+    ):
+        """Test creating adverb card with comparison forms."""
+        card_data = {**ADVERB_CARD_DATA, "deck_id": str(grammar_deck.id)}
+        response = await client.post(
+            "/api/v1/cards",
+            json=card_data,
+            headers=superuser_auth_headers,
+        )
+
+        assert response.status_code == 201
+        data = response.json()
+
+        # Verify adverb grammar data
+        assert data["part_of_speech"] == "adverb"
+        assert data["adverb_data"] is not None
+        assert data["adverb_data"]["comparative"] == "γρηγορότερα"
+        assert data["adverb_data"]["superlative"] == "γρηγορότατα"
+        assert data["noun_data"] is None
+        assert data["verb_data"] is None
+        assert data["adjective_data"] is None
