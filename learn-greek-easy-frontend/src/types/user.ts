@@ -16,7 +16,7 @@ export interface UserProfile extends User {
 }
 
 export interface UserSettings {
-  language: 'en' | 'el' | 'ru';
+  language: 'en' | 'ru';
   dailyGoal: number;
   notificationsEnabled: boolean;
   soundEnabled: boolean;

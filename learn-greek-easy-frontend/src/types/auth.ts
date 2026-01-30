@@ -3,7 +3,7 @@ export type UserRole = 'free' | 'premium' | 'admin';
 
 // User preferences
 export interface UserPreferences {
-  language: 'en' | 'el' | 'ru';
+  language: 'en' | 'ru';
   dailyGoal: number; // minutes
   notifications: boolean;
   theme?: 'light' | 'dark';

@@ -86,62 +86,6 @@ function detectInitialLanguage(): SupportedLanguage {
 }
 
 /**
- * Load Greek language resources.
- *
- * @returns Promise resolving to Greek resource bundle
- */
-async function loadGreekBundle(): Promise<Record<string, unknown>> {
-  const [
-    achievements,
-    admin,
-    auth,
-    changelog,
-    common,
-    culture,
-    deck,
-    feedback,
-    landing,
-    mockExam,
-    profile,
-    review,
-    settings,
-    statistics,
-  ] = await Promise.all([
-    import('./locales/el/achievements.json'),
-    import('./locales/el/admin.json'),
-    import('./locales/el/auth.json'),
-    import('./locales/el/changelog.json'),
-    import('./locales/el/common.json'),
-    import('./locales/el/culture.json'),
-    import('./locales/el/deck.json'),
-    import('./locales/el/feedback.json'),
-    import('./locales/el/landing.json'),
-    import('./locales/el/mockExam.json'),
-    import('./locales/el/profile.json'),
-    import('./locales/el/review.json'),
-    import('./locales/el/settings.json'),
-    import('./locales/el/statistics.json'),
-  ]);
-
-  return {
-    achievements: achievements.default,
-    admin: admin.default,
-    auth: auth.default,
-    changelog: changelog.default,
-    common: common.default,
-    culture: culture.default,
-    deck: deck.default,
-    feedback: feedback.default,
-    landing: landing.default,
-    mockExam: mockExam.default,
-    profile: profile.default,
-    review: review.default,
-    settings: settings.default,
-    statistics: statistics.default,
-  };
-}
-
-/**
  * Load Russian language resources.
  *
  * @returns Promise resolving to Russian resource bundle
@@ -200,16 +144,12 @@ async function loadRussianBundle(): Promise<Record<string, unknown>> {
 /**
  * Pre-load language bundle if non-English.
  *
- * @param lang - Language code to load ('el' or 'ru')
+ * @param lang - Language code to load ('ru')
  * @returns Promise resolving to resource bundle or undefined for English
  */
 async function loadLanguageBundle(
   lang: SupportedLanguage
 ): Promise<Record<string, Record<string, unknown>> | undefined> {
-  if (lang === 'el') {
-    const bundle = await loadGreekBundle();
-    return { el: bundle };
-  }
   if (lang === 'ru') {
     const bundle = await loadRussianBundle();
     return { ru: bundle };
@@ -299,7 +239,7 @@ export async function initI18n(): Promise<typeof i18n> {
   // Step 5: Defense in depth - handle runtime language changes
   // This ensures resources are loaded if user switches language after init
   i18n.on('languageChanged', async (lng: string) => {
-    if ((lng === 'el' || lng === 'ru') && !i18n.hasResourceBundle(lng, 'common')) {
+    if (lng === 'ru' && !i18n.hasResourceBundle(lng, 'common')) {
       const bundle = await loadLanguageBundle(lng as SupportedLanguage);
       if (bundle) {
         const langBundle = bundle[lng];
