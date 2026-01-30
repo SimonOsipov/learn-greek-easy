@@ -2,6 +2,7 @@ import { useState } from 'react';
 
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useReviewStore } from '@/stores/reviewStore';
 import type { ReviewRating } from '@/types/review';
@@ -29,13 +30,13 @@ export function RatingButtons() {
       {buttons.map(({ rating, labelKey, color }) => {
         const label = t(labelKey);
         return (
-          <button
+          <Button
             key={rating}
             onClick={() => handleRate(rating)}
             disabled={!canRate || isLoading}
             className={cn(
               'max-w-[120px] flex-1 rounded-lg px-6 py-3 text-sm font-semibold text-white',
-              'transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50',
+              'transition-all duration-200',
               color,
               highlightedButton === rating && 'ring-2 ring-current ring-offset-2',
               canRate && 'hover:-translate-y-0.5 hover:shadow-lg'
@@ -44,7 +45,7 @@ export function RatingButtons() {
             type="button"
           >
             {label}
-          </button>
+          </Button>
         );
       })}
     </div>

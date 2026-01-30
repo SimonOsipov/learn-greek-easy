@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 
+import { Progress } from '@/components/ui/progress';
 import { useReviewStore } from '@/stores/reviewStore';
 
 export function ProgressHeader() {
@@ -16,12 +17,11 @@ export function ProgressHeader() {
   return (
     <div className="border-b border-border bg-muted/50 px-6 py-4">
       {/* Progress bar */}
-      <div className="mb-2 h-2 overflow-hidden rounded-full bg-muted">
-        <div
-          className="h-full bg-gradient-to-r from-gradient-from to-gradient-to transition-all duration-300"
-          style={{ width: `${percentage}%` }}
-        />
-      </div>
+      <Progress
+        value={percentage}
+        className="mb-2 h-2 bg-muted [&>div]:bg-gradient-to-r [&>div]:from-gradient-from [&>div]:to-gradient-to"
+        aria-label={t('session.cardOf', { current: current + 1, total })}
+      />
 
       {/* Progress text */}
       <div className="text-center text-sm text-muted-foreground">

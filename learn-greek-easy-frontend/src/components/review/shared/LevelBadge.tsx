@@ -1,3 +1,4 @@
+import { Badge } from '@/components/ui/badge';
 import { getCEFRColor, getCEFRTextColor } from '@/lib/cefrColors';
 import { cn } from '@/lib/utils';
 import type { DeckLevel } from '@/types/deck';
@@ -16,14 +17,6 @@ export function LevelBadge({ level }: LevelBadgeProps) {
   const textColor = getCEFRTextColor(level as DeckLevel);
 
   return (
-    <span
-      className={cn(
-        'inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide',
-        bgColor,
-        textColor
-      )}
-    >
-      {level}
-    </span>
+    <Badge className={cn('px-3 py-1 uppercase tracking-wide', bgColor, textColor)}>{level}</Badge>
   );
 }
