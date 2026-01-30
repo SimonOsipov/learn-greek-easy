@@ -115,7 +115,8 @@
       },
       "voice": {
         "active": "Active",
-        "passive": "Passive"
+        "passive": "Passive",
+        "toggleAriaLabel": "Toggle between active and passive voice"
       },
       "notAvailable": "N/A"
     },

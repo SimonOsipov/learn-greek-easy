@@ -12,3 +12,5 @@ export { TenseTabs } from './TenseTabs';
 export type { TenseTabsProps } from './TenseTabs';
 export { VerbConjugationGrid } from './VerbConjugationGrid';
 export type { VerbConjugationGridProps } from './VerbConjugationGrid';
+export { VoiceToggle } from './VoiceToggle';
+export type { VoiceToggleProps } from './VoiceToggle';

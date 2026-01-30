@@ -3,9 +3,10 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import type { VerbData } from '@/types/grammar';
+import type { VerbData, VerbVoice } from '@/types/grammar';
 
 import { VerbConjugationGrid } from './VerbConjugationGrid';
+import { VoiceToggle } from './VoiceToggle';
 
 const VERB_TENSES = ['present', 'imperfect', 'past', 'future', 'perfect', 'imperative'] as const;
 type VerbTense = (typeof VERB_TENSES)[number];
@@ -29,9 +30,20 @@ function tenseHasData(verbData: VerbData, tense: VerbTense): boolean {
 export function TenseTabs({ verbData }: TenseTabsProps) {
   const { t } = useTranslation('review');
   const [selectedTense, setSelectedTense] = useState<VerbTense>('present');
+  const [selectedVoice, setSelectedVoice] = useState<VerbVoice>(verbData.voice);
+
+  // TODO: Set to true when passive voice data is available for this verb
+  const hasPassive = false;
 
   return (
     <div className="space-y-4">
+      <div className="flex items-center justify-end">
+        <VoiceToggle
+          selectedVoice={selectedVoice}
+          onVoiceChange={setSelectedVoice}
+          disabled={!hasPassive}
+        />
+      </div>
       <Tabs value={selectedTense} onValueChange={(v) => setSelectedTense(v as VerbTense)}>
         <div className="overflow-x-auto">
           <TabsList className="inline-flex w-full min-w-max">
