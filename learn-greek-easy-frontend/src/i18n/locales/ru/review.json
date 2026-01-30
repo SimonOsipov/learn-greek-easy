@@ -15,7 +15,12 @@
     "flipCardAriaLabel": "Перевернуть карточку, чтобы увидеть перевод",
     "answerRevealed": "Ответ показан",
     "minRemaining": "Осталось {{minutes}} мин",
-    "sessionEndedNoCards": "Сессия завершена без повторения карточек."
+    "sessionEndedNoCards": "Сессия завершена без повторения карточек.",
+    "earlyPractice": {
+      "badge": "Ранняя практика",
+      "tooltip": "Практика до срока повторения - отличное усердие!",
+      "dueLabel": "Срок: {{date}}"
+    }
   },
   "ratings": {
     "again": "Снова",
