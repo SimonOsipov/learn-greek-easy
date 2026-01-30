@@ -19,7 +19,7 @@ export function TenseTabs({ selectedTense, onTenseChange, disabled }: TenseTabsP
           className={cn(
             'rounded-md px-4 py-2 text-xs font-semibold transition-all',
             selectedTense === tense
-              ? 'bg-gradient-to-br from-[#667eea] to-[#764ba2] text-white'
+              ? 'bg-gradient-to-br from-gradient-from to-gradient-to text-white'
               : 'text-muted-foreground hover:bg-muted/50',
             disabled && 'cursor-not-allowed opacity-50'
           )}

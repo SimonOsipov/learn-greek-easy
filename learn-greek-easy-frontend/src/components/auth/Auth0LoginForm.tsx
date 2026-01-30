@@ -341,7 +341,7 @@ export const Auth0LoginForm: React.FC = () => {
               data-testid="login-submit"
               loading={isSubmitting}
               loadingText={t('login.submitting')}
-              className="w-full bg-gradient-to-br from-[#667eea] to-[#764ba2] text-white hover:opacity-90"
+              className="w-full bg-gradient-to-br from-gradient-from to-gradient-to text-white hover:opacity-90"
               size="lg"
             >
               {t('login.submit')}

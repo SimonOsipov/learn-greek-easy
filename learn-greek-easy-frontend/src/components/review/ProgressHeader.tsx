@@ -18,7 +18,7 @@ export function ProgressHeader() {
       {/* Progress bar */}
       <div className="mb-2 h-2 overflow-hidden rounded-full bg-muted">
         <div
-          className="h-full bg-gradient-to-r from-[#667eea] to-[#764ba2] transition-all duration-300"
+          className="h-full bg-gradient-to-r from-gradient-from to-gradient-to transition-all duration-300"
           style={{ width: `${percentage}%` }}
         />
       </div>
