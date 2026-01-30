@@ -336,13 +336,14 @@ describe('VerbConjugationGrid', () => {
     });
   });
 
-  describe('Grid Structure', () => {
-    it('should render main conjugation grid', () => {
+  describe('Table Structure', () => {
+    it('should render main conjugation table', () => {
       const { container } = render(<VerbConjugationGrid verbData={mockVerbDataComplete} />);
 
-      // Main grid has grid-cols-6 class
-      const mainGrid = container.querySelector('.grid-cols-6');
-      expect(mainGrid).toBeInTheDocument();
+      // Main table should have 6 person rows
+      const tableBody = container.querySelector('tbody');
+      const rows = tableBody?.querySelectorAll('tr');
+      expect(rows?.length).toBe(6);
     });
 
     it('should render imperative section as separate grid', () => {

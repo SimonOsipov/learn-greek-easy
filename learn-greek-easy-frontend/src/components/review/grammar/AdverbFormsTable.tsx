@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 
-import { cn } from '@/lib/utils';
+import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table';
 import type { AdverbData } from '@/types/grammar';
 
 export interface AdverbFormsTableProps {
@@ -19,18 +19,19 @@ export function AdverbFormsTable({ adverbData, positiveForm }: AdverbFormsTableP
   ] as const;
 
   return (
-    <div className="overflow-hidden rounded-lg border border-border bg-card">
-      {forms.map(({ key, value }, index) => (
-        <div
-          key={key}
-          className={cn('grid grid-cols-2', index < forms.length - 1 && 'border-b border-border')}
-        >
-          <div className="bg-muted/50 px-4 py-2 text-sm font-medium text-muted-foreground">
-            {t(`grammar.adverbForms.${key}`)}
-          </div>
-          <div className="px-4 py-2 text-sm">{value || na}</div>
-        </div>
-      ))}
+    <div className="overflow-hidden rounded-md border">
+      <Table>
+        <TableBody>
+          {forms.map(({ key, value }) => (
+            <TableRow key={key} className="hover:bg-transparent">
+              <TableCell className="bg-muted/50 px-4 py-2 font-medium text-muted-foreground">
+                {t(`grammar.adverbForms.${key}`)}
+              </TableCell>
+              <TableCell className="px-4 py-2">{value || na}</TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
     </div>
   );
 }

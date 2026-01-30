@@ -161,21 +161,21 @@ describe('NounDeclensionTable', () => {
     });
   });
 
-  describe('Grid Structure', () => {
+  describe('Table Structure', () => {
     it('should render 4 data rows (one per case)', () => {
       const { container } = render(<NounDeclensionTable nounData={mockNounDataComplete} />);
 
-      // Each case row has grid-cols-3 class
-      const rows = container.querySelectorAll('.grid-cols-3');
-      // 1 header row + 4 case rows = 5 total
-      expect(rows.length).toBe(5);
+      // Table body should have 4 rows (one per case)
+      const tableBody = container.querySelector('tbody');
+      const rows = tableBody?.querySelectorAll('tr');
+      expect(rows?.length).toBe(4);
     });
 
     it('should have rounded border container', () => {
       const { container } = render(<NounDeclensionTable nounData={mockNounDataComplete} />);
 
       const table = container.firstChild;
-      expect(table).toHaveClass('rounded-lg');
+      expect(table).toHaveClass('rounded-md');
       expect(table).toHaveClass('border');
     });
   });

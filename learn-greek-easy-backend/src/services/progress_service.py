@@ -19,7 +19,7 @@ Example Usage:
 
 import asyncio
 import math
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from typing import Any, Optional, cast
 from uuid import UUID
 
@@ -693,7 +693,7 @@ class ProgressService:
         # 3. Sort combined list by last_studied_at descending
         # =====================================================================
         all_deck_summaries.sort(
-            key=lambda x: x.last_studied_at or datetime.min,
+            key=lambda x: x.last_studied_at or datetime.min.replace(tzinfo=timezone.utc),
             reverse=True,
         )
 

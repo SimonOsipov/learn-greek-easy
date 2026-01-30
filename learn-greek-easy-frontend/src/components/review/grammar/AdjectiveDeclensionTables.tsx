@@ -1,6 +1,14 @@
 import { useTranslation } from 'react-i18next';
 
-import { cn } from '@/lib/utils';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import type { AdjectiveData } from '@/types/grammar';
 
 export interface AdjectiveDeclensionTablesProps {
@@ -25,39 +33,43 @@ function GenderTable({ gender, data, na, t }: GenderTableProps) {
   const cases = ['nominative', 'genitive', 'accusative', 'vocative'] as const;
 
   return (
-    <div className="overflow-hidden rounded-lg border border-border bg-card">
-      {/* Gender header */}
-      <div className="border-b border-border bg-primary/10 px-4 py-2">
-        <h4 className="text-sm font-semibold text-primary">
+    <Card className="overflow-hidden">
+      <CardHeader className="bg-primary/10 px-4 py-2">
+        <CardTitle className="text-sm font-semibold text-primary">
           {t(`grammar.adjectiveDeclension.genders.${gender}`)}
-        </h4>
-      </div>
-
-      {/* Column headers */}
-      <div className="grid grid-cols-3 border-b border-border bg-muted/50">
-        <div className="px-4 py-2 text-sm font-medium text-muted-foreground" />
-        <div className="px-4 py-2 text-center text-sm font-medium text-muted-foreground">
-          {t('grammar.nounDeclension.singular')}
-        </div>
-        <div className="px-4 py-2 text-center text-sm font-medium text-muted-foreground">
-          {t('grammar.nounDeclension.plural')}
-        </div>
-      </div>
-
-      {/* Data rows */}
-      {cases.map((caseKey, index) => (
-        <div
-          key={caseKey}
-          className={cn('grid grid-cols-3', index < cases.length - 1 && 'border-b border-border')}
-        >
-          <div className="bg-muted/50 px-4 py-2 text-sm font-medium text-muted-foreground">
-            {t(`grammar.nounDeclension.cases.${caseKey}`)}
-          </div>
-          <div className="px-4 py-2 text-center text-sm">{data[caseKey].singular || na}</div>
-          <div className="px-4 py-2 text-center text-sm">{data[caseKey].plural || na}</div>
-        </div>
-      ))}
-    </div>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="p-0">
+        <Table>
+          <TableHeader>
+            <TableRow className="hover:bg-transparent">
+              <TableHead className="h-auto bg-muted/50 px-4 py-2" />
+              <TableHead className="h-auto bg-muted/50 px-4 py-2 text-center">
+                {t('grammar.nounDeclension.singular')}
+              </TableHead>
+              <TableHead className="h-auto bg-muted/50 px-4 py-2 text-center">
+                {t('grammar.nounDeclension.plural')}
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {cases.map((caseKey) => (
+              <TableRow key={caseKey} className="hover:bg-transparent">
+                <TableCell className="bg-muted/50 px-4 py-2 font-medium text-muted-foreground">
+                  {t(`grammar.nounDeclension.cases.${caseKey}`)}
+                </TableCell>
+                <TableCell className="px-4 py-2 text-center">
+                  {data[caseKey].singular || na}
+                </TableCell>
+                <TableCell className="px-4 py-2 text-center">
+                  {data[caseKey].plural || na}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -118,27 +130,29 @@ export function AdjectiveDeclensionTables({ adjectiveData }: AdjectiveDeclension
       </div>
 
       {/* Comparison section */}
-      <div className="overflow-hidden rounded-lg border border-border bg-card">
-        <div className="border-b border-border bg-primary/10 px-4 py-2">
-          <h4 className="text-sm font-semibold text-primary">
+      <Card className="overflow-hidden">
+        <CardHeader className="bg-primary/10 px-4 py-2">
+          <CardTitle className="text-sm font-semibold text-primary">
             {t('grammar.adjectiveDeclension.comparison.title')}
-          </h4>
-        </div>
-        <div className="grid grid-cols-2">
-          <div className="border-r border-border p-4">
-            <div className="mb-1 text-xs font-medium text-muted-foreground">
-              {t('grammar.adjectiveDeclension.comparison.comparative')}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="grid grid-cols-2">
+            <div className="border-r border-border p-4">
+              <div className="mb-1 text-xs font-medium text-muted-foreground">
+                {t('grammar.adjectiveDeclension.comparison.comparative')}
+              </div>
+              <div className="text-sm">{adjectiveData.comparative || na}</div>
             </div>
-            <div className="text-sm">{adjectiveData.comparative || na}</div>
-          </div>
-          <div className="p-4">
-            <div className="mb-1 text-xs font-medium text-muted-foreground">
-              {t('grammar.adjectiveDeclension.comparison.superlative')}
+            <div className="p-4">
+              <div className="mb-1 text-xs font-medium text-muted-foreground">
+                {t('grammar.adjectiveDeclension.comparison.superlative')}
+              </div>
+              <div className="text-sm">{adjectiveData.superlative || na}</div>
             </div>
-            <div className="text-sm">{adjectiveData.superlative || na}</div>
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

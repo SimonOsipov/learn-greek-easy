@@ -37,6 +37,7 @@ class TestListDecksUnit:
         mock_deck.description = "Test description"
         mock_deck.level = DeckLevel.A1
         mock_deck.is_active = True
+        mock_deck.is_premium = False
         mock_deck.created_at = MagicMock()
         mock_deck.updated_at = MagicMock()
 
@@ -44,6 +45,7 @@ class TestListDecksUnit:
             mock_repo = AsyncMock()
             mock_repo.list_active.return_value = [mock_deck]
             mock_repo.count_active.return_value = 1
+            mock_repo.get_batch_card_counts.return_value = {mock_deck.id: 10}
             mock_repo_class.return_value = mock_repo
 
             response = await client.get("/api/v1/decks?page=2&page_size=10", headers=auth_headers)
@@ -54,6 +56,8 @@ class TestListDecksUnit:
             call_kwargs = mock_repo.list_active.call_args.kwargs
             assert call_kwargs["skip"] == 10  # (page 2 - 1) * page_size 10
             assert call_kwargs["limit"] == 10
+            # Verify card counts were fetched
+            mock_repo.get_batch_card_counts.assert_called_once_with([mock_deck.id])
 
     @pytest.mark.asyncio
     async def test_list_decks_with_level_filter_passes_to_repository(
@@ -64,6 +68,7 @@ class TestListDecksUnit:
             mock_repo = AsyncMock()
             mock_repo.list_active.return_value = []
             mock_repo.count_active.return_value = 0
+            mock_repo.get_batch_card_counts.return_value = {}
             mock_repo_class.return_value = mock_repo
 
             response = await client.get("/api/v1/decks?level=B1", headers=auth_headers)
@@ -82,6 +87,7 @@ class TestListDecksUnit:
             mock_repo = AsyncMock()
             mock_repo.list_active.return_value = []
             mock_repo.count_active.return_value = 0
+            mock_repo.get_batch_card_counts.return_value = {}
             mock_repo_class.return_value = mock_repo
 
             response = await client.get("/api/v1/decks", headers=auth_headers)
@@ -238,6 +244,7 @@ class TestSearchDecksUnit:
             mock_repo = AsyncMock()
             mock_repo.search.return_value = []
             mock_repo.count_search.return_value = 0
+            mock_repo.get_batch_card_counts.return_value = {}
             mock_repo_class.return_value = mock_repo
 
             response = await client.get("/api/v1/decks/search?q=greek", headers=auth_headers)
@@ -560,6 +567,7 @@ class TestDeckIsPremiumUnit:
             mock_repo = AsyncMock()
             mock_repo.list_active.return_value = [mock_deck]
             mock_repo.count_active.return_value = 1
+            mock_repo.get_batch_card_counts.return_value = {mock_deck.id: 10}
             mock_repo_class.return_value = mock_repo
 
             response = await client.get("/api/v1/decks", headers=auth_headers)
@@ -569,6 +577,7 @@ class TestDeckIsPremiumUnit:
             assert len(data["decks"]) == 1
             assert "is_premium" in data["decks"][0]
             assert data["decks"][0]["is_premium"] is True
+            assert data["decks"][0]["card_count"] == 10
 
     @pytest.mark.asyncio
     async def test_list_decks_is_premium_false_in_response(
@@ -589,6 +598,7 @@ class TestDeckIsPremiumUnit:
             mock_repo = AsyncMock()
             mock_repo.list_active.return_value = [mock_deck]
             mock_repo.count_active.return_value = 1
+            mock_repo.get_batch_card_counts.return_value = {mock_deck.id: 5}
             mock_repo_class.return_value = mock_repo
 
             response = await client.get("/api/v1/decks", headers=auth_headers)
@@ -647,6 +657,7 @@ class TestDeckIsPremiumUnit:
             mock_repo = AsyncMock()
             mock_repo.search.return_value = [mock_deck]
             mock_repo.count_search.return_value = 1
+            mock_repo.get_batch_card_counts.return_value = {mock_deck.id: 15}
             mock_repo_class.return_value = mock_repo
 
             response = await client.get("/api/v1/decks/search?q=greek", headers=auth_headers)
@@ -656,6 +667,7 @@ class TestDeckIsPremiumUnit:
             assert len(data["decks"]) == 1
             assert "is_premium" in data["decks"][0]
             assert data["decks"][0]["is_premium"] is True
+            assert data["decks"][0]["card_count"] == 15
 
     # Note: Update tests for is_premium are in integration tests
     # (tests/integration/api/test_decks.py::TestDeckIsPremiumIntegration)
@@ -694,6 +706,7 @@ class TestListMyDecksUnit:
             mock_repo = AsyncMock()
             mock_repo.list_user_owned.return_value = [mock_deck]
             mock_repo.count_user_owned.return_value = 1
+            mock_repo.get_batch_card_counts.return_value = {mock_deck.id: 5}
             mock_repo_class.return_value = mock_repo
 
             response = await client.get("/api/v1/decks/mine", headers=auth_headers)
@@ -703,6 +716,8 @@ class TestListMyDecksUnit:
             mock_repo.list_user_owned.assert_called_once()
             call_kwargs = mock_repo.list_user_owned.call_args.kwargs
             assert "user_id" in call_kwargs
+            # Verify card counts were fetched
+            mock_repo.get_batch_card_counts.assert_called_once_with([mock_deck.id])
 
     @pytest.mark.asyncio
     async def test_list_my_decks_with_pagination(self, client: AsyncClient, auth_headers: dict):
@@ -711,6 +726,7 @@ class TestListMyDecksUnit:
             mock_repo = AsyncMock()
             mock_repo.list_user_owned.return_value = []
             mock_repo.count_user_owned.return_value = 0
+            mock_repo.get_batch_card_counts.return_value = {}
             mock_repo_class.return_value = mock_repo
 
             response = await client.get(
@@ -729,6 +745,7 @@ class TestListMyDecksUnit:
             mock_repo = AsyncMock()
             mock_repo.list_user_owned.return_value = []
             mock_repo.count_user_owned.return_value = 0
+            mock_repo.get_batch_card_counts.return_value = {}
             mock_repo_class.return_value = mock_repo
 
             response = await client.get("/api/v1/decks/mine?level=B1", headers=auth_headers)
@@ -746,6 +763,7 @@ class TestListMyDecksUnit:
             mock_repo = AsyncMock()
             mock_repo.list_user_owned.return_value = []
             mock_repo.count_user_owned.return_value = 0
+            mock_repo.get_batch_card_counts.return_value = {}
             mock_repo_class.return_value = mock_repo
 
             response = await client.get("/api/v1/decks/mine", headers=auth_headers)
