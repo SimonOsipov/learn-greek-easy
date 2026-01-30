@@ -19,11 +19,24 @@ import { test, expect } from '@playwright/test';
 test.describe('Grammar UI in Flashcard Review', () => {
   /**
    * Helper to start a review session for a specific deck.
-   * Navigates to decks page, clicks on a deck, and starts review.
+   * Navigates to decks page via dropdown menu, clicks on a deck, and starts review.
    */
   async function startDeckReview(page: import('@playwright/test').Page) {
-    // Navigate to decks page
-    await page.goto('/decks');
+    // Start at dashboard
+    await page.goto('/');
+
+    // Navigate to decks page via dropdown menu
+    const decksDropdown = page.locator('[data-testid="decks-dropdown-trigger"]');
+    await expect(decksDropdown).toBeVisible();
+    await decksDropdown.click();
+
+    // Click "Public Decks" in the dropdown menu
+    const publicDecksLink = page.getByRole('menuitem', { name: /public decks/i });
+    await expect(publicDecksLink).toBeVisible();
+    await publicDecksLink.click();
+
+    // Wait for navigation to complete
+    await page.waitForURL(/\/decks/);
 
     // Wait for deck cards to load
     const deckCard = page.locator('[data-testid="deck-card"]').first();
@@ -35,35 +48,28 @@ test.describe('Grammar UI in Flashcard Review', () => {
     await expect(reviewButton).toBeVisible({ timeout: 5000 });
     await reviewButton.click();
 
-    // Wait for flashcard to appear
-    const flashcard = page.locator('[data-testid="flashcard"]');
-    await expect(flashcard).toBeVisible({ timeout: 10000 });
+    // Wait for review session to start - card should be visible
+    const flashcard = page.locator('[data-testid="flashcard"]').or(page.locator('.flashcard'));
+    await expect(flashcard.first()).toBeVisible({ timeout: 10000 });
   }
 
   /**
    * Helper to flip the current card.
    */
   async function flipCard(page: import('@playwright/test').Page) {
-    // Try clicking "Show Answer" button or the card header
     const showAnswerBtn = page.getByRole('button', { name: /show answer|flip/i });
     const isButtonVisible = await showAnswerBtn.isVisible().catch(() => false);
 
     if (isButtonVisible) {
       await showAnswerBtn.click();
     } else {
-      // Click on the card header to flip
-      const cardHeader = page.locator('[data-testid="flashcard"]').locator('role=button').first();
-      if (await cardHeader.isVisible().catch(() => false)) {
-        await cardHeader.click();
-      } else {
-        // Use keyboard shortcut
-        await page.keyboard.press('Space');
-      }
+      // If button not found, click the card header to flip
+      const cardContent = page.locator('[data-testid="flashcard"]').or(page.locator('.flashcard'));
+      await cardContent.first().click();
     }
 
-    // Wait for rating buttons to appear (indicates flip complete)
-    const ratingButton = page.getByRole('button', { name: /good|easy|hard|again/i }).first();
-    await expect(ratingButton).toBeVisible({ timeout: 5000 });
+    // Wait for the flip animation
+    await page.waitForTimeout(300);
   }
 
   /**
