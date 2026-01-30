@@ -140,7 +140,9 @@
     },
     "examples": {
       "title": "Examples",
-      "noExamples": "No examples available"
+      "noExamples": "No examples available",
+      "showTranslation": "Click to show translation",
+      "hideTranslation": "Click to hide translation"
     }
   }
 }
