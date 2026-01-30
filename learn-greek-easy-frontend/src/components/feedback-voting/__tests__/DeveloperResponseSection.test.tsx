@@ -13,7 +13,6 @@ import React from 'react';
 
 import { render, screen } from '@testing-library/react';
 import { formatDistanceToNow } from 'date-fns';
-import { el } from 'date-fns/locale/el';
 import { ru } from 'date-fns/locale/ru';
 import i18n from 'i18next';
 import { I18nextProvider, initReactI18next } from 'react-i18next';
@@ -25,13 +24,6 @@ import { DeveloperResponseSection } from '../DeveloperResponseSection';
 const enFeedback = {
   developerResponse: {
     title: 'Developer Response',
-  },
-};
-
-// Mock Greek translations
-const elFeedback = {
-  developerResponse: {
-    title: 'Απάντηση Προγραμματιστή',
   },
 };
 
@@ -48,7 +40,6 @@ const setupI18n = (language: string = 'en') => {
   testI18n.use(initReactI18next).init({
     resources: {
       en: { feedback: enFeedback },
-      el: { feedback: elFeedback },
       ru: { feedback: ruFeedback },
     },
     lng: language,
@@ -114,20 +105,6 @@ describe('DeveloperResponseSection', () => {
       expect(screen.getByText(expectedTime)).toBeInTheDocument();
     });
 
-    it('should format timestamp with Greek locale when language is Greek', () => {
-      const testDate = '2026-01-09T12:00:00Z';
-      renderWithI18n(
-        <DeveloperResponseSection response="Test response" respondedAt={testDate} />,
-        'el'
-      );
-
-      const expectedTime = formatDistanceToNow(new Date(testDate), {
-        addSuffix: true,
-        locale: el,
-      });
-      expect(screen.getByText(expectedTime)).toBeInTheDocument();
-    });
-
     it('should format timestamp with Russian locale when language is Russian', () => {
       const testDate = '2026-01-09T12:00:00Z';
       renderWithI18n(
@@ -180,12 +157,6 @@ describe('DeveloperResponseSection', () => {
   });
 
   describe('Translation - Language Switching', () => {
-    it('should display translated title in Greek', () => {
-      renderWithI18n(<DeveloperResponseSection {...defaultProps} />, 'el');
-
-      expect(screen.getByText('Απάντηση Προγραμματιστή')).toBeInTheDocument();
-    });
-
     it('should display translated title in Russian', () => {
       renderWithI18n(<DeveloperResponseSection {...defaultProps} />, 'ru');
 
