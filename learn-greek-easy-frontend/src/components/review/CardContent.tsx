@@ -80,11 +80,12 @@ export function CardContent({ card, isFlipped }: CardContentProps) {
         return nounData ? <NounDeclensionTable nounData={nounData} /> : null;
       case 'verb':
         return verbData ? (
-          <TenseTabs verbData={verbData} cardId={card.id} sessionId={sessionId} />
+          <TenseTabs key={card.id} verbData={verbData} cardId={card.id} sessionId={sessionId} />
         ) : null;
       case 'adjective':
         return adjectiveData ? (
           <AdjectiveDeclensionTables
+            key={card.id}
             adjectiveData={adjectiveData}
             cardId={card.id}
             sessionId={sessionId}
@@ -135,7 +136,7 @@ export function CardContent({ card, isFlipped }: CardContentProps) {
             <h3 className="mb-2 text-sm font-medium text-muted-foreground">
               {t('grammar.examples.title')}
             </h3>
-            <ExampleSentences examples={examples} />
+            <ExampleSentences key={card.id} examples={examples} />
           </div>
         )}
       </div>
