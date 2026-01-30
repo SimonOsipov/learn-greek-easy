@@ -12,10 +12,8 @@
  * entire document body, not just the component container.
  */
 
-import React from 'react';
-
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { LanguageSwitcher } from '../LanguageSwitcher';
@@ -31,13 +29,11 @@ vi.mock('@/contexts/LanguageContext', () => ({
     isChanging: false,
     availableLanguages: [
       { code: 'en', name: 'English', nativeName: 'English', flag: '🇬🇧' },
-      { code: 'el', name: 'Greek', nativeName: 'Ελληνικά', flag: '🇬🇷' },
       { code: 'ru', name: 'Russian', nativeName: 'Русский', flag: '🇷🇺' },
     ],
     getLanguageName: (code: string) => {
       const names: Record<string, string> = {
         en: 'English',
-        el: 'Ελληνικά',
         ru: 'Русский',
       };
       return names[code] || code;
@@ -120,20 +116,6 @@ describe('LanguageSwitcher', () => {
       });
     });
 
-    it('should show Greek option', async () => {
-      const user = userEvent.setup();
-      render(<LanguageSwitcher />);
-
-      const button = screen.getByTestId('language-switcher-trigger');
-      await user.click(button);
-
-      await waitFor(() => {
-        const greekOption = document.querySelector('[data-testid="language-option-el"]');
-        expect(greekOption).toBeInTheDocument();
-        expect(greekOption).toHaveTextContent('Ελληνικά');
-      });
-    });
-
     it('should show Russian option', async () => {
       const user = userEvent.setup();
       render(<LanguageSwitcher />);
@@ -159,7 +141,6 @@ describe('LanguageSwitcher', () => {
         const menu = document.querySelector('[data-testid="language-switcher-menu"]');
         expect(menu).toBeInTheDocument();
         expect(menu?.textContent).toContain('🇬🇧');
-        expect(menu?.textContent).toContain('🇬🇷');
         expect(menu?.textContent).toContain('🇷🇺');
       });
     });
@@ -179,26 +160,6 @@ describe('LanguageSwitcher', () => {
   });
 
   describe('Language Selection', () => {
-    it('should call changeLanguage when selecting Greek', async () => {
-      const user = userEvent.setup();
-      render(<LanguageSwitcher />);
-
-      const button = screen.getByTestId('language-switcher-trigger');
-      await user.click(button);
-
-      await waitFor(async () => {
-        const greekOption = document.querySelector('[data-testid="language-option-el"]');
-        expect(greekOption).toBeInTheDocument();
-      });
-
-      const greekOption = document.querySelector(
-        '[data-testid="language-option-el"]'
-      ) as HTMLElement;
-      await user.click(greekOption);
-
-      expect(mockChangeLanguage).toHaveBeenCalledWith('el', 'header');
-    });
-
     it('should call changeLanguage when selecting English', async () => {
       const user = userEvent.setup();
       render(<LanguageSwitcher />);
@@ -250,9 +211,9 @@ describe('LanguageSwitcher', () => {
           isChanging: true, // Changing state
           availableLanguages: [
             { code: 'en', name: 'English', nativeName: 'English', flag: '🇬🇧' },
-            { code: 'el', name: 'Greek', nativeName: 'Ελληνικά', flag: '🇬🇷' },
+            { code: 'ru', name: 'Russian', nativeName: 'Русский', flag: '🇷🇺' },
           ],
-          getLanguageName: (code: string) => (code === 'en' ? 'English' : 'Ελληνικά'),
+          getLanguageName: (code: string) => (code === 'en' ? 'English' : 'Русский'),
         }),
       }));
 
@@ -284,13 +245,11 @@ describe('LanguageSwitcher - Disabled State', () => {
         isChanging: true,
         availableLanguages: [
           { code: 'en', name: 'English', nativeName: 'English', flag: '🇬🇧' },
-          { code: 'el', name: 'Greek', nativeName: 'Ελληνικά', flag: '🇬🇷' },
           { code: 'ru', name: 'Russian', nativeName: 'Русский', flag: '🇷🇺' },
         ],
         getLanguageName: (code: string) => {
           const names: Record<string, string> = {
             en: 'English',
-            el: 'Ελληνικά',
             ru: 'Русский',
           };
           return names[code] || code;

@@ -27,7 +27,6 @@ describe('i18n configuration', () => {
     // Initialize i18n (this will detect English from test environment)
     await initI18n();
     // Load remaining languages for comprehensive testing
-    await loadLanguageResources('el');
     await loadLanguageResources('ru');
   });
 
@@ -65,10 +64,6 @@ describe('i18n configuration', () => {
       expect(i18n.hasResourceBundle('en', 'common')).toBe(true);
     });
 
-    it('should have Greek common namespace loaded', () => {
-      expect(i18n.hasResourceBundle('el', 'common')).toBe(true);
-    });
-
     it('should have Russian common namespace loaded', () => {
       expect(i18n.hasResourceBundle('ru', 'common')).toBe(true);
     });
@@ -76,12 +71,6 @@ describe('i18n configuration', () => {
     it('should have all namespaces loaded for English', () => {
       NAMESPACES.forEach((ns) => {
         expect(i18n.hasResourceBundle('en', ns)).toBe(true);
-      });
-    });
-
-    it('should have all namespaces loaded for Greek', () => {
-      NAMESPACES.forEach((ns) => {
-        expect(i18n.hasResourceBundle('el', ns)).toBe(true);
       });
     });
 
@@ -93,11 +82,6 @@ describe('i18n configuration', () => {
   });
 
   describe('Language Switching', () => {
-    it('should change language to Greek successfully', async () => {
-      await i18n.changeLanguage('el');
-      expect(i18n.language).toBe('el');
-    });
-
     it('should change language to English successfully', async () => {
       await i18n.changeLanguage('en');
       expect(i18n.language).toBe('en');
@@ -109,17 +93,14 @@ describe('i18n configuration', () => {
     });
 
     it('should maintain language after multiple switches', async () => {
-      await i18n.changeLanguage('el');
-      expect(i18n.language).toBe('el');
+      await i18n.changeLanguage('ru');
+      expect(i18n.language).toBe('ru');
 
       await i18n.changeLanguage('en');
       expect(i18n.language).toBe('en');
 
       await i18n.changeLanguage('ru');
       expect(i18n.language).toBe('ru');
-
-      await i18n.changeLanguage('el');
-      expect(i18n.language).toBe('el');
     });
   });
 
@@ -127,12 +108,6 @@ describe('i18n configuration', () => {
     it('should return translation for valid key in English', () => {
       const translation = i18n.t('common:loading');
       expect(translation).toBe('Loading...');
-    });
-
-    it('should return translation for valid key in Greek', async () => {
-      await i18n.changeLanguage('el');
-      const translation = i18n.t('common:loading');
-      expect(translation).toBe('Φόρτωση...');
     });
 
     it('should return translation for valid key in Russian', async () => {
@@ -166,13 +141,12 @@ describe('i18n configuration', () => {
       expect(DEFAULT_LANGUAGE).toBe('en');
     });
 
-    it('should have exactly 3 supported languages', () => {
-      expect(SUPPORTED_LANGUAGES).toHaveLength(3);
+    it('should have exactly 2 supported languages', () => {
+      expect(SUPPORTED_LANGUAGES).toHaveLength(2);
     });
 
-    it('should include en, el, and ru in supported languages', () => {
+    it('should include en and ru in supported languages', () => {
       expect(SUPPORTED_LANGUAGES).toContain('en');
-      expect(SUPPORTED_LANGUAGES).toContain('el');
       expect(SUPPORTED_LANGUAGES).toContain('ru');
     });
   });

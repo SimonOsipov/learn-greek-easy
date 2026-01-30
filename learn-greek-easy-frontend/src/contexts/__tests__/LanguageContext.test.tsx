@@ -85,24 +85,24 @@ describe('LanguageContext', () => {
   });
 
   describe('Language Change', () => {
-    it('should change language to Greek', async () => {
+    it('should change language to Russian', async () => {
       const { result } = renderHook(() => useLanguage(), { wrapper });
 
       await act(async () => {
-        await result.current.changeLanguage('el', 'header');
+        await result.current.changeLanguage('ru', 'header');
       });
 
       await waitFor(() => {
-        expect(result.current.currentLanguage).toBe('el');
+        expect(result.current.currentLanguage).toBe('ru');
       });
     });
 
     it('should change language to English', async () => {
       const { result } = renderHook(() => useLanguage(), { wrapper });
 
-      // First switch to Greek
+      // First switch to Russian
       await act(async () => {
-        await result.current.changeLanguage('el', 'header');
+        await result.current.changeLanguage('ru', 'header');
       });
 
       // Then switch back to English
@@ -138,13 +138,13 @@ describe('LanguageContext', () => {
       expect(englishOption?.nativeName).toBe('English');
     });
 
-    it('should have Greek option', () => {
+    it('should have Russian option', () => {
       const { result } = renderHook(() => useLanguage(), { wrapper });
 
-      const greekOption = result.current.availableLanguages.find((lang) => lang.code === 'el');
+      const russianOption = result.current.availableLanguages.find((lang) => lang.code === 'ru');
 
-      expect(greekOption).toBeDefined();
-      expect(greekOption?.nativeName).toBe('Ελληνικά');
+      expect(russianOption).toBeDefined();
+      expect(russianOption?.nativeName).toBe('Русский');
     });
 
     it('should have flag emoji for each language', () => {
@@ -163,9 +163,9 @@ describe('LanguageContext', () => {
       expect(result.current.getLanguageName('en')).toBe('English');
     });
 
-    it('should return Greek name for "el" code', () => {
+    it('should return Russian name for "ru" code', () => {
       const { result } = renderHook(() => useLanguage(), { wrapper });
-      expect(result.current.getLanguageName('el')).toBe('Ελληνικά');
+      expect(result.current.getLanguageName('ru')).toBe('Русский');
     });
   });
 
@@ -179,7 +179,7 @@ describe('LanguageContext', () => {
       const { result } = renderHook(() => useLanguage(), { wrapper });
 
       await act(async () => {
-        await result.current.changeLanguage('el', 'header');
+        await result.current.changeLanguage('ru', 'header');
       });
 
       await waitFor(() => {
@@ -194,10 +194,10 @@ describe('LanguageContext', () => {
 
       // Should not throw when passing 'header' as source
       await act(async () => {
-        await result.current.changeLanguage('el', 'header');
+        await result.current.changeLanguage('ru', 'header');
       });
 
-      expect(result.current.currentLanguage).toBe('el');
+      expect(result.current.currentLanguage).toBe('ru');
     });
 
     it('should accept settings source', async () => {
@@ -205,10 +205,10 @@ describe('LanguageContext', () => {
 
       // Should not throw when passing 'settings' as source
       await act(async () => {
-        await result.current.changeLanguage('el', 'settings');
+        await result.current.changeLanguage('ru', 'settings');
       });
 
-      expect(result.current.currentLanguage).toBe('el');
+      expect(result.current.currentLanguage).toBe('ru');
     });
 
     it('should default to header source if not provided', async () => {
@@ -216,10 +216,10 @@ describe('LanguageContext', () => {
 
       // Should not throw when source is omitted
       await act(async () => {
-        await result.current.changeLanguage('el');
+        await result.current.changeLanguage('ru');
       });
 
-      expect(result.current.currentLanguage).toBe('el');
+      expect(result.current.currentLanguage).toBe('ru');
     });
   });
 });
