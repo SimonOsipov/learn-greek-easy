@@ -25,6 +25,11 @@ def upgrade() -> None:
     """
     op.execute("UPDATE user_settings SET preferred_language = 'en' WHERE preferred_language = 'el'")
 
+    # Also update the column comment to reflect supported languages
+    op.alter_column(
+        "user_settings", "preferred_language", comment="ISO 639-1 language code (e.g., 'en', 'ru')"
+    )
+
 
 def downgrade() -> None:
     """No automatic downgrade - Greek preference data cannot be restored.
@@ -32,4 +37,8 @@ def downgrade() -> None:
     This is a one-way migration. If Greek UI support is re-added,
     users would need to manually re-select Greek.
     """
-    pass  # Intentionally empty - data migration cannot be reversed
+    # Restore the original column comment
+    op.alter_column(
+        "user_settings", "preferred_language", comment="ISO 639-1 language code (e.g., 'en', 'el')"
+    )
+    # Note: Data migration cannot be reversed - users would need to manually re-select Greek
