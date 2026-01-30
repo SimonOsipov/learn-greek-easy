@@ -97,7 +97,8 @@
         "imperfect": "Imperfect",
         "past": "Past",
         "future": "Future",
-        "perfect": "Perfect"
+        "perfect": "Perfect",
+        "imperative": "Imperative"
       },
       "persons": {
         "firstSingular": "I",

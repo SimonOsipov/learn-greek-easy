@@ -8,5 +8,7 @@ export { NounDeclensionTable } from './NounDeclensionTable';
 export type { NounDeclensionTableProps } from './NounDeclensionTable';
 export { PartOfSpeechBadge } from './PartOfSpeechBadge';
 export type { PartOfSpeechBadgeProps } from './PartOfSpeechBadge';
+export { TenseTabs } from './TenseTabs';
+export type { TenseTabsProps } from './TenseTabs';
 export { VerbConjugationGrid } from './VerbConjugationGrid';
 export type { VerbConjugationGridProps } from './VerbConjugationGrid';

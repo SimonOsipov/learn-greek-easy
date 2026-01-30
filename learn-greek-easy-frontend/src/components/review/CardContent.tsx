@@ -5,7 +5,7 @@ import type { CardReview } from '@/types/review';
 
 import {
   NounDeclensionTable,
-  VerbConjugationGrid,
+  TenseTabs,
   AdjectiveDeclensionTables,
   AdverbFormsTable,
   ExampleSentences,
@@ -32,7 +32,7 @@ export function CardContent({ card, isFlipped }: CardContentProps) {
       case 'noun':
         return nounData ? <NounDeclensionTable nounData={nounData} /> : null;
       case 'verb':
-        return verbData ? <VerbConjugationGrid verbData={verbData} /> : null;
+        return verbData ? <TenseTabs verbData={verbData} /> : null;
       case 'adjective':
         return adjectiveData ? <AdjectiveDeclensionTables adjectiveData={adjectiveData} /> : null;
       case 'adverb':

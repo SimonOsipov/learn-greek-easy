@@ -92,7 +92,8 @@
         "imperfect": "Имперфект",
         "past": "Прошедшее",
         "future": "Будущее",
-        "perfect": "Перфект"
+        "perfect": "Перфект",
+        "imperative": "Повелительное"
       },
       "persons": {
         "firstSingular": "Я",
