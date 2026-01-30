@@ -11,18 +11,18 @@ interface CardHeaderProps {
 
 export function CardHeader({ card, onFlip }: CardHeaderProps) {
   const { t } = useTranslation('review');
-  const partOfSpeech = card.part_of_speech || card.partOfSpeech;
+  const partOfSpeech = card.part_of_speech;
 
   // Get gender for nouns or voice for verbs
   const getMetadataLabel = () => {
     if (partOfSpeech === 'noun') {
-      const gender = card.noun_data?.gender || card.nounData?.gender;
+      const gender = card.noun_data?.gender;
       if (gender) {
         return t(`grammar.nounDeclension.genders.${gender}`);
       }
     }
     if (partOfSpeech === 'verb') {
-      const voice = card.verb_data?.voice || card.verbData?.voice;
+      const voice = card.verb_data?.voice;
       if (voice) {
         return t(`grammar.verbConjugation.voice.${voice}`);
       }

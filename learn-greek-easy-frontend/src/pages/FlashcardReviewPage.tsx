@@ -8,6 +8,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { FlashcardContainer } from '@/components/review/FlashcardContainer';
 import { FlashcardSkeleton } from '@/components/review/FlashcardSkeleton';
 import { KeyboardShortcutsHelp } from '@/components/review/KeyboardShortcutsHelp';
+import { ThemeSwitcher } from '@/components/theme';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
@@ -120,7 +121,10 @@ export function FlashcardReviewPage() {
   // Loading state
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#667eea] to-[#764ba2] p-10">
+      <div className="min-h-screen bg-background p-10">
+        <div className="fixed right-4 top-4 z-50">
+          <ThemeSwitcher />
+        </div>
         <FlashcardSkeleton />
       </div>
     );
@@ -129,17 +133,20 @@ export function FlashcardReviewPage() {
   // Error state
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#667eea] to-[#764ba2] p-10">
+      <div className="min-h-screen bg-background p-10">
+        <div className="fixed right-4 top-4 z-50">
+          <ThemeSwitcher />
+        </div>
         <div className="mx-auto max-w-4xl">
           <Button
             variant="ghost"
             onClick={() => navigate(`/decks/${deckId}`)}
-            className="mb-4 text-white hover:bg-white/20"
+            className="mb-4 text-foreground hover:bg-muted"
           >
             <ChevronLeft className="mr-2 h-4 w-4" />
             {t('session.backToDeck')}
           </Button>
-          <Alert variant="destructive" className="bg-white">
+          <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>{t('session.error')}</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
@@ -160,17 +167,20 @@ export function FlashcardReviewPage() {
   // No cards due state
   if (!currentCard) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#667eea] to-[#764ba2] p-10">
+      <div className="min-h-screen bg-background p-10">
+        <div className="fixed right-4 top-4 z-50">
+          <ThemeSwitcher />
+        </div>
         <div className="mx-auto max-w-4xl">
           <Button
             variant="ghost"
             onClick={() => navigate(`/decks/${deckId}`)}
-            className="mb-4 text-white hover:bg-white/20"
+            className="mb-4 text-foreground hover:bg-muted"
           >
             <ChevronLeft className="mr-2 h-4 w-4" />
             {t('session.backToDeck')}
           </Button>
-          <Alert className="bg-white">
+          <Alert>
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>{t('session.noCardsDue')}</AlertTitle>
             <AlertDescription>{t('session.noCardsDueDescription')}</AlertDescription>
@@ -187,12 +197,15 @@ export function FlashcardReviewPage() {
 
   // Main flashcard view
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#667eea] to-[#764ba2] p-10">
+    <div className="min-h-screen bg-background p-10">
+      <div className="fixed right-4 top-4 z-50">
+        <ThemeSwitcher />
+      </div>
       <div className="mx-auto mb-4 max-w-4xl">
         <Button
           variant="ghost"
           onClick={() => navigate(`/decks/${deckId}`)}
-          className="text-white hover:bg-white/20"
+          className="text-foreground hover:bg-muted"
         >
           <ChevronLeft className="mr-2 h-4 w-4" />
           {t('session.exitReview')}

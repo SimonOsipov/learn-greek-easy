@@ -18,9 +18,9 @@ interface CardContentProps {
 
 export function CardContent({ card, isFlipped }: CardContentProps) {
   const { t } = useTranslation('review');
-  const partOfSpeech = card.part_of_speech || card.partOfSpeech;
+  const partOfSpeech = card.part_of_speech;
 
-  // Get grammar data from API (snake_case) or legacy (camelCase) fields
+  // Get grammar data from API (snake_case fields)
   const nounData = card.noun_data;
   const verbData = card.verb_data;
   const adjectiveData = card.adjective_data;

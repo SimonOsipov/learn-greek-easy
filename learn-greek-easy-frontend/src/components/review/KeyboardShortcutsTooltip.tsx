@@ -1,10 +1,9 @@
-import { useState } from 'react';
-
 import { useTranslation } from 'react-i18next';
+
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 export function KeyboardShortcutsTooltip() {
   const { t } = useTranslation('review');
-  const [isOpen, setIsOpen] = useState(false);
 
   const shortcuts = [
     { key: t('keyboard.spaceKey'), actionKey: 'keyboard.flipCard' },
@@ -15,21 +14,18 @@ export function KeyboardShortcutsTooltip() {
   ];
 
   return (
-    <div
-      className="absolute left-4 top-4 z-10 hidden md:block"
-      onMouseEnter={() => setIsOpen(true)}
-      onMouseLeave={() => setIsOpen(false)}
-    >
-      <button
-        className="cursor-help text-2xl opacity-60 transition-opacity hover:opacity-100"
-        aria-label={t('keyboard.title')}
-        type="button"
-      >
-        ⌨️
-      </button>
-
-      {isOpen && (
-        <div className="absolute left-0 top-full mt-2 min-w-[200px] rounded-lg border border-border bg-card p-3 shadow-lg">
+    <div className="absolute left-4 top-4 z-10 hidden md:block">
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            className="cursor-help text-2xl opacity-60 transition-opacity hover:opacity-100"
+            aria-label={t('keyboard.title')}
+            type="button"
+          >
+            ⌨️
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="bottom" align="start" className="min-w-[200px] p-3">
           <div className="mb-2 text-center text-xs font-bold text-foreground">
             {t('keyboard.title')}
           </div>
@@ -43,8 +39,8 @@ export function KeyboardShortcutsTooltip() {
               </div>
             ))}
           </div>
-        </div>
-      )}
+        </TooltipContent>
+      </Tooltip>
     </div>
   );
 }
