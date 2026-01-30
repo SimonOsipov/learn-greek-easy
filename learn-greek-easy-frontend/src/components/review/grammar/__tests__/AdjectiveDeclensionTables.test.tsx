@@ -2,13 +2,14 @@
  * AdjectiveDeclensionTables Component Tests
  *
  * Tests for the AdjectiveDeclensionTables component, verifying:
- * - Renders 3 gender tables (masculine, feminine, neuter)
+ * - Renders gender tabs (via GenderTabs component)
  * - Renders comparison section (comparative, superlative)
- * - Displays correct i18n labels for genders, cases, and comparison
+ * - Displays correct i18n labels for comparison
  * - Handles missing data with N/A placeholder
  */
 
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 
 import { AdjectiveDeclensionTables } from '../AdjectiveDeclensionTables';
@@ -109,46 +110,68 @@ const mockAdjectiveDataEmpty: AdjectiveData = {
 };
 
 describe('AdjectiveDeclensionTables', () => {
-  describe('Gender Table Headers', () => {
-    it('should render masculine gender header', () => {
+  describe('Gender Tabs', () => {
+    it('should render gender tabs', () => {
       render(<AdjectiveDeclensionTables adjectiveData={mockAdjectiveDataComplete} />);
 
-      expect(screen.getByText('Masculine')).toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: 'Masculine' })).toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: 'Feminine' })).toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: 'Neuter' })).toBeInTheDocument();
     });
 
-    it('should render feminine gender header', () => {
+    it('should have Masculine tab selected by default', () => {
       render(<AdjectiveDeclensionTables adjectiveData={mockAdjectiveDataComplete} />);
 
-      expect(screen.getByText('Feminine')).toBeInTheDocument();
+      const masculineTab = screen.getByRole('tab', { name: 'Masculine' });
+      expect(masculineTab).toHaveAttribute('data-state', 'active');
     });
 
-    it('should render neuter gender header', () => {
+    it('should display masculine declension data by default', () => {
       render(<AdjectiveDeclensionTables adjectiveData={mockAdjectiveDataComplete} />);
 
-      expect(screen.getByText('Neuter')).toBeInTheDocument();
+      // Masculine-specific forms should be visible
+      expect(screen.getByText('μεγάλος')).toBeInTheDocument();
+      expect(screen.getByText('μεγάλε')).toBeInTheDocument();
+    });
+
+    it('should switch to feminine gender when clicking Feminine tab', async () => {
+      const user = userEvent.setup();
+      render(<AdjectiveDeclensionTables adjectiveData={mockAdjectiveDataComplete} />);
+
+      await user.click(screen.getByRole('tab', { name: 'Feminine' }));
+
+      // Feminine-specific form should be visible
+      expect(screen.getByText('μεγάλης')).toBeInTheDocument();
+    });
+
+    it('should switch to neuter gender when clicking Neuter tab', async () => {
+      const user = userEvent.setup();
+      render(<AdjectiveDeclensionTables adjectiveData={mockAdjectiveDataComplete} />);
+
+      await user.click(screen.getByRole('tab', { name: 'Neuter' }));
+
+      // Neuter-specific form should be visible (μεγάλα appears multiple times)
+      expect(screen.getAllByText('μεγάλα').length).toBeGreaterThanOrEqual(1);
     });
   });
 
   describe('Case Labels', () => {
-    it('should render case labels for each gender table', () => {
+    it('should render case labels in the table', () => {
       render(<AdjectiveDeclensionTables adjectiveData={mockAdjectiveDataComplete} />);
 
-      // Each gender table has 4 case labels, so 3 tables x 4 cases = 12 total
-      // But labels are shared text, so we check they exist
-      expect(screen.getAllByText('Nominative')).toHaveLength(3);
-      expect(screen.getAllByText('Genitive')).toHaveLength(3);
-      expect(screen.getAllByText('Accusative')).toHaveLength(3);
-      expect(screen.getAllByText('Vocative')).toHaveLength(3);
+      expect(screen.getByText('Nominative')).toBeInTheDocument();
+      expect(screen.getByText('Genitive')).toBeInTheDocument();
+      expect(screen.getByText('Accusative')).toBeInTheDocument();
+      expect(screen.getByText('Vocative')).toBeInTheDocument();
     });
   });
 
   describe('Column Headers', () => {
-    it('should render singular/plural headers for each table', () => {
+    it('should render singular/plural headers', () => {
       render(<AdjectiveDeclensionTables adjectiveData={mockAdjectiveDataComplete} />);
 
-      // 3 gender tables, each with Singular and Plural headers
-      expect(screen.getAllByText('Singular')).toHaveLength(3);
-      expect(screen.getAllByText('Plural')).toHaveLength(3);
+      expect(screen.getByText('Singular')).toBeInTheDocument();
+      expect(screen.getByText('Plural')).toBeInTheDocument();
     });
   });
 
@@ -177,10 +200,33 @@ describe('AdjectiveDeclensionTables', () => {
       expect(screen.getByText('μεγαλύτερος')).toBeInTheDocument();
       expect(screen.getByText('ο μεγαλύτερος')).toBeInTheDocument();
     });
+
+    it('should always be visible regardless of selected tab', async () => {
+      const user = userEvent.setup();
+      render(<AdjectiveDeclensionTables adjectiveData={mockAdjectiveDataComplete} />);
+
+      // Comparison visible on Masculine tab
+      expect(screen.getByText('Comparison')).toBeInTheDocument();
+      expect(screen.getByText('μεγαλύτερος')).toBeInTheDocument();
+
+      // Switch to Feminine
+      await user.click(screen.getByRole('tab', { name: 'Feminine' }));
+
+      // Comparison still visible
+      expect(screen.getByText('Comparison')).toBeInTheDocument();
+      expect(screen.getByText('μεγαλύτερος')).toBeInTheDocument();
+
+      // Switch to Neuter
+      await user.click(screen.getByRole('tab', { name: 'Neuter' }));
+
+      // Comparison still visible
+      expect(screen.getByText('Comparison')).toBeInTheDocument();
+      expect(screen.getByText('μεγαλύτερος')).toBeInTheDocument();
+    });
   });
 
   describe('Complete Data', () => {
-    it('should render masculine nominative and vocative plural (unique forms)', () => {
+    it('should render masculine forms on masculine tab', () => {
       render(<AdjectiveDeclensionTables adjectiveData={mockAdjectiveDataComplete} />);
 
       expect(screen.getByText('μεγάλος')).toBeInTheDocument();
@@ -188,35 +234,40 @@ describe('AdjectiveDeclensionTables', () => {
       expect(screen.getByText('μεγάλους')).toBeInTheDocument();
     });
 
-    it('should render masculine/neuter genitive (shared form appears twice)', () => {
+    it('should render feminine forms on feminine tab', async () => {
+      const user = userEvent.setup();
       render(<AdjectiveDeclensionTables adjectiveData={mockAdjectiveDataComplete} />);
 
-      // μεγάλου is the same for masculine and neuter genitive singular
-      expect(screen.getAllByText('μεγάλου')).toHaveLength(2);
-    });
+      await user.click(screen.getByRole('tab', { name: 'Feminine' }));
 
-    it('should render feminine forms', () => {
-      render(<AdjectiveDeclensionTables adjectiveData={mockAdjectiveDataComplete} />);
-
-      // μεγάλη appears multiple times (fem_nom_sg, fem_acc_sg, fem_voc_sg)
-      expect(screen.getAllByText('μεγάλη').length).toBeGreaterThanOrEqual(1);
       expect(screen.getByText('μεγάλης')).toBeInTheDocument();
       // μεγάλες appears multiple times
       expect(screen.getAllByText('μεγάλες').length).toBeGreaterThanOrEqual(1);
     });
 
-    it('should render neuter forms (shared with masculine)', () => {
+    it('should render neuter forms on neuter tab', async () => {
+      const user = userEvent.setup();
       render(<AdjectiveDeclensionTables adjectiveData={mockAdjectiveDataComplete} />);
 
-      // μεγάλο appears multiple times (masc_acc_sg, neut_nom_sg, neut_acc_sg, neut_voc_sg)
-      expect(screen.getAllByText('μεγάλο').length).toBeGreaterThanOrEqual(1);
+      await user.click(screen.getByRole('tab', { name: 'Neuter' }));
+
       // μεγάλα appears multiple times
       expect(screen.getAllByText('μεγάλα').length).toBeGreaterThanOrEqual(1);
     });
 
-    it('should not display N/A with complete data', () => {
+    it('should not display N/A with complete data on any tab', async () => {
+      const user = userEvent.setup();
       render(<AdjectiveDeclensionTables adjectiveData={mockAdjectiveDataComplete} />);
 
+      // Check Masculine tab
+      expect(screen.queryByText('N/A')).not.toBeInTheDocument();
+
+      // Check Feminine tab
+      await user.click(screen.getByRole('tab', { name: 'Feminine' }));
+      expect(screen.queryByText('N/A')).not.toBeInTheDocument();
+
+      // Check Neuter tab
+      await user.click(screen.getByRole('tab', { name: 'Neuter' }));
       expect(screen.queryByText('N/A')).not.toBeInTheDocument();
     });
   });
@@ -225,7 +276,7 @@ describe('AdjectiveDeclensionTables', () => {
     it('should display N/A for missing forms', () => {
       render(<AdjectiveDeclensionTables adjectiveData={mockAdjectiveDataPartial} />);
 
-      // Should have N/A for missing vocatives, genitives, and superlative
+      // Should have N/A for missing vocative and genitive plural
       const naElements = screen.getAllByText('N/A');
       expect(naElements.length).toBeGreaterThan(0);
     });
@@ -234,10 +285,6 @@ describe('AdjectiveDeclensionTables', () => {
       render(<AdjectiveDeclensionTables adjectiveData={mockAdjectiveDataPartial} />);
 
       expect(screen.getByText('καλός')).toBeInTheDocument();
-      // καλή appears twice (fem_nom_sg and fem_acc_sg are the same)
-      expect(screen.getAllByText('καλή').length).toBeGreaterThanOrEqual(1);
-      // καλό appears multiple times
-      expect(screen.getAllByText('καλό').length).toBeGreaterThanOrEqual(1);
       expect(screen.getByText('καλύτερος')).toBeInTheDocument();
     });
 
@@ -254,21 +301,21 @@ describe('AdjectiveDeclensionTables', () => {
   });
 
   describe('Empty Data', () => {
-    it('should display N/A for all empty forms', () => {
+    it('should display N/A for all empty forms in current tab', () => {
       render(<AdjectiveDeclensionTables adjectiveData={mockAdjectiveDataEmpty} />);
 
-      // 24 declension forms (8 per gender x 3) + 2 comparison = 26 N/A
+      // 8 declension forms (masculine by default) + 2 comparison = 10 N/A
       const naElements = screen.getAllByText('N/A');
-      expect(naElements.length).toBe(26);
+      expect(naElements.length).toBe(10);
     });
 
     it('should still render all headers and labels', () => {
       render(<AdjectiveDeclensionTables adjectiveData={mockAdjectiveDataEmpty} />);
 
-      // Gender headers
-      expect(screen.getByText('Masculine')).toBeInTheDocument();
-      expect(screen.getByText('Feminine')).toBeInTheDocument();
-      expect(screen.getByText('Neuter')).toBeInTheDocument();
+      // Gender tabs
+      expect(screen.getByRole('tab', { name: 'Masculine' })).toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: 'Feminine' })).toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: 'Neuter' })).toBeInTheDocument();
 
       // Comparison section
       expect(screen.getByText('Comparison')).toBeInTheDocument();
@@ -277,26 +324,17 @@ describe('AdjectiveDeclensionTables', () => {
     });
   });
 
-  describe('Grid Structure', () => {
-    it('should render 3 gender tables', () => {
-      const { container } = render(
-        <AdjectiveDeclensionTables adjectiveData={mockAdjectiveDataComplete} />
-      );
+  describe('Structure', () => {
+    it('should render tablist for gender selection', () => {
+      render(<AdjectiveDeclensionTables adjectiveData={mockAdjectiveDataComplete} />);
 
-      // Each gender table has a primary/10 header background
-      const genderHeaders = container.querySelectorAll('.bg-primary\\/10');
-      // 3 gender headers + 1 comparison header = 4
-      expect(genderHeaders.length).toBe(4);
+      expect(screen.getByRole('tablist')).toBeInTheDocument();
     });
 
-    it('should render gender tables in a responsive grid', () => {
-      const { container } = render(
-        <AdjectiveDeclensionTables adjectiveData={mockAdjectiveDataComplete} />
-      );
+    it('should render tabpanel for gender content', () => {
+      render(<AdjectiveDeclensionTables adjectiveData={mockAdjectiveDataComplete} />);
 
-      // Container has md:grid-cols-3 class
-      const gridContainer = container.querySelector('.md\\:grid-cols-3');
-      expect(gridContainer).toBeInTheDocument();
+      expect(screen.getByRole('tabpanel')).toBeInTheDocument();
     });
 
     it('should have space-y-4 container for vertical spacing', () => {
