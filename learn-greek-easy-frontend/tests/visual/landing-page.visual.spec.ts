@@ -18,13 +18,13 @@ test.describe('Landing Page - Desktop Visual Tests', () => {
     await takeSnapshot(page, 'Landing Page - Full Page - English', testInfo);
   });
 
-  test('Landing Page - Full Page - Greek', async ({ page }, testInfo) => {
+  test('Landing Page - Full Page - Russian', async ({ page }, testInfo) => {
     await page.goto('/');
-    await page.evaluate(() => localStorage.setItem('i18nextLng', 'el'));
+    await page.evaluate(() => localStorage.setItem('i18nextLng', 'ru'));
     await page.reload();
     await waitForPageReady(page, '[data-testid="landing-page"]');
 
-    await takeSnapshot(page, 'Landing Page - Full Page - Greek', testInfo);
+    await takeSnapshot(page, 'Landing Page - Full Page - Russian', testInfo);
   });
 
   test('Landing Page - Hero Section', async ({ page }, testInfo) => {

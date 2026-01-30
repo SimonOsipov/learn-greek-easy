@@ -3,7 +3,8 @@
  *
  * Tests for internationalization of the admin panel.
  * Verifies that admin panel respects language selection
- * and displays correct translations for English, Greek, and Russian.
+ * and displays correct translations for English and Russian.
+ * Note: Greek UI was removed - only EN/RU are now supported.
  */
 
 import { test, expect } from '@playwright/test';
@@ -39,20 +40,6 @@ test.describe.skip('Admin Panel - i18n Translations', () => {
     );
   });
 
-  test('Admin panel displays Greek translations when Greek is selected', async ({ page }) => {
-    // Switch to Greek
-    await page.getByTestId('language-switcher-trigger').click();
-    await page.getByTestId('language-option-el').click();
-
-    // Should display Greek title (assertion auto-waits for text change)
-    await expect(page.getByTestId('admin-title')).toHaveText('Πίνακας Διαχείρισης');
-
-    // Should display Greek subtitle
-    await expect(page.getByTestId('admin-subtitle')).toHaveText(
-      'Διαχείριση περιεχομένου και προβολή στατιστικών'
-    );
-  });
-
   test('Admin panel displays Russian translations when Russian is selected', async ({ page }) => {
     // Switch to Russian
     await page.getByTestId('language-switcher-trigger').click();
@@ -68,32 +55,25 @@ test.describe.skip('Admin Panel - i18n Translations', () => {
   });
 
   test('Language persists after page reload on admin panel', async ({ page }) => {
-    // Switch to Greek
+    // Switch to Russian
     await page.getByTestId('language-switcher-trigger').click();
-    await page.getByTestId('language-option-el').click();
+    await page.getByTestId('language-option-ru').click();
 
-    // Verify Greek is displayed (assertion auto-waits)
-    await expect(page.getByTestId('admin-title')).toHaveText('Πίνακας Διαχείρισης');
+    // Verify Russian is displayed (assertion auto-waits)
+    await expect(page.getByTestId('admin-title')).toHaveText('Панель администратора');
 
     // Reload the page
     await page.reload();
     await page.waitForLoadState('networkidle');
     await expect(page.getByTestId('admin-page')).toBeVisible({ timeout: 15000 });
 
-    // Should still display Greek after reload
-    await expect(page.getByTestId('admin-title')).toHaveText('Πίνακας Διαχείρισης');
+    // Should still display Russian after reload
+    await expect(page.getByTestId('admin-title')).toHaveText('Панель администратора');
   });
 
   test('Language change applies immediately without page refresh', async ({ page }) => {
     // Verify English is displayed initially
     await expect(page.getByTestId('admin-title')).toHaveText('Admin Dashboard');
-
-    // Switch to Greek
-    await page.getByTestId('language-switcher-trigger').click();
-    await page.getByTestId('language-option-el').click();
-
-    // Should immediately display Greek (no refresh needed) - assertion auto-waits
-    await expect(page.getByTestId('admin-title')).toHaveText('Πίνακας Διαχείρισης');
 
     // Switch to Russian
     await page.getByTestId('language-switcher-trigger').click();
@@ -114,20 +94,6 @@ test.describe.skip('Admin Panel - i18n Translations', () => {
     // Look for card count text (e.g., "10 cards" or "1 card")
     // The pattern should match English plural forms - assertion auto-waits for content
     const cardCountText = page.locator('text=/\\d+\\s+cards?$/');
-    await expect(cardCountText.first()).toBeVisible({ timeout: 10000 });
-  });
-
-  test('Card count shows pluralized correctly in Greek', async ({ page }) => {
-    // Switch to Greek
-    await page.getByTestId('language-switcher-trigger').click();
-    await page.getByTestId('language-option-el').click();
-
-    // Wait for language to change - verify title changed first
-    await expect(page.getByTestId('admin-title')).toHaveText('Πίνακας Διαχείρισης');
-
-    // Look for Greek card count text
-    // Greek uses "κάρτα" (singular) or "κάρτες" (plural)
-    const cardCountText = page.locator('text=/\\d+\\s+κάρτ/');
     await expect(cardCountText.first()).toBeVisible({ timeout: 10000 });
   });
 
@@ -167,19 +133,6 @@ test.describe.skip('Admin Panel - Summary Cards i18n', () => {
 
     await expect(totalDecksCard).toContainText('Total Decks');
     await expect(totalCardsCard).toContainText('Total Cards');
-  });
-
-  test('Summary cards show Greek labels when Greek is selected', async ({ page }) => {
-    // Switch to Greek
-    await page.getByTestId('language-switcher-trigger').click();
-    await page.getByTestId('language-option-el').click();
-
-    // Wait for language change - assertions auto-wait
-    const totalDecksCard = page.getByTestId('total-decks-card');
-    const totalCardsCard = page.getByTestId('total-cards-card');
-
-    await expect(totalDecksCard).toContainText('Συνολικές Τράπουλες');
-    await expect(totalCardsCard).toContainText('Συνολικές Κάρτες');
   });
 
   test('Summary cards show Russian labels when Russian is selected', async ({ page }) => {

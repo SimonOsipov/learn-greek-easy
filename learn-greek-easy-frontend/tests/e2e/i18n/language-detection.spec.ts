@@ -31,7 +31,7 @@ test.describe('Language Detection', () => {
     await context.close();
   });
 
-  test('should detect Greek browser language and show Greek UI', async ({ browser }) => {
+  test('should fallback to English for Greek browser language (Greek UI removed)', async ({ browser }) => {
     const context = await browser.newContext({
       locale: 'el-GR',
     });
@@ -45,9 +45,9 @@ test.describe('Language Detection', () => {
     // Wait for page to load
     await page.waitForLoadState('networkidle');
 
-    // Check for Greek text on login page using test-id
+    // Greek browser locale should fallback to English (Greek UI was removed)
     await expect(page.getByTestId('login-card')).toBeVisible({ timeout: 10000 });
-    await expect(page.getByTestId('login-title')).toHaveText('Καλώς Ήρθατε');
+    await expect(page.getByTestId('login-title')).toHaveText('Welcome Back');
 
     await context.close();
   });
@@ -134,7 +134,7 @@ test.describe('Language Detection', () => {
     await context.close();
   });
 
-  test('should handle el-CY (Cypriot Greek) -> el', async ({ browser }) => {
+  test('should fallback to English for el-CY (Cypriot Greek) - Greek UI removed', async ({ browser }) => {
     const context = await browser.newContext({
       locale: 'el-CY', // Cypriot Greek
     });
@@ -146,9 +146,9 @@ test.describe('Language Detection', () => {
     await page.reload();
     await page.waitForLoadState('networkidle');
 
-    // Should use Greek (base language)
+    // Cypriot Greek should fallback to English (Greek UI was removed)
     await expect(page.getByTestId('login-card')).toBeVisible({ timeout: 10000 });
-    await expect(page.getByTestId('login-title')).toHaveText('Καλώς Ήρθατε');
+    await expect(page.getByTestId('login-title')).toHaveText('Welcome Back');
 
     await context.close();
   });
@@ -159,7 +159,7 @@ test.describe('Language Priority', () => {
 
   test('should prefer localStorage over browser language', async ({ browser }) => {
     const context = await browser.newContext({
-      locale: 'el-GR', // Browser says Greek
+      locale: 'ru-RU', // Browser says Russian
     });
     const page = await context.newPage();
 
@@ -169,7 +169,7 @@ test.describe('Language Priority', () => {
     await page.reload();
     await page.waitForLoadState('networkidle');
 
-    // Should use English from localStorage despite Greek browser setting
+    // Should use English from localStorage despite Russian browser setting
     await expect(page.getByTestId('login-card')).toBeVisible({ timeout: 10000 });
     await expect(page.getByTestId('login-title')).toHaveText('Welcome Back');
 
@@ -178,7 +178,7 @@ test.describe('Language Priority', () => {
 
   test('should use browser language when localStorage is cleared', async ({ browser }) => {
     const context = await browser.newContext({
-      locale: 'el-GR',
+      locale: 'ru-RU',
     });
     const page = await context.newPage();
 
@@ -188,9 +188,9 @@ test.describe('Language Priority', () => {
     await page.reload();
     await page.waitForLoadState('networkidle');
 
-    // Should use Greek from browser
+    // Should use Russian from browser
     await expect(page.getByTestId('login-card')).toBeVisible({ timeout: 10000 });
-    await expect(page.getByTestId('login-title')).toHaveText('Καλώς Ήρθατε');
+    await expect(page.getByTestId('login-title')).toHaveText('С возвращением');
 
     await context.close();
   });

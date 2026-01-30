@@ -19,8 +19,8 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 # Supported Languages
 # ============================================================================
 
-# Supported interface languages - extend as needed
-SupportedLanguage = Literal["en", "el"]
+# Supported interface languages (Greek UI removed - only EN/RU supported)
+SupportedLanguage = Literal["en", "ru"]
 
 # ============================================================================
 # User Schemas

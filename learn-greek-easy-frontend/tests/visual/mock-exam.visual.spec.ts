@@ -40,7 +40,7 @@ async function setTheme(page: Page, theme: 'light' | 'dark'): Promise<void> {
 /**
  * Helper to set language via localStorage
  */
-async function setLanguage(page: Page, lang: 'en' | 'el'): Promise<void> {
+async function setLanguage(page: Page, lang: 'en' | 'ru'): Promise<void> {
   await page.evaluate((l) => {
     localStorage.setItem('i18nextLng', l);
   }, lang);

@@ -1,11 +1,11 @@
 /**
  * Lazy loading for non-English language resources.
  *
- * This module enables on-demand loading of Greek and Russian translations
+ * This module enables on-demand loading of Russian translations
  * to reduce the initial bundle size and improve LCP (Largest Contentful Paint).
  *
  * English resources are loaded synchronously as the default language.
- * Greek and Russian resources are loaded only when the user switches to those languages.
+ * Russian resources are loaded only when the user switches to that language.
  *
  * @module i18n/lazy-resources
  */
@@ -23,60 +23,6 @@ import type { SupportedLanguage } from './constants';
 export function isLanguageLoaded(lang: SupportedLanguage): boolean {
   // Check if common namespace exists (all namespaces are loaded together)
   return i18n.hasResourceBundle(lang, 'common');
-}
-
-/**
- * Load Greek language resources on demand.
- *
- * @returns Promise that resolves when all Greek resources are loaded
- */
-async function loadGreekResources(): Promise<void> {
-  const [
-    achievements,
-    admin,
-    auth,
-    changelog,
-    common,
-    culture,
-    deck,
-    feedback,
-    landing,
-    mockExam,
-    profile,
-    review,
-    settings,
-    statistics,
-  ] = await Promise.all([
-    import('./locales/el/achievements.json'),
-    import('./locales/el/admin.json'),
-    import('./locales/el/auth.json'),
-    import('./locales/el/changelog.json'),
-    import('./locales/el/common.json'),
-    import('./locales/el/culture.json'),
-    import('./locales/el/deck.json'),
-    import('./locales/el/feedback.json'),
-    import('./locales/el/landing.json'),
-    import('./locales/el/mockExam.json'),
-    import('./locales/el/profile.json'),
-    import('./locales/el/review.json'),
-    import('./locales/el/settings.json'),
-    import('./locales/el/statistics.json'),
-  ]);
-
-  i18n.addResourceBundle('el', 'achievements', achievements.default, true, true);
-  i18n.addResourceBundle('el', 'admin', admin.default, true, true);
-  i18n.addResourceBundle('el', 'auth', auth.default, true, true);
-  i18n.addResourceBundle('el', 'changelog', changelog.default, true, true);
-  i18n.addResourceBundle('el', 'common', common.default, true, true);
-  i18n.addResourceBundle('el', 'culture', culture.default, true, true);
-  i18n.addResourceBundle('el', 'deck', deck.default, true, true);
-  i18n.addResourceBundle('el', 'feedback', feedback.default, true, true);
-  i18n.addResourceBundle('el', 'landing', landing.default, true, true);
-  i18n.addResourceBundle('el', 'mockExam', mockExam.default, true, true);
-  i18n.addResourceBundle('el', 'profile', profile.default, true, true);
-  i18n.addResourceBundle('el', 'review', review.default, true, true);
-  i18n.addResourceBundle('el', 'settings', settings.default, true, true);
-  i18n.addResourceBundle('el', 'statistics', statistics.default, true, true);
 }
 
 /**
@@ -136,26 +82,22 @@ async function loadRussianResources(): Promise<void> {
 /**
  * Lazily load language resources on demand.
  *
- * This function loads the translation resources for Greek or Russian languages
+ * This function loads the translation resources for Russian language
  * when needed. English resources are always available (bundled synchronously).
  *
- * @param lang - The language code to load ('el' for Greek, 'ru' for Russian)
+ * @param lang - The language code to load ('ru' for Russian)
  * @returns Promise that resolves when the language resources are loaded
  *
  * @example
- * // Load Greek resources before switching language
- * await loadLanguageResources('el');
- * await i18n.changeLanguage('el');
+ * // Load Russian resources before switching language
+ * await loadLanguageResources('ru');
+ * await i18n.changeLanguage('ru');
  */
-export async function loadLanguageResources(lang: 'el' | 'ru'): Promise<void> {
+export async function loadLanguageResources(lang: 'ru'): Promise<void> {
   // Check if already loaded to avoid duplicate network requests
   if (isLanguageLoaded(lang)) {
     return;
   }
 
-  if (lang === 'el') {
-    await loadGreekResources();
-  } else if (lang === 'ru') {
-    await loadRussianResources();
-  }
+  await loadRussianResources();
 }

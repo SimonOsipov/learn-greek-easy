@@ -90,10 +90,10 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       userPreferredLang.preferred_language !== currentLanguage
     ) {
       // User's DB preference takes precedence - sync i18next to it
-      // Load resources first for non-English languages
+      // Load resources first for Russian language
       const syncLanguage = async () => {
         const targetLang = userPreferredLang.preferred_language!;
-        if (targetLang !== 'en') {
+        if (targetLang === 'ru') {
           await loadLanguageResources(targetLang);
         }
         i18n.changeLanguage(targetLang);
@@ -125,9 +125,9 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       setIsChanging(true);
 
       try {
-        // Step 1: Load language resources on demand (for non-English languages)
+        // Step 1: Load language resources on demand (for Russian)
         // This ensures resources are available before switching
-        if (lang !== 'en') {
+        if (lang === 'ru') {
           await loadLanguageResources(lang);
         }
 

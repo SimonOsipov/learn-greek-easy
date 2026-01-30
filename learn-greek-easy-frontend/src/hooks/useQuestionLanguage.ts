@@ -1,9 +1,9 @@
 import { useState, useCallback, useRef } from 'react';
 
 import { useLanguage } from '@/contexts/LanguageContext';
-import { SUPPORTED_LANGUAGES, type SupportedLanguage } from '@/i18n';
 import { trackCultureLanguageChanged } from '@/lib/analytics/cultureAnalytics';
 import log from '@/lib/logger';
+import type { CultureLanguage } from '@/types/culture';
 
 /**
  * localStorage key for persisting culture question language preference.
@@ -12,13 +12,19 @@ import log from '@/lib/logger';
 const CULTURE_LANGUAGE_KEY = 'culture_question_language';
 
 /**
+ * Supported languages for culture question content.
+ * Includes Greek since culture questions can be displayed in Greek.
+ */
+const CULTURE_LANGUAGES: CultureLanguage[] = ['el', 'en', 'ru'];
+
+/**
  * Result of the useQuestionLanguage hook
  */
 export interface UseQuestionLanguageResult {
   /** Current question display language */
-  questionLanguage: SupportedLanguage;
+  questionLanguage: CultureLanguage;
   /** Change the question language (persists to localStorage, tracks analytics) */
-  setQuestionLanguage: (lang: SupportedLanguage) => void;
+  setQuestionLanguage: (lang: CultureLanguage) => void;
   /** Reset to app default language (clears localStorage preference) */
   resetToDefault: () => void;
 }
@@ -27,13 +33,13 @@ export interface UseQuestionLanguageResult {
  * Read stored language from localStorage with validation.
  * Returns null if no valid stored value.
  */
-function getStoredLanguage(): SupportedLanguage | null {
+function getStoredLanguage(): CultureLanguage | null {
   if (typeof window === 'undefined') return null;
 
   try {
     const stored = localStorage.getItem(CULTURE_LANGUAGE_KEY);
-    if (stored && SUPPORTED_LANGUAGES.includes(stored as SupportedLanguage)) {
-      return stored as SupportedLanguage;
+    if (stored && CULTURE_LANGUAGES.includes(stored as CultureLanguage)) {
+      return stored as CultureLanguage;
     }
   } catch {
     // localStorage may be unavailable (e.g., private browsing)
@@ -77,23 +83,28 @@ export function useQuestionLanguage(): UseQuestionLanguageResult {
   const { currentLanguage } = useLanguage();
 
   // Initialize from localStorage or fall back to app language
-  const [questionLanguage, setQuestionLanguageState] = useState<SupportedLanguage>(() => {
+  // Default to 'en' if app language is not a valid culture language
+  const [questionLanguage, setQuestionLanguageState] = useState<CultureLanguage>(() => {
     const stored = getStoredLanguage();
-    return stored ?? currentLanguage;
+    if (stored) return stored;
+    // Fall back to app language if it's a valid culture language, otherwise default to 'en'
+    return CULTURE_LANGUAGES.includes(currentLanguage as CultureLanguage)
+      ? (currentLanguage as CultureLanguage)
+      : 'en';
   });
 
   // Use ref to track previous language for analytics
   // This avoids stale closure issues in setQuestionLanguage callback
-  const previousLangRef = useRef<SupportedLanguage>(questionLanguage);
+  const previousLangRef = useRef<CultureLanguage>(questionLanguage);
 
   /**
    * Change the question language.
    * Persists to localStorage and tracks analytics.
    */
   const setQuestionLanguage = useCallback(
-    (lang: SupportedLanguage) => {
+    (lang: CultureLanguage) => {
       // Validate language
-      if (!SUPPORTED_LANGUAGES.includes(lang)) {
+      if (!CULTURE_LANGUAGES.includes(lang)) {
         log.warn(`[useQuestionLanguage] Unsupported language: ${lang}`);
         return;
       }
@@ -134,9 +145,14 @@ export function useQuestionLanguage(): UseQuestionLanguageResult {
       log.warn('[useQuestionLanguage] Could not remove from localStorage');
     }
 
-    // Reset to current app language
-    setQuestionLanguageState(currentLanguage);
-    previousLangRef.current = currentLanguage;
+    // Reset to current app language (or 'en' if app language is not a valid culture language)
+    const defaultLang: CultureLanguage = CULTURE_LANGUAGES.includes(
+      currentLanguage as CultureLanguage
+    )
+      ? (currentLanguage as CultureLanguage)
+      : 'en';
+    setQuestionLanguageState(defaultLang);
+    previousLangRef.current = defaultLang;
   }, [currentLanguage]);
 
   return {
