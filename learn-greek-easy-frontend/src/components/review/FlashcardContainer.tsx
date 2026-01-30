@@ -87,12 +87,10 @@ export function FlashcardContainer({ card }: FlashcardContainerProps) {
           <CardHeader card={card} onFlip={flipCard} />
         </div>
 
-        {/* Card Content - Translations and Grammar tables (visible when flipped) */}
-        {isCardFlipped && (
-          <div className="px-8 pb-6">
-            <CardContent card={card} isFlipped={isCardFlipped} />
-          </div>
-        )}
+        {/* Card Content - Translations and Grammar tables (blurred until revealed) */}
+        <div className="px-8 pb-6">
+          <CardContent card={card} isFlipped={isCardFlipped} />
+        </div>
 
         <RatingButtons />
       </div>

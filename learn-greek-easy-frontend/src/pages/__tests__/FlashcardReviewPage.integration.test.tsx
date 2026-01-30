@@ -392,16 +392,17 @@ describe('FlashcardReviewPage - Session Initialization', () => {
       expect(screen.getByText(currentCard.word)).toBeInTheDocument();
     }
 
-    // Answer should NOT be visible initially (hidden with opacity-0)
-    // The Translation component renders text with opacity-0 when not flipped
+    // Answer should NOT be visible initially (hidden with blur-md)
+    // The CardContent component renders content with blur-md class when not flipped
     if (currentCard?.translation) {
       const translationElements = screen.queryAllByText(currentCard.translation);
-      // Translation is in DOM but should be hidden (opacity-0)
+      // Translation is in DOM but should be hidden (blur-md)
       if (translationElements.length > 0) {
         const translationInCard = translationElements.find((el) => el.closest('[role="button"]'));
         if (translationInCard) {
-          // Check it's hidden via opacity-0 class
-          expect(translationInCard.className).toContain('opacity-0');
+          // Check it's hidden via blur-md class on the parent container
+          const container = translationInCard.closest('[role="button"]');
+          expect(container?.className).toContain('blur-md');
         }
       }
     }

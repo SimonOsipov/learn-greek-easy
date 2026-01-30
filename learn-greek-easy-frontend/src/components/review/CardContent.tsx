@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 
 import { cn } from '@/lib/utils';
+import { useReviewStore } from '@/stores/reviewStore';
 import type { CardReview } from '@/types/review';
 
 import {
@@ -18,6 +19,7 @@ interface CardContentProps {
 
 export function CardContent({ card, isFlipped }: CardContentProps) {
   const { t } = useTranslation('review');
+  const { flipCard } = useReviewStore();
   const partOfSpeech = card.part_of_speech;
 
   // Get grammar data from API (snake_case fields)
@@ -48,9 +50,23 @@ export function CardContent({ card, isFlipped }: CardContentProps) {
 
   return (
     <div
+      role={!isFlipped ? 'button' : undefined}
+      tabIndex={!isFlipped ? 0 : undefined}
+      onClick={!isFlipped ? flipCard : undefined}
+      onKeyDown={
+        !isFlipped
+          ? (e: React.KeyboardEvent) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                flipCard();
+              }
+            }
+          : undefined
+      }
+      aria-label={!isFlipped ? t('session.clickToReveal') : undefined}
       className={cn(
         'grid gap-6 transition-[filter] duration-200 md:grid-cols-2',
-        !isFlipped && 'pointer-events-none select-none blur-md'
+        !isFlipped && 'cursor-pointer select-none blur-md'
       )}
     >
       {/* Left column: Translations + Examples */}
