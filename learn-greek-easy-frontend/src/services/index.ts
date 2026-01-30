@@ -42,7 +42,6 @@ export type {
 // Card API
 export { cardAPI } from './cardAPI';
 export type {
-  CardDifficulty,
   CardListResponse,
   CardResponse,
   CardSearchResponse,
@@ -132,20 +131,7 @@ export type {
 
 // Admin API
 export { adminAPI } from './adminAPI';
-export type {
-  AnalysisStartedResponse,
-  ContentStatsResponse,
-  DiscoveredArticle,
-  FetchHistoryDetailResponse,
-  FetchHistoryItem,
-  FetchHistoryResponse,
-  FetchHtmlResponse,
-  ListNewsSourcesParams,
-  NewsSourceCreatePayload,
-  NewsSourceListResponse,
-  NewsSourceResponse,
-  NewsSourceUpdatePayload,
-} from './adminAPI';
+export type { ContentStatsResponse } from './adminAPI';
 
 // Mock Exam API
 export { mockExamAPI } from './mockExamAPI';

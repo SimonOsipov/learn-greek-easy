@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 import { Clock } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -9,12 +9,10 @@ import { cn } from '@/lib/utils';
 import { useReviewStore } from '@/stores/reviewStore';
 import type { CardReview } from '@/types/review';
 
-import { CardMain } from './CardMain';
-import { NounGrammarSection } from './grammar/NounGrammarSection';
-import { VerbGrammarSection } from './grammar/VerbGrammarSection';
+import { CardContent } from './CardContent';
+import { CardHeader } from './CardHeader';
 import { ProgressHeader } from './ProgressHeader';
 import { RatingButtons } from './RatingButtons';
-import { ExampleSection } from './shared/ExampleSection';
 
 interface FlashcardContainerProps {
   card: CardReview;
@@ -23,13 +21,7 @@ interface FlashcardContainerProps {
 export function FlashcardContainer({ card }: FlashcardContainerProps) {
   const { t } = useTranslation('review');
   const { isCardFlipped, flipCard, activeSession, currentCardIndex } = useReviewStore();
-  const [selectedTense, setSelectedTense] = useState<'present' | 'past' | 'future'>('present');
   const [srAnnouncement, setSrAnnouncement] = useState('');
-
-  // Reset tense when card changes
-  useEffect(() => {
-    setSelectedTense('present');
-  }, [card.id]);
 
   // Announce card flip to screen readers
   useEffect(() => {
@@ -57,7 +49,7 @@ export function FlashcardContainer({ card }: FlashcardContainerProps) {
         data-testid="flashcard"
         className={cn(
           'mx-auto max-w-4xl overflow-hidden rounded-2xl bg-card shadow-2xl',
-          'flex min-h-[800px] flex-col transition-transform duration-300',
+          'flex flex-col transition-transform duration-300',
           'hover:-translate-y-1'
         )}
       >
@@ -90,20 +82,19 @@ export function FlashcardContainer({ card }: FlashcardContainerProps) {
           </div>
         )}
 
-        <CardMain card={card} isFlipped={isCardFlipped} onFlip={flipCard} />
-        <RatingButtons />
+        {/* Card Header - Greek word with part of speech badge */}
+        <div className="px-8 py-6">
+          <CardHeader card={card} onFlip={flipCard} />
+        </div>
 
-        {/* Grammar Section - conditional based on card type */}
-        {card.nounData && <NounGrammarSection nounData={card.nounData} />}
-        {card.verbData && (
-          <VerbGrammarSection
-            verbData={card.verbData}
-            selectedTense={selectedTense}
-            onTenseChange={setSelectedTense}
-          />
+        {/* Card Content - Translations and Grammar tables (visible when flipped) */}
+        {isCardFlipped && (
+          <div className="px-8 pb-6">
+            <CardContent card={card} isFlipped={isCardFlipped} />
+          </div>
         )}
 
-        <ExampleSection card={card} selectedTense={selectedTense} isFlipped={isCardFlipped} />
+        <RatingButtons />
       </div>
     </>
   );

@@ -4,7 +4,7 @@ import { renderHook, act, waitFor } from '@testing-library/react';
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 
 import { reviewAPI } from '@/services/reviewAPI';
-import { studyAPI, type StudyQueue, type StudyQueueCard } from '@/services/studyAPI';
+import { studyAPI } from '@/services/studyAPI';
 import type { ReviewSession, CardReview, SessionSummary } from '@/types/review';
 
 import { useAnalyticsStore } from '../analyticsStore';
@@ -18,6 +18,15 @@ vi.mock('@/services/reviewAPI', () => ({
     submit: vi.fn(),
   },
 }));
+
+// TODO: These skipped tests reference a legacy mockReviewAPI that no longer exists.
+// This placeholder allows TypeScript to compile. Tests should be rewritten.
+const mockReviewAPI = {
+  startReviewSession: vi.fn(),
+  submitCardRating: vi.fn(),
+  endReviewSession: vi.fn(),
+  resumeSession: vi.fn(),
+};
 
 vi.mock('@/services/studyAPI', () => ({
   studyAPI: {
@@ -37,34 +46,48 @@ describe('reviewStore', () => {
   const mockCards: CardReview[] = [
     {
       id: 'card-1',
-      deckId: mockDeckId,
       front: 'Hello',
       back: 'Γειά σου',
-      frontExample: 'Hello, how are you?',
-      backExample: 'Γειά σου, πώς είσαι;',
+      difficulty: 'new',
+      timesReviewed: 0,
+      successRate: 0,
       srData: {
+        cardId: 'card-1',
+        deckId: mockDeckId,
         state: 'new',
         easeFactor: 2.5,
         interval: 0,
         repetitions: 0,
+        step: 0,
         dueDate: new Date(),
         lastReviewed: null,
+        reviewCount: 0,
+        successCount: 0,
+        failureCount: 0,
+        successRate: 0,
       },
     },
     {
       id: 'card-2',
-      deckId: mockDeckId,
       front: 'Goodbye',
       back: 'Αντίο',
-      frontExample: 'Goodbye, see you later',
-      backExample: 'Αντίο, τα λέμε αργότερα',
+      difficulty: 'learning',
+      timesReviewed: 1,
+      successRate: 100,
       srData: {
+        cardId: 'card-2',
+        deckId: mockDeckId,
         state: 'learning',
         easeFactor: 2.3,
         interval: 1,
         repetitions: 1,
+        step: 1,
         dueDate: new Date(),
         lastReviewed: new Date(),
+        reviewCount: 1,
+        successCount: 1,
+        failureCount: 0,
+        successRate: 100,
       },
     },
   ];

@@ -9,6 +9,16 @@
  * - Initializing cards for study
  */
 
+import type {
+  PartOfSpeech,
+  DeckLevel,
+  Example,
+  NounData,
+  VerbData,
+  AdjectiveData,
+  AdverbData,
+} from '@/types/grammar';
+
 import { api, buildQueryString } from './api';
 
 // ============================================
@@ -22,20 +32,30 @@ export type CardStatus = 'new' | 'learning' | 'review' | 'mastered';
 
 /**
  * Card in study queue
+ *
+ * Matches the StudyQueueCard schema in src/schemas/sm2.py.
+ * Contains card content plus SM-2 scheduling metadata.
  */
 export interface StudyQueueCard {
   card_id: string;
   front_text: string;
   back_text: string;
+  back_text_ru: string | null;
   example_sentence: string | null;
   pronunciation: string | null;
-  difficulty: string;
+  part_of_speech: PartOfSpeech | null;
+  level: DeckLevel | null;
+  examples: Example[] | null;
+  noun_data: NounData | null;
+  verb_data: VerbData | null;
+  adjective_data: AdjectiveData | null;
+  adverb_data: AdverbData | null;
   status: CardStatus;
   is_new: boolean;
   is_early_practice: boolean;
   due_date: string | null;
-  easiness_factor: number;
-  interval: number;
+  easiness_factor: number | null;
+  interval: number | null;
 }
 
 /**

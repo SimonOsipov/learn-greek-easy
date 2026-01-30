@@ -62,5 +62,78 @@
     "escKey": "Esc",
     "tip": "Συμβουλή:",
     "tipMessage": "Μπορείτε να χρησιμοποιήσετε το πληκτρολόγιό σας για επανάληψη καρτών χωρίς να αγγίξετε το ποντίκι!"
+  },
+  "grammar": {
+    "partOfSpeech": {
+      "noun": "Ουσιαστικό",
+      "verb": "Ρήμα",
+      "adjective": "Επίθετο",
+      "adverb": "Επίρρημα"
+    },
+    "nounDeclension": {
+      "singular": "Ενικός",
+      "plural": "Πληθυντικός",
+      "cases": {
+        "nominative": "Ονομαστική",
+        "genitive": "Γενική",
+        "accusative": "Αιτιατική",
+        "vocative": "Κλητική"
+      },
+      "genders": {
+        "masculine": "Αρσενικό",
+        "feminine": "Θηλυκό",
+        "neuter": "Ουδέτερο"
+      },
+      "notAvailable": "Δ/Υ"
+    },
+    "verbConjugation": {
+      "tenses": {
+        "present": "Ενεστώτας",
+        "imperfect": "Παρατατικός",
+        "past": "Αόριστος",
+        "future": "Μέλλοντας",
+        "perfect": "Παρακείμενος"
+      },
+      "persons": {
+        "firstSingular": "Εγώ",
+        "secondSingular": "Εσύ",
+        "thirdSingular": "Αυτός/ή",
+        "firstPlural": "Εμείς",
+        "secondPlural": "Εσείς",
+        "thirdPlural": "Αυτοί/ές"
+      },
+      "imperative": {
+        "title": "Προστακτική",
+        "singular": "Ενικός",
+        "plural": "Πληθυντικός"
+      },
+      "voice": {
+        "active": "Ενεργητική",
+        "passive": "Παθητική"
+      },
+      "notAvailable": "Δ/Υ"
+    },
+    "adjectiveDeclension": {
+      "genders": {
+        "masculine": "Αρσενικό",
+        "feminine": "Θηλυκό",
+        "neuter": "Ουδέτερο"
+      },
+      "comparison": {
+        "title": "Σύγκριση",
+        "comparative": "Συγκριτικός",
+        "superlative": "Υπερθετικός"
+      }
+    },
+    "adverbForms": {
+      "positive": "Θετικός",
+      "comparative": "Συγκριτικός",
+      "superlative": "Υπερθετικός",
+      "notAvailable": "Δ/Υ"
+    },
+    "examples": {
+      "title": "Παραδείγματα",
+      "noExamples": "Δεν υπάρχουν παραδείγματα"
+    }
   }
 }

@@ -103,7 +103,6 @@ const mapRatingToAnalytics = (rating: ReviewRating): 1 | 2 | 3 | 4 => {
  */
 const transformStudyQueueCard = (card: StudyQueueCard, deckId: string): CardReview => ({
   id: card.card_id,
-  deckId,
   // Map backend field names to frontend field names
   front: card.front_text,
   back: card.back_text,
@@ -112,18 +111,31 @@ const transformStudyQueueCard = (card: StudyQueueCard, deckId: string): CardRevi
   translation: card.back_text,
   pronunciation: card.pronunciation || '',
   example: card.example_sentence || '',
-  exampleTranslation: '', // Not available in StudyQueueCard
-  notes: '',
-  status: card.status as 'new' | 'learning' | 'review' | 'mastered',
-  difficulty: card.difficulty as 'easy' | 'medium' | 'hard',
-  isEarlyPractice: card.is_early_practice, // Preserve early practice flag from backend
+  exampleTranslation: '',
+  // Derive difficulty from status - new/learning cards are "new", review cards use SM-2 status
+  difficulty: card.is_new ? 'new' : (card.status as 'new' | 'learning' | 'review' | 'mastered'),
+  nextReviewDate: card.due_date ? new Date(card.due_date) : undefined,
+  timesReviewed: 0,
+  successRate: 0,
+  isEarlyPractice: card.is_early_practice,
+
+  // Pass through grammar fields from API (snake_case)
+  part_of_speech: card.part_of_speech,
+  level: card.level,
+  examples: card.examples,
+  noun_data: card.noun_data,
+  verb_data: card.verb_data,
+  adjective_data: card.adjective_data,
+  adverb_data: card.adverb_data,
+  back_text_ru: card.back_text_ru,
+
   // Spaced repetition data
   srData: {
     cardId: card.card_id,
     deckId,
-    interval: card.interval,
-    easeFactor: card.easiness_factor,
-    repetitions: 0, // Not available in StudyQueueCard
+    interval: card.interval ?? 0,
+    easeFactor: card.easiness_factor ?? 2.5,
+    repetitions: 0,
     state: card.is_new ? 'new' : (card.status as 'new' | 'learning' | 'review' | 'mastered'),
     step: 0,
     dueDate: card.due_date ? new Date(card.due_date) : null,
@@ -133,17 +145,6 @@ const transformStudyQueueCard = (card: StudyQueueCard, deckId: string): CardRevi
     failureCount: 0,
     successRate: 0,
   },
-  // Legacy fields for backward compatibility
-  easeFactor: card.easiness_factor,
-  interval: card.interval,
-  repetitions: 0, // Not available in StudyQueueCard
-  nextReviewDate: card.due_date ? new Date(card.due_date) : new Date(),
-  lastReviewDate: undefined,
-  reviewCount: 0,
-  correctCount: 0,
-  timesReviewed: 0,
-  successRate: 0,
-  averageTime: 0,
 });
 
 /**
@@ -256,8 +257,10 @@ export const useReviewStore = create<ReviewState>()(
             cards,
             status: 'active',
             startTime: new Date(),
+            endTime: null,
+            pausedAt: null,
             currentIndex: 0,
-            config: config as QueueConfig,
+            ratings: [],
             stats: {
               ...DEFAULT_SESSION_STATS,
               cardsRemaining: cards.length,
@@ -361,7 +364,7 @@ export const useReviewStore = create<ReviewState>()(
                 card_id: currentCard.id,
                 rating: mapRatingToAnalytics(rating),
                 time_ms: timeMs,
-                card_status: currentCard.status,
+                card_status: currentCard.srData.state,
                 session_id: activeSession.sessionId,
                 timestamp: new Date().toISOString(),
               });
@@ -475,7 +478,7 @@ export const useReviewStore = create<ReviewState>()(
             activeSession: {
               ...session,
               status: 'active',
-              pausedAt: undefined,
+              pausedAt: null,
             },
             currentCardIndex: currentIndex,
             isCardFlipped: false,
@@ -515,38 +518,41 @@ export const useReviewStore = create<ReviewState>()(
 
         try {
           // Calculate session summary from local stats
-          const endTime = new Date();
-          const startTime = new Date(activeSession.startTime);
-          const durationMinutes = Math.max(
-            1,
-            Math.round((endTime.getTime() - startTime.getTime()) / 60000)
-          );
+          const completedAt = new Date();
 
           const summary: SessionSummary = {
             sessionId: activeSession.sessionId,
             deckId: activeSession.deckId,
             userId: activeSession.userId,
-            startTime,
-            endTime,
-            duration: durationMinutes,
-            stats: {
-              cardsReviewed: sessionStats.cardsReviewed,
-              cardsRemaining: sessionStats.cardsRemaining,
-              accuracy: sessionStats.accuracy,
-              cardsCorrect: sessionStats.cardsCorrect,
-              cardsIncorrect: sessionStats.cardsIncorrect,
-              totalTime: sessionStats.totalTime,
-              averageTime: sessionStats.averageTime,
-              againCount: sessionStats.againCount,
-              hardCount: sessionStats.hardCount,
-              goodCount: sessionStats.goodCount,
-              easyCount: sessionStats.easyCount,
+            completedAt,
+            cardsReviewed: sessionStats.cardsReviewed,
+            accuracy: sessionStats.accuracy,
+            totalTime: sessionStats.totalTime,
+            averageTimePerCard: sessionStats.averageTime,
+            ratingBreakdown: {
+              again: sessionStats.againCount,
+              hard: sessionStats.hardCount,
+              good: sessionStats.goodCount,
+              easy: sessionStats.easyCount,
             },
-            newCardsLearned: sessionStats.cardsCorrect,
-            cardsGraduated: Math.floor(sessionStats.easyCount * 0.5),
-            averageEaseFactor: 2.5,
-            xpEarned: sessionStats.cardsReviewed * 10 + sessionStats.cardsCorrect * 5,
-            streakMaintained: true,
+            transitions: {
+              newToLearning: sessionStats.cardsReviewed,
+              learningToReview: Math.floor(sessionStats.goodCount * 0.5),
+              reviewToMastered: Math.floor(sessionStats.easyCount * 0.3),
+              toRelearning: sessionStats.againCount,
+            },
+            deckProgressBefore: {
+              cardsNew: activeSession.cards.length,
+              cardsLearning: 0,
+              cardsReview: 0,
+              cardsMastered: 0,
+            },
+            deckProgressAfter: {
+              cardsNew: Math.max(0, activeSession.cards.length - sessionStats.cardsReviewed),
+              cardsLearning: sessionStats.cardsReviewed - sessionStats.againCount,
+              cardsReview: 0,
+              cardsMastered: Math.floor(sessionStats.easyCount * 0.3),
+            },
           };
 
           // Update analytics snapshot

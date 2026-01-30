@@ -62,5 +62,78 @@
     "escKey": "Esc",
     "tip": "Совет:",
     "tipMessage": "Вы можете использовать клавиатуру для повторения карточек без мыши!"
+  },
+  "grammar": {
+    "partOfSpeech": {
+      "noun": "Существительное",
+      "verb": "Глагол",
+      "adjective": "Прилагательное",
+      "adverb": "Наречие"
+    },
+    "nounDeclension": {
+      "singular": "Единственное",
+      "plural": "Множественное",
+      "cases": {
+        "nominative": "Именительный",
+        "genitive": "Родительный",
+        "accusative": "Винительный",
+        "vocative": "Звательный"
+      },
+      "genders": {
+        "masculine": "Мужской",
+        "feminine": "Женский",
+        "neuter": "Средний"
+      },
+      "notAvailable": "Н/Д"
+    },
+    "verbConjugation": {
+      "tenses": {
+        "present": "Настоящее",
+        "imperfect": "Имперфект",
+        "past": "Прошедшее",
+        "future": "Будущее",
+        "perfect": "Перфект"
+      },
+      "persons": {
+        "firstSingular": "Я",
+        "secondSingular": "Ты",
+        "thirdSingular": "Он/Она",
+        "firstPlural": "Мы",
+        "secondPlural": "Вы",
+        "thirdPlural": "Они"
+      },
+      "imperative": {
+        "title": "Повелительное",
+        "singular": "Единственное",
+        "plural": "Множественное"
+      },
+      "voice": {
+        "active": "Действительный",
+        "passive": "Страдательный"
+      },
+      "notAvailable": "Н/Д"
+    },
+    "adjectiveDeclension": {
+      "genders": {
+        "masculine": "Мужской",
+        "feminine": "Женский",
+        "neuter": "Средний"
+      },
+      "comparison": {
+        "title": "Сравнение",
+        "comparative": "Сравнительная",
+        "superlative": "Превосходная"
+      }
+    },
+    "adverbForms": {
+      "positive": "Положительная",
+      "comparative": "Сравнительная",
+      "superlative": "Превосходная",
+      "notAvailable": "Н/Д"
+    },
+    "examples": {
+      "title": "Примеры",
+      "noExamples": "Примеры отсутствуют"
+    }
   }
 }

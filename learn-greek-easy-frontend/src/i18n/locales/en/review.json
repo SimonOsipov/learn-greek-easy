@@ -67,5 +67,78 @@
     "escKey": "Esc",
     "tip": "Tip:",
     "tipMessage": "You can use your keyboard to review cards without touching your mouse!"
+  },
+  "grammar": {
+    "partOfSpeech": {
+      "noun": "Noun",
+      "verb": "Verb",
+      "adjective": "Adjective",
+      "adverb": "Adverb"
+    },
+    "nounDeclension": {
+      "singular": "Singular",
+      "plural": "Plural",
+      "cases": {
+        "nominative": "Nominative",
+        "genitive": "Genitive",
+        "accusative": "Accusative",
+        "vocative": "Vocative"
+      },
+      "genders": {
+        "masculine": "Masculine",
+        "feminine": "Feminine",
+        "neuter": "Neuter"
+      },
+      "notAvailable": "N/A"
+    },
+    "verbConjugation": {
+      "tenses": {
+        "present": "Present",
+        "imperfect": "Imperfect",
+        "past": "Past",
+        "future": "Future",
+        "perfect": "Perfect"
+      },
+      "persons": {
+        "firstSingular": "I",
+        "secondSingular": "You (sg)",
+        "thirdSingular": "He/She",
+        "firstPlural": "We",
+        "secondPlural": "You (pl)",
+        "thirdPlural": "They"
+      },
+      "imperative": {
+        "title": "Imperative",
+        "singular": "Singular",
+        "plural": "Plural"
+      },
+      "voice": {
+        "active": "Active",
+        "passive": "Passive"
+      },
+      "notAvailable": "N/A"
+    },
+    "adjectiveDeclension": {
+      "genders": {
+        "masculine": "Masculine",
+        "feminine": "Feminine",
+        "neuter": "Neuter"
+      },
+      "comparison": {
+        "title": "Comparison",
+        "comparative": "Comparative",
+        "superlative": "Superlative"
+      }
+    },
+    "adverbForms": {
+      "positive": "Positive",
+      "comparative": "Comparative",
+      "superlative": "Superlative",
+      "notAvailable": "N/A"
+    },
+    "examples": {
+      "title": "Examples",
+      "noExamples": "No examples available"
+    }
   }
 }

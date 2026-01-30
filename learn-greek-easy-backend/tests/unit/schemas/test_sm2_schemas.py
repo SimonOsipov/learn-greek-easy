@@ -7,6 +7,7 @@ import pytest
 from pydantic import ValidationError
 
 from src.db.models import CardStatus
+from src.schemas.card import Example
 from src.schemas.sm2 import StudyQueue, StudyQueueCard, StudyQueueRequest
 
 
@@ -140,7 +141,7 @@ class TestStudyQueueCard:
         assert card.card_id == card_id
         assert card.is_early_practice is True
         assert card.due_date == date.today()
-        assert card.examples == [{"greek": "Example", "english": "Translation", "russian": ""}]
+        assert card.examples == [Example(greek="Example", english="Translation", russian="")]
 
     def test_examples_field_optional(self):
         """Test that examples field is optional."""
@@ -172,7 +173,11 @@ class TestStudyQueueCard:
             is_new=True,
             examples=examples,
         )
-        assert card.examples == examples
+        expected = [
+            Example(greek="Greek 1", english="English 1", russian="Russian 1"),
+            Example(greek="Greek 2", english="English 2", russian="Russian 2", tense="present"),
+        ]
+        assert card.examples == expected
         assert len(card.examples) == 2
 
 

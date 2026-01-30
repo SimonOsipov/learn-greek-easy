@@ -19,7 +19,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from src.db.models import CardStatus
+from src.db.models import CardStatus, DeckLevel, PartOfSpeech
+from src.schemas.card import AdjectiveData, AdverbData, Example, NounData, VerbData
 
 # ============================================================================
 # SM-2 Calculation Schemas
@@ -166,6 +167,10 @@ class StudyQueueCard(BaseModel):
         ...,
         description="English translation (back of card)",
     )
+    back_text_ru: Optional[str] = Field(
+        default=None,
+        description="Russian translation (back of card)",
+    )
     example_sentence: Optional[str] = Field(
         default=None,
         description="Example sentence using the word",
@@ -174,9 +179,33 @@ class StudyQueueCard(BaseModel):
         default=None,
         description="Pronunciation guide",
     )
-    examples: Optional[list[dict]] = Field(
+    part_of_speech: Optional[PartOfSpeech] = Field(
+        default=None,
+        description="Part of speech (noun, verb, adjective, adverb)",
+    )
+    level: Optional[DeckLevel] = Field(
+        default=None,
+        description="CEFR proficiency level (A1-C2)",
+    )
+    examples: Optional[list[Example]] = Field(
         default=None,
         description="Structured examples with multilingual translations",
+    )
+    noun_data: Optional[NounData] = Field(
+        default=None,
+        description="Noun grammar data (declensions)",
+    )
+    verb_data: Optional[VerbData] = Field(
+        default=None,
+        description="Verb grammar data (conjugations)",
+    )
+    adjective_data: Optional[AdjectiveData] = Field(
+        default=None,
+        description="Adjective grammar data (declensions)",
+    )
+    adverb_data: Optional[AdverbData] = Field(
+        default=None,
+        description="Adverb grammar data (comparison forms)",
     )
     status: CardStatus = Field(
         ...,

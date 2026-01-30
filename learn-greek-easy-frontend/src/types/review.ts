@@ -1,18 +1,46 @@
 // src/types/review.ts
 
 import type { Card as BaseCard } from './deck';
+import type {
+  PartOfSpeech,
+  DeckLevel,
+  Example,
+  NounData,
+  VerbData,
+  AdjectiveData,
+  AdverbData,
+} from './grammar';
 
 /**
  * Extended card type for vocabulary review with Greek language learning features
  * Extends base Card with detailed grammar and type-specific data
+ *
+ * @deprecated Legacy types - use API types from @/types/grammar for new code.
+ * The types below use camelCase which doesn't match the API's snake_case.
+ * New grammar UI components should use:
+ * - NounData, VerbData, AdjectiveData, AdverbData from '@/types/grammar'
+ * - StudyQueueCard from '@/services/studyAPI' for study queue cards
+ *
+ * Migration planned in GRAMMARUI-03+
  */
 export interface Card extends BaseCard {
   word?: string; // Greek word/phrase (optional for backward compatibility)
   translation?: string; // English translation (optional for backward compatibility)
-  partOfSpeech?: 'noun' | 'verb' | 'adjective' | 'adverb';
-  level?: 'A1' | 'A2' | 'B1' | 'B2';
 
-  // Type-specific metadata
+  // NEW: API-aligned grammar fields (snake_case from @/types/grammar)
+  part_of_speech?: PartOfSpeech | null;
+  level?: DeckLevel | null;
+  examples?: Example[] | null;
+  noun_data?: NounData | null;
+  verb_data?: VerbData | null;
+  adjective_data?: AdjectiveData | null;
+  adverb_data?: AdverbData | null;
+  back_text_ru?: string | null;
+
+  // Legacy camelCase fields (deprecated - kept for backward compatibility)
+  partOfSpeech?: 'noun' | 'verb' | 'adjective' | 'adverb';
+
+  // Type-specific metadata (legacy camelCase - see NounData in @/types/grammar)
   nounData?: {
     gender: 'masculine' | 'feminine' | 'neuter';
     cases: {
@@ -25,6 +53,7 @@ export interface Card extends BaseCard {
     exampleTranslation: string;
   };
 
+  // Legacy camelCase - see VerbData in @/types/grammar
   verbData?: {
     voice: 'active' | 'passive' | 'middle';
     conjugations: {
@@ -42,6 +71,7 @@ export interface Card extends BaseCard {
 
 /**
  * Conjugation set for a verb tense (all 6 persons)
+ * @deprecated Use VerbData from '@/types/grammar' instead
  */
 export interface ConjugationSet {
   firstSingular: string;
