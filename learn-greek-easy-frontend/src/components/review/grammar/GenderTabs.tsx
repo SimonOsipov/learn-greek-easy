@@ -12,6 +12,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { trackGrammarGenderChanged } from '@/lib/analytics';
 import type { AdjectiveData } from '@/types/grammar';
 
 const GENDERS = ['masculine', 'feminine', 'neuter'] as const;
@@ -19,6 +20,10 @@ type Gender = (typeof GENDERS)[number];
 
 export interface GenderTabsProps {
   adjectiveData: AdjectiveData;
+  /** Optional card ID for analytics tracking */
+  cardId?: string;
+  /** Optional session ID for analytics tracking */
+  sessionId?: string;
 }
 
 interface GenderTableData {
@@ -140,14 +145,31 @@ function GenderTable({ gender, data, na, t }: GenderTableProps) {
   );
 }
 
-export function GenderTabs({ adjectiveData }: GenderTabsProps) {
+export function GenderTabs({ adjectiveData, cardId, sessionId }: GenderTabsProps) {
   const { t } = useTranslation('review');
   const [selectedGender, setSelectedGender] = useState<Gender>('masculine');
 
   const na = t('grammar.nounDeclension.notAvailable');
 
+  const handleGenderChange = (newGender: string) => {
+    const gender = newGender as Gender;
+
+    // Track analytics if context is provided
+    if (cardId && sessionId) {
+      trackGrammarGenderChanged({
+        card_id: cardId,
+        part_of_speech: 'adjective',
+        from_gender: selectedGender,
+        to_gender: gender,
+        session_id: sessionId,
+      });
+    }
+
+    setSelectedGender(gender);
+  };
+
   return (
-    <Tabs value={selectedGender} onValueChange={(v) => setSelectedGender(v as Gender)}>
+    <Tabs value={selectedGender} onValueChange={handleGenderChange}>
       <div className="overflow-x-auto">
         <TabsList className="inline-flex w-full min-w-max">
           {GENDERS.map((gender) => (

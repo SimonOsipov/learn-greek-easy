@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { trackGrammarTenseChanged } from '@/lib/analytics';
 import type { VerbData, VerbVoice } from '@/types/grammar';
 
 import { VerbConjugationGrid } from './VerbConjugationGrid';
@@ -13,6 +14,10 @@ type VerbTense = (typeof VERB_TENSES)[number];
 
 export interface TenseTabsProps {
   verbData: VerbData;
+  /** Optional card ID for analytics tracking */
+  cardId?: string;
+  /** Optional session ID for analytics tracking */
+  sessionId?: string;
 }
 
 function tenseHasData(verbData: VerbData, tense: VerbTense): boolean {
@@ -27,13 +32,30 @@ function tenseHasData(verbData: VerbData, tense: VerbTense): boolean {
   });
 }
 
-export function TenseTabs({ verbData }: TenseTabsProps) {
+export function TenseTabs({ verbData, cardId, sessionId }: TenseTabsProps) {
   const { t } = useTranslation('review');
   const [selectedTense, setSelectedTense] = useState<VerbTense>('present');
   const [selectedVoice, setSelectedVoice] = useState<VerbVoice>(verbData.voice);
 
   // TODO: Set to true when passive voice data is available for this verb
   const hasPassive = false;
+
+  const handleTenseChange = (newTense: string) => {
+    const tense = newTense as VerbTense;
+
+    // Track analytics if context is provided
+    if (cardId && sessionId) {
+      trackGrammarTenseChanged({
+        card_id: cardId,
+        part_of_speech: 'verb',
+        from_tense: selectedTense,
+        to_tense: tense,
+        session_id: sessionId,
+      });
+    }
+
+    setSelectedTense(tense);
+  };
 
   return (
     <div className="space-y-4">
@@ -42,9 +64,11 @@ export function TenseTabs({ verbData }: TenseTabsProps) {
           selectedVoice={selectedVoice}
           onVoiceChange={setSelectedVoice}
           disabled={!hasPassive}
+          cardId={cardId}
+          sessionId={sessionId}
         />
       </div>
-      <Tabs value={selectedTense} onValueChange={(v) => setSelectedTense(v as VerbTense)}>
+      <Tabs value={selectedTense} onValueChange={handleTenseChange}>
         <div className="overflow-x-auto">
           <TabsList className="inline-flex w-full min-w-max">
             {VERB_TENSES.map((tense) => (

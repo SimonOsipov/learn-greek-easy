@@ -7,9 +7,17 @@ import { GenderTabs } from './GenderTabs';
 
 export interface AdjectiveDeclensionTablesProps {
   adjectiveData: AdjectiveData;
+  /** Optional card ID for analytics tracking */
+  cardId?: string;
+  /** Optional session ID for analytics tracking */
+  sessionId?: string;
 }
 
-export function AdjectiveDeclensionTables({ adjectiveData }: AdjectiveDeclensionTablesProps) {
+export function AdjectiveDeclensionTables({
+  adjectiveData,
+  cardId,
+  sessionId,
+}: AdjectiveDeclensionTablesProps) {
   const { t } = useTranslation('review');
 
   const na = t('grammar.nounDeclension.notAvailable');
@@ -17,7 +25,7 @@ export function AdjectiveDeclensionTables({ adjectiveData }: AdjectiveDeclension
   return (
     <div className="space-y-4">
       {/* Gender declension tabs */}
-      <GenderTabs adjectiveData={adjectiveData} />
+      <GenderTabs adjectiveData={adjectiveData} cardId={cardId} sessionId={sessionId} />
 
       {/* Comparison section */}
       <Card className="overflow-hidden">
