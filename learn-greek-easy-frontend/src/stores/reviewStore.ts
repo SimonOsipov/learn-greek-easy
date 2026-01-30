@@ -106,7 +106,6 @@ const transformStudyQueueCard = (card: StudyQueueCard, deckId: string): CardRevi
   // Map backend field names to frontend field names
   front: card.front_text,
   back: card.back_text,
-  // Also add word/translation aliases for CardMain component compatibility
   word: card.front_text,
   translation: card.back_text,
   pronunciation: card.pronunciation || '',

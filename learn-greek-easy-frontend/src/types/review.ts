@@ -15,19 +15,15 @@ import type {
  * Extended card type for vocabulary review with Greek language learning features
  * Extends base Card with detailed grammar and type-specific data
  *
- * @deprecated Legacy types - use API types from @/types/grammar for new code.
- * The types below use camelCase which doesn't match the API's snake_case.
- * New grammar UI components should use:
- * - NounData, VerbData, AdjectiveData, AdverbData from '@/types/grammar'
+ * Uses API-aligned snake_case types from @/types/grammar:
+ * - NounData, VerbData, AdjectiveData, AdverbData
  * - StudyQueueCard from '@/services/studyAPI' for study queue cards
- *
- * Migration planned in GRAMMARUI-03+
  */
 export interface Card extends BaseCard {
   word?: string; // Greek word/phrase (optional for backward compatibility)
   translation?: string; // English translation (optional for backward compatibility)
 
-  // NEW: API-aligned grammar fields (snake_case from @/types/grammar)
+  // API-aligned grammar fields (snake_case from @/types/grammar)
   part_of_speech?: PartOfSpeech | null;
   level?: DeckLevel | null;
   examples?: Example[] | null;
@@ -36,50 +32,6 @@ export interface Card extends BaseCard {
   adjective_data?: AdjectiveData | null;
   adverb_data?: AdverbData | null;
   back_text_ru?: string | null;
-
-  // Legacy camelCase fields (deprecated - kept for backward compatibility)
-  partOfSpeech?: 'noun' | 'verb' | 'adjective' | 'adverb';
-
-  // Type-specific metadata (legacy camelCase - see NounData in @/types/grammar)
-  nounData?: {
-    gender: 'masculine' | 'feminine' | 'neuter';
-    cases: {
-      nominativeSingular: string;
-      nominativePlural: string;
-      genitiveSingular: string;
-      genitivePlural: string;
-    };
-    exampleSentence: string;
-    exampleTranslation: string;
-  };
-
-  // Legacy camelCase - see VerbData in @/types/grammar
-  verbData?: {
-    voice: 'active' | 'passive' | 'middle';
-    conjugations: {
-      present: ConjugationSet;
-      past: ConjugationSet;
-      future: ConjugationSet;
-    };
-    exampleSentences: {
-      present: { greek: string; english: string };
-      past: { greek: string; english: string };
-      future: { greek: string; english: string };
-    };
-  };
-}
-
-/**
- * Conjugation set for a verb tense (all 6 persons)
- * @deprecated Use VerbData from '@/types/grammar' instead
- */
-export interface ConjugationSet {
-  firstSingular: string;
-  secondSingular: string;
-  thirdSingular: string;
-  firstPlural: string;
-  secondPlural: string;
-  thirdPlural: string;
 }
 
 /**
