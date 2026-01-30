@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ScrollableTable } from '@/components/ui/scrollable-table';
 import {
   Table,
   TableBody,
@@ -43,14 +44,17 @@ export function VerbConjugationGrid({ verbData }: VerbConjugationGridProps) {
   return (
     <div className="space-y-4">
       {/* Main conjugation grid */}
-      <div className="overflow-x-auto">
+      <ScrollableTable>
         <div className="min-w-[500px] overflow-hidden rounded-md border">
           <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent">
-                <TableHead className="h-auto bg-muted/50 px-3 py-2" />
+                <TableHead className="h-auto whitespace-nowrap bg-muted/50 px-2 py-2 text-xs sm:px-3 sm:text-sm" />
                 {TENSES.map((tense) => (
-                  <TableHead key={tense} className="h-auto bg-muted/50 px-3 py-2 text-center">
+                  <TableHead
+                    key={tense}
+                    className="h-auto whitespace-nowrap bg-muted/50 px-2 py-2 text-center text-xs sm:px-3 sm:text-sm"
+                  >
                     {t(`grammar.verbConjugation.tenses.${tense}`)}
                   </TableHead>
                 ))}
@@ -59,13 +63,16 @@ export function VerbConjugationGrid({ verbData }: VerbConjugationGridProps) {
             <TableBody>
               {PERSONS.map((person) => (
                 <TableRow key={person} className="hover:bg-transparent">
-                  <TableCell className="bg-muted/50 px-3 py-2 font-medium text-muted-foreground">
+                  <TableCell className="whitespace-nowrap bg-muted/50 px-2 py-2 text-xs font-medium text-muted-foreground sm:px-3 sm:text-sm">
                     {personLabels[person]}
                   </TableCell>
                   {TENSES.map((tense) => {
                     const value = getConjugation(verbData, tense, person);
                     return (
-                      <TableCell key={tense} className="px-3 py-2 text-center">
+                      <TableCell
+                        key={tense}
+                        className="whitespace-nowrap px-2 py-2 text-center text-xs sm:px-3 sm:text-sm"
+                      >
                         {value || na}
                       </TableCell>
                     );
@@ -75,7 +82,7 @@ export function VerbConjugationGrid({ verbData }: VerbConjugationGridProps) {
             </TableBody>
           </Table>
         </div>
-      </div>
+      </ScrollableTable>
 
       {/* Imperative section */}
       <Card>
