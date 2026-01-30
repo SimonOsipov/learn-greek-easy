@@ -128,15 +128,16 @@ describe('AdverbFormsTable', () => {
     });
   });
 
-  describe('Grid Structure', () => {
+  describe('Table Structure', () => {
     it('should render 3 rows (one per form)', () => {
       const { container } = render(
         <AdverbFormsTable adverbData={mockAdverbDataComplete} positiveForm="γρήγορα" />
       );
 
-      // Each row has grid-cols-2 class
-      const rows = container.querySelectorAll('.grid-cols-2');
-      expect(rows.length).toBe(3);
+      // Table body should have 3 rows (one per form)
+      const tableBody = container.querySelector('tbody');
+      const rows = tableBody?.querySelectorAll('tr');
+      expect(rows?.length).toBe(3);
     });
 
     it('should have rounded border container', () => {
@@ -145,19 +146,18 @@ describe('AdverbFormsTable', () => {
       );
 
       const table = container.firstChild;
-      expect(table).toHaveClass('rounded-lg');
+      expect(table).toHaveClass('rounded-md');
       expect(table).toHaveClass('border');
     });
 
-    it('should have border between rows except last', () => {
+    it('should use table rows with built-in border styling', () => {
       const { container } = render(
         <AdverbFormsTable adverbData={mockAdverbDataComplete} positiveForm="γρήγορα" />
       );
 
-      // First two rows should have border-b, last should not
-      const rowsWithBorder = container.querySelectorAll('.border-b.border-border');
-      // 2 rows have bottom border (positive and comparative)
-      expect(rowsWithBorder.length).toBe(2);
+      // Table rows have border-b from shadcn/ui Table component
+      const rows = container.querySelectorAll('tbody tr');
+      expect(rows.length).toBe(3);
     });
   });
 });

@@ -77,10 +77,11 @@ describe('ExampleSentences', () => {
     it('should render empty state with correct styling', () => {
       const { container } = render(<ExampleSentences examples={[]} />);
 
-      const emptyMessage = container.firstChild;
-      expect(emptyMessage).toHaveClass('rounded-lg');
-      expect(emptyMessage).toHaveClass('border');
-      expect(emptyMessage).toHaveClass('text-muted-foreground');
+      // Card component wraps the empty state
+      const card = container.firstChild;
+      expect(card).toHaveClass('rounded-lg');
+      expect(card).toHaveClass('border');
+      expect(card).toHaveClass('bg-card');
     });
   });
 
@@ -196,11 +197,12 @@ describe('ExampleSentences', () => {
       expect(cards.length).toBe(3);
     });
 
-    it('should have padding on example cards', () => {
+    it('should have padding on example cards content', () => {
       const { container } = render(<ExampleSentences examples={mockSingleExample} />);
 
-      const card = container.querySelector('.rounded-lg.border');
-      expect(card).toHaveClass('p-4');
+      // CardContent has p-4 padding
+      const cardContent = container.querySelector('.p-4');
+      expect(cardContent).toBeInTheDocument();
     });
   });
 

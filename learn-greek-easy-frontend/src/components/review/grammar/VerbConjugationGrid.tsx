@@ -1,6 +1,14 @@
 import { useTranslation } from 'react-i18next';
 
-import { cn } from '@/lib/utils';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import type { VerbData } from '@/types/grammar';
 
 export interface VerbConjugationGridProps {
@@ -36,65 +44,63 @@ export function VerbConjugationGrid({ verbData }: VerbConjugationGridProps) {
     <div className="space-y-4">
       {/* Main conjugation grid */}
       <div className="overflow-x-auto">
-        <div className="min-w-[500px] overflow-hidden rounded-lg border border-border bg-card">
-          {/* Header row */}
-          <div className="grid grid-cols-6 border-b border-border bg-muted/50">
-            <div className="px-3 py-2 text-sm font-medium text-muted-foreground" />
-            {TENSES.map((tense) => (
-              <div
-                key={tense}
-                className="px-3 py-2 text-center text-sm font-medium text-muted-foreground"
-              >
-                {t(`grammar.verbConjugation.tenses.${tense}`)}
-              </div>
-            ))}
-          </div>
-
-          {/* Data rows */}
-          {PERSONS.map((person, index) => (
-            <div
-              key={person}
-              className={cn(
-                'grid grid-cols-6',
-                index < PERSONS.length - 1 && 'border-b border-border'
-              )}
-            >
-              <div className="bg-muted/50 px-3 py-2 text-sm font-medium text-muted-foreground">
-                {personLabels[person]}
-              </div>
-              {TENSES.map((tense) => {
-                const value = getConjugation(verbData, tense, person);
-                return (
-                  <div key={tense} className="px-3 py-2 text-center text-sm">
-                    {value || na}
-                  </div>
-                );
-              })}
-            </div>
-          ))}
+        <div className="min-w-[500px] overflow-hidden rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow className="hover:bg-transparent">
+                <TableHead className="h-auto bg-muted/50 px-3 py-2" />
+                {TENSES.map((tense) => (
+                  <TableHead key={tense} className="h-auto bg-muted/50 px-3 py-2 text-center">
+                    {t(`grammar.verbConjugation.tenses.${tense}`)}
+                  </TableHead>
+                ))}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {PERSONS.map((person) => (
+                <TableRow key={person} className="hover:bg-transparent">
+                  <TableCell className="bg-muted/50 px-3 py-2 font-medium text-muted-foreground">
+                    {personLabels[person]}
+                  </TableCell>
+                  {TENSES.map((tense) => {
+                    const value = getConjugation(verbData, tense, person);
+                    return (
+                      <TableCell key={tense} className="px-3 py-2 text-center">
+                        {value || na}
+                      </TableCell>
+                    );
+                  })}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </div>
       </div>
 
       {/* Imperative section */}
-      <div className="overflow-hidden rounded-lg border border-border bg-card">
-        <div className="border-b border-border bg-muted/50 px-3 py-2 text-sm font-medium text-muted-foreground">
-          {t('grammar.verbConjugation.imperative.title')}
-        </div>
-        <div className="grid grid-cols-2">
-          <div className="border-r border-border px-3 py-2">
-            <span className="text-sm text-muted-foreground">
-              {t('grammar.verbConjugation.imperative.singular')}:{' '}
-            </span>
-            <span className="text-sm font-medium">{verbData.imperative_2s || na}</span>
+      <Card>
+        <CardHeader className="bg-muted/50 px-3 py-2">
+          <CardTitle className="text-sm font-medium text-muted-foreground">
+            {t('grammar.verbConjugation.imperative.title')}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="grid grid-cols-2">
+            <div className="border-r border-border px-3 py-2">
+              <span className="text-sm text-muted-foreground">
+                {t('grammar.verbConjugation.imperative.singular')}:{' '}
+              </span>
+              <span className="text-sm font-medium">{verbData.imperative_2s || na}</span>
+            </div>
+            <div className="px-3 py-2">
+              <span className="text-sm text-muted-foreground">
+                {t('grammar.verbConjugation.imperative.plural')}:{' '}
+              </span>
+              <span className="text-sm font-medium">{verbData.imperative_2p || na}</span>
+            </div>
           </div>
-          <div className="px-3 py-2">
-            <span className="text-sm text-muted-foreground">
-              {t('grammar.verbConjugation.imperative.plural')}:{' '}
-            </span>
-            <span className="text-sm font-medium">{verbData.imperative_2p || na}</span>
-          </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
