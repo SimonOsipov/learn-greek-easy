@@ -40,7 +40,7 @@ async function setTheme(page: Page, theme: 'light' | 'dark'): Promise<void> {
 /**
  * Helper to set language via localStorage
  */
-async function setLanguage(page: Page, lang: 'en' | 'el'): Promise<void> {
+async function setLanguage(page: Page, lang: 'en' | 'ru'): Promise<void> {
   await page.evaluate((l) => {
     localStorage.setItem('i18nextLng', l);
   }, lang);
@@ -79,17 +79,17 @@ test.describe('My Decks - Page Content Visual Tests', () => {
     await takeSnapshot(page, 'My Decks - With Content - Desktop EN Dark', testInfo);
   });
 
-  // Scenario 3: Desktop EL Light
-  test('My Decks - With Content - Desktop EL Light', async ({ page }, testInfo) => {
+  // Scenario 3: Desktop RU Light
+  test('My Decks - With Content - Desktop RU Light', async ({ page }, testInfo) => {
     await page.setViewportSize(VIEWPORTS.desktop);
     await setTheme(page, 'light');
-    await setLanguage(page, 'el');
+    await setLanguage(page, 'ru');
     await page.goto('/my-decks');
     await page.reload(); // Reload to apply language
     await waitForPageReady(page, '[data-testid="my-decks-title"]');
     await page.waitForTimeout(1000);
 
-    await takeSnapshot(page, 'My Decks - With Content - Desktop EL Light', testInfo);
+    await takeSnapshot(page, 'My Decks - With Content - Desktop RU Light', testInfo);
   });
 
   // Scenario 4: Tablet EN Light
@@ -194,17 +194,17 @@ test.describe('My Decks - Empty State Visual Tests', () => {
     await takeSnapshot(page, 'My Decks - Empty State - Desktop EN Dark', testInfo);
   });
 
-  // Scenario 10: Desktop EL Light - Empty
-  test('My Decks - Empty State - Desktop EL Light', async ({ page }, testInfo) => {
+  // Scenario 10: Desktop RU Light - Empty
+  test('My Decks - Empty State - Desktop RU Light', async ({ page }, testInfo) => {
     await page.setViewportSize(VIEWPORTS.desktop);
     await setTheme(page, 'light');
-    await setLanguage(page, 'el');
+    await setLanguage(page, 'ru');
     await page.goto('/my-decks');
     await page.reload();
     await waitForPageReady(page, '[data-testid="my-decks-title"]');
     await page.waitForTimeout(500);
 
-    await takeSnapshot(page, 'My Decks - Empty State - Desktop EL Light', testInfo);
+    await takeSnapshot(page, 'My Decks - Empty State - Desktop RU Light', testInfo);
   });
 
   // Scenario 11: Tablet EN Light - Empty
