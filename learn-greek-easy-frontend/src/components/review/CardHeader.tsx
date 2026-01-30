@@ -54,7 +54,7 @@ export function CardHeader({ card, onFlip }: CardHeaderProps) {
       </div>
       <h2 className="mt-4 text-4xl font-bold">{card.word || card.front}</h2>
       {card.pronunciation && (
-        <p className="mt-2 text-lg italic text-muted-foreground">[{card.pronunciation}]</p>
+        <p className="mt-2 text-lg italic text-muted-foreground">{card.pronunciation}</p>
       )}
       <p className="mt-4 text-sm text-muted-foreground">{t('session.clickToReveal')}</p>
     </div>
