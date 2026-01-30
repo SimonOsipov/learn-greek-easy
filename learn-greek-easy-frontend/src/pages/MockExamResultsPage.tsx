@@ -39,7 +39,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useQuestionLanguage } from '@/hooks/useQuestionLanguage';
-import type { SupportedLanguage } from '@/i18n';
 import {
   trackMockExamResultsViewed,
   trackMockExamIncorrectReviewExpanded,
@@ -49,6 +48,7 @@ import log from '@/lib/logger';
 import { cn } from '@/lib/utils';
 import { useMockExamSessionStore } from '@/stores/mockExamSessionStore';
 import { useXPStore } from '@/stores/xpStore';
+import type { CultureLanguage } from '@/types/culture';
 import type { MockExamQuestionState } from '@/types/mockExamSession';
 
 /** Option letter mapping */
@@ -59,7 +59,7 @@ const OPTION_LETTERS = ['A', 'B', 'C', 'D'] as const;
  */
 function getLocalizedText(
   text: { el: string; en: string; ru: string },
-  language: SupportedLanguage
+  language: CultureLanguage
 ): string {
   return text[language] || text.en || '';
 }

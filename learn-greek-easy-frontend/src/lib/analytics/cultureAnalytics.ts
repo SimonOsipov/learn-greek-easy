@@ -10,7 +10,7 @@
 
 import posthog from 'posthog-js';
 
-import type { SupportedLanguage } from '@/i18n';
+import type { CultureLanguage } from '@/types/culture';
 
 // ============================================================================
 // Type Interfaces
@@ -120,8 +120,8 @@ export function trackCultureSessionAbandoned(properties: CultureSessionAbandoned
  * @param toLang - New language code
  */
 export function trackCultureLanguageChanged(
-  fromLang: SupportedLanguage,
-  toLang: SupportedLanguage
+  fromLang: CultureLanguage,
+  toLang: CultureLanguage
 ): void {
   if (typeof posthog?.capture === 'function') {
     posthog.capture('culture_language_changed', {

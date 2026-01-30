@@ -6,9 +6,9 @@ import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import type { SupportedLanguage } from '@/i18n';
 import { trackNewsSourceLinkClicked } from '@/lib/analytics';
 import { cn } from '@/lib/utils';
+import type { CultureLanguage } from '@/types/culture';
 
 /**
  * Props for QuestionFeedback component
@@ -22,14 +22,14 @@ export interface QuestionFeedbackProps {
     /** Option label: "A", "B", "C", or "D" */
     label: string;
     /** Multilingual option text */
-    text: Record<SupportedLanguage, string>;
+    text: Record<CultureLanguage, string>;
   };
 
   /** XP earned for this answer (retained for analytics, not displayed in UI) */
   xpEarned: number;
 
   /** Current display language for the correct answer text */
-  language: SupportedLanguage;
+  language: CultureLanguage;
 
   /** Callback when user clicks "Next Question" or "View Summary" */
   onNextQuestion: () => void;

@@ -10,11 +10,28 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import type { SupportedLanguage } from '@/i18n';
-import { LANGUAGE_OPTIONS } from '@/i18n/types';
 import { trackCultureLanguageChanged } from '@/lib/analytics';
 import log from '@/lib/logger';
 import { cn } from '@/lib/utils';
+import type { CultureLanguage } from '@/types/culture';
+
+/**
+ * Language options for culture content (includes Greek for question content).
+ * This is separate from UI language options because culture questions
+ * support Greek content even though the UI doesn't have Greek translations.
+ */
+interface CultureLanguageOption {
+  code: CultureLanguage;
+  name: string;
+  nativeName: string;
+  flag: string;
+}
+
+const CULTURE_LANGUAGE_OPTIONS: CultureLanguageOption[] = [
+  { code: 'el', name: 'Greek', nativeName: 'Ελληνικά', flag: '🇬🇷' },
+  { code: 'en', name: 'English', nativeName: 'English', flag: '🇬🇧' },
+  { code: 'ru', name: 'Russian', nativeName: 'Русский', flag: '🇷🇺' },
+];
 
 /**
  * Storage key for culture question language preference.
@@ -27,10 +44,10 @@ const CULTURE_LANGUAGE_KEY = 'culture_question_language';
  */
 export interface LanguageSelectorProps {
   /** Current selected language */
-  value: SupportedLanguage;
+  value: CultureLanguage;
 
   /** Callback when language changes */
-  onChange: (lang: SupportedLanguage) => void;
+  onChange: (lang: CultureLanguage) => void;
 
   /** Display variant: buttons (default) or dropdown */
   variant?: 'buttons' | 'dropdown';
@@ -48,8 +65,8 @@ export interface LanguageSelectorProps {
 /**
  * Get display configuration for a language
  */
-function getLanguageDisplay(code: SupportedLanguage) {
-  const option = LANGUAGE_OPTIONS.find((opt) => opt.code === code);
+function getLanguageDisplay(code: CultureLanguage) {
+  const option = CULTURE_LANGUAGE_OPTIONS.find((opt) => opt.code === code);
   return {
     code: code.toUpperCase(),
     name: option?.nativeName || code,
@@ -104,7 +121,7 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
    * Persists to localStorage, tracks analytics, and calls onChange.
    */
   const handleSelect = useCallback(
-    (lang: SupportedLanguage) => {
+    (lang: CultureLanguage) => {
       if (lang === value) return;
 
       // Track analytics event
@@ -122,7 +139,7 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
     [value, onChange]
   );
 
-  const languages: SupportedLanguage[] = ['el', 'en', 'ru'];
+  const languages: CultureLanguage[] = ['el', 'en', 'ru'];
 
   // Size classes
   const sizeClasses = {
