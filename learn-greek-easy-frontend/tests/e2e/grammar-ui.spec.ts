@@ -299,24 +299,31 @@ test.describe('Grammar UI in Flashcard Review', () => {
       const badge = page.locator('[data-testid="part-of-speech-badge"]');
 
       for (let i = 0; i < 10 && !foundNoun; i++) {
-        await expect(badge).toBeVisible();
-        const hasBlue = await badge.evaluate((el) => el.classList.contains('bg-blue-500'));
+        // First check if badge is visible (some cards don't have part_of_speech)
+        const isBadgeVisible = await badge.isVisible().catch(() => false);
 
-        if (hasBlue) {
-          foundNoun = true;
-          await flipCard(page);
+        if (isBadgeVisible) {
+          const hasBlue = await badge.evaluate((el) => el.classList.contains('bg-blue-500'));
 
-          // Verify declension table structure - should have 4 case rows
-          // Each case row has a label: Nominative, Genitive, Accusative, Vocative
-          // These are translated, but we can check for the table structure
+          if (hasBlue) {
+            foundNoun = true;
+            await flipCard(page);
 
-          // The table has a grid layout with 3 columns (case label, singular, plural)
-          const tableRows = page.locator('.grid.grid-cols-3');
-          const rowCount = await tableRows.count();
+            // Verify declension table structure - should have 4 case rows
+            // Each case row has a label: Nominative, Genitive, Accusative, Vocative
+            // These are translated, but we can check for the table structure
 
-          // Should have at least 5 rows: 1 header + 4 data rows
-          expect(rowCount).toBeGreaterThanOrEqual(5);
-        } else {
+            // The table has a grid layout with 3 columns (case label, singular, plural)
+            const tableRows = page.locator('.grid.grid-cols-3');
+            const rowCount = await tableRows.count();
+
+            // Should have at least 5 rows: 1 header + 4 data rows
+            expect(rowCount).toBeGreaterThanOrEqual(5);
+          }
+        }
+
+        // If not the right card type, move to next
+        if (!foundNoun) {
           await flipCard(page);
           await rateCardAndContinue(page);
 
@@ -338,26 +345,33 @@ test.describe('Grammar UI in Flashcard Review', () => {
       const badge = page.locator('[data-testid="part-of-speech-badge"]');
 
       for (let i = 0; i < 10 && !foundNoun; i++) {
-        await expect(badge).toBeVisible();
-        const hasBlue = await badge.evaluate((el) => el.classList.contains('bg-blue-500'));
+        // First check if badge is visible (some cards don't have part_of_speech)
+        const isBadgeVisible = await badge.isVisible().catch(() => false);
 
-        if (hasBlue) {
-          foundNoun = true;
+        if (isBadgeVisible) {
+          const hasBlue = await badge.evaluate((el) => el.classList.contains('bg-blue-500'));
 
-          // Gender label should be in the card header (before flip)
-          // It's displayed as text-muted-foreground in the same row as the badge
-          const headerRow = page
-            .locator('[data-testid="flashcard"]')
-            .locator('.flex.items-center.justify-between')
-            .first();
+          if (hasBlue) {
+            foundNoun = true;
 
-          // Look for gender text (Masculine, Feminine, Neuter - translated)
-          const genderText = headerRow.locator('.text-muted-foreground');
-          const isGenderVisible = await genderText.isVisible().catch(() => false);
+            // Gender label should be in the card header (before flip)
+            // It's displayed as text-muted-foreground in the same row as the badge
+            const headerRow = page
+              .locator('[data-testid="flashcard"]')
+              .locator('.flex.items-center.justify-between')
+              .first();
 
-          // Gender should be visible for noun cards
-          expect(isGenderVisible).toBe(true);
-        } else {
+            // Look for gender text (Masculine, Feminine, Neuter - translated)
+            const genderText = headerRow.locator('.text-muted-foreground');
+            const isGenderVisible = await genderText.isVisible().catch(() => false);
+
+            // Gender should be visible for noun cards
+            expect(isGenderVisible).toBe(true);
+          }
+        }
+
+        // If not the right card type, move to next
+        if (!foundNoun) {
           await flipCard(page);
           await rateCardAndContinue(page);
 
@@ -381,20 +395,27 @@ test.describe('Grammar UI in Flashcard Review', () => {
       const badge = page.locator('[data-testid="part-of-speech-badge"]');
 
       for (let i = 0; i < 10 && !foundVerb; i++) {
-        await expect(badge).toBeVisible();
-        const hasGreen = await badge.evaluate((el) => el.classList.contains('bg-green-500'));
+        // First check if badge is visible (some cards don't have part_of_speech)
+        const isBadgeVisible = await badge.isVisible().catch(() => false);
 
-        if (hasGreen) {
-          foundVerb = true;
-          await flipCard(page);
+        if (isBadgeVisible) {
+          const hasGreen = await badge.evaluate((el) => el.classList.contains('bg-green-500'));
 
-          // Verb conjugation grid has 6 columns (person label + 5 tenses)
-          const gridRows = page.locator('.grid.grid-cols-6');
-          const rowCount = await gridRows.count();
+          if (hasGreen) {
+            foundVerb = true;
+            await flipCard(page);
 
-          // Should have at least 7 rows: 1 header + 6 person rows
-          expect(rowCount).toBeGreaterThanOrEqual(7);
-        } else {
+            // Verb conjugation grid has 6 columns (person label + 5 tenses)
+            const gridRows = page.locator('.grid.grid-cols-6');
+            const rowCount = await gridRows.count();
+
+            // Should have at least 7 rows: 1 header + 6 person rows
+            expect(rowCount).toBeGreaterThanOrEqual(7);
+          }
+        }
+
+        // If not the right card type, move to next
+        if (!foundVerb) {
           await flipCard(page);
           await rateCardAndContinue(page);
 
@@ -416,19 +437,26 @@ test.describe('Grammar UI in Flashcard Review', () => {
       const badge = page.locator('[data-testid="part-of-speech-badge"]');
 
       for (let i = 0; i < 10 && !foundVerb; i++) {
-        await expect(badge).toBeVisible();
-        const hasGreen = await badge.evaluate((el) => el.classList.contains('bg-green-500'));
+        // First check if badge is visible (some cards don't have part_of_speech)
+        const isBadgeVisible = await badge.isVisible().catch(() => false);
 
-        if (hasGreen) {
-          foundVerb = true;
-          await flipCard(page);
+        if (isBadgeVisible) {
+          const hasGreen = await badge.evaluate((el) => el.classList.contains('bg-green-500'));
 
-          // Imperative section has a 2-column grid layout
-          const imperativeGrid = page.locator('.grid.grid-cols-2');
-          const isImperativeVisible = await imperativeGrid.first().isVisible().catch(() => false);
+          if (hasGreen) {
+            foundVerb = true;
+            await flipCard(page);
 
-          expect(isImperativeVisible).toBe(true);
-        } else {
+            // Imperative section has a 2-column grid layout
+            const imperativeGrid = page.locator('.grid.grid-cols-2');
+            const isImperativeVisible = await imperativeGrid.first().isVisible().catch(() => false);
+
+            expect(isImperativeVisible).toBe(true);
+          }
+        }
+
+        // If not the right card type, move to next
+        if (!foundVerb) {
           await flipCard(page);
           await rateCardAndContinue(page);
 
@@ -450,24 +478,31 @@ test.describe('Grammar UI in Flashcard Review', () => {
       const badge = page.locator('[data-testid="part-of-speech-badge"]');
 
       for (let i = 0; i < 10 && !foundVerb; i++) {
-        await expect(badge).toBeVisible();
-        const hasGreen = await badge.evaluate((el) => el.classList.contains('bg-green-500'));
+        // First check if badge is visible (some cards don't have part_of_speech)
+        const isBadgeVisible = await badge.isVisible().catch(() => false);
 
-        if (hasGreen) {
-          foundVerb = true;
+        if (isBadgeVisible) {
+          const hasGreen = await badge.evaluate((el) => el.classList.contains('bg-green-500'));
 
-          // Voice label should be in the card header
-          const headerRow = page
-            .locator('[data-testid="flashcard"]')
-            .locator('.flex.items-center.justify-between')
-            .first();
+          if (hasGreen) {
+            foundVerb = true;
 
-          const voiceText = headerRow.locator('.text-muted-foreground');
-          const isVoiceVisible = await voiceText.isVisible().catch(() => false);
+            // Voice label should be in the card header
+            const headerRow = page
+              .locator('[data-testid="flashcard"]')
+              .locator('.flex.items-center.justify-between')
+              .first();
 
-          // Voice should be visible for verb cards (Active/Passive)
-          expect(isVoiceVisible).toBe(true);
-        } else {
+            const voiceText = headerRow.locator('.text-muted-foreground');
+            const isVoiceVisible = await voiceText.isVisible().catch(() => false);
+
+            // Voice should be visible for verb cards (Active/Passive)
+            expect(isVoiceVisible).toBe(true);
+          }
+        }
+
+        // If not the right card type, move to next
+        if (!foundVerb) {
           await flipCard(page);
           await rateCardAndContinue(page);
 
@@ -491,24 +526,31 @@ test.describe('Grammar UI in Flashcard Review', () => {
       const badge = page.locator('[data-testid="part-of-speech-badge"]');
 
       for (let i = 0; i < 10 && !foundAdjective; i++) {
-        await expect(badge).toBeVisible();
-        const hasPurple = await badge.evaluate((el) => el.classList.contains('bg-purple-500'));
+        // First check if badge is visible (some cards don't have part_of_speech)
+        const isBadgeVisible = await badge.isVisible().catch(() => false);
 
-        if (hasPurple) {
-          foundAdjective = true;
-          await flipCard(page);
+        if (isBadgeVisible) {
+          const hasPurple = await badge.evaluate((el) => el.classList.contains('bg-purple-500'));
 
-          // Adjective has 3 gender tables arranged in a md:grid-cols-3 grid
-          const genderGrid = page.locator('.grid.gap-4.md\\:grid-cols-3');
-          await expect(genderGrid).toBeVisible();
+          if (hasPurple) {
+            foundAdjective = true;
+            await flipCard(page);
 
-          // Each gender table has a primary-colored header
-          const genderHeaders = page.locator('.bg-primary\\/10');
-          const headerCount = await genderHeaders.count();
+            // Adjective has 3 gender tables arranged in a md:grid-cols-3 grid
+            const genderGrid = page.locator('.grid.gap-4.md\\:grid-cols-3');
+            await expect(genderGrid).toBeVisible();
 
-          // Should have at least 3 gender headers + 1 comparison section
-          expect(headerCount).toBeGreaterThanOrEqual(3);
-        } else {
+            // Each gender table has a primary-colored header
+            const genderHeaders = page.locator('.bg-primary\\/10');
+            const headerCount = await genderHeaders.count();
+
+            // Should have at least 3 gender headers + 1 comparison section
+            expect(headerCount).toBeGreaterThanOrEqual(3);
+          }
+        }
+
+        // If not the right card type, move to next
+        if (!foundAdjective) {
           await flipCard(page);
           await rateCardAndContinue(page);
 
@@ -530,17 +572,24 @@ test.describe('Grammar UI in Flashcard Review', () => {
       const badge = page.locator('[data-testid="part-of-speech-badge"]');
 
       for (let i = 0; i < 10 && !foundAdjective; i++) {
-        await expect(badge).toBeVisible();
-        const hasPurple = await badge.evaluate((el) => el.classList.contains('bg-purple-500'));
+        // First check if badge is visible (some cards don't have part_of_speech)
+        const isBadgeVisible = await badge.isVisible().catch(() => false);
 
-        if (hasPurple) {
-          foundAdjective = true;
-          await flipCard(page);
+        if (isBadgeVisible) {
+          const hasPurple = await badge.evaluate((el) => el.classList.contains('bg-purple-500'));
 
-          // Comparison section exists with 2 columns for comparative/superlative
-          const comparisonSection = page.locator('.grid.grid-cols-2').last();
-          await expect(comparisonSection).toBeVisible();
-        } else {
+          if (hasPurple) {
+            foundAdjective = true;
+            await flipCard(page);
+
+            // Comparison section exists with 2 columns for comparative/superlative
+            const comparisonSection = page.locator('.grid.grid-cols-2').last();
+            await expect(comparisonSection).toBeVisible();
+          }
+        }
+
+        // If not the right card type, move to next
+        if (!foundAdjective) {
           await flipCard(page);
           await rateCardAndContinue(page);
 
@@ -564,21 +613,28 @@ test.describe('Grammar UI in Flashcard Review', () => {
       const badge = page.locator('[data-testid="part-of-speech-badge"]');
 
       for (let i = 0; i < 10 && !foundAdverb; i++) {
-        await expect(badge).toBeVisible();
-        const hasOrange = await badge.evaluate((el) => el.classList.contains('bg-orange-500'));
+        // First check if badge is visible (some cards don't have part_of_speech)
+        const isBadgeVisible = await badge.isVisible().catch(() => false);
 
-        if (hasOrange) {
-          foundAdverb = true;
-          await flipCard(page);
+        if (isBadgeVisible) {
+          const hasOrange = await badge.evaluate((el) => el.classList.contains('bg-orange-500'));
 
-          // Adverb has a simple 2-column table with 3 rows
-          const formRows = page.locator('.grid.grid-cols-2');
-          const rowCount = await formRows.count();
+          if (hasOrange) {
+            foundAdverb = true;
+            await flipCard(page);
 
-          // Should have at least 3 rows (positive, comparative, superlative)
-          // Plus other 2-column grids might exist (translations, imperative for other cards)
-          expect(rowCount).toBeGreaterThanOrEqual(1);
-        } else {
+            // Adverb has a simple 2-column table with 3 rows
+            const formRows = page.locator('.grid.grid-cols-2');
+            const rowCount = await formRows.count();
+
+            // Should have at least 3 rows (positive, comparative, superlative)
+            // Plus other 2-column grids might exist (translations, imperative for other cards)
+            expect(rowCount).toBeGreaterThanOrEqual(1);
+          }
+        }
+
+        // If not the right card type, move to next
+        if (!foundAdverb) {
           await flipCard(page);
           await rateCardAndContinue(page);
 
