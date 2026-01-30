@@ -18,7 +18,7 @@ interface CardContentProps {
 }
 
 export function CardContent({ card, isFlipped }: CardContentProps) {
-  const { t } = useTranslation('review');
+  const { t, i18n } = useTranslation('review');
   const { flipCard } = useReviewStore();
   const partOfSpeech = card.part_of_speech;
 
@@ -28,6 +28,19 @@ export function CardContent({ card, isFlipped }: CardContentProps) {
   const adjectiveData = card.adjective_data;
   const adverbData = card.adverb_data;
   const examples = card.examples;
+
+  // Get translation based on UI language with fallback
+  const getTranslation = (): string => {
+    const english = card.translation || card.back;
+    const russian = card.back_text_ru;
+
+    if (i18n.language === 'ru') {
+      return russian || english || '';
+    }
+    return english || russian || '';
+  };
+
+  const translation = getTranslation();
 
   const renderGrammarTable = () => {
     switch (partOfSpeech) {
@@ -71,20 +84,9 @@ export function CardContent({ card, isFlipped }: CardContentProps) {
     >
       {/* Left column: Translations + Examples */}
       <div className="space-y-4">
-        {/* Translations */}
+        {/* Translation */}
         <div className="rounded-lg border border-border bg-card p-4">
-          <div className="space-y-2">
-            <p>
-              <span className="text-sm font-medium text-muted-foreground">EN: </span>
-              <span>{card.translation || card.back}</span>
-            </p>
-            {card.back_text_ru && (
-              <p>
-                <span className="text-sm font-medium text-muted-foreground">RU: </span>
-                <span>{card.back_text_ru}</span>
-              </p>
-            )}
-          </div>
+          {translation && <p className="text-base">{translation}</p>}
         </div>
 
         {/* Examples */}
