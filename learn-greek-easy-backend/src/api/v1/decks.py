@@ -103,11 +103,22 @@ async def list_decks(
     decks = await repo.list_active(skip=skip, limit=page_size, level=level)
     total = await repo.count_active(level=level)
 
+    # Get card counts for all decks in batch
+    deck_ids = [deck.id for deck in decks]
+    card_counts = await repo.get_batch_card_counts(deck_ids)
+
+    # Build response with card counts
+    deck_responses = []
+    for deck in decks:
+        deck_dict = DeckResponse.model_validate(deck).model_dump()
+        deck_dict["card_count"] = card_counts.get(deck.id, 0)
+        deck_responses.append(DeckResponse(**deck_dict))
+
     return DeckListResponse(
         total=total,
         page=page,
         page_size=page_size,
-        decks=[DeckResponse.model_validate(deck) for deck in decks],
+        decks=deck_responses,
     )
 
 
@@ -272,12 +283,23 @@ async def search_decks(
     decks = await repo.search(query_text=q, skip=skip, limit=page_size)
     total = await repo.count_search(query_text=q)
 
+    # Get card counts for all decks in batch
+    deck_ids = [deck.id for deck in decks]
+    card_counts = await repo.get_batch_card_counts(deck_ids)
+
+    # Build response with card counts
+    deck_responses = []
+    for deck in decks:
+        deck_dict = DeckResponse.model_validate(deck).model_dump()
+        deck_dict["card_count"] = card_counts.get(deck.id, 0)
+        deck_responses.append(DeckResponse(**deck_dict))
+
     return DeckSearchResponse(
         total=total,
         page=page,
         page_size=page_size,
         query=q,
-        decks=[DeckResponse.model_validate(deck) for deck in decks],
+        decks=deck_responses,
     )
 
 
@@ -352,11 +374,22 @@ async def list_my_decks(
     )
     total = await repo.count_user_owned(user_id=current_user.id, level=level)
 
+    # Get card counts for all decks in batch
+    deck_ids = [deck.id for deck in decks]
+    card_counts = await repo.get_batch_card_counts(deck_ids)
+
+    # Build response with card counts
+    deck_responses = []
+    for deck in decks:
+        deck_dict = DeckResponse.model_validate(deck).model_dump()
+        deck_dict["card_count"] = card_counts.get(deck.id, 0)
+        deck_responses.append(DeckResponse(**deck_dict))
+
     return DeckListResponse(
         total=total,
         page=page,
         page_size=page_size,
-        decks=[DeckResponse.model_validate(deck) for deck in decks],
+        decks=deck_responses,
     )
 
 

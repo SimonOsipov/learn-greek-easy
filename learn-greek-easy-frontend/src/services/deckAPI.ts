@@ -30,7 +30,7 @@ export interface DeckResponse {
   level: DeckLevel;
   is_active: boolean;
   is_premium?: boolean;
-  card_count?: number; // Optional - list endpoint may not return this
+  card_count: number; // Always returned by list/search endpoints
   estimated_time_minutes?: number;
   tags?: string[];
   created_at: string;

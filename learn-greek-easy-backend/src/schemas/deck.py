@@ -62,6 +62,7 @@ class DeckResponse(DeckBase):
     id: UUID
     is_active: bool
     is_premium: bool
+    card_count: int = Field(0, ge=0, description="Number of cards in the deck")
     created_at: datetime
     updated_at: datetime
 
