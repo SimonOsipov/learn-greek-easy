@@ -332,7 +332,7 @@ class UserSettings(Base, TimestampMixin):
         String(10),
         nullable=True,
         default=None,
-        comment="ISO 639-1 language code (e.g., 'en', 'el')",
+        comment="ISO 639-1 language code (e.g., 'en', 'ru')",
     )
 
     # Theme preference
