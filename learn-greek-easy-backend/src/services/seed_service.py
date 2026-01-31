@@ -103,6 +103,21 @@ class AnnouncementCampaignSeedData(TypedDict):
     read_by_learner: bool
 
 
+class AdminCardSeedData(TypedDict, total=False):
+    """Type definition for admin vocabulary card seed data items."""
+
+    front_text: str  # Greek word (required)
+    back_text_en: str  # English translation (required)
+    back_text_ru: str  # Russian translation (optional)
+    pronunciation: str  # Pronunciation guide (optional)
+    part_of_speech: PartOfSpeech  # Part of speech (optional)
+    noun_data: dict[str, Any]  # Noun grammar data (optional)
+    verb_data: dict[str, Any]  # Verb grammar data (optional)
+    adjective_data: dict[str, Any]  # Adjective grammar data (optional)
+    adverb_data: dict[str, Any]  # Adverb grammar data (optional)
+    examples: list[dict[str, str]]  # Structured examples (optional)
+
+
 class SeedService:
     """Service for seeding E2E test database with deterministic data.
 
@@ -404,6 +419,166 @@ class SeedService:
             "link_url": None,
             "hours_ago": 168,  # 7 days ago
             "read_by_learner": False,
+        },
+    ]
+
+    # Admin vocabulary cards for E2E testing
+    # Deck 1: 10 cards with varying grammar data completeness
+    # Deck 2: Empty deck for first card creation test
+    ADMIN_CARDS_DECK_NAME = "E2E Vocabulary Cards Test Deck"
+    ADMIN_CARDS_EMPTY_DECK_NAME = "E2E Empty Vocabulary Deck"
+    ADMIN_CARDS: list[AdminCardSeedData] = [
+        # Card 1: Basic card - just front_text and back_text_en (no grammar)
+        {
+            "front_text": "καλημέρα",
+            "back_text_en": "good morning",
+        },
+        # Card 2: Card with back_text_ru
+        {
+            "front_text": "καληνύχτα",
+            "back_text_en": "good night",
+            "back_text_ru": "спокойной ночи",
+        },
+        # Card 3: Card with pronunciation
+        {
+            "front_text": "ευχαριστώ",
+            "back_text_en": "thank you",
+            "back_text_ru": "спасибо",
+            "pronunciation": "ef-ha-ri-STO",
+        },
+        # Card 4: Noun card with partial noun_data (gender: masculine, some declension)
+        {
+            "front_text": "σπίτι",
+            "back_text_en": "house",
+            "back_text_ru": "дом",
+            "pronunciation": "SPI-ti",
+            "part_of_speech": PartOfSpeech.NOUN,
+            "noun_data": {
+                "gender": "neuter",
+                "nominative_singular": "σπίτι",
+                "genitive_singular": "σπιτιού",
+                "accusative_singular": "σπίτι",
+            },
+        },
+        # Card 5: Noun card with full noun_data (all declension fields)
+        {
+            "front_text": "νερό",
+            "back_text_en": "water",
+            "back_text_ru": "вода",
+            "pronunciation": "ne-RO",
+            "part_of_speech": PartOfSpeech.NOUN,
+            "noun_data": {
+                "gender": "neuter",
+                "nominative_singular": "νερό",
+                "genitive_singular": "νερού",
+                "accusative_singular": "νερό",
+                "vocative_singular": "νερό",
+                "nominative_plural": "νερά",
+                "genitive_plural": "νερών",
+                "accusative_plural": "νερά",
+                "vocative_plural": "νερά",
+            },
+        },
+        # Card 6: Verb card with verb_data (voice: active, some conjugations)
+        {
+            "front_text": "τρώω",
+            "back_text_en": "I eat",
+            "back_text_ru": "я ем",
+            "pronunciation": "TRO-o",
+            "part_of_speech": PartOfSpeech.VERB,
+            "verb_data": {
+                "voice": "active",
+                "present_1s": "τρώω",
+                "present_2s": "τρως",
+                "present_3s": "τρώει",
+                "present_1p": "τρώμε",
+                "present_2p": "τρώτε",
+                "present_3p": "τρώνε",
+            },
+        },
+        # Card 7: Verb card with verb_data (voice: passive, different conjugations)
+        {
+            "front_text": "διαβάζομαι",
+            "back_text_en": "I am read",
+            "back_text_ru": "меня читают",
+            "pronunciation": "dhi-a-VA-zo-me",
+            "part_of_speech": PartOfSpeech.VERB,
+            "verb_data": {
+                "voice": "passive",
+                "present_1s": "διαβάζομαι",
+                "present_2s": "διαβάζεσαι",
+                "present_3s": "διαβάζεται",
+                "present_1p": "διαβαζόμαστε",
+                "present_2p": "διαβάζεστε",
+                "present_3p": "διαβάζονται",
+                "past_1s": "διαβάστηκα",
+                "past_2s": "διαβάστηκες",
+                "past_3s": "διαβάστηκε",
+            },
+        },
+        # Card 8: Adjective card with adjective_data (some declension + comparison)
+        {
+            "front_text": "καλός",
+            "back_text_en": "good",
+            "back_text_ru": "хороший",
+            "pronunciation": "ka-LOS",
+            "part_of_speech": PartOfSpeech.ADJECTIVE,
+            "adjective_data": {
+                "masculine_nom_sg": "καλός",
+                "masculine_gen_sg": "καλού",
+                "masculine_acc_sg": "καλό",
+                "feminine_nom_sg": "καλή",
+                "feminine_gen_sg": "καλής",
+                "feminine_acc_sg": "καλή",
+                "neuter_nom_sg": "καλό",
+                "neuter_gen_sg": "καλού",
+                "neuter_acc_sg": "καλό",
+                "comparative": "καλύτερος",
+                "superlative": "κάλλιστος",
+            },
+        },
+        # Card 9: Adverb card with adverb_data (comparative, superlative)
+        {
+            "front_text": "γρήγορα",
+            "back_text_en": "quickly",
+            "back_text_ru": "быстро",
+            "pronunciation": "GHRI-gho-ra",
+            "part_of_speech": PartOfSpeech.ADVERB,
+            "adverb_data": {
+                "comparative": "πιο γρήγορα",
+                "superlative": "γρηγορότατα",
+            },
+        },
+        # Card 10: Card with examples array (2-3 examples)
+        {
+            "front_text": "βιβλίο",
+            "back_text_en": "book",
+            "back_text_ru": "книга",
+            "pronunciation": "vi-VLI-o",
+            "part_of_speech": PartOfSpeech.NOUN,
+            "noun_data": {
+                "gender": "neuter",
+                "nominative_singular": "βιβλίο",
+                "genitive_singular": "βιβλίου",
+                "accusative_singular": "βιβλίο",
+            },
+            "examples": [
+                {
+                    "greek": "Διαβάζω ένα βιβλίο.",
+                    "english": "I am reading a book.",
+                    "russian": "Я читаю книгу.",
+                },
+                {
+                    "greek": "Το βιβλίο είναι στο τραπέζι.",
+                    "english": "The book is on the table.",
+                    "russian": "Книга на столе.",
+                },
+                {
+                    "greek": "Αγόρασα καινούργιο βιβλίο.",
+                    "english": "I bought a new book.",
+                    "russian": "Я купил новую книгу.",
+                },
+            ],
         },
     ]
 
@@ -3944,6 +4119,142 @@ class SeedService:
                 "bug_fix": 4,
                 "announcement": 4,
             },
+        }
+
+    async def seed_admin_cards(self) -> dict[str, Any]:
+        """Seed vocabulary decks and cards for E2E admin testing.
+
+        Creates:
+        - 1 vocabulary deck with 10 cards (varying grammar data completeness)
+        - 1 empty vocabulary deck for first card creation test
+
+        Cards include:
+        - Basic cards (front_text, back_text_en only)
+        - Cards with Russian translations
+        - Cards with pronunciation
+        - Noun cards with partial/full declension data
+        - Verb cards with active/passive voice conjugations
+        - Adjective cards with declension and comparison
+        - Adverb cards with comparison forms
+        - Cards with structured examples
+
+        This method is idempotent - it deletes existing E2E test decks
+        before creating new ones.
+
+        Returns:
+            dict with seeding summary including created decks and cards
+
+        Raises:
+            RuntimeError: If seeding not allowed
+        """
+        self._check_can_seed()
+
+        # Delete existing E2E test decks (idempotent)
+        # First delete cards in those decks (FK constraint)
+        existing_decks = await self.db.execute(
+            select(Deck).where(
+                Deck.name.in_([self.ADMIN_CARDS_DECK_NAME, self.ADMIN_CARDS_EMPTY_DECK_NAME])
+            )
+        )
+        for deck in existing_decks.scalars().all():
+            await self.db.execute(delete(Card).where(Card.deck_id == deck.id))
+        await self.db.execute(
+            delete(Deck).where(
+                Deck.name.in_([self.ADMIN_CARDS_DECK_NAME, self.ADMIN_CARDS_EMPTY_DECK_NAME])
+            )
+        )
+
+        # Create main test deck with 10 cards
+        main_deck = Deck(
+            name=self.ADMIN_CARDS_DECK_NAME,
+            description="E2E test deck with vocabulary cards of varying completeness",
+            level=DeckLevel.A1,
+            is_active=True,
+            is_premium=False,
+        )
+        self.db.add(main_deck)
+        await self.db.flush()
+
+        # Create cards
+        created_cards = []
+        for i, card_data in enumerate(self.ADMIN_CARDS):
+            # Extract grammar data (generate searchable forms if grammar data present)
+            noun_data = card_data.get("noun_data")
+            verb_data = card_data.get("verb_data")
+            adjective_data = card_data.get("adjective_data")
+            adverb_data = card_data.get("adverb_data")
+            examples = card_data.get("examples")
+
+            # Generate searchable forms from grammar data
+            enriched_data: dict[str, Any] = {}
+            if noun_data:
+                enriched_data["noun_data"] = noun_data
+            if verb_data:
+                enriched_data["verb_data"] = verb_data
+            if adjective_data:
+                enriched_data["adjective_data"] = adjective_data
+            if adverb_data:
+                enriched_data["adverb_data"] = adverb_data
+
+            searchable_forms = extract_searchable_forms(enriched_data, card_data["front_text"])
+            searchable_forms_normalized = generate_normalized_forms(searchable_forms)
+
+            card = Card(
+                deck_id=main_deck.id,
+                front_text=card_data["front_text"],
+                back_text_en=card_data["back_text_en"],
+                back_text_ru=card_data.get("back_text_ru"),
+                pronunciation=card_data.get("pronunciation"),
+                part_of_speech=card_data.get("part_of_speech"),
+                level=DeckLevel.A1,
+                noun_data=noun_data,
+                verb_data=verb_data,
+                adjective_data=adjective_data,
+                adverb_data=adverb_data,
+                examples=examples,
+                searchable_forms=searchable_forms if searchable_forms else None,
+                searchable_forms_normalized=(
+                    searchable_forms_normalized if searchable_forms_normalized else None
+                ),
+            )
+            self.db.add(card)
+            created_cards.append(
+                {
+                    "front_text": card_data["front_text"],
+                    "back_text_en": card_data["back_text_en"],
+                    "has_grammar": bool(noun_data or verb_data or adjective_data or adverb_data),
+                    "has_examples": bool(examples),
+                }
+            )
+
+        await self.db.flush()
+
+        # Create empty test deck for first card creation test
+        empty_deck = Deck(
+            name=self.ADMIN_CARDS_EMPTY_DECK_NAME,
+            description="E2E test deck for first card creation testing",
+            level=DeckLevel.A1,
+            is_active=True,
+            is_premium=False,
+        )
+        self.db.add(empty_deck)
+        await self.db.flush()
+
+        return {
+            "success": True,
+            "decks_created": 2,
+            "cards_created": len(created_cards),
+            "main_deck": {
+                "id": str(main_deck.id),
+                "name": self.ADMIN_CARDS_DECK_NAME,
+                "card_count": len(created_cards),
+            },
+            "empty_deck": {
+                "id": str(empty_deck.id),
+                "name": self.ADMIN_CARDS_EMPTY_DECK_NAME,
+                "card_count": 0,
+            },
+            "cards": created_cards,
         }
 
     # =====================

@@ -821,3 +821,53 @@ async def seed_announcements(
         duration_ms=(perf_counter() - start_time) * 1000,
         results=result,
     )
+
+
+@router.post(
+    "/admin-cards",
+    response_model=SeedResultResponse,
+    summary="Seed vocabulary cards for admin testing",
+    description="Create vocabulary decks and cards for E2E testing of the admin vocabulary card UI. "
+    "Creates 2 decks: one with 10 cards of varying completeness, one empty for first card creation. "
+    "This endpoint is idempotent - existing test data is replaced.",
+    dependencies=[Depends(verify_seed_access)],
+)
+async def seed_admin_cards(
+    db: AsyncSession = Depends(get_db),
+) -> SeedResultResponse:
+    """Seed vocabulary cards for admin E2E testing.
+
+    Creates:
+    - 1 deck with 10 vocabulary cards (varying grammar completeness)
+    - 1 empty deck for first card creation testing
+
+    Card types include:
+    - Basic cards (just front_text and back_text_en)
+    - Cards with Russian translations
+    - Cards with pronunciation
+    - Noun cards with partial/full declension
+    - Verb cards with active/passive voice
+    - Adjective cards with declension and comparison
+    - Adverb cards with comparison forms
+    - Cards with structured examples
+
+    This endpoint is idempotent - it replaces existing E2E test decks.
+
+    Returns:
+        SeedResultResponse with deck and card creation results
+    """
+    start_time = perf_counter()
+
+    service = SeedService(db)
+    result = await service.seed_admin_cards()
+    await db.commit()
+
+    duration_ms = (perf_counter() - start_time) * 1000
+
+    return SeedResultResponse(
+        success=result.get("success", False),
+        operation="admin-cards",
+        timestamp=datetime.now(timezone.utc),
+        duration_ms=duration_ms,
+        results=result,
+    )

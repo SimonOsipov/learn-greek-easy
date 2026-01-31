@@ -184,6 +184,7 @@
     "announcements": "Объявления",
     "feedback": "Отзывы",
     "changelog": "История изменений",
+    "bulkUploads": "Массовая загрузка",
     "newsComingSoon": "Скоро",
     "newsComingSoonDescription": "Вкладка Новости обновляется. Скоро появятся новые функции."
   },
@@ -388,6 +389,191 @@
       "createError": "Не удалось создать запись",
       "updateError": "Не удалось обновить запись",
       "deleteError": "Не удалось удалить запись"
+    }
+  },
+  "vocabularyCard": {
+    "frontText": "Греческое слово/фраза",
+    "frontTextPlaceholder": "Введите текст на греческом",
+    "backTextEn": "Перевод на английский",
+    "backTextEnPlaceholder": "Введите перевод на английский",
+    "backTextRu": "Перевод на русский (необязательно)",
+    "backTextRuPlaceholder": "Введите перевод на русский",
+    "pronunciation": "Произношение",
+    "pronunciationPlaceholder": "напр., калимера",
+    "partOfSpeech": "Часть речи",
+    "partOfSpeechPlaceholder": "Выберите часть речи",
+    "level": "Уровень CEFR (переопределение)",
+    "levelPlaceholder": "По умолчанию из колоды",
+    "levelDescription": "Оставьте пустым для использования уровня колоды",
+    "exampleSentence": "Пример предложения (необязательно)",
+    "exampleSentencePlaceholder": "Введите пример на греческом",
+    "partOfSpeechOptions": {
+      "noun": "Существительное",
+      "verb": "Глагол",
+      "adjective": "Прилагательное",
+      "adverb": "Наречие"
+    },
+    "tabs": {
+      "basicInfo": "Основная информация",
+      "grammar": "Грамматика",
+      "examples": "Примеры"
+    },
+    "legacyExampleDeprecated": "Устарело",
+    "legacyExampleHint": "Используйте вкладку Примеры для структурированных примеров",
+    "grammarTab": {
+      "placeholder": "Выберите часть речи во вкладке Основная информация для редактирования грамматики.",
+      "title": "Грамматика"
+    },
+    "examplesTab": {
+      "title": "Примеры",
+      "emptyState": "Примеры не добавлены. Нажмите 'Добавить пример' для создания.",
+      "addButton": "Добавить пример",
+      "greekLabel": "Греческий",
+      "greekPlaceholder": "Введите пример на греческом",
+      "englishLabel": "Английский",
+      "englishPlaceholder": "Введите перевод на английский",
+      "russianLabel": "Русский (необязательно)",
+      "russianPlaceholder": "Введите перевод на русский",
+      "tenseLabel": "Время",
+      "tensePlaceholder": "Выберите время",
+      "removeButton": "Удалить пример"
+    },
+    "grammar": {
+      "noun": {
+        "title": "Склонение существительного",
+        "genderLabel": "Род",
+        "genderPlaceholder": "Выберите род",
+        "genders": {
+          "masculine": "Мужской род",
+          "feminine": "Женский род",
+          "neuter": "Средний род"
+        },
+        "declensionTable": "Таблица склонения",
+        "singular": "Единственное число",
+        "plural": "Множественное число",
+        "cases": {
+          "nominative": "Именительный",
+          "genitive": "Родительный",
+          "accusative": "Винительный",
+          "vocative": "Звательный"
+        }
+      },
+      "verb": {
+        "title": "Спряжение глагола",
+        "voiceLabel": "Залог",
+        "voicePlaceholder": "Выберите залог",
+        "voices": {
+          "active": "Активный залог",
+          "passive": "Пассивный залог"
+        },
+        "tenses": {
+          "present": "Настоящее",
+          "imperfect": "Несовершенный вид",
+          "past": "Прошедшее (Аорист)",
+          "future": "Будущее",
+          "perfect": "Совершенный вид"
+        },
+        "persons": {
+          "firstSingular": "Я",
+          "secondSingular": "Ты",
+          "thirdSingular": "Он/Она/Оно",
+          "firstPlural": "Мы",
+          "secondPlural": "Вы",
+          "thirdPlural": "Они"
+        },
+        "imperative": {
+          "title": "Повелительное наклонение",
+          "singular": "Единственное (ты)",
+          "plural": "Множественное (вы)"
+        }
+      },
+      "adjective": {
+        "title": "Склонение прилагательного",
+        "genders": {
+          "masculine": "Мужской род",
+          "feminine": "Женский род",
+          "neuter": "Средний род"
+        },
+        "singular": "Единственное число",
+        "plural": "Множественное число",
+        "cases": {
+          "nominative": "Именительный",
+          "genitive": "Родительный",
+          "accusative": "Винительный",
+          "vocative": "Звательный"
+        },
+        "comparison": {
+          "title": "Степени сравнения",
+          "comparative": "Сравнительная степень",
+          "comparativePlaceholder": "напр., красивее",
+          "superlative": "Превосходная степень",
+          "superlativePlaceholder": "напр., самый красивый"
+        }
+      },
+      "adverb": {
+        "title": "Степени сравнения наречия",
+        "comparative": "Сравнительная степень",
+        "comparativePlaceholder": "напр., быстрее",
+        "superlative": "Превосходная степень",
+        "superlativePlaceholder": "напр., быстрее всего"
+      }
+    },
+    "createModal": {
+      "title": "Создать карточку словаря",
+      "cancelButton": "Отмена",
+      "createButton": "Создать карточку",
+      "creatingButton": "Создание...",
+      "successTitle": "Карточка создана!",
+      "successMessage": "Карточка словаря успешно создана.",
+      "createAnotherButton": "Создать ещё",
+      "doneButton": "Готово",
+      "cancelConfirmTitle": "Отменить изменения?",
+      "cancelConfirmMessage": "У вас есть несохранённые изменения. Вы уверены, что хотите закрыть?",
+      "cancelConfirmYes": "Отменить",
+      "cancelConfirmNo": "Продолжить редактирование",
+      "errorToast": "Не удалось создать карточку. Попробуйте ещё раз."
+    },
+    "editModal": {
+      "title": "Редактировать карточку словаря",
+      "cancelButton": "Отмена",
+      "saveButton": "Сохранить изменения",
+      "savingButton": "Сохранение...",
+      "loadingError": "Не удалось загрузить данные карточки",
+      "retryButton": "Повторить",
+      "cancelConfirmTitle": "Отменить изменения?",
+      "cancelConfirmMessage": "У вас есть несохранённые изменения. Вы уверены, что хотите закрыть?",
+      "cancelConfirmYes": "Отменить",
+      "cancelConfirmNo": "Продолжить редактирование",
+      "successToast": "Карточка успешно обновлена",
+      "errorToast": "Не удалось обновить карточку. Попробуйте ещё раз."
+    }
+  },
+  "bulkUploads": {
+    "title": "Массовая загрузка карточек",
+    "description": "Загрузите несколько карточек словаря одновременно в формате JSON.",
+    "deckLabel": "Целевая колода",
+    "deckPlaceholder": "Выберите колоду словаря",
+    "jsonLabel": "JSON карточек",
+    "jsonPlaceholder": "Вставьте JSON-массив карточек сюда...",
+    "validateButton": "Проверить и просмотреть",
+    "uploadButton": "Загрузить карточки",
+    "uploadingButton": "Загрузка...",
+    "maxCardsWarning": "Максимум 100 карточек за одну загрузку",
+    "validationErrors": "Ошибки валидации",
+    "previewTitle": "Предварительный просмотр",
+    "totalCards": "Всего карточек",
+    "withGrammar": "С грамматикой",
+    "withExamples": "С примерами",
+    "successToast": "Успешно загружено {{count}} карточек",
+    "errorToast": "Не удалось загрузить карточки. Попробуйте ещё раз.",
+    "invalidJson": "Неверный формат JSON",
+    "noCards": "Карточки не найдены в JSON",
+    "tooManyCards": "Слишком много карточек. Максимум 100.",
+    "grammarCounts": {
+      "nouns": "Сущ.",
+      "verbs": "Глаг.",
+      "adjectives": "Прил.",
+      "adverbs": "Нар."
     }
   }
 }

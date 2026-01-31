@@ -42,6 +42,7 @@ export type {
 // Card API
 export { cardAPI } from './cardAPI';
 export type {
+  CardCreatePayload,
   CardListResponse,
   CardResponse,
   CardSearchResponse,

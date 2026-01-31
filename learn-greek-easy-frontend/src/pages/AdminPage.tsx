@@ -27,6 +27,7 @@ import { useTranslation } from 'react-i18next';
 import {
   AdminFeedbackSection,
   AnnouncementsTab,
+  BulkUploadsTab,
   CardCreateModal,
   ChangelogTab,
   DeckCreateModal,
@@ -556,7 +557,7 @@ AllDecksList.displayName = 'AllDecksList';
 /**
  * Top-level admin tab type
  */
-type AdminTabType = 'decks' | 'news' | 'announcements' | 'changelog' | 'feedback';
+type AdminTabType = 'decks' | 'news' | 'announcements' | 'changelog' | 'bulkUploads' | 'feedback';
 
 /**
  * Admin Page
@@ -1097,25 +1098,32 @@ const AdminPage: React.FC = () => {
       {/* Top-Level Tab Switcher */}
       <div className="w-full" data-testid="admin-tab-switcher">
         <div className="flex gap-2 rounded-lg bg-muted p-1">
-          {(['decks', 'news', 'announcements', 'changelog', 'feedback'] as AdminTabType[]).map(
-            (tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={cn(
-                  'flex-1 rounded-md px-4 py-2 text-sm font-medium transition-all',
-                  activeTab === tab
-                    ? 'bg-background text-foreground shadow-sm'
-                    : 'text-muted-foreground hover:bg-background/50 hover:text-foreground'
-                )}
-                aria-pressed={activeTab === tab}
-                type="button"
-                data-testid={`admin-tab-${tab}`}
-              >
-                {t(`tabs.${tab}`)}
-              </button>
-            )
-          )}
+          {(
+            [
+              'decks',
+              'news',
+              'announcements',
+              'changelog',
+              'bulkUploads',
+              'feedback',
+            ] as AdminTabType[]
+          ).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={cn(
+                'flex-1 rounded-md px-4 py-2 text-sm font-medium transition-all',
+                activeTab === tab
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:bg-background/50 hover:text-foreground'
+              )}
+              aria-pressed={activeTab === tab}
+              type="button"
+              data-testid={`admin-tab-${tab}`}
+            >
+              {t(`tabs.${tab}`)}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -1190,6 +1198,16 @@ const AdminPage: React.FC = () => {
             {t('admin:tabs.changelog')}
           </h2>
           <ChangelogTab />
+        </section>
+      )}
+
+      {/* Bulk Uploads Tab Content */}
+      {activeTab === 'bulkUploads' && (
+        <section aria-labelledby="bulk-uploads-heading">
+          <h2 id="bulk-uploads-heading" className="sr-only">
+            {t('admin:tabs.bulkUploads')}
+          </h2>
+          <BulkUploadsTab />
         </section>
       )}
 

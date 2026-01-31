@@ -219,17 +219,23 @@ export interface CultureDeckListItem {
 // ============================================
 
 /**
+ * Part of speech type
+ */
+export type PartOfSpeech = 'noun' | 'verb' | 'adjective' | 'adverb';
+
+/**
  * Vocabulary card item for admin deck detail view
  */
 export interface AdminVocabularyCard {
   id: string;
   deck_id: string;
   front_text: string;
-  back_text: string;
+  back_text_en: string;
+  back_text_ru: string | null;
   example_sentence: string | null;
   pronunciation: string | null;
-  difficulty: 'easy' | 'medium' | 'hard';
-  order_index: number;
+  part_of_speech: PartOfSpeech | null;
+  level: DeckLevel | null;
   created_at: string;
   updated_at: string;
 }
