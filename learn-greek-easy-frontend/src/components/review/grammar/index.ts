@@ -4,6 +4,8 @@ export { AdverbFormsTable } from './AdverbFormsTable';
 export type { AdverbFormsTableProps } from './AdverbFormsTable';
 export { ExampleSentences } from './ExampleSentences';
 export type { ExampleSentencesProps } from './ExampleSentences';
+export { GenderBadge } from './GenderBadge';
+export type { GenderBadgeProps } from './GenderBadge';
 export { GenderTabs } from './GenderTabs';
 export type { GenderTabsProps } from './GenderTabs';
 export { NounDeclensionTable } from './NounDeclensionTable';
