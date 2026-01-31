@@ -14,7 +14,6 @@
     "clickToReveal": "Нажмите, чтобы показать",
     "flipCardAriaLabel": "Перевернуть карточку, чтобы увидеть перевод",
     "answerRevealed": "Ответ показан",
-    "minRemaining": "Осталось {{minutes}} мин",
     "sessionEndedNoCards": "Сессия завершена без повторения карточек.",
     "earlyPractice": {
       "badge": "Ранняя практика",
