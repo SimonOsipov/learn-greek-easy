@@ -141,8 +141,24 @@ test.describe('Admin Culture Cards - Create from Action Bar', () => {
 // CREATE FROM DECK DETAIL MODAL
 // ============================================================================
 
+/**
+ * Helper to seed culture content (decks and questions)
+ */
+async function seedCultureContent(page: import('@playwright/test').Page): Promise<void> {
+  const apiBaseUrl = process.env.E2E_API_URL || process.env.VITE_API_URL || 'http://localhost:8000';
+  const response = await page.request.post(`${apiBaseUrl}/api/v1/test/seed/culture`);
+  if (!response.ok()) {
+    console.warn('[TEST] Culture seeding failed, tests may use existing data');
+  }
+}
+
 test.describe('Admin Culture Cards - Create from Deck Detail', () => {
   test.use({ storageState: ADMIN_AUTH });
+
+  test.beforeEach(async ({ page }) => {
+    // Seed culture decks and questions to ensure test data exists
+    await seedCultureContent(page);
+  });
 
   test('Create card from deck detail modal', async ({ page }) => {
     // Navigate to admin panel
@@ -161,41 +177,51 @@ test.describe('Admin Culture Cards - Create from Deck Detail', () => {
       has: page.locator('text=/culture/i'),
     }).first();
 
-    // If no visible culture deck row, we need to find it differently
-    // Click on view details button for any deck with culture type
-    const viewDetailBtn = page.locator('button').filter({ hasText: /view/i }).first();
-
-    // Alternative: click directly on a deck row to open detail modal
-    const anyDeckRow = page.locator('[data-testid^="deck-row-"]').first();
-    if (await anyDeckRow.isVisible()) {
-      await anyDeckRow.click();
+    // Try culture deck first, fall back to any deck if not found
+    let clickedCultureDeck = false;
+    if (await cultureDeckRow.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await cultureDeckRow.click();
+      clickedCultureDeck = true;
     } else {
-      // Fallback: Skip if no decks available
-      test.skip();
-      return;
+      // Try any deck row as fallback
+      const anyDeckRow = page.locator('[data-testid^="deck-row-"]').first();
+      if (await anyDeckRow.isVisible()) {
+        await anyDeckRow.click();
+      } else {
+        // No decks available
+        test.skip();
+        return;
+      }
     }
 
     // Deck detail modal should open
     const detailModal = page.getByTestId('deck-detail-modal');
     await expect(detailModal).toBeVisible({ timeout: 5000 });
 
-    // Check if this is a culture deck (has "Create Card" button)
+    // Click "Create Card" button (available for both culture and vocabulary decks)
     const createCardBtn = page.getByTestId('create-card-btn');
-    const isNotCultureDeck = await createCardBtn.isHidden().catch(() => true);
+    await expect(createCardBtn).toBeVisible({ timeout: 3000 });
+    await createCardBtn.click();
 
-    if (isNotCultureDeck) {
-      // Close modal and try to find a culture deck
+    // Wait for either culture or vocabulary create modal to appear
+    // Culture decks open card-create-modal, vocabulary decks open vocabulary-card-create-modal
+    const cultureCreateModal = page.getByTestId('card-create-modal');
+    const vocabCreateModal = page.getByTestId('vocabulary-card-create-modal');
+
+    // Check which modal opened
+    const isCultureModal = await cultureCreateModal.isVisible({ timeout: 3000 }).catch(() => false);
+
+    if (!isCultureModal) {
+      // This is a vocabulary deck, not a culture deck - close and skip
+      await page.keyboard.press('Escape');
+      await page.waitForTimeout(500);
       await page.getByTestId('deck-detail-close').click();
-      await expect(detailModal).not.toBeVisible();
       test.skip();
       return;
     }
 
-    // Click "Create Card" button in deck detail modal
-    await createCardBtn.click();
-
-    // Card create modal should open
-    const createModal = page.getByTestId('card-create-modal');
+    // Culture card create modal is open
+    const createModal = cultureCreateModal;
     await expect(createModal).toBeVisible({ timeout: 5000 });
 
     // Fill the culture card form
