@@ -119,30 +119,27 @@ export function CardContent({ card, isFlipped }: CardContentProps) {
       }
       aria-label={!isFlipped ? t('session.clickToReveal') : undefined}
       className={cn(
-        'grid gap-6 transition-[filter] duration-200 md:grid-cols-2',
+        'flex flex-col gap-6 transition-[filter] duration-200',
         !isFlipped && 'cursor-pointer select-none blur-md'
       )}
     >
-      {/* Left column: Translations + Examples */}
-      <div className="space-y-4">
-        {/* Translation */}
-        <div className="rounded-lg border border-border bg-card p-4">
-          {translation && <p className="text-base">{translation}</p>}
-        </div>
-
-        {/* Examples */}
-        {examples && examples.length > 0 && (
-          <div>
-            <h3 className="mb-2 text-sm font-medium text-muted-foreground">
-              {t('grammar.examples.title')}
-            </h3>
-            <ExampleSentences key={card.id} examples={examples} />
-          </div>
-        )}
+      {/* Translation */}
+      <div className="rounded-lg border border-border bg-card p-4">
+        {translation && <p className="text-base">{translation}</p>}
       </div>
 
-      {/* Right column: Grammar tables */}
-      <div>{grammarTable}</div>
+      {/* Grammar table */}
+      {grammarTable}
+
+      {/* Examples */}
+      {examples && examples.length > 0 && (
+        <div>
+          <h3 className="mb-2 text-sm font-medium text-muted-foreground">
+            {t('grammar.examples.title')}
+          </h3>
+          <ExampleSentences key={card.id} examples={examples} />
+        </div>
+      )}
     </div>
   );
 }
