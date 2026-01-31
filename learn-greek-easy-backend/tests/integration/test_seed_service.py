@@ -209,13 +209,13 @@ class TestSeedServiceTruncation:
         await db_session.commit()
 
         assert result["success"] is True
-        # 22 tables: mock_exam_answers, mock_exam_sessions, news_items,
+        # 23 tables: mock_exam_answers, mock_exam_sessions, news_items,
         # xp_transactions, user_achievements, user_xp, achievements,
-        # notifications, announcement_campaigns, culture_question_stats,
-        # culture_questions, culture_decks, reviews, card_statistics,
-        # user_deck_progress, feedback_votes, feedback, refresh_tokens,
-        # user_settings, cards, users, decks
-        assert len(result["truncated_tables"]) == 22
+        # notifications, announcement_campaigns, changelog_entries,
+        # culture_question_stats, culture_questions, culture_decks,
+        # reviews, card_statistics, user_deck_progress, feedback_votes,
+        # feedback, refresh_tokens, user_settings, cards, users, decks
+        assert len(result["truncated_tables"]) == 23
 
 
 # ============================================================================
