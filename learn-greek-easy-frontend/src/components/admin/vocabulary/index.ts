@@ -9,5 +9,8 @@ export type { ExamplesTabProps } from './ExamplesTab';
 export { GrammarTab } from './GrammarTab';
 export type { GrammarTabProps } from './GrammarTab';
 
+export { VocabularyCardCreateModal } from './VocabularyCardCreateModal';
+export type { VocabularyCardCreateModalProps } from './VocabularyCardCreateModal';
+
 // Grammar forms
 export * from './grammar';

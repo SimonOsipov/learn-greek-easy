@@ -92,6 +92,27 @@ export interface SearchCardsParams {
   page_size?: number;
 }
 
+/**
+ * Payload for creating a vocabulary card
+ *
+ * Matches the CardCreate schema in the backend.
+ */
+export interface CardCreatePayload {
+  deck_id: string;
+  front_text: string;
+  back_text_en: string;
+  back_text_ru?: string | null;
+  example_sentence?: string | null;
+  pronunciation?: string | null;
+  part_of_speech?: PartOfSpeech | null;
+  level?: DeckLevel | null;
+  examples?: Example[] | null;
+  noun_data?: NounData | null;
+  verb_data?: VerbData | null;
+  adjective_data?: AdjectiveData | null;
+  adverb_data?: AdverbData | null;
+}
+
 // ============================================
 // Card API Methods
 // ============================================
@@ -127,5 +148,14 @@ export const cardAPI = {
    */
   getById: async (cardId: string): Promise<CardResponse> => {
     return api.get<CardResponse>(`/api/v1/cards/${cardId}`);
+  },
+
+  /**
+   * Create a new vocabulary card
+   *
+   * Requires superuser privileges.
+   */
+  create: async (data: CardCreatePayload): Promise<CardResponse> => {
+    return api.post<CardResponse>('/api/v1/cards', data);
   },
 };

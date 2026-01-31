@@ -506,6 +506,21 @@
         "superlative": "Superlative",
         "superlativePlaceholder": "e.g., most quickly"
       }
+    },
+    "createModal": {
+      "title": "Create Vocabulary Card",
+      "cancelButton": "Cancel",
+      "createButton": "Create Card",
+      "creatingButton": "Creating...",
+      "successTitle": "Card Created!",
+      "successMessage": "The vocabulary card has been created successfully.",
+      "createAnotherButton": "Create Another",
+      "doneButton": "Done",
+      "cancelConfirmTitle": "Discard Changes?",
+      "cancelConfirmMessage": "You have unsaved changes. Are you sure you want to close?",
+      "cancelConfirmYes": "Discard",
+      "cancelConfirmNo": "Keep Editing",
+      "errorToast": "Failed to create card. Please try again."
     }
   }
 }
