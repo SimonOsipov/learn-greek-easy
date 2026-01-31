@@ -558,6 +558,12 @@
     "errorToast": "Failed to upload cards. Please try again.",
     "invalidJson": "Invalid JSON format",
     "noCards": "No cards found in JSON",
-    "tooManyCards": "Too many cards. Maximum is 100."
+    "tooManyCards": "Too many cards. Maximum is 100.",
+    "grammarCounts": {
+      "nouns": "Nouns",
+      "verbs": "Verbs",
+      "adjectives": "Adj",
+      "adverbs": "Adv"
+    }
   }
 }

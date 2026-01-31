@@ -509,18 +509,28 @@ export const BulkUploadsTab: React.FC = () => {
                       </p>
                       <p className="text-sm">
                         {previewSummary.grammarCounts.nouns > 0 && (
-                          <span className="mr-2">Nouns: {previewSummary.grammarCounts.nouns}</span>
+                          <span className="mr-2">
+                            {t('bulkUploads.grammarCounts.nouns')}:{' '}
+                            {previewSummary.grammarCounts.nouns}
+                          </span>
                         )}
                         {previewSummary.grammarCounts.verbs > 0 && (
-                          <span className="mr-2">Verbs: {previewSummary.grammarCounts.verbs}</span>
+                          <span className="mr-2">
+                            {t('bulkUploads.grammarCounts.verbs')}:{' '}
+                            {previewSummary.grammarCounts.verbs}
+                          </span>
                         )}
                         {previewSummary.grammarCounts.adjectives > 0 && (
                           <span className="mr-2">
-                            Adj: {previewSummary.grammarCounts.adjectives}
+                            {t('bulkUploads.grammarCounts.adjectives')}:{' '}
+                            {previewSummary.grammarCounts.adjectives}
                           </span>
                         )}
                         {previewSummary.grammarCounts.adverbs > 0 && (
-                          <span>Adv: {previewSummary.grammarCounts.adverbs}</span>
+                          <span>
+                            {t('bulkUploads.grammarCounts.adverbs')}:{' '}
+                            {previewSummary.grammarCounts.adverbs}
+                          </span>
                         )}
                         {Object.values(previewSummary.grammarCounts).every((c) => c === 0) && '-'}
                       </p>
