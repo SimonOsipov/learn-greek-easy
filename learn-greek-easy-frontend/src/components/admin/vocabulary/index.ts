@@ -12,5 +12,8 @@ export type { GrammarTabProps } from './GrammarTab';
 export { VocabularyCardCreateModal } from './VocabularyCardCreateModal';
 export type { VocabularyCardCreateModalProps } from './VocabularyCardCreateModal';
 
+export { VocabularyCardEditModal } from './VocabularyCardEditModal';
+export type { VocabularyCardEditModalProps } from './VocabularyCardEditModal';
+
 // Grammar forms
 export * from './grammar';

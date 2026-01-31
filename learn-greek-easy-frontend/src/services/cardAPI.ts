@@ -158,4 +158,13 @@ export const cardAPI = {
   create: async (data: CardCreatePayload): Promise<CardResponse> => {
     return api.post<CardResponse>('/api/v1/cards', data);
   },
+
+  /**
+   * Update an existing vocabulary card
+   *
+   * Requires superuser privileges.
+   */
+  update: async (cardId: string, data: Partial<CardCreatePayload>): Promise<CardResponse> => {
+    return api.patch<CardResponse>(`/api/v1/cards/${cardId}`, data);
+  },
 };

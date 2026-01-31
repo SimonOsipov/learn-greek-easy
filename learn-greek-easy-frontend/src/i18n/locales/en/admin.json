@@ -521,6 +521,20 @@
       "cancelConfirmYes": "Discard",
       "cancelConfirmNo": "Keep Editing",
       "errorToast": "Failed to create card. Please try again."
+    },
+    "editModal": {
+      "title": "Edit Vocabulary Card",
+      "cancelButton": "Cancel",
+      "saveButton": "Save Changes",
+      "savingButton": "Saving...",
+      "loadingError": "Failed to load card data",
+      "retryButton": "Retry",
+      "cancelConfirmTitle": "Discard Changes?",
+      "cancelConfirmMessage": "You have unsaved changes. Are you sure you want to close?",
+      "cancelConfirmYes": "Discard",
+      "cancelConfirmNo": "Keep Editing",
+      "successToast": "Card updated successfully",
+      "errorToast": "Failed to update card. Please try again."
     }
   }
 }
