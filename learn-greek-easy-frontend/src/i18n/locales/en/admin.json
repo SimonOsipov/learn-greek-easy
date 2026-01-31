@@ -457,6 +457,29 @@
           "singular": "Singular (you)",
           "plural": "Plural (you)"
         }
+      },
+      "adjective": {
+        "title": "Adjective Declension",
+        "genders": {
+          "masculine": "Masculine",
+          "feminine": "Feminine",
+          "neuter": "Neuter"
+        },
+        "singular": "Singular",
+        "plural": "Plural",
+        "cases": {
+          "nominative": "Nominative",
+          "genitive": "Genitive",
+          "accusative": "Accusative",
+          "vocative": "Vocative"
+        },
+        "comparison": {
+          "title": "Comparison Forms",
+          "comparative": "Comparative",
+          "comparativePlaceholder": "e.g., more beautiful",
+          "superlative": "Superlative",
+          "superlativePlaceholder": "e.g., most beautiful"
+        }
       }
     }
   }
