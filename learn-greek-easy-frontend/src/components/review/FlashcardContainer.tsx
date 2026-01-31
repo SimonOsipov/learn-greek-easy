@@ -11,7 +11,6 @@ import type { CardReview } from '@/types/review';
 
 import { CardContent } from './CardContent';
 import { CardHeader } from './CardHeader';
-import { ProgressHeader } from './ProgressHeader';
 import { RatingButtons } from './RatingButtons';
 
 interface FlashcardContainerProps {
@@ -53,8 +52,6 @@ export function FlashcardContainer({ card }: FlashcardContainerProps) {
           'hover:-translate-y-1'
         )}
       >
-        <ProgressHeader />
-
         {/* Early Practice Indicator */}
         {card.isEarlyPractice && (
           <div className="-mt-2 mb-2 flex justify-center">
