@@ -330,7 +330,9 @@ class TestUpdateMeWithAvatar:
         data = response.json()
         # Response now returns presigned URL, not the raw S3 key
         assert data["avatar_url"] == "https://s3.example.com/presigned-get"
-        mock_s3_service.generate_presigned_url.assert_called_with(avatar_key, expiry_seconds=3600)
+        mock_s3_service.generate_presigned_url.assert_called_with(
+            avatar_key, expiry_seconds=2592000
+        )
 
         # Verify DB stores the S3 key (not presigned URL)
         await db_session.refresh(test_user)
@@ -443,7 +445,9 @@ class TestUpdateMeWithAvatar:
         data = response.json()
         # Response now returns presigned URL, not the raw S3 key
         assert data["avatar_url"] == "https://s3.example.com/presigned-get"
-        mock_s3_service.generate_presigned_url.assert_called_with(avatar_key, expiry_seconds=3600)
+        mock_s3_service.generate_presigned_url.assert_called_with(
+            avatar_key, expiry_seconds=2592000
+        )
 
     @pytest.mark.asyncio
     async def test_unauthenticated(self, client: AsyncClient) -> None:

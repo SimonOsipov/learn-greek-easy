@@ -14,6 +14,7 @@ import {
   AdverbFormsTable,
   ExampleSentences,
 } from './grammar';
+import { SectionHeader } from './SectionHeader';
 
 interface CardContentProps {
   card: CardReview;
@@ -51,6 +52,23 @@ export function CardContent({ card, isFlipped }: CardContentProps) {
   };
 
   const translation = getTranslation();
+
+  // Get section header title based on part of speech
+  const getGrammarSectionTitle = (): string | null => {
+    switch (partOfSpeech) {
+      case 'noun':
+      case 'adjective':
+        return t('grammar.sections.declension');
+      case 'verb':
+        return t('grammar.sections.conjugation');
+      case 'adverb':
+        return t('grammar.sections.forms');
+      default:
+        return null;
+    }
+  };
+
+  const grammarSectionTitle = getGrammarSectionTitle();
 
   // Determine if this card has grammar data
   const hasGrammarData = !!(nounData || verbData || adjectiveData || adverbData);
@@ -119,30 +137,33 @@ export function CardContent({ card, isFlipped }: CardContentProps) {
       }
       aria-label={!isFlipped ? t('session.clickToReveal') : undefined}
       className={cn(
-        'grid gap-6 transition-[filter] duration-200 md:grid-cols-2',
+        'flex flex-col gap-6 transition-[filter] duration-200',
         !isFlipped && 'cursor-pointer select-none blur-md'
       )}
     >
-      {/* Left column: Translations + Examples */}
-      <div className="space-y-4">
-        {/* Translation */}
+      {/* Translation */}
+      <div className="flex flex-col gap-2">
+        <SectionHeader title={t('grammar.sections.translation')} />
         <div className="rounded-lg border border-border bg-card p-4">
           {translation && <p className="text-base">{translation}</p>}
         </div>
-
-        {/* Examples */}
-        {examples && examples.length > 0 && (
-          <div>
-            <h3 className="mb-2 text-sm font-medium text-muted-foreground">
-              {t('grammar.examples.title')}
-            </h3>
-            <ExampleSentences key={card.id} examples={examples} />
-          </div>
-        )}
       </div>
 
-      {/* Right column: Grammar tables */}
-      <div>{grammarTable}</div>
+      {/* Grammar table */}
+      {grammarTable && (
+        <div className="flex flex-col gap-2">
+          {grammarSectionTitle && <SectionHeader title={grammarSectionTitle} />}
+          {grammarTable}
+        </div>
+      )}
+
+      {/* Examples */}
+      {examples && examples.length > 0 && (
+        <div className="flex flex-col gap-2">
+          <SectionHeader title={t('grammar.examples.title')} />
+          <ExampleSentences key={card.id} examples={examples} />
+        </div>
+      )}
     </div>
   );
 }

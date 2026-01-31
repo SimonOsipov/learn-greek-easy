@@ -73,21 +73,7 @@ interface FlashcardContainerProps {
 
 ---
 
-### 3. ProgressHeader
-
-**Purpose**: Display session progress bar and time estimate.
-
-**File**: `/src/components/review/ProgressHeader.tsx`
-
-**Features**:
-- Gradient progress bar (purple)
-- Card count (X of Y)
-- Estimated time remaining
-- Gray background header
-
----
-
-### 4. CardMain
+### 3. CardMain
 
 **Purpose**: Main clickable card area with Greek word, pronunciation, translation, and badges.
 
@@ -105,7 +91,7 @@ interface FlashcardContainerProps {
 
 ---
 
-### 5. RatingButtons
+### 4. RatingButtons
 
 **Purpose**: Four-button rating panel (Again, Hard, Good, Easy).
 
@@ -127,7 +113,7 @@ interface FlashcardContainerProps {
 
 ---
 
-### 6. GreekWord
+### 5. GreekWord
 
 **Purpose**: Display Greek word with pronunciation.
 
@@ -143,7 +129,7 @@ interface GreekWordProps {
 
 ---
 
-### 7. Translation
+### 6. Translation
 
 **Purpose**: Translation text with fade-in animation.
 
@@ -157,7 +143,7 @@ interface GreekWordProps {
 
 ---
 
-### 8. WordTypeBadge
+### 7. WordTypeBadge
 
 **Purpose**: Badge showing word type and metadata (noun gender, verb voice).
 
@@ -171,7 +157,7 @@ interface GreekWordProps {
 
 ---
 
-### 9. LevelBadge
+### 8. LevelBadge
 
 **Purpose**: CEFR level badge (A1, A2, B1, B2, C1, C2).
 
@@ -186,7 +172,7 @@ interface GreekWordProps {
 
 ---
 
-### 10. PremiumGate
+### 9. PremiumGate
 
 **Purpose**: Wrapper for premium content with blur effect and badge.
 
@@ -208,7 +194,7 @@ interface PremiumGateProps {
 
 ---
 
-### 11. NounGrammarSection
+### 10. NounGrammarSection
 
 **Purpose**: Display noun cases table with premium gating.
 
@@ -221,7 +207,7 @@ interface PremiumGateProps {
 
 ---
 
-### 12. VerbGrammarSection
+### 11. VerbGrammarSection
 
 **Purpose**: Display verb conjugation table with tense tabs.
 
@@ -235,7 +221,7 @@ interface PremiumGateProps {
 
 ---
 
-### 13. ConjugationTable
+### 12. ConjugationTable
 
 **Purpose**: 6-row table for verb conjugations.
 
@@ -248,7 +234,7 @@ interface PremiumGateProps {
 
 ---
 
-### 14. CasesTable
+### 13. CasesTable
 
 **Purpose**: 4-row table for noun cases.
 
@@ -260,7 +246,7 @@ interface PremiumGateProps {
 
 ---
 
-### 15. ExampleSection
+### 14. ExampleSection
 
 **Purpose**: Display example sentence with translation reveal.
 
@@ -274,7 +260,7 @@ interface PremiumGateProps {
 
 ---
 
-### 16. SessionSummary
+### 15. SessionSummary
 
 **Purpose**: Display comprehensive post-session statistics with performance metrics, rating breakdown, and progress visualization.
 
@@ -365,7 +351,7 @@ const { sessionSummary } = useReviewStore();
 
 ---
 
-### 17. SessionSummaryPage
+### 16. SessionSummaryPage
 
 **Purpose**: Container page for displaying session summary after review completion.
 
@@ -432,7 +418,7 @@ navigate(`/decks/${deckId}/summary`);
 
 ---
 
-### 18. KeyboardShortcutsHelp
+### 17. KeyboardShortcutsHelp
 
 **Purpose**: Modal dialog displaying all keyboard shortcuts with visual kbd elements for accessibility and user guidance.
 

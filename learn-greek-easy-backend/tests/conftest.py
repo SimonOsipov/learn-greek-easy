@@ -17,10 +17,14 @@ Note: All database fixtures use PostgreSQL exclusively.
 """
 
 # Set testing mode BEFORE any imports that load settings
-# This disables rate limiting for all tests
+# This disables rate limiting for all tests and enables E2E seeding
+# FEATURE_BACKGROUND_TASKS must be false for E2E tests to work correctly
+# since background tasks don't actually execute in test context
 import os
 
 os.environ["TESTING"] = "true"
+os.environ["TEST_SEED_ENABLED"] = "true"
+os.environ["FEATURE_BACKGROUND_TASKS"] = "false"
 
 # flake8: noqa: E402 - imports must come after os.environ is set
 import asyncio

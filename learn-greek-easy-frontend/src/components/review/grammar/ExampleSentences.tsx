@@ -6,6 +6,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import type { Example } from '@/types/grammar';
 
+import { TenseBadge } from './TenseBadge';
+
 export interface ExampleSentencesProps {
   examples: Example[];
 }
@@ -51,11 +53,11 @@ export function ExampleSentences({ examples }: ExampleSentencesProps) {
         return (
           <Card key={index}>
             <CardContent className="p-4">
-              {examples.length > 1 && (
-                <span className="text-sm font-medium text-muted-foreground">{index + 1}. </span>
-              )}
-              {/* Greek - always visible */}
-              <p className="text-base font-medium">{example.greek}</p>
+              {/* Greek - always visible, with optional tense badge */}
+              <div className="flex items-baseline gap-2">
+                <p className="text-base font-medium">{example.greek}</p>
+                {example.tense && <TenseBadge tense={example.tense} />}
+              </div>
 
               {/* Translation - blurred until revealed */}
               {translation && (

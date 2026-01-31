@@ -1,8 +1,9 @@
 import { useTranslation } from 'react-i18next';
 
+import type { NounGender } from '@/types/grammar';
 import type { CardReview } from '@/types/review';
 
-import { PartOfSpeechBadge } from './grammar';
+import { GenderBadge, PartOfSpeechBadge } from './grammar';
 
 interface CardHeaderProps {
   card: CardReview;
@@ -13,24 +14,15 @@ export function CardHeader({ card, onFlip }: CardHeaderProps) {
   const { t } = useTranslation('review');
   const partOfSpeech = card.part_of_speech;
 
-  // Get gender for nouns or voice for verbs
-  const getMetadataLabel = () => {
-    if (partOfSpeech === 'noun') {
-      const gender = card.noun_data?.gender;
-      if (gender) {
-        return t(`grammar.nounDeclension.genders.${gender}`);
-      }
-    }
-    if (partOfSpeech === 'verb') {
-      const voice = card.verb_data?.voice;
-      if (voice) {
-        return t(`grammar.verbConjugation.voice.${voice}`);
-      }
-    }
-    return null;
-  };
+  // Extract gender for nouns (to display as GenderBadge)
+  const nounGender: NounGender | null =
+    partOfSpeech === 'noun' ? (card.noun_data?.gender ?? null) : null;
 
-  const metadataLabel = getMetadataLabel();
+  // Get voice label for verbs (displayed as text)
+  const voiceLabel: string | null =
+    partOfSpeech === 'verb' && card.verb_data?.voice
+      ? t(`grammar.verbConjugation.voice.${card.verb_data.voice}`)
+      : null;
 
   return (
     <div
@@ -49,8 +41,9 @@ export function CardHeader({ card, onFlip }: CardHeaderProps) {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           {partOfSpeech && <PartOfSpeechBadge partOfSpeech={partOfSpeech} />}
+          {nounGender && <GenderBadge gender={nounGender} />}
         </div>
-        {metadataLabel && <span className="text-sm text-muted-foreground">{metadataLabel}</span>}
+        {voiceLabel && <span className="text-sm text-muted-foreground">{voiceLabel}</span>}
       </div>
       <h2 className="mt-4 text-4xl font-bold">{card.word || card.front}</h2>
       {card.pronunciation && (

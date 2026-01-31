@@ -427,3 +427,93 @@ test.describe('Mobile Viewport', () => {
     await expect(page.getByText('the house')).toBeVisible();
   });
 });
+
+// ============================================================================
+// LANGUAGE SELECTOR TESTS
+// ============================================================================
+
+test.describe('Language Selector', () => {
+  test('language switcher is visible in vocabulary review', async ({ page }) => {
+    await setupReviewMock(page, mockNounCard);
+    await navigateToReview(page);
+
+    // Language switcher trigger (globe icon) should be visible
+    const languageSwitcher = page.locator('[data-testid="language-switcher-trigger"]');
+    await expect(languageSwitcher).toBeVisible();
+  });
+
+  test('language dropdown opens with EN/RU options', async ({ page }) => {
+    await setupReviewMock(page, mockNounCard);
+    await navigateToReview(page);
+
+    // Click the language switcher trigger
+    await page.locator('[data-testid="language-switcher-trigger"]').click();
+
+    // Dropdown menu should appear
+    const menu = page.locator('[data-testid="language-switcher-menu"]');
+    await expect(menu).toBeVisible();
+
+    // Both language options should be visible
+    await expect(page.locator('[data-testid="language-option-en"]')).toBeVisible();
+    await expect(page.locator('[data-testid="language-option-ru"]')).toBeVisible();
+  });
+
+  test('switching to Russian updates card translation', async ({ page }) => {
+    await setupReviewMock(page, mockNounCard);
+    await navigateToReview(page);
+    await flipCard(page);
+
+    // Verify English translation is shown initially
+    await expect(page.getByText('the house')).toBeVisible();
+
+    // Switch to Russian
+    await page.locator('[data-testid="language-switcher-trigger"]').click();
+    await page.locator('[data-testid="language-option-ru"]').click();
+
+    // Wait for language switch and re-render
+    await page.waitForTimeout(500);
+
+    // Translation should now show Russian text (exact match to avoid matching example sentence)
+    await expect(page.getByText('dom', { exact: true })).toBeVisible();
+  });
+
+  test('switching to Russian updates rating button text', async ({ page }) => {
+    await setupReviewMock(page, mockNounCard);
+    await navigateToReview(page);
+    await flipCard(page);
+
+    // Verify English rating button text initially
+    await expect(page.getByRole('button', { name: /good/i })).toBeVisible();
+
+    // Switch to Russian
+    await page.locator('[data-testid="language-switcher-trigger"]').click();
+    await page.locator('[data-testid="language-option-ru"]').click();
+    await page.waitForTimeout(500);
+
+    // Rating buttons should show Russian text
+    await expect(page.getByRole('button', { name: /хорошо/i })).toBeVisible();
+  });
+
+  test('switching back to English restores UI', async ({ page }) => {
+    await setupReviewMock(page, mockNounCard);
+    await navigateToReview(page);
+    await flipCard(page);
+
+    // Switch to Russian first
+    await page.locator('[data-testid="language-switcher-trigger"]').click();
+    await page.locator('[data-testid="language-option-ru"]').click();
+    await page.waitForTimeout(500);
+
+    // Verify Russian is active (exact match to avoid matching example sentence)
+    await expect(page.getByText('dom', { exact: true })).toBeVisible();
+
+    // Switch back to English
+    await page.locator('[data-testid="language-switcher-trigger"]').click();
+    await page.locator('[data-testid="language-option-en"]').click();
+    await page.waitForTimeout(500);
+
+    // English translation should be restored
+    await expect(page.getByText('the house')).toBeVisible();
+    await expect(page.getByRole('button', { name: /good/i })).toBeVisible();
+  });
+});
