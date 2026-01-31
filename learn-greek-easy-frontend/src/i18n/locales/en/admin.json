@@ -413,6 +413,20 @@
       "placeholder": "Select a part of speech in the Basic Info tab to edit grammar details.",
       "title": "Grammar"
     },
+    "examplesTab": {
+      "title": "Examples",
+      "emptyState": "No examples added. Click 'Add Example' to create one.",
+      "addButton": "Add Example",
+      "greekLabel": "Greek",
+      "greekPlaceholder": "Enter Greek example sentence",
+      "englishLabel": "English",
+      "englishPlaceholder": "Enter English translation",
+      "russianLabel": "Russian (Optional)",
+      "russianPlaceholder": "Enter Russian translation",
+      "tenseLabel": "Tense",
+      "tensePlaceholder": "Select tense",
+      "removeButton": "Remove example"
+    },
     "grammar": {
       "noun": {
         "title": "Noun Declension",
