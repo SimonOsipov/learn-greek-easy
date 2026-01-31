@@ -51,9 +51,6 @@ export function ExampleSentences({ examples }: ExampleSentencesProps) {
         return (
           <Card key={index}>
             <CardContent className="p-4">
-              {examples.length > 1 && (
-                <span className="text-sm font-medium text-muted-foreground">{index + 1}. </span>
-              )}
               {/* Greek - always visible */}
               <p className="text-base font-medium">{example.greek}</p>
 

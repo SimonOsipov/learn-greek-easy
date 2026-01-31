@@ -6,8 +6,6 @@
  * - Translations start blurred, reveal on click
  * - Shows only UI language translation (EN or RU with fallback)
  * - Handles empty state with message
- * - Handles multiple examples with numbering
- * - Handles single example without numbering
  * - Keyboard accessibility (Enter/Space to reveal)
  * - Each example reveals independently
  */
@@ -323,15 +321,6 @@ describe('ExampleSentences', () => {
     });
   });
 
-  describe('Single Example', () => {
-    it('should NOT display numbering for single example', () => {
-      render(<ExampleSentences examples={mockSingleExample} />);
-
-      // Should not find "1." text for single example
-      expect(screen.queryByText('1.')).not.toBeInTheDocument();
-    });
-  });
-
   describe('Multiple Examples', () => {
     it('should render all examples', () => {
       render(<ExampleSentences examples={mockMultipleExamples} />);
@@ -339,14 +328,6 @@ describe('ExampleSentences', () => {
       expect(screen.getByText('Γράφω ένα γράμμα.')).toBeInTheDocument();
       expect(screen.getByText('Αυτός γράφει κάθε μέρα.')).toBeInTheDocument();
       expect(screen.getByText('Θα γράψουμε μαζί.')).toBeInTheDocument();
-    });
-
-    it('should display numbering for multiple examples', () => {
-      render(<ExampleSentences examples={mockMultipleExamples} />);
-
-      expect(screen.getByText('1.')).toBeInTheDocument();
-      expect(screen.getByText('2.')).toBeInTheDocument();
-      expect(screen.getByText('3.')).toBeInTheDocument();
     });
 
     it('should show only one translation per example (not both EN and RU)', () => {
@@ -404,16 +385,6 @@ describe('ExampleSentences', () => {
       // CardContent has p-4 padding
       const cardContent = container.querySelector('.p-4');
       expect(cardContent).toBeInTheDocument();
-    });
-  });
-
-  describe('Number Styling', () => {
-    it('should render numbers with muted foreground and font-medium', () => {
-      render(<ExampleSentences examples={mockMultipleExamples} />);
-
-      const number = screen.getByText('1.');
-      expect(number).toHaveClass('text-muted-foreground');
-      expect(number).toHaveClass('font-medium');
     });
   });
 });
