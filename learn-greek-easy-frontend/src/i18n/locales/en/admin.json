@@ -401,6 +401,13 @@
       "verb": "Verb",
       "adjective": "Adjective",
       "adverb": "Adverb"
-    }
+    },
+    "tabs": {
+      "basicInfo": "Basic Info",
+      "grammar": "Grammar",
+      "examples": "Examples"
+    },
+    "legacyExampleDeprecated": "Deprecated",
+    "legacyExampleHint": "Use the Examples tab for structured examples"
   }
 }

@@ -31,3 +31,4 @@ export {
   type VocabularyCardFormProps,
   type VocabularyCardFormData,
 } from './VocabularyCardForm';
+export * from './vocabulary';
