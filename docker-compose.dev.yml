@@ -16,6 +16,7 @@ services:
     environment:
       - NODE_ENV=development
       - VITE_API_URL=http://localhost:8000
+      - VITE_AUTH0_ENABLED=false
     volumes:
       - ./learn-greek-easy-frontend/src:/app/src:cached
       - ./learn-greek-easy-frontend/public:/app/public:cached
