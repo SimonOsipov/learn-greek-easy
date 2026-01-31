@@ -408,6 +408,27 @@
       "examples": "Examples"
     },
     "legacyExampleDeprecated": "Deprecated",
-    "legacyExampleHint": "Use the Examples tab for structured examples"
+    "legacyExampleHint": "Use the Examples tab for structured examples",
+    "grammar": {
+      "noun": {
+        "title": "Noun Declension",
+        "genderLabel": "Gender",
+        "genderPlaceholder": "Select gender",
+        "genders": {
+          "masculine": "Masculine",
+          "feminine": "Feminine",
+          "neuter": "Neuter"
+        },
+        "declensionTable": "Declension Table",
+        "singular": "Singular",
+        "plural": "Plural",
+        "cases": {
+          "nominative": "Nominative",
+          "genitive": "Genitive",
+          "accusative": "Accusative",
+          "vocative": "Vocative"
+        }
+      }
+    }
   }
 }
