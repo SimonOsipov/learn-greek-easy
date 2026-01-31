@@ -17,4 +17,8 @@ export type { SessionSummaryProps } from './SessionSummary';
 // Keyboard Shortcuts Help Dialog
 export { KeyboardShortcutsHelp } from './KeyboardShortcutsHelp';
 
+// Section Header Component
+export { SectionHeader } from './SectionHeader';
+export type { SectionHeaderProps } from './SectionHeader';
+
 // Additional review components can be exported here as they are created
