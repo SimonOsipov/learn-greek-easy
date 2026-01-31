@@ -24,6 +24,8 @@ vi.mock('react-i18next', () => ({
         'grammar.examples.noExamples': 'No examples available',
         'grammar.examples.showTranslation': 'Click to show translation',
         'grammar.examples.hideTranslation': 'Click to hide translation',
+        'grammar.verbConjugation.tenses.past': 'Past',
+        'grammar.verbConjugation.tenses.present': 'Present',
       };
       return translations[key] || key;
     },
@@ -72,6 +74,25 @@ const mockExampleWithTense: Example[] = [
     english: 'I wrote the book.',
     russian: 'Я написал книгу.',
     tense: 'past',
+  },
+];
+
+// Example WITHOUT tense field (for comparison testing)
+const mockExampleWithoutTense: Example[] = [
+  {
+    greek: 'Γράφω ένα γράμμα.',
+    english: 'I write a letter.',
+    russian: 'Я пишу письмо.',
+  },
+];
+
+// Example with null tense (edge case)
+const mockExampleWithNullTense: Example[] = [
+  {
+    greek: 'Διαβάζω ένα βιβλίο.',
+    english: 'I read a book.',
+    russian: 'Я читаю книгу.',
+    tense: null,
   },
 ];
 
@@ -349,9 +370,34 @@ describe('ExampleSentences', () => {
   describe('Example with Tense', () => {
     it('should render example with tense field', () => {
       render(<ExampleSentences examples={mockExampleWithTense} />);
-
       expect(screen.getByText('Έγραψα το βιβλίο.')).toBeInTheDocument();
       expect(screen.getByText('I wrote the book.')).toBeInTheDocument();
+    });
+
+    it('should render TenseBadge when tense is present', () => {
+      render(<ExampleSentences examples={mockExampleWithTense} />);
+      expect(screen.getByTestId('tense-badge')).toBeInTheDocument();
+    });
+
+    it('should display translated tense label', () => {
+      render(<ExampleSentences examples={mockExampleWithTense} />);
+      expect(screen.getByText('Past')).toBeInTheDocument();
+    });
+
+    it('should NOT render TenseBadge when tense is absent', () => {
+      render(<ExampleSentences examples={mockExampleWithoutTense} />);
+      expect(screen.queryByTestId('tense-badge')).not.toBeInTheDocument();
+    });
+
+    it('should NOT render TenseBadge when tense is null', () => {
+      render(<ExampleSentences examples={mockExampleWithNullTense} />);
+      expect(screen.queryByTestId('tense-badge')).not.toBeInTheDocument();
+    });
+
+    it('should position TenseBadge in flex container with Greek text', () => {
+      const { container } = render(<ExampleSentences examples={mockExampleWithTense} />);
+      const flexContainer = container.querySelector('.flex.items-baseline.gap-2');
+      expect(flexContainer).toBeInTheDocument();
     });
   });
 
