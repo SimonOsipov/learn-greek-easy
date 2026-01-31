@@ -12,6 +12,8 @@ export { NounDeclensionTable } from './NounDeclensionTable';
 export type { NounDeclensionTableProps } from './NounDeclensionTable';
 export { PartOfSpeechBadge } from './PartOfSpeechBadge';
 export type { PartOfSpeechBadgeProps } from './PartOfSpeechBadge';
+export { TenseBadge } from './TenseBadge';
+export type { TenseBadgeProps } from './TenseBadge';
 export { TenseTabs } from './TenseTabs';
 export type { TenseTabsProps } from './TenseTabs';
 export { VerbConjugationGrid } from './VerbConjugationGrid';
