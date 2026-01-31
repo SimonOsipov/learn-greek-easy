@@ -15,7 +15,12 @@
     "flipCardAriaLabel": "Перевернуть карточку, чтобы увидеть перевод",
     "answerRevealed": "Ответ показан",
     "minRemaining": "Осталось {{minutes}} мин",
-    "sessionEndedNoCards": "Сессия завершена без повторения карточек."
+    "sessionEndedNoCards": "Сессия завершена без повторения карточек.",
+    "earlyPractice": {
+      "badge": "Ранняя практика",
+      "tooltip": "Практика до срока повторения - отличное усердие!",
+      "dueLabel": "Срок: {{date}}"
+    }
   },
   "ratings": {
     "again": "Снова",
@@ -92,7 +97,8 @@
         "imperfect": "Имперфект",
         "past": "Прошедшее",
         "future": "Будущее",
-        "perfect": "Перфект"
+        "perfect": "Перфект",
+        "imperative": "Повелительное"
       },
       "persons": {
         "firstSingular": "Я",
@@ -109,7 +115,8 @@
       },
       "voice": {
         "active": "Действительный",
-        "passive": "Страдательный"
+        "passive": "Страдательный",
+        "toggleAriaLabel": "Переключить между действительным и страдательным залогом"
       },
       "notAvailable": "Н/Д"
     },
@@ -133,7 +140,9 @@
     },
     "examples": {
       "title": "Примеры",
-      "noExamples": "Примеры отсутствуют"
+      "noExamples": "Примеры отсутствуют",
+      "showTranslation": "Нажмите, чтобы показать перевод",
+      "hideTranslation": "Нажмите, чтобы скрыть перевод"
     }
   }
 }

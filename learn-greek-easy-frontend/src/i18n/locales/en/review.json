@@ -97,7 +97,8 @@
         "imperfect": "Imperfect",
         "past": "Past",
         "future": "Future",
-        "perfect": "Perfect"
+        "perfect": "Perfect",
+        "imperative": "Imperative"
       },
       "persons": {
         "firstSingular": "I",
@@ -114,7 +115,8 @@
       },
       "voice": {
         "active": "Active",
-        "passive": "Passive"
+        "passive": "Passive",
+        "toggleAriaLabel": "Toggle between active and passive voice"
       },
       "notAvailable": "N/A"
     },
@@ -138,7 +140,9 @@
     },
     "examples": {
       "title": "Examples",
-      "noExamples": "No examples available"
+      "noExamples": "No examples available",
+      "showTranslation": "Click to show translation",
+      "hideTranslation": "Click to hide translation"
     }
   }
 }
