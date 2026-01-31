@@ -409,6 +409,10 @@
     },
     "legacyExampleDeprecated": "Deprecated",
     "legacyExampleHint": "Use the Examples tab for structured examples",
+    "grammarTab": {
+      "placeholder": "Select a part of speech in the Basic Info tab to edit grammar details.",
+      "title": "Grammar"
+    },
     "grammar": {
       "noun": {
         "title": "Noun Declension",
