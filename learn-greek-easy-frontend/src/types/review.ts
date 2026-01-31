@@ -143,16 +143,11 @@ export interface ReviewSession {
  */
 export interface SessionStats {
   cardsReviewed: number; // Cards completed so far
-  cardsRemaining: number; // Cards left in queue
 
   // Performance
   accuracy: number; // Percentage (0-100)
   cardsCorrect: number; // Rated "good" or "easy"
   cardsIncorrect: number; // Rated "again"
-
-  // Time tracking
-  totalTime: number; // Total seconds elapsed
-  averageTime: number; // Seconds per card
 
   // Rating breakdown
   againCount: number;

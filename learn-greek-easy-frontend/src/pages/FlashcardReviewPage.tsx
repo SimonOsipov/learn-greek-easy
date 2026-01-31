@@ -92,7 +92,7 @@ export function FlashcardReviewPage() {
       if (activeSession && sessionStats.cardsReviewed > 0 && !sessionSummary) {
         const durationSec = sessionStartTime.current
           ? Math.round((Date.now() - sessionStartTime.current) / 1000)
-          : Math.round(sessionStats.totalTime);
+          : 0;
 
         // Use sendBeacon for fire-and-forget on page unload
         if (typeof navigator?.sendBeacon === 'function' && typeof posthog?.capture === 'function') {

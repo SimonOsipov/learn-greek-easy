@@ -5,14 +5,13 @@ import { useReviewStore } from '@/stores/reviewStore';
 
 export function ProgressHeader() {
   const { t } = useTranslation('review');
-  const { progress, sessionStats } = useReviewStore();
+  const { progress } = useReviewStore();
   const { current, total } = progress;
   const percentage = total > 0 ? (current / total) * 100 : 0;
 
-  // Calculate estimated time remaining
-  const avgTimePerCard = sessionStats.averageTime || 30; // 30s default
-  const cardsRemaining = sessionStats.cardsRemaining;
-  const minutesRemaining = Math.ceil((cardsRemaining * avgTimePerCard) / 60);
+  // Time fields removed from SessionStats - this component will be deleted in GRAMREF-05
+  const cardsRemaining = Math.max(0, total - current);
+  const minutesRemaining = Math.ceil((cardsRemaining * 30) / 60); // 30s default per card
 
   return (
     <div className="border-b border-border bg-muted/50 px-6 py-4">

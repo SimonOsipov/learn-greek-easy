@@ -44,12 +44,9 @@ const DEFAULT_QUEUE_CONFIG: QueueConfig = {
  */
 const DEFAULT_SESSION_STATS: SessionStats = {
   cardsReviewed: 0,
-  cardsRemaining: 0,
   accuracy: 0,
   cardsCorrect: 0,
   cardsIncorrect: 0,
-  totalTime: 0,
-  averageTime: 0,
   againCount: 0,
   hardCount: 0,
   goodCount: 0,
@@ -262,7 +259,6 @@ export const useReviewStore = create<ReviewState>()(
             ratings: [],
             stats: {
               ...DEFAULT_SESSION_STATS,
-              cardsRemaining: cards.length,
             },
           };
 
@@ -373,7 +369,7 @@ export const useReviewStore = create<ReviewState>()(
           }
 
           // Update session stats
-          const updatedStats = calculateUpdatedStats(get().sessionStats, rating, timeSpent);
+          const updatedStats = calculateUpdatedStats(get().sessionStats, rating);
 
           // Advance to next card
           const nextIndex = currentCardIndex + 1;
@@ -526,8 +522,8 @@ export const useReviewStore = create<ReviewState>()(
             completedAt,
             cardsReviewed: sessionStats.cardsReviewed,
             accuracy: sessionStats.accuracy,
-            totalTime: sessionStats.totalTime,
-            averageTimePerCard: sessionStats.averageTime,
+            totalTime: 0,
+            averageTimePerCard: 0,
             ratingBreakdown: {
               again: sessionStats.againCount,
               hard: sessionStats.hardCount,
@@ -635,13 +631,8 @@ export const useReviewStore = create<ReviewState>()(
 /**
  * Helper: Calculate updated stats after rating a card
  */
-function calculateUpdatedStats(
-  currentStats: SessionStats,
-  rating: ReviewRating,
-  timeSpent: number
-): SessionStats {
+function calculateUpdatedStats(currentStats: SessionStats, rating: ReviewRating): SessionStats {
   const cardsReviewed = currentStats.cardsReviewed + 1;
-  const totalTime = currentStats.totalTime + timeSpent;
 
   const ratingCounts = {
     againCount: currentStats.againCount + (rating === 'again' ? 1 : 0),
@@ -653,16 +644,12 @@ function calculateUpdatedStats(
   const cardsCorrect = currentStats.cardsCorrect + (rating === 'good' || rating === 'easy' ? 1 : 0);
   const cardsIncorrect = currentStats.cardsIncorrect + (rating === 'again' ? 1 : 0);
   const accuracy = cardsReviewed > 0 ? Math.round((cardsCorrect / cardsReviewed) * 100) : 0;
-  const averageTime = cardsReviewed > 0 ? Math.round(totalTime / cardsReviewed) : 0;
 
   return {
     cardsReviewed,
-    cardsRemaining: currentStats.cardsRemaining - 1,
     accuracy,
     cardsCorrect,
     cardsIncorrect,
-    totalTime,
-    averageTime,
     ...ratingCounts,
   };
 }
