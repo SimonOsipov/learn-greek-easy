@@ -379,5 +379,28 @@
       "updateError": "Failed to update changelog entry",
       "deleteError": "Failed to delete changelog entry"
     }
+  },
+  "vocabularyCard": {
+    "frontText": "Greek Word/Phrase",
+    "frontTextPlaceholder": "Enter Greek text",
+    "backTextEn": "English Translation",
+    "backTextEnPlaceholder": "Enter English translation",
+    "backTextRu": "Russian Translation (Optional)",
+    "backTextRuPlaceholder": "Enter Russian translation",
+    "pronunciation": "Pronunciation",
+    "pronunciationPlaceholder": "e.g., kalimera",
+    "partOfSpeech": "Part of Speech",
+    "partOfSpeechPlaceholder": "Select part of speech",
+    "level": "CEFR Level Override",
+    "levelPlaceholder": "Default from deck",
+    "levelDescription": "Leave empty to use deck's default level",
+    "exampleSentence": "Example Sentence (Optional)",
+    "exampleSentencePlaceholder": "Enter example in Greek",
+    "partOfSpeechOptions": {
+      "noun": "Noun",
+      "verb": "Verb",
+      "adjective": "Adjective",
+      "adverb": "Adverb"
+    }
   }
 }
