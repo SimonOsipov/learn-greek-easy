@@ -81,7 +81,7 @@ This guide has been split into category-based files for easier navigation. Each 
 ### Review & Learning
 
 **[Review Components](../../learn-greek-easy-frontend/docs/components/review-components.md)** (530 lines)
-- FlashCard, ReviewSession, RatingButtons, ProgressHeader, CompletionDialog, ReviewControls, CardCounter, KeyboardShortcutsHelp, FlipButton, TimerDisplay, SessionStats, AnswerFeedback, ReviewHistory, ReviewSettings, StreakDisplay, GoalProgress, ReviewSchedule
+- FlashCard, ReviewSession, RatingButtons, CompletionDialog, ReviewControls, CardCounter, KeyboardShortcutsHelp, FlipButton, TimerDisplay, SessionStats, AnswerFeedback, ReviewHistory, ReviewSettings, StreakDisplay, GoalProgress, ReviewSchedule
 
 ---
 
