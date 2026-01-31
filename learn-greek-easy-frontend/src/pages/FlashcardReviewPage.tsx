@@ -5,6 +5,7 @@ import posthog from 'posthog-js';
 import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate } from 'react-router-dom';
 
+import { LanguageSwitcher } from '@/components/i18n';
 import { FlashcardContainer } from '@/components/review/FlashcardContainer';
 import { FlashcardSkeleton } from '@/components/review/FlashcardSkeleton';
 import { KeyboardShortcutsHelp } from '@/components/review/KeyboardShortcutsHelp';
@@ -122,7 +123,8 @@ export function FlashcardReviewPage() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background p-10">
-        <div className="fixed right-4 top-4 z-50">
+        <div className="fixed right-4 top-4 z-50 flex items-center gap-2">
+          <LanguageSwitcher variant="icon" />
           <ThemeSwitcher />
         </div>
         <FlashcardSkeleton />
@@ -134,7 +136,8 @@ export function FlashcardReviewPage() {
   if (error) {
     return (
       <div className="min-h-screen bg-background p-10">
-        <div className="fixed right-4 top-4 z-50">
+        <div className="fixed right-4 top-4 z-50 flex items-center gap-2">
+          <LanguageSwitcher variant="icon" />
           <ThemeSwitcher />
         </div>
         <div className="mx-auto max-w-4xl">
@@ -168,7 +171,8 @@ export function FlashcardReviewPage() {
   if (!currentCard) {
     return (
       <div className="min-h-screen bg-background p-10">
-        <div className="fixed right-4 top-4 z-50">
+        <div className="fixed right-4 top-4 z-50 flex items-center gap-2">
+          <LanguageSwitcher variant="icon" />
           <ThemeSwitcher />
         </div>
         <div className="mx-auto max-w-4xl">
@@ -198,7 +202,8 @@ export function FlashcardReviewPage() {
   // Main flashcard view
   return (
     <div className="min-h-screen bg-background p-10">
-      <div className="fixed right-4 top-4 z-50">
+      <div className="fixed right-4 top-4 z-50 flex items-center gap-2">
+        <LanguageSwitcher variant="icon" />
         <ThemeSwitcher />
       </div>
       <div className="mx-auto mb-4 max-w-4xl">
