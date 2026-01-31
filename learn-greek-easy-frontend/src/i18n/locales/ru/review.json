@@ -74,6 +74,12 @@
       "adjective": "Прилагательное",
       "adverb": "Наречие"
     },
+    "sections": {
+      "translation": "Перевод",
+      "declension": "Склонение",
+      "conjugation": "Спряжение",
+      "forms": "Формы"
+    },
     "nounDeclension": {
       "singular": "Единственное",
       "plural": "Множественное",

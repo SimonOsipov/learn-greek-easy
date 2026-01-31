@@ -74,6 +74,12 @@
       "adjective": "Adjective",
       "adverb": "Adverb"
     },
+    "sections": {
+      "translation": "Translation",
+      "declension": "Declension",
+      "conjugation": "Conjugation",
+      "forms": "Forms"
+    },
     "nounDeclension": {
       "singular": "Singular",
       "plural": "Plural",
