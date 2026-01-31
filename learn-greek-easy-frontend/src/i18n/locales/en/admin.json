@@ -428,6 +428,35 @@
           "accusative": "Accusative",
           "vocative": "Vocative"
         }
+      },
+      "verb": {
+        "title": "Verb Conjugation",
+        "voiceLabel": "Voice",
+        "voicePlaceholder": "Select voice",
+        "voices": {
+          "active": "Active",
+          "passive": "Passive"
+        },
+        "tenses": {
+          "present": "Present",
+          "imperfect": "Imperfect",
+          "past": "Past (Aorist)",
+          "future": "Future",
+          "perfect": "Perfect"
+        },
+        "persons": {
+          "firstSingular": "I",
+          "secondSingular": "You (sg)",
+          "thirdSingular": "He/She/It",
+          "firstPlural": "We",
+          "secondPlural": "You (pl)",
+          "thirdPlural": "They"
+        },
+        "imperative": {
+          "title": "Imperative",
+          "singular": "Singular (you)",
+          "plural": "Plural (you)"
+        }
       }
     }
   }
