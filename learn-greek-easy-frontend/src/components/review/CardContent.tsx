@@ -14,6 +14,7 @@ import {
   AdverbFormsTable,
   ExampleSentences,
 } from './grammar';
+import { SectionHeader } from './SectionHeader';
 
 interface CardContentProps {
   card: CardReview;
@@ -124,8 +125,11 @@ export function CardContent({ card, isFlipped }: CardContentProps) {
       )}
     >
       {/* Translation */}
-      <div className="rounded-lg border border-border bg-card p-4">
-        {translation && <p className="text-base">{translation}</p>}
+      <div className="flex flex-col gap-2">
+        <SectionHeader title={t('grammar.sections.translation')} />
+        <div className="rounded-lg border border-border bg-card p-4">
+          {translation && <p className="text-base">{translation}</p>}
+        </div>
       </div>
 
       {/* Grammar table */}
