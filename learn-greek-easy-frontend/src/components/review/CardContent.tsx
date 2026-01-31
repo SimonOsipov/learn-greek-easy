@@ -53,6 +53,23 @@ export function CardContent({ card, isFlipped }: CardContentProps) {
 
   const translation = getTranslation();
 
+  // Get section header title based on part of speech
+  const getGrammarSectionTitle = (): string | null => {
+    switch (partOfSpeech) {
+      case 'noun':
+      case 'adjective':
+        return t('grammar.sections.declension');
+      case 'verb':
+        return t('grammar.sections.conjugation');
+      case 'adverb':
+        return t('grammar.sections.forms');
+      default:
+        return null;
+    }
+  };
+
+  const grammarSectionTitle = getGrammarSectionTitle();
+
   // Determine if this card has grammar data
   const hasGrammarData = !!(nounData || verbData || adjectiveData || adverbData);
 
@@ -133,7 +150,12 @@ export function CardContent({ card, isFlipped }: CardContentProps) {
       </div>
 
       {/* Grammar table */}
-      {grammarTable}
+      {grammarTable && (
+        <div className="flex flex-col gap-2">
+          {grammarSectionTitle && <SectionHeader title={grammarSectionTitle} />}
+          {grammarTable}
+        </div>
+      )}
 
       {/* Examples */}
       {examples && examples.length > 0 && (
