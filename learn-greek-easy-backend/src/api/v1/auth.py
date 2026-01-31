@@ -96,7 +96,7 @@ def _build_user_profile_response(user: User) -> UserProfileResponse:
     if user.avatar_url:
         avatar_presigned_url = s3_service.generate_presigned_url(
             user.avatar_url,
-            expiry_seconds=3600,  # 1 hour expiry for avatar URLs
+            expiry_seconds=2592000,  # 30 days expiry for avatar URLs
         )
 
     # Build response with presigned URL and auth_provider

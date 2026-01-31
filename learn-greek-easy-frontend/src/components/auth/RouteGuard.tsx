@@ -39,8 +39,9 @@ function AuthLoadingScreen() {
  * Refreshes user profile to get fresh presigned URLs for profile pictures.
  */
 function Auth0RouteGuard({ children }: RouteGuardProps) {
-  const { isLoading: auth0Loading, isAuthenticated } = useAuth0();
+  const { isLoading: auth0Loading, isAuthenticated: auth0Authenticated } = useAuth0();
   const checkAuth = useAuthStore((state) => state.checkAuth);
+  const storeAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const setAuthInitialized = useAppStore((state) => state.setAuthInitialized);
   const [isRefreshingProfile, setIsRefreshingProfile] = useState(false);
   const hasRefreshedRef = useRef(false);
@@ -52,8 +53,9 @@ function Auth0RouteGuard({ children }: RouteGuardProps) {
     const abortController = new AbortController();
 
     const refreshProfile = async () => {
-      // If authenticated and haven't refreshed yet, fetch fresh profile
-      if (isAuthenticated && !hasRefreshedRef.current) {
+      // If authenticated via Auth0 OR local store and haven't refreshed yet, fetch fresh profile
+      // Local store may have valid tokens even when Auth0 session has expired
+      if ((auth0Authenticated || storeAuthenticated) && !hasRefreshedRef.current) {
         hasRefreshedRef.current = true;
         setIsRefreshingProfile(true);
         try {
@@ -78,7 +80,7 @@ function Auth0RouteGuard({ children }: RouteGuardProps) {
     return () => {
       abortController.abort();
     };
-  }, [auth0Loading, isAuthenticated, checkAuth, setAuthInitialized]);
+  }, [auth0Loading, auth0Authenticated, storeAuthenticated, checkAuth, setAuthInitialized]);
 
   if (auth0Loading || isRefreshingProfile) {
     return <AuthLoadingScreen />;
