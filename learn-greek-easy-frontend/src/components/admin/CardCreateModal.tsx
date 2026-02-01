@@ -71,14 +71,20 @@ export function CardCreateModal({ open, onOpenChange, deckId, onSuccess }: CardC
   const [selectedDeckId, setSelectedDeckId] = useState<string>('');
   const [cardType, setCardType] = useState<CardType>('culture');
   const [decks, setDecks] = useState<CultureDeckListItem[]>([]);
-  // TODO: Will be used by VOCAB-A-04 to render vocabulary deck dropdown
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [vocabularyDecks, setVocabularyDecks] = useState<UnifiedDeckItem[]>([]);
   const [isLoadingDecks, setIsLoadingDecks] = useState(false);
   const [formKey, setFormKey] = useState(0);
 
   // Determine effective deck ID
   const effectiveDeckId = deckId || selectedDeckId;
+
+  // Compute which decks to show based on card type
+  const decksToShow = cardType === 'vocabulary' ? vocabularyDecks : decks;
+
+  // Helper to get deck name as string (vocabulary decks may have MultilingualName)
+  const getDeckName = (deck: CultureDeckListItem | UnifiedDeckItem): string => {
+    return typeof deck.name === 'string' ? deck.name : deck.name.en;
+  };
 
   // Fetch decks when modal opens (only when no deckId prop)
   useEffect(() => {
@@ -236,14 +242,14 @@ export function CardCreateModal({ open, onOpenChange, deckId, onSuccess }: CardC
                         <SelectValue placeholder={t('cardCreate.selectDeckPlaceholder')} />
                       </SelectTrigger>
                       <SelectContent>
-                        {decks.length === 0 ? (
+                        {decksToShow.length === 0 ? (
                           <SelectItem value="__none" disabled>
                             {t('cardCreate.noDecks')}
                           </SelectItem>
                         ) : (
-                          decks.map((deck) => (
+                          decksToShow.map((deck) => (
                             <SelectItem key={deck.id} value={deck.id}>
-                              {deck.name}
+                              {getDeckName(deck)}
                             </SelectItem>
                           ))
                         )}
