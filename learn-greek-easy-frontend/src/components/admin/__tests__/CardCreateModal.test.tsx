@@ -4,7 +4,7 @@
  * Comprehensive tests for the CardCreateModal component, covering:
  * - Modal open/close states
  * - Conditional UI (deck dropdown visible when no deckId, hidden when deckId provided)
- * - Card type dropdown (culture selected, vocabulary disabled)
+ * - Card type dropdown (culture or vocabulary)
  * - Success flow (Create Another, Done buttons)
  * - Cancel flow (confirmation dialog when dirty)
  * - API call formatting
@@ -28,6 +28,7 @@ import i18n from '@/i18n';
 vi.mock('@/services/adminAPI', () => ({
   adminAPI: {
     getCultureDecks: vi.fn(),
+    listDecks: vi.fn(),
     createCultureQuestion: vi.fn(),
   },
 }));
@@ -113,6 +114,26 @@ describe('CardCreateModal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     (adminAPI.getCultureDecks as Mock).mockResolvedValue(createMockDecks());
+    (adminAPI.listDecks as Mock).mockResolvedValue({
+      decks: [
+        {
+          id: 'vocab-deck-1',
+          name: 'Basic Vocabulary',
+          type: 'vocabulary',
+          level: 'A1',
+          category: null,
+          item_count: 10,
+          is_active: true,
+          is_premium: false,
+          created_at: '2024-01-01',
+          owner_id: null,
+          owner_name: null,
+        },
+      ],
+      total: 1,
+      page: 1,
+      page_size: 20,
+    });
     (adminAPI.createCultureQuestion as Mock).mockResolvedValue({ id: 'new-question-id' });
   });
 
@@ -231,8 +252,8 @@ describe('CardCreateModal', () => {
       });
     });
 
-    // Note: Testing vocabulary option disabled requires Radix Select interaction
-    // which doesn't work reliably in happy-dom. The functionality is covered by E2E tests.
+    // Note: Vocabulary option is now enabled. Radix Select interactions
+    // don't work reliably in happy-dom. Selection behavior is covered by E2E tests.
   });
 
   // ============================================

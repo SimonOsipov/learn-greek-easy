@@ -261,8 +261,8 @@ test.describe('Keyboard Navigation - Protected Pages', () => {
     // Wait for decks page React content to load (not LCP shell)
     await expect(page.locator('[data-testid="decks-title"]')).toBeVisible({ timeout: 10000 });
 
-    // Look for Greek vocabulary deck
-    const deckHeading = page.getByRole('heading', { name: /greek.*vocabulary/i });
+    // Look for Greek vocabulary deck (use .first() as multiple A1-C2 decks exist)
+    const deckHeading = page.getByRole('heading', { name: /greek.*vocabulary/i }).first();
 
     // Only run if deck exists
     if ((await deckHeading.count()) > 0) {

@@ -2,7 +2,7 @@
  * CardCreateModal - Modal for creating culture cards.
  *
  * Features:
- * - Card type dropdown (Culture selected, Vocabulary disabled) when no deckId
+ * - Card type dropdown (Culture or Vocabulary) when no deckId
  * - Deck dropdown for selecting target deck when no deckId
  * - CultureCardForm integration
  * - Success state with Create Another/Done buttons
@@ -11,8 +11,11 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
+import { zodResolver } from '@hookform/resolvers/zod';
 import { CheckCircle } from 'lucide-react';
+import { FormProvider, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
+import { z } from 'zod';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -31,12 +34,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
-import type { CultureDeckListItem, CultureQuestionCreatePayload } from '@/services/adminAPI';
+import type {
+  CultureDeckListItem,
+  CultureQuestionCreatePayload,
+  UnifiedDeckItem,
+} from '@/services/adminAPI';
 import { adminAPI } from '@/services/adminAPI';
+import { cardAPI, type CardCreatePayload } from '@/services/cardAPI';
 
 import { CultureCardForm } from './CultureCardForm';
+import { BasicInfoTab } from './vocabulary/BasicInfoTab';
+import { ExamplesTab } from './vocabulary/ExamplesTab';
 import { AlertDialog } from '../dialogs/AlertDialog';
+import { AdjectiveGrammarForm } from './vocabulary/grammar/AdjectiveGrammarForm';
+import { AdverbGrammarForm } from './vocabulary/grammar/AdverbGrammarForm';
+import { NounGrammarForm } from './vocabulary/grammar/NounGrammarForm';
+import { VerbGrammarForm } from './vocabulary/grammar/VerbGrammarForm';
 
 // ============================================
 // Types
@@ -53,6 +68,51 @@ export interface CardCreateModalProps {
 }
 
 // ============================================
+// Vocabulary Card Schema
+// ============================================
+
+const vocabularyCardSchema = z.object({
+  front_text: z.string().min(1, 'Greek text is required'),
+  back_text_en: z.string().min(1, 'English translation is required'),
+  back_text_ru: z.string().optional().or(z.literal('')),
+  example_sentence: z.string().optional().or(z.literal('')),
+  pronunciation: z.string().max(255).optional().or(z.literal('')),
+  part_of_speech: z.enum(['noun', 'verb', 'adjective', 'adverb']).optional().nullable(),
+  level: z.enum(['A1', 'A2', 'B1', 'B2', 'C1', 'C2']).optional().nullable(),
+  noun_data: z.any().optional().nullable(),
+  verb_data: z.any().optional().nullable(),
+  adjective_data: z.any().optional().nullable(),
+  adverb_data: z.any().optional().nullable(),
+  examples: z
+    .array(
+      z.object({
+        greek: z.string().max(1000),
+        english: z.string().max(1000).optional().or(z.literal('')),
+        russian: z.string().max(1000).optional().or(z.literal('')),
+        tense: z.string().optional().nullable(),
+      })
+    )
+    .optional(),
+});
+
+type VocabularyCardFormData = z.infer<typeof vocabularyCardSchema>;
+
+const vocabularyDefaultValues: VocabularyCardFormData = {
+  front_text: '',
+  back_text_en: '',
+  back_text_ru: '',
+  example_sentence: '',
+  pronunciation: '',
+  part_of_speech: null,
+  level: null,
+  noun_data: null,
+  verb_data: null,
+  adjective_data: null,
+  adverb_data: null,
+  examples: [],
+};
+
+// ============================================
 // Component
 // ============================================
 
@@ -67,11 +127,31 @@ export function CardCreateModal({ open, onOpenChange, deckId, onSuccess }: CardC
   const [selectedDeckId, setSelectedDeckId] = useState<string>('');
   const [cardType, setCardType] = useState<CardType>('culture');
   const [decks, setDecks] = useState<CultureDeckListItem[]>([]);
+  const [vocabularyDecks, setVocabularyDecks] = useState<UnifiedDeckItem[]>([]);
   const [isLoadingDecks, setIsLoadingDecks] = useState(false);
   const [formKey, setFormKey] = useState(0);
 
+  // Vocabulary form state - tabs by part of speech
+  type TabValue = 'general' | 'noun' | 'verb' | 'adjective' | 'adverb';
+  const [activeTab, setActiveTab] = useState<TabValue>('general');
+
+  // Vocabulary form setup
+  const vocabForm = useForm<VocabularyCardFormData>({
+    resolver: zodResolver(vocabularyCardSchema),
+    mode: 'onChange',
+    defaultValues: vocabularyDefaultValues,
+  });
+
   // Determine effective deck ID
   const effectiveDeckId = deckId || selectedDeckId;
+
+  // Compute which decks to show based on card type
+  const decksToShow = cardType === 'vocabulary' ? vocabularyDecks : decks;
+
+  // Helper to get deck name as string (vocabulary decks may have MultilingualName)
+  const getDeckName = (deck: CultureDeckListItem | UnifiedDeckItem): string => {
+    return typeof deck.name === 'string' ? deck.name : deck.name.en;
+  };
 
   // Fetch decks when modal opens (only when no deckId prop)
   useEffect(() => {
@@ -104,10 +184,32 @@ export function CardCreateModal({ open, onOpenChange, deckId, onSuccess }: CardC
         setSelectedDeckId('');
         setCardType('culture');
         setFormKey((prev) => prev + 1);
+        // Reset vocabulary form state
+        setActiveTab('general');
+        vocabForm.reset(vocabularyDefaultValues);
       }, 200);
       return () => clearTimeout(timeout);
     }
-  }, [open]);
+  }, [open, vocabForm]);
+
+  // Fetch vocabulary decks when card type changes to vocabulary
+  useEffect(() => {
+    // Reset selected deck when card type changes
+    setSelectedDeckId('');
+
+    if (cardType === 'vocabulary') {
+      adminAPI.listDecks({ type: 'vocabulary' }).then((res) => {
+        setVocabularyDecks(res.decks);
+      });
+    }
+  }, [cardType]);
+
+  // Track vocabulary form dirty state
+  useEffect(() => {
+    if (cardType === 'vocabulary') {
+      setIsDirty(vocabForm.formState.isDirty);
+    }
+  }, [cardType, vocabForm.formState.isDirty]);
 
   // Handle dirty state changes from form
   const handleDirtyChange = useCallback((dirty: boolean) => {
@@ -127,6 +229,38 @@ export function CardCreateModal({ open, onOpenChange, deckId, onSuccess }: CardC
     } catch {
       toast({
         title: t('errors.createFailed'),
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Handle vocabulary form submission
+  const handleVocabularySubmit = async (data: VocabularyCardFormData) => {
+    setIsSubmitting(true);
+    try {
+      const payload: CardCreatePayload = {
+        deck_id: effectiveDeckId,
+        front_text: data.front_text,
+        back_text_en: data.back_text_en,
+        back_text_ru: data.back_text_ru || null,
+        example_sentence: data.example_sentence || null,
+        pronunciation: data.pronunciation || null,
+        part_of_speech: data.part_of_speech || null,
+        level: data.level || null,
+        noun_data: data.noun_data || null,
+        verb_data: data.verb_data || null,
+        adjective_data: data.adjective_data || null,
+        adverb_data: data.adverb_data || null,
+        examples: data.examples?.length ? data.examples : null,
+      };
+      await cardAPI.create(payload);
+      setView('success');
+      setIsDirty(false);
+    } catch {
+      toast({
+        title: t('vocabularyCard.createModal.errorToast'),
         variant: 'destructive',
       });
     } finally {
@@ -154,6 +288,11 @@ export function CardCreateModal({ open, onOpenChange, deckId, onSuccess }: CardC
   const handleCreateAnother = () => {
     setView('form');
     setFormKey((prev) => prev + 1);
+    // Reset vocabulary form when creating another
+    if (cardType === 'vocabulary') {
+      vocabForm.reset(vocabularyDefaultValues);
+      setActiveTab('general');
+    }
   };
 
   // Handle "Done" button
@@ -177,7 +316,10 @@ export function CardCreateModal({ open, onOpenChange, deckId, onSuccess }: CardC
   return (
     <>
       <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogContent className="sm:max-w-[600px]" data-testid="card-create-modal">
+        <DialogContent
+          className="max-h-[90vh] overflow-y-auto sm:max-w-[700px]"
+          data-testid="card-create-modal"
+        >
           {view === 'form' ? (
             <>
               <DialogHeader>
@@ -200,9 +342,7 @@ export function CardCreateModal({ open, onOpenChange, deckId, onSuccess }: CardC
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="culture">{t('cardCreate.culture')}</SelectItem>
-                        <SelectItem value="vocabulary" disabled>
-                          {t('cardCreate.vocabulary')}
-                        </SelectItem>
+                        <SelectItem value="vocabulary">{t('cardCreate.vocabulary')}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -219,14 +359,14 @@ export function CardCreateModal({ open, onOpenChange, deckId, onSuccess }: CardC
                         <SelectValue placeholder={t('cardCreate.selectDeckPlaceholder')} />
                       </SelectTrigger>
                       <SelectContent>
-                        {decks.length === 0 ? (
+                        {decksToShow.length === 0 ? (
                           <SelectItem value="__none" disabled>
                             {t('cardCreate.noDecks')}
                           </SelectItem>
                         ) : (
-                          decks.map((deck) => (
+                          decksToShow.map((deck) => (
                             <SelectItem key={deck.id} value={deck.id}>
-                              {deck.name}
+                              {getDeckName(deck)}
                             </SelectItem>
                           ))
                         )}
@@ -237,13 +377,101 @@ export function CardCreateModal({ open, onOpenChange, deckId, onSuccess }: CardC
               )}
 
               {/* Culture Card Form */}
-              <CultureCardForm
-                key={formKey}
-                deckId={effectiveDeckId}
-                onSubmit={handleSubmit}
-                onDirtyChange={handleDirtyChange}
-                isSubmitting={isSubmitting}
-              />
+              {cardType === 'culture' && (
+                <CultureCardForm
+                  key={formKey}
+                  deckId={effectiveDeckId}
+                  onSubmit={handleSubmit}
+                  onDirtyChange={handleDirtyChange}
+                  isSubmitting={isSubmitting}
+                />
+              )}
+
+              {/* Vocabulary Card Form */}
+              {cardType === 'vocabulary' && selectedDeckId && (
+                <FormProvider {...vocabForm}>
+                  <form
+                    id="vocabulary-card-form"
+                    data-testid="vocabulary-card-form"
+                    onSubmit={vocabForm.handleSubmit(handleVocabularySubmit)}
+                  >
+                    <div className="mt-4">
+                      <Tabs
+                        value={activeTab}
+                        onValueChange={(value) => {
+                          setActiveTab(value as TabValue);
+                          const posMap: Record<string, string | null> = {
+                            general: null,
+                            noun: 'noun',
+                            verb: 'verb',
+                            adjective: 'adjective',
+                            adverb: 'adverb',
+                          };
+                          if (value in posMap) {
+                            vocabForm.setValue(
+                              'part_of_speech',
+                              posMap[value] as 'noun' | 'verb' | 'adjective' | 'adverb' | null
+                            );
+                          }
+                        }}
+                        data-testid="vocabulary-card-tabs"
+                      >
+                        <TabsList className="w-full">
+                          <TabsTrigger value="general" className="flex-1">
+                            {t('vocabularyCard.posTabs.general')}
+                          </TabsTrigger>
+                          <TabsTrigger value="noun" className="flex-1">
+                            {t('vocabularyCard.partOfSpeechOptions.noun')}
+                          </TabsTrigger>
+                          <TabsTrigger value="verb" className="flex-1">
+                            {t('vocabularyCard.partOfSpeechOptions.verb')}
+                          </TabsTrigger>
+                          <TabsTrigger value="adjective" className="flex-1">
+                            {t('vocabularyCard.partOfSpeechOptions.adjective')}
+                          </TabsTrigger>
+                          <TabsTrigger value="adverb" className="flex-1">
+                            {t('vocabularyCard.partOfSpeechOptions.adverb')}
+                          </TabsTrigger>
+                        </TabsList>
+
+                        {/* General Tab - BasicInfo + Examples only */}
+                        <TabsContent value="general" className="mt-4 space-y-6">
+                          <BasicInfoTab isSubmitting={isSubmitting} showPartOfSpeech={false} />
+                          <ExamplesTab isSubmitting={isSubmitting} />
+                        </TabsContent>
+
+                        {/* Noun Tab - BasicInfo + NounGrammar + Examples */}
+                        <TabsContent value="noun" className="mt-4 space-y-6">
+                          <BasicInfoTab isSubmitting={isSubmitting} showPartOfSpeech={false} />
+                          <NounGrammarForm isSubmitting={isSubmitting} />
+                          <ExamplesTab isSubmitting={isSubmitting} />
+                        </TabsContent>
+
+                        {/* Verb Tab - BasicInfo + VerbGrammar + Examples */}
+                        <TabsContent value="verb" className="mt-4 space-y-6">
+                          <BasicInfoTab isSubmitting={isSubmitting} showPartOfSpeech={false} />
+                          <VerbGrammarForm isSubmitting={isSubmitting} />
+                          <ExamplesTab isSubmitting={isSubmitting} />
+                        </TabsContent>
+
+                        {/* Adjective Tab - BasicInfo + AdjectiveGrammar + Examples */}
+                        <TabsContent value="adjective" className="mt-4 space-y-6">
+                          <BasicInfoTab isSubmitting={isSubmitting} showPartOfSpeech={false} />
+                          <AdjectiveGrammarForm isSubmitting={isSubmitting} />
+                          <ExamplesTab isSubmitting={isSubmitting} />
+                        </TabsContent>
+
+                        {/* Adverb Tab - BasicInfo + AdverbGrammar + Examples */}
+                        <TabsContent value="adverb" className="mt-4 space-y-6">
+                          <BasicInfoTab isSubmitting={isSubmitting} showPartOfSpeech={false} />
+                          <AdverbGrammarForm isSubmitting={isSubmitting} />
+                          <ExamplesTab isSubmitting={isSubmitting} />
+                        </TabsContent>
+                      </Tabs>
+                    </div>
+                  </form>
+                </FormProvider>
+              )}
 
               <DialogFooter>
                 <Button
@@ -256,15 +484,8 @@ export function CardCreateModal({ open, onOpenChange, deckId, onSuccess }: CardC
                 </Button>
                 <Button
                   type="submit"
-                  form="culture-card-form"
+                  form={cardType === 'vocabulary' ? 'vocabulary-card-form' : 'culture-card-form'}
                   disabled={!canSubmit}
-                  onClick={() => {
-                    // Trigger form submission via the form's submit handler
-                    const form = document.querySelector(
-                      '[data-testid="culture-card-form"]'
-                    ) as HTMLFormElement;
-                    form?.requestSubmit();
-                  }}
                   data-testid="create-btn"
                 >
                   {isSubmitting ? t('cardCreate.creating') : t('cardCreate.create')}
