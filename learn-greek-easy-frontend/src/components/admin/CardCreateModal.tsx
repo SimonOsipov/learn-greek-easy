@@ -32,7 +32,11 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
-import type { CultureDeckListItem, CultureQuestionCreatePayload } from '@/services/adminAPI';
+import type {
+  CultureDeckListItem,
+  CultureQuestionCreatePayload,
+  UnifiedDeckItem,
+} from '@/services/adminAPI';
 import { adminAPI } from '@/services/adminAPI';
 
 import { CultureCardForm } from './CultureCardForm';
@@ -67,6 +71,9 @@ export function CardCreateModal({ open, onOpenChange, deckId, onSuccess }: CardC
   const [selectedDeckId, setSelectedDeckId] = useState<string>('');
   const [cardType, setCardType] = useState<CardType>('culture');
   const [decks, setDecks] = useState<CultureDeckListItem[]>([]);
+  // TODO: Will be used by VOCAB-A-03 and VOCAB-A-04 in subsequent commits
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [vocabularyDecks, setVocabularyDecks] = useState<UnifiedDeckItem[]>([]);
   const [isLoadingDecks, setIsLoadingDecks] = useState(false);
   const [formKey, setFormKey] = useState(0);
 
