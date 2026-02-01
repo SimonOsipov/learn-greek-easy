@@ -320,6 +320,7 @@ export function CultureCardForm({
 
   return (
     <form
+      id="culture-card-form"
       onSubmit={handleSubmit(handleFormSubmit)}
       className="space-y-6"
       data-testid="culture-card-form"

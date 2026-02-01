@@ -42,6 +42,7 @@ import type {
   UnifiedDeckItem,
 } from '@/services/adminAPI';
 import { adminAPI } from '@/services/adminAPI';
+import { cardAPI, type CardCreatePayload } from '@/services/cardAPI';
 
 import { CultureCardForm } from './CultureCardForm';
 import { BasicInfoTab } from './vocabulary/BasicInfoTab';
@@ -212,6 +213,13 @@ export function CardCreateModal({ open, onOpenChange, deckId, onSuccess }: CardC
     }
   }, [cardType]);
 
+  // Track vocabulary form dirty state
+  useEffect(() => {
+    if (cardType === 'vocabulary') {
+      setIsDirty(vocabForm.formState.isDirty);
+    }
+  }, [cardType, vocabForm.formState.isDirty]);
+
   // Handle dirty state changes from form
   const handleDirtyChange = useCallback((dirty: boolean) => {
     setIsDirty(dirty);
@@ -230,6 +238,38 @@ export function CardCreateModal({ open, onOpenChange, deckId, onSuccess }: CardC
     } catch {
       toast({
         title: t('errors.createFailed'),
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Handle vocabulary form submission
+  const handleVocabularySubmit = async (data: VocabularyCardFormData) => {
+    setIsSubmitting(true);
+    try {
+      const payload: CardCreatePayload = {
+        deck_id: effectiveDeckId,
+        front_text: data.front_text,
+        back_text_en: data.back_text_en,
+        back_text_ru: data.back_text_ru || null,
+        example_sentence: data.example_sentence || null,
+        pronunciation: data.pronunciation || null,
+        part_of_speech: data.part_of_speech || null,
+        level: data.level || null,
+        noun_data: data.noun_data || null,
+        verb_data: data.verb_data || null,
+        adjective_data: data.adjective_data || null,
+        adverb_data: data.adverb_data || null,
+        examples: data.examples?.length ? data.examples : null,
+      };
+      await cardAPI.create(payload);
+      setView('success');
+      setIsDirty(false);
+    } catch {
+      toast({
+        title: t('vocabularyCard.createModal.errorToast'),
         variant: 'destructive',
       });
     } finally {
@@ -257,6 +297,11 @@ export function CardCreateModal({ open, onOpenChange, deckId, onSuccess }: CardC
   const handleCreateAnother = () => {
     setView('form');
     setFormKey((prev) => prev + 1);
+    // Reset vocabulary form when creating another
+    if (cardType === 'vocabulary') {
+      vocabForm.reset(vocabularyDefaultValues);
+      setActiveTab('basic');
+    }
   };
 
   // Handle "Done" button
@@ -351,43 +396,49 @@ export function CardCreateModal({ open, onOpenChange, deckId, onSuccess }: CardC
               {/* Vocabulary Card Form */}
               {cardType === 'vocabulary' && selectedDeckId && (
                 <FormProvider {...vocabForm}>
-                  <div className="mt-4">
-                    <Tabs
-                      value={activeTab}
-                      onValueChange={(value) =>
-                        setActiveTab(value as 'basic' | 'grammar' | 'examples')
-                      }
-                      data-testid="vocabulary-card-tabs"
-                    >
-                      <TabsList className="w-full">
-                        <TabsTrigger value="basic" className="flex-1">
-                          {t('vocabularyCard.tabs.basicInfo')}
-                        </TabsTrigger>
-                        {partOfSpeech && (
-                          <TabsTrigger value="grammar" className="flex-1">
-                            {t('vocabularyCard.tabs.grammar')}
+                  <form
+                    id="vocabulary-card-form"
+                    data-testid="vocabulary-card-form"
+                    onSubmit={vocabForm.handleSubmit(handleVocabularySubmit)}
+                  >
+                    <div className="mt-4">
+                      <Tabs
+                        value={activeTab}
+                        onValueChange={(value) =>
+                          setActiveTab(value as 'basic' | 'grammar' | 'examples')
+                        }
+                        data-testid="vocabulary-card-tabs"
+                      >
+                        <TabsList className="w-full">
+                          <TabsTrigger value="basic" className="flex-1">
+                            {t('vocabularyCard.tabs.basicInfo')}
                           </TabsTrigger>
-                        )}
-                        <TabsTrigger value="examples" className="flex-1">
-                          {t('vocabularyCard.tabs.examples')}
-                        </TabsTrigger>
-                      </TabsList>
+                          {partOfSpeech && (
+                            <TabsTrigger value="grammar" className="flex-1">
+                              {t('vocabularyCard.tabs.grammar')}
+                            </TabsTrigger>
+                          )}
+                          <TabsTrigger value="examples" className="flex-1">
+                            {t('vocabularyCard.tabs.examples')}
+                          </TabsTrigger>
+                        </TabsList>
 
-                      <TabsContent value="basic" className="mt-4">
-                        <BasicInfoTab isSubmitting={isSubmitting} />
-                      </TabsContent>
-
-                      {partOfSpeech && (
-                        <TabsContent value="grammar" className="mt-4">
-                          <GrammarTab isSubmitting={isSubmitting} />
+                        <TabsContent value="basic" className="mt-4">
+                          <BasicInfoTab isSubmitting={isSubmitting} />
                         </TabsContent>
-                      )}
 
-                      <TabsContent value="examples" className="mt-4">
-                        <ExamplesTab isSubmitting={isSubmitting} />
-                      </TabsContent>
-                    </Tabs>
-                  </div>
+                        {partOfSpeech && (
+                          <TabsContent value="grammar" className="mt-4">
+                            <GrammarTab isSubmitting={isSubmitting} />
+                          </TabsContent>
+                        )}
+
+                        <TabsContent value="examples" className="mt-4">
+                          <ExamplesTab isSubmitting={isSubmitting} />
+                        </TabsContent>
+                      </Tabs>
+                    </div>
+                  </form>
                 </FormProvider>
               )}
 
@@ -402,15 +453,8 @@ export function CardCreateModal({ open, onOpenChange, deckId, onSuccess }: CardC
                 </Button>
                 <Button
                   type="submit"
-                  form="culture-card-form"
+                  form={cardType === 'vocabulary' ? 'vocabulary-card-form' : 'culture-card-form'}
                   disabled={!canSubmit}
-                  onClick={() => {
-                    // Trigger form submission via the form's submit handler
-                    const form = document.querySelector(
-                      '[data-testid="culture-card-form"]'
-                    ) as HTMLFormElement;
-                    form?.requestSubmit();
-                  }}
                   data-testid="create-btn"
                 >
                   {isSubmitting ? t('cardCreate.creating') : t('cardCreate.create')}
