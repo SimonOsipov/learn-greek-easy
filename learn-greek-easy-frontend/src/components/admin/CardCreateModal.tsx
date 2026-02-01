@@ -13,7 +13,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { CheckCircle } from 'lucide-react';
-import { useForm } from 'react-hook-form';
+import { FormProvider, useForm, useWatch } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
 
@@ -34,12 +34,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  Tabs as _Tabs,
-  TabsContent as _TabsContent,
-  TabsList as _TabsList,
-  TabsTrigger as _TabsTrigger,
-} from '@/components/ui/tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
 import type {
   CultureDeckListItem,
@@ -49,9 +44,9 @@ import type {
 import { adminAPI } from '@/services/adminAPI';
 
 import { CultureCardForm } from './CultureCardForm';
-import { BasicInfoTab as _BasicInfoTab } from './vocabulary/BasicInfoTab';
-import { ExamplesTab as _ExamplesTab } from './vocabulary/ExamplesTab';
-import { GrammarTab as _GrammarTab } from './vocabulary/GrammarTab';
+import { BasicInfoTab } from './vocabulary/BasicInfoTab';
+import { ExamplesTab } from './vocabulary/ExamplesTab';
+import { GrammarTab } from './vocabulary/GrammarTab';
 import { AlertDialog } from '../dialogs/AlertDialog';
 
 // ============================================
@@ -132,8 +127,8 @@ export function CardCreateModal({ open, onOpenChange, deckId, onSuccess }: CardC
   const [isLoadingDecks, setIsLoadingDecks] = useState(false);
   const [formKey, setFormKey] = useState(0);
 
-  // Vocabulary form state (will be used in VOCAB-A-07)
-  const [_activeTab, setActiveTab] = useState<'basic' | 'grammar' | 'examples'>('basic');
+  // Vocabulary form state
+  const [activeTab, setActiveTab] = useState<'basic' | 'grammar' | 'examples'>('basic');
 
   // Vocabulary form setup
   const vocabForm = useForm<VocabularyCardFormData>({
@@ -141,6 +136,19 @@ export function CardCreateModal({ open, onOpenChange, deckId, onSuccess }: CardC
     mode: 'onChange',
     defaultValues: vocabularyDefaultValues,
   });
+
+  // Watch part_of_speech for conditional Grammar tab visibility
+  const partOfSpeech = useWatch({
+    control: vocabForm.control,
+    name: 'part_of_speech',
+  });
+
+  // Reset to basic tab if grammar tab becomes hidden while active
+  useEffect(() => {
+    if (!partOfSpeech && activeTab === 'grammar') {
+      setActiveTab('basic');
+    }
+  }, [partOfSpeech, activeTab]);
 
   // Determine effective deck ID
   const effectiveDeckId = deckId || selectedDeckId;
@@ -330,13 +338,58 @@ export function CardCreateModal({ open, onOpenChange, deckId, onSuccess }: CardC
               )}
 
               {/* Culture Card Form */}
-              <CultureCardForm
-                key={formKey}
-                deckId={effectiveDeckId}
-                onSubmit={handleSubmit}
-                onDirtyChange={handleDirtyChange}
-                isSubmitting={isSubmitting}
-              />
+              {cardType === 'culture' && (
+                <CultureCardForm
+                  key={formKey}
+                  deckId={effectiveDeckId}
+                  onSubmit={handleSubmit}
+                  onDirtyChange={handleDirtyChange}
+                  isSubmitting={isSubmitting}
+                />
+              )}
+
+              {/* Vocabulary Card Form */}
+              {cardType === 'vocabulary' && selectedDeckId && (
+                <FormProvider {...vocabForm}>
+                  <div className="mt-4">
+                    <Tabs
+                      value={activeTab}
+                      onValueChange={(value) =>
+                        setActiveTab(value as 'basic' | 'grammar' | 'examples')
+                      }
+                      data-testid="vocabulary-card-tabs"
+                    >
+                      <TabsList className="w-full">
+                        <TabsTrigger value="basic" className="flex-1">
+                          {t('vocabularyCard.tabs.basicInfo')}
+                        </TabsTrigger>
+                        {partOfSpeech && (
+                          <TabsTrigger value="grammar" className="flex-1">
+                            {t('vocabularyCard.tabs.grammar')}
+                          </TabsTrigger>
+                        )}
+                        <TabsTrigger value="examples" className="flex-1">
+                          {t('vocabularyCard.tabs.examples')}
+                        </TabsTrigger>
+                      </TabsList>
+
+                      <TabsContent value="basic" className="mt-4">
+                        <BasicInfoTab isSubmitting={isSubmitting} />
+                      </TabsContent>
+
+                      {partOfSpeech && (
+                        <TabsContent value="grammar" className="mt-4">
+                          <GrammarTab isSubmitting={isSubmitting} />
+                        </TabsContent>
+                      )}
+
+                      <TabsContent value="examples" className="mt-4">
+                        <ExamplesTab isSubmitting={isSubmitting} />
+                      </TabsContent>
+                    </Tabs>
+                  </div>
+                </FormProvider>
+              )}
 
               <DialogFooter>
                 <Button
