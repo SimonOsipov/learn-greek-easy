@@ -413,6 +413,9 @@
       "adjective": "Прилагательное",
       "adverb": "Наречие"
     },
+    "posTabs": {
+      "general": "Общее"
+    },
     "tabs": {
       "basicInfo": "Основная информация",
       "grammar": "Грамматика",

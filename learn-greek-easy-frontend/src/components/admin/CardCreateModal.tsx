@@ -13,7 +13,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { CheckCircle } from 'lucide-react';
-import { FormProvider, useForm, useWatch } from 'react-hook-form';
+import { FormProvider, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
 
@@ -47,8 +47,11 @@ import { cardAPI, type CardCreatePayload } from '@/services/cardAPI';
 import { CultureCardForm } from './CultureCardForm';
 import { BasicInfoTab } from './vocabulary/BasicInfoTab';
 import { ExamplesTab } from './vocabulary/ExamplesTab';
-import { GrammarTab } from './vocabulary/GrammarTab';
 import { AlertDialog } from '../dialogs/AlertDialog';
+import { AdjectiveGrammarForm } from './vocabulary/grammar/AdjectiveGrammarForm';
+import { AdverbGrammarForm } from './vocabulary/grammar/AdverbGrammarForm';
+import { NounGrammarForm } from './vocabulary/grammar/NounGrammarForm';
+import { VerbGrammarForm } from './vocabulary/grammar/VerbGrammarForm';
 
 // ============================================
 // Types
@@ -128,8 +131,9 @@ export function CardCreateModal({ open, onOpenChange, deckId, onSuccess }: CardC
   const [isLoadingDecks, setIsLoadingDecks] = useState(false);
   const [formKey, setFormKey] = useState(0);
 
-  // Vocabulary form state
-  const [activeTab, setActiveTab] = useState<'basic' | 'grammar' | 'examples'>('basic');
+  // Vocabulary form state - tabs by part of speech
+  type TabValue = 'general' | 'noun' | 'verb' | 'adjective' | 'adverb';
+  const [activeTab, setActiveTab] = useState<TabValue>('general');
 
   // Vocabulary form setup
   const vocabForm = useForm<VocabularyCardFormData>({
@@ -137,19 +141,6 @@ export function CardCreateModal({ open, onOpenChange, deckId, onSuccess }: CardC
     mode: 'onChange',
     defaultValues: vocabularyDefaultValues,
   });
-
-  // Watch part_of_speech for conditional Grammar tab visibility
-  const partOfSpeech = useWatch({
-    control: vocabForm.control,
-    name: 'part_of_speech',
-  });
-
-  // Reset to basic tab if grammar tab becomes hidden while active
-  useEffect(() => {
-    if (!partOfSpeech && activeTab === 'grammar') {
-      setActiveTab('basic');
-    }
-  }, [partOfSpeech, activeTab]);
 
   // Determine effective deck ID
   const effectiveDeckId = deckId || selectedDeckId;
@@ -194,7 +185,7 @@ export function CardCreateModal({ open, onOpenChange, deckId, onSuccess }: CardC
         setCardType('culture');
         setFormKey((prev) => prev + 1);
         // Reset vocabulary form state
-        setActiveTab('basic');
+        setActiveTab('general');
         vocabForm.reset(vocabularyDefaultValues);
       }, 200);
       return () => clearTimeout(timeout);
@@ -300,7 +291,7 @@ export function CardCreateModal({ open, onOpenChange, deckId, onSuccess }: CardC
     // Reset vocabulary form when creating another
     if (cardType === 'vocabulary') {
       vocabForm.reset(vocabularyDefaultValues);
-      setActiveTab('basic');
+      setActiveTab('general');
     }
   };
 
@@ -325,7 +316,10 @@ export function CardCreateModal({ open, onOpenChange, deckId, onSuccess }: CardC
   return (
     <>
       <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogContent className="sm:max-w-[600px]" data-testid="card-create-modal">
+        <DialogContent
+          className="max-h-[90vh] overflow-y-auto sm:max-w-[700px]"
+          data-testid="card-create-modal"
+        >
           {view === 'form' ? (
             <>
               <DialogHeader>
@@ -404,36 +398,73 @@ export function CardCreateModal({ open, onOpenChange, deckId, onSuccess }: CardC
                     <div className="mt-4">
                       <Tabs
                         value={activeTab}
-                        onValueChange={(value) =>
-                          setActiveTab(value as 'basic' | 'grammar' | 'examples')
-                        }
+                        onValueChange={(value) => {
+                          setActiveTab(value as TabValue);
+                          const posMap: Record<string, string | null> = {
+                            general: null,
+                            noun: 'noun',
+                            verb: 'verb',
+                            adjective: 'adjective',
+                            adverb: 'adverb',
+                          };
+                          if (value in posMap) {
+                            vocabForm.setValue(
+                              'part_of_speech',
+                              posMap[value] as 'noun' | 'verb' | 'adjective' | 'adverb' | null
+                            );
+                          }
+                        }}
                         data-testid="vocabulary-card-tabs"
                       >
                         <TabsList className="w-full">
-                          <TabsTrigger value="basic" className="flex-1">
-                            {t('vocabularyCard.tabs.basicInfo')}
+                          <TabsTrigger value="general" className="flex-1">
+                            {t('vocabularyCard.posTabs.general')}
                           </TabsTrigger>
-                          {partOfSpeech && (
-                            <TabsTrigger value="grammar" className="flex-1">
-                              {t('vocabularyCard.tabs.grammar')}
-                            </TabsTrigger>
-                          )}
-                          <TabsTrigger value="examples" className="flex-1">
-                            {t('vocabularyCard.tabs.examples')}
+                          <TabsTrigger value="noun" className="flex-1">
+                            {t('vocabularyCard.partOfSpeechOptions.noun')}
+                          </TabsTrigger>
+                          <TabsTrigger value="verb" className="flex-1">
+                            {t('vocabularyCard.partOfSpeechOptions.verb')}
+                          </TabsTrigger>
+                          <TabsTrigger value="adjective" className="flex-1">
+                            {t('vocabularyCard.partOfSpeechOptions.adjective')}
+                          </TabsTrigger>
+                          <TabsTrigger value="adverb" className="flex-1">
+                            {t('vocabularyCard.partOfSpeechOptions.adverb')}
                           </TabsTrigger>
                         </TabsList>
 
-                        <TabsContent value="basic" className="mt-4">
-                          <BasicInfoTab isSubmitting={isSubmitting} />
+                        {/* General Tab - BasicInfo + Examples only */}
+                        <TabsContent value="general" className="mt-4 space-y-6">
+                          <BasicInfoTab isSubmitting={isSubmitting} showPartOfSpeech={false} />
+                          <ExamplesTab isSubmitting={isSubmitting} />
                         </TabsContent>
 
-                        {partOfSpeech && (
-                          <TabsContent value="grammar" className="mt-4">
-                            <GrammarTab isSubmitting={isSubmitting} />
-                          </TabsContent>
-                        )}
+                        {/* Noun Tab - BasicInfo + NounGrammar + Examples */}
+                        <TabsContent value="noun" className="mt-4 space-y-6">
+                          <BasicInfoTab isSubmitting={isSubmitting} showPartOfSpeech={false} />
+                          <NounGrammarForm isSubmitting={isSubmitting} />
+                          <ExamplesTab isSubmitting={isSubmitting} />
+                        </TabsContent>
 
-                        <TabsContent value="examples" className="mt-4">
+                        {/* Verb Tab - BasicInfo + VerbGrammar + Examples */}
+                        <TabsContent value="verb" className="mt-4 space-y-6">
+                          <BasicInfoTab isSubmitting={isSubmitting} showPartOfSpeech={false} />
+                          <VerbGrammarForm isSubmitting={isSubmitting} />
+                          <ExamplesTab isSubmitting={isSubmitting} />
+                        </TabsContent>
+
+                        {/* Adjective Tab - BasicInfo + AdjectiveGrammar + Examples */}
+                        <TabsContent value="adjective" className="mt-4 space-y-6">
+                          <BasicInfoTab isSubmitting={isSubmitting} showPartOfSpeech={false} />
+                          <AdjectiveGrammarForm isSubmitting={isSubmitting} />
+                          <ExamplesTab isSubmitting={isSubmitting} />
+                        </TabsContent>
+
+                        {/* Adverb Tab - BasicInfo + AdverbGrammar + Examples */}
+                        <TabsContent value="adverb" className="mt-4 space-y-6">
+                          <BasicInfoTab isSubmitting={isSubmitting} showPartOfSpeech={false} />
+                          <AdverbGrammarForm isSubmitting={isSubmitting} />
                           <ExamplesTab isSubmitting={isSubmitting} />
                         </TabsContent>
                       </Tabs>

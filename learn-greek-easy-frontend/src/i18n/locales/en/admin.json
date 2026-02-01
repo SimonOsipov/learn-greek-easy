@@ -403,6 +403,9 @@
       "adjective": "Adjective",
       "adverb": "Adverb"
     },
+    "posTabs": {
+      "general": "General"
+    },
     "tabs": {
       "basicInfo": "Basic Info",
       "grammar": "Grammar",

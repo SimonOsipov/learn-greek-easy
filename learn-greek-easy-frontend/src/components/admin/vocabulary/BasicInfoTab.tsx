@@ -12,15 +12,13 @@
  * - English translation (back_text_en) - required
  * - Russian translation (back_text_ru) - optional
  * - Pronunciation - optional
- * - Part of speech - select
+ * - Part of speech - select (optional, controlled by showPartOfSpeech prop)
  * - CEFR level - select with deck default
- * - Legacy example sentence - deprecated field
  */
 
 import { useFormContext } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
-import { Badge } from '@/components/ui/badge';
 import {
   FormControl,
   FormDescription,
@@ -53,13 +51,18 @@ const CEFR_LEVELS = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'] as const;
 export interface BasicInfoTabProps {
   isSubmitting?: boolean;
   deckLevel?: string; // For CEFR level default display in placeholder
+  showPartOfSpeech?: boolean; // Whether to show part of speech selector (default true)
 }
 
 // ============================================
 // Component
 // ============================================
 
-export function BasicInfoTab({ isSubmitting = false, deckLevel }: BasicInfoTabProps) {
+export function BasicInfoTab({
+  isSubmitting = false,
+  deckLevel,
+  showPartOfSpeech = true,
+}: BasicInfoTabProps) {
   const { t } = useTranslation('admin');
   const { control } = useFormContext();
 
@@ -152,34 +155,36 @@ export function BasicInfoTab({ isSubmitting = false, deckLevel }: BasicInfoTabPr
       />
 
       {/* Part of Speech */}
-      <FormField
-        control={control}
-        name="part_of_speech"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>{t('vocabularyCard.partOfSpeech')}</FormLabel>
-            <Select
-              onValueChange={(value) => field.onChange(value === '' ? null : value)}
-              value={field.value || ''}
-              disabled={isSubmitting}
-            >
-              <FormControl>
-                <SelectTrigger data-testid="part-of-speech-select">
-                  <SelectValue placeholder={t('vocabularyCard.partOfSpeechPlaceholder')} />
-                </SelectTrigger>
-              </FormControl>
-              <SelectContent>
-                {PART_OF_SPEECH_OPTIONS.map((pos) => (
-                  <SelectItem key={pos} value={pos}>
-                    {t(`vocabularyCard.partOfSpeechOptions.${pos}`)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
+      {showPartOfSpeech && (
+        <FormField
+          control={control}
+          name="part_of_speech"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>{t('vocabularyCard.partOfSpeech')}</FormLabel>
+              <Select
+                onValueChange={(value) => field.onChange(value === '' ? null : value)}
+                value={field.value || ''}
+                disabled={isSubmitting}
+              >
+                <FormControl>
+                  <SelectTrigger data-testid="part-of-speech-select">
+                    <SelectValue placeholder={t('vocabularyCard.partOfSpeechPlaceholder')} />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {PART_OF_SPEECH_OPTIONS.map((pos) => (
+                    <SelectItem key={pos} value={pos}>
+                      {t(`vocabularyCard.partOfSpeechOptions.${pos}`)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      )}
 
       {/* CEFR Level Override */}
       <FormField
@@ -207,33 +212,6 @@ export function BasicInfoTab({ isSubmitting = false, deckLevel }: BasicInfoTabPr
               </SelectContent>
             </Select>
             <FormDescription>{t('vocabularyCard.levelDescription')}</FormDescription>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-
-      {/* Legacy Example Sentence (Deprecated) */}
-      <FormField
-        control={control}
-        name="example_sentence"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel className="flex items-center gap-2">
-              {t('vocabularyCard.exampleSentence')}
-              <Badge variant="secondary" data-testid="legacy-example-badge">
-                {t('vocabularyCard.legacyExampleDeprecated')}
-              </Badge>
-            </FormLabel>
-            <FormControl>
-              <Textarea
-                placeholder={t('vocabularyCard.exampleSentencePlaceholder')}
-                className="min-h-[80px]"
-                data-testid="example-sentence-input"
-                disabled={isSubmitting}
-                {...field}
-              />
-            </FormControl>
-            <FormDescription>{t('vocabularyCard.legacyExampleHint')}</FormDescription>
             <FormMessage />
           </FormItem>
         )}
