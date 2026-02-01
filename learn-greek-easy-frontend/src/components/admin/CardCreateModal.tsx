@@ -11,8 +11,11 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
+import { zodResolver } from '@hookform/resolvers/zod';
 import { CheckCircle } from 'lucide-react';
+import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
+import { z } from 'zod';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -66,6 +69,51 @@ export interface CardCreateModalProps {
 }
 
 // ============================================
+// Vocabulary Card Schema
+// ============================================
+
+const vocabularyCardSchema = z.object({
+  front_text: z.string().min(1, 'Greek text is required'),
+  back_text_en: z.string().min(1, 'English translation is required'),
+  back_text_ru: z.string().optional().or(z.literal('')),
+  example_sentence: z.string().optional().or(z.literal('')),
+  pronunciation: z.string().max(255).optional().or(z.literal('')),
+  part_of_speech: z.enum(['noun', 'verb', 'adjective', 'adverb']).optional().nullable(),
+  level: z.enum(['A1', 'A2', 'B1', 'B2', 'C1', 'C2']).optional().nullable(),
+  noun_data: z.any().optional().nullable(),
+  verb_data: z.any().optional().nullable(),
+  adjective_data: z.any().optional().nullable(),
+  adverb_data: z.any().optional().nullable(),
+  examples: z
+    .array(
+      z.object({
+        greek: z.string().max(1000),
+        english: z.string().max(1000).optional().or(z.literal('')),
+        russian: z.string().max(1000).optional().or(z.literal('')),
+        tense: z.string().optional().nullable(),
+      })
+    )
+    .optional(),
+});
+
+type VocabularyCardFormData = z.infer<typeof vocabularyCardSchema>;
+
+const vocabularyDefaultValues: VocabularyCardFormData = {
+  front_text: '',
+  back_text_en: '',
+  back_text_ru: '',
+  example_sentence: '',
+  pronunciation: '',
+  part_of_speech: null,
+  level: null,
+  noun_data: null,
+  verb_data: null,
+  adjective_data: null,
+  adverb_data: null,
+  examples: [],
+};
+
+// ============================================
 // Component
 // ============================================
 
@@ -83,6 +131,16 @@ export function CardCreateModal({ open, onOpenChange, deckId, onSuccess }: CardC
   const [vocabularyDecks, setVocabularyDecks] = useState<UnifiedDeckItem[]>([]);
   const [isLoadingDecks, setIsLoadingDecks] = useState(false);
   const [formKey, setFormKey] = useState(0);
+
+  // Vocabulary form state (will be used in VOCAB-A-07)
+  const [_activeTab, setActiveTab] = useState<'basic' | 'grammar' | 'examples'>('basic');
+
+  // Vocabulary form setup
+  const vocabForm = useForm<VocabularyCardFormData>({
+    resolver: zodResolver(vocabularyCardSchema),
+    mode: 'onChange',
+    defaultValues: vocabularyDefaultValues,
+  });
 
   // Determine effective deck ID
   const effectiveDeckId = deckId || selectedDeckId;
@@ -126,10 +184,13 @@ export function CardCreateModal({ open, onOpenChange, deckId, onSuccess }: CardC
         setSelectedDeckId('');
         setCardType('culture');
         setFormKey((prev) => prev + 1);
+        // Reset vocabulary form state
+        setActiveTab('basic');
+        vocabForm.reset(vocabularyDefaultValues);
       }, 200);
       return () => clearTimeout(timeout);
     }
-  }, [open]);
+  }, [open, vocabForm]);
 
   // Fetch vocabulary decks when card type changes to vocabulary
   useEffect(() => {
