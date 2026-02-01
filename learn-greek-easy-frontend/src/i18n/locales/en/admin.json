@@ -175,7 +175,8 @@
     "news": "News",
     "announcements": "Announcements",
     "feedback": "Feedback",
-    "changelog": "Changelog"
+    "changelog": "Changelog",
+    "bulkUploads": "Bulk Uploads"
   },
   "announcements": {
     "create": {
@@ -378,6 +379,191 @@
       "createError": "Failed to create changelog entry",
       "updateError": "Failed to update changelog entry",
       "deleteError": "Failed to delete changelog entry"
+    }
+  },
+  "vocabularyCard": {
+    "frontText": "Greek Word/Phrase",
+    "frontTextPlaceholder": "Enter Greek text",
+    "backTextEn": "English Translation",
+    "backTextEnPlaceholder": "Enter English translation",
+    "backTextRu": "Russian Translation (Optional)",
+    "backTextRuPlaceholder": "Enter Russian translation",
+    "pronunciation": "Pronunciation",
+    "pronunciationPlaceholder": "e.g., kalimera",
+    "partOfSpeech": "Part of Speech",
+    "partOfSpeechPlaceholder": "Select part of speech",
+    "level": "CEFR Level Override",
+    "levelPlaceholder": "Default from deck",
+    "levelDescription": "Leave empty to use deck's default level",
+    "exampleSentence": "Example Sentence (Optional)",
+    "exampleSentencePlaceholder": "Enter example in Greek",
+    "partOfSpeechOptions": {
+      "noun": "Noun",
+      "verb": "Verb",
+      "adjective": "Adjective",
+      "adverb": "Adverb"
+    },
+    "tabs": {
+      "basicInfo": "Basic Info",
+      "grammar": "Grammar",
+      "examples": "Examples"
+    },
+    "legacyExampleDeprecated": "Deprecated",
+    "legacyExampleHint": "Use the Examples tab for structured examples",
+    "grammarTab": {
+      "placeholder": "Select a part of speech in the Basic Info tab to edit grammar details.",
+      "title": "Grammar"
+    },
+    "examplesTab": {
+      "title": "Examples",
+      "emptyState": "No examples added. Click 'Add Example' to create one.",
+      "addButton": "Add Example",
+      "greekLabel": "Greek",
+      "greekPlaceholder": "Enter Greek example sentence",
+      "englishLabel": "English",
+      "englishPlaceholder": "Enter English translation",
+      "russianLabel": "Russian (Optional)",
+      "russianPlaceholder": "Enter Russian translation",
+      "tenseLabel": "Tense",
+      "tensePlaceholder": "Select tense",
+      "removeButton": "Remove example"
+    },
+    "grammar": {
+      "noun": {
+        "title": "Noun Declension",
+        "genderLabel": "Gender",
+        "genderPlaceholder": "Select gender",
+        "genders": {
+          "masculine": "Masculine",
+          "feminine": "Feminine",
+          "neuter": "Neuter"
+        },
+        "declensionTable": "Declension Table",
+        "singular": "Singular",
+        "plural": "Plural",
+        "cases": {
+          "nominative": "Nominative",
+          "genitive": "Genitive",
+          "accusative": "Accusative",
+          "vocative": "Vocative"
+        }
+      },
+      "verb": {
+        "title": "Verb Conjugation",
+        "voiceLabel": "Voice",
+        "voicePlaceholder": "Select voice",
+        "voices": {
+          "active": "Active",
+          "passive": "Passive"
+        },
+        "tenses": {
+          "present": "Present",
+          "imperfect": "Imperfect",
+          "past": "Past (Aorist)",
+          "future": "Future",
+          "perfect": "Perfect"
+        },
+        "persons": {
+          "firstSingular": "I",
+          "secondSingular": "You (sg)",
+          "thirdSingular": "He/She/It",
+          "firstPlural": "We",
+          "secondPlural": "You (pl)",
+          "thirdPlural": "They"
+        },
+        "imperative": {
+          "title": "Imperative",
+          "singular": "Singular (you)",
+          "plural": "Plural (you)"
+        }
+      },
+      "adjective": {
+        "title": "Adjective Declension",
+        "genders": {
+          "masculine": "Masculine",
+          "feminine": "Feminine",
+          "neuter": "Neuter"
+        },
+        "singular": "Singular",
+        "plural": "Plural",
+        "cases": {
+          "nominative": "Nominative",
+          "genitive": "Genitive",
+          "accusative": "Accusative",
+          "vocative": "Vocative"
+        },
+        "comparison": {
+          "title": "Comparison Forms",
+          "comparative": "Comparative",
+          "comparativePlaceholder": "e.g., more beautiful",
+          "superlative": "Superlative",
+          "superlativePlaceholder": "e.g., most beautiful"
+        }
+      },
+      "adverb": {
+        "title": "Adverb Comparison",
+        "comparative": "Comparative",
+        "comparativePlaceholder": "e.g., more quickly",
+        "superlative": "Superlative",
+        "superlativePlaceholder": "e.g., most quickly"
+      }
+    },
+    "createModal": {
+      "title": "Create Vocabulary Card",
+      "cancelButton": "Cancel",
+      "createButton": "Create Card",
+      "creatingButton": "Creating...",
+      "successTitle": "Card Created!",
+      "successMessage": "The vocabulary card has been created successfully.",
+      "createAnotherButton": "Create Another",
+      "doneButton": "Done",
+      "cancelConfirmTitle": "Discard Changes?",
+      "cancelConfirmMessage": "You have unsaved changes. Are you sure you want to close?",
+      "cancelConfirmYes": "Discard",
+      "cancelConfirmNo": "Keep Editing",
+      "errorToast": "Failed to create card. Please try again."
+    },
+    "editModal": {
+      "title": "Edit Vocabulary Card",
+      "cancelButton": "Cancel",
+      "saveButton": "Save Changes",
+      "savingButton": "Saving...",
+      "loadingError": "Failed to load card data",
+      "retryButton": "Retry",
+      "cancelConfirmTitle": "Discard Changes?",
+      "cancelConfirmMessage": "You have unsaved changes. Are you sure you want to close?",
+      "cancelConfirmYes": "Discard",
+      "cancelConfirmNo": "Keep Editing",
+      "successToast": "Card updated successfully",
+      "errorToast": "Failed to update card. Please try again."
+    }
+  },
+  "bulkUploads": {
+    "title": "Bulk Upload Cards",
+    "description": "Upload multiple vocabulary cards at once using JSON format.",
+    "deckLabel": "Target Deck",
+    "deckPlaceholder": "Select a vocabulary deck",
+    "jsonLabel": "Cards JSON",
+    "jsonPlaceholder": "Paste JSON array of cards here...",
+    "validateButton": "Validate & Preview",
+    "uploadButton": "Upload Cards",
+    "uploadingButton": "Uploading...",
+    "maxCardsWarning": "Maximum 100 cards per upload",
+    "validationErrors": "Validation Errors",
+    "previewTitle": "Preview Summary",
+    "totalCards": "Total Cards",
+    "withGrammar": "With Grammar",
+    "withExamples": "With Examples",
+    "successToast": "Successfully uploaded {{count}} cards",
+    "errorToast": "Failed to upload cards. Please try again.",
+    "invalidJson": "Invalid JSON format",
+    "noCards": "No cards found in JSON",
+    "tooManyCards": "Too many cards. Maximum is 100.",
+    "grammarCounts": {
+      "nouns": "Nouns",
+      "verbs": "Verbs",
+      "adjectives": "Adj",
+      "adverbs": "Adv"
     }
   }
 }

@@ -26,6 +26,7 @@ The seeding infrastructure provides deterministic test data for E2E tests, enabl
 | `/api/v1/test/seed/pending-question` | POST | Create pending question for review testing |
 | `/api/v1/test/seed/news-questions` | POST | Seed news items with linked culture questions |
 | `/api/v1/test/seed/danger-zone` | POST | Create danger zone test users |
+| `/api/v1/test/seed/admin-cards` | POST | Create vocabulary cards for admin E2E testing |
 
 ## Test Users Created
 
@@ -163,6 +164,36 @@ Seed endpoint: `POST /api/v1/test/seed/danger-zone`
 - 2 MockExamSessions with answers (1 passed, 1 failed)
 - 10 CultureQuestionStats with history
 - 5 Notifications (2 unread, 3 read)
+
+## Admin Vocabulary Cards
+
+Seed endpoint: `POST /api/v1/test/seed/admin-cards`
+
+Creates vocabulary decks and cards for E2E testing of the admin vocabulary card management UI.
+
+### Decks Created
+
+| Deck Name | Cards | Purpose |
+|-----------|-------|---------|
+| E2E Vocabulary Cards Test Deck | 10 | Testing card display, edit, delete operations |
+| E2E Empty Vocabulary Deck | 0 | Testing first card creation in empty deck |
+
+### Cards in Main Deck
+
+| # | Greek | Type | Grammar Data |
+|---|-------|------|--------------|
+| 1 | καλημέρα | Basic | None (front_text + back_text_en only) |
+| 2 | καληνύχτα | Basic + RU | back_text_ru added |
+| 3 | ευχαριστώ | Basic + pronunciation | All basic fields |
+| 4 | σπίτι | Noun (partial) | gender + 3 declension fields |
+| 5 | νερό | Noun (full) | gender + all 8 declension fields |
+| 6 | τρώω | Verb (active) | voice + 6 present conjugations |
+| 7 | διαβάζομαι | Verb (passive) | voice + 9 conjugation fields |
+| 8 | καλός | Adjective | 9 declension + 2 comparison fields |
+| 9 | γρήγορα | Adverb | comparative + superlative |
+| 10 | βιβλίο | Noun + examples | noun_data + 3 structured examples |
+
+**Note**: This endpoint is standalone and does NOT depend on other seed endpoints. It is idempotent - existing E2E test decks are replaced on each call.
 
 ## CLI Usage
 

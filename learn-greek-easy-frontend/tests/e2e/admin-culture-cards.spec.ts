@@ -141,8 +141,24 @@ test.describe('Admin Culture Cards - Create from Action Bar', () => {
 // CREATE FROM DECK DETAIL MODAL
 // ============================================================================
 
+/**
+ * Helper to seed culture content (decks and questions)
+ */
+async function seedCultureContent(page: import('@playwright/test').Page): Promise<void> {
+  const apiBaseUrl = process.env.E2E_API_URL || process.env.VITE_API_URL || 'http://localhost:8000';
+  const response = await page.request.post(`${apiBaseUrl}/api/v1/test/seed/culture`);
+  if (!response.ok()) {
+    console.warn('[TEST] Culture seeding failed, tests may use existing data');
+  }
+}
+
 test.describe('Admin Culture Cards - Create from Deck Detail', () => {
   test.use({ storageState: ADMIN_AUTH });
+
+  test.beforeEach(async ({ page }) => {
+    // Seed culture decks and questions to ensure test data exists
+    await seedCultureContent(page);
+  });
 
   test('Create card from deck detail modal', async ({ page }) => {
     // Navigate to admin panel
@@ -161,41 +177,51 @@ test.describe('Admin Culture Cards - Create from Deck Detail', () => {
       has: page.locator('text=/culture/i'),
     }).first();
 
-    // If no visible culture deck row, we need to find it differently
-    // Click on view details button for any deck with culture type
-    const viewDetailBtn = page.locator('button').filter({ hasText: /view/i }).first();
-
-    // Alternative: click directly on a deck row to open detail modal
-    const anyDeckRow = page.locator('[data-testid^="deck-row-"]').first();
-    if (await anyDeckRow.isVisible()) {
-      await anyDeckRow.click();
+    // Try culture deck first, fall back to any deck if not found
+    let clickedCultureDeck = false;
+    if (await cultureDeckRow.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await cultureDeckRow.click();
+      clickedCultureDeck = true;
     } else {
-      // Fallback: Skip if no decks available
-      test.skip();
-      return;
+      // Try any deck row as fallback
+      const anyDeckRow = page.locator('[data-testid^="deck-row-"]').first();
+      if (await anyDeckRow.isVisible()) {
+        await anyDeckRow.click();
+      } else {
+        // No decks available
+        test.skip();
+        return;
+      }
     }
 
     // Deck detail modal should open
     const detailModal = page.getByTestId('deck-detail-modal');
     await expect(detailModal).toBeVisible({ timeout: 5000 });
 
-    // Check if this is a culture deck (has "Create Card" button)
+    // Click "Create Card" button (available for both culture and vocabulary decks)
     const createCardBtn = page.getByTestId('create-card-btn');
-    const isNotCultureDeck = await createCardBtn.isHidden().catch(() => true);
+    await expect(createCardBtn).toBeVisible({ timeout: 3000 });
+    await createCardBtn.click();
 
-    if (isNotCultureDeck) {
-      // Close modal and try to find a culture deck
+    // Wait for either culture or vocabulary create modal to appear
+    // Culture decks open card-create-modal, vocabulary decks open vocabulary-card-create-modal
+    const cultureCreateModal = page.getByTestId('card-create-modal');
+    const vocabCreateModal = page.getByTestId('vocabulary-card-create-modal');
+
+    // Check which modal opened
+    const isCultureModal = await cultureCreateModal.isVisible({ timeout: 3000 }).catch(() => false);
+
+    if (!isCultureModal) {
+      // This is a vocabulary deck, not a culture deck - close and skip
+      await page.keyboard.press('Escape');
+      await page.waitForTimeout(500);
       await page.getByTestId('deck-detail-close').click();
-      await expect(detailModal).not.toBeVisible();
       test.skip();
       return;
     }
 
-    // Click "Create Card" button in deck detail modal
-    await createCardBtn.click();
-
-    // Card create modal should open
-    const createModal = page.getByTestId('card-create-modal');
+    // Culture card create modal is open
+    const createModal = cultureCreateModal;
     await expect(createModal).toBeVisible({ timeout: 5000 });
 
     // Fill the culture card form
@@ -232,6 +258,11 @@ test.describe('Admin Culture Cards - Create from Deck Detail', () => {
 test.describe('Admin Culture Cards - Edit Card', () => {
   test.use({ storageState: ADMIN_AUTH });
 
+  test.beforeEach(async ({ page }) => {
+    // Seed culture decks and questions to ensure test data exists
+    await seedCultureContent(page);
+  });
+
   test('Edit existing culture card', async ({ page }) => {
     // Navigate to admin panel
     await page.goto('/admin');
@@ -243,13 +274,26 @@ test.describe('Admin Culture Cards - Edit Card', () => {
     // Wait for deck list to load
     await page.waitForTimeout(2000);
 
-    // Click on a deck to open detail modal
-    const deckRow = page.locator('[data-testid^="deck-row-"]').first();
-    if (!(await deckRow.isVisible())) {
-      test.skip();
-      return;
+    // Find and click on a culture deck (not vocabulary deck)
+    // Look for a deck row with "culture" type indicator
+    const cultureDeckRow = page.locator('[data-testid^="deck-row-"]').filter({
+      has: page.locator('text=/culture/i'),
+    }).first();
+
+    // Try culture deck first, fall back to any deck if not found
+    if (await cultureDeckRow.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await cultureDeckRow.click();
+    } else {
+      // Try any deck row as fallback
+      const anyDeckRow = page.locator('[data-testid^="deck-row-"]').first();
+      if (await anyDeckRow.isVisible()) {
+        await anyDeckRow.click();
+      } else {
+        // No decks available
+        test.skip();
+        return;
+      }
     }
-    await deckRow.click();
 
     // Deck detail modal should open
     const detailModal = page.getByTestId('deck-detail-modal');
@@ -258,12 +302,13 @@ test.describe('Admin Culture Cards - Edit Card', () => {
     // Wait for questions to load
     await page.waitForTimeout(1000);
 
-    // Find an edit button for a question
+    // Find an edit button for a culture question (not vocabulary card)
+    // Culture questions have edit-question-{id}, vocabulary cards have vocabulary-card-edit-{id}
     const editBtn = page.locator('[data-testid^="edit-question-"]').first();
     const hasEditButton = await editBtn.isVisible().catch(() => false);
 
     if (!hasEditButton) {
-      // No questions to edit, close modal
+      // No culture questions to edit (might be vocabulary deck or empty culture deck)
       await page.getByTestId('deck-detail-close').click();
       test.skip();
       return;
@@ -276,13 +321,16 @@ test.describe('Admin Culture Cards - Edit Card', () => {
     const editModal = page.getByTestId('card-edit-modal');
     await expect(editModal).toBeVisible({ timeout: 5000 });
 
-    // Modify the question text in Russian tab (should be active by default)
-    const questionInput = page.getByTestId('question-input-ru');
+    // Modify the question text in English tab (this is the fallback displayed in deck list)
+    // Switch to English tab first
+    await page.getByTestId('lang-tab-en').click();
+
+    const questionInput = page.getByTestId('question-input-en');
     await expect(questionInput).toBeVisible();
 
     // Append text to existing question
     const originalText = await questionInput.inputValue();
-    await questionInput.fill(`${originalText} (Edited)`);
+    await questionInput.fill(`${originalText} (E2E-Edited)`);
 
     // Click save button
     await page.getByTestId('save-btn').click();
@@ -290,8 +338,15 @@ test.describe('Admin Culture Cards - Edit Card', () => {
     // Modal should close after successful save
     await expect(editModal).not.toBeVisible({ timeout: 10000 });
 
-    // Verify the edited question appears in the list
-    await expect(page.getByText(/edited/i)).toBeVisible({ timeout: 5000 });
+    // Wait for the list to refresh and verify the edited question appears
+    // The deck detail modal should still be open and show the updated text
+    await expect(detailModal).toBeVisible();
+
+    // Wait a bit for the fetchItems to complete
+    await page.waitForTimeout(1000);
+
+    // Verify the edited question appears in the list within the deck detail modal
+    await expect(detailModal.getByText(/E2E-Edited/i)).toBeVisible({ timeout: 5000 });
   });
 });
 

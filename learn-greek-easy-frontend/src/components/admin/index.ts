@@ -1,6 +1,7 @@
 // src/components/admin/index.ts
 
 export { AdminFeedbackCard } from './AdminFeedbackCard';
+export { BulkUploadsTab } from './BulkUploadsTab';
 export { AdminFeedbackResponseDialog } from './AdminFeedbackResponseDialog';
 export { AdminFeedbackSection } from './AdminFeedbackSection';
 export { CardCreateModal, type CardCreateModalProps } from './CardCreateModal';
@@ -25,3 +26,10 @@ export {
   type VocabularyDeckCreateFormData,
 } from './VocabularyDeckCreateForm';
 export { VocabularyDeckEditForm, type VocabularyDeckFormData } from './VocabularyDeckEditForm';
+export {
+  VocabularyCardForm,
+  VOCABULARY_CARD_FORM_ID,
+  type VocabularyCardFormProps,
+  type VocabularyCardFormData,
+} from './VocabularyCardForm';
+export * from './vocabulary';

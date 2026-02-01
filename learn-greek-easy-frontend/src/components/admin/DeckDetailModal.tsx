@@ -6,6 +6,7 @@ import { AlertCircle, ChevronLeft, ChevronRight, Pencil, Plus, Trash2 } from 'lu
 import { useTranslation } from 'react-i18next';
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -27,6 +28,7 @@ import type {
 import { CardCreateModal } from './CardCreateModal';
 import { CardDeleteDialog } from './CardDeleteDialog';
 import { CardEditModal } from './CardEditModal';
+import { VocabularyCardCreateModal, VocabularyCardEditModal } from './vocabulary';
 
 interface DeckDetailModalProps {
   open: boolean;
@@ -52,7 +54,7 @@ function getDeckDisplayName(name: string | MultilingualName, locale: string): st
  * Format card preview text for vocabulary cards
  */
 function formatCardPreview(card: AdminVocabularyCard): string {
-  return `${card.front_text} - ${card.back_text}`;
+  return `${card.front_text} - ${card.back_text_en}`;
 }
 
 /**
@@ -100,11 +102,16 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
   >(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Edit modal state
+  // Edit modal state (culture questions)
   const [editingCard, setEditingCard] = useState<AdminCultureQuestion | null>(null);
 
-  // Create modal state
+  // Create modal state (culture questions)
   const [createModalOpen, setCreateModalOpen] = useState(false);
+
+  // Vocabulary card modal state
+  const [vocabularyCreateModalOpen, setVocabularyCreateModalOpen] = useState(false);
+  const [vocabularyEditModalOpen, setVocabularyEditModalOpen] = useState(false);
+  const [selectedVocabularyCardId, setSelectedVocabularyCardId] = useState<string | null>(null);
 
   const fetchItems = useCallback(async () => {
     if (!deck) return;
@@ -227,16 +234,16 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
                 <DialogTitle data-testid="deck-detail-title">{deckName}</DialogTitle>
                 <DialogDescription>{t(itemCountKey, { count: total })}</DialogDescription>
               </div>
-              {!isVocabulary && (
-                <Button
-                  size="sm"
-                  onClick={() => setCreateModalOpen(true)}
-                  data-testid="create-card-btn"
-                >
-                  <Plus className="mr-1 h-4 w-4" />
-                  {t('deckDetail.createCard')}
-                </Button>
-              )}
+              <Button
+                size="sm"
+                onClick={() =>
+                  isVocabulary ? setVocabularyCreateModalOpen(true) : setCreateModalOpen(true)
+                }
+                data-testid="create-card-btn"
+              >
+                <Plus className="mr-1 h-4 w-4" />
+                {t('deckDetail.createCard')}
+              </Button>
             </div>
           </DialogHeader>
 
@@ -276,20 +283,54 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
                   className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50"
                   data-testid={`card-item-${card.id}`}
                 >
-                  <div className="flex-1 overflow-hidden pr-2">
-                    <p className="truncate font-medium">{card.front_text}</p>
-                    <p className="truncate text-sm text-muted-foreground">{card.back_text}</p>
+                  <div className="min-w-0 flex-1 pr-2">
+                    <div className="flex items-center gap-2">
+                      <p className="truncate font-medium">{card.front_text}</p>
+                      {card.part_of_speech && (
+                        <Badge
+                          variant="secondary"
+                          className="shrink-0"
+                          data-testid={`vocabulary-card-pos-badge-${card.id}`}
+                        >
+                          {card.part_of_speech}
+                        </Badge>
+                      )}
+                      {card.level && card.level !== deck?.level && (
+                        <Badge
+                          variant="outline"
+                          className="shrink-0"
+                          data-testid={`vocabulary-card-level-badge-${card.id}`}
+                        >
+                          {card.level}
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="truncate text-sm text-muted-foreground">{card.back_text_en}</p>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDeleteClick(card)}
-                    className="shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                    data-testid={`delete-card-${card.id}`}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    <span className="sr-only">{t('actions.delete')}</span>
-                  </Button>
+                  <div className="flex shrink-0 items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedVocabularyCardId(card.id);
+                        setVocabularyEditModalOpen(true);
+                      }}
+                      data-testid={`vocabulary-card-edit-${card.id}`}
+                    >
+                      <Pencil className="h-4 w-4" />
+                      <span className="sr-only">{t('actions.edit')}</span>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDeleteClick(card)}
+                      className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                      data-testid={`delete-card-${card.id}`}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      <span className="sr-only">{t('actions.delete')}</span>
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -423,6 +464,37 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
           onSuccess={() => {
             fetchItems();
             onItemDeleted?.(); // Refresh parent deck counts
+          }}
+        />
+      )}
+
+      {/* Vocabulary Card Create Modal */}
+      {isVocabulary && deck && (
+        <VocabularyCardCreateModal
+          open={vocabularyCreateModalOpen}
+          onOpenChange={setVocabularyCreateModalOpen}
+          deckId={deck.id}
+          deckLevel={deck.level ?? undefined}
+          onSuccess={() => {
+            fetchItems();
+            onItemDeleted?.(); // Refresh parent deck counts
+          }}
+        />
+      )}
+
+      {/* Vocabulary Card Edit Modal */}
+      {isVocabulary && deck && selectedVocabularyCardId && (
+        <VocabularyCardEditModal
+          open={vocabularyEditModalOpen}
+          onOpenChange={(open) => {
+            setVocabularyEditModalOpen(open);
+            if (!open) setSelectedVocabularyCardId(null);
+          }}
+          cardId={selectedVocabularyCardId}
+          deckId={deck.id}
+          deckLevel={deck.level ?? undefined}
+          onSuccess={() => {
+            fetchItems();
           }}
         />
       )}

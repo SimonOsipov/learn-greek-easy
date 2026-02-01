@@ -92,6 +92,27 @@ export interface SearchCardsParams {
   page_size?: number;
 }
 
+/**
+ * Payload for creating a vocabulary card
+ *
+ * Matches the CardCreate schema in the backend.
+ */
+export interface CardCreatePayload {
+  deck_id: string;
+  front_text: string;
+  back_text_en: string;
+  back_text_ru?: string | null;
+  example_sentence?: string | null;
+  pronunciation?: string | null;
+  part_of_speech?: PartOfSpeech | null;
+  level?: DeckLevel | null;
+  examples?: Example[] | null;
+  noun_data?: NounData | null;
+  verb_data?: VerbData | null;
+  adjective_data?: AdjectiveData | null;
+  adverb_data?: AdverbData | null;
+}
+
 // ============================================
 // Card API Methods
 // ============================================
@@ -127,5 +148,44 @@ export const cardAPI = {
    */
   getById: async (cardId: string): Promise<CardResponse> => {
     return api.get<CardResponse>(`/api/v1/cards/${cardId}`);
+  },
+
+  /**
+   * Create a new vocabulary card
+   *
+   * Requires superuser privileges.
+   */
+  create: async (data: CardCreatePayload): Promise<CardResponse> => {
+    return api.post<CardResponse>('/api/v1/cards', data);
+  },
+
+  /**
+   * Update an existing vocabulary card
+   *
+   * Requires superuser privileges.
+   */
+  update: async (cardId: string, data: Partial<CardCreatePayload>): Promise<CardResponse> => {
+    return api.patch<CardResponse>(`/api/v1/cards/${cardId}`, data);
+  },
+
+  /**
+   * Bulk create vocabulary cards
+   *
+   * Creates multiple cards in one request.
+   * Requires superuser privileges.
+   * Maximum 100 cards per request.
+   *
+   * @param deckId - UUID of the target deck
+   * @param cards - Array of cards to create (without deck_id)
+   * @returns Object with deck_id, created_count, and cards array
+   */
+  bulkCreate: async (
+    deckId: string,
+    cards: Omit<CardCreatePayload, 'deck_id'>[]
+  ): Promise<{ deck_id: string; created_count: number; cards: CardResponse[] }> => {
+    return api.post<{ deck_id: string; created_count: number; cards: CardResponse[] }>(
+      '/api/v1/cards/bulk',
+      { deck_id: deckId, cards }
+    );
   },
 };
