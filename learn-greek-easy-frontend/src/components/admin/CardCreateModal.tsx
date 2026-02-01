@@ -31,6 +31,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Tabs as _Tabs,
+  TabsContent as _TabsContent,
+  TabsList as _TabsList,
+  TabsTrigger as _TabsTrigger,
+} from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
 import type {
   CultureDeckListItem,
@@ -40,6 +46,9 @@ import type {
 import { adminAPI } from '@/services/adminAPI';
 
 import { CultureCardForm } from './CultureCardForm';
+import { BasicInfoTab as _BasicInfoTab } from './vocabulary/BasicInfoTab';
+import { ExamplesTab as _ExamplesTab } from './vocabulary/ExamplesTab';
+import { GrammarTab as _GrammarTab } from './vocabulary/GrammarTab';
 import { AlertDialog } from '../dialogs/AlertDialog';
 
 // ============================================
