@@ -91,7 +91,7 @@ test.describe('Admin Culture Cards - Create from Action Bar', () => {
     const modal = page.getByTestId('card-create-modal');
     await expect(modal).toBeVisible({ timeout: 5000 });
 
-    // Card type should default to culture (vocabulary is disabled)
+    // Card type should default to culture
     const cardTypeSelect = page.getByTestId('card-type-select');
     await expect(cardTypeSelect).toContainText('Culture');
 

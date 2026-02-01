@@ -2,7 +2,7 @@
  * CardCreateModal - Modal for creating culture cards.
  *
  * Features:
- * - Card type dropdown (Culture selected, Vocabulary disabled) when no deckId
+ * - Card type dropdown (Culture or Vocabulary) when no deckId
  * - Deck dropdown for selecting target deck when no deckId
  * - CultureCardForm integration
  * - Success state with Create Another/Done buttons
@@ -200,9 +200,7 @@ export function CardCreateModal({ open, onOpenChange, deckId, onSuccess }: CardC
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="culture">{t('cardCreate.culture')}</SelectItem>
-                        <SelectItem value="vocabulary" disabled>
-                          {t('cardCreate.vocabulary')}
-                        </SelectItem>
+                        <SelectItem value="vocabulary">{t('cardCreate.vocabulary')}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

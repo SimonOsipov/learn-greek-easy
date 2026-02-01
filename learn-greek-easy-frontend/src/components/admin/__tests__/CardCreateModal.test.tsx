@@ -4,7 +4,7 @@
  * Comprehensive tests for the CardCreateModal component, covering:
  * - Modal open/close states
  * - Conditional UI (deck dropdown visible when no deckId, hidden when deckId provided)
- * - Card type dropdown (culture selected, vocabulary disabled)
+ * - Card type dropdown (culture or vocabulary)
  * - Success flow (Create Another, Done buttons)
  * - Cancel flow (confirmation dialog when dirty)
  * - API call formatting
@@ -231,8 +231,8 @@ describe('CardCreateModal', () => {
       });
     });
 
-    // Note: Testing vocabulary option disabled requires Radix Select interaction
-    // which doesn't work reliably in happy-dom. The functionality is covered by E2E tests.
+    // Note: Vocabulary option is now enabled. Radix Select interactions
+    // don't work reliably in happy-dom. Selection behavior is covered by E2E tests.
   });
 
   // ============================================
