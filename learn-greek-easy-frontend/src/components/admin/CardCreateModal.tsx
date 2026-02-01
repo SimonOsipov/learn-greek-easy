@@ -71,7 +71,7 @@ export function CardCreateModal({ open, onOpenChange, deckId, onSuccess }: CardC
   const [selectedDeckId, setSelectedDeckId] = useState<string>('');
   const [cardType, setCardType] = useState<CardType>('culture');
   const [decks, setDecks] = useState<CultureDeckListItem[]>([]);
-  // TODO: Will be used by VOCAB-A-03 and VOCAB-A-04 in subsequent commits
+  // TODO: Will be used by VOCAB-A-04 to render vocabulary deck dropdown
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [vocabularyDecks, setVocabularyDecks] = useState<UnifiedDeckItem[]>([]);
   const [isLoadingDecks, setIsLoadingDecks] = useState(false);
@@ -115,6 +115,18 @@ export function CardCreateModal({ open, onOpenChange, deckId, onSuccess }: CardC
       return () => clearTimeout(timeout);
     }
   }, [open]);
+
+  // Fetch vocabulary decks when card type changes to vocabulary
+  useEffect(() => {
+    // Reset selected deck when card type changes
+    setSelectedDeckId('');
+
+    if (cardType === 'vocabulary') {
+      adminAPI.listDecks({ type: 'vocabulary' }).then((res) => {
+        setVocabularyDecks(res.decks);
+      });
+    }
+  }, [cardType]);
 
   // Handle dirty state changes from form
   const handleDirtyChange = useCallback((dirty: boolean) => {

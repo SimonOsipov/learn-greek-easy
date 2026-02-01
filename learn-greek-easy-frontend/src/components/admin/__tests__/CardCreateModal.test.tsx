@@ -28,6 +28,7 @@ import i18n from '@/i18n';
 vi.mock('@/services/adminAPI', () => ({
   adminAPI: {
     getCultureDecks: vi.fn(),
+    listDecks: vi.fn(),
     createCultureQuestion: vi.fn(),
   },
 }));
@@ -113,6 +114,26 @@ describe('CardCreateModal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     (adminAPI.getCultureDecks as Mock).mockResolvedValue(createMockDecks());
+    (adminAPI.listDecks as Mock).mockResolvedValue({
+      decks: [
+        {
+          id: 'vocab-deck-1',
+          name: 'Basic Vocabulary',
+          type: 'vocabulary',
+          level: 'A1',
+          category: null,
+          item_count: 10,
+          is_active: true,
+          is_premium: false,
+          created_at: '2024-01-01',
+          owner_id: null,
+          owner_name: null,
+        },
+      ],
+      total: 1,
+      page: 1,
+      page_size: 20,
+    });
     (adminAPI.createCultureQuestion as Mock).mockResolvedValue({ id: 'new-question-id' });
   });
 
