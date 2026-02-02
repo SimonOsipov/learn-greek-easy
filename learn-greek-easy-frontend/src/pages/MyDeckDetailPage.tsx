@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 
-import { AlertCircle, BookOpen, ChevronLeft, Pencil, Trash2 } from 'lucide-react';
+import { AlertCircle, BookOpen, ChevronLeft, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 
@@ -12,6 +12,7 @@ import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog';
 import { PageLoader } from '@/components/feedback';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { UserVocabularyCardCreateModal } from '@/components/vocabulary';
 import { useToast } from '@/hooks/use-toast';
 import {
   trackMyDecksAccessDenied,
@@ -42,6 +43,9 @@ export const MyDeckDetailPage: React.FC = () => {
   // Delete dialog state
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Create card modal state
+  const [isCreateCardModalOpen, setIsCreateCardModalOpen] = useState(false);
 
   const fetchDeck = useCallback(async () => {
     if (!deckId) return;
@@ -155,6 +159,16 @@ export const MyDeckDetailPage: React.FC = () => {
     setIsDeleteDialogOpen(false);
   };
 
+  // Create card handlers
+  const handleCreateCardClick = () => {
+    setIsCreateCardModalOpen(true);
+  };
+
+  const handleCreateCardSuccess = () => {
+    setIsCreateCardModalOpen(false);
+    fetchDeck(); // Refresh deck data including card count
+  };
+
   // Handle invalid deckId (not provided)
   if (!deckId) {
     return <NotFoundState />;
@@ -213,6 +227,14 @@ export const MyDeckDetailPage: React.FC = () => {
             <span>/</span>
             <span className="truncate font-medium text-foreground">{deck.name}</span>
           </nav>
+
+          {/* Create Card Button */}
+          <div className="mb-4 flex justify-end">
+            <Button variant="hero" onClick={handleCreateCardClick} data-testid="create-card-button">
+              <Plus className="mr-2 h-4 w-4" />
+              {t('myDecks.createCard')}
+            </Button>
+          </div>
 
           {/* Deck Content Placeholder - actual deck detail implementation would go here */}
           <Card className="relative">
@@ -279,6 +301,17 @@ export const MyDeckDetailPage: React.FC = () => {
         variant="destructive"
         loading={isDeleting}
       />
+
+      {/* Create Card Modal */}
+      {deck && (
+        <UserVocabularyCardCreateModal
+          open={isCreateCardModalOpen}
+          onOpenChange={setIsCreateCardModalOpen}
+          deckId={deck.id}
+          deckLevel={deck.level}
+          onSuccess={handleCreateCardSuccess}
+        />
+      )}
     </>
   );
 };
