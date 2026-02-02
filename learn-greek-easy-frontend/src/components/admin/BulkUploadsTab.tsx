@@ -5,15 +5,14 @@
  *
  * Admin tab for bulk uploading vocabulary cards via JSON.
  * Features:
- * - Deck selector (vocabulary decks only)
- * - JSON textarea for card data
+ * - JSON textarea with deck_id and cards in payload
  * - Validate & Preview functionality
  * - Preview summary showing card counts and grammar breakdown
  * - Upload with progress indication
  * - Success/error handling with toast notifications
  */
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 
 import { AlertCircle, CheckCircle2, Loader2, Upload } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -22,17 +21,9 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/hooks/use-toast';
-import { adminAPI, type UnifiedDeckItem } from '@/services/adminAPI';
-import { cardAPI } from '@/services/cardAPI';
+import { cardAPI, type CardCreatePayload } from '@/services/cardAPI';
 import type { PartOfSpeech, DeckLevel } from '@/types/grammar';
 
 // ============================================================================
@@ -216,6 +207,88 @@ function validateCards(cards: unknown[]): ValidationError[] {
   return errors;
 }
 
+// UUID validation regex
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Parse JSON input and extract deck_id and cards.
+ * Requires object format with deck_id and cards fields.
+ * Rejects bare array format with helpful migration message.
+ * Returns detailed syntax error info when parsing fails.
+ */
+function parseCardsJson(jsonString: string):
+  | { success: true; deck_id: string; cards: unknown[] }
+  | {
+      success: false;
+      errorKey:
+        | 'invalidJson'
+        | 'arrayFormatDetected'
+        | 'missingDeckId'
+        | 'invalidDeckId'
+        | 'missingCards';
+      syntaxError?: { message: string; line?: number; column?: number };
+    } {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(jsonString);
+  } catch (error) {
+    if (error instanceof SyntaxError) {
+      // Try to extract position from error message
+      const posMatch = error.message.match(/position\s+(\d+)/i);
+      if (posMatch) {
+        const position = parseInt(posMatch[1], 10);
+        const beforeError = jsonString.substring(0, position);
+        const lines = beforeError.split('\n');
+        const line = lines.length;
+        const column = lines[lines.length - 1].length + 1;
+        // Clean up error message (remove "at position N" suffix)
+        const cleanMessage = error.message.replace(/\s*at position \d+/i, '').trim();
+        return {
+          success: false,
+          errorKey: 'invalidJson',
+          syntaxError: { message: cleanMessage, line, column },
+        };
+      }
+      // No position info available
+      return {
+        success: false,
+        errorKey: 'invalidJson',
+        syntaxError: { message: error.message },
+      };
+    }
+    return { success: false, errorKey: 'invalidJson' };
+  }
+
+  // Reject bare array format with helpful migration message
+  if (Array.isArray(parsed)) {
+    return { success: false, errorKey: 'arrayFormatDetected' };
+  }
+
+  // Must be an object
+  if (typeof parsed !== 'object' || parsed === null) {
+    return { success: false, errorKey: 'missingDeckId' };
+  }
+
+  const obj = parsed as Record<string, unknown>;
+
+  // Validate deck_id is present and non-empty string
+  if (typeof obj.deck_id !== 'string' || obj.deck_id.trim() === '') {
+    return { success: false, errorKey: 'missingDeckId' };
+  }
+
+  // Validate deck_id is valid UUID format
+  if (!UUID_REGEX.test(obj.deck_id)) {
+    return { success: false, errorKey: 'invalidDeckId' };
+  }
+
+  // Validate cards array exists
+  if (!Array.isArray(obj.cards)) {
+    return { success: false, errorKey: 'missingCards' };
+  }
+
+  return { success: true, deck_id: obj.deck_id, cards: obj.cards };
+}
+
 /**
  * Calculate preview summary from validated cards
  */
@@ -248,11 +321,6 @@ function calculatePreviewSummary(cards: BulkCardInput[]): PreviewSummary {
 export const BulkUploadsTab: React.FC = () => {
   const { t } = useTranslation('admin');
 
-  // Deck selection state
-  const [vocabularyDecks, setVocabularyDecks] = useState<UnifiedDeckItem[]>([]);
-  const [selectedDeckId, setSelectedDeckId] = useState<string>('');
-  const [isLoadingDecks, setIsLoadingDecks] = useState(true);
-
   // JSON input state
   const [jsonInput, setJsonInput] = useState('');
 
@@ -260,32 +328,10 @@ export const BulkUploadsTab: React.FC = () => {
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
   const [isValidated, setIsValidated] = useState(false);
   const [previewSummary, setPreviewSummary] = useState<PreviewSummary | null>(null);
+  const [validatedDeckId, setValidatedDeckId] = useState<string | null>(null);
 
   // Upload state
   const [isUploading, setIsUploading] = useState(false);
-
-  // ========================================
-  // Fetch vocabulary decks on mount
-  // ========================================
-  useEffect(() => {
-    const fetchDecks = async () => {
-      setIsLoadingDecks(true);
-      try {
-        // Fetch vocabulary decks only (type filter)
-        const response = await adminAPI.listDecks({ type: 'vocabulary', page_size: 100 });
-        setVocabularyDecks(response.decks);
-      } catch {
-        toast({
-          title: t('errors.loadingDecks'),
-          variant: 'destructive',
-        });
-      } finally {
-        setIsLoadingDecks(false);
-      }
-    };
-
-    fetchDecks();
-  }, [t]);
 
   // ========================================
   // Reset validation when input changes
@@ -295,6 +341,7 @@ export const BulkUploadsTab: React.FC = () => {
     setIsValidated(false);
     setValidationErrors([]);
     setPreviewSummary(null);
+    setValidatedDeckId(null);
   }, []);
 
   // ========================================
@@ -305,16 +352,7 @@ export const BulkUploadsTab: React.FC = () => {
     setValidationErrors([]);
     setPreviewSummary(null);
     setIsValidated(false);
-
-    // Check if deck is selected
-    if (!selectedDeckId) {
-      toast({
-        title: t('bulkUploads.deckLabel'),
-        description: t('bulkUploads.deckPlaceholder'),
-        variant: 'destructive',
-      });
-      return;
-    }
+    setValidatedDeckId(null);
 
     // Check if JSON is provided
     if (!jsonInput.trim()) {
@@ -322,33 +360,34 @@ export const BulkUploadsTab: React.FC = () => {
       return;
     }
 
-    // Parse JSON
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(jsonInput);
-    } catch {
-      setValidationErrors([
-        { cardIndex: -1, field: 'json', message: t('bulkUploads.invalidJson') },
-      ]);
+    // Parse JSON and extract deck_id and cards
+    const parseResult = parseCardsJson(jsonInput);
+    if (!parseResult.success) {
+      let errorMessage: string;
+      if (parseResult.syntaxError) {
+        const { message, line, column } = parseResult.syntaxError;
+        if (line !== undefined && column !== undefined) {
+          errorMessage = t('bulkUploads.jsonSyntaxError', { line, column, message });
+        } else {
+          errorMessage = t('bulkUploads.jsonSyntaxErrorNoPosition', { message });
+        }
+      } else {
+        errorMessage = t(`bulkUploads.${parseResult.errorKey}`);
+      }
+      setValidationErrors([{ cardIndex: -1, field: 'json', message: errorMessage }]);
       return;
     }
 
-    // Check if it's an array
-    if (!Array.isArray(parsed)) {
-      setValidationErrors([
-        { cardIndex: -1, field: 'json', message: t('bulkUploads.invalidJson') },
-      ]);
-      return;
-    }
+    const cardsArray = parseResult.cards;
 
     // Check if empty
-    if (parsed.length === 0) {
+    if (cardsArray.length === 0) {
       setValidationErrors([{ cardIndex: -1, field: 'json', message: t('bulkUploads.noCards') }]);
       return;
     }
 
     // Check max cards
-    if (parsed.length > MAX_CARDS) {
+    if (cardsArray.length > MAX_CARDS) {
       setValidationErrors([
         { cardIndex: -1, field: 'json', message: t('bulkUploads.tooManyCards') },
       ]);
@@ -356,31 +395,35 @@ export const BulkUploadsTab: React.FC = () => {
     }
 
     // Validate each card
-    const errors = validateCards(parsed);
+    const errors = validateCards(cardsArray);
     if (errors.length > 0) {
       setValidationErrors(errors);
       return;
     }
 
-    // All valid - calculate preview
-    const summary = calculatePreviewSummary(parsed as BulkCardInput[]);
+    // All valid - calculate preview and store deck_id
+    const summary = calculatePreviewSummary(cardsArray as BulkCardInput[]);
     setPreviewSummary(summary);
+    setValidatedDeckId(parseResult.deck_id);
     setIsValidated(true);
-  }, [jsonInput, selectedDeckId, t]);
+  }, [jsonInput, t]);
 
   // ========================================
   // Upload Cards
   // ========================================
   const handleUpload = useCallback(async () => {
-    if (!isValidated || !selectedDeckId || !previewSummary) return;
+    if (!isValidated || !validatedDeckId || !previewSummary) return;
 
     setIsUploading(true);
 
     try {
-      const cards = JSON.parse(jsonInput) as BulkCardInput[];
+      const parseResult = parseCardsJson(jsonInput);
+      if (!parseResult.success) return; // Should not happen since validated
+      // Cast to the API expected type - validation already verified structure
+      const cards = parseResult.cards as Omit<CardCreatePayload, 'deck_id'>[];
 
-      // Call bulk create API
-      const response = await cardAPI.bulkCreate(selectedDeckId, cards);
+      // Call bulk create API using deck_id from the validated JSON
+      const response = await cardAPI.bulkCreate(validatedDeckId, cards);
 
       // Show success toast
       toast({
@@ -389,10 +432,10 @@ export const BulkUploadsTab: React.FC = () => {
 
       // Clear form on success
       setJsonInput('');
-      setSelectedDeckId('');
       setIsValidated(false);
       setPreviewSummary(null);
       setValidationErrors([]);
+      setValidatedDeckId(null);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       toast({
@@ -404,14 +447,7 @@ export const BulkUploadsTab: React.FC = () => {
     } finally {
       setIsUploading(false);
     }
-  }, [isValidated, selectedDeckId, previewSummary, jsonInput, t]);
-
-  // ========================================
-  // Get deck name helper
-  // ========================================
-  const getDeckName = (deck: UnifiedDeckItem): string => {
-    return typeof deck.name === 'string' ? deck.name : deck.name.en;
-  };
+  }, [isValidated, validatedDeckId, previewSummary, jsonInput, t]);
 
   // ========================================
   // Render
@@ -424,27 +460,6 @@ export const BulkUploadsTab: React.FC = () => {
           <CardDescription>{t('bulkUploads.description')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Deck Selector */}
-          <div className="space-y-2">
-            <Label htmlFor="deck-select">{t('bulkUploads.deckLabel')}</Label>
-            <Select
-              value={selectedDeckId}
-              onValueChange={setSelectedDeckId}
-              disabled={isLoadingDecks || isUploading}
-            >
-              <SelectTrigger id="deck-select" data-testid="bulk-uploads-deck-select">
-                <SelectValue placeholder={t('bulkUploads.deckPlaceholder')} />
-              </SelectTrigger>
-              <SelectContent>
-                {vocabularyDecks.map((deck) => (
-                  <SelectItem key={deck.id} value={deck.id}>
-                    {getDeckName(deck)} ({deck.level || 'No level'})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
           {/* JSON Textarea */}
           <div className="space-y-2">
             <Label htmlFor="json-textarea">{t('bulkUploads.jsonLabel')}</Label>
