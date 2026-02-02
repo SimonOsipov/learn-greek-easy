@@ -171,6 +171,9 @@ interface ReviewState {
   /** Time when current card was shown (for timing) */
   cardStartTime: number | null;
 
+  /** Time when session started (for total time calculation) */
+  sessionStartTime: number | null;
+
   // Computed getters (as direct properties for Zustand)
   readonly currentCard: CardReview | null;
   readonly progress: { current: number; total: number };
@@ -204,6 +207,7 @@ export const useReviewStore = create<ReviewState>()(
       error: null,
       sessionSummary: null,
       cardStartTime: null,
+      sessionStartTime: null,
 
       // Computed properties
       currentCard: null,
@@ -272,6 +276,7 @@ export const useReviewStore = create<ReviewState>()(
             isLoading: false,
             error: null,
             cardStartTime: Date.now(),
+            sessionStartTime: Date.now(),
             currentCard,
             progress: { current: 0, total: cards.length },
             hasNextCard: cards.length > 1,
@@ -481,6 +486,7 @@ export const useReviewStore = create<ReviewState>()(
             isLoading: false,
             error: null,
             cardStartTime: Date.now(),
+            sessionStartTime: new Date(session.startTime).getTime(),
             currentCard,
             progress: { current: currentIndex, total: session.cards.length },
             hasNextCard: currentIndex < session.cards.length - 1,
@@ -503,7 +509,7 @@ export const useReviewStore = create<ReviewState>()(
        * End session and return summary
        */
       endSession: async (): Promise<SessionSummary> => {
-        const { activeSession, sessionStats } = get();
+        const { activeSession, sessionStats, sessionStartTime } = get();
 
         if (!activeSession) {
           throw new Error('No active session to end');
@@ -515,6 +521,16 @@ export const useReviewStore = create<ReviewState>()(
           // Calculate session summary from local stats
           const completedAt = new Date();
 
+          // Calculate actual session duration
+          const endTime = Date.now();
+          const totalTimeSeconds = sessionStartTime
+            ? Math.round((endTime - sessionStartTime) / 1000)
+            : 0;
+          const avgTimePerCard =
+            sessionStats.cardsReviewed > 0
+              ? Math.round(totalTimeSeconds / sessionStats.cardsReviewed)
+              : 0;
+
           const summary: SessionSummary = {
             sessionId: activeSession.sessionId,
             deckId: activeSession.deckId,
@@ -522,8 +538,8 @@ export const useReviewStore = create<ReviewState>()(
             completedAt,
             cardsReviewed: sessionStats.cardsReviewed,
             accuracy: sessionStats.accuracy,
-            totalTime: 0,
-            averageTimePerCard: 0,
+            totalTime: totalTimeSeconds,
+            averageTimePerCard: avgTimePerCard,
             ratingBreakdown: {
               again: sessionStats.againCount,
               hard: sessionStats.hardCount,
@@ -567,6 +583,7 @@ export const useReviewStore = create<ReviewState>()(
             isLoading: false,
             error: null,
             cardStartTime: null,
+            sessionStartTime: null,
             currentCard: null,
             progress: { current: 0, total: 0 },
             hasNextCard: false,
@@ -601,6 +618,7 @@ export const useReviewStore = create<ReviewState>()(
           isLoading: false,
           error: null,
           cardStartTime: null,
+          sessionStartTime: null,
           currentCard: null,
           progress: { current: 0, total: 0 },
           hasNextCard: false,
