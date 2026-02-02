@@ -107,10 +107,10 @@
       },
       "persons": {
         "firstSingular": "I",
-        "secondSingular": "You (sg)",
+        "secondSingular": "You (singular)",
         "thirdSingular": "He/She",
         "firstPlural": "We",
-        "secondPlural": "You (pl)",
+        "secondPlural": "You (plural)",
         "thirdPlural": "They"
       },
       "imperative": {
