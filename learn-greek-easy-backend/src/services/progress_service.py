@@ -612,7 +612,7 @@ class ProgressService:
             all_deck_summaries.append(
                 DeckProgressSummary(
                     deck_id=deck.id,
-                    deck_name=deck.name,
+                    deck_name=deck.name_en,
                     deck_level=deck.level.value if deck.level else "A1",
                     total_cards=total_cards,
                     cards_studied=progress.cards_studied,
@@ -674,7 +674,7 @@ class ProgressService:
             all_deck_summaries.append(
                 DeckProgressSummary(
                     deck_id=culture_deck.id,
-                    deck_name=culture_deck.name,
+                    deck_name=culture_deck.name_en,
                     deck_level=culture_deck.category,  # Use category as level
                     total_cards=total_cards,
                     cards_studied=cards_studied,
@@ -848,9 +848,9 @@ class ProgressService:
 
         return DeckProgressDetailResponse(
             deck_id=deck.id,
-            deck_name=deck.name,
+            deck_name=deck.name_en,
             deck_level=deck.level.value if deck.level else "A1",
-            deck_description=deck.description,
+            deck_description=deck.description_en,
             progress=progress_metrics,
             statistics=statistics,
             timeline=timeline,

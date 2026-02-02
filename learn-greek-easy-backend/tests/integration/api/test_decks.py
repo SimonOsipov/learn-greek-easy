@@ -934,8 +934,9 @@ class TestGetDeckEndpoint:
         assert response.status_code == 200
         data = response.json()
         assert data["id"] == str(deck.id)
-        assert data["name"] == deck.name
-        assert data["description"] == deck.description
+        # Default locale is English
+        assert data["name"] == deck.name_en
+        assert data["description"] == deck.description_en
         assert data["level"] == deck.level.value
         assert data["is_active"] is True
         assert data["card_count"] == expected_card_count
@@ -991,7 +992,7 @@ class TestGetDeckEndpoint:
         data = response.json()
         assert data["card_count"] == 0
         assert data["id"] == str(empty_deck.id)
-        assert data["name"] == empty_deck.name
+        assert data["name"] == empty_deck.name_en
 
     @pytest.mark.asyncio
     async def test_get_deck_includes_all_fields(
@@ -1040,7 +1041,7 @@ class TestUpdateDeckEndpoint:
         data = response.json()
         assert data["name"] == new_name
         # Other fields should remain unchanged
-        assert data["description"] == empty_deck.description
+        assert data["description"] == empty_deck.description_en
         assert data["level"] == empty_deck.level.value
         assert data["is_active"] is True
 
@@ -1085,7 +1086,7 @@ class TestUpdateDeckEndpoint:
         assert response.status_code == 200
         data = response.json()
         assert data["description"] == new_description
-        assert data["name"] == empty_deck.name  # Unchanged
+        assert data["name"] == empty_deck.name_en  # Unchanged
 
     @pytest.mark.asyncio
     async def test_update_deck_level(
@@ -2106,7 +2107,7 @@ class TestListMyDecksEndpoint:
         assert data["total"] == 1
         assert len(data["decks"]) == 1
         assert data["decks"][0]["id"] == str(user_owned_deck.id)
-        assert data["decks"][0]["name"] == user_owned_deck.name
+        assert data["decks"][0]["name"] == user_owned_deck.name_en
 
     @pytest.mark.asyncio
     async def test_list_my_decks_excludes_system_decks(
@@ -2254,7 +2255,7 @@ class TestDeckAuthorizationIntegration:
         assert response.status_code == 200
         data = response.json()
         assert data["id"] == str(user_owned_deck.id)
-        assert data["name"] == user_owned_deck.name
+        assert data["name"] == user_owned_deck.name_en
 
     @pytest.mark.asyncio
     async def test_get_other_users_deck_returns_403(
@@ -2284,3 +2285,281 @@ class TestDeckAuthorizationIntegration:
 
         # Superuser is also a non-owner, so 403
         assert response.status_code == 403
+
+
+class TestDeckLocalizationIntegration:
+    """Integration tests for deck localization with Accept-Language header.
+
+    Tests verify that the API correctly returns localized name and description
+    based on the Accept-Language header. Supported locales: en, el, ru.
+    """
+
+    # =========================================================================
+    # Accept-Language Header Tests - List Decks
+    # =========================================================================
+
+    @pytest.mark.asyncio
+    async def test_list_decks_english_locale(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        localized_deck: Deck,
+    ):
+        """Test GET /decks returns English name/description with Accept-Language: en."""
+        headers = {**auth_headers, "Accept-Language": "en"}
+        response = await client.get("/api/v1/decks", headers=headers)
+
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data["decks"]) >= 1
+
+        deck = next(d for d in data["decks"] if d["id"] == str(localized_deck.id))
+        assert deck["name"] == localized_deck.name_en
+        assert deck["description"] == localized_deck.description_en
+
+    @pytest.mark.asyncio
+    async def test_list_decks_russian_locale(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        localized_deck: Deck,
+    ):
+        """Test GET /decks returns Russian name/description with Accept-Language: ru."""
+        headers = {**auth_headers, "Accept-Language": "ru"}
+        response = await client.get("/api/v1/decks", headers=headers)
+
+        assert response.status_code == 200
+        data = response.json()
+
+        deck = next(d for d in data["decks"] if d["id"] == str(localized_deck.id))
+        assert deck["name"] == localized_deck.name_ru
+        assert deck["description"] == localized_deck.description_ru
+
+    @pytest.mark.asyncio
+    async def test_list_decks_greek_locale(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        localized_deck: Deck,
+    ):
+        """Test GET /decks returns Greek name/description with Accept-Language: el."""
+        headers = {**auth_headers, "Accept-Language": "el"}
+        response = await client.get("/api/v1/decks", headers=headers)
+
+        assert response.status_code == 200
+        data = response.json()
+
+        deck = next(d for d in data["decks"] if d["id"] == str(localized_deck.id))
+        assert deck["name"] == localized_deck.name_el
+        assert deck["description"] == localized_deck.description_el
+
+    @pytest.mark.asyncio
+    async def test_list_decks_unsupported_locale_fallback_to_english(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        localized_deck: Deck,
+    ):
+        """Test unsupported locale (de) falls back to English."""
+        headers = {**auth_headers, "Accept-Language": "de"}
+        response = await client.get("/api/v1/decks", headers=headers)
+
+        assert response.status_code == 200
+        data = response.json()
+
+        deck = next(d for d in data["decks"] if d["id"] == str(localized_deck.id))
+        assert deck["name"] == localized_deck.name_en  # Fallback to English
+
+    @pytest.mark.asyncio
+    async def test_list_decks_no_accept_language_defaults_to_english(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        localized_deck: Deck,
+    ):
+        """Test missing Accept-Language header defaults to English."""
+        response = await client.get("/api/v1/decks", headers=auth_headers)
+
+        assert response.status_code == 200
+        data = response.json()
+
+        deck = next(d for d in data["decks"] if d["id"] == str(localized_deck.id))
+        assert deck["name"] == localized_deck.name_en
+
+    @pytest.mark.asyncio
+    async def test_list_decks_complex_accept_language_header(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        localized_deck: Deck,
+    ):
+        """Test complex Accept-Language with quality factors."""
+        # Russian highest priority, then English
+        headers = {**auth_headers, "Accept-Language": "ru-RU,ru;q=0.9,en;q=0.7"}
+        response = await client.get("/api/v1/decks", headers=headers)
+
+        assert response.status_code == 200
+        data = response.json()
+
+        deck = next(d for d in data["decks"] if d["id"] == str(localized_deck.id))
+        assert deck["name"] == localized_deck.name_ru
+
+    @pytest.mark.asyncio
+    async def test_list_decks_region_variant_locale(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        localized_deck: Deck,
+    ):
+        """Test region variant (en-US) extracts base language."""
+        headers = {**auth_headers, "Accept-Language": "en-US"}
+        response = await client.get("/api/v1/decks", headers=headers)
+
+        assert response.status_code == 200
+        data = response.json()
+
+        deck = next(d for d in data["decks"] if d["id"] == str(localized_deck.id))
+        assert deck["name"] == localized_deck.name_en
+
+    # =========================================================================
+    # Accept-Language Header Tests - Get Deck Detail
+    # =========================================================================
+
+    @pytest.mark.asyncio
+    async def test_get_deck_locale_english(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        localized_deck: Deck,
+    ):
+        """Test GET /decks/{id} returns English content with Accept-Language: en."""
+        headers = {**auth_headers, "Accept-Language": "en"}
+        response = await client.get(f"/api/v1/decks/{localized_deck.id}", headers=headers)
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["name"] == localized_deck.name_en
+        assert data["description"] == localized_deck.description_en
+
+    @pytest.mark.asyncio
+    async def test_get_deck_locale_russian(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        localized_deck: Deck,
+    ):
+        """Test GET /decks/{id} returns Russian content with Accept-Language: ru."""
+        headers = {**auth_headers, "Accept-Language": "ru"}
+        response = await client.get(f"/api/v1/decks/{localized_deck.id}", headers=headers)
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["name"] == localized_deck.name_ru
+        assert data["description"] == localized_deck.description_ru
+
+    @pytest.mark.asyncio
+    async def test_get_deck_locale_greek(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        localized_deck: Deck,
+    ):
+        """Test GET /decks/{id} returns Greek content with Accept-Language: el."""
+        headers = {**auth_headers, "Accept-Language": "el"}
+        response = await client.get(f"/api/v1/decks/{localized_deck.id}", headers=headers)
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["name"] == localized_deck.name_el
+        assert data["description"] == localized_deck.description_el
+
+    # =========================================================================
+    # Accept-Language Header Tests - Search Decks
+    # =========================================================================
+
+    @pytest.mark.asyncio
+    async def test_search_decks_respects_locale(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        localized_deck: Deck,
+    ):
+        """Test search endpoint returns localized results."""
+        # Search using part of the English name
+        headers = {**auth_headers, "Accept-Language": "ru"}
+        response = await client.get(
+            "/api/v1/decks/search?q=Greek",
+            headers=headers,
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        if data["total"] > 0:
+            # Results should be in Russian
+            deck = next((d for d in data["decks"] if d["id"] == str(localized_deck.id)), None)
+            if deck:
+                assert deck["name"] == localized_deck.name_ru
+                assert deck["description"] == localized_deck.description_ru
+
+    # =========================================================================
+    # Accept-Language Header Tests - My Decks
+    # =========================================================================
+
+    @pytest.mark.asyncio
+    async def test_list_my_decks_respects_locale(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        user_owned_deck: Deck,
+    ):
+        """Test /decks/mine returns localized content."""
+        headers = {**auth_headers, "Accept-Language": "ru"}
+        response = await client.get("/api/v1/decks/mine", headers=headers)
+
+        assert response.status_code == 200
+        data = response.json()
+        # User-created decks typically only have _en content,
+        # so they should fall back to English even when ru is requested
+        if data["total"] > 0:
+            deck = data["decks"][0]
+            # User-created decks store content in _en columns
+            assert deck["name"] == user_owned_deck.name_en
+
+    # =========================================================================
+    # User Deck Creation Tests (stores as _en)
+    # =========================================================================
+
+    @pytest.mark.asyncio
+    async def test_user_created_deck_returns_localized(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+    ):
+        """Test user-created deck returns in requested locale (falls back to _en)."""
+        deck_data = {
+            "name": "Personal Vocab",
+            "description": "My vocabulary notes",
+            "level": "B1",
+        }
+
+        # Create deck
+        create_response = await client.post(
+            "/api/v1/decks",
+            json=deck_data,
+            headers=auth_headers,
+        )
+        assert create_response.status_code == 201
+        deck_id = create_response.json()["id"]
+
+        # Request in Russian - should fall back to English content
+        headers = {**auth_headers, "Accept-Language": "ru"}
+        get_response = await client.get(
+            f"/api/v1/decks/{deck_id}",
+            headers=headers,
+        )
+
+        assert get_response.status_code == 200
+        data = get_response.json()
+        # Should still show the English content since user decks only have _en
+        assert data["name"] == deck_data["name"]
+        assert data["description"] == deck_data["description"]

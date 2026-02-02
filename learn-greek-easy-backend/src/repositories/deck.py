@@ -136,11 +136,19 @@ class DeckRepository(BaseRepository[Deck]):
 
         Note:
             Uses case-insensitive ILIKE search (PostgreSQL)
+            Searches across all language variants (en, el, ru)
         """
         search_pattern = f"%{query_text}%"
         query = (
             select(Deck)
-            .where((Deck.name.ilike(search_pattern)) | (Deck.description.ilike(search_pattern)))
+            .where(
+                (Deck.name_en.ilike(search_pattern))
+                | (Deck.name_el.ilike(search_pattern))
+                | (Deck.name_ru.ilike(search_pattern))
+                | (Deck.description_en.ilike(search_pattern))
+                | (Deck.description_el.ilike(search_pattern))
+                | (Deck.description_ru.ilike(search_pattern))
+            )
             .where(Deck.is_active.is_(True))
             .where(Deck.owner_id.is_(None))  # Only system decks
             .offset(skip)
@@ -169,7 +177,14 @@ class DeckRepository(BaseRepository[Deck]):
         query = select(func.count(Deck.id)).where(
             Deck.is_active.is_(True),
             Deck.owner_id.is_(None),  # Only system decks
-            (Deck.name.ilike(search_pattern)) | (Deck.description.ilike(search_pattern)),
+            (
+                (Deck.name_en.ilike(search_pattern))
+                | (Deck.name_el.ilike(search_pattern))
+                | (Deck.name_ru.ilike(search_pattern))
+                | (Deck.description_en.ilike(search_pattern))
+                | (Deck.description_el.ilike(search_pattern))
+                | (Deck.description_ru.ilike(search_pattern))
+            ),
         )
         result = await self.db.execute(query)
         return result.scalar() or 0

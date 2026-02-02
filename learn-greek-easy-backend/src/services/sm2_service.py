@@ -330,7 +330,7 @@ class SM2Service:
             deck = await self.deck_repo.get(request.deck_id)
             if not deck or not deck.is_active:
                 raise DeckNotFoundException(deck_id=str(request.deck_id))
-            deck_name = deck.name
+            deck_name = deck.name_en
 
         logger.debug(
             "Building study queue",

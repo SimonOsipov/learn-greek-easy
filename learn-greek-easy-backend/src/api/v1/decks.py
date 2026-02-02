@@ -205,6 +205,18 @@ async def create_deck(
     # which is only used for logic, not stored in the database
     create_data = deck_data.model_dump(exclude_unset=True, exclude={"is_system_deck"})
 
+    # Map name/description to trilingual fields (user decks store in _en columns)
+    if "name" in create_data:
+        name = create_data.pop("name")
+        create_data["name_en"] = name
+        create_data["name_el"] = name  # Same as English for user-created decks
+        create_data["name_ru"] = name  # Same as English for user-created decks
+    if "description" in create_data:
+        description = create_data.pop("description")
+        create_data["description_en"] = description
+        create_data["description_el"] = description  # Same as English for user-created decks
+        create_data["description_ru"] = description  # Same as English for user-created decks
+
     # Determine deck ownership based on is_system_deck flag and user permissions
     if deck_data.is_system_deck:
         # Only superusers can create system decks
@@ -228,7 +240,18 @@ async def create_deck(
     await db.commit()
     await db.refresh(deck)
 
-    return DeckResponse.model_validate(deck)
+    # Return response with localized fields (default to English for created deck)
+    return DeckResponse(
+        id=deck.id,
+        name=deck.name_en,
+        description=deck.description_en,
+        level=deck.level,
+        is_active=deck.is_active,
+        is_premium=deck.is_premium,
+        card_count=0,  # New deck has no cards
+        created_at=deck.created_at,
+        updated_at=deck.updated_at,
+    )
 
 
 @router.get(
@@ -616,8 +639,21 @@ async def update_deck(
     if deck.owner_id != current_user.id and not current_user.is_superuser:
         raise ForbiddenException(detail="Not authorized to edit this deck")
 
+    # Map name/description to trilingual fields for update
+    update_data = deck_data.model_dump(exclude_unset=True)
+    if "name" in update_data:
+        name = update_data.pop("name")
+        update_data["name_en"] = name
+        update_data["name_el"] = name  # For user updates, set all to same value
+        update_data["name_ru"] = name
+    if "description" in update_data:
+        description = update_data.pop("description")
+        update_data["description_en"] = description
+        update_data["description_el"] = description
+        update_data["description_ru"] = description
+
     # Update using BaseRepository.update() pattern
-    updated_deck = await repo.update(deck, deck_data)
+    updated_deck = await repo.update(deck, update_data)
 
     # Commit the transaction
     await db.commit()
@@ -631,7 +667,19 @@ async def update_deck(
             entity_id=deck_id,
         )
 
-    return DeckResponse.model_validate(updated_deck)
+    # Return response with localized fields (default to English for updated deck)
+    card_count = await repo.count_cards(deck_id)
+    return DeckResponse(
+        id=updated_deck.id,
+        name=updated_deck.name_en,
+        description=updated_deck.description_en,
+        level=updated_deck.level,
+        is_active=updated_deck.is_active,
+        is_premium=updated_deck.is_premium,
+        card_count=card_count,
+        created_at=updated_deck.created_at,
+        updated_at=updated_deck.updated_at,
+    )
 
 
 @router.delete(
