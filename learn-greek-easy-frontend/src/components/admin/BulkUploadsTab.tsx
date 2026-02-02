@@ -217,6 +217,38 @@ function validateCards(cards: unknown[]): ValidationError[] {
 }
 
 /**
+ * Parse JSON input and extract cards array.
+ * Accepts both bare array and object-with-cards formats.
+ */
+function parseCardsJson(
+  jsonString: string
+):
+  | { success: true; cards: unknown[] }
+  | { success: false; errorKey: 'invalidJson' | 'invalidJsonFormat' } {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(jsonString);
+  } catch {
+    return { success: false, errorKey: 'invalidJson' };
+  }
+
+  if (Array.isArray(parsed)) {
+    return { success: true, cards: parsed };
+  }
+
+  if (
+    typeof parsed === 'object' &&
+    parsed !== null &&
+    'cards' in parsed &&
+    Array.isArray((parsed as { cards: unknown }).cards)
+  ) {
+    return { success: true, cards: (parsed as { cards: unknown[] }).cards };
+  }
+
+  return { success: false, errorKey: 'invalidJsonFormat' };
+}
+
+/**
  * Calculate preview summary from validated cards
  */
 function calculatePreviewSummary(cards: BulkCardInput[]): PreviewSummary {
@@ -322,33 +354,25 @@ export const BulkUploadsTab: React.FC = () => {
       return;
     }
 
-    // Parse JSON
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(jsonInput);
-    } catch {
+    // Parse JSON and extract cards array
+    const parseResult = parseCardsJson(jsonInput);
+    if (!parseResult.success) {
       setValidationErrors([
-        { cardIndex: -1, field: 'json', message: t('bulkUploads.invalidJson') },
+        { cardIndex: -1, field: 'json', message: t(`bulkUploads.${parseResult.errorKey}`) },
       ]);
       return;
     }
 
-    // Check if it's an array
-    if (!Array.isArray(parsed)) {
-      setValidationErrors([
-        { cardIndex: -1, field: 'json', message: t('bulkUploads.invalidJson') },
-      ]);
-      return;
-    }
+    const cardsArray = parseResult.cards;
 
     // Check if empty
-    if (parsed.length === 0) {
+    if (cardsArray.length === 0) {
       setValidationErrors([{ cardIndex: -1, field: 'json', message: t('bulkUploads.noCards') }]);
       return;
     }
 
     // Check max cards
-    if (parsed.length > MAX_CARDS) {
+    if (cardsArray.length > MAX_CARDS) {
       setValidationErrors([
         { cardIndex: -1, field: 'json', message: t('bulkUploads.tooManyCards') },
       ]);
@@ -356,14 +380,14 @@ export const BulkUploadsTab: React.FC = () => {
     }
 
     // Validate each card
-    const errors = validateCards(parsed);
+    const errors = validateCards(cardsArray);
     if (errors.length > 0) {
       setValidationErrors(errors);
       return;
     }
 
     // All valid - calculate preview
-    const summary = calculatePreviewSummary(parsed as BulkCardInput[]);
+    const summary = calculatePreviewSummary(cardsArray as BulkCardInput[]);
     setPreviewSummary(summary);
     setIsValidated(true);
   }, [jsonInput, selectedDeckId, t]);
@@ -377,7 +401,9 @@ export const BulkUploadsTab: React.FC = () => {
     setIsUploading(true);
 
     try {
-      const cards = JSON.parse(jsonInput) as BulkCardInput[];
+      const parseResult = parseCardsJson(jsonInput);
+      if (!parseResult.success) return; // Should not happen since validated
+      const cards = parseResult.cards as BulkCardInput[];
 
       // Call bulk create API
       const response = await cardAPI.bulkCreate(selectedDeckId, cards);

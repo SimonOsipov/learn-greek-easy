@@ -560,6 +560,7 @@
     "successToast": "Successfully uploaded {{count}} cards",
     "errorToast": "Failed to upload cards. Please try again.",
     "invalidJson": "Invalid JSON format",
+    "invalidJsonFormat": "JSON must be an array of cards or an object with a 'cards' property",
     "noCards": "No cards found in JSON",
     "tooManyCards": "Too many cards. Maximum is 100.",
     "grammarCounts": {
