@@ -410,13 +410,40 @@ class Deck(Base, TimestampMixin):
         server_default=func.uuid_generate_v4(),
     )
 
-    # Deck information
-    name: Mapped[str] = mapped_column(
+    # Multilingual name fields
+    name_el: Mapped[str] = mapped_column(
+        String(255),
+        nullable=False,
+        comment="Deck name in Greek",
+    )
+    name_en: Mapped[str] = mapped_column(
         String(255),
         nullable=False,
         index=True,
+        comment="Deck name in English",
     )
-    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    name_ru: Mapped[str] = mapped_column(
+        String(255),
+        nullable=False,
+        comment="Deck name in Russian",
+    )
+
+    # Multilingual description fields
+    description_el: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        comment="Deck description in Greek",
+    )
+    description_en: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        comment="Deck description in English",
+    )
+    description_ru: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        comment="Deck description in Russian",
+    )
     level: Mapped[DeckLevel] = mapped_column(
         nullable=False,
         index=True,
@@ -463,7 +490,7 @@ class Deck(Base, TimestampMixin):
     )
 
     def __repr__(self) -> str:
-        return f"<Deck(id={self.id}, name={self.name}, level={self.level})>"
+        return f"<Deck(id={self.id}, name_en={self.name_en}, level={self.level})>"
 
 
 class Card(Base, TimestampMixin):
@@ -1226,17 +1253,39 @@ class CultureDeck(Base, TimestampMixin):
         server_default=func.uuid_generate_v4(),
     )
 
-    # Deck information (English only - simplified from multilingual JSON)
-    name: Mapped[str] = mapped_column(
+    # Multilingual name fields
+    name_el: Mapped[str] = mapped_column(
+        String(255),
+        nullable=False,
+        comment="Deck name in Greek",
+    )
+    name_en: Mapped[str] = mapped_column(
         String(255),
         nullable=False,
         index=True,
-        comment="Deck name (English)",
+        comment="Deck name in English",
     )
-    description: Mapped[str | None] = mapped_column(
+    name_ru: Mapped[str] = mapped_column(
+        String(255),
+        nullable=False,
+        comment="Deck name in Russian",
+    )
+
+    # Multilingual description fields
+    description_el: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,
-        comment="Deck description (English, optional)",
+        comment="Deck description in Greek",
+    )
+    description_en: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        comment="Deck description in English",
+    )
+    description_ru: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        comment="Deck description in Russian",
     )
 
     # Classification
@@ -1279,7 +1328,7 @@ class CultureDeck(Base, TimestampMixin):
     )
 
     def __repr__(self) -> str:
-        return f"<CultureDeck(id={self.id}, category={self.category})>"
+        return f"<CultureDeck(id={self.id}, name_en={self.name_en[:30] if self.name_en else ''}, category={self.category})>"
 
 
 class CultureQuestion(Base, TimestampMixin):
