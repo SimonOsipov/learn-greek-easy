@@ -369,9 +369,30 @@ export const MyDeckDetailPage: React.FC = () => {
             </div>
           ) : cards.length === 0 ? (
             <Card>
-              <CardContent className="py-12 text-center">
-                <BookOpen className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
-                <p className="text-muted-foreground">{t('myDecks.cards.empty')}</p>
+              <CardContent className="py-8">
+                <div
+                  className="flex min-h-[300px] flex-col items-center justify-center p-8 text-center"
+                  role="status"
+                  aria-label={t('myDecks.cards.empty')}
+                  data-testid="cards-empty-state"
+                >
+                  <BookOpen
+                    className="mb-4 h-16 w-16 text-muted-foreground/50"
+                    aria-hidden="true"
+                  />
+                  <h3 className="mb-2 text-lg font-semibold text-foreground">
+                    {t('myDecks.cards.empty')}
+                  </h3>
+                  <p className="mb-4 text-muted-foreground">{t('myDecks.cards.emptyCta')}</p>
+                  <Button
+                    variant="hero"
+                    onClick={handleCreateCardClick}
+                    data-testid="empty-state-create-card-button"
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    {t('myDecks.createCard')}
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           ) : (

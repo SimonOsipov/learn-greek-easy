@@ -161,7 +161,8 @@
     "cards": {
       "editCard": "Edit card",
       "deleteCard": "Delete card",
-      "empty": "No cards in this deck yet",
+      "empty": "Your deck is empty",
+      "emptyCta": "Create your first card!",
       "deleteTitle": "Delete Card?",
       "deleteMessage": "Are you sure you want to delete \"{{cardName}}\"? This action cannot be undone.",
       "deleteConfirm": "Delete",
