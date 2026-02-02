@@ -51,7 +51,7 @@ export function FlashcardContainer({ card }: FlashcardContainerProps) {
       >
         {/* Card Header - Greek word with part of speech badge */}
         <div className="px-8 py-6">
-          <CardHeader card={card} onFlip={flipCard} />
+          <CardHeader card={card} onFlip={flipCard} isCardFlipped={isCardFlipped} />
         </div>
 
         {/* Card Content - Translations and Grammar tables (blurred until revealed) */}

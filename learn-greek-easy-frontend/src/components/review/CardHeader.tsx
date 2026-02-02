@@ -11,9 +11,10 @@ import { GenderBadge, PartOfSpeechBadge } from './grammar';
 interface CardHeaderProps {
   card: CardReview;
   onFlip: () => void;
+  isCardFlipped: boolean;
 }
 
-export function CardHeader({ card, onFlip }: CardHeaderProps) {
+export function CardHeader({ card, onFlip, isCardFlipped }: CardHeaderProps) {
   const { t } = useTranslation('review');
   const partOfSpeech = card.part_of_speech;
 
@@ -75,7 +76,9 @@ export function CardHeader({ card, onFlip }: CardHeaderProps) {
       {card.pronunciation && (
         <p className="mt-2 text-xl italic text-muted-foreground">{card.pronunciation}</p>
       )}
-      <p className="mt-4 text-sm text-muted-foreground">{t('session.clickToReveal')}</p>
+      {!isCardFlipped && (
+        <p className="mt-4 text-sm text-muted-foreground">{t('session.clickToReveal')}</p>
+      )}
     </div>
   );
 }

@@ -1,5 +1,3 @@
-import { useState } from 'react';
-
 import { useTranslation } from 'react-i18next';
 
 import { Card, CardContent } from '@/components/ui/card';
@@ -10,23 +8,11 @@ import { TenseBadge } from './TenseBadge';
 
 export interface ExampleSentencesProps {
   examples: Example[];
+  isFlipped?: boolean;
 }
 
-export function ExampleSentences({ examples }: ExampleSentencesProps) {
+export function ExampleSentences({ examples, isFlipped = true }: ExampleSentencesProps) {
   const { t, i18n } = useTranslation('review');
-  const [revealedIndexes, setRevealedIndexes] = useState<Set<number>>(new Set());
-
-  const toggleReveal = (index: number) => {
-    setRevealedIndexes((prev) => {
-      const next = new Set(prev);
-      if (next.has(index)) {
-        next.delete(index);
-      } else {
-        next.add(index);
-      }
-      return next;
-    });
-  };
 
   const getTranslation = (example: Example): string => {
     const primary = i18n.language === 'ru' ? example.russian : example.english;
@@ -47,7 +33,6 @@ export function ExampleSentences({ examples }: ExampleSentencesProps) {
   return (
     <div className="space-y-4">
       {examples.map((example, index) => {
-        const isRevealed = revealedIndexes.has(index);
         const translation = getTranslation(example);
 
         return (
@@ -59,26 +44,12 @@ export function ExampleSentences({ examples }: ExampleSentencesProps) {
                 {example.tense && <TenseBadge tense={example.tense} />}
               </div>
 
-              {/* Translation - blurred until revealed */}
+              {/* Translation - visible when card is flipped */}
               {translation && (
                 <div
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => toggleReveal(index)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      toggleReveal(index);
-                    }
-                  }}
-                  aria-label={
-                    isRevealed
-                      ? t('grammar.examples.hideTranslation')
-                      : t('grammar.examples.showTranslation')
-                  }
                   className={cn(
                     'mt-1 transition-[filter] duration-200',
-                    !isRevealed && 'cursor-pointer select-none blur-sm'
+                    !isFlipped && 'select-none blur-sm'
                   )}
                 >
                   <p className="text-sm text-muted-foreground">{translation}</p>

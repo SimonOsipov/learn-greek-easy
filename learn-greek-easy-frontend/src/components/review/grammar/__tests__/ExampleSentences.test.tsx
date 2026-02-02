@@ -3,14 +3,13 @@
  *
  * Tests for the ExampleSentences component, verifying:
  * - Renders Greek text always visible (never blurred)
- * - Translations start blurred, reveal on click
+ * - Translations are blurred when isFlipped=false, visible when isFlipped=true
  * - Shows only UI language translation (EN or RU with fallback)
  * - Handles empty state with message
- * - Keyboard accessibility (Enter/Space to reveal)
- * - Each example reveals independently
+ * - isFlipped prop controls all translation visibility
  */
 
-import { fireEvent, render, screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { Example } from '@/types/grammar';
@@ -22,8 +21,6 @@ vi.mock('react-i18next', () => ({
     t: (key: string) => {
       const translations: Record<string, string> = {
         'grammar.examples.noExamples': 'No examples available',
-        'grammar.examples.showTranslation': 'Click to show translation',
-        'grammar.examples.hideTranslation': 'Click to hide translation',
         'grammar.verbConjugation.tenses.past': 'Past',
         'grammar.verbConjugation.tenses.present': 'Present',
       };
@@ -170,111 +167,60 @@ describe('ExampleSentences', () => {
     });
   });
 
-  describe('Translation Blur/Reveal', () => {
-    it('should render translation blurred initially', () => {
+  describe('isFlipped Prop Behavior', () => {
+    it('should render translations visible when isFlipped is true (default)', () => {
       render(<ExampleSentences examples={mockSingleExample} />);
 
-      const translationButton = screen.getByRole('button', {
-        name: 'Click to show translation',
-      });
-      expect(translationButton).toHaveClass('blur-sm');
-      expect(translationButton).toHaveClass('select-none');
-      expect(translationButton).toHaveClass('cursor-pointer');
+      const translationText = screen.getByText('The house is big.');
+      const translationContainer = translationText.parentElement;
+      expect(translationContainer).not.toHaveClass('blur-sm');
     });
 
-    it('should reveal translation on click', () => {
-      render(<ExampleSentences examples={mockSingleExample} />);
+    it('should render translations visible when isFlipped is explicitly true', () => {
+      render(<ExampleSentences examples={mockSingleExample} isFlipped={true} />);
 
-      const translationButton = screen.getByRole('button', {
-        name: 'Click to show translation',
-      });
-
-      // Initially blurred
-      expect(translationButton).toHaveClass('blur-sm');
-
-      // Click to reveal
-      fireEvent.click(translationButton);
-
-      // Now revealed - get by new aria-label
-      const revealedButton = screen.getByRole('button', {
-        name: 'Click to hide translation',
-      });
-      expect(revealedButton).not.toHaveClass('blur-sm');
+      const translationText = screen.getByText('The house is big.');
+      const translationContainer = translationText.parentElement;
+      expect(translationContainer).not.toHaveClass('blur-sm');
     });
 
-    it('should hide translation on second click', () => {
-      render(<ExampleSentences examples={mockSingleExample} />);
+    it('should render translations blurred when isFlipped is false', () => {
+      render(<ExampleSentences examples={mockSingleExample} isFlipped={false} />);
 
-      const translationButton = screen.getByRole('button', {
-        name: 'Click to show translation',
-      });
+      const translationText = screen.getByText('The house is big.');
+      const translationContainer = translationText.parentElement;
+      expect(translationContainer).toHaveClass('blur-sm');
+      expect(translationContainer).toHaveClass('select-none');
+    });
 
-      // First click - reveal
-      fireEvent.click(translationButton);
-      const revealedButton = screen.getByRole('button', {
-        name: 'Click to hide translation',
-      });
-      expect(revealedButton).not.toHaveClass('blur-sm');
+    it('should blur all translations when isFlipped is false', () => {
+      const { container } = render(
+        <ExampleSentences examples={mockMultipleExamples} isFlipped={false} />
+      );
 
-      // Second click - hide again
-      fireEvent.click(revealedButton);
-      const hiddenButton = screen.getByRole('button', {
-        name: 'Click to show translation',
-      });
-      expect(hiddenButton).toHaveClass('blur-sm');
+      // All translation containers should be blurred
+      const blurredElements = container.querySelectorAll('.blur-sm');
+      expect(blurredElements.length).toBe(3);
+    });
+
+    it('should reveal all translations when isFlipped is true', () => {
+      const { container } = render(
+        <ExampleSentences examples={mockMultipleExamples} isFlipped={true} />
+      );
+
+      // No translation containers should be blurred
+      const blurredElements = container.querySelectorAll('.blur-sm');
+      expect(blurredElements.length).toBe(0);
     });
 
     it('should have transition classes for smooth blur animation', () => {
-      render(<ExampleSentences examples={mockSingleExample} />);
+      const { container } = render(
+        <ExampleSentences examples={mockSingleExample} isFlipped={false} />
+      );
 
-      const translationButton = screen.getByRole('button', {
-        name: 'Click to show translation',
-      });
-      expect(translationButton).toHaveClass('transition-[filter]');
-      expect(translationButton).toHaveClass('duration-200');
-    });
-  });
-
-  describe('Keyboard Accessibility', () => {
-    it('should reveal translation on Enter key', () => {
-      render(<ExampleSentences examples={mockSingleExample} />);
-
-      const translationButton = screen.getByRole('button', {
-        name: 'Click to show translation',
-      });
-
-      // Press Enter
-      fireEvent.keyDown(translationButton, { key: 'Enter' });
-
-      const revealedButton = screen.getByRole('button', {
-        name: 'Click to hide translation',
-      });
-      expect(revealedButton).not.toHaveClass('blur-sm');
-    });
-
-    it('should reveal translation on Space key', () => {
-      render(<ExampleSentences examples={mockSingleExample} />);
-
-      const translationButton = screen.getByRole('button', {
-        name: 'Click to show translation',
-      });
-
-      // Press Space
-      fireEvent.keyDown(translationButton, { key: ' ' });
-
-      const revealedButton = screen.getByRole('button', {
-        name: 'Click to hide translation',
-      });
-      expect(revealedButton).not.toHaveClass('blur-sm');
-    });
-
-    it('should have tabIndex for keyboard navigation', () => {
-      render(<ExampleSentences examples={mockSingleExample} />);
-
-      const translationButton = screen.getByRole('button', {
-        name: 'Click to show translation',
-      });
-      expect(translationButton).toHaveAttribute('tabIndex', '0');
+      const translationContainer = container.querySelector('.blur-sm');
+      expect(translationContainer).toHaveClass('transition-[filter]');
+      expect(translationContainer).toHaveClass('duration-200');
     });
   });
 
@@ -311,34 +257,6 @@ describe('ExampleSentences', () => {
 
       // Should show Russian as fallback
       expect(screen.getByText('Добрый вечер.')).toBeInTheDocument();
-    });
-  });
-
-  describe('Independent Reveal State', () => {
-    it('should reveal examples independently', () => {
-      render(<ExampleSentences examples={mockMultipleExamples} />);
-
-      const buttons = screen.getAllByRole('button', {
-        name: 'Click to show translation',
-      });
-      expect(buttons).toHaveLength(3);
-
-      // Reveal only the second example
-      fireEvent.click(buttons[1]);
-
-      // First and third should still be blurred
-      const blurredButtons = screen.getAllByRole('button', {
-        name: 'Click to show translation',
-      });
-      expect(blurredButtons).toHaveLength(2);
-      expect(blurredButtons[0]).toHaveClass('blur-sm');
-      expect(blurredButtons[1]).toHaveClass('blur-sm');
-
-      // Second should be revealed
-      const revealedButton = screen.getByRole('button', {
-        name: 'Click to hide translation',
-      });
-      expect(revealedButton).not.toHaveClass('blur-sm');
     });
   });
 
@@ -431,6 +349,15 @@ describe('ExampleSentences', () => {
       // CardContent has p-4 padding
       const cardContent = container.querySelector('.p-4');
       expect(cardContent).toBeInTheDocument();
+    });
+  });
+
+  describe('Accessibility', () => {
+    it('should not have button role on translation (no longer interactive)', () => {
+      render(<ExampleSentences examples={mockSingleExample} />);
+
+      // Translations should not be buttons since they are no longer interactive
+      expect(screen.queryByRole('button')).not.toBeInTheDocument();
     });
   });
 });
