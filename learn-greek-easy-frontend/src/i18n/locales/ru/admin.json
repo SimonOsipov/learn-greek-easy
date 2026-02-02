@@ -571,6 +571,8 @@
     "errorToast": "Не удалось загрузить карточки. Попробуйте ещё раз.",
     "invalidJson": "Неверный формат JSON",
     "invalidJsonFormat": "JSON должен быть массивом карточек или объектом со свойством 'cards'",
+    "jsonSyntaxError": "Ошибка синтаксиса JSON на строке {{line}}, столбец {{column}}: {{message}}",
+    "jsonSyntaxErrorNoPosition": "Ошибка синтаксиса JSON: {{message}}",
     "noCards": "Карточки не найдены в JSON",
     "tooManyCards": "Слишком много карточек. Максимум 100.",
     "grammarCounts": {

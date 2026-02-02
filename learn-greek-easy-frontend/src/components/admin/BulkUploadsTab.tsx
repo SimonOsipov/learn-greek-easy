@@ -219,16 +219,43 @@ function validateCards(cards: unknown[]): ValidationError[] {
 /**
  * Parse JSON input and extract cards array.
  * Accepts both bare array and object-with-cards formats.
+ * Returns detailed syntax error info when parsing fails.
  */
-function parseCardsJson(
-  jsonString: string
-):
+function parseCardsJson(jsonString: string):
   | { success: true; cards: unknown[] }
-  | { success: false; errorKey: 'invalidJson' | 'invalidJsonFormat' } {
+  | {
+      success: false;
+      errorKey: 'invalidJson' | 'invalidJsonFormat';
+      syntaxError?: { message: string; line?: number; column?: number };
+    } {
   let parsed: unknown;
   try {
     parsed = JSON.parse(jsonString);
-  } catch {
+  } catch (error) {
+    if (error instanceof SyntaxError) {
+      // Try to extract position from error message
+      const posMatch = error.message.match(/position\s+(\d+)/i);
+      if (posMatch) {
+        const position = parseInt(posMatch[1], 10);
+        const beforeError = jsonString.substring(0, position);
+        const lines = beforeError.split('\n');
+        const line = lines.length;
+        const column = lines[lines.length - 1].length + 1;
+        // Clean up error message (remove "at position N" suffix)
+        const cleanMessage = error.message.replace(/\s*at position \d+/i, '').trim();
+        return {
+          success: false,
+          errorKey: 'invalidJson',
+          syntaxError: { message: cleanMessage, line, column },
+        };
+      }
+      // No position info available
+      return {
+        success: false,
+        errorKey: 'invalidJson',
+        syntaxError: { message: error.message },
+      };
+    }
     return { success: false, errorKey: 'invalidJson' };
   }
 
@@ -357,9 +384,18 @@ export const BulkUploadsTab: React.FC = () => {
     // Parse JSON and extract cards array
     const parseResult = parseCardsJson(jsonInput);
     if (!parseResult.success) {
-      setValidationErrors([
-        { cardIndex: -1, field: 'json', message: t(`bulkUploads.${parseResult.errorKey}`) },
-      ]);
+      let errorMessage: string;
+      if (parseResult.syntaxError) {
+        const { message, line, column } = parseResult.syntaxError;
+        if (line !== undefined && column !== undefined) {
+          errorMessage = t('bulkUploads.jsonSyntaxError', { line, column, message });
+        } else {
+          errorMessage = t('bulkUploads.jsonSyntaxErrorNoPosition', { message });
+        }
+      } else {
+        errorMessage = t(`bulkUploads.${parseResult.errorKey}`);
+      }
+      setValidationErrors([{ cardIndex: -1, field: 'json', message: errorMessage }]);
       return;
     }
 
