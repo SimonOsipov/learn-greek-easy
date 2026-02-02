@@ -1,6 +1,6 @@
 // src/pages/MyDeckDetailPage.tsx
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 import { AlertCircle, BookOpen, ChevronLeft, Loader2, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -26,6 +26,17 @@ import {
   trackUserDeckDeleteStarted,
   trackUserDeckDeleteCancelled,
 } from '@/lib/analytics/myDecksAnalytics';
+import {
+  trackUserCardCreateStarted,
+  trackUserCardCreateCompleted,
+  trackUserCardCreateCancelled,
+  trackUserCardEditStarted,
+  trackUserCardEditCompleted,
+  trackUserCardEditCancelled,
+  trackUserCardDeleteStarted,
+  trackUserCardDeleteCompleted,
+  trackUserCardDeleteCancelled,
+} from '@/lib/analytics/userCardAnalytics';
 import { reportAPIError } from '@/lib/errorReporting';
 import { APIRequestError } from '@/services/api';
 import { cardAPI, type CardResponse } from '@/services/cardAPI';
@@ -64,6 +75,13 @@ export const MyDeckDetailPage: React.FC = () => {
   const [isDeleteCardDialogOpen, setIsDeleteCardDialogOpen] = useState(false);
   const [cardToDelete, setCardToDelete] = useState<CardResponse | null>(null);
   const [isDeletingCard, setIsDeletingCard] = useState(false);
+
+  // Analytics state
+  const [createCardSource, setCreateCardSource] = useState<'create_button' | 'empty_state_cta'>(
+    'create_button'
+  );
+  const createCardSuccessRef = useRef(false);
+  const editCardSuccessRef = useRef(false);
 
   const fetchDeck = useCallback(async () => {
     if (!deckId) return;
@@ -197,28 +215,67 @@ export const MyDeckDetailPage: React.FC = () => {
   };
 
   // Create card handlers
-  const handleCreateCardClick = () => {
+  const handleCreateCardClick = (source: 'create_button' | 'empty_state_cta' = 'create_button') => {
+    setCreateCardSource(source);
+    createCardSuccessRef.current = false;
+    if (deckId) {
+      trackUserCardCreateStarted({ deck_id: deckId, source });
+    }
     setIsCreateCardModalOpen(true);
   };
 
   const handleCreateCardSuccess = () => {
+    createCardSuccessRef.current = true;
     setIsCreateCardModalOpen(false);
+    if (deckId) {
+      // Note: card_id and other properties would require modal to pass card data back
+      trackUserCardCreateCompleted({
+        deck_id: deckId,
+        card_id: '', // Not available at page level - tracked with empty string
+        has_grammar: false, // Not available at page level
+        has_examples: false, // Not available at page level
+        example_count: 0, // Not available at page level
+      });
+    }
     fetchDeck(); // Refresh deck data including card count
     fetchCards(); // Refresh cards list
   };
 
+  const handleCreateCardModalOpenChange = (open: boolean) => {
+    if (!open && !createCardSuccessRef.current && deckId) {
+      trackUserCardCreateCancelled({ deck_id: deckId, source: createCardSource });
+    }
+    setIsCreateCardModalOpen(open);
+  };
+
   // Edit card handlers
   const handleEditCardClick = (card: CardResponse) => {
+    editCardSuccessRef.current = false;
+    if (deckId) {
+      trackUserCardEditStarted({ card_id: card.id, deck_id: deckId });
+    }
     setSelectedCardId(card.id);
     setIsEditCardModalOpen(true);
   };
 
   const handleEditCardModalClose = () => {
+    if (selectedCardId && deckId && !editCardSuccessRef.current) {
+      trackUserCardEditCancelled({ card_id: selectedCardId, deck_id: deckId });
+    }
     setIsEditCardModalOpen(false);
     setSelectedCardId(null);
   };
 
   const handleCardUpdated = () => {
+    editCardSuccessRef.current = true;
+    if (selectedCardId && deckId) {
+      // Note: fields_changed would require modal to pass change data back
+      trackUserCardEditCompleted({
+        card_id: selectedCardId,
+        deck_id: deckId,
+        fields_changed: [], // Not available at page level
+      });
+    }
     setIsEditCardModalOpen(false);
     setSelectedCardId(null);
     fetchCards(); // Refresh cards list
@@ -226,6 +283,7 @@ export const MyDeckDetailPage: React.FC = () => {
 
   // Delete card handlers
   const handleDeleteCardClick = (card: CardResponse) => {
+    trackUserCardDeleteStarted({ card_id: card.id, deck_id: card.deck_id });
     setCardToDelete(card);
     setIsDeleteCardDialogOpen(true);
   };
@@ -236,6 +294,10 @@ export const MyDeckDetailPage: React.FC = () => {
     setIsDeletingCard(true);
     try {
       await cardAPI.delete(cardToDelete.id);
+      trackUserCardDeleteCompleted({
+        card_id: cardToDelete.id,
+        deck_id: cardToDelete.deck_id,
+      });
       toast({
         title: t('myDecks.cards.deleteSuccess'),
       });
@@ -255,6 +317,12 @@ export const MyDeckDetailPage: React.FC = () => {
   };
 
   const handleDeleteCardCancel = () => {
+    if (cardToDelete) {
+      trackUserCardDeleteCancelled({
+        card_id: cardToDelete.id,
+        deck_id: cardToDelete.deck_id,
+      });
+    }
     setIsDeleteCardDialogOpen(false);
     setCardToDelete(null);
   };
@@ -320,7 +388,11 @@ export const MyDeckDetailPage: React.FC = () => {
 
           {/* Create Card Button */}
           <div className="mb-4 flex justify-end">
-            <Button variant="hero" onClick={handleCreateCardClick} data-testid="create-card-button">
+            <Button
+              variant="hero"
+              onClick={() => handleCreateCardClick('create_button')}
+              data-testid="create-card-button"
+            >
               <Plus className="mr-2 h-4 w-4" />
               {t('myDecks.createCard')}
             </Button>
@@ -386,7 +458,7 @@ export const MyDeckDetailPage: React.FC = () => {
                   <p className="mb-4 text-muted-foreground">{t('myDecks.cards.emptyCta')}</p>
                   <Button
                     variant="hero"
-                    onClick={handleCreateCardClick}
+                    onClick={() => handleCreateCardClick('empty_state_cta')}
                     data-testid="empty-state-create-card-button"
                   >
                     <Plus className="mr-2 h-4 w-4" />
@@ -484,7 +556,7 @@ export const MyDeckDetailPage: React.FC = () => {
       {deck && (
         <UserVocabularyCardCreateModal
           open={isCreateCardModalOpen}
-          onOpenChange={setIsCreateCardModalOpen}
+          onOpenChange={handleCreateCardModalOpenChange}
           deckId={deck.id}
           deckLevel={deck.level}
           onSuccess={handleCreateCardSuccess}
