@@ -178,20 +178,34 @@ class TestDeckFactory:
     """Tests for DeckFactory."""
 
     async def test_create_basic_deck(self, db_session: AsyncSession):
-        """Test creating a basic deck."""
+        """Test creating a basic deck with trilingual fields."""
         deck = await DeckFactory.create(session=db_session)
 
         assert deck is not None
         assert deck.id is not None
-        assert deck.name is not None
+        # Check trilingual name fields
+        assert deck.name_el is not None
+        assert deck.name_en is not None
+        assert deck.name_ru is not None
+        # Check trilingual description fields
+        assert deck.description_el is not None
+        assert deck.description_en is not None
+        assert deck.description_ru is not None
         assert deck.level == DeckLevel.A1  # Default
         assert deck.is_active is True
+        assert deck.is_premium is False
 
     async def test_create_inactive_deck(self, db_session: AsyncSession):
         """Test creating an inactive deck."""
         deck = await DeckFactory.create(session=db_session, inactive=True)
 
         assert deck.is_active is False
+
+    async def test_create_premium_deck(self, db_session: AsyncSession):
+        """Test creating a premium deck."""
+        deck = await DeckFactory.create(session=db_session, premium=True)
+
+        assert deck.is_premium is True
 
     async def test_level_traits(self, db_session: AsyncSession):
         """Test CEFR level traits."""
@@ -200,6 +214,9 @@ class TestDeckFactory:
 
         assert a2_deck.level == DeckLevel.A2
         assert b1_deck.level == DeckLevel.B1
+        # Verify trilingual names exist for traits
+        assert a2_deck.name_en is not None
+        assert b1_deck.name_en is not None
 
     async def test_create_with_cards(self, db_session: AsyncSession):
         """Test creating a deck with cards."""
@@ -209,6 +226,25 @@ class TestDeckFactory:
         assert len(cards) == 5
         for card in cards:
             assert card.deck_id == deck.id
+
+    async def test_create_with_custom_multilingual_fields(self, db_session: AsyncSession):
+        """Test creating a deck with custom trilingual values."""
+        deck = await DeckFactory.create(
+            session=db_session,
+            name_el="Προσαρμοσμένο",
+            name_en="Custom",
+            name_ru="Пользовательский",
+            description_el="Προσαρμοσμένη περιγραφή",
+            description_en="Custom description",
+            description_ru="Пользовательское описание",
+        )
+
+        assert deck.name_el == "Προσαρμοσμένο"
+        assert deck.name_en == "Custom"
+        assert deck.name_ru == "Пользовательский"
+        assert deck.description_el == "Προσαρμοσμένη περιγραφή"
+        assert deck.description_en == "Custom description"
+        assert deck.description_ru == "Пользовательское описание"
 
 
 # =============================================================================

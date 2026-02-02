@@ -44,12 +44,14 @@ from tests.factories.base import BaseFactory
 class CultureDeckFactory(BaseFactory):
     """Factory for CultureDeck model.
 
-    Creates culture exam decks with multilingual content.
+    Creates culture exam decks with trilingual content (Greek, English, Russian).
 
     Traits:
         inactive: Deactivated deck
+        premium: Premium deck
         geography: Geography category deck
         politics: Politics category deck
+        culture: Culture category deck
 
     Example:
         deck = await CultureDeckFactory.create()
@@ -59,10 +61,19 @@ class CultureDeckFactory(BaseFactory):
     class Meta:
         model = CultureDeck
 
-    name = "History"
-    description = "Greek history questions"
+    # Multilingual name fields
+    name_el = "Ιστορία"
+    name_en = "History"
+    name_ru = "История"
+
+    # Multilingual description fields
+    description_el = "Ερωτήσεις ελληνικής ιστορίας"
+    description_en = "Greek history questions"
+    description_ru = "Вопросы по истории Греции"
+
     category = "history"
     is_active = True
+    is_premium = False
     order_index = factory.Sequence(lambda n: n)
 
     class Params:
@@ -71,25 +82,51 @@ class CultureDeckFactory(BaseFactory):
         # Inactive deck
         inactive = factory.Trait(is_active=False)
 
+        # Premium deck
+        premium = factory.Trait(is_premium=True)
+
         # Geography category deck
         geography = factory.Trait(
             category="geography",
-            name="Geography",
-            description="Geography questions",
+            name_el="Γεωγραφία",
+            name_en="Geography",
+            name_ru="География",
+            description_el="Ερωτήσεις γεωγραφίας",
+            description_en="Geography questions",
+            description_ru="Вопросы по географии",
         )
 
         # Politics category deck
         politics = factory.Trait(
             category="politics",
-            name="Politics",
-            description="Politics questions",
+            name_el="Πολιτική",
+            name_en="Politics",
+            name_ru="Политика",
+            description_el="Ερωτήσεις πολιτικής",
+            description_en="Politics questions",
+            description_ru="Вопросы по политике",
         )
 
         # Culture category deck
         culture = factory.Trait(
             category="culture",
-            name="Culture",
-            description="Culture questions",
+            name_el="Πολιτισμός",
+            name_en="Culture",
+            name_ru="Культура",
+            description_el="Ερωτήσεις πολιτισμού",
+            description_en="Culture questions",
+            description_ru="Вопросы по культуре",
+        )
+
+        # Traditions category deck
+        traditions = factory.Trait(
+            category="traditions",
+            name_el="Παραδόσεις",
+            name_en="Traditions",
+            name_ru="Традиции",
+            description_el="Ερωτήσεις παραδόσεων",
+            description_en="Traditions questions",
+            description_ru="Вопросы о традициях",
         )
 
 

@@ -434,3 +434,368 @@ class TestDeckSearchResponse:
             decks=[deck],
         )
         assert response.decks[0].is_premium is True
+
+
+# ============================================================================
+# Admin Schema Tests (Trilingual)
+# ============================================================================
+
+
+class TestDeckAdminCreate:
+    """Test DeckAdminCreate schema validation for trilingual deck creation."""
+
+    def test_valid_admin_create_all_fields(self):
+        """Test valid admin create with all trilingual fields."""
+        from src.schemas.deck import DeckAdminCreate
+
+        schema = DeckAdminCreate(
+            name_el="Λεξιλόγιο A1",
+            name_en="A1 Vocabulary",
+            name_ru="Словарь A1",
+            description_el="Βασικό λεξιλόγιο",
+            description_en="Basic vocabulary",
+            description_ru="Базовая лексика",
+            level=DeckLevel.A1,
+        )
+        assert schema.name_el == "Λεξιλόγιο A1"
+        assert schema.name_en == "A1 Vocabulary"
+        assert schema.name_ru == "Словарь A1"
+        assert schema.level == DeckLevel.A1
+
+    def test_admin_create_missing_name_el_rejected(self):
+        """Test that missing name_el is rejected."""
+        from src.schemas.deck import DeckAdminCreate
+
+        with pytest.raises(ValidationError):
+            DeckAdminCreate(
+                name_en="A1 Vocabulary",
+                name_ru="Словарь A1",
+                level=DeckLevel.A1,
+            )
+
+    def test_admin_create_missing_name_en_rejected(self):
+        """Test that missing name_en is rejected."""
+        from src.schemas.deck import DeckAdminCreate
+
+        with pytest.raises(ValidationError):
+            DeckAdminCreate(
+                name_el="Λεξιλόγιο A1",
+                name_ru="Словарь A1",
+                level=DeckLevel.A1,
+            )
+
+    def test_admin_create_missing_name_ru_rejected(self):
+        """Test that missing name_ru is rejected."""
+        from src.schemas.deck import DeckAdminCreate
+
+        with pytest.raises(ValidationError):
+            DeckAdminCreate(
+                name_el="Λεξιλόγιο A1",
+                name_en="A1 Vocabulary",
+                level=DeckLevel.A1,
+            )
+
+    def test_admin_create_empty_name_rejected(self):
+        """Test that empty name fields are rejected."""
+        from src.schemas.deck import DeckAdminCreate
+
+        with pytest.raises(ValidationError) as exc_info:
+            DeckAdminCreate(
+                name_el="",
+                name_en="A1 Vocabulary",
+                name_ru="Словарь A1",
+                level=DeckLevel.A1,
+            )
+        assert "too_short" in str(exc_info.value).lower()
+
+    def test_admin_create_name_too_long_rejected(self):
+        """Test that name over 255 characters is rejected."""
+        from src.schemas.deck import DeckAdminCreate
+
+        with pytest.raises(ValidationError) as exc_info:
+            DeckAdminCreate(
+                name_el="A" * 256,
+                name_en="A1 Vocabulary",
+                name_ru="Словарь A1",
+                level=DeckLevel.A1,
+            )
+        assert "string_too_long" in str(exc_info.value).lower()
+
+    def test_admin_create_descriptions_optional(self):
+        """Test that description fields are optional."""
+        from src.schemas.deck import DeckAdminCreate
+
+        schema = DeckAdminCreate(
+            name_el="Λεξιλόγιο A1",
+            name_en="A1 Vocabulary",
+            name_ru="Словарь A1",
+            level=DeckLevel.A1,
+        )
+        assert schema.description_el is None
+        assert schema.description_en is None
+        assert schema.description_ru is None
+
+    def test_admin_create_default_values(self):
+        """Test default values for is_active and is_premium."""
+        from src.schemas.deck import DeckAdminCreate
+
+        schema = DeckAdminCreate(
+            name_el="Test",
+            name_en="Test",
+            name_ru="Test",
+            level=DeckLevel.A1,
+        )
+        assert schema.is_active is True
+        assert schema.is_premium is False
+
+    def test_admin_create_all_cefr_levels(self):
+        """Test DeckAdminCreate accepts all CEFR levels."""
+        from src.schemas.deck import DeckAdminCreate
+
+        levels = [
+            DeckLevel.A1,
+            DeckLevel.A2,
+            DeckLevel.B1,
+            DeckLevel.B2,
+            DeckLevel.C1,
+            DeckLevel.C2,
+        ]
+        for level in levels:
+            schema = DeckAdminCreate(
+                name_el="Test",
+                name_en="Test",
+                name_ru="Test",
+                level=level,
+            )
+            assert schema.level == level
+
+    def test_admin_create_with_premium_flag(self):
+        """Test creating a premium deck."""
+        from src.schemas.deck import DeckAdminCreate
+
+        schema = DeckAdminCreate(
+            name_el="Premium Deck",
+            name_en="Premium Deck",
+            name_ru="Премиум Deck",
+            level=DeckLevel.B2,
+            is_premium=True,
+            is_active=True,
+        )
+        assert schema.is_premium is True
+
+
+class TestDeckAdminUpdate:
+    """Test DeckAdminUpdate schema validation for partial updates."""
+
+    def test_all_fields_optional(self):
+        """Test that all fields are optional for partial update."""
+        from src.schemas.deck import DeckAdminUpdate
+
+        update = DeckAdminUpdate()
+        assert update.name_el is None
+        assert update.name_en is None
+        assert update.name_ru is None
+        assert update.description_el is None
+        assert update.description_en is None
+        assert update.description_ru is None
+        assert update.level is None
+        assert update.is_active is None
+        assert update.is_premium is None
+
+    def test_update_single_language_name(self):
+        """Test updating only one language name."""
+        from src.schemas.deck import DeckAdminUpdate
+
+        update = DeckAdminUpdate(name_ru="Обновленное название")
+        assert update.name_ru == "Обновленное название"
+        assert update.name_el is None
+        assert update.name_en is None
+
+    def test_update_empty_name_rejected(self):
+        """Test that empty name fields are rejected."""
+        from src.schemas.deck import DeckAdminUpdate
+
+        with pytest.raises(ValidationError) as exc_info:
+            DeckAdminUpdate(name_en="")
+        assert "too_short" in str(exc_info.value).lower()
+
+    def test_update_mixed_fields(self):
+        """Test updating a mix of language and common fields."""
+        from src.schemas.deck import DeckAdminUpdate
+
+        update = DeckAdminUpdate(
+            name_el="Νέο όνομα",
+            description_en="Updated description",
+            is_premium=True,
+        )
+        assert update.name_el == "Νέο όνομα"
+        assert update.description_en == "Updated description"
+        assert update.is_premium is True
+        assert update.name_en is None
+
+    def test_update_level_only(self):
+        """Test updating only the level field."""
+        from src.schemas.deck import DeckAdminUpdate
+
+        update = DeckAdminUpdate(level=DeckLevel.C2)
+        assert update.level == DeckLevel.C2
+        assert update.name_el is None
+
+    def test_update_is_active_and_is_premium(self):
+        """Test updating status flags."""
+        from src.schemas.deck import DeckAdminUpdate
+
+        update = DeckAdminUpdate(is_active=False, is_premium=True)
+        assert update.is_active is False
+        assert update.is_premium is True
+
+
+class TestDeckAdminResponse:
+    """Test DeckAdminResponse schema validation."""
+
+    def test_valid_admin_response(self):
+        """Test valid admin response with all language fields."""
+        from src.schemas.deck import DeckAdminResponse
+
+        now = datetime.now()
+        response = DeckAdminResponse(
+            id=uuid4(),
+            name_el="Λεξιλόγιο",
+            name_en="Vocabulary",
+            name_ru="Словарь",
+            description_el="Περιγραφή",
+            description_en="Description",
+            description_ru="Описание",
+            level=DeckLevel.A1,
+            is_active=True,
+            is_premium=False,
+            card_count=25,
+            owner_id=None,
+            created_at=now,
+            updated_at=now,
+        )
+        assert response.name_el == "Λεξιλόγιο"
+        assert response.name_en == "Vocabulary"
+        assert response.name_ru == "Словарь"
+        assert response.card_count == 25
+
+    def test_admin_response_with_owner(self):
+        """Test admin response with owner_id."""
+        from src.schemas.deck import DeckAdminResponse
+
+        now = datetime.now()
+        owner_id = uuid4()
+        response = DeckAdminResponse(
+            id=uuid4(),
+            name_el="Test",
+            name_en="Test",
+            name_ru="Test",
+            description_el=None,
+            description_en=None,
+            description_ru=None,
+            level=DeckLevel.B1,
+            is_active=True,
+            is_premium=True,
+            card_count=0,
+            owner_id=owner_id,
+            created_at=now,
+            updated_at=now,
+        )
+        assert response.owner_id == owner_id
+        assert response.is_premium is True
+
+    def test_admin_response_descriptions_can_be_none(self):
+        """Test that description fields can be None."""
+        from src.schemas.deck import DeckAdminResponse
+
+        now = datetime.now()
+        response = DeckAdminResponse(
+            id=uuid4(),
+            name_el="Test",
+            name_en="Test",
+            name_ru="Test",
+            description_el=None,
+            description_en=None,
+            description_ru=None,
+            level=DeckLevel.A1,
+            is_active=True,
+            is_premium=False,
+            card_count=0,
+            owner_id=None,
+            created_at=now,
+            updated_at=now,
+        )
+        assert response.description_el is None
+        assert response.description_en is None
+        assert response.description_ru is None
+
+    def test_admin_response_card_count_validation(self):
+        """Test that negative card count is rejected."""
+        from src.schemas.deck import DeckAdminResponse
+
+        now = datetime.now()
+        with pytest.raises(ValidationError):
+            DeckAdminResponse(
+                id=uuid4(),
+                name_el="Test",
+                name_en="Test",
+                name_ru="Test",
+                description_el=None,
+                description_en=None,
+                description_ru=None,
+                level=DeckLevel.A1,
+                is_active=True,
+                is_premium=False,
+                card_count=-1,
+                owner_id=None,
+                created_at=now,
+                updated_at=now,
+            )
+
+
+class TestDeckAdminListResponse:
+    """Test DeckAdminListResponse schema validation."""
+
+    def test_valid_admin_list_response(self):
+        """Test valid admin list response."""
+        from src.schemas.deck import DeckAdminListResponse, DeckAdminResponse
+
+        now = datetime.now()
+        deck = DeckAdminResponse(
+            id=uuid4(),
+            name_el="Test",
+            name_en="Test",
+            name_ru="Test",
+            description_el=None,
+            description_en=None,
+            description_ru=None,
+            level=DeckLevel.A1,
+            is_active=True,
+            is_premium=False,
+            card_count=10,
+            owner_id=None,
+            created_at=now,
+            updated_at=now,
+        )
+        response = DeckAdminListResponse(
+            total=1,
+            page=1,
+            page_size=20,
+            decks=[deck],
+        )
+        assert response.total == 1
+        assert len(response.decks) == 1
+        assert response.decks[0].name_en == "Test"
+
+    def test_admin_list_empty(self):
+        """Test admin list with no decks."""
+        from src.schemas.deck import DeckAdminListResponse
+
+        response = DeckAdminListResponse(
+            total=0,
+            page=1,
+            page_size=20,
+            decks=[],
+        )
+        assert response.total == 0
+        assert len(response.decks) == 0

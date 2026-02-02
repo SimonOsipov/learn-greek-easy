@@ -29,6 +29,7 @@ class DeckFactory(BaseFactory):
     """Factory for Deck model.
 
     Creates flashcard decks with configurable CEFR levels.
+    Supports trilingual name/description (Greek, English, Russian).
 
     Traits:
         inactive: Deactivated deck
@@ -43,17 +44,33 @@ class DeckFactory(BaseFactory):
     class Meta:
         model = Deck
 
-    # Default values
-    name = factory.LazyAttribute(
+    # Multilingual name fields
+    name_el = factory.LazyAttribute(
+        lambda obj: f"Ελληνικό Deck {obj.level.value if hasattr(obj, 'level') and obj.level else 'A1'}"
+    )
+    name_en = factory.LazyAttribute(
         lambda obj: fake.deck_name(obj.level.value if hasattr(obj, "level") and obj.level else "A1")
     )
-    description = factory.LazyAttribute(
+    name_ru = factory.LazyAttribute(
+        lambda obj: f"Русский Deck {obj.level.value if hasattr(obj, 'level') and obj.level else 'A1'}"
+    )
+
+    # Multilingual description fields (optional)
+    description_el = factory.LazyAttribute(
+        lambda obj: f"Περιγραφή για {obj.level.value if hasattr(obj, 'level') and obj.level else 'A1'}"
+    )
+    description_en = factory.LazyAttribute(
         lambda obj: fake.deck_description(
             obj.level.value if hasattr(obj, "level") and obj.level else "A1"
         )
     )
+    description_ru = factory.LazyAttribute(
+        lambda obj: f"Описание для {obj.level.value if hasattr(obj, 'level') and obj.level else 'A1'}"
+    )
+
     level = DeckLevel.A1
     is_active = True
+    is_premium = False
 
     class Params:
         """Factory traits for common variations."""
@@ -63,41 +80,70 @@ class DeckFactory(BaseFactory):
             is_active=False,
         )
 
+        # Premium deck
+        premium = factory.Trait(
+            is_premium=True,
+        )
+
         # CEFR Level traits
         a1 = factory.Trait(
             level=DeckLevel.A1,
-            name=factory.LazyAttribute(lambda _: fake.deck_name("A1")),
-            description=factory.LazyAttribute(lambda _: fake.deck_description("A1")),
+            name_el=factory.LazyAttribute(lambda _: "Ελληνικό Deck A1"),
+            name_en=factory.LazyAttribute(lambda _: fake.deck_name("A1")),
+            name_ru=factory.LazyAttribute(lambda _: "Русский Deck A1"),
+            description_el=factory.LazyAttribute(lambda _: "Περιγραφή για A1"),
+            description_en=factory.LazyAttribute(lambda _: fake.deck_description("A1")),
+            description_ru=factory.LazyAttribute(lambda _: "Описание для A1"),
         )
 
         a2 = factory.Trait(
             level=DeckLevel.A2,
-            name=factory.LazyAttribute(lambda _: fake.deck_name("A2")),
-            description=factory.LazyAttribute(lambda _: fake.deck_description("A2")),
+            name_el=factory.LazyAttribute(lambda _: "Ελληνικό Deck A2"),
+            name_en=factory.LazyAttribute(lambda _: fake.deck_name("A2")),
+            name_ru=factory.LazyAttribute(lambda _: "Русский Deck A2"),
+            description_el=factory.LazyAttribute(lambda _: "Περιγραφή για A2"),
+            description_en=factory.LazyAttribute(lambda _: fake.deck_description("A2")),
+            description_ru=factory.LazyAttribute(lambda _: "Описание για A2"),
         )
 
         b1 = factory.Trait(
             level=DeckLevel.B1,
-            name=factory.LazyAttribute(lambda _: fake.deck_name("B1")),
-            description=factory.LazyAttribute(lambda _: fake.deck_description("B1")),
+            name_el=factory.LazyAttribute(lambda _: "Ελληνικό Deck B1"),
+            name_en=factory.LazyAttribute(lambda _: fake.deck_name("B1")),
+            name_ru=factory.LazyAttribute(lambda _: "Русский Deck B1"),
+            description_el=factory.LazyAttribute(lambda _: "Περιγραφή για B1"),
+            description_en=factory.LazyAttribute(lambda _: fake.deck_description("B1")),
+            description_ru=factory.LazyAttribute(lambda _: "Описание для B1"),
         )
 
         b2 = factory.Trait(
             level=DeckLevel.B2,
-            name=factory.LazyAttribute(lambda _: fake.deck_name("B2")),
-            description=factory.LazyAttribute(lambda _: fake.deck_description("B2")),
+            name_el=factory.LazyAttribute(lambda _: "Ελληνικό Deck B2"),
+            name_en=factory.LazyAttribute(lambda _: fake.deck_name("B2")),
+            name_ru=factory.LazyAttribute(lambda _: "Русский Deck B2"),
+            description_el=factory.LazyAttribute(lambda _: "Περιγραφή για B2"),
+            description_en=factory.LazyAttribute(lambda _: fake.deck_description("B2")),
+            description_ru=factory.LazyAttribute(lambda _: "Описание для B2"),
         )
 
         c1 = factory.Trait(
             level=DeckLevel.C1,
-            name=factory.LazyAttribute(lambda _: fake.deck_name("C1")),
-            description=factory.LazyAttribute(lambda _: fake.deck_description("C1")),
+            name_el=factory.LazyAttribute(lambda _: "Ελληνικό Deck C1"),
+            name_en=factory.LazyAttribute(lambda _: fake.deck_name("C1")),
+            name_ru=factory.LazyAttribute(lambda _: "Русский Deck C1"),
+            description_el=factory.LazyAttribute(lambda _: "Περιγραφή για C1"),
+            description_en=factory.LazyAttribute(lambda _: fake.deck_description("C1")),
+            description_ru=factory.LazyAttribute(lambda _: "Описание для C1"),
         )
 
         c2 = factory.Trait(
             level=DeckLevel.C2,
-            name=factory.LazyAttribute(lambda _: fake.deck_name("C2")),
-            description=factory.LazyAttribute(lambda _: fake.deck_description("C2")),
+            name_el=factory.LazyAttribute(lambda _: "Ελληνικό Deck C2"),
+            name_en=factory.LazyAttribute(lambda _: fake.deck_name("C2")),
+            name_ru=factory.LazyAttribute(lambda _: "Русский Deck C2"),
+            description_el=factory.LazyAttribute(lambda _: "Περιγραφή για C2"),
+            description_en=factory.LazyAttribute(lambda _: fake.deck_description("C2")),
+            description_ru=factory.LazyAttribute(lambda _: "Описание для C2"),
         )
 
     @classmethod
