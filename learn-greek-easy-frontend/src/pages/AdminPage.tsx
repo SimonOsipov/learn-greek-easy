@@ -832,19 +832,15 @@ const AdminPage: React.FC = () => {
         deckName = result.name;
       } else {
         const cultureData = data as {
-          name: string;
-          description?: string;
+          name: { en: string; ru: string };
+          description?: { en: string; ru: string };
           category: string;
-          icon: string;
-          color_accent: string;
           is_premium: boolean;
         };
         const payload: CultureDeckCreatePayload = {
           name: cultureData.name,
           description: cultureData.description || null,
           category: cultureData.category,
-          icon: cultureData.icon,
-          color_accent: cultureData.color_accent,
           is_premium: cultureData.is_premium,
         };
         const result = await adminAPI.createCultureDeck(payload);
