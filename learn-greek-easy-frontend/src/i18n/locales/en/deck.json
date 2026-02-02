@@ -140,6 +140,15 @@
     "createDeck": "Create Deck",
     "createCard": "Create Card",
     "comingSoon": "Coming soon",
+    "selectDeck": {
+      "title": "Select a Deck",
+      "description": "Choose a deck to add your new card to",
+      "noDecksFallback": "No decks available"
+    },
+    "noDecksForCard": {
+      "title": "No Decks Yet",
+      "message": "Create a deck first to add cards to it"
+    },
     "editDeck": "Edit deck",
     "deleteDeck": "Delete deck",
     "deleteSuccess": "Deck deleted successfully",

@@ -25,3 +25,7 @@ export type { UserDeckFormData, UserDeckFormProps } from './UserDeckForm';
 // User deck edit modal (DECKCREAT-06)
 export { UserDeckEditModal } from './UserDeckEditModal';
 export type { UserDeckEditModalProps } from './UserDeckEditModal';
+
+// Deck selector modal (USRCARD-11)
+export { DeckSelectorModal } from './DeckSelectorModal';
+export type { DeckSelectorModalProps } from './DeckSelectorModal';

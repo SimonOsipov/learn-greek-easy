@@ -85,7 +85,7 @@ test.describe('User Card Creation - Create Flows', () => {
     await createCardButton.click();
 
     // Modal should open
-    const modal = page.locator('[data-testid="vocabulary-card-create-modal"]');
+    const modal = page.locator('[data-testid="user-vocabulary-card-create-modal"]');
     await expect(modal).toBeVisible({ timeout: 5000 });
 
     // Fill required fields
@@ -94,17 +94,17 @@ test.describe('User Card Creation - Create Flows', () => {
     await page.locator('[data-testid="back-text-en-input"]').fill('test translation');
 
     // Submit the form
-    const submitButton = page.locator('[data-testid="vocabulary-card-create-submit"]');
+    const submitButton = page.locator('[data-testid="user-vocabulary-card-submit"]');
     await expect(submitButton).toBeEnabled();
     await submitButton.click();
 
     // Wait for success state
-    await expect(page.locator('[data-testid="vocabulary-card-create-success"]')).toBeVisible({
+    await expect(page.locator('[data-testid="user-vocabulary-card-create-success"]')).toBeVisible({
       timeout: 10000,
     });
 
     // Click Done to close modal
-    await page.locator('[data-testid="vocabulary-card-create-done"]').click();
+    await page.locator('[data-testid="user-vocabulary-card-done"]').click();
     await expect(modal).not.toBeVisible({ timeout: 5000 });
 
     // Verify card appears in the list
@@ -149,20 +149,20 @@ test.describe('User Card Creation - Create Flows', () => {
     await page.locator('[data-testid="create-card-button"]').click();
 
     // Modal should open
-    const modal = page.locator('[data-testid="vocabulary-card-create-modal"]');
+    const modal = page.locator('[data-testid="user-vocabulary-card-create-modal"]');
     await expect(modal).toBeVisible({ timeout: 5000 });
+
+    // Click on the Noun tab to switch part-of-speech
+    // The modal has 5 tabs: General | Noun | Verb | Adjective | Adverb
+    await page.getByRole('tab', { name: /noun/i }).click();
+
+    // Verify noun grammar form is visible
+    await expect(page.locator('[data-testid="noun-grammar-form"]')).toBeVisible({ timeout: 5000 });
 
     // Fill basic fields
     const uniqueGreek = `noun_test_${Date.now()}`;
     await page.locator('[data-testid="front-text-input"]').fill(uniqueGreek);
     await page.locator('[data-testid="back-text-en-input"]').fill('noun test');
-
-    // Select noun as part of speech - this should auto-switch to Grammar tab
-    await page.locator('[data-testid="part-of-speech-select"]').click();
-    await page.locator('[role="option"]').filter({ hasText: /^noun$/i }).click();
-
-    // Verify Grammar tab is now active and noun form is visible
-    await expect(page.locator('[data-testid="noun-grammar-form"]')).toBeVisible({ timeout: 5000 });
 
     // Fill noun gender
     await page.locator('[data-testid="noun-gender-select"]').click();
@@ -176,7 +176,7 @@ test.describe('User Card Creation - Create Flows', () => {
     await nominativeSingular.blur();
 
     // Submit the form
-    const submitButton = page.locator('[data-testid="vocabulary-card-create-submit"]');
+    const submitButton = page.locator('[data-testid="user-vocabulary-card-submit"]');
     await expect(submitButton).toBeVisible();
     await expect(submitButton).toBeEnabled();
 
@@ -185,11 +185,11 @@ test.describe('User Card Creation - Create Flows', () => {
     await submitButton.click();
 
     // Wait for either success state or an error toast
-    const successState = page.locator('[data-testid="vocabulary-card-create-success"]');
+    const successState = page.locator('[data-testid="user-vocabulary-card-create-success"]');
     await expect(successState).toBeVisible({ timeout: 15000 });
 
     // Click Done
-    await page.locator('[data-testid="vocabulary-card-create-done"]').click();
+    await page.locator('[data-testid="user-vocabulary-card-done"]').click();
     await expect(modal).not.toBeVisible({ timeout: 5000 });
 
     // Verify card appears with noun badge
@@ -227,20 +227,20 @@ test.describe('User Card Creation - Create Flows', () => {
     await page.locator('[data-testid="create-card-button"]').click();
 
     // Modal should open
-    const modal = page.locator('[data-testid="vocabulary-card-create-modal"]');
+    const modal = page.locator('[data-testid="user-vocabulary-card-create-modal"]');
     await expect(modal).toBeVisible({ timeout: 5000 });
+
+    // Click on the Verb tab to switch part-of-speech
+    // The modal has 5 tabs: General | Noun | Verb | Adjective | Adverb
+    await page.getByRole('tab', { name: /verb/i }).click();
+
+    // Verify verb grammar form is visible
+    await expect(page.locator('[data-testid="verb-grammar-form"]')).toBeVisible({ timeout: 5000 });
 
     // Fill basic fields
     const uniqueGreek = `verb_test_${Date.now()}`;
     await page.locator('[data-testid="front-text-input"]').fill(uniqueGreek);
     await page.locator('[data-testid="back-text-en-input"]').fill('verb test');
-
-    // Select verb as part of speech
-    await page.locator('[data-testid="part-of-speech-select"]').click();
-    await page.locator('[role="option"]').filter({ hasText: /^verb$/i }).click();
-
-    // Verify Grammar tab is now active and verb form is visible
-    await expect(page.locator('[data-testid="verb-grammar-form"]')).toBeVisible({ timeout: 5000 });
 
     // Select voice
     await page.locator('[data-testid="verb-voice-select"]').click();
@@ -254,7 +254,7 @@ test.describe('User Card Creation - Create Flows', () => {
     await present1s.blur();
 
     // Submit the form
-    const submitButton = page.locator('[data-testid="vocabulary-card-create-submit"]');
+    const submitButton = page.locator('[data-testid="user-vocabulary-card-submit"]');
     await expect(submitButton).toBeVisible();
     await expect(submitButton).toBeEnabled();
 
@@ -263,11 +263,11 @@ test.describe('User Card Creation - Create Flows', () => {
     await submitButton.click();
 
     // Wait for either success state or an error toast
-    const successState = page.locator('[data-testid="vocabulary-card-create-success"]');
+    const successState = page.locator('[data-testid="user-vocabulary-card-create-success"]');
     await expect(successState).toBeVisible({ timeout: 15000 });
 
     // Click Done
-    await page.locator('[data-testid="vocabulary-card-create-done"]').click();
+    await page.locator('[data-testid="user-vocabulary-card-done"]').click();
     await expect(modal).not.toBeVisible({ timeout: 5000 });
 
     // Verify card appears with verb badge
@@ -306,17 +306,17 @@ test.describe('User Card Creation - Edit Flow', () => {
 
     // Create a test card
     await page.locator('[data-testid="create-card-button"]').click();
-    const createModal = page.locator('[data-testid="vocabulary-card-create-modal"]');
+    const createModal = page.locator('[data-testid="user-vocabulary-card-create-modal"]');
     await expect(createModal).toBeVisible({ timeout: 5000 });
 
     const uniqueGreek = `edit_test_${Date.now()}`;
     await page.locator('[data-testid="front-text-input"]').fill(uniqueGreek);
     await page.locator('[data-testid="back-text-en-input"]').fill('original translation');
-    await page.locator('[data-testid="vocabulary-card-create-submit"]').click();
-    await expect(page.locator('[data-testid="vocabulary-card-create-success"]')).toBeVisible({
+    await page.locator('[data-testid="user-vocabulary-card-submit"]').click();
+    await expect(page.locator('[data-testid="user-vocabulary-card-create-success"]')).toBeVisible({
       timeout: 10000,
     });
-    await page.locator('[data-testid="vocabulary-card-create-done"]').click();
+    await page.locator('[data-testid="user-vocabulary-card-done"]').click();
     await expect(createModal).not.toBeVisible({ timeout: 5000 });
 
     // Find the card and click edit
@@ -379,17 +379,17 @@ test.describe('User Card Creation - Delete Flows', () => {
 
     // Create a test card
     await page.locator('[data-testid="create-card-button"]').click();
-    const createModal = page.locator('[data-testid="vocabulary-card-create-modal"]');
+    const createModal = page.locator('[data-testid="user-vocabulary-card-create-modal"]');
     await expect(createModal).toBeVisible({ timeout: 5000 });
 
     const uniqueGreek = `delete_test_${Date.now()}`;
     await page.locator('[data-testid="front-text-input"]').fill(uniqueGreek);
     await page.locator('[data-testid="back-text-en-input"]').fill('to be deleted');
-    await page.locator('[data-testid="vocabulary-card-create-submit"]').click();
-    await expect(page.locator('[data-testid="vocabulary-card-create-success"]')).toBeVisible({
+    await page.locator('[data-testid="user-vocabulary-card-submit"]').click();
+    await expect(page.locator('[data-testid="user-vocabulary-card-create-success"]')).toBeVisible({
       timeout: 10000,
     });
-    await page.locator('[data-testid="vocabulary-card-create-done"]').click();
+    await page.locator('[data-testid="user-vocabulary-card-done"]').click();
     await expect(createModal).not.toBeVisible({ timeout: 5000 });
 
     // Wait for cards list and get count
@@ -447,17 +447,17 @@ test.describe('User Card Creation - Delete Flows', () => {
 
     // Create a test card
     await page.locator('[data-testid="create-card-button"]').click();
-    const createModal = page.locator('[data-testid="vocabulary-card-create-modal"]');
+    const createModal = page.locator('[data-testid="user-vocabulary-card-create-modal"]');
     await expect(createModal).toBeVisible({ timeout: 5000 });
 
     const uniqueGreek = `cancel_delete_test_${Date.now()}`;
     await page.locator('[data-testid="front-text-input"]').fill(uniqueGreek);
     await page.locator('[data-testid="back-text-en-input"]').fill('should remain');
-    await page.locator('[data-testid="vocabulary-card-create-submit"]').click();
-    await expect(page.locator('[data-testid="vocabulary-card-create-success"]')).toBeVisible({
+    await page.locator('[data-testid="user-vocabulary-card-submit"]').click();
+    await expect(page.locator('[data-testid="user-vocabulary-card-create-success"]')).toBeVisible({
       timeout: 10000,
     });
-    await page.locator('[data-testid="vocabulary-card-create-done"]').click();
+    await page.locator('[data-testid="user-vocabulary-card-done"]').click();
     await expect(createModal).not.toBeVisible({ timeout: 5000 });
 
     // Find the card and click delete
@@ -539,20 +539,20 @@ test.describe('User Card Creation - Empty State Flow', () => {
     await page.locator('[data-testid="empty-state-create-card-button"]').click();
 
     // Modal should open
-    const createCardModal = page.locator('[data-testid="vocabulary-card-create-modal"]');
+    const createCardModal = page.locator('[data-testid="user-vocabulary-card-create-modal"]');
     await expect(createCardModal).toBeVisible({ timeout: 5000 });
 
     // Fill and create card
     const uniqueGreek = `first_card_${Date.now()}`;
     await page.locator('[data-testid="front-text-input"]').fill(uniqueGreek);
     await page.locator('[data-testid="back-text-en-input"]').fill('first translation');
-    await page.locator('[data-testid="vocabulary-card-create-submit"]').click();
+    await page.locator('[data-testid="user-vocabulary-card-submit"]').click();
 
     // Wait for success
-    await expect(page.locator('[data-testid="vocabulary-card-create-success"]')).toBeVisible({
+    await expect(page.locator('[data-testid="user-vocabulary-card-create-success"]')).toBeVisible({
       timeout: 10000,
     });
-    await page.locator('[data-testid="vocabulary-card-create-done"]').click();
+    await page.locator('[data-testid="user-vocabulary-card-done"]').click();
     await expect(createCardModal).not.toBeVisible({ timeout: 5000 });
 
     // Verify empty state is gone and cards list is shown

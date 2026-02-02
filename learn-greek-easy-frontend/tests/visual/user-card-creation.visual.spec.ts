@@ -280,7 +280,7 @@ test.describe('User Card Create Modal - Visual Tests', () => {
     await page.locator('[data-testid="create-card-button"]').click();
 
     // Wait for modal to open
-    await expect(page.locator('[data-testid="vocabulary-card-create-modal"]')).toBeVisible({
+    await expect(page.locator('[data-testid="user-vocabulary-card-create-modal"]')).toBeVisible({
       timeout: 5000,
     });
     await page.waitForTimeout(500);
@@ -288,7 +288,7 @@ test.describe('User Card Create Modal - Visual Tests', () => {
     await takeSnapshot(page, 'User Card Create Modal - Basic Info Tab', testInfo);
   });
 
-  // Scenario 6: Create modal - Grammar tab (Noun)
+  // Scenario 6: Create modal - Noun tab
   test('user-card-create-grammar-noun', async ({ page }, testInfo) => {
     await page.setViewportSize(VIEWPORTS.desktop);
     await setupUserDeckMocks(page, 'user-deck-001', mockCards);
@@ -300,23 +300,22 @@ test.describe('User Card Create Modal - Visual Tests', () => {
 
     // Open create modal
     await page.locator('[data-testid="create-card-button"]').click();
-    await expect(page.locator('[data-testid="vocabulary-card-create-modal"]')).toBeVisible({
+    await expect(page.locator('[data-testid="user-vocabulary-card-create-modal"]')).toBeVisible({
       timeout: 5000,
     });
     await page.waitForTimeout(300);
 
-    // Select noun as part_of_speech
-    await page.locator('[data-testid="part-of-speech-select"]').click();
-    await page.locator('[role="option"]').filter({ hasText: /^noun$/i }).click();
+    // Click on Noun tab (modal has 5 tabs: General | Noun | Verb | Adjective | Adverb)
+    await page.getByRole('tab', { name: /noun/i }).click();
 
     // Wait for noun grammar form to appear
     await expect(page.locator('[data-testid="noun-grammar-form"]')).toBeVisible({ timeout: 5000 });
     await page.waitForTimeout(500);
 
-    await takeSnapshot(page, 'User Card Create Modal - Grammar Tab (Noun)', testInfo);
+    await takeSnapshot(page, 'User Card Create Modal - Noun Tab', testInfo);
   });
 
-  // Scenario 7: Create modal - Grammar tab (Verb)
+  // Scenario 7: Create modal - Verb tab
   test('user-card-create-grammar-verb', async ({ page }, testInfo) => {
     await page.setViewportSize(VIEWPORTS.desktop);
     await setupUserDeckMocks(page, 'user-deck-001', mockCards);
@@ -328,20 +327,19 @@ test.describe('User Card Create Modal - Visual Tests', () => {
 
     // Open create modal
     await page.locator('[data-testid="create-card-button"]').click();
-    await expect(page.locator('[data-testid="vocabulary-card-create-modal"]')).toBeVisible({
+    await expect(page.locator('[data-testid="user-vocabulary-card-create-modal"]')).toBeVisible({
       timeout: 5000,
     });
     await page.waitForTimeout(300);
 
-    // Select verb as part_of_speech
-    await page.locator('[data-testid="part-of-speech-select"]').click();
-    await page.locator('[role="option"]').filter({ hasText: /^verb$/i }).click();
+    // Click on Verb tab (modal has 5 tabs: General | Noun | Verb | Adjective | Adverb)
+    await page.getByRole('tab', { name: /verb/i }).click();
 
     // Wait for verb grammar form to appear
     await expect(page.locator('[data-testid="verb-grammar-form"]')).toBeVisible({ timeout: 5000 });
     await page.waitForTimeout(500);
 
-    await takeSnapshot(page, 'User Card Create Modal - Grammar Tab (Verb)', testInfo);
+    await takeSnapshot(page, 'User Card Create Modal - Verb Tab', testInfo);
   });
 
   // Scenario 8: Create modal - Examples tab
@@ -356,7 +354,7 @@ test.describe('User Card Create Modal - Visual Tests', () => {
 
     // Open create modal
     await page.locator('[data-testid="create-card-button"]').click();
-    await expect(page.locator('[data-testid="vocabulary-card-create-modal"]')).toBeVisible({
+    await expect(page.locator('[data-testid="user-vocabulary-card-create-modal"]')).toBeVisible({
       timeout: 5000,
     });
     await page.waitForTimeout(300);

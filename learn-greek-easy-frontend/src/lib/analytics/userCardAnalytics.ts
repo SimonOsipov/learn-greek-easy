@@ -12,7 +12,7 @@ import posthog from 'posthog-js';
 
 export interface UserCardCreateStartedProperties {
   deck_id: string;
-  source: 'create_button' | 'empty_state_cta';
+  source: 'create_button' | 'empty_state_cta' | 'my_decks_list_button';
 }
 
 export interface UserCardCreateCompletedProperties {
@@ -26,7 +26,7 @@ export interface UserCardCreateCompletedProperties {
 
 export interface UserCardCreateCancelledProperties {
   deck_id: string;
-  source: 'create_button' | 'empty_state_cta';
+  source: 'create_button' | 'empty_state_cta' | 'my_decks_list_button';
 }
 
 export interface UserCardEditStartedProperties {
