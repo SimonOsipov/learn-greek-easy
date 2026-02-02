@@ -188,4 +188,13 @@ export const cardAPI = {
       { deck_id: deckId, cards }
     );
   },
+
+  /**
+   * Delete a vocabulary card (soft delete)
+   *
+   * Requires deck ownership or superuser privileges.
+   */
+  delete: async (cardId: string): Promise<void> => {
+    return api.delete<void>(`/api/v1/cards/${cardId}`);
+  },
 };

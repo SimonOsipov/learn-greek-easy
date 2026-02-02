@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config import settings
 from src.core.dependencies import get_current_superuser, get_current_user
-from src.core.exceptions import CardNotFoundException, DeckNotFoundException
+from src.core.exceptions import CardNotFoundException, DeckNotFoundException, ForbiddenException
 from src.db.dependencies import get_db
 from src.db.models import User
 from src.repositories.card import CardRepository
@@ -126,7 +126,7 @@ async def list_cards(
     response_model=CardResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Create a new card",
-    description="Create a new card in a deck. Requires superuser privileges.",
+    description="Create a new card in a deck. Requires deck ownership or superuser privileges.",
     responses={
         201: {
             "description": "Card created successfully",
@@ -146,7 +146,7 @@ async def list_cards(
             },
         },
         401: {"description": "Not authenticated"},
-        403: {"description": "Not authorized (requires superuser)"},
+        403: {"description": "Not authorized to create cards in this deck"},
         404: {"description": "Deck not found"},
         422: {"description": "Validation error"},
     },
@@ -155,32 +155,36 @@ async def create_card(
     card_data: CardCreate,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_superuser),
+    current_user: User = Depends(get_current_user),
 ) -> CardResponse:
     """Create a new card.
 
-    Requires superuser privileges.
+    Requires deck ownership or superuser privileges.
 
     Args:
         card_data: Card creation data
         background_tasks: FastAPI BackgroundTasks for scheduling async operations
         db: Database session (injected)
-        current_user: Authenticated superuser (injected)
+        current_user: Authenticated user (injected)
 
     Returns:
         CardResponse: The created card
 
     Raises:
         401: If not authenticated
-        403: If authenticated but not superuser
+        403: If not authorized to create cards in this deck
         404: If deck doesn't exist
         422: If validation fails
     """
-    # Validate deck exists (allow inactive decks - admin privilege)
+    # Validate deck exists
     deck_repo = DeckRepository(db)
     deck = await deck_repo.get(card_data.deck_id)
     if deck is None:
         raise DeckNotFoundException(deck_id=str(card_data.deck_id))
+
+    # Authorization: user must own the deck OR be superuser
+    if deck.owner_id != current_user.id and not current_user.is_superuser:
+        raise ForbiddenException(detail="Not authorized to create cards in this deck")
 
     # Create the card using BaseRepository.create() pattern
     card_repo = CardRepository(db)
@@ -437,7 +441,7 @@ async def get_card(
     "/{card_id}",
     response_model=CardResponse,
     summary="Update a card",
-    description="Update an existing card. Requires superuser privileges.",
+    description="Update an existing card. Requires deck ownership or superuser privileges.",
     responses={
         200: {
             "description": "Card updated successfully",
@@ -457,7 +461,7 @@ async def get_card(
             },
         },
         401: {"description": "Not authenticated"},
-        403: {"description": "Not authorized (requires superuser)"},
+        403: {"description": "Not authorized to edit this card"},
         404: {"description": "Card not found"},
         422: {"description": "Validation error"},
     },
@@ -467,11 +471,11 @@ async def update_card(
     card_data: CardUpdate,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_superuser),
+    current_user: User = Depends(get_current_user),
 ) -> CardResponse:
     """Update an existing card.
 
-    Requires superuser privileges.
+    Requires deck ownership or superuser privileges.
     Only provided fields will be updated (partial update).
     Note: deck_id cannot be changed.
 
@@ -480,14 +484,14 @@ async def update_card(
         card_data: Fields to update (all optional)
         background_tasks: FastAPI BackgroundTasks for scheduling async operations
         db: Database session (injected)
-        current_user: Authenticated superuser (injected)
+        current_user: Authenticated user (injected)
 
     Returns:
         CardResponse: The updated card
 
     Raises:
         401: If not authenticated
-        403: If authenticated but not superuser
+        403: If not authorized to edit this card
         404: If card doesn't exist
         422: If validation fails
     """
@@ -497,6 +501,12 @@ async def update_card(
     card = await repo.get(card_id)
     if card is None:
         raise CardNotFoundException(card_id=str(card_id))
+
+    # Authorization: user must own the deck OR be superuser
+    deck_repo = DeckRepository(db)
+    deck = await deck_repo.get(card.deck_id)
+    if deck is None or (deck.owner_id != current_user.id and not current_user.is_superuser):
+        raise ForbiddenException(detail="Not authorized to edit this card")
 
     # Update card
     updated_card = await repo.update(card, card_data)
@@ -521,11 +531,11 @@ async def update_card(
     "/{card_id}",
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Delete a card",
-    description="Delete a card. Requires superuser privileges. This is a hard delete.",
+    description="Delete a card. Requires deck ownership or superuser privileges.",
     responses={
         204: {"description": "Card deleted successfully"},
         401: {"description": "Not authenticated"},
-        403: {"description": "Not authorized (requires superuser)"},
+        403: {"description": "Not authorized to delete this card"},
         404: {"description": "Card not found"},
     },
 )
@@ -533,11 +543,11 @@ async def delete_card(
     card_id: UUID,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_superuser),
+    current_user: User = Depends(get_current_user),
 ) -> Response:
     """Delete a card.
 
-    Requires superuser privileges.
+    Requires deck ownership or superuser privileges.
 
     WARNING: This is a HARD DELETE. The card and all associated
     statistics/reviews will be permanently removed.
@@ -546,14 +556,14 @@ async def delete_card(
         card_id: UUID of the card to delete
         background_tasks: FastAPI BackgroundTasks for scheduling async operations
         db: Database session (injected)
-        current_user: Authenticated superuser (injected)
+        current_user: Authenticated user (injected)
 
     Returns:
         Empty response with 204 status
 
     Raises:
         401: If not authenticated
-        403: If authenticated but not superuser
+        403: If not authorized to delete this card
         404: If card doesn't exist
     """
     repo = CardRepository(db)
@@ -562,6 +572,12 @@ async def delete_card(
     card = await repo.get(card_id)
     if card is None:
         raise CardNotFoundException(card_id=str(card_id))
+
+    # Authorization: user must own the deck OR be superuser
+    deck_repo = DeckRepository(db)
+    deck = await deck_repo.get(card.deck_id)
+    if deck is None or (deck.owner_id != current_user.id and not current_user.is_superuser):
+        raise ForbiddenException(detail="Not authorized to delete this card")
 
     # Store deck_id before deletion for cache invalidation
     deck_id = card.deck_id

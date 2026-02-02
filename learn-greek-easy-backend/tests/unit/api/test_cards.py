@@ -611,6 +611,26 @@ class TestSearchCardsUnit:
 class TestCreateCardUnit:
     """Unit tests for POST /api/v1/cards endpoint."""
 
+    @pytest.fixture
+    def mock_system_deck(self):
+        """Create a mock system deck (owner_id=None)."""
+        deck = MagicMock(spec=Deck)
+        deck.id = uuid4()
+        deck.owner_id = None  # System deck
+        deck.name = "System Deck"
+        deck.is_active = True
+        return deck
+
+    @pytest.fixture
+    def mock_other_user_deck(self):
+        """Create a mock deck owned by another user."""
+        deck = MagicMock(spec=Deck)
+        deck.id = uuid4()
+        deck.owner_id = uuid4()  # Different user
+        deck.name = "Other User Deck"
+        deck.is_active = True
+        return deck
+
     @pytest.mark.asyncio
     async def test_create_card_unauthorized_returns_401(self, client: AsyncClient):
         """Test that unauthenticated request returns 401."""
@@ -627,21 +647,50 @@ class TestCreateCardUnit:
         assert data["success"] is False
 
     @pytest.mark.asyncio
-    async def test_create_card_non_superuser_returns_403(
-        self, client: AsyncClient, auth_headers: dict
+    async def test_create_card_non_owner_system_deck_returns_403(
+        self, client: AsyncClient, auth_headers: dict, mock_system_deck
     ):
-        """Test that regular user returns 403."""
-        card_data = {
-            "deck_id": str(uuid4()),
-            "front_text": "test",
-            "back_text_en": "test",
-        }
+        """Test that regular user cannot create card in system deck (owner_id=None)."""
+        with patch("src.api.v1.cards.DeckRepository") as MockDeckRepo:
+            mock_deck_repo = AsyncMock()
+            mock_deck_repo.get.return_value = mock_system_deck
+            MockDeckRepo.return_value = mock_deck_repo
 
-        response = await client.post("/api/v1/cards", json=card_data, headers=auth_headers)
+            card_data = {
+                "deck_id": str(mock_system_deck.id),
+                "front_text": "test",
+                "back_text_en": "test",
+            }
 
-        assert response.status_code == 403
-        data = response.json()
-        assert data["success"] is False
+            response = await client.post("/api/v1/cards", json=card_data, headers=auth_headers)
+
+            assert response.status_code == 403
+            data = response.json()
+            assert data["success"] is False
+            assert "Not authorized to create cards in this deck" in data["error"]["message"]
+
+    @pytest.mark.asyncio
+    async def test_create_card_non_owner_other_user_deck_returns_403(
+        self, client: AsyncClient, auth_headers: dict, mock_other_user_deck
+    ):
+        """Test that regular user cannot create card in another user's deck."""
+        with patch("src.api.v1.cards.DeckRepository") as MockDeckRepo:
+            mock_deck_repo = AsyncMock()
+            mock_deck_repo.get.return_value = mock_other_user_deck
+            MockDeckRepo.return_value = mock_deck_repo
+
+            card_data = {
+                "deck_id": str(mock_other_user_deck.id),
+                "front_text": "test",
+                "back_text_en": "test",
+            }
+
+            response = await client.post("/api/v1/cards", json=card_data, headers=auth_headers)
+
+            assert response.status_code == 403
+            data = response.json()
+            assert data["success"] is False
+            assert "Not authorized to create cards in this deck" in data["error"]["message"]
 
     @pytest.mark.asyncio
     async def test_create_card_missing_front_text_returns_422(
@@ -738,6 +787,46 @@ class TestBulkCreateCardsUnit:
 class TestUpdateCardUnit:
     """Unit tests for PATCH /api/v1/cards/{card_id} endpoint."""
 
+    @pytest.fixture
+    def mock_system_deck(self):
+        """Create a mock system deck (owner_id=None)."""
+        deck = MagicMock(spec=Deck)
+        deck.id = uuid4()
+        deck.owner_id = None  # System deck
+        deck.name = "System Deck"
+        deck.is_active = True
+        return deck
+
+    @pytest.fixture
+    def mock_other_user_deck(self):
+        """Create a mock deck owned by another user."""
+        deck = MagicMock(spec=Deck)
+        deck.id = uuid4()
+        deck.owner_id = uuid4()  # Different user
+        deck.name = "Other User Deck"
+        deck.is_active = True
+        return deck
+
+    @pytest.fixture
+    def mock_card_in_system_deck(self, mock_system_deck):
+        """Create a mock card in a system deck."""
+        card = MagicMock(spec=Card)
+        card.id = uuid4()
+        card.deck_id = mock_system_deck.id
+        card.front_text = "test"
+        card.back_text_en = "test"
+        return card
+
+    @pytest.fixture
+    def mock_card_in_other_user_deck(self, mock_other_user_deck):
+        """Create a mock card in another user's deck."""
+        card = MagicMock(spec=Card)
+        card.id = uuid4()
+        card.deck_id = mock_other_user_deck.id
+        card.front_text = "test"
+        card.back_text_en = "test"
+        return card
+
     @pytest.mark.asyncio
     async def test_update_card_unauthorized_returns_401(self, client: AsyncClient):
         """Test that unauthenticated request returns 401."""
@@ -750,21 +839,64 @@ class TestUpdateCardUnit:
         assert data["success"] is False
 
     @pytest.mark.asyncio
-    async def test_update_card_non_superuser_returns_403(
-        self, client: AsyncClient, auth_headers: dict
+    async def test_update_card_non_owner_system_deck_returns_403(
+        self, client: AsyncClient, auth_headers: dict, mock_system_deck, mock_card_in_system_deck
     ):
-        """Test that regular user returns 403."""
-        card_id = uuid4()
+        """Test that regular user cannot update card in system deck (owner_id=None)."""
+        with (
+            patch("src.api.v1.cards.CardRepository") as MockCardRepo,
+            patch("src.api.v1.cards.DeckRepository") as MockDeckRepo,
+        ):
+            mock_card_repo = AsyncMock()
+            mock_card_repo.get.return_value = mock_card_in_system_deck
+            MockCardRepo.return_value = mock_card_repo
 
-        response = await client.patch(
-            f"/api/v1/cards/{card_id}",
-            json={"front_text": "Updated"},
-            headers=auth_headers,
-        )
+            mock_deck_repo = AsyncMock()
+            mock_deck_repo.get.return_value = mock_system_deck
+            MockDeckRepo.return_value = mock_deck_repo
 
-        assert response.status_code == 403
-        data = response.json()
-        assert data["success"] is False
+            response = await client.patch(
+                f"/api/v1/cards/{mock_card_in_system_deck.id}",
+                json={"front_text": "Updated"},
+                headers=auth_headers,
+            )
+
+            assert response.status_code == 403
+            data = response.json()
+            assert data["success"] is False
+            assert "Not authorized to edit this card" in data["error"]["message"]
+
+    @pytest.mark.asyncio
+    async def test_update_card_non_owner_other_user_deck_returns_403(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        mock_other_user_deck,
+        mock_card_in_other_user_deck,
+    ):
+        """Test that regular user cannot update card in another user's deck."""
+        with (
+            patch("src.api.v1.cards.CardRepository") as MockCardRepo,
+            patch("src.api.v1.cards.DeckRepository") as MockDeckRepo,
+        ):
+            mock_card_repo = AsyncMock()
+            mock_card_repo.get.return_value = mock_card_in_other_user_deck
+            MockCardRepo.return_value = mock_card_repo
+
+            mock_deck_repo = AsyncMock()
+            mock_deck_repo.get.return_value = mock_other_user_deck
+            MockDeckRepo.return_value = mock_deck_repo
+
+            response = await client.patch(
+                f"/api/v1/cards/{mock_card_in_other_user_deck.id}",
+                json={"front_text": "Updated"},
+                headers=auth_headers,
+            )
+
+            assert response.status_code == 403
+            data = response.json()
+            assert data["success"] is False
+            assert "Not authorized to edit this card" in data["error"]["message"]
 
     @pytest.mark.asyncio
     async def test_update_card_not_found_returns_404(
@@ -838,6 +970,46 @@ class TestUpdateCardUnit:
 class TestDeleteCardUnit:
     """Unit tests for DELETE /api/v1/cards/{card_id} endpoint."""
 
+    @pytest.fixture
+    def mock_system_deck(self):
+        """Create a mock system deck (owner_id=None)."""
+        deck = MagicMock(spec=Deck)
+        deck.id = uuid4()
+        deck.owner_id = None  # System deck
+        deck.name = "System Deck"
+        deck.is_active = True
+        return deck
+
+    @pytest.fixture
+    def mock_other_user_deck(self):
+        """Create a mock deck owned by another user."""
+        deck = MagicMock(spec=Deck)
+        deck.id = uuid4()
+        deck.owner_id = uuid4()  # Different user
+        deck.name = "Other User Deck"
+        deck.is_active = True
+        return deck
+
+    @pytest.fixture
+    def mock_card_in_system_deck(self, mock_system_deck):
+        """Create a mock card in a system deck."""
+        card = MagicMock(spec=Card)
+        card.id = uuid4()
+        card.deck_id = mock_system_deck.id
+        card.front_text = "test"
+        card.back_text_en = "test"
+        return card
+
+    @pytest.fixture
+    def mock_card_in_other_user_deck(self, mock_other_user_deck):
+        """Create a mock card in another user's deck."""
+        card = MagicMock(spec=Card)
+        card.id = uuid4()
+        card.deck_id = mock_other_user_deck.id
+        card.front_text = "test"
+        card.back_text_en = "test"
+        return card
+
     @pytest.mark.asyncio
     async def test_delete_card_unauthorized_returns_401(self, client: AsyncClient):
         """Test that unauthenticated request returns 401."""
@@ -850,17 +1022,62 @@ class TestDeleteCardUnit:
         assert data["success"] is False
 
     @pytest.mark.asyncio
-    async def test_delete_card_non_superuser_returns_403(
-        self, client: AsyncClient, auth_headers: dict
+    async def test_delete_card_non_owner_system_deck_returns_403(
+        self, client: AsyncClient, auth_headers: dict, mock_system_deck, mock_card_in_system_deck
     ):
-        """Test that regular user returns 403."""
-        card_id = uuid4()
+        """Test that regular user cannot delete card in system deck (owner_id=None)."""
+        with (
+            patch("src.api.v1.cards.CardRepository") as MockCardRepo,
+            patch("src.api.v1.cards.DeckRepository") as MockDeckRepo,
+        ):
+            mock_card_repo = AsyncMock()
+            mock_card_repo.get.return_value = mock_card_in_system_deck
+            MockCardRepo.return_value = mock_card_repo
 
-        response = await client.delete(f"/api/v1/cards/{card_id}", headers=auth_headers)
+            mock_deck_repo = AsyncMock()
+            mock_deck_repo.get.return_value = mock_system_deck
+            MockDeckRepo.return_value = mock_deck_repo
 
-        assert response.status_code == 403
-        data = response.json()
-        assert data["success"] is False
+            response = await client.delete(
+                f"/api/v1/cards/{mock_card_in_system_deck.id}",
+                headers=auth_headers,
+            )
+
+            assert response.status_code == 403
+            data = response.json()
+            assert data["success"] is False
+            assert "Not authorized to delete this card" in data["error"]["message"]
+
+    @pytest.mark.asyncio
+    async def test_delete_card_non_owner_other_user_deck_returns_403(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        mock_other_user_deck,
+        mock_card_in_other_user_deck,
+    ):
+        """Test that regular user cannot delete card in another user's deck."""
+        with (
+            patch("src.api.v1.cards.CardRepository") as MockCardRepo,
+            patch("src.api.v1.cards.DeckRepository") as MockDeckRepo,
+        ):
+            mock_card_repo = AsyncMock()
+            mock_card_repo.get.return_value = mock_card_in_other_user_deck
+            MockCardRepo.return_value = mock_card_repo
+
+            mock_deck_repo = AsyncMock()
+            mock_deck_repo.get.return_value = mock_other_user_deck
+            MockDeckRepo.return_value = mock_deck_repo
+
+            response = await client.delete(
+                f"/api/v1/cards/{mock_card_in_other_user_deck.id}",
+                headers=auth_headers,
+            )
+
+            assert response.status_code == 403
+            data = response.json()
+            assert data["success"] is False
+            assert "Not authorized to delete this card" in data["error"]["message"]
 
     @pytest.mark.asyncio
     async def test_delete_card_not_found_returns_404(

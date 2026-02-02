@@ -117,3 +117,25 @@ export {
   trackGrammarVoiceToggled,
   trackGrammarGenderChanged,
 } from './grammarAnalytics';
+export {
+  // Type interfaces
+  type UserCardCreateStartedProperties,
+  type UserCardCreateCompletedProperties,
+  type UserCardCreateCancelledProperties,
+  type UserCardEditStartedProperties,
+  type UserCardEditCompletedProperties,
+  type UserCardEditCancelledProperties,
+  type UserCardDeleteStartedProperties,
+  type UserCardDeleteCompletedProperties,
+  type UserCardDeleteCancelledProperties,
+  // Tracking functions
+  trackUserCardCreateStarted,
+  trackUserCardCreateCompleted,
+  trackUserCardCreateCancelled,
+  trackUserCardEditStarted,
+  trackUserCardEditCompleted,
+  trackUserCardEditCancelled,
+  trackUserCardDeleteStarted,
+  trackUserCardDeleteCompleted,
+  trackUserCardDeleteCancelled,
+} from './userCardAnalytics';

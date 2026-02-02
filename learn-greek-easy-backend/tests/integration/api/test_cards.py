@@ -684,6 +684,22 @@ class TestCreateCardEndpoint:
         await db_session.refresh(deck)
         return deck
 
+    @pytest.fixture
+    async def user_owned_deck_for_create(self, db_session, test_user):
+        """Create a deck owned by test_user for card creation tests."""
+        deck = Deck(
+            id=uuid4(),
+            name="User Owned Deck",
+            description="Test deck owned by regular user",
+            level=DeckLevel.A1,
+            is_active=True,
+            owner_id=test_user.id,
+        )
+        db_session.add(deck)
+        await db_session.commit()
+        await db_session.refresh(deck)
+        return deck
+
     @pytest.mark.asyncio
     async def test_create_card_success(
         self, client: AsyncClient, superuser_auth_headers: dict, active_deck_for_create
@@ -756,10 +772,10 @@ class TestCreateCardEndpoint:
         assert data["success"] is False
 
     @pytest.mark.asyncio
-    async def test_create_card_non_superuser_returns_403(
+    async def test_create_card_non_owner_system_deck_returns_403(
         self, client: AsyncClient, auth_headers: dict, active_deck_for_create
     ):
-        """Test regular user (non-superuser) returns 403."""
+        """Test regular user cannot create card in system deck (owner_id=None)."""
         card_data = {
             "deck_id": str(active_deck_for_create.id),
             "front_text": "test",
@@ -775,6 +791,37 @@ class TestCreateCardEndpoint:
         assert response.status_code == 403
         data = response.json()
         assert data["success"] is False
+        assert "Not authorized to create cards in this deck" in data["error"]["message"]
+
+    @pytest.mark.asyncio
+    async def test_create_card_owner_success(
+        self, client: AsyncClient, auth_headers: dict, user_owned_deck_for_create
+    ):
+        """Test deck owner can create card in their own deck."""
+        card_data = {
+            "deck_id": str(user_owned_deck_for_create.id),
+            "front_text": "mera",
+            "back_text_en": "day",
+            "example_sentence": "Kali mera!",
+            "pronunciation": "MEH-rah",
+        }
+
+        response = await client.post(
+            "/api/v1/cards",
+            json=card_data,
+            headers=auth_headers,
+        )
+
+        assert response.status_code == 201
+        data = response.json()
+        assert data["front_text"] == card_data["front_text"]
+        assert data["back_text_en"] == card_data["back_text_en"]
+        assert data["example_sentence"] == card_data["example_sentence"]
+        assert data["pronunciation"] == card_data["pronunciation"]
+        assert str(data["deck_id"]) == card_data["deck_id"]
+        assert "id" in data
+        assert "created_at" in data
+        assert "updated_at" in data
 
     @pytest.mark.asyncio
     async def test_create_card_deck_not_found_returns_404(
@@ -1267,6 +1314,38 @@ class TestUpdateCardEndpoint:
         await db_session.refresh(card)
         return card
 
+    @pytest.fixture
+    async def user_owned_deck_for_update(self, db_session, test_user):
+        """Create a deck owned by test_user for update tests."""
+        deck = Deck(
+            id=uuid4(),
+            name="User Owned Update Deck",
+            description="Test deck owned by regular user for update tests",
+            level=DeckLevel.A1,
+            is_active=True,
+            owner_id=test_user.id,
+        )
+        db_session.add(deck)
+        await db_session.commit()
+        await db_session.refresh(deck)
+        return deck
+
+    @pytest.fixture
+    async def card_in_user_owned_deck(self, db_session, user_owned_deck_for_update):
+        """Create a card in user's owned deck for update tests."""
+        card = Card(
+            id=uuid4(),
+            deck_id=user_owned_deck_for_update.id,
+            front_text="user_owned_front",
+            back_text_en="user_owned_back",
+            example_sentence="User owned example sentence",
+            pronunciation="user-owned-pron",
+        )
+        db_session.add(card)
+        await db_session.commit()
+        await db_session.refresh(card)
+        return card
+
     @pytest.mark.asyncio
     async def test_update_card_front_text_only(
         self, client: AsyncClient, superuser_auth_headers: dict, card_for_update
@@ -1351,10 +1430,10 @@ class TestUpdateCardEndpoint:
         assert data["success"] is False
 
     @pytest.mark.asyncio
-    async def test_update_card_non_superuser_returns_403(
+    async def test_update_card_non_owner_system_deck_returns_403(
         self, client: AsyncClient, auth_headers: dict, card_for_update
     ):
-        """Test regular user (non-superuser) returns 403."""
+        """Test regular user cannot update card in system deck (owner_id=None)."""
         response = await client.patch(
             f"/api/v1/cards/{card_for_update.id}",
             json={"front_text": "should_fail"},
@@ -1364,6 +1443,31 @@ class TestUpdateCardEndpoint:
         assert response.status_code == 403
         data = response.json()
         assert data["success"] is False
+        assert "Not authorized to edit this card" in data["error"]["message"]
+
+    @pytest.mark.asyncio
+    async def test_update_card_owner_success(
+        self, client: AsyncClient, auth_headers: dict, card_in_user_owned_deck
+    ):
+        """Test deck owner can update card in their own deck."""
+        new_front_text = "updated_by_owner"
+
+        response = await client.patch(
+            f"/api/v1/cards/{card_in_user_owned_deck.id}",
+            json={"front_text": new_front_text},
+            headers=auth_headers,
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["front_text"] == new_front_text
+        # Other fields should remain unchanged
+        assert data["back_text_en"] == "user_owned_back"
+        assert data["example_sentence"] == "User owned example sentence"
+        assert data["pronunciation"] == "user-owned-pron"
+        assert "id" in data
+        assert "created_at" in data
+        assert "updated_at" in data
 
     @pytest.mark.asyncio
     async def test_update_card_not_found_returns_404(
@@ -1510,6 +1614,38 @@ class TestDeleteCardEndpoint:
         await db_session.refresh(card)
         return card
 
+    @pytest.fixture
+    async def user_owned_deck_for_delete(self, db_session, test_user):
+        """Create a deck owned by test_user for delete tests."""
+        deck = Deck(
+            id=uuid4(),
+            name="User Owned Delete Deck",
+            description="Test deck owned by regular user for delete tests",
+            level=DeckLevel.A1,
+            is_active=True,
+            owner_id=test_user.id,
+        )
+        db_session.add(deck)
+        await db_session.commit()
+        await db_session.refresh(deck)
+        return deck
+
+    @pytest.fixture
+    async def card_in_user_owned_deck_for_delete(self, db_session, user_owned_deck_for_delete):
+        """Create a card in user's owned deck for delete tests."""
+        card = Card(
+            id=uuid4(),
+            deck_id=user_owned_deck_for_delete.id,
+            front_text="user_owned_delete",
+            back_text_en="user owned to be deleted",
+            example_sentence="User owned delete example",
+            pronunciation="user-del-pron",
+        )
+        db_session.add(card)
+        await db_session.commit()
+        await db_session.refresh(card)
+        return card
+
     @pytest.mark.asyncio
     async def test_delete_card_success(
         self, client: AsyncClient, superuser_auth_headers: dict, card_for_delete
@@ -1556,10 +1692,10 @@ class TestDeleteCardEndpoint:
         assert data["success"] is False
 
     @pytest.mark.asyncio
-    async def test_delete_card_non_superuser_returns_403(
+    async def test_delete_card_non_owner_system_deck_returns_403(
         self, client: AsyncClient, auth_headers: dict, card_for_delete
     ):
-        """Test regular user (non-superuser) returns 403."""
+        """Test regular user cannot delete card in system deck (owner_id=None)."""
         response = await client.delete(
             f"/api/v1/cards/{card_for_delete.id}",
             headers=auth_headers,
@@ -1568,6 +1704,20 @@ class TestDeleteCardEndpoint:
         assert response.status_code == 403
         data = response.json()
         assert data["success"] is False
+        assert "Not authorized to delete this card" in data["error"]["message"]
+
+    @pytest.mark.asyncio
+    async def test_delete_card_owner_success(
+        self, client: AsyncClient, auth_headers: dict, card_in_user_owned_deck_for_delete
+    ):
+        """Test deck owner can delete card in their own deck."""
+        response = await client.delete(
+            f"/api/v1/cards/{card_in_user_owned_deck_for_delete.id}",
+            headers=auth_headers,
+        )
+
+        assert response.status_code == 204
+        assert response.content == b""  # No content
 
     @pytest.mark.asyncio
     async def test_delete_card_not_found_returns_404(

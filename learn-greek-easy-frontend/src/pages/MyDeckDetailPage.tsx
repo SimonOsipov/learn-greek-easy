@@ -1,8 +1,8 @@
 // src/pages/MyDeckDetailPage.tsx
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 
-import { AlertCircle, BookOpen, ChevronLeft, Pencil, Trash2 } from 'lucide-react';
+import { AlertCircle, BookOpen, ChevronLeft, Loader2, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 
@@ -10,8 +10,13 @@ import { UserDeckEditModal } from '@/components/decks';
 import { AlertDialog } from '@/components/dialogs/AlertDialog';
 import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog';
 import { PageLoader } from '@/components/feedback';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import {
+  UserVocabularyCardCreateModal,
+  UserVocabularyCardEditModal,
+} from '@/components/vocabulary';
 import { useToast } from '@/hooks/use-toast';
 import {
   trackMyDecksAccessDenied,
@@ -21,8 +26,20 @@ import {
   trackUserDeckDeleteStarted,
   trackUserDeckDeleteCancelled,
 } from '@/lib/analytics/myDecksAnalytics';
+import {
+  trackUserCardCreateStarted,
+  trackUserCardCreateCompleted,
+  trackUserCardCreateCancelled,
+  trackUserCardEditStarted,
+  trackUserCardEditCompleted,
+  trackUserCardEditCancelled,
+  trackUserCardDeleteStarted,
+  trackUserCardDeleteCompleted,
+  trackUserCardDeleteCancelled,
+} from '@/lib/analytics/userCardAnalytics';
 import { reportAPIError } from '@/lib/errorReporting';
 import { APIRequestError } from '@/services/api';
+import { cardAPI, type CardResponse } from '@/services/cardAPI';
 import { deckAPI, type DeckDetailResponse, type DeckLevel } from '@/services/deckAPI';
 
 export const MyDeckDetailPage: React.FC = () => {
@@ -42,6 +59,29 @@ export const MyDeckDetailPage: React.FC = () => {
   // Delete dialog state
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Create card modal state
+  const [isCreateCardModalOpen, setIsCreateCardModalOpen] = useState(false);
+
+  // Cards list state
+  const [cards, setCards] = useState<CardResponse[]>([]);
+  const [isLoadingCards, setIsLoadingCards] = useState(false);
+
+  // Edit card modal state
+  const [isEditCardModalOpen, setIsEditCardModalOpen] = useState(false);
+  const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
+
+  // Delete card dialog state
+  const [isDeleteCardDialogOpen, setIsDeleteCardDialogOpen] = useState(false);
+  const [cardToDelete, setCardToDelete] = useState<CardResponse | null>(null);
+  const [isDeletingCard, setIsDeletingCard] = useState(false);
+
+  // Analytics state
+  const [createCardSource, setCreateCardSource] = useState<'create_button' | 'empty_state_cta'>(
+    'create_button'
+  );
+  const createCardSuccessRef = useRef(false);
+  const editCardSuccessRef = useRef(false);
 
   const fetchDeck = useCallback(async () => {
     if (!deckId) return;
@@ -72,9 +112,28 @@ export const MyDeckDetailPage: React.FC = () => {
     }
   }, [deckId, t]);
 
+  const fetchCards = useCallback(async () => {
+    if (!deckId) return;
+    setIsLoadingCards(true);
+    try {
+      const response = await cardAPI.listByDeck({ deck_id: deckId, page_size: 100 });
+      setCards(response.cards);
+    } catch (err) {
+      reportAPIError(err, { operation: 'fetchCards', endpoint: `/cards?deck_id=${deckId}` });
+    } finally {
+      setIsLoadingCards(false);
+    }
+  }, [deckId]);
+
   useEffect(() => {
     fetchDeck();
   }, [fetchDeck]);
+
+  useEffect(() => {
+    if (deck) {
+      fetchCards();
+    }
+  }, [deck, fetchCards]);
 
   const handleAccessDeniedOk = () => {
     navigate('/my-decks', { replace: true });
@@ -155,6 +214,119 @@ export const MyDeckDetailPage: React.FC = () => {
     setIsDeleteDialogOpen(false);
   };
 
+  // Create card handlers
+  const handleCreateCardClick = (source: 'create_button' | 'empty_state_cta' = 'create_button') => {
+    setCreateCardSource(source);
+    createCardSuccessRef.current = false;
+    if (deckId) {
+      trackUserCardCreateStarted({ deck_id: deckId, source });
+    }
+    setIsCreateCardModalOpen(true);
+  };
+
+  const handleCreateCardSuccess = () => {
+    createCardSuccessRef.current = true;
+    setIsCreateCardModalOpen(false);
+    if (deckId) {
+      // Note: card_id and other properties would require modal to pass card data back
+      trackUserCardCreateCompleted({
+        deck_id: deckId,
+        card_id: '', // Not available at page level - tracked with empty string
+        has_grammar: false, // Not available at page level
+        has_examples: false, // Not available at page level
+        example_count: 0, // Not available at page level
+      });
+    }
+    fetchDeck(); // Refresh deck data including card count
+    fetchCards(); // Refresh cards list
+  };
+
+  const handleCreateCardModalOpenChange = (open: boolean) => {
+    if (!open && !createCardSuccessRef.current && deckId) {
+      trackUserCardCreateCancelled({ deck_id: deckId, source: createCardSource });
+    }
+    setIsCreateCardModalOpen(open);
+  };
+
+  // Edit card handlers
+  const handleEditCardClick = (card: CardResponse) => {
+    editCardSuccessRef.current = false;
+    if (deckId) {
+      trackUserCardEditStarted({ card_id: card.id, deck_id: deckId });
+    }
+    setSelectedCardId(card.id);
+    setIsEditCardModalOpen(true);
+  };
+
+  const handleEditCardModalClose = () => {
+    if (selectedCardId && deckId && !editCardSuccessRef.current) {
+      trackUserCardEditCancelled({ card_id: selectedCardId, deck_id: deckId });
+    }
+    setIsEditCardModalOpen(false);
+    setSelectedCardId(null);
+  };
+
+  const handleCardUpdated = () => {
+    editCardSuccessRef.current = true;
+    if (selectedCardId && deckId) {
+      // Note: fields_changed would require modal to pass change data back
+      trackUserCardEditCompleted({
+        card_id: selectedCardId,
+        deck_id: deckId,
+        fields_changed: [], // Not available at page level
+      });
+    }
+    setIsEditCardModalOpen(false);
+    setSelectedCardId(null);
+    fetchCards(); // Refresh cards list
+  };
+
+  // Delete card handlers
+  const handleDeleteCardClick = (card: CardResponse) => {
+    trackUserCardDeleteStarted({ card_id: card.id, deck_id: card.deck_id });
+    setCardToDelete(card);
+    setIsDeleteCardDialogOpen(true);
+  };
+
+  const handleDeleteCardConfirm = async () => {
+    if (!cardToDelete) return;
+
+    setIsDeletingCard(true);
+    try {
+      await cardAPI.delete(cardToDelete.id);
+      trackUserCardDeleteCompleted({
+        card_id: cardToDelete.id,
+        deck_id: cardToDelete.deck_id,
+      });
+      toast({
+        title: t('myDecks.cards.deleteSuccess'),
+      });
+      setIsDeleteCardDialogOpen(false);
+      setCardToDelete(null);
+      fetchCards(); // Refresh cards list
+      fetchDeck(); // Refresh deck data including card count
+    } catch (err) {
+      reportAPIError(err, { operation: 'deleteCard', endpoint: `/cards/${cardToDelete.id}` });
+      toast({
+        title: t('myDecks.cards.deleteError'),
+        variant: 'destructive',
+      });
+    } finally {
+      setIsDeletingCard(false);
+    }
+  };
+
+  const handleDeleteCardCancel = () => {
+    if (cardToDelete) {
+      trackUserCardDeleteCancelled({
+        card_id: cardToDelete.id,
+        deck_id: cardToDelete.deck_id,
+      });
+    }
+    setIsDeleteCardDialogOpen(false);
+    setCardToDelete(null);
+  };
+
   // Handle invalid deckId (not provided)
   if (!deckId) {
     return <NotFoundState />;
@@ -214,8 +386,20 @@ export const MyDeckDetailPage: React.FC = () => {
             <span className="truncate font-medium text-foreground">{deck.name}</span>
           </nav>
 
-          {/* Deck Content Placeholder - actual deck detail implementation would go here */}
-          <Card className="relative">
+          {/* Create Card Button */}
+          <div className="mb-4 flex justify-end">
+            <Button
+              variant="hero"
+              onClick={() => handleCreateCardClick('create_button')}
+              data-testid="create-card-button"
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              {t('myDecks.createCard')}
+            </Button>
+          </div>
+
+          {/* Deck Header Card */}
+          <Card className="relative mb-6">
             {/* Action Buttons */}
             <div className="absolute right-4 top-4 flex gap-1">
               <Button
@@ -244,8 +428,96 @@ export const MyDeckDetailPage: React.FC = () => {
               {deck.description && (
                 <p className="text-sm text-muted-foreground">{deck.description}</p>
               )}
+              <div className="mt-2">
+                <Badge variant="secondary">{deck.level}</Badge>
+              </div>
             </CardContent>
           </Card>
+
+          {/* Cards List */}
+          {isLoadingCards ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : cards.length === 0 ? (
+            <Card>
+              <CardContent className="py-8">
+                <div
+                  className="flex min-h-[300px] flex-col items-center justify-center p-8 text-center"
+                  role="status"
+                  aria-label={t('myDecks.cards.empty')}
+                  data-testid="cards-empty-state"
+                >
+                  <BookOpen
+                    className="mb-4 h-16 w-16 text-muted-foreground/50"
+                    aria-hidden="true"
+                  />
+                  <h3 className="mb-2 text-lg font-semibold text-foreground">
+                    {t('myDecks.cards.empty')}
+                  </h3>
+                  <p className="mb-4 text-muted-foreground">{t('myDecks.cards.emptyCta')}</p>
+                  <Button
+                    variant="hero"
+                    onClick={() => handleCreateCardClick('empty_state_cta')}
+                    data-testid="empty-state-create-card-button"
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    {t('myDecks.createCard')}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-3" data-testid="cards-list">
+              {cards.map((card) => (
+                <Card key={card.id} className="relative" data-testid={`card-${card.id}`}>
+                  <CardContent className="py-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="min-w-0 flex-1">
+                        <div className="mb-1 flex items-center gap-2">
+                          <span className="text-lg font-medium text-foreground">
+                            {card.front_text}
+                          </span>
+                          {card.part_of_speech && (
+                            <Badge variant="outline" className="text-xs">
+                              {card.part_of_speech}
+                            </Badge>
+                          )}
+                          {card.level && card.level !== deck.level && (
+                            <Badge variant="secondary" className="text-xs">
+                              {card.level}
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground">{card.back_text_en}</p>
+                      </div>
+                      <div className="flex shrink-0 gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEditCardClick(card)}
+                          aria-label={t('myDecks.cards.editCard')}
+                          data-testid={`edit-card-${card.id}`}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteCardClick(card)}
+                          aria-label={t('myDecks.cards.deleteCard')}
+                          data-testid={`delete-card-${card.id}`}
+                          className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -278,6 +550,43 @@ export const MyDeckDetailPage: React.FC = () => {
         onCancel={handleDeleteCancel}
         variant="destructive"
         loading={isDeleting}
+      />
+
+      {/* Create Card Modal */}
+      {deck && (
+        <UserVocabularyCardCreateModal
+          open={isCreateCardModalOpen}
+          onOpenChange={handleCreateCardModalOpenChange}
+          deckId={deck.id}
+          deckLevel={deck.level}
+          onSuccess={handleCreateCardSuccess}
+        />
+      )}
+
+      {/* Edit Card Modal */}
+      {deck && selectedCardId && (
+        <UserVocabularyCardEditModal
+          open={isEditCardModalOpen}
+          onOpenChange={(open) => !open && handleEditCardModalClose()}
+          cardId={selectedCardId}
+          deckId={deck.id}
+          deckLevel={deck.level}
+          onSuccess={handleCardUpdated}
+        />
+      )}
+
+      {/* Delete Card Confirmation Dialog */}
+      <ConfirmDialog
+        open={isDeleteCardDialogOpen}
+        onOpenChange={(open) => !open && handleDeleteCardCancel()}
+        title={t('myDecks.cards.deleteTitle')}
+        description={t('myDecks.cards.deleteMessage', { cardName: cardToDelete?.front_text })}
+        confirmText={t('myDecks.cards.deleteConfirm')}
+        cancelText={t('myDecks.cards.deleteCancel')}
+        onConfirm={handleDeleteCardConfirm}
+        onCancel={handleDeleteCardCancel}
+        variant="destructive"
+        loading={isDeletingCard}
       />
     </>
   );

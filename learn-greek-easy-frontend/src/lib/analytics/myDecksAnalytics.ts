@@ -20,7 +20,8 @@ export interface MyDecksCreateDeckClickedProperties {
 }
 
 export interface MyDecksCreateCardClickedProperties {
-  button_state: 'disabled';
+  button_state: 'disabled' | 'enabled';
+  has_decks?: boolean;
 }
 
 export interface MyDecksAccessDeniedProperties {

@@ -304,24 +304,37 @@ test.describe('My Decks - Disabled Button Tooltips', () => {
     await expect(createDeckButton).toBeEnabled();
   });
 
-  test('should show "Coming soon" tooltip on Create Card button hover', async ({ page }) => {
+  test('should open deck selector modal when Create Card button is clicked', async ({ page }) => {
     await page.goto('/my-decks');
 
     // Wait for page to load
     await expect(page.locator('[data-testid="my-decks-title"]')).toBeVisible({ timeout: 15000 });
 
-    // Find the Create Card button (disabled)
-    const createCardButtonWrapper = page.locator('span').filter({
-      has: page.getByRole('button', { name: /create card/i }),
-    });
-    await expect(createCardButtonWrapper).toBeVisible();
+    // Wait for decks to load (learner has decks)
+    const deckCards = page.locator('[data-testid="deck-card"]');
+    await expect(deckCards.first()).toBeVisible({ timeout: 15000 });
 
-    // Hover over the button wrapper to trigger tooltip
-    await createCardButtonWrapper.hover();
+    // Find and click the Create Card button
+    const createCardButton = page.locator('[data-testid="my-decks-create-card-button"]');
+    await expect(createCardButton).toBeVisible();
+    await expect(createCardButton).toBeEnabled();
+    await createCardButton.click();
 
-    // Tooltip with "Coming soon" should appear
-    const tooltip = page.getByRole('tooltip').getByText(/coming soon/i);
-    await expect(tooltip).toBeVisible({ timeout: 5000 });
+    // Deck selector modal should open
+    const deckSelectorModal = page.locator('[data-testid="deck-selector-modal"]');
+    await expect(deckSelectorModal).toBeVisible({ timeout: 5000 });
+
+    // Close the modal
+    const closeButton = deckSelectorModal.locator('button[aria-label="Close"]').or(
+      page.getByRole('button', { name: /close/i })
+    );
+    if (await closeButton.isVisible()) {
+      await closeButton.click();
+    } else {
+      // Press Escape to close
+      await page.keyboard.press('Escape');
+    }
+    await expect(deckSelectorModal).not.toBeVisible({ timeout: 5000 });
   });
 });
 
@@ -381,9 +394,9 @@ test.describe('My Decks - Page Structure', () => {
     await expect(createDeckButton).toBeVisible();
     await expect(createCardButton).toBeVisible();
 
-    // Create Deck button should be enabled, Create Card button should be disabled
+    // Both Create Deck and Create Card buttons should be enabled
     await expect(createDeckButton).toBeEnabled();
-    await expect(createCardButton).toBeDisabled();
+    await expect(createCardButton).toBeEnabled();
   });
 
   test('should display decks in a grid layout', async ({ page }) => {

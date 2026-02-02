@@ -140,6 +140,15 @@
     "createDeck": "Create Deck",
     "createCard": "Create Card",
     "comingSoon": "Coming soon",
+    "selectDeck": {
+      "title": "Select a Deck",
+      "description": "Choose a deck to add your new card to",
+      "noDecksFallback": "No decks available"
+    },
+    "noDecksForCard": {
+      "title": "No Decks Yet",
+      "message": "Create a deck first to add cards to it"
+    },
     "editDeck": "Edit deck",
     "deleteDeck": "Delete deck",
     "deleteSuccess": "Deck deleted successfully",
@@ -157,6 +166,22 @@
     },
     "error": {
       "loading": "Failed to load your decks"
+    },
+    "cards": {
+      "editCard": "Edit card",
+      "deleteCard": "Delete card",
+      "empty": "Your deck is empty",
+      "emptyCta": "Create your first card!",
+      "deleteTitle": "Delete Card?",
+      "deleteMessage": "Are you sure you want to delete \"{{cardName}}\"? This action cannot be undone.",
+      "deleteConfirm": "Delete",
+      "deleteCancel": "Cancel",
+      "deleteSuccess": "Card deleted successfully",
+      "deleteError": "Failed to delete card",
+      "createSuccess": "Card created successfully",
+      "editSuccess": "Card updated successfully",
+      "createError": "Failed to create card",
+      "editError": "Failed to update card"
     }
   },
   "form": {
