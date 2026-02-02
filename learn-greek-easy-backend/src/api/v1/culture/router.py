@@ -719,10 +719,12 @@ async def update_culture_deck(
     # Get question count for response
     question_count = await service.deck_repo.count_questions(deck_id)
 
+    # Admin endpoint: return English content for consistency
+    # Full localization will be handled in public endpoints
     return CultureDeckDetailResponse(
         id=updated_deck.id,
-        name=updated_deck.name,
-        description=updated_deck.description,
+        name=updated_deck.name_en,
+        description=updated_deck.description_en,
         category=updated_deck.category,
         question_count=question_count,
         is_premium=updated_deck.is_premium,

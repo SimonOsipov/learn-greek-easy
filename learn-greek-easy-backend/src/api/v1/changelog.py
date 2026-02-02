@@ -6,66 +6,16 @@ This module provides endpoints for changelog entries:
 Requires authentication.
 """
 
-from fastapi import APIRouter, Depends, Header, Query
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.dependencies import get_current_user
+from src.core.dependencies import get_current_user, get_locale_from_header
 from src.db.dependencies import get_db
 from src.db.models import User
 from src.schemas.changelog import ChangelogListResponse
 from src.services import ChangelogService
 
 router = APIRouter()
-
-
-def parse_accept_language(accept_language: str | None) -> str:
-    """Parse Accept-Language header to extract preferred locale.
-
-    Supports formats:
-    - "el" -> "el"
-    - "el-GR" -> "el"
-    - "el,en;q=0.9" -> "el" (highest priority)
-
-    Args:
-        accept_language: Raw Accept-Language header value
-
-    Returns:
-        Two-letter locale code (defaults to "en" if parsing fails)
-    """
-    if not accept_language:
-        return "en"
-
-    # Split by comma and process each language tag
-    languages = []
-    for part in accept_language.split(","):
-        part = part.strip()
-        if not part:
-            continue
-
-        # Split language from quality factor (e.g., "el;q=0.9")
-        if ";" in part:
-            lang_part, q_part = part.split(";", 1)
-            lang_part = lang_part.strip()
-            try:
-                q_value = float(q_part.strip().replace("q=", ""))
-            except ValueError:
-                q_value = 1.0
-        else:
-            lang_part = part
-            q_value = 1.0
-
-        # Extract base language (e.g., "el-GR" -> "el")
-        base_lang = lang_part.split("-")[0].lower()
-
-        if base_lang:
-            languages.append((base_lang, q_value))
-
-    # Sort by quality factor (descending) and return highest
-    if languages:
-        languages.sort(key=lambda x: x[1], reverse=True)
-        return languages[0][0]
-
-    return "en"
 
 
 @router.get(
@@ -86,7 +36,7 @@ Default is 5 items per page, maximum 50.
 async def get_changelog(
     page: int = Query(default=1, ge=1, description="Page number"),
     page_size: int = Query(default=5, ge=1, le=50, description="Items per page (max 50)"),
-    accept_language: str | None = Header(default=None, alias="Accept-Language"),
+    locale: str = Depends(get_locale_from_header),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> ChangelogListResponse:
@@ -97,8 +47,6 @@ async def get_changelog(
 
     Requires authentication.
     """
-    locale = parse_accept_language(accept_language)
-
     service = ChangelogService(db)
     return await service.get_public_list(
         page=page,

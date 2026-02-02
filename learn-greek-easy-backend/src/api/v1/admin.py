@@ -254,7 +254,7 @@ async def list_decks(
         vocab_query = (
             select(
                 Deck.id,
-                Deck.name,
+                Deck.name_en.label("name"),
                 Deck.level,
                 Deck.is_active,
                 Deck.is_premium,
@@ -267,9 +267,13 @@ async def list_decks(
             .outerjoin(User, Deck.owner_id == User.id)
         )
 
-        # Apply search filter
+        # Apply search filter (search across all language name fields)
         if search:
-            vocab_query = vocab_query.where(Deck.name.ilike(f"%{search}%"))
+            vocab_query = vocab_query.where(
+                Deck.name_en.ilike(f"%{search}%")
+                | Deck.name_el.ilike(f"%{search}%")
+                | Deck.name_ru.ilike(f"%{search}%")
+            )
 
         # Get total count for vocabulary
         vocab_count_query = select(func.count()).select_from(vocab_query.subquery())
@@ -312,7 +316,7 @@ async def list_decks(
 
         culture_query = select(
             CultureDeck.id,
-            CultureDeck.name,
+            CultureDeck.name_en.label("name"),
             CultureDeck.category,
             CultureDeck.is_active,
             CultureDeck.is_premium,
@@ -323,9 +327,13 @@ async def list_decks(
             CultureDeck.id == culture_question_count_subquery.c.deck_id,
         )
 
-        # Apply search filter
+        # Apply search filter (search across all language name fields)
         if search:
-            culture_query = culture_query.where(CultureDeck.name.ilike(f"%{search}%"))
+            culture_query = culture_query.where(
+                CultureDeck.name_en.ilike(f"%{search}%")
+                | CultureDeck.name_el.ilike(f"%{search}%")
+                | CultureDeck.name_ru.ilike(f"%{search}%")
+            )
 
         # Get total count for culture
         culture_count_query = select(func.count()).select_from(culture_query.subquery())

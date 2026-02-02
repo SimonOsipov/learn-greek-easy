@@ -21,7 +21,7 @@ Usage:
 import uuid
 from typing import Optional
 
-from fastapi import Depends, Request
+from fastapi import Depends, Header, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -241,6 +241,55 @@ async def get_current_user_optional(
     return user
 
 
+def get_locale_from_header(
+    accept_language: str | None = Header(default=None, alias="Accept-Language"),
+) -> str:
+    """FastAPI dependency to extract locale from Accept-Language header.
+
+    Supports formats:
+    - "el" -> "el"
+    - "el-GR" -> "el"
+    - "el,en;q=0.9" -> "el" (highest priority)
+
+    Returns:
+        Two-letter locale code (defaults to "en" if parsing fails)
+    """
+    if not accept_language:
+        return "en"
+
+    # Split by comma and process each language tag
+    languages = []
+    for part in accept_language.split(","):
+        part = part.strip()
+        if not part:
+            continue
+
+        # Split language from quality factor (e.g., "el;q=0.9")
+        if ";" in part:
+            lang_part, q_part = part.split(";", 1)
+            lang_part = lang_part.strip()
+            try:
+                q_value = float(q_part.strip().replace("q=", ""))
+            except ValueError:
+                q_value = 1.0
+        else:
+            lang_part = part
+            q_value = 1.0
+
+        # Extract base language (e.g., "el-GR" -> "el")
+        base_lang = lang_part.split("-")[0].lower()
+
+        if base_lang:
+            languages.append((base_lang, q_value))
+
+    # Sort by quality factor (descending) and return highest
+    if languages:
+        languages.sort(key=lambda x: x[1], reverse=True)
+        return languages[0][0]
+
+    return "en"
+
+
 # ============================================================================
 # Export Public API
 # ============================================================================
@@ -249,6 +298,7 @@ __all__ = [
     "get_current_user",
     "get_current_superuser",
     "get_current_user_optional",
+    "get_locale_from_header",
     "get_validated_user_id",
     "security_scheme",
 ]
