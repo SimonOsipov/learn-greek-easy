@@ -531,11 +531,11 @@ async def update_card(
     "/{card_id}",
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Delete a card",
-    description="Delete a card. Requires superuser privileges. This is a hard delete.",
+    description="Delete a card. Requires deck ownership or superuser privileges.",
     responses={
         204: {"description": "Card deleted successfully"},
         401: {"description": "Not authenticated"},
-        403: {"description": "Not authorized (requires superuser)"},
+        403: {"description": "Not authorized to delete this card"},
         404: {"description": "Card not found"},
     },
 )
@@ -543,11 +543,11 @@ async def delete_card(
     card_id: UUID,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_superuser),
+    current_user: User = Depends(get_current_user),
 ) -> Response:
     """Delete a card.
 
-    Requires superuser privileges.
+    Requires deck ownership or superuser privileges.
 
     WARNING: This is a HARD DELETE. The card and all associated
     statistics/reviews will be permanently removed.
@@ -556,14 +556,14 @@ async def delete_card(
         card_id: UUID of the card to delete
         background_tasks: FastAPI BackgroundTasks for scheduling async operations
         db: Database session (injected)
-        current_user: Authenticated superuser (injected)
+        current_user: Authenticated user (injected)
 
     Returns:
         Empty response with 204 status
 
     Raises:
         401: If not authenticated
-        403: If authenticated but not superuser
+        403: If not authorized to delete this card
         404: If card doesn't exist
     """
     repo = CardRepository(db)
@@ -572,6 +572,12 @@ async def delete_card(
     card = await repo.get(card_id)
     if card is None:
         raise CardNotFoundException(card_id=str(card_id))
+
+    # Authorization: user must own the deck OR be superuser
+    deck_repo = DeckRepository(db)
+    deck = await deck_repo.get(card.deck_id)
+    if deck is None or (deck.owner_id != current_user.id and not current_user.is_superuser):
+        raise ForbiddenException(detail="Not authorized to delete this card")
 
     # Store deck_id before deletion for cache invalidation
     deck_id = card.deck_id

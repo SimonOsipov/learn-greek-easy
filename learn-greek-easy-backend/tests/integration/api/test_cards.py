@@ -1614,6 +1614,38 @@ class TestDeleteCardEndpoint:
         await db_session.refresh(card)
         return card
 
+    @pytest.fixture
+    async def user_owned_deck_for_delete(self, db_session, test_user):
+        """Create a deck owned by test_user for delete tests."""
+        deck = Deck(
+            id=uuid4(),
+            name="User Owned Delete Deck",
+            description="Test deck owned by regular user for delete tests",
+            level=DeckLevel.A1,
+            is_active=True,
+            owner_id=test_user.id,
+        )
+        db_session.add(deck)
+        await db_session.commit()
+        await db_session.refresh(deck)
+        return deck
+
+    @pytest.fixture
+    async def card_in_user_owned_deck_for_delete(self, db_session, user_owned_deck_for_delete):
+        """Create a card in user's owned deck for delete tests."""
+        card = Card(
+            id=uuid4(),
+            deck_id=user_owned_deck_for_delete.id,
+            front_text="user_owned_delete",
+            back_text_en="user owned to be deleted",
+            example_sentence="User owned delete example",
+            pronunciation="user-del-pron",
+        )
+        db_session.add(card)
+        await db_session.commit()
+        await db_session.refresh(card)
+        return card
+
     @pytest.mark.asyncio
     async def test_delete_card_success(
         self, client: AsyncClient, superuser_auth_headers: dict, card_for_delete
@@ -1660,10 +1692,10 @@ class TestDeleteCardEndpoint:
         assert data["success"] is False
 
     @pytest.mark.asyncio
-    async def test_delete_card_non_superuser_returns_403(
+    async def test_delete_card_non_owner_system_deck_returns_403(
         self, client: AsyncClient, auth_headers: dict, card_for_delete
     ):
-        """Test regular user (non-superuser) returns 403."""
+        """Test regular user cannot delete card in system deck (owner_id=None)."""
         response = await client.delete(
             f"/api/v1/cards/{card_for_delete.id}",
             headers=auth_headers,
@@ -1672,6 +1704,20 @@ class TestDeleteCardEndpoint:
         assert response.status_code == 403
         data = response.json()
         assert data["success"] is False
+        assert "Not authorized to delete this card" in data["error"]["message"]
+
+    @pytest.mark.asyncio
+    async def test_delete_card_owner_success(
+        self, client: AsyncClient, auth_headers: dict, card_in_user_owned_deck_for_delete
+    ):
+        """Test deck owner can delete card in their own deck."""
+        response = await client.delete(
+            f"/api/v1/cards/{card_in_user_owned_deck_for_delete.id}",
+            headers=auth_headers,
+        )
+
+        assert response.status_code == 204
+        assert response.content == b""  # No content
 
     @pytest.mark.asyncio
     async def test_delete_card_not_found_returns_404(
