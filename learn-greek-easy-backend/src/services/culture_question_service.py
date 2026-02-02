@@ -221,7 +221,7 @@ class CultureQuestionService:
 
         return CultureQuestionQueue(
             deck_id=deck_id,
-            deck_name=deck.name,
+            deck_name=deck.name_en,
             category=deck.category,
             total_due=len(due_stats),
             total_new=len(new_questions),
