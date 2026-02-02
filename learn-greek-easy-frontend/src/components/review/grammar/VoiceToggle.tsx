@@ -46,7 +46,11 @@ export function VoiceToggle({
     <div className="flex items-center gap-2">
       <Label
         htmlFor="voice-toggle"
-        className={cn('text-sm', disabled && 'cursor-not-allowed opacity-50')}
+        className={cn(
+          'text-sm',
+          selectedVoice === 'active' ? 'font-semibold' : 'font-normal',
+          disabled && 'cursor-not-allowed opacity-50'
+        )}
       >
         {t('grammar.verbConjugation.voice.active')}
       </Label>
@@ -59,7 +63,11 @@ export function VoiceToggle({
       />
       <Label
         htmlFor="voice-toggle"
-        className={cn('text-sm', disabled && 'cursor-not-allowed opacity-50')}
+        className={cn(
+          'text-sm',
+          selectedVoice === 'passive' ? 'font-semibold' : 'font-normal',
+          disabled && 'cursor-not-allowed opacity-50'
+        )}
       >
         {t('grammar.verbConjugation.voice.passive')}
       </Label>
