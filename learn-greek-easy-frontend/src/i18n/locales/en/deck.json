@@ -168,7 +168,11 @@
       "deleteConfirm": "Delete",
       "deleteCancel": "Cancel",
       "deleteSuccess": "Card deleted successfully",
-      "deleteError": "Failed to delete card"
+      "deleteError": "Failed to delete card",
+      "createSuccess": "Card created successfully",
+      "editSuccess": "Card updated successfully",
+      "createError": "Failed to create card",
+      "editError": "Failed to update card"
     }
   },
   "form": {

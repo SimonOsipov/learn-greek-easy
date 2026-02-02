@@ -168,7 +168,11 @@
       "deleteConfirm": "Удалить",
       "deleteCancel": "Отмена",
       "deleteSuccess": "Карта успешно удалена",
-      "deleteError": "Не удалось удалить карту"
+      "deleteError": "Не удалось удалить карту",
+      "createSuccess": "Карта успешно создана",
+      "editSuccess": "Карта успешно обновлена",
+      "createError": "Не удалось создать карту",
+      "editError": "Не удалось обновить карту"
     }
   },
   "form": {
