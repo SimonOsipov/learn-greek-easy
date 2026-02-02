@@ -420,11 +420,19 @@ test.describe('User Card Creation - Delete Flows', () => {
     // Card should be removed - wait for the specific card to disappear
     await expect(cardLocator).not.toBeVisible({ timeout: 5000 });
 
-    // Count should decrease - re-query the cards list to avoid stale references
-    const updatedCardsList = page.locator('[data-testid="cards-list"]');
-    await expect(updatedCardsList).toBeVisible({ timeout: 5000 });
-    const newCount = await updatedCardsList.locator('[data-testid^="card-"]').count();
-    expect(newCount).toBe(initialCount - 1);
+    // Verify the count decreased
+    // If we deleted the last card, empty state should be shown instead of cards list
+    if (initialCount === 1) {
+      // Deleted the only card - empty state should now be visible
+      const emptyState = page.locator('[data-testid="cards-empty-state"]');
+      await expect(emptyState).toBeVisible({ timeout: 5000 });
+    } else {
+      // Still have cards remaining - verify count decreased
+      const updatedCardsList = page.locator('[data-testid="cards-list"]');
+      await expect(updatedCardsList).toBeVisible({ timeout: 5000 });
+      const newCount = await updatedCardsList.locator('[data-testid^="card-"]').count();
+      expect(newCount).toBe(initialCount - 1);
+    }
   });
 
   test('Flow 6: Delete card - cancel', async ({ page }) => {
