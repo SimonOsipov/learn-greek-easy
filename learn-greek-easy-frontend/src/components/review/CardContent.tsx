@@ -144,9 +144,7 @@ export function CardContent({ card, isFlipped }: CardContentProps) {
       {/* Translation */}
       <div className="flex flex-col gap-2">
         <SectionHeader title={t('grammar.sections.translation')} />
-        <div className="rounded-lg border border-border bg-card p-4">
-          {translation && <p className="text-base">{translation}</p>}
-        </div>
+        {translation && <p className="text-base text-foreground">{translation}</p>}
       </div>
 
       {/* Grammar table */}

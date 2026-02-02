@@ -10,7 +10,7 @@ export interface SectionHeaderProps {
 export function SectionHeader({ title, className }: SectionHeaderProps) {
   return (
     <div className={cn('flex items-center gap-3', className)}>
-      <span className="text-sm font-medium text-muted-foreground">{title}</span>
+      <span className="text-sm font-semibold text-muted-foreground">{title}</span>
       <div className="h-px flex-1 bg-border" />
     </div>
   );
