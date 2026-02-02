@@ -28,9 +28,22 @@ import {
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
+import { cn } from '@/lib/utils';
 import type { UnifiedDeckItem } from '@/services/adminAPI';
 
 import { DeactivationWarningDialog } from './DeactivationWarningDialog';
+
+/**
+ * Supported languages for culture deck names and descriptions
+ */
+const DECK_LANGUAGES = ['el', 'en', 'ru'] as const;
+type DeckLanguage = (typeof DECK_LANGUAGES)[number];
+
+const LANGUAGE_LABELS: Record<DeckLanguage, string> = {
+  el: 'Greek',
+  en: 'English',
+  ru: 'Russian',
+};
 
 /**
  * Culture deck categories
@@ -47,16 +60,16 @@ const CULTURE_CATEGORIES = [
 type CultureCategory = (typeof CULTURE_CATEGORIES)[number];
 
 /**
- * Validation schema for culture deck edit form
+ * Validation schema for culture deck edit form with trilingual support
  */
 const cultureDeckSchema = z.object({
-  name: z.string().min(1, 'Name is required').max(255, 'Name must be at most 255 characters'),
-  description: z
-    .string()
-    .max(1000, 'Description must be at most 1000 characters')
-    .optional()
-    .or(z.literal('')),
-  category: z.enum(CULTURE_CATEGORIES),
+  name_el: z.string().min(1, 'Name is required').max(255),
+  name_en: z.string().min(1, 'Name is required').max(255),
+  name_ru: z.string().min(1, 'Name is required').max(255),
+  description_el: z.string().max(2000).optional().or(z.literal('')),
+  description_en: z.string().max(2000).optional().or(z.literal('')),
+  description_ru: z.string().max(2000).optional().or(z.literal('')),
+  category: z.enum(CULTURE_CATEGORIES as readonly [string, ...string[]]),
   is_active: z.boolean(),
   is_premium: z.boolean(),
 });
@@ -71,13 +84,14 @@ interface CultureDeckEditFormProps {
 }
 
 /**
- * Form component for editing culture deck metadata
+ * Form component for editing culture deck metadata with trilingual support
  *
  * Fields:
- * - name: Required text input (1-255 chars)
- * - description: Optional textarea (max 1000 chars)
+ * - name_el/name_en/name_ru: Required text inputs per language (1-255 chars)
+ * - description_el/description_en/description_ru: Optional textareas per language (max 2000 chars)
  * - category: Culture category dropdown
  * - is_active: Toggle switch for active status
+ * - is_premium: Toggle switch for premium status
  */
 export const CultureDeckEditForm: React.FC<CultureDeckEditFormProps> = ({
   deck,
@@ -87,21 +101,53 @@ export const CultureDeckEditForm: React.FC<CultureDeckEditFormProps> = ({
 }) => {
   const { t } = useTranslation('admin');
   const [showDeactivationWarning, setShowDeactivationWarning] = useState(false);
+  const [activeTab, setActiveTab] = useState<DeckLanguage>('en');
 
-  // Get the deck name as string (culture decks now use simple strings after migration)
-  const deckName = typeof deck.name === 'string' ? deck.name : deck.name.en;
+  // Get the deck name for display in deactivation dialog (prefer English)
+  const deckNameDisplay =
+    typeof deck.name === 'string'
+      ? deck.name
+      : typeof deck.name === 'object' && deck.name !== null
+        ? deck.name.en || deck.name.el || deck.name.ru || ''
+        : '';
 
   const form = useForm<CultureDeckFormData>({
     resolver: zodResolver(cultureDeckSchema),
     mode: 'onChange',
     defaultValues: {
-      name: deckName,
-      description: '', // Culture decks don't have description in current model
+      name_el:
+        ((deck as Record<string, unknown>).name_el as string) ||
+        (typeof deck.name === 'object' && deck.name !== null ? deck.name.el : '') ||
+        '',
+      name_en:
+        ((deck as Record<string, unknown>).name_en as string) ||
+        (typeof deck.name === 'object' && deck.name !== null
+          ? deck.name.en
+          : typeof deck.name === 'string'
+            ? deck.name
+            : '') ||
+        '',
+      name_ru:
+        ((deck as Record<string, unknown>).name_ru as string) ||
+        (typeof deck.name === 'object' && deck.name !== null ? deck.name.ru : '') ||
+        '',
+      description_el: ((deck as Record<string, unknown>).description_el as string) || '',
+      description_en: ((deck as Record<string, unknown>).description_en as string) || '',
+      description_ru: ((deck as Record<string, unknown>).description_ru as string) || '',
       category: (deck.category as CultureCategory) || 'culture',
       is_active: deck.is_active,
       is_premium: deck.is_premium ?? false,
     },
   });
+
+  /**
+   * Check if a language tab has validation errors
+   */
+  const hasTabErrors = (lang: DeckLanguage): boolean => {
+    const nameKey = `name_${lang}` as keyof CultureDeckFormData;
+    const descKey = `description_${lang}` as keyof CultureDeckFormData;
+    return !!(form.formState.errors[nameKey] || form.formState.errors[descKey]);
+  };
 
   const onSubmit = (data: CultureDeckFormData) => {
     onSave(data);
@@ -137,42 +183,75 @@ export const CultureDeckEditForm: React.FC<CultureDeckEditFormProps> = ({
         className="space-y-4"
         data-testid="culture-deck-edit-form"
       >
-        <FormField
-          control={form.control}
-          name="name"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>{t('deckEdit.name')}</FormLabel>
-              <FormControl>
-                <Input
-                  placeholder={t('deckEdit.namePlaceholder')}
-                  data-testid="deck-edit-name"
-                  {...field}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        {/* Language Tabs */}
+        <div className="space-y-4">
+          <div className="flex gap-1 rounded-lg bg-muted p-1">
+            {DECK_LANGUAGES.map((lang) => (
+              <button
+                key={lang}
+                type="button"
+                onClick={() => setActiveTab(lang)}
+                data-testid={`culture-deck-edit-lang-tab-${lang}`}
+                className={cn(
+                  'relative flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors',
+                  activeTab === lang ? 'bg-background shadow' : 'hover:bg-background/50',
+                  hasTabErrors(lang) && 'text-destructive'
+                )}
+              >
+                {LANGUAGE_LABELS[lang]}
+                {hasTabErrors(lang) && (
+                  <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-destructive" />
+                )}
+              </button>
+            ))}
+          </div>
 
-        <FormField
-          control={form.control}
-          name="description"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>{t('deckEdit.description')}</FormLabel>
-              <FormControl>
-                <Textarea
-                  placeholder={t('deckEdit.descriptionPlaceholder')}
-                  className="min-h-[100px]"
-                  data-testid="deck-edit-description"
-                  {...field}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+          {/* Tab Content - name and description per language */}
+          {DECK_LANGUAGES.map((lang) => (
+            <div key={lang} className={cn('space-y-4', activeTab !== lang && 'hidden')}>
+              {/* Name field */}
+              <FormField
+                control={form.control}
+                name={`name_${lang}` as 'name_el' | 'name_en' | 'name_ru'}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Name ({LANGUAGE_LABELS[lang]})</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Enter deck name"
+                        data-testid={`culture-deck-edit-name-${lang}`}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Description field */}
+              <FormField
+                control={form.control}
+                name={
+                  `description_${lang}` as 'description_el' | 'description_en' | 'description_ru'
+                }
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description ({LANGUAGE_LABELS[lang]})</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Enter deck description (optional)"
+                        className="min-h-[100px]"
+                        data-testid={`culture-deck-edit-description-${lang}`}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+          ))}
+        </div>
 
         <FormField
           control={form.control}
@@ -256,7 +335,7 @@ export const CultureDeckEditForm: React.FC<CultureDeckEditFormProps> = ({
           open={showDeactivationWarning}
           onCancel={handleDeactivationCancel}
           onConfirm={handleDeactivationConfirm}
-          deckName={deckName}
+          deckName={deckNameDisplay}
         />
       </form>
     </Form>
