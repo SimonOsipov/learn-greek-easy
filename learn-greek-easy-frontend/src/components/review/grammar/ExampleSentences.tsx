@@ -1,3 +1,5 @@
+import { useMemo } from 'react';
+
 import { useTranslation } from 'react-i18next';
 
 import { Card, CardContent } from '@/components/ui/card';
@@ -5,6 +7,22 @@ import { cn } from '@/lib/utils';
 import type { Example } from '@/types/grammar';
 
 import { TenseBadge } from './TenseBadge';
+
+// Tense ordering for consistent display (same order as TenseTabs)
+const TENSE_ORDER: readonly string[] = [
+  'present',
+  'imperfect',
+  'past',
+  'future',
+  'perfect',
+  'imperative',
+] as const;
+
+function getTenseSortIndex(tense: string | null | undefined): number {
+  if (!tense) return TENSE_ORDER.length;
+  const index = TENSE_ORDER.indexOf(tense.toLowerCase());
+  return index === -1 ? TENSE_ORDER.length : index;
+}
 
 export interface ExampleSentencesProps {
   examples: Example[];
@@ -20,6 +38,12 @@ export function ExampleSentences({ examples, isFlipped = true }: ExampleSentence
     return primary || fallback || '';
   };
 
+  // Sort examples by tense for consistent display order
+  const sortedExamples = useMemo(() => {
+    if (!examples || examples.length === 0) return [];
+    return [...examples].sort((a, b) => getTenseSortIndex(a.tense) - getTenseSortIndex(b.tense));
+  }, [examples]);
+
   if (!examples || examples.length === 0) {
     return (
       <Card>
@@ -32,7 +56,7 @@ export function ExampleSentences({ examples, isFlipped = true }: ExampleSentence
 
   return (
     <div className="space-y-4">
-      {examples.map((example, index) => {
+      {sortedExamples.map((example, index) => {
         const translation = getTranslation(example);
 
         return (
