@@ -10,6 +10,7 @@
  * All endpoints require superuser authentication.
  */
 
+import type { CultureDeckAdminResponse, DeckAdminResponse } from '@/types/deck';
 import type {
   AdminFeedbackItem,
   AdminFeedbackListParams,
@@ -18,6 +19,9 @@ import type {
 } from '@/types/feedback';
 
 import { api, buildQueryString } from './api';
+
+// Re-export admin response types for convenience
+export type { CultureDeckAdminResponse, DeckAdminResponse } from '@/types/deck';
 
 // ============================================
 // Types
@@ -61,6 +65,7 @@ export interface UnifiedDeckItem {
   item_count: number;
   is_active: boolean;
   is_premium: boolean;
+  is_system_deck: boolean | null; // true for system decks (vocabulary only), null for culture decks
   created_at: string;
   owner_id: string | null;
   owner_name: string | null;
@@ -554,9 +559,14 @@ export const adminAPI = {
    *
    * Updates deck name, description, level, or active status.
    * Requires superuser authentication.
+   *
+   * @returns DeckAdminResponse for system decks with trilingual fields
    */
-  updateVocabularyDeck: async (deckId: string, data: VocabularyDeckUpdatePayload) => {
-    return api.patch(`/api/v1/decks/${deckId}`, data);
+  updateVocabularyDeck: async (
+    deckId: string,
+    data: VocabularyDeckUpdatePayload
+  ): Promise<DeckAdminResponse> => {
+    return api.patch<DeckAdminResponse>(`/api/v1/decks/${deckId}`, data);
   },
 
   /**
@@ -564,9 +574,14 @@ export const adminAPI = {
    *
    * Updates deck name, description, category, or active status.
    * Requires superuser authentication.
+   *
+   * @returns CultureDeckAdminResponse with trilingual fields
    */
-  updateCultureDeck: async (deckId: string, data: CultureDeckUpdatePayload) => {
-    return api.patch(`/api/v1/culture/decks/${deckId}`, data);
+  updateCultureDeck: async (
+    deckId: string,
+    data: CultureDeckUpdatePayload
+  ): Promise<CultureDeckAdminResponse> => {
+    return api.patch<CultureDeckAdminResponse>(`/api/v1/culture/decks/${deckId}`, data);
   },
 
   /**

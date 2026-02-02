@@ -72,3 +72,55 @@ export interface DeckFilters {
   status: DeckStatus[];
   showPremiumOnly: boolean;
 }
+
+// ============================================================================
+// Admin Response Types (All Languages)
+// ============================================================================
+
+/**
+ * Admin response for vocabulary deck with all language fields.
+ * Matches backend DeckAdminResponse schema.
+ *
+ * Used by admin endpoints to display and edit deck content in all languages.
+ * Unlike DeckResponse (localized), this includes all three language variants.
+ */
+export interface DeckAdminResponse {
+  id: string;
+  name_el: string;
+  name_en: string;
+  name_ru: string;
+  description_el: string | null;
+  description_en: string | null;
+  description_ru: string | null;
+  level: DeckLevel;
+  is_active: boolean;
+  is_premium: boolean;
+  card_count: number;
+  owner_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Admin response for culture deck with all language fields.
+ * Matches backend CultureDeckAdminResponse schema.
+ *
+ * Used by admin endpoints to display and edit deck content in all languages.
+ * Unlike CultureDeckResponse (localized), this includes all three language variants.
+ */
+export interface CultureDeckAdminResponse {
+  id: string;
+  name_el: string;
+  name_en: string;
+  name_ru: string;
+  description_el: string | null;
+  description_en: string | null;
+  description_ru: string | null;
+  category: string;
+  is_active: boolean;
+  is_premium: boolean;
+  question_count: number;
+  order_index: number;
+  created_at: string;
+  updated_at: string;
+}
