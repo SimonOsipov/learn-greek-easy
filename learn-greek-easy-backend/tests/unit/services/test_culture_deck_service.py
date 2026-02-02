@@ -52,8 +52,12 @@ class TestCultureDeckServiceList:
         # Create mock deck
         mock_deck = MagicMock()
         mock_deck.id = uuid4()
-        mock_deck.name = "Greek History"
-        mock_deck.description = "History deck"
+        mock_deck.name_en = "Greek History"
+        mock_deck.name_el = "Ελληνική Ιστορία"
+        mock_deck.name_ru = "Греческая история"
+        mock_deck.description_en = "History deck"
+        mock_deck.description_el = "Τράπουλα ιστορίας"
+        mock_deck.description_ru = "Колода истории"
         mock_deck.category = "history"
         mock_deck.is_active = True
         mock_deck.is_premium = False
@@ -120,8 +124,12 @@ class TestCultureDeckServiceList:
         # Create mock deck
         mock_deck = MagicMock()
         mock_deck.id = uuid4()
-        mock_deck.name = "Test"
-        mock_deck.description = "Test desc"
+        mock_deck.name_en = "Test"
+        mock_deck.name_el = "Τεστ"
+        mock_deck.name_ru = "Тест"
+        mock_deck.description_en = "Test desc"
+        mock_deck.description_el = "Περιγραφή τεστ"
+        mock_deck.description_ru = "Тестовое описание"
         mock_deck.category = "culture"
         mock_deck.is_active = True
         mock_deck.is_premium = False
@@ -167,8 +175,12 @@ class TestCultureDeckServiceList:
 
         mock_deck = MagicMock()
         mock_deck.id = uuid4()
-        mock_deck.name = "Test"
-        mock_deck.description = "Test desc"
+        mock_deck.name_en = "Test"
+        mock_deck.name_el = "Τεστ"
+        mock_deck.name_ru = "Тест"
+        mock_deck.description_en = "Test desc"
+        mock_deck.description_el = "Περιγραφή τεστ"
+        mock_deck.description_ru = "Тестовое описание"
         mock_deck.category = "culture"
         mock_deck.is_active = True
         mock_deck.is_premium = False
@@ -201,8 +213,12 @@ class TestCultureDeckServiceGetDeck:
 
         mock_deck = MagicMock()
         mock_deck.id = deck_id
-        mock_deck.name = "Greek History"
-        mock_deck.description = "Learn about Greek history"
+        mock_deck.name_en = "Greek History"
+        mock_deck.name_el = "Ελληνική Ιστορία"
+        mock_deck.name_ru = "Греческая история"
+        mock_deck.description_en = "Learn about Greek history"
+        mock_deck.description_el = "Μάθετε για την ελληνική ιστορία"
+        mock_deck.description_ru = "Узнайте об истории Греции"
         mock_deck.category = "history"
         mock_deck.is_active = True
         mock_deck.is_premium = False
@@ -267,8 +283,12 @@ class TestCultureDeckServiceGetDeck:
 
         mock_deck = MagicMock()
         mock_deck.id = deck_id
-        mock_deck.name = "Test"
-        mock_deck.description = "Test desc"
+        mock_deck.name_en = "Test"
+        mock_deck.name_el = "Τεστ"
+        mock_deck.name_ru = "Тест"
+        mock_deck.description_en = "Test desc"
+        mock_deck.description_el = "Περιγραφή τεστ"
+        mock_deck.description_ru = "Тестовое описание"
         mock_deck.category = "culture"
         mock_deck.is_active = True
         mock_deck.is_premium = False
@@ -404,24 +424,33 @@ class TestCreateDeck:
     @pytest.mark.asyncio
     async def test_create_deck_success(self, mock_db_session: MagicMock):
         """Should successfully create a deck."""
-        from src.schemas.culture import CultureDeckCreate
+        from src.schemas.culture import CultureDeckAdminResponse, CultureDeckCreate
 
         service = CultureDeckService(mock_db_session)
 
         deck_data = CultureDeckCreate(
-            name="New deck",
-            description="Description",
+            name_en="New deck",
+            name_el="Νέα τράπουλα",
+            name_ru="Новая колода",
+            description_en="Description",
+            description_el="Περιγραφή",
+            description_ru="Описание",
             category="history",
             order_index=0,
         )
 
         mock_deck = MagicMock()
         mock_deck.id = uuid4()
-        mock_deck.name = "New deck"
-        mock_deck.description = "Description"
+        mock_deck.name_en = "New deck"
+        mock_deck.name_el = "Νέα τράπουλα"
+        mock_deck.name_ru = "Новая колода"
+        mock_deck.description_en = "Description"
+        mock_deck.description_el = "Περιγραφή"
+        mock_deck.description_ru = "Описание"
         mock_deck.category = "history"
         mock_deck.is_active = True
         mock_deck.is_premium = False
+        mock_deck.order_index = 0
         mock_deck.created_at = datetime(2024, 1, 1)
         mock_deck.updated_at = datetime(2024, 1, 1)
 
@@ -430,10 +459,10 @@ class TestCreateDeck:
 
             result = await service.create_deck(deck_data)
 
-            assert isinstance(result, CultureDeckDetailResponse)
+            assert isinstance(result, CultureDeckAdminResponse)
             assert result.id == mock_deck.id
-            assert result.name == mock_deck.name
-            assert result.description == mock_deck.description
+            assert result.name_en == mock_deck.name_en
+            assert result.description_en == mock_deck.description_en
             assert result.category == "history"
             assert result.question_count == 0  # New deck has no questions
             assert result.is_active is True
@@ -446,19 +475,28 @@ class TestCreateDeck:
         service = CultureDeckService(mock_db_session)
 
         deck_data = CultureDeckCreate(
-            name="Test",
-            description="Desc",
+            name_en="Test",
+            name_el="Τεστ",
+            name_ru="Тест",
+            description_en="Desc",
+            description_el="Περιγραφή",
+            description_ru="Описание",
             category="culture",
             order_index=10,
         )
 
         mock_deck = MagicMock()
         mock_deck.id = uuid4()
-        mock_deck.name = "Test"
-        mock_deck.description = "Desc"
+        mock_deck.name_en = "Test"
+        mock_deck.name_el = "Τεστ"
+        mock_deck.name_ru = "Тест"
+        mock_deck.description_en = "Desc"
+        mock_deck.description_el = "Περιγραφή"
+        mock_deck.description_ru = "Описание"
         mock_deck.category = "culture"
         mock_deck.is_active = True
         mock_deck.is_premium = False
+        mock_deck.order_index = 10
         mock_deck.created_at = datetime(2024, 1, 1)
         mock_deck.updated_at = datetime(2024, 1, 1)
 
@@ -484,30 +522,46 @@ class TestUpdateDeck:
         deck_id = uuid4()
 
         update_data = CultureDeckUpdate(
-            name="Updated name",
+            name_en="Updated name",
         )
 
         mock_deck = MagicMock()
         mock_deck.id = deck_id
-        mock_deck.name = "Old"
-        mock_deck.description = "Desc"
+        mock_deck.name_en = "Old"
+        mock_deck.name_el = "Παλιό"
+        mock_deck.name_ru = "Старое"
+        mock_deck.description_en = "Desc"
+        mock_deck.description_el = "Περιγραφή"
+        mock_deck.description_ru = "Описание"
         mock_deck.is_active = True
 
         mock_updated_deck = MagicMock()
         mock_updated_deck.id = deck_id
-        mock_updated_deck.name = "Updated name"
+        mock_updated_deck.name_en = "Updated name"
+        mock_updated_deck.name_el = "Παλιό"
+        mock_updated_deck.name_ru = "Старое"
+        mock_updated_deck.description_en = "Desc"
+        mock_updated_deck.description_el = "Περιγραφή"
+        mock_updated_deck.description_ru = "Описание"
+        mock_updated_deck.category = "culture"
+        mock_updated_deck.is_active = True
+        mock_updated_deck.is_premium = False
 
         with (
             patch.object(service.deck_repo, "get", new_callable=AsyncMock) as mock_get,
             patch.object(service.deck_repo, "update", new_callable=AsyncMock) as mock_update,
+            patch.object(
+                service.deck_repo, "count_questions", new_callable=AsyncMock
+            ) as mock_count_q,
         ):
             mock_get.return_value = mock_deck
             mock_update.return_value = mock_updated_deck
+            mock_count_q.return_value = 10
 
             result = await service.update_deck(deck_id, update_data)
 
             assert result.id == deck_id
-            assert result.name == mock_updated_deck.name
+            assert result.name_en == mock_updated_deck.name_en
             mock_get.assert_awaited_once_with(deck_id)
             mock_update.assert_awaited_once()
 
@@ -525,18 +579,37 @@ class TestUpdateDeck:
 
         mock_deck = MagicMock()
         mock_deck.id = deck_id
+        mock_deck.name_en = "Test"
+        mock_deck.name_el = "Τεστ"
+        mock_deck.name_ru = "Тест"
+        mock_deck.description_en = "Desc"
+        mock_deck.description_el = "Περιγραφή"
+        mock_deck.description_ru = "Описание"
+        mock_deck.category = "culture"
         mock_deck.is_active = True
 
         mock_updated_deck = MagicMock()
         mock_updated_deck.id = deck_id
+        mock_updated_deck.name_en = "Test"
+        mock_updated_deck.name_el = "Τεστ"
+        mock_updated_deck.name_ru = "Тест"
+        mock_updated_deck.description_en = "Desc"
+        mock_updated_deck.description_el = "Περιγραφή"
+        mock_updated_deck.description_ru = "Описание"
         mock_updated_deck.category = "geography"
+        mock_updated_deck.is_active = True
+        mock_updated_deck.is_premium = False
 
         with (
             patch.object(service.deck_repo, "get", new_callable=AsyncMock) as mock_get,
             patch.object(service.deck_repo, "update", new_callable=AsyncMock) as mock_update,
+            patch.object(
+                service.deck_repo, "count_questions", new_callable=AsyncMock
+            ) as mock_count_q,
         ):
             mock_get.return_value = mock_deck
             mock_update.return_value = mock_updated_deck
+            mock_count_q.return_value = 10
 
             await service.update_deck(deck_id, update_data)
 
@@ -559,17 +632,36 @@ class TestUpdateDeck:
 
         mock_deck = MagicMock()
         mock_deck.id = deck_id
+        mock_deck.name_en = "Test"
+        mock_deck.name_el = "Τεστ"
+        mock_deck.name_ru = "Тест"
+        mock_deck.description_en = "Desc"
+        mock_deck.description_el = "Περιγραφή"
+        mock_deck.description_ru = "Описание"
+        mock_deck.category = "culture"
         mock_deck.is_active = False  # Inactive deck
 
         mock_updated_deck = MagicMock()
         mock_updated_deck.id = deck_id
+        mock_updated_deck.name_en = "Test"
+        mock_updated_deck.name_el = "Τεστ"
+        mock_updated_deck.name_ru = "Тест"
+        mock_updated_deck.description_en = "Desc"
+        mock_updated_deck.description_el = "Περιγραφή"
+        mock_updated_deck.description_ru = "Описание"
+        mock_updated_deck.category = "culture"
         mock_updated_deck.is_active = True
+        mock_updated_deck.is_premium = False
 
         with (
             patch.object(service.deck_repo, "get", new_callable=AsyncMock) as mock_get,
             patch.object(service.deck_repo, "update", new_callable=AsyncMock) as mock_update,
+            patch.object(
+                service.deck_repo, "count_questions", new_callable=AsyncMock
+            ) as mock_count_q,
         ):
             mock_get.return_value = mock_deck
+            mock_count_q.return_value = 10
             mock_update.return_value = mock_updated_deck
 
             result = await service.update_deck(deck_id, update_data)
@@ -586,7 +678,7 @@ class TestUpdateDeck:
         deck_id = uuid4()
 
         update_data = CultureDeckUpdate(
-            name="new-name",
+            name_en="new-name",
         )
 
         with patch.object(service.deck_repo, "get", new_callable=AsyncMock) as mock_get:

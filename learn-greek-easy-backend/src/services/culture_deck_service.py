@@ -389,6 +389,9 @@ class CultureDeckService:
         # Create deck using repository
         deck = await self.deck_repo.create(deck_dict)
 
+        # Refresh to get database-generated values (e.g., created_at, updated_at)
+        await self.db.refresh(deck)
+
         logger.info(
             "Culture deck created",
             extra={
@@ -451,6 +454,9 @@ class CultureDeckService:
 
         # Update deck using repository
         updated_deck = await self.deck_repo.update(deck, update_dict)
+
+        # Refresh to get database-generated values (e.g., updated_at)
+        await self.db.refresh(updated_deck)
 
         # Get question count for response
         question_count = await self.deck_repo.count_questions(deck_id)

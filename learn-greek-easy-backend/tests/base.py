@@ -156,8 +156,8 @@ class BaseTestCase:
 
         Args:
             db_session: Database session
-            name: Deck name
-            description: Deck description
+            name: Deck name (used for all language fields)
+            description: Deck description (used for all language fields)
             level: CEFR level (A1-C2)
             is_active: Whether deck is active
 
@@ -165,8 +165,12 @@ class BaseTestCase:
             Deck: Created deck
         """
         deck = Deck(
-            name=name,
-            description=description,
+            name_en=name,
+            name_el=name,
+            name_ru=name,
+            description_en=description,
+            description_el=description,
+            description_ru=description,
             level=level,
             is_active=is_active,
         )

@@ -172,8 +172,12 @@ class TestPostgreSQLFeatures:
     async def test_native_enum_deck_level(self, db_session: AsyncSession):
         """Test that DeckLevel enum works with PostgreSQL."""
         deck = Deck(
-            name="Test Deck",
-            description="Testing enums",
+            name_en="Test Deck",
+            name_el="Δοκιμαστική Τράπουλα",
+            name_ru="Тестовая колода",
+            description_en="Testing enums",
+            description_el="Δοκιμή enum",
+            description_ru="Тестирование enum",
             level=DeckLevel.A1,
             is_active=True,
         )
@@ -226,8 +230,12 @@ class TestRelationships:
     async def test_deck_cards_relationship(self, db_session: AsyncSession):
         """Test creating a deck with cards."""
         deck = Deck(
-            name="Test Deck",
-            description="A test deck",
+            name_en="Test Deck",
+            name_el="Δοκιμαστική Τράπουλα",
+            name_ru="Тестовая колода",
+            description_en="A test deck",
+            description_el="Δοκιμαστική τράπουλα",
+            description_ru="Тестовая колода",
             level=DeckLevel.A1,
             is_active=True,
         )
@@ -250,8 +258,12 @@ class TestRelationships:
         """Test that cascade deletes work."""
         # Create deck with cards
         deck = Deck(
-            name="Cascade Test Deck",
-            description="Testing cascades",
+            name_en="Cascade Test Deck",
+            name_el="Δοκιμαστική Τράπουλα Cascade",
+            name_ru="Тестовая колода Cascade",
+            description_en="Testing cascades",
+            description_el="Δοκιμή cascade",
+            description_ru="Тестирование cascade",
             level=DeckLevel.A1,
             is_active=True,
         )

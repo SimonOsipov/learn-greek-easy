@@ -82,7 +82,9 @@ def mock_deck():
     """Create a mock Deck object."""
     deck = MagicMock(spec=Deck)
     deck.id = uuid4()
-    deck.name = "Test Deck"
+    deck.name_en = "Test Deck"
+    deck.name_el = "Δοκιμαστική Τράπουλα"
+    deck.name_ru = "Тестовая колода"
     deck.is_active = True
     return deck
 

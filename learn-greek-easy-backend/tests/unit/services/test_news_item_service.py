@@ -483,8 +483,12 @@ class TestDelete:
 async def active_culture_deck(db_session: AsyncSession) -> CultureDeck:
     """Create an active culture deck for testing."""
     deck = CultureDeck(
-        name="Culture",
-        description="Culture questions",
+        name_en="Culture",
+        name_el="Culture",
+        name_ru="Culture",
+        description_en="Culture questions",
+        description_el="Culture questions",
+        description_ru="Culture questions",
         category="culture",
         is_active=True,
         order_index=1,
@@ -499,8 +503,12 @@ async def active_culture_deck(db_session: AsyncSession) -> CultureDeck:
 async def inactive_culture_deck(db_session: AsyncSession) -> CultureDeck:
     """Create an inactive culture deck for testing."""
     deck = CultureDeck(
-        name="Old Culture",
-        description="Inactive culture questions",
+        name_en="Old Culture",
+        name_el="Old Culture",
+        name_ru="Old Culture",
+        description_en="Inactive culture questions",
+        description_el="Inactive culture questions",
+        description_ru="Inactive culture questions",
         category="culture",
         is_active=False,
         order_index=2,

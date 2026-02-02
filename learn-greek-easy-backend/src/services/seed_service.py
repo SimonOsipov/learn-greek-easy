@@ -266,24 +266,30 @@ class SeedService:
         "e2e_learner@test.com": [
             {
                 "name_en": "My Greek Basics",
+                "name_el": "Τα Ελληνικά μου Βασικά",
                 "name_ru": "Мои основы греческого",
                 "description_en": "My personal collection of basic Greek words",
+                "description_el": "Η προσωπική μου συλλογή βασικών ελληνικών λέξεων",
                 "description_ru": "Моя личная коллекция базовых греческих слов",
                 "level": DeckLevel.A1,
                 "card_count": 5,
             },
             {
                 "name_en": "Travel Phrases",
+                "name_el": "Φράσεις Ταξιδιού",
                 "name_ru": "Фразы для путешествий",
                 "description_en": "Essential phrases for traveling in Greece",
+                "description_el": "Απαραίτητες φράσεις για ταξίδια στην Ελλάδα",
                 "description_ru": "Необходимые фразы для путешествия по Греции",
                 "level": DeckLevel.A2,
                 "card_count": 3,
             },
             {
                 "name_en": "Practice Deck",
+                "name_el": "Τράπουλα Εξάσκησης",
                 "name_ru": "Практическая колода",
                 "description_en": "An empty deck for practice",
+                "description_el": "Μια κενή τράπουλα για εξάσκηση",
                 "description_ru": "Пустая колода для практики",
                 "level": DeckLevel.B1,
                 "card_count": 0,
@@ -292,8 +298,10 @@ class SeedService:
         "e2e_admin@test.com": [
             {
                 "name_en": "Admin's Personal Deck",
+                "name_el": "Προσωπική Τράπουλα Διαχειριστή",
                 "name_ru": "Личная колода администратора",
                 "description_en": "Admin's personal vocabulary collection",
+                "description_el": "Προσωπική συλλογή λεξιλογίου διαχειριστή",
                 "description_ru": "Личная коллекция словарного запаса администратора",
                 "level": DeckLevel.A1,
                 "card_count": 2,
@@ -449,8 +457,10 @@ class SeedService:
     # Deck 1: 10 cards with varying grammar data completeness
     # Deck 2: Empty deck for first card creation test
     ADMIN_CARDS_DECK_NAME_EN = "E2E Vocabulary Cards Test Deck"
+    ADMIN_CARDS_DECK_NAME_EL = "E2E Δοκιμαστική Τράπουλα Καρτών Λεξιλογίου"
     ADMIN_CARDS_DECK_NAME_RU = "E2E Колода тестовых карточек словарного запаса"
     ADMIN_CARDS_EMPTY_DECK_NAME_EN = "E2E Empty Vocabulary Deck"
+    ADMIN_CARDS_EMPTY_DECK_NAME_EL = "E2E Κενή Τράπουλα Λεξιλογίου"
     ADMIN_CARDS_EMPTY_DECK_NAME_RU = "E2E Пустая колода словарного запаса"
     ADMIN_CARDS: list[AdminCardSeedData] = [
         # Card 1: Basic card - just front_text and back_text_en (no grammar)
@@ -611,32 +621,42 @@ class SeedService:
     CULTURE_DECKS = {
         "history": {
             "name_en": "Greek History",
+            "name_el": "Ελληνική Ιστορία",
             "name_ru": "Греческая история",
             "description_en": "Questions about Greek history",
+            "description_el": "Ερωτήσεις για την ελληνική ιστορία",
             "description_ru": "Вопросы об истории Греции",
         },
         "geography": {
             "name_en": "Greek Geography",
+            "name_el": "Ελληνική Γεωγραφία",
             "name_ru": "Греческая география",
             "description_en": "Questions about Greek geography",
+            "description_el": "Ερωτήσεις για την ελληνική γεωγραφία",
             "description_ru": "Вопросы о географии Греции",
         },
         "politics": {
             "name_en": "Political System",
+            "name_el": "Πολιτικό Σύστημα",
             "name_ru": "Политическая система",
             "description_en": "Questions about the political system",
+            "description_el": "Ερωτήσεις για το πολιτικό σύστημα",
             "description_ru": "Вопросы о политической системе",
         },
         "culture": {
             "name_en": "Greek Culture",
+            "name_el": "Ελληνικός Πολιτισμός",
             "name_ru": "Греческая культура",
             "description_en": "Questions about Greek culture",
+            "description_el": "Ερωτήσεις για τον ελληνικό πολιτισμό",
             "description_ru": "Вопросы о греческой культуре",
         },
         "traditions": {
             "name_en": "Traditions and Customs",
+            "name_el": "Παραδόσεις και Έθιμα",
             "name_ru": "Традиции и обычаи",
             "description_en": "Questions about Greek traditions",
+            "description_el": "Ερωτήσεις για τις ελληνικές παραδόσεις",
             "description_ru": "Вопросы о греческих традициях",
         },
     }
@@ -1957,6 +1977,23 @@ class SeedService:
         # Premium levels - C1 and C2 are premium content
         premium_levels = {DeckLevel.C1, DeckLevel.C2}
 
+        # Greek translations for CEFR levels
+        level_translations_el = {
+            DeckLevel.A1: "Ελληνικό Λεξιλόγιο A1",
+            DeckLevel.A2: "Ελληνικό Λεξιλόγιο A2",
+            DeckLevel.B1: "Ελληνικό Λεξιλόγιο B1",
+            DeckLevel.B2: "Ελληνικό Λεξιλόγιο B2",
+            DeckLevel.C1: "Ελληνικό Λεξιλόγιο C1",
+            DeckLevel.C2: "Ελληνικό Λεξιλόγιο C2",
+        }
+        description_translations_el = {
+            DeckLevel.A1: "Βασικό ελληνικό λεξιλόγιο για επίπεδο CEFR A1",
+            DeckLevel.A2: "Βασικό ελληνικό λεξιλόγιο για επίπεδο CEFR A2",
+            DeckLevel.B1: "Βασικό ελληνικό λεξιλόγιο για επίπεδο CEFR B1",
+            DeckLevel.B2: "Βασικό ελληνικό λεξιλόγιο για επίπεδο CEFR B2",
+            DeckLevel.C1: "Βασικό ελληνικό λεξιλόγιο για επίπεδο CEFR C1",
+            DeckLevel.C2: "Βασικό ελληνικό λεξιλόγιο για επίπεδο CEFR C2",
+        }
         # Russian translations for CEFR levels
         level_translations_ru = {
             DeckLevel.A1: "Греческий словарь A1",
@@ -1980,8 +2017,10 @@ class SeedService:
             is_premium = level in premium_levels
             deck = Deck(
                 name_en=f"Greek {level.value} Vocabulary",
+                name_el=level_translations_el[level],
                 name_ru=level_translations_ru[level],
                 description_en=f"Essential Greek vocabulary for CEFR level {level.value}",
+                description_el=description_translations_el[level],
                 description_ru=description_translations_ru[level],
                 level=level,
                 is_active=True,
@@ -2053,8 +2092,10 @@ class SeedService:
                 # Create deck with owner_id set to the user
                 deck = Deck(
                     name_en=deck_config["name_en"],
+                    name_el=deck_config["name_el"],
                     name_ru=deck_config["name_ru"],
                     description_en=deck_config["description_en"],
+                    description_el=deck_config["description_el"],
                     description_ru=deck_config["description_ru"],
                     level=deck_config["level"],
                     is_active=True,
@@ -2489,8 +2530,10 @@ class SeedService:
             is_premium = category in premium_categories
             deck = CultureDeck(
                 name_en=deck_data["name_en"],
+                name_el=deck_data["name_el"],
                 name_ru=deck_data["name_ru"],
                 description_en=deck_data["description_en"],
+                description_el=deck_data["description_el"],
                 description_ru=deck_data["description_ru"],
                 category=category,
                 is_active=True,
@@ -2999,8 +3042,10 @@ class SeedService:
         if not deck:
             deck = CultureDeck(
                 name_en="E2E News Questions",
+                name_el="E2E Ερωτήσεις Ειδήσεων",
                 name_ru="E2E Новостные вопросы",
                 description_en="Deck for E2E testing news-linked questions",
+                description_el="Τράπουλα για δοκιμές E2E ερωτήσεων που σχετίζονται με ειδήσεις",
                 description_ru="Колода для E2E тестирования вопросов, связанных с новостями",
                 category="culture",
                 is_active=True,
@@ -3161,8 +3206,10 @@ class SeedService:
         if not deck:
             deck = CultureDeck(
                 name_en="E2E News Feed Page",
+                name_el="E2E Σελίδα Ροής Ειδήσεων",
                 name_ru="E2E Страница ленты новостей",
                 description_en="Deck for E2E testing news feed page pagination and filtering",
+                description_el="Τράπουλα για δοκιμές E2E σελιδοποίησης και φιλτραρίσματος ροής ειδήσεων",
                 description_ru="Колода для E2E тестирования пагинации и фильтрации страницы ленты новостей",
                 category="culture",
                 is_active=True,
@@ -4356,8 +4403,10 @@ class SeedService:
         # Create main test deck with 10 cards
         main_deck = Deck(
             name_en=self.ADMIN_CARDS_DECK_NAME_EN,
+            name_el=self.ADMIN_CARDS_DECK_NAME_EL,
             name_ru=self.ADMIN_CARDS_DECK_NAME_RU,
             description_en="E2E test deck with vocabulary cards of varying completeness",
+            description_el="E2E δοκιμαστική τράπουλα με κάρτες λεξιλογίου διαφορετικής πληρότητας",
             description_ru="E2E тестовая колода с карточками словарного запаса разной полноты",
             level=DeckLevel.A1,
             is_active=True,
@@ -4423,8 +4472,10 @@ class SeedService:
         # Create empty test deck for first card creation test
         empty_deck = Deck(
             name_en=self.ADMIN_CARDS_EMPTY_DECK_NAME_EN,
+            name_el=self.ADMIN_CARDS_EMPTY_DECK_NAME_EL,
             name_ru=self.ADMIN_CARDS_EMPTY_DECK_NAME_RU,
             description_en="E2E test deck for first card creation testing",
+            description_el="E2E δοκιμαστική τράπουλα για δοκιμή δημιουργίας πρώτης κάρτας",
             description_ru="E2E тестовая колода для тестирования создания первой карточки",
             level=DeckLevel.A1,
             is_active=True,

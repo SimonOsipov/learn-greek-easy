@@ -32,8 +32,12 @@ def valid_multilingual_text():
 def valid_culture_deck_data():
     """Return valid culture deck creation data."""
     return {
-        "name": "Test Deck",
-        "description": "Test description",
+        "name_en": "Test Deck",
+        "name_el": "Test Deck",
+        "name_ru": "Test Deck",
+        "description_en": "Test description",
+        "description_el": "Test description",
+        "description_ru": "Test description",
         "category": "history",
         "order_index": 0,
     }
@@ -58,8 +62,12 @@ async def culture_deck_for_tests(db_session):
     """Create a culture deck for testing question operations."""
     deck = CultureDeck(
         id=uuid4(),
-        name="Test Deck",
-        description="Test description",
+        name_en="Test Deck",
+        name_el="Test Deck",
+        name_ru="Test Deck",
+        description_en="Test description",
+        description_el="Test description",
+        description_ru="Test description",
         category="history",
         is_active=True,
         order_index=0,
@@ -143,7 +151,7 @@ class TestCreateCultureDeck:
     ):
         """Test empty name returns 422."""
         invalid_data = {**valid_culture_deck_data}
-        invalid_data["name"] = ""  # Empty string
+        invalid_data["name_en"] = ""  # Empty string
         response = await client.post(
             "/api/v1/culture/decks",
             json=invalid_data,
@@ -160,7 +168,7 @@ class TestUpdateCultureDeck:
         self, client: AsyncClient, superuser_auth_headers: dict, culture_deck_for_tests
     ):
         """Test superuser can update a culture deck."""
-        update_data = {"category": "geography", "name": "Updated Deck"}
+        update_data = {"category": "geography", "name_en": "Updated Deck"}
 
         response = await client.patch(
             f"/api/v1/culture/decks/{culture_deck_for_tests.id}",
@@ -171,7 +179,7 @@ class TestUpdateCultureDeck:
         assert response.status_code == 200
         data = response.json()
         assert data["category"] == "geography"
-        assert data["name"] == "Updated Deck"
+        assert data["name_en"] == "Updated Deck"
 
     @pytest.mark.asyncio
     async def test_update_deck_not_found_returns_404(
@@ -557,7 +565,13 @@ class TestCultureDeckIsPremiumIntegration:
         self, client: AsyncClient, superuser_auth_headers: dict, valid_culture_deck_data
     ):
         """Test creating a culture deck with is_premium=True."""
-        deck_data = {**valid_culture_deck_data, "name": "Premium Culture", "is_premium": True}
+        deck_data = {
+            **valid_culture_deck_data,
+            "name_en": "Premium Culture",
+            "name_el": "Premium Culture",
+            "name_ru": "Premium Culture",
+            "is_premium": True,
+        }
 
         response = await client.post(
             "/api/v1/culture/decks",
@@ -608,7 +622,13 @@ class TestCultureDeckIsPremiumIntegration:
     ):
         """Test PATCH /culture/decks/{id} can update is_premium to False."""
         # Create a premium deck
-        deck_data = {**valid_culture_deck_data, "name": "Premium to Reset", "is_premium": True}
+        deck_data = {
+            **valid_culture_deck_data,
+            "name_en": "Premium to Reset",
+            "name_el": "Premium to Reset",
+            "name_ru": "Premium to Reset",
+            "is_premium": True,
+        }
         create_response = await client.post(
             "/api/v1/culture/decks",
             json=deck_data,
@@ -650,7 +670,13 @@ class TestCultureDeckIsPremiumIntegration:
     ):
         """Test that updating is_active does not affect is_premium."""
         # Create a premium deck
-        deck_data = {**valid_culture_deck_data, "name": "Active Premium Test", "is_premium": True}
+        deck_data = {
+            **valid_culture_deck_data,
+            "name_en": "Active Premium Test",
+            "name_el": "Active Premium Test",
+            "name_ru": "Active Premium Test",
+            "is_premium": True,
+        }
         create_response = await client.post(
             "/api/v1/culture/decks",
             json=deck_data,
@@ -702,6 +728,9 @@ class TestCultureDeckIsPremiumIntegration:
         assert len(data["decks"]) >= 1
 
         deck = data["decks"][0]
+        # Note: GET /culture/decks returns localized CultureDeckResponse
+        # which has single 'name' and 'description' fields (localized),
+        # not the trilingual name_en/name_el/name_ru fields
         required_fields = [
             "id",
             "name",

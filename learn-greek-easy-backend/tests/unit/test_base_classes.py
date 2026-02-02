@@ -80,7 +80,7 @@ class TestBaseTestCaseDeckCardCreation(BaseTestCase):
 
         assert deck is not None
         assert deck.id is not None
-        assert deck.name == "Test Deck"
+        assert deck.name_en == "Test Deck"
         assert deck.level == DeckLevel.A1
         assert deck.is_active is True
 
@@ -92,7 +92,7 @@ class TestBaseTestCaseDeckCardCreation(BaseTestCase):
             level=DeckLevel.B2,
         )
 
-        assert deck.name == "Greek B2 Vocabulary"
+        assert deck.name_en == "Greek B2 Vocabulary"
         assert deck.level == DeckLevel.B2
 
     async def test_create_test_card(self, db_session: AsyncSession):

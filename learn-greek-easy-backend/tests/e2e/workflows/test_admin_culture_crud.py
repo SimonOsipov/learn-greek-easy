@@ -30,8 +30,12 @@ from tests.factories.culture import CultureDeckFactory, CultureQuestionFactory
 def get_valid_deck_data() -> dict:
     """Get valid deck creation data."""
     return {
-        "name": "Greek History Test",
-        "description": "Test description for E2E",
+        "name_el": "Ελληνική Ιστορία Τεστ",
+        "name_en": "Greek History Test",
+        "name_ru": "Тест греческой истории",
+        "description_el": "Δοκιμαστική περιγραφή για E2E",
+        "description_en": "Test description for E2E",
+        "description_ru": "Тестовое описание для E2E",
         "category": "history",
     }
 
@@ -81,7 +85,7 @@ class TestAdminDeckCreate(E2ETestCase):
         assert response.status_code == 201
         data = response.json()
 
-        assert data["name"] == "Greek History Test"
+        assert data["name_en"] == "Greek History Test"
         assert data["category"] == "history"
         assert data["is_active"] is True
 
@@ -106,8 +110,12 @@ class TestAdminDeckCreate(E2ETestCase):
         # Required fields
         required_fields = [
             "id",
-            "name",
-            "description",
+            "name_el",
+            "name_en",
+            "name_ru",
+            "description_el",
+            "description_en",
+            "description_ru",
             "category",
             "question_count",
             "is_active",
@@ -117,9 +125,9 @@ class TestAdminDeckCreate(E2ETestCase):
         for field in required_fields:
             assert field in data, f"Missing field: {field}"
 
-        # Name and description are now simple strings
-        assert isinstance(data["name"], str)
-        assert isinstance(data["description"], str)
+        # Name and description are now trilingual strings
+        assert isinstance(data["name_en"], str)
+        assert isinstance(data["description_en"], str)
 
     @pytest.mark.asyncio
     async def test_create_deck_forbidden_for_regular_user(
@@ -166,7 +174,9 @@ class TestAdminDeckCreate(E2ETestCase):
             deck_data = get_valid_deck_data()
             deck_data["category"] = category
             # Make name unique per category
-            deck_data["name"] = f"Test {category} deck"
+            deck_data["name_el"] = f"Δοκιμή {category} τράπουλα"
+            deck_data["name_en"] = f"Test {category} deck"
+            deck_data["name_ru"] = f"Тест {category} колода"
 
             response = await client.post(
                 "/api/v1/culture/decks",
@@ -216,7 +226,7 @@ class TestAdminDeckUpdate(E2ETestCase):
         deck = await CultureDeckFactory.create(session=db_session)
         await db_session.commit()
 
-        original_name = deck.name
+        original_name_en = deck.name_en
 
         # Update only category
         response = await client.patch(
@@ -229,7 +239,7 @@ class TestAdminDeckUpdate(E2ETestCase):
         data = response.json()
         assert data["category"] == "geography"
         # Name should remain unchanged
-        assert data["name"] == original_name
+        assert data["name_en"] == original_name_en
 
     @pytest.mark.asyncio
     async def test_update_deck_not_found(

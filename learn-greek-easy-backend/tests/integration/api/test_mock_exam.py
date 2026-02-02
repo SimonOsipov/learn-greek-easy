@@ -30,8 +30,12 @@ async def culture_deck_with_questions(
 ) -> tuple[CultureDeck, list[CultureQuestion]]:
     """Create a culture deck with 30 questions for mock exam testing."""
     deck = CultureDeck(
-        name="Greek History",
-        description="Learn about Greek history",
+        name_en="Greek History",
+        name_el="Greek History",
+        name_ru="Greek History",
+        description_en="Learn about Greek history",
+        description_el="Learn about Greek history",
+        description_ru="Learn about Greek history",
         category="history",
         is_active=True,
     )
@@ -69,8 +73,12 @@ async def culture_deck_with_questions(
 async def few_questions_deck(db_session: AsyncSession) -> tuple[CultureDeck, list[CultureQuestion]]:
     """Create a culture deck with only 10 questions (not enough for mock exam)."""
     deck = CultureDeck(
-        name="Small Deck",
-        description="Small deck for testing",
+        name_en="Small Deck",
+        name_el="Small Deck",
+        name_ru="Small Deck",
+        description_en="Small deck for testing",
+        description_el="Small deck for testing",
+        description_ru="Small deck for testing",
         category="culture",
         is_active=True,
     )

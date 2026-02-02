@@ -377,8 +377,8 @@ class TestDeckProgressListEndpoint:
     ):
         """User with deck progress should see their decks."""
         # Create decks with progress
-        deck1 = await DeckFactory.create(session=db_session, name="Deck 1")
-        deck2 = await DeckFactory.create(session=db_session, name="Deck 2")
+        deck1 = await DeckFactory.create(session=db_session, name_en="Deck 1")
+        deck2 = await DeckFactory.create(session=db_session, name_en="Deck 2")
 
         await UserDeckProgressFactory.create(
             session=db_session,
@@ -465,7 +465,7 @@ class TestDeckProgressListEndpoint:
         """First page should work correctly."""
         # Create 5 decks with progress
         for i in range(5):
-            deck = await DeckFactory.create(session=db_session, name=f"Deck {i}")
+            deck = await DeckFactory.create(session=db_session, name_en=f"Deck {i}")
             await UserDeckProgressFactory.create(
                 session=db_session,
                 user_id=test_user.id,
@@ -497,7 +497,7 @@ class TestDeckProgressListEndpoint:
         """Second page should return correct items."""
         # Create 5 decks with progress
         for i in range(5):
-            deck = await DeckFactory.create(session=db_session, name=f"Deck {i}")
+            deck = await DeckFactory.create(session=db_session, name_en=f"Deck {i}")
             await UserDeckProgressFactory.create(
                 session=db_session,
                 user_id=test_user.id,
@@ -552,7 +552,7 @@ class TestDeckProgressDetailEndpoint:
     ):
         """Should return detailed progress for a deck."""
         # Create deck with cards and progress
-        deck = await DeckFactory.create(session=db_session, name="Test Deck")
+        deck = await DeckFactory.create(session=db_session, name_en="Test Deck")
         cards = await CardFactory.create_batch(
             session=db_session,
             size=5,
