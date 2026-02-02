@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config import settings
 from src.core.dependencies import get_current_superuser, get_current_user
-from src.core.exceptions import CardNotFoundException, DeckNotFoundException
+from src.core.exceptions import CardNotFoundException, DeckNotFoundException, ForbiddenException
 from src.db.dependencies import get_db
 from src.db.models import User
 from src.repositories.card import CardRepository
@@ -126,7 +126,7 @@ async def list_cards(
     response_model=CardResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Create a new card",
-    description="Create a new card in a deck. Requires superuser privileges.",
+    description="Create a new card in a deck. Requires deck ownership or superuser privileges.",
     responses={
         201: {
             "description": "Card created successfully",
@@ -146,7 +146,7 @@ async def list_cards(
             },
         },
         401: {"description": "Not authenticated"},
-        403: {"description": "Not authorized (requires superuser)"},
+        403: {"description": "Not authorized to create cards in this deck"},
         404: {"description": "Deck not found"},
         422: {"description": "Validation error"},
     },
@@ -155,32 +155,36 @@ async def create_card(
     card_data: CardCreate,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_superuser),
+    current_user: User = Depends(get_current_user),
 ) -> CardResponse:
     """Create a new card.
 
-    Requires superuser privileges.
+    Requires deck ownership or superuser privileges.
 
     Args:
         card_data: Card creation data
         background_tasks: FastAPI BackgroundTasks for scheduling async operations
         db: Database session (injected)
-        current_user: Authenticated superuser (injected)
+        current_user: Authenticated user (injected)
 
     Returns:
         CardResponse: The created card
 
     Raises:
         401: If not authenticated
-        403: If authenticated but not superuser
+        403: If not authorized to create cards in this deck
         404: If deck doesn't exist
         422: If validation fails
     """
-    # Validate deck exists (allow inactive decks - admin privilege)
+    # Validate deck exists
     deck_repo = DeckRepository(db)
     deck = await deck_repo.get(card_data.deck_id)
     if deck is None:
         raise DeckNotFoundException(deck_id=str(card_data.deck_id))
+
+    # Authorization: user must own the deck OR be superuser
+    if deck.owner_id != current_user.id and not current_user.is_superuser:
+        raise ForbiddenException(detail="Not authorized to create cards in this deck")
 
     # Create the card using BaseRepository.create() pattern
     card_repo = CardRepository(db)

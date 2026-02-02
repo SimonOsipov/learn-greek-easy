@@ -684,6 +684,22 @@ class TestCreateCardEndpoint:
         await db_session.refresh(deck)
         return deck
 
+    @pytest.fixture
+    async def user_owned_deck_for_create(self, db_session, test_user):
+        """Create a deck owned by test_user for card creation tests."""
+        deck = Deck(
+            id=uuid4(),
+            name="User Owned Deck",
+            description="Test deck owned by regular user",
+            level=DeckLevel.A1,
+            is_active=True,
+            owner_id=test_user.id,
+        )
+        db_session.add(deck)
+        await db_session.commit()
+        await db_session.refresh(deck)
+        return deck
+
     @pytest.mark.asyncio
     async def test_create_card_success(
         self, client: AsyncClient, superuser_auth_headers: dict, active_deck_for_create
@@ -756,10 +772,10 @@ class TestCreateCardEndpoint:
         assert data["success"] is False
 
     @pytest.mark.asyncio
-    async def test_create_card_non_superuser_returns_403(
+    async def test_create_card_non_owner_system_deck_returns_403(
         self, client: AsyncClient, auth_headers: dict, active_deck_for_create
     ):
-        """Test regular user (non-superuser) returns 403."""
+        """Test regular user cannot create card in system deck (owner_id=None)."""
         card_data = {
             "deck_id": str(active_deck_for_create.id),
             "front_text": "test",
@@ -775,6 +791,37 @@ class TestCreateCardEndpoint:
         assert response.status_code == 403
         data = response.json()
         assert data["success"] is False
+        assert "Not authorized to create cards in this deck" in data["error"]["message"]
+
+    @pytest.mark.asyncio
+    async def test_create_card_owner_success(
+        self, client: AsyncClient, auth_headers: dict, user_owned_deck_for_create
+    ):
+        """Test deck owner can create card in their own deck."""
+        card_data = {
+            "deck_id": str(user_owned_deck_for_create.id),
+            "front_text": "mera",
+            "back_text_en": "day",
+            "example_sentence": "Kali mera!",
+            "pronunciation": "MEH-rah",
+        }
+
+        response = await client.post(
+            "/api/v1/cards",
+            json=card_data,
+            headers=auth_headers,
+        )
+
+        assert response.status_code == 201
+        data = response.json()
+        assert data["front_text"] == card_data["front_text"]
+        assert data["back_text_en"] == card_data["back_text_en"]
+        assert data["example_sentence"] == card_data["example_sentence"]
+        assert data["pronunciation"] == card_data["pronunciation"]
+        assert str(data["deck_id"]) == card_data["deck_id"]
+        assert "id" in data
+        assert "created_at" in data
+        assert "updated_at" in data
 
     @pytest.mark.asyncio
     async def test_create_card_deck_not_found_returns_404(
