@@ -3,8 +3,7 @@
  *
  * Tests for admin bulk upload functionality including:
  * - Navigate to Bulk Uploads tab
- * - Select vocabulary deck from dropdown
- * - Validate valid JSON successfully
+ * - Validate valid JSON with deck_id successfully
  * - Preview shows correct summary counts
  * - Upload cards and show success toast
  * - Invalid JSON shows parsing error
@@ -12,6 +11,9 @@
  * - Validation errors show card index and field
  * - Form content preserved after validation error
  * - Maximum 100 cards validation
+ * - Array format shows migration error
+ * - Missing deck_id shows error
+ * - Invalid deck_id format shows error
  *
  * Test User:
  * - e2e_admin: Admin user with superuser access
@@ -50,82 +52,101 @@ async function navigateToBulkUploads(page: import('@playwright/test').Page): Pro
 }
 
 /**
- * Helper to select a vocabulary deck from the dropdown
+ * Helper to get a valid vocabulary deck ID for tests
  */
-async function selectVocabularyDeck(page: import('@playwright/test').Page): Promise<void> {
-  const deckSelect = page.getByTestId('bulk-uploads-deck-select');
-  await expect(deckSelect).toBeVisible();
-
-  // Open dropdown
-  await deckSelect.click();
-
-  // Wait for options to load and select the first one
-  const deckOptions = page.locator('[role="option"]');
-  await expect(deckOptions.first()).toBeVisible({ timeout: 5000 });
-  await deckOptions.first().click();
-
-  // Verify selection is shown (dropdown closes and has value)
-  await expect(deckSelect).not.toHaveText('Select a vocabulary deck');
+async function getVocabularyDeckId(page: import('@playwright/test').Page): Promise<string> {
+  const apiBaseUrl = process.env.E2E_API_URL || process.env.VITE_API_URL || 'http://localhost:8000';
+  const response = await page.request.get(`${apiBaseUrl}/api/v1/admin/decks?type=vocabulary&page_size=1`);
+  const data = await response.json();
+  if (!data.decks?.[0]?.id) {
+    throw new Error('No vocabulary deck found for E2E tests');
+  }
+  return data.decks[0].id;
 }
 
-// Sample JSON data for tests
-const VALID_MINIMAL_JSON = JSON.stringify([
-  { front_text: 'γεια', back_text_en: 'hello' },
-]);
+// Sample JSON data makers for tests (now take deckId as parameter)
+const makeValidMinimalJson = (deckId: string) => JSON.stringify({
+  deck_id: deckId,
+  cards: [{ front_text: 'γεια', back_text_en: 'hello' }],
+});
 
-const VALID_JSON_WITH_GRAMMAR = JSON.stringify([
-  {
-    front_text: 'σπίτι',
-    back_text_en: 'house',
-    part_of_speech: 'noun',
-    noun_data: { gender: 'neuter' },
-  },
-  {
-    front_text: 'τρώω',
-    back_text_en: 'I eat',
-    part_of_speech: 'verb',
-    verb_data: { voice: 'active' },
-  },
-]);
+const makeValidJsonWithGrammar = (deckId: string) => JSON.stringify({
+  deck_id: deckId,
+  cards: [
+    {
+      front_text: 'σπίτι',
+      back_text_en: 'house',
+      part_of_speech: 'noun',
+      noun_data: { gender: 'neuter' },
+    },
+    {
+      front_text: 'τρώω',
+      back_text_en: 'I eat',
+      part_of_speech: 'verb',
+      verb_data: { voice: 'active' },
+    },
+  ],
+});
 
-const VALID_JSON_WITH_EXAMPLES = JSON.stringify([
-  {
-    front_text: 'test',
-    back_text_en: 'test',
-    examples: [{ greek: 'example', english: 'translation' }],
-  },
-]);
+const makeValidJsonWithExamples = (deckId: string) => JSON.stringify({
+  deck_id: deckId,
+  cards: [
+    {
+      front_text: 'test',
+      back_text_en: 'test',
+      examples: [{ greek: 'example', english: 'translation' }],
+    },
+  ],
+});
 
-const VALID_JSON_THREE_CARDS = JSON.stringify([
-  {
-    front_text: 'σπίτι',
-    back_text_en: 'house',
-    part_of_speech: 'noun',
-    noun_data: { gender: 'neuter' },
-  },
-  {
-    front_text: 'τρώω',
-    back_text_en: 'I eat',
-    part_of_speech: 'verb',
-    verb_data: { voice: 'active' },
-  },
-  {
-    front_text: 'γρήγορα',
-    back_text_en: 'quickly',
-    examples: [{ greek: 'Τρέχει γρήγορα', english: 'He runs quickly' }],
-  },
-]);
+const makeValidJsonThreeCards = (deckId: string) => JSON.stringify({
+  deck_id: deckId,
+  cards: [
+    {
+      front_text: 'σπίτι',
+      back_text_en: 'house',
+      part_of_speech: 'noun',
+      noun_data: { gender: 'neuter' },
+    },
+    {
+      front_text: 'τρώω',
+      back_text_en: 'I eat',
+      part_of_speech: 'verb',
+      verb_data: { voice: 'active' },
+    },
+    {
+      front_text: 'γρήγορα',
+      back_text_en: 'quickly',
+      examples: [{ greek: 'Τρέχει γρήγορα', english: 'He runs quickly' }],
+    },
+  ],
+});
+
+const makeInvalidJsonMissingFrontText = (deckId: string) => JSON.stringify({
+  deck_id: deckId,
+  cards: [{ back_text_en: 'test' }],
+});
+
+const makeInvalidJsonSecondCardError = (deckId: string) => JSON.stringify({
+  deck_id: deckId,
+  cards: [
+    { front_text: 'valid', back_text_en: 'valid' },
+    { back_text_en: 'missing front_text' },
+  ],
+});
+
+const makeTooManyCardsJson = (deckId: string) => {
+  const cards = [];
+  for (let i = 0; i < 101; i++) {
+    cards.push({
+      front_text: `word${i}`,
+      back_text_en: `translation${i}`,
+    });
+  }
+  return JSON.stringify({ deck_id: deckId, cards });
+};
 
 const INVALID_JSON_NOT_PARSEABLE = 'not json';
-
-const INVALID_JSON_MISSING_FRONT_TEXT = JSON.stringify([
-  { back_text_en: 'test' },
-]);
-
-const INVALID_JSON_SECOND_CARD_ERROR = JSON.stringify([
-  { front_text: 'valid', back_text_en: 'valid' },
-  { back_text_en: 'missing front_text' },
-]);
 
 // ============================================================================
 // NAVIGATION TESTS
@@ -149,42 +170,10 @@ test.describe('Admin Bulk Upload - Navigation', () => {
     // Verify the tab content loads
     await expect(page.getByTestId('bulk-uploads-tab')).toBeVisible({ timeout: 5000 });
 
-    // Verify key elements are present
-    await expect(page.getByTestId('bulk-uploads-deck-select')).toBeVisible();
+    // Verify key elements are present (no deck select anymore)
     await expect(page.getByTestId('bulk-uploads-json-textarea')).toBeVisible();
     await expect(page.getByTestId('bulk-uploads-validate-button')).toBeVisible();
     await expect(page.getByTestId('bulk-uploads-upload-button')).toBeVisible();
-  });
-});
-
-// ============================================================================
-// DECK SELECTION TESTS
-// ============================================================================
-
-test.describe('Admin Bulk Upload - Deck Selection', () => {
-  test.use({ storageState: ADMIN_AUTH });
-
-  test.beforeEach(async ({ page }) => {
-    await seedAdminCards(page);
-    await navigateToBulkUploads(page);
-  });
-
-  test('selects vocabulary deck from dropdown', async ({ page }) => {
-    const deckSelect = page.getByTestId('bulk-uploads-deck-select');
-    await expect(deckSelect).toBeVisible();
-
-    // Open deck selector
-    await deckSelect.click();
-
-    // Wait for options to load
-    const deckOptions = page.locator('[role="option"]');
-    await expect(deckOptions.first()).toBeVisible({ timeout: 5000 });
-
-    // Select a vocabulary deck
-    await deckOptions.first().click();
-
-    // Verify selection is shown (the select should no longer show placeholder)
-    await expect(deckSelect).not.toHaveText('Select a vocabulary deck');
   });
 });
 
@@ -201,11 +190,10 @@ test.describe('Admin Bulk Upload - Validation Success', () => {
   });
 
   test('validates valid JSON successfully', async ({ page }) => {
-    // Select deck
-    await selectVocabularyDeck(page);
+    const deckId = await getVocabularyDeckId(page);
 
-    // Paste valid JSON
-    await page.getByTestId('bulk-uploads-json-textarea').fill(VALID_MINIMAL_JSON);
+    // Paste valid JSON with deck_id
+    await page.getByTestId('bulk-uploads-json-textarea').fill(makeValidMinimalJson(deckId));
 
     // Click Validate & Preview
     await page.getByTestId('bulk-uploads-validate-button').click();
@@ -218,11 +206,10 @@ test.describe('Admin Bulk Upload - Validation Success', () => {
   });
 
   test('preview shows correct summary counts', async ({ page }) => {
-    // Select deck
-    await selectVocabularyDeck(page);
+    const deckId = await getVocabularyDeckId(page);
 
     // Paste JSON with 3 cards: 1 noun, 1 verb, 1 with examples
-    await page.getByTestId('bulk-uploads-json-textarea').fill(VALID_JSON_THREE_CARDS);
+    await page.getByTestId('bulk-uploads-json-textarea').fill(makeValidJsonThreeCards(deckId));
 
     // Click Validate & Preview
     await page.getByTestId('bulk-uploads-validate-button').click();
@@ -257,13 +244,12 @@ test.describe('Admin Bulk Upload - Upload Success', () => {
   });
 
   test('uploads cards and shows success toast', async ({ page }) => {
+    const deckId = await getVocabularyDeckId(page);
     const uniqueId = `E2E_BULK_${Date.now()}`;
-    const uniqueJson = JSON.stringify([
-      { front_text: `γεια_${uniqueId}`, back_text_en: `hello_${uniqueId}` },
-    ]);
-
-    // Select deck
-    await selectVocabularyDeck(page);
+    const uniqueJson = JSON.stringify({
+      deck_id: deckId,
+      cards: [{ front_text: `γεια_${uniqueId}`, back_text_en: `hello_${uniqueId}` }],
+    });
 
     // Paste valid JSON
     await page.getByTestId('bulk-uploads-json-textarea').fill(uniqueJson);
@@ -281,9 +267,6 @@ test.describe('Admin Bulk Upload - Upload Success', () => {
 
     // Verify form is cleared (textarea should be empty)
     await expect(page.getByTestId('bulk-uploads-json-textarea')).toHaveValue('');
-
-    // Deck select should also be cleared (shows placeholder again)
-    await expect(page.getByTestId('bulk-uploads-deck-select')).toContainText('Select a vocabulary deck');
   });
 });
 
@@ -300,9 +283,6 @@ test.describe('Admin Bulk Upload - Validation Errors', () => {
   });
 
   test('invalid JSON shows parsing error', async ({ page }) => {
-    // Select deck
-    await selectVocabularyDeck(page);
-
     // Paste invalid JSON (not parseable)
     await page.getByTestId('bulk-uploads-json-textarea').fill(INVALID_JSON_NOT_PARSEABLE);
 
@@ -316,11 +296,10 @@ test.describe('Admin Bulk Upload - Validation Errors', () => {
   });
 
   test('missing required fields shows validation errors', async ({ page }) => {
-    // Select deck
-    await selectVocabularyDeck(page);
+    const deckId = await getVocabularyDeckId(page);
 
-    // Paste JSON with missing front_text: [{"back_text_en": "test"}]
-    await page.getByTestId('bulk-uploads-json-textarea').fill(INVALID_JSON_MISSING_FRONT_TEXT);
+    // Paste JSON with missing front_text
+    await page.getByTestId('bulk-uploads-json-textarea').fill(makeInvalidJsonMissingFrontText(deckId));
 
     // Click Validate
     await page.getByTestId('bulk-uploads-validate-button').click();
@@ -333,11 +312,10 @@ test.describe('Admin Bulk Upload - Validation Errors', () => {
   });
 
   test('validation errors show card index and field', async ({ page }) => {
-    // Select deck
-    await selectVocabularyDeck(page);
+    const deckId = await getVocabularyDeckId(page);
 
-    // Paste JSON with error on card 2: [{valid}, {invalid}]
-    await page.getByTestId('bulk-uploads-json-textarea').fill(INVALID_JSON_SECOND_CARD_ERROR);
+    // Paste JSON with error on card 2
+    await page.getByTestId('bulk-uploads-json-textarea').fill(makeInvalidJsonSecondCardError(deckId));
 
     // Click Validate
     await page.getByTestId('bulk-uploads-validate-button').click();
@@ -350,9 +328,6 @@ test.describe('Admin Bulk Upload - Validation Errors', () => {
   });
 
   test('form content preserved after validation error', async ({ page }) => {
-    // Select deck
-    await selectVocabularyDeck(page);
-
     const invalidJson = INVALID_JSON_NOT_PARSEABLE;
 
     // Paste invalid JSON
@@ -369,18 +344,10 @@ test.describe('Admin Bulk Upload - Validation Errors', () => {
   });
 
   test('maximum 100 cards validation', async ({ page }) => {
-    // Select deck
-    await selectVocabularyDeck(page);
+    const deckId = await getVocabularyDeckId(page);
 
     // Generate JSON with 101 cards
-    const tooManyCards = [];
-    for (let i = 0; i < 101; i++) {
-      tooManyCards.push({
-        front_text: `word${i}`,
-        back_text_en: `translation${i}`,
-      });
-    }
-    const tooManyCardsJson = JSON.stringify(tooManyCards);
+    const tooManyCardsJson = makeTooManyCardsJson(deckId);
 
     // Paste JSON
     await page.getByTestId('bulk-uploads-json-textarea').fill(tooManyCardsJson);
@@ -393,5 +360,46 @@ test.describe('Admin Bulk Upload - Validation Errors', () => {
     await expect(errors).toBeVisible({ timeout: 5000 });
     await expect(errors.getByText(/Too many cards/i)).toBeVisible();
     await expect(errors.getByText(/Maximum is 100/i)).toBeVisible();
+  });
+
+  test('array format shows migration error', async ({ page }) => {
+    // Old format - should show clear migration message
+    const oldFormatJson = JSON.stringify([
+      { front_text: 'test', back_text_en: 'test' },
+    ]);
+
+    await page.getByTestId('bulk-uploads-json-textarea').fill(oldFormatJson);
+    await page.getByTestId('bulk-uploads-validate-button').click();
+
+    const errors = page.getByTestId('bulk-uploads-errors');
+    await expect(errors).toBeVisible({ timeout: 5000 });
+    await expect(errors).toContainText(/format has changed/i);
+  });
+
+  test('missing deck_id shows error', async ({ page }) => {
+    const jsonWithoutDeckId = JSON.stringify({
+      cards: [{ front_text: 'test', back_text_en: 'test' }],
+    });
+
+    await page.getByTestId('bulk-uploads-json-textarea').fill(jsonWithoutDeckId);
+    await page.getByTestId('bulk-uploads-validate-button').click();
+
+    const errors = page.getByTestId('bulk-uploads-errors');
+    await expect(errors).toBeVisible({ timeout: 5000 });
+    await expect(errors).toContainText(/deck_id.*required/i);
+  });
+
+  test('invalid deck_id format shows error', async ({ page }) => {
+    const jsonWithBadDeckId = JSON.stringify({
+      deck_id: 'not-a-uuid',
+      cards: [{ front_text: 'test', back_text_en: 'test' }],
+    });
+
+    await page.getByTestId('bulk-uploads-json-textarea').fill(jsonWithBadDeckId);
+    await page.getByTestId('bulk-uploads-validate-button').click();
+
+    const errors = page.getByTestId('bulk-uploads-errors');
+    await expect(errors).toBeVisible({ timeout: 5000 });
+    await expect(errors).toContainText(/UUID/i);
   });
 });
