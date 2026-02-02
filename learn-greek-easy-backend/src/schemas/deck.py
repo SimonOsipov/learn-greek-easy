@@ -54,12 +54,23 @@ class DeckUpdate(BaseModel):
     is_premium: Optional[bool] = None
 
 
-class DeckResponse(DeckBase):
-    """Schema for deck response."""
+class DeckResponse(BaseModel):
+    """Schema for deck response (localized based on user preference).
+
+    Returns single name/description in the user's preferred language.
+    Language selection happens in the service layer.
+    """
 
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
+
+    # Single localized fields (populated by service based on user language)
+    name: str
+    description: str | None = None
+
+    # Common fields
+    level: DeckLevel
     is_active: bool
     is_premium: bool
     card_count: int = Field(0, ge=0, description="Number of cards in the deck")
@@ -96,6 +107,90 @@ class DeckSearchResponse(BaseModel):
     page_size: int
     query: str = Field(..., description="The search query that was used")
     decks: list[DeckResponse]
+
+
+# ============================================================================
+# Admin Schemas (All languages)
+# ============================================================================
+
+
+class DeckAdminCreate(BaseModel):
+    """Schema for creating a localized deck (admin only).
+
+    Admin creates system decks with trilingual name/description.
+    All language fields are required for system decks.
+    """
+
+    # Trilingual name fields (all required for system decks)
+    name_el: str = Field(..., min_length=1, max_length=255, description="Greek name")
+    name_en: str = Field(..., min_length=1, max_length=255, description="English name")
+    name_ru: str = Field(..., min_length=1, max_length=255, description="Russian name")
+
+    # Trilingual description fields (optional)
+    description_el: str | None = Field(None, max_length=2000, description="Greek description")
+    description_en: str | None = Field(None, max_length=2000, description="English description")
+    description_ru: str | None = Field(None, max_length=2000, description="Russian description")
+
+    # Common fields
+    level: DeckLevel
+    is_active: bool = True
+    is_premium: bool = False
+
+
+class DeckAdminUpdate(BaseModel):
+    """Schema for updating a localized deck (admin only).
+
+    All fields optional for partial updates.
+    """
+
+    # Trilingual name fields (optional for partial update)
+    name_el: str | None = Field(None, min_length=1, max_length=255)
+    name_en: str | None = Field(None, min_length=1, max_length=255)
+    name_ru: str | None = Field(None, min_length=1, max_length=255)
+
+    # Trilingual description fields
+    description_el: str | None = Field(None, max_length=2000)
+    description_en: str | None = Field(None, max_length=2000)
+    description_ru: str | None = Field(None, max_length=2000)
+
+    # Common fields
+    level: DeckLevel | None = None
+    is_active: bool | None = None
+    is_premium: bool | None = None
+
+
+class DeckAdminResponse(BaseModel):
+    """Schema for deck response in admin API (all languages)."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+
+    # All language fields visible to admin
+    name_el: str
+    name_en: str
+    name_ru: str
+    description_el: str | None
+    description_en: str | None
+    description_ru: str | None
+
+    # Common fields
+    level: DeckLevel
+    is_active: bool
+    is_premium: bool
+    card_count: int = Field(0, ge=0, description="Number of cards in the deck")
+    owner_id: UUID | None = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class DeckAdminListResponse(BaseModel):
+    """Paginated list of decks for admin API."""
+
+    total: int
+    page: int
+    page_size: int
+    decks: list[DeckAdminResponse]
 
 
 # Import at the end to avoid circular dependencies
