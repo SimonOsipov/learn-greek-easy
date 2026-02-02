@@ -157,6 +157,17 @@
     },
     "error": {
       "loading": "Failed to load your decks"
+    },
+    "cards": {
+      "editCard": "Edit card",
+      "deleteCard": "Delete card",
+      "empty": "No cards in this deck yet",
+      "deleteTitle": "Delete Card?",
+      "deleteMessage": "Are you sure you want to delete \"{{cardName}}\"? This action cannot be undone.",
+      "deleteConfirm": "Delete",
+      "deleteCancel": "Cancel",
+      "deleteSuccess": "Card deleted successfully",
+      "deleteError": "Failed to delete card"
     }
   },
   "form": {
