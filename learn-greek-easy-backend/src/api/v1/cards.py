@@ -441,7 +441,7 @@ async def get_card(
     "/{card_id}",
     response_model=CardResponse,
     summary="Update a card",
-    description="Update an existing card. Requires superuser privileges.",
+    description="Update an existing card. Requires deck ownership or superuser privileges.",
     responses={
         200: {
             "description": "Card updated successfully",
@@ -461,7 +461,7 @@ async def get_card(
             },
         },
         401: {"description": "Not authenticated"},
-        403: {"description": "Not authorized (requires superuser)"},
+        403: {"description": "Not authorized to edit this card"},
         404: {"description": "Card not found"},
         422: {"description": "Validation error"},
     },
@@ -471,11 +471,11 @@ async def update_card(
     card_data: CardUpdate,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_superuser),
+    current_user: User = Depends(get_current_user),
 ) -> CardResponse:
     """Update an existing card.
 
-    Requires superuser privileges.
+    Requires deck ownership or superuser privileges.
     Only provided fields will be updated (partial update).
     Note: deck_id cannot be changed.
 
@@ -484,14 +484,14 @@ async def update_card(
         card_data: Fields to update (all optional)
         background_tasks: FastAPI BackgroundTasks for scheduling async operations
         db: Database session (injected)
-        current_user: Authenticated superuser (injected)
+        current_user: Authenticated user (injected)
 
     Returns:
         CardResponse: The updated card
 
     Raises:
         401: If not authenticated
-        403: If authenticated but not superuser
+        403: If not authorized to edit this card
         404: If card doesn't exist
         422: If validation fails
     """
@@ -501,6 +501,12 @@ async def update_card(
     card = await repo.get(card_id)
     if card is None:
         raise CardNotFoundException(card_id=str(card_id))
+
+    # Authorization: user must own the deck OR be superuser
+    deck_repo = DeckRepository(db)
+    deck = await deck_repo.get(card.deck_id)
+    if deck is None or (deck.owner_id != current_user.id and not current_user.is_superuser):
+        raise ForbiddenException(detail="Not authorized to edit this card")
 
     # Update card
     updated_card = await repo.update(card, card_data)
