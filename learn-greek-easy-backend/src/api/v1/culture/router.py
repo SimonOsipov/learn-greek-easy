@@ -30,13 +30,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.v1.culture.mock_exam import router as mock_exam_router
 from src.config import settings
-from src.core.dependencies import get_current_superuser, get_current_user
+from src.core.dependencies import get_current_superuser, get_current_user, get_locale_from_header
 from src.core.exceptions import ValidationException
 from src.db.dependencies import get_db
 from src.db.models import User
 from src.schemas.culture import (
     CultureAnswerRequest,
     CultureAnswerResponseFast,
+    CultureDeckAdminResponse,
     CultureDeckCreate,
     CultureDeckDetailResponse,
     CultureDeckListResponse,
@@ -120,10 +121,12 @@ async def list_culture_decks(
     ),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    locale: str = Depends(get_locale_from_header),
 ) -> CultureDeckListResponse:
     """List all active culture decks with pagination and optional filtering.
 
     Requires authentication. Returns personalized progress for each deck.
+    Content is localized based on Accept-Language header.
 
     Args:
         page: Page number starting from 1
@@ -131,6 +134,7 @@ async def list_culture_decks(
         category: Optional category filter
         db: Database session (injected)
         current_user: Authenticated user (injected)
+        locale: Language code from Accept-Language header (injected)
 
     Returns:
         CultureDeckListResponse with total count and paginated deck list
@@ -146,6 +150,7 @@ async def list_culture_decks(
         page_size=page_size,
         category=category,
         user_id=user_id,
+        locale=locale,
     )
 
 
@@ -218,18 +223,21 @@ async def get_culture_deck(
     deck_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    locale: str = Depends(get_locale_from_header),
 ) -> CultureDeckDetailResponse:
     """Get a specific culture deck by ID with question count.
 
     Requires authentication. Inactive decks return 404.
+    Content is localized based on Accept-Language header.
 
     Args:
         deck_id: UUID of the deck to retrieve
         db: Database session (injected)
         current_user: Authenticated user (injected)
+        locale: Language code from Accept-Language header (injected)
 
     Returns:
-        CultureDeckDetailResponse with deck details
+        CultureDeckDetailResponse with localized deck details
 
     Raises:
         CultureDeckNotFoundException: If deck doesn't exist or is inactive
@@ -243,6 +251,7 @@ async def get_culture_deck(
     return await service.get_deck(
         deck_id=deck_id,
         user_id=user_id,
+        locale=locale,
     )
 
 
@@ -262,7 +271,13 @@ async def get_culture_deck(
             "description": "List of available categories",
             "content": {
                 "application/json": {
-                    "example": ["culture", "geography", "history", "politics", "traditions"]
+                    "example": [
+                        "culture",
+                        "geography",
+                        "history",
+                        "politics",
+                        "traditions",
+                    ]
                 }
             },
         },
@@ -328,7 +343,11 @@ async def get_categories(
                         "questions": [
                             {
                                 "id": "...",
-                                "question_text": {"el": "...", "en": "...", "ru": "..."},
+                                "question_text": {
+                                    "el": "...",
+                                    "en": "...",
+                                    "ru": "...",
+                                },
                                 "options": [{"el": "...", "en": "...", "ru": "..."}],
                                 "image_url": "https://...",
                                 "order_index": 1,
@@ -557,8 +576,14 @@ async def submit_answer(
                             "total_practice_sessions": 25,
                         },
                         "by_category": {
-                            "history": {"questions_total": 50, "questions_mastered": 15},
-                            "geography": {"questions_total": 40, "questions_mastered": 10},
+                            "history": {
+                                "questions_total": 50,
+                                "questions_mastered": 15,
+                            },
+                            "geography": {
+                                "questions_total": 40,
+                                "questions_mastered": 10,
+                            },
                         },
                         "recent_sessions": [],
                     }
@@ -608,20 +633,22 @@ router.include_router(mock_exam_router)
 
 @router.post(
     "/decks",
-    response_model=CultureDeckDetailResponse,
+    response_model=CultureDeckAdminResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Create a new culture deck",
     description="""
-    Create a new culture deck.
+    Create a new culture deck with multilingual content.
 
     **Authentication**: Required (Superuser only)
 
     **Required fields**:
-    - name: Multilingual deck name {el, en, ru}
-    - description: Multilingual description {el, en, ru}
-    - icon: Icon identifier (e.g., 'book-open')
-    - color_accent: Hex color (e.g., '#4F46E5')
+    - name_el, name_en, name_ru: Deck name in all languages
     - category: history, geography, politics, culture, traditions
+
+    **Optional fields**:
+    - description_el, description_en, description_ru: Descriptions
+    - order_index: Display order within category
+    - is_premium: Whether deck requires premium subscription
     """,
     responses={
         201: {"description": "Culture deck created successfully"},
@@ -634,26 +661,25 @@ async def create_culture_deck(
     deck_data: CultureDeckCreate,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_superuser),
-) -> CultureDeckDetailResponse:
+) -> CultureDeckAdminResponse:
     """Create a new culture deck.
 
-    Requires superuser privileges.
+    Requires superuser privileges. Returns all language fields.
 
     Args:
-        deck_data: Deck creation data with multilingual fields
+        deck_data: Deck creation data with all language fields
         db: Database session (injected)
         current_user: Authenticated superuser (injected)
 
     Returns:
-        CultureDeckDetailResponse with created deck details
+        CultureDeckAdminResponse with all language fields
 
     Example:
         POST /api/v1/culture/decks
         {
-            "name": {"el": "...", "en": "Greek History", "ru": "..."},
-            "description": {"el": "...", "en": "...", "ru": "..."},
-            "icon": "book-open",
-            "color_accent": "#4F46E5",
+            "name_el": "Ελληνική Ιστορία",
+            "name_en": "Greek History",
+            "name_ru": "Греческая история",
             "category": "history"
         }
     """
@@ -668,10 +694,11 @@ async def create_culture_deck(
 
 @router.patch(
     "/decks/{deck_id}",
-    response_model=CultureDeckDetailResponse,
+    response_model=CultureDeckAdminResponse,
     summary="Update a culture deck",
     description="""
     Update an existing culture deck. All fields are optional.
+    Language fields can be updated independently.
 
     **Authentication**: Required (Superuser only)
     """,
@@ -688,10 +715,11 @@ async def update_culture_deck(
     deck_data: CultureDeckUpdate,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_superuser),
-) -> CultureDeckDetailResponse:
+) -> CultureDeckAdminResponse:
     """Update an existing culture deck.
 
     Requires superuser privileges. Only provided fields will be updated.
+    Returns all language fields.
 
     Args:
         deck_id: UUID of the deck to update
@@ -700,39 +728,22 @@ async def update_culture_deck(
         current_user: Authenticated superuser (injected)
 
     Returns:
-        CultureDeckDetailResponse with updated deck details
+        CultureDeckAdminResponse with all language fields
 
     Raises:
         404: If deck doesn't exist
 
     Example:
         PATCH /api/v1/culture/decks/{deck_id}
-        {"category": "geography"}
+        {"name_el": "Νέο όνομα", "category": "geography"}
     """
     service = CultureDeckService(db)
     updated_deck = await service.update_deck(deck_id, deck_data)
 
-    # Commit the transaction and refresh
+    # Commit the transaction
     await db.commit()
-    await db.refresh(updated_deck)
 
-    # Get question count for response
-    question_count = await service.deck_repo.count_questions(deck_id)
-
-    # Admin endpoint: return English content for consistency
-    # Full localization will be handled in public endpoints
-    return CultureDeckDetailResponse(
-        id=updated_deck.id,
-        name=updated_deck.name_en,
-        description=updated_deck.description_en,
-        category=updated_deck.category,
-        question_count=question_count,
-        is_premium=updated_deck.is_premium,
-        progress=None,
-        is_active=updated_deck.is_active,
-        created_at=updated_deck.created_at,
-        updated_at=updated_deck.updated_at,
-    )
+    return updated_deck
 
 
 @router.delete(
