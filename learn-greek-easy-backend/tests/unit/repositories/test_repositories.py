@@ -301,8 +301,12 @@ async def test_list_active_decks(db_session: AsyncSession, sample_deck):
     from src.db.models import Deck
 
     inactive_deck = Deck(
-        name="Inactive Deck",
-        description="This deck is inactive",
+        name_el="Ανενεργή Τράπουλα",
+        name_en="Inactive Deck",
+        name_ru="Неактивная колода",
+        description_el="Αυτή η τράπουλα είναι ανενεργή",
+        description_en="This deck is inactive",
+        description_ru="Эта колода неактивна",
         level=DeckLevel.A1,
         is_active=False,
     )
@@ -325,14 +329,22 @@ async def test_list_active_with_level_filter(db_session: AsyncSession):
     from src.db.models import Deck
 
     a1_deck = Deck(
-        name="A1 Deck",
-        description="Beginner",
+        name_el="Τράπουλα A1",
+        name_en="A1 Deck",
+        name_ru="Колода A1",
+        description_el="Αρχάριος",
+        description_en="Beginner",
+        description_ru="Начинающий",
         level=DeckLevel.A1,
         is_active=True,
     )
     b1_deck = Deck(
-        name="B1 Deck",
-        description="Intermediate",
+        name_el="Τράπουλα B1",
+        name_en="B1 Deck",
+        name_ru="Колода B1",
+        description_el="Ενδιάμεσος",
+        description_en="Intermediate",
+        description_ru="Средний",
         level=DeckLevel.B1,
         is_active=True,
     )
@@ -375,14 +387,22 @@ async def test_search_decks(db_session: AsyncSession):
 
     # Create searchable decks
     deck1 = Deck(
-        name="Greek for Beginners",
-        description="Learn basic Greek",
+        name_el="Ελληνικά για Αρχάριους",
+        name_en="Greek for Beginners",
+        name_ru="Греческий для начинающих",
+        description_el="Μάθε βασικά ελληνικά",
+        description_en="Learn basic Greek",
+        description_ru="Учи основы греческого",
         level=DeckLevel.A1,
         is_active=True,
     )
     deck2 = Deck(
-        name="Advanced Vocabulary",
-        description="Greek advanced words",
+        name_el="Προχωρημένο Λεξιλόγιο",
+        name_en="Advanced Vocabulary",
+        name_ru="Продвинутый словарный запас",
+        description_el="Ελληνικές προχωρημένες λέξεις",
+        description_en="Greek advanced words",
+        description_ru="Продвинутые греческие слова",
         level=DeckLevel.C1,
         is_active=True,
     )
@@ -458,8 +478,12 @@ async def test_get_or_create_new_progress(db_session: AsyncSession, sample_user,
     from src.db.models import Deck
 
     new_deck = Deck(
-        name="New Deck",
-        description="Brand new",
+        name_el="Νέα Τράπουλα",
+        name_en="New Deck",
+        name_ru="Новая колода",
+        description_el="Ολοκαίνουργια",
+        description_en="Brand new",
+        description_ru="Совершенно новая",
         level=DeckLevel.A1,
         is_active=True,
     )
@@ -981,8 +1005,12 @@ async def test_get_new_cards_for_deck_no_deck_filter(
     from src.db.models import Card, Deck
 
     another_deck = Deck(
-        name="Another Deck",
-        description="Test",
+        name_el="Άλλη Τράπουλα",
+        name_en="Another Deck",
+        name_ru="Другая колода",
+        description_el="Δοκιμή",
+        description_en="Test",
+        description_ru="Тест",
         level=DeckLevel.A2,
         is_active=True,
     )

@@ -67,8 +67,12 @@ async def sample_user_with_settings(db_session):
 async def sample_deck(db_session):
     """Create a sample deck for testing."""
     deck = Deck(
-        name="Greek Basics A1",
-        description="Basic Greek vocabulary and phrases",
+        name_el="Βασικά Ελληνικά A1",
+        name_en="Greek Basics A1",
+        name_ru="Греческий Основы A1",
+        description_el="Βασικό ελληνικό λεξιλόγιο και φράσεις",
+        description_en="Basic Greek vocabulary and phrases",
+        description_ru="Базовая греческая лексика и фразы",
         level=DeckLevel.A1,
         is_active=True,
     )
