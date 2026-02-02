@@ -20,9 +20,32 @@
  */
 
 import { test, expect } from '@playwright/test';
+import * as fs from 'fs';
 
 // Storage state paths
 const ADMIN_AUTH = 'playwright/.auth/admin.json';
+
+/**
+ * Helper to get admin access token from storage state file
+ * This is needed because page.request doesn't automatically include
+ * the Authorization header for authenticated API calls.
+ */
+function getAdminAccessToken(): string | null {
+  try {
+    const adminAuthState = JSON.parse(fs.readFileSync(ADMIN_AUTH, 'utf-8'));
+    const authStorageItem = adminAuthState.origins?.[0]?.localStorage?.find(
+      (item: { name: string; value: string }) => item.name === 'auth-storage'
+    );
+    if (authStorageItem) {
+      const authData = JSON.parse(authStorageItem.value);
+      // Check both 'accessToken' and 'token' for compatibility
+      return authData?.state?.accessToken || authData?.state?.token || null;
+    }
+  } catch {
+    // File might not exist or be invalid
+  }
+  return null;
+}
 
 /**
  * Helper to seed admin vocabulary card test data
@@ -53,10 +76,26 @@ async function navigateToBulkUploads(page: import('@playwright/test').Page): Pro
 
 /**
  * Helper to get a valid vocabulary deck ID for tests
+ * Uses the admin access token from storage state for authentication
  */
 async function getVocabularyDeckId(page: import('@playwright/test').Page): Promise<string> {
   const apiBaseUrl = process.env.E2E_API_URL || process.env.VITE_API_URL || 'http://localhost:8000';
-  const response = await page.request.get(`${apiBaseUrl}/api/v1/admin/decks?type=vocabulary&page_size=1`);
+  const accessToken = getAdminAccessToken();
+
+  if (!accessToken) {
+    throw new Error('Admin access token not available - auth setup may have failed');
+  }
+
+  const response = await page.request.get(`${apiBaseUrl}/api/v1/admin/decks?type=vocabulary&page_size=1`, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  if (!response.ok()) {
+    throw new Error(`Failed to fetch vocabulary decks: ${response.status()} ${response.statusText()}`);
+  }
+
   const data = await response.json();
   if (!data.decks?.[0]?.id) {
     throw new Error('No vocabulary deck found for E2E tests');
@@ -263,7 +302,8 @@ test.describe('Admin Bulk Upload - Upload Success', () => {
 
     // Verify success toast appears (wait for the toast notification)
     // The toast should contain "Successfully uploaded X cards"
-    await expect(page.getByText(/Successfully uploaded \d+ cards/i)).toBeVisible({ timeout: 10000 });
+    // Use .first() to handle multiple matches (toast text + aria-live region)
+    await expect(page.getByText(/Successfully uploaded \d+ cards/i).first()).toBeVisible({ timeout: 10000 });
 
     // Verify form is cleared (textarea should be empty)
     await expect(page.getByTestId('bulk-uploads-json-textarea')).toHaveValue('');
@@ -289,10 +329,10 @@ test.describe('Admin Bulk Upload - Validation Errors', () => {
     // Click Validate
     await page.getByTestId('bulk-uploads-validate-button').click();
 
-    // Verify error: "Invalid JSON format"
+    // Verify error: "JSON syntax error" (shown when JSON can't be parsed)
     const errors = page.getByTestId('bulk-uploads-errors');
     await expect(errors).toBeVisible({ timeout: 5000 });
-    await expect(errors.getByText(/Invalid JSON format/i)).toBeVisible();
+    await expect(errors.getByText(/JSON syntax error/i)).toBeVisible();
   });
 
   test('missing required fields shows validation errors', async ({ page }) => {
