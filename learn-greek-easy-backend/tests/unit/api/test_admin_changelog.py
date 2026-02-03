@@ -32,10 +32,8 @@ async def changelog_entries(db_session: AsyncSession) -> list[ChangelogEntry]:
     for i in range(5):
         entry = ChangelogEntry(
             title_en=f"English Title {i + 1}",
-            title_el=f"Greek Title {i + 1}",
             title_ru=f"Russian Title {i + 1}",
             content_en=f"English content {i + 1}",
-            content_el=f"Greek content {i + 1}",
             content_ru=f"Russian content {i + 1}",
             tag=ChangelogTag.NEW_FEATURE,
         )
@@ -54,10 +52,8 @@ async def single_entry(db_session: AsyncSession) -> ChangelogEntry:
     """Create a single changelog entry for testing."""
     entry = ChangelogEntry(
         title_en="Test Entry",
-        title_el="Δοκιμαστική Καταχώρηση",
         title_ru="Тестовая Запись",
         content_en="Test content in English",
-        content_el="Δοκιμαστικό περιεχόμενο",
         content_ru="Тестовое содержание",
         tag=ChangelogTag.BUG_FIX,
     )
@@ -117,10 +113,8 @@ class TestAuthorization:
             "/api/v1/admin/changelog",
             json={
                 "title_en": "Test",
-                "title_el": "Test",
                 "title_ru": "Test",
                 "content_en": "Content",
-                "content_el": "Content",
                 "content_ru": "Content",
                 "tag": "new_feature",
             },
@@ -139,10 +133,8 @@ class TestAuthorization:
             headers=auth_headers,
             json={
                 "title_en": "Test",
-                "title_el": "Test",
                 "title_ru": "Test",
                 "content_en": "Content",
-                "content_el": "Content",
                 "content_ru": "Content",
                 "tag": "new_feature",
             },
@@ -219,10 +211,8 @@ class TestAdminListChangelog:
 
         item = data["items"][0]
         assert item["title_en"] == "Test Entry"
-        assert item["title_el"] == "Δοκιμαστική Καταχώρηση"
         assert item["title_ru"] == "Тестовая Запись"
         assert "content_en" in item
-        assert "content_el" in item
         assert "content_ru" in item
 
     @pytest.mark.asyncio
@@ -308,10 +298,8 @@ class TestAdminCreateChangelog:
             headers=superuser_auth_headers,
             json={
                 "title_en": "New Feature Title",
-                "title_el": "Νέο Χαρακτηριστικό",
                 "title_ru": "Новая Функция",
                 "content_en": "Description in English",
-                "content_el": "Περιγραφή στα ελληνικά",
                 "content_ru": "Описание на русском",
                 "tag": "new_feature",
             },
@@ -335,10 +323,8 @@ class TestAdminCreateChangelog:
             headers=superuser_auth_headers,
             json={
                 "title_en": "Bug Fix",
-                "title_el": "Διόρθωση",
                 "title_ru": "Исправление",
                 "content_en": "Fixed bug",
-                "content_el": "Διορθώθηκε",
                 "content_ru": "Исправлено",
                 "tag": "bug_fix",
             },
@@ -359,10 +345,8 @@ class TestAdminCreateChangelog:
             headers=superuser_auth_headers,
             json={
                 "title_en": "Announcement",
-                "title_el": "Ανακοίνωση",
                 "title_ru": "Объявление",
                 "content_en": "Important announcement",
-                "content_el": "Σημαντική ανακοίνωση",
                 "content_ru": "Важное объявление",
                 "tag": "announcement",
             },
@@ -401,10 +385,8 @@ class TestAdminCreateChangelog:
             headers=superuser_auth_headers,
             json={
                 "title_en": "Test",
-                "title_el": "Test",
                 "title_ru": "Test",
                 "content_en": "Content",
-                "content_el": "Content",
                 "content_ru": "Content",
                 "tag": "invalid_tag",
             },
@@ -441,7 +423,7 @@ class TestAdminUpdateChangelog:
         data = response.json()
         assert data["title_en"] == "Updated Title"
         # Other fields should be preserved
-        assert data["title_el"] == single_entry.title_el
+        assert data["title_ru"] == single_entry.title_ru
 
     @pytest.mark.asyncio
     async def test_partial_update(

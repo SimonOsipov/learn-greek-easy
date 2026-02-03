@@ -61,15 +61,13 @@ class TestChangelogItemResponse:
         assert response.updated_at == now
 
     def test_has_localized_fields_not_language_specific(self):
-        """Test public response has title/content, not title_en/title_el/etc."""
+        """Test public response has title/content, not title_en/title_ru/etc."""
         fields = ChangelogItemResponse.model_fields.keys()
         assert "title" in fields
         assert "content" in fields
         assert "title_en" not in fields
-        assert "title_el" not in fields
         assert "title_ru" not in fields
         assert "content_en" not in fields
-        assert "content_el" not in fields
         assert "content_ru" not in fields
 
     def test_from_attributes_enabled(self):
@@ -195,56 +193,46 @@ class TestChangelogEntryCreate:
         """Test valid create with all required fields."""
         entry = ChangelogEntryCreate(
             title_en="New Feature",
-            title_el="Νέο Χαρακτηριστικό",
             title_ru="Новая функция",
             content_en="Description in English",
-            content_el="Περιγραφή στα Ελληνικά",
             content_ru="Описание на русском",
             tag=ChangelogTag.NEW_FEATURE,
         )
         assert entry.title_en == "New Feature"
-        assert entry.title_el == "Νέο Χαρακτηριστικό"
         assert entry.title_ru == "Новая функция"
         assert entry.content_en == "Description in English"
-        assert entry.content_el == "Περιγραφή στα Ελληνικά"
         assert entry.content_ru == "Описание на русском"
         assert entry.tag == ChangelogTag.NEW_FEATURE
 
-    def test_all_six_language_fields_required(self):
-        """Test all 6 language fields are required."""
+    def test_all_four_language_fields_required(self):
+        """Test all 4 language fields are required."""
         # Missing title_en
         with pytest.raises(ValidationError) as exc_info:
             ChangelogEntryCreate(
-                title_el="Test",
                 title_ru="Test",
                 content_en="Test",
-                content_el="Test",
                 content_ru="Test",
                 tag=ChangelogTag.BUG_FIX,
             )
         assert "title_en" in str(exc_info.value)
 
-        # Missing content_el
+        # Missing content_ru
         with pytest.raises(ValidationError) as exc_info:
             ChangelogEntryCreate(
                 title_en="Test",
-                title_el="Test",
                 title_ru="Test",
                 content_en="Test",
-                content_ru="Test",
                 tag=ChangelogTag.BUG_FIX,
             )
-        assert "content_el" in str(exc_info.value)
+        assert "content_ru" in str(exc_info.value)
 
     def test_tag_required(self):
         """Test tag is required."""
         with pytest.raises(ValidationError) as exc_info:
             ChangelogEntryCreate(
                 title_en="Test",
-                title_el="Test",
                 title_ru="Test",
                 content_en="Test",
-                content_el="Test",
                 content_ru="Test",
             )
         assert "tag" in str(exc_info.value)
@@ -254,10 +242,8 @@ class TestChangelogEntryCreate:
         with pytest.raises(ValidationError):
             ChangelogEntryCreate(
                 title_en="",
-                title_el="Test",
                 title_ru="Test",
                 content_en="Test",
-                content_el="Test",
                 content_ru="Test",
                 tag=ChangelogTag.BUG_FIX,
             )
@@ -267,10 +253,8 @@ class TestChangelogEntryCreate:
         with pytest.raises(ValidationError):
             ChangelogEntryCreate(
                 title_en="Test",
-                title_el="Test",
                 title_ru="Test",
                 content_en="",
-                content_el="Test",
                 content_ru="Test",
                 tag=ChangelogTag.BUG_FIX,
             )
@@ -280,10 +264,8 @@ class TestChangelogEntryCreate:
         # At max length - should work
         entry = ChangelogEntryCreate(
             title_en="A" * 500,
-            title_el="Test",
             title_ru="Test",
             content_en="Test",
-            content_el="Test",
             content_ru="Test",
             tag=ChangelogTag.BUG_FIX,
         )
@@ -293,10 +275,8 @@ class TestChangelogEntryCreate:
         with pytest.raises(ValidationError):
             ChangelogEntryCreate(
                 title_en="A" * 501,
-                title_el="Test",
                 title_ru="Test",
                 content_en="Test",
-                content_el="Test",
                 content_ru="Test",
                 tag=ChangelogTag.BUG_FIX,
             )
@@ -306,10 +286,8 @@ class TestChangelogEntryCreate:
         for tag in ChangelogTag:
             entry = ChangelogEntryCreate(
                 title_en="Test",
-                title_el="Test",
                 title_ru="Test",
                 content_en="Test content",
-                content_el="Test content",
                 content_ru="Test content",
                 tag=tag,
             )
@@ -323,10 +301,8 @@ class TestChangelogEntryUpdate:
         """Test all fields are optional (empty update allowed)."""
         update = ChangelogEntryUpdate()
         assert update.title_en is None
-        assert update.title_el is None
         assert update.title_ru is None
         assert update.content_en is None
-        assert update.content_el is None
         assert update.content_ru is None
         assert update.tag is None
 
@@ -334,7 +310,7 @@ class TestChangelogEntryUpdate:
         """Test partial update with only title_en."""
         update = ChangelogEntryUpdate(title_en="Updated Title")
         assert update.title_en == "Updated Title"
-        assert update.title_el is None
+        assert update.title_ru is None
         assert update.content_en is None
         assert update.tag is None
 
@@ -348,10 +324,8 @@ class TestChangelogEntryUpdate:
         """Test update with all fields."""
         update = ChangelogEntryUpdate(
             title_en="New Title EN",
-            title_el="New Title EL",
             title_ru="New Title RU",
             content_en="New Content EN",
-            content_el="New Content EL",
             content_ru="New Content RU",
             tag=ChangelogTag.BUG_FIX,
         )
@@ -365,7 +339,7 @@ class TestChangelogEntryUpdate:
             ChangelogEntryUpdate(title_en="")
 
         with pytest.raises(ValidationError):
-            ChangelogEntryUpdate(content_el="")
+            ChangelogEntryUpdate(content_ru="")
 
     def test_max_length_still_applies_when_provided(self):
         """Test max_length=500 applies when value is provided."""
@@ -383,10 +357,8 @@ class TestChangelogEntryAdminResponse:
         response = ChangelogEntryAdminResponse(
             id=entry_id,
             title_en="New Feature",
-            title_el="Νέο Χαρακτηριστικό",
             title_ru="Новая функция",
             content_en="Description in English",
-            content_el="Περιγραφή στα Ελληνικά",
             content_ru="Описание на русском",
             tag=ChangelogTag.NEW_FEATURE,
             created_at=now,
@@ -394,21 +366,17 @@ class TestChangelogEntryAdminResponse:
         )
         assert response.id == entry_id
         assert response.title_en == "New Feature"
-        assert response.title_el == "Νέο Χαρακτηριστικό"
         assert response.title_ru == "Новая функция"
         assert response.content_en == "Description in English"
-        assert response.content_el == "Περιγραφή στα Ελληνικά"
         assert response.content_ru == "Описание на русском"
         assert response.tag == ChangelogTag.NEW_FEATURE
 
-    def test_has_all_six_language_fields(self):
-        """Test admin response has all 6 language fields."""
+    def test_has_all_four_language_fields(self):
+        """Test admin response has all 4 language fields."""
         fields = ChangelogEntryAdminResponse.model_fields.keys()
         assert "title_en" in fields
-        assert "title_el" in fields
         assert "title_ru" in fields
         assert "content_en" in fields
-        assert "content_el" in fields
         assert "content_ru" in fields
         # Should NOT have localized-only fields
         assert "title" not in fields
@@ -434,10 +402,8 @@ class TestChangelogAdminListResponse:
         item = ChangelogEntryAdminResponse(
             id=uuid4(),
             title_en="Test",
-            title_el="Test",
             title_ru="Test",
             content_en="Test content",
-            content_el="Test content",
             content_ru="Test content",
             tag=ChangelogTag.BUG_FIX,
             created_at=now,

@@ -29,10 +29,8 @@ async def changelog_entries(db_session: AsyncSession) -> list[ChangelogEntry]:
     for i in range(10):
         entry = ChangelogEntry(
             title_en=f"English Title {i + 1}",
-            title_el=f"Ελληνικός Τίτλος {i + 1}",
             title_ru=f"Русский Заголовок {i + 1}",
             content_en=f"English content {i + 1}",
-            content_el=f"Greek content {i + 1}",
             content_ru=f"Russian content {i + 1}",
             tag=ChangelogTag.NEW_FEATURE if i % 2 == 0 else ChangelogTag.BUG_FIX,
         )
@@ -194,20 +192,20 @@ class TestAcceptLanguageHeader:
         assert "English Title" in data["items"][0]["title"]
 
     @pytest.mark.asyncio
-    async def test_greek_header(
+    async def test_greek_header_falls_back_to_english(
         self,
         client: AsyncClient,
         auth_headers: dict[str, str],
         changelog_entries: list[ChangelogEntry],
     ):
-        """Should return Greek content with Accept-Language: el."""
+        """Should return English content with Accept-Language: el (fallback)."""
         headers = {**auth_headers, "Accept-Language": "el"}
         response = await client.get("/api/v1/changelog", headers=headers)
 
         assert response.status_code == 200
         data = response.json()
-        # Greek titles start with Greek text
-        assert "Ελληνικός" in data["items"][0]["title"]
+        # Greek locale should now fall back to English
+        assert "English Title" in data["items"][0]["title"]
 
     @pytest.mark.asyncio
     async def test_russian_header(

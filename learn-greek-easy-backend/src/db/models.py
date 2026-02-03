@@ -1921,7 +1921,7 @@ class AnnouncementCampaign(Base, TimestampMixin):
 class ChangelogEntry(Base, TimestampMixin):
     """Changelog entry for app updates and announcements.
 
-    Stores multilingual content (EN, EL, RU) for title and content.
+    Stores multilingual content (EN, RU) for title and content.
     Content supports basic markdown (bold/italic).
     """
 
@@ -1944,18 +1944,6 @@ class ChangelogEntry(Base, TimestampMixin):
         Text,
         nullable=False,
         comment="Content in English (supports bold/italic markdown)",
-    )
-
-    # Greek content
-    title_el: Mapped[str] = mapped_column(
-        String(500),
-        nullable=False,
-        comment="Title in Greek",
-    )
-    content_el: Mapped[str] = mapped_column(
-        Text,
-        nullable=False,
-        comment="Content in Greek (supports bold/italic markdown)",
     )
 
     # Russian content

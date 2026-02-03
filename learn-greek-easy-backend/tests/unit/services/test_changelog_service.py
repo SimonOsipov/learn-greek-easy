@@ -1,7 +1,7 @@
 """Unit tests for ChangelogService.
 
 This module tests:
-- get_public_list: Localized content for en, el, ru with fallback
+- get_public_list: Localized content for en, ru with fallback
 - get_admin_list: Returns all language fields
 - get_by_id: Returns entry or raises NotFoundException
 - create: Creates entry with all fields
@@ -34,10 +34,8 @@ async def changelog_entries(db_session: AsyncSession) -> list[ChangelogEntry]:
     for i in range(5):
         entry = ChangelogEntry(
             title_en=f"English Title {i + 1}",
-            title_el=f"Ελληνικός Τίτλος {i + 1}",
             title_ru=f"Русский Заголовок {i + 1}",
             content_en=f"English content for entry {i + 1}",
-            content_el=f"Ελληνικό περιεχόμενο {i + 1}",
             content_ru=f"Русское содержание {i + 1}",
             tag=ChangelogTag.NEW_FEATURE if i % 2 == 0 else ChangelogTag.BUG_FIX,
         )
@@ -53,13 +51,11 @@ async def changelog_entries(db_session: AsyncSession) -> list[ChangelogEntry]:
 
 @pytest.fixture
 async def single_changelog_entry(db_session: AsyncSession) -> ChangelogEntry:
-    """Create a single changelog entry with multilingual content."""
+    """Create a single changelog entry with bilingual content."""
     entry = ChangelogEntry(
         title_en="Feature: Dark Mode",
-        title_el="Χαρακτηριστικό: Σκοτεινή Λειτουργία",
         title_ru="Функция: Темный режим",
         content_en="We've added dark mode support to the app.",
-        content_el="Προσθέσαμε υποστήριξη σκοτεινής λειτουργίας στην εφαρμογή.",
         content_ru="Мы добавили поддержку темного режима в приложение.",
         tag=ChangelogTag.NEW_FEATURE,
     )
@@ -93,19 +89,20 @@ class TestGetPublicListLocalization:
         assert result.items[0].content == "We've added dark mode support to the app."
 
     @pytest.mark.asyncio
-    async def test_returns_greek_content(
+    async def test_greek_locale_falls_back_to_english(
         self,
         db_session: AsyncSession,
         single_changelog_entry: ChangelogEntry,
     ):
-        """Should return Greek content when locale is 'el'."""
+        """Should fall back to English when Greek (el) locale is requested."""
         service = ChangelogService(db_session)
 
         result = await service.get_public_list(page=1, page_size=10, locale="el")
 
         assert len(result.items) == 1
-        assert result.items[0].title == "Χαρακτηριστικό: Σκοτεινή Λειτουργία"
-        assert "Προσθέσαμε υποστήριξη" in result.items[0].content
+        # Greek locale should now return English content as fallback
+        assert result.items[0].title == "Feature: Dark Mode"
+        assert "We've added dark mode" in result.items[0].content
 
     @pytest.mark.asyncio
     async def test_returns_russian_content(
@@ -248,10 +245,8 @@ class TestGetAdminList:
         assert len(result.items) == 1
         item = result.items[0]
         assert item.title_en == "Feature: Dark Mode"
-        assert item.title_el == "Χαρακτηριστικό: Σκοτεινή Λειτουργία"
         assert item.title_ru == "Функция: Темный режим"
         assert item.content_en is not None
-        assert item.content_el is not None
         assert item.content_ru is not None
 
     @pytest.mark.asyncio
@@ -337,10 +332,8 @@ class TestCreate:
 
         create_data = ChangelogEntryCreate(
             title_en="New Feature Title",
-            title_el="Νέο Χαρακτηριστικό",
             title_ru="Новая Функция",
             content_en="New feature description in English.",
-            content_el="Περιγραφή νέου χαρακτηριστικού.",
             content_ru="Описание новой функции.",
             tag=ChangelogTag.NEW_FEATURE,
         )
@@ -349,7 +342,6 @@ class TestCreate:
 
         assert result.id is not None
         assert result.title_en == "New Feature Title"
-        assert result.title_el == "Νέο Χαρακτηριστικό"
         assert result.title_ru == "Новая Функция"
         assert result.tag == ChangelogTag.NEW_FEATURE
 
@@ -363,10 +355,8 @@ class TestCreate:
 
         create_data = ChangelogEntryCreate(
             title_en="Bug Fix",
-            title_el="Διόρθωση Σφάλματος",
             title_ru="Исправление ошибки",
             content_en="Fixed a critical bug.",
-            content_el="Διορθώθηκε κρίσιμο σφάλμα.",
             content_ru="Исправлена критическая ошибка.",
             tag=ChangelogTag.BUG_FIX,
         )
@@ -385,10 +375,8 @@ class TestCreate:
 
         create_data = ChangelogEntryCreate(
             title_en="Announcement",
-            title_el="Ανακοίνωση",
             title_ru="Объявление",
             content_en="Important announcement.",
-            content_el="Σημαντική ανακοίνωση.",
             content_ru="Важное объявление.",
             tag=ChangelogTag.ANNOUNCEMENT,
         )
@@ -421,7 +409,6 @@ class TestUpdate:
 
         assert result.title_en == "Updated Title"
         # Other fields should remain unchanged
-        assert result.title_el == single_changelog_entry.title_el
         assert result.title_ru == single_changelog_entry.title_ru
 
     @pytest.mark.asyncio
@@ -433,7 +420,6 @@ class TestUpdate:
         """Should preserve unchanged fields during partial update."""
         service = ChangelogService(db_session)
 
-        original_content_el = single_changelog_entry.content_el
         original_content_ru = single_changelog_entry.content_ru
 
         update_data = ChangelogEntryUpdate(content_en="Only English updated")
@@ -441,7 +427,6 @@ class TestUpdate:
         result = await service.update(single_changelog_entry.id, update_data)
 
         assert result.content_en == "Only English updated"
-        assert result.content_el == original_content_el
         assert result.content_ru == original_content_ru
 
     @pytest.mark.asyncio
@@ -455,14 +440,14 @@ class TestUpdate:
 
         update_data = ChangelogEntryUpdate(
             title_en="New English Title",
-            title_el="Νέος Ελληνικός Τίτλος",
+            title_ru="Новый Русский Заголовок",
             tag=ChangelogTag.BUG_FIX,
         )
 
         result = await service.update(single_changelog_entry.id, update_data)
 
         assert result.title_en == "New English Title"
-        assert result.title_el == "Νέος Ελληνικός Τίτλος"
+        assert result.title_ru == "Новый Русский Заголовок"
         assert result.tag == ChangelogTag.BUG_FIX
 
     @pytest.mark.asyncio

@@ -33,10 +33,8 @@ async def changelog_entries(db_session: AsyncSession) -> list[ChangelogEntry]:
     for i in range(5):
         entry = ChangelogEntry(
             title_en=f"English Title {i + 1}",
-            title_el=f"Greek Title {i + 1}",
             title_ru=f"Russian Title {i + 1}",
             content_en=f"English content for entry {i + 1}",
-            content_el=f"Greek content for entry {i + 1}",
             content_ru=f"Russian content for entry {i + 1}",
             tag=ChangelogTag.NEW_FEATURE if i % 3 == 0 else ChangelogTag.BUG_FIX,
         )
@@ -55,10 +53,8 @@ async def single_changelog_entry(db_session: AsyncSession) -> ChangelogEntry:
     """Create a single changelog entry for testing."""
     entry = ChangelogEntry(
         title_en="Test English Title",
-        title_el="Test Greek Title",
         title_ru="Test Russian Title",
         content_en="Test English content",
-        content_el="Test Greek content",
         content_ru="Test Russian content",
         tag=ChangelogTag.ANNOUNCEMENT,
     )
@@ -232,10 +228,8 @@ class TestCreate:
 
         entry_data = {
             "title_en": "New English Title",
-            "title_el": "New Greek Title",
             "title_ru": "New Russian Title",
             "content_en": "New English content",
-            "content_el": "New Greek content",
             "content_ru": "New Russian content",
             "tag": ChangelogTag.NEW_FEATURE,
         }
@@ -244,7 +238,6 @@ class TestCreate:
 
         assert result.id is not None
         assert result.title_en == "New English Title"
-        assert result.title_el == "New Greek Title"
         assert result.title_ru == "New Russian Title"
         assert result.content_en == "New English content"
         assert result.tag == ChangelogTag.NEW_FEATURE
@@ -261,10 +254,8 @@ class TestCreate:
         for tag in ChangelogTag:
             entry_data = {
                 "title_en": f"Title for {tag.value}",
-                "title_el": f"Greek {tag.value}",
                 "title_ru": f"Russian {tag.value}",
                 "content_en": f"Content for {tag.value}",
-                "content_el": f"Greek content {tag.value}",
                 "content_ru": f"Russian content {tag.value}",
                 "tag": tag,
             }
@@ -299,7 +290,6 @@ class TestUpdate:
 
         assert result.title_en == "Updated English Title"
         # Other fields should remain unchanged
-        assert result.title_el == single_changelog_entry.title_el
         assert result.title_ru == single_changelog_entry.title_ru
 
     @pytest.mark.asyncio
@@ -311,7 +301,6 @@ class TestUpdate:
         """Should preserve unchanged fields during partial update."""
         repo = ChangelogRepository(db_session)
 
-        original_content_el = single_changelog_entry.content_el
         original_content_ru = single_changelog_entry.content_ru
 
         update_data = {"content_en": "Only English content updated"}
@@ -319,7 +308,6 @@ class TestUpdate:
         result = await repo.update(single_changelog_entry, update_data)
 
         assert result.content_en == "Only English content updated"
-        assert result.content_el == original_content_el
         assert result.content_ru == original_content_ru
 
     @pytest.mark.asyncio
