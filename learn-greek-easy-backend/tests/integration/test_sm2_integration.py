@@ -650,7 +650,7 @@ class TestDatabaseTransactionVerification:
         """
         deck, cards = test_deck_with_10_cards
 
-        # Process review (which commits internally)
+        # Process review (which flushes changes)
         await sm2_service.process_review(
             user_id=test_user.id,
             card_id=cards[0].id,

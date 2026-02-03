@@ -327,6 +327,31 @@ class TestProcessReview:
         call_kwargs = service.progress_repo.update_progress_metrics.call_args.kwargs
         assert call_kwargs["cards_mastered_delta"] == -1
 
+    @pytest.mark.asyncio
+    async def test_process_review_uses_flush_not_commit(self, mock_db_session, mock_stats):
+        """process_review uses flush() not commit() - commit handled by get_db dependency."""
+        service = SM2Service(mock_db_session)
+
+        service.stats_repo.get_or_create = AsyncMock(return_value=mock_stats)
+        service.stats_repo.update_sm2_data = AsyncMock()
+        service.progress_repo.get_or_create = AsyncMock(return_value=MagicMock(id=uuid4()))
+        service.progress_repo.update_progress_metrics = AsyncMock()
+
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none.return_value = uuid4()
+        mock_db_session.execute.return_value = mock_result
+
+        await service.process_review(
+            user_id=uuid4(),
+            card_id=mock_stats.card_id,
+            quality=4,
+            time_taken=10,
+        )
+
+        # Verify flush was called (not commit - commit is handled by get_db dependency)
+        mock_db_session.flush.assert_awaited()
+        mock_db_session.commit.assert_not_awaited()
+
 
 @pytest.mark.unit
 @pytest.mark.sm2
@@ -415,8 +440,8 @@ class TestProcessBulkReviews:
         assert len(result.results) == 3
 
     @pytest.mark.asyncio
-    async def test_bulk_commits_successful_reviews(self, mock_db_session, mock_stats):
-        """commit is called after processing all reviews."""
+    async def test_bulk_flushes_successful_reviews(self, mock_db_session, mock_stats):
+        """flush is called after processing all reviews (commit handled by get_db dependency)."""
         service = SM2Service(mock_db_session)
 
         service.stats_repo.get_or_create = AsyncMock(return_value=mock_stats)
@@ -438,8 +463,9 @@ class TestProcessBulkReviews:
             session_id="test-session",
         )
 
-        # Verify commit was called
-        mock_db_session.commit.assert_awaited()
+        # Verify flush was called (not commit - commit is handled by get_db dependency)
+        mock_db_session.flush.assert_awaited()
+        mock_db_session.commit.assert_not_awaited()
 
 
 @pytest.mark.unit

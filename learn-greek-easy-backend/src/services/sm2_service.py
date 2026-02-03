@@ -186,8 +186,8 @@ class SM2Service:
             stats=stats,
         )
 
-        # Step 7: Commit transaction
-        await self.db.commit()
+        # Step 7: Flush changes (commit handled by get_db dependency)
+        await self.db.flush()
 
         # Generate message for the result
         message = self._get_review_message(
@@ -275,8 +275,8 @@ class SM2Service:
             else:
                 failed_count += 1
 
-        # Commit all successful reviews
-        await self.db.commit()
+        # Flush all successful reviews
+        await self.db.flush()
 
         logger.info(
             "Bulk review processing completed",
