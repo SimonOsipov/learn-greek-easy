@@ -65,7 +65,8 @@ async def check_achievements_task(user_id: UUID, db_url: str) -> None:
             engine, class_=AsyncSession, expire_on_commit=False
         )
 
-        async with async_session_factory() as session:
+        session = async_session_factory()
+        try:
             # Import here to avoid circular imports
             from src.services.progress_service import ProgressService
 
@@ -81,6 +82,8 @@ async def check_achievements_task(user_id: UUID, db_url: str) -> None:
                     "total_points": achievements.total_points,
                 },
             )
+        finally:
+            await session.close()
 
     except Exception as e:
         logger.error(
@@ -270,7 +273,8 @@ async def recalculate_progress_task(
             engine, class_=AsyncSession, expire_on_commit=False
         )
 
-        async with async_session_factory() as session:
+        session = async_session_factory()
+        try:
             # Import here to avoid circular imports
             from src.repositories import CardStatisticsRepository, UserDeckProgressRepository
 
@@ -318,6 +322,8 @@ async def recalculate_progress_task(
                         "cards_mastered": cards_mastered,
                     },
                 )
+        finally:
+            await session.close()
 
         duration_ms = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
         logger.info(
@@ -400,7 +406,8 @@ async def process_answer_side_effects_task(
             engine, class_=AsyncSession, expire_on_commit=False
         )
 
-        async with async_session_factory() as session:
+        session = async_session_factory()
+        try:
             # Step 1: Record answer history
             from src.db.models import CultureAnswerHistory
 
@@ -432,6 +439,8 @@ async def process_answer_side_effects_task(
             )
 
             await session.commit()
+        finally:
+            await session.close()
 
         logger.info(
             "Answer side effects processed successfully",
@@ -618,7 +627,8 @@ async def process_culture_answer_full_async(
             engine, class_=AsyncSession, expire_on_commit=False
         )
 
-        async with async_session_factory() as session:
+        session = async_session_factory()
+        try:
             # Import here to avoid circular imports
             from datetime import date as date_type
 
@@ -756,6 +766,8 @@ async def process_culture_answer_full_async(
 
             # Commit all changes
             await session.commit()
+        finally:
+            await session.close()
 
         duration_ms = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
         logger.info(
@@ -830,7 +842,8 @@ async def check_culture_achievements_task(
             engine, class_=AsyncSession, expire_on_commit=False
         )
 
-        async with async_session_factory() as session:
+        session = async_session_factory()
+        try:
             from src.services.achievement_service import AchievementService
 
             service = AchievementService(session)
@@ -857,6 +870,8 @@ async def check_culture_achievements_task(
                     "No culture achievements unlocked",
                     extra={"user_id": str(user_id)},
                 )
+        finally:
+            await session.close()
 
     except Exception as e:
         logger.error(
@@ -916,7 +931,8 @@ async def create_announcement_notifications_task(
             engine, class_=AsyncSession, expire_on_commit=False
         )
 
-        async with async_session_factory() as session:
+        session = async_session_factory()
+        try:
             # Import here to avoid circular imports
             from sqlalchemy import select
 
@@ -975,6 +991,8 @@ async def create_announcement_notifications_task(
 
             # Commit all changes
             await session.commit()
+        finally:
+            await session.close()
 
         duration_ms = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
         logger.info(

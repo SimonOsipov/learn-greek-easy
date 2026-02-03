@@ -406,11 +406,7 @@ class TestCheckAchievementsTaskImplementation:
 
                 with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
                     mock_session = AsyncMock()
-                    # Create proper async context manager mock
-                    mock_context = MagicMock()
-                    mock_context.__aenter__ = AsyncMock(return_value=mock_session)
-                    mock_context.__aexit__ = AsyncMock(return_value=False)  # Propagate exceptions
-                    mock_session_factory = MagicMock(return_value=mock_context)
+                    mock_session_factory = MagicMock(return_value=mock_session)
                     mock_sessionmaker.return_value = mock_session_factory
 
                     with patch("src.tasks.background.logger") as mock_logger:
@@ -1099,10 +1095,7 @@ class TestRecalculateProgressTaskImplementation:
 
                 with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
                     mock_session = AsyncMock()
-                    mock_context = MagicMock()
-                    mock_context.__aenter__ = AsyncMock(return_value=mock_session)
-                    mock_context.__aexit__ = AsyncMock(return_value=False)
-                    mock_session_factory = MagicMock(return_value=mock_context)
+                    mock_session_factory = MagicMock(return_value=mock_session)
                     mock_sessionmaker.return_value = mock_session_factory
 
                     with patch("src.repositories.CardStatisticsRepository") as mock_stats_class:
@@ -1155,10 +1148,7 @@ class TestRecalculateProgressTaskImplementation:
 
                 with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
                     mock_session = AsyncMock()
-                    mock_context = MagicMock()
-                    mock_context.__aenter__ = AsyncMock(return_value=mock_session)
-                    mock_context.__aexit__ = AsyncMock(return_value=False)
-                    mock_session_factory = MagicMock(return_value=mock_context)
+                    mock_session_factory = MagicMock(return_value=mock_session)
                     mock_sessionmaker.return_value = mock_session_factory
 
                     with patch("src.repositories.CardStatisticsRepository") as mock_stats_class:
@@ -1232,10 +1222,7 @@ class TestRecalculateProgressTaskImplementation:
 
                 with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
                     mock_session = AsyncMock()
-                    mock_context = MagicMock()
-                    mock_context.__aenter__ = AsyncMock(return_value=mock_session)
-                    mock_context.__aexit__ = AsyncMock(return_value=False)
-                    mock_session_factory = MagicMock(return_value=mock_context)
+                    mock_session_factory = MagicMock(return_value=mock_session)
                     mock_sessionmaker.return_value = mock_session_factory
 
                     with patch("src.repositories.CardStatisticsRepository") as mock_stats_class:
@@ -1300,10 +1287,7 @@ class TestRecalculateProgressTaskImplementation:
 
                 with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
                     mock_session = AsyncMock()
-                    mock_context = MagicMock()
-                    mock_context.__aenter__ = AsyncMock(return_value=mock_session)
-                    mock_context.__aexit__ = AsyncMock(return_value=False)
-                    mock_session_factory = MagicMock(return_value=mock_context)
+                    mock_session_factory = MagicMock(return_value=mock_session)
                     mock_sessionmaker.return_value = mock_session_factory
 
                     with patch("src.repositories.CardStatisticsRepository") as mock_stats_class:
@@ -1341,10 +1325,7 @@ class TestRecalculateProgressTaskImplementation:
 
                 with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
                     mock_session = AsyncMock()
-                    mock_context = MagicMock()
-                    mock_context.__aenter__ = AsyncMock(return_value=mock_session)
-                    mock_context.__aexit__ = AsyncMock(return_value=False)
-                    mock_session_factory = MagicMock(return_value=mock_context)
+                    mock_session_factory = MagicMock(return_value=mock_session)
                     mock_sessionmaker.return_value = mock_session_factory
 
                     with patch("src.repositories.CardStatisticsRepository") as mock_stats_class:
@@ -1419,10 +1400,7 @@ class TestRecalculateProgressTaskImplementation:
 
                 with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
                     mock_session = AsyncMock()
-                    mock_context = MagicMock()
-                    mock_context.__aenter__ = AsyncMock(return_value=mock_session)
-                    mock_context.__aexit__ = AsyncMock(return_value=False)
-                    mock_session_factory = MagicMock(return_value=mock_context)
+                    mock_session_factory = MagicMock(return_value=mock_session)
                     mock_sessionmaker.return_value = mock_session_factory
 
                     with patch("src.repositories.CardStatisticsRepository") as mock_stats_class:
@@ -1475,10 +1453,7 @@ class TestRecalculateProgressTaskImplementation:
 
                 with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
                     mock_session = AsyncMock()
-                    mock_context = MagicMock()
-                    mock_context.__aenter__ = AsyncMock(return_value=mock_session)
-                    mock_context.__aexit__ = AsyncMock(return_value=False)
-                    mock_session_factory = MagicMock(return_value=mock_context)
+                    mock_session_factory = MagicMock(return_value=mock_session)
                     mock_sessionmaker.return_value = mock_session_factory
 
                     with patch("src.repositories.CardStatisticsRepository") as mock_stats_class:
@@ -1522,10 +1497,7 @@ class TestRecalculateProgressTaskImplementation:
 
                 with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
                     mock_session = AsyncMock()
-                    mock_context = MagicMock()
-                    mock_context.__aenter__ = AsyncMock(return_value=mock_session)
-                    mock_context.__aexit__ = AsyncMock(return_value=False)
-                    mock_session_factory = MagicMock(return_value=mock_context)
+                    mock_session_factory = MagicMock(return_value=mock_session)
                     mock_sessionmaker.return_value = mock_session_factory
 
                     with patch("src.repositories.CardStatisticsRepository") as mock_stats_class:
@@ -1769,3 +1741,339 @@ class TestProcessCultureAnswerFullAsync:
                         assert start_call[1]["extra"]["question_id"] == str(question_id)
                         assert start_call[1]["extra"]["is_correct"] is True
                         assert start_call[1]["extra"]["task"] == "process_culture_answer_full"
+
+
+class TestSessionCleanupOrder:
+    """Test that session is closed before engine is disposed.
+
+    This is critical to avoid InvalidRequestError: "Method 'close()' can't
+    be called here; method '_connection_for_bind()' is already in progress".
+    """
+
+    @pytest.mark.asyncio
+    async def test_check_achievements_closes_session_before_engine_dispose(self):
+        """Test that check_achievements_task closes session before engine dispose."""
+        from src.tasks.background import check_achievements_task
+
+        user_id = uuid4()
+        call_order = []
+
+        with patch.object(settings, "feature_background_tasks", True):
+            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
+                mock_engine = AsyncMock()
+
+                async def mock_dispose():
+                    call_order.append("engine.dispose")
+
+                mock_engine.dispose = mock_dispose
+                mock_engine_creator.return_value = mock_engine
+
+                with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
+                    mock_session = AsyncMock()
+
+                    async def mock_close():
+                        call_order.append("session.close")
+
+                    mock_session.close = mock_close
+                    mock_session_factory = MagicMock(return_value=mock_session)
+                    mock_sessionmaker.return_value = mock_session_factory
+
+                    with patch(
+                        "src.services.progress_service.ProgressService"
+                    ) as mock_service_class:
+                        mock_service = AsyncMock()
+                        mock_service.get_achievements.return_value = MagicMock(
+                            achievements=[],
+                            total_points=0,
+                        )
+                        mock_service_class.return_value = mock_service
+
+                        await check_achievements_task(
+                            user_id, "postgresql+asyncpg://test:test@localhost/test"
+                        )
+
+                        # Verify session.close is called before engine.dispose
+                        assert call_order == ["session.close", "engine.dispose"]
+
+    @pytest.mark.asyncio
+    async def test_check_achievements_closes_session_before_engine_on_error(self):
+        """Test that session is closed before engine dispose even on error."""
+        from src.tasks.background import check_achievements_task
+
+        user_id = uuid4()
+        call_order = []
+
+        with patch.object(settings, "feature_background_tasks", True):
+            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
+                mock_engine = AsyncMock()
+
+                async def mock_dispose():
+                    call_order.append("engine.dispose")
+
+                mock_engine.dispose = mock_dispose
+                mock_engine_creator.return_value = mock_engine
+
+                with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
+                    mock_session = AsyncMock()
+
+                    async def mock_close():
+                        call_order.append("session.close")
+
+                    mock_session.close = mock_close
+                    mock_session_factory = MagicMock(return_value=mock_session)
+                    mock_sessionmaker.return_value = mock_session_factory
+
+                    with patch(
+                        "src.services.progress_service.ProgressService"
+                    ) as mock_service_class:
+                        mock_service = AsyncMock()
+                        mock_service.get_achievements.side_effect = Exception("Service error")
+                        mock_service_class.return_value = mock_service
+
+                        await check_achievements_task(
+                            user_id, "postgresql+asyncpg://test:test@localhost/test"
+                        )
+
+                        # Session close should still happen before engine dispose
+                        assert call_order == ["session.close", "engine.dispose"]
+
+    @pytest.mark.asyncio
+    async def test_recalculate_progress_closes_session_before_engine_dispose(self):
+        """Test that recalculate_progress_task closes session before engine dispose."""
+        from src.tasks.background import recalculate_progress_task
+
+        user_id = uuid4()
+        deck_id = uuid4()
+        call_order = []
+
+        with patch.object(settings, "feature_background_tasks", True):
+            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
+                mock_engine = AsyncMock()
+
+                async def mock_dispose():
+                    call_order.append("engine.dispose")
+
+                mock_engine.dispose = mock_dispose
+                mock_engine_creator.return_value = mock_engine
+
+                with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
+                    mock_session = AsyncMock()
+
+                    async def mock_close():
+                        call_order.append("session.close")
+
+                    mock_session.close = mock_close
+                    mock_session_factory = MagicMock(return_value=mock_session)
+                    mock_sessionmaker.return_value = mock_session_factory
+
+                    with patch("src.repositories.CardStatisticsRepository") as mock_stats_class:
+                        mock_stats_repo = AsyncMock()
+                        mock_stats_repo.count_by_status.return_value = {}
+                        mock_stats_class.return_value = mock_stats_repo
+
+                        with patch(
+                            "src.repositories.UserDeckProgressRepository"
+                        ) as mock_progress_class:
+                            mock_progress_repo = AsyncMock()
+                            mock_progress = MagicMock()
+                            mock_progress.cards_studied = 0
+                            mock_progress.cards_mastered = 0
+                            mock_progress_repo.get_or_create.return_value = mock_progress
+                            mock_progress_class.return_value = mock_progress_repo
+
+                            await recalculate_progress_task(
+                                user_id, deck_id, "postgresql+asyncpg://test:test@localhost/test"
+                            )
+
+                            assert call_order == ["session.close", "engine.dispose"]
+
+    @pytest.mark.asyncio
+    async def test_process_answer_side_effects_closes_session_before_engine_dispose(self):
+        """Test that process_answer_side_effects_task closes session before engine dispose."""
+        from src.tasks.background import process_answer_side_effects_task
+
+        user_id = uuid4()
+        question_id = uuid4()
+        call_order = []
+
+        with patch.object(settings, "feature_background_tasks", True):
+            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
+                mock_engine = AsyncMock()
+
+                async def mock_dispose():
+                    call_order.append("engine.dispose")
+
+                mock_engine.dispose = mock_dispose
+                mock_engine_creator.return_value = mock_engine
+
+                with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
+                    mock_session = AsyncMock()
+
+                    async def mock_close():
+                        call_order.append("session.close")
+
+                    mock_session.close = mock_close
+                    mock_session_factory = MagicMock(return_value=mock_session)
+                    mock_sessionmaker.return_value = mock_session_factory
+
+                    with patch(
+                        "src.tasks.background._check_and_notify_daily_goal", new_callable=AsyncMock
+                    ):
+                        await process_answer_side_effects_task(
+                            user_id=user_id,
+                            question_id=question_id,
+                            language="en",
+                            is_correct=True,
+                            selected_option=1,
+                            time_taken_seconds=5,
+                            deck_category="history",
+                            culture_answers_before=0,
+                            db_url="postgresql+asyncpg://test:test@localhost/test",
+                        )
+
+                        assert call_order == ["session.close", "engine.dispose"]
+
+    @pytest.mark.asyncio
+    async def test_process_culture_answer_full_closes_session_before_engine_dispose(self):
+        """Test that process_culture_answer_full_async closes session before engine dispose."""
+        from src.tasks.background import process_culture_answer_full_async
+
+        user_id = uuid4()
+        question_id = uuid4()
+        call_order = []
+
+        with patch.object(settings, "feature_background_tasks", True):
+            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
+                mock_engine = AsyncMock()
+
+                async def mock_dispose():
+                    call_order.append("engine.dispose")
+
+                mock_engine.dispose = mock_dispose
+                mock_engine_creator.return_value = mock_engine
+
+                with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
+                    mock_session = AsyncMock()
+
+                    async def mock_close():
+                        call_order.append("session.close")
+
+                    mock_session.close = mock_close
+
+                    # Mock execute to raise an error to trigger session close
+                    mock_session.execute.side_effect = Exception("DB error")
+
+                    mock_session_factory = MagicMock(return_value=mock_session)
+                    mock_sessionmaker.return_value = mock_session_factory
+
+                    await process_culture_answer_full_async(
+                        user_id=user_id,
+                        question_id=question_id,
+                        selected_option=1,
+                        time_taken=5,
+                        language="en",
+                        is_correct=True,
+                        is_perfect=False,
+                        deck_category="history",
+                        db_url="postgresql+asyncpg://test:test@localhost/test",
+                    )
+
+                    assert call_order == ["session.close", "engine.dispose"]
+
+    @pytest.mark.asyncio
+    async def test_check_culture_achievements_closes_session_before_engine_dispose(self):
+        """Test that check_culture_achievements_task closes session before engine dispose."""
+        from src.tasks.background import check_culture_achievements_task
+
+        user_id = uuid4()
+        question_id = uuid4()
+        call_order = []
+
+        with patch.object(settings, "feature_background_tasks", True):
+            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
+                mock_engine = AsyncMock()
+
+                async def mock_dispose():
+                    call_order.append("engine.dispose")
+
+                mock_engine.dispose = mock_dispose
+                mock_engine_creator.return_value = mock_engine
+
+                with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
+                    mock_session = AsyncMock()
+
+                    async def mock_close():
+                        call_order.append("session.close")
+
+                    mock_session.close = mock_close
+                    mock_session_factory = MagicMock(return_value=mock_session)
+                    mock_sessionmaker.return_value = mock_session_factory
+
+                    with patch(
+                        "src.services.achievement_service.AchievementService"
+                    ) as mock_service_class:
+                        mock_service = AsyncMock()
+                        mock_service.check_culture_achievements.return_value = []
+                        mock_service_class.return_value = mock_service
+
+                        await check_culture_achievements_task(
+                            user_id=user_id,
+                            question_id=question_id,
+                            is_correct=True,
+                            language="en",
+                            deck_category="history",
+                            db_url="postgresql+asyncpg://test:test@localhost/test",
+                        )
+
+                        assert call_order == ["session.close", "engine.dispose"]
+
+    @pytest.mark.asyncio
+    async def test_create_announcement_notifications_closes_session_before_engine_dispose(self):
+        """Test that create_announcement_notifications_task closes session before engine dispose."""
+        from src.tasks.background import create_announcement_notifications_task
+
+        campaign_id = uuid4()
+        call_order = []
+
+        with patch.object(settings, "feature_background_tasks", True):
+            with patch("src.tasks.background.create_async_engine") as mock_engine_creator:
+                mock_engine = AsyncMock()
+
+                async def mock_dispose():
+                    call_order.append("engine.dispose")
+
+                mock_engine.dispose = mock_dispose
+                mock_engine_creator.return_value = mock_engine
+
+                with patch("src.tasks.background.async_sessionmaker") as mock_sessionmaker:
+                    mock_session = AsyncMock()
+
+                    async def mock_close():
+                        call_order.append("session.close")
+
+                    mock_session.close = mock_close
+
+                    # Mock execute to return empty user list
+                    mock_result = MagicMock()
+                    mock_result.scalars.return_value.all.return_value = []
+                    mock_session.execute.return_value = mock_result
+
+                    mock_session_factory = MagicMock(return_value=mock_session)
+                    mock_sessionmaker.return_value = mock_session_factory
+
+                    with patch(
+                        "src.repositories.announcement.AnnouncementCampaignRepository"
+                    ) as mock_repo_class:
+                        mock_repo = AsyncMock()
+                        mock_repo.get.return_value = None
+                        mock_repo_class.return_value = mock_repo
+
+                        await create_announcement_notifications_task(
+                            campaign_id=campaign_id,
+                            campaign_title="Test",
+                            campaign_message="Test message",
+                            link_url=None,
+                            db_url="postgresql+asyncpg://test:test@localhost/test",
+                        )
+
+                        assert call_order == ["session.close", "engine.dispose"]

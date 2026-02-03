@@ -43,10 +43,7 @@ class TestStatsAggregateTaskExecution:
 
             with patch("src.tasks.scheduled.async_sessionmaker") as mock_sessionmaker:
                 mock_session = AsyncMock()
-                mock_context = MagicMock()
-                mock_context.__aenter__ = AsyncMock(return_value=mock_session)
-                mock_context.__aexit__ = AsyncMock(return_value=False)
-                mock_session_factory = MagicMock(return_value=mock_context)
+                mock_session_factory = MagicMock(return_value=mock_session)
                 mock_sessionmaker.return_value = mock_session_factory
 
                 # Mock review stats query result
@@ -87,10 +84,7 @@ class TestStatsAggregateTaskExecution:
 
             with patch("src.tasks.scheduled.async_sessionmaker") as mock_sessionmaker:
                 mock_session = AsyncMock()
-                mock_context = MagicMock()
-                mock_context.__aenter__ = AsyncMock(return_value=mock_session)
-                mock_context.__aexit__ = AsyncMock(return_value=False)
-                mock_session_factory = MagicMock(return_value=mock_context)
+                mock_session_factory = MagicMock(return_value=mock_session)
                 mock_sessionmaker.return_value = mock_session_factory
 
                 # Empty results
@@ -122,10 +116,7 @@ class TestStatsAggregateTaskExecution:
 
             with patch("src.tasks.scheduled.async_sessionmaker") as mock_sessionmaker:
                 mock_session = AsyncMock()
-                mock_context = MagicMock()
-                mock_context.__aenter__ = AsyncMock(return_value=mock_session)
-                mock_context.__aexit__ = AsyncMock(return_value=False)
-                mock_session_factory = MagicMock(return_value=mock_context)
+                mock_session_factory = MagicMock(return_value=mock_session)
                 mock_sessionmaker.return_value = mock_session_factory
 
                 # Mock review stats query result for multiple users
@@ -161,10 +152,7 @@ class TestStatsAggregateTaskExecution:
 
             with patch("src.tasks.scheduled.async_sessionmaker") as mock_sessionmaker:
                 mock_session = AsyncMock()
-                mock_context = MagicMock()
-                mock_context.__aenter__ = AsyncMock(return_value=mock_session)
-                mock_context.__aexit__ = AsyncMock(return_value=False)
-                mock_session_factory = MagicMock(return_value=mock_context)
+                mock_session_factory = MagicMock(return_value=mock_session)
                 mock_sessionmaker.return_value = mock_session_factory
 
                 # Make execute raise an error
@@ -193,10 +181,7 @@ class TestStatsAggregateTaskExecution:
 
             with patch("src.tasks.scheduled.async_sessionmaker") as mock_sessionmaker:
                 mock_session = AsyncMock()
-                mock_context = MagicMock()
-                mock_context.__aenter__ = AsyncMock(return_value=mock_session)
-                mock_context.__aexit__ = AsyncMock(return_value=False)
-                mock_session_factory = MagicMock(return_value=mock_context)
+                mock_session_factory = MagicMock(return_value=mock_session)
                 mock_sessionmaker.return_value = mock_session_factory
 
                 review_result = MagicMock()
@@ -222,10 +207,7 @@ class TestStatsAggregateTaskExecution:
 
             with patch("src.tasks.scheduled.async_sessionmaker") as mock_sessionmaker:
                 mock_session = AsyncMock()
-                mock_context = MagicMock()
-                mock_context.__aenter__ = AsyncMock(return_value=mock_session)
-                mock_context.__aexit__ = AsyncMock(return_value=False)
-                mock_session_factory = MagicMock(return_value=mock_context)
+                mock_session_factory = MagicMock(return_value=mock_session)
                 mock_sessionmaker.return_value = mock_session_factory
 
                 review_result = MagicMock()
@@ -257,10 +239,7 @@ class TestStatsAggregateTaskLogging:
 
             with patch("src.tasks.scheduled.async_sessionmaker") as mock_sessionmaker:
                 mock_session = AsyncMock()
-                mock_context = MagicMock()
-                mock_context.__aenter__ = AsyncMock(return_value=mock_session)
-                mock_context.__aexit__ = AsyncMock(return_value=False)
-                mock_session_factory = MagicMock(return_value=mock_context)
+                mock_session_factory = MagicMock(return_value=mock_session)
                 mock_sessionmaker.return_value = mock_session_factory
 
                 review_result = MagicMock()
@@ -288,10 +267,7 @@ class TestStatsAggregateTaskLogging:
 
             with patch("src.tasks.scheduled.async_sessionmaker") as mock_sessionmaker:
                 mock_session = AsyncMock()
-                mock_context = MagicMock()
-                mock_context.__aenter__ = AsyncMock(return_value=mock_session)
-                mock_context.__aexit__ = AsyncMock(return_value=False)
-                mock_session_factory = MagicMock(return_value=mock_context)
+                mock_session_factory = MagicMock(return_value=mock_session)
                 mock_sessionmaker.return_value = mock_session_factory
 
                 review_result = MagicMock()
@@ -335,10 +311,7 @@ class TestStatsAggregateTaskLogging:
 
             with patch("src.tasks.scheduled.async_sessionmaker") as mock_sessionmaker:
                 mock_session = AsyncMock()
-                mock_context = MagicMock()
-                mock_context.__aenter__ = AsyncMock(return_value=mock_session)
-                mock_context.__aexit__ = AsyncMock(return_value=False)
-                mock_session_factory = MagicMock(return_value=mock_context)
+                mock_session_factory = MagicMock(return_value=mock_session)
                 mock_sessionmaker.return_value = mock_session_factory
 
                 # Mock review stats query result for two users
@@ -400,10 +373,7 @@ class TestStatsAggregateTaskLogging:
 
             with patch("src.tasks.scheduled.async_sessionmaker") as mock_sessionmaker:
                 mock_session = AsyncMock()
-                mock_context = MagicMock()
-                mock_context.__aenter__ = AsyncMock(return_value=mock_session)
-                mock_context.__aexit__ = AsyncMock(return_value=False)
-                mock_session_factory = MagicMock(return_value=mock_context)
+                mock_session_factory = MagicMock(return_value=mock_session)
                 mock_sessionmaker.return_value = mock_session_factory
 
                 # Two users with combined stats
@@ -456,10 +426,7 @@ class TestStatsAggregateTaskQuery:
 
             with patch("src.tasks.scheduled.async_sessionmaker") as mock_sessionmaker:
                 mock_session = AsyncMock()
-                mock_context = MagicMock()
-                mock_context.__aenter__ = AsyncMock(return_value=mock_session)
-                mock_context.__aexit__ = AsyncMock(return_value=False)
-                mock_session_factory = MagicMock(return_value=mock_context)
+                mock_session_factory = MagicMock(return_value=mock_session)
                 mock_sessionmaker.return_value = mock_session_factory
 
                 review_result = MagicMock()
@@ -503,10 +470,7 @@ class TestStatsAggregateTaskEdgeCases:
 
             with patch("src.tasks.scheduled.async_sessionmaker") as mock_sessionmaker:
                 mock_session = AsyncMock()
-                mock_context = MagicMock()
-                mock_context.__aenter__ = AsyncMock(return_value=mock_session)
-                mock_context.__aexit__ = AsyncMock(return_value=False)
-                mock_session_factory = MagicMock(return_value=mock_context)
+                mock_session_factory = MagicMock(return_value=mock_session)
                 mock_sessionmaker.return_value = mock_session_factory
 
                 # Mock with None avg_quality
@@ -547,10 +511,7 @@ class TestStatsAggregateTaskEdgeCases:
 
             with patch("src.tasks.scheduled.async_sessionmaker") as mock_sessionmaker:
                 mock_session = AsyncMock()
-                mock_context = MagicMock()
-                mock_context.__aenter__ = AsyncMock(return_value=mock_session)
-                mock_context.__aexit__ = AsyncMock(return_value=False)
-                mock_session_factory = MagicMock(return_value=mock_context)
+                mock_session_factory = MagicMock(return_value=mock_session)
                 mock_sessionmaker.return_value = mock_session_factory
 
                 # Mock with None time_taken (COALESCE should handle this)
@@ -592,10 +553,7 @@ class TestStatsAggregateTaskEdgeCases:
 
             with patch("src.tasks.scheduled.async_sessionmaker") as mock_sessionmaker:
                 mock_session = AsyncMock()
-                mock_context = MagicMock()
-                mock_context.__aenter__ = AsyncMock(return_value=mock_session)
-                mock_context.__aexit__ = AsyncMock(return_value=False)
-                mock_session_factory = MagicMock(return_value=mock_context)
+                mock_session_factory = MagicMock(return_value=mock_session)
                 mock_sessionmaker.return_value = mock_session_factory
 
                 # User has reviews
@@ -636,10 +594,7 @@ class TestStatsAggregateTaskEdgeCases:
 
             with patch("src.tasks.scheduled.async_sessionmaker") as mock_sessionmaker:
                 mock_session = AsyncMock()
-                mock_context = MagicMock()
-                mock_context.__aenter__ = AsyncMock(return_value=mock_session)
-                mock_context.__aexit__ = AsyncMock(return_value=False)
-                mock_session_factory = MagicMock(return_value=mock_context)
+                mock_session_factory = MagicMock(return_value=mock_session)
                 mock_sessionmaker.return_value = mock_session_factory
 
                 # No reviews (empty)
@@ -677,3 +632,84 @@ class TestStatsAggregateTaskConfiguration:
         """Test that task uses database_url from settings."""
         assert hasattr(settings, "database_url")
         assert settings.database_url is not None
+
+
+class TestStatsAggregateSessionCleanupOrder:
+    """Test that session is closed before engine is disposed.
+
+    This is critical to avoid InvalidRequestError: "Method 'close()' can't
+    be called here; method '_connection_for_bind()' is already in progress".
+    """
+
+    @pytest.mark.asyncio
+    async def test_stats_aggregate_closes_session_before_engine_dispose(self):
+        """Test that stats_aggregate_task closes session before engine dispose."""
+        from src.tasks.scheduled import stats_aggregate_task
+
+        call_order = []
+
+        with patch("src.tasks.scheduled.create_async_engine") as mock_engine_creator:
+            mock_engine = AsyncMock()
+
+            async def mock_dispose():
+                call_order.append("engine.dispose")
+
+            mock_engine.dispose = mock_dispose
+            mock_engine_creator.return_value = mock_engine
+
+            with patch("src.tasks.scheduled.async_sessionmaker") as mock_sessionmaker:
+                mock_session = AsyncMock()
+
+                async def mock_close():
+                    call_order.append("session.close")
+
+                mock_session.close = mock_close
+
+                # Mock execute for both queries
+                review_result = MagicMock()
+                review_result.fetchall.return_value = []
+                mastery_result = MagicMock()
+                mastery_result.fetchall.return_value = []
+
+                mock_session.execute.side_effect = [review_result, mastery_result]
+
+                mock_session_factory = MagicMock(return_value=mock_session)
+                mock_sessionmaker.return_value = mock_session_factory
+
+                await stats_aggregate_task()
+
+                assert call_order == ["session.close", "engine.dispose"]
+
+    @pytest.mark.asyncio
+    async def test_stats_aggregate_closes_session_before_engine_on_error(self):
+        """Test that session is closed before engine dispose even on error."""
+        from src.tasks.scheduled import stats_aggregate_task
+
+        call_order = []
+
+        with patch("src.tasks.scheduled.create_async_engine") as mock_engine_creator:
+            mock_engine = AsyncMock()
+
+            async def mock_dispose():
+                call_order.append("engine.dispose")
+
+            mock_engine.dispose = mock_dispose
+            mock_engine_creator.return_value = mock_engine
+
+            with patch("src.tasks.scheduled.async_sessionmaker") as mock_sessionmaker:
+                mock_session = AsyncMock()
+
+                async def mock_close():
+                    call_order.append("session.close")
+
+                mock_session.close = mock_close
+                mock_session.execute.side_effect = Exception("DB error")
+
+                mock_session_factory = MagicMock(return_value=mock_session)
+                mock_sessionmaker.return_value = mock_session_factory
+
+                with pytest.raises(Exception, match="DB error"):
+                    await stats_aggregate_task()
+
+                # Session close should still happen before engine dispose
+                assert call_order == ["session.close", "engine.dispose"]
