@@ -1,11 +1,11 @@
 /**
  * Main admin tab for changelog management.
  *
- * Integrates table, form modal, and delete dialog.
+ * Integrates table, edit modal, and delete dialog.
  * Features:
  * - JSON input card for creating changelog entries
  * - Table with edit/delete actions
- * - Form modal for edit operations
+ * - JSON-based edit modal for editing existing entries
  * - Delete confirmation dialog
  * - Pagination support
  */
@@ -29,10 +29,10 @@ import {
   selectAdminChangelogTotal,
   selectAdminChangelogTotalPages,
 } from '@/stores/adminChangelogStore';
-import type { ChangelogEntryAdmin, ChangelogCreateRequest } from '@/types/changelog';
+import type { ChangelogEntryAdmin } from '@/types/changelog';
 
 import { ChangelogDeleteDialog } from './ChangelogDeleteDialog';
-import { ChangelogFormModal } from './ChangelogFormModal';
+import { ChangelogEditModal } from './ChangelogEditModal';
 import { validateChangelogJson, JSON_PLACEHOLDER } from './changelogJsonValidation';
 import { ChangelogTable } from './ChangelogTable';
 
@@ -52,10 +52,10 @@ export function ChangelogTab() {
   const totalPages = useAdminChangelogStore(selectAdminChangelogTotalPages);
 
   // Store actions
-  const { fetchList, createEntry, updateEntry, setPage, reset } = useAdminChangelogStore();
+  const { fetchList, createEntry, setPage, reset } = useAdminChangelogStore();
 
   // Local UI state
-  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<ChangelogEntryAdmin | null>(null);
   const [deletingEntry, setDeletingEntry] = useState<ChangelogEntryAdmin | null>(null);
@@ -105,7 +105,7 @@ export function ChangelogTab() {
 
   const handleEdit = (entry: ChangelogEntryAdmin) => {
     setEditingEntry(entry);
-    setIsFormOpen(true);
+    setIsEditOpen(true);
   };
 
   const handleDelete = (entry: ChangelogEntryAdmin) => {
@@ -113,39 +113,10 @@ export function ChangelogTab() {
     setIsDeleteOpen(true);
   };
 
-  const handleFormClose = () => {
-    setIsFormOpen(false);
-    setEditingEntry(null);
-  };
-
   const handleDeleteDialogClose = (open: boolean) => {
     setIsDeleteOpen(open);
     if (!open) {
       setDeletingEntry(null);
-    }
-  };
-
-  const handleFormSubmit = async (data: ChangelogCreateRequest) => {
-    try {
-      if (editingEntry) {
-        await updateEntry(editingEntry.id, data);
-        toast({
-          title: t('admin:changelog.toast.updated'),
-        });
-      } else {
-        await createEntry(data);
-        toast({
-          title: t('admin:changelog.toast.created'),
-        });
-      }
-      handleFormClose();
-    } catch {
-      toast({
-        title: editingEntry
-          ? t('admin:changelog.toast.updateError')
-          : t('admin:changelog.toast.createError'),
-        variant: 'destructive',
-      });
     }
   };
 
@@ -208,14 +179,17 @@ export function ChangelogTab() {
         />
       </div>
 
-      {/* Form Modal - kept for EDIT only */}
-      <ChangelogFormModal
-        open={isFormOpen}
-        onClose={handleFormClose}
-        onSubmit={handleFormSubmit}
-        entry={editingEntry}
-        isSaving={isSaving}
-      />
+      {/* Edit Modal - JSON-based editing */}
+      {editingEntry && (
+        <ChangelogEditModal
+          open={isEditOpen}
+          onOpenChange={(open) => {
+            setIsEditOpen(open);
+            if (!open) setEditingEntry(null);
+          }}
+          entry={editingEntry}
+        />
+      )}
 
       {/* Delete Dialog - handles deletion internally */}
       <ChangelogDeleteDialog
