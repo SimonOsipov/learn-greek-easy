@@ -31,6 +31,9 @@ export function FlashcardReviewPage() {
     sessionStats,
   } = useReviewStore();
   const { decks } = useDeckStore();
+
+  // Detect transition state: session just ended, navigating to summary
+  const isTransitioningToSummary = !activeSession && sessionSummary !== null;
   const { track } = useTrackEvent();
 
   // Refs to prevent duplicate event tracking
@@ -167,8 +170,8 @@ export function FlashcardReviewPage() {
     );
   }
 
-  // No cards due state
-  if (!currentCard) {
+  // No cards due state - but NOT during session-to-summary transition
+  if (!currentCard && !isTransitioningToSummary) {
     return (
       <div className="min-h-screen bg-background p-10">
         <div className="fixed right-4 top-4 z-50 flex items-center gap-2">
@@ -195,6 +198,19 @@ export function FlashcardReviewPage() {
             </Button>
           </div>
         </div>
+      </div>
+    );
+  }
+
+  // Transition state: show loading while navigating to summary
+  if (isTransitioningToSummary) {
+    return (
+      <div className="min-h-screen bg-background p-10">
+        <div className="fixed right-4 top-4 z-50 flex items-center gap-2">
+          <LanguageSwitcher variant="icon" />
+          <ThemeSwitcher />
+        </div>
+        <FlashcardSkeleton />
       </div>
     );
   }

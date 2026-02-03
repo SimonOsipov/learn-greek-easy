@@ -276,40 +276,33 @@ test.describe('Adjective Gender Tab Navigation', () => {
 // ============================================================================
 
 test.describe('Example Translation Reveal', () => {
-  test('example translations are blurred initially', async ({ page }) => {
+  test('example translations are blurred before card flip', async ({ page }) => {
+    await setupReviewMock(page, mockNounCard);
+    // E2E tests use storageState from playwright config - no manual login needed
+    await navigateToReview(page);
+
+    // Before flip, the entire card content is blurred with blur-md
+    // Example translations within are also blurred as part of the card
+    const blurredContent = page.locator('.blur-md');
+    await expect(blurredContent).toBeVisible();
+  });
+
+  test('example translations are revealed after card flip', async ({ page }) => {
     await setupReviewMock(page, mockNounCard);
     // E2E tests use storageState from playwright config - no manual login needed
     await navigateToReview(page);
     await flipCard(page);
 
+    // After flip, example translations should be visible (no blur-sm on translations)
     // Example Greek text should be visible
     await expect(page.getByText('To spiti mou einai megalo.')).toBeVisible();
 
-    // Example translation should be blurred (has blur-sm class)
-    const translationContainer = page.locator('.blur-sm');
-    await expect(translationContainer).toBeVisible();
-  });
-
-  test('clicking blurred translation reveals it', async ({ page }) => {
-    await setupReviewMock(page, mockNounCard);
-    // E2E tests use storageState from playwright config - no manual login needed
-    await navigateToReview(page);
-    await flipCard(page);
-
-    // Find the blurred translation and click it
-    const blurredTranslation = page.locator('.blur-sm');
-    await expect(blurredTranslation).toBeVisible();
-    await blurredTranslation.click();
-
-    // Wait for transition
-    await page.waitForTimeout(300);
-
-    // Translation should no longer be blurred
-    const stillBlurred = page.locator('.blur-sm');
-    await expect(stillBlurred).toHaveCount(0);
-
-    // Translation text should be visible
+    // Translation text should be visible and not blurred
     await expect(page.getByText('My house is big.')).toBeVisible();
+
+    // No blur-sm on translation containers after flip
+    const blurredTranslation = page.locator('.blur-sm');
+    await expect(blurredTranslation).toHaveCount(0);
   });
 });
 

@@ -8,26 +8,22 @@ import {
   getEncouragingMessage,
   getAccuracyColor,
   formatRatingBreakdown,
-  hasProgressTransitions,
 } from '@/lib/sessionSummaryUtils';
 import type { SessionSummary as SessionSummaryType } from '@/types/review';
 
 export interface SessionSummaryProps {
   summary: SessionSummaryType;
-  onBackToDeck: () => void;
-  onReviewAgain: () => void;
-  onDashboard: () => void;
+  onBackToDashboard: () => void;
 }
 
 /**
  * SessionSummary Component
  *
- * Displays comprehensive post-session statistics including:
+ * Displays post-session statistics including:
  * - Completion message with performance-based encouragement
  * - Statistics grid (cards reviewed, accuracy, time spent, avg per card)
  * - Rating breakdown (Again/Hard/Good/Easy with percentages)
- * - Progress transitions (state changes: new→learning→mastered)
- * - Action buttons (Back to Deck, Review Again, Dashboard)
+ * - Single action button (Back to Dashboard)
  *
  * Edge cases handled:
  * - Zero cards reviewed: Shows simplified message
@@ -35,15 +31,10 @@ export interface SessionSummaryProps {
  * - All "again" (0%): Supportive encouragement
  *
  * Responsive:
- * - Mobile (< 640px): 2x2 grids, stacked buttons
- * - Desktop (≥ 640px): 1x4 grids, row buttons
+ * - Mobile (< 640px): 2x2 grids
+ * - Desktop (≥ 640px): 1x4 grids
  */
-export function SessionSummary({
-  summary,
-  onBackToDeck,
-  onReviewAgain,
-  onDashboard,
-}: SessionSummaryProps) {
+export function SessionSummary({ summary, onBackToDashboard }: SessionSummaryProps) {
   const { t } = useTranslation('review');
 
   // Edge case: no cards reviewed
@@ -53,12 +44,8 @@ export function SessionSummary({
         <Card className="bg-muted/50 text-center">
           <CardContent className="pb-6 pt-8">
             <p className="mb-4 text-lg text-foreground">{t('session.sessionEndedNoCards')}</p>
-            <Button
-              size="lg"
-              onClick={onBackToDeck}
-              className="bg-gradient-to-br from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700"
-            >
-              {t('summary.backToDeck')}
+            <Button size="lg" onClick={onBackToDashboard}>
+              {t('summary.backToDashboard')}
             </Button>
           </CardContent>
         </Card>
@@ -68,7 +55,6 @@ export function SessionSummary({
 
   const message = getEncouragingMessage(summary.accuracy, summary.cardsReviewed);
   const accuracyColor = getAccuracyColor(summary.accuracy);
-  const showTransitions = hasProgressTransitions(summary);
   const ratingBreakdown = formatRatingBreakdown(summary);
 
   return (
@@ -170,69 +156,10 @@ export function SessionSummary({
         </CardContent>
       </Card>
 
-      {/* 4. Progress Transitions (Conditional) */}
-      {showTransitions && (
-        <Card>
-          <CardHeader>
-            <CardTitle>{t('summary.progressMade')}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2 text-sm">
-              {summary.transitions.newToLearning > 0 && (
-                <p className="text-foreground">
-                  <span className="mr-2" aria-hidden="true">
-                    🆕
-                  </span>
-                  <span className="font-semibold">{summary.transitions.newToLearning}</span>{' '}
-                  {t('summary.movedToLearning')}
-                </p>
-              )}
-              {summary.transitions.learningToReview > 0 && (
-                <p className="text-foreground">
-                  <span className="mr-2" aria-hidden="true">
-                    📚
-                  </span>
-                  <span className="font-semibold">{summary.transitions.learningToReview}</span>{' '}
-                  {t('summary.graduatedToReview')}
-                </p>
-              )}
-              {summary.transitions.reviewToMastered > 0 && (
-                <p className="text-foreground">
-                  <span className="mr-2" aria-hidden="true">
-                    ✨
-                  </span>
-                  <span className="font-semibold">{summary.transitions.reviewToMastered}</span>{' '}
-                  {t('summary.cardsMastered')}
-                </p>
-              )}
-              {summary.transitions.toRelearning > 0 && (
-                <p className="text-foreground">
-                  <span className="mr-2" aria-hidden="true">
-                    🔄
-                  </span>
-                  <span className="font-semibold">{summary.transitions.toRelearning}</span>{' '}
-                  {t('summary.needReview')}
-                </p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* 5. Action Buttons */}
-      <div className="flex flex-col gap-3 sm:flex-row">
-        <Button
-          size="lg"
-          onClick={onBackToDeck}
-          className="flex-1 bg-gradient-to-br from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700"
-        >
-          {t('summary.backToDeck')}
-        </Button>
-        <Button size="lg" variant="outline" onClick={onReviewAgain} className="flex-1">
-          {t('summary.reviewAgain')}
-        </Button>
-        <Button size="lg" variant="ghost" onClick={onDashboard} className="hidden sm:block">
-          {t('summary.dashboard')}
+      {/* 4. Action Button */}
+      <div className="flex justify-center">
+        <Button size="lg" onClick={onBackToDashboard}>
+          {t('summary.backToDashboard')}
         </Button>
       </div>
     </div>

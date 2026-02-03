@@ -7,7 +7,11 @@ import { cn } from '@/lib/utils';
 import { useReviewStore } from '@/stores/reviewStore';
 import type { ReviewRating } from '@/types/review';
 
-export function RatingButtons() {
+interface RatingButtonsProps {
+  isFlipped?: boolean;
+}
+
+export function RatingButtons({ isFlipped = false }: RatingButtonsProps) {
   const { t } = useTranslation('review');
   const { rateCard, canRate, isLoading } = useReviewStore();
   const [highlightedButton, setHighlightedButton] = useState<ReviewRating | null>(null);
@@ -26,7 +30,7 @@ export function RatingButtons() {
   ];
 
   return (
-    <div className="flex justify-center gap-3 px-8 py-6">
+    <div className={cn('flex justify-center gap-3 px-8 py-4', !isFlipped && 'invisible')}>
       {buttons.map(({ rating, labelKey, color }) => {
         const label = t(labelKey);
         return (

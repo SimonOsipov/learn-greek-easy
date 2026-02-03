@@ -52,20 +52,28 @@ export function VerbConjugationGrid({ verbData, selectedTense }: VerbConjugation
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="grid grid-cols-2">
-            <div className="border-r border-border px-3 py-2">
-              <span className="text-sm text-muted-foreground">
-                {t('grammar.verbConjugation.imperative.singular')}:{' '}
-              </span>
-              <span className="text-sm font-medium">{verbData.imperative_2s || na}</span>
-            </div>
-            <div className="px-3 py-2">
-              <span className="text-sm text-muted-foreground">
-                {t('grammar.verbConjugation.imperative.plural')}:{' '}
-              </span>
-              <span className="text-sm font-medium">{verbData.imperative_2p || na}</span>
-            </div>
-          </div>
+          <Table>
+            <TableHeader>
+              <TableRow className="hover:bg-transparent">
+                <TableHead className="h-auto whitespace-nowrap bg-muted/50 px-2 py-2 text-xs font-bold sm:px-3 sm:text-sm">
+                  {t('grammar.verbConjugation.imperative.singular')}
+                </TableHead>
+                <TableHead className="h-auto whitespace-nowrap bg-muted/50 px-2 py-2 text-xs font-bold sm:px-3 sm:text-sm">
+                  {t('grammar.verbConjugation.imperative.plural')}
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              <TableRow className="hover:bg-transparent">
+                <TableCell className="min-w-[150px] whitespace-nowrap px-2 py-2 text-xs sm:px-3 sm:text-sm">
+                  {verbData.imperative_2s || na}
+                </TableCell>
+                <TableCell className="min-w-[150px] whitespace-nowrap px-2 py-2 text-xs sm:px-3 sm:text-sm">
+                  {verbData.imperative_2p || na}
+                </TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
     );
@@ -80,8 +88,8 @@ export function VerbConjugationGrid({ verbData, selectedTense }: VerbConjugation
           <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent">
-                <TableHead className="h-auto whitespace-nowrap bg-muted/50 px-2 py-2 text-xs sm:px-3 sm:text-sm" />
-                <TableHead className="h-auto whitespace-nowrap bg-muted/50 px-2 py-2 text-center text-xs sm:px-3 sm:text-sm">
+                <TableHead className="h-auto whitespace-nowrap bg-muted/50 px-2 py-2 text-xs font-bold sm:px-3 sm:text-sm" />
+                <TableHead className="h-auto whitespace-nowrap bg-muted/50 px-2 py-2 text-center text-xs font-bold sm:px-3 sm:text-sm">
                   {t(`grammar.verbConjugation.tenses.${tense}`)}
                 </TableHead>
               </TableRow>
@@ -91,10 +99,10 @@ export function VerbConjugationGrid({ verbData, selectedTense }: VerbConjugation
                 const value = getConjugation(verbData, tense, person);
                 return (
                   <TableRow key={person} className="hover:bg-transparent">
-                    <TableCell className="whitespace-nowrap bg-muted/50 px-2 py-2 text-xs font-medium text-muted-foreground sm:px-3 sm:text-sm">
+                    <TableCell className="whitespace-nowrap bg-muted/50 px-2 py-2 text-xs font-bold text-muted-foreground sm:px-3 sm:text-sm">
                       {personLabels[person]}
                     </TableCell>
-                    <TableCell className="whitespace-nowrap px-2 py-2 text-center text-xs sm:px-3 sm:text-sm">
+                    <TableCell className="min-w-[150px] whitespace-nowrap px-2 py-2 text-center text-xs sm:px-3 sm:text-sm">
                       {value || na}
                     </TableCell>
                   </TableRow>
@@ -116,11 +124,11 @@ export function VerbConjugationGrid({ verbData, selectedTense }: VerbConjugation
           <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent">
-                <TableHead className="h-auto whitespace-nowrap bg-muted/50 px-2 py-2 text-xs sm:px-3 sm:text-sm" />
+                <TableHead className="h-auto whitespace-nowrap bg-muted/50 px-2 py-2 text-xs font-bold sm:px-3 sm:text-sm" />
                 {TENSES.map((tense) => (
                   <TableHead
                     key={tense}
-                    className="h-auto whitespace-nowrap bg-muted/50 px-2 py-2 text-center text-xs sm:px-3 sm:text-sm"
+                    className="h-auto whitespace-nowrap bg-muted/50 px-2 py-2 text-center text-xs font-bold sm:px-3 sm:text-sm"
                   >
                     {t(`grammar.verbConjugation.tenses.${tense}`)}
                   </TableHead>
@@ -130,7 +138,7 @@ export function VerbConjugationGrid({ verbData, selectedTense }: VerbConjugation
             <TableBody>
               {PERSONS.map((person) => (
                 <TableRow key={person} className="hover:bg-transparent">
-                  <TableCell className="whitespace-nowrap bg-muted/50 px-2 py-2 text-xs font-medium text-muted-foreground sm:px-3 sm:text-sm">
+                  <TableCell className="whitespace-nowrap bg-muted/50 px-2 py-2 text-xs font-bold text-muted-foreground sm:px-3 sm:text-sm">
                     {personLabels[person]}
                   </TableCell>
                   {TENSES.map((tense) => {
@@ -138,7 +146,7 @@ export function VerbConjugationGrid({ verbData, selectedTense }: VerbConjugation
                     return (
                       <TableCell
                         key={tense}
-                        className="whitespace-nowrap px-2 py-2 text-center text-xs sm:px-3 sm:text-sm"
+                        className="min-w-[150px] whitespace-nowrap px-2 py-2 text-center text-xs sm:px-3 sm:text-sm"
                       >
                         {value || na}
                       </TableCell>
@@ -159,20 +167,28 @@ export function VerbConjugationGrid({ verbData, selectedTense }: VerbConjugation
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="grid grid-cols-2">
-            <div className="border-r border-border px-3 py-2">
-              <span className="text-sm text-muted-foreground">
-                {t('grammar.verbConjugation.imperative.singular')}:{' '}
-              </span>
-              <span className="text-sm font-medium">{verbData.imperative_2s || na}</span>
-            </div>
-            <div className="px-3 py-2">
-              <span className="text-sm text-muted-foreground">
-                {t('grammar.verbConjugation.imperative.plural')}:{' '}
-              </span>
-              <span className="text-sm font-medium">{verbData.imperative_2p || na}</span>
-            </div>
-          </div>
+          <Table>
+            <TableHeader>
+              <TableRow className="hover:bg-transparent">
+                <TableHead className="h-auto whitespace-nowrap bg-muted/50 px-2 py-2 text-xs font-bold sm:px-3 sm:text-sm">
+                  {t('grammar.verbConjugation.imperative.singular')}
+                </TableHead>
+                <TableHead className="h-auto whitespace-nowrap bg-muted/50 px-2 py-2 text-xs font-bold sm:px-3 sm:text-sm">
+                  {t('grammar.verbConjugation.imperative.plural')}
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              <TableRow className="hover:bg-transparent">
+                <TableCell className="min-w-[150px] whitespace-nowrap px-2 py-2 text-xs sm:px-3 sm:text-sm">
+                  {verbData.imperative_2s || na}
+                </TableCell>
+                <TableCell className="min-w-[150px] whitespace-nowrap px-2 py-2 text-xs sm:px-3 sm:text-sm">
+                  {verbData.imperative_2p || na}
+                </TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
     </div>

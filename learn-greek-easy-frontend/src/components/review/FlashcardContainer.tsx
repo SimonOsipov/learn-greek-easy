@@ -1,10 +1,7 @@
 import { useEffect, useState } from 'react';
 
-import { Clock } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Badge } from '@/components/ui/badge';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { useReviewStore } from '@/stores/reviewStore';
 import type { CardReview } from '@/types/review';
@@ -52,44 +49,18 @@ export function FlashcardContainer({ card }: FlashcardContainerProps) {
           'hover:-translate-y-1'
         )}
       >
-        {/* Early Practice Indicator */}
-        {card.isEarlyPractice && (
-          <div className="-mt-2 mb-2 flex justify-center">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Badge
-                  variant="secondary"
-                  className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
-                >
-                  <Clock className="mr-1 h-3 w-3" />
-                  {t('session.earlyPractice.badge')}
-                </Badge>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{t('session.earlyPractice.tooltip')}</p>
-                {card.srData?.dueDate && (
-                  <p className="text-xs text-muted-foreground">
-                    {t('session.earlyPractice.dueLabel', {
-                      date: new Date(card.srData.dueDate).toLocaleDateString(),
-                    })}
-                  </p>
-                )}
-              </TooltipContent>
-            </Tooltip>
-          </div>
-        )}
-
         {/* Card Header - Greek word with part of speech badge */}
         <div className="px-8 py-6">
-          <CardHeader card={card} onFlip={flipCard} />
+          <CardHeader card={card} onFlip={flipCard} isCardFlipped={isCardFlipped} />
         </div>
+
+        {/* Rating Buttons - visible after reveal, positioned above content */}
+        <RatingButtons isFlipped={isCardFlipped} />
 
         {/* Card Content - Translations and Grammar tables (blurred until revealed) */}
         <div className="px-8 pb-6">
           <CardContent card={card} isFlipped={isCardFlipped} />
         </div>
-
-        <RatingButtons />
       </div>
     </>
   );

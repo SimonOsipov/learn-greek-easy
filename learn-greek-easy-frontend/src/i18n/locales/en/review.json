@@ -45,6 +45,7 @@
     "cardsMastered": "cards mastered!",
     "needReview": "cards need review",
     "backToDeck": "Back to Deck",
+    "backToDashboard": "Back to Dashboard",
     "reviewAgain": "Review Again",
     "dashboard": "Dashboard",
     "seconds": "s",
@@ -107,10 +108,10 @@
       },
       "persons": {
         "firstSingular": "I",
-        "secondSingular": "You (sg)",
+        "secondSingular": "You (singular)",
         "thirdSingular": "He/She",
         "firstPlural": "We",
-        "secondPlural": "You (pl)",
+        "secondPlural": "You (plural)",
         "thirdPlural": "They"
       },
       "imperative": {

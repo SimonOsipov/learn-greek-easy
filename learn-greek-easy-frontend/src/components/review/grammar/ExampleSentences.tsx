@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo } from 'react';
 
 import { useTranslation } from 'react-i18next';
 
@@ -8,31 +8,41 @@ import type { Example } from '@/types/grammar';
 
 import { TenseBadge } from './TenseBadge';
 
-export interface ExampleSentencesProps {
-  examples: Example[];
+// Tense ordering for consistent display (same order as TenseTabs)
+const TENSE_ORDER: readonly string[] = [
+  'present',
+  'imperfect',
+  'past',
+  'future',
+  'perfect',
+  'imperative',
+] as const;
+
+function getTenseSortIndex(tense: string | null | undefined): number {
+  if (!tense) return TENSE_ORDER.length;
+  const index = TENSE_ORDER.indexOf(tense.toLowerCase());
+  return index === -1 ? TENSE_ORDER.length : index;
 }
 
-export function ExampleSentences({ examples }: ExampleSentencesProps) {
-  const { t, i18n } = useTranslation('review');
-  const [revealedIndexes, setRevealedIndexes] = useState<Set<number>>(new Set());
+export interface ExampleSentencesProps {
+  examples: Example[];
+  isFlipped?: boolean;
+}
 
-  const toggleReveal = (index: number) => {
-    setRevealedIndexes((prev) => {
-      const next = new Set(prev);
-      if (next.has(index)) {
-        next.delete(index);
-      } else {
-        next.add(index);
-      }
-      return next;
-    });
-  };
+export function ExampleSentences({ examples, isFlipped = true }: ExampleSentencesProps) {
+  const { t, i18n } = useTranslation('review');
 
   const getTranslation = (example: Example): string => {
     const primary = i18n.language === 'ru' ? example.russian : example.english;
     const fallback = i18n.language === 'ru' ? example.english : example.russian;
     return primary || fallback || '';
   };
+
+  // Sort examples by tense for consistent display order
+  const sortedExamples = useMemo(() => {
+    if (!examples || examples.length === 0) return [];
+    return [...examples].sort((a, b) => getTenseSortIndex(a.tense) - getTenseSortIndex(b.tense));
+  }, [examples]);
 
   if (!examples || examples.length === 0) {
     return (
@@ -46,8 +56,7 @@ export function ExampleSentences({ examples }: ExampleSentencesProps) {
 
   return (
     <div className="space-y-4">
-      {examples.map((example, index) => {
-        const isRevealed = revealedIndexes.has(index);
+      {sortedExamples.map((example, index) => {
         const translation = getTranslation(example);
 
         return (
@@ -59,26 +68,12 @@ export function ExampleSentences({ examples }: ExampleSentencesProps) {
                 {example.tense && <TenseBadge tense={example.tense} />}
               </div>
 
-              {/* Translation - blurred until revealed */}
+              {/* Translation - visible when card is flipped */}
               {translation && (
                 <div
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => toggleReveal(index)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      toggleReveal(index);
-                    }
-                  }}
-                  aria-label={
-                    isRevealed
-                      ? t('grammar.examples.hideTranslation')
-                      : t('grammar.examples.showTranslation')
-                  }
                   className={cn(
                     'mt-1 transition-[filter] duration-200',
-                    !isRevealed && 'cursor-pointer select-none blur-sm'
+                    !isFlipped && 'select-none blur-sm'
                   )}
                 >
                   <p className="text-sm text-muted-foreground">{translation}</p>

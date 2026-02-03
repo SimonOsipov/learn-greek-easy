@@ -209,7 +209,7 @@ describe('TenseTabs', () => {
       render(<TenseTabs verbData={mockVerbDataComplete} />);
 
       // Check that person labels are visible in the table (single-tense view)
-      expect(screen.getByText('You (sg)')).toBeInTheDocument();
+      expect(screen.getByText('You (singular)')).toBeInTheDocument();
       expect(screen.getByText('He/She')).toBeInTheDocument();
 
       // Switch to Past and verify content changes
@@ -223,9 +223,9 @@ describe('TenseTabs', () => {
 
       await user.click(screen.getByRole('tab', { name: 'Imperative' }));
 
-      // Should show singular/plural labels
-      expect(screen.getByText(/Singular:/)).toBeInTheDocument();
-      expect(screen.getByText(/Plural:/)).toBeInTheDocument();
+      // Should show singular/plural labels in table header
+      expect(screen.getByText('Singular')).toBeInTheDocument();
+      expect(screen.getByText('Plural')).toBeInTheDocument();
     });
   });
 
