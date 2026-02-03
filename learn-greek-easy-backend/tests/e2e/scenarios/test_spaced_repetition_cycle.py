@@ -53,7 +53,7 @@ class TestSpacedRepetitionCycle(E2ETestCase):
         # Create deck with cards
         deck = await DeckFactory.create(
             session=db_session,
-            name="State Progression Test Deck",
+            name_en="State Progression Test Deck",
         )
         cards = await CardFactory.create_batch(
             session=db_session,
@@ -165,7 +165,7 @@ class TestSpacedRepetitionCycle(E2ETestCase):
         """
         deck = await DeckFactory.create(
             session=db_session,
-            name="Interval Test Deck",
+            name_en="Interval Test Deck",
         )
         cards = await CardFactory.create_batch(
             session=db_session,
@@ -224,7 +224,7 @@ class TestSpacedRepetitionCycle(E2ETestCase):
         """
         deck = await DeckFactory.create(
             session=db_session,
-            name="Failed Review Test Deck",
+            name_en="Failed Review Test Deck",
         )
         cards = await CardFactory.create_batch(
             session=db_session,
@@ -298,7 +298,7 @@ class TestSpacedRepetitionCycle(E2ETestCase):
         """
         deck = await DeckFactory.create(
             session=db_session,
-            name="Due Date Test Deck",
+            name_en="Due Date Test Deck",
         )
         cards = await CardFactory.create_batch(
             session=db_session,
@@ -372,7 +372,7 @@ class TestSpacedRepetitionCycle(E2ETestCase):
         """
         deck = await DeckFactory.create(
             session=db_session,
-            name=f"EF Test Deck Q{quality}",
+            name_en=f"EF Test Deck Q{quality}",
         )
         cards = await CardFactory.create_batch(
             session=db_session,
@@ -435,7 +435,7 @@ class TestSpacedRepetitionCycle(E2ETestCase):
         """
         deck = await DeckFactory.create(
             session=db_session,
-            name=f"EF Failed Test Deck Q{quality}",
+            name_en=f"EF Failed Test Deck Q{quality}",
         )
         cards = await CardFactory.create_batch(
             session=db_session,
@@ -496,7 +496,7 @@ class TestSpacedRepetitionCycle(E2ETestCase):
         """
         deck = await DeckFactory.create(
             session=db_session,
-            name="Mastery Test Deck",
+            name_en="Mastery Test Deck",
         )
         cards = await CardFactory.create_batch(
             session=db_session,
@@ -566,7 +566,7 @@ class TestSpacedRepetitionCycle(E2ETestCase):
         """
         deck = await DeckFactory.create(
             session=db_session,
-            name="Mastery Loss Test Deck",
+            name_en="Mastery Loss Test Deck",
         )
         cards = await CardFactory.create_batch(
             session=db_session,
@@ -638,7 +638,7 @@ class TestSpacedRepetitionCycle(E2ETestCase):
         """
         deck = await DeckFactory.create(
             session=db_session,
-            name="Quality Boundary Test Deck",
+            name_en="Quality Boundary Test Deck",
         )
         cards = await CardFactory.create_batch(
             session=db_session,
@@ -702,7 +702,7 @@ class TestSpacedRepetitionCycle(E2ETestCase):
         """
         deck = await DeckFactory.create(
             session=db_session,
-            name="EF Growth Test Deck",
+            name_en="EF Growth Test Deck",
         )
         cards = await CardFactory.create_batch(
             session=db_session,
@@ -750,7 +750,7 @@ class TestSpacedRepetitionCycle(E2ETestCase):
         """
         deck = await DeckFactory.create(
             session=db_session,
-            name="EF Floor Test Deck",
+            name_en="EF Floor Test Deck",
         )
         cards = await CardFactory.create_batch(
             session=db_session,
@@ -810,7 +810,7 @@ class TestSpacedRepetitionCycle(E2ETestCase):
         """
         deck = await DeckFactory.create(
             session=db_session,
-            name="Alternating Quality Test Deck",
+            name_en="Alternating Quality Test Deck",
         )
         cards = await CardFactory.create_batch(
             session=db_session,
@@ -873,7 +873,7 @@ class TestSpacedRepetitionCycle(E2ETestCase):
         """
         deck = await DeckFactory.create(
             session=db_session,
-            name="DB Consistency Test Deck",
+            name_en="DB Consistency Test Deck",
         )
         cards = await CardFactory.create_batch(
             session=db_session,

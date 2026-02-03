@@ -254,7 +254,7 @@ async def list_decks(
         vocab_query = (
             select(
                 Deck.id,
-                Deck.name,
+                Deck.name_en.label("name"),
                 Deck.level,
                 Deck.is_active,
                 Deck.is_premium,
@@ -262,14 +262,25 @@ async def list_decks(
                 Deck.owner_id,
                 User.full_name.label("owner_name"),
                 func.coalesce(vocab_card_count_subquery.c.card_count, 0).label("item_count"),
+                # Trilingual fields for edit forms
+                Deck.name_el,
+                Deck.name_en,
+                Deck.name_ru,
+                Deck.description_el,
+                Deck.description_en,
+                Deck.description_ru,
             )
             .outerjoin(vocab_card_count_subquery, Deck.id == vocab_card_count_subquery.c.deck_id)
             .outerjoin(User, Deck.owner_id == User.id)
         )
 
-        # Apply search filter
+        # Apply search filter (search across all language name fields)
         if search:
-            vocab_query = vocab_query.where(Deck.name.ilike(f"%{search}%"))
+            vocab_query = vocab_query.where(
+                Deck.name_en.ilike(f"%{search}%")
+                | Deck.name_el.ilike(f"%{search}%")
+                | Deck.name_ru.ilike(f"%{search}%")
+            )
 
         # Get total count for vocabulary
         vocab_count_query = select(func.count()).select_from(vocab_query.subquery())
@@ -293,6 +304,13 @@ async def list_decks(
                     created_at=row.created_at,
                     owner_id=row.owner_id,
                     owner_name=row.owner_name,
+                    # Trilingual fields for edit forms
+                    name_el=row.name_el,
+                    name_en=row.name_en,
+                    name_ru=row.name_ru,
+                    description_el=row.description_el,
+                    description_en=row.description_en,
+                    description_ru=row.description_ru,
                 )
             )
 
@@ -312,20 +330,31 @@ async def list_decks(
 
         culture_query = select(
             CultureDeck.id,
-            CultureDeck.name,
+            CultureDeck.name_en.label("name"),
             CultureDeck.category,
             CultureDeck.is_active,
             CultureDeck.is_premium,
             CultureDeck.created_at,
             func.coalesce(culture_question_count_subquery.c.question_count, 0).label("item_count"),
+            # Trilingual fields for edit forms
+            CultureDeck.name_el,
+            CultureDeck.name_en,
+            CultureDeck.name_ru,
+            CultureDeck.description_el,
+            CultureDeck.description_en,
+            CultureDeck.description_ru,
         ).outerjoin(
             culture_question_count_subquery,
             CultureDeck.id == culture_question_count_subquery.c.deck_id,
         )
 
-        # Apply search filter
+        # Apply search filter (search across all language name fields)
         if search:
-            culture_query = culture_query.where(CultureDeck.name.ilike(f"%{search}%"))
+            culture_query = culture_query.where(
+                CultureDeck.name_en.ilike(f"%{search}%")
+                | CultureDeck.name_el.ilike(f"%{search}%")
+                | CultureDeck.name_ru.ilike(f"%{search}%")
+            )
 
         # Get total count for culture
         culture_count_query = select(func.count()).select_from(culture_query.subquery())
@@ -349,6 +378,13 @@ async def list_decks(
                     created_at=row.created_at,
                     owner_id=None,
                     owner_name=None,
+                    # Trilingual fields for edit forms
+                    name_el=row.name_el,
+                    name_en=row.name_en,
+                    name_ru=row.name_ru,
+                    description_el=row.description_el,
+                    description_en=row.description_en,
+                    description_ru=row.description_ru,
                 )
             )
 

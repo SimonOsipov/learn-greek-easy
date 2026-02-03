@@ -1,6 +1,6 @@
 // src/components/admin/CultureDeckCreateForm.tsx
 
-import React from 'react';
+import React, { useState } from 'react';
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -28,6 +28,19 @@ import {
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
+import { cn } from '@/lib/utils';
+
+/**
+ * Supported languages for culture deck names (trilingual: EL/EN/RU)
+ */
+const DECK_LANGUAGES = ['el', 'en', 'ru'] as const;
+type DeckLanguage = (typeof DECK_LANGUAGES)[number];
+
+const LANGUAGE_LABELS: Record<DeckLanguage, string> = {
+  el: 'Greek',
+  en: 'English',
+  ru: 'Russian',
+};
 
 /**
  * Culture deck categories
@@ -42,11 +55,23 @@ const CULTURE_CATEGORIES = [
 ] as const;
 
 /**
- * Validation schema for culture deck create form
+ * Validation schema for culture deck create form with trilingual support
  */
 const cultureDeckCreateSchema = z.object({
-  name: z.string().min(1, 'Name is required').max(255, 'Name must be at most 255 characters'),
-  description: z
+  name_el: z.string().min(1, 'Name is required').max(255, 'Name must be at most 255 characters'),
+  name_en: z.string().min(1, 'Name is required').max(255, 'Name must be at most 255 characters'),
+  name_ru: z.string().min(1, 'Name is required').max(255, 'Name must be at most 255 characters'),
+  description_el: z
+    .string()
+    .max(1000, 'Description must be at most 1000 characters')
+    .optional()
+    .or(z.literal('')),
+  description_en: z
+    .string()
+    .max(1000, 'Description must be at most 1000 characters')
+    .optional()
+    .or(z.literal('')),
+  description_ru: z
     .string()
     .max(1000, 'Description must be at most 1000 characters')
     .optional()
@@ -64,14 +89,12 @@ interface CultureDeckCreateFormProps {
 }
 
 /**
- * Form component for creating a new culture deck
+ * Form component for creating a new culture deck with trilingual support
  *
  * Fields:
- * - name: Required text input (1-255 chars)
- * - description: Optional textarea (max 1000 chars)
+ * - name_el/name_en/name_ru: Required text inputs (1-255 chars each)
+ * - description_el/description_en/description_ru: Optional textareas (max 1000 chars each)
  * - category: Culture category dropdown
- * - icon: Emoji or icon name (required)
- * - color_accent: Hex color code
  * - is_premium: Toggle switch for premium status
  */
 export const CultureDeckCreateForm: React.FC<CultureDeckCreateFormProps> = ({
@@ -80,17 +103,31 @@ export const CultureDeckCreateForm: React.FC<CultureDeckCreateFormProps> = ({
   isLoading = false,
 }) => {
   const { t } = useTranslation('admin');
+  const [activeTab, setActiveTab] = useState<DeckLanguage>('en');
 
   const form = useForm<CultureDeckCreateFormData>({
     resolver: zodResolver(cultureDeckCreateSchema),
     mode: 'onChange',
     defaultValues: {
-      name: '',
-      description: '',
+      name_el: '',
+      name_en: '',
+      name_ru: '',
+      description_el: '',
+      description_en: '',
+      description_ru: '',
       category: 'culture',
       is_premium: false,
     },
   });
+
+  /**
+   * Check if a language tab has validation errors
+   */
+  const hasTabErrors = (lang: DeckLanguage): boolean => {
+    const nameKey = `name_${lang}` as keyof CultureDeckCreateFormData;
+    const descKey = `description_${lang}` as keyof CultureDeckCreateFormData;
+    return !!(form.formState.errors[nameKey] || form.formState.errors[descKey]);
+  };
 
   const handleSubmit = (data: CultureDeckCreateFormData) => {
     onSubmit(data);
@@ -103,42 +140,75 @@ export const CultureDeckCreateForm: React.FC<CultureDeckCreateFormProps> = ({
         className="space-y-4"
         data-testid="culture-deck-create-form"
       >
-        <FormField
-          control={form.control}
-          name="name"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>{t('deckCreate.name')}</FormLabel>
-              <FormControl>
-                <Input
-                  placeholder={t('deckCreate.namePlaceholder')}
-                  data-testid="deck-create-name"
-                  {...field}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        {/* Language tabs for name/description */}
+        <div className="space-y-4">
+          <div className="flex gap-1 rounded-lg bg-muted p-1">
+            {DECK_LANGUAGES.map((lang) => (
+              <button
+                key={lang}
+                type="button"
+                onClick={() => setActiveTab(lang)}
+                data-testid={`deck-create-lang-tab-${lang}`}
+                className={cn(
+                  'relative flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors',
+                  activeTab === lang ? 'bg-background shadow' : 'hover:bg-background/50',
+                  hasTabErrors(lang) && 'text-destructive'
+                )}
+              >
+                {LANGUAGE_LABELS[lang]}
+                {hasTabErrors(lang) && (
+                  <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-destructive" />
+                )}
+              </button>
+            ))}
+          </div>
 
-        <FormField
-          control={form.control}
-          name="description"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>{t('deckCreate.description')}</FormLabel>
-              <FormControl>
-                <Textarea
-                  placeholder={t('deckCreate.descriptionPlaceholder')}
-                  className="min-h-[100px]"
-                  data-testid="deck-create-description"
-                  {...field}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+          {/* Tab content - name and description per language */}
+          {DECK_LANGUAGES.map((lang) => (
+            <div key={lang} className={cn('space-y-4', activeTab !== lang && 'hidden')}>
+              <FormField
+                control={form.control}
+                name={`name_${lang}` as keyof CultureDeckCreateFormData}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      {t('deckCreate.name')} ({LANGUAGE_LABELS[lang]})
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder={t('deckCreate.namePlaceholder')}
+                        data-testid={`deck-create-name-${lang}`}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name={`description_${lang}` as keyof CultureDeckCreateFormData}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      {t('deckCreate.description')} ({LANGUAGE_LABELS[lang]})
+                    </FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder={t('deckCreate.descriptionPlaceholder')}
+                        className="min-h-[100px]"
+                        data-testid={`deck-create-description-${lang}`}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+          ))}
+        </div>
 
         <FormField
           control={form.control}

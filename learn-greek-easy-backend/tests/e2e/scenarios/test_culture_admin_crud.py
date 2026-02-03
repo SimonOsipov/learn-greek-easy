@@ -42,8 +42,12 @@ class TestCultureDeckCreate(E2ETestCase):
     ) -> None:
         """Test superuser can create a new culture deck."""
         deck_data = {
-            "name": "Greek History",
-            "description": "Learn about Greek history",
+            "name_en": "Greek History",
+            "name_el": "Greek History",
+            "name_ru": "Greek History",
+            "description_en": "Learn about Greek history",
+            "description_el": "Learn about Greek history",
+            "description_ru": "Learn about Greek history",
             "category": "history",
         }
 
@@ -55,7 +59,7 @@ class TestCultureDeckCreate(E2ETestCase):
 
         assert response.status_code == 201
         data = response.json()
-        assert data["name"] == "Greek History"
+        assert data["name_en"] == "Greek History"
         assert data["category"] == "history"
         assert data["question_count"] == 0
         assert data["is_active"] is True
@@ -70,8 +74,12 @@ class TestCultureDeckCreate(E2ETestCase):
     ) -> None:
         """Test creating deck with custom order_index."""
         deck_data = {
-            "name": "Test Deck",
-            "description": "Description",
+            "name_en": "Test Deck",
+            "name_el": "Test Deck",
+            "name_ru": "Test Deck",
+            "description_en": "Description",
+            "description_el": "Description",
+            "description_ru": "Description",
             "category": "geography",
             "order_index": 100,
         }
@@ -94,8 +102,12 @@ class TestCultureDeckCreate(E2ETestCase):
     ) -> None:
         """Test that regular user cannot create culture deck."""
         deck_data = {
-            "name": "Test",
-            "description": "Desc",
+            "name_en": "Test",
+            "name_el": "Test",
+            "name_ru": "Test",
+            "description_en": "Desc",
+            "description_el": "Desc",
+            "description_ru": "Desc",
             "category": "test",
         }
 
@@ -114,8 +126,12 @@ class TestCultureDeckCreate(E2ETestCase):
     ) -> None:
         """Test that unauthenticated request fails."""
         deck_data = {
-            "name": "Test",
-            "description": "Desc",
+            "name_en": "Test",
+            "name_el": "Test",
+            "name_ru": "Test",
+            "description_en": "Desc",
+            "description_el": "Desc",
+            "description_ru": "Desc",
             "category": "test",
         }
 
@@ -143,7 +159,7 @@ class TestCultureDeckUpdate(E2ETestCase):
 
         update_data = {
             "category": "updated_category",
-            "name": "Updated Name",
+            "name_en": "Updated Name",
         }
 
         response = await client.patch(
@@ -155,7 +171,7 @@ class TestCultureDeckUpdate(E2ETestCase):
         assert response.status_code == 200
         data = response.json()
         assert data["category"] == "updated_category"
-        assert data["name"] == "Updated Name"
+        assert data["name_en"] == "Updated Name"
 
     @pytest.mark.asyncio
     async def test_update_deck_partial_update(
@@ -170,20 +186,20 @@ class TestCultureDeckUpdate(E2ETestCase):
             category="original_category",
         )
         await db_session.commit()
-        original_name = deck.name
+        original_name = deck.name_en
 
         response = await client.patch(
             f"/api/v1/culture/decks/{deck.id}",
-            json={"description": "new-description"},
+            json={"description_en": "new-description"},
             headers=admin_session.headers,
         )
 
         assert response.status_code == 200
         data = response.json()
-        assert data["description"] == "new-description"
+        assert data["description_en"] == "new-description"
         assert data["category"] == "original_category"
         # Name should be unchanged
-        assert data["name"] == original_name
+        assert data["name_en"] == original_name
 
     @pytest.mark.asyncio
     async def test_update_deck_not_found(
@@ -745,8 +761,8 @@ class TestCultureAdminExtended(E2ETestCase):
         await db_session.commit()
 
         update_data = {
-            "name": "New Name",
-            "description": "New Description",
+            "name_en": "New Name",
+            "description_en": "New Description",
             "category": "traditions",
         }
 
@@ -757,7 +773,7 @@ class TestCultureAdminExtended(E2ETestCase):
         )
         assert response.status_code == 200
         data = response.json()
-        assert data["name"] == "New Name"
+        assert data["name_en"] == "New Name"
         assert data["category"] == "traditions"
 
     @pytest.mark.asyncio
@@ -925,8 +941,12 @@ class TestCultureAdminExtended(E2ETestCase):
 
         for category in categories:
             deck_data = {
-                "name": f"Deck {category}",
-                "description": "Desc",
+                "name_en": f"Deck {category}",
+                "name_el": f"Deck {category}",
+                "name_ru": f"Deck {category}",
+                "description_en": "Desc",
+                "description_el": "Desc",
+                "description_ru": "Desc",
                 "category": category,
             }
 
@@ -949,8 +969,12 @@ class TestCultureAdminExtended(E2ETestCase):
         # Create 5 decks
         for i in range(5):
             deck_data = {
-                "name": f"List Deck {i}",
-                "description": "Desc",
+                "name_en": f"List Deck {i}",
+                "name_el": f"List Deck {i}",
+                "name_ru": f"List Deck {i}",
+                "description_en": "Desc",
+                "description_el": "Desc",
+                "description_ru": "Desc",
                 "category": "history",
             }
             await client.post(
@@ -981,7 +1005,7 @@ class TestCultureAdminExtended(E2ETestCase):
         # Update only the description
         response = await client.patch(
             f"/api/v1/culture/decks/{deck.id}",
-            json={"description": "New Description"},
+            json={"description_en": "New Description"},
             headers=admin_session.headers,
         )
         assert response.status_code == 200
@@ -1009,8 +1033,12 @@ class TestCultureAdminExtended(E2ETestCase):
 
         # Create new deck with same category
         new_deck_data = {
-            "name": "New History",
-            "description": "Desc",
+            "name_en": "New History",
+            "name_el": "New History",
+            "name_ru": "New History",
+            "description_en": "Desc",
+            "description_el": "Desc",
+            "description_ru": "Desc",
             "category": "history",
         }
         create_response = await client.post(

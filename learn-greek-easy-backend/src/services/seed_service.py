@@ -225,7 +225,12 @@ class SeedService:
             ("διακυβέρνηση", "governance", "Administration", PartOfSpeech.NOUN),
             ("αντικειμενικότητα", "objectivity", "Impartiality", PartOfSpeech.NOUN),
             ("υποκειμενικότητα", "subjectivity", "Personal view", PartOfSpeech.NOUN),
-            ("διεπιστημονικός", "interdisciplinary", "Academic", PartOfSpeech.ADJECTIVE),
+            (
+                "διεπιστημονικός",
+                "interdisciplinary",
+                "Academic",
+                PartOfSpeech.ADJECTIVE,
+            ),
             ("πολυπλοκότητα", "complexity", "Intricacy", PartOfSpeech.NOUN),
             ("ενσωμάτωση", "integration", "Incorporation", PartOfSpeech.NOUN),
             ("διαφοροποίηση", "differentiation", "Distinction", PartOfSpeech.NOUN),
@@ -234,9 +239,19 @@ class SeedService:
         DeckLevel.C2: [
             ("μεταμοντερνισμός", "postmodernism", "Philosophy", PartOfSpeech.NOUN),
             ("επιστημολογία", "epistemology", "Theory of knowledge", PartOfSpeech.NOUN),
-            ("υπερβατικός", "transcendent", "Beyond experience", PartOfSpeech.ADJECTIVE),
+            (
+                "υπερβατικός",
+                "transcendent",
+                "Beyond experience",
+                PartOfSpeech.ADJECTIVE,
+            ),
             ("διαλεκτική", "dialectic", "Philosophical method", PartOfSpeech.NOUN),
-            ("παραδειγματικός", "paradigmatic", "Model example", PartOfSpeech.ADJECTIVE),
+            (
+                "παραδειγματικός",
+                "paradigmatic",
+                "Model example",
+                PartOfSpeech.ADJECTIVE,
+            ),
             ("αποδόμηση", "deconstruction", "Analysis method", PartOfSpeech.NOUN),
             ("ερμηνευτική", "hermeneutics", "Interpretation theory", PartOfSpeech.NOUN),
             ("φαινομενολογία", "phenomenology", "Philosophy branch", PartOfSpeech.NOUN),
@@ -250,28 +265,44 @@ class SeedService:
     USER_DECKS: dict[str, list[dict[str, Any]]] = {
         "e2e_learner@test.com": [
             {
-                "name": "My Greek Basics",
-                "description": "My personal collection of basic Greek words",
+                "name_en": "My Greek Basics",
+                "name_el": "Τα Ελληνικά μου Βασικά",
+                "name_ru": "Мои основы греческого",
+                "description_en": "My personal collection of basic Greek words",
+                "description_el": "Η προσωπική μου συλλογή βασικών ελληνικών λέξεων",
+                "description_ru": "Моя личная коллекция базовых греческих слов",
                 "level": DeckLevel.A1,
                 "card_count": 5,
             },
             {
-                "name": "Travel Phrases",
-                "description": "Essential phrases for traveling in Greece",
+                "name_en": "Travel Phrases",
+                "name_el": "Φράσεις Ταξιδιού",
+                "name_ru": "Фразы для путешествий",
+                "description_en": "Essential phrases for traveling in Greece",
+                "description_el": "Απαραίτητες φράσεις για ταξίδια στην Ελλάδα",
+                "description_ru": "Необходимые фразы для путешествия по Греции",
                 "level": DeckLevel.A2,
                 "card_count": 3,
             },
             {
-                "name": "Practice Deck",
-                "description": "An empty deck for practice",
+                "name_en": "Practice Deck",
+                "name_el": "Τράπουλα Εξάσκησης",
+                "name_ru": "Практическая колода",
+                "description_en": "An empty deck for practice",
+                "description_el": "Μια κενή τράπουλα για εξάσκηση",
+                "description_ru": "Пустая колода для практики",
                 "level": DeckLevel.B1,
                 "card_count": 0,
             },
         ],
         "e2e_admin@test.com": [
             {
-                "name": "Admin's Personal Deck",
-                "description": "Admin's personal vocabulary collection",
+                "name_en": "Admin's Personal Deck",
+                "name_el": "Προσωπική Τράπουλα Διαχειριστή",
+                "name_ru": "Личная колода администратора",
+                "description_en": "Admin's personal vocabulary collection",
+                "description_el": "Προσωπική συλλογή λεξιλογίου διαχειριστή",
+                "description_ru": "Личная коллекция словарного запаса администратора",
                 "level": DeckLevel.A1,
                 "card_count": 2,
             },
@@ -425,8 +456,12 @@ class SeedService:
     # Admin vocabulary cards for E2E testing
     # Deck 1: 10 cards with varying grammar data completeness
     # Deck 2: Empty deck for first card creation test
-    ADMIN_CARDS_DECK_NAME = "E2E Vocabulary Cards Test Deck"
-    ADMIN_CARDS_EMPTY_DECK_NAME = "E2E Empty Vocabulary Deck"
+    ADMIN_CARDS_DECK_NAME_EN = "E2E Vocabulary Cards Test Deck"
+    ADMIN_CARDS_DECK_NAME_EL = "E2E Δοκιμαστική Τράπουλα Καρτών Λεξιλογίου"
+    ADMIN_CARDS_DECK_NAME_RU = "E2E Колода тестовых карточек словарного запаса"
+    ADMIN_CARDS_EMPTY_DECK_NAME_EN = "E2E Empty Vocabulary Deck"
+    ADMIN_CARDS_EMPTY_DECK_NAME_EL = "E2E Κενή Τράπουλα Λεξιλογίου"
+    ADMIN_CARDS_EMPTY_DECK_NAME_RU = "E2E Пустая колода словарного запаса"
     ADMIN_CARDS: list[AdminCardSeedData] = [
         # Card 1: Basic card - just front_text and back_text_en (no grammar)
         {
@@ -585,24 +620,44 @@ class SeedService:
     # Culture categories with deck definitions (simple English strings)
     CULTURE_DECKS = {
         "history": {
-            "name": "Greek History",
-            "description": "Questions about Greek history",
+            "name_en": "Greek History",
+            "name_el": "Ελληνική Ιστορία",
+            "name_ru": "Греческая история",
+            "description_en": "Questions about Greek history",
+            "description_el": "Ερωτήσεις για την ελληνική ιστορία",
+            "description_ru": "Вопросы об истории Греции",
         },
         "geography": {
-            "name": "Greek Geography",
-            "description": "Questions about Greek geography",
+            "name_en": "Greek Geography",
+            "name_el": "Ελληνική Γεωγραφία",
+            "name_ru": "Греческая география",
+            "description_en": "Questions about Greek geography",
+            "description_el": "Ερωτήσεις για την ελληνική γεωγραφία",
+            "description_ru": "Вопросы о географии Греции",
         },
         "politics": {
-            "name": "Political System",
-            "description": "Questions about the political system",
+            "name_en": "Political System",
+            "name_el": "Πολιτικό Σύστημα",
+            "name_ru": "Политическая система",
+            "description_en": "Questions about the political system",
+            "description_el": "Ερωτήσεις για το πολιτικό σύστημα",
+            "description_ru": "Вопросы о политической системе",
         },
         "culture": {
-            "name": "Greek Culture",
-            "description": "Questions about Greek culture",
+            "name_en": "Greek Culture",
+            "name_el": "Ελληνικός Πολιτισμός",
+            "name_ru": "Греческая культура",
+            "description_en": "Questions about Greek culture",
+            "description_el": "Ερωτήσεις για τον ελληνικό πολιτισμό",
+            "description_ru": "Вопросы о греческой культуре",
         },
         "traditions": {
-            "name": "Traditions and Customs",
-            "description": "Questions about Greek traditions",
+            "name_en": "Traditions and Customs",
+            "name_el": "Παραδόσεις και Έθιμα",
+            "name_ru": "Традиции и обычаи",
+            "description_en": "Questions about Greek traditions",
+            "description_el": "Ερωτήσεις για τις ελληνικές παραδόσεις",
+            "description_ru": "Вопросы о греческих традициях",
         },
     }
 
@@ -618,7 +673,11 @@ class SeedService:
                 "options": [
                     {"el": "Όθων", "en": "Otto", "ru": "Оттон"},
                     {"el": "Γεώργιος Α'", "en": "George I", "ru": "Георг I"},
-                    {"el": "Κωνσταντίνος Α'", "en": "Constantine I", "ru": "Константин I"},
+                    {
+                        "el": "Κωνσταντίνος Α'",
+                        "en": "Constantine I",
+                        "ru": "Константин I",
+                    },
                     {"el": "Παύλος", "en": "Paul", "ru": "Павел"},
                 ],
                 "correct_option": 1,
@@ -791,8 +850,16 @@ class SeedService:
                         "en": "Freedom or Death",
                         "ru": "Свобода или смерть",
                     },
-                    {"el": "Ένωση και Δύναμη", "en": "Unity and Strength", "ru": "Единство и сила"},
-                    {"el": "Νίκη ή Θάνατος", "en": "Victory or Death", "ru": "Победа или смерть"},
+                    {
+                        "el": "Ένωση και Δύναμη",
+                        "en": "Unity and Strength",
+                        "ru": "Единство и сила",
+                    },
+                    {
+                        "el": "Νίκη ή Θάνατος",
+                        "en": "Victory or Death",
+                        "ru": "Победа или смерть",
+                    },
                     # Note: Only 3 options - testing variable answer count support
                 ],
                 "correct_option": 1,
@@ -862,7 +929,11 @@ class SeedService:
                     "ru": "Какое море омывает западную Грецию?",
                 },
                 "options": [
-                    {"el": "Ιόνιο Πέλαγος", "en": "Ionian Sea", "ru": "Ионическое море"},
+                    {
+                        "el": "Ιόνιο Πέλαγος",
+                        "en": "Ionian Sea",
+                        "ru": "Ионическое море",
+                    },
                     {"el": "Αιγαίο Πέλαγος", "en": "Aegean Sea", "ru": "Эгейское море"},
                     {
                         "el": "Μεσόγειος Θάλασσα",
@@ -1020,7 +1091,11 @@ class SeedService:
                         "en": "The people by direct vote",
                         "ru": "Народ прямым голосованием",
                     },
-                    {"el": "Ο Πρωθυπουργός", "en": "The Prime Minister", "ru": "Премьер-министр"},
+                    {
+                        "el": "Ο Πρωθυπουργός",
+                        "en": "The Prime Minister",
+                        "ru": "Премьер-министр",
+                    },
                     {
                         "el": "Το Υπουργικό Συμβούλιο",
                         "en": "The Cabinet",
@@ -1060,7 +1135,11 @@ class SeedService:
                         "en": "Council of State",
                         "ru": "Государственный совет",
                     },
-                    {"el": "Ελεγκτικό Συνέδριο", "en": "Court of Audit", "ru": "Счётная палата"},
+                    {
+                        "el": "Ελεγκτικό Συνέδριο",
+                        "en": "Court of Audit",
+                        "ru": "Счётная палата",
+                    },
                     {
                         "el": "Ανώτατο Ειδικό Δικαστήριο",
                         "en": "Supreme Special Court",
@@ -1174,7 +1253,11 @@ class SeedService:
                         "en": "Greece Never Dies",
                         "ru": "Греция никогда не умрёт",
                     },
-                    {"el": "Δόξα και Τιμή", "en": "Glory and Honor", "ru": "Слава и честь"},
+                    {
+                        "el": "Δόξα και Τιμή",
+                        "en": "Glory and Honor",
+                        "ru": "Слава и честь",
+                    },
                     {
                         "el": "Μακεδονία Ξακουστή",
                         "en": "Famous Macedonia",
@@ -1190,13 +1273,21 @@ class SeedService:
                     "ru": "Какой греческий поэт получил Нобелевскую премию по литературе?",
                 },
                 "options": [
-                    {"el": "Γιώργος Σεφέρης", "en": "George Seferis", "ru": "Йоргос Сеферис"},
+                    {
+                        "el": "Γιώργος Σεφέρης",
+                        "en": "George Seferis",
+                        "ru": "Йоргос Сеферис",
+                    },
                     {
                         "el": "Κωνσταντίνος Καβάφης",
                         "en": "Constantine Cavafy",
                         "ru": "Константинос Кавафис",
                     },
-                    {"el": "Οδυσσέας Ελύτης", "en": "Odysseas Elytis", "ru": "Одиссеас Элитис"},
+                    {
+                        "el": "Οδυσσέας Ελύτης",
+                        "en": "Odysseas Elytis",
+                        "ru": "Одиссеас Элитис",
+                    },
                     {
                         "el": "Νίκος Καζαντζάκης",
                         "en": "Nikos Kazantzakis",
@@ -1222,7 +1313,11 @@ class SeedService:
                         "en": "Odeon of Herodes Atticus",
                         "ru": "Одеон Герода Аттика",
                     },
-                    {"el": "Θέατρο Διονύσου", "en": "Theatre of Dionysus", "ru": "Театр Диониса"},
+                    {
+                        "el": "Θέατρο Διονύσου",
+                        "en": "Theatre of Dionysus",
+                        "ru": "Театр Диониса",
+                    },
                     {
                         "el": "Αρχαίο Θέατρο Δελφών",
                         "en": "Ancient Theatre of Delphi",
@@ -1258,7 +1353,11 @@ class SeedService:
                         "en": "Temple of Olympian Zeus",
                         "ru": "Храм Зевса Олимпийского",
                     },
-                    {"el": "Αρχαία Αγορά", "en": "Ancient Agora", "ru": "Древняя Агора"},
+                    {
+                        "el": "Αρχαία Αγορά",
+                        "en": "Ancient Agora",
+                        "ru": "Древняя Агора",
+                    },
                     {"el": "Ερεχθείο", "en": "Erechtheion", "ru": "Эрехтейон"},
                 ],
                 "correct_option": 1,
@@ -1275,7 +1374,11 @@ class SeedService:
                         "en": "Greek Orthodox Christian",
                         "ru": "Греческое православие",
                     },
-                    {"el": "Ρωμαιοκαθολική", "en": "Roman Catholic", "ru": "Римско-католическая"},
+                    {
+                        "el": "Ρωμαιοκαθολική",
+                        "en": "Roman Catholic",
+                        "ru": "Римско-католическая",
+                    },
                     {"el": "Προτεσταντική", "en": "Protestant", "ru": "Протестантизм"},
                     {
                         "el": "Δεν υπάρχει επίσημη θρησκεία",
@@ -1292,8 +1395,16 @@ class SeedService:
                     "ru": "Какая известная греческая музыка связана с ребетико?",
                 },
                 "options": [
-                    {"el": "Λαϊκή μουσική", "en": "Folk music", "ru": "Народная музыка"},
-                    {"el": "Κλασική μουσική", "en": "Classical music", "ru": "Классическая музыка"},
+                    {
+                        "el": "Λαϊκή μουσική",
+                        "en": "Folk music",
+                        "ru": "Народная музыка",
+                    },
+                    {
+                        "el": "Κλασική μουσική",
+                        "en": "Classical music",
+                        "ru": "Классическая музыка",
+                    },
                     {
                         "el": "Βυζαντινή μουσική",
                         "en": "Byzantine music",
@@ -1314,7 +1425,11 @@ class SeedService:
                     "ru": "Какой греческий режиссёр получил Оскар за лучший фильм?",
                 },
                 "options": [
-                    {"el": "Γιώργος Λάνθιμος", "en": "Yorgos Lanthimos", "ru": "Йоргос Лантимос"},
+                    {
+                        "el": "Γιώργος Λάνθιμος",
+                        "en": "Yorgos Lanthimos",
+                        "ru": "Йоргос Лантимос",
+                    },
                     {"el": "Κώστας Γαβράς", "en": "Costa-Gavras", "ru": "Коста-Гаврас"},
                     {
                         "el": "Θεόδωρος Αγγελόπουλος",
@@ -1362,8 +1477,16 @@ class SeedService:
                         "en": "According to the Western calendar",
                         "ru": "По западному календарю",
                     },
-                    {"el": "Πάντα τον Μάρτιο", "en": "Always in March", "ru": "Всегда в марте"},
-                    {"el": "Πάντα τον Απρίλιο", "en": "Always in April", "ru": "Всегда в апреле"},
+                    {
+                        "el": "Πάντα τον Μάρτιο",
+                        "en": "Always in March",
+                        "ru": "Всегда в марте",
+                    },
+                    {
+                        "el": "Πάντα τον Απρίλιο",
+                        "en": "Always in April",
+                        "ru": "Всегда в апреле",
+                    },
                 ],
                 "correct_option": 1,
             },
@@ -1428,7 +1551,11 @@ class SeedService:
                         "ru": "Миндаль в сахаре (Куфета)",
                     },
                     {"el": "Μπακλαβάς", "en": "Baklava", "ru": "Пахлава"},
-                    {"el": "Γαλακτομπούρεκο", "en": "Galaktoboureko", "ru": "Галактобуреко"},
+                    {
+                        "el": "Γαλακτομπούρεκο",
+                        "en": "Galaktoboureko",
+                        "ru": "Галактобуреко",
+                    },
                     {"el": "Λουκουμάδες", "en": "Loukoumades", "ru": "Лукумадес"},
                 ],
                 "correct_option": 1,
@@ -1445,9 +1572,21 @@ class SeedService:
                         "en": "Cutting the Vasilopita",
                         "ru": "Разрезание Василопиты",
                     },
-                    {"el": "Ανάβουμε κεριά", "en": "Lighting candles", "ru": "Зажигание свечей"},
-                    {"el": "Τρώμε σταφύλια", "en": "Eating grapes", "ru": "Едим виноград"},
-                    {"el": "Πετάμε πιάτα", "en": "Throwing plates", "ru": "Бросание тарелок"},
+                    {
+                        "el": "Ανάβουμε κεριά",
+                        "en": "Lighting candles",
+                        "ru": "Зажигание свечей",
+                    },
+                    {
+                        "el": "Τρώμε σταφύλια",
+                        "en": "Eating grapes",
+                        "ru": "Едим виноград",
+                    },
+                    {
+                        "el": "Πετάμε πιάτα",
+                        "en": "Throwing plates",
+                        "ru": "Бросание тарелок",
+                    },
                 ],
                 "correct_option": 1,
             },
@@ -1483,7 +1622,11 @@ class SeedService:
                         "ru": "Рождение Иисуса",
                     },
                     {"el": "Η Ανάσταση", "en": "The Resurrection", "ru": "Воскресение"},
-                    {"el": "Η Μεταμόρφωση", "en": "The Transfiguration", "ru": "Преображение"},
+                    {
+                        "el": "Η Μεταμόρφωση",
+                        "en": "The Transfiguration",
+                        "ru": "Преображение",
+                    },
                 ],
                 "correct_option": 1,
             },
@@ -1534,7 +1677,11 @@ class SeedService:
                         "en": "Celebrated together with birthdays",
                         "ru": "Отмечается вместе с днём рождения",
                     },
-                    {"el": "Δεν γιορτάζεται", "en": "Not celebrated", "ru": "Не отмечается"},
+                    {
+                        "el": "Δεν γιορτάζεται",
+                        "en": "Not celebrated",
+                        "ru": "Не отмечается",
+                    },
                     {
                         "el": "Γιορτάζεται μόνο για παιδιά",
                         "en": "Celebrated only for children",
@@ -1830,12 +1977,51 @@ class SeedService:
         # Premium levels - C1 and C2 are premium content
         premium_levels = {DeckLevel.C1, DeckLevel.C2}
 
+        # Greek translations for CEFR levels
+        level_translations_el = {
+            DeckLevel.A1: "Ελληνικό Λεξιλόγιο A1",
+            DeckLevel.A2: "Ελληνικό Λεξιλόγιο A2",
+            DeckLevel.B1: "Ελληνικό Λεξιλόγιο B1",
+            DeckLevel.B2: "Ελληνικό Λεξιλόγιο B2",
+            DeckLevel.C1: "Ελληνικό Λεξιλόγιο C1",
+            DeckLevel.C2: "Ελληνικό Λεξιλόγιο C2",
+        }
+        description_translations_el = {
+            DeckLevel.A1: "Βασικό ελληνικό λεξιλόγιο για επίπεδο CEFR A1",
+            DeckLevel.A2: "Βασικό ελληνικό λεξιλόγιο για επίπεδο CEFR A2",
+            DeckLevel.B1: "Βασικό ελληνικό λεξιλόγιο για επίπεδο CEFR B1",
+            DeckLevel.B2: "Βασικό ελληνικό λεξιλόγιο για επίπεδο CEFR B2",
+            DeckLevel.C1: "Βασικό ελληνικό λεξιλόγιο για επίπεδο CEFR C1",
+            DeckLevel.C2: "Βασικό ελληνικό λεξιλόγιο για επίπεδο CEFR C2",
+        }
+        # Russian translations for CEFR levels
+        level_translations_ru = {
+            DeckLevel.A1: "Греческий словарь A1",
+            DeckLevel.A2: "Греческий словарь A2",
+            DeckLevel.B1: "Греческий словарь B1",
+            DeckLevel.B2: "Греческий словарь B2",
+            DeckLevel.C1: "Греческий словарь C1",
+            DeckLevel.C2: "Греческий словарь C2",
+        }
+        description_translations_ru = {
+            DeckLevel.A1: "Основной греческий словарь для уровня CEFR A1",
+            DeckLevel.A2: "Основной греческий словарь для уровня CEFR A2",
+            DeckLevel.B1: "Основной греческий словарь для уровня CEFR B1",
+            DeckLevel.B2: "Основной греческий словарь для уровня CEFR B2",
+            DeckLevel.C1: "Основной греческий словарь для уровня CEFR C1",
+            DeckLevel.C2: "Основной греческий словарь для уровня CEFR C2",
+        }
+
         for level, words in self.VOCABULARY.items():
             # Create deck - C1 and C2 are premium
             is_premium = level in premium_levels
             deck = Deck(
-                name=f"Greek {level.value} Vocabulary",
-                description=f"Essential Greek vocabulary for CEFR level {level.value}",
+                name_en=f"Greek {level.value} Vocabulary",
+                name_el=level_translations_el[level],
+                name_ru=level_translations_ru[level],
+                description_en=f"Essential Greek vocabulary for CEFR level {level.value}",
+                description_el=description_translations_el[level],
+                description_ru=description_translations_ru[level],
                 level=level,
                 is_active=True,
                 is_premium=is_premium,
@@ -1858,7 +2044,7 @@ class SeedService:
             created_decks.append(
                 {
                     "id": str(deck.id),
-                    "name": deck.name,
+                    "name": deck.name_en,
                     "level": level.value,
                     "card_count": len(words),
                     "is_premium": is_premium,
@@ -1905,8 +2091,12 @@ class SeedService:
             for deck_config in deck_configs:
                 # Create deck with owner_id set to the user
                 deck = Deck(
-                    name=deck_config["name"],
-                    description=deck_config["description"],
+                    name_en=deck_config["name_en"],
+                    name_el=deck_config["name_el"],
+                    name_ru=deck_config["name_ru"],
+                    description_en=deck_config["description_en"],
+                    description_el=deck_config["description_el"],
+                    description_ru=deck_config["description_ru"],
                     level=deck_config["level"],
                     is_active=True,
                     is_premium=False,  # User decks are never premium
@@ -1936,7 +2126,7 @@ class SeedService:
                 created_decks.append(
                     {
                         "id": str(deck.id),
-                        "name": deck.name,
+                        "name": deck.name_en,
                         "level": deck_config["level"].value,
                         "card_count": card_count,
                         "owner_id": str(user_id),
@@ -2339,8 +2529,12 @@ class SeedService:
             # History and Traditions are premium, others are free
             is_premium = category in premium_categories
             deck = CultureDeck(
-                name=deck_data["name"],
-                description=deck_data["description"],
+                name_en=deck_data["name_en"],
+                name_el=deck_data["name_el"],
+                name_ru=deck_data["name_ru"],
+                description_en=deck_data["description_en"],
+                description_el=deck_data["description_el"],
+                description_ru=deck_data["description_ru"],
                 category=category,
                 is_active=True,
                 is_premium=is_premium,
@@ -2365,17 +2559,10 @@ class SeedService:
                 self.db.add(question)
                 total_questions += 1
 
-            # Extract English name for return value
-            name_translations = deck_data["name"]
-            if isinstance(name_translations, dict):
-                name_en = name_translations.get("en", str(name_translations))
-            else:
-                name_en = str(name_translations)
-
             created_decks.append(
                 {
                     "id": str(deck.id),
-                    "name": name_en,
+                    "name": deck_data["name_en"],
                     "category": category,
                     "question_count": len(questions_data),
                     "is_premium": is_premium,
@@ -2848,14 +3035,18 @@ class SeedService:
 
         # Find or create E2E culture deck
         result = await self.db.execute(
-            select(CultureDeck).where(CultureDeck.name == "E2E News Questions")
+            select(CultureDeck).where(CultureDeck.name_en == "E2E News Questions")
         )
         deck = result.scalar_one_or_none()
 
         if not deck:
             deck = CultureDeck(
-                name="E2E News Questions",
-                description="Deck for E2E testing news-linked questions",
+                name_en="E2E News Questions",
+                name_el="E2E Ερωτήσεις Ειδήσεων",
+                name_ru="E2E Новостные вопросы",
+                description_en="Deck for E2E testing news-linked questions",
+                description_el="Τράπουλα για δοκιμές E2E ερωτήσεων που σχετίζονται με ειδήσεις",
+                description_ru="Колода для E2E тестирования вопросов, связанных с новостями",
                 category="culture",
                 is_active=True,
                 is_premium=False,
@@ -3008,14 +3199,18 @@ class SeedService:
 
         # Find or create E2E culture deck for news page questions
         result = await self.db.execute(
-            select(CultureDeck).where(CultureDeck.name == "E2E News Feed Page")
+            select(CultureDeck).where(CultureDeck.name_en == "E2E News Feed Page")
         )
         deck = result.scalar_one_or_none()
 
         if not deck:
             deck = CultureDeck(
-                name="E2E News Feed Page",
-                description="Deck for E2E testing news feed page questions",
+                name_en="E2E News Feed Page",
+                name_el="E2E Σελίδα Ροής Ειδήσεων",
+                name_ru="E2E Страница ленты новостей",
+                description_en="Deck for E2E testing news feed page pagination and filtering",
+                description_el="Τράπουλα για δοκιμές E2E σελιδοποίησης και φιλτραρίσματος ροής ειδήσεων",
+                description_ru="Колода для E2E тестирования пагинации и фильтрации страницы ленты новостей",
                 category="culture",
                 is_active=True,
                 is_premium=False,
@@ -3024,7 +3219,14 @@ class SeedService:
             await self.db.flush()
 
         # Define categories and difficulty levels for variety
-        categories = ["politics", "culture", "sports", "economy", "science", "technology"]
+        categories = [
+            "politics",
+            "culture",
+            "sports",
+            "economy",
+            "science",
+            "technology",
+        ]
         difficulty_levels = ["A1", "A2", "B1", "B2"]
 
         # News items data - 25 items total
@@ -3045,7 +3247,11 @@ class SeedService:
                 "Economic Growth in Greece",
                 "Экономический рост в Греции",
             ),
-            ("Ο τουρισμός σπάει ρεκόρ", "Tourism Breaks Records", "Туризм бьет рекорды"),
+            (
+                "Ο τουρισμός σπάει ρεκόρ",
+                "Tourism Breaks Records",
+                "Туризм бьет рекорды",
+            ),
             (
                 "Νέα τεχνολογική επένδυση στην Αθήνα",
                 "New Tech Investment in Athens",
@@ -3097,7 +3303,11 @@ class SeedService:
                 "Diplomatic Developments in Eastern Mediterranean",
                 "Дипломатические события в Восточном Средиземноморье",
             ),
-            ("Νέα μέτρα για την ενέργεια", "New Energy Measures", "Новые энергетические меры"),
+            (
+                "Νέα μέτρα για την ενέργεια",
+                "New Energy Measures",
+                "Новые энергетические меры",
+            ),
             (
                 "Φεστιβάλ κινηματογράφου στην Αθήνα",
                 "Film Festival in Athens",
@@ -3220,9 +3430,17 @@ class SeedService:
                 },
                 "options": [
                     {"el": "Οικονομική", "en": "Economic", "ru": "Экономическое"},
-                    {"el": "Τεχνολογική", "en": "Technological", "ru": "Технологическое"},
+                    {
+                        "el": "Τεχνολογική",
+                        "en": "Technological",
+                        "ru": "Технологическое",
+                    },
                     {"el": "Πολιτιστική", "en": "Cultural", "ru": "Культурное"},
-                    {"el": "Περιβαλλοντική", "en": "Environmental", "ru": "Экологическое"},
+                    {
+                        "el": "Περιβαλλοντική",
+                        "en": "Environmental",
+                        "ru": "Экологическое",
+                    },
                 ],
                 "correct": 2,
             },
@@ -3268,7 +3486,11 @@ class SeedService:
                         "en": "Increase in visitors",
                         "ru": "Увеличение посетителей",
                     },
-                    {"el": "Νέες θέσεις εργασίας", "en": "New jobs", "ru": "Новые рабочие места"},
+                    {
+                        "el": "Νέες θέσεις εργασίας",
+                        "en": "New jobs",
+                        "ru": "Новые рабочие места",
+                    },
                     {
                         "el": "Βελτίωση υποδομών",
                         "en": "Infrastructure improvement",
@@ -3918,9 +4140,19 @@ class SeedService:
                         False,
                         "/achievements",
                     ),
-                    (NotificationType.DAILY_GOAL_COMPLETE, "Daily Goal Complete!", False, "/"),
+                    (
+                        NotificationType.DAILY_GOAL_COMPLETE,
+                        "Daily Goal Complete!",
+                        False,
+                        "/",
+                    ),
                     (NotificationType.LEVEL_UP, "Level Up!", True, "/achievements"),
-                    (NotificationType.STREAK_AT_RISK, "Streak at Risk!", True, "/decks"),
+                    (
+                        NotificationType.STREAK_AT_RISK,
+                        "Streak at Risk!",
+                        True,
+                        "/decks",
+                    ),
                     (NotificationType.WELCOME, "Welcome!", True, "/decks"),
                 ]
                 for notif_type, title, is_read, action_url in notification_types:
@@ -4153,21 +4385,29 @@ class SeedService:
         # First delete cards in those decks (FK constraint)
         existing_decks = await self.db.execute(
             select(Deck).where(
-                Deck.name.in_([self.ADMIN_CARDS_DECK_NAME, self.ADMIN_CARDS_EMPTY_DECK_NAME])
+                Deck.name_en.in_(
+                    [self.ADMIN_CARDS_DECK_NAME_EN, self.ADMIN_CARDS_EMPTY_DECK_NAME_EN]
+                )
             )
         )
         for deck in existing_decks.scalars().all():
             await self.db.execute(delete(Card).where(Card.deck_id == deck.id))
         await self.db.execute(
             delete(Deck).where(
-                Deck.name.in_([self.ADMIN_CARDS_DECK_NAME, self.ADMIN_CARDS_EMPTY_DECK_NAME])
+                Deck.name_en.in_(
+                    [self.ADMIN_CARDS_DECK_NAME_EN, self.ADMIN_CARDS_EMPTY_DECK_NAME_EN]
+                )
             )
         )
 
         # Create main test deck with 10 cards
         main_deck = Deck(
-            name=self.ADMIN_CARDS_DECK_NAME,
-            description="E2E test deck with vocabulary cards of varying completeness",
+            name_en=self.ADMIN_CARDS_DECK_NAME_EN,
+            name_el=self.ADMIN_CARDS_DECK_NAME_EL,
+            name_ru=self.ADMIN_CARDS_DECK_NAME_RU,
+            description_en="E2E test deck with vocabulary cards of varying completeness",
+            description_el="E2E δοκιμαστική τράπουλα με κάρτες λεξιλογίου διαφορετικής πληρότητας",
+            description_ru="E2E тестовая колода с карточками словарного запаса разной полноты",
             level=DeckLevel.A1,
             is_active=True,
             is_premium=False,
@@ -4231,8 +4471,12 @@ class SeedService:
 
         # Create empty test deck for first card creation test
         empty_deck = Deck(
-            name=self.ADMIN_CARDS_EMPTY_DECK_NAME,
-            description="E2E test deck for first card creation testing",
+            name_en=self.ADMIN_CARDS_EMPTY_DECK_NAME_EN,
+            name_el=self.ADMIN_CARDS_EMPTY_DECK_NAME_EL,
+            name_ru=self.ADMIN_CARDS_EMPTY_DECK_NAME_RU,
+            description_en="E2E test deck for first card creation testing",
+            description_el="E2E δοκιμαστική τράπουλα για δοκιμή δημιουργίας πρώτης κάρτας",
+            description_ru="E2E тестовая колода для тестирования создания первой карточки",
             level=DeckLevel.A1,
             is_active=True,
             is_premium=False,
@@ -4246,12 +4490,12 @@ class SeedService:
             "cards_created": len(created_cards),
             "main_deck": {
                 "id": str(main_deck.id),
-                "name": self.ADMIN_CARDS_DECK_NAME,
+                "name": self.ADMIN_CARDS_DECK_NAME_EN,
                 "card_count": len(created_cards),
             },
             "empty_deck": {
                 "id": str(empty_deck.id),
-                "name": self.ADMIN_CARDS_EMPTY_DECK_NAME,
+                "name": self.ADMIN_CARDS_EMPTY_DECK_NAME_EN,
                 "card_count": 0,
             },
             "cards": created_cards,
@@ -4315,7 +4559,10 @@ class SeedService:
 
         stats_result: dict[str, Any] = {"success": True, "stats_created": 0}
         reviews_result: dict[str, Any] = {"success": True, "reviews_created": 0}
-        notifications_result: dict[str, Any] = {"success": True, "notifications_created": 0}
+        notifications_result: dict[str, Any] = {
+            "success": True,
+            "notifications_created": 0,
+        }
 
         if learner_id and a1_deck_id:
             # Create 60% progress on A1 deck for learner

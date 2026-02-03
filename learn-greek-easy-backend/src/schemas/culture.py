@@ -84,13 +84,23 @@ class CultureDeckProgress(BaseModel):
 
 
 class CultureDeckResponse(BaseModel):
-    """Response schema for culture deck listing."""
+    """Response schema for culture deck listing (localized).
+
+    Returns deck name and description in the user's preferred language
+    based on Accept-Language header. The API endpoint is responsible for
+    selecting the appropriate language variant before returning this response.
+
+    Language selection priority:
+    1. Exact match (e.g., "el" -> Greek)
+    2. Fallback to English if requested language unavailable
+    3. Default to English if Accept-Language not provided
+    """
 
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID = Field(..., description="Deck unique identifier")
-    name: str = Field(..., min_length=1, max_length=255, description="Deck name")
-    description: Optional[str] = Field(None, description="Deck description")
+    name: str = Field(..., min_length=1, max_length=255, description="Deck name (localized)")
+    description: Optional[str] = Field(None, description="Deck description (localized)")
     category: str = Field(
         ...,
         max_length=50,
@@ -106,7 +116,11 @@ class CultureDeckResponse(BaseModel):
 
 
 class CultureDeckDetailResponse(CultureDeckResponse):
-    """Extended deck response with additional metadata."""
+    """Extended deck response with additional metadata (localized).
+
+    Inherits localized name and description from CultureDeckResponse.
+    Used for single deck detail views in the public API.
+    """
 
     is_active: bool = Field(..., description="Whether deck is active")
     created_at: datetime = Field(..., description="Creation timestamp")
@@ -381,10 +395,22 @@ class CultureAnswerResponseFast(BaseModel):
 
 
 class CultureDeckCreate(BaseModel):
-    """Schema for creating a new culture deck (admin only)."""
+    """Schema for creating a new culture deck (admin only).
 
-    name: str = Field(..., min_length=1, max_length=255, description="Deck name")
-    description: Optional[str] = Field(None, description="Deck description")
+    Requires name and description in all three supported languages (el, en, ru).
+    """
+
+    # Multilingual name fields (all required)
+    name_el: str = Field(..., min_length=1, max_length=255, description="Deck name in Greek")
+    name_en: str = Field(..., min_length=1, max_length=255, description="Deck name in English")
+    name_ru: str = Field(..., min_length=1, max_length=255, description="Deck name in Russian")
+
+    # Multilingual description fields (all optional)
+    description_el: Optional[str] = Field(None, description="Deck description in Greek")
+    description_en: Optional[str] = Field(None, description="Deck description in English")
+    description_ru: Optional[str] = Field(None, description="Deck description in Russian")
+
+    # Non-localized fields (unchanged)
     category: str = Field(
         ...,
         max_length=50,
@@ -397,10 +423,29 @@ class CultureDeckCreate(BaseModel):
 
 
 class CultureDeckUpdate(BaseModel):
-    """Schema for updating a culture deck (admin only). All fields optional."""
+    """Schema for updating a culture deck (admin only). All fields optional.
 
-    name: Optional[str] = Field(None, min_length=1, max_length=255, description="Deck name")
-    description: Optional[str] = Field(None, description="Deck description")
+    Supports partial updates - only provided fields are updated.
+    Language fields can be updated independently.
+    """
+
+    # Multilingual name fields (all optional for partial updates)
+    name_el: Optional[str] = Field(
+        None, min_length=1, max_length=255, description="Deck name in Greek"
+    )
+    name_en: Optional[str] = Field(
+        None, min_length=1, max_length=255, description="Deck name in English"
+    )
+    name_ru: Optional[str] = Field(
+        None, min_length=1, max_length=255, description="Deck name in Russian"
+    )
+
+    # Multilingual description fields (all optional)
+    description_el: Optional[str] = Field(None, description="Deck description in Greek")
+    description_en: Optional[str] = Field(None, description="Deck description in English")
+    description_ru: Optional[str] = Field(None, description="Deck description in Russian")
+
+    # Non-localized fields (unchanged)
     category: Optional[str] = Field(
         None,
         max_length=50,
@@ -410,6 +455,51 @@ class CultureDeckUpdate(BaseModel):
     is_active: Optional[bool] = Field(None, description="Whether deck is active")
     is_premium: Optional[bool] = Field(
         None, description="Whether deck requires premium subscription"
+    )
+
+
+class CultureDeckAdminResponse(BaseModel):
+    """Admin response schema for culture deck (all language variants).
+
+    Used by admin endpoints to display and edit deck content in all languages.
+    """
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID = Field(..., description="Deck unique identifier")
+
+    # Multilingual name fields
+    name_el: str = Field(..., description="Deck name in Greek")
+    name_en: str = Field(..., description="Deck name in English")
+    name_ru: str = Field(..., description="Deck name in Russian")
+
+    # Multilingual description fields
+    description_el: Optional[str] = Field(None, description="Deck description in Greek")
+    description_en: Optional[str] = Field(None, description="Deck description in English")
+    description_ru: Optional[str] = Field(None, description="Deck description in Russian")
+
+    # Non-localized fields
+    category: str = Field(
+        ...,
+        max_length=50,
+        description="Category: history, geography, politics, culture, traditions",
+    )
+    question_count: int = Field(..., ge=0, description="Total questions in deck")
+    is_active: bool = Field(..., description="Whether deck is active")
+    is_premium: bool = Field(
+        default=False, description="Whether deck requires premium subscription"
+    )
+    order_index: int = Field(..., ge=0, description="Display order within category")
+    created_at: datetime = Field(..., description="Creation timestamp")
+    updated_at: datetime = Field(..., description="Last update timestamp")
+
+
+class CultureDeckAdminListResponse(BaseModel):
+    """Paginated list of culture decks for admin API."""
+
+    total: int = Field(..., ge=0, description="Total deck count")
+    decks: list[CultureDeckAdminResponse] = Field(
+        ..., description="List of decks with all language variants"
     )
 
 

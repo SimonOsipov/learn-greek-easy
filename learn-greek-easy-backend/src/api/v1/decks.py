@@ -11,8 +11,9 @@ from fastapi import APIRouter, BackgroundTasks, Depends, Query, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config import settings
-from src.core.dependencies import get_current_user
+from src.core.dependencies import get_current_user, get_locale_from_header
 from src.core.exceptions import DeckNotFoundException, ForbiddenException
+from src.core.localization import get_localized_deck_content
 from src.db.dependencies import get_db
 from src.db.models import DeckLevel, User
 from src.repositories.deck import DeckRepository
@@ -40,7 +41,12 @@ router = APIRouter(
     "",
     response_model=DeckListResponse,
     summary="List active decks",
-    description="Get a paginated list of all active decks with optional level filtering.",
+    description="""Get a paginated list of all active decks with optional level filtering.
+
+**Localization**: Content is returned in the language specified by the
+Accept-Language header. Supported languages: en (English), el (Greek), ru (Russian).
+Falls back to English if the requested language is not supported.
+""",
     responses={
         200: {
             "description": "Paginated list of active decks",
@@ -73,18 +79,21 @@ async def list_decks(
     level: Optional[DeckLevel] = Query(
         default=None, description="Filter by CEFR level (A1, A2, B1, B2, C1, C2)"
     ),
+    locale: str = Depends(get_locale_from_header),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> DeckListResponse:
     """List all active decks with pagination and optional filtering.
 
     Requires authentication. Returns only active decks.
+    Content is localized based on Accept-Language header.
     Use the level parameter to filter by CEFR proficiency level.
 
     Args:
         page: Page number starting from 1
         page_size: Number of items per page (1-100)
         level: Optional CEFR level filter
+        locale: Locale from Accept-Language header
         db: Database session (injected)
         current_user: Authenticated user (injected)
 
@@ -107,12 +116,23 @@ async def list_decks(
     deck_ids = [deck.id for deck in decks]
     card_counts = await repo.get_batch_card_counts(deck_ids)
 
-    # Build response with card counts
+    # Build localized response with card counts
     deck_responses = []
     for deck in decks:
-        deck_dict = DeckResponse.model_validate(deck).model_dump()
-        deck_dict["card_count"] = card_counts.get(deck.id, 0)
-        deck_responses.append(DeckResponse(**deck_dict))
+        name, description = get_localized_deck_content(deck, locale)
+        deck_responses.append(
+            DeckResponse(
+                id=deck.id,
+                name=name,
+                description=description,
+                level=deck.level,
+                is_active=deck.is_active,
+                is_premium=deck.is_premium,
+                card_count=card_counts.get(deck.id, 0),
+                created_at=deck.created_at,
+                updated_at=deck.updated_at,
+            )
+        )
 
     return DeckListResponse(
         total=total,
@@ -185,6 +205,18 @@ async def create_deck(
     # which is only used for logic, not stored in the database
     create_data = deck_data.model_dump(exclude_unset=True, exclude={"is_system_deck"})
 
+    # Map name/description to trilingual fields (user decks store in _en columns)
+    if "name" in create_data:
+        name = create_data.pop("name")
+        create_data["name_en"] = name
+        create_data["name_el"] = name  # Same as English for user-created decks
+        create_data["name_ru"] = name  # Same as English for user-created decks
+    if "description" in create_data:
+        description = create_data.pop("description")
+        create_data["description_en"] = description
+        create_data["description_el"] = description  # Same as English for user-created decks
+        create_data["description_ru"] = description  # Same as English for user-created decks
+
     # Determine deck ownership based on is_system_deck flag and user permissions
     if deck_data.is_system_deck:
         # Only superusers can create system decks
@@ -208,14 +240,30 @@ async def create_deck(
     await db.commit()
     await db.refresh(deck)
 
-    return DeckResponse.model_validate(deck)
+    # Return response with localized fields (default to English for created deck)
+    return DeckResponse(
+        id=deck.id,
+        name=deck.name_en,
+        description=deck.description_en,
+        level=deck.level,
+        is_active=deck.is_active,
+        is_premium=deck.is_premium,
+        card_count=0,  # New deck has no cards
+        created_at=deck.created_at,
+        updated_at=deck.updated_at,
+    )
 
 
 @router.get(
     "/search",
     response_model=DeckSearchResponse,
     summary="Search decks",
-    description="Search for decks by name or description with case-insensitive partial matching.",
+    description="""Search for decks by name or description with case-insensitive partial matching.
+
+**Localization**: Content is returned in the language specified by the
+Accept-Language header. Supported languages: en (English), el (Greek), ru (Russian).
+Falls back to English if the requested language is not supported.
+""",
     responses={
         200: {
             "description": "Search results with pagination",
@@ -253,6 +301,7 @@ async def search_decks(
     ),
     page: int = Query(default=1, ge=1, description="Page number (starting from 1)"),
     page_size: int = Query(default=20, ge=1, le=50, description="Items per page (max 50)"),
+    locale: str = Depends(get_locale_from_header),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> DeckSearchResponse:
@@ -260,11 +309,13 @@ async def search_decks(
 
     Requires authentication. Performs case-insensitive partial matching on
     deck names and descriptions. Only active decks are included in search results.
+    Content is localized based on Accept-Language header.
 
     Args:
         q: Search query (required, 1-100 characters)
         page: Page number starting from 1
         page_size: Number of items per page (1-50)
+        locale: Locale from Accept-Language header
         db: Database session (injected)
         current_user: Authenticated user (injected)
 
@@ -287,12 +338,23 @@ async def search_decks(
     deck_ids = [deck.id for deck in decks]
     card_counts = await repo.get_batch_card_counts(deck_ids)
 
-    # Build response with card counts
+    # Build localized response with card counts
     deck_responses = []
     for deck in decks:
-        deck_dict = DeckResponse.model_validate(deck).model_dump()
-        deck_dict["card_count"] = card_counts.get(deck.id, 0)
-        deck_responses.append(DeckResponse(**deck_dict))
+        name, description = get_localized_deck_content(deck, locale)
+        deck_responses.append(
+            DeckResponse(
+                id=deck.id,
+                name=name,
+                description=description,
+                level=deck.level,
+                is_active=deck.is_active,
+                is_premium=deck.is_premium,
+                card_count=card_counts.get(deck.id, 0),
+                created_at=deck.created_at,
+                updated_at=deck.updated_at,
+            )
+        )
 
     return DeckSearchResponse(
         total=total,
@@ -307,7 +369,12 @@ async def search_decks(
     "/mine",
     response_model=DeckListResponse,
     summary="List user's own decks",
-    description="Get paginated list of decks owned by the current user.",
+    description="""Get paginated list of decks owned by the current user.
+
+**Localization**: Content is returned in the language specified by the
+Accept-Language header. Supported languages: en (English), el (Greek), ru (Russian).
+Falls back to English if the requested language is not supported.
+""",
     responses={
         200: {
             "description": "Paginated list of user's own decks",
@@ -342,18 +409,21 @@ async def list_my_decks(
     level: Optional[DeckLevel] = Query(
         default=None, description="Filter by CEFR level (A1, A2, B1, B2, C1, C2)"
     ),
+    locale: str = Depends(get_locale_from_header),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> DeckListResponse:
     """List all decks owned by the current authenticated user.
 
     Requires authentication. Returns only active decks owned by the user.
+    Content is localized based on Accept-Language header.
     Use the level parameter to filter by CEFR proficiency level.
 
     Args:
         page: Page number starting from 1
         page_size: Number of items per page (1-100)
         level: Optional CEFR level filter
+        locale: Locale from Accept-Language header
         db: Database session (injected)
         current_user: Authenticated user (injected)
 
@@ -378,12 +448,23 @@ async def list_my_decks(
     deck_ids = [deck.id for deck in decks]
     card_counts = await repo.get_batch_card_counts(deck_ids)
 
-    # Build response with card counts
+    # Build localized response with card counts
     deck_responses = []
     for deck in decks:
-        deck_dict = DeckResponse.model_validate(deck).model_dump()
-        deck_dict["card_count"] = card_counts.get(deck.id, 0)
-        deck_responses.append(DeckResponse(**deck_dict))
+        name, description = get_localized_deck_content(deck, locale)
+        deck_responses.append(
+            DeckResponse(
+                id=deck.id,
+                name=name,
+                description=description,
+                level=deck.level,
+                is_active=deck.is_active,
+                is_premium=deck.is_premium,
+                card_count=card_counts.get(deck.id, 0),
+                created_at=deck.created_at,
+                updated_at=deck.updated_at,
+            )
+        )
 
     return DeckListResponse(
         total=total,
@@ -397,7 +478,12 @@ async def list_my_decks(
     "/{deck_id}",
     response_model=DeckDetailResponse,
     summary="Get deck by ID",
-    description="Get a single deck by its UUID, including the card count.",
+    description="""Get a single deck by its UUID, including the card count.
+
+**Localization**: Content is returned in the language specified by the
+Accept-Language header. Supported languages: en (English), el (Greek), ru (Russian).
+Falls back to English if the requested language is not supported.
+""",
     responses={
         200: {
             "description": "Deck details with card count",
@@ -422,16 +508,19 @@ async def list_my_decks(
 )
 async def get_deck(
     deck_id: UUID,
+    locale: str = Depends(get_locale_from_header),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> DeckDetailResponse:
     """Get a specific deck by ID with card count.
 
     Requires authentication. Returns deck details including
-    the number of cards. Inactive decks return 404.
+    the number of cards. Content is localized based on Accept-Language header.
+    Inactive decks return 404.
 
     Args:
         deck_id: UUID of the deck to retrieve
+        locale: Locale from Accept-Language header
         db: Database session (injected)
         current_user: Authenticated user (injected)
 
@@ -461,11 +550,14 @@ async def get_deck(
     # Get card count
     card_count = await repo.count_cards(deck_id)
 
-    # Build response with card_count
+    # Get localized content
+    name, description = get_localized_deck_content(deck, locale)
+
+    # Build response with localized content and card_count
     return DeckDetailResponse(
         id=deck.id,
-        name=deck.name,
-        description=deck.description,
+        name=name,
+        description=description,
         level=deck.level,
         is_active=deck.is_active,
         is_premium=deck.is_premium,
@@ -547,8 +639,21 @@ async def update_deck(
     if deck.owner_id != current_user.id and not current_user.is_superuser:
         raise ForbiddenException(detail="Not authorized to edit this deck")
 
+    # Map name/description to trilingual fields for update
+    update_data = deck_data.model_dump(exclude_unset=True)
+    if "name" in update_data:
+        name = update_data.pop("name")
+        update_data["name_en"] = name
+        update_data["name_el"] = name  # For user updates, set all to same value
+        update_data["name_ru"] = name
+    if "description" in update_data:
+        description = update_data.pop("description")
+        update_data["description_en"] = description
+        update_data["description_el"] = description
+        update_data["description_ru"] = description
+
     # Update using BaseRepository.update() pattern
-    updated_deck = await repo.update(deck, deck_data)
+    updated_deck = await repo.update(deck, update_data)
 
     # Commit the transaction
     await db.commit()
@@ -562,7 +667,19 @@ async def update_deck(
             entity_id=deck_id,
         )
 
-    return DeckResponse.model_validate(updated_deck)
+    # Return response with localized fields (default to English for updated deck)
+    card_count = await repo.count_cards(deck_id)
+    return DeckResponse(
+        id=updated_deck.id,
+        name=updated_deck.name_en,
+        description=updated_deck.description_en,
+        level=updated_deck.level,
+        is_active=updated_deck.is_active,
+        is_premium=updated_deck.is_premium,
+        card_count=card_count,
+        created_at=updated_deck.created_at,
+        updated_at=updated_deck.updated_at,
+    )
 
 
 @router.delete(

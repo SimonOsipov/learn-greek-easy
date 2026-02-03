@@ -23,8 +23,10 @@ Usage:
 from collections.abc import Generator
 
 import pytest
+import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.db.models import CultureDeck, Deck, DeckLevel
 from tests.factories.base import set_factory_session
 
 # =============================================================================
@@ -424,6 +426,65 @@ def failed_review_data(test_card) -> dict:
 
 
 # =============================================================================
+# Localized Deck Fixtures
+# =============================================================================
+
+
+@pytest_asyncio.fixture
+async def localized_deck(db_session: AsyncSession) -> Deck:
+    """Create a system deck with all language variants.
+
+    This fixture creates a deck with trilingual support for testing
+    Accept-Language header handling.
+
+    Yields:
+        Deck: A system deck with name and description in en, el, ru
+    """
+    deck = Deck(
+        name_el="Ελληνικό Λεξιλόγιο",
+        name_en="Greek Vocabulary",
+        name_ru="Греческий словарь",
+        description_el="Βασικές λέξεις για αρχάριους",
+        description_en="Basic words for beginners",
+        description_ru="Базовые слова для начинающих",
+        level=DeckLevel.A1,
+        is_active=True,
+        is_premium=False,
+        owner_id=None,  # System deck
+    )
+    db_session.add(deck)
+    await db_session.flush()
+    await db_session.refresh(deck)
+    return deck
+
+
+@pytest_asyncio.fixture
+async def localized_culture_deck(db_session: AsyncSession) -> CultureDeck:
+    """Create a culture deck with all language variants.
+
+    This fixture creates a culture deck with trilingual support for testing
+    Accept-Language header handling.
+
+    Yields:
+        CultureDeck: A culture deck with name and description in en, el, ru
+    """
+    deck = CultureDeck(
+        name_el="Ελληνική Ιστορία",
+        name_en="Greek History",
+        name_ru="Греческая история",
+        description_el="Μάθετε για την ιστορία της Ελλάδας",
+        description_en="Learn about Greek history",
+        description_ru="Узнайте об истории Греции",
+        category="history",
+        is_active=True,
+    )
+    db_session.add(deck)
+    await db_session.flush()
+    await db_session.refresh(deck)
+    return deck
+
+
+# =============================================================================
 # Module Exports
 # =============================================================================
 
@@ -448,6 +509,9 @@ __all__ = [
     # Deck fixtures
     "valid_deck_data",
     "valid_card_data",
+    # Localized deck fixtures
+    "localized_deck",
+    "localized_culture_deck",
     # Review fixtures
     "valid_review_data",
     "perfect_review_data",

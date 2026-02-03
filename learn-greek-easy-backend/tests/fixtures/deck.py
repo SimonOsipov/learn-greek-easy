@@ -200,17 +200,17 @@ def create_deck_data(
     is_active: bool = True,
     owner_id: UUID | None = None,
 ) -> dict[str, Any]:
-    """Create deck data dictionary.
+    """Create deck data dictionary with trilingual support.
 
     Args:
-        name: Deck name (auto-generated if None)
-        description: Deck description
+        name: Deck name in English (auto-generated if None)
+        description: Deck description in English
         level: CEFR level (A1-C2)
         is_active: Whether deck is active
         owner_id: Owner user ID (None for system decks)
 
     Returns:
-        dict: Deck data ready for Deck model creation
+        dict: Deck data ready for Deck model creation with trilingual fields
     """
     if name is None:
         name = f"Greek {level.value} Vocabulary"
@@ -226,9 +226,15 @@ def create_deck_data(
         }
         description = descriptions.get(level, "Greek vocabulary deck")
 
+    # Generate trilingual names and descriptions
+    # For testing purposes, we use the English name/description for all locales
     return {
-        "name": name,
-        "description": description,
+        "name_en": name,
+        "name_el": name,  # Same as English for test fixtures
+        "name_ru": name,  # Same as English for test fixtures
+        "description_en": description,
+        "description_el": description,  # Same as English for test fixtures
+        "description_ru": description,  # Same as English for test fixtures
         "level": level,
         "is_active": is_active,
         "owner_id": owner_id,

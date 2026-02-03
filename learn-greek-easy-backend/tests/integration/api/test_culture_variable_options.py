@@ -54,8 +54,12 @@ def valid_3_option_question_data():
 async def culture_deck_for_variable_tests(db_session: AsyncSession) -> CultureDeck:
     """Create a culture deck for variable options testing."""
     deck = CultureDeck(
-        name="Variable Options Test Deck",
-        description="Testing 2, 3, and 4 option questions",
+        name_en="Variable Options Test Deck",
+        name_el="Variable Options Test Deck",
+        name_ru="Variable Options Test Deck",
+        description_en="Testing 2, 3, and 4 option questions",
+        description_el="Testing 2, 3, and 4 option questions",
+        description_ru="Testing 2, 3, and 4 option questions",
         category="history",
         is_active=True,
         order_index=999,

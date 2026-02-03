@@ -99,7 +99,9 @@ class TestCultureDecksList(E2ETestCase):
         for i in range(5):
             await CultureDeckFactory.create(
                 session=db_session,
-                name=f"Deck {i}",
+                name_en=f"Deck {i}",
+                name_el=f"Deck {i}",
+                name_ru=f"Deck {i}",
             )
         await db_session.commit()
 

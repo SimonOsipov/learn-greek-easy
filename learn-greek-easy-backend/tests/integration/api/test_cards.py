@@ -186,8 +186,12 @@ class TestListCardsIntegration:
         """Create an active deck in the database."""
         deck = Deck(
             id=uuid4(),
-            name="Test Active Deck",
-            description="A test deck for cards API testing",
+            name_en="Test Active Deck",
+            name_el="Τεστ Ενεργή Τράπουλα",
+            name_ru="Тестовая активная колода",
+            description_en="A test deck for cards API testing",
+            description_el="Μια τράπουλα τεστ για δοκιμές API καρτών",
+            description_ru="Тестовая колода для тестирования API карточек",
             level=DeckLevel.A1,
             is_active=True,
         )
@@ -201,8 +205,12 @@ class TestListCardsIntegration:
         """Create an inactive deck in the database."""
         deck = Deck(
             id=uuid4(),
-            name="Test Inactive Deck",
-            description="An inactive test deck",
+            name_en="Test Inactive Deck",
+            name_el="Τεστ Ανενεργή Τράπουλα",
+            name_ru="Тестовая неактивная колода",
+            description_en="An inactive test deck",
+            description_el="Μια ανενεργή τράπουλα τεστ",
+            description_ru="Неактивная тестовая колода",
             level=DeckLevel.A1,
             is_active=False,
         )
@@ -481,8 +489,12 @@ class TestGetCardEndpoint:
         """Create an active deck in the database."""
         deck = Deck(
             id=uuid4(),
-            name="Test Active Deck",
-            description="A test deck for get card API testing",
+            name_en="Test Active Deck",
+            name_el="Τεστ Ενεργή Τράπουλα",
+            name_ru="Тестовая активная колода",
+            description_en="A test deck for get card API testing",
+            description_el="Τράπουλα τεστ για δοκιμές API καρτών",
+            description_ru="Тестовая колода для API карточек",
             level=DeckLevel.A1,
             is_active=True,
         )
@@ -496,8 +508,12 @@ class TestGetCardEndpoint:
         """Create an inactive deck in the database."""
         deck = Deck(
             id=uuid4(),
-            name="Test Inactive Deck",
-            description="An inactive test deck",
+            name_en="Test Inactive Deck",
+            name_el="Τεστ Ανενεργή Τράπουλα",
+            name_ru="Тестовая неактивная колода",
+            description_en="An inactive test deck",
+            description_el="Ανενεργή τράπουλα τεστ",
+            description_ru="Неактивная тестовая колода",
             level=DeckLevel.A1,
             is_active=False,
         )
@@ -659,8 +675,12 @@ class TestCreateCardEndpoint:
         """Create an active deck for card creation tests."""
         deck = Deck(
             id=uuid4(),
-            name="Deck for Card Creation",
-            description="Test deck for create card endpoint",
+            name_en="Deck for Card Creation",
+            name_el="Τράπουλα για δημιουργία καρτών",
+            name_ru="Колода для создания карточек",
+            description_en="Test deck for create card endpoint",
+            description_el="Τράπουλα τεστ για endpoint δημιουργίας καρτών",
+            description_ru="Тестовая колода для создания карточек",
             level=DeckLevel.A1,
             is_active=True,
         )
@@ -674,8 +694,12 @@ class TestCreateCardEndpoint:
         """Create an inactive deck for card creation tests."""
         deck = Deck(
             id=uuid4(),
-            name="Inactive Deck for Card Creation",
-            description="Inactive test deck",
+            name_en="Inactive Deck for Card Creation",
+            name_el="Ανενεργή τράπουλα για δημιουργία καρτών",
+            name_ru="Неактивная колода для создания карточек",
+            description_en="Inactive test deck",
+            description_el="Ανενεργή τράπουλα τεστ",
+            description_ru="Неактивная тестовая колода",
             level=DeckLevel.A1,
             is_active=False,
         )
@@ -689,8 +713,12 @@ class TestCreateCardEndpoint:
         """Create a deck owned by test_user for card creation tests."""
         deck = Deck(
             id=uuid4(),
-            name="User Owned Deck",
-            description="Test deck owned by regular user",
+            name_en="User Owned Deck",
+            name_el="Τράπουλα ανήκει στον χρήστη",
+            name_ru="Колода пользователя",
+            description_en="Test deck owned by regular user",
+            description_el="Τράπουλα τεστ ανήκει στον κανονικό χρήστη",
+            description_ru="Тестовая колода обычного пользователя",
             level=DeckLevel.A1,
             is_active=True,
             owner_id=test_user.id,
@@ -1024,8 +1052,12 @@ class TestSearchCardsEndpoint:
         """Create an active deck for search tests."""
         deck = Deck(
             id=uuid4(),
-            name="Search Test Deck",
-            description="Deck for card search tests",
+            name_en="Search Test Deck",
+            name_el="Τράπουλα αναζήτησης τεστ",
+            name_ru="Тестовая колода для поиска",
+            description_en="Deck for card search tests",
+            description_el="Τράπουλα για δοκιμές αναζήτησης καρτών",
+            description_ru="Колода для тестов поиска карточек",
             level=DeckLevel.A1,
             is_active=True,
         )
@@ -1288,8 +1320,12 @@ class TestUpdateCardEndpoint:
         """Create an active deck for update tests."""
         deck = Deck(
             id=uuid4(),
-            name="Update Test Deck",
-            description="Deck for card update tests",
+            name_en="Update Test Deck",
+            name_el="Τράπουλα ενημέρωσης τεστ",
+            name_ru="Тестовая колода для обновления",
+            description_en="Deck for card update tests",
+            description_el="Τράπουλα για δοκιμές ενημέρωσης καρτών",
+            description_ru="Колода для тестов обновления карточек",
             level=DeckLevel.A1,
             is_active=True,
         )
@@ -1319,8 +1355,12 @@ class TestUpdateCardEndpoint:
         """Create a deck owned by test_user for update tests."""
         deck = Deck(
             id=uuid4(),
-            name="User Owned Update Deck",
-            description="Test deck owned by regular user for update tests",
+            name_en="User Owned Update Deck",
+            name_el="Τράπουλα χρήστη για ενημέρωση",
+            name_ru="Колода пользователя для обновления",
+            description_en="Test deck owned by regular user for update tests",
+            description_el="Τράπουλα τεστ ανήκει στον χρήστη για δοκιμές ενημέρωσης",
+            description_ru="Тестовая колода пользователя для тестов обновления",
             level=DeckLevel.A1,
             is_active=True,
             owner_id=test_user.id,
@@ -1588,8 +1628,12 @@ class TestDeleteCardEndpoint:
         """Create an active deck for delete tests."""
         deck = Deck(
             id=uuid4(),
-            name="Delete Test Deck",
-            description="Deck for card delete tests",
+            name_en="Delete Test Deck",
+            name_el="Τράπουλα διαγραφής τεστ",
+            name_ru="Тестовая колода для удаления",
+            description_en="Deck for card delete tests",
+            description_el="Τράπουλα για δοκιμές διαγραφής καρτών",
+            description_ru="Колода для тестов удаления карточек",
             level=DeckLevel.A1,
             is_active=True,
         )
@@ -1619,8 +1663,12 @@ class TestDeleteCardEndpoint:
         """Create a deck owned by test_user for delete tests."""
         deck = Deck(
             id=uuid4(),
-            name="User Owned Delete Deck",
-            description="Test deck owned by regular user for delete tests",
+            name_en="User Owned Delete Deck",
+            name_el="Τράπουλα χρήστη για διαγραφή",
+            name_ru="Колода пользователя для удаления",
+            description_en="Test deck owned by regular user for delete tests",
+            description_el="Τράπουλα τεστ για δοκιμές διαγραφής",
+            description_ru="Тестовая колода для тестов удаления",
             level=DeckLevel.A1,
             is_active=True,
             owner_id=test_user.id,
@@ -1794,8 +1842,12 @@ class TestCardCRUDFlow:
         """Create a deck for CRUD flow tests."""
         deck = Deck(
             id=uuid4(),
-            name="CRUD Flow Test Deck",
-            description="Deck for card CRUD flow tests",
+            name_en="CRUD Flow Test Deck",
+            name_el="Τράπουλα CRUD Flow τεστ",
+            name_ru="Тестовая колода CRUD Flow",
+            description_en="Deck for card CRUD flow tests",
+            description_el="Τράπουλα για δοκιμές CRUD καρτών",
+            description_ru="Колода для тестов CRUD карточек",
             level=DeckLevel.A1,
             is_active=True,
         )
@@ -2037,8 +2089,12 @@ class TestCardGrammarFieldsIntegration:
         """Create a deck for grammar field tests."""
         deck = Deck(
             id=uuid4(),
-            name="Grammar Test Deck",
-            description="Deck for testing grammar fields",
+            name_en="Grammar Test Deck",
+            name_el="Τράπουλα γραμματικής τεστ",
+            name_ru="Тестовая колода грамматики",
+            description_en="Deck for testing grammar fields",
+            description_el="Τράπουλα για δοκιμές πεδίων γραμματικής",
+            description_ru="Колода для тестов полей грамматики",
             level=DeckLevel.A1,
             is_active=True,
         )
@@ -2269,8 +2325,12 @@ class TestGrammarFieldsCompleteness:
         """Create a deck for grammar completeness tests."""
         deck = Deck(
             id=uuid4(),
-            name="Grammar Completeness Test Deck",
-            description="Deck for testing all grammar fields are returned",
+            name_en="Grammar Completeness Test Deck",
+            name_el="Τράπουλα πληρότητας γραμματικής",
+            name_ru="Колода полноты грамматики",
+            description_en="Deck for testing all grammar fields are returned",
+            description_el="Τράπουλα για δοκιμή επιστροφής όλων των πεδίων γραμματικής",
+            description_ru="Колода для проверки возврата всех полей грамматики",
             level=DeckLevel.A1,
             is_active=True,
         )

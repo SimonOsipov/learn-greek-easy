@@ -85,8 +85,12 @@ class TestBulkCreateCardsEndpoint:
         """Create an active deck for bulk card creation tests."""
         deck = Deck(
             id=uuid4(),
-            name="Deck for Bulk Card Creation",
-            description="Test deck for bulk create card endpoint",
+            name_en="Deck for Bulk Card Creation",
+            name_el="Τράπουλα για μαζική δημιουργία καρτών",
+            name_ru="Колода для массового создания карточек",
+            description_en="Test deck for bulk create card endpoint",
+            description_el="Τράπουλα τεστ για endpoint μαζικής δημιουργίας καρτών",
+            description_ru="Тестовая колода для массового создания карточек",
             level=DeckLevel.A1,
             is_active=True,
         )
@@ -100,8 +104,12 @@ class TestBulkCreateCardsEndpoint:
         """Create an inactive deck for bulk card creation tests."""
         deck = Deck(
             id=uuid4(),
-            name="Inactive Deck for Bulk Creation",
-            description="Inactive test deck",
+            name_en="Inactive Deck for Bulk Creation",
+            name_el="Ανενεργή τράπουλα για μαζική δημιουργία",
+            name_ru="Неактивная колода для массового создания",
+            description_en="Inactive test deck",
+            description_el="Ανενεργή τράπουλα τεστ",
+            description_ru="Неактивная тестовая колода",
             level=DeckLevel.A1,
             is_active=False,
         )
@@ -727,8 +735,12 @@ class TestBulkCreateGrammarFields:
         """Create a deck for bulk grammar tests."""
         deck = Deck(
             id=uuid4(),
-            name="Bulk Grammar Test Deck",
-            description="Test deck for bulk create grammar fields",
+            name_en="Bulk Grammar Test Deck",
+            name_el="Τράπουλα μαζικής γραμματικής τεστ",
+            name_ru="Тестовая колода массовой грамматики",
+            description_en="Test deck for bulk create grammar fields",
+            description_el="Τράπουλα τεστ για μαζική δημιουργία πεδίων γραμματικής",
+            description_ru="Тестовая колода для массового создания полей грамматики",
             level=DeckLevel.A1,
             is_active=True,
         )

@@ -23,7 +23,9 @@ class TestListCardsUnit:
         deck = MagicMock(spec=Deck)
         deck.id = uuid4()
         deck.is_active = True
-        deck.name = "Test Deck"
+        deck.name_en = "Test Deck"
+        deck.name_el = "Δοκιμαστική Τράπουλα"
+        deck.name_ru = "Тестовая колода"
         return deck
 
     @pytest.fixture
@@ -617,7 +619,9 @@ class TestCreateCardUnit:
         deck = MagicMock(spec=Deck)
         deck.id = uuid4()
         deck.owner_id = None  # System deck
-        deck.name = "System Deck"
+        deck.name_en = "System Deck"
+        deck.name_el = "Σύστημα Τράπουλα"
+        deck.name_ru = "Системная колода"
         deck.is_active = True
         return deck
 
@@ -627,7 +631,9 @@ class TestCreateCardUnit:
         deck = MagicMock(spec=Deck)
         deck.id = uuid4()
         deck.owner_id = uuid4()  # Different user
-        deck.name = "Other User Deck"
+        deck.name_en = "Other User Deck"
+        deck.name_el = "Τράπουλα Άλλου Χρήστη"
+        deck.name_ru = "Колода другого пользователя"
         deck.is_active = True
         return deck
 
@@ -793,7 +799,9 @@ class TestUpdateCardUnit:
         deck = MagicMock(spec=Deck)
         deck.id = uuid4()
         deck.owner_id = None  # System deck
-        deck.name = "System Deck"
+        deck.name_en = "System Deck"
+        deck.name_el = "Σύστημα Τράπουλα"
+        deck.name_ru = "Системная колода"
         deck.is_active = True
         return deck
 
@@ -803,7 +811,9 @@ class TestUpdateCardUnit:
         deck = MagicMock(spec=Deck)
         deck.id = uuid4()
         deck.owner_id = uuid4()  # Different user
-        deck.name = "Other User Deck"
+        deck.name_en = "Other User Deck"
+        deck.name_el = "Τράπουλα Άλλου Χρήστη"
+        deck.name_ru = "Колода другого пользователя"
         deck.is_active = True
         return deck
 
@@ -976,7 +986,9 @@ class TestDeleteCardUnit:
         deck = MagicMock(spec=Deck)
         deck.id = uuid4()
         deck.owner_id = None  # System deck
-        deck.name = "System Deck"
+        deck.name_en = "System Deck"
+        deck.name_el = "Σύστημα Τράπουλα"
+        deck.name_ru = "Системная колода"
         deck.is_active = True
         return deck
 
@@ -986,7 +998,9 @@ class TestDeleteCardUnit:
         deck = MagicMock(spec=Deck)
         deck.id = uuid4()
         deck.owner_id = uuid4()  # Different user
-        deck.name = "Other User Deck"
+        deck.name_en = "Other User Deck"
+        deck.name_el = "Τράπουλα Άλλου Χρήστη"
+        deck.name_ru = "Колода другого пользователя"
         deck.is_active = True
         return deck
 

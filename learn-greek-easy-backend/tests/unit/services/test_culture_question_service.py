@@ -28,8 +28,12 @@ from src.services.culture_question_service import CultureQuestionService
 async def culture_deck(db_session: AsyncSession) -> CultureDeck:
     """Create an active culture deck for testing."""
     deck = CultureDeck(
-        name="Greek History",
-        description="Learn about Greek history",
+        name_en="Greek History",
+        name_el="Greek History",
+        name_ru="Greek History",
+        description_en="Learn about Greek history",
+        description_el="Learn about Greek history",
+        description_ru="Learn about Greek history",
         category="history",
         is_active=True,
     )
@@ -43,8 +47,12 @@ async def culture_deck(db_session: AsyncSession) -> CultureDeck:
 async def inactive_deck(db_session: AsyncSession) -> CultureDeck:
     """Create an inactive culture deck."""
     deck = CultureDeck(
-        name="Archived",
-        description="Archived deck",
+        name_en="Archived",
+        name_el="Archived",
+        name_ru="Archived",
+        description_en="Archived deck",
+        description_el="Archived deck",
+        description_ru="Archived deck",
         category="history",
         is_active=False,
     )

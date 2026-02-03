@@ -26,8 +26,12 @@ from src.db.models import CultureDeck, CultureQuestion
 async def culture_deck(db_session: AsyncSession) -> CultureDeck:
     """Create a single active culture deck for testing."""
     deck = CultureDeck(
-        name="Greek History",
-        description="Learn about Greek history",
+        name_en="Greek History",
+        name_el="Ελληνική Ιστορία",
+        name_ru="Греческая история",
+        description_en="Learn about Greek history",
+        description_el="Μάθετε για την ελληνική ιστορία",
+        description_ru="Узнайте об истории Греции",
         category="history",
         is_active=True,
     )
@@ -71,8 +75,12 @@ async def culture_deck_with_questions(
 async def inactive_culture_deck(db_session: AsyncSession) -> CultureDeck:
     """Create an inactive culture deck."""
     deck = CultureDeck(
-        name="Archived Deck",
-        description="This deck is archived",
+        name_en="Archived Deck",
+        name_el="Αρχειοθετημένο Ντεκ",
+        name_ru="Архивированная колода",
+        description_en="This deck is archived",
+        description_el="Αυτό το ντεκ είναι αρχειοθετημένο",
+        description_ru="Эта колода в архиве",
         category="history",
         is_active=False,
     )
@@ -90,8 +98,12 @@ async def multiple_culture_decks(db_session: AsyncSession) -> list[CultureDeck]:
 
     for i, category in enumerate(categories):
         deck = CultureDeck(
-            name=f"{category.title()} Deck",
-            description=f"Deck about {category}",
+            name_en=f"{category.title()} Deck",
+            name_el=f"Ντεκ {category.title()}",
+            name_ru=f"Колода {category.title()}",
+            description_en=f"Deck about {category}",
+            description_el=f"Ντεκ σχετικά με {category}",
+            description_ru=f"Колода о {category}",
             category=category,
             is_active=True,
         )
@@ -288,7 +300,8 @@ class TestGetCultureDeckEndpoint:
         assert response.status_code == 200
         data = response.json()
         assert data["id"] == str(deck.id)
-        assert data["name"] == deck.name
+        # Default locale is English
+        assert data["name"] == deck.name_en
         assert data["category"] == "history"
         assert data["question_count"] == 5
         assert data["is_active"] is True
@@ -488,3 +501,188 @@ class TestAuthenticatedCultureDeckAccess:
                 200,
                 404,
             ), f"Expected 200/404 for {endpoint}, got {response.status_code}"
+
+
+# =============================================================================
+# Test Culture Deck Localization
+# =============================================================================
+
+
+class TestCultureDeckLocalizationIntegration:
+    """Integration tests for culture deck localization with Accept-Language header.
+
+    Tests verify that the API correctly returns localized name and description
+    based on the Accept-Language header. Supported locales: en, el, ru.
+    """
+
+    # =========================================================================
+    # Accept-Language Header Tests - List Culture Decks
+    # =========================================================================
+
+    @pytest.mark.asyncio
+    async def test_list_culture_decks_english_locale(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        localized_culture_deck: CultureDeck,
+    ):
+        """Test GET /culture/decks returns English with Accept-Language: en."""
+        headers = {**auth_headers, "Accept-Language": "en"}
+        response = await client.get("/api/v1/culture/decks", headers=headers)
+
+        assert response.status_code == 200
+        data = response.json()
+
+        deck = next(d for d in data["decks"] if d["id"] == str(localized_culture_deck.id))
+        assert deck["name"] == localized_culture_deck.name_en
+        assert deck["description"] == localized_culture_deck.description_en
+
+    @pytest.mark.asyncio
+    async def test_list_culture_decks_russian_locale(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        localized_culture_deck: CultureDeck,
+    ):
+        """Test GET /culture/decks returns Russian with Accept-Language: ru."""
+        headers = {**auth_headers, "Accept-Language": "ru"}
+        response = await client.get("/api/v1/culture/decks", headers=headers)
+
+        assert response.status_code == 200
+        data = response.json()
+
+        deck = next(d for d in data["decks"] if d["id"] == str(localized_culture_deck.id))
+        assert deck["name"] == localized_culture_deck.name_ru
+        assert deck["description"] == localized_culture_deck.description_ru
+
+    @pytest.mark.asyncio
+    async def test_list_culture_decks_greek_locale(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        localized_culture_deck: CultureDeck,
+    ):
+        """Test GET /culture/decks returns Greek with Accept-Language: el."""
+        headers = {**auth_headers, "Accept-Language": "el"}
+        response = await client.get("/api/v1/culture/decks", headers=headers)
+
+        assert response.status_code == 200
+        data = response.json()
+
+        deck = next(d for d in data["decks"] if d["id"] == str(localized_culture_deck.id))
+        assert deck["name"] == localized_culture_deck.name_el
+        assert deck["description"] == localized_culture_deck.description_el
+
+    @pytest.mark.asyncio
+    async def test_list_culture_decks_no_header_defaults_to_english(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        localized_culture_deck: CultureDeck,
+    ):
+        """Test missing Accept-Language header defaults to English."""
+        response = await client.get("/api/v1/culture/decks", headers=auth_headers)
+
+        assert response.status_code == 200
+        data = response.json()
+
+        deck = next(d for d in data["decks"] if d["id"] == str(localized_culture_deck.id))
+        assert deck["name"] == localized_culture_deck.name_en
+
+    # =========================================================================
+    # Accept-Language Header Tests - Get Culture Deck Detail
+    # =========================================================================
+
+    @pytest.mark.asyncio
+    async def test_get_culture_deck_locale_english(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        localized_culture_deck: CultureDeck,
+    ):
+        """Test GET /culture/decks/{id} returns English with Accept-Language: en."""
+        headers = {**auth_headers, "Accept-Language": "en"}
+        response = await client.get(
+            f"/api/v1/culture/decks/{localized_culture_deck.id}",
+            headers=headers,
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["name"] == localized_culture_deck.name_en
+        assert data["description"] == localized_culture_deck.description_en
+
+    @pytest.mark.asyncio
+    async def test_get_culture_deck_locale_russian(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        localized_culture_deck: CultureDeck,
+    ):
+        """Test GET /culture/decks/{id} returns Russian with Accept-Language: ru."""
+        headers = {**auth_headers, "Accept-Language": "ru"}
+        response = await client.get(
+            f"/api/v1/culture/decks/{localized_culture_deck.id}",
+            headers=headers,
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["name"] == localized_culture_deck.name_ru
+        assert data["description"] == localized_culture_deck.description_ru
+
+    @pytest.mark.asyncio
+    async def test_get_culture_deck_locale_greek(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        localized_culture_deck: CultureDeck,
+    ):
+        """Test GET /culture/decks/{id} returns Greek with Accept-Language: el."""
+        headers = {**auth_headers, "Accept-Language": "el"}
+        response = await client.get(
+            f"/api/v1/culture/decks/{localized_culture_deck.id}",
+            headers=headers,
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["name"] == localized_culture_deck.name_el
+        assert data["description"] == localized_culture_deck.description_el
+
+    @pytest.mark.asyncio
+    async def test_culture_deck_unsupported_locale_fallback(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        localized_culture_deck: CultureDeck,
+    ):
+        """Test unsupported locale (de) falls back to English."""
+        headers = {**auth_headers, "Accept-Language": "de-DE"}
+        response = await client.get(
+            f"/api/v1/culture/decks/{localized_culture_deck.id}",
+            headers=headers,
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["name"] == localized_culture_deck.name_en
+
+    @pytest.mark.asyncio
+    async def test_culture_deck_complex_accept_language(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        localized_culture_deck: CultureDeck,
+    ):
+        """Test complex Accept-Language with quality factors."""
+        # Greek highest priority
+        headers = {**auth_headers, "Accept-Language": "el-GR,el;q=0.9,en;q=0.7"}
+        response = await client.get(
+            f"/api/v1/culture/decks/{localized_culture_deck.id}",
+            headers=headers,
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["name"] == localized_culture_deck.name_el

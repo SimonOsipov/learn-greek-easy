@@ -27,8 +27,12 @@ class TestDeckModelIsPremium:
         # Note: SQLAlchemy's `default=False` only applies on database INSERT.
         # In-memory model instances need explicit values for non-nullable fields.
         deck = Deck(
-            name="Test Deck",
-            description="Test description",
+            name_en="Test Deck",
+            name_el="Test Deck",
+            name_ru="Test Deck",
+            description_en="Test description",
+            description_el="Test description",
+            description_ru="Test description",
             level=DeckLevel.A1,
             is_premium=False,
         )
@@ -37,8 +41,12 @@ class TestDeckModelIsPremium:
     def test_deck_is_premium_can_be_true(self):
         """Test is_premium can be set to True."""
         deck = Deck(
-            name="Premium Deck",
-            description="Premium content",
+            name_en="Premium Deck",
+            name_el="Premium Deck",
+            name_ru="Premium Deck",
+            description_en="Premium content",
+            description_el="Premium content",
+            description_ru="Premium content",
             level=DeckLevel.B1,
             is_premium=True,
         )
@@ -47,8 +55,12 @@ class TestDeckModelIsPremium:
     def test_deck_is_premium_explicit_false(self):
         """Test is_premium can be explicitly set to False."""
         deck = Deck(
-            name="Free Deck",
-            description="Free content",
+            name_en="Free Deck",
+            name_el="Free Deck",
+            name_ru="Free Deck",
+            description_en="Free content",
+            description_el="Free content",
+            description_ru="Free content",
             level=DeckLevel.A2,
             is_premium=False,
         )
@@ -58,7 +70,9 @@ class TestDeckModelIsPremium:
         """Test is_premium and is_active are independent."""
         # Active and premium
         deck1 = Deck(
-            name="Active Premium",
+            name_en="Active Premium",
+            name_el="Active Premium",
+            name_ru="Active Premium",
             level=DeckLevel.A1,
             is_active=True,
             is_premium=True,
@@ -68,7 +82,9 @@ class TestDeckModelIsPremium:
 
         # Active and not premium
         deck2 = Deck(
-            name="Active Free",
+            name_en="Active Free",
+            name_el="Active Free",
+            name_ru="Active Free",
             level=DeckLevel.A1,
             is_active=True,
             is_premium=False,
@@ -78,7 +94,9 @@ class TestDeckModelIsPremium:
 
         # Inactive and premium
         deck3 = Deck(
-            name="Inactive Premium",
+            name_en="Inactive Premium",
+            name_el="Inactive Premium",
+            name_ru="Inactive Premium",
             level=DeckLevel.A1,
             is_active=False,
             is_premium=True,
@@ -88,7 +106,9 @@ class TestDeckModelIsPremium:
 
         # Inactive and not premium
         deck4 = Deck(
-            name="Inactive Free",
+            name_en="Inactive Free",
+            name_el="Inactive Free",
+            name_ru="Inactive Free",
             level=DeckLevel.A1,
             is_active=False,
             is_premium=False,
@@ -104,8 +124,12 @@ class TestDeckModelIsPremiumDatabase:
     async def test_deck_is_premium_persists_false(self, db_session: AsyncSession):
         """Test is_premium=False is persisted to database."""
         deck = Deck(
-            name="Free DB Deck",
-            description="Test persistence",
+            name_en="Free DB Deck",
+            name_el="Free DB Deck",
+            name_ru="Free DB Deck",
+            description_en="Test persistence",
+            description_el="Test persistence",
+            description_ru="Test persistence",
             level=DeckLevel.A1,
             is_premium=False,
         )
@@ -120,8 +144,12 @@ class TestDeckModelIsPremiumDatabase:
     async def test_deck_is_premium_persists_true(self, db_session: AsyncSession):
         """Test is_premium=True is persisted to database."""
         deck = Deck(
-            name="Premium DB Deck",
-            description="Premium test",
+            name_en="Premium DB Deck",
+            name_el="Premium DB Deck",
+            name_ru="Premium DB Deck",
+            description_en="Premium test",
+            description_el="Premium test",
+            description_ru="Premium test",
             level=DeckLevel.B2,
             is_premium=True,
         )
@@ -136,8 +164,12 @@ class TestDeckModelIsPremiumDatabase:
     async def test_deck_is_premium_default_persists(self, db_session: AsyncSession):
         """Test default is_premium=False when not specified."""
         deck = Deck(
-            name="Default Premium Deck",
-            description="Default test",
+            name_en="Default Premium Deck",
+            name_el="Default Premium Deck",
+            name_ru="Default Premium Deck",
+            description_en="Default test",
+            description_el="Default test",
+            description_ru="Default test",
             level=DeckLevel.A1,
         )
         db_session.add(deck)
@@ -150,7 +182,9 @@ class TestDeckModelIsPremiumDatabase:
     async def test_deck_is_premium_update_independent(self, db_session: AsyncSession):
         """Test updating is_premium does not affect is_active."""
         deck = Deck(
-            name="Update Test Deck",
+            name_en="Update Test Deck",
+            name_el="Update Test Deck",
+            name_ru="Update Test Deck",
             level=DeckLevel.A1,
             is_active=True,
             is_premium=False,
@@ -170,7 +204,9 @@ class TestDeckModelIsPremiumDatabase:
     async def test_deck_is_active_update_independent(self, db_session: AsyncSession):
         """Test updating is_active does not affect is_premium."""
         deck = Deck(
-            name="Active Update Test Deck",
+            name_en="Active Update Test Deck",
+            name_el="Active Update Test Deck",
+            name_ru="Active Update Test Deck",
             level=DeckLevel.A1,
             is_active=True,
             is_premium=True,
@@ -195,8 +231,12 @@ class TestCultureDeckModelIsPremium:
         # Note: SQLAlchemy's `default=False` only applies on database INSERT.
         # In-memory model instances need explicit values for non-nullable fields.
         deck = CultureDeck(
-            name="Culture Test",
-            description="Culture test description",
+            name_en="Culture Test",
+            name_el="Culture Test",
+            name_ru="Culture Test",
+            description_en="Culture test description",
+            description_el="Culture test description",
+            description_ru="Culture test description",
             category="history",
             is_premium=False,
         )
@@ -205,8 +245,12 @@ class TestCultureDeckModelIsPremium:
     def test_culture_deck_is_premium_can_be_true(self):
         """Test is_premium can be set to True."""
         deck = CultureDeck(
-            name="Premium Culture Deck",
-            description="Premium culture content",
+            name_en="Premium Culture Deck",
+            name_el="Premium Culture Deck",
+            name_ru="Premium Culture Deck",
+            description_en="Premium culture content",
+            description_el="Premium culture content",
+            description_ru="Premium culture content",
             category="traditions",
             is_premium=True,
         )
@@ -215,8 +259,12 @@ class TestCultureDeckModelIsPremium:
     def test_culture_deck_is_premium_explicit_false(self):
         """Test is_premium can be explicitly set to False."""
         deck = CultureDeck(
-            name="Free Culture Deck",
-            description="Free culture content",
+            name_en="Free Culture Deck",
+            name_el="Free Culture Deck",
+            name_ru="Free Culture Deck",
+            description_en="Free culture content",
+            description_el="Free culture content",
+            description_ru="Free culture content",
             category="geography",
             is_premium=False,
         )
@@ -226,7 +274,9 @@ class TestCultureDeckModelIsPremium:
         """Test is_premium and is_active are independent."""
         # Active and premium
         deck1 = CultureDeck(
-            name="Active Premium Culture",
+            name_en="Active Premium Culture",
+            name_el="Active Premium Culture",
+            name_ru="Active Premium Culture",
             category="history",
             is_active=True,
             is_premium=True,
@@ -236,7 +286,9 @@ class TestCultureDeckModelIsPremium:
 
         # Active and not premium
         deck2 = CultureDeck(
-            name="Active Free Culture",
+            name_en="Active Free Culture",
+            name_el="Active Free Culture",
+            name_ru="Active Free Culture",
             category="history",
             is_active=True,
             is_premium=False,
@@ -246,7 +298,9 @@ class TestCultureDeckModelIsPremium:
 
         # Inactive and premium
         deck3 = CultureDeck(
-            name="Inactive Premium Culture",
+            name_en="Inactive Premium Culture",
+            name_el="Inactive Premium Culture",
+            name_ru="Inactive Premium Culture",
             category="history",
             is_active=False,
             is_premium=True,
@@ -256,7 +310,9 @@ class TestCultureDeckModelIsPremium:
 
         # Inactive and not premium
         deck4 = CultureDeck(
-            name="Inactive Free Culture",
+            name_en="Inactive Free Culture",
+            name_el="Inactive Free Culture",
+            name_ru="Inactive Free Culture",
             category="history",
             is_active=False,
             is_premium=False,
@@ -272,8 +328,12 @@ class TestCultureDeckModelIsPremiumDatabase:
     async def test_culture_deck_is_premium_persists_false(self, db_session: AsyncSession):
         """Test is_premium=False is persisted to database."""
         deck = CultureDeck(
-            name="Free Culture DB",
-            description="Test persistence",
+            name_en="Free Culture DB",
+            name_el="Free Culture DB",
+            name_ru="Free Culture DB",
+            description_en="Test persistence",
+            description_el="Test persistence",
+            description_ru="Test persistence",
             category="history",
             is_premium=False,
         )
@@ -288,8 +348,12 @@ class TestCultureDeckModelIsPremiumDatabase:
     async def test_culture_deck_is_premium_persists_true(self, db_session: AsyncSession):
         """Test is_premium=True is persisted to database."""
         deck = CultureDeck(
-            name="Premium Culture DB",
-            description="Premium test",
+            name_en="Premium Culture DB",
+            name_el="Premium Culture DB",
+            name_ru="Premium Culture DB",
+            description_en="Premium test",
+            description_el="Premium test",
+            description_ru="Premium test",
             category="traditions",
             is_premium=True,
         )
@@ -304,8 +368,12 @@ class TestCultureDeckModelIsPremiumDatabase:
     async def test_culture_deck_is_premium_default_persists(self, db_session: AsyncSession):
         """Test default is_premium=False when not specified."""
         deck = CultureDeck(
-            name="Default Premium Culture",
-            description="Default test",
+            name_en="Default Premium Culture",
+            name_el="Default Premium Culture",
+            name_ru="Default Premium Culture",
+            description_en="Default test",
+            description_el="Default test",
+            description_ru="Default test",
             category="geography",
         )
         db_session.add(deck)
@@ -318,7 +386,9 @@ class TestCultureDeckModelIsPremiumDatabase:
     async def test_culture_deck_is_premium_update_independent(self, db_session: AsyncSession):
         """Test updating is_premium does not affect is_active."""
         deck = CultureDeck(
-            name="Update Culture Test",
+            name_en="Update Culture Test",
+            name_el="Update Culture Test",
+            name_ru="Update Culture Test",
             category="history",
             is_active=True,
             is_premium=False,
@@ -338,7 +408,9 @@ class TestCultureDeckModelIsPremiumDatabase:
     async def test_culture_deck_is_active_update_independent(self, db_session: AsyncSession):
         """Test updating is_active does not affect is_premium."""
         deck = CultureDeck(
-            name="Active Culture Update Test",
+            name_en="Active Culture Update Test",
+            name_el="Active Culture Update Test",
+            name_ru="Active Culture Update Test",
             category="traditions",
             is_active=True,
             is_premium=True,
@@ -361,8 +433,12 @@ class TestDeckModelOwnerId:
     def test_deck_owner_id_default_none(self):
         """Test owner_id defaults to None (system deck)."""
         deck = Deck(
-            name="System Deck",
-            description="System-created deck",
+            name_en="System Deck",
+            name_el="System Deck",
+            name_ru="System Deck",
+            description_en="System-created deck",
+            description_el="System-created deck",
+            description_ru="System-created deck",
             level=DeckLevel.A1,
             is_premium=False,
         )
@@ -372,8 +448,12 @@ class TestDeckModelOwnerId:
         """Test owner_id can be set to a UUID."""
         user_id = uuid4()
         deck = Deck(
-            name="User Deck",
-            description="User-created deck",
+            name_en="User Deck",
+            name_el="User Deck",
+            name_ru="User Deck",
+            description_en="User-created deck",
+            description_el="User-created deck",
+            description_ru="User-created deck",
             level=DeckLevel.A1,
             is_premium=False,
             owner_id=user_id,
@@ -383,8 +463,12 @@ class TestDeckModelOwnerId:
     def test_deck_owner_id_explicit_none(self):
         """Test owner_id can be explicitly set to None."""
         deck = Deck(
-            name="Explicit System Deck",
-            description="Explicitly system deck",
+            name_en="Explicit System Deck",
+            name_el="Explicit System Deck",
+            name_ru="Explicit System Deck",
+            description_en="Explicitly system deck",
+            description_el="Explicitly system deck",
+            description_ru="Explicitly system deck",
             level=DeckLevel.A2,
             is_premium=False,
             owner_id=None,
@@ -397,7 +481,9 @@ class TestDeckModelOwnerId:
 
         # System deck (no owner), free
         deck1 = Deck(
-            name="System Free",
+            name_en="System Free",
+            name_el="System Free",
+            name_ru="System Free",
             level=DeckLevel.A1,
             is_premium=False,
             owner_id=None,
@@ -407,7 +493,9 @@ class TestDeckModelOwnerId:
 
         # System deck (no owner), premium
         deck2 = Deck(
-            name="System Premium",
+            name_en="System Premium",
+            name_el="System Premium",
+            name_ru="System Premium",
             level=DeckLevel.A1,
             is_premium=True,
             owner_id=None,
@@ -417,7 +505,9 @@ class TestDeckModelOwnerId:
 
         # User deck, free
         deck3 = Deck(
-            name="User Free",
+            name_en="User Free",
+            name_el="User Free",
+            name_ru="User Free",
             level=DeckLevel.A1,
             is_premium=False,
             owner_id=user_id,
@@ -427,7 +517,9 @@ class TestDeckModelOwnerId:
 
         # User deck, premium
         deck4 = Deck(
-            name="User Premium",
+            name_en="User Premium",
+            name_el="User Premium",
+            name_ru="User Premium",
             level=DeckLevel.A1,
             is_premium=True,
             owner_id=user_id,
@@ -443,8 +535,12 @@ class TestDeckModelOwnerIdDatabase:
     async def test_deck_owner_id_persists_none(self, db_session: AsyncSession):
         """Test owner_id=None is persisted to database (system deck)."""
         deck = Deck(
-            name="System DB Deck",
-            description="Test persistence",
+            name_en="System DB Deck",
+            name_el="System DB Deck",
+            name_ru="System DB Deck",
+            description_en="Test persistence",
+            description_el="Test persistence",
+            description_ru="Test persistence",
             level=DeckLevel.A1,
             is_premium=False,
             owner_id=None,
@@ -460,8 +556,12 @@ class TestDeckModelOwnerIdDatabase:
     async def test_deck_owner_id_default_persists(self, db_session: AsyncSession):
         """Test default owner_id=None when not specified."""
         deck = Deck(
-            name="Default Owner Deck",
-            description="Default test",
+            name_en="Default Owner Deck",
+            name_el="Default Owner Deck",
+            name_ru="Default Owner Deck",
+            description_en="Default test",
+            description_el="Default test",
+            description_ru="Default test",
             level=DeckLevel.A1,
         )
         db_session.add(deck)
@@ -476,8 +576,12 @@ class TestDeckModelOwnerIdDatabase:
     ):
         """Test owner_id is persisted when set to a user ID."""
         deck = Deck(
-            name="User Owned Deck",
-            description="User-created deck",
+            name_en="User Owned Deck",
+            name_el="User Owned Deck",
+            name_ru="User Owned Deck",
+            description_en="User-created deck",
+            description_el="User-created deck",
+            description_ru="User-created deck",
             level=DeckLevel.A1,
             is_premium=False,
             owner_id=test_user.id,
@@ -493,8 +597,12 @@ class TestDeckModelOwnerIdDatabase:
     async def test_deck_owner_relationship_loads(self, db_session: AsyncSession, test_user: User):
         """Test owner relationship loads correctly."""
         deck = Deck(
-            name="Owned Deck",
-            description="User-created deck",
+            name_en="Owned Deck",
+            name_el="Owned Deck",
+            name_ru="Owned Deck",
+            description_en="User-created deck",
+            description_el="User-created deck",
+            description_ru="User-created deck",
             level=DeckLevel.A1,
             is_premium=False,
             owner_id=test_user.id,
@@ -512,8 +620,12 @@ class TestDeckModelOwnerIdDatabase:
     async def test_deck_owner_relationship_none_for_system_deck(self, db_session: AsyncSession):
         """Test owner relationship is None for system decks."""
         deck = Deck(
-            name="System Deck",
-            description="System deck",
+            name_en="System Deck",
+            name_el="System Deck",
+            name_ru="System Deck",
+            description_en="System deck",
+            description_el="System deck",
+            description_ru="System deck",
             level=DeckLevel.A1,
             is_premium=False,
             owner_id=None,
@@ -553,8 +665,12 @@ class TestDeckModelOwnerIdDatabase:
 
         # Create a deck owned by this user
         deck = Deck(
-            name="Cascade Test Deck",
-            description="Will be deleted with owner",
+            name_en="Cascade Test Deck",
+            name_el="Cascade Test Deck",
+            name_ru="Cascade Test Deck",
+            description_en="Will be deleted with owner",
+            description_el="Will be deleted with owner",
+            description_ru="Will be deleted with owner",
             level=DeckLevel.A1,
             is_premium=False,
             owner_id=user.id,
@@ -582,7 +698,9 @@ class TestDeckModelOwnerIdDatabase:
     ):
         """Test updating owner_id does not affect is_premium or is_active."""
         deck = Deck(
-            name="Update Owner Test Deck",
+            name_en="Update Owner Test Deck",
+            name_el="Update Owner Test Deck",
+            name_ru="Update Owner Test Deck",
             level=DeckLevel.A1,
             is_active=True,
             is_premium=True,

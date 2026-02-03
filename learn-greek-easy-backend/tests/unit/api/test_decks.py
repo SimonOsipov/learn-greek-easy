@@ -33,8 +33,12 @@ class TestListDecksUnit:
         """Test that list endpoint calls repository with correct parameters."""
         mock_deck = MagicMock(spec=Deck)
         mock_deck.id = uuid4()
-        mock_deck.name = "Test Deck"
-        mock_deck.description = "Test description"
+        mock_deck.name_en = "Test Deck"
+        mock_deck.name_el = "Τεστ Τράπουλα"
+        mock_deck.name_ru = "Тестовая колода"
+        mock_deck.description_en = "Test description"
+        mock_deck.description_el = "Περιγραφή τεστ"
+        mock_deck.description_ru = "Тестовое описание"
         mock_deck.level = DeckLevel.A1
         mock_deck.is_active = True
         mock_deck.is_premium = False
@@ -158,10 +162,15 @@ class TestGetDeckUnit:
         deck_id = uuid4()
         mock_deck = MagicMock(spec=Deck)
         mock_deck.id = deck_id
-        mock_deck.name = "Test Deck"
-        mock_deck.description = "Test"
+        mock_deck.name_en = "Test Deck"
+        mock_deck.name_el = "Τεστ Τράπουλα"
+        mock_deck.name_ru = "Тестовая колода"
+        mock_deck.description_en = "Test"
+        mock_deck.description_el = "Τεστ"
+        mock_deck.description_ru = "Тест"
         mock_deck.level = DeckLevel.A1
         mock_deck.is_active = True
+        mock_deck.is_premium = False
         mock_deck.owner_id = None  # System deck (accessible to all)
         mock_deck.created_at = MagicMock()
         mock_deck.updated_at = MagicMock()
@@ -374,7 +383,9 @@ class TestUpdateDeckUnit:
 
         mock_deck = MagicMock(spec=Deck)
         mock_deck.id = deck_id
-        mock_deck.name = "Other User's Deck"
+        mock_deck.name_en = "Other User's Deck"
+        mock_deck.name_el = "Τράπουλα Άλλου Χρήστη"
+        mock_deck.name_ru = "Колода другого пользователя"
         mock_deck.owner_id = other_user_id  # Owned by another user
 
         with patch("src.api.v1.decks.DeckRepository") as mock_repo_class:
@@ -401,7 +412,9 @@ class TestUpdateDeckUnit:
 
         mock_deck = MagicMock(spec=Deck)
         mock_deck.id = deck_id
-        mock_deck.name = "System Deck"
+        mock_deck.name_en = "System Deck"
+        mock_deck.name_el = "Σύστημα Τράπουλα"
+        mock_deck.name_ru = "Системная колода"
         mock_deck.owner_id = None  # System deck - owner_id is None
 
         with patch("src.api.v1.decks.DeckRepository") as mock_repo_class:
@@ -475,7 +488,9 @@ class TestDeleteDeckUnit:
 
         mock_deck = MagicMock(spec=Deck)
         mock_deck.id = deck_id
-        mock_deck.name = "System Deck"
+        mock_deck.name_en = "System Deck"
+        mock_deck.name_el = "Σύστημα Τράπουλα"
+        mock_deck.name_ru = "Системная колода"
         mock_deck.owner_id = None  # System deck - owner_id is None
 
         with patch("src.api.v1.decks.DeckRepository") as mock_repo_class:
@@ -501,7 +516,9 @@ class TestDeleteDeckUnit:
 
         mock_deck = MagicMock(spec=Deck)
         mock_deck.id = deck_id
-        mock_deck.name = "Other User's Deck"
+        mock_deck.name_en = "Other User's Deck"
+        mock_deck.name_el = "Τράπουλα Άλλου Χρήστη"
+        mock_deck.name_ru = "Колода другого пользователя"
         mock_deck.owner_id = other_user_id  # Owned by another user
 
         with patch("src.api.v1.decks.DeckRepository") as mock_repo_class:
@@ -555,8 +572,12 @@ class TestDeckIsPremiumUnit:
         """Test that list endpoint includes is_premium field in response."""
         mock_deck = MagicMock(spec=Deck)
         mock_deck.id = uuid4()
-        mock_deck.name = "Premium Test Deck"
-        mock_deck.description = "Test description"
+        mock_deck.name_en = "Premium Test Deck"
+        mock_deck.name_el = "Πρίμιουμ Τεστ Τράπουλα"
+        mock_deck.name_ru = "Премиум тестовая колода"
+        mock_deck.description_en = "Test description"
+        mock_deck.description_el = "Περιγραφή τεστ"
+        mock_deck.description_ru = "Тестовое описание"
         mock_deck.level = DeckLevel.A1
         mock_deck.is_active = True
         mock_deck.is_premium = True
@@ -586,8 +607,12 @@ class TestDeckIsPremiumUnit:
         """Test that list endpoint returns is_premium=False for free decks."""
         mock_deck = MagicMock(spec=Deck)
         mock_deck.id = uuid4()
-        mock_deck.name = "Free Test Deck"
-        mock_deck.description = "Free content"
+        mock_deck.name_en = "Free Test Deck"
+        mock_deck.name_el = "Δωρεάν Τεστ Τράπουλα"
+        mock_deck.name_ru = "Бесплатная тестовая колода"
+        mock_deck.description_en = "Free content"
+        mock_deck.description_el = "Δωρεάν περιεχόμενο"
+        mock_deck.description_ru = "Бесплатный контент"
         mock_deck.level = DeckLevel.A1
         mock_deck.is_active = True
         mock_deck.is_premium = False
@@ -616,8 +641,12 @@ class TestDeckIsPremiumUnit:
         deck_id = uuid4()
         mock_deck = MagicMock(spec=Deck)
         mock_deck.id = deck_id
-        mock_deck.name = "Premium Deck"
-        mock_deck.description = "Premium content"
+        mock_deck.name_en = "Premium Deck"
+        mock_deck.name_el = "Πρίμιουμ Τράπουλα"
+        mock_deck.name_ru = "Премиум колода"
+        mock_deck.description_en = "Premium content"
+        mock_deck.description_el = "Πρίμιουμ περιεχόμενο"
+        mock_deck.description_ru = "Премиум контент"
         mock_deck.level = DeckLevel.B1
         mock_deck.is_active = True
         mock_deck.is_premium = True
@@ -645,8 +674,12 @@ class TestDeckIsPremiumUnit:
         """Test that search endpoint includes is_premium field."""
         mock_deck = MagicMock(spec=Deck)
         mock_deck.id = uuid4()
-        mock_deck.name = "Greek Premium"
-        mock_deck.description = "Premium Greek content"
+        mock_deck.name_en = "Greek Premium"
+        mock_deck.name_el = "Ελληνικό Πρίμιουμ"
+        mock_deck.name_ru = "Греческий премиум"
+        mock_deck.description_en = "Premium Greek content"
+        mock_deck.description_el = "Πρίμιουμ ελληνικό περιεχόμενο"
+        mock_deck.description_ru = "Премиум греческий контент"
         mock_deck.level = DeckLevel.B2
         mock_deck.is_active = True
         mock_deck.is_premium = True
@@ -694,8 +727,12 @@ class TestListMyDecksUnit:
         """Test that list_my_decks calls repository with current user's ID."""
         mock_deck = MagicMock(spec=Deck)
         mock_deck.id = uuid4()
-        mock_deck.name = "My Custom Deck"
-        mock_deck.description = "My personal deck"
+        mock_deck.name_en = "My Custom Deck"
+        mock_deck.name_el = "Η Προσωπική μου Τράπουλα"
+        mock_deck.name_ru = "Моя пользовательская колода"
+        mock_deck.description_en = "My personal deck"
+        mock_deck.description_el = "Η προσωπική μου τράπουλα"
+        mock_deck.description_ru = "Моя личная колода"
         mock_deck.level = DeckLevel.A1
         mock_deck.is_active = True
         mock_deck.is_premium = False
@@ -800,8 +837,12 @@ class TestGetDeckAuthorizationUnit:
         deck_id = uuid4()
         mock_deck = MagicMock(spec=Deck)
         mock_deck.id = deck_id
-        mock_deck.name = "System Deck"
-        mock_deck.description = "A system deck"
+        mock_deck.name_en = "System Deck"
+        mock_deck.name_el = "Τράπουλα Συστήματος"
+        mock_deck.name_ru = "Системная колода"
+        mock_deck.description_en = "A system deck"
+        mock_deck.description_el = "Μια τράπουλα συστήματος"
+        mock_deck.description_ru = "Системная колода"
         mock_deck.level = DeckLevel.A1
         mock_deck.is_active = True
         mock_deck.is_premium = False
@@ -829,8 +870,12 @@ class TestGetDeckAuthorizationUnit:
 
         mock_deck = MagicMock(spec=Deck)
         mock_deck.id = deck_id
-        mock_deck.name = "Other User's Deck"
-        mock_deck.description = "Not my deck"
+        mock_deck.name_en = "Other User's Deck"
+        mock_deck.name_el = "Τράπουλα Άλλου Χρήστη"
+        mock_deck.name_ru = "Колода другого пользователя"
+        mock_deck.description_en = "Not my deck"
+        mock_deck.description_el = "Όχι η τράπουλά μου"
+        mock_deck.description_ru = "Не моя колода"
         mock_deck.level = DeckLevel.A1
         mock_deck.is_active = True
         mock_deck.is_premium = False

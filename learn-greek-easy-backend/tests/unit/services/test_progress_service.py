@@ -48,9 +48,13 @@ def mock_deck():
     """Create a mock Deck object."""
     deck = MagicMock(spec=Deck)
     deck.id = uuid4()
-    deck.name = "Greek A1 Vocabulary"
+    deck.name_en = "Greek A1 Vocabulary"
+    deck.name_el = "Ελληνικό Λεξιλόγιο A1"
+    deck.name_ru = "Греческий словарь A1"
     deck.level = DeckLevel.A1
-    deck.description = "Essential Greek vocabulary"
+    deck.description_en = "Essential Greek vocabulary"
+    deck.description_el = "Βασικό ελληνικό λεξιλόγιο"
+    deck.description_ru = "Основной греческий словарь"
     deck.is_active = True
     deck.card_count = 100
     return deck
@@ -639,7 +643,9 @@ class TestProgressServiceDeckList:
         # Create second mock deck and progress
         mock_deck2 = MagicMock(spec=Deck)
         mock_deck2.id = uuid4()
-        mock_deck2.name = "Greek A2 Vocabulary"
+        mock_deck2.name_en = "Greek A2 Vocabulary"
+        mock_deck2.name_el = "Ελληνικό Λεξιλόγιο A2"
+        mock_deck2.name_ru = "Греческий словарь A2"
         mock_deck2.level = DeckLevel.A2
         mock_deck2.is_active = True
 
@@ -788,9 +794,9 @@ class TestProgressServiceDeckDetail:
         result = await service.get_deck_progress_detail(user_id, deck_id)
 
         assert result.deck_id == deck_id
-        assert result.deck_name == mock_deck.name
+        assert result.deck_name == mock_deck.name_en
         assert result.deck_level == "A1"
-        assert result.deck_description == mock_deck.description
+        assert result.deck_description == mock_deck.description_en
         assert result.progress.total_cards == 100
         assert result.progress.cards_studied == 75
         assert result.progress.cards_mastered == 30

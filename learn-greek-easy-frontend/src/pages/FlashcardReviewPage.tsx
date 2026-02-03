@@ -170,8 +170,8 @@ export function FlashcardReviewPage() {
     );
   }
 
-  // No cards due state - but NOT during session-to-summary transition
-  if (!currentCard && !isTransitioningToSummary) {
+  // No cards due state - but NOT during session-to-summary transition or initial mount
+  if (!currentCard && activeSession && !isTransitioningToSummary) {
     return (
       <div className="min-h-screen bg-background p-10">
         <div className="fixed right-4 top-4 z-50 flex items-center gap-2">
@@ -204,6 +204,19 @@ export function FlashcardReviewPage() {
 
   // Transition state: show loading while navigating to summary
   if (isTransitioningToSummary) {
+    return (
+      <div className="min-h-screen bg-background p-10">
+        <div className="fixed right-4 top-4 z-50 flex items-center gap-2">
+          <LanguageSwitcher variant="icon" />
+          <ThemeSwitcher />
+        </div>
+        <FlashcardSkeleton />
+      </div>
+    );
+  }
+
+  // Initial mount: show loading while session is being established
+  if (!currentCard || !activeSession) {
     return (
       <div className="min-h-screen bg-background p-10">
         <div className="fixed right-4 top-4 z-50 flex items-center gap-2">

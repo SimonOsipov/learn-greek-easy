@@ -13,7 +13,7 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.api.v1.changelog import parse_accept_language
+from src.core.dependencies import get_locale_from_header
 from src.db.models import ChangelogEntry, ChangelogTag
 
 # =============================================================================
@@ -241,57 +241,57 @@ class TestAcceptLanguageHeader:
 
 
 # =============================================================================
-# Test parse_accept_language Function
+# Test get_locale_from_header Function
 # =============================================================================
 
 
-class TestParseAcceptLanguage:
-    """Tests for parse_accept_language utility function."""
+class TestGetLocaleFromHeader:
+    """Tests for get_locale_from_header utility function."""
 
     def test_simple_locale(self):
         """Should parse simple locale codes."""
-        assert parse_accept_language("en") == "en"
-        assert parse_accept_language("el") == "el"
-        assert parse_accept_language("ru") == "ru"
+        assert get_locale_from_header("en") == "en"
+        assert get_locale_from_header("el") == "el"
+        assert get_locale_from_header("ru") == "ru"
 
     def test_locale_with_region(self):
         """Should extract base language from locale with region."""
-        assert parse_accept_language("en-US") == "en"
-        assert parse_accept_language("el-GR") == "el"
-        assert parse_accept_language("ru-RU") == "ru"
+        assert get_locale_from_header("en-US") == "en"
+        assert get_locale_from_header("el-GR") == "el"
+        assert get_locale_from_header("ru-RU") == "ru"
 
     def test_multiple_languages_with_quality(self):
         """Should return highest priority language."""
-        assert parse_accept_language("el,en;q=0.9") == "el"
-        assert parse_accept_language("en;q=0.9,el") == "el"
+        assert get_locale_from_header("el,en;q=0.9") == "el"
+        assert get_locale_from_header("en;q=0.9,el") == "el"
 
     def test_quality_factors(self):
         """Should respect quality factors."""
-        assert parse_accept_language("en;q=0.5,el;q=0.9,ru;q=0.7") == "el"
-        assert parse_accept_language("ru;q=1.0,en;q=0.5") == "ru"
+        assert get_locale_from_header("en;q=0.5,el;q=0.9,ru;q=0.7") == "el"
+        assert get_locale_from_header("ru;q=1.0,en;q=0.5") == "ru"
 
     def test_none_returns_english(self):
         """Should return 'en' when header is None."""
-        assert parse_accept_language(None) == "en"
+        assert get_locale_from_header(None) == "en"
 
     def test_empty_string_returns_english(self):
         """Should return 'en' for empty string."""
-        assert parse_accept_language("") == "en"
+        assert get_locale_from_header("") == "en"
 
     def test_whitespace_handling(self):
         """Should handle whitespace in header."""
-        assert parse_accept_language("  en  ") == "en"
-        assert parse_accept_language("el , en ; q=0.9") == "el"
+        assert get_locale_from_header("  en  ") == "en"
+        assert get_locale_from_header("el , en ; q=0.9") == "el"
 
     def test_invalid_quality_defaults_to_one(self):
         """Should treat invalid quality factor as 1.0."""
-        assert parse_accept_language("en;q=invalid,el") == "en"
+        assert get_locale_from_header("en;q=invalid,el") == "en"
 
     def test_complex_header(self):
         """Should parse complex Accept-Language headers."""
         # Real-world example from browser
         header = "el-GR,el;q=0.9,en-US;q=0.8,en;q=0.7"
-        assert parse_accept_language(header) == "el"
+        assert get_locale_from_header(header) == "el"
 
 
 # =============================================================================

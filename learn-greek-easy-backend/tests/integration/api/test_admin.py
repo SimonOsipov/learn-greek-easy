@@ -92,13 +92,17 @@ class TestAdminStatsIntegration:
         # Arrange - Create test decks and cards
         deck1 = await DeckFactory.create(
             session=db_session,
-            name="Test Deck A1",
+            name_en="Test Deck A1",
+            name_el="Test Deck A1",
+            name_ru="Test Deck A1",
             a1=True,
             is_active=True,
         )
         deck2 = await DeckFactory.create(
             session=db_session,
-            name="Test Deck B1",
+            name_en="Test Deck B1",
+            name_el="Test Deck B1",
+            name_ru="Test Deck B1",
             b1=True,
             is_active=True,
         )
@@ -136,13 +140,17 @@ class TestAdminStatsIntegration:
         # Arrange - Create active and inactive decks
         active_deck = await DeckFactory.create(
             session=db_session,
-            name="Active Deck",
+            name_en="Active Deck",
+            name_el="Active Deck",
+            name_ru="Active Deck",
             a2=True,
             is_active=True,
         )
         inactive_deck = await DeckFactory.create(
             session=db_session,
-            name="Inactive Deck",
+            name_en="Inactive Deck",
+            name_el="Inactive Deck",
+            name_ru="Inactive Deck",
             b2=True,
             is_active=False,
         )
@@ -178,7 +186,9 @@ class TestAdminStatsIntegration:
         # Arrange - Create a deck with cards
         deck = await DeckFactory.create(
             session=db_session,
-            name="Schema Test Deck",
+            name_en="Schema Test Deck",
+            name_el="Schema Test Deck",
+            name_ru="Schema Test Deck",
             c1=True,
             is_active=True,
         )

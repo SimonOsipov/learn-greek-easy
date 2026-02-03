@@ -584,13 +584,43 @@ class TestCultureDeckResponseIsPremium:
 
 
 class TestCultureDeckCreate:
-    """Test CultureDeckCreate schema validation."""
+    """Test CultureDeckCreate schema validation with trilingual fields."""
+
+    def test_create_deck_with_trilingual_names(self):
+        """Test creating deck with trilingual names."""
+        deck_data = CultureDeckCreate(
+            name_el="Ιστορία",
+            name_en="History",
+            name_ru="История",
+            category="history",
+            order_index=0,
+        )
+        assert deck_data.name_el == "Ιστορία"
+        assert deck_data.name_en == "History"
+        assert deck_data.name_ru == "История"
+
+    def test_create_deck_with_trilingual_descriptions(self):
+        """Test creating deck with trilingual descriptions."""
+        deck_data = CultureDeckCreate(
+            name_el="Ιστορία",
+            name_en="History",
+            name_ru="История",
+            description_el="Ελληνική ιστορία",
+            description_en="Greek history",
+            description_ru="Греческая история",
+            category="history",
+            order_index=0,
+        )
+        assert deck_data.description_el == "Ελληνική ιστορία"
+        assert deck_data.description_en == "Greek history"
+        assert deck_data.description_ru == "Греческая история"
 
     def test_create_deck_with_is_premium_default_false(self):
         """Test is_premium defaults to False on create."""
         deck_data = CultureDeckCreate(
-            name="New Culture Deck",
-            description="Learn Greek culture",
+            name_el="New Culture Deck",
+            name_en="New Culture Deck",
+            name_ru="Новый Deck",
             category="history",
             order_index=0,
         )
@@ -599,8 +629,9 @@ class TestCultureDeckCreate:
     def test_create_deck_with_is_premium_true(self):
         """Test is_premium can be set to True on create."""
         deck_data = CultureDeckCreate(
-            name="Premium Culture Deck",
-            description="Premium Greek culture content",
+            name_el="Premium Culture Deck",
+            name_en="Premium Culture Deck",
+            name_ru="Премиум Deck",
             category="traditions",
             order_index=0,
             is_premium=True,
@@ -610,29 +641,82 @@ class TestCultureDeckCreate:
     def test_create_deck_with_is_premium_false_explicit(self):
         """Test is_premium can be explicitly False on create."""
         deck_data = CultureDeckCreate(
-            name="Free Culture Deck",
-            description="Free content",
+            name_el="Free Culture Deck",
+            name_en="Free Culture Deck",
+            name_ru="Бесплатный Deck",
             category="geography",
             order_index=0,
             is_premium=False,
         )
         assert deck_data.is_premium is False
 
+    def test_create_deck_missing_name_el_rejected(self):
+        """Test that missing name_el is rejected."""
+        with pytest.raises(ValidationError):
+            CultureDeckCreate(
+                name_en="History",
+                name_ru="История",
+                category="history",
+                order_index=0,
+            )
+
+    def test_create_deck_missing_name_en_rejected(self):
+        """Test that missing name_en is rejected."""
+        with pytest.raises(ValidationError):
+            CultureDeckCreate(
+                name_el="Ιστορία",
+                name_ru="История",
+                category="history",
+                order_index=0,
+            )
+
+    def test_create_deck_missing_name_ru_rejected(self):
+        """Test that missing name_ru is rejected."""
+        with pytest.raises(ValidationError):
+            CultureDeckCreate(
+                name_el="Ιστορία",
+                name_en="History",
+                category="history",
+                order_index=0,
+            )
+
+    def test_create_deck_descriptions_optional(self):
+        """Test that descriptions are optional."""
+        deck_data = CultureDeckCreate(
+            name_el="Test",
+            name_en="Test",
+            name_ru="Test",
+            category="history",
+            order_index=0,
+        )
+        assert deck_data.description_el is None
+        assert deck_data.description_en is None
+        assert deck_data.description_ru is None
+
 
 class TestCultureDeckUpdate:
-    """Test CultureDeckUpdate schema validation for is_premium field."""
+    """Test CultureDeckUpdate schema validation with trilingual fields."""
 
     def test_update_is_premium_only(self):
         """Test updating only is_premium field."""
         update = CultureDeckUpdate(is_premium=True)
         assert update.is_premium is True
-        assert update.name is None
+        assert update.name_el is None
+        assert update.name_en is None
+        assert update.name_ru is None
         assert update.is_active is None
 
     def test_update_is_premium_false(self):
         """Test updating is_premium to False."""
         update = CultureDeckUpdate(is_premium=False)
         assert update.is_premium is False
+
+    def test_update_single_language_name(self):
+        """Test updating only one language name."""
+        update = CultureDeckUpdate(name_ru="Обновленное название")
+        assert update.name_ru == "Обновленное название"
+        assert update.name_el is None
+        assert update.name_en is None
 
     def test_update_is_premium_and_is_active_independent(self):
         """Test is_premium and is_active can be updated independently."""
@@ -651,26 +735,95 @@ class TestCultureDeckUpdate:
         assert update3.is_active is False
         assert update3.is_premium is True
 
-    def test_update_all_fields_including_premium(self):
-        """Test updating all fields including is_premium."""
+    def test_update_all_trilingual_fields(self):
+        """Test updating all trilingual fields."""
         update = CultureDeckUpdate(
-            name="Updated Name",
-            description="New description",
+            name_el="Νέο Όνομα",
+            name_en="New Name",
+            name_ru="Новое Имя",
+            description_el="Νέα περιγραφή",
+            description_en="New description",
+            description_ru="Новое описание",
             category="geography",
             order_index=5,
             is_active=True,
             is_premium=True,
         )
-        assert update.name == "Updated Name"
+        assert update.name_el == "Νέο Όνομα"
+        assert update.name_en == "New Name"
+        assert update.name_ru == "Новое Имя"
         assert update.is_active is True
         assert update.is_premium is True
 
     def test_update_empty_all_fields_none(self):
         """Test empty update has all fields as None."""
         update = CultureDeckUpdate()
-        assert update.name is None
-        assert update.description is None
+        assert update.name_el is None
+        assert update.name_en is None
+        assert update.name_ru is None
+        assert update.description_el is None
+        assert update.description_en is None
+        assert update.description_ru is None
         assert update.category is None
         assert update.order_index is None
         assert update.is_active is None
         assert update.is_premium is None
+
+
+class TestCultureDeckAdminResponse:
+    """Test CultureDeckAdminResponse schema validation."""
+
+    def test_valid_admin_response_with_trilingual_fields(self):
+        """Test valid admin response with all language fields."""
+        from datetime import datetime
+
+        from src.schemas.culture import CultureDeckAdminResponse
+
+        now = datetime.now()
+        response = CultureDeckAdminResponse(
+            id=uuid4(),
+            name_el="Ιστορία",
+            name_en="History",
+            name_ru="История",
+            description_el="Ελληνική ιστορία",
+            description_en="Greek history",
+            description_ru="Греческая история",
+            category="history",
+            question_count=25,
+            is_active=True,
+            is_premium=False,
+            order_index=0,
+            created_at=now,
+            updated_at=now,
+        )
+        assert response.name_el == "Ιστορία"
+        assert response.name_en == "History"
+        assert response.name_ru == "История"
+        assert response.question_count == 25
+
+    def test_admin_response_descriptions_can_be_none(self):
+        """Test that description fields can be None."""
+        from datetime import datetime
+
+        from src.schemas.culture import CultureDeckAdminResponse
+
+        now = datetime.now()
+        response = CultureDeckAdminResponse(
+            id=uuid4(),
+            name_el="Test",
+            name_en="Test",
+            name_ru="Test",
+            description_el=None,
+            description_en=None,
+            description_ru=None,
+            category="history",
+            question_count=0,
+            is_active=True,
+            is_premium=False,
+            order_index=0,
+            created_at=now,
+            updated_at=now,
+        )
+        assert response.description_el is None
+        assert response.description_en is None
+        assert response.description_ru is None

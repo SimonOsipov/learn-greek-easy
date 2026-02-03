@@ -1,17 +1,18 @@
 """Culture Deck Service for culture exam deck operations.
 
 This service provides:
-1. List culture decks with optional filtering
-2. Get deck details with question count
+1. List culture decks with optional filtering and localization
+2. Get deck details with question count and localization
 3. Progress tracking for authenticated users
 4. Admin CRUD operations (create, update, soft delete)
 
 Example Usage:
     async with get_db_session() as db:
         service = CultureDeckService(db)
-        decks = await service.list_decks(user_id=user.id)
+        # Public endpoints with localization
+        decks = await service.list_decks(user_id=user.id, locale="el")
 
-        # Admin operations
+        # Admin operations (return all languages)
         deck = await service.create_deck(deck_data)
         updated = await service.update_deck(deck_id, update_data)
         await service.soft_delete_deck(deck_id)
@@ -26,6 +27,7 @@ from src.core.exceptions import CultureDeckNotFoundException
 from src.core.logging import get_logger
 from src.repositories import CultureDeckRepository, CultureQuestionStatsRepository
 from src.schemas.culture import (
+    CultureDeckAdminResponse,
     CultureDeckCreate,
     CultureDeckDetailResponse,
     CultureDeckListResponse,
@@ -38,6 +40,10 @@ if TYPE_CHECKING:
     from src.db.models import CultureDeck
 
 logger = get_logger(__name__)
+
+# Supported locales with English as fallback (matches ChangelogService pattern)
+SUPPORTED_LOCALES = frozenset(["en", "el", "ru"])
+DEFAULT_LOCALE = "en"
 
 
 class CultureDeckService:
@@ -97,19 +103,45 @@ class CultureDeckService:
             last_practiced_at=last_practiced,
         )
 
-    async def _build_deck_response(
+    def _get_localized_text(
+        self,
+        field_en: Optional[str],
+        field_el: Optional[str],
+        field_ru: Optional[str],
+        locale: str,
+    ) -> Optional[str]:
+        """Get text for the specified locale with English fallback.
+
+        Args:
+            field_en: English text
+            field_el: Greek text
+            field_ru: Russian text
+            locale: Target locale (en, el, ru)
+
+        Returns:
+            Localized text or None if all fields are None
+        """
+        if locale == "el":
+            return field_el or field_en
+        elif locale == "ru":
+            return field_ru or field_en
+        return field_en
+
+    async def _build_localized_deck_response(
         self,
         deck: "CultureDeck",
+        locale: str,
         user_id: Optional[UUID] = None,
     ) -> CultureDeckResponse:
-        """Build a CultureDeckResponse from a deck model.
+        """Build a localized CultureDeckResponse from a deck model.
 
         Args:
             deck: CultureDeck model instance
+            locale: Target locale (en, el, ru)
             user_id: Optional user UUID for progress
 
         Returns:
-            CultureDeckResponse with all fields populated
+            CultureDeckResponse with single-language content
         """
         # Get question count
         question_count = await self.deck_repo.count_questions(deck.id)
@@ -121,12 +153,47 @@ class CultureDeckService:
 
         return CultureDeckResponse(
             id=deck.id,
-            name=deck.name,
-            description=deck.description,
+            name=self._get_localized_text(deck.name_en, deck.name_el, deck.name_ru, locale),
+            description=self._get_localized_text(
+                deck.description_en, deck.description_el, deck.description_ru, locale
+            ),
             category=deck.category,
             question_count=question_count,
             is_premium=deck.is_premium,
             progress=progress,
+        )
+
+    def _build_localized_detail_response(
+        self,
+        deck: "CultureDeck",
+        question_count: int,
+        progress: Optional[CultureDeckProgress],
+        locale: str,
+    ) -> CultureDeckDetailResponse:
+        """Build a localized CultureDeckDetailResponse.
+
+        Args:
+            deck: CultureDeck model instance
+            question_count: Number of questions in deck
+            progress: User progress (if authenticated)
+            locale: Target locale (en, el, ru)
+
+        Returns:
+            CultureDeckDetailResponse with single-language content
+        """
+        return CultureDeckDetailResponse(
+            id=deck.id,
+            name=self._get_localized_text(deck.name_en, deck.name_el, deck.name_ru, locale),
+            description=self._get_localized_text(
+                deck.description_en, deck.description_el, deck.description_ru, locale
+            ),
+            category=deck.category,
+            question_count=question_count,
+            is_premium=deck.is_premium,
+            progress=progress,
+            is_active=deck.is_active,
+            created_at=deck.created_at,
+            updated_at=deck.updated_at,
         )
 
     # =========================================================================
@@ -140,23 +207,28 @@ class CultureDeckService:
         page_size: int = 20,
         category: Optional[str] = None,
         user_id: Optional[UUID] = None,
+        locale: str = "en",
     ) -> CultureDeckListResponse:
-        """List culture decks with optional filtering and pagination.
+        """List culture decks with optional filtering, pagination, and localization.
 
         Args:
             page: Page number (1-indexed)
             page_size: Number of items per page
             category: Optional category filter
             user_id: Optional user UUID for progress data
+            locale: Language code (en, el, ru). Falls back to 'en' if unsupported.
 
         Returns:
-            CultureDeckListResponse with paginated decks
+            CultureDeckListResponse with paginated localized decks
 
         Note:
             - Only active decks are returned
             - If user_id provided, includes progress for each deck
             - Anonymous users receive decks without progress
         """
+        # Normalize locale with fallback
+        normalized_locale = locale if locale in SUPPORTED_LOCALES else DEFAULT_LOCALE
+
         skip = (page - 1) * page_size
 
         logger.debug(
@@ -166,6 +238,7 @@ class CultureDeckService:
                 "page_size": page_size,
                 "category": category,
                 "user_id": str(user_id) if user_id else None,
+                "locale": normalized_locale,
             },
         )
 
@@ -177,10 +250,10 @@ class CultureDeckService:
         )
         total = await self.deck_repo.count_active(category=category)
 
-        # Build response for each deck
+        # Build response for each deck with locale
         deck_responses = []
         for deck in decks:
-            response = await self._build_deck_response(deck, user_id)
+            response = await self._build_localized_deck_response(deck, normalized_locale, user_id)
             deck_responses.append(response)
 
         logger.info(
@@ -201,24 +274,30 @@ class CultureDeckService:
         self,
         deck_id: UUID,
         user_id: Optional[UUID] = None,
+        locale: str = "en",
     ) -> CultureDeckDetailResponse:
-        """Get a culture deck by ID with details.
+        """Get a culture deck by ID with localized details.
 
         Args:
             deck_id: Deck UUID
             user_id: Optional user UUID for progress data
+            locale: Language code (en, el, ru). Falls back to 'en' if unsupported.
 
         Returns:
-            CultureDeckDetailResponse with full deck details
+            CultureDeckDetailResponse with localized content
 
         Raises:
             CultureDeckNotFoundException: If deck doesn't exist or is inactive
         """
+        # Normalize locale with fallback
+        normalized_locale = locale if locale in SUPPORTED_LOCALES else DEFAULT_LOCALE
+
         logger.debug(
             "Getting culture deck",
             extra={
                 "deck_id": str(deck_id),
                 "user_id": str(user_id) if user_id else None,
+                "locale": normalized_locale,
             },
         )
 
@@ -246,17 +325,8 @@ class CultureDeckService:
             },
         )
 
-        return CultureDeckDetailResponse(
-            id=deck.id,
-            name=deck.name,
-            description=deck.description,
-            category=deck.category,
-            question_count=question_count,
-            is_premium=deck.is_premium,
-            progress=progress,
-            is_active=deck.is_active,
-            created_at=deck.created_at,
-            updated_at=deck.updated_at,
+        return self._build_localized_detail_response(
+            deck, question_count, progress, normalized_locale
         )
 
     async def get_categories(self) -> list[str]:
@@ -282,14 +352,14 @@ class CultureDeckService:
     async def create_deck(
         self,
         deck_data: CultureDeckCreate,
-    ) -> CultureDeckDetailResponse:
+    ) -> CultureDeckAdminResponse:
         """Create a new culture deck.
 
         Args:
-            deck_data: Deck creation data with multilingual fields
+            deck_data: Deck creation data with all language fields
 
         Returns:
-            CultureDeckDetailResponse with created deck details
+            CultureDeckAdminResponse with all language fields
 
         Note:
             - Requires superuser privileges (enforced in router)
@@ -302,10 +372,14 @@ class CultureDeckService:
             },
         )
 
-        # Convert Pydantic model to dict for create
+        # Convert Pydantic model to dict with multilingual fields
         deck_dict = {
-            "name": deck_data.name,
-            "description": deck_data.description,
+            "name_en": deck_data.name_en,
+            "name_el": deck_data.name_el,
+            "name_ru": deck_data.name_ru,
+            "description_en": deck_data.description_en,
+            "description_el": deck_data.description_el,
+            "description_ru": deck_data.description_ru,
             "category": deck_data.category,
             "order_index": deck_data.order_index,
             "is_active": True,
@@ -315,6 +389,9 @@ class CultureDeckService:
         # Create deck using repository
         deck = await self.deck_repo.create(deck_dict)
 
+        # Refresh to get database-generated values (e.g., created_at, updated_at)
+        await self.db.refresh(deck)
+
         logger.info(
             "Culture deck created",
             extra={
@@ -323,15 +400,19 @@ class CultureDeckService:
             },
         )
 
-        return CultureDeckDetailResponse(
+        return CultureDeckAdminResponse(
             id=deck.id,
-            name=deck.name,
-            description=deck.description,
+            name_en=deck.name_en,
+            name_el=deck.name_el,
+            name_ru=deck.name_ru,
+            description_en=deck.description_en,
+            description_el=deck.description_el,
+            description_ru=deck.description_ru,
             category=deck.category,
             question_count=0,  # New deck has no questions
             is_premium=deck.is_premium,
-            progress=None,
             is_active=deck.is_active,
+            order_index=deck.order_index,
             created_at=deck.created_at,
             updated_at=deck.updated_at,
         )
@@ -340,7 +421,7 @@ class CultureDeckService:
         self,
         deck_id: UUID,
         deck_data: CultureDeckUpdate,
-    ) -> "CultureDeck":
+    ) -> CultureDeckAdminResponse:
         """Update an existing culture deck.
 
         Args:
@@ -348,7 +429,7 @@ class CultureDeckService:
             deck_data: Fields to update (all optional)
 
         Returns:
-            Updated CultureDeck SQLAlchemy model (not committed)
+            CultureDeckAdminResponse with all language fields
 
         Raises:
             CultureDeckNotFoundException: If deck doesn't exist
@@ -374,6 +455,12 @@ class CultureDeckService:
         # Update deck using repository
         updated_deck = await self.deck_repo.update(deck, update_dict)
 
+        # Refresh to get database-generated values (e.g., updated_at)
+        await self.db.refresh(updated_deck)
+
+        # Get question count for response
+        question_count = await self.deck_repo.count_questions(deck_id)
+
         logger.info(
             "Culture deck updated",
             extra={
@@ -382,7 +469,22 @@ class CultureDeckService:
             },
         )
 
-        return updated_deck
+        return CultureDeckAdminResponse(
+            id=updated_deck.id,
+            name_en=updated_deck.name_en,
+            name_el=updated_deck.name_el,
+            name_ru=updated_deck.name_ru,
+            description_en=updated_deck.description_en,
+            description_el=updated_deck.description_el,
+            description_ru=updated_deck.description_ru,
+            category=updated_deck.category,
+            question_count=question_count,
+            is_premium=updated_deck.is_premium,
+            is_active=updated_deck.is_active,
+            order_index=updated_deck.order_index,
+            created_at=updated_deck.created_at,
+            updated_at=updated_deck.updated_at,
+        )
 
     async def soft_delete_deck(self, deck_id: UUID) -> None:
         """Soft delete a culture deck by setting is_active to False.

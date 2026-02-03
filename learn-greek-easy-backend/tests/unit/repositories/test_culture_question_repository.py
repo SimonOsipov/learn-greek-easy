@@ -25,8 +25,12 @@ from src.repositories.culture_question import CultureQuestionRepository
 async def culture_deck(db_session: AsyncSession) -> CultureDeck:
     """Create an active culture deck for testing."""
     deck = CultureDeck(
-        name="Greek History",
-        description="Learn about Greek history",
+        name_en="Greek History",
+        name_el="Greek History",
+        name_ru="Greek History",
+        description_en="Learn about Greek history",
+        description_el="Learn about Greek history",
+        description_ru="Learn about Greek history",
         category="history",
         is_active=True,
     )
@@ -350,8 +354,12 @@ class TestCountByDeck:
 
         # Create a second deck with questions
         second_deck = CultureDeck(
-            name="Second Deck",
-            description="Second deck for testing",
+            name_en="Second Deck",
+            name_el="Second Deck",
+            name_ru="Second Deck",
+            description_en="Second deck for testing",
+            description_el="Second deck for testing",
+            description_ru="Second deck for testing",
             category="geography",
             is_active=True,
         )

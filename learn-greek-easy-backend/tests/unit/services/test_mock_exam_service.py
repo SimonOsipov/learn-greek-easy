@@ -30,8 +30,12 @@ from src.services.mock_exam_service import MockExamService
 async def culture_deck(db_session: AsyncSession) -> CultureDeck:
     """Create an active culture deck for testing."""
     deck = CultureDeck(
-        name="Greek History",
-        description="Learn about Greek history",
+        name_en="Greek History",
+        name_el="Greek History",
+        name_ru="Greek History",
+        description_en="Learn about Greek history",
+        description_el="Learn about Greek history",
+        description_ru="Learn about Greek history",
         category="history",
         is_active=True,
     )

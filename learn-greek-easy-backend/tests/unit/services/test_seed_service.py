@@ -932,14 +932,20 @@ class TestSeedServiceCulture:
         # CULTURE_DECKS is a dict with category as key
         for category, deck_data in SeedService.CULTURE_DECKS.items():
             assert category in ["history", "geography", "politics", "culture", "traditions"]
-            assert "name" in deck_data
-            assert "description" in deck_data
+            # Check trilingual name fields
+            assert "name_en" in deck_data
+            assert "name_ru" in deck_data
+            # Check trilingual description fields
+            assert "description_en" in deck_data
+            assert "description_ru" in deck_data
 
-            # Name and description are now simple English strings (not multilingual dicts)
-            assert isinstance(deck_data["name"], str)
-            assert isinstance(deck_data["description"], str)
-            assert len(deck_data["name"]) > 0
-            assert len(deck_data["description"]) > 0
+            # Name and description are now simple strings per language
+            assert isinstance(deck_data["name_en"], str)
+            assert isinstance(deck_data["name_ru"], str)
+            assert isinstance(deck_data["description_en"], str)
+            assert isinstance(deck_data["description_ru"], str)
+            assert len(deck_data["name_en"]) > 0
+            assert len(deck_data["description_en"]) > 0
 
 
 class TestSeedServiceCultureStatistics:
@@ -1102,14 +1108,14 @@ class TestSeedServiceUserDecks:
         learner_decks = SeedService.USER_DECKS["e2e_learner@test.com"]
         assert len(learner_decks) == 3
 
-        # Verify learner deck names and card counts
-        learner_names = [d["name"] for d in learner_decks]
+        # Verify learner deck names (using trilingual name_en) and card counts
+        learner_names = [d["name_en"] for d in learner_decks]
         assert "My Greek Basics" in learner_names
         assert "Travel Phrases" in learner_names
         assert "Practice Deck" in learner_names
 
         # Verify card counts for learner
-        learner_card_counts = {d["name"]: d["card_count"] for d in learner_decks}
+        learner_card_counts = {d["name_en"]: d["card_count"] for d in learner_decks}
         assert learner_card_counts["My Greek Basics"] == 5
         assert learner_card_counts["Travel Phrases"] == 3
         assert learner_card_counts["Practice Deck"] == 0
@@ -1117,7 +1123,7 @@ class TestSeedServiceUserDecks:
         # e2e_admin should have 1 deck
         admin_decks = SeedService.USER_DECKS["e2e_admin@test.com"]
         assert len(admin_decks) == 1
-        assert admin_decks[0]["name"] == "Admin's Personal Deck"
+        assert admin_decks[0]["name_en"] == "Admin's Personal Deck"
         assert admin_decks[0]["card_count"] == 2
 
     def test_user_decks_have_valid_levels(self, seed_service):
@@ -1211,7 +1217,7 @@ class TestSeedServiceUserDecks:
 
         def track_objects(obj):
             original_add(obj)
-            if hasattr(obj, "owner_id") and hasattr(obj, "name") and hasattr(obj, "level"):
+            if hasattr(obj, "owner_id") and hasattr(obj, "name_en") and hasattr(obj, "level"):
                 added_decks.append(obj)
             elif hasattr(obj, "deck_id") and hasattr(obj, "front_text"):
                 added_cards.append(obj)
@@ -1231,7 +1237,7 @@ class TestSeedServiceUserDecks:
         assert len(added_cards) == 8
 
         # Find the Practice Deck (which has 0 cards)
-        practice_deck = next((d for d in added_decks if d.name == "Practice Deck"), None)
+        practice_deck = next((d for d in added_decks if d.name_en == "Practice Deck"), None)
         assert practice_deck is not None
 
         # Verify no cards were created for Practice Deck
@@ -1705,7 +1711,7 @@ class TestSeedServiceNewsFeedPage:
 
         def track_decks(obj):
             original_add(obj)
-            if hasattr(obj, "name") and hasattr(obj, "category") and hasattr(obj, "is_active"):
+            if hasattr(obj, "name_en") and hasattr(obj, "category") and hasattr(obj, "is_active"):
                 added_decks.append(obj)
 
         mock_db_with_ids.add = MagicMock(side_effect=track_decks)
@@ -1714,7 +1720,7 @@ class TestSeedServiceNewsFeedPage:
 
         # Verify deck was created
         assert len(added_decks) == 1
-        assert added_decks[0].name == "E2E News Feed Page"
+        assert added_decks[0].name_en == "E2E News Feed Page"
         assert "deck_id" in result
 
     @pytest.mark.asyncio

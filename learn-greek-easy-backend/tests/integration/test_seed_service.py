@@ -117,7 +117,7 @@ class TestSeedServiceIntegration:
             deck = await db_session.scalar(select(Deck).where(Deck.level == level))
             assert deck is not None, f"Deck for level {level} not found"
             assert deck.is_active is True
-            assert f"{level.value}" in deck.name
+            assert f"{level.value}" in deck.name_en
 
     @pytest.mark.asyncio
     async def test_seed_creates_cards_with_greek_text(
@@ -312,17 +312,21 @@ class TestSeedServiceAuthentication:
 
     @pytest.mark.asyncio
     async def test_all_users_are_auth0_style(self, db_session: AsyncSession, enable_seeding):
-        """All seeded users are Auth0-style (no password)."""
+        """All seeded users are Auth0-style (no password).
+
+        Note: Base E2E users (e2e_learner, e2e_beginner, e2e_advanced, e2e_admin)
+        have auth0_id=None to allow Auth0 E2E tests to link real Auth0 accounts.
+        XP test users have fake auth0_ids since they're not used in Auth0 tests.
+        """
         seed_service = SeedService(db_session)
 
         await seed_service.seed_all()
 
         users = (await db_session.execute(select(User))).scalars().all()
 
-        # All users should be Auth0-style
+        # All users should have no password hash (Auth0-style)
         for user in users:
-            assert user.password_hash is None
-            assert user.auth0_id is not None
+            assert user.password_hash is None, f"User {user.email} has password_hash"
 
 
 # ============================================================================
@@ -729,25 +733,25 @@ class TestSeedServiceCulture:
 
     @pytest.mark.asyncio
     async def test_seed_creates_culture_decks(self, db_session: AsyncSession, enable_seeding):
-        """seed_all creates 5 culture decks."""
+        """seed_all creates at least 5 base culture decks plus E2E decks."""
         seed_service = SeedService(db_session)
 
         await seed_service.seed_all()
 
-        # Verify 5 culture decks were created
+        # Verify at least 5 culture decks were created (5 base + E2E decks)
         deck_count = await db_session.scalar(select(func.count(CultureDeck.id)))
-        assert deck_count == 5
+        assert deck_count >= 5
 
     @pytest.mark.asyncio
     async def test_seed_creates_culture_questions(self, db_session: AsyncSession, enable_seeding):
-        """seed_all creates 50 culture questions (10 per deck)."""
+        """seed_all creates at least 50 culture questions (10 per base deck)."""
         seed_service = SeedService(db_session)
 
         await seed_service.seed_all()
 
-        # Verify 50 culture questions were created
+        # Verify at least 50 culture questions were created (50 base + E2E questions)
         question_count = await db_session.scalar(select(func.count(CultureQuestion.id)))
-        assert question_count == 50
+        assert question_count >= 50
 
     @pytest.mark.asyncio
     async def test_culture_decks_have_correct_categories(
@@ -776,14 +780,14 @@ class TestSeedServiceCulture:
 
         for deck in decks:
             # Name should have all 3 languages
-            assert "el" in deck.name, f"Deck {deck.category} missing 'el' in name"
-            assert "en" in deck.name, f"Deck {deck.category} missing 'en' in name"
-            assert "ru" in deck.name, f"Deck {deck.category} missing 'ru' in name"
+            assert deck.name_el is not None, f"Deck {deck.category} missing name_el"
+            assert deck.name_en is not None, f"Deck {deck.category} missing name_en"
+            assert deck.name_ru is not None, f"Deck {deck.category} missing name_ru"
 
             # Description should have all 3 languages
-            assert "el" in deck.description, f"Deck {deck.category} missing 'el' in description"
-            assert "en" in deck.description, f"Deck {deck.category} missing 'en' in description"
-            assert "ru" in deck.description, f"Deck {deck.category} missing 'ru' in description"
+            assert deck.description_el is not None, f"Deck {deck.category} missing description_el"
+            assert deck.description_en is not None, f"Deck {deck.category} missing description_en"
+            assert deck.description_ru is not None, f"Deck {deck.category} missing description_ru"
 
     @pytest.mark.asyncio
     async def test_culture_questions_have_trilingual_content(
@@ -825,21 +829,37 @@ class TestSeedServiceCulture:
             assert deck is not None, f"Culture deck not found for question {q.id}"
 
     @pytest.mark.asyncio
-    async def test_each_deck_has_ten_questions(self, db_session: AsyncSession, enable_seeding):
-        """Verify each culture deck has exactly 10 questions."""
+    async def test_each_base_deck_has_ten_questions(self, db_session: AsyncSession, enable_seeding):
+        """Verify each base culture deck has exactly 10 questions.
+
+        Only checks the 5 base culture decks, not E2E decks which may have
+        different question counts.
+        """
         seed_service = SeedService(db_session)
 
         await seed_service.seed_all()
 
-        decks = (await db_session.execute(select(CultureDeck))).scalars().all()
+        base_categories = {"history", "geography", "politics", "culture", "traditions"}
+        decks = (
+            (
+                await db_session.execute(
+                    select(CultureDeck).where(CultureDeck.category.in_(base_categories))
+                )
+            )
+            .scalars()
+            .all()
+        )
 
-        for deck in decks:
+        # Filter to only base decks (not E2E decks with names like "E2E ...")
+        base_decks = [d for d in decks if not d.name_en.startswith("E2E")]
+
+        for deck in base_decks:
             question_count = await db_session.scalar(
                 select(func.count(CultureQuestion.id)).where(CultureQuestion.deck_id == deck.id)
             )
             assert (
                 question_count == 10
-            ), f"Deck {deck.category} has {question_count} questions, expected 10"
+            ), f"Base deck {deck.category} has {question_count} questions, expected 10"
 
 
 @pytest.mark.no_parallel
@@ -920,13 +940,13 @@ class TestSeedServiceCultureStatistics:
         # First seed
         await seed_service.seed_all()
 
-        # Verify culture data exists
+        # Verify culture data exists (at least 5 base decks, possibly more E2E decks)
         deck_count_before = await db_session.scalar(select(func.count(CultureDeck.id)))
         question_count_before = await db_session.scalar(select(func.count(CultureQuestion.id)))
         stats_count_before = await db_session.scalar(select(func.count(CultureQuestionStats.id)))
 
-        assert deck_count_before == 5
-        assert question_count_before == 50
+        assert deck_count_before >= 5
+        assert question_count_before >= 50
         assert stats_count_before > 0
 
         # Truncate

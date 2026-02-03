@@ -147,7 +147,7 @@ class TestAdminStats:
         """Test response matches expected schema structure."""
         deck = await DeckFactory.create(
             session=db_session,
-            name="Test Deck",
+            name_en="Test Deck",
             a1=True,
             is_active=True,
         )
@@ -378,7 +378,7 @@ class TestAdminDecks:
         """Test that endpoint returns vocabulary decks correctly."""
         deck = await DeckFactory.create(
             session=db_session,
-            name="Test Vocabulary Deck",
+            name_en="Test Vocabulary Deck",
             is_active=True,
         )
 
@@ -407,7 +407,7 @@ class TestAdminDecks:
         """Test that endpoint returns culture decks correctly."""
         culture_deck = await CultureDeckFactory.create(
             session=db_session,
-            name="Test Culture Deck",
+            name_en="Test Culture Deck",
             is_active=True,
         )
 
@@ -436,12 +436,12 @@ class TestAdminDecks:
         """Test that endpoint returns both vocabulary and culture decks when both exist."""
         vocab_deck = await DeckFactory.create(
             session=db_session,
-            name="Vocabulary Test",
+            name_en="Vocabulary Test",
             is_active=True,
         )
         culture_deck = await CultureDeckFactory.create(
             session=db_session,
-            name="Culture Test",
+            name_en="Culture Test",
             is_active=True,
         )
 
@@ -473,7 +473,7 @@ class TestAdminDecks:
         """Test that vocabulary deck has correct structure (category is None)."""
         deck = await DeckFactory.create(
             session=db_session,
-            name="Structure Test Vocab",
+            name_en="Structure Test Vocab",
             a1=True,
             is_active=True,
         )
@@ -512,7 +512,7 @@ class TestAdminDecks:
         """Test that culture deck has correct structure (level is None)."""
         culture_deck = await CultureDeckFactory.create(
             session=db_session,
-            name="Structure Test Culture",
+            name_en="Structure Test Culture",
             category="geography",
             is_active=True,
         )
@@ -555,12 +555,12 @@ class TestAdminDecks:
         """Test that type=vocabulary returns only vocabulary decks."""
         vocab_deck = await DeckFactory.create(
             session=db_session,
-            name="Vocab Only Test",
+            name_en="Vocab Only Test",
             is_active=True,
         )
         culture_deck = await CultureDeckFactory.create(
             session=db_session,
-            name="Culture Filter Test",
+            name_en="Culture Filter Test",
             is_active=True,
         )
 
@@ -591,12 +591,12 @@ class TestAdminDecks:
         """Test that type=culture returns only culture decks."""
         vocab_deck = await DeckFactory.create(
             session=db_session,
-            name="Vocab Filter Test",
+            name_en="Vocab Filter Test",
             is_active=True,
         )
         culture_deck = await CultureDeckFactory.create(
             session=db_session,
-            name="Culture Only Test",
+            name_en="Culture Only Test",
             is_active=True,
         )
 
@@ -641,12 +641,12 @@ class TestAdminDecks:
         """Test that search filters vocabulary decks by name."""
         matching_deck = await DeckFactory.create(
             session=db_session,
-            name="Alpha Vocabulary",
+            name_en="Alpha Vocabulary",
             is_active=True,
         )
         non_matching_deck = await DeckFactory.create(
             session=db_session,
-            name="Beta Learning",
+            name_en="Beta Learning",
             is_active=True,
         )
 
@@ -672,12 +672,12 @@ class TestAdminDecks:
         """Test that search filters culture decks by name."""
         matching_deck = await CultureDeckFactory.create(
             session=db_session,
-            name="Greek History",
+            name_en="Greek History",
             is_active=True,
         )
         non_matching_deck = await CultureDeckFactory.create(
             session=db_session,
-            name="Politics Quiz",
+            name_en="Politics Quiz",
             is_active=True,
         )
 
@@ -703,7 +703,7 @@ class TestAdminDecks:
         """Test that search is case-insensitive."""
         deck = await DeckFactory.create(
             session=db_session,
-            name="UPPERCASE Deck",
+            name_en="UPPERCASE Deck",
             is_active=True,
         )
 
@@ -728,7 +728,7 @@ class TestAdminDecks:
         """Test that search with no matches returns empty list."""
         await DeckFactory.create(
             session=db_session,
-            name="Regular Deck",
+            name_en="Regular Deck",
             is_active=True,
         )
 
@@ -758,7 +758,7 @@ class TestAdminDecks:
         for i in range(5):
             await DeckFactory.create(
                 session=db_session,
-                name=f"Deck {i}",
+                name_en=f"Deck {i}",
                 is_active=True,
             )
 
@@ -784,7 +784,7 @@ class TestAdminDecks:
         for i in range(10):
             await DeckFactory.create(
                 session=db_session,
-                name=f"Page Size Deck {i}",
+                name_en=f"Page Size Deck {i}",
                 is_active=True,
             )
 
@@ -811,7 +811,7 @@ class TestAdminDecks:
         for i in range(6):
             await DeckFactory.create(
                 session=db_session,
-                name=f"Pagination Deck {i}",
+                name_en=f"Pagination Deck {i}",
                 is_active=True,
             )
 
@@ -849,7 +849,7 @@ class TestAdminDecks:
         """Test that page beyond data returns empty list."""
         await DeckFactory.create(
             session=db_session,
-            name="Only One Deck",
+            name_en="Only One Deck",
             is_active=True,
         )
 
@@ -917,7 +917,7 @@ class TestAdminDecks:
         for i in range(15):
             await DeckFactory.create(
                 session=db_session,
-                name=f"TotalTest Deck {i}",
+                name_en=f"TotalTest Deck {i}",
                 is_active=True,
             )
 
@@ -951,19 +951,19 @@ class TestAdminDecks:
         # Create decks with explicit timestamps (oldest to newest)
         deck1 = await DeckFactory.create(
             session=db_session,
-            name="First Created",
+            name_en="First Created",
             is_active=True,
             created_at=now - timedelta(hours=2),
         )
         deck2 = await DeckFactory.create(
             session=db_session,
-            name="Second Created",
+            name_en="Second Created",
             is_active=True,
             created_at=now - timedelta(hours=1),
         )
         deck3 = await DeckFactory.create(
             session=db_session,
-            name="Third Created",
+            name_en="Third Created",
             is_active=True,
             created_at=now,
         )
@@ -1000,13 +1000,13 @@ class TestAdminDecks:
 
         vocab_deck = await DeckFactory.create(
             session=db_session,
-            name="Vocab Mixed Sort",
+            name_en="Vocab Mixed Sort",
             is_active=True,
             created_at=earlier,
         )
         culture_deck = await CultureDeckFactory.create(
             session=db_session,
-            name="Culture Mixed Sort",
+            name_en="Culture Mixed Sort",
             is_active=True,
             created_at=now,
         )
@@ -1036,12 +1036,12 @@ class TestAdminDecks:
         """Test that inactive vocabulary decks are included in results for admin."""
         active_deck = await DeckFactory.create(
             session=db_session,
-            name="Active Vocab Deck",
+            name_en="Active Vocab Deck",
             is_active=True,
         )
         inactive_deck = await DeckFactory.create(
             session=db_session,
-            name="Inactive Vocab Deck",
+            name_en="Inactive Vocab Deck",
             is_active=False,
         )
 
@@ -1076,12 +1076,12 @@ class TestAdminDecks:
         """Test that inactive culture decks are included in results for admin."""
         active_deck = await CultureDeckFactory.create(
             session=db_session,
-            name="Active Culture Deck",
+            name_en="Active Culture Deck",
             is_active=True,
         )
         inactive_deck = await CultureDeckFactory.create(
             session=db_session,
-            name="Inactive Culture Deck",
+            name_en="Inactive Culture Deck",
             is_active=False,
         )
 
@@ -1116,7 +1116,7 @@ class TestAdminDecks:
         """Test that deck with zero items shows item_count=0."""
         empty_deck = await DeckFactory.create(
             session=db_session,
-            name="Empty Deck",
+            name_en="Empty Deck",
             is_active=True,
         )
 
@@ -1142,17 +1142,17 @@ class TestAdminDecks:
         """Test that search combined with type filter works."""
         vocab_matching = await DeckFactory.create(
             session=db_session,
-            name="Combined Vocabulary",
+            name_en="Combined Vocabulary",
             is_active=True,
         )
         culture_matching = await CultureDeckFactory.create(
             session=db_session,
-            name="Combined Culture",
+            name_en="Combined Culture",
             is_active=True,
         )
         vocab_not_matching = await DeckFactory.create(
             session=db_session,
-            name="Other Deck",
+            name_en="Other Deck",
             is_active=True,
         )
 
@@ -1183,7 +1183,7 @@ class TestAdminDecks:
         # Create vocabulary deck with cards
         vocab_deck = await DeckFactory.create(
             session=db_session,
-            name="Deck With Cards",
+            name_en="Deck With Cards",
             is_active=True,
         )
         for _ in range(7):
@@ -1192,7 +1192,7 @@ class TestAdminDecks:
         # Create culture deck with questions
         culture_deck = await CultureDeckFactory.create(
             session=db_session,
-            name="Deck With Questions",
+            name_en="Deck With Questions",
             is_active=True,
         )
         for _ in range(5):
