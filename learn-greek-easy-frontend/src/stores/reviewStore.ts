@@ -44,9 +44,6 @@ const DEFAULT_QUEUE_CONFIG: QueueConfig = {
  */
 const DEFAULT_SESSION_STATS: SessionStats = {
   cardsReviewed: 0,
-  accuracy: 0,
-  cardsCorrect: 0,
-  cardsIncorrect: 0,
   againCount: 0,
   hardCount: 0,
   goodCount: 0,
@@ -537,7 +534,6 @@ export const useReviewStore = create<ReviewState>()(
             userId: activeSession.userId,
             completedAt,
             cardsReviewed: sessionStats.cardsReviewed,
-            accuracy: sessionStats.accuracy,
             totalTime: totalTimeSeconds,
             averageTimePerCard: avgTimePerCard,
             ratingBreakdown: {
@@ -659,15 +655,8 @@ function calculateUpdatedStats(currentStats: SessionStats, rating: ReviewRating)
     easyCount: currentStats.easyCount + (rating === 'easy' ? 1 : 0),
   };
 
-  const cardsCorrect = currentStats.cardsCorrect + (rating === 'good' || rating === 'easy' ? 1 : 0);
-  const cardsIncorrect = currentStats.cardsIncorrect + (rating === 'again' ? 1 : 0);
-  const accuracy = cardsReviewed > 0 ? Math.round((cardsCorrect / cardsReviewed) * 100) : 0;
-
   return {
     cardsReviewed,
-    accuracy,
-    cardsCorrect,
-    cardsIncorrect,
     ...ratingCounts,
   };
 }
