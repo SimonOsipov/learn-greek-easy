@@ -326,7 +326,7 @@ jobs:
 
   # Job 5: E2E Tests (parallelized by browser)
   e2e-tests:
-    name: E2E Tests (${{ matrix.browser }})
+    name: E2E Tests (${{ matrix.browser }}, shard ${{ matrix.shard }}/3)
     runs-on: ubuntu-latest
     needs: [frontend-lint, backend-lint, alembic-check]
     env:
@@ -336,6 +336,7 @@ jobs:
       fail-fast: false
       matrix:
         browser: [chromium, firefox, webkit]
+        shard: [1, 2, 3]
 
     services:
       postgres:
@@ -582,7 +583,7 @@ jobs:
           AUTH0_CLIENT_ID: ${{ secrets.AUTH0_CLIENT_ID }}
           AUTH0_AUDIENCE: ${{ secrets.AUTH0_AUDIENCE }}
           AUTH0_E2E_TEST_PASSWORD: ${{ secrets.AUTH0_E2E_TEST_PASSWORD }}
-        run: npx playwright test --project=${{ matrix.browser }}
+        run: npx playwright test --project=${{ matrix.browser }} --shard=${{ matrix.shard }}/3
 
       - name: Save Playwright browsers cache
         if: always() && steps.playwright-cache.outputs.cache-hit != 'true'
@@ -595,7 +596,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report-${{ matrix.browser }}
+          name: playwright-report-${{ matrix.browser }}-shard-${{ matrix.shard }}
           path: learn-greek-easy-frontend/playwright-report/
           retention-days: 7
 
@@ -603,7 +604,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-results-${{ matrix.browser }}
+          name: playwright-results-${{ matrix.browser }}-shard-${{ matrix.shard }}
           path: learn-greek-easy-frontend/test-results/
           retention-days: 7
 
