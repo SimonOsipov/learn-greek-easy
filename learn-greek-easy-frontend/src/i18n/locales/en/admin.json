@@ -362,6 +362,30 @@
   "changelog": {
     "title": "Changelog",
     "addNew": "Add New",
+    "create": {
+      "title": "Create Changelog Entry",
+      "description": "Paste JSON to create a new changelog entry",
+      "hint": "Content supports **bold** and *italic* markdown",
+      "submit": "Submit",
+      "submitting": "Submitting...",
+      "success": "Changelog entry created",
+      "error": "Failed to create entry",
+      "validationError": "Invalid JSON"
+    },
+    "edit": {
+      "title": "Edit Changelog Entry",
+      "hint": "Modify JSON and save. Content supports **bold** and *italic*",
+      "save": "Save",
+      "saving": "Saving...",
+      "cancel": "Cancel",
+      "success": "Changelog entry updated",
+      "error": "Failed to update entry"
+    },
+    "validation": {
+      "invalidJson": "Invalid JSON format",
+      "missingFields": "Missing required fields: {{fields}}",
+      "invalidTag": "Invalid tag. Must be: new_feature, bug_fix, or announcement"
+    },
     "delete": {
       "title": "Delete Update",
       "warning": "Are you sure you want to delete this update?",
