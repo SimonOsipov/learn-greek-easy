@@ -862,17 +862,25 @@ const AdminPage: React.FC = () => {
         deckId = result.id;
         deckName = result.name;
       } else {
-        // CultureDeckCreateForm produces: name: { en, ru }, description: { en, ru }
-        // API expects same format
+        // CultureDeckCreateForm produces trilingual data: name_el, name_en, name_ru, etc.
+        // API expects same flat format
         const cultureData = data as {
-          name: { en: string; ru: string };
-          description?: { en: string; ru: string };
+          name_el: string;
+          name_en: string;
+          name_ru: string;
+          description_el?: string;
+          description_en?: string;
+          description_ru?: string;
           category: string;
           is_premium: boolean;
         };
         const payload: CultureDeckCreatePayload = {
-          name: cultureData.name,
-          description: cultureData.description || null,
+          name_el: cultureData.name_el,
+          name_en: cultureData.name_en,
+          name_ru: cultureData.name_ru,
+          description_el: cultureData.description_el || null,
+          description_en: cultureData.description_en || null,
+          description_ru: cultureData.description_ru || null,
           category: cultureData.category,
           is_premium: cultureData.is_premium,
         };

@@ -120,11 +120,18 @@ test.describe('Admin Vocabulary Deck Create - Multilingual', () => {
     await page.getByTestId('deck-create-lang-tab-en').click();
     await page.getByTestId('deck-create-name-en').fill('Only English Name');
 
-    // Trigger validation by trying to submit (or blur)
-    await page.getByTestId('deck-create-submit').click();
+    // Trigger validation by typing and clearing Greek and Russian name fields
+    // (onChange mode requires a value change to trigger validation)
+    await page.getByTestId('deck-create-lang-tab-el').click();
+    await page.getByTestId('deck-create-name-el').fill('temp');
+    await page.getByTestId('deck-create-name-el').clear();
 
-    // Modal should still be open (validation fails)
-    await expect(modal).toBeVisible();
+    await page.getByTestId('deck-create-lang-tab-ru').click();
+    await page.getByTestId('deck-create-name-ru').fill('temp');
+    await page.getByTestId('deck-create-name-ru').clear();
+
+    // Go back to English tab to see the error indicators on other tabs
+    await page.getByTestId('deck-create-lang-tab-en').click();
 
     // Greek and Russian tabs should show error indicators (text-destructive class)
     const elTab = page.getByTestId('deck-create-lang-tab-el');
@@ -173,7 +180,7 @@ test.describe('Admin Culture Deck Create - Multilingual', () => {
     await navigateToAdminDecks(page);
   });
 
-  test('creates culture deck with EN/RU names and category', async ({ page }) => {
+  test('creates culture deck with EL/EN/RU names and category', async ({ page }) => {
     const uniqueId = Date.now();
 
     // Click "Create Deck" button
@@ -190,13 +197,18 @@ test.describe('Admin Culture Deck Create - Multilingual', () => {
     // Wait for culture form to render (form changes based on deck type)
     await expect(page.getByTestId('culture-deck-create-form')).toBeVisible({ timeout: 3000 });
 
-    // Fill English tab (culture decks use EN/RU tabs in create form)
-    await page.getByTestId('lang-tab-en').click();
+    // Fill Greek tab
+    await page.getByTestId('deck-create-lang-tab-el').click();
+    await page.getByTestId('deck-create-name-el').fill(`Δοκιμαστική Πολιτιστική Δέσμη ${uniqueId}`);
+    await page.getByTestId('deck-create-description-el').fill('Ελληνική περιγραφή για πολιτιστική δέσμη');
+
+    // Fill English tab
+    await page.getByTestId('deck-create-lang-tab-en').click();
     await page.getByTestId('deck-create-name-en').fill(`Test Culture Deck EN ${uniqueId}`);
     await page.getByTestId('deck-create-description-en').fill('English description for culture deck');
 
     // Fill Russian tab
-    await page.getByTestId('lang-tab-ru').click();
+    await page.getByTestId('deck-create-lang-tab-ru').click();
     await page.getByTestId('deck-create-name-ru').fill(`Тестовая колода культуры ${uniqueId}`);
     await page.getByTestId('deck-create-description-ru').fill('Русское описание для культурной колоды');
 

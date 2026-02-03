@@ -132,19 +132,16 @@ export interface VocabularyDeckCreatePayload {
 }
 
 /**
- * Multilingual deck name object for culture deck creation
- */
-export interface MultilingualDeckName {
-  en: string;
-  ru: string;
-}
-
-/**
- * Payload for creating a culture deck (multilingual support)
+ * Payload for creating a culture deck (trilingual support)
+ * Uses flat field names to match backend CultureDeckCreate schema
  */
 export interface CultureDeckCreatePayload {
-  name: MultilingualDeckName;
-  description?: MultilingualDeckName | null;
+  name_el: string;
+  name_en: string;
+  name_ru: string;
+  description_el?: string | null;
+  description_en?: string | null;
+  description_ru?: string | null;
   category: string;
   is_premium?: boolean;
 }
