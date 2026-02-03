@@ -26,7 +26,7 @@ from src.schemas.changelog import (
 logger = get_logger(__name__)
 
 # Supported locales with English as fallback
-SUPPORTED_LOCALES = frozenset(["en", "el", "ru"])
+SUPPORTED_LOCALES = frozenset(["en", "ru"])
 DEFAULT_LOCALE = "en"
 
 
@@ -109,9 +109,7 @@ class ChangelogService:
         locale: str,
     ) -> tuple[str, str]:
         """Get title and content for the specified locale."""
-        if locale == "el":
-            return entry.title_el, entry.content_el
-        elif locale == "ru":
+        if locale == "ru":
             return entry.title_ru, entry.content_ru
         return entry.title_en, entry.content_en
 
@@ -187,10 +185,8 @@ class ChangelogService:
         # Pass dict to BaseRepository.create()
         entry_dict = {
             "title_en": data.title_en,
-            "title_el": data.title_el,
             "title_ru": data.title_ru,
             "content_en": data.content_en,
-            "content_el": data.content_el,
             "content_ru": data.content_ru,
             "tag": data.tag,
         }

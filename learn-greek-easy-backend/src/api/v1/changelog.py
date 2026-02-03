@@ -26,7 +26,7 @@ router = APIRouter()
 Get a paginated list of changelog entries with localized content.
 
 **Localization**: Content is returned in the language specified by the
-Accept-Language header. Supported languages: en (English), el (Greek), ru (Russian).
+Accept-Language header. Supported languages: en (English), ru (Russian).
 Falls back to English if the requested language is not supported.
 
 **Pagination**: Use page and page_size parameters for pagination.
