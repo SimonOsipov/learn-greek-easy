@@ -64,7 +64,7 @@ class ChangelogService:
         Args:
             page: Page number (1-indexed)
             page_size: Items per page (default 5 for public view)
-            locale: Language code (en, el, ru). Falls back to 'en' if unsupported.
+            locale: Language code (en, ru). Falls back to 'en' if unsupported.
 
         Returns:
             Paginated list of localized changelog entries
