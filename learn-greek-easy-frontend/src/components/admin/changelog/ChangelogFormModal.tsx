@@ -44,17 +44,14 @@ import {
 // Language labels for tabs
 const LANGUAGE_LABELS: Record<ChangelogLanguage, string> = {
   en: 'English',
-  el: 'Greek',
   ru: 'Russian',
 };
 
 // Validation schema
 const formSchema = z.object({
   title_en: z.string().min(1, 'Title is required').max(500),
-  title_el: z.string().min(1, 'Title is required').max(500),
   title_ru: z.string().min(1, 'Title is required').max(500),
   content_en: z.string().min(1, 'Content is required'),
-  content_el: z.string().min(1, 'Content is required'),
   content_ru: z.string().min(1, 'Content is required'),
   tag: z.enum(['new_feature', 'bug_fix', 'announcement']),
 });
@@ -91,10 +88,8 @@ export function ChangelogFormModal({
     resolver: zodResolver(formSchema),
     defaultValues: {
       title_en: '',
-      title_el: '',
       title_ru: '',
       content_en: '',
-      content_el: '',
       content_ru: '',
       tag: 'new_feature',
     },
@@ -106,20 +101,16 @@ export function ChangelogFormModal({
       if (entry) {
         reset({
           title_en: entry.title_en,
-          title_el: entry.title_el,
           title_ru: entry.title_ru,
           content_en: entry.content_en,
-          content_el: entry.content_el,
           content_ru: entry.content_ru,
           tag: entry.tag,
         });
       } else {
         reset({
           title_en: '',
-          title_el: '',
           title_ru: '',
           content_en: '',
-          content_el: '',
           content_ru: '',
           tag: 'new_feature',
         });

@@ -27,10 +27,8 @@ export interface ChangelogListResponse {
 export interface ChangelogEntryAdmin {
   id: string;
   title_en: string;
-  title_el: string;
   title_ru: string;
   content_en: string;
-  content_el: string;
   content_ru: string;
   tag: ChangelogTag;
   created_at: string;
@@ -40,10 +38,8 @@ export interface ChangelogEntryAdmin {
 /** Request body for creating a changelog entry */
 export interface ChangelogCreateRequest {
   title_en: string;
-  title_el: string;
   title_ru: string;
   content_en: string;
-  content_el: string;
   content_ru: string;
   tag: ChangelogTag;
 }
@@ -51,10 +47,8 @@ export interface ChangelogCreateRequest {
 /** Request body for updating a changelog entry (all fields optional) */
 export interface ChangelogUpdateRequest {
   title_en?: string;
-  title_el?: string;
   title_ru?: string;
   content_en?: string;
-  content_el?: string;
   content_ru?: string;
   tag?: ChangelogTag;
 }
@@ -90,10 +84,10 @@ export const CHANGELOG_TAG_CONFIG: Record<
 };
 
 /** Languages supported for changelog content */
-export type ChangelogLanguage = 'en' | 'el' | 'ru';
+export type ChangelogLanguage = 'en' | 'ru';
 
 /** Language options for admin form tabs */
-export const CHANGELOG_LANGUAGES: readonly ChangelogLanguage[] = ['en', 'el', 'ru'];
+export const CHANGELOG_LANGUAGES: readonly ChangelogLanguage[] = ['en', 'ru'];
 
 /** Tag options for admin form select */
 export const CHANGELOG_TAG_OPTIONS: readonly ChangelogTag[] = [
