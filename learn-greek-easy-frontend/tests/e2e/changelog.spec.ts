@@ -306,11 +306,6 @@ test.describe('Changelog - Admin CRUD Operations', () => {
     await page.getByTestId('changelog-title-input-en').fill('E2E Test Entry');
     await page.getByTestId('changelog-content-input-en').fill('This is a test entry created by E2E tests.');
 
-    // Switch to Greek tab and fill
-    await page.getByTestId('changelog-lang-tab-el').click();
-    await page.getByTestId('changelog-title-input-el').fill('E2E Test Entry (Greek)');
-    await page.getByTestId('changelog-content-input-el').fill('Content in Greek for testing.');
-
     // Switch to Russian tab and fill
     await page.getByTestId('changelog-lang-tab-ru').click();
     await page.getByTestId('changelog-title-input-ru').fill('E2E Test Entry (Russian)');

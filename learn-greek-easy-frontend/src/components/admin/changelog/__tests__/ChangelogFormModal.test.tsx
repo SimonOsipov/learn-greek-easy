@@ -3,7 +3,7 @@
  *
  * Tests for the admin changelog form modal including:
  * - Create vs Edit mode titles
- * - Language tabs (EN, EL, RU)
+ * - Language tabs (EN, RU)
  * - Form validation
  * - Saving state
  * - Form reset on open/close
@@ -35,10 +35,8 @@ vi.mock('react-i18next', () => ({
 const createMockEntry = (overrides: Partial<ChangelogEntryAdmin> = {}): ChangelogEntryAdmin => ({
   id: 'entry-123',
   title_en: 'English Title',
-  title_el: 'Greek Title',
   title_ru: 'Russian Title',
   content_en: 'English content',
-  content_el: 'Greek content',
   content_ru: 'Russian content',
   tag: 'new_feature',
   created_at: '2026-01-15T10:30:00Z',
@@ -86,14 +84,6 @@ describe('ChangelogFormModal', () => {
       expect(screen.getByText('English')).toBeInTheDocument();
     });
 
-    it('should render Greek tab', () => {
-      const props = createDefaultProps();
-      render(<ChangelogFormModal {...props} />);
-
-      expect(screen.getByTestId('changelog-lang-tab-el')).toBeInTheDocument();
-      expect(screen.getByText('Greek')).toBeInTheDocument();
-    });
-
     it('should render Russian tab', () => {
       const props = createDefaultProps();
       render(<ChangelogFormModal {...props} />);
@@ -109,18 +99,6 @@ describe('ChangelogFormModal', () => {
       // English inputs should be visible
       expect(screen.getByTestId('changelog-title-input-en')).toBeVisible();
       expect(screen.getByTestId('changelog-content-input-en')).toBeVisible();
-    });
-
-    it('should switch to Greek tab when clicked', async () => {
-      const user = userEvent.setup();
-      const props = createDefaultProps();
-      render(<ChangelogFormModal {...props} />);
-
-      await user.click(screen.getByTestId('changelog-lang-tab-el'));
-
-      // Greek inputs should become visible
-      expect(screen.getByTestId('changelog-title-input-el')).toBeVisible();
-      expect(screen.getByTestId('changelog-content-input-el')).toBeVisible();
     });
 
     it('should switch to Russian tab when clicked', async () => {
@@ -142,7 +120,6 @@ describe('ChangelogFormModal', () => {
       render(<ChangelogFormModal {...props} />);
 
       expect(screen.getByTestId('changelog-title-input-en')).toBeInTheDocument();
-      expect(screen.getByTestId('changelog-title-input-el')).toBeInTheDocument();
       expect(screen.getByTestId('changelog-title-input-ru')).toBeInTheDocument();
     });
 
@@ -151,7 +128,6 @@ describe('ChangelogFormModal', () => {
       render(<ChangelogFormModal {...props} />);
 
       expect(screen.getByTestId('changelog-content-input-en')).toBeInTheDocument();
-      expect(screen.getByTestId('changelog-content-input-el')).toBeInTheDocument();
       expect(screen.getByTestId('changelog-content-input-ru')).toBeInTheDocument();
     });
 
@@ -186,9 +162,6 @@ describe('ChangelogFormModal', () => {
       // Fill content for all languages but leave titles empty
       await user.type(screen.getByTestId('changelog-content-input-en'), 'Some content');
 
-      await user.click(screen.getByTestId('changelog-lang-tab-el'));
-      await user.type(screen.getByTestId('changelog-content-input-el'), 'Greek content');
-
       await user.click(screen.getByTestId('changelog-lang-tab-ru'));
       await user.type(screen.getByTestId('changelog-content-input-ru'), 'Russian content');
 
@@ -209,9 +182,6 @@ describe('ChangelogFormModal', () => {
 
       // Fill title for all languages but leave content empty
       await user.type(screen.getByTestId('changelog-title-input-en'), 'Some title');
-
-      await user.click(screen.getByTestId('changelog-lang-tab-el'));
-      await user.type(screen.getByTestId('changelog-title-input-el'), 'Greek title');
 
       await user.click(screen.getByTestId('changelog-lang-tab-ru'));
       await user.type(screen.getByTestId('changelog-title-input-ru'), 'Russian title');
@@ -235,13 +205,13 @@ describe('ChangelogFormModal', () => {
       await user.type(screen.getByTestId('changelog-title-input-en'), 'English title');
       await user.type(screen.getByTestId('changelog-content-input-en'), 'English content');
 
-      // Submit form (should fail on Greek validation)
+      // Submit form (should fail on Russian validation)
       await user.click(screen.getByTestId('changelog-form-submit'));
 
       await waitFor(() => {
-        // Greek tab should have error indicator (destructive text color)
-        const elTab = screen.getByTestId('changelog-lang-tab-el');
-        expect(elTab).toHaveClass('text-destructive');
+        // Russian tab should have error indicator (destructive text color)
+        const ruTab = screen.getByTestId('changelog-lang-tab-ru');
+        expect(ruTab).toHaveClass('text-destructive');
       });
     });
   });
@@ -258,10 +228,6 @@ describe('ChangelogFormModal', () => {
       await user.type(screen.getByTestId('changelog-title-input-en'), 'EN Title');
       await user.type(screen.getByTestId('changelog-content-input-en'), 'EN Content');
 
-      await user.click(screen.getByTestId('changelog-lang-tab-el'));
-      await user.type(screen.getByTestId('changelog-title-input-el'), 'EL Title');
-      await user.type(screen.getByTestId('changelog-content-input-el'), 'EL Content');
-
       await user.click(screen.getByTestId('changelog-lang-tab-ru'));
       await user.type(screen.getByTestId('changelog-title-input-ru'), 'RU Title');
       await user.type(screen.getByTestId('changelog-content-input-ru'), 'RU Content');
@@ -272,10 +238,8 @@ describe('ChangelogFormModal', () => {
       await waitFor(() => {
         expect(mockOnSubmit).toHaveBeenCalledWith({
           title_en: 'EN Title',
-          title_el: 'EL Title',
           title_ru: 'RU Title',
           content_en: 'EN Content',
-          content_el: 'EL Content',
           content_ru: 'RU Content',
           tag: 'new_feature',
         });
