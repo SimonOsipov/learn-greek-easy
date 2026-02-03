@@ -144,11 +144,6 @@ export interface ReviewSession {
 export interface SessionStats {
   cardsReviewed: number; // Cards completed so far
 
-  // Performance
-  accuracy: number; // Percentage (0-100)
-  cardsCorrect: number; // Rated "good" or "easy"
-  cardsIncorrect: number; // Rated "again"
-
   // Rating breakdown
   againCount: number;
   hardCount: number;
@@ -168,7 +163,6 @@ export interface SessionSummary {
 
   // Performance summary
   cardsReviewed: number;
-  accuracy: number; // Percentage (0-100)
   totalTime: number; // Seconds
   averageTimePerCard: number; // Seconds
 

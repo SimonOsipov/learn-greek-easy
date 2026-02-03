@@ -4,8 +4,7 @@
  * This module provides pure functions for:
  * - Time formatting (seconds → "5m 32s")
  * - Percentage calculations with safe division
- * - Accuracy-based messaging
- * - Color class selection
+ * - Again-percentage-based messaging
  * - Transition detection
  * - Percentage adjustment for rounding errors
  */
@@ -34,86 +33,53 @@ export function formatTime(seconds: number): string {
 }
 
 /**
- * Calculate accuracy percentage from SessionSummary
+ * Get encouraging message based on "again" rate and cards reviewed
  *
- * Accuracy = (cardsCorrect / cardsReviewed) * 100
- * cardsCorrect = cards rated as "good" or "easy"
- *
- * @param summary - Session summary object
- * @returns Accuracy percentage (0-100)
- */
-export function calculateAccuracy(summary: SessionSummary): number {
-  if (summary.cardsReviewed === 0) return 0;
-
-  const cardsCorrect = summary.ratingBreakdown.good + summary.ratingBreakdown.easy;
-  return Math.round((cardsCorrect / summary.cardsReviewed) * 100);
-}
-
-/**
- * Get encouraging message based on accuracy and cards reviewed
- *
- * Message tiers:
- * - 100%: Perfect celebration
- * - 90%+: Excellent work
- * - 70%+: Great job
- * - 50%+: Good effort
- * - 0%: Supportive encouragement
+ * Message tiers (INVERTED from accuracy - lower "again" is better):
+ * - 0% again: Perfect celebration
+ * - ≤10% again: Excellent work
+ * - ≤30% again: Great job
+ * - ≤50% again: Good effort
+ * - 100% again: Supportive encouragement
  * - Default: Progress acknowledgment
  *
- * @param accuracy - Accuracy percentage (0-100)
+ * @param againPercentage - "Again" rating percentage (0-100)
  * @param cardsReviewed - Number of cards reviewed
  * @returns Encouraging message string
  */
-export function getEncouragingMessage(accuracy: number, cardsReviewed: number): string {
+export function getEncouragingMessage(againPercentage: number, cardsReviewed: number): string {
   // Edge case: no cards reviewed
   if (cardsReviewed === 0) {
     return 'Session ended without reviewing cards.';
   }
 
-  // Perfect score
-  if (accuracy === 100) {
+  // Perfect score (no "again" ratings)
+  if (againPercentage === 0) {
     return "Perfect session! You're crushing it!";
   }
 
-  // Excellent (90%+)
-  if (accuracy >= 90) {
+  // Excellent (≤10% again)
+  if (againPercentage <= 10) {
     return "Excellent work! You're mastering this deck!";
   }
 
-  // Great (70-89%)
-  if (accuracy >= 70) {
+  // Great (11-30% again)
+  if (againPercentage <= 30) {
     return 'Great job! Keep up the consistent practice!';
   }
 
-  // Good (50-69%)
-  if (accuracy >= 50) {
+  // Good (31-50% again)
+  if (againPercentage <= 50) {
     return "Good effort! Keep practicing and you'll improve!";
   }
 
-  // All "again" (0%)
-  if (accuracy === 0) {
+  // All "again" (100%)
+  if (againPercentage === 100) {
     return 'Keep going! Every review builds your foundation.';
   }
 
-  // Default (1-49%)
+  // Default (51-99% again)
   return "Every review counts! You're making progress!";
-}
-
-/**
- * Get Tailwind color class based on accuracy percentage
- *
- * Color tiers:
- * - ≥70%: green (good performance)
- * - 50-69%: orange (moderate performance)
- * - <50%: red (needs improvement)
- *
- * @param accuracy - Accuracy percentage (0-100)
- * @returns Tailwind text color class
- */
-export function getAccuracyColor(accuracy: number): string {
-  if (accuracy >= 70) return 'text-green-600 dark:text-green-400';
-  if (accuracy >= 50) return 'text-orange-600 dark:text-orange-400';
-  return 'text-red-600 dark:text-red-400';
 }
 
 /**
