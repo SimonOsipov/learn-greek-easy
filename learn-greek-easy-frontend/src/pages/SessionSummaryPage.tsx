@@ -35,9 +35,7 @@ import { useXPStore } from '@/stores/xpStore';
  * - No local state (all data from store)
  *
  * Navigation:
- * - Back to Deck: /decks/:deckId
- * - Review Again: /decks/:deckId/review
- * - Dashboard: /dashboard
+ * - Back to Dashboard: /dashboard
  */
 export function SessionSummaryPage() {
   const { t } = useTranslation('review');
@@ -53,10 +51,10 @@ export function SessionSummaryPage() {
   // Redirect if no summary available
   useEffect(() => {
     if (!sessionSummary) {
-      log.warn('No session summary available, redirecting to deck');
-      navigate(`/decks/${deckId}`, { replace: true });
+      log.warn('No session summary available, redirecting to dashboard');
+      navigate('/dashboard', { replace: true });
     }
-  }, [sessionSummary, deckId, navigate]);
+  }, [sessionSummary, navigate]);
 
   // Track study_session_completed when summary is available
   useEffect(() => {
@@ -154,16 +152,8 @@ export function SessionSummaryPage() {
     );
   }
 
-  // Navigation handlers
-  const handleBackToDeck = () => {
-    navigate(`/decks/${deckId}`);
-  };
-
-  const handleReviewAgain = () => {
-    navigate(`/decks/${deckId}/review`);
-  };
-
-  const handleDashboard = () => {
+  // Navigation handler
+  const handleBackToDashboard = () => {
     navigate('/dashboard');
   };
 
@@ -171,12 +161,7 @@ export function SessionSummaryPage() {
   return (
     <div className="min-h-screen bg-muted py-8 md:py-12">
       <div className="container mx-auto px-4">
-        <SessionSummary
-          summary={sessionSummary}
-          onBackToDeck={handleBackToDeck}
-          onReviewAgain={handleReviewAgain}
-          onDashboard={handleDashboard}
-        />
+        <SessionSummary summary={sessionSummary} onBackToDashboard={handleBackToDashboard} />
       </div>
     </div>
   );

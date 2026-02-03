@@ -4,8 +4,7 @@
  * Tests session summary display and analytics integration including:
  * - Summary statistics display (cards reviewed, accuracy, time)
  * - Rating breakdown visualization
- * - Progress transitions (new → learning → mastered)
- * - Navigation actions (back to deck, review again, dashboard)
+ * - Navigation actions (back to dashboard)
  * - Edge cases (zero cards, perfect score, all failures)
  *
  * These tests verify that SessionSummary correctly displays session data
@@ -21,15 +20,11 @@ import type { SessionSummary as SessionSummaryType } from '@/types/review';
 import { SessionSummary } from '../SessionSummary';
 
 // Mock navigation
-const mockOnBackToDeck = vi.fn();
-const mockOnReviewAgain = vi.fn();
-const mockOnDashboard = vi.fn();
+const mockOnBackToDashboard = vi.fn();
 
 describe('SessionSummary - Statistics Display', () => {
   beforeEach(() => {
-    mockOnBackToDeck.mockClear();
-    mockOnReviewAgain.mockClear();
-    mockOnDashboard.mockClear();
+    mockOnBackToDashboard.mockClear();
   });
 
   const createMockSummary = (overrides?: Partial<SessionSummaryType>): SessionSummaryType => ({
@@ -71,14 +66,7 @@ describe('SessionSummary - Statistics Display', () => {
   it('should display session completion message', () => {
     const summary = createMockSummary();
 
-    render(
-      <SessionSummary
-        summary={summary}
-        onBackToDeck={mockOnBackToDeck}
-        onReviewAgain={mockOnReviewAgain}
-        onDashboard={mockOnDashboard}
-      />
-    );
+    render(<SessionSummary summary={summary} onBackToDashboard={mockOnBackToDashboard} />);
 
     expect(screen.getByText(/session complete/i)).toBeInTheDocument();
   });
@@ -86,14 +74,7 @@ describe('SessionSummary - Statistics Display', () => {
   it('should display total cards reviewed', () => {
     const summary = createMockSummary({ cardsReviewed: 15 });
 
-    render(
-      <SessionSummary
-        summary={summary}
-        onBackToDeck={mockOnBackToDeck}
-        onReviewAgain={mockOnReviewAgain}
-        onDashboard={mockOnDashboard}
-      />
-    );
+    render(<SessionSummary summary={summary} onBackToDashboard={mockOnBackToDashboard} />);
 
     expect(screen.getByText('15')).toBeInTheDocument();
     expect(screen.getByText(/cards reviewed/i)).toBeInTheDocument();
@@ -103,12 +84,7 @@ describe('SessionSummary - Statistics Display', () => {
     const summaryGood = createMockSummary({ accuracy: 85 });
 
     const { rerender } = render(
-      <SessionSummary
-        summary={summaryGood}
-        onBackToDeck={mockOnBackToDeck}
-        onReviewAgain={mockOnReviewAgain}
-        onDashboard={mockOnDashboard}
-      />
+      <SessionSummary summary={summaryGood} onBackToDashboard={mockOnBackToDashboard} />
     );
 
     expect(screen.getByText(/85%/)).toBeInTheDocument();
@@ -116,14 +92,7 @@ describe('SessionSummary - Statistics Display', () => {
 
     // Test with low accuracy
     const summaryPoor = createMockSummary({ accuracy: 45 });
-    rerender(
-      <SessionSummary
-        summary={summaryPoor}
-        onBackToDeck={mockOnBackToDeck}
-        onReviewAgain={mockOnReviewAgain}
-        onDashboard={mockOnDashboard}
-      />
-    );
+    rerender(<SessionSummary summary={summaryPoor} onBackToDashboard={mockOnBackToDashboard} />);
 
     expect(screen.getByText(/45%/)).toBeInTheDocument();
   });
@@ -133,26 +102,14 @@ describe('SessionSummary - Statistics Display', () => {
     const summary1 = createMockSummary({ totalTime: 45 }); // 45 seconds
 
     const { rerender } = render(
-      <SessionSummary
-        summary={summary1}
-        onBackToDeck={mockOnBackToDeck}
-        onReviewAgain={mockOnReviewAgain}
-        onDashboard={mockOnDashboard}
-      />
+      <SessionSummary summary={summary1} onBackToDashboard={mockOnBackToDashboard} />
     );
 
     expect(screen.getByText(/time spent/i)).toBeInTheDocument();
 
     // Test with minutes
     const summary2 = createMockSummary({ totalTime: 180 }); // 3 minutes
-    rerender(
-      <SessionSummary
-        summary={summary2}
-        onBackToDeck={mockOnBackToDeck}
-        onReviewAgain={mockOnReviewAgain}
-        onDashboard={mockOnDashboard}
-      />
-    );
+    rerender(<SessionSummary summary={summary2} onBackToDashboard={mockOnBackToDashboard} />);
 
     expect(screen.getByText(/time spent/i)).toBeInTheDocument();
   });
@@ -160,14 +117,7 @@ describe('SessionSummary - Statistics Display', () => {
   it('should display average time per card', () => {
     const summary = createMockSummary({ averageTimePerCard: 25 });
 
-    render(
-      <SessionSummary
-        summary={summary}
-        onBackToDeck={mockOnBackToDeck}
-        onReviewAgain={mockOnReviewAgain}
-        onDashboard={mockOnDashboard}
-      />
-    );
+    render(<SessionSummary summary={summary} onBackToDashboard={mockOnBackToDashboard} />);
 
     expect(screen.getByText('25s')).toBeInTheDocument();
     expect(screen.getByText(/avg per card/i)).toBeInTheDocument();
@@ -176,9 +126,7 @@ describe('SessionSummary - Statistics Display', () => {
 
 describe('SessionSummary - Rating Breakdown', () => {
   beforeEach(() => {
-    mockOnBackToDeck.mockClear();
-    mockOnReviewAgain.mockClear();
-    mockOnDashboard.mockClear();
+    mockOnBackToDashboard.mockClear();
   });
 
   const createMockSummary = (overrides?: Partial<SessionSummaryType>): SessionSummaryType => ({
@@ -220,14 +168,7 @@ describe('SessionSummary - Rating Breakdown', () => {
   it('should display rating breakdown section', () => {
     const summary = createMockSummary();
 
-    render(
-      <SessionSummary
-        summary={summary}
-        onBackToDeck={mockOnBackToDeck}
-        onReviewAgain={mockOnReviewAgain}
-        onDashboard={mockOnDashboard}
-      />
-    );
+    render(<SessionSummary summary={summary} onBackToDashboard={mockOnBackToDashboard} />);
 
     expect(screen.getByText(/rating breakdown/i)).toBeInTheDocument();
   });
@@ -242,16 +183,9 @@ describe('SessionSummary - Rating Breakdown', () => {
       },
     });
 
-    render(
-      <SessionSummary
-        summary={summary}
-        onBackToDeck={mockOnBackToDeck}
-        onReviewAgain={mockOnReviewAgain}
-        onDashboard={mockOnDashboard}
-      />
-    );
+    render(<SessionSummary summary={summary} onBackToDashboard={mockOnBackToDashboard} />);
 
-    // Check for rating labels (use getAllByText since "Again" appears in both label and "Review Again" button)
+    // Check for rating labels
     expect(screen.getAllByText(/again/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/hard/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/good/i).length).toBeGreaterThan(0);
@@ -275,14 +209,7 @@ describe('SessionSummary - Rating Breakdown', () => {
       },
     });
 
-    render(
-      <SessionSummary
-        summary={summary}
-        onBackToDeck={mockOnBackToDeck}
-        onReviewAgain={mockOnReviewAgain}
-        onDashboard={mockOnDashboard}
-      />
-    );
+    render(<SessionSummary summary={summary} onBackToDashboard={mockOnBackToDashboard} />);
 
     // Percentages should be calculated and displayed (use getAllByText since some percentages may appear multiple times)
     expect(screen.getAllByText(/10%/).length).toBeGreaterThan(0); // Again
@@ -291,104 +218,9 @@ describe('SessionSummary - Rating Breakdown', () => {
   });
 });
 
-describe('SessionSummary - Progress Transitions', () => {
-  beforeEach(() => {
-    mockOnBackToDeck.mockClear();
-    mockOnReviewAgain.mockClear();
-    mockOnDashboard.mockClear();
-  });
-
-  const createMockSummary = (overrides?: Partial<SessionSummaryType>): SessionSummaryType => ({
-    sessionId: 'session-123',
-    deckId: 'deck-a1',
-    userId: 'user-1',
-    completedAt: new Date(),
-    cardsReviewed: 10,
-    accuracy: 80,
-    totalTime: 300,
-    averageTimePerCard: 30,
-    ratingBreakdown: {
-      again: 1,
-      hard: 1,
-      good: 6,
-      easy: 2,
-    },
-    transitions: {
-      newToLearning: 0,
-      learningToReview: 0,
-      reviewToMastered: 0,
-      toRelearning: 0,
-    },
-    deckProgressBefore: {
-      cardsNew: 20,
-      cardsLearning: 5,
-      cardsReview: 15,
-      cardsMastered: 10,
-    },
-    deckProgressAfter: {
-      cardsNew: 20,
-      cardsLearning: 5,
-      cardsReview: 15,
-      cardsMastered: 10,
-    },
-    ...overrides,
-  });
-
-  it('should display progress transitions when they exist', () => {
-    const summary = createMockSummary({
-      transitions: {
-        newToLearning: 3,
-        learningToReview: 2,
-        reviewToMastered: 1,
-        toRelearning: 1,
-      },
-    });
-
-    render(
-      <SessionSummary
-        summary={summary}
-        onBackToDeck={mockOnBackToDeck}
-        onReviewAgain={mockOnReviewAgain}
-        onDashboard={mockOnDashboard}
-      />
-    );
-
-    expect(screen.getByText(/progress made/i)).toBeInTheDocument();
-    // Check that transition text is displayed (number and text are in separate elements)
-    expect(screen.getByText(/moved to learning/i)).toBeInTheDocument();
-    expect(screen.getByText(/graduated to review/i)).toBeInTheDocument();
-    expect(screen.getByText(/mastered/i)).toBeInTheDocument();
-    expect(screen.getByText(/need review/i)).toBeInTheDocument();
-  });
-
-  it('should hide progress section when no transitions occurred', () => {
-    const summary = createMockSummary({
-      transitions: {
-        newToLearning: 0,
-        learningToReview: 0,
-        reviewToMastered: 0,
-        toRelearning: 0,
-      },
-    });
-
-    render(
-      <SessionSummary
-        summary={summary}
-        onBackToDeck={mockOnBackToDeck}
-        onReviewAgain={mockOnReviewAgain}
-        onDashboard={mockOnDashboard}
-      />
-    );
-
-    expect(screen.queryByText(/progress made/i)).not.toBeInTheDocument();
-  });
-});
-
 describe('SessionSummary - Navigation Actions', () => {
   beforeEach(() => {
-    mockOnBackToDeck.mockClear();
-    mockOnReviewAgain.mockClear();
-    mockOnDashboard.mockClear();
+    mockOnBackToDashboard.mockClear();
   });
 
   const createMockSummary = (): SessionSummaryType => ({
@@ -426,89 +258,30 @@ describe('SessionSummary - Navigation Actions', () => {
     },
   });
 
-  it('should call onBackToDeck when "Back to Deck" button is clicked', async () => {
+  it('should call onBackToDashboard when "Back to Dashboard" button is clicked', async () => {
     const user = userEvent.setup();
     const summary = createMockSummary();
 
-    render(
-      <SessionSummary
-        summary={summary}
-        onBackToDeck={mockOnBackToDeck}
-        onReviewAgain={mockOnReviewAgain}
-        onDashboard={mockOnDashboard}
-      />
-    );
+    render(<SessionSummary summary={summary} onBackToDashboard={mockOnBackToDashboard} />);
 
-    const backButton = screen.getByRole('button', { name: /back to deck/i });
+    const backButton = screen.getByRole('button', { name: /back to dashboard/i });
     await user.click(backButton);
 
-    expect(mockOnBackToDeck).toHaveBeenCalledTimes(1);
+    expect(mockOnBackToDashboard).toHaveBeenCalledTimes(1);
   });
 
-  it('should call onReviewAgain when "Review Again" button is clicked', async () => {
-    const user = userEvent.setup();
+  it('should display Back to Dashboard button', () => {
     const summary = createMockSummary();
 
-    render(
-      <SessionSummary
-        summary={summary}
-        onBackToDeck={mockOnBackToDeck}
-        onReviewAgain={mockOnReviewAgain}
-        onDashboard={mockOnDashboard}
-      />
-    );
+    render(<SessionSummary summary={summary} onBackToDashboard={mockOnBackToDashboard} />);
 
-    const reviewAgainButton = screen.getByRole('button', { name: /review again/i });
-    await user.click(reviewAgainButton);
-
-    expect(mockOnReviewAgain).toHaveBeenCalledTimes(1);
-  });
-
-  it('should call onDashboard when "Dashboard" button is clicked', async () => {
-    const user = userEvent.setup();
-    const summary = createMockSummary();
-
-    render(
-      <SessionSummary
-        summary={summary}
-        onBackToDeck={mockOnBackToDeck}
-        onReviewAgain={mockOnReviewAgain}
-        onDashboard={mockOnDashboard}
-      />
-    );
-
-    // Dashboard button might be hidden on mobile, so check if it exists
-    const dashboardButton = screen.queryByRole('button', { name: /dashboard/i });
-
-    if (dashboardButton) {
-      await user.click(dashboardButton);
-      expect(mockOnDashboard).toHaveBeenCalledTimes(1);
-    }
-  });
-
-  it('should display all navigation buttons', () => {
-    const summary = createMockSummary();
-
-    render(
-      <SessionSummary
-        summary={summary}
-        onBackToDeck={mockOnBackToDeck}
-        onReviewAgain={mockOnReviewAgain}
-        onDashboard={mockOnDashboard}
-      />
-    );
-
-    expect(screen.getByRole('button', { name: /back to deck/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /review again/i })).toBeInTheDocument();
-    // Dashboard button might be hidden on mobile in responsive design
+    expect(screen.getByRole('button', { name: /back to dashboard/i })).toBeInTheDocument();
   });
 });
 
 describe('SessionSummary - Edge Cases', () => {
   beforeEach(() => {
-    mockOnBackToDeck.mockClear();
-    mockOnReviewAgain.mockClear();
-    mockOnDashboard.mockClear();
+    mockOnBackToDashboard.mockClear();
   });
 
   const createMockSummary = (overrides?: Partial<SessionSummaryType>): SessionSummaryType => ({
@@ -550,17 +323,10 @@ describe('SessionSummary - Edge Cases', () => {
   it('should handle zero cards reviewed edge case', () => {
     const summary = createMockSummary({ cardsReviewed: 0 });
 
-    render(
-      <SessionSummary
-        summary={summary}
-        onBackToDeck={mockOnBackToDeck}
-        onReviewAgain={mockOnReviewAgain}
-        onDashboard={mockOnDashboard}
-      />
-    );
+    render(<SessionSummary summary={summary} onBackToDashboard={mockOnBackToDashboard} />);
 
     expect(screen.getByText(/session ended without reviewing/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /back to deck/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /back to dashboard/i })).toBeInTheDocument();
   });
 
   it('should display perfect score (100% accuracy) correctly', () => {
@@ -575,14 +341,7 @@ describe('SessionSummary - Edge Cases', () => {
       },
     });
 
-    render(
-      <SessionSummary
-        summary={summary}
-        onBackToDeck={mockOnBackToDeck}
-        onReviewAgain={mockOnReviewAgain}
-        onDashboard={mockOnDashboard}
-      />
-    );
+    render(<SessionSummary summary={summary} onBackToDashboard={mockOnBackToDashboard} />);
 
     // Use getAllByText since 100% may appear in multiple places
     expect(screen.getAllByText(/100%/).length).toBeGreaterThan(0);
@@ -602,14 +361,7 @@ describe('SessionSummary - Edge Cases', () => {
       },
     });
 
-    render(
-      <SessionSummary
-        summary={summary}
-        onBackToDeck={mockOnBackToDeck}
-        onReviewAgain={mockOnReviewAgain}
-        onDashboard={mockOnDashboard}
-      />
-    );
+    render(<SessionSummary summary={summary} onBackToDashboard={mockOnBackToDashboard} />);
 
     // Use getAllByText since 0% may appear multiple times in rating breakdown
     expect(screen.getAllByText(/0%/).length).toBeGreaterThan(0);
@@ -623,14 +375,7 @@ describe('SessionSummary - Edge Cases', () => {
       averageTimePerCard: 24,
     });
 
-    render(
-      <SessionSummary
-        summary={summary}
-        onBackToDeck={mockOnBackToDeck}
-        onReviewAgain={mockOnReviewAgain}
-        onDashboard={mockOnDashboard}
-      />
-    );
+    render(<SessionSummary summary={summary} onBackToDashboard={mockOnBackToDashboard} />);
 
     expect(screen.getByText('150')).toBeInTheDocument();
     expect(screen.getByText('24s')).toBeInTheDocument();
@@ -649,14 +394,7 @@ describe('SessionSummary - Edge Cases', () => {
       },
     });
 
-    render(
-      <SessionSummary
-        summary={summary}
-        onBackToDeck={mockOnBackToDeck}
-        onReviewAgain={mockOnReviewAgain}
-        onDashboard={mockOnDashboard}
-      />
-    );
+    render(<SessionSummary summary={summary} onBackToDashboard={mockOnBackToDashboard} />);
 
     // Use getAllByText since '1' may appear multiple times in the summary
     expect(screen.getAllByText('1').length).toBeGreaterThan(0);
@@ -666,9 +404,7 @@ describe('SessionSummary - Edge Cases', () => {
 
 describe('SessionSummary - Accessibility', () => {
   beforeEach(() => {
-    mockOnBackToDeck.mockClear();
-    mockOnReviewAgain.mockClear();
-    mockOnDashboard.mockClear();
+    mockOnBackToDashboard.mockClear();
   });
 
   const createMockSummary = (): SessionSummaryType => ({
@@ -709,14 +445,7 @@ describe('SessionSummary - Accessibility', () => {
   it('should have proper ARIA live region for status', () => {
     const summary = createMockSummary();
 
-    render(
-      <SessionSummary
-        summary={summary}
-        onBackToDeck={mockOnBackToDeck}
-        onReviewAgain={mockOnReviewAgain}
-        onDashboard={mockOnDashboard}
-      />
-    );
+    render(<SessionSummary summary={summary} onBackToDashboard={mockOnBackToDashboard} />);
 
     // Check for role="status" or aria-live
     const statusElement = screen.getByRole('status');
@@ -726,19 +455,10 @@ describe('SessionSummary - Accessibility', () => {
   it('should have accessible button labels', () => {
     const summary = createMockSummary();
 
-    render(
-      <SessionSummary
-        summary={summary}
-        onBackToDeck={mockOnBackToDeck}
-        onReviewAgain={mockOnReviewAgain}
-        onDashboard={mockOnDashboard}
-      />
-    );
+    render(<SessionSummary summary={summary} onBackToDashboard={mockOnBackToDashboard} />);
 
-    const backButton = screen.getByRole('button', { name: /back to deck/i });
-    const reviewAgainButton = screen.getByRole('button', { name: /review again/i });
+    const backButton = screen.getByRole('button', { name: /back to dashboard/i });
 
     expect(backButton).toHaveAccessibleName();
-    expect(reviewAgainButton).toHaveAccessibleName();
   });
 });

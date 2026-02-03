@@ -157,4 +157,28 @@ describe('VoiceToggle', () => {
       expect(switchElement).not.toBeDisabled();
     });
   });
+
+  describe('Font Weight Styling', () => {
+    it('should apply font-semibold to Active label when active voice is selected', () => {
+      const onVoiceChange = vi.fn();
+      render(<VoiceToggle selectedVoice="active" onVoiceChange={onVoiceChange} />);
+
+      const activeLabel = screen.getByText('Active');
+      const passiveLabel = screen.getByText('Passive');
+
+      expect(activeLabel).toHaveClass('font-semibold');
+      expect(passiveLabel).toHaveClass('font-normal');
+    });
+
+    it('should apply font-semibold to Passive label when passive voice is selected', () => {
+      const onVoiceChange = vi.fn();
+      render(<VoiceToggle selectedVoice="passive" onVoiceChange={onVoiceChange} />);
+
+      const activeLabel = screen.getByText('Active');
+      const passiveLabel = screen.getByText('Passive');
+
+      expect(activeLabel).toHaveClass('font-normal');
+      expect(passiveLabel).toHaveClass('font-semibold');
+    });
+  });
 });

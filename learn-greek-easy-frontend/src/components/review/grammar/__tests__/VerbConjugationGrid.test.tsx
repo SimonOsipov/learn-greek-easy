@@ -174,7 +174,7 @@ describe('VerbConjugationGrid', () => {
     it('should render second person singular label', () => {
       render(<VerbConjugationGrid verbData={mockVerbDataComplete} />);
 
-      expect(screen.getByText('You (sg)')).toBeInTheDocument();
+      expect(screen.getByText('You (singular)')).toBeInTheDocument();
     });
 
     it('should render third person singular label', () => {
@@ -192,7 +192,7 @@ describe('VerbConjugationGrid', () => {
     it('should render second person plural label', () => {
       render(<VerbConjugationGrid verbData={mockVerbDataComplete} />);
 
-      expect(screen.getByText('You (pl)')).toBeInTheDocument();
+      expect(screen.getByText('You (plural)')).toBeInTheDocument();
     });
 
     it('should render third person plural label', () => {
@@ -212,15 +212,15 @@ describe('VerbConjugationGrid', () => {
     it('should render singular imperative label', () => {
       render(<VerbConjugationGrid verbData={mockVerbDataComplete} />);
 
-      // The label includes "Singular:" with colon
-      expect(screen.getByText(/Singular:/)).toBeInTheDocument();
+      // The label is in table header
+      expect(screen.getByText('Singular')).toBeInTheDocument();
     });
 
     it('should render plural imperative label', () => {
       render(<VerbConjugationGrid verbData={mockVerbDataComplete} />);
 
-      // The label includes "Plural:" with colon
-      expect(screen.getByText(/Plural:/)).toBeInTheDocument();
+      // The label is in table header
+      expect(screen.getByText('Plural')).toBeInTheDocument();
     });
 
     it('should render imperative forms', () => {
@@ -328,10 +328,10 @@ describe('VerbConjugationGrid', () => {
 
       // Persons
       expect(screen.getByText('I')).toBeInTheDocument();
-      expect(screen.getByText('You (sg)')).toBeInTheDocument();
+      expect(screen.getByText('You (singular)')).toBeInTheDocument();
       expect(screen.getByText('He/She')).toBeInTheDocument();
       expect(screen.getByText('We')).toBeInTheDocument();
-      expect(screen.getByText('You (pl)')).toBeInTheDocument();
+      expect(screen.getByText('You (plural)')).toBeInTheDocument();
       expect(screen.getByText('They')).toBeInTheDocument();
     });
   });
@@ -346,12 +346,13 @@ describe('VerbConjugationGrid', () => {
       expect(rows?.length).toBe(6);
     });
 
-    it('should render imperative section as separate grid', () => {
+    it('should render imperative section as table', () => {
       const { container } = render(<VerbConjugationGrid verbData={mockVerbDataComplete} />);
 
-      // Imperative section has grid-cols-2 class
-      const imperativeGrid = container.querySelector('.grid-cols-2');
-      expect(imperativeGrid).toBeInTheDocument();
+      // Imperative section now uses table format
+      const tables = container.querySelectorAll('table');
+      // Main conjugation table + imperative table = 2 tables
+      expect(tables.length).toBe(2);
     });
 
     it('should have space-y-4 container for vertical spacing', () => {
