@@ -22,8 +22,18 @@ import { VocabularyDeckEditForm, type VocabularyDeckFormData } from '../Vocabula
 import type { UnifiedDeckItem } from '@/services/adminAPI';
 import i18n from '@/i18n';
 
-// Mock deck for testing
-const createMockDeck = (overrides: Partial<UnifiedDeckItem> = {}): UnifiedDeckItem => ({
+// Extended deck type with trilingual fields for testing
+interface TrilingualMockDeck extends UnifiedDeckItem {
+  name_el?: string;
+  name_en?: string;
+  name_ru?: string;
+  description_el?: string;
+  description_en?: string;
+  description_ru?: string;
+}
+
+// Mock deck for testing with trilingual support
+const createMockDeck = (overrides: Partial<TrilingualMockDeck> = {}): TrilingualMockDeck => ({
   id: 'test-deck-1',
   name: 'Test Vocabulary Deck',
   type: 'vocabulary',
@@ -32,9 +42,17 @@ const createMockDeck = (overrides: Partial<UnifiedDeckItem> = {}): UnifiedDeckIt
   item_count: 50,
   is_active: true,
   is_premium: false,
+  is_system_deck: true,
   created_at: '2026-01-01T00:00:00Z',
   owner_id: null,
   owner_name: null,
+  // Trilingual name fields for form
+  name_el: 'Test Vocabulary Deck EL',
+  name_en: 'Test Vocabulary Deck',
+  name_ru: 'Test Vocabulary Deck RU',
+  description_el: '',
+  description_en: '',
+  description_ru: '',
   ...overrides,
 });
 
@@ -306,6 +324,9 @@ describe('VocabularyDeckEditForm', () => {
       const user = userEvent.setup();
       const deck = createMockDeck({
         name: 'Complete Test Deck',
+        name_el: 'Complete Test Deck EL',
+        name_en: 'Complete Test Deck EN',
+        name_ru: 'Complete Test Deck RU',
         level: 'B1',
         is_active: true,
         is_premium: true,
@@ -324,15 +345,19 @@ describe('VocabularyDeckEditForm', () => {
 
       const savedData = mockOnSave.mock.calls[0][0] as VocabularyDeckFormData;
 
-      // Verify all fields are present
-      expect(savedData).toHaveProperty('name');
-      expect(savedData).toHaveProperty('description');
+      // Verify all trilingual fields are present
+      expect(savedData).toHaveProperty('name_el');
+      expect(savedData).toHaveProperty('name_en');
+      expect(savedData).toHaveProperty('name_ru');
+      expect(savedData).toHaveProperty('description_el');
+      expect(savedData).toHaveProperty('description_en');
+      expect(savedData).toHaveProperty('description_ru');
       expect(savedData).toHaveProperty('level');
       expect(savedData).toHaveProperty('is_active');
       expect(savedData).toHaveProperty('is_premium');
 
       // Verify values
-      expect(savedData.name).toBe('Complete Test Deck');
+      expect(savedData.name_en).toBe('Complete Test Deck EN');
       expect(savedData.level).toBe('B1');
       expect(savedData.is_active).toBe(true);
       expect(savedData.is_premium).toBe(true);

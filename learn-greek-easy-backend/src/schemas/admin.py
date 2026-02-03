@@ -57,7 +57,7 @@ class UnifiedDeckItem(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID = Field(..., description="Deck UUID")
-    name: str = Field(..., description="Deck name")
+    name: str = Field(..., description="Deck name (English for display)")
     type: str = Field(..., description="Deck type: 'vocabulary' or 'culture'")
     level: Optional[DeckLevel] = Field(None, description="CEFR level (vocabulary decks only)")
     category: Optional[str] = Field(None, description="Category (culture decks only)")
@@ -69,6 +69,13 @@ class UnifiedDeckItem(BaseModel):
     owner_name: Optional[str] = Field(
         None, description="Owner display name (None for system decks)"
     )
+    # Trilingual fields for edit forms
+    name_el: Optional[str] = Field(None, description="Greek deck name")
+    name_en: Optional[str] = Field(None, description="English deck name")
+    name_ru: Optional[str] = Field(None, description="Russian deck name")
+    description_el: Optional[str] = Field(None, description="Greek description")
+    description_en: Optional[str] = Field(None, description="English description")
+    description_ru: Optional[str] = Field(None, description="Russian description")
 
 
 class AdminDeckListResponse(BaseModel):

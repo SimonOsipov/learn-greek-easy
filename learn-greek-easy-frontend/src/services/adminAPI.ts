@@ -69,6 +69,13 @@ export interface UnifiedDeckItem {
   created_at: string;
   owner_id: string | null;
   owner_name: string | null;
+  // Trilingual fields for edit forms
+  name_el?: string;
+  name_en?: string;
+  name_ru?: string;
+  description_el?: string;
+  description_en?: string;
+  description_ru?: string;
 }
 
 /**

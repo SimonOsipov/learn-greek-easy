@@ -667,16 +667,17 @@ const AdminPage: React.FC = () => {
       const wasActive = selectedDeck.is_active;
       const isNowActive = data.is_active;
 
+      // Extract name_en from trilingual form data for comparison and tracking
+      const formNameEn = 'name_en' in data ? (data.name_en as string) : '';
+      const originalDeckName = getDeckDisplayName(selectedDeck);
+
       // Determine which fields changed
       const fieldsChanged: string[] = [];
-      const deckName = getDeckDisplayName(selectedDeck);
 
-      if (data.name !== deckName) {
+      if (formNameEn !== originalDeckName) {
         fieldsChanged.push('name');
       }
-      if (data.description !== (selectedDeck as { description?: string | null }).description) {
-        fieldsChanged.push('description');
-      }
+      // Note: description comparison is simplified since we're using trilingual format
       if (data.is_active !== wasActive) {
         fieldsChanged.push('is_active');
       }
@@ -691,26 +692,50 @@ const AdminPage: React.FC = () => {
       }
 
       // Call appropriate API based on deck type
+      // Forms produce trilingual data (name_el, name_en, name_ru, etc.)
+      // API expects single name/description fields (uses name_en as primary)
       if (selectedDeck.type === 'vocabulary') {
-        const payload: VocabularyDeckUpdatePayload = {
-          name: data.name,
-          description: data.description,
-          is_active: data.is_active,
-          is_premium: data.is_premium,
+        const formData = data as {
+          name_el?: string;
+          name_en?: string;
+          name_ru?: string;
+          description_el?: string;
+          description_en?: string;
+          description_ru?: string;
+          level?: 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
+          is_active: boolean;
+          is_premium: boolean;
         };
-        if ('level' in data) {
-          payload.level = data.level;
+        const payload: VocabularyDeckUpdatePayload = {
+          name: formData.name_en || '',
+          description: formData.description_en || null,
+          is_active: formData.is_active,
+          is_premium: formData.is_premium,
+        };
+        if (formData.level) {
+          payload.level = formData.level;
         }
         await adminAPI.updateVocabularyDeck(selectedDeck.id, payload);
       } else {
-        const payload: CultureDeckUpdatePayload = {
-          name: data.name,
-          description: data.description,
-          is_active: data.is_active,
-          is_premium: data.is_premium,
+        const formData = data as {
+          name_el?: string;
+          name_en?: string;
+          name_ru?: string;
+          description_el?: string;
+          description_en?: string;
+          description_ru?: string;
+          category?: string;
+          is_active: boolean;
+          is_premium: boolean;
         };
-        if ('category' in data) {
-          payload.category = data.category;
+        const payload: CultureDeckUpdatePayload = {
+          name: formData.name_en || '',
+          description: formData.description_en || null,
+          is_active: formData.is_active,
+          is_premium: formData.is_premium,
+        };
+        if (formData.category) {
+          payload.category = formData.category;
         }
         await adminAPI.updateCultureDeck(selectedDeck.id, payload);
       }
@@ -719,7 +744,7 @@ const AdminPage: React.FC = () => {
       trackAdminDeckEditSaved({
         deck_id: selectedDeck.id,
         deck_type: selectedDeck.type,
-        deck_name: data.name,
+        deck_name: formNameEn,
         fields_changed: fieldsChanged,
       });
 
@@ -728,13 +753,13 @@ const AdminPage: React.FC = () => {
         trackAdminDeckDeactivated({
           deck_id: selectedDeck.id,
           deck_type: selectedDeck.type,
-          deck_name: data.name,
+          deck_name: formNameEn,
         });
       } else if (!wasActive && isNowActive) {
         trackAdminDeckReactivated({
           deck_id: selectedDeck.id,
           deck_type: selectedDeck.type,
-          deck_name: data.name,
+          deck_name: formNameEn,
         });
       }
 
@@ -746,13 +771,13 @@ const AdminPage: React.FC = () => {
         trackAdminDeckPremiumEnabled({
           deck_id: selectedDeck.id,
           deck_type: selectedDeck.type,
-          deck_name: data.name,
+          deck_name: formNameEn,
         });
       } else if (wasPremium && !isNowPremium) {
         trackAdminDeckPremiumDisabled({
           deck_id: selectedDeck.id,
           deck_type: selectedDeck.type,
-          deck_name: data.name,
+          deck_name: formNameEn,
         });
       }
 
@@ -814,15 +839,21 @@ const AdminPage: React.FC = () => {
       let deckName: string;
 
       if (type === 'vocabulary') {
+        // VocabularyDeckCreateForm produces trilingual data: name_el, name_en, name_ru, etc.
+        // API expects single name field (use name_en as primary)
         const vocabularyData = data as {
-          name: string;
-          description?: string;
+          name_el: string;
+          name_en: string;
+          name_ru: string;
+          description_el?: string;
+          description_en?: string;
+          description_ru?: string;
           level: 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
           is_premium: boolean;
         };
         const payload: VocabularyDeckCreatePayload = {
-          name: vocabularyData.name,
-          description: vocabularyData.description || null,
+          name: vocabularyData.name_en,
+          description: vocabularyData.description_en || null,
           level: vocabularyData.level,
           is_premium: vocabularyData.is_premium,
           is_system_deck: true,
@@ -831,6 +862,8 @@ const AdminPage: React.FC = () => {
         deckId = result.id;
         deckName = result.name;
       } else {
+        // CultureDeckCreateForm produces: name: { en, ru }, description: { en, ru }
+        // API expects same format
         const cultureData = data as {
           name: { en: string; ru: string };
           description?: { en: string; ru: string };
