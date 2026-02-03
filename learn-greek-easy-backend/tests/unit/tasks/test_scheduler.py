@@ -257,10 +257,7 @@ class TestScheduledTaskStubs:
 
             with patch("src.tasks.scheduled.async_sessionmaker") as mock_sessionmaker:
                 mock_session = AsyncMock()
-                mock_context = MagicMock()
-                mock_context.__aenter__ = AsyncMock(return_value=mock_session)
-                mock_context.__aexit__ = AsyncMock(return_value=False)
-                mock_session_factory = MagicMock(return_value=mock_context)
+                mock_session_factory = MagicMock(return_value=mock_session)
                 mock_sessionmaker.return_value = mock_session_factory
 
                 mock_result = MagicMock()
@@ -308,10 +305,7 @@ class TestScheduledTaskStubs:
 
             with patch("src.tasks.scheduled.async_sessionmaker") as mock_sessionmaker:
                 mock_session = AsyncMock()
-                mock_context = MagicMock()
-                mock_context.__aenter__ = AsyncMock(return_value=mock_session)
-                mock_context.__aexit__ = AsyncMock(return_value=False)
-                mock_session_factory = MagicMock(return_value=mock_context)
+                mock_session_factory = MagicMock(return_value=mock_session)
                 mock_sessionmaker.return_value = mock_session_factory
 
                 # Mock empty results for both queries

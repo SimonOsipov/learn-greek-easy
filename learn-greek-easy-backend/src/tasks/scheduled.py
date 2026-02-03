@@ -53,7 +53,8 @@ async def streak_reset_task() -> None:
             engine, class_=AsyncSession, expire_on_commit=False
         )
 
-        async with async_session_factory() as session:
+        session = async_session_factory()
+        try:
             today = datetime.now(timezone.utc).date()
             yesterday = today - timedelta(days=1)
 
@@ -110,6 +111,8 @@ async def streak_reset_task() -> None:
                 )
 
             await session.commit()
+        finally:
+            await session.close()
 
     except Exception as e:
         logger.error(f"Streak reset task failed: {e}", exc_info=True)
@@ -296,7 +299,8 @@ async def stats_aggregate_task() -> None:
             engine, class_=AsyncSession, expire_on_commit=False
         )
 
-        async with async_session_factory() as session:
+        session = async_session_factory()
+        try:
             yesterday = datetime.now(timezone.utc).date() - timedelta(days=1)
 
             # Aggregate review statistics by user for yesterday
@@ -390,6 +394,8 @@ async def stats_aggregate_task() -> None:
             )
 
             await session.commit()
+        finally:
+            await session.close()
 
     except Exception as e:
         logger.error(f"Stats aggregation failed: {e}", exc_info=True)
