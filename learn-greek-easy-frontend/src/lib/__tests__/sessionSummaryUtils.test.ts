@@ -2,13 +2,11 @@
  * Session Summary Utilities Tests
  *
  * Comprehensive test suite for session summary calculation utilities.
- * Tests time formatting, accuracy calculations, message generation, and rating breakdowns.
+ * Tests time formatting, message generation, and rating breakdowns.
  *
  * Coverage targets:
  * - Time formatting (seconds → human-readable)
- * - Accuracy calculations
- * - Encouraging message selection
- * - Color class selection
+ * - Encouraging message selection (again-percentage-based)
  * - Rating breakdown formatting
  * - Percentage adjustments for rounding
  * - Progress transition detection
@@ -20,9 +18,7 @@ import type { SessionSummary } from '@/types/review';
 
 import {
   formatTime,
-  calculateAccuracy,
   getEncouragingMessage,
-  getAccuracyColor,
   formatRatingBreakdown,
   hasProgressTransitions,
   adjustPercentages,
@@ -36,7 +32,6 @@ describe('sessionSummaryUtils', () => {
     userId: 'test-user',
     completedAt: new Date(),
     cardsReviewed: 10,
-    accuracy: 80,
     totalTime: 300,
     averageTimePerCard: 30,
     ratingBreakdown: {
@@ -100,152 +95,43 @@ describe('sessionSummaryUtils', () => {
     });
   });
 
-  describe('calculateAccuracy', () => {
-    it('should calculate accuracy from good + easy ratings', () => {
-      const summary = createSessionSummary({
-        cardsReviewed: 10,
-        ratingBreakdown: {
-          again: 1,
-          hard: 1,
-          good: 6,
-          easy: 2,
-        },
-      });
-
-      const accuracy = calculateAccuracy(summary);
-      expect(accuracy).toBe(80); // (6 + 2) / 10 = 80%
-    });
-
-    it('should return 0 for zero cards reviewed', () => {
-      const summary = createSessionSummary({
-        cardsReviewed: 0,
-        ratingBreakdown: { again: 0, hard: 0, good: 0, easy: 0 },
-      });
-
-      expect(calculateAccuracy(summary)).toBe(0);
-    });
-
-    it('should return 100 for perfect session', () => {
-      const summary = createSessionSummary({
-        cardsReviewed: 5,
-        ratingBreakdown: { again: 0, hard: 0, good: 3, easy: 2 },
-      });
-
-      expect(calculateAccuracy(summary)).toBe(100); // (3 + 2) / 5 = 100%
-    });
-
-    it('should return 0 for all "again" ratings', () => {
-      const summary = createSessionSummary({
-        cardsReviewed: 5,
-        ratingBreakdown: { again: 5, hard: 0, good: 0, easy: 0 },
-      });
-
-      expect(calculateAccuracy(summary)).toBe(0);
-    });
-
-    it('should round to nearest integer', () => {
-      const summary = createSessionSummary({
-        cardsReviewed: 3,
-        ratingBreakdown: { again: 0, hard: 1, good: 2, easy: 0 },
-      });
-
-      expect(calculateAccuracy(summary)).toBe(67); // 2/3 = 66.67 → 67
-    });
-
-    it('should handle edge case: 1 card reviewed', () => {
-      const summary = createSessionSummary({
-        cardsReviewed: 1,
-        ratingBreakdown: { again: 0, hard: 0, good: 1, easy: 0 },
-      });
-
-      expect(calculateAccuracy(summary)).toBe(100);
-    });
-
-    it('should not count "hard" as correct', () => {
-      const summary = createSessionSummary({
-        cardsReviewed: 10,
-        ratingBreakdown: { again: 0, hard: 10, good: 0, easy: 0 },
-      });
-
-      expect(calculateAccuracy(summary)).toBe(0);
-    });
-  });
-
   describe('getEncouragingMessage', () => {
-    it('should return perfect message for 100% accuracy', () => {
-      const message = getEncouragingMessage(100, 10);
-      expect(message).toContain('Perfect');
-      expect(message).toContain('crushing it');
+    it('returns perfect message for 0% again rate', () => {
+      expect(getEncouragingMessage(0, 10)).toBe("Perfect session! You're crushing it!");
     });
 
-    it('should return excellent message for 90%+ accuracy', () => {
-      expect(getEncouragingMessage(90, 10)).toContain('Excellent');
-      expect(getEncouragingMessage(95, 10)).toContain('mastering');
-      expect(getEncouragingMessage(99, 10)).toContain('Excellent');
+    it('returns excellent message for <=10% again rate', () => {
+      expect(getEncouragingMessage(10, 10)).toBe("Excellent work! You're mastering this deck!");
+      expect(getEncouragingMessage(5, 20)).toBe("Excellent work! You're mastering this deck!");
     });
 
-    it('should return great message for 70-89% accuracy', () => {
-      expect(getEncouragingMessage(70, 10)).toContain('Great job');
-      expect(getEncouragingMessage(80, 10)).toContain('consistent practice');
-      expect(getEncouragingMessage(89, 10)).toContain('Great');
+    it('returns great message for 11-30% again rate', () => {
+      expect(getEncouragingMessage(11, 10)).toBe('Great job! Keep up the consistent practice!');
+      expect(getEncouragingMessage(30, 20)).toBe('Great job! Keep up the consistent practice!');
     });
 
-    it('should return good message for 50-69% accuracy', () => {
-      expect(getEncouragingMessage(50, 10)).toContain('Good effort');
-      expect(getEncouragingMessage(60, 10)).toContain('practicing');
-      expect(getEncouragingMessage(69, 10)).toContain('improve');
+    it('returns good message for 31-50% again rate', () => {
+      expect(getEncouragingMessage(31, 10)).toBe(
+        "Good effort! Keep practicing and you'll improve!"
+      );
+      expect(getEncouragingMessage(50, 20)).toBe(
+        "Good effort! Keep practicing and you'll improve!"
+      );
     });
 
-    it('should return encouraging message for 1-49% accuracy', () => {
-      const message = getEncouragingMessage(25, 10);
-      expect(message).toContain('progress');
+    it('returns supportive message for 100% again rate', () => {
+      expect(getEncouragingMessage(100, 10)).toBe(
+        'Keep going! Every review builds your foundation.'
+      );
     });
 
-    it('should return supportive message for 0% accuracy', () => {
-      const message = getEncouragingMessage(0, 10);
-      expect(message).toContain('Keep going');
-      expect(message).toContain('foundation');
+    it('returns progress message for 51-99% again rate', () => {
+      expect(getEncouragingMessage(51, 10)).toBe("Every review counts! You're making progress!");
+      expect(getEncouragingMessage(75, 20)).toBe("Every review counts! You're making progress!");
     });
 
-    it('should handle edge case: no cards reviewed', () => {
-      const message = getEncouragingMessage(0, 0);
-      expect(message).toContain('Session ended');
-      expect(message).toContain('without reviewing');
-    });
-
-    it('should handle boundary: exactly 70%', () => {
-      const message = getEncouragingMessage(70, 10);
-      expect(message).toContain('Great');
-    });
-
-    it('should handle boundary: exactly 90%', () => {
-      const message = getEncouragingMessage(90, 10);
-      expect(message).toContain('Excellent');
-    });
-  });
-
-  describe('getAccuracyColor', () => {
-    it('should return green for 70%+ accuracy', () => {
-      expect(getAccuracyColor(70)).toBe('text-green-600 dark:text-green-400');
-      expect(getAccuracyColor(80)).toBe('text-green-600 dark:text-green-400');
-      expect(getAccuracyColor(100)).toBe('text-green-600 dark:text-green-400');
-    });
-
-    it('should return orange for 50-69% accuracy', () => {
-      expect(getAccuracyColor(50)).toBe('text-orange-600 dark:text-orange-400');
-      expect(getAccuracyColor(60)).toBe('text-orange-600 dark:text-orange-400');
-      expect(getAccuracyColor(69)).toBe('text-orange-600 dark:text-orange-400');
-    });
-
-    it('should return red for < 50% accuracy', () => {
-      expect(getAccuracyColor(0)).toBe('text-red-600 dark:text-red-400');
-      expect(getAccuracyColor(25)).toBe('text-red-600 dark:text-red-400');
-      expect(getAccuracyColor(49)).toBe('text-red-600 dark:text-red-400');
-    });
-
-    it('should handle boundary cases', () => {
-      expect(getAccuracyColor(70)).toBe('text-green-600 dark:text-green-400'); // Exactly 70
-      expect(getAccuracyColor(50)).toBe('text-orange-600 dark:text-orange-400'); // Exactly 50
+    it('returns specific message when no cards reviewed', () => {
+      expect(getEncouragingMessage(0, 0)).toBe('Session ended without reviewing cards.');
     });
   });
 

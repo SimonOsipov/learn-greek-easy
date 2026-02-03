@@ -33,7 +33,6 @@ describe('SessionSummary - Statistics Display', () => {
     userId: 'user-1',
     completedAt: new Date(),
     cardsReviewed: 10,
-    accuracy: 80,
     totalTime: 300, // 5 minutes
     averageTimePerCard: 30, // 30 seconds
     ratingBreakdown: {
@@ -80,23 +79,6 @@ describe('SessionSummary - Statistics Display', () => {
     expect(screen.getByText(/cards reviewed/i)).toBeInTheDocument();
   });
 
-  it('should display accuracy percentage with correct color coding', () => {
-    const summaryGood = createMockSummary({ accuracy: 85 });
-
-    const { rerender } = render(
-      <SessionSummary summary={summaryGood} onBackToDashboard={mockOnBackToDashboard} />
-    );
-
-    expect(screen.getByText(/85%/)).toBeInTheDocument();
-    expect(screen.getByText(/accuracy/i)).toBeInTheDocument();
-
-    // Test with low accuracy
-    const summaryPoor = createMockSummary({ accuracy: 45 });
-    rerender(<SessionSummary summary={summaryPoor} onBackToDashboard={mockOnBackToDashboard} />);
-
-    expect(screen.getByText(/45%/)).toBeInTheDocument();
-  });
-
   it('should display time spent in readable format', () => {
     // Test various time formats
     const summary1 = createMockSummary({ totalTime: 45 }); // 45 seconds
@@ -135,7 +117,6 @@ describe('SessionSummary - Rating Breakdown', () => {
     userId: 'user-1',
     completedAt: new Date(),
     cardsReviewed: 10,
-    accuracy: 80,
     totalTime: 300,
     averageTimePerCard: 30,
     ratingBreakdown: {
@@ -229,7 +210,6 @@ describe('SessionSummary - Navigation Actions', () => {
     userId: 'user-1',
     completedAt: new Date(),
     cardsReviewed: 10,
-    accuracy: 80,
     totalTime: 300,
     averageTimePerCard: 30,
     ratingBreakdown: {
@@ -290,7 +270,6 @@ describe('SessionSummary - Edge Cases', () => {
     userId: 'user-1',
     completedAt: new Date(),
     cardsReviewed: 10,
-    accuracy: 80,
     totalTime: 300,
     averageTimePerCard: 30,
     ratingBreakdown: {
@@ -329,10 +308,9 @@ describe('SessionSummary - Edge Cases', () => {
     expect(screen.getByRole('button', { name: /back to dashboard/i })).toBeInTheDocument();
   });
 
-  it('should display perfect score (100% accuracy) correctly', () => {
+  it('should display perfect score (no again ratings) correctly', () => {
     const summary = createMockSummary({
       cardsReviewed: 10,
-      accuracy: 100,
       ratingBreakdown: {
         again: 0,
         hard: 0,
@@ -343,16 +321,13 @@ describe('SessionSummary - Edge Cases', () => {
 
     render(<SessionSummary summary={summary} onBackToDashboard={mockOnBackToDashboard} />);
 
-    // Use getAllByText since 100% may appear in multiple places
-    expect(screen.getAllByText(/100%/).length).toBeGreaterThan(0);
     // Should show encouraging message for perfect score
     expect(screen.getByText(/session complete/i)).toBeInTheDocument();
   });
 
-  it('should display poor performance (0% accuracy) with supportive message', () => {
+  it('should display poor performance (all again ratings) with supportive message', () => {
     const summary = createMockSummary({
       cardsReviewed: 5,
-      accuracy: 0,
       ratingBreakdown: {
         again: 5,
         hard: 0,
@@ -363,8 +338,7 @@ describe('SessionSummary - Edge Cases', () => {
 
     render(<SessionSummary summary={summary} onBackToDashboard={mockOnBackToDashboard} />);
 
-    // Use getAllByText since 0% may appear multiple times in rating breakdown
-    expect(screen.getAllByText(/0%/).length).toBeGreaterThan(0);
+    // Should still show session complete message
     expect(screen.getByText(/session complete/i)).toBeInTheDocument();
   });
 
@@ -413,7 +387,6 @@ describe('SessionSummary - Accessibility', () => {
     userId: 'user-1',
     completedAt: new Date(),
     cardsReviewed: 10,
-    accuracy: 80,
     totalTime: 300,
     averageTimePerCard: 30,
     ratingBreakdown: {

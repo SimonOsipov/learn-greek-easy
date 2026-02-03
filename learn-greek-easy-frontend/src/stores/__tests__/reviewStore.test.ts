@@ -105,9 +105,6 @@ describe('reviewStore', () => {
     ratings: [],
     stats: {
       cardsReviewed: 0,
-      accuracy: 0,
-      cardsCorrect: 0,
-      cardsIncorrect: 0,
       againCount: 0,
       hardCount: 0,
       goodCount: 0,
@@ -121,7 +118,6 @@ describe('reviewStore', () => {
     userId: mockUserId,
     completedAt: new Date(),
     cardsReviewed: 2,
-    accuracy: 90,
     totalTime: 120,
     averageTimePerCard: 60,
     ratingBreakdown: {
@@ -158,9 +154,6 @@ describe('reviewStore', () => {
       isCardFlipped: false,
       sessionStats: {
         cardsReviewed: 0,
-        accuracy: 0,
-        cardsCorrect: 0,
-        cardsIncorrect: 0,
         againCount: 0,
         hardCount: 0,
         goodCount: 0,
@@ -524,7 +517,6 @@ describe('reviewStore', () => {
       });
 
       expect(result.current.sessionStats.againCount).toBe(1);
-      expect(result.current.sessionStats.cardsIncorrect).toBe(1);
 
       act(() => {
         useReviewStore.setState({
@@ -538,7 +530,6 @@ describe('reviewStore', () => {
       });
 
       expect(result.current.sessionStats.easyCount).toBe(1);
-      expect(result.current.sessionStats.cardsCorrect).toBe(1);
     });
 
     it('should throw error if no active session', async () => {
@@ -566,48 +557,6 @@ describe('reviewStore', () => {
           await result.current.rateCard('good');
         })
       ).rejects.toThrow('You must flip the card before rating');
-    });
-
-    it('should calculate accuracy correctly', async () => {
-      const { result } = renderHook(() => useReviewStore());
-
-      act(() => {
-        useReviewStore.setState({
-          activeSession: mockSession,
-          currentCardIndex: 0,
-          isCardFlipped: true,
-        });
-      });
-
-      // Rate 3 cards: 2 correct, 1 incorrect
-      await act(async () => {
-        await result.current.rateCard('good');
-      });
-
-      act(() => {
-        useReviewStore.setState({
-          currentCardIndex: 0,
-          isCardFlipped: true,
-        });
-      });
-
-      await act(async () => {
-        await result.current.rateCard('easy');
-      });
-
-      act(() => {
-        useReviewStore.setState({
-          currentCardIndex: 0,
-          isCardFlipped: true,
-        });
-      });
-
-      await act(async () => {
-        await result.current.rateCard('again');
-      });
-
-      // Accuracy should be 67% (2/3 * 100 = 66.67 rounded to 67)
-      expect(result.current.sessionStats.accuracy).toBe(67);
     });
   });
 
@@ -818,9 +767,6 @@ describe('reviewStore', () => {
           isCardFlipped: true,
           sessionStats: {
             cardsReviewed: 1,
-            accuracy: 100,
-            cardsCorrect: 1,
-            cardsIncorrect: 0,
             againCount: 0,
             hardCount: 0,
             goodCount: 1,

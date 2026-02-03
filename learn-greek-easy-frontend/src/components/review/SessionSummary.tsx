@@ -1,4 +1,4 @@
-import { CheckCircle, TrendingUp, Clock, Target } from 'lucide-react';
+import { CheckCircle, Clock, Target } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   formatTime,
   getEncouragingMessage,
-  getAccuracyColor,
   formatRatingBreakdown,
 } from '@/lib/sessionSummaryUtils';
 import type { SessionSummary as SessionSummaryType } from '@/types/review';
@@ -21,18 +20,18 @@ export interface SessionSummaryProps {
  *
  * Displays post-session statistics including:
  * - Completion message with performance-based encouragement
- * - Statistics grid (cards reviewed, accuracy, time spent, avg per card)
+ * - Statistics grid (cards reviewed, time spent, avg per card)
  * - Rating breakdown (Again/Hard/Good/Easy with percentages)
  * - Single action button (Back to Dashboard)
  *
  * Edge cases handled:
  * - Zero cards reviewed: Shows simplified message
- * - Perfect score (100%): Special celebration
- * - All "again" (0%): Supportive encouragement
+ * - Perfect score (0% again): Special celebration
+ * - All "again" (100%): Supportive encouragement
  *
  * Responsive:
  * - Mobile (< 640px): 2x2 grids
- * - Desktop (≥ 640px): 1x4 grids
+ * - Desktop (≥ 640px): 1x3 grids
  */
 export function SessionSummary({ summary, onBackToDashboard }: SessionSummaryProps) {
   const { t } = useTranslation('review');
@@ -53,8 +52,11 @@ export function SessionSummary({ summary, onBackToDashboard }: SessionSummaryPro
     );
   }
 
-  const message = getEncouragingMessage(summary.accuracy, summary.cardsReviewed);
-  const accuracyColor = getAccuracyColor(summary.accuracy);
+  const againPercentage =
+    summary.cardsReviewed > 0
+      ? Math.round((summary.ratingBreakdown.again / summary.cardsReviewed) * 100)
+      : 0;
+  const message = getEncouragingMessage(againPercentage, summary.cardsReviewed);
   const ratingBreakdown = formatRatingBreakdown(summary);
 
   return (
@@ -75,7 +77,7 @@ export function SessionSummary({ summary, onBackToDashboard }: SessionSummaryPro
       </Card>
 
       {/* 2. Statistics Grid */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3">
         {/* Cards Reviewed */}
         <Card>
           <CardContent className="pt-4 text-center sm:pt-6">
@@ -89,18 +91,6 @@ export function SessionSummary({ summary, onBackToDashboard }: SessionSummaryPro
             <p className="mt-1 text-xs text-muted-foreground sm:text-sm">
               {t('summary.cardsReviewed')}
             </p>
-          </CardContent>
-        </Card>
-
-        {/* Accuracy (PRIMARY METRIC) */}
-        <Card>
-          <CardContent className="pt-4 text-center sm:pt-6">
-            <TrendingUp
-              className={`mx-auto mb-2 h-6 w-6 sm:h-8 sm:w-8 ${accuracyColor}`}
-              aria-hidden="true"
-            />
-            <p className={`text-2xl font-bold sm:text-3xl ${accuracyColor}`}>{summary.accuracy}%</p>
-            <p className="mt-1 text-xs text-muted-foreground sm:text-sm">{t('summary.accuracy')}</p>
           </CardContent>
         </Card>
 

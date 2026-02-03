@@ -683,7 +683,6 @@ describe('FlashcardReviewPage - Card Flip and Rating', () => {
       const { sessionStats } = useReviewStore.getState();
       expect(sessionStats.cardsReviewed).toBe(1);
       expect(sessionStats.goodCount).toBe(1);
-      expect(sessionStats.cardsCorrect).toBe(1);
     });
   });
 
@@ -781,51 +780,6 @@ describe('FlashcardReviewPage - Card Flip and Rating', () => {
     expect(sessionStats.goodCount).toBe(1);
     expect(sessionStats.easyCount).toBe(1);
     expect(sessionStats.cardsReviewed).toBe(4);
-  });
-
-  it('should calculate accuracy correctly based on ratings', async () => {
-    const user = userEvent.setup();
-    render(<FlashcardReviewPage />);
-
-    await waitFor(
-      () => {
-        const { currentCard } = useReviewStore.getState();
-        expect(currentCard).toBeTruthy();
-      },
-      { timeout: 5000 }
-    );
-
-    // Rate 3 cards as "good" (correct) and 2 as "again" (incorrect)
-    const ratings = ['good', 'good', 'good', 'again', 'again'] as const;
-
-    for (const rating of ratings) {
-      await waitFor(() => {
-        const { currentCard } = useReviewStore.getState();
-        expect(currentCard).toBeTruthy();
-      });
-
-      const cardArea = screen.getByRole('button', { name: /flip card/i });
-      await user.click(cardArea);
-
-      await waitFor(() => {
-        expect(useReviewStore.getState().isCardFlipped).toBe(true);
-      });
-
-      const ratingButton = screen.getByRole('button', {
-        name: new RegExp(`rate card as ${rating}`, 'i'),
-      });
-      await user.click(ratingButton);
-
-      await waitFor(() => {
-        expect(useReviewStore.getState().isCardFlipped).toBe(false);
-      });
-    }
-
-    // Accuracy should be 60% (3 correct out of 5)
-    const { sessionStats } = useReviewStore.getState();
-    expect(sessionStats.accuracy).toBe(60);
-    expect(sessionStats.cardsCorrect).toBe(3);
-    expect(sessionStats.cardsIncorrect).toBe(2);
   });
 });
 
@@ -1162,7 +1116,6 @@ describe('FlashcardReviewPage - Session Completion', () => {
         userId: 'test-user',
         completedAt: new Date(),
         cardsReviewed: 1,
-        accuracy: 100,
         totalTime: 10,
         averageTimePerCard: 10,
         ratingBreakdown: { again: 0, hard: 0, good: 1, easy: 0 },

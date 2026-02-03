@@ -92,9 +92,6 @@ describe('reviewStore analytics', () => {
       isCardFlipped: false,
       sessionStats: {
         cardsReviewed: 0,
-        accuracy: 0,
-        cardsCorrect: 0,
-        cardsIncorrect: 0,
         againCount: 0,
         hardCount: 0,
         goodCount: 0,
