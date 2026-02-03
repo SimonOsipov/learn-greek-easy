@@ -863,10 +863,10 @@ class TestSeedServiceCulture:
         assert result["total_questions"] == 50  # 5 decks * 10 questions
 
     @pytest.mark.asyncio
-    async def test_culture_questions_have_trilingual_content(
+    async def test_culture_questions_have_bilingual_content(
         self, mock_db_with_ids, mock_settings_can_seed
     ):
-        """Verify culture questions have el, en, ru translations."""
+        """Verify culture questions have en, ru translations."""
         seed_service = SeedService(mock_db_with_ids)
 
         # Track added questions
@@ -883,15 +883,13 @@ class TestSeedServiceCulture:
         await seed_service.seed_culture_decks_and_questions()
 
         for q in added_questions:
-            # Check question text has all 3 languages
-            assert "el" in q.question_text
+            # Check question text has en and ru languages
             assert "en" in q.question_text
             assert "ru" in q.question_text
 
-            # Check options have all 3 languages
+            # Check options have en and ru languages
             for option in [q.option_a, q.option_b, q.option_c, q.option_d]:
                 if option:  # option_d may be None
-                    assert "el" in option
                     assert "en" in option
                     assert "ru" in option
 
@@ -910,15 +908,13 @@ class TestSeedServiceCulture:
                 assert "options" in q_data
                 assert "correct_option" in q_data
 
-                # Check question has translations
-                assert "el" in q_data["question_text"]
+                # Check question has translations (en, ru)
                 assert "en" in q_data["question_text"]
                 assert "ru" in q_data["question_text"]
 
-                # Check options (answers) have translations
+                # Check options (answers) have translations (en, ru)
                 assert len(q_data["options"]) >= 2  # At least 2 options
                 for option in q_data["options"]:
-                    assert "el" in option
                     assert "en" in option
                     assert "ru" in option
 
@@ -1887,8 +1883,8 @@ class TestSeedServiceChangelog:
         assert entries_with_bold >= 3, "Expected at least 3 entries with **bold** formatting"
 
     @pytest.mark.asyncio
-    async def test_entries_have_trilingual_content(self, mock_db_with_ids, mock_settings_can_seed):
-        """Entries should have English, Greek, and Russian content."""
+    async def test_entries_have_bilingual_content(self, mock_db_with_ids, mock_settings_can_seed):
+        """Entries should have English and Russian content."""
         from src.db.models import ChangelogEntry
 
         seed_service = SeedService(mock_db_with_ids)
@@ -1907,12 +1903,10 @@ class TestSeedServiceChangelog:
         await seed_service.seed_changelog_entries()
 
         for entry in added_entries:
-            # Check all 3 languages have content
+            # Check en and ru languages have content
             assert entry.title_en and len(entry.title_en) > 0
-            assert entry.title_el and len(entry.title_el) > 0
             assert entry.title_ru and len(entry.title_ru) > 0
             assert entry.content_en and len(entry.content_en) > 0
-            assert entry.content_el and len(entry.content_el) > 0
             assert entry.content_ru and len(entry.content_ru) > 0
 
     @pytest.mark.asyncio
