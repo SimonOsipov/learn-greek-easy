@@ -381,7 +381,7 @@ describe('analyticsStore', () => {
 
       expect(result.current.lastFetch).not.toBeNull();
 
-      // Update snapshot
+      // Update snapshot - SessionSummary no longer includes accuracy, cardsCorrect, cardsIncorrect
       await act(async () => {
         await result.current.updateSnapshot('test-user-123', {
           sessionId: 'session-123',
@@ -389,7 +389,6 @@ describe('analyticsStore', () => {
           userId: 'test-user-123',
           completedAt: new Date(),
           cardsReviewed: 20,
-          accuracy: 90,
           totalTime: 600,
           averageTimePerCard: 30,
           ratingBreakdown: { again: 2, hard: 3, good: 10, easy: 5 },
