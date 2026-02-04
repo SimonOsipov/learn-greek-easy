@@ -25,6 +25,7 @@ import {
 import { useTranslation } from 'react-i18next';
 
 import {
+  AdminCardErrorSection,
   AdminFeedbackSection,
   AnnouncementsTab,
   BulkUploadsTab,
@@ -557,7 +558,14 @@ AllDecksList.displayName = 'AllDecksList';
 /**
  * Top-level admin tab type
  */
-type AdminTabType = 'decks' | 'news' | 'announcements' | 'changelog' | 'bulkUploads' | 'feedback';
+type AdminTabType =
+  | 'decks'
+  | 'news'
+  | 'announcements'
+  | 'changelog'
+  | 'bulkUploads'
+  | 'cardErrors'
+  | 'feedback';
 
 /**
  * Admin Page
@@ -1142,6 +1150,7 @@ const AdminPage: React.FC = () => {
               'announcements',
               'changelog',
               'bulkUploads',
+              'cardErrors',
               'feedback',
             ] as AdminTabType[]
           ).map((tab) => (
@@ -1245,6 +1254,16 @@ const AdminPage: React.FC = () => {
             {t('admin:tabs.bulkUploads')}
           </h2>
           <BulkUploadsTab />
+        </section>
+      )}
+
+      {/* Card Errors Tab Content */}
+      {activeTab === 'cardErrors' && (
+        <section aria-labelledby="card-errors-heading">
+          <h2 id="card-errors-heading" className="sr-only">
+            {t('tabs.cardErrors')}
+          </h2>
+          <AdminCardErrorSection />
         </section>
       )}
 

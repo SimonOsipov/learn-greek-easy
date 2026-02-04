@@ -176,7 +176,8 @@
     "announcements": "Announcements",
     "feedback": "Feedback",
     "changelog": "Changelog",
-    "bulkUploads": "Bulk Uploads"
+    "bulkUploads": "Bulk Uploads",
+    "cardErrors": "Card Errors"
   },
   "announcements": {
     "create": {
