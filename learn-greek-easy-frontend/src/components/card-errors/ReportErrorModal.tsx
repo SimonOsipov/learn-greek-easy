@@ -9,9 +9,9 @@ import { useState } from 'react';
 
 import { X, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
+import { toast } from '@/hooks/use-toast';
 import { trackCardErrorReported } from '@/lib/analytics';
 import { reportAPIError } from '@/lib/errorReporting';
 import { cn } from '@/lib/utils';
