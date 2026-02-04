@@ -10,6 +10,12 @@
  * All endpoints require superuser authentication.
  */
 
+import type {
+  AdminCardErrorListParams,
+  AdminCardErrorListResponse,
+  AdminCardErrorResponse,
+  AdminCardErrorUpdateRequest,
+} from '@/types/cardError';
 import type { CultureDeckAdminResponse, DeckAdminResponse } from '@/types/deck';
 import type {
   AdminFeedbackItem,
@@ -971,5 +977,96 @@ export const adminAPI = {
    */
   getAnnouncementDetail: async (id: string): Promise<AnnouncementDetailResponse> => {
     return api.get<AnnouncementDetailResponse>(`/api/v1/admin/announcements/${id}`);
+  },
+
+  // ============================================
+  // Card Error Management
+  // ============================================
+
+  /**
+   * List card error reports with pagination and filters
+   *
+   * Returns paginated list sorted by created_at DESC (newest first),
+   * with PENDING status items prioritized first.
+   * Supports filtering by status and card_type.
+   * Requires superuser authentication.
+   *
+   * @param params - Query parameters for filtering/pagination
+   * @returns Paginated list of card error reports with reporter info
+   *
+   * @example
+   * ```ts
+   * // Get all pending errors, page 1
+   * const errors = await adminAPI.listCardErrors({ status: 'PENDING', page: 1 });
+   *
+   * // Get vocabulary errors only
+   * const vocabErrors = await adminAPI.listCardErrors({ card_type: 'VOCABULARY' });
+   * ```
+   */
+  listCardErrors: async (
+    params: AdminCardErrorListParams = {}
+  ): Promise<AdminCardErrorListResponse> => {
+    const queryString = buildQueryString({
+      status: params.status,
+      card_type: params.card_type,
+      page: params.page || 1,
+      page_size: params.page_size || 20,
+    });
+    return api.get<AdminCardErrorListResponse>(`/api/v1/admin/card-errors${queryString}`);
+  },
+
+  /**
+   * Get a single card error report by ID
+   *
+   * Returns full details including reporter information.
+   * Requires superuser authentication.
+   *
+   * @param id - UUID of the card error report
+   * @returns Full card error report details
+   * @throws 404 if report not found
+   *
+   * @example
+   * ```ts
+   * const error = await adminAPI.getCardError('uuid-here');
+   * console.log(error.reporter.full_name); // "John Doe"
+   * ```
+   */
+  getCardError: async (id: string): Promise<AdminCardErrorResponse> => {
+    return api.get<AdminCardErrorResponse>(`/api/v1/admin/card-errors/${id}`);
+  },
+
+  /**
+   * Update a card error report status and/or admin notes
+   *
+   * Updates the report's status and adds admin notes.
+   * When status is changed to FIXED/DISMISSED/REVIEWED, resolved_at is auto-set
+   * and resolved_by is set to current admin's ID.
+   * Requires superuser authentication.
+   *
+   * @param id - UUID of the card error report to update
+   * @param data - Update payload (status and/or admin_notes)
+   * @returns Updated card error report
+   * @throws 404 if report not found
+   * @throws 422 if validation fails (e.g., admin_notes > 1000 chars)
+   *
+   * @example
+   * ```ts
+   * // Mark as fixed with notes
+   * const updated = await adminAPI.updateCardError('uuid-here', {
+   *   status: 'FIXED',
+   *   admin_notes: 'Corrected the translation in v1.2.3',
+   * });
+   *
+   * // Just add notes without changing status
+   * const noted = await adminAPI.updateCardError('uuid-here', {
+   *   admin_notes: 'Investigating this issue',
+   * });
+   * ```
+   */
+  updateCardError: async (
+    id: string,
+    data: AdminCardErrorUpdateRequest
+  ): Promise<AdminCardErrorResponse> => {
+    return api.patch<AdminCardErrorResponse>(`/api/v1/admin/card-errors/${id}`, data);
   },
 };
