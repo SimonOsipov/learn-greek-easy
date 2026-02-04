@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/hooks/use-toast';
+import { getApiErrorMessage } from '@/lib/apiErrorUtils';
 import { useAdminChangelogStore, selectAdminChangelogIsSaving } from '@/stores/adminChangelogStore';
 import type { ChangelogEntryAdmin, ChangelogUpdateRequest } from '@/types/changelog';
 import { CHANGELOG_TAG_OPTIONS } from '@/types/changelog';
@@ -133,9 +134,11 @@ export function ChangelogEditModal({ open, onOpenChange, entry }: ChangelogEditM
         title: t('admin:changelog.edit.success'),
       });
       onOpenChange(false);
-    } catch {
+    } catch (error) {
+      const apiErrorMessage = getApiErrorMessage(error);
       toast({
         title: t('admin:changelog.edit.error'),
+        description: apiErrorMessage || undefined,
         variant: 'destructive',
       });
     }

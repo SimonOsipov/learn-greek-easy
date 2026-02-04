@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/hooks/use-toast';
+import { getApiErrorMessage } from '@/lib/apiErrorUtils';
 import {
   useAdminChangelogStore,
   selectAdminChangelogItems,
@@ -95,9 +96,11 @@ export function ChangelogTab() {
         title: t('admin:changelog.toast.created'),
       });
       setJsonInput(''); // Clear input on success
-    } catch {
+    } catch (error) {
+      const apiErrorMessage = getApiErrorMessage(error);
       toast({
         title: t('admin:changelog.toast.createError'),
+        description: apiErrorMessage || undefined,
         variant: 'destructive',
       });
     }
