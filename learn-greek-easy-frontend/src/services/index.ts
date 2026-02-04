@@ -117,6 +117,15 @@ export type {
   VoteType,
 } from '@/types/feedback';
 
+// Card Error API
+export { cardErrorAPI } from './cardErrorAPI';
+export type {
+  CardType,
+  CardErrorStatus,
+  CreateCardErrorRequest,
+  CardErrorResponse,
+} from '@/types/cardError';
+
 // Notification API
 export * as notificationAPI from './notificationAPI';
 

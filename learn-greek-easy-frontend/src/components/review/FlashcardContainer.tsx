@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 
 import { useTranslation } from 'react-i18next';
 
+import { ReportErrorButton, ReportErrorModal } from '@/components/card-errors';
 import { cn } from '@/lib/utils';
 import { useReviewStore } from '@/stores/reviewStore';
 import type { CardReview } from '@/types/review';
@@ -18,6 +19,7 @@ export function FlashcardContainer({ card }: FlashcardContainerProps) {
   const { t } = useTranslation('review');
   const { isCardFlipped, flipCard, activeSession, currentCardIndex } = useReviewStore();
   const [srAnnouncement, setSrAnnouncement] = useState('');
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
 
   // Announce card flip to screen readers
   useEffect(() => {
@@ -61,7 +63,25 @@ export function FlashcardContainer({ card }: FlashcardContainerProps) {
         <div className="px-8 pb-6">
           <CardContent card={card} isFlipped={isCardFlipped} />
         </div>
+
+        {/* Report Error Button - shown after card is flipped */}
+        {isCardFlipped && (
+          <div className="border-t border-border px-8 py-3">
+            <ReportErrorButton
+              onClick={() => setIsReportModalOpen(true)}
+              data-testid="report-error-button"
+            />
+          </div>
+        )}
       </div>
+
+      {/* Report Error Modal */}
+      <ReportErrorModal
+        isOpen={isReportModalOpen}
+        onClose={() => setIsReportModalOpen(false)}
+        cardId={card.id}
+        cardType="VOCABULARY"
+      />
     </>
   );
 }

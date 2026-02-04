@@ -21,6 +21,17 @@ from src.schemas.card import (
     CardWithStatisticsResponse,
 )
 
+# Card Error Report schemas
+from src.schemas.card_error import (
+    AdminCardErrorReportListResponse,
+    AdminCardErrorReportResponse,
+    AdminCardErrorReportUpdate,
+    CardErrorReportCreate,
+    CardErrorReportListResponse,
+    CardErrorReportResponse,
+    ReporterBriefResponse,
+)
+
 # Changelog schemas
 from src.schemas.changelog import (
     ChangelogAdminListResponse,
@@ -246,6 +257,14 @@ __all__ = [
     "FeedbackUpdate",
     "VoteRequest",
     "VoteResponse",
+    # Card Error Report
+    "ReporterBriefResponse",
+    "CardErrorReportCreate",
+    "CardErrorReportResponse",
+    "CardErrorReportListResponse",
+    "AdminCardErrorReportUpdate",
+    "AdminCardErrorReportResponse",
+    "AdminCardErrorReportListResponse",
     # Notification
     "NotificationResponse",
     "NotificationListResponse",

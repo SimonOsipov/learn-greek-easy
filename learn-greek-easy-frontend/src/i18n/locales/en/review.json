@@ -149,5 +149,18 @@
       "showTranslation": "Click to show translation",
       "hideTranslation": "Click to hide translation"
     }
+  },
+  "reportError": {
+    "button": "Report Error",
+    "title": "Report an Error",
+    "description": "Help us improve by reporting any errors you find in this card.",
+    "placeholder": "Describe the error you found...",
+    "validation": {
+      "tooShort": "Please provide at least 10 characters"
+    },
+    "success": "Thank you for reporting this error!",
+    "error": "Failed to submit error report. Please try again.",
+    "alreadyReported": "You have already reported an error for this card",
+    "submitting": "Submitting..."
   }
 }

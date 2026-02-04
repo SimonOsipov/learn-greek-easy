@@ -139,3 +139,13 @@ export {
   trackUserCardDeleteCompleted,
   trackUserCardDeleteCancelled,
 } from './userCardAnalytics';
+export {
+  // Type interfaces
+  type CardErrorReportedProperties,
+  type CardErrorModalOpenedProperties,
+  type CardErrorModalClosedProperties,
+  // Tracking functions
+  trackCardErrorReported,
+  trackCardErrorModalOpened,
+  trackCardErrorModalClosed,
+} from './cardErrorAnalytics';

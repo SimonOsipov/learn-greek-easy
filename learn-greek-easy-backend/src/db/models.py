@@ -5,6 +5,7 @@ This module contains all SQLAlchemy models for the application:
 - Content (Deck, Card)
 - Progress tracking (UserDeckProgress, CardStatistics, Review)
 - Feedback (Feedback, FeedbackVote)
+- Card Error Reports (CardErrorReport)
 - XP and Achievements (UserXP, XPTransaction, Achievement, UserAchievement)
 - Notifications (Notification)
 - Culture Exam (CultureDeck, CultureQuestion, CultureQuestionStats, CultureAnswerHistory)
@@ -154,6 +155,22 @@ class ChangelogTag(str, enum.Enum):
     NEW_FEATURE = "new_feature"
     BUG_FIX = "bug_fix"
     ANNOUNCEMENT = "announcement"
+
+
+class CardErrorCardType(str, enum.Enum):
+    """Type of card being reported for errors."""
+
+    VOCABULARY = "VOCABULARY"  # Vocabulary flashcard (Card model)
+    CULTURE = "CULTURE"  # Culture question (CultureQuestion model)
+
+
+class CardErrorStatus(str, enum.Enum):
+    """Status of a card error report (admin-managed workflow)."""
+
+    PENDING = "PENDING"  # New report, awaiting admin review
+    REVIEWED = "REVIEWED"  # Admin has reviewed, no action taken
+    FIXED = "FIXED"  # Error was confirmed and fixed
+    DISMISSED = "DISMISSED"  # Report was invalid/spam
 
 
 # ============================================================================
@@ -935,6 +952,93 @@ class FeedbackVote(Base, TimestampMixin):
 
     def __repr__(self) -> str:
         return f"<FeedbackVote(user_id={self.user_id}, feedback_id={self.feedback_id}, type={self.vote_type})>"
+
+
+# ============================================================================
+# Card Error Report Models
+# ============================================================================
+
+
+class CardErrorReport(Base, TimestampMixin):
+    """User-submitted error report for vocabulary cards or culture questions.
+
+    Allows users to report errors (typos, incorrect translations, wrong answers)
+    on flashcards or culture questions. Admins can review and resolve reports.
+    """
+
+    __tablename__ = "card_error_reports"
+    __table_args__ = (
+        UniqueConstraint("user_id", "card_type", "card_id", name="uq_user_card_error_report"),
+        Index("ix_card_error_reports_card_type_status", "card_type", "status"),
+        Index("ix_card_error_reports_created_at", "created_at"),
+        Index("ix_card_error_reports_status_created_at", "status", text("created_at DESC")),
+    )
+
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True,
+        server_default=func.uuid_generate_v4(),
+    )
+
+    user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
+    card_type: Mapped[CardErrorCardType] = mapped_column(
+        nullable=False,
+        comment="Type of card: vocabulary (Card) or culture (CultureQuestion)",
+    )
+    card_id: Mapped[UUID] = mapped_column(
+        nullable=False,
+        index=True,
+        comment="UUID of the Card or CultureQuestion being reported",
+    )
+
+    description: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+        comment="User's description of the error (max 1000 chars enforced at API level)",
+    )
+
+    status: Mapped[CardErrorStatus] = mapped_column(
+        nullable=False,
+        server_default=text("'PENDING'"),
+        index=True,
+        comment="Report status: pending, reviewed, fixed, dismissed",
+    )
+
+    admin_notes: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        comment="Internal admin notes about the resolution",
+    )
+    resolved_by: Mapped[UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+        comment="Admin user who resolved the report",
+    )
+    resolved_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        comment="Timestamp when report was resolved",
+    )
+
+    user: Mapped["User"] = relationship(
+        lazy="selectin",
+        foreign_keys=[user_id],
+    )
+    resolver: Mapped["User | None"] = relationship(
+        lazy="selectin",
+        foreign_keys=[resolved_by],
+    )
+
+    def __repr__(self) -> str:
+        return (
+            f"<CardErrorReport(id={self.id}, card_type={self.card_type}, "
+            f"card_id={self.card_id}, status={self.status})>"
+        )
 
 
 # ============================================================================

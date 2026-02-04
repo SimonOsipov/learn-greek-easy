@@ -85,6 +85,18 @@ export type {
 // Export feedback constants
 export { STATUS_CONFIG, CATEGORY_CONFIG } from './feedback';
 
+// Export card error types explicitly
+export type {
+  CardType,
+  CardErrorStatus,
+  CreateCardErrorRequest,
+  CardErrorResponse,
+  CardErrorStatusConfig,
+} from './cardError';
+
+// Export card error constants
+export { CARD_ERROR_STATUS_CONFIG, CARD_TYPE_CONFIG } from './cardError';
+
 // Export notification types explicitly
 export type {
   NotificationType,

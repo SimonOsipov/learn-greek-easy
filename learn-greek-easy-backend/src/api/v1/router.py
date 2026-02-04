@@ -24,6 +24,7 @@ from fastapi import APIRouter
 
 from src.api.v1.admin import router as admin_router
 from src.api.v1.auth import router as auth_router
+from src.api.v1.card_errors import router as card_errors_router
 from src.api.v1.cards import router as card_router
 from src.api.v1.changelog import router as changelog_router
 from src.api.v1.culture import router as culture_router
@@ -107,6 +108,15 @@ v1_router.include_router(
     feedback_router,
     prefix="/feedback",
     tags=["Feedback"],
+)
+
+# =============================================================================
+# Card Error Routes
+# =============================================================================
+v1_router.include_router(
+    card_errors_router,
+    prefix="/card-errors",
+    tags=["Card Errors"],
 )
 
 # =============================================================================
