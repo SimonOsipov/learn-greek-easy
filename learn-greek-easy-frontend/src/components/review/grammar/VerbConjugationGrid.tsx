@@ -74,7 +74,7 @@ export function VerbConjugationGrid({
               <TableRow className="hover:bg-transparent">
                 <TableCell
                   className={cn(
-                    'min-w-[150px] whitespace-nowrap px-2 py-2 text-xs transition-[filter] duration-200 sm:px-3 sm:text-sm',
+                    'min-w-[150px] whitespace-nowrap px-2 py-2 text-xs text-foreground transition-[filter] duration-200 sm:px-3 sm:text-sm',
                     !isFlipped && 'select-none blur-md'
                   )}
                 >
@@ -82,7 +82,7 @@ export function VerbConjugationGrid({
                 </TableCell>
                 <TableCell
                   className={cn(
-                    'min-w-[150px] whitespace-nowrap px-2 py-2 text-xs transition-[filter] duration-200 sm:px-3 sm:text-sm',
+                    'min-w-[150px] whitespace-nowrap px-2 py-2 text-xs text-foreground transition-[filter] duration-200 sm:px-3 sm:text-sm',
                     !isFlipped && 'select-none blur-md'
                   )}
                 >
@@ -121,7 +121,7 @@ export function VerbConjugationGrid({
                     </TableCell>
                     <TableCell
                       className={cn(
-                        'min-w-[150px] whitespace-nowrap px-2 py-2 text-center text-xs transition-[filter] duration-200 sm:px-3 sm:text-sm',
+                        'min-w-[150px] whitespace-nowrap px-2 py-2 text-center text-xs text-foreground transition-[filter] duration-200 sm:px-3 sm:text-sm',
                         !isFlipped && 'select-none blur-md'
                       )}
                     >
@@ -169,7 +169,7 @@ export function VerbConjugationGrid({
                       <TableCell
                         key={tense}
                         className={cn(
-                          'min-w-[150px] whitespace-nowrap px-2 py-2 text-center text-xs transition-[filter] duration-200 sm:px-3 sm:text-sm',
+                          'min-w-[150px] whitespace-nowrap px-2 py-2 text-center text-xs text-foreground transition-[filter] duration-200 sm:px-3 sm:text-sm',
                           !isFlipped && 'select-none blur-md'
                         )}
                       >
@@ -207,7 +207,7 @@ export function VerbConjugationGrid({
               <TableRow className="hover:bg-transparent">
                 <TableCell
                   className={cn(
-                    'min-w-[150px] whitespace-nowrap px-2 py-2 text-xs transition-[filter] duration-200 sm:px-3 sm:text-sm',
+                    'min-w-[150px] whitespace-nowrap px-2 py-2 text-xs text-foreground transition-[filter] duration-200 sm:px-3 sm:text-sm',
                     !isFlipped && 'select-none blur-md'
                   )}
                 >
@@ -215,7 +215,7 @@ export function VerbConjugationGrid({
                 </TableCell>
                 <TableCell
                   className={cn(
-                    'min-w-[150px] whitespace-nowrap px-2 py-2 text-xs transition-[filter] duration-200 sm:px-3 sm:text-sm',
+                    'min-w-[150px] whitespace-nowrap px-2 py-2 text-xs text-foreground transition-[filter] duration-200 sm:px-3 sm:text-sm',
                     !isFlipped && 'select-none blur-md'
                   )}
                 >

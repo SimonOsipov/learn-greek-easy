@@ -72,7 +72,7 @@ export function CardHeader({ card, onFlip, isCardFlipped }: CardHeaderProps) {
         </div>
         {voiceLabel && <span className="text-sm text-muted-foreground">{voiceLabel}</span>}
       </div>
-      <h2 className="mt-4 text-5xl font-bold">{card.word || card.front}</h2>
+      <h2 className="mt-4 text-5xl font-bold text-foreground">{card.word || card.front}</h2>
       {card.pronunciation && (
         <p className="mt-2 text-xl italic text-muted-foreground">{card.pronunciation}</p>
       )}

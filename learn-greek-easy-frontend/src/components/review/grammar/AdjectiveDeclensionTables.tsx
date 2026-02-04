@@ -51,7 +51,7 @@ export function AdjectiveDeclensionTables({
               </div>
               <div
                 className={cn(
-                  'text-sm transition-[filter] duration-200',
+                  'text-sm text-foreground transition-[filter] duration-200',
                   !isFlipped && 'select-none blur-md'
                 )}
               >
@@ -64,7 +64,7 @@ export function AdjectiveDeclensionTables({
               </div>
               <div
                 className={cn(
-                  'text-sm transition-[filter] duration-200',
+                  'text-sm text-foreground transition-[filter] duration-200',
                   !isFlipped && 'select-none blur-md'
                 )}
               >

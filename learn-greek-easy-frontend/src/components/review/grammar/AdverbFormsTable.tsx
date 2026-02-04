@@ -36,7 +36,7 @@ export function AdverbFormsTable({
               </TableCell>
               <TableCell
                 className={cn(
-                  'px-4 py-2 transition-[filter] duration-200',
+                  'px-4 py-2 text-foreground transition-[filter] duration-200',
                   !isFlipped && 'select-none blur-md'
                 )}
               >

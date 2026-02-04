@@ -136,7 +136,7 @@ function GenderTable({ gender, data, na, t, isFlipped = true }: GenderTableProps
                 </TableCell>
                 <TableCell
                   className={cn(
-                    'px-4 py-2 text-center transition-[filter] duration-200',
+                    'px-4 py-2 text-center text-foreground transition-[filter] duration-200',
                     !isFlipped && 'select-none blur-md'
                   )}
                 >
@@ -144,7 +144,7 @@ function GenderTable({ gender, data, na, t, isFlipped = true }: GenderTableProps
                 </TableCell>
                 <TableCell
                   className={cn(
-                    'px-4 py-2 text-center transition-[filter] duration-200',
+                    'px-4 py-2 text-center text-foreground transition-[filter] duration-200',
                     !isFlipped && 'select-none blur-md'
                   )}
                 >

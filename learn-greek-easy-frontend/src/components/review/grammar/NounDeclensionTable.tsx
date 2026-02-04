@@ -58,7 +58,7 @@ export function NounDeclensionTable({ nounData, isFlipped = true }: NounDeclensi
               </TableCell>
               <TableCell
                 className={cn(
-                  'px-3 py-2 text-center transition-[filter] duration-200',
+                  'px-3 py-2 text-center text-foreground transition-[filter] duration-200',
                   !isFlipped && 'select-none blur-md'
                 )}
               >
@@ -66,7 +66,7 @@ export function NounDeclensionTable({ nounData, isFlipped = true }: NounDeclensi
               </TableCell>
               <TableCell
                 className={cn(
-                  'px-3 py-2 text-center transition-[filter] duration-200',
+                  'px-3 py-2 text-center text-foreground transition-[filter] duration-200',
                   !isFlipped && 'select-none blur-md'
                 )}
               >
