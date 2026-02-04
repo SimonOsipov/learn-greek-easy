@@ -96,7 +96,7 @@ async function navigateToCultureFeedback(page: Page): Promise<void> {
   await expect(page).toHaveURL(/\/culture\/[^/]+\/practice/, { timeout: 10000 });
 
   // Wait for MCQ options to be visible
-  const optionButton = page.locator('button').filter({ hasText: /^[A-D]\.\s/ }).first();
+  const optionButton = page.locator('button').filter({ hasText: /^[A-D]\s/ }).first();
   await expect(optionButton).toBeVisible({ timeout: 10000 });
 
   // Select an answer and submit

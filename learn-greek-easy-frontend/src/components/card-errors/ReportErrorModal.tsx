@@ -62,7 +62,10 @@ export function ReportErrorModal({ isOpen, onClose, cardId, cardType }: ReportEr
 
     // Client-side validation
     if (trimmedDescription.length < MIN_DESCRIPTION_LENGTH) {
-      toast.error(t('reportError.validation.tooShort', 'Please provide at least 10 characters'));
+      toast({
+        title: t('reportError.validation.tooShort', 'Please provide at least 10 characters'),
+        variant: 'destructive',
+      });
       return;
     }
 
@@ -79,14 +82,20 @@ export function ReportErrorModal({ isOpen, onClose, cardId, cardType }: ReportEr
       trackCardErrorReported({ cardType, cardId });
 
       // Show success and close
-      toast.success(t('reportError.success', 'Thank you for reporting this error!'));
+      toast({
+        title: t('reportError.success', 'Thank you for reporting this error!'),
+      });
       handleClose();
     } catch (error: unknown) {
       // Check for duplicate report (409 Conflict)
       if (error && typeof error === 'object' && 'status' in error && error.status === 409) {
-        toast.error(
-          t('reportError.alreadyReported', 'You have already reported an error for this card')
-        );
+        toast({
+          title: t(
+            'reportError.alreadyReported',
+            'You have already reported an error for this card'
+          ),
+          variant: 'destructive',
+        });
       } else {
         // Report to error tracking and show generic error
         reportAPIError(error, {
@@ -95,7 +104,10 @@ export function ReportErrorModal({ isOpen, onClose, cardId, cardType }: ReportEr
           cardId,
           cardType,
         });
-        toast.error(t('reportError.error', 'Failed to submit error report. Please try again.'));
+        toast({
+          title: t('reportError.error', 'Failed to submit error report. Please try again.'),
+          variant: 'destructive',
+        });
       }
     } finally {
       setIsSubmitting(false);
