@@ -20,9 +20,12 @@ import {
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/hooks/use-toast';
+import { getApiErrorMessage } from '@/lib/apiErrorUtils';
 import { useAdminChangelogStore, selectAdminChangelogIsSaving } from '@/stores/adminChangelogStore';
 import type { ChangelogEntryAdmin, ChangelogUpdateRequest } from '@/types/changelog';
 import { CHANGELOG_TAG_OPTIONS } from '@/types/changelog';
+
+import { sanitizeJsonInput } from './changelogJsonValidation';
 
 /**
  * Converts a changelog entry to editable JSON string.
@@ -104,10 +107,11 @@ export function ChangelogEditModal({ open, onOpenChange, entry }: ChangelogEditM
   }, [open, entry]);
 
   const handleSave = async () => {
-    // Parse JSON
+    // Sanitize and parse JSON
+    const sanitizedJson = sanitizeJsonInput(jsonValue);
     let parsed: unknown;
     try {
-      parsed = JSON.parse(jsonValue);
+      parsed = JSON.parse(sanitizedJson);
     } catch {
       toast({
         title: t('admin:changelog.validation.invalidJson'),
@@ -133,9 +137,11 @@ export function ChangelogEditModal({ open, onOpenChange, entry }: ChangelogEditM
         title: t('admin:changelog.edit.success'),
       });
       onOpenChange(false);
-    } catch {
+    } catch (error) {
+      const apiErrorMessage = getApiErrorMessage(error);
       toast({
         title: t('admin:changelog.edit.error'),
+        description: apiErrorMessage || undefined,
         variant: 'destructive',
       });
     }

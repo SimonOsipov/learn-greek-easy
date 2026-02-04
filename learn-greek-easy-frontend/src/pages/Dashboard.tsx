@@ -21,7 +21,7 @@ import type { Metric } from '@/types/dashboard';
  *
  * Main user dashboard showing:
  * - Welcome section with streak and due cards
- * - Key metrics (due today, streak, mastered, accuracy, time)
+ * - Key metrics (due today, streak, mastered, time)
  * - Progress charts (line, area, bar, pie)
  * - Active decks
  *
@@ -138,14 +138,6 @@ export const Dashboard: React.FC = () => {
       },
       {
         id: '4',
-        label: t('dashboard.metrics.accuracy'),
-        value: `${Math.round(summary.averageAccuracy)}%`,
-        sublabel: analyticsData.dateRange.label.toLowerCase(),
-        color: 'blue',
-        icon: '🎯',
-      },
-      {
-        id: '5',
         label: t('dashboard.metrics.totalTime'),
         value: formatStudyTime(summary.totalTimeStudied),
         sublabel: t('dashboard.metrics.allTime'),
@@ -236,8 +228,8 @@ export const Dashboard: React.FC = () => {
           {t('dashboard.progress.title')}
         </h2>
         {isLoading ? (
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
-            {[1, 2, 3, 4, 5].map((i) => (
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-4">
+            {[1, 2, 3, 4].map((i) => (
               <Skeleton key={i} className="h-24 rounded-lg" />
             ))}
           </div>
@@ -246,13 +238,9 @@ export const Dashboard: React.FC = () => {
             {t('dashboard.progress.error')}
           </div>
         ) : metrics.length > 0 ? (
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-4">
             {metrics.map((metric) => (
-              <MetricCard
-                key={metric.id}
-                {...metric}
-                tooltip={t('dashboard.metrics.tooltip', { label: metric.label.toLowerCase() })}
-              />
+              <MetricCard key={metric.id} {...metric} />
             ))}
           </div>
         ) : (

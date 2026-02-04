@@ -392,17 +392,17 @@ describe('FlashcardReviewPage - Session Initialization', () => {
       expect(screen.getByText(currentCard.word)).toBeInTheDocument();
     }
 
-    // Answer should NOT be visible initially (hidden with blur-md)
-    // The CardContent component renders content with blur-md class when not flipped
+    // Answer should NOT be visible initially (hidden with blur-md via selective blur)
+    // The CardContent component now applies blur-md to individual answer elements,
+    // not the container, for selective blur (structure visible, values hidden)
     if (currentCard?.translation) {
       const translationElements = screen.queryAllByText(currentCard.translation);
-      // Translation is in DOM but should be hidden (blur-md)
+      // Translation is in DOM but should be hidden (blur-md on the element itself)
       if (translationElements.length > 0) {
         const translationInCard = translationElements.find((el) => el.closest('[role="button"]'));
         if (translationInCard) {
-          // Check it's hidden via blur-md class on the parent container
-          const container = translationInCard.closest('[role="button"]');
-          expect(container?.className).toContain('blur-md');
+          // Check the translation text element itself has blur-md (selective blur)
+          expect(translationInCard.className).toContain('blur-md');
         }
       }
     }

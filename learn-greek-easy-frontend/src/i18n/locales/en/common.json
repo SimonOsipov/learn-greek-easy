@@ -38,8 +38,7 @@
       "days": "days",
       "wordsTotal": "words total",
       "thisPeriod": "this period",
-      "allTime": "all time",
-      "tooltip": "Click to view {{label}} details"
+      "allTime": "all time"
     },
     "activeDecks": {
       "title": "Active Decks",

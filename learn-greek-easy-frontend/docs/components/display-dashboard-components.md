@@ -21,8 +21,6 @@ interface MetricCardProps {
   color?: 'primary' | 'orange' | 'green' | 'blue' | 'muted';
   icon?: React.ReactNode;
   loading?: boolean;
-  onClick?: () => void;
-  tooltip?: string;
 }
 ```
 
@@ -33,7 +31,6 @@ interface MetricCardProps {
   value={24}
   sublabel="cards to review"
   color="primary"
-  tooltip="Cards scheduled for review today"
 />
 
 <MetricCard

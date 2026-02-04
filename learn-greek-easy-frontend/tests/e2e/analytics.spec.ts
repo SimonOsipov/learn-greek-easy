@@ -62,12 +62,11 @@ test.describe('Analytics Dashboard', () => {
     await expect(progressSection).toBeVisible({ timeout: 10000 });
 
     // Look for actual metric labels on Dashboard
-    // Dashboard has: Due Today, Current Streak, Mastered, Accuracy, Total Time
+    // Dashboard has: Due Today, Current Streak, Mastered, Total Time
     const metricPatterns = [
       /due today/i,
       /current streak/i,
       /mastered/i,
-      /accuracy/i,
       /total time/i,
       /cards to review/i,
       /words total/i,
@@ -83,7 +82,7 @@ test.describe('Analytics Dashboard', () => {
       }
     }
 
-    // At least some metrics should be visible (Dashboard has 5 metrics)
+    // At least some metrics should be visible (Dashboard has 4 metrics)
     expect(foundMetrics).toBeGreaterThan(0);
   });
 

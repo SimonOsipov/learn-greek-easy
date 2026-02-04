@@ -41,9 +41,10 @@ test.describe('Card Content Blur/Reveal', () => {
     // E2E tests use storageState from playwright config - no manual login needed
     await navigateToReview(page);
 
-    // The card content area should have blur-md class before flip
-    const cardContent = page.locator('.blur-md');
-    await expect(cardContent).toBeVisible();
+    // With selective blur, multiple elements have blur-md class (translation, table values)
+    // Check that at least one blur-md element exists
+    const blurredContent = page.locator('.blur-md');
+    await expect(blurredContent.first()).toBeVisible();
   });
 
   test('card content is revealed after flip (click)', async ({ page }) => {
@@ -281,10 +282,10 @@ test.describe('Example Translation Reveal', () => {
     // E2E tests use storageState from playwright config - no manual login needed
     await navigateToReview(page);
 
-    // Before flip, the entire card content is blurred with blur-md
-    // Example translations within are also blurred as part of the card
+    // With selective blur, multiple elements have blur-md class (translation, table values)
+    // Check that at least one blur-md element exists
     const blurredContent = page.locator('.blur-md');
-    await expect(blurredContent).toBeVisible();
+    await expect(blurredContent.first()).toBeVisible();
   });
 
   test('example translations are revealed after card flip', async ({ page }) => {
@@ -409,9 +410,10 @@ test.describe('Mobile Viewport', () => {
     // E2E tests use storageState from playwright config - no manual login needed
     await navigateToReview(page);
 
-    // Content should be blurred before flip
+    // With selective blur, multiple elements have blur-md class (translation, table values)
+    // Check that at least one blur-md element exists before flip
     const blurredContent = page.locator('.blur-md');
-    await expect(blurredContent).toBeVisible();
+    await expect(blurredContent.first()).toBeVisible();
 
     // Flip with tap/click
     await clickToFlip(page);

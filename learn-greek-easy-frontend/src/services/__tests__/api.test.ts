@@ -27,7 +27,12 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { api, _resetRefreshState_forTesting, _getRefreshPromise_forTesting } from '../api';
+import {
+  api,
+  APIRequestError,
+  _resetRefreshState_forTesting,
+  _getRefreshPromise_forTesting,
+} from '../api';
 
 // Mock the sleep function for retry tests to avoid slow tests
 vi.mock('@/lib/retryUtils', async (importOriginal) => {
@@ -1104,6 +1109,146 @@ describe('Transient Error Retry', () => {
       const fetchCalls = (fetch as ReturnType<typeof vi.fn>).mock.calls;
       const apiCalls = fetchCalls.filter((call) => !call[0].includes('/auth/refresh'));
       expect(apiCalls.length).toBeLessThanOrEqual(2);
+    });
+  });
+});
+
+describe('Error Parsing', () => {
+  const originalFetch = global.fetch;
+
+  beforeEach(() => {
+    _resetRefreshState_forTesting();
+    localStorage.clear();
+    sessionStorage.clear();
+  });
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+    vi.restoreAllMocks();
+    localStorage.clear();
+    sessionStorage.clear();
+  });
+
+  describe('nested error structure parsing', () => {
+    it('should extract nested error.details for 422 responses', async () => {
+      global.fetch = vi.fn().mockImplementation(() => {
+        return Promise.resolve({
+          ok: false,
+          status: 422,
+          statusText: 'Unprocessable Entity',
+          json: () =>
+            Promise.resolve({
+              error: {
+                message: 'Validation failed',
+                details: [
+                  {
+                    type: 'string_too_short',
+                    loc: ['body', 'title_en'],
+                    msg: 'String should have at least 1 character',
+                    input: '',
+                  },
+                ],
+              },
+            }),
+        });
+      });
+
+      const result = (await api
+        .post('/api/v1/test', {}, { skipAuth: true })
+        .catch((e) => e)) as APIRequestError;
+
+      expect(result.status).toBe(422);
+      expect(result.message).toBe('Validation failed');
+      expect(result.detail).toEqual([
+        {
+          type: 'string_too_short',
+          loc: ['body', 'title_en'],
+          msg: 'String should have at least 1 character',
+          input: '',
+        },
+      ]);
+    });
+
+    it('should extract nested error.message for non-422 errors', async () => {
+      global.fetch = vi.fn().mockImplementation(() => {
+        return Promise.resolve({
+          ok: false,
+          status: 400,
+          statusText: 'Bad Request',
+          json: () =>
+            Promise.resolve({
+              error: {
+                message: 'Custom error message from backend',
+                details: null,
+              },
+            }),
+        });
+      });
+
+      const result = (await api
+        .post('/api/v1/test', {}, { skipAuth: true })
+        .catch((e) => e)) as APIRequestError;
+
+      expect(result.status).toBe(400);
+      expect(result.message).toBe('Custom error message from backend');
+    });
+
+    it('should fall back to top-level detail when error.details is not present', async () => {
+      global.fetch = vi.fn().mockImplementation(() => {
+        return Promise.resolve({
+          ok: false,
+          status: 400,
+          statusText: 'Bad Request',
+          json: () =>
+            Promise.resolve({
+              detail: 'Top level detail message',
+            }),
+        });
+      });
+
+      const result = (await api
+        .post('/api/v1/test', {}, { skipAuth: true })
+        .catch((e) => e)) as APIRequestError;
+
+      expect(result.status).toBe(400);
+      expect(result.message).toBe('Top level detail message');
+      expect(result.detail).toBe('Top level detail message');
+    });
+
+    it('should handle empty error response gracefully', async () => {
+      global.fetch = vi.fn().mockImplementation(() => {
+        return Promise.resolve({
+          ok: false,
+          status: 500,
+          statusText: 'Internal Server Error',
+          json: () => Promise.resolve({}),
+        });
+      });
+
+      const result = (await api
+        .post('/api/v1/test', {}, { skipAuth: true })
+        .catch((e) => e)) as APIRequestError;
+
+      expect(result.status).toBe(500);
+      expect(result.message).toBe('Request failed with status 500');
+    });
+
+    it('should handle JSON parse failure gracefully', async () => {
+      global.fetch = vi.fn().mockImplementation(() => {
+        return Promise.resolve({
+          ok: false,
+          status: 500,
+          statusText: 'Internal Server Error',
+          json: () => Promise.reject(new Error('Invalid JSON')),
+        });
+      });
+
+      const result = (await api
+        .post('/api/v1/test', {}, { skipAuth: true })
+        .catch((e) => e)) as APIRequestError;
+
+      expect(result.status).toBe(500);
+      expect(result.message).toBe('Request failed with status 500');
     });
   });
 });

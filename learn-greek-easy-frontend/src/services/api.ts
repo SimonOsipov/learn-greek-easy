@@ -340,11 +340,16 @@ async function request<T>(
 
           if (!retryResponse.ok) {
             const errorData = await retryResponse.json().catch(() => ({}));
+            const detail = errorData.error?.details || errorData.detail;
+            const message =
+              errorData.error?.message ||
+              errorData.detail ||
+              `Request failed with status ${retryResponse.status}`;
             throw new APIRequestError({
               status: retryResponse.status,
               statusText: retryResponse.statusText,
-              message: errorData.detail || `Request failed with status ${retryResponse.status}`,
-              detail: errorData.detail,
+              message,
+              detail,
             });
           }
 
@@ -369,11 +374,16 @@ async function request<T>(
       // Handle other errors (non-retryable)
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
+        const detail = errorData.error?.details || errorData.detail;
+        const message =
+          errorData.error?.message ||
+          errorData.detail ||
+          `Request failed with status ${response.status}`;
         throw new APIRequestError({
           status: response.status,
           statusText: response.statusText,
-          message: errorData.detail || `Request failed with status ${response.status}`,
-          detail: errorData.detail,
+          message,
+          detail,
         });
       }
 

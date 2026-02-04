@@ -95,10 +95,16 @@ export function CardContent({ card, isFlipped }: CardContentProps) {
   const renderGrammarTable = () => {
     switch (partOfSpeech) {
       case 'noun':
-        return nounData ? <NounDeclensionTable nounData={nounData} /> : null;
+        return nounData ? <NounDeclensionTable nounData={nounData} isFlipped={isFlipped} /> : null;
       case 'verb':
         return verbData ? (
-          <TenseTabs key={card.id} verbData={verbData} cardId={card.id} sessionId={sessionId} />
+          <TenseTabs
+            key={card.id}
+            verbData={verbData}
+            cardId={card.id}
+            sessionId={sessionId}
+            isFlipped={isFlipped}
+          />
         ) : null;
       case 'adjective':
         return adjectiveData ? (
@@ -107,11 +113,16 @@ export function CardContent({ card, isFlipped }: CardContentProps) {
             adjectiveData={adjectiveData}
             cardId={card.id}
             sessionId={sessionId}
+            isFlipped={isFlipped}
           />
         ) : null;
       case 'adverb':
         return adverbData ? (
-          <AdverbFormsTable adverbData={adverbData} positiveForm={card.word || card.front} />
+          <AdverbFormsTable
+            adverbData={adverbData}
+            positiveForm={card.word || card.front}
+            isFlipped={isFlipped}
+          />
         ) : null;
       default:
         return null;
@@ -136,15 +147,21 @@ export function CardContent({ card, isFlipped }: CardContentProps) {
           : undefined
       }
       aria-label={!isFlipped ? t('session.clickToReveal') : undefined}
-      className={cn(
-        'flex flex-col gap-6 transition-[filter] duration-200',
-        !isFlipped && 'cursor-pointer select-none blur-md'
-      )}
+      className={cn('flex flex-col gap-6', !isFlipped && 'cursor-pointer select-none')}
     >
       {/* Translation */}
       <div className="flex flex-col gap-2">
         <SectionHeader title={t('grammar.sections.translation')} />
-        {translation && <p className="text-base text-foreground">{translation}</p>}
+        {translation && (
+          <p
+            className={cn(
+              'text-base text-foreground transition-[filter] duration-200',
+              !isFlipped && 'select-none blur-md'
+            )}
+          >
+            {translation}
+          </p>
+        )}
       </div>
 
       {/* Grammar table */}

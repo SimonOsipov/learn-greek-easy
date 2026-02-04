@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 import type { AdjectiveData } from '@/types/grammar';
 
 import { GenderTabs } from './GenderTabs';
@@ -11,12 +12,15 @@ export interface AdjectiveDeclensionTablesProps {
   cardId?: string;
   /** Optional session ID for analytics tracking */
   sessionId?: string;
+  /** Whether the card is flipped (controls blur state) */
+  isFlipped?: boolean;
 }
 
 export function AdjectiveDeclensionTables({
   adjectiveData,
   cardId,
   sessionId,
+  isFlipped = true,
 }: AdjectiveDeclensionTablesProps) {
   const { t } = useTranslation('review');
 
@@ -25,7 +29,12 @@ export function AdjectiveDeclensionTables({
   return (
     <div className="space-y-4">
       {/* Gender declension tabs */}
-      <GenderTabs adjectiveData={adjectiveData} cardId={cardId} sessionId={sessionId} />
+      <GenderTabs
+        adjectiveData={adjectiveData}
+        cardId={cardId}
+        sessionId={sessionId}
+        isFlipped={isFlipped}
+      />
 
       {/* Comparison section */}
       <Card className="overflow-hidden">
@@ -40,13 +49,27 @@ export function AdjectiveDeclensionTables({
               <div className="mb-1 text-xs font-medium text-muted-foreground">
                 {t('grammar.adjectiveDeclension.comparison.comparative')}
               </div>
-              <div className="text-sm">{adjectiveData.comparative || na}</div>
+              <div
+                className={cn(
+                  'text-sm transition-[filter] duration-200',
+                  !isFlipped && 'select-none blur-md'
+                )}
+              >
+                {adjectiveData.comparative || na}
+              </div>
             </div>
             <div className="p-4">
               <div className="mb-1 text-xs font-medium text-muted-foreground">
                 {t('grammar.adjectiveDeclension.comparison.superlative')}
               </div>
-              <div className="text-sm">{adjectiveData.superlative || na}</div>
+              <div
+                className={cn(
+                  'text-sm transition-[filter] duration-200',
+                  !isFlipped && 'select-none blur-md'
+                )}
+              >
+                {adjectiveData.superlative || na}
+              </div>
             </div>
           </div>
         </CardContent>

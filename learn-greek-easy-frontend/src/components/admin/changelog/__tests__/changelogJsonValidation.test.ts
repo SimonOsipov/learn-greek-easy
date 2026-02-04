@@ -9,6 +9,7 @@ import { describe, it, expect } from 'vitest';
 
 import {
   validateChangelogJson,
+  sanitizeJsonInput,
   JSON_PLACEHOLDER,
   REQUIRED_FIELDS,
   VALID_TAGS,
@@ -412,6 +413,88 @@ describe('changelogJsonValidation', () => {
 
     it('VALID_TAGS is immutable (readonly)', () => {
       expect(VALID_TAGS.length).toBe(3);
+    });
+  });
+
+  describe('sanitizeJsonInput', () => {
+    it('should pass through valid JSON unchanged', () => {
+      const input = '{"key": "value"}';
+      expect(sanitizeJsonInput(input)).toBe(input);
+    });
+
+    it('should normalize Windows line endings (\\r\\n)', () => {
+      const input = '{\r\n  "key": "value"\r\n}';
+      const expected = '{\n  "key": "value"\n}';
+      expect(sanitizeJsonInput(input)).toBe(expected);
+    });
+
+    it('should escape literal newlines in string values', () => {
+      const input = '{"content": "line1\nline2"}';
+      const expected = '{"content": "line1\\nline2"}';
+      expect(sanitizeJsonInput(input)).toBe(expected);
+    });
+
+    it('should preserve structural newlines between JSON elements', () => {
+      const input = '{\n  "a": "1",\n  "b": "2"\n}';
+      expect(sanitizeJsonInput(input)).toBe(input);
+    });
+
+    it('should handle strings with escaped quotes', () => {
+      const input = '{"msg": "say \\"hello\\""}';
+      expect(sanitizeJsonInput(input)).toBe(input);
+    });
+
+    it('should handle multiple strings with newlines', () => {
+      const input = '{"a": "x\ny", "b": "p\nq"}';
+      const expected = '{"a": "x\\ny", "b": "p\\nq"}';
+      expect(sanitizeJsonInput(input)).toBe(expected);
+    });
+
+    it('should handle empty strings', () => {
+      const input = '{"empty": ""}';
+      expect(sanitizeJsonInput(input)).toBe(input);
+    });
+
+    it('should handle strings with existing escape sequences', () => {
+      const input = '{"escaped": "line1\\nline2"}';
+      expect(sanitizeJsonInput(input)).toBe(input);
+    });
+
+    it('should handle mixed Windows and Unix line endings', () => {
+      const input = '{\r\n  "content": "line1\r\nline2"\r\n}';
+      const expected = '{\n  "content": "line1\\nline2"\n}';
+      expect(sanitizeJsonInput(input)).toBe(expected);
+    });
+  });
+
+  describe('validateChangelogJson with sanitization', () => {
+    it('should accept JSON with Windows line endings', () => {
+      const input =
+        '{\r\n  "tag": "new_feature",\r\n  "title_en": "Test",\r\n  "title_ru": "Тест",\r\n  "content_en": "Content",\r\n  "content_ru": "Содержимое"\r\n}';
+      const result = validateChangelogJson(input);
+      expect(result.valid).toBe(true);
+    });
+
+    it('should accept JSON with literal newlines in content', () => {
+      const input = `{
+        "tag": "new_feature",
+        "title_en": "Test",
+        "title_ru": "Тест",
+        "content_en": "Line 1\nLine 2",
+        "content_ru": "Строка 1\nСтрока 2"
+      }`;
+      const result = validateChangelogJson(input);
+      expect(result.valid).toBe(true);
+      if (result.valid) {
+        expect(result.data.content_en).toContain('\n');
+      }
+    });
+
+    it('should handle complex JSON with multiple newline issues', () => {
+      const input =
+        '{\r\n  "tag": "bug_fix",\r\n  "title_en": "Fix",\r\n  "title_ru": "Исправление",\r\n  "content_en": "Fixed:\n- Bug 1\n- Bug 2",\r\n  "content_ru": "Исправлено:\n- Ошибка 1\n- Ошибка 2"\r\n}';
+      const result = validateChangelogJson(input);
+      expect(result.valid).toBe(true);
     });
   });
 });
