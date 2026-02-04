@@ -85,8 +85,8 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: learn_greek_easy
       POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=en_US.UTF-8"
-    ports:
-      - "5433:5432"
+    # No port exposure - only accessible via Docker network (most secure)
+    # If you need direct access: ports: ["127.0.0.1:5433:5432"]
     volumes:
       - postgres_data_dev:/var/lib/postgresql/data
     networks:
@@ -104,8 +104,8 @@ services:
     image: redis:7-alpine
     container_name: learn-greek-redis-dev
     command: redis-server --appendonly yes --maxmemory 128mb --maxmemory-policy allkeys-lru
-    ports:
-      - "6379:6379"
+    # No port exposure - only accessible via Docker network (most secure)
+    # If you need direct access: ports: ["127.0.0.1:6379:6379"]
     volumes:
       - redis_data_dev:/data
     networks:
