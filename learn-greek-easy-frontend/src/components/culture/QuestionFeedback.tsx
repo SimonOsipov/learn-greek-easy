@@ -1,9 +1,10 @@
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 import { motion } from 'framer-motion';
 import { CheckCircle, XCircle, ArrowRight, BarChart3, ExternalLink } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import { ReportErrorButton, ReportErrorModal } from '@/components/card-errors';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { trackNewsSourceLinkClicked } from '@/lib/analytics';
@@ -98,8 +99,9 @@ export const QuestionFeedback: React.FC<QuestionFeedbackProps> = ({
   sourceArticleUrl,
   cardId,
 }) => {
-  const { t } = useTranslation('culture');
+  const { t } = useTranslation(['culture', 'review']);
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
 
   // Check for reduced motion preference
   const prefersReducedMotion = useMemo(() => {
@@ -224,6 +226,16 @@ export const QuestionFeedback: React.FC<QuestionFeedbackProps> = ({
             </a>
           )}
 
+          {/* Report Error Button - only show if cardId is available */}
+          {cardId && (
+            <div className="mt-4 flex justify-start">
+              <ReportErrorButton
+                onClick={() => setIsReportModalOpen(true)}
+                data-testid="culture-report-error-button"
+              />
+            </div>
+          )}
+
           {/* Action button */}
           <div className="mt-6">
             <Button
@@ -252,6 +264,16 @@ export const QuestionFeedback: React.FC<QuestionFeedbackProps> = ({
           </div>
         </Card>
       </motion.div>
+
+      {/* Report Error Modal - only render if cardId is available */}
+      {cardId && (
+        <ReportErrorModal
+          isOpen={isReportModalOpen}
+          onClose={() => setIsReportModalOpen(false)}
+          cardId={cardId}
+          cardType="CULTURE"
+        />
+      )}
     </>
   );
 };
