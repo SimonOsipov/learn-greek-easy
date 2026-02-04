@@ -227,6 +227,18 @@ class DeckAlreadyStartedException(BaseAPIException):
         )
 
 
+class ConflictException(BaseAPIException):
+    """Resource conflict - duplicate or conflicting state."""
+
+    def __init__(self, resource: str = "Resource", detail: Optional[str] = None) -> None:
+        detail = detail or f"{resource} already exists"
+        super().__init__(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=detail,
+            error_code="CONFLICT",
+        )
+
+
 # ============================================================================
 # Rate Limiting
 # ============================================================================
