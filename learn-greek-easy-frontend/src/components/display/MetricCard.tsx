@@ -2,13 +2,10 @@ import React from 'react';
 
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import type { Metric } from '@/types/dashboard';
 
 interface MetricCardProps extends Metric {
   loading?: boolean;
-  onClick?: () => void;
-  tooltip?: string;
 }
 
 const colorClasses = {
@@ -20,7 +17,7 @@ const colorClasses = {
 };
 
 export const MetricCard = React.memo<MetricCardProps>(
-  ({ label, value, sublabel, color = 'primary', icon, loading, onClick, tooltip }) => {
+  ({ label, value, sublabel, color = 'primary', icon, loading }) => {
     if (loading) {
       return (
         <Card className="p-6">
@@ -33,11 +30,8 @@ export const MetricCard = React.memo<MetricCardProps>(
       );
     }
 
-    const content = (
-      <Card
-        className="cursor-pointer transition-all hover:-translate-y-0.5 hover:shadow-md"
-        onClick={onClick}
-      >
+    return (
+      <Card className="transition-all hover:-translate-y-0.5 hover:shadow-md">
         <CardContent className="p-6">
           <div className="mb-2 flex items-center justify-between">
             <span className="text-sm text-muted-foreground">{label}</span>
@@ -48,21 +42,6 @@ export const MetricCard = React.memo<MetricCardProps>(
         </CardContent>
       </Card>
     );
-
-    if (tooltip) {
-      return (
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>{content}</TooltipTrigger>
-            <TooltipContent>
-              <p>{tooltip}</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      );
-    }
-
-    return content;
   }
 );
 

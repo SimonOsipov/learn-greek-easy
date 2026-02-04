@@ -248,11 +248,7 @@ export const Dashboard: React.FC = () => {
         ) : metrics.length > 0 ? (
           <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
             {metrics.map((metric) => (
-              <MetricCard
-                key={metric.id}
-                {...metric}
-                tooltip={t('dashboard.metrics.tooltip', { label: metric.label.toLowerCase() })}
-              />
+              <MetricCard key={metric.id} {...metric} />
             ))}
           </div>
         ) : (
