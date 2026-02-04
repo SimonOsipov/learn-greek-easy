@@ -53,6 +53,28 @@ export const JSON_PLACEHOLDER = `{
 }`;
 
 /**
+ * Sanitizes JSON input to handle common copy-paste issues.
+ *
+ * Handles:
+ * 1. Windows line endings (\r\n) -> Unix (\n)
+ * 2. Literal newlines in string values -> \n escape sequences
+ *
+ * @param input - Raw JSON string that may have copy-paste artifacts
+ * @returns Sanitized JSON string safe for JSON.parse()
+ */
+export function sanitizeJsonInput(input: string): string {
+  // Step 1: Normalize line endings (Windows -> Unix)
+  let sanitized = input.replace(/\r\n/g, '\n');
+
+  // Step 2: Replace literal newlines inside string values with \n escape
+  // This regex finds content between quotes (handling escaped quotes)
+  // and replaces any literal newlines within those strings
+  sanitized = sanitized.replace(/"(?:[^"\\]|\\.)*"/g, (match) => match.replace(/\n/g, '\\n'));
+
+  return sanitized;
+}
+
+/**
  * Validates changelog JSON input string.
  *
  * Validation order:
@@ -64,10 +86,13 @@ export const JSON_PLACEHOLDER = `{
  * @returns ValidationResult with either validated data or error details
  */
 export function validateChangelogJson(json: string): ValidationResult {
+  // Sanitize input before parsing
+  const sanitizedJson = sanitizeJsonInput(json);
+
   // Step 1: Parse JSON
   let parsed: unknown;
   try {
-    parsed = JSON.parse(json);
+    parsed = JSON.parse(sanitizedJson);
   } catch {
     return {
       valid: false,

@@ -25,6 +25,8 @@ import { useAdminChangelogStore, selectAdminChangelogIsSaving } from '@/stores/a
 import type { ChangelogEntryAdmin, ChangelogUpdateRequest } from '@/types/changelog';
 import { CHANGELOG_TAG_OPTIONS } from '@/types/changelog';
 
+import { sanitizeJsonInput } from './changelogJsonValidation';
+
 /**
  * Converts a changelog entry to editable JSON string.
  * Only includes the fields that can be edited (excludes id, timestamps).
@@ -105,10 +107,11 @@ export function ChangelogEditModal({ open, onOpenChange, entry }: ChangelogEditM
   }, [open, entry]);
 
   const handleSave = async () => {
-    // Parse JSON
+    // Sanitize and parse JSON
+    const sanitizedJson = sanitizeJsonInput(jsonValue);
     let parsed: unknown;
     try {
-      parsed = JSON.parse(jsonValue);
+      parsed = JSON.parse(sanitizedJson);
     } catch {
       toast({
         title: t('admin:changelog.validation.invalidJson'),

@@ -18,6 +18,8 @@ export interface TenseTabsProps {
   cardId?: string;
   /** Optional session ID for analytics tracking */
   sessionId?: string;
+  /** Whether the card is flipped (controls blur state) */
+  isFlipped?: boolean;
 }
 
 function tenseHasData(verbData: VerbData, tense: VerbTense): boolean {
@@ -32,7 +34,7 @@ function tenseHasData(verbData: VerbData, tense: VerbTense): boolean {
   });
 }
 
-export function TenseTabs({ verbData, cardId, sessionId }: TenseTabsProps) {
+export function TenseTabs({ verbData, cardId, sessionId, isFlipped = true }: TenseTabsProps) {
   const { t } = useTranslation('review');
   const [selectedTense, setSelectedTense] = useState<VerbTense>('present');
   const [selectedVoice, setSelectedVoice] = useState<VerbVoice>(verbData.voice);
@@ -86,7 +88,7 @@ export function TenseTabs({ verbData, cardId, sessionId }: TenseTabsProps) {
         </div>
         {VERB_TENSES.map((tense) => (
           <TabsContent key={tense} value={tense} className="mt-4">
-            <VerbConjugationGrid verbData={verbData} selectedTense={tense} />
+            <VerbConjugationGrid verbData={verbData} selectedTense={tense} isFlipped={isFlipped} />
           </TabsContent>
         ))}
       </Tabs>

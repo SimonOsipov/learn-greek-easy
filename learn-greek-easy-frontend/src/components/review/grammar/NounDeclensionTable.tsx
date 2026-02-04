@@ -8,13 +8,15 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { cn } from '@/lib/utils';
 import type { NounData } from '@/types/grammar';
 
 export interface NounDeclensionTableProps {
   nounData: NounData;
+  isFlipped?: boolean;
 }
 
-export function NounDeclensionTable({ nounData }: NounDeclensionTableProps) {
+export function NounDeclensionTable({ nounData, isFlipped = true }: NounDeclensionTableProps) {
   const { t } = useTranslation('review');
 
   const cases = [
@@ -54,8 +56,22 @@ export function NounDeclensionTable({ nounData }: NounDeclensionTableProps) {
               <TableCell className="bg-muted/50 px-3 py-2 font-medium text-muted-foreground">
                 {t(`grammar.nounDeclension.cases.${key}`)}
               </TableCell>
-              <TableCell className="px-3 py-2 text-center">{singular || na}</TableCell>
-              <TableCell className="px-3 py-2 text-center">{plural || na}</TableCell>
+              <TableCell
+                className={cn(
+                  'px-3 py-2 text-center transition-[filter] duration-200',
+                  !isFlipped && 'select-none blur-md'
+                )}
+              >
+                {singular || na}
+              </TableCell>
+              <TableCell
+                className={cn(
+                  'px-3 py-2 text-center transition-[filter] duration-200',
+                  !isFlipped && 'select-none blur-md'
+                )}
+              >
+                {plural || na}
+              </TableCell>
             </TableRow>
           ))}
         </TableBody>

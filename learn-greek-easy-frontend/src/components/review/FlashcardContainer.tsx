@@ -47,8 +47,7 @@ export function FlashcardContainer({ card }: FlashcardContainerProps) {
         data-testid="flashcard"
         className={cn(
           'mx-auto max-w-4xl overflow-hidden rounded-2xl bg-card shadow-2xl',
-          'flex flex-col transition-transform duration-300',
-          'hover:-translate-y-1'
+          'flex flex-col'
         )}
       >
         {/* Card Header - Greek word with part of speech badge */}

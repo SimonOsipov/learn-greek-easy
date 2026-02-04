@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { trackGrammarGenderChanged } from '@/lib/analytics';
+import { cn } from '@/lib/utils';
 import type { AdjectiveData } from '@/types/grammar';
 
 const GENDERS = ['masculine', 'feminine', 'neuter'] as const;
@@ -24,6 +25,8 @@ export interface GenderTabsProps {
   cardId?: string;
   /** Optional session ID for analytics tracking */
   sessionId?: string;
+  /** Whether the card is flipped (controls blur state) */
+  isFlipped?: boolean;
 }
 
 interface GenderTableData {
@@ -99,9 +102,10 @@ interface GenderTableProps {
   data: GenderTableData;
   na: string;
   t: (key: string) => string;
+  isFlipped?: boolean;
 }
 
-function GenderTable({ gender, data, na, t }: GenderTableProps) {
+function GenderTable({ gender, data, na, t, isFlipped = true }: GenderTableProps) {
   const cases = ['nominative', 'genitive', 'accusative', 'vocative'] as const;
 
   return (
@@ -130,10 +134,20 @@ function GenderTable({ gender, data, na, t }: GenderTableProps) {
                 <TableCell className="bg-muted/50 px-4 py-2 font-medium text-muted-foreground">
                   {t(`grammar.nounDeclension.cases.${caseKey}`)}
                 </TableCell>
-                <TableCell className="px-4 py-2 text-center">
+                <TableCell
+                  className={cn(
+                    'px-4 py-2 text-center transition-[filter] duration-200',
+                    !isFlipped && 'select-none blur-md'
+                  )}
+                >
                   {data[caseKey].singular || na}
                 </TableCell>
-                <TableCell className="px-4 py-2 text-center">
+                <TableCell
+                  className={cn(
+                    'px-4 py-2 text-center transition-[filter] duration-200',
+                    !isFlipped && 'select-none blur-md'
+                  )}
+                >
                   {data[caseKey].plural || na}
                 </TableCell>
               </TableRow>
@@ -145,7 +159,12 @@ function GenderTable({ gender, data, na, t }: GenderTableProps) {
   );
 }
 
-export function GenderTabs({ adjectiveData, cardId, sessionId }: GenderTabsProps) {
+export function GenderTabs({
+  adjectiveData,
+  cardId,
+  sessionId,
+  isFlipped = true,
+}: GenderTabsProps) {
   const { t } = useTranslation('review');
   const [selectedGender, setSelectedGender] = useState<Gender>('masculine');
 
@@ -181,7 +200,13 @@ export function GenderTabs({ adjectiveData, cardId, sessionId }: GenderTabsProps
       </div>
       {GENDERS.map((gender) => (
         <TabsContent key={gender} value={gender} className="mt-4">
-          <GenderTable gender={gender} data={getGenderData(adjectiveData, gender)} na={na} t={t} />
+          <GenderTable
+            gender={gender}
+            data={getGenderData(adjectiveData, gender)}
+            na={na}
+            t={t}
+            isFlipped={isFlipped}
+          />
         </TabsContent>
       ))}
     </Tabs>

@@ -10,6 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { cn } from '@/lib/utils';
 import type { VerbData } from '@/types/grammar';
 
 const TENSES = ['present', 'imperfect', 'past', 'future', 'perfect'] as const;
@@ -21,6 +22,8 @@ type Person = (typeof PERSONS)[number];
 export interface VerbConjugationGridProps {
   verbData: VerbData;
   selectedTense?: 'present' | 'imperfect' | 'past' | 'future' | 'perfect' | 'imperative';
+  /** Whether the card is flipped (controls blur state) */
+  isFlipped?: boolean;
 }
 
 function getConjugation(verbData: VerbData, tense: Tense, person: Person): string {
@@ -29,7 +32,11 @@ function getConjugation(verbData: VerbData, tense: Tense, person: Person): strin
   return typeof value === 'string' ? value : '';
 }
 
-export function VerbConjugationGrid({ verbData, selectedTense }: VerbConjugationGridProps) {
+export function VerbConjugationGrid({
+  verbData,
+  selectedTense,
+  isFlipped = true,
+}: VerbConjugationGridProps) {
   const { t } = useTranslation('review');
   const na = t('grammar.verbConjugation.notAvailable');
 
@@ -65,10 +72,20 @@ export function VerbConjugationGrid({ verbData, selectedTense }: VerbConjugation
             </TableHeader>
             <TableBody>
               <TableRow className="hover:bg-transparent">
-                <TableCell className="min-w-[150px] whitespace-nowrap px-2 py-2 text-xs sm:px-3 sm:text-sm">
+                <TableCell
+                  className={cn(
+                    'min-w-[150px] whitespace-nowrap px-2 py-2 text-xs transition-[filter] duration-200 sm:px-3 sm:text-sm',
+                    !isFlipped && 'select-none blur-md'
+                  )}
+                >
                   {verbData.imperative_2s || na}
                 </TableCell>
-                <TableCell className="min-w-[150px] whitespace-nowrap px-2 py-2 text-xs sm:px-3 sm:text-sm">
+                <TableCell
+                  className={cn(
+                    'min-w-[150px] whitespace-nowrap px-2 py-2 text-xs transition-[filter] duration-200 sm:px-3 sm:text-sm',
+                    !isFlipped && 'select-none blur-md'
+                  )}
+                >
                   {verbData.imperative_2p || na}
                 </TableCell>
               </TableRow>
@@ -102,7 +119,12 @@ export function VerbConjugationGrid({ verbData, selectedTense }: VerbConjugation
                     <TableCell className="whitespace-nowrap bg-muted/50 px-2 py-2 text-xs font-bold text-muted-foreground sm:px-3 sm:text-sm">
                       {personLabels[person]}
                     </TableCell>
-                    <TableCell className="min-w-[150px] whitespace-nowrap px-2 py-2 text-center text-xs sm:px-3 sm:text-sm">
+                    <TableCell
+                      className={cn(
+                        'min-w-[150px] whitespace-nowrap px-2 py-2 text-center text-xs transition-[filter] duration-200 sm:px-3 sm:text-sm',
+                        !isFlipped && 'select-none blur-md'
+                      )}
+                    >
                       {value || na}
                     </TableCell>
                   </TableRow>
@@ -146,7 +168,10 @@ export function VerbConjugationGrid({ verbData, selectedTense }: VerbConjugation
                     return (
                       <TableCell
                         key={tense}
-                        className="min-w-[150px] whitespace-nowrap px-2 py-2 text-center text-xs sm:px-3 sm:text-sm"
+                        className={cn(
+                          'min-w-[150px] whitespace-nowrap px-2 py-2 text-center text-xs transition-[filter] duration-200 sm:px-3 sm:text-sm',
+                          !isFlipped && 'select-none blur-md'
+                        )}
                       >
                         {value || na}
                       </TableCell>
@@ -180,10 +205,20 @@ export function VerbConjugationGrid({ verbData, selectedTense }: VerbConjugation
             </TableHeader>
             <TableBody>
               <TableRow className="hover:bg-transparent">
-                <TableCell className="min-w-[150px] whitespace-nowrap px-2 py-2 text-xs sm:px-3 sm:text-sm">
+                <TableCell
+                  className={cn(
+                    'min-w-[150px] whitespace-nowrap px-2 py-2 text-xs transition-[filter] duration-200 sm:px-3 sm:text-sm',
+                    !isFlipped && 'select-none blur-md'
+                  )}
+                >
                   {verbData.imperative_2s || na}
                 </TableCell>
-                <TableCell className="min-w-[150px] whitespace-nowrap px-2 py-2 text-xs sm:px-3 sm:text-sm">
+                <TableCell
+                  className={cn(
+                    'min-w-[150px] whitespace-nowrap px-2 py-2 text-xs transition-[filter] duration-200 sm:px-3 sm:text-sm',
+                    !isFlipped && 'select-none blur-md'
+                  )}
+                >
                   {verbData.imperative_2p || na}
                 </TableCell>
               </TableRow>
