@@ -176,7 +176,8 @@
     "announcements": "Announcements",
     "feedback": "Feedback",
     "changelog": "Changelog",
-    "bulkUploads": "Bulk Uploads"
+    "bulkUploads": "Bulk Uploads",
+    "cardErrors": "Card Errors"
   },
   "announcements": {
     "create": {
@@ -324,6 +325,58 @@
     "states": {
       "noFeedback": "No feedback submitted yet",
       "noFilteredResults": "No feedback matches the selected filters"
+    }
+  },
+  "cardErrors": {
+    "sectionTitle": "Card Error Reports",
+    "sectionDescription": "Review and respond to card error reports from users",
+    "anonymousUser": "Anonymous User",
+    "respond": "Respond",
+    "editResponse": "Edit Response",
+    "adminNotesLabel": "Admin Notes",
+    "statuses": {
+      "pending": "Pending",
+      "reviewed": "Reviewed",
+      "fixed": "Fixed",
+      "dismissed": "Dismissed"
+    },
+    "cardTypes": {
+      "vocabulary": "Vocabulary Card",
+      "culture": "Culture Question"
+    },
+    "filters": {
+      "statusPlaceholder": "Filter by status",
+      "typePlaceholder": "Filter by card type",
+      "allStatuses": "All Statuses",
+      "allTypes": "All Types",
+      "clear": "Clear Filters"
+    },
+    "errors": {
+      "loadingTitle": "Error Loading Reports"
+    },
+    "states": {
+      "noErrors": "No error reports submitted yet",
+      "noFilteredResults": "No reports match the selected filters"
+    },
+    "detail": {
+      "title": "Error Report Details",
+      "reportedOn": "Reported on {{date}}",
+      "reportedBy": "Reported by",
+      "anonymousUser": "Anonymous User",
+      "userDescription": "User Description",
+      "viewCard": "View Card",
+      "cardIdCopied": "Card ID Copied",
+      "cardIdCopiedMessage": "Card ID has been copied to clipboard",
+      "adminActions": "Admin Actions",
+      "statusLabel": "Status",
+      "selectStatus": "Select status",
+      "adminNotesLabel": "Admin Notes",
+      "adminNotesPlaceholder": "Add notes about the resolution...",
+      "resolvedAt": "Resolved on {{date}}",
+      "updateSuccess": "Report Updated",
+      "updateSuccessMessage": "The error report has been updated successfully",
+      "updateError": "Update Failed",
+      "updateErrorMessage": "Failed to update the error report"
     }
   },
   "cardCreate": {

@@ -8,6 +8,7 @@ business rules validation, and domain logic.
 from src.services.achievement_service import AchievementService
 from src.services.announcement_service import AnnouncementService
 from src.services.auth_service import AuthService
+from src.services.card_error_admin_service import CardErrorAdminService
 from src.services.card_error_service import CardErrorService
 from src.services.changelog_service import ChangelogService
 from src.services.culture_deck_service import CultureDeckService
@@ -28,6 +29,7 @@ __all__ = [
     "AchievementService",
     "AnnouncementService",
     "AuthService",
+    "CardErrorAdminService",
     "CardErrorService",
     "ChangelogService",
     "CultureDeckService",

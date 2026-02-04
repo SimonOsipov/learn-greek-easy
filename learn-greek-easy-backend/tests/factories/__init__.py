@@ -64,6 +64,9 @@ from tests.factories.auth import RefreshTokenFactory, UserFactory, UserSettingsF
 # Base factory
 from tests.factories.base import BaseFactory, unique_email, unique_token, utc_now
 
+# Card error factories
+from tests.factories.card_error import CardErrorReportFactory
+
 # Content factories
 from tests.factories.content import CardFactory, DeckFactory
 
@@ -119,6 +122,8 @@ __all__ = [
     "UserFactory",
     "UserSettingsFactory",
     "RefreshTokenFactory",
+    # Card Errors
+    "CardErrorReportFactory",
     # Content
     "DeckFactory",
     "CardFactory",

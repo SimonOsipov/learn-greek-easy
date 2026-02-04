@@ -92,6 +92,12 @@ export type {
   CreateCardErrorRequest,
   CardErrorResponse,
   CardErrorStatusConfig,
+  // Admin card error types
+  AdminCardErrorUpdateRequest,
+  AdminCardErrorListParams,
+  ReporterBrief,
+  AdminCardErrorResponse,
+  AdminCardErrorListResponse,
 } from './cardError';
 
 // Export card error constants

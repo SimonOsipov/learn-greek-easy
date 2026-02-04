@@ -22,6 +22,8 @@ from src.core.logging import get_logger
 from src.db.dependencies import get_db
 from src.db.models import (
     Card,
+    CardErrorCardType,
+    CardErrorStatus,
     CultureDeck,
     CultureQuestion,
     Deck,
@@ -49,6 +51,12 @@ from src.schemas.announcement import (
     AnnouncementWithCreatorResponse,
     CreatorBriefResponse,
 )
+from src.schemas.card_error import (
+    AdminCardErrorReportListResponse,
+    AdminCardErrorReportResponse,
+    AdminCardErrorReportUpdate,
+    ReporterBriefResponse,
+)
 from src.schemas.changelog import (
     ChangelogAdminListResponse,
     ChangelogEntryAdminResponse,
@@ -68,6 +76,7 @@ from src.schemas.news_item import (
     NewsItemWithQuestionCreate,
 )
 from src.services.announcement_service import AnnouncementService
+from src.services.card_error_admin_service import CardErrorAdminService
 from src.services.changelog_service import ChangelogService
 from src.services.feedback_admin_service import FeedbackAdminService
 from src.services.news_item_service import NewsItemService
@@ -1402,3 +1411,301 @@ async def admin_delete_changelog(
     """Delete a changelog entry permanently."""
     service = ChangelogService(db)
     await service.delete(entry_id)
+
+
+# ============================================================================
+# Card Error Admin Endpoints
+# ============================================================================
+
+
+@router.get(
+    "/card-errors",
+    response_model=AdminCardErrorReportListResponse,
+    summary="List card error reports for admin",
+    description="Get paginated list of all card error reports with filters. PENDING status items are sorted first.",
+    responses={
+        200: {
+            "description": "Paginated card error report list",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "total": 15,
+                        "page": 1,
+                        "page_size": 20,
+                        "items": [
+                            {
+                                "id": "550e8400-e29b-41d4-a716-446655440000",
+                                "card_id": "660e8400-e29b-41d4-a716-446655440001",
+                                "card_type": "VOCABULARY",
+                                "user_id": "770e8400-e29b-41d4-a716-446655440002",
+                                "description": "Typo in translation...",
+                                "status": "PENDING",
+                                "admin_notes": None,
+                                "resolved_by": None,
+                                "resolved_at": None,
+                                "reporter": {
+                                    "id": "770e8400-e29b-41d4-a716-446655440002",
+                                    "full_name": "John Doe",
+                                },
+                                "created_at": "2024-01-15T10:30:00Z",
+                                "updated_at": "2024-01-15T10:30:00Z",
+                            }
+                        ],
+                    }
+                }
+            },
+        },
+    },
+)
+async def list_card_errors(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+    page: int = Query(1, ge=1, description="Page number"),
+    page_size: int = Query(20, ge=1, le=100, description="Items per page"),
+    status_filter: Optional[CardErrorStatus] = Query(
+        None, alias="status", description="Filter by status"
+    ),
+    card_type: Optional[CardErrorCardType] = Query(None, description="Filter by card type"),
+) -> AdminCardErrorReportListResponse:
+    """List all card error reports for admin with pagination and filters.
+
+    Returns reports sorted with PENDING status items first, then by created_at DESC.
+
+    Args:
+        db: Database session (injected)
+        current_user: Authenticated superuser (injected)
+        page: Page number (1-indexed)
+        page_size: Number of items per page (max 100)
+        status_filter: Optional filter by report status
+        card_type: Optional filter by card type (VOCABULARY or CULTURE)
+
+    Returns:
+        AdminCardErrorReportListResponse with paginated report list
+
+    Raises:
+        401: If not authenticated
+        403: If authenticated but not superuser
+    """
+    service = CardErrorAdminService(db)
+    items, total = await service.get_list_for_admin(
+        status=status_filter,
+        card_type=card_type,
+        page=page,
+        page_size=page_size,
+    )
+
+    # Convert to response schema with null-safe reporter mapping
+    response_items = [
+        AdminCardErrorReportResponse(
+            id=item.id,
+            card_id=item.card_id,
+            card_type=item.card_type,
+            user_id=item.user_id,
+            description=item.description,
+            status=item.status,
+            admin_notes=item.admin_notes,
+            resolved_by=item.resolved_by,
+            resolved_at=item.resolved_at,
+            reporter=(
+                ReporterBriefResponse(
+                    id=item.user.id,
+                    full_name=item.user.full_name,
+                )
+                if item.user
+                else ReporterBriefResponse(id=item.user_id, full_name=None)
+            ),
+            created_at=item.created_at,
+            updated_at=item.updated_at,
+        )
+        for item in items
+    ]
+
+    return AdminCardErrorReportListResponse(
+        total=total,
+        page=page,
+        page_size=page_size,
+        items=response_items,
+    )
+
+
+@router.get(
+    "/card-errors/{report_id}",
+    response_model=AdminCardErrorReportResponse,
+    summary="Get card error report details",
+    description="Get detailed view of a single card error report.",
+    responses={
+        200: {
+            "description": "Card error report details",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "id": "550e8400-e29b-41d4-a716-446655440000",
+                        "card_id": "660e8400-e29b-41d4-a716-446655440001",
+                        "card_type": "VOCABULARY",
+                        "user_id": "770e8400-e29b-41d4-a716-446655440002",
+                        "description": "Typo in translation...",
+                        "status": "PENDING",
+                        "admin_notes": None,
+                        "resolved_by": None,
+                        "resolved_at": None,
+                        "reporter": {
+                            "id": "770e8400-e29b-41d4-a716-446655440002",
+                            "full_name": "John Doe",
+                        },
+                        "created_at": "2024-01-15T10:30:00Z",
+                        "updated_at": "2024-01-15T10:30:00Z",
+                    }
+                }
+            },
+        },
+        404: {"description": "Report not found"},
+    },
+)
+async def get_card_error(
+    report_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> AdminCardErrorReportResponse:
+    """Get detailed card error report by ID.
+
+    Args:
+        report_id: UUID of the error report
+        db: Database session (injected)
+        current_user: Authenticated superuser (injected)
+
+    Returns:
+        AdminCardErrorReportResponse with full report details
+
+    Raises:
+        401: If not authenticated
+        403: If authenticated but not superuser
+        404: If report not found
+    """
+    service = CardErrorAdminService(db)
+    report = await service.get_report_for_admin(report_id)
+
+    # Map to response with null-safe reporter
+    return AdminCardErrorReportResponse(
+        id=report.id,
+        card_id=report.card_id,
+        card_type=report.card_type,
+        user_id=report.user_id,
+        description=report.description,
+        status=report.status,
+        admin_notes=report.admin_notes,
+        resolved_by=report.resolved_by,
+        resolved_at=report.resolved_at,
+        reporter=(
+            ReporterBriefResponse(
+                id=report.user.id,
+                full_name=report.user.full_name,
+            )
+            if report.user
+            else ReporterBriefResponse(id=report.user_id, full_name=None)
+        ),
+        created_at=report.created_at,
+        updated_at=report.updated_at,
+    )
+
+
+@router.patch(
+    "/card-errors/{report_id}",
+    response_model=AdminCardErrorReportResponse,
+    summary="Update card error report",
+    description="Update card error report status and/or admin notes. At least one field must be provided.",
+    responses={
+        200: {
+            "description": "Updated card error report",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "id": "550e8400-e29b-41d4-a716-446655440000",
+                        "card_id": "660e8400-e29b-41d4-a716-446655440001",
+                        "card_type": "VOCABULARY",
+                        "user_id": "770e8400-e29b-41d4-a716-446655440002",
+                        "description": "Typo in translation...",
+                        "status": "FIXED",
+                        "admin_notes": "Fixed in version 2.3.1",
+                        "resolved_by": "880e8400-e29b-41d4-a716-446655440003",
+                        "resolved_at": "2024-01-16T14:00:00Z",
+                        "reporter": {
+                            "id": "770e8400-e29b-41d4-a716-446655440002",
+                            "full_name": "John Doe",
+                        },
+                        "created_at": "2024-01-15T10:30:00Z",
+                        "updated_at": "2024-01-16T14:00:00Z",
+                    }
+                }
+            },
+        },
+        404: {"description": "Report not found"},
+        422: {"description": "Validation error (empty update)"},
+    },
+)
+async def update_card_error(
+    report_id: UUID,
+    update_data: AdminCardErrorReportUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> AdminCardErrorReportResponse:
+    """Update card error report status and/or admin notes.
+
+    Business logic:
+    - At least one field (status or admin_notes) must be provided
+    - When status changes to FIXED/REVIEWED/DISMISSED, sets resolved_by and resolved_at
+    - When status changes back to PENDING, clears resolved_by and resolved_at
+
+    Args:
+        report_id: UUID of the report to update
+        update_data: Fields to update (status and/or admin_notes)
+        db: Database session (injected)
+        current_user: Authenticated superuser (injected)
+
+    Returns:
+        Updated AdminCardErrorReportResponse
+
+    Raises:
+        401: If not authenticated
+        403: If authenticated but not superuser
+        404: If report not found
+        422: If neither status nor admin_notes is provided
+    """
+    # Validate that at least one field is provided
+    if update_data.status is None and update_data.admin_notes is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="At least one of 'status' or 'admin_notes' must be provided",
+        )
+
+    service = CardErrorAdminService(db)
+    report = await service.update_report_for_admin(
+        report_id=report_id,
+        admin_user_id=current_user.id,
+        data=update_data,
+    )
+
+    # Commit the transaction
+    await db.commit()
+
+    # Map to response with null-safe reporter
+    return AdminCardErrorReportResponse(
+        id=report.id,
+        card_id=report.card_id,
+        card_type=report.card_type,
+        user_id=report.user_id,
+        description=report.description,
+        status=report.status,
+        admin_notes=report.admin_notes,
+        resolved_by=report.resolved_by,
+        resolved_at=report.resolved_at,
+        reporter=(
+            ReporterBriefResponse(
+                id=report.user.id,
+                full_name=report.user.full_name,
+            )
+            if report.user
+            else ReporterBriefResponse(id=report.user_id, full_name=None)
+        ),
+        created_at=report.created_at,
+        updated_at=report.updated_at,
+    )

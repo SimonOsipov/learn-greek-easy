@@ -1,4 +1,4 @@
-"""Card Error Report Service for managing card error submissions."""
+"""Card Error Report Service for user-facing card error submissions."""
 
 from uuid import UUID
 

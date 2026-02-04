@@ -1,4 +1,4 @@
-# Ralph Loop Prompt - Learn Greek Easy
+# Ralph Workflow Prompt - Learn Greek Easy
 
 ## CRITICAL RULES (READ FIRST)
 
@@ -189,6 +189,14 @@ Task(
 - Repeat stages 1-5
 - **Checkpoint:** Output `<promise>TASK_DONE</promise>`
 
+### About Checkpoints
+The `<promise>` tags are convention markers for workflow progress. They:
+- Make progress visible in the conversation
+- Get recorded in handoff.yaml for session continuity
+- Signal completion of each stage
+
+No external system parses these - they're self-documenting milestones.
+
 ---
 
 ## PR Rules (ONE branch, ONE PR for ALL tasks)
@@ -243,7 +251,7 @@ cd /Users/samosipov/Downloads/learn-greek-easy/learn-greek-easy-frontend && npm 
 
 ---
 
-## Loop Completion Signal
+## Workflow Completion Signal
 
 Output `<promise>ALL_TASKS_COMPLETE</promise>` ONLY when ALL conditions are TRUE:
 
@@ -279,7 +287,7 @@ Human decides merge after reviewing the PR.
 | Reading files directly in main context | Bloats context, wastes tokens | Use Explore agent |
 | Editing files directly in main context | Bloats context, error-prone | Use Executor agent |
 | Outputting ALL_TASKS_COMPLETE before deploy+smoke | Deploy might fail, false completion | Wait for deploy + smoke-tests to pass |
-| Skipping stage checkpoints | Loop can't track progress | Output every checkpoint |
+| Skipping stage checkpoints | Breaks workflow visibility and handoff continuity | Output every checkpoint |
 | Multiple Grep/Glob calls for research | Bloats context | Single Explore agent call |
 | Architecture agent creating subtasks | Creates clutter in Kanban | Return plan as text, update existing task |
 | Hiding/disabling features to "fix" bugs | Reduces functionality, lazy solution | Actually fix the bug, add missing data |
