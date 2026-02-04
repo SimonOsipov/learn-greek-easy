@@ -1,6 +1,10 @@
 // src/components/admin/index.ts
 
 export { AdminCardErrorCard } from './AdminCardErrorCard';
+export {
+  AdminCardErrorDetailModal,
+  type AdminCardErrorDetailModalProps,
+} from './AdminCardErrorDetailModal';
 export { AdminCardErrorSection } from './AdminCardErrorSection';
 export { AdminFeedbackCard } from './AdminFeedbackCard';
 export { BulkUploadsTab } from './BulkUploadsTab';

@@ -356,6 +356,26 @@
     "states": {
       "noErrors": "No error reports submitted yet",
       "noFilteredResults": "No reports match the selected filters"
+    },
+    "detail": {
+      "title": "Error Report Details",
+      "reportedOn": "Reported on {{date}}",
+      "reportedBy": "Reported by",
+      "anonymousUser": "Anonymous User",
+      "userDescription": "User Description",
+      "viewCard": "View Card",
+      "cardIdCopied": "Card ID Copied",
+      "cardIdCopiedMessage": "Card ID has been copied to clipboard",
+      "adminActions": "Admin Actions",
+      "statusLabel": "Status",
+      "selectStatus": "Select status",
+      "adminNotesLabel": "Admin Notes",
+      "adminNotesPlaceholder": "Add notes about the resolution...",
+      "resolvedAt": "Resolved on {{date}}",
+      "updateSuccess": "Report Updated",
+      "updateSuccessMessage": "The error report has been updated successfully",
+      "updateError": "Update Failed",
+      "updateErrorMessage": "Failed to update the error report"
     }
   },
   "cardCreate": {

@@ -366,6 +366,26 @@
     "states": {
       "noErrors": "Отчёты об ошибках ещё не поступали",
       "noFilteredResults": "Нет отчётов, соответствующих выбранным фильтрам"
+    },
+    "detail": {
+      "title": "Детали отчёта об ошибке",
+      "reportedOn": "Сообщено {{date}}",
+      "reportedBy": "Сообщил",
+      "anonymousUser": "Анонимный пользователь",
+      "userDescription": "Описание пользователя",
+      "viewCard": "Просмотреть карточку",
+      "cardIdCopied": "ID карточки скопирован",
+      "cardIdCopiedMessage": "ID карточки скопирован в буфер обмена",
+      "adminActions": "Действия администратора",
+      "statusLabel": "Статус",
+      "selectStatus": "Выберите статус",
+      "adminNotesLabel": "Заметки администратора",
+      "adminNotesPlaceholder": "Добавьте заметки о разрешении...",
+      "resolvedAt": "Разрешено {{date}}",
+      "updateSuccess": "Отчёт обновлён",
+      "updateSuccessMessage": "Отчёт об ошибке успешно обновлён",
+      "updateError": "Ошибка обновления",
+      "updateErrorMessage": "Не удалось обновить отчёт об ошибке"
     }
   },
   "cardCreate": {

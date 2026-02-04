@@ -20,7 +20,7 @@ import { useAdminCardErrorStore } from '@/stores/adminCardErrorStore';
 import type { AdminCardErrorResponse, CardErrorStatus, CardType } from '@/types/cardError';
 
 import { AdminCardErrorCard } from './AdminCardErrorCard';
-// Note: AdminCardErrorResponseDialog will be implemented in CERAD-06
+import { AdminCardErrorDetailModal } from './AdminCardErrorDetailModal';
 
 const CARD_ERROR_STATUSES: { value: CardErrorStatus; label: string }[] = [
   { value: 'PENDING', label: 'pending' },
@@ -44,6 +44,7 @@ export const AdminCardErrorSection: React.FC = () => {
   const { t } = useTranslation('admin');
   const {
     errorList,
+    selectedError,
     page,
     total,
     totalPages,
@@ -57,8 +58,8 @@ export const AdminCardErrorSection: React.FC = () => {
     setSelectedError,
   } = useAdminCardErrorStore();
 
-  // Dialog state for CERAD-06
-  const [_isResponseDialogOpen, _setIsResponseDialogOpen] = useState(false);
+  // Dialog state
+  const [isResponseDialogOpen, setIsResponseDialogOpen] = useState(false);
   const pageSize = 10;
 
   // Fetch on mount
@@ -84,12 +85,12 @@ export const AdminCardErrorSection: React.FC = () => {
 
   const handleRespond = (errorReport: AdminCardErrorResponse) => {
     setSelectedError(errorReport);
-    _setIsResponseDialogOpen(true);
+    setIsResponseDialogOpen(true);
   };
 
-  // Dialog close handler for CERAD-06
-  const _handleResponseDialogClose = (open: boolean) => {
-    _setIsResponseDialogOpen(open);
+  // Dialog close handler
+  const handleResponseDialogClose = (open: boolean) => {
+    setIsResponseDialogOpen(open);
     if (!open) {
       setSelectedError(null);
     }
@@ -261,14 +262,17 @@ export const AdminCardErrorSection: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Response Dialog - placeholder for CERAD-06 */}
-      {/*
-      <AdminCardErrorResponseDialog
+      {/* Detail Modal */}
+      <AdminCardErrorDetailModal
         open={isResponseDialogOpen}
         onOpenChange={handleResponseDialogClose}
-        errorReport={selectedError}
+        report={selectedError}
+        onUpdate={() => {
+          // The store will auto-update via updateError
+          // Refetch to ensure list is in sync
+          fetchErrorList();
+        }}
       />
-      */}
     </>
   );
 };
