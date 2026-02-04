@@ -336,6 +336,38 @@
       "noFilteredResults": "Нет отзывов, соответствующих выбранным фильтрам"
     }
   },
+  "cardErrors": {
+    "sectionTitle": "Отчёты об ошибках в карточках",
+    "sectionDescription": "Просмотр и ответы на отчёты пользователей об ошибках в карточках",
+    "anonymousUser": "Анонимный пользователь",
+    "respond": "Ответить",
+    "editResponse": "Изменить ответ",
+    "adminNotesLabel": "Заметки администратора",
+    "statuses": {
+      "pending": "В ожидании",
+      "reviewed": "Рассмотрено",
+      "fixed": "Исправлено",
+      "dismissed": "Отклонено"
+    },
+    "cardTypes": {
+      "vocabulary": "Словарная карточка",
+      "culture": "Вопрос о культуре"
+    },
+    "filters": {
+      "statusPlaceholder": "Фильтр по статусу",
+      "typePlaceholder": "Фильтр по типу карточки",
+      "allStatuses": "Все статусы",
+      "allTypes": "Все типы",
+      "clear": "Очистить фильтры"
+    },
+    "errors": {
+      "loadingTitle": "Ошибка загрузки отчётов"
+    },
+    "states": {
+      "noErrors": "Отчёты об ошибках ещё не поступали",
+      "noFilteredResults": "Нет отчётов, соответствующих выбранным фильтрам"
+    }
+  },
   "cardCreate": {
     "title": "Создать карточку",
     "description": "Добавить новый вопрос в колоду культуры",

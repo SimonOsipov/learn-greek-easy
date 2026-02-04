@@ -1,5 +1,7 @@
 // src/components/admin/index.ts
 
+export { AdminCardErrorCard } from './AdminCardErrorCard';
+export { AdminCardErrorSection } from './AdminCardErrorSection';
 export { AdminFeedbackCard } from './AdminFeedbackCard';
 export { BulkUploadsTab } from './BulkUploadsTab';
 export { AdminFeedbackResponseDialog } from './AdminFeedbackResponseDialog';
