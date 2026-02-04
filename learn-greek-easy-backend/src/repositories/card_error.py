@@ -3,7 +3,7 @@
 from typing import Optional
 from uuid import UUID
 
-from sqlalchemy import desc, func, select
+from sqlalchemy import case, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -109,3 +109,47 @@ class CardErrorReportRepository(BaseRepository[CardErrorReport]):
         )
         result = await self.db.execute(query)
         return result.scalar_one()
+
+    async def list_for_admin(
+        self,
+        *,
+        card_type: Optional[CardErrorCardType] = None,
+        status: Optional[CardErrorStatus] = None,
+        skip: int = 0,
+        limit: int = 20,
+    ) -> list[CardErrorReport]:
+        """List error reports for admin view with PENDING-first sorting.
+
+        Sorting: PENDING status items first (priority 0), all others second (priority 1),
+        then by created_at DESC within each group.
+
+        Args:
+            card_type: Optional filter by card type (VOCABULARY or CULTURE)
+            status: Optional filter by status
+            skip: Number of records to skip (for pagination)
+            limit: Maximum records to return
+
+        Returns:
+            List of CardErrorReport with user and resolver relations loaded
+        """
+        query = select(CardErrorReport).options(
+            selectinload(CardErrorReport.user),
+            selectinload(CardErrorReport.resolver),
+        )
+
+        if card_type is not None:
+            query = query.where(CardErrorReport.card_type == card_type)
+        if status is not None:
+            query = query.where(CardErrorReport.status == status)
+
+        # Sort PENDING status first (0), all others second (1), then by created_at DESC
+        status_priority = case(
+            (CardErrorReport.status == CardErrorStatus.PENDING, 0),
+            else_=1,
+        )
+        query = query.order_by(status_priority, desc(CardErrorReport.created_at))
+
+        query = query.offset(skip).limit(limit)
+
+        result = await self.db.execute(query)
+        return list(result.scalars().all())
