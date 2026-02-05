@@ -501,7 +501,7 @@ class Deck(Base, TimestampMixin):
         default=CardSystemVersion.V1,
         server_default=text("'V1'"),
         index=True,
-        comment="Card presentation system: V1 (traditional flashcards), V2 (new system)",
+        comment="Card system version: V1 (classic Card model) or V2 (WordEntry-based)",
     )
 
     # Owner (for user-created decks)
