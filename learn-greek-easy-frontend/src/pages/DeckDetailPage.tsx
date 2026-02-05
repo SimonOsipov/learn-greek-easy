@@ -30,6 +30,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Skeleton } from '@/components/ui/skeleton';
+import { V2DeckPage } from '@/features/decks/components/V2DeckPage';
 import { reportAPIError } from '@/lib/errorReporting';
 import { formatRelativeDate } from '@/lib/helpers';
 import log from '@/lib/logger';
@@ -81,6 +82,12 @@ export const DeckDetailPage: React.FC = () => {
     return <NotFoundState />;
   }
 
+  // Route to V2DeckPage for V2 decks (word browser system)
+  if (selectedDeck.cardSystem === 'V2') {
+    return <V2DeckPage deckId={deckId} />;
+  }
+
+  // V1 deck rendering (traditional flashcard system) continues below
   // Check if deck is locked (premium deck + free user)
   const isPremiumLocked = selectedDeck.isPremium && user?.role === 'free';
 

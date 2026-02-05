@@ -20,7 +20,7 @@ import { progressAPI } from '@/services/progressAPI';
 import type { DeckProgressSummary } from '@/services/progressAPI';
 import { studyAPI } from '@/services/studyAPI';
 import { useAuthStore } from '@/stores/authStore';
-import type { Deck, DeckFilters, DeckProgress } from '@/types/deck';
+import type { CardSystemVersion, Deck, DeckFilters, DeckProgress } from '@/types/deck';
 
 /**
  * Extended filter state including deck type
@@ -95,6 +95,7 @@ const transformDeckResponse = (deck: DeckResponse, progressData?: DeckProgressSu
     createdAt: new Date(deck.created_at),
     updatedAt: new Date(deck.updated_at),
     progress,
+    cardSystem: (deck.card_system ?? 'V1') as CardSystemVersion,
   };
 };
 
@@ -163,6 +164,7 @@ const transformCultureDeckResponse = (deck: CultureDeckResponse): Deck => {
     createdAt: new Date(),
     updatedAt: new Date(),
     progress,
+    cardSystem: 'V1' as CardSystemVersion, // Culture decks always use V1
   };
 };
 
