@@ -163,6 +163,18 @@ from src.schemas.user import (
     UserWithSettingsUpdate,
 )
 
+# Word Entry schemas
+from src.schemas.word_entry import (
+    ExampleSentence,
+    GrammarData,
+    WordEntryBase,
+    WordEntryCreate,
+    WordEntryListResponse,
+    WordEntryResponse,
+    WordEntrySearchResponse,
+    WordEntryUpdate,
+)
+
 __all__ = [
     # Announcement
     "AnnouncementCreate",
@@ -296,4 +308,13 @@ __all__ = [
     "MockExamSubmitAllResponse",
     "MockExamHistoryItem",
     "MockExamStatisticsResponse",
+    # Word Entry
+    "ExampleSentence",
+    "GrammarData",
+    "WordEntryBase",
+    "WordEntryCreate",
+    "WordEntryListResponse",
+    "WordEntryResponse",
+    "WordEntrySearchResponse",
+    "WordEntryUpdate",
 ]
