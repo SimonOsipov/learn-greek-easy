@@ -90,10 +90,7 @@ export function ReportErrorModal({ isOpen, onClose, cardId, cardType }: ReportEr
       // Check for duplicate report (409 Conflict)
       if (error && typeof error === 'object' && 'status' in error && error.status === 409) {
         toast({
-          title: t(
-            'reportError.alreadyReported',
-            'You have already reported an error for this card'
-          ),
+          title: t('reportError.pendingReview', 'Admin yet to review your previous feedback'),
           variant: 'destructive',
         });
       } else {
