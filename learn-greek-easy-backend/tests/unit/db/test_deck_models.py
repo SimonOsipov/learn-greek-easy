@@ -717,3 +717,277 @@ class TestDeckModelOwnerIdDatabase:
         assert deck.owner_id == test_user.id
         assert deck.is_active is True  # Should remain unchanged
         assert deck.is_premium is True  # Should remain unchanged
+
+
+class TestDeckModelCardSystem:
+    """Test Deck model card_system field (Dual Card System feature)."""
+
+    def test_deck_card_system_can_be_v1(self):
+        """Test card_system can be set to V1."""
+        from src.db.models import CardSystemVersion
+
+        deck = Deck(
+            name_en="V1 Deck",
+            name_el="V1 Deck",
+            name_ru="V1 Deck",
+            description_en="V1 card system",
+            description_el="V1 card system",
+            description_ru="V1 card system",
+            level=DeckLevel.A1,
+            is_premium=False,
+            card_system=CardSystemVersion.V1,
+        )
+        assert deck.card_system == CardSystemVersion.V1
+        assert deck.card_system == "V1"
+
+    def test_deck_card_system_can_be_v2(self):
+        """Test card_system can be set to V2."""
+        from src.db.models import CardSystemVersion
+
+        deck = Deck(
+            name_en="V2 Deck",
+            name_el="V2 Deck",
+            name_ru="V2 Deck",
+            description_en="V2 card system",
+            description_el="V2 card system",
+            description_ru="V2 card system",
+            level=DeckLevel.A1,
+            is_premium=False,
+            card_system=CardSystemVersion.V2,
+        )
+        assert deck.card_system == CardSystemVersion.V2
+        assert deck.card_system == "V2"
+
+    def test_deck_card_system_independent_of_is_premium(self):
+        """Test card_system and is_premium are independent."""
+        from src.db.models import CardSystemVersion
+
+        # V1 free deck
+        deck1 = Deck(
+            name_en="V1 Free",
+            name_el="V1 Free",
+            name_ru="V1 Free",
+            level=DeckLevel.A1,
+            is_premium=False,
+            card_system=CardSystemVersion.V1,
+        )
+        assert deck1.card_system == CardSystemVersion.V1
+        assert deck1.is_premium is False
+
+        # V1 premium deck
+        deck2 = Deck(
+            name_en="V1 Premium",
+            name_el="V1 Premium",
+            name_ru="V1 Premium",
+            level=DeckLevel.A1,
+            is_premium=True,
+            card_system=CardSystemVersion.V1,
+        )
+        assert deck2.card_system == CardSystemVersion.V1
+        assert deck2.is_premium is True
+
+        # V2 free deck
+        deck3 = Deck(
+            name_en="V2 Free",
+            name_el="V2 Free",
+            name_ru="V2 Free",
+            level=DeckLevel.A1,
+            is_premium=False,
+            card_system=CardSystemVersion.V2,
+        )
+        assert deck3.card_system == CardSystemVersion.V2
+        assert deck3.is_premium is False
+
+        # V2 premium deck
+        deck4 = Deck(
+            name_en="V2 Premium",
+            name_el="V2 Premium",
+            name_ru="V2 Premium",
+            level=DeckLevel.A1,
+            is_premium=True,
+            card_system=CardSystemVersion.V2,
+        )
+        assert deck4.card_system == CardSystemVersion.V2
+        assert deck4.is_premium is True
+
+    def test_deck_card_system_independent_of_is_active(self):
+        """Test card_system and is_active are independent."""
+        from src.db.models import CardSystemVersion
+
+        # V1 active deck
+        deck1 = Deck(
+            name_en="V1 Active",
+            name_el="V1 Active",
+            name_ru="V1 Active",
+            level=DeckLevel.A1,
+            is_active=True,
+            is_premium=False,
+            card_system=CardSystemVersion.V1,
+        )
+        assert deck1.card_system == CardSystemVersion.V1
+        assert deck1.is_active is True
+
+        # V1 inactive deck
+        deck2 = Deck(
+            name_en="V1 Inactive",
+            name_el="V1 Inactive",
+            name_ru="V1 Inactive",
+            level=DeckLevel.A1,
+            is_active=False,
+            is_premium=False,
+            card_system=CardSystemVersion.V1,
+        )
+        assert deck2.card_system == CardSystemVersion.V1
+        assert deck2.is_active is False
+
+        # V2 active deck
+        deck3 = Deck(
+            name_en="V2 Active",
+            name_el="V2 Active",
+            name_ru="V2 Active",
+            level=DeckLevel.A1,
+            is_active=True,
+            is_premium=False,
+            card_system=CardSystemVersion.V2,
+        )
+        assert deck3.card_system == CardSystemVersion.V2
+        assert deck3.is_active is True
+
+        # V2 inactive deck
+        deck4 = Deck(
+            name_en="V2 Inactive",
+            name_el="V2 Inactive",
+            name_ru="V2 Inactive",
+            level=DeckLevel.A1,
+            is_active=False,
+            is_premium=False,
+            card_system=CardSystemVersion.V2,
+        )
+        assert deck4.card_system == CardSystemVersion.V2
+        assert deck4.is_active is False
+
+
+class TestDeckModelCardSystemDatabase:
+    """Integration tests for Deck model card_system with database."""
+
+    @pytest.mark.asyncio
+    async def test_deck_card_system_persists_v1(self, db_session: AsyncSession):
+        """Test card_system=V1 is persisted to database."""
+        from src.db.models import CardSystemVersion
+
+        deck = Deck(
+            name_en="V1 DB Deck",
+            name_el="V1 DB Deck",
+            name_ru="V1 DB Deck",
+            description_en="V1 card system persistence test",
+            description_el="V1 card system persistence test",
+            description_ru="V1 card system persistence test",
+            level=DeckLevel.A1,
+            is_premium=False,
+            card_system=CardSystemVersion.V1,
+        )
+        db_session.add(deck)
+        await db_session.commit()
+        await db_session.refresh(deck)
+
+        assert deck.id is not None
+        assert deck.card_system == CardSystemVersion.V1
+        assert deck.card_system == "V1"
+
+    @pytest.mark.asyncio
+    async def test_deck_card_system_persists_v2(self, db_session: AsyncSession):
+        """Test card_system=V2 is persisted to database."""
+        from src.db.models import CardSystemVersion
+
+        deck = Deck(
+            name_en="V2 DB Deck",
+            name_el="V2 DB Deck",
+            name_ru="V2 DB Deck",
+            description_en="V2 card system persistence test",
+            description_el="V2 card system persistence test",
+            description_ru="V2 card system persistence test",
+            level=DeckLevel.A1,
+            is_premium=False,
+            card_system=CardSystemVersion.V2,
+        )
+        db_session.add(deck)
+        await db_session.commit()
+        await db_session.refresh(deck)
+
+        assert deck.id is not None
+        assert deck.card_system == CardSystemVersion.V2
+        assert deck.card_system == "V2"
+
+    @pytest.mark.asyncio
+    async def test_deck_card_system_default_is_v1(self, db_session: AsyncSession):
+        """Test card_system defaults to V1 when not specified."""
+        from src.db.models import CardSystemVersion
+
+        deck = Deck(
+            name_en="Default Card System Deck",
+            name_el="Default Card System Deck",
+            name_ru="Default Card System Deck",
+            description_en="Default card system test",
+            description_el="Default card system test",
+            description_ru="Default card system test",
+            level=DeckLevel.A1,
+            is_premium=False,
+            # card_system not specified - should default to V1
+        )
+        db_session.add(deck)
+        await db_session.commit()
+        await db_session.refresh(deck)
+
+        assert deck.card_system == CardSystemVersion.V1
+        assert deck.card_system == "V1"
+
+    @pytest.mark.asyncio
+    async def test_deck_card_system_update_v1_to_v2(self, db_session: AsyncSession):
+        """Test updating card_system from V1 to V2."""
+        from src.db.models import CardSystemVersion
+
+        deck = Deck(
+            name_en="Update Card System Deck",
+            name_el="Update Card System Deck",
+            name_ru="Update Card System Deck",
+            level=DeckLevel.A1,
+            is_premium=False,
+            card_system=CardSystemVersion.V1,
+        )
+        db_session.add(deck)
+        await db_session.commit()
+
+        # Update card_system
+        deck.card_system = CardSystemVersion.V2
+        await db_session.commit()
+        await db_session.refresh(deck)
+
+        assert deck.card_system == CardSystemVersion.V2
+        assert deck.card_system == "V2"
+
+    @pytest.mark.asyncio
+    async def test_deck_card_system_update_independent(self, db_session: AsyncSession):
+        """Test updating card_system does not affect other fields."""
+        from src.db.models import CardSystemVersion
+
+        deck = Deck(
+            name_en="Independence Test Deck",
+            name_el="Independence Test Deck",
+            name_ru="Independence Test Deck",
+            level=DeckLevel.A1,
+            is_active=True,
+            is_premium=True,
+            card_system=CardSystemVersion.V1,
+        )
+        db_session.add(deck)
+        await db_session.commit()
+
+        # Update card_system only
+        deck.card_system = CardSystemVersion.V2
+        await db_session.commit()
+        await db_session.refresh(deck)
+
+        assert deck.card_system == CardSystemVersion.V2
+        assert deck.is_active is True  # Should remain unchanged
+        assert deck.is_premium is True  # Should remain unchanged
+        assert deck.level == DeckLevel.A1  # Should remain unchanged
