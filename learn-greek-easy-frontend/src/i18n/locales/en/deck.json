@@ -217,5 +217,22 @@
     "wordBrowserPlaceholder": "Browse vocabulary words in this deck. Full functionality coming soon.",
     "comingSoon": "Coming soon",
     "toPractice": "To practice"
+  },
+  "wordBrowser": {
+    "searchPlaceholder": "Search words...",
+    "clearSearch": "Clear search",
+    "filterGroup": "Filter by status",
+    "filters": {
+      "all": "All",
+      "learned": "Learned",
+      "reviewing": "Reviewing",
+      "new": "New"
+    },
+    "showing": "Showing {{count}} of {{total}} words",
+    "emptyTitle": "No words found",
+    "emptySearchDescription": "No words match your search. Try a different term.",
+    "emptyFilterDescription": "No words in this category.",
+    "errorTitle": "Failed to load words",
+    "errorDescription": "There was an error loading the word entries. Please try again."
   }
 }

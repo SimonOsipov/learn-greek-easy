@@ -217,5 +217,22 @@
     "wordBrowserPlaceholder": "Просмотр словарных записей в этой колоде. Полный функционал скоро.",
     "comingSoon": "Скоро",
     "toPractice": "К практике"
+  },
+  "wordBrowser": {
+    "searchPlaceholder": "Поиск слов...",
+    "clearSearch": "Очистить поиск",
+    "filterGroup": "Фильтр по статусу",
+    "filters": {
+      "all": "Все",
+      "learned": "Выученные",
+      "reviewing": "На повторении",
+      "new": "Новые"
+    },
+    "showing": "Показано {{count}} из {{total}} слов",
+    "emptyTitle": "Слова не найдены",
+    "emptySearchDescription": "Нет слов, соответствующих поиску. Попробуйте другой запрос.",
+    "emptyFilterDescription": "Нет слов в этой категории.",
+    "errorTitle": "Ошибка загрузки слов",
+    "errorDescription": "Произошла ошибка при загрузке слов. Попробуйте еще раз."
   }
 }

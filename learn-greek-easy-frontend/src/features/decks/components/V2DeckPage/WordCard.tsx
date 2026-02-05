@@ -1,5 +1,13 @@
 // src/features/decks/components/V2DeckPage/WordCard.tsx
 
+/**
+ * Individual word card component for V2 decks.
+ * Displays word entry with lemma, pronunciation, translation, and part of speech.
+ *
+ * Note: The main WordCard implementation is in WordGrid.tsx as an internal component.
+ * This file exports the props interface for external use.
+ */
+
 import type { WordEntryResponse } from '@/services/wordEntryAPI';
 
 /**
@@ -10,13 +18,6 @@ export interface WordCardProps {
   word: WordEntryResponse;
 }
 
-/**
- * WordCard Component (Placeholder)
- *
- * Displays an individual word entry with lemma, translation, and
- * part of speech. Full implementation in DUAL-07.
- */
-export const WordCard: React.FC<WordCardProps> = () => {
-  // Placeholder - actual implementation in DUAL-07
-  return null;
-};
+// WordCard is implemented inside WordGrid.tsx for performance optimization
+// (allows for virtualization in the future without prop drilling)
+// This file exports only the props interface for type safety
