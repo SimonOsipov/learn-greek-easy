@@ -44,22 +44,22 @@ async function navigateToFlashcardReview(page: Page): Promise<void> {
 
 /**
  * Helper function to flip a flashcard and reveal the answer.
+ *
+ * Clicks directly on the flashcard element which triggers the flip via CardHeader's onClick.
+ * Then waits for report-error-button which is conditionally rendered
+ * (more reliable than rating buttons which use CSS visibility:hidden).
  */
 async function flipFlashcard(page: Page): Promise<void> {
-  const showAnswerBtn = page.getByRole('button', { name: /show answer|flip/i });
-  const isButtonVisible = await showAnswerBtn.isVisible().catch(() => false);
+  // Click the flashcard element - CardHeader handles onClick to call flipCard()
+  // This is more reliable than keyboard shortcuts which require window focus
+  const flashcard = page.locator('[data-testid="flashcard"]');
+  await flashcard.click();
 
-  if (isButtonVisible) {
-    await showAnswerBtn.click();
-  } else {
-    // Try clicking the card itself
-    const flashcard = page.locator('[data-testid="flashcard"]');
-    await flashcard.click();
-  }
-
-  // Wait for rating buttons to appear (indicates card is flipped)
-  const goodButton = page.getByRole('button', { name: /good/i }).first();
-  await expect(goodButton).toBeVisible({ timeout: 3000 });
+  // Wait for the report-error-button to appear - this is conditionally rendered
+  // only when isCardFlipped is true (see FlashcardContainer.tsx line 67)
+  // This is more reliable than checking for rating buttons which use CSS visibility
+  const reportErrorButton = page.getByTestId('report-error-button');
+  await expect(reportErrorButton).toBeVisible({ timeout: 5000 });
 }
 
 /**
