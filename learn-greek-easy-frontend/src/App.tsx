@@ -152,6 +152,13 @@ const Unauthorized = lazyWithRetry(() =>
 // Landing page (public)
 const LandingPage = lazyWithRetry(() => import('@/pages/LandingPage'));
 
+// Word reference page (word entry detail)
+const WordReferencePage = lazyWithRetry(() =>
+  import('@/features/words/pages/WordReferencePage').then((m) => ({
+    default: m.WordReferencePage,
+  }))
+);
+
 function AppContent() {
   const isAppReady = useAppStore(selectIsReady);
   const setReactHydrated = useAppStore((state) => state.setReactHydrated);
@@ -201,6 +208,10 @@ function AppContent() {
                 <Route path="/decks" element={<AppLayout />}>
                   <Route index element={<DecksPage />} />
                   <Route path=":id" element={<DeckDetailPage />} />
+                </Route>
+                {/* Word reference page inside AppLayout */}
+                <Route path="/decks/:deckId/words/:wordId" element={<AppLayout />}>
+                  <Route index element={<WordReferencePage />} />
                 </Route>
                 <Route path="/my-decks" element={<AppLayout />}>
                   <Route index element={<MyDecksPage />} />

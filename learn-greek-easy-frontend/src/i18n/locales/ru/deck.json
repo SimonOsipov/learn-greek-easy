@@ -234,5 +234,33 @@
     "emptyFilterDescription": "Нет слов в этой категории.",
     "errorTitle": "Ошибка загрузки слов",
     "errorDescription": "Произошла ошибка при загрузке слов. Попробуйте еще раз."
+  },
+  "wordReference": {
+    "backToDeck": "Назад к колоде",
+    "pronunciation": "Произношение",
+    "meaning": "Значение",
+    "conjugation": "Спряжение",
+    "declension": "Склонение",
+    "examples": "Примеры",
+    "notes": "Заметки",
+    "practiceWord": "Практиковать это слово",
+    "comingSoon": "Скоро",
+    "noGrammar": "Грамматическая информация недоступна",
+    "noExamples": "Примеры использования отсутствуют",
+    "partOfSpeech": {
+      "noun": "Существительное",
+      "verb": "Глагол",
+      "adjective": "Прилагательное",
+      "adverb": "Наречие"
+    },
+    "voice": {
+      "active": "Активный",
+      "passive": "Пассивный"
+    },
+    "gender": {
+      "masculine": "Мужской",
+      "feminine": "Женский",
+      "neuter": "Средний"
+    }
   }
 }

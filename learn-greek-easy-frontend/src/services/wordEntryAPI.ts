@@ -125,4 +125,17 @@ export const wordEntryAPI = {
   getByDeck: async (deckId: string): Promise<WordEntryListResponse> => {
     return api.get<WordEntryListResponse>(`/api/v1/decks/${deckId}/word-entries`);
   },
+
+  /**
+   * Get a single word entry by ID.
+   *
+   * Fetches the full word entry with grammar data and examples.
+   * Requires authenticated user with access to the deck.
+   *
+   * @param wordId - UUID of the word entry
+   * @returns WordEntryResponse with full word entry data
+   */
+  getById: async (wordId: string): Promise<WordEntryResponse> => {
+    return api.get<WordEntryResponse>(`/api/v1/word-entries/${wordId}`);
+  },
 };

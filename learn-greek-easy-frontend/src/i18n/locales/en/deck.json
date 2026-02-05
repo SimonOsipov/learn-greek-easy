@@ -234,5 +234,33 @@
     "emptyFilterDescription": "No words in this category.",
     "errorTitle": "Failed to load words",
     "errorDescription": "There was an error loading the word entries. Please try again."
+  },
+  "wordReference": {
+    "backToDeck": "Back to Deck",
+    "pronunciation": "Pronunciation",
+    "meaning": "Meaning",
+    "conjugation": "Conjugation",
+    "declension": "Declension",
+    "examples": "Examples",
+    "notes": "Notes",
+    "practiceWord": "Practice this word",
+    "comingSoon": "Coming soon",
+    "noGrammar": "Grammar information not available",
+    "noExamples": "No usage examples available",
+    "partOfSpeech": {
+      "noun": "Noun",
+      "verb": "Verb",
+      "adjective": "Adjective",
+      "adverb": "Adverb"
+    },
+    "voice": {
+      "active": "Active",
+      "passive": "Passive"
+    },
+    "gender": {
+      "masculine": "Masculine",
+      "feminine": "Feminine",
+      "neuter": "Neuter"
+    }
   }
 }
