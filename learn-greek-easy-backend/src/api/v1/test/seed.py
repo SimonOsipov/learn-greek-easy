@@ -871,3 +871,44 @@ async def seed_admin_cards(
         duration_ms=duration_ms,
         results=result,
     )
+
+
+@router.post(
+    "/dual-decks",
+    response_model=SeedResultResponse,
+    summary="Seed V1/V2 dual deck test data",
+    description="Create one V1 deck with traditional cards and one V2 deck with word entries "
+    "for E2E testing of the dual card system. This endpoint is idempotent - "
+    "existing test decks are replaced.",
+    dependencies=[Depends(verify_seed_access)],
+)
+async def seed_dual_decks(
+    db: AsyncSession = Depends(get_db),
+) -> SeedResultResponse:
+    """Seed V1 and V2 decks for E2E testing.
+
+    Creates:
+    - 1 V1 deck (E2E V1 Test Deck) with 10 traditional cards
+    - 1 V2 deck (E2E V2 Test Deck) with 10 word entries
+
+    The V2 deck includes grammar data (conjugation for verbs, declension for nouns).
+
+    This endpoint is idempotent - it replaces existing E2E test decks.
+
+    Returns:
+        SeedResultResponse with deck IDs and counts
+    """
+    start_time = perf_counter()
+
+    service = SeedService(db)
+    result = await service.seed_dual_decks()
+
+    duration_ms = (perf_counter() - start_time) * 1000
+
+    return SeedResultResponse(
+        success=result.get("success", False),
+        operation="dual-decks",
+        timestamp=datetime.now(timezone.utc),
+        duration_ms=duration_ms,
+        results=result,
+    )

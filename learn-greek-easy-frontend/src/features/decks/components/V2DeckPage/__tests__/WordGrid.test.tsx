@@ -12,11 +12,25 @@
 import React from 'react';
 
 import { render, screen } from '@testing-library/react';
+import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { describe, it, expect } from 'vitest';
 
 import type { WordEntryResponse } from '@/services/wordEntryAPI';
 
 import { WordGrid, WordGridSkeleton } from '../WordGrid';
+
+/**
+ * Helper to render WordGrid within a router context
+ */
+function renderWithRouter(entries: WordEntryResponse[], deckId: string = 'deck-1') {
+  return render(
+    <MemoryRouter initialEntries={[`/decks/${deckId}`]}>
+      <Routes>
+        <Route path="/decks/:deckId" element={<WordGrid entries={entries} />} />
+      </Routes>
+    </MemoryRouter>
+  );
+}
 
 // Mock word entries data
 const mockWordEntries: WordEntryResponse[] = [
@@ -73,12 +87,12 @@ const mockWordEntries: WordEntryResponse[] = [
 describe('WordGrid Component', () => {
   describe('Grid Layout', () => {
     it('should render grid container with test id', () => {
-      render(<WordGrid entries={mockWordEntries} />);
+      renderWithRouter(mockWordEntries);
       expect(screen.getByTestId('word-grid')).toBeInTheDocument();
     });
 
     it('should have responsive grid styles', () => {
-      render(<WordGrid entries={mockWordEntries} />);
+      renderWithRouter(mockWordEntries);
       const grid = screen.getByTestId('word-grid');
 
       // Check for grid class
@@ -92,7 +106,7 @@ describe('WordGrid Component', () => {
     });
 
     it('should render correct number of word cards', () => {
-      render(<WordGrid entries={mockWordEntries} />);
+      renderWithRouter(mockWordEntries);
 
       // WordCard uses data-testid="word-card" for each card
       const cards = screen.getAllByTestId('word-card');
@@ -100,7 +114,7 @@ describe('WordGrid Component', () => {
     });
 
     it('should render empty grid when no entries', () => {
-      render(<WordGrid entries={[]} />);
+      renderWithRouter([]);
       const grid = screen.getByTestId('word-grid');
 
       expect(grid).toBeInTheDocument();
@@ -110,7 +124,7 @@ describe('WordGrid Component', () => {
 
   describe('WordCard - Content Display', () => {
     it('should display lemma prominently', () => {
-      render(<WordGrid entries={[mockWordEntries[0]]} />);
+      renderWithRouter([mockWordEntries[0]]);
 
       // Lemma should be in an h3 heading using word-card-lemma testid
       const lemma = screen.getByTestId('word-card-lemma');
@@ -119,7 +133,7 @@ describe('WordGrid Component', () => {
     });
 
     it('should display pronunciation when available', () => {
-      render(<WordGrid entries={[mockWordEntries[0]]} />);
+      renderWithRouter([mockWordEntries[0]]);
 
       // Pronunciation is displayed without brackets in standalone WordCard
       const pronunciation = screen.getByTestId('word-card-pronunciation');
@@ -127,21 +141,21 @@ describe('WordGrid Component', () => {
     });
 
     it('should not display pronunciation when not available', () => {
-      render(<WordGrid entries={[mockWordEntries[1]]} />);
+      renderWithRouter([mockWordEntries[1]]);
 
       // Entry 2 has no pronunciation
       expect(screen.queryByTestId('word-card-pronunciation')).not.toBeInTheDocument();
     });
 
     it('should display English translation', () => {
-      render(<WordGrid entries={[mockWordEntries[0]]} />);
+      renderWithRouter([mockWordEntries[0]]);
 
       const translation = screen.getByTestId('word-card-translation');
       expect(translation).toHaveTextContent('test translation');
     });
 
     it('should display all entries with translations', () => {
-      render(<WordGrid entries={mockWordEntries} />);
+      renderWithRouter(mockWordEntries);
 
       // Each entry should have its translation visible
       expect(screen.getByText('test translation')).toBeInTheDocument();
@@ -152,14 +166,14 @@ describe('WordGrid Component', () => {
 
   describe('WordCard - Mastery Indicators', () => {
     it('should render mastery indicator for each card', () => {
-      render(<WordGrid entries={[mockWordEntries[0]]} />);
+      renderWithRouter([mockWordEntries[0]]);
 
       const indicator = screen.getByTestId('word-card-mastery-indicator');
       expect(indicator).toBeInTheDocument();
     });
 
     it('should render mastery dots for each card', () => {
-      render(<WordGrid entries={[mockWordEntries[0]]} />);
+      renderWithRouter([mockWordEntries[0]]);
 
       const dots = screen.getByTestId('word-card-mastery-dots');
       expect(dots).toBeInTheDocument();
@@ -170,7 +184,7 @@ describe('WordGrid Component', () => {
 
   describe('WordCard - Accessibility', () => {
     it('should have aria-label on each card', () => {
-      render(<WordGrid entries={[mockWordEntries[0]]} />);
+      renderWithRouter([mockWordEntries[0]]);
 
       const card = screen.getByTestId('word-card');
       expect(card).toHaveAttribute('aria-label', 'test - test translation');

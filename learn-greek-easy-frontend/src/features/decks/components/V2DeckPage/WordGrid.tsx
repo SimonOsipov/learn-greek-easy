@@ -5,6 +5,8 @@
  * Uses CSS Grid with auto-fill and minmax for responsive layout.
  */
 
+import { useNavigate, useParams } from 'react-router-dom';
+
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { WordEntryResponse } from '@/services/wordEntryAPI';
@@ -29,6 +31,13 @@ export interface WordGridProps {
  * - Desktop: 4-6 columns
  */
 export function WordGrid({ entries }: WordGridProps) {
+  const navigate = useNavigate();
+  const { deckId } = useParams<{ deckId: string }>();
+
+  const handleWordCardClick = (entryId: string) => {
+    navigate(`/decks/${deckId}/words/${entryId}`);
+  };
+
   return (
     <div
       className="grid gap-4"
@@ -38,7 +47,7 @@ export function WordGrid({ entries }: WordGridProps) {
       data-testid="word-grid"
     >
       {entries.map((entry) => (
-        <WordCard key={entry.id} wordEntry={entry} />
+        <WordCard key={entry.id} wordEntry={entry} onClick={() => handleWordCardClick(entry.id)} />
       ))}
     </div>
   );

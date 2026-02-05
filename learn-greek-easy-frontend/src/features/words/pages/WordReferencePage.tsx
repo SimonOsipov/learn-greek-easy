@@ -223,13 +223,14 @@ export function WordReferencePage() {
   const notes = grammarData && 'notes' in grammarData ? (grammarData.notes as string) : null;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-testid="word-reference-page">
       {/* Gradient Header */}
       <div className="rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 p-6">
         {/* Back navigation */}
         <Link
           to={`/decks/${deckId}`}
           className="mb-4 inline-flex items-center text-sm text-muted-foreground transition-colors hover:text-foreground"
+          data-testid="back-button"
         >
           <ChevronLeft className="mr-1 h-4 w-4" />
           {t('deck:detail.goBack')}
@@ -293,7 +294,13 @@ export function WordReferencePage() {
         <Tooltip>
           <TooltipTrigger asChild>
             <span>
-              <Button variant="default" size="lg" disabled className="cursor-not-allowed">
+              <Button
+                variant="default"
+                size="lg"
+                disabled
+                className="cursor-not-allowed"
+                data-testid="practice-word-button"
+              >
                 Practice this word
               </Button>
             </span>

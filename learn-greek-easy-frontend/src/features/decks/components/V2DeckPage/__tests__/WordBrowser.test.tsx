@@ -18,6 +18,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { I18nextProvider } from 'react-i18next';
+import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { WordBrowser } from '../WordBrowser';
@@ -83,7 +84,7 @@ const mockWordEntries = [
   },
 ];
 
-// Create a wrapper with providers
+// Create a wrapper with providers (includes MemoryRouter for WordGrid's useNavigate/useParams)
 const createWrapper = () => {
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -98,7 +99,19 @@ const createWrapper = () => {
     React.createElement(
       QueryClientProvider,
       { client: queryClient },
-      React.createElement(I18nextProvider, { i18n }, children)
+      React.createElement(
+        I18nextProvider,
+        { i18n },
+        React.createElement(
+          MemoryRouter,
+          { initialEntries: ['/decks/deck-1'] },
+          React.createElement(
+            Routes,
+            null,
+            React.createElement(Route, { path: '/decks/:deckId', element: children })
+          )
+        )
+      )
     );
 };
 
