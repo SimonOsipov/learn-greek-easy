@@ -968,7 +968,6 @@ class CardErrorReport(Base, TimestampMixin):
 
     __tablename__ = "card_error_reports"
     __table_args__ = (
-        UniqueConstraint("user_id", "card_type", "card_id", name="uq_user_card_error_report"),
         Index("ix_card_error_reports_card_type_status", "card_type", "status"),
         Index("ix_card_error_reports_created_at", "created_at"),
         Index("ix_card_error_reports_status_created_at", "status", text("created_at DESC")),
