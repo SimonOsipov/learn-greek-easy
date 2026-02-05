@@ -186,6 +186,7 @@
     "changelog": "История изменений",
     "bulkUploads": "Массовая загрузка",
     "cardErrors": "Ошибки карточек",
+    "wordEntries": "Словарные записи",
     "newsComingSoon": "Скоро",
     "newsComingSoonDescription": "Вкладка Новости обновляется. Скоро появятся новые функции."
   },
@@ -658,6 +659,39 @@
       "verbs": "Глаг.",
       "adjectives": "Прил.",
       "adverbs": "Нар."
+    }
+  },
+  "wordEntries": {
+    "title": "Массовая загрузка словарных записей",
+    "description": "Загрузите несколько словарных записей одновременно в формате JSON.",
+    "jsonLabel": "JSON словарных записей",
+    "jsonPlaceholder": "Вставьте JSON-объект с deck_id и word_entries...",
+    "validateButton": "Проверить и просмотреть",
+    "uploadButton": "Загрузить записи",
+    "uploadingButton": "Загрузка...",
+    "maxEntriesWarning": "Максимум 100 записей за одну загрузку",
+    "validationErrors": "Ошибки валидации",
+    "previewTitle": "Предварительный просмотр",
+    "totalEntries": "Всего записей",
+    "partOfSpeechBreakdown": "Части речи",
+    "withExamples": "С примерами",
+    "successToast": "Успешно загружено: {{created}} создано, {{updated}} обновлено",
+    "errorToast": "Не удалось загрузить записи. Попробуйте ещё раз.",
+    "invalidJson": "Неверный формат JSON",
+    "arrayFormatDetected": "Формат JSON изменился. Используйте: { \"deck_id\": \"uuid-колоды\", \"word_entries\": [...] }",
+    "missingDeckId": "deck_id обязателен и должен быть непустой строкой",
+    "invalidDeckId": "deck_id должен быть в формате UUID",
+    "missingWordEntries": "Массив word_entries обязателен",
+    "jsonSyntaxError": "Ошибка синтаксиса JSON на строке {{line}}, столбец {{column}}: {{message}}",
+    "jsonSyntaxErrorNoPosition": "Ошибка синтаксиса JSON: {{message}}",
+    "noEntries": "Записи не найдены в JSON",
+    "tooManyEntries": "Слишком много записей. Максимум 100.",
+    "deckNotFound": "Колода не найдена или доступ запрещён",
+    "partOfSpeechCounts": {
+      "nouns": "Сущ",
+      "verbs": "Глаг",
+      "adjectives": "Прил",
+      "adverbs": "Нар"
     }
   }
 }
