@@ -15,6 +15,7 @@ from src.db.models import (
     User,
     UserDeckProgress,
     UserSettings,
+    WordEntry,
 )
 from src.db.session import close_db, get_session, get_session_factory, init_db
 
@@ -43,6 +44,7 @@ __all__ = [
     # Models - Content
     "Deck",
     "Card",
+    "WordEntry",
     # Models - Progress
     "UserDeckProgress",
     "CardStatistics",

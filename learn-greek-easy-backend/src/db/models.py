@@ -640,6 +640,112 @@ class Card(Base, TimestampMixin):
         return f"<Card(id={self.id}, front={self.front_text[:20]})>"
 
 
+class WordEntry(Base, TimestampMixin):
+    """Linguistic source of truth for vocabulary data.
+
+    Stores lexicographic information (lemma, part of speech, translations,
+    grammar data) separate from flashcard presentation. Enables dictionary
+    lookup, grammar drills, and multi-context vocabulary features.
+    """
+
+    __tablename__ = "word_entries"
+    __table_args__ = (
+        UniqueConstraint("deck_id", "lemma", "part_of_speech", name="uq_word_entry_deck_lemma_pos"),
+        Index("ix_word_entries_deck_id", "deck_id"),
+        Index("ix_word_entries_is_active", "is_active"),
+        Index("ix_word_entries_lemma", "lemma"),
+        Index("ix_word_entries_cefr_level", "cefr_level"),
+    )
+
+    # Primary key
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True,
+        server_default=func.uuid_generate_v4(),
+    )
+
+    # Foreign key - associated deck
+    deck_id: Mapped[UUID] = mapped_column(
+        ForeignKey("decks.id", ondelete="CASCADE"),
+        nullable=False,
+        comment="Deck this word entry belongs to",
+    )
+
+    # Core lexicographic fields
+    lemma: Mapped[str] = mapped_column(
+        String(100),
+        nullable=False,
+        comment="Dictionary form (base form) of the word in Greek",
+    )
+    part_of_speech: Mapped[PartOfSpeech] = mapped_column(
+        nullable=False,
+        comment="Part of speech classification",
+    )
+    cefr_level: Mapped[DeckLevel | None] = mapped_column(
+        nullable=True,
+        comment="CEFR level (A1-C2), overrides deck level if set",
+    )
+
+    # Translations
+    translation_en: Mapped[str] = mapped_column(
+        String(500),
+        nullable=False,
+        comment="English translation(s), comma-separated for multiple meanings",
+    )
+    translation_ru: Mapped[str | None] = mapped_column(
+        String(500),
+        nullable=True,
+        comment="Russian translation(s), comma-separated for multiple meanings",
+    )
+
+    # Pronunciation
+    pronunciation: Mapped[str | None] = mapped_column(
+        String(200),
+        nullable=True,
+        comment="IPA or simplified pronunciation guide",
+    )
+
+    # Structured grammar data (JSONB for flexibility)
+    grammar_data: Mapped[dict | None] = mapped_column(
+        JSON,
+        nullable=True,
+        server_default=text("'{}'::jsonb"),
+        comment="Part-of-speech specific grammar data",
+    )
+
+    # Usage examples (JSONB array)
+    examples: Mapped[list[dict] | None] = mapped_column(
+        JSON,
+        nullable=True,
+        server_default=text("'[]'::jsonb"),
+        comment="Usage examples: [{greek, english, russian?, context?}, ...]",
+    )
+
+    # Audio reference
+    audio_key: Mapped[str | None] = mapped_column(
+        String(500),
+        nullable=True,
+        comment="S3 key for audio pronunciation file",
+    )
+
+    # Status flag
+    is_active: Mapped[bool] = mapped_column(
+        Boolean,
+        default=True,
+        server_default=text("true"),
+        nullable=False,
+        comment="Soft delete flag - inactive entries are hidden from users",
+    )
+
+    # Relationships
+    deck: Mapped["Deck"] = relationship(
+        lazy="selectin",
+        foreign_keys=[deck_id],
+    )
+
+    def __repr__(self) -> str:
+        return f"<WordEntry(id={self.id}, lemma={self.lemma}, pos={self.part_of_speech})>"
+
+
 # ============================================================================
 # Progress Tracking Models
 # ============================================================================
