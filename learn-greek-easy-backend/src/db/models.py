@@ -174,6 +174,18 @@ class CardErrorStatus(str, enum.Enum):
     DISMISSED = "DISMISSED"  # Report was invalid/spam
 
 
+class CardSystemVersion(str, enum.Enum):
+    """Card system version for decks.
+
+    Determines which card data source a deck uses:
+    - v1: Legacy cards table (original system)
+    - v2: New word_entries system (WENTRY feature)
+    """
+
+    V1 = "v1"
+    V2 = "v2"
+
+
 # ============================================================================
 # User Models
 # ============================================================================
