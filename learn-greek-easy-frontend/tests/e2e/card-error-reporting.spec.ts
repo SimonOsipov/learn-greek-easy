@@ -194,15 +194,15 @@ test.describe('Card Error Reporting - Vocabulary Flashcards', () => {
     // Submit the report
     await submitButton.click();
 
-    // Should close modal on successful submission OR show "already reported" toast
-    // (If running against same seeded data, the card may already have a report)
+    // Should close modal on successful submission OR show "yet to review" toast
+    // (If running against same seeded data, the card may already have a pending report)
     const modalClosed = page.getByRole('dialog').waitFor({ state: 'hidden', timeout: 5000 }).then(() => 'closed');
-    const alreadyReported = page.getByText(/already reported/i).waitFor({ state: 'visible', timeout: 5000 }).then(() => 'already-reported');
+    const yetToReview = page.getByText(/yet to review/i).waitFor({ state: 'visible', timeout: 5000 }).then(() => 'yet-to-review');
 
-    const result = await Promise.race([modalClosed, alreadyReported]);
+    const result = await Promise.race([modalClosed, yetToReview]);
 
     // Either outcome proves the submission was processed correctly
-    expect(['closed', 'already-reported']).toContain(result);
+    expect(['closed', 'yet-to-review']).toContain(result);
   });
 
   test('CDERR-E2E-05: Cancel button closes modal without submitting', async ({ page }) => {
