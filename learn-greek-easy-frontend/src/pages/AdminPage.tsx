@@ -39,6 +39,7 @@ import {
   type DeckEditFormData,
   type DeckType,
   NewsTab,
+  WordEntriesTab,
 } from '@/components/admin';
 import { CultureBadge, type CultureCategory } from '@/components/culture';
 import { DeckBadge } from '@/components/decks';
@@ -564,6 +565,7 @@ type AdminTabType =
   | 'announcements'
   | 'changelog'
   | 'bulkUploads'
+  | 'wordEntries'
   | 'cardErrors'
   | 'feedback';
 
@@ -1150,6 +1152,7 @@ const AdminPage: React.FC = () => {
               'announcements',
               'changelog',
               'bulkUploads',
+              'wordEntries',
               'cardErrors',
               'feedback',
             ] as AdminTabType[]
@@ -1254,6 +1257,16 @@ const AdminPage: React.FC = () => {
             {t('admin:tabs.bulkUploads')}
           </h2>
           <BulkUploadsTab />
+        </section>
+      )}
+
+      {/* Word Entries Tab Content */}
+      {activeTab === 'wordEntries' && (
+        <section aria-labelledby="word-entries-heading">
+          <h2 id="word-entries-heading" className="sr-only">
+            {t('admin:tabs.wordEntries')}
+          </h2>
+          <WordEntriesTab />
         </section>
       )}
 
