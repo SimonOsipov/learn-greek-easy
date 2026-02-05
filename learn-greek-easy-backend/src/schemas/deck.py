@@ -206,8 +206,32 @@ class DeckAdminListResponse(BaseModel):
     decks: list[DeckAdminResponse]
 
 
+# ============================================================================
+# Deck Word Entries Response
+# ============================================================================
+
+
+class DeckWordEntriesResponse(BaseModel):
+    """Response for deck word entries listing.
+
+    Used by GET /api/v1/decks/{deck_id}/word-entries to return paginated
+    word entries for a V2 deck. For V1 decks, returns empty list with total=0.
+    """
+
+    deck_id: UUID = Field(..., description="UUID of the deck")
+    total: int = Field(..., ge=0, description="Total number of matching entries")
+    page: int = Field(..., ge=1, description="Current page number")
+    page_size: int = Field(..., ge=1, le=100, description="Items per page")
+    word_entries: list["WordEntryResponse"] = Field(
+        default_factory=list,
+        description="List of word entries for current page",
+    )
+
+
 # Import at the end to avoid circular dependencies
 from src.schemas.progress import UserDeckProgressResponse  # noqa: E402
+from src.schemas.word_entry import WordEntryResponse  # noqa: E402
 
 # Update forward references
 DeckWithProgressResponse.model_rebuild()
+DeckWordEntriesResponse.model_rebuild()
