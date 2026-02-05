@@ -45,19 +45,21 @@ async function navigateToFlashcardReview(page: Page): Promise<void> {
 /**
  * Helper function to flip a flashcard and reveal the answer.
  *
- * Clicks directly on the flashcard element which triggers the flip via CardHeader's onClick.
- * Then waits for report-error-button which is conditionally rendered
- * (more reliable than rating buttons which use CSS visibility:hidden).
+ * Uses Space key to flip (consistent with flashcard-review.spec.ts).
+ * The flashcard container div has no onClick - the handlers are on CardHeader/CardContent inside.
+ * Space key works because useKeyboardShortcuts hook is active on the page.
  */
 async function flipFlashcard(page: Page): Promise<void> {
-  // Click the flashcard element - CardHeader handles onClick to call flipCard()
-  // This is more reliable than keyboard shortcuts which require window focus
+  // First click flashcard to ensure focus is on the page
   const flashcard = page.locator('[data-testid="flashcard"]');
   await flashcard.click();
 
+  // Use Space key to flip - this is what works in flashcard-review.spec.ts
+  // The useKeyboardShortcuts hook listens for Space to trigger flipCard()
+  await page.keyboard.press('Space');
+
   // Wait for the report-error-button to appear - this is conditionally rendered
   // only when isCardFlipped is true (see FlashcardContainer.tsx line 67)
-  // This is more reliable than checking for rating buttons which use CSS visibility
   const reportErrorButton = page.getByTestId('report-error-button');
   await expect(reportErrorButton).toBeVisible({ timeout: 5000 });
 }
