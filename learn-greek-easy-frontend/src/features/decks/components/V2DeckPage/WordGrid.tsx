@@ -5,68 +5,11 @@
  * Uses CSS Grid with auto-fill and minmax for responsive layout.
  */
 
-import { Volume2 } from 'lucide-react';
-
-import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { cn } from '@/lib/utils';
 import type { WordEntryResponse } from '@/services/wordEntryAPI';
 
-// ============================================
-// WordCard Component
-// ============================================
-
-interface WordCardProps {
-  entry: WordEntryResponse;
-}
-
-/**
- * Individual word card showing:
- * - Greek lemma (large, prominent)
- * - Pronunciation (if available)
- * - English translation
- * - Part of speech badge
- */
-function WordCard({ entry }: WordCardProps) {
-  return (
-    <Card
-      className={cn(
-        'flex flex-col gap-2 p-4 transition-shadow hover:shadow-md',
-        'cursor-pointer' // Future: click to expand/see examples
-      )}
-      data-testid={`word-card-${entry.id}`}
-    >
-      {/* Greek word (lemma) */}
-      <div className="flex items-start justify-between gap-2">
-        <h3 className="text-lg font-semibold leading-tight text-foreground">{entry.lemma}</h3>
-        {entry.audio_key && (
-          <button
-            className="shrink-0 text-muted-foreground hover:text-primary"
-            aria-label="Play pronunciation"
-          >
-            <Volume2 className="h-4 w-4" />
-          </button>
-        )}
-      </div>
-
-      {/* Pronunciation */}
-      {entry.pronunciation && (
-        <p className="text-sm italic text-muted-foreground">[{entry.pronunciation}]</p>
-      )}
-
-      {/* English translation */}
-      <p className="line-clamp-2 text-sm text-foreground/80">{entry.translation_en}</p>
-
-      {/* Part of speech badge */}
-      <div className="mt-auto pt-2">
-        <Badge variant="secondary" className="text-xs capitalize">
-          {entry.part_of_speech}
-        </Badge>
-      </div>
-    </Card>
-  );
-}
+import { WordCard } from '../WordCard';
 
 // ============================================
 // WordGrid Component
@@ -95,7 +38,7 @@ export function WordGrid({ entries }: WordGridProps) {
       data-testid="word-grid"
     >
       {entries.map((entry) => (
-        <WordCard key={entry.id} entry={entry} />
+        <WordCard key={entry.id} wordEntry={entry} />
       ))}
     </div>
   );
