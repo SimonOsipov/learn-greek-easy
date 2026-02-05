@@ -68,6 +68,7 @@ class PartOfSpeech(str, enum.Enum):
     VERB = "verb"
     ADJECTIVE = "adjective"
     ADVERB = "adverb"
+    PHRASE = "phrase"
 
 
 class CardStatus(str, enum.Enum):
