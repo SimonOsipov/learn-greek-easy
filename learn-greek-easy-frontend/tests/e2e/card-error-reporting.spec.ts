@@ -53,9 +53,9 @@ async function flipFlashcard(page: Page): Promise<void> {
   const flashcard = page.locator('[data-testid="flashcard"]');
   await expect(flashcard).toBeVisible({ timeout: 5000 });
 
-  // Click on CardHeader which has role="button" and aria-label containing "flip"
-  // This is the actual clickable element with onClick={onFlip}
-  const cardHeader = page.getByRole('button', { name: /flip/i });
+  // Click on CardHeader which has role="button" and aria-label "Flip card to reveal translation"
+  // Use exact match to avoid matching other buttons with "flip" in their name
+  const cardHeader = page.getByRole('button', { name: /flip card to reveal/i });
   await cardHeader.click();
 
   // Wait for the report-error-button to appear - this is conditionally rendered
