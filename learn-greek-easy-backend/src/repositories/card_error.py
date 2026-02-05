@@ -96,6 +96,32 @@ class CardErrorReportRepository(BaseRepository[CardErrorReport]):
         result = await self.db.execute(query)
         return result.scalar_one_or_none()
 
+    async def get_pending_report_for_card(
+        self, card_id: UUID, card_type: CardErrorCardType, user_id: UUID
+    ) -> Optional[CardErrorReport]:
+        """Get user's existing PENDING report for a specific card.
+
+        This method checks if the user has an unresolved (PENDING status) report
+        for a specific card. Used to enforce the business rule that users cannot
+        submit duplicate reports while one is still pending review.
+
+        Args:
+            card_id: The ID of the card being reported
+            card_type: The type of card (VOCABULARY or CULTURE)
+            user_id: The ID of the user who submitted the report
+
+        Returns:
+            The pending CardErrorReport if one exists, None otherwise
+        """
+        query = select(CardErrorReport).where(
+            CardErrorReport.card_id == card_id,
+            CardErrorReport.card_type == card_type,
+            CardErrorReport.user_id == user_id,
+            CardErrorReport.status == CardErrorStatus.PENDING,
+        )
+        result = await self.db.execute(query)
+        return result.scalar_one_or_none()
+
     async def get_pending_count_for_card(self, card_id: UUID, card_type: CardErrorCardType) -> int:
         """Get count of pending error reports for a card."""
         query = (

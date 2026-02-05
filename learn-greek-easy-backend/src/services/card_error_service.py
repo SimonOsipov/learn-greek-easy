@@ -35,10 +35,10 @@ class CardErrorService:
             Created CardErrorReport
 
         Raises:
-            ConflictException: If user already reported this card
+            ConflictException: If user has a pending (unreviewed) report for this card
         """
-        # Check for existing report (unique constraint: user_id, card_type, card_id)
-        existing = await self.repo.get_user_report_for_card(
+        # Check for pending report - allow re-submission after resolution
+        existing = await self.repo.get_pending_report_for_card(
             card_id=data.card_id,
             card_type=data.card_type,
             user_id=user_id,
@@ -47,7 +47,7 @@ class CardErrorService:
         if existing:
             raise ConflictException(
                 resource="CardErrorReport",
-                detail="You have already reported an error for this card",
+                detail="Admin yet to review your previous feedback",
             )
 
         # Create the report

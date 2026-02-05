@@ -12,7 +12,7 @@ from uuid import uuid4
 import pytest
 
 from src.core.exceptions import ConflictException
-from src.db.models import CardErrorCardType, CardErrorReport
+from src.db.models import CardErrorCardType, CardErrorReport, CardErrorStatus
 from src.schemas.card_error import CardErrorReportCreate
 from src.services.card_error_service import CardErrorService
 
@@ -34,7 +34,7 @@ def mock_db_session():
 def mock_repo():
     """Create a mock CardErrorReportRepository."""
     repo = MagicMock()
-    repo.get_user_report_for_card = AsyncMock(return_value=None)
+    repo.get_pending_report_for_card = AsyncMock(return_value=None)
     repo.create = AsyncMock()
     return repo
 
@@ -69,7 +69,7 @@ class TestCreateCardErrorReportSuccess:
         mock_report.card_type = CardErrorCardType.VOCABULARY
         mock_report.description = "The translation is incorrect."
 
-        mock_repo.get_user_report_for_card.return_value = None
+        mock_repo.get_pending_report_for_card.return_value = None
         mock_repo.create.return_value = mock_report
 
         create_data = CardErrorReportCreate(
@@ -87,7 +87,7 @@ class TestCreateCardErrorReportSuccess:
 
         # Assert
         assert result == mock_report
-        mock_repo.get_user_report_for_card.assert_awaited_once_with(
+        mock_repo.get_pending_report_for_card.assert_awaited_once_with(
             card_id=card_id,
             card_type=CardErrorCardType.VOCABULARY,
             user_id=user_id,
@@ -96,24 +96,27 @@ class TestCreateCardErrorReportSuccess:
 
 
 # =============================================================================
-# Test create_card_error_report - Duplicate Report
+# Test create_card_error_report - Pending Report Block
 # =============================================================================
 
 
 @pytest.mark.unit
-class TestCreateCardErrorReportDuplicate:
-    """Tests for duplicate card error report handling."""
+class TestCreateCardErrorReportPendingBlock:
+    """Tests for blocking when PENDING report exists."""
 
     @pytest.mark.asyncio
-    async def test_create_card_error_report_raises_conflict_when_exists(self, service, mock_repo):
-        """Raises ConflictException when user already reported this card."""
+    async def test_create_card_error_report_raises_conflict_when_pending_exists(
+        self, service, mock_repo
+    ):
+        """Raises ConflictException when user has a PENDING report for this card."""
         # Arrange
         user_id = uuid4()
         card_id = uuid4()
-        existing_report = MagicMock(spec=CardErrorReport)
-        existing_report.id = uuid4()
+        existing_pending_report = MagicMock(spec=CardErrorReport)
+        existing_pending_report.id = uuid4()
+        existing_pending_report.status = CardErrorStatus.PENDING
 
-        mock_repo.get_user_report_for_card.return_value = existing_report
+        mock_repo.get_pending_report_for_card.return_value = existing_pending_report
 
         create_data = CardErrorReportCreate(
             card_id=card_id,
@@ -128,8 +131,13 @@ class TestCreateCardErrorReportDuplicate:
                 data=create_data,
             )
 
-        assert "already reported" in str(exc_info.value.detail)
+        assert "Admin yet to review" in str(exc_info.value.detail)
         mock_repo.create.assert_not_awaited()
+        mock_repo.get_pending_report_for_card.assert_awaited_once_with(
+            card_id=card_id,
+            card_type=CardErrorCardType.VOCABULARY,
+            user_id=user_id,
+        )
 
 
 # =============================================================================
@@ -151,7 +159,7 @@ class TestCreateCardErrorReportCultureType:
         mock_report.id = uuid4()
         mock_report.card_type = CardErrorCardType.CULTURE
 
-        mock_repo.get_user_report_for_card.return_value = None
+        mock_repo.get_pending_report_for_card.return_value = None
         mock_repo.create.return_value = mock_report
 
         create_data = CardErrorReportCreate(
@@ -169,7 +177,7 @@ class TestCreateCardErrorReportCultureType:
 
         # Assert
         assert result == mock_report
-        mock_repo.get_user_report_for_card.assert_awaited_once_with(
+        mock_repo.get_pending_report_for_card.assert_awaited_once_with(
             card_id=card_id,
             card_type=CardErrorCardType.CULTURE,
             user_id=user_id,
@@ -198,7 +206,7 @@ class TestCreateCardErrorReportLogging:
         mock_report.card_id = card_id
         mock_report.card_type = CardErrorCardType.VOCABULARY
 
-        mock_repo.get_user_report_for_card.return_value = None
+        mock_repo.get_pending_report_for_card.return_value = None
         mock_repo.create.return_value = mock_report
 
         create_data = CardErrorReportCreate(
@@ -225,3 +233,132 @@ class TestCreateCardErrorReportLogging:
             assert extra["user_id"] == str(user_id)
             assert extra["card_id"] == str(card_id)
             assert extra["card_type"] == "VOCABULARY"
+
+
+# =============================================================================
+# Test create_card_error_report - Re-submission Scenarios
+# =============================================================================
+
+
+@pytest.mark.unit
+class TestCreateCardErrorReportResubmission:
+    """Tests for re-submission after previous report was resolved."""
+
+    @pytest.mark.asyncio
+    async def test_allows_resubmission_after_report_reviewed(self, service, mock_repo):
+        """User CAN submit new report when previous report is REVIEWED."""
+        # Arrange
+        user_id = uuid4()
+        card_id = uuid4()
+        mock_report = MagicMock(spec=CardErrorReport)
+        mock_report.id = uuid4()
+
+        # No PENDING report exists (previous was REVIEWED)
+        mock_repo.get_pending_report_for_card.return_value = None
+        mock_repo.create.return_value = mock_report
+
+        create_data = CardErrorReportCreate(
+            card_id=card_id,
+            card_type=CardErrorCardType.VOCABULARY,
+            description="Found another issue after review.",
+        )
+
+        # Act
+        with patch("src.services.card_error_service.logger"):
+            result = await service.create_card_error_report(
+                user_id=user_id,
+                data=create_data,
+            )
+
+        # Assert - submission succeeds
+        assert result == mock_report
+        mock_repo.create.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_allows_resubmission_after_report_fixed(self, service, mock_repo):
+        """User CAN submit new report when previous report is FIXED."""
+        # Arrange
+        user_id = uuid4()
+        card_id = uuid4()
+        mock_report = MagicMock(spec=CardErrorReport)
+        mock_report.id = uuid4()
+
+        # No PENDING report exists (previous was FIXED)
+        mock_repo.get_pending_report_for_card.return_value = None
+        mock_repo.create.return_value = mock_report
+
+        create_data = CardErrorReportCreate(
+            card_id=card_id,
+            card_type=CardErrorCardType.VOCABULARY,
+            description="Found new issue after fix.",
+        )
+
+        # Act
+        with patch("src.services.card_error_service.logger"):
+            result = await service.create_card_error_report(
+                user_id=user_id,
+                data=create_data,
+            )
+
+        # Assert - submission succeeds
+        assert result == mock_report
+        mock_repo.create.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_allows_resubmission_after_report_dismissed(self, service, mock_repo):
+        """User CAN submit new report when previous report is DISMISSED."""
+        # Arrange
+        user_id = uuid4()
+        card_id = uuid4()
+        mock_report = MagicMock(spec=CardErrorReport)
+        mock_report.id = uuid4()
+
+        # No PENDING report exists (previous was DISMISSED)
+        mock_repo.get_pending_report_for_card.return_value = None
+        mock_repo.create.return_value = mock_report
+
+        create_data = CardErrorReportCreate(
+            card_id=card_id,
+            card_type=CardErrorCardType.VOCABULARY,
+            description="Resubmitting with better description.",
+        )
+
+        # Act
+        with patch("src.services.card_error_service.logger"):
+            result = await service.create_card_error_report(
+                user_id=user_id,
+                data=create_data,
+            )
+
+        # Assert - submission succeeds
+        assert result == mock_report
+        mock_repo.create.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_blocks_resubmission_while_pending(self, service, mock_repo):
+        """User CANNOT submit new report while previous report is PENDING."""
+        # Arrange
+        user_id = uuid4()
+        card_id = uuid4()
+        existing_pending_report = MagicMock(spec=CardErrorReport)
+        existing_pending_report.id = uuid4()
+        existing_pending_report.status = CardErrorStatus.PENDING
+
+        # PENDING report exists (blocking case)
+        mock_repo.get_pending_report_for_card.return_value = existing_pending_report
+
+        create_data = CardErrorReportCreate(
+            card_id=card_id,
+            card_type=CardErrorCardType.VOCABULARY,
+            description="Trying to submit while pending exists.",
+        )
+
+        # Act & Assert
+        with pytest.raises(ConflictException) as exc_info:
+            await service.create_card_error_report(
+                user_id=user_id,
+                data=create_data,
+            )
+
+        assert "Admin yet to review" in str(exc_info.value.detail)
+        mock_repo.create.assert_not_awaited()

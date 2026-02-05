@@ -161,6 +161,7 @@
     "success": "Thank you for reporting this error!",
     "error": "Failed to submit error report. Please try again.",
     "alreadyReported": "You have already reported an error for this card",
+    "pendingReview": "Admin yet to review your previous feedback",
     "submitting": "Submitting..."
   }
 }
