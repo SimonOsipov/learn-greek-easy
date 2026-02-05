@@ -12,7 +12,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from src.db.models import DeckLevel
+from src.db.models import CardSystemVersion, DeckLevel
 
 # ============================================================================
 # Deck Schemas
@@ -73,6 +73,10 @@ class DeckResponse(BaseModel):
     level: DeckLevel
     is_active: bool
     is_premium: bool
+    card_system: CardSystemVersion = Field(
+        default=CardSystemVersion.V1,
+        description="Card UI system version: v1 (flip) or v2 (expandable)",
+    )
     card_count: int = Field(0, ge=0, description="Number of cards in the deck")
     created_at: datetime
     updated_at: datetime
@@ -135,6 +139,10 @@ class DeckAdminCreate(BaseModel):
     level: DeckLevel
     is_active: bool = True
     is_premium: bool = False
+    card_system: CardSystemVersion | None = Field(
+        default=None,
+        description="Card UI system version. If None, uses DB default (v1)",
+    )
 
 
 class DeckAdminUpdate(BaseModel):
@@ -157,6 +165,7 @@ class DeckAdminUpdate(BaseModel):
     level: DeckLevel | None = None
     is_active: bool | None = None
     is_premium: bool | None = None
+    card_system: CardSystemVersion | None = None
 
 
 class DeckAdminResponse(BaseModel):
@@ -178,6 +187,10 @@ class DeckAdminResponse(BaseModel):
     level: DeckLevel
     is_active: bool
     is_premium: bool
+    card_system: CardSystemVersion = Field(
+        default=CardSystemVersion.V1,
+        description="Card UI system version: v1 (flip) or v2 (expandable)",
+    )
     card_count: int = Field(0, ge=0, description="Number of cards in the deck")
     owner_id: UUID | None = None
     created_at: datetime
