@@ -38,6 +38,7 @@ from src.db.models import (  # noqa: F401
     NewsItem,
     Notification,
     NotificationType,
+    PartOfSpeech,
     RefreshToken,
     Review,
     ReviewRating,
@@ -47,6 +48,7 @@ from src.db.models import (  # noqa: F401
     UserSettings,
     UserXP,
     VoteType,
+    WordEntry,
     XPTransaction,
 )
 
