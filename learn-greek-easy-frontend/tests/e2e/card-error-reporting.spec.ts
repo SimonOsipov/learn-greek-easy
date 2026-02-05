@@ -56,8 +56,10 @@ async function flipFlashcard(page: Page): Promise<void> {
   const clickToReveal = page.getByText(/click to reveal/i);
   await expect(clickToReveal).toBeVisible({ timeout: 5000 });
 
-  // Use Space key to flip
-  await page.keyboard.press('Space');
+  // Click on the CardHeader to flip it (it has role="button" and onClick={onFlip})
+  // The flashcard container itself doesn't have a click handler
+  const cardHeader = flashcard.getByRole('button').first();
+  await cardHeader.click();
 
   // Wait for the card to actually flip - the "Click to reveal" text should disappear
   await expect(clickToReveal).not.toBeVisible({ timeout: 5000 });
