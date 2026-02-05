@@ -376,3 +376,137 @@ class WordEntrySearchResponse(BaseModel):
         description="Part of speech filter applied",
     )
     items: list[WordEntryResponse]
+
+
+# ============================================================================
+# Bulk Word Entry Schemas
+# ============================================================================
+
+
+class WordEntryBulkCreate(BaseModel):
+    """Schema for individual word entry in bulk upload request.
+
+    Similar to WordEntryBase but without deck_id (provided at request level),
+    audio_key (not supported in bulk), and is_active (defaults to True).
+    """
+
+    lemma: str = Field(
+        ...,
+        min_length=1,
+        max_length=100,
+        description="Dictionary form (base form) of the word in Greek",
+    )
+    part_of_speech: PartOfSpeech = Field(
+        ...,
+        description="Part of speech classification",
+    )
+    cefr_level: Optional[DeckLevel] = Field(
+        default=None,
+        description="CEFR level (A1-C2), overrides deck level if set",
+    )
+    translation_en: str = Field(
+        ...,
+        min_length=1,
+        max_length=500,
+        description="English translation(s)",
+    )
+    translation_ru: Optional[str] = Field(
+        default=None,
+        max_length=500,
+        description="Russian translation(s)",
+    )
+    pronunciation: Optional[str] = Field(
+        default=None,
+        max_length=200,
+        description="IPA or phonetic pronunciation guide",
+    )
+    grammar_data: Optional[dict[str, Any]] = Field(
+        default=None,
+        description="Part-of-speech specific grammar information (stored as-is)",
+    )
+    examples: Optional[list[ExampleSentence]] = Field(
+        default=None,
+        description="Usage examples with translations",
+    )
+
+    @field_validator("lemma", mode="before")
+    @classmethod
+    def strip_and_validate_lemma(cls, v: str) -> str:
+        """Strip whitespace and validate non-empty lemma."""
+        if isinstance(v, str):
+            v = v.strip()
+            if not v:
+                raise ValueError("lemma cannot be empty or whitespace only")
+        return v
+
+    @field_validator("translation_ru", mode="before")
+    @classmethod
+    def strip_translation_ru(cls, v: str | None) -> str | None:
+        """Strip whitespace from Russian translation if provided."""
+        if v is None:
+            return None
+        if isinstance(v, str):
+            v = v.strip()
+            if not v:
+                return None
+        return v
+
+
+class WordEntryBulkRequest(BaseModel):
+    """Schema for bulk word entry upload request.
+
+    Allows uploading multiple word entries to a single deck.
+    Entries with matching lemma + part_of_speech will be updated;
+    new entries will be created.
+    """
+
+    deck_id: UUID = Field(
+        ...,
+        description="UUID of the deck to add word entries to",
+    )
+    word_entries: list[WordEntryBulkCreate] = Field(
+        ...,
+        min_length=1,
+        max_length=100,
+        description="List of word entries to create or update (1-100 entries)",
+    )
+
+    @model_validator(mode="after")
+    def check_no_duplicate_lemma_pos(self) -> "WordEntryBulkRequest":
+        """Ensure no duplicate lemma + part_of_speech combinations in request."""
+        seen = set()
+        for entry in self.word_entries:
+            key = (entry.lemma.lower(), entry.part_of_speech)
+            if key in seen:
+                raise ValueError(
+                    f"Duplicate entry for lemma '{entry.lemma}' with "
+                    f"part_of_speech '{entry.part_of_speech.value}'"
+                )
+            seen.add(key)
+        return self
+
+
+class WordEntryBulkResponse(BaseModel):
+    """Schema for bulk word entry upload response.
+
+    Returns summary counts and the full list of created/updated entries.
+    """
+
+    deck_id: UUID = Field(
+        ...,
+        description="UUID of the deck entries were added to",
+    )
+    created_count: int = Field(
+        ...,
+        ge=0,
+        description="Number of new word entries created",
+    )
+    updated_count: int = Field(
+        ...,
+        ge=0,
+        description="Number of existing word entries updated",
+    )
+    word_entries: list[WordEntryResponse] = Field(
+        ...,
+        description="List of all created and updated word entries",
+    )
