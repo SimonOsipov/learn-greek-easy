@@ -4825,8 +4825,6 @@ class SeedService:
                 back_text_ru=None,
                 pronunciation=None,
                 part_of_speech=PartOfSpeech.NOUN if category == "noun" else None,
-                status=CardStatus.NEW,
-                tags=[category],
             )
             self.db.add(card)
             v1_cards.append(card)
