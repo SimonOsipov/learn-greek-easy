@@ -178,12 +178,12 @@ class CardSystemVersion(str, enum.Enum):
     """Card system version for decks.
 
     Determines which card data source a deck uses:
-    - v1: Legacy cards table (original system)
-    - v2: New word_entries system (WENTRY feature)
+    - V1: Legacy cards table (original system)
+    - V2: New word_entries system (WENTRY feature)
     """
 
-    V1 = "v1"
-    V2 = "v2"
+    V1 = "V1"
+    V2 = "V2"
 
 
 # ============================================================================
@@ -493,6 +493,15 @@ class Deck(Base, TimestampMixin):
         nullable=False,
         index=True,
         comment="Premium decks require a subscription to access",
+    )
+
+    # Card system version
+    card_system: Mapped[CardSystemVersion] = mapped_column(
+        nullable=False,
+        default=CardSystemVersion.V1,
+        server_default=text("'V1'"),
+        index=True,
+        comment="Card presentation system: V1 (traditional flashcards), V2 (new system)",
     )
 
     # Owner (for user-created decks)

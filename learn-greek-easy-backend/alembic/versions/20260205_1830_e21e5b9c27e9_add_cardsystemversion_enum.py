@@ -24,8 +24,8 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     """Create cardsystemversion enum type."""
     cardsystemversion_enum = postgresql.ENUM(
-        "v1",
-        "v2",
+        "V1",
+        "V2",
         name="cardsystemversion",
         create_type=False,
     )
@@ -34,5 +34,5 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     """Drop cardsystemversion enum type."""
-    cardsystemversion_enum = postgresql.ENUM("v1", "v2", name="cardsystemversion")
+    cardsystemversion_enum = postgresql.ENUM("V1", "V2", name="cardsystemversion")
     cardsystemversion_enum.drop(op.get_bind(), checkfirst=True)

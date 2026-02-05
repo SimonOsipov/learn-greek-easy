@@ -21,7 +21,7 @@ Usage:
 import factory
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.db.models import Card, Deck, DeckLevel
+from src.db.models import Card, CardSystemVersion, Deck, DeckLevel
 from tests.factories.base import BaseFactory, fake
 
 
@@ -71,6 +71,7 @@ class DeckFactory(BaseFactory):
     level = DeckLevel.A1
     is_active = True
     is_premium = False
+    card_system = CardSystemVersion.V1
 
     class Params:
         """Factory traits for common variations."""
