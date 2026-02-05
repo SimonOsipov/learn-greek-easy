@@ -211,5 +211,11 @@
     "editSuccess": "Deck updated successfully",
     "createError": "Failed to create deck",
     "editError": "Failed to update deck"
+  },
+  "v2": {
+    "wordBrowserTitle": "Word Entries Browser",
+    "wordBrowserPlaceholder": "Browse vocabulary words in this deck. Full functionality coming soon.",
+    "comingSoon": "Coming soon",
+    "toPractice": "To practice"
   }
 }
