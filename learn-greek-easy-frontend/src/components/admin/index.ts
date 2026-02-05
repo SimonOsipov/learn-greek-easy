@@ -8,6 +8,7 @@ export {
 export { AdminCardErrorSection } from './AdminCardErrorSection';
 export { AdminFeedbackCard } from './AdminFeedbackCard';
 export { BulkUploadsTab } from './BulkUploadsTab';
+export { WordEntriesTab } from './WordEntriesTab';
 export { AdminFeedbackResponseDialog } from './AdminFeedbackResponseDialog';
 export { AdminFeedbackSection } from './AdminFeedbackSection';
 export { CardCreateModal, type CardCreateModalProps } from './CardCreateModal';

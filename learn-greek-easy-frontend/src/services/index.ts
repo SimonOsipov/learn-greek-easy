@@ -50,6 +50,15 @@ export type {
   SearchCardsParams,
 } from './cardAPI';
 
+// Word Entry API
+export { wordEntryAPI } from './wordEntryAPI';
+export type {
+  WordEntryBulkResponse,
+  WordEntryExampleSentence,
+  WordEntryInput,
+  WordEntryResponse,
+} from './wordEntryAPI';
+
 // Study API
 export { studyAPI } from './studyAPI';
 export type {

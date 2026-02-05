@@ -37,6 +37,7 @@ from src.api.v1.progress import router as progress_router
 from src.api.v1.reviews import router as review_router
 from src.api.v1.study import router as study_router
 from src.api.v1.users import router as users_router
+from src.api.v1.word_entries import router as word_entries_router
 from src.api.v1.xp import router as xp_router
 
 # Create the main v1 router
@@ -180,6 +181,15 @@ v1_router.include_router(
     users_router,
     prefix="/users",
     tags=["Users"],
+)
+
+# =============================================================================
+# Word Entries Routes
+# =============================================================================
+v1_router.include_router(
+    word_entries_router,
+    prefix="/word-entries",
+    tags=["Word Entries"],
 )
 
 # =============================================================================
