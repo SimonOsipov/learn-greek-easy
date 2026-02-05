@@ -45,21 +45,22 @@ async function navigateToFlashcardReview(page: Page): Promise<void> {
 /**
  * Helper function to flip a flashcard and reveal the answer.
  *
- * Clicks directly on the CardHeader which has role="button" and onClick={onFlip}.
- * The container div has no onClick - must target the actual clickable CardHeader.
+ * Uses the same approach as flashcard-review.spec.ts which passes reliably.
  */
 async function flipFlashcard(page: Page): Promise<void> {
   // Wait for flashcard container to be visible
   const flashcard = page.locator('[data-testid="flashcard"]');
   await expect(flashcard).toBeVisible({ timeout: 5000 });
 
-  // Click on CardHeader - it's the first role="button" element inside the flashcard container
-  // Using CSS selector to avoid language-dependent aria-label matching
-  const cardHeader = flashcard.locator('[role="button"]').first();
-  await cardHeader.click();
+  // Use Space key to flip - same approach as flashcard-review.spec.ts
+  await page.keyboard.press('Space');
 
-  // Wait for the report-error-button to appear - this is conditionally rendered
-  // only when isCardFlipped is true (see FlashcardContainer.tsx line 67)
+  // Wait for rating buttons to appear (indicates flip complete)
+  // This is the same check used in flashcard-review.spec.ts
+  const ratingButton = page.getByRole('button', { name: /good|easy|hard|again/i }).first();
+  await expect(ratingButton).toBeVisible({ timeout: 5000 });
+
+  // Also verify report-error-button is visible
   const reportErrorButton = page.getByTestId('report-error-button');
   await expect(reportErrorButton).toBeVisible({ timeout: 5000 });
 }
