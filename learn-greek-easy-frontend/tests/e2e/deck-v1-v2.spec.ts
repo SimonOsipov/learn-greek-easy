@@ -120,6 +120,19 @@ test.describe('V1/V2 Deck Pages', () => {
       console.log(`[DEBUG] Has cookies: ${cookies.length > 0}`);
       console.log(`[DEBUG] Storage state keys: ${Object.keys(storageState).join(', ')}`);
 
+      // Listen for console errors
+      const consoleErrors: string[] = [];
+      page.on('console', (msg) => {
+        if (msg.type() === 'error') {
+          consoleErrors.push(msg.text());
+        }
+      });
+
+      // Listen for page crashes
+      page.on('pageerror', (error) => {
+        consoleErrors.push(`PAGE ERROR: ${error.message}`);
+      });
+
       // Navigate to V2 deck detail page
       console.log(`[DEBUG] Navigating to V2 deck: ${v2DeckId}`);
       await page.goto(`/decks/${v2DeckId}`);
@@ -138,6 +151,11 @@ test.describe('V1/V2 Deck Pages', () => {
         pageHTML.includes('deck-detail') || pageHTML.includes('v2-deck-detail');
       console.log(`[DEBUG] Page state - Loading: ${hasLoadingState}, Error: ${hasErrorState}, HasDeck: ${hasDeckDetail}`);
       console.log(`[DEBUG] Page URL: ${page.url()}`);
+
+      // Log any console errors
+      if (consoleErrors.length > 0) {
+        console.log(`[DEBUG] Console errors: ${consoleErrors.join(' | ')}`);
+      }
 
       // Capture any text that looks like an error
       const bodyText = await page.locator('body').textContent();
