@@ -39,7 +39,7 @@ import { useDeckStore } from '@/stores/deckStore';
 import type { Deck, DeckStatus } from '@/types/deck';
 
 export const DeckDetailPage: React.FC = () => {
-  const { t } = useTranslation('deck');
+  const { t, i18n } = useTranslation('deck');
   const { id: deckId } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
@@ -50,7 +50,7 @@ export const DeckDetailPage: React.FC = () => {
   // Track whether we've initiated a fetch for this deck
   const [hasFetched, setHasFetched] = useState(false);
 
-  // Fetch deck on mount and when deckId changes
+  // Fetch deck on mount, when deckId changes, or when language changes
   useEffect(() => {
     if (deckId) {
       setHasFetched(false);
@@ -67,7 +67,7 @@ export const DeckDetailPage: React.FC = () => {
     // When routing to V2DeckPage (for V2 decks), this component unmounts
     // but V2DeckPage reuses the same deck from the store.
     // V2DeckPage handles its own cleanup when the user navigates away.
-  }, [deckId, selectDeck]);
+  }, [deckId, selectDeck, i18n.language]);
 
   // Handle invalid deckId (not provided)
   if (!deckId) {

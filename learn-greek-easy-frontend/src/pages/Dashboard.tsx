@@ -28,7 +28,7 @@ import type { Metric } from '@/types/dashboard';
  * Uses real backend API data via analyticsStore and deckStore.
  */
 export const Dashboard: React.FC = () => {
-  const { t } = useTranslation('common');
+  const { t, i18n } = useTranslation('common');
   const navigate = useNavigate();
 
   // Auth state
@@ -46,12 +46,12 @@ export const Dashboard: React.FC = () => {
   const decksLoading = useDeckStore((state) => state.isLoading);
   const fetchDecks = useDeckStore((state) => state.fetchDecks);
 
-  // Fetch decks on mount
+  // Fetch decks on mount or when language changes
   useEffect(() => {
     fetchDecks().catch((error) => {
       reportAPIError(error, { operation: 'fetchDecks', endpoint: '/decks' });
     });
-  }, [fetchDecks]);
+  }, [fetchDecks, i18n.language]);
 
   // Memoized navigation handler for decks page
   const handleNavigateToDecks = useCallback(() => {
