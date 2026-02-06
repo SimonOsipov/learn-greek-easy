@@ -919,8 +919,8 @@ class TestDeckModelCardSystemDatabase:
         assert deck.card_system == "V2"
 
     @pytest.mark.asyncio
-    async def test_deck_card_system_default_is_v1(self, db_session: AsyncSession):
-        """Test card_system defaults to V1 when not specified."""
+    async def test_deck_card_system_default_is_v2(self, db_session: AsyncSession):
+        """Test card_system defaults to V2 when not specified."""
         from src.db.models import CardSystemVersion
 
         deck = Deck(
@@ -932,14 +932,14 @@ class TestDeckModelCardSystemDatabase:
             description_ru="Default card system test",
             level=DeckLevel.A1,
             is_premium=False,
-            # card_system not specified - should default to V1
+            # card_system not specified - should default to V2
         )
         db_session.add(deck)
         await db_session.commit()
         await db_session.refresh(deck)
 
-        assert deck.card_system == CardSystemVersion.V1
-        assert deck.card_system == "V1"
+        assert deck.card_system == CardSystemVersion.V2
+        assert deck.card_system == "V2"
 
     @pytest.mark.asyncio
     async def test_deck_card_system_update_v1_to_v2(self, db_session: AsyncSession):

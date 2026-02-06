@@ -509,8 +509,8 @@ class Deck(Base, TimestampMixin):
     # Card system version
     card_system: Mapped[CardSystemVersion] = mapped_column(
         nullable=False,
-        default=CardSystemVersion.V1,
-        server_default=text("'V1'"),
+        default=CardSystemVersion.V2,
+        server_default=text("'V2'"),
         index=True,
         comment="Card system version: V1 (classic Card model) or V2 (WordEntry-based)",
     )

@@ -839,8 +839,8 @@ class TestDeckResponseCardSystem:
         )
         assert response.card_system == CardSystemVersion.V2
 
-    def test_deck_response_card_system_default_v1(self):
-        """DeckResponse should default to V1 for card_system."""
+    def test_deck_response_card_system_default_v2(self):
+        """DeckResponse should default to V2 for card_system."""
         now = datetime.now()
         response = DeckResponse(
             id=uuid4(),
@@ -851,7 +851,7 @@ class TestDeckResponseCardSystem:
             created_at=now,
             updated_at=now,
         )
-        assert response.card_system == CardSystemVersion.V1
+        assert response.card_system == CardSystemVersion.V2
 
 
 class TestDeckAdminCreateCardSystem:
@@ -998,8 +998,8 @@ class TestDeckAdminResponseCardSystem:
         )
         assert response.card_system == CardSystemVersion.V2
 
-    def test_admin_response_card_system_default_v1(self):
-        """DeckAdminResponse should default to V1 for card_system."""
+    def test_admin_response_card_system_default_v2(self):
+        """DeckAdminResponse should default to V2 for card_system."""
         from src.schemas.deck import DeckAdminResponse
 
         now = datetime.now()
@@ -1019,4 +1019,4 @@ class TestDeckAdminResponseCardSystem:
             created_at=now,
             updated_at=now,
         )
-        assert response.card_system == CardSystemVersion.V1
+        assert response.card_system == CardSystemVersion.V2
