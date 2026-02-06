@@ -100,6 +100,18 @@ CRITICAL: You MUST use the specified subagent for each stage. Do NOT implement c
 | Execution | product-executor | Always — implement all code changes |
 | QA Verify | product-qa-spec | Always — verify implementation correctness |
 
+## Fallback: If Subagent Spawning Fails
+If you cannot spawn a subagent (e.g., agent teams unavailable, tool errors), read the corresponding agent technical prompt file BEFORE executing the stage yourself. These files contain the full methodology and instructions for each role:
+
+| Stage | Read this file first |
+|-------|---------------------|
+| Architecture | `~/.claude/agents/product-architecture-spec.md` |
+| QA Plan / QA Verify | `~/.claude/agents/product-qa-spec.md` |
+| Execution | `~/.claude/agents/product-executor.md` |
+| Explore | No file needed — use Glob/Grep/Read to verify files and patterns directly |
+
+Read the file, internalize the instructions, then execute the stage following that agent's methodology.
+
 ## Stage 1: Architecture
 - Spawn a `product-architecture-spec` subagent via Task tool
 - Pass it the Vibe Kanban task description and ask it to review/enhance the architecture
