@@ -23,7 +23,7 @@ let v1DeckId: string;
 let v2DeckId: string;
 
 /**
- * Seed V1/V2 test decks
+ * Seed V1/V2 test decks (1 V1 + 3 V2: Nouns A1, Verbs A2, Mixed A2)
  */
 async function seedDualDecks(
   request: APIRequestContext

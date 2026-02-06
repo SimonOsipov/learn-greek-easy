@@ -877,9 +877,9 @@ async def seed_admin_cards(
     "/dual-decks",
     response_model=SeedResultResponse,
     summary="Seed V1/V2 dual deck test data",
-    description="Create one V1 deck with traditional cards and one V2 deck with word entries "
-    "for E2E testing of the dual card system. This endpoint is idempotent - "
-    "existing test decks are replaced.",
+    description="Create one V1 deck with traditional cards and three V2 decks (Nouns A1, "
+    "Verbs A2, Mixed A2) with word entries for E2E testing of the dual card system. "
+    "This endpoint is idempotent - existing test decks are replaced.",
     dependencies=[Depends(verify_seed_access)],
 )
 async def seed_dual_decks(
@@ -889,9 +889,10 @@ async def seed_dual_decks(
 
     Creates:
     - 1 V1 deck (E2E V1 Test Deck) with 10 traditional cards
-    - 1 V2 deck (E2E V2 Test Deck) with 10 word entries
-
-    The V2 deck includes grammar data (conjugation for verbs, declension for nouns).
+    - 3 V2 decks:
+      - E2E V2 Nouns Deck (A1): 10 nouns with declension data
+      - E2E V2 Verbs Deck (A2): 10 verbs with conjugation data
+      - E2E V2 Mixed Deck (A2): 4 adjectives, 4 adverbs, 2 phrases
 
     This endpoint is idempotent - it replaces existing E2E test decks.
 
