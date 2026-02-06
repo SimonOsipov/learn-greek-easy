@@ -108,7 +108,7 @@ const createWrapper = () => {
           React.createElement(
             Routes,
             null,
-            React.createElement(Route, { path: '/decks/:deckId', element: children })
+            React.createElement(Route, { path: '/decks/:id', element: children })
           )
         )
       )

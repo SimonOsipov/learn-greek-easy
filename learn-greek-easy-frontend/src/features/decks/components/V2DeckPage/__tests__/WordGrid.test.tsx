@@ -26,7 +26,7 @@ function renderWithRouter(entries: WordEntryResponse[], deckId: string = 'deck-1
   return render(
     <MemoryRouter initialEntries={[`/decks/${deckId}`]}>
       <Routes>
-        <Route path="/decks/:deckId" element={<WordGrid entries={entries} />} />
+        <Route path="/decks/:id" element={<WordGrid entries={entries} />} />
       </Routes>
     </MemoryRouter>
   );

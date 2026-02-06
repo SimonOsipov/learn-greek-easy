@@ -32,7 +32,7 @@ export interface WordGridProps {
  */
 export function WordGrid({ entries }: WordGridProps) {
   const navigate = useNavigate();
-  const { deckId } = useParams<{ deckId: string }>();
+  const { id: deckId } = useParams<{ id: string }>();
 
   const handleWordCardClick = (entryId: string) => {
     navigate(`/decks/${deckId}/words/${entryId}`);
