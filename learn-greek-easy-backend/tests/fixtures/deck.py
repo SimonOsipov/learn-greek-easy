@@ -29,7 +29,7 @@ from uuid import UUID
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.db.models import Card, Deck, DeckLevel
+from src.db.models import Card, CardSystemVersion, Deck, DeckLevel
 
 # =============================================================================
 # Type Definitions
@@ -236,6 +236,7 @@ def create_deck_data(
         "description_el": description,  # Same as English for test fixtures
         "description_ru": description,  # Same as English for test fixtures
         "level": level,
+        "card_system": CardSystemVersion.V1,  # Fixtures create Card records (V1 table)
         "is_active": is_active,
         "owner_id": owner_id,
     }

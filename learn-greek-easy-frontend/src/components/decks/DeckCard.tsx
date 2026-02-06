@@ -202,7 +202,13 @@ export const DeckCard: React.FC<DeckCardProps> = ({
           >
             {/* Card Count */}
             <div>
-              <p className="text-xs text-muted-foreground">{t('detail.cards')}</p>
+              <p className="text-xs text-muted-foreground">
+                {isCultureDeck
+                  ? t('detail.questions')
+                  : deck.cardSystem === 'V2'
+                    ? t('detail.words')
+                    : t('detail.cards')}
+              </p>
               <p className="text-sm font-semibold text-foreground">{cardCount}</p>
             </div>
 

@@ -73,6 +73,8 @@
     "notFoundDescription": "Колода, которую вы ищете, не существует или была удалена.",
     "browseAll": "Все колоды",
     "cards": "карточек",
+    "words": "слов",
+    "questions": "вопросов",
     "flashcards": "карточки",
     "cardsToReview": "карточек на повторение",
     "mastered": "{{count}}/{{total}} освоено",

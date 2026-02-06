@@ -71,7 +71,7 @@ class DeckFactory(BaseFactory):
     level = DeckLevel.A1
     is_active = True
     is_premium = False
-    card_system = CardSystemVersion.V2
+    card_system = CardSystemVersion.V1  # Factory pairs with CardFactory (V1 Card records)
 
     class Params:
         """Factory traits for common variations."""

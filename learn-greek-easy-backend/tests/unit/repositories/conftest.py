@@ -11,6 +11,7 @@ from src.db.models import (
     Card,
     CardStatistics,
     CardStatus,
+    CardSystemVersion,
     Deck,
     DeckLevel,
     RefreshToken,
@@ -74,6 +75,7 @@ async def sample_deck(db_session):
         description_en="Basic Greek vocabulary and phrases",
         description_ru="Базовая греческая лексика и фразы",
         level=DeckLevel.A1,
+        card_system=CardSystemVersion.V1,
         is_active=True,
     )
     db_session.add(deck)
