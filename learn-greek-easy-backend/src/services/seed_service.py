@@ -2027,6 +2027,7 @@ class SeedService:
                 level=level,
                 is_active=True,
                 is_premium=is_premium,
+                card_system=CardSystemVersion.V1,
             )
             self.db.add(deck)
             await self.db.flush()
@@ -2103,6 +2104,7 @@ class SeedService:
                     is_active=True,
                     is_premium=False,  # User decks are never premium
                     owner_id=user_id,
+                    card_system=CardSystemVersion.V1,
                 )
                 self.db.add(deck)
                 await self.db.flush()
@@ -4389,6 +4391,7 @@ class SeedService:
             level=DeckLevel.A1,
             is_active=True,
             is_premium=False,
+            card_system=CardSystemVersion.V1,
         )
         self.db.add(main_deck)
         await self.db.flush()
@@ -4458,6 +4461,7 @@ class SeedService:
             level=DeckLevel.A1,
             is_active=True,
             is_premium=False,
+            card_system=CardSystemVersion.V1,
         )
         self.db.add(empty_deck)
         await self.db.flush()
