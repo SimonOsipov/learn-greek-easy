@@ -50,13 +50,8 @@ test.describe('Flashcard Review Session', () => {
     // Navigate to a V1 deck with enabled review button
     await navigateToV1Deck(page);
 
-    // Review button should already be visible and enabled
+    // Review button should already be visible and enabled from navigateToV1Deck
     const reviewButton = page.getByRole('button', { name: /review|start/i }).first();
-    await reviewButton.click();
-
-    // Wait for deck detail page - review button should become visible
-    const reviewButton = page.getByRole('button', { name: /review|start/i }).first();
-    await expect(reviewButton).toBeVisible({ timeout: 5000 });
     await reviewButton.click();
 
     // Wait for review session to start - card should be visible
