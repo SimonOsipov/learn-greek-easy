@@ -186,6 +186,17 @@ class CardSystemVersion(str, enum.Enum):
     V2 = "V2"
 
 
+class CardType(str, enum.Enum):
+    """Type of flashcard exercise generated from a word entry."""
+
+    MEANING_EL_TO_EN = "meaning_el_to_en"
+    MEANING_EN_TO_EL = "meaning_en_to_el"
+    CONJUGATION = "conjugation"
+    DECLENSION = "declension"
+    CLOZE = "cloze"
+    SENTENCE_TRANSLATION = "sentence_translation"
+
+
 # ============================================================================
 # User Models
 # ============================================================================
