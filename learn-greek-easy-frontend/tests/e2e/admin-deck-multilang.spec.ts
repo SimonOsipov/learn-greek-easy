@@ -1,11 +1,11 @@
 /**
  * Admin Deck Management E2E Tests - Multilingual Support
  *
- * Tests for admin deck creation and editing with trilingual (EL/EN/RU) support including:
- * - Vocabulary deck creation with all language tabs
- * - Culture deck creation with language tabs
- * - Vocabulary deck editing with language tabs
- * - Culture deck editing with language tabs
+ * Tests for admin deck creation and editing with bilingual (EN/RU) support including:
+ * - Vocabulary deck creation with EN/RU language tabs
+ * - Culture deck creation with EN/RU language tabs
+ * - Vocabulary deck editing with EN/RU language tabs
+ * - Culture deck editing with EN/RU language tabs
  * - Language tab switching and value preservation
  * - Tab error indicators for incomplete languages
  * - Cancel confirmation on dirty forms
@@ -65,7 +65,7 @@ test.describe('Admin Vocabulary Deck Create - Multilingual', () => {
     await navigateToAdminDecks(page);
   });
 
-  test('creates vocabulary deck with EN/EL/RU names', async ({ page }) => {
+  test('creates vocabulary deck with EN/RU names', async ({ page }) => {
     const uniqueId = Date.now();
 
     // Click "Create Deck" button in action bar
@@ -83,11 +83,6 @@ test.describe('Admin Vocabulary Deck Create - Multilingual', () => {
     await page.getByTestId('deck-create-lang-tab-en').click();
     await page.getByTestId('deck-create-name-en').fill(`Test Vocab Deck EN ${uniqueId}`);
     await page.getByTestId('deck-create-description-en').fill('English description for vocabulary deck');
-
-    // Fill Greek tab
-    await page.getByTestId('deck-create-lang-tab-el').click();
-    await page.getByTestId('deck-create-name-el').fill(`Δοκιμαστική Λεξιλόγιο ${uniqueId}`);
-    await page.getByTestId('deck-create-description-el').fill('Ελληνική περιγραφή για δέσμη λεξιλογίου');
 
     // Fill Russian tab
     await page.getByTestId('deck-create-lang-tab-ru').click();
@@ -120,25 +115,19 @@ test.describe('Admin Vocabulary Deck Create - Multilingual', () => {
     await page.getByTestId('deck-create-lang-tab-en').click();
     await page.getByTestId('deck-create-name-en').fill('Only English Name');
 
-    // Trigger validation by typing and clearing Greek and Russian name fields
+    // Trigger validation by typing and clearing Russian name field
     // (onChange mode requires a value change to trigger validation)
-    await page.getByTestId('deck-create-lang-tab-el').click();
-    await page.getByTestId('deck-create-name-el').fill('temp');
-    await page.getByTestId('deck-create-name-el').clear();
-
     await page.getByTestId('deck-create-lang-tab-ru').click();
     await page.getByTestId('deck-create-name-ru').fill('temp');
     await page.getByTestId('deck-create-name-ru').clear();
 
-    // Go back to English tab to see the error indicators on other tabs
+    // Go back to English tab to see the error indicator on Russian tab
     await page.getByTestId('deck-create-lang-tab-en').click();
 
-    // Greek and Russian tabs should show error indicators (text-destructive class)
-    const elTab = page.getByTestId('deck-create-lang-tab-el');
+    // Russian tab should show error indicator (text-destructive class)
     const ruTab = page.getByTestId('deck-create-lang-tab-ru');
 
-    // Check that tabs have error styling
-    await expect(elTab).toHaveClass(/text-destructive/);
+    // Check that tab has error styling
     await expect(ruTab).toHaveClass(/text-destructive/);
 
     // Cancel and close
@@ -180,7 +169,7 @@ test.describe('Admin Culture Deck Create - Multilingual', () => {
     await navigateToAdminDecks(page);
   });
 
-  test('creates culture deck with EL/EN/RU names and category', async ({ page }) => {
+  test('creates culture deck with EN/RU names and category', async ({ page }) => {
     const uniqueId = Date.now();
 
     // Click "Create Deck" button
@@ -196,11 +185,6 @@ test.describe('Admin Culture Deck Create - Multilingual', () => {
 
     // Wait for culture form to render (form changes based on deck type)
     await expect(page.getByTestId('culture-deck-create-form')).toBeVisible({ timeout: 3000 });
-
-    // Fill Greek tab
-    await page.getByTestId('deck-create-lang-tab-el').click();
-    await page.getByTestId('deck-create-name-el').fill(`Δοκιμαστική Πολιτιστική Δέσμη ${uniqueId}`);
-    await page.getByTestId('deck-create-description-el').fill('Ελληνική περιγραφή για πολιτιστική δέσμη');
 
     // Fill English tab
     await page.getByTestId('deck-create-lang-tab-en').click();
@@ -418,7 +402,7 @@ test.describe('Admin Culture Deck Edit - Multilingual', () => {
     await navigateToAdminDecks(page);
   });
 
-  test('edits culture deck with trilingual fields', async ({ page }) => {
+  test('edits culture deck with bilingual fields', async ({ page }) => {
     const uniqueId = Date.now();
 
     // Wait for deck list to load
@@ -459,11 +443,11 @@ test.describe('Admin Culture Deck Edit - Multilingual', () => {
     const editModal = page.getByTestId('deck-edit-modal');
     await expect(editModal).toBeVisible({ timeout: 5000 });
 
-    // Modify Greek name (culture deck edit uses trilingual tabs)
-    await page.getByTestId('culture-deck-edit-lang-tab-el').click();
-    const elNameInput = page.getByTestId('culture-deck-edit-name-el');
-    await expect(elNameInput).toBeVisible();
-    await elNameInput.fill(`Ελληνική Ενημέρωση ${uniqueId}`);
+    // Modify Russian name (culture deck edit uses bilingual EN/RU tabs)
+    await page.getByTestId('culture-deck-edit-lang-tab-ru').click();
+    const ruNameInput = page.getByTestId('culture-deck-edit-name-ru');
+    await expect(ruNameInput).toBeVisible();
+    await ruNameInput.fill(`Обновление культуры ${uniqueId}`);
 
     // Change category
     await page.getByTestId('deck-edit-category').click();
@@ -508,10 +492,6 @@ test.describe('Admin Deck - Language Tab Behavior', () => {
     await page.getByTestId('deck-create-name-ru').fill('Русское название');
     await page.getByTestId('deck-create-description-ru').fill('Русское описание');
 
-    // Switch to Greek tab and fill
-    await page.getByTestId('deck-create-lang-tab-el').click();
-    await page.getByTestId('deck-create-name-el').fill('Ελληνικό όνομα');
-
     // Switch back to English and verify values are preserved
     await page.getByTestId('deck-create-lang-tab-en').click();
     await expect(page.getByTestId('deck-create-name-en')).toHaveValue('English Deck Name');
@@ -521,10 +501,6 @@ test.describe('Admin Deck - Language Tab Behavior', () => {
     await page.getByTestId('deck-create-lang-tab-ru').click();
     await expect(page.getByTestId('deck-create-name-ru')).toHaveValue('Русское название');
     await expect(page.getByTestId('deck-create-description-ru')).toHaveValue('Русское описание');
-
-    // Switch back to Greek and verify
-    await page.getByTestId('deck-create-lang-tab-el').click();
-    await expect(page.getByTestId('deck-create-name-el')).toHaveValue('Ελληνικό όνομα');
 
     // Cancel to close
     await page.getByTestId('deck-create-cancel').click();
@@ -546,13 +522,6 @@ test.describe('Admin Deck - Language Tab Behavior', () => {
     await page.getByTestId('deck-create-lang-tab-en').click();
     await page.getByTestId('deck-create-name-en').fill('English Name');
 
-    // Submit should still be disabled (Greek and Russian not filled)
-    await expect(submitBtn).toBeDisabled();
-
-    // Fill Greek
-    await page.getByTestId('deck-create-lang-tab-el').click();
-    await page.getByTestId('deck-create-name-el').fill('Ελληνικό');
-
     // Submit should still be disabled (Russian not filled)
     await expect(submitBtn).toBeDisabled();
 
@@ -560,7 +529,7 @@ test.describe('Admin Deck - Language Tab Behavior', () => {
     await page.getByTestId('deck-create-lang-tab-ru').click();
     await page.getByTestId('deck-create-name-ru').fill('Русское');
 
-    // Now submit should be enabled
+    // Now submit should be enabled (both EN and RU filled)
     await expect(submitBtn).toBeEnabled();
 
     // Cancel
