@@ -48,7 +48,7 @@ router = APIRouter(
                         "part_of_speech": "noun",
                         "translation_en": "house, home",
                         "translation_ru": "дом",
-                        "pronunciation": "/ˈspiti/",
+                        "pronunciation": "/spí·ti/",
                         "cefr_level": "A1",
                         "grammar_data": {
                             "gender": "neuter",
@@ -151,7 +151,7 @@ async def get_word_entry(
                                 "part_of_speech": "noun",
                                 "translation_en": "house, home",
                                 "translation_ru": "dom",
-                                "pronunciation": "spiti",
+                                "pronunciation": "/spí·ti/",
                                 "cefr_level": "A1",
                                 "grammar_data": {"gender": "neuter"},
                                 "examples": [],
