@@ -774,8 +774,93 @@ class WordEntry(Base, TimestampMixin):
         foreign_keys=[deck_id],
     )
 
+    # Relationships
+    card_records: Mapped[List["CardRecord"]] = relationship(
+        back_populates="word_entry", lazy="selectin", cascade="all, delete-orphan"
+    )
+
     def __repr__(self) -> str:
         return f"<WordEntry(id={self.id}, lemma={self.lemma}, pos={self.part_of_speech})>"
+
+
+# ============================================================================
+# Card Record Models (V2 Card System)
+# ============================================================================
+
+
+class CardRecord(Base, TimestampMixin):
+    """Individual flashcard generated from a word entry.
+
+    Each word entry can produce multiple card records of different types
+    (meaning, conjugation, declension, cloze, sentence translation).
+    """
+
+    __tablename__ = "card_records"
+    __table_args__ = (
+        UniqueConstraint(
+            "word_entry_id", "card_type", "tier", name="uq_card_record_entry_type_tier"
+        ),
+        Index("ix_card_records_word_entry_id", "word_entry_id"),
+        Index("ix_card_records_deck_id", "deck_id"),
+        Index("ix_card_records_card_type", "card_type"),
+        Index("ix_card_records_is_active", "is_active"),
+        Index("ix_card_records_tier", "tier"),
+        Index("ix_card_records_deck_type", "deck_id", "card_type"),
+        Index("ix_card_records_deck_active", "deck_id", "is_active"),
+    )
+
+    # Primary key
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True,
+        server_default=func.uuid_generate_v4(),
+    )
+
+    # Foreign keys
+    word_entry_id: Mapped[UUID] = mapped_column(
+        ForeignKey("word_entries.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    deck_id: Mapped[UUID] = mapped_column(
+        ForeignKey("decks.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+
+    # Card type and tier
+    card_type: Mapped[CardType] = mapped_column(
+        nullable=False,
+    )
+    tier: Mapped[int | None] = mapped_column(
+        Integer,
+        nullable=True,
+    )
+
+    # Content (JSONB)
+    front_content: Mapped[dict] = mapped_column(
+        JSON,
+        nullable=False,
+    )
+    back_content: Mapped[dict] = mapped_column(
+        JSON,
+        nullable=False,
+    )
+
+    # Status flag
+    is_active: Mapped[bool] = mapped_column(
+        Boolean,
+        default=True,
+        server_default=text("true"),
+        nullable=False,
+    )
+
+    # Relationships
+    word_entry: Mapped["WordEntry"] = relationship(back_populates="card_records", lazy="selectin")
+    deck: Mapped["Deck"] = relationship(
+        lazy="selectin",
+        foreign_keys=[deck_id],
+    )
+
+    def __repr__(self) -> str:
+        return f"<CardRecord(id={self.id}, type={self.card_type}, tier={self.tier})>"
 
 
 # ============================================================================
