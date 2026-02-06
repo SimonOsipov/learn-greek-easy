@@ -74,6 +74,7 @@ import {
   trackAdminDeckPremiumEnabled,
   trackAdminDeckReactivated,
 } from '@/lib/analytics/adminAnalytics';
+import { getLocalizedDeckName } from '@/lib/deckLocale';
 import { cn } from '@/lib/utils';
 import { adminAPI } from '@/services/adminAPI';
 import type {
@@ -81,7 +82,6 @@ import type {
   CultureDeckCreatePayload,
   CultureDeckUpdatePayload,
   DeckListResponse,
-  MultilingualName,
   UnifiedDeckItem,
   VocabularyDeckCreatePayload,
   VocabularyDeckUpdatePayload,
@@ -186,22 +186,6 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ title, value, icon, testId })
 );
 
 /**
- * Get localized name from multilingual object
- */
-function getLocalizedName(name: string | MultilingualName, locale: string): string {
-  if (typeof name === 'string') {
-    return name;
-  }
-  // Map i18n locale to our supported locales
-  const localeMap: Record<string, keyof MultilingualName> = {
-    en: 'en',
-    ru: 'ru',
-  };
-  const key = localeMap[locale] || 'en';
-  return name[key] || name.en || Object.values(name)[0] || '';
-}
-
-/**
  * Unified deck list item for All Decks section
  */
 interface UnifiedDeckListItemProps {
@@ -221,7 +205,7 @@ const UnifiedDeckListItem: React.FC<UnifiedDeckListItemProps> = ({
   onDelete,
   onViewDetail,
 }) => {
-  const displayName = getLocalizedName(deck.name, locale);
+  const displayName = getLocalizedDeckName(deck, locale);
   const itemCountKey =
     deck.type === 'culture'
       ? 'deck.questionCount'
@@ -648,7 +632,7 @@ const AdminPage: React.FC = () => {
    * Get display name for a deck (handles multilingual names)
    */
   const getDeckDisplayName = (deck: UnifiedDeckItem): string => {
-    return typeof deck.name === 'string' ? deck.name : deck.name.en;
+    return getLocalizedDeckName(deck, locale);
   };
 
   /**

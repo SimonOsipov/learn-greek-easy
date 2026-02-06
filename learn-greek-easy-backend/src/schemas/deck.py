@@ -86,6 +86,12 @@ class DeckResponse(BaseModel):
     name: str
     description: str | None = None
 
+    # All-language fields for client-side locale resolution
+    name_en: str | None = None
+    name_ru: str | None = None
+    description_en: str | None = None
+    description_ru: str | None = None
+
     # Common fields
     level: DeckLevel
     is_active: bool

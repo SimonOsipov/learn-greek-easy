@@ -7,6 +7,7 @@ import { CultureBadge, type CultureCategory } from '@/components/culture';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { getLocalizedDeckName } from '@/lib/deckLocale';
 import { calculateCompletionPercentage } from '@/lib/progressUtils';
 import type { Deck } from '@/types/deck';
 
@@ -41,8 +42,9 @@ export const DeckCard: React.FC<DeckCardProps> = ({
   onEditClick,
   onDeleteClick,
 }) => {
-  const { t } = useTranslation('deck');
-  const { titleGreek, title, level, category, cardCount, isPremium, progress } = deck;
+  const { t, i18n } = useTranslation('deck');
+  const { level, category, cardCount, isPremium, progress } = deck;
+  const localizedName = getLocalizedDeckName(deck, i18n.language);
 
   // Calculate completion percentage
   const completionPercent = progress ? calculateCompletionPercentage(progress) : 0;
@@ -94,7 +96,7 @@ export const DeckCard: React.FC<DeckCardProps> = ({
             }
           : undefined
       }
-      aria-label={`${titleGreek} - ${title} deck, ${level} level, ${completionPercent}% completed${isLocked ? ', locked' : ''}`}
+      aria-label={`${localizedName} deck, ${level} level, ${completionPercent}% completed${isLocked ? ', locked' : ''}`}
     >
       {/* Action buttons (edit/delete) - visible on hover */}
       {showActions && (
@@ -129,15 +131,13 @@ export const DeckCard: React.FC<DeckCardProps> = ({
         {/* Title and Level Badge Row */}
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
-            {/* Greek Title */}
+            {/* Localized Title */}
             <h3
               data-testid="deck-card-title"
               className="truncate text-lg font-semibold text-foreground"
             >
-              {titleGreek}
+              {localizedName}
             </h3>
-            {/* English Subtitle */}
-            <p className="truncate text-sm text-muted-foreground">{title}</p>
           </div>
 
           {/* Premium Icon (level badge moved to badge row) */}

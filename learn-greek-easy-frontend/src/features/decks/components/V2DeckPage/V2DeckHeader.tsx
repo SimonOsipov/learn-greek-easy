@@ -7,6 +7,7 @@ import { DeckBadge } from '@/components/decks/DeckBadge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { getLocalizedDeckName, getLocalizedDeckDescription } from '@/lib/deckLocale';
 import type { Deck } from '@/types/deck';
 
 /**
@@ -72,7 +73,9 @@ const V2ProgressBar: React.FC<V2ProgressBarProps> = ({ total }) => {
  * - Disabled "Study Now" button with "Coming soon" tooltip
  */
 export const V2DeckHeader: React.FC<V2DeckHeaderProps> = ({ deck }) => {
-  const { t } = useTranslation('deck');
+  const { t, i18n } = useTranslation('deck');
+  const localizedName = getLocalizedDeckName(deck, i18n.language);
+  const localizedDescription = getLocalizedDeckDescription(deck, i18n.language);
 
   // Use cardCount as the word count (for V2 decks, this represents word entries)
   const wordCount = deck.cardCount;
@@ -83,13 +86,10 @@ export const V2DeckHeader: React.FC<V2DeckHeaderProps> = ({ deck }) => {
         {/* Title Row */}
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0 flex-1">
-            {/* Greek Title - Primary */}
+            {/* Localized Title */}
             <h1 className="mb-1 text-2xl font-semibold text-foreground md:text-3xl">
-              {deck.titleGreek}
+              {localizedName}
             </h1>
-
-            {/* English Subtitle - Secondary */}
-            <p className="text-base text-muted-foreground md:text-lg">{deck.title}</p>
           </div>
 
           {/* Badges */}
@@ -109,7 +109,9 @@ export const V2DeckHeader: React.FC<V2DeckHeaderProps> = ({ deck }) => {
 
       <CardContent>
         {/* Description */}
-        <p className="leading-relaxed text-foreground">{deck.description}</p>
+        <p className="leading-relaxed text-foreground">
+          {localizedDescription || deck.description}
+        </p>
 
         {/* Progress Bar - All New for V2 */}
         <div className="mt-6">

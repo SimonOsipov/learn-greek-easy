@@ -31,6 +31,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Skeleton } from '@/components/ui/skeleton';
 import { V2DeckPage } from '@/features/decks/components/V2DeckPage';
+import { getLocalizedDeckName, getLocalizedDeckDescription } from '@/lib/deckLocale';
 import { reportAPIError } from '@/lib/errorReporting';
 import { formatRelativeDate } from '@/lib/helpers';
 import log from '@/lib/logger';
@@ -39,7 +40,7 @@ import { useDeckStore } from '@/stores/deckStore';
 import type { Deck, DeckStatus } from '@/types/deck';
 
 export const DeckDetailPage: React.FC = () => {
-  const { t } = useTranslation('deck');
+  const { t, i18n } = useTranslation('deck');
   const { id: deckId } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
@@ -121,7 +122,9 @@ export const DeckDetailPage: React.FC = () => {
           {t('detail.breadcrumb')}
         </Link>
         <span>/</span>
-        <span className="truncate font-medium text-foreground">{selectedDeck.titleGreek}</span>
+        <span className="truncate font-medium text-foreground">
+          {getLocalizedDeckName(selectedDeck, i18n.language)}
+        </span>
       </nav>
 
       {/* Main Content */}
@@ -187,8 +190,10 @@ const DeckHeaderSection: React.FC<DeckHeaderSectionProps> = ({
   onContinue,
   onUpgrade,
 }) => {
-  const { t } = useTranslation('deck');
+  const { t, i18n } = useTranslation('deck');
   const { resetProgress } = useDeckStore();
+  const localizedName = getLocalizedDeckName(deck, i18n.language);
+  const localizedDescription = getLocalizedDeckDescription(deck, i18n.language);
   const [isResetting, setIsResetting] = useState(false);
 
   const handleResetProgress = async () => {
@@ -213,13 +218,10 @@ const DeckHeaderSection: React.FC<DeckHeaderSectionProps> = ({
         {/* Title and Badges Row */}
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0 flex-1">
-            {/* Greek Title - Primary */}
+            {/* Localized Title */}
             <h1 className="mb-1 text-2xl font-semibold text-foreground md:text-3xl">
-              {deck.titleGreek}
+              {localizedName}
             </h1>
-
-            {/* English Subtitle - Secondary */}
-            <p className="text-base text-muted-foreground md:text-lg">{deck.title}</p>
           </div>
 
           {/* Level Badge, Premium Icon, and Actions */}
@@ -273,7 +275,9 @@ const DeckHeaderSection: React.FC<DeckHeaderSectionProps> = ({
 
       <CardContent>
         {/* Description */}
-        <p className="leading-relaxed text-foreground">{deck.description}</p>
+        <p className="leading-relaxed text-foreground">
+          {localizedDescription || deck.description}
+        </p>
 
         {/* Progress Bar (if in progress or completed) */}
         {deck.progress && deck.progress.status !== 'not-started' && (

@@ -69,6 +69,11 @@ export interface Deck {
   progress?: DeckProgress;
   /** Card presentation system version (V1=flashcards, V2=word browser) */
   cardSystem: CardSystemVersion;
+  // Multilingual fields for client-side locale resolution
+  nameEn?: string;
+  nameRu?: string;
+  descriptionEn?: string | null;
+  descriptionRu?: string | null;
 }
 
 /**

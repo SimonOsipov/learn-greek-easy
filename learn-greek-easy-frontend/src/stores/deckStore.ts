@@ -96,6 +96,10 @@ const transformDeckResponse = (deck: DeckResponse, progressData?: DeckProgressSu
     updatedAt: new Date(deck.updated_at),
     progress,
     cardSystem: (deck.card_system ?? 'V1') as CardSystemVersion,
+    nameEn: deck.name_en,
+    nameRu: deck.name_ru,
+    descriptionEn: deck.description_en,
+    descriptionRu: deck.description_ru,
   };
 };
 
