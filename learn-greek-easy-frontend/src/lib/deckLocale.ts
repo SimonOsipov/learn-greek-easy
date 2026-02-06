@@ -13,6 +13,7 @@
 export function getLocalizedDeckName(
   deck: {
     name?: string;
+    title?: string;
     nameEn?: string;
     nameRu?: string;
     name_en?: string;
@@ -21,9 +22,11 @@ export function getLocalizedDeckName(
   locale: string
 ): string {
   if (locale === 'ru') {
-    return deck.nameRu || deck.name_ru || deck.nameEn || deck.name_en || deck.name || '';
+    return (
+      deck.nameRu || deck.name_ru || deck.nameEn || deck.name_en || deck.name || deck.title || ''
+    );
   }
-  return deck.nameEn || deck.name_en || deck.name || '';
+  return deck.nameEn || deck.name_en || deck.name || deck.title || '';
 }
 
 /**
