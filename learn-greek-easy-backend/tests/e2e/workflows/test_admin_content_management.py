@@ -3,7 +3,6 @@
 This module tests complete administrator workflows for managing
 learning content (decks and cards), including:
 - Deck CRUD lifecycle
-- Bulk card creation
 - Content propagation to users
 - Visibility control via activation/deactivation
 - Permission boundaries
@@ -11,7 +10,6 @@ learning content (decks and cards), including:
 
 Test Classes:
 - TestAdminDeckManagement: Deck CRUD operations by admin
-- TestAdminCardManagement: Card bulk operations
 - TestContentPropagation: Content visibility to regular users
 - TestPermissionBoundaries: Permission enforcement tests
 - TestCardNotFoundErrors: Card 404 error handling
@@ -187,183 +185,6 @@ class TestAdminDeckManagement(E2ETestCase):
 
 
 @pytest.mark.e2e
-class TestAdminCardManagement(E2ETestCase):
-    """E2E tests for admin card management workflows."""
-
-    @pytest.mark.asyncio
-    async def test_bulk_card_creation_workflow(
-        self,
-        client: AsyncClient,
-        superuser_auth_headers: dict,
-    ):
-        """Test admin creates deck and bulk adds cards.
-
-        Flow:
-        Create Deck -> Bulk Add Cards (10+) -> Verify All Cards Created ->
-        Verify Card Count -> Regular User Can Access Cards
-        """
-        # Step 1: Create deck
-        deck_response = await client.post(
-            "/api/v1/decks",
-            json={
-                "name": "Greek Numbers 1-10",
-                "description": "Learn to count in Greek",
-                "level": "A1",
-            },
-            headers=superuser_auth_headers,
-        )
-        assert deck_response.status_code == 201
-        deck_id = deck_response.json()["id"]
-
-        # Step 2: Bulk create cards
-        greek_numbers = [
-            ("ena", "one", "easy"),
-            ("dio", "two", "easy"),
-            ("tria", "three", "easy"),
-            ("tessera", "four", "medium"),
-            ("pente", "five", "medium"),
-            ("exi", "six", "medium"),
-            ("efta", "seven", "medium"),
-            ("okto", "eight", "hard"),
-            ("ennea", "nine", "hard"),
-            ("deka", "ten", "hard"),
-        ]
-
-        cards_data = {
-            "deck_id": deck_id,
-            "cards": [
-                {
-                    "front_text": greek,
-                    "back_text_en": english,
-                    "example_sentence": f"I have {english} apple(s).",
-                    "pronunciation": greek,
-                }
-                for greek, english, _unused in greek_numbers
-            ],
-        }
-
-        bulk_response = await client.post(
-            "/api/v1/cards/bulk",
-            json=cards_data,
-            headers=superuser_auth_headers,
-        )
-        assert bulk_response.status_code == 201
-        bulk_result = bulk_response.json()
-        assert bulk_result["created_count"] == 10
-        assert len(bulk_result["cards"]) == 10
-
-        # Step 3: Verify card count on deck
-        deck_get = await client.get(f"/api/v1/decks/{deck_id}", headers=superuser_auth_headers)
-        assert deck_get.status_code == 200
-        assert deck_get.json()["card_count"] == 10
-
-        # Step 4: Verify all cards accessible via list endpoint
-        cards_list = await client.get(
-            f"/api/v1/cards?deck_id={deck_id}", headers=superuser_auth_headers
-        )
-        assert cards_list.status_code == 200
-        assert cards_list.json()["total"] == 10
-
-        # Step 5: Verify cards are searchable
-        search_result = await client.get(
-            f"/api/v1/cards/search?q=ena&deck_id={deck_id}", headers=superuser_auth_headers
-        )
-        assert search_result.status_code == 200
-        assert search_result.json()["total"] >= 1
-
-    @pytest.mark.asyncio
-    async def test_bulk_creation_edge_cases(
-        self,
-        client: AsyncClient,
-        superuser_auth_headers: dict,
-    ):
-        """Test bulk card creation edge cases.
-
-        Tests:
-        - Maximum cards (100) - should succeed
-        - Over maximum (101) - should fail with 422
-        - Empty array - should fail with 422
-        - Mixed valid/invalid (missing required field) - should fail
-        """
-        # Setup: Create deck
-        deck_response = await client.post(
-            "/api/v1/decks",
-            json={"name": "Bulk Edge Case Deck", "level": "A1"},
-            headers=superuser_auth_headers,
-        )
-        deck_id = deck_response.json()["id"]
-
-        # Test 1: Maximum cards (100) - should succeed
-        max_cards = {
-            "deck_id": deck_id,
-            "cards": [
-                {
-                    "front_text": f"word_{i}",
-                    "back_text_en": f"translation_{i}",
-                }
-                for i in range(100)
-            ],
-        }
-        max_response = await client.post(
-            "/api/v1/cards/bulk",
-            json=max_cards,
-            headers=superuser_auth_headers,
-        )
-        assert max_response.status_code == 201
-        assert max_response.json()["created_count"] == 100
-
-        # Create another deck for remaining tests
-        deck2_response = await client.post(
-            "/api/v1/decks",
-            json={"name": "Bulk Edge Case Deck 2", "level": "A1"},
-            headers=superuser_auth_headers,
-        )
-        deck2_id = deck2_response.json()["id"]
-
-        # Test 2: Over maximum (101) - should fail
-        over_max_cards = {
-            "deck_id": deck2_id,
-            "cards": [{"front_text": f"w{i}", "back_text_en": f"t{i}"} for i in range(101)],
-        }
-        over_response = await client.post(
-            "/api/v1/cards/bulk",
-            json=over_max_cards,
-            headers=superuser_auth_headers,
-        )
-        assert over_response.status_code == 422
-        assert over_response.json()["error"]["code"] == "VALIDATION_ERROR"
-
-        # Test 3: Empty array - should fail
-        empty_response = await client.post(
-            "/api/v1/cards/bulk",
-            json={"deck_id": deck2_id, "cards": []},
-            headers=superuser_auth_headers,
-        )
-        assert empty_response.status_code == 422
-
-        # Test 4: Mixed valid/invalid (missing required field)
-        mixed_cards = {
-            "deck_id": deck2_id,
-            "cards": [
-                {"front_text": "valid", "back_text_en": "valid"},
-                {"front_text": "invalid_no_back"},  # Missing back_text_en
-            ],
-        }
-        mixed_response = await client.post(
-            "/api/v1/cards/bulk",
-            json=mixed_cards,
-            headers=superuser_auth_headers,
-        )
-        assert mixed_response.status_code == 422
-
-        # Verify NO cards were created (all-or-nothing)
-        verify_list = await client.get(
-            f"/api/v1/cards?deck_id={deck2_id}", headers=superuser_auth_headers
-        )
-        assert verify_list.json()["total"] == 0
-
-
-@pytest.mark.e2e
 class TestContentPropagation(E2ETestCase):
     """E2E tests for content visibility to regular users."""
 
@@ -514,7 +335,6 @@ class TestPermissionBoundaries(E2ETestCase):
         - Regular user CANNOT update system decks (owner_id=None)
         - Regular user CANNOT delete system decks
         - Regular user CANNOT create cards (requires superuser)
-        - Regular user CANNOT bulk create cards (requires superuser)
         """
         # Setup: Get an existing system deck ID for update/delete tests
         # empty_deck is a system deck (owner_id=None)
@@ -561,17 +381,6 @@ class TestPermissionBoundaries(E2ETestCase):
         )
         assert card_response.status_code == 403
 
-        # Test 5: Regular user CANNOT bulk create cards (requires superuser)
-        bulk_response = await client.post(
-            "/api/v1/cards/bulk",
-            json={
-                "deck_id": deck_id,
-                "cards": [{"front_text": "t", "back_text_en": "t"}],
-            },
-            headers=auth_headers,
-        )
-        assert bulk_response.status_code == 403
-
     @pytest.mark.asyncio
     async def test_unauthenticated_admin_operations_fail(
         self,
@@ -612,16 +421,6 @@ class TestPermissionBoundaries(E2ETestCase):
             },
         )
         assert unauth_card.status_code == 401
-
-        # Test 5: Unauthenticated user cannot BULK CREATE cards
-        unauth_bulk = await client.post(
-            "/api/v1/cards/bulk",
-            json={
-                "deck_id": deck_id,
-                "cards": [{"front_text": "t", "back_text_en": "t"}],
-            },
-        )
-        assert unauth_bulk.status_code == 401
 
 
 @pytest.mark.e2e

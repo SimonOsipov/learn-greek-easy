@@ -11,15 +11,13 @@ from fastapi import APIRouter, BackgroundTasks, Depends, Query, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config import settings
-from src.core.dependencies import get_current_superuser, get_current_user
+from src.core.dependencies import get_current_user
 from src.core.exceptions import CardNotFoundException, DeckNotFoundException, ForbiddenException
 from src.db.dependencies import get_db
 from src.db.models import User
 from src.repositories.card import CardRepository
 from src.repositories.deck import DeckRepository
 from src.schemas.card import (
-    CardBulkCreateRequest,
-    CardBulkCreateResponse,
     CardCreate,
     CardListResponse,
     CardResponse,
@@ -204,91 +202,6 @@ async def create_card(
         )
 
     return CardResponse.model_validate(card)
-
-
-@router.post(
-    "/bulk",
-    response_model=CardBulkCreateResponse,
-    status_code=status.HTTP_201_CREATED,
-    summary="Bulk create cards",
-    description="Create multiple cards in one request. Requires superuser privileges. Maximum 100 cards per request.",
-    responses={
-        201: {
-            "description": "Cards created successfully",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "deck_id": "550e8400-e29b-41d4-a716-446655440000",
-                        "created_count": 2,
-                        "cards": [
-                            {
-                                "id": "660e8400-e29b-41d4-a716-446655440001",
-                                "deck_id": "550e8400-e29b-41d4-a716-446655440000",
-                                "front_text": "kalimera",
-                                "back_text": "good morning",
-                            }
-                        ],
-                    }
-                }
-            },
-        },
-        401: {"description": "Not authenticated"},
-        403: {"description": "Not authorized (requires superuser)"},
-        404: {"description": "Deck not found"},
-        422: {"description": "Validation error (empty array, >100 cards, invalid data)"},
-    },
-)
-async def bulk_create_cards(
-    request: CardBulkCreateRequest,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_superuser),
-) -> CardBulkCreateResponse:
-    """Create multiple cards in one request.
-
-    Requires superuser privileges.
-
-    This endpoint uses transactional semantics - if any card fails
-    validation, the entire request is rejected (all-or-nothing).
-
-    Args:
-        request: Deck ID and array of cards to create
-        db: Database session (injected)
-        current_user: Authenticated superuser (injected)
-
-    Returns:
-        CardBulkCreateResponse: Created cards with count
-
-    Raises:
-        401: If not authenticated
-        403: If authenticated but not superuser
-        404: If deck doesn't exist
-        422: If validation fails (empty array, >100 cards, invalid card data)
-    """
-    # Validate deck exists
-    deck_repo = DeckRepository(db)
-    deck = await deck_repo.get(request.deck_id)
-    if deck is None:
-        raise DeckNotFoundException(deck_id=str(request.deck_id))
-
-    # Prepare cards data with deck_id
-    cards_data = [{"deck_id": request.deck_id, **card.model_dump()} for card in request.cards]
-
-    # Bulk create using repository
-    card_repo = CardRepository(db)
-    created_cards = await card_repo.bulk_create(cards_data)
-
-    # Commit the transaction
-    await db.commit()
-
-    # Refresh all cards to get generated fields (id, timestamps)
-    for card in created_cards:
-        await db.refresh(card)
-
-    return CardBulkCreateResponse(
-        deck_id=request.deck_id,
-        created_count=len(created_cards),
-        cards=[CardResponse.model_validate(card) for card in created_cards],
-    )
 
 
 @router.get(

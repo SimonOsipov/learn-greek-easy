@@ -64,21 +64,18 @@ class TestDataConsistency(E2ETestCase):
         assert cards_response.status_code == 200
         assert cards_response.json()["total"] == 0
 
-        # Step 3: Add bulk cards (5 cards)
-        cards_data = [
-            {
-                "front_text": f"Greek word {i}",
-                "back_text_en": f"English translation {i}",
-            }
-            for i in range(5)
-        ]
-        bulk_response = await client.post(
-            "/api/v1/cards/bulk",
-            json={"deck_id": deck_id, "cards": cards_data},
-            headers=headers,
-        )
-        assert bulk_response.status_code == 201
-        assert bulk_response.json()["created_count"] == 5
+        # Step 3: Add 5 cards individually
+        for i in range(5):
+            card_response = await client.post(
+                "/api/v1/cards",
+                json={
+                    "deck_id": deck_id,
+                    "front_text": f"Greek word {i}",
+                    "back_text_en": f"English translation {i}",
+                },
+                headers=headers,
+            )
+            assert card_response.status_code == 201
 
         # Step 4: Verify via API
         cards_list = await client.get(f"/api/v1/cards?deck_id={deck_id}", headers=headers)
@@ -380,21 +377,20 @@ class TestDataConsistency(E2ETestCase):
         assert deck_response.status_code == 201
         deck_id = deck_response.json()["id"]
 
-        # Step 2: Add cards
-        cards_data = [
-            {
-                "front_text": f"Word {i}",
-                "back_text_en": f"Translation {i}",
-            }
-            for i in range(5)
-        ]
-        cards_response = await client.post(
-            "/api/v1/cards/bulk",
-            json={"deck_id": deck_id, "cards": cards_data},
-            headers=admin_headers,
-        )
-        assert cards_response.status_code == 201
-        card_ids = [c["id"] for c in cards_response.json()["cards"]]
+        # Step 2: Add cards individually
+        card_ids = []
+        for i in range(5):
+            card_response = await client.post(
+                "/api/v1/cards",
+                json={
+                    "deck_id": deck_id,
+                    "front_text": f"Word {i}",
+                    "back_text_en": f"Translation {i}",
+                },
+                headers=admin_headers,
+            )
+            assert card_response.status_code == 201
+            card_ids.append(card_response.json()["id"])
 
         # Step 3: Both users initialize and review
         from src.core.security import create_access_token
