@@ -22,6 +22,7 @@ from src.db.models import (  # noqa: F401
     Card,
     CardStatistics,
     CardStatus,
+    CardType,
     CultureAnswerHistory,
     CultureDeck,
     CultureQuestion,
