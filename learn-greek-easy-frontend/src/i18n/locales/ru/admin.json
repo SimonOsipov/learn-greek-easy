@@ -636,7 +636,6 @@
     "title": "Массовая загрузка словарных записей",
     "description": "Загрузите несколько словарных записей одновременно в формате JSON.",
     "jsonLabel": "JSON словарных записей",
-    "jsonPlaceholder": "Вставьте JSON-объект с deck_id и word_entries...",
     "validateButton": "Проверить и просмотреть",
     "uploadButton": "Загрузить записи",
     "uploadingButton": "Загрузка...",

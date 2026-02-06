@@ -624,7 +624,6 @@
     "title": "Bulk Upload Word Entries",
     "description": "Upload multiple word entries at once using JSON format.",
     "jsonLabel": "Word Entries JSON",
-    "jsonPlaceholder": "Paste JSON object with deck_id and word_entries...",
     "validateButton": "Validate & Preview",
     "uploadButton": "Upload Entries",
     "uploadingButton": "Uploading...",
