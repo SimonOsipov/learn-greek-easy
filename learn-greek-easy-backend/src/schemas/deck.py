@@ -39,16 +39,33 @@ class DeckCreate(DeckBase):
     The is_system_deck flag explicitly controls whether the deck is a system
     deck (visible to all users in /decks) or a personal deck (visible only
     to the creator in /mine).
+
+    Optional bilingual fields (name_en, name_ru, description_en, description_ru)
+    allow admin to set per-language values. When provided, these take priority
+    over the single name/description fields.
     """
 
     is_system_deck: bool = False
+    name_en: Optional[str] = Field(None, min_length=1, max_length=255)
+    name_ru: Optional[str] = Field(None, min_length=1, max_length=255)
+    description_en: Optional[str] = None
+    description_ru: Optional[str] = None
 
 
 class DeckUpdate(BaseModel):
-    """Schema for updating a deck (admin only)."""
+    """Schema for updating a deck (admin only).
+
+    Supports both legacy single-field (name, description) and bilingual
+    (name_en, name_ru, description_en, description_ru) updates.
+    When bilingual fields are provided, they take priority over single fields.
+    """
 
     name: Optional[str] = Field(None, min_length=1, max_length=255)
+    name_en: Optional[str] = Field(None, min_length=1, max_length=255)
+    name_ru: Optional[str] = Field(None, min_length=1, max_length=255)
     description: Optional[str] = None
+    description_en: Optional[str] = None
+    description_ru: Optional[str] = None
     level: Optional[DeckLevel] = None
     is_active: Optional[bool] = None
     is_premium: Optional[bool] = None

@@ -108,7 +108,11 @@ export interface ListDecksParams {
  */
 export interface VocabularyDeckUpdatePayload {
   name?: string;
+  name_en?: string;
+  name_ru?: string;
   description?: string | null;
+  description_en?: string | null;
+  description_ru?: string | null;
   level?: DeckLevel;
   is_active?: boolean;
   is_premium?: boolean;
@@ -119,7 +123,11 @@ export interface VocabularyDeckUpdatePayload {
  */
 export interface CultureDeckUpdatePayload {
   name?: string;
+  name_en?: string;
+  name_ru?: string;
   description?: string | null;
+  description_en?: string | null;
+  description_ru?: string | null;
   category?: string;
   is_active?: boolean;
   is_premium?: boolean;
@@ -130,7 +138,11 @@ export interface CultureDeckUpdatePayload {
  */
 export interface VocabularyDeckCreatePayload {
   name: string;
+  name_en?: string;
+  name_ru?: string;
   description?: string | null;
+  description_en?: string | null;
+  description_ru?: string | null;
   level: DeckLevel;
   is_premium?: boolean;
   is_system_deck: true;

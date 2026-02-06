@@ -717,8 +717,10 @@ const AdminPage: React.FC = () => {
           is_premium: boolean;
         };
         const payload: VocabularyDeckUpdatePayload = {
-          name: formData.name_en || '',
-          description: formData.description_en || null,
+          name_en: formData.name_en || '',
+          name_ru: formData.name_ru || '',
+          description_en: formData.description_en || null,
+          description_ru: formData.description_ru || null,
           is_active: formData.is_active,
           is_premium: formData.is_premium,
         };
@@ -737,8 +739,10 @@ const AdminPage: React.FC = () => {
           is_premium: boolean;
         };
         const payload: CultureDeckUpdatePayload = {
-          name: formData.name_en || '',
-          description: formData.description_en || null,
+          name_en: formData.name_en || '',
+          name_ru: formData.name_ru || '',
+          description_en: formData.description_en || null,
+          description_ru: formData.description_ru || null,
           is_active: formData.is_active,
           is_premium: formData.is_premium,
         };
@@ -859,7 +863,10 @@ const AdminPage: React.FC = () => {
         };
         const payload: VocabularyDeckCreatePayload = {
           name: vocabularyData.name_en,
-          description: vocabularyData.description_en || null,
+          name_en: vocabularyData.name_en,
+          name_ru: vocabularyData.name_ru,
+          description_en: vocabularyData.description_en || null,
+          description_ru: vocabularyData.description_ru || null,
           level: vocabularyData.level,
           is_premium: vocabularyData.is_premium,
           is_system_deck: true,
