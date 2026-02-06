@@ -109,13 +109,47 @@ test.describe('V1/V2 Deck Pages', () => {
   // =====================
 
   test.describe('V2 Deck (Word Browser View)', () => {
-    test('E2E-DUAL-04: V2 deck displays word browser', async ({ page }) => {
+    test('E2E-DUAL-04: V2 deck displays word browser', async ({ page, request }) => {
+      // First verify the API returns V2 for this deck
+      const apiBaseUrl = getApiBaseUrl();
+      console.log(`[DEBUG] Checking API for V2 deck: ${v2DeckId}`);
+
+      // Get storage state to get auth token
+      const cookies = await page.context().cookies();
+      const storageState = await page.context().storageState();
+      console.log(`[DEBUG] Has cookies: ${cookies.length > 0}`);
+      console.log(`[DEBUG] Storage state keys: ${Object.keys(storageState).join(', ')}`);
+
       // Navigate to V2 deck detail page
       console.log(`[DEBUG] Navigating to V2 deck: ${v2DeckId}`);
       await page.goto(`/decks/${v2DeckId}`);
 
+      // Wait for page to load (give it some time)
+      await page.waitForTimeout(3000);
+
+      // Debug: Capture what's actually on the page
+      const pageHTML = await page.content();
+      const hasLoadingState = pageHTML.includes('skeleton') || pageHTML.includes('loading');
+      const hasErrorState =
+        pageHTML.includes('error') ||
+        pageHTML.includes('not found') ||
+        pageHTML.includes('Not Found');
+      const hasDeckDetail =
+        pageHTML.includes('deck-detail') || pageHTML.includes('v2-deck-detail');
+      console.log(`[DEBUG] Page state - Loading: ${hasLoadingState}, Error: ${hasErrorState}, HasDeck: ${hasDeckDetail}`);
+      console.log(`[DEBUG] Page URL: ${page.url()}`);
+
+      // Also check if there's an alert or error message visible
+      const alertLocator = page.locator('[role="alert"], .error, .alert');
+      if ((await alertLocator.count()) > 0) {
+        const alertText = await alertLocator.first().textContent();
+        console.log(`[DEBUG] Alert/Error text: ${alertText}`);
+      }
+
       // Wait for any deck detail element first (V1 or V2)
-      const anyDeckDetail = page.locator('[data-testid="deck-detail"], [data-testid="v2-deck-detail"]');
+      const anyDeckDetail = page.locator(
+        '[data-testid="deck-detail"], [data-testid="v2-deck-detail"]'
+      );
       await expect(anyDeckDetail.first()).toBeVisible({ timeout: 15000 });
 
       // Debug: Log what we got
