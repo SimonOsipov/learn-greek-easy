@@ -41,10 +41,29 @@ async function seedDualDecks(
 
 test.describe('V1/V2 Deck Pages', () => {
   test.beforeAll(async ({ request }) => {
+    const apiBaseUrl = getApiBaseUrl();
+    console.log('[DUAL-SEED] Starting dual deck seeding...');
+
     // Seed V1/V2 test decks
     const deckIds = await seedDualDecks(request);
     v1DeckId = deckIds.v1DeckId;
     v2DeckId = deckIds.v2DeckId;
+
+    console.log(`[DUAL-SEED] Seeded decks - V1: ${v1DeckId}, V2: ${v2DeckId}`);
+
+    // Verify both decks exist immediately after seeding
+    const v1Response = await request.get(`${apiBaseUrl}/api/v1/decks/${v1DeckId}`);
+    const v2Response = await request.get(`${apiBaseUrl}/api/v1/decks/${v2DeckId}`);
+
+    console.log(`[DUAL-SEED] V1 deck API check: ${v1Response.status()}`);
+    console.log(`[DUAL-SEED] V2 deck API check: ${v2Response.status()}`);
+
+    if (!v1Response.ok()) {
+      console.log(`[DUAL-SEED] V1 deck response: ${await v1Response.text()}`);
+    }
+    if (!v2Response.ok()) {
+      console.log(`[DUAL-SEED] V2 deck response: ${await v2Response.text()}`);
+    }
   });
 
   // =====================
@@ -112,6 +131,23 @@ test.describe('V1/V2 Deck Pages', () => {
     test('E2E-DUAL-04: V2 deck displays word browser', async ({ page, request }) => {
       // First verify the API returns V2 for this deck
       const apiBaseUrl = getApiBaseUrl();
+      console.log(`[DEBUG] V2 test starting - v2DeckId: ${v2DeckId}`);
+
+      // Directly check if V2 deck exists in DB before navigating
+      const v2CheckResponse = await request.get(`${apiBaseUrl}/api/v1/decks/${v2DeckId}`);
+      console.log(`[DEBUG] V2 deck direct API check: ${v2CheckResponse.status()}`);
+      if (!v2CheckResponse.ok()) {
+        const errorBody = await v2CheckResponse.text();
+        console.log(`[DEBUG] V2 deck API error: ${errorBody}`);
+
+        // Also check V1 deck to see if it still exists
+        const v1CheckResponse = await request.get(`${apiBaseUrl}/api/v1/decks/${v1DeckId}`);
+        console.log(`[DEBUG] V1 deck API check (for comparison): ${v1CheckResponse.status()}`);
+      } else {
+        const v2Data = await v2CheckResponse.json();
+        console.log(`[DEBUG] V2 deck exists: ${JSON.stringify(v2Data)}`);
+      }
+
       console.log(`[DEBUG] Checking API for V2 deck: ${v2DeckId}`);
 
       // Get storage state to get auth token
