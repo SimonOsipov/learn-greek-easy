@@ -333,6 +333,11 @@ export const useDeckStore = create<DeckState>()(
        * Select a specific deck by ID
        */
       selectDeck: async (deckId: string) => {
+        // Validate deckId to prevent API calls with invalid IDs
+        if (!deckId || deckId === 'undefined') {
+          throw new Error('Invalid deck ID');
+        }
+
         set({ isLoading: true, error: null });
 
         try {

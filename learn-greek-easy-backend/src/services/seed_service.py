@@ -4773,16 +4773,10 @@ class SeedService:
         Returns:
             dict with v1_deck_id, v2_deck_id, and counts
         """
-        # Delete existing E2E dual test decks (idempotent)
-        existing_v1 = await self.db.execute(select(Deck).where(Deck.name_en == "E2E V1 Test Deck"))
-        existing_v1_deck = existing_v1.scalar_one_or_none()
-        if existing_v1_deck:
-            await self.db.execute(delete(Deck).where(Deck.id == existing_v1_deck.id))
-
-        existing_v2 = await self.db.execute(select(Deck).where(Deck.name_en == "E2E V2 Test Deck"))
-        existing_v2_deck = existing_v2.scalar_one_or_none()
-        if existing_v2_deck:
-            await self.db.execute(delete(Deck).where(Deck.id == existing_v2_deck.id))
+        # Delete ALL existing E2E dual test decks (idempotent)
+        # Use delete with where clause to handle multiple duplicates if they exist
+        await self.db.execute(delete(Deck).where(Deck.name_en == "E2E V1 Test Deck"))
+        await self.db.execute(delete(Deck).where(Deck.name_en == "E2E V2 Test Deck"))
 
         await self.db.flush()
 

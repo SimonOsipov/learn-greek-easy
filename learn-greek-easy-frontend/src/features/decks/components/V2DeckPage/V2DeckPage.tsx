@@ -1,8 +1,8 @@
 // src/features/decks/components/V2DeckPage/V2DeckPage.tsx
 
-import React, { useEffect } from 'react';
+import React from 'react';
 
-import { AlertCircle, BookOpen, ChevronLeft } from 'lucide-react';
+import { AlertCircle, ChevronLeft } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 
@@ -10,7 +10,6 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { reportAPIError } from '@/lib/errorReporting';
 import { useDeckStore } from '@/stores/deckStore';
 
 import { V2DeckHeader } from './V2DeckHeader';
@@ -32,35 +31,25 @@ interface V2DeckPageProps {
  */
 export const V2DeckPage: React.FC<V2DeckPageProps> = ({ deckId }) => {
   const { t } = useTranslation('deck');
-  const { selectedDeck, isLoading, error, selectDeck, clearSelection } = useDeckStore();
+  const { selectedDeck, isLoading, error, selectDeck } = useDeckStore();
 
-  // Fetch deck on mount and when deckId changes
-  useEffect(() => {
-    if (deckId) {
-      selectDeck(deckId).catch((err) => {
-        reportAPIError(err, { operation: 'loadDeck', endpoint: `/decks/${deckId}` });
-      });
-    }
+  // V2DeckPage is rendered by DeckDetailPage when the deck has cardSystem='V2'.
+  // At this point, the deck is already loaded in the store.
+  // Note: We intentionally do NOT clear the selection here because:
+  // 1. React StrictMode double-invokes effects and their cleanups
+  // 2. If we clear selection in cleanup, StrictMode will clear it before the component fully mounts
+  // 3. Instead, we rely on route changes to naturally trigger new deck selections
 
-    // Cleanup: clear selection when component unmounts
-    return () => {
-      clearSelection();
-    };
-  }, [deckId, selectDeck, clearSelection]);
-
-  // Loading state
-  if (isLoading) {
+  // Loading state - also show loading if deck isn't loaded yet
+  // (V2DeckPage is only rendered when DeckDetailPage has confirmed the deck is V2,
+  // so selectedDeck should always be available, but handle the edge case)
+  if (isLoading || !selectedDeck) {
     return <LoadingSkeleton />;
   }
 
   // Error state
   if (error) {
     return <ErrorState error={error} onRetry={() => selectDeck(deckId)} />;
-  }
-
-  // Not found state (deck doesn't exist)
-  if (!selectedDeck) {
-    return <NotFoundState />;
   }
 
   return (
@@ -185,32 +174,6 @@ const ErrorState: React.FC<ErrorStateProps> = ({ error, onRetry }) => {
             </Button>
             <Button onClick={onRetry}>{t('detail.tryAgain')}</Button>
           </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
-};
-
-/**
- * Not Found State Component
- *
- * Displays a message when the deck doesn't exist.
- */
-const NotFoundState: React.FC = () => {
-  const { t } = useTranslation('deck');
-
-  return (
-    <div className="container mx-auto max-w-4xl px-4 py-6 md:py-8">
-      <Card>
-        <CardContent className="py-12 pt-6 text-center">
-          <BookOpen className="mx-auto mb-4 h-16 w-16 text-muted-foreground" />
-          <h2 className="mb-2 text-xl font-semibold text-foreground">{t('detail.notFound')}</h2>
-          <p className="mx-auto mb-6 max-w-md text-sm text-muted-foreground">
-            {t('detail.notFoundDescription')}
-          </p>
-          <Button asChild>
-            <Link to="/decks">{t('detail.browseAll')}</Link>
-          </Button>
         </CardContent>
       </Card>
     </div>

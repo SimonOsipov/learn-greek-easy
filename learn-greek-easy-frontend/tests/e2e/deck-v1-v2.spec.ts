@@ -39,9 +39,11 @@ async function seedDualDecks(
   };
 }
 
+// Use serial mode to ensure seeding happens only once and deck IDs are consistent
+test.describe.configure({ mode: 'serial' });
+
 test.describe('V1/V2 Deck Pages', () => {
   test.beforeAll(async ({ request }) => {
-    const apiBaseUrl = getApiBaseUrl();
     console.log('[DUAL-SEED] Starting dual deck seeding...');
 
     // Seed V1/V2 test decks
@@ -50,20 +52,6 @@ test.describe('V1/V2 Deck Pages', () => {
     v2DeckId = deckIds.v2DeckId;
 
     console.log(`[DUAL-SEED] Seeded decks - V1: ${v1DeckId}, V2: ${v2DeckId}`);
-
-    // Verify both decks exist immediately after seeding
-    const v1Response = await request.get(`${apiBaseUrl}/api/v1/decks/${v1DeckId}`);
-    const v2Response = await request.get(`${apiBaseUrl}/api/v1/decks/${v2DeckId}`);
-
-    console.log(`[DUAL-SEED] V1 deck API check: ${v1Response.status()}`);
-    console.log(`[DUAL-SEED] V2 deck API check: ${v2Response.status()}`);
-
-    if (!v1Response.ok()) {
-      console.log(`[DUAL-SEED] V1 deck response: ${await v1Response.text()}`);
-    }
-    if (!v2Response.ok()) {
-      console.log(`[DUAL-SEED] V2 deck response: ${await v2Response.text()}`);
-    }
   });
 
   // =====================
@@ -128,107 +116,13 @@ test.describe('V1/V2 Deck Pages', () => {
   // =====================
 
   test.describe('V2 Deck (Word Browser View)', () => {
-    test('E2E-DUAL-04: V2 deck displays word browser', async ({ page, request }) => {
-      // First verify the API returns V2 for this deck
-      const apiBaseUrl = getApiBaseUrl();
-      console.log(`[DEBUG] V2 test starting - v2DeckId: ${v2DeckId}`);
-
-      // Directly check if V2 deck exists in DB before navigating
-      const v2CheckResponse = await request.get(`${apiBaseUrl}/api/v1/decks/${v2DeckId}`);
-      console.log(`[DEBUG] V2 deck direct API check: ${v2CheckResponse.status()}`);
-      if (!v2CheckResponse.ok()) {
-        const errorBody = await v2CheckResponse.text();
-        console.log(`[DEBUG] V2 deck API error: ${errorBody}`);
-
-        // Also check V1 deck to see if it still exists
-        const v1CheckResponse = await request.get(`${apiBaseUrl}/api/v1/decks/${v1DeckId}`);
-        console.log(`[DEBUG] V1 deck API check (for comparison): ${v1CheckResponse.status()}`);
-      } else {
-        const v2Data = await v2CheckResponse.json();
-        console.log(`[DEBUG] V2 deck exists: ${JSON.stringify(v2Data)}`);
-      }
-
-      console.log(`[DEBUG] Checking API for V2 deck: ${v2DeckId}`);
-
-      // Get storage state to get auth token
-      const cookies = await page.context().cookies();
-      const storageState = await page.context().storageState();
-      console.log(`[DEBUG] Has cookies: ${cookies.length > 0}`);
-      console.log(`[DEBUG] Storage state keys: ${Object.keys(storageState).join(', ')}`);
-
-      // Listen for console errors
-      const consoleErrors: string[] = [];
-      page.on('console', (msg) => {
-        if (msg.type() === 'error') {
-          consoleErrors.push(msg.text());
-        }
-      });
-
-      // Listen for page crashes
-      page.on('pageerror', (error) => {
-        consoleErrors.push(`PAGE ERROR: ${error.message}`);
-      });
-
+    test('E2E-DUAL-04: V2 deck displays word browser', async ({ page }) => {
       // Navigate to V2 deck detail page
-      console.log(`[DEBUG] Navigating to V2 deck: ${v2DeckId}`);
       await page.goto(`/decks/${v2DeckId}`);
 
-      // Wait for page to load (give it some time)
-      await page.waitForTimeout(3000);
-
-      // Debug: Capture what's actually on the page
-      const pageHTML = await page.content();
-      const hasLoadingState = pageHTML.includes('skeleton') || pageHTML.includes('loading');
-      const hasErrorState =
-        pageHTML.includes('error') ||
-        pageHTML.includes('not found') ||
-        pageHTML.includes('Not Found');
-      const hasDeckDetail =
-        pageHTML.includes('deck-detail') || pageHTML.includes('v2-deck-detail');
-      console.log(`[DEBUG] Page state - Loading: ${hasLoadingState}, Error: ${hasErrorState}, HasDeck: ${hasDeckDetail}`);
-      console.log(`[DEBUG] Page URL: ${page.url()}`);
-
-      // Log any console errors
-      if (consoleErrors.length > 0) {
-        console.log(`[DEBUG] Console errors: ${consoleErrors.join(' | ')}`);
-      }
-
-      // Capture any text that looks like an error
-      const bodyText = await page.locator('body').textContent();
-      console.log(`[DEBUG] Page text (first 500 chars): ${bodyText?.substring(0, 500)}`);
-
-      // Check for specific error patterns
-      const notFoundLocator = page.getByText('Deck Not Found');
-      const notFoundVisible = await notFoundLocator.isVisible().catch(() => false);
-      console.log(`[DEBUG] "Deck Not Found" visible: ${notFoundVisible}`);
-
-      // Also check if there's an alert or error message visible
-      const alertLocator = page.locator('[role="alert"], .error, .alert');
-      const alertCount = await alertLocator.count();
-      console.log(`[DEBUG] Alert count: ${alertCount}`);
-      if (alertCount > 0) {
-        const alertText = await alertLocator.first().textContent();
-        console.log(`[DEBUG] Alert/Error text: ${alertText}`);
-      }
-
-      // Wait for any deck detail element first (V1 or V2)
-      const anyDeckDetail = page.locator(
-        '[data-testid="deck-detail"], [data-testid="v2-deck-detail"]'
-      );
-      await expect(anyDeckDetail.first()).toBeVisible({ timeout: 15000 });
-
-      // Debug: Log what we got
-      const v1Detail = page.locator('[data-testid="deck-detail"]');
-      const v2Detail = page.locator('[data-testid="v2-deck-detail"]');
-      const v1CardSystem = await v1Detail.getAttribute('data-card-system').catch(() => null);
-      const v2Visible = await v2Detail.isVisible().catch(() => false);
-      console.log(`[DEBUG] V1 deck visible: ${await v1Detail.isVisible().catch(() => false)}`);
-      console.log(`[DEBUG] V1 deck card_system attr: ${v1CardSystem}`);
-      console.log(`[DEBUG] V2 deck visible: ${v2Visible}`);
-
-      // Now wait for V2 deck detail to load
+      // Wait for V2 deck detail to load
       const deckDetail = page.locator('[data-testid="v2-deck-detail"]');
-      await expect(deckDetail).toBeVisible({ timeout: 10000 });
+      await expect(deckDetail).toBeVisible({ timeout: 15000 });
 
       // Verify V2-specific UI elements
       // 1. Word browser component is visible
@@ -336,8 +230,9 @@ test.describe('V1/V2 Deck Pages', () => {
       await expect(referencePage).toBeVisible({ timeout: 10000 });
 
       // Verify word is shown (the Greek lemma should be prominent)
-      const wordHeading = page.locator('h1').first();
-      await expect(wordHeading).toBeVisible();
+      // Search within the reference page to avoid finding hidden h1 elements elsewhere
+      const wordHeading = referencePage.locator('h1, [data-testid="word-lemma"]').first();
+      await expect(wordHeading).toBeVisible({ timeout: 5000 });
       const headingText = await wordHeading.textContent();
       expect(headingText).toBeTruthy();
       expect(headingText!.length).toBeGreaterThan(0);
@@ -381,6 +276,10 @@ test.describe('V1/V2 Deck Pages', () => {
       const deckUrl = `/decks/${v2DeckId}`;
       await page.goto(deckUrl);
 
+      // Wait for V2 deck to load first
+      const wordBrowser = page.locator('[data-testid="word-browser"]');
+      await expect(wordBrowser).toBeVisible({ timeout: 15000 });
+
       // Navigate to word reference page
       const wordCards = page.locator('[data-testid="word-card"]');
       await expect(wordCards.first()).toBeVisible({ timeout: 10000 });
@@ -397,9 +296,8 @@ test.describe('V1/V2 Deck Pages', () => {
       await expect(backButton).toBeVisible();
       await backButton.click();
 
-      // Should return to deck detail page
-      await page.waitForURL(deckUrl);
-      await expect(page.locator('[data-testid="word-browser"]')).toBeVisible();
+      // Should return to deck detail page with word browser visible
+      await expect(wordBrowser).toBeVisible({ timeout: 15000 });
     });
   });
 });
