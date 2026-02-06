@@ -22,17 +22,31 @@ All tasks share a single feature branch and PR. Git operations must be serialize
 
 ## Team Structure
 
+The number of chains is **dynamic** — determined by the dependency graph in Phase 0. Each independent group of tasks becomes its own chain.
+
 ```
 Team Lead (you)
 ├── Orchestrates workflow, manages git/PR, assigns tasks
 ├── Calls MCP tools directly (Vibe Kanban, git, gh)
 │
-├── chain-a (general-purpose agent)
-│   └── Executes tasks in Chain A sequentially through all 5 stages
+├── chain-1 (general-purpose agent)
+│   └── Executes tasks in Chain 1 sequentially through all 5 stages
 │
-└── chain-b (general-purpose agent)
-    └── Executes tasks in Chain B sequentially through all 5 stages
+├── chain-2 (general-purpose agent)
+│   └── Executes tasks in Chain 2 sequentially through all 5 stages
+│
+├── ...additional chains as needed...
+│
+└── chain-N (general-purpose agent)
+    └── Executes tasks in Chain N sequentially through all 5 stages
 ```
+
+**Chain count rules:**
+- Analyze the dependency graph — each independent subgraph = one chain
+- A single task with no dependencies to other tasks = its own chain
+- Tasks that depend on each other = same chain, ordered by dependency
+- If ALL tasks are interdependent, there is 1 chain (effectively sequential Ralph with team infrastructure)
+- No artificial cap — let the dependency graph dictate the structure
 
 ---
 
@@ -43,8 +57,10 @@ Team Lead (you)
 1. Check `.claude/handoff.yaml` for session continuity
 2. Query Vibe Kanban for all `inprogress` tasks (project: `9cad311d-e4b4-4861-bf89-4fe6bad3ce8b`)
 3. Read each task description to understand dependencies
-4. **Build dependency graph** — group tasks into independent chains that can run in parallel
-5. Create feature branch from main
+4. **Build dependency graph** — identify which tasks depend on each other and which are independent
+5. **Determine chain count** — each independent subgraph becomes its own chain (could be 1, 2, 3, or more)
+6. **Log chain plan** — output the chain assignments so the user can see the parallelization strategy
+7. Create feature branch from main
 
 ```bash
 git checkout -b feature/[name] main
@@ -55,14 +71,14 @@ git checkout -b feature/[name] main
 1. Create team with `TeamCreate`
 2. Create internal task list with `TaskCreate` — one task per Vibe Kanban ticket
 3. Set up `blockedBy` dependencies using `TaskUpdate`
-4. Spawn one teammate per independent chain using `Task` tool with `team_name`
+4. **Spawn one teammate per chain** — iterate over the chains from the dependency graph and spawn each in parallel
 
-**Teammate spawn template:**
+**Teammate spawn template (repeat for each chain):**
 ```
 Task(
   subagent_type="general-purpose",
   team_name="[team-name]",
-  name="chain-[x]",
+  name="chain-[N]",
   mode="bypassPermissions",
   prompt="You are a chain executor in a Ralph Teams workflow.
 
@@ -199,17 +215,24 @@ workflow: "ralph-teams"
 team_name: "[team-name]"
 branch: "feature/[name]"
 pr_number: null  # or PR number once created
+total_chains: 3  # actual count from dependency graph
 chains:
-  chain-a:
-    tasks: ["CREC-01", "CREC-02", "CREC-03", "CREC-05"]
-    completed: ["CREC-01"]
-    current: "CREC-02"
+  chain-1:
+    tasks: ["FEAT-01", "FEAT-02", "FEAT-05"]
+    completed: ["FEAT-01"]
+    current: "FEAT-02"
     stage: "execution"
-  chain-b:
-    tasks: ["CREC-04", "CREC-06"]
+  chain-2:
+    tasks: ["FEAT-03", "FEAT-06"]
     completed: []
-    current: "CREC-04"
+    current: "FEAT-03"
     stage: "explore"
+  chain-3:
+    tasks: ["FEAT-04"]
+    completed: []
+    current: "FEAT-04"
+    stage: "architecture"
+  # ...add chain-N entries as needed
 blockers: []
 decisions: []
 ```
@@ -221,9 +244,10 @@ decisions: []
 | Scenario | Use |
 |----------|-----|
 | 1-2 tasks, all dependent | `/ralph` (sequential) |
-| 3+ tasks with independent chains | `/ralph-teams` (parallel) |
-| All tasks touch same files | `/ralph` (sequential) |
+| 2+ tasks with at least 2 independent groups | `/ralph-teams` (parallel) |
+| All tasks touch same files / form one dependency chain | `/ralph` (sequential) |
 | Tasks split across frontend/backend | `/ralph-teams` (parallel) |
+| Many independent tasks (e.g. 6 tasks, 4 independent groups) | `/ralph-teams` with 4 chains |
 
 ---
 
@@ -236,6 +260,7 @@ decisions: []
 | Chain agent reviewing plan without QA agent | Spawn `product-qa-spec` subagent for plan review and verification |
 | Chain agent skipping architecture subagent | Spawn `product-architecture-spec` subagent to review/enhance spec |
 | Spawning one agent per task | One agent per CHAIN (sequential within chain) |
+| Hardcoding 2 chains regardless of task graph | Let dependency graph determine chain count |
 | Not coordinating git between chains | Team lead manages push/merge order |
 | Skipping stages for speed | Every stage is mandatory |
 | Marking tasks `done` | Only QA can mark `done` after merge |
