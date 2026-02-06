@@ -195,7 +195,6 @@ function getLocalizedName(name: string | MultilingualName, locale: string): stri
   // Map i18n locale to our supported locales
   const localeMap: Record<string, keyof MultilingualName> = {
     en: 'en',
-    el: 'el',
     ru: 'ru',
   };
   const key = localeMap[locale] || 'en';
@@ -223,7 +222,12 @@ const UnifiedDeckListItem: React.FC<UnifiedDeckListItemProps> = ({
   onViewDetail,
 }) => {
   const displayName = getLocalizedName(deck.name, locale);
-  const itemCountKey = deck.type === 'vocabulary' ? 'deck.cardCount' : 'deck.questionCount';
+  const itemCountKey =
+    deck.type === 'culture'
+      ? 'deck.questionCount'
+      : deck.card_system === 'V2'
+        ? 'deck.wordCount'
+        : 'deck.cardCount';
 
   const handleRowClick = (e: React.MouseEvent) => {
     // Don't trigger view detail if clicking on action buttons
@@ -704,10 +708,8 @@ const AdminPage: React.FC = () => {
       // API expects single name/description fields (uses name_en as primary)
       if (selectedDeck.type === 'vocabulary') {
         const formData = data as {
-          name_el?: string;
           name_en?: string;
           name_ru?: string;
-          description_el?: string;
           description_en?: string;
           description_ru?: string;
           level?: 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
@@ -726,10 +728,8 @@ const AdminPage: React.FC = () => {
         await adminAPI.updateVocabularyDeck(selectedDeck.id, payload);
       } else {
         const formData = data as {
-          name_el?: string;
           name_en?: string;
           name_ru?: string;
-          description_el?: string;
           description_en?: string;
           description_ru?: string;
           category?: string;
@@ -850,10 +850,8 @@ const AdminPage: React.FC = () => {
         // VocabularyDeckCreateForm produces trilingual data: name_el, name_en, name_ru, etc.
         // API expects single name field (use name_en as primary)
         const vocabularyData = data as {
-          name_el: string;
           name_en: string;
           name_ru: string;
-          description_el?: string;
           description_en?: string;
           description_ru?: string;
           level: 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
@@ -873,20 +871,18 @@ const AdminPage: React.FC = () => {
         // CultureDeckCreateForm produces trilingual data: name_el, name_en, name_ru, etc.
         // API expects same flat format
         const cultureData = data as {
-          name_el: string;
           name_en: string;
           name_ru: string;
-          description_el?: string;
           description_en?: string;
           description_ru?: string;
           category: string;
           is_premium: boolean;
         };
         const payload: CultureDeckCreatePayload = {
-          name_el: cultureData.name_el,
+          name_el: cultureData.name_en,
           name_en: cultureData.name_en,
           name_ru: cultureData.name_ru,
-          description_el: cultureData.description_el || null,
+          description_el: cultureData.description_en || null,
           description_en: cultureData.description_en || null,
           description_ru: cultureData.description_ru || null,
           category: cultureData.category,

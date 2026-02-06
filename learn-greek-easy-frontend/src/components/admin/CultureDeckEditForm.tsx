@@ -36,11 +36,10 @@ import { DeactivationWarningDialog } from './DeactivationWarningDialog';
 /**
  * Supported languages for culture deck names and descriptions
  */
-const DECK_LANGUAGES = ['el', 'en', 'ru'] as const;
+const DECK_LANGUAGES = ['en', 'ru'] as const;
 type DeckLanguage = (typeof DECK_LANGUAGES)[number];
 
 const LANGUAGE_LABELS: Record<DeckLanguage, string> = {
-  el: 'Greek',
   en: 'English',
   ru: 'Russian',
 };
@@ -60,13 +59,11 @@ const CULTURE_CATEGORIES = [
 type CultureCategory = (typeof CULTURE_CATEGORIES)[number];
 
 /**
- * Validation schema for culture deck edit form with trilingual support
+ * Validation schema for culture deck edit form with bilingual support
  */
 const cultureDeckSchema = z.object({
-  name_el: z.string().min(1, 'Name is required').max(255),
   name_en: z.string().min(1, 'Name is required').max(255),
   name_ru: z.string().min(1, 'Name is required').max(255),
-  description_el: z.string().max(2000).optional().or(z.literal('')),
   description_en: z.string().max(2000).optional().or(z.literal('')),
   description_ru: z.string().max(2000).optional().or(z.literal('')),
   category: z.enum(CULTURE_CATEGORIES as readonly [string, ...string[]]),
@@ -84,11 +81,11 @@ interface CultureDeckEditFormProps {
 }
 
 /**
- * Form component for editing culture deck metadata with trilingual support
+ * Form component for editing culture deck metadata with bilingual support
  *
  * Fields:
- * - name_el/name_en/name_ru: Required text inputs per language (1-255 chars)
- * - description_el/description_en/description_ru: Optional textareas per language (max 2000 chars)
+ * - name_en/name_ru: Required text inputs per language (1-255 chars)
+ * - description_en/description_ru: Optional textareas per language (max 2000 chars)
  * - category: Culture category dropdown
  * - is_active: Toggle switch for active status
  * - is_premium: Toggle switch for premium status
@@ -108,17 +105,13 @@ export const CultureDeckEditForm: React.FC<CultureDeckEditFormProps> = ({
     typeof deck.name === 'string'
       ? deck.name
       : typeof deck.name === 'object' && deck.name !== null
-        ? deck.name.en || deck.name.el || deck.name.ru || ''
+        ? deck.name.en || deck.name.ru || ''
         : '';
 
   const form = useForm<CultureDeckFormData>({
     resolver: zodResolver(cultureDeckSchema),
     mode: 'onChange',
     defaultValues: {
-      name_el:
-        ((deck as Record<string, unknown>).name_el as string) ||
-        (typeof deck.name === 'object' && deck.name !== null ? deck.name.el : '') ||
-        '',
       name_en:
         ((deck as Record<string, unknown>).name_en as string) ||
         (typeof deck.name === 'object' && deck.name !== null
@@ -131,7 +124,6 @@ export const CultureDeckEditForm: React.FC<CultureDeckEditFormProps> = ({
         ((deck as Record<string, unknown>).name_ru as string) ||
         (typeof deck.name === 'object' && deck.name !== null ? deck.name.ru : '') ||
         '',
-      description_el: ((deck as Record<string, unknown>).description_el as string) || '',
       description_en: ((deck as Record<string, unknown>).description_en as string) || '',
       description_ru: ((deck as Record<string, unknown>).description_ru as string) || '',
       category: (deck.category as CultureCategory) || 'culture',
@@ -212,7 +204,7 @@ export const CultureDeckEditForm: React.FC<CultureDeckEditFormProps> = ({
               {/* Name field */}
               <FormField
                 control={form.control}
-                name={`name_${lang}` as 'name_el' | 'name_en' | 'name_ru'}
+                name={`name_${lang}` as 'name_en' | 'name_ru'}
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Name ({LANGUAGE_LABELS[lang]})</FormLabel>
@@ -231,9 +223,7 @@ export const CultureDeckEditForm: React.FC<CultureDeckEditFormProps> = ({
               {/* Description field */}
               <FormField
                 control={form.control}
-                name={
-                  `description_${lang}` as 'description_el' | 'description_en' | 'description_ru'
-                }
+                name={`description_${lang}` as 'description_en' | 'description_ru'}
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Description ({LANGUAGE_LABELS[lang]})</FormLabel>
