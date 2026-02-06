@@ -6,7 +6,7 @@
  * - V2 decks: Word browser with search and disabled Study button
  * - Word reference page: Grammar data display and navigation
  *
- * Test data is seeded via the /api/v1/test/seed/dual-decks endpoint.
+ * Test data is seeded via the /api/v1/test/seed/all endpoint.
  */
 
 import { test, expect, APIRequestContext } from '@playwright/test';
@@ -23,13 +23,14 @@ let v1DeckId: string;
 let v2DeckId: string;
 
 /**
- * Seed V1/V2 test decks (1 V1 + 3 V2: Nouns A1, Verbs A2, Mixed A2)
+ * Seed all test data and extract V1/V2 deck IDs for dual card system tests.
+ * Uses the unified seed/all endpoint which includes dual-deck data.
  */
-async function seedDualDecks(
+async function seedAndExtractDeckIds(
   request: APIRequestContext
 ): Promise<{ v1DeckId: string; v2DeckId: string }> {
   const apiBaseUrl = getApiBaseUrl();
-  const response = await request.post(`${apiBaseUrl}/api/v1/test/seed/dual-decks`);
+  const response = await request.post(`${apiBaseUrl}/api/v1/test/seed/all`);
   expect(response.ok()).toBe(true);
 
   const data = await response.json();
@@ -44,14 +45,14 @@ test.describe.configure({ mode: 'serial' });
 
 test.describe('V1/V2 Deck Pages', () => {
   test.beforeAll(async ({ request }) => {
-    console.log('[DUAL-SEED] Starting dual deck seeding...');
+    console.log('[SEED-ALL] Starting full seeding for V1/V2 deck tests...');
 
-    // Seed V1/V2 test decks
-    const deckIds = await seedDualDecks(request);
+    // Seed all test data and extract V1/V2 deck IDs
+    const deckIds = await seedAndExtractDeckIds(request);
     v1DeckId = deckIds.v1DeckId;
     v2DeckId = deckIds.v2DeckId;
 
-    console.log(`[DUAL-SEED] Seeded decks - V1: ${v1DeckId}, V2: ${v2DeckId}`);
+    console.log(`[SEED-ALL] Seeded decks - V1: ${v1DeckId}, V2: ${v2DeckId}`);
   });
 
   // =====================
