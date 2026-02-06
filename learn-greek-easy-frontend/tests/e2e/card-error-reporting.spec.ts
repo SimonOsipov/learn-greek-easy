@@ -16,6 +16,7 @@ import { test, expect, Page } from '@playwright/test';
 /**
  * Helper function to navigate to a flashcard review session.
  * Returns once the first flashcard is visible.
+ * NOTE: Must select a V1 deck (with enabled review button), not V2 decks (word browser only).
  */
 async function navigateToFlashcardReview(page: Page): Promise<void> {
   // Navigate to decks page
@@ -25,16 +26,31 @@ async function navigateToFlashcardReview(page: Page): Promise<void> {
   const deckCard = page.locator('[data-testid="deck-card"]').first();
   await expect(deckCard).toBeVisible({ timeout: 15000 });
 
-  // Click on first vocabulary deck (not culture)
-  const vocabDeck = page.locator('[data-testid="deck-card"]').filter({
-    hasNot: page.locator('[data-testid="culture-badge"]'),
+  // Click on a V1 vocabulary deck (not culture, not V2)
+  // Look for deck names like "Greek A1 Vocabulary" which are V1 decks
+  const v1VocabDeck = page.locator('[data-testid="deck-card"]').filter({
+    hasText: /A1 Vocabulary|A2 Vocabulary|B1 Vocabulary|Greek A1|Greek A2/i,
   }).first();
-  await expect(vocabDeck).toBeVisible({ timeout: 5000 });
-  await vocabDeck.click();
 
-  // Wait for deck detail page and click review button
+  const hasV1Deck = await v1VocabDeck.isVisible().catch(() => false);
+
+  if (hasV1Deck) {
+    await v1VocabDeck.click();
+  } else {
+    // Fallback: click any deck that is NOT a V2 test deck or culture deck
+    const regularDeck = page.locator('[data-testid="deck-card"]').filter({
+      hasNotText: /E2E V2|Word Entry/i,
+    }).filter({
+      hasNot: page.locator('[data-testid="culture-badge"]'),
+    }).first();
+    await expect(regularDeck).toBeVisible({ timeout: 5000 });
+    await regularDeck.click();
+  }
+
+  // Wait for deck detail page and verify review button is ENABLED
   const reviewButton = page.getByRole('button', { name: /review|start/i }).first();
   await expect(reviewButton).toBeVisible({ timeout: 5000 });
+  await expect(reviewButton).toBeEnabled({ timeout: 5000 });
   await reviewButton.click();
 
   // Wait for flashcard to be visible
