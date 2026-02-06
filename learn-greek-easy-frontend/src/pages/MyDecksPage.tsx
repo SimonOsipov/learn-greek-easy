@@ -57,6 +57,11 @@ const transformDeckResponse = (deck: DeckResponse): Deck => {
     createdAt: new Date(deck.created_at),
     updatedAt: new Date(deck.updated_at),
     progress,
+    cardSystem: (deck.card_system ?? 'V1') as 'V1' | 'V2',
+    nameEn: deck.name_en,
+    nameRu: deck.name_ru,
+    descriptionEn: deck.description_en,
+    descriptionRu: deck.description_ru,
   };
 };
 

@@ -83,6 +83,8 @@
     "cardCount_other": "{{count}} cards",
     "questionCount_one": "{{count}} question",
     "questionCount_other": "{{count}} questions",
+    "wordCount_one": "{{count}} word",
+    "wordCount_other": "{{count}} words",
     "byOwner": "by {{owner}}",
     "deactivated": "Deactivated"
   },

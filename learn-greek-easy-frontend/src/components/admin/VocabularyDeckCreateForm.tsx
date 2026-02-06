@@ -34,11 +34,10 @@ import type { DeckLevel } from '@/services/adminAPI';
 /**
  * Supported languages for vocabulary deck names
  */
-const DECK_LANGUAGES = ['el', 'en', 'ru'] as const;
+const DECK_LANGUAGES = ['en', 'ru'] as const;
 type DeckLanguage = (typeof DECK_LANGUAGES)[number];
 
 const LANGUAGE_LABELS: Record<DeckLanguage, string> = {
-  el: 'Greek',
   en: 'English',
   ru: 'Russian',
 };
@@ -49,17 +48,11 @@ const LANGUAGE_LABELS: Record<DeckLanguage, string> = {
 const CEFR_LEVELS: DeckLevel[] = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
 
 /**
- * Validation schema for vocabulary deck create form with trilingual support
+ * Validation schema for vocabulary deck create form with bilingual support
  */
 const vocabularyDeckCreateSchema = z.object({
-  name_el: z.string().min(1, 'Name is required').max(255, 'Name must be at most 255 characters'),
   name_en: z.string().min(1, 'Name is required').max(255, 'Name must be at most 255 characters'),
   name_ru: z.string().min(1, 'Name is required').max(255, 'Name must be at most 255 characters'),
-  description_el: z
-    .string()
-    .max(1000, 'Description must be at most 1000 characters')
-    .optional()
-    .or(z.literal('')),
   description_en: z
     .string()
     .max(1000, 'Description must be at most 1000 characters')
@@ -83,11 +76,11 @@ interface VocabularyDeckCreateFormProps {
 }
 
 /**
- * Form component for creating a new vocabulary deck with trilingual support
+ * Form component for creating a new vocabulary deck with bilingual support
  *
  * Fields:
- * - name_el/name_en/name_ru: Required text inputs (1-255 chars each)
- * - description_el/description_en/description_ru: Optional textareas (max 1000 chars each)
+ * - name_en/name_ru: Required text inputs (1-255 chars each)
+ * - description_en/description_ru: Optional textareas (max 1000 chars each)
  * - level: CEFR level dropdown (A1-C2)
  * - is_premium: Toggle switch for premium status
  */
@@ -103,10 +96,8 @@ export const VocabularyDeckCreateForm: React.FC<VocabularyDeckCreateFormProps> =
     resolver: zodResolver(vocabularyDeckCreateSchema),
     mode: 'onChange',
     defaultValues: {
-      name_el: '',
       name_en: '',
       name_ru: '',
-      description_el: '',
       description_en: '',
       description_ru: '',
       level: 'A1',

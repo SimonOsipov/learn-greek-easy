@@ -21,18 +21,16 @@ import { CultureDeckEditForm, type CultureDeckFormData } from '../CultureDeckEdi
 import type { UnifiedDeckItem } from '@/services/adminAPI';
 import i18n from '@/i18n';
 
-// Extended deck type with trilingual fields for testing
-interface TrilingualMockDeck extends UnifiedDeckItem {
-  name_el?: string;
+// Extended deck type with bilingual fields for testing
+interface BilingualMockDeck extends UnifiedDeckItem {
   name_en?: string;
   name_ru?: string;
-  description_el?: string;
   description_en?: string;
   description_ru?: string;
 }
 
-// Mock deck for testing with trilingual support
-const createMockDeck = (overrides: Partial<TrilingualMockDeck> = {}): TrilingualMockDeck => ({
+// Mock deck for testing with bilingual support
+const createMockDeck = (overrides: Partial<BilingualMockDeck> = {}): BilingualMockDeck => ({
   id: 'test-culture-deck-1',
   name: 'Test Culture Deck',
   type: 'culture',
@@ -44,11 +42,9 @@ const createMockDeck = (overrides: Partial<TrilingualMockDeck> = {}): Trilingual
   created_at: '2026-01-01T00:00:00Z',
   owner_id: null,
   owner_name: null,
-  // Trilingual name fields for form
-  name_el: 'Test Culture Deck EL',
+  // Bilingual name fields for form
   name_en: 'Test Culture Deck',
   name_ru: 'Test Culture Deck RU',
-  description_el: '',
   description_en: '',
   description_ru: '',
   ...overrides,
@@ -301,7 +297,6 @@ describe('CultureDeckEditForm', () => {
       const user = userEvent.setup();
       const deck = createMockDeck({
         name: 'Complete Culture Deck',
-        name_el: 'Complete Culture Deck EL',
         name_en: 'Complete Culture Deck EN',
         name_ru: 'Complete Culture Deck RU',
         category: 'traditions',
@@ -322,11 +317,9 @@ describe('CultureDeckEditForm', () => {
 
       const savedData = mockOnSave.mock.calls[0][0] as CultureDeckFormData;
 
-      // Verify all trilingual fields are present
-      expect(savedData).toHaveProperty('name_el');
+      // Verify all bilingual fields are present
       expect(savedData).toHaveProperty('name_en');
       expect(savedData).toHaveProperty('name_ru');
-      expect(savedData).toHaveProperty('description_el');
       expect(savedData).toHaveProperty('description_en');
       expect(savedData).toHaveProperty('description_ru');
       expect(savedData).toHaveProperty('category');

@@ -87,6 +87,10 @@
     "questionCount_few": "{{count}} вопроса",
     "questionCount_many": "{{count}} вопросов",
     "questionCount_other": "{{count}} вопросов",
+    "wordCount_one": "{{count}} слово",
+    "wordCount_few": "{{count}} слова",
+    "wordCount_many": "{{count}} слов",
+    "wordCount_other": "{{count}} слов",
     "byOwner": "от {{owner}}",
     "deactivated": "Деактивировано"
   },

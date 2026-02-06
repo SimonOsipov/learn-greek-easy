@@ -15,7 +15,7 @@ from src.core.dependencies import get_current_user, get_locale_from_header
 from src.core.exceptions import DeckNotFoundException, ForbiddenException
 from src.core.localization import get_localized_deck_content
 from src.db.dependencies import get_db
-from src.db.models import DeckLevel, PartOfSpeech, User
+from src.db.models import CardSystemVersion, DeckLevel, PartOfSpeech, User
 from src.repositories.deck import DeckRepository
 from src.repositories.word_entry import WordEntryRepository
 from src.schemas.deck import (
@@ -128,6 +128,10 @@ async def list_decks(
                 id=deck.id,
                 name=name,
                 description=description,
+                name_en=deck.name_en,
+                name_ru=deck.name_ru,
+                description_en=deck.description_en,
+                description_ru=deck.description_ru,
                 level=deck.level,
                 is_active=deck.is_active,
                 is_premium=deck.is_premium,
@@ -209,13 +213,31 @@ async def create_deck(
     # which is only used for logic, not stored in the database
     create_data = deck_data.model_dump(exclude_unset=True, exclude={"is_system_deck"})
 
-    # Map name/description to trilingual fields (user decks store in _en columns)
-    if "name" in create_data:
+    # Map name/description to trilingual fields
+    # Bilingual fields (name_en, name_ru) take priority over single name field
+    if "name_en" in create_data or "name_ru" in create_data:
+        # Bilingual fields provided — use them directly, default name_el to name_en
+        name_en = create_data.get("name_en") or create_data.get("name", "")
+        create_data["name_en"] = name_en
+        create_data["name_el"] = name_en  # Greek mirrors English
+        if "name_ru" not in create_data:
+            create_data["name_ru"] = name_en
+        create_data.pop("name", None)
+    elif "name" in create_data:
+        # Legacy single-name field — copy to all columns
         name = create_data.pop("name")
         create_data["name_en"] = name
         create_data["name_el"] = name  # Same as English for user-created decks
         create_data["name_ru"] = name  # Same as English for user-created decks
-    if "description" in create_data:
+    if "description_en" in create_data or "description_ru" in create_data:
+        # Bilingual description fields — use directly
+        desc_en = create_data.get("description_en") or create_data.get("description")
+        create_data["description_en"] = desc_en
+        create_data["description_el"] = desc_en  # Greek mirrors English
+        if "description_ru" not in create_data:
+            create_data["description_ru"] = desc_en
+        create_data.pop("description", None)
+    elif "description" in create_data:
         description = create_data.pop("description")
         create_data["description_en"] = description
         create_data["description_el"] = description  # Same as English for user-created decks
@@ -236,6 +258,10 @@ async def create_deck(
             create_data["is_active"] = True
             create_data["is_premium"] = False
 
+    # Set card_system to V1 since this endpoint pairs with POST /api/v1/cards (V1 Card table)
+    # V2 decks are created via the admin API with word entries
+    create_data["card_system"] = CardSystemVersion.V1
+
     # Create the deck using BaseRepository.create()
     # Note: BaseRepository.create() uses flush, not commit
     deck = await repo.create(create_data)
@@ -249,6 +275,10 @@ async def create_deck(
         id=deck.id,
         name=deck.name_en,
         description=deck.description_en,
+        name_en=deck.name_en,
+        name_ru=deck.name_ru,
+        description_en=deck.description_en,
+        description_ru=deck.description_ru,
         level=deck.level,
         is_active=deck.is_active,
         is_premium=deck.is_premium,
@@ -352,6 +382,10 @@ async def search_decks(
                 id=deck.id,
                 name=name,
                 description=description,
+                name_en=deck.name_en,
+                name_ru=deck.name_ru,
+                description_en=deck.description_en,
+                description_ru=deck.description_ru,
                 level=deck.level,
                 is_active=deck.is_active,
                 is_premium=deck.is_premium,
@@ -463,6 +497,10 @@ async def list_my_decks(
                 id=deck.id,
                 name=name,
                 description=description,
+                name_en=deck.name_en,
+                name_ru=deck.name_ru,
+                description_en=deck.description_en,
+                description_ru=deck.description_ru,
                 level=deck.level,
                 is_active=deck.is_active,
                 is_premium=deck.is_premium,
@@ -565,6 +603,10 @@ async def get_deck(
         id=deck.id,
         name=name,
         description=description,
+        name_en=deck.name_en,
+        name_ru=deck.name_ru,
+        description_en=deck.description_en,
+        description_ru=deck.description_ru,
         level=deck.level,
         is_active=deck.is_active,
         is_premium=deck.is_premium,
@@ -791,13 +833,26 @@ async def update_deck(
         raise ForbiddenException(detail="Not authorized to edit this deck")
 
     # Map name/description to trilingual fields for update
+    # Bilingual fields (name_en, name_ru) take priority over single name field
     update_data = deck_data.model_dump(exclude_unset=True)
-    if "name" in update_data:
+    if "name_en" in update_data or "name_ru" in update_data:
+        # Bilingual fields provided — use them directly
+        # Set name_el to name_en (Greek not user-editable)
+        if "name_en" in update_data:
+            update_data["name_el"] = update_data["name_en"]
+        update_data.pop("name", None)
+    elif "name" in update_data:
+        # Legacy single-name field — copy to all columns
         name = update_data.pop("name")
         update_data["name_en"] = name
         update_data["name_el"] = name  # For user updates, set all to same value
         update_data["name_ru"] = name
-    if "description" in update_data:
+    if "description_en" in update_data or "description_ru" in update_data:
+        # Bilingual description fields — use directly
+        if "description_en" in update_data:
+            update_data["description_el"] = update_data["description_en"]
+        update_data.pop("description", None)
+    elif "description" in update_data:
         description = update_data.pop("description")
         update_data["description_en"] = description
         update_data["description_el"] = description
@@ -824,6 +879,10 @@ async def update_deck(
         id=updated_deck.id,
         name=updated_deck.name_en,
         description=updated_deck.description_en,
+        name_en=updated_deck.name_en,
+        name_ru=updated_deck.name_ru,
+        description_en=updated_deck.description_en,
+        description_ru=updated_deck.description_ru,
         level=updated_deck.level,
         is_active=updated_deck.is_active,
         is_premium=updated_deck.is_premium,

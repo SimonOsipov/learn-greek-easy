@@ -6,7 +6,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from src.db.models import Card, Deck, DeckLevel
+from src.db.models import Card, CardSystemVersion, Deck, DeckLevel, WordEntry
 from src.repositories.base import BaseRepository
 
 
@@ -96,18 +96,35 @@ class DeckRepository(BaseRepository[Deck]):
         return result.scalar_one_or_none()
 
     async def count_cards(self, deck_id: UUID) -> int:
-        """Count total cards in a deck.
+        """Count total cards/word entries in a deck.
+
+        Checks the deck's card_system to determine whether to count
+        from the Card table (V1) or WordEntry table (V2).
 
         Args:
             deck_id: Deck UUID
 
         Returns:
-            Number of cards in deck
+            Number of cards/word entries in deck
 
         Use Case:
             Deck metadata, progress calculations
         """
-        query = select(func.count()).select_from(Card).where(Card.deck_id == deck_id)
+        # Determine deck's card system
+        deck_query = select(Deck.card_system).where(Deck.id == deck_id)
+        deck_result = await self.db.execute(deck_query)
+        card_system = deck_result.scalar_one_or_none()
+
+        if card_system == CardSystemVersion.V2:
+            query = (
+                select(func.count())
+                .select_from(WordEntry)
+                .where(WordEntry.deck_id == deck_id)
+                .where(WordEntry.is_active.is_(True))
+            )
+        else:
+            query = select(func.count()).select_from(Card).where(Card.deck_id == deck_id)
+
         result = await self.db.execute(query)
         return result.scalar_one()
 
@@ -260,10 +277,35 @@ class DeckRepository(BaseRepository[Deck]):
         if not deck_ids:
             return {}
 
-        query = (
-            select(Card.deck_id, func.count(Card.id).label("count"))
-            .where(Card.deck_id.in_(deck_ids))
-            .group_by(Card.deck_id)
-        )
-        result = await self.db.execute(query)
-        return {row[0]: row[1] for row in result.all()}
+        # Determine card system for each deck
+        deck_systems_query = select(Deck.id, Deck.card_system).where(Deck.id.in_(deck_ids))
+        deck_systems_result = await self.db.execute(deck_systems_query)
+        deck_systems = {row[0]: row[1] for row in deck_systems_result.all()}
+
+        v1_ids = [did for did, sys in deck_systems.items() if sys != CardSystemVersion.V2]
+        v2_ids = [did for did, sys in deck_systems.items() if sys == CardSystemVersion.V2]
+
+        result: dict[UUID, int] = {}
+
+        if v1_ids:
+            v1_query = (
+                select(Card.deck_id, func.count(Card.id).label("count"))
+                .where(Card.deck_id.in_(v1_ids))
+                .group_by(Card.deck_id)
+            )
+            v1_result = await self.db.execute(v1_query)
+            for row in v1_result.all():
+                result[row[0]] = row[1]
+
+        if v2_ids:
+            v2_query = (
+                select(WordEntry.deck_id, func.count(WordEntry.id).label("count"))
+                .where(WordEntry.deck_id.in_(v2_ids))
+                .where(WordEntry.is_active.is_(True))
+                .group_by(WordEntry.deck_id)
+            )
+            v2_result = await self.db.execute(v2_query)
+            for row in v2_result.all():
+                result[row[0]] = row[1]
+
+        return result

@@ -48,10 +48,7 @@ export function ExamplesSection({ examples }: ExamplesSectionProps) {
       </CardHeader>
       <CardContent className="space-y-4">
         {examples.map((example, index) => (
-          <div
-            key={index}
-            className="rounded-lg border border-border bg-muted/30 p-4 transition-colors hover:bg-muted/50"
-          >
+          <Card key={index} className="bg-muted/30 p-4 transition-colors hover:bg-muted/50">
             {/* Context badge */}
             {example.context && (
               <Badge variant="outline" className="mb-2 text-xs">
@@ -71,7 +68,7 @@ export function ExamplesSection({ examples }: ExamplesSectionProps) {
             {example.russian && (
               <p className="mt-1 text-sm italic text-muted-foreground">{example.russian}</p>
             )}
-          </div>
+          </Card>
         ))}
       </CardContent>
     </Card>

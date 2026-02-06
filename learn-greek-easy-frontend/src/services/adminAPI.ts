@@ -72,14 +72,13 @@ export interface UnifiedDeckItem {
   is_active: boolean;
   is_premium: boolean;
   is_system_deck: boolean | null; // true for system decks (vocabulary only), null for culture decks
+  card_system?: string | null; // V1 or V2 (vocabulary decks only)
   created_at: string;
   owner_id: string | null;
   owner_name: string | null;
-  // Trilingual fields for edit forms
-  name_el?: string;
+  // Bilingual fields for edit forms
   name_en?: string;
   name_ru?: string;
-  description_el?: string;
   description_en?: string;
   description_ru?: string;
 }
@@ -109,7 +108,11 @@ export interface ListDecksParams {
  */
 export interface VocabularyDeckUpdatePayload {
   name?: string;
+  name_en?: string;
+  name_ru?: string;
   description?: string | null;
+  description_en?: string | null;
+  description_ru?: string | null;
   level?: DeckLevel;
   is_active?: boolean;
   is_premium?: boolean;
@@ -120,7 +123,11 @@ export interface VocabularyDeckUpdatePayload {
  */
 export interface CultureDeckUpdatePayload {
   name?: string;
+  name_en?: string;
+  name_ru?: string;
   description?: string | null;
+  description_en?: string | null;
+  description_ru?: string | null;
   category?: string;
   is_active?: boolean;
   is_premium?: boolean;
@@ -131,7 +138,11 @@ export interface CultureDeckUpdatePayload {
  */
 export interface VocabularyDeckCreatePayload {
   name: string;
+  name_en?: string;
+  name_ru?: string;
   description?: string | null;
+  description_en?: string | null;
+  description_ru?: string | null;
   level: DeckLevel;
   is_premium?: boolean;
   is_system_deck: true;
@@ -493,7 +504,6 @@ export interface NewsItemUpdate {
   title_el?: string;
   title_en?: string;
   title_ru?: string;
-  description_el?: string;
   description_en?: string;
   description_ru?: string;
   publication_date?: string;

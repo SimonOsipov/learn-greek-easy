@@ -15,6 +15,7 @@ import { ChevronLeft } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
 
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -82,10 +83,10 @@ function WordReferenceError({ message }: { message: string }) {
 
   return (
     <div className="flex flex-col items-center justify-center gap-4 py-12">
-      <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-6 text-center">
-        <h2 className="text-lg font-semibold text-destructive">{t('wordBrowser.errorTitle')}</h2>
-        <p className="mt-2 text-sm text-muted-foreground">{message}</p>
-      </div>
+      <Alert variant="destructive" className="max-w-md text-center">
+        <AlertTitle>{t('wordBrowser.errorTitle')}</AlertTitle>
+        <AlertDescription>{message}</AlertDescription>
+      </Alert>
       <Button asChild variant="outline">
         <Link to={`/decks/${deckId}`}>
           <ChevronLeft className="mr-2 h-4 w-4" />
@@ -106,10 +107,10 @@ function WordNotFound() {
 
   return (
     <div className="flex flex-col items-center justify-center gap-4 py-12">
-      <div className="rounded-lg border border-muted bg-muted/30 p-6 text-center">
-        <h2 className="text-lg font-semibold">{t('detail.notFound')}</h2>
-        <p className="mt-2 text-sm text-muted-foreground">{t('detail.notFoundDescription')}</p>
-      </div>
+      <Alert className="max-w-md text-center">
+        <AlertTitle>{t('detail.notFound')}</AlertTitle>
+        <AlertDescription>{t('detail.notFoundDescription')}</AlertDescription>
+      </Alert>
       <Button asChild variant="outline">
         <Link to={`/decks/${deckId}`}>
           <ChevronLeft className="mr-2 h-4 w-4" />
@@ -227,14 +228,12 @@ export function WordReferencePage() {
       {/* Gradient Header */}
       <div className="rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 p-6">
         {/* Back navigation */}
-        <Link
-          to={`/decks/${deckId}`}
-          className="mb-4 inline-flex items-center text-sm text-muted-foreground transition-colors hover:text-foreground"
-          data-testid="back-button"
-        >
-          <ChevronLeft className="mr-1 h-4 w-4" />
-          {t('deck:detail.goBack')}
-        </Link>
+        <Button asChild variant="ghost" size="sm" className="mb-4" data-testid="back-button">
+          <Link to={`/decks/${deckId}`}>
+            <ChevronLeft className="mr-1 h-4 w-4" />
+            {t('deck:detail.goBack')}
+          </Link>
+        </Button>
 
         {/* Type badges */}
         <div className="mb-4 flex flex-wrap gap-2">

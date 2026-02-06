@@ -27,6 +27,10 @@ export interface DeckResponse {
   id: string;
   name: string;
   description: string | null;
+  name_en?: string;
+  name_ru?: string;
+  description_en?: string | null;
+  description_ru?: string | null;
   level: DeckLevel;
   is_active: boolean;
   is_premium?: boolean;

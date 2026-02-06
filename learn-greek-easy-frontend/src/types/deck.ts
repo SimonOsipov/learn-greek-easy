@@ -69,6 +69,11 @@ export interface Deck {
   progress?: DeckProgress;
   /** Card presentation system version (V1=flashcards, V2=word browser) */
   cardSystem: CardSystemVersion;
+  // Multilingual fields for client-side locale resolution
+  nameEn?: string;
+  nameRu?: string;
+  descriptionEn?: string | null;
+  descriptionRu?: string | null;
 }
 
 /**
@@ -95,10 +100,8 @@ export interface DeckFilters {
  */
 export interface DeckAdminResponse {
   id: string;
-  name_el: string;
   name_en: string;
   name_ru: string;
-  description_el: string | null;
   description_en: string | null;
   description_ru: string | null;
   level: DeckLevel;
@@ -119,10 +122,8 @@ export interface DeckAdminResponse {
  */
 export interface CultureDeckAdminResponse {
   id: string;
-  name_el: string;
   name_en: string;
   name_ru: string;
-  description_el: string | null;
   description_en: string | null;
   description_ru: string | null;
   category: string;

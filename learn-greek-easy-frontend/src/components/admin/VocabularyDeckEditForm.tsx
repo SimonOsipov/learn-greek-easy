@@ -36,11 +36,10 @@ import { DeactivationWarningDialog } from './DeactivationWarningDialog';
 /**
  * Supported languages for vocabulary deck names
  */
-const DECK_LANGUAGES = ['el', 'en', 'ru'] as const;
+const DECK_LANGUAGES = ['en', 'ru'] as const;
 type DeckLanguage = (typeof DECK_LANGUAGES)[number];
 
 const LANGUAGE_LABELS: Record<DeckLanguage, string> = {
-  el: 'Greek',
   en: 'English',
   ru: 'Russian',
 };
@@ -51,17 +50,11 @@ const LANGUAGE_LABELS: Record<DeckLanguage, string> = {
 const CEFR_LEVELS: DeckLevel[] = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
 
 /**
- * Validation schema for vocabulary deck edit form with trilingual support
+ * Validation schema for vocabulary deck edit form with bilingual support
  */
 const vocabularyDeckSchema = z.object({
-  name_el: z.string().min(1, 'Name is required').max(255, 'Name must be at most 255 characters'),
   name_en: z.string().min(1, 'Name is required').max(255, 'Name must be at most 255 characters'),
   name_ru: z.string().min(1, 'Name is required').max(255, 'Name must be at most 255 characters'),
-  description_el: z
-    .string()
-    .max(1000, 'Description must be at most 1000 characters')
-    .optional()
-    .or(z.literal('')),
   description_en: z
     .string()
     .max(1000, 'Description must be at most 1000 characters')
@@ -80,9 +73,9 @@ const vocabularyDeckSchema = z.object({
 export type VocabularyDeckFormData = z.infer<typeof vocabularyDeckSchema>;
 
 /**
- * Extended deck type with trilingual name/description fields
+ * Extended deck type with bilingual name/description fields
  */
-interface TrilingualDeckItem extends UnifiedDeckItem {
+interface BilingualDeckItem extends UnifiedDeckItem {
   name_el?: string;
   name_en?: string;
   name_ru?: string;
@@ -92,18 +85,18 @@ interface TrilingualDeckItem extends UnifiedDeckItem {
 }
 
 interface VocabularyDeckEditFormProps {
-  deck: TrilingualDeckItem;
+  deck: BilingualDeckItem;
   onSave: (data: VocabularyDeckFormData) => void;
   onCancel: () => void;
   isLoading?: boolean;
 }
 
 /**
- * Form component for editing vocabulary deck metadata with trilingual support
+ * Form component for editing vocabulary deck metadata with bilingual support
  *
  * Fields:
- * - name_el/name_en/name_ru: Required text inputs (1-255 chars each)
- * - description_el/description_en/description_ru: Optional textareas (max 1000 chars each)
+ * - name_en/name_ru: Required text inputs (1-255 chars each)
+ * - description_en/description_ru: Optional textareas (max 1000 chars each)
  * - level: CEFR level dropdown (A1-C2)
  * - is_active: Toggle switch for active status
  * - is_premium: Toggle switch for premium status
@@ -125,10 +118,8 @@ export const VocabularyDeckEditForm: React.FC<VocabularyDeckEditFormProps> = ({
     resolver: zodResolver(vocabularyDeckSchema),
     mode: 'onChange',
     defaultValues: {
-      name_el: deck.name_el || '',
       name_en: deck.name_en || '',
       name_ru: deck.name_ru || '',
-      description_el: deck.description_el || '',
       description_en: deck.description_en || '',
       description_ru: deck.description_ru || '',
       level: (deck.level as DeckLevel) || 'A1',

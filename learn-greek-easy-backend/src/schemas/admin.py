@@ -64,6 +64,9 @@ class UnifiedDeckItem(BaseModel):
     item_count: int = Field(..., ge=0, description="Number of cards/questions")
     is_active: bool = Field(..., description="Whether deck is active")
     is_premium: bool = Field(..., description="Whether deck requires premium subscription")
+    card_system: Optional[str] = Field(
+        None, description="Card system version (V1 or V2, vocabulary decks only)"
+    )
     created_at: datetime = Field(..., description="Creation timestamp")
     owner_id: Optional[UUID] = Field(None, description="Owner user ID (None for system decks)")
     owner_name: Optional[str] = Field(

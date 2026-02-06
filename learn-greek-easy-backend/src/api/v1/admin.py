@@ -12,7 +12,7 @@ from typing import Optional
 from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
-from sqlalchemy import func, select
+from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config import settings
@@ -24,12 +24,14 @@ from src.db.models import (
     Card,
     CardErrorCardType,
     CardErrorStatus,
+    CardSystemVersion,
     CultureDeck,
     CultureQuestion,
     Deck,
     FeedbackCategory,
     FeedbackStatus,
     User,
+    WordEntry,
 )
 from src.schemas.admin import (
     AdminCultureQuestionItem,
@@ -148,13 +150,25 @@ async def get_admin_stats(
     )
     total_vocabulary_decks = deck_count_result.scalar() or 0
 
-    # Count cards in active vocabulary decks
-    card_count_result = await db.execute(
+    # Count cards in active vocabulary decks (V1 + V2)
+    v1_card_count_result = await db.execute(
         select(func.count(Card.id))
         .join(Deck, Card.deck_id == Deck.id)
         .where(Deck.is_active.is_(True))
+        .where(Deck.card_system == CardSystemVersion.V1)
     )
-    total_vocabulary_cards = card_count_result.scalar() or 0
+    v1_count = v1_card_count_result.scalar() or 0
+
+    v2_word_count_result = await db.execute(
+        select(func.count(WordEntry.id))
+        .join(Deck, WordEntry.deck_id == Deck.id)
+        .where(Deck.is_active.is_(True))
+        .where(Deck.card_system == CardSystemVersion.V2)
+        .where(WordEntry.is_active.is_(True))
+    )
+    v2_count = v2_word_count_result.scalar() or 0
+
+    total_vocabulary_cards = v1_count + v2_count
 
     # Count active culture decks
     culture_deck_result = await db.execute(
@@ -253,10 +267,18 @@ async def list_decks(
     # Vocabulary Decks Query
     # ========================================
     if type is None or type == "vocabulary":
-        # Count cards per vocabulary deck
-        vocab_card_count_subquery = (
+        # Count V1 cards per vocabulary deck
+        v1_card_count_subquery = (
             select(Card.deck_id, func.count(Card.id).label("card_count"))
             .group_by(Card.deck_id)
+            .subquery()
+        )
+
+        # Count V2 active word entries per vocabulary deck
+        v2_word_count_subquery = (
+            select(WordEntry.deck_id, func.count(WordEntry.id).label("word_count"))
+            .where(WordEntry.is_active.is_(True))
+            .group_by(WordEntry.deck_id)
             .subquery()
         )
 
@@ -269,8 +291,15 @@ async def list_decks(
                 Deck.is_premium,
                 Deck.created_at,
                 Deck.owner_id,
+                Deck.card_system,
                 User.full_name.label("owner_name"),
-                func.coalesce(vocab_card_count_subquery.c.card_count, 0).label("item_count"),
+                case(
+                    (
+                        Deck.card_system == CardSystemVersion.V2,
+                        func.coalesce(v2_word_count_subquery.c.word_count, 0),
+                    ),
+                    else_=func.coalesce(v1_card_count_subquery.c.card_count, 0),
+                ).label("item_count"),
                 # Trilingual fields for edit forms
                 Deck.name_el,
                 Deck.name_en,
@@ -279,7 +308,8 @@ async def list_decks(
                 Deck.description_en,
                 Deck.description_ru,
             )
-            .outerjoin(vocab_card_count_subquery, Deck.id == vocab_card_count_subquery.c.deck_id)
+            .outerjoin(v1_card_count_subquery, Deck.id == v1_card_count_subquery.c.deck_id)
+            .outerjoin(v2_word_count_subquery, Deck.id == v2_word_count_subquery.c.deck_id)
             .outerjoin(User, Deck.owner_id == User.id)
         )
 
@@ -313,6 +343,7 @@ async def list_decks(
                     created_at=row.created_at,
                     owner_id=row.owner_id,
                     owner_name=row.owner_name,
+                    card_system=row.card_system.value,
                     # Trilingual fields for edit forms
                     name_el=row.name_el,
                     name_en=row.name_en,

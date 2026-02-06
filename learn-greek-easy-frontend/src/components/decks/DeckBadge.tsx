@@ -85,7 +85,7 @@ export const DeckBadge: React.FC<DeckBadgeProps> = ({
     const label = getCEFRLabel(level);
     return (
       <Badge
-        className={`${bgColor} ${textColor} rounded px-2 py-1 text-xs font-semibold ${className}`}
+        className={`${bgColor} ${textColor} border-0 px-2 py-1 ${className}`}
         aria-label={`Level ${label}`}
       >
         {level}
@@ -99,7 +99,7 @@ export const DeckBadge: React.FC<DeckBadgeProps> = ({
     return (
       <Badge
         variant="outline"
-        className={`${config.bgColor} ${config.textColor} whitespace-nowrap rounded px-2 py-1 text-xs ${className}`}
+        className={`${config.bgColor} ${config.textColor} whitespace-nowrap border-0 px-2 py-1 ${className}`}
         aria-label={`Status: ${statusLabel}`}
       >
         {statusLabel}

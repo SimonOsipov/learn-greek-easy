@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/hooks/use-toast';
+import { getLocalizedDeckName } from '@/lib/deckLocale';
 import { adminAPI } from '@/services/adminAPI';
 import type {
   AdminCultureQuestion,
@@ -39,15 +40,27 @@ interface DeckDetailModalProps {
 
 /**
  * Get display name for a deck (handles multilingual names)
+ * Uses shared getLocalizedDeckName for flat fields; falls back to
+ * MultilingualName for legacy support.
  */
-function getDeckDisplayName(name: string | MultilingualName, locale: string): string {
+function getDeckDisplayName(
+  deck: { name?: string | MultilingualName; name_en?: string; name_ru?: string },
+  locale: string
+): string {
+  // If flat bilingual fields are available, prefer them
+  if (deck.name_en || deck.name_ru) {
+    return getLocalizedDeckName(deck as { name_en?: string; name_ru?: string }, locale);
+  }
+  // Fallback to MultilingualName object
+  const name = deck.name;
   if (typeof name === 'string') {
     return name;
   }
-  // MultilingualName has el, en, ru fields
-  if (locale === 'el' && name.el) return name.el;
-  if (locale === 'ru' && name.ru) return name.ru;
-  return name.en || name.el || name.ru || '';
+  if (name) {
+    if (locale === 'ru' && name.ru) return name.ru;
+    return name.en || name.ru || '';
+  }
+  return '';
 }
 
 /**
@@ -206,7 +219,7 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
 
   if (!deck) return null;
 
-  const deckName = getDeckDisplayName(deck.name, locale);
+  const deckName = getDeckDisplayName(deck, locale);
   const isVocabulary = deck.type === 'vocabulary';
   const itemCountKey = isVocabulary ? 'deckDetail.cardsCount' : 'deckDetail.questionsCount';
   const noItemsKey = isVocabulary ? 'deckDetail.noCards' : 'deckDetail.noQuestions';
