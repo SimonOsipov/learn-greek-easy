@@ -37,33 +37,33 @@ test.describe('Deck Language Switching', () => {
     await expect(deckCards.first()).toContainText('Greek', { timeout: 10000 });
   });
 
-  test('should switch deck name on detail page when language changes', async ({ page }) => {
+  test('should switch multiple deck names when language is changed', async ({ page }) => {
     await page.goto('/decks');
 
-    // Wait for deck cards to load and click the first one
-    const firstDeck = page.locator('[data-testid="deck-card"]').first();
-    await expect(firstDeck).toBeVisible({ timeout: 15000 });
-    await firstDeck.click();
+    // Wait for deck cards to load
+    const deckCards = page.locator('[data-testid="deck-card"]');
+    await expect(deckCards.first()).toBeVisible({ timeout: 15000 });
 
-    // Wait for detail page to load (look for heading or action button)
-    const heading = page.locator('h1').first();
-    await expect(heading).toBeVisible({ timeout: 10000 });
-
-    // Verify English name is shown
-    await expect(heading).toContainText('Greek', { timeout: 10000 });
+    // Verify at least 2 English deck names are visible
+    const firstTitle = deckCards.nth(0).locator('[data-testid="deck-card-title"]');
+    const secondTitle = deckCards.nth(1).locator('[data-testid="deck-card-title"]');
+    await expect(firstTitle).toContainText('Greek', { timeout: 10000 });
+    await expect(secondTitle).toContainText('Greek', { timeout: 10000 });
 
     // Switch language to Russian
     await page.locator('[data-testid="language-switcher-trigger"]').click();
     await page.locator('[data-testid="language-option-ru"]').click();
 
-    // Verify Russian name appears on the detail page
-    await expect(heading).toContainText('Греческий', { timeout: 10000 });
+    // Verify both deck names switched to Russian
+    await expect(firstTitle).toContainText('Греческий', { timeout: 10000 });
+    await expect(secondTitle).toContainText('Греческий', { timeout: 10000 });
 
     // Switch back to English
     await page.locator('[data-testid="language-switcher-trigger"]').click();
     await page.locator('[data-testid="language-option-en"]').click();
 
-    // Verify English name is restored
-    await expect(heading).toContainText('Greek', { timeout: 10000 });
+    // Verify English names are restored
+    await expect(firstTitle).toContainText('Greek', { timeout: 10000 });
+    await expect(secondTitle).toContainText('Greek', { timeout: 10000 });
   });
 });
