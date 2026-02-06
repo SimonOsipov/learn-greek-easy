@@ -22,18 +22,71 @@ function getApiBaseUrl(): string {
 let v1DeckId: string;
 let v2DeckId: string;
 
+// Fresh auth tokens obtained after seed/all truncates all tables (including users).
+// The storageState from auth.setup.ts becomes invalid because the user UUID no longer
+// exists, so we re-authenticate via seed/auth and inject these tokens in beforeEach.
+let freshAuthState: Record<string, unknown> | null = null;
+
 /**
  * Seed all test data and extract V1/V2 deck IDs for dual card system tests.
  * Uses the unified seed/all endpoint which includes dual-deck data.
+ *
+ * Also re-authenticates via seed/auth since seed/all truncates the users table,
+ * invalidating the JWT from the storageState file.
  */
 async function seedAndExtractDeckIds(
   request: APIRequestContext
 ): Promise<{ v1DeckId: string; v2DeckId: string }> {
   const apiBaseUrl = getApiBaseUrl();
+
+  // Step 1: Seed all test data
   const response = await request.post(`${apiBaseUrl}/api/v1/test/seed/all`);
   expect(response.ok()).toBe(true);
 
   const data = await response.json();
+
+  // Step 2: Re-authenticate as e2e_learner since seed/all wiped the users table
+  const authResponse = await request.post(`${apiBaseUrl}/api/v1/test/seed/auth`, {
+    data: { email: 'e2e_learner@test.com' },
+    headers: { 'Content-Type': 'application/json' },
+  });
+  expect(authResponse.ok()).toBe(true);
+
+  const tokens = await authResponse.json();
+  const now = new Date().toISOString();
+
+  // Build auth state matching the Zustand store format (same as auth.setup.ts)
+  freshAuthState = {
+    state: {
+      user: {
+        id: tokens.user_id,
+        email: 'e2e_learner@test.com',
+        name: 'E2E Learner',
+        role: tokens.is_superuser ? 'admin' : 'free',
+        preferences: {
+          language: 'en',
+          dailyGoal: 20,
+          notifications: true,
+          theme: 'light',
+        },
+        stats: {
+          streak: 0,
+          wordsLearned: 0,
+          totalXP: 0,
+          joinedDate: now,
+        },
+        createdAt: now,
+        updatedAt: now,
+      },
+      token: tokens.access_token,
+      refreshToken: tokens.refresh_token,
+      isAuthenticated: true,
+      rememberMe: true,
+      error: null,
+    },
+    version: 0,
+  };
+
   return {
     v1DeckId: data.results.v1_deck_id,
     v2DeckId: data.results.v2_deck_id,
@@ -53,6 +106,18 @@ test.describe('V1/V2 Deck Pages', () => {
     v2DeckId = deckIds.v2DeckId;
 
     console.log(`[SEED-ALL] Seeded decks - V1: ${v1DeckId}, V2: ${v2DeckId}`);
+  });
+
+  // Re-inject fresh auth tokens into localStorage before each test.
+  // seed/all truncates the users table, so the storageState from auth.setup.ts
+  // references a nonexistent user. We set the fresh tokens obtained after seeding.
+  test.beforeEach(async ({ page }) => {
+    if (!freshAuthState) {
+      throw new Error('[SEED-ALL] freshAuthState is null - seeding may have failed');
+    }
+    await page.addInitScript((authState) => {
+      localStorage.setItem('auth-storage', JSON.stringify(authState));
+    }, freshAuthState);
   });
 
   // =====================
