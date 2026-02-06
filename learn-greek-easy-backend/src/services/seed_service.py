@@ -4524,6 +4524,9 @@ class SeedService:
         # Step 3b: Create user-owned decks (My Decks feature)
         user_decks_result = await self.seed_user_decks(users_result["users"])
 
+        # Step 3c: Create V2 decks with word entries
+        v2_decks_result = await self._seed_v2_decks()
+
         # Step 4 & 5: Create progress for learner user
         # Find the learner user and A1 deck for detailed progress
         learner_id = None
@@ -4749,6 +4752,11 @@ class SeedService:
             "users": users_result,
             "content": content_result,
             "user_decks": user_decks_result,
+            "v2_decks": v2_decks_result,
+            "v1_deck_id": content_result["decks"][0]["id"] if content_result.get("decks") else None,
+            "v2_deck_id": (
+                v2_decks_result["v2_decks"][0]["id"] if v2_decks_result.get("v2_decks") else None
+            ),
             "statistics": stats_result,
             "reviews": reviews_result,
             "notifications": notifications_result,
@@ -4799,75 +4807,19 @@ class SeedService:
             await self.db.flush()
         return entries
 
-    async def seed_dual_decks(self) -> dict[str, Any]:
-        """Seed V1 and V2 decks for E2E testing of dual card system.
+    async def _seed_v2_decks(self) -> dict[str, Any]:
+        """Create V2 decks with word entries for E2E testing.
 
-        Creates:
-        - 1 V1 deck with 10 traditional cards (SM-2 states)
-        - 3 V2 decks:
-          - E2E V2 Nouns Deck (A1): noun word entries with declension data
-          - E2E V2 Verbs Deck (A2): verb word entries with conjugation data
-          - E2E V2 Mixed Deck (A2): adjective, adverb, and phrase entries
+        Creates 3 V2 decks:
+        - E2E V2 Nouns Deck (A1): 10 nouns with declension grammar_data
+        - E2E V2 Verbs Deck (A2): 10 verbs with conjugation grammar_data
+        - E2E V2 Mixed Deck (A2): 4 adjectives + 4 adverbs + 2 phrases
 
-        This endpoint is idempotent - it deletes existing E2E dual test decks first.
+        NOTE: Does NOT call self.db.commit() - caller is responsible for committing.
 
         Returns:
-            dict with v1_deck_id, v2_deck_id (backwards-compat), v2_decks array, and counts
+            dict with 'v2_decks' list and 'v2_word_entry_count' total
         """
-        # Delete ALL existing E2E dual test decks (idempotent)
-        # Use delete with where clause to handle multiple duplicates if they exist
-        await self.db.execute(delete(Deck).where(Deck.name_en == "E2E V1 Test Deck"))
-        await self.db.execute(delete(Deck).where(Deck.name_en == "E2E V2 Test Deck"))
-        await self.db.execute(delete(Deck).where(Deck.name_en == "E2E V2 Nouns Deck (A1)"))
-        await self.db.execute(delete(Deck).where(Deck.name_en == "E2E V2 Verbs Deck (A2)"))
-        await self.db.execute(delete(Deck).where(Deck.name_en == "E2E V2 Mixed Deck (A2)"))
-
-        await self.db.flush()
-
-        # ========== Create V1 Deck (Traditional Cards) ==========
-        v1_deck = Deck(
-            name_en="E2E V1 Test Deck",
-            name_el="E2E V1 Test Deck",
-            name_ru="E2E V1 Test Deck",
-            description_en="Test deck for V1 (legacy flashcard) system",
-            description_el="Test deck for V1 (legacy flashcard) system",
-            description_ru="Test deck for V1 (legacy flashcard) system",
-            level=DeckLevel.A1,
-            is_active=True,
-            is_premium=False,
-            card_system=CardSystemVersion.V1,
-        )
-        self.db.add(v1_deck)
-        await self.db.flush()
-
-        # Create 10 traditional cards for V1 deck
-        v1_vocabulary = [
-            ("γεια", "hello", "greeting"),
-            ("ναι", "yes", "affirmative"),
-            ("όχι", "no", "negative"),
-            ("ευχαριστώ", "thank you", "gratitude"),
-            ("παρακαλώ", "please", "politeness"),
-            ("νερό", "water", "noun"),
-            ("ψωμί", "bread", "noun"),
-            ("σπίτι", "house", "noun"),
-            ("καλημέρα", "good morning", "greeting"),
-            ("καληνύχτα", "good night", "greeting"),
-        ]
-
-        v1_cards = []
-        for greek, english, category in v1_vocabulary:
-            card = Card(
-                deck_id=v1_deck.id,
-                front_text=greek,
-                back_text_en=english,
-                back_text_ru=None,
-                pronunciation=None,
-                part_of_speech=PartOfSpeech.NOUN if category == "noun" else None,
-            )
-            self.db.add(card)
-            v1_cards.append(card)
-        await self.db.flush()
-
         # ========== Create V2 Nouns Deck ==========
         v2_nouns_deck = Deck(
             name_en="E2E V2 Nouns Deck (A1)",
@@ -4915,11 +4867,6 @@ class SeedService:
         await self.db.flush()
 
         # V2 Nouns vocabulary (10 A1 nouns: 4 neuter, 4 masculine, 2 feminine)
-        v2_nouns_entries: list[WordEntry] = []
-        v2_verbs_entries: list[WordEntry] = []
-        v2_mixed_entries: list[WordEntry] = []
-
-        # Create word entries for each deck
         v2_nouns_vocabulary: list[dict[str, Any]] = [
             # ---- Neuter nouns (4) ----
             {
@@ -5867,14 +5814,9 @@ class SeedService:
         )
 
         await self.db.flush()
-        await self.db.commit()
 
         return {
             "success": True,
-            "v1_deck_id": str(v1_deck.id),
-            "v1_deck_name": v1_deck.name_en,
-            # Backwards-compatible: first V2 deck ID for existing E2E tests
-            "v2_deck_id": str(v2_nouns_deck.id),
             "v2_decks": [
                 {
                     "id": str(v2_nouns_deck.id),
@@ -5895,8 +5837,92 @@ class SeedService:
                     "word_entry_count": len(v2_mixed_entries),
                 },
             ],
-            "v1_card_count": len(v1_cards),
             "v2_word_entry_count": len(v2_nouns_entries)
             + len(v2_verbs_entries)
             + len(v2_mixed_entries),
+        }
+
+    async def seed_dual_decks(self) -> dict[str, Any]:
+        """Seed V1 and V2 decks for E2E testing of dual card system.
+
+        Creates:
+        - 1 V1 deck with 10 traditional cards (SM-2 states)
+        - 3 V2 decks:
+          - E2E V2 Nouns Deck (A1): noun word entries with declension data
+          - E2E V2 Verbs Deck (A2): verb word entries with conjugation data
+          - E2E V2 Mixed Deck (A2): adjective, adverb, and phrase entries
+
+        This endpoint is idempotent - it deletes existing E2E dual test decks first.
+
+        Returns:
+            dict with v1_deck_id, v2_deck_id (backwards-compat), v2_decks array, and counts
+        """
+        # Delete ALL existing E2E dual test decks (idempotent)
+        # Use delete with where clause to handle multiple duplicates if they exist
+        await self.db.execute(delete(Deck).where(Deck.name_en == "E2E V1 Test Deck"))
+        await self.db.execute(delete(Deck).where(Deck.name_en == "E2E V2 Test Deck"))
+        await self.db.execute(delete(Deck).where(Deck.name_en == "E2E V2 Nouns Deck (A1)"))
+        await self.db.execute(delete(Deck).where(Deck.name_en == "E2E V2 Verbs Deck (A2)"))
+        await self.db.execute(delete(Deck).where(Deck.name_en == "E2E V2 Mixed Deck (A2)"))
+
+        await self.db.flush()
+
+        # ========== Create V1 Deck (Traditional Cards) ==========
+        v1_deck = Deck(
+            name_en="E2E V1 Test Deck",
+            name_el="E2E V1 Test Deck",
+            name_ru="E2E V1 Test Deck",
+            description_en="Test deck for V1 (legacy flashcard) system",
+            description_el="Test deck for V1 (legacy flashcard) system",
+            description_ru="Test deck for V1 (legacy flashcard) system",
+            level=DeckLevel.A1,
+            is_active=True,
+            is_premium=False,
+            card_system=CardSystemVersion.V1,
+        )
+        self.db.add(v1_deck)
+        await self.db.flush()
+
+        # Create 10 traditional cards for V1 deck
+        v1_vocabulary = [
+            ("γεια", "hello", "greeting"),
+            ("ναι", "yes", "affirmative"),
+            ("όχι", "no", "negative"),
+            ("ευχαριστώ", "thank you", "gratitude"),
+            ("παρακαλώ", "please", "politeness"),
+            ("νερό", "water", "noun"),
+            ("ψωμί", "bread", "noun"),
+            ("σπίτι", "house", "noun"),
+            ("καλημέρα", "good morning", "greeting"),
+            ("καληνύχτα", "good night", "greeting"),
+        ]
+
+        v1_cards = []
+        for greek, english, category in v1_vocabulary:
+            card = Card(
+                deck_id=v1_deck.id,
+                front_text=greek,
+                back_text_en=english,
+                back_text_ru=None,
+                pronunciation=None,
+                part_of_speech=PartOfSpeech.NOUN if category == "noun" else None,
+            )
+            self.db.add(card)
+            v1_cards.append(card)
+        await self.db.flush()
+
+        # ========== Create V2 Decks (delegated to reusable method) ==========
+        v2_result = await self._seed_v2_decks()
+
+        await self.db.commit()
+
+        return {
+            "success": True,
+            "v1_deck_id": str(v1_deck.id),
+            "v1_deck_name": v1_deck.name_en,
+            # Backwards-compatible: first V2 deck ID for existing E2E tests
+            "v2_deck_id": v2_result["v2_decks"][0]["id"] if v2_result.get("v2_decks") else None,
+            "v2_decks": v2_result.get("v2_decks", []),
+            "v1_card_count": len(v1_cards),
+            "v2_word_entry_count": v2_result.get("v2_word_entry_count", 0),
         }

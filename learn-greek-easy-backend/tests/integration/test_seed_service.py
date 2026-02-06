@@ -72,9 +72,9 @@ class TestSeedServiceIntegration:
         assert user_count == 7
 
         # Verify decks were created
-        # 6 CEFR level decks + 4 user-owned decks (3 learner + 1 admin) = 10 total
+        # 6 CEFR level decks + 4 user-owned decks (3 learner + 1 admin) + 3 V2 decks = 13 total
         deck_count = await db_session.scalar(select(func.count(Deck.id)))
-        assert deck_count == 10
+        assert deck_count == 13
 
         # Verify cards were created
         # 6 CEFR decks * 10 cards = 60 + user deck cards (5+3+0+2=10) = 70 total
