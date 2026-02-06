@@ -31,6 +31,7 @@ from src.db.models import (
     UserDeckProgress,
     UserSettings,
     VoteType,
+    WordEntry,
 )
 from src.services.seed_service import SeedService
 
@@ -65,6 +66,7 @@ class TestSeedServiceIntegration:
         result = await seed_service.seed_all()
 
         assert result["success"] is True
+        assert "v2_decks" in result
 
         # Verify users were created
         # seed_users creates 4 base users + seed_all adds 3 XP test users = 7 total
@@ -80,6 +82,10 @@ class TestSeedServiceIntegration:
         # 6 CEFR decks * 10 cards = 60 + user deck cards (5+3+0+2=10) = 70 total
         card_count = await db_session.scalar(select(func.count(Card.id)))
         assert card_count == 70
+
+        # V2 decks use WordEntry: 10 nouns + 10 verbs + 10 mixed = 30 total
+        word_entry_count = await db_session.scalar(select(func.count(WordEntry.id)))
+        assert word_entry_count == 30
 
         # Verify user settings were created (7 users = 7 settings)
         settings_count = await db_session.scalar(select(func.count(UserSettings.id)))
