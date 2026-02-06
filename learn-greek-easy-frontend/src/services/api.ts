@@ -11,7 +11,6 @@
  * - Type-safe request methods
  */
 
-import i18n from '@/i18n';
 import log from '@/lib/logger';
 import {
   type RetryConfig,
@@ -229,7 +228,6 @@ async function request<T>(
   // Build headers
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    'Accept-Language': i18n.language || 'en',
     ...customHeaders,
   };
 

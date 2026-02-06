@@ -186,17 +186,19 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ title, value, icon, testId })
 );
 
 /**
- * Get localized name for a deck, preferring flat name_en/name_ru fields
- * over the multilingual name object (which may be a flat English string).
+ * Get localized name from multilingual object
  */
-function getLocalizedName(
-  deck: { name: string | MultilingualName; name_en?: string; name_ru?: string },
-  locale: string
-): string {
-  if (locale === 'ru' && deck.name_ru) return deck.name_ru;
-  if (deck.name_en) return deck.name_en;
-  if (typeof deck.name === 'string') return deck.name;
-  return deck.name.en || Object.values(deck.name)[0] || '';
+function getLocalizedName(name: string | MultilingualName, locale: string): string {
+  if (typeof name === 'string') {
+    return name;
+  }
+  // Map i18n locale to our supported locales
+  const localeMap: Record<string, keyof MultilingualName> = {
+    en: 'en',
+    ru: 'ru',
+  };
+  const key = localeMap[locale] || 'en';
+  return name[key] || name.en || Object.values(name)[0] || '';
 }
 
 /**
@@ -219,7 +221,7 @@ const UnifiedDeckListItem: React.FC<UnifiedDeckListItemProps> = ({
   onDelete,
   onViewDetail,
 }) => {
-  const displayName = getLocalizedName(deck, locale);
+  const displayName = getLocalizedName(deck.name, locale);
   const itemCountKey =
     deck.type === 'culture'
       ? 'deck.questionCount'
@@ -643,10 +645,10 @@ const AdminPage: React.FC = () => {
   };
 
   /**
-   * Get display name for a deck (handles multilingual names, respects locale)
+   * Get display name for a deck (handles multilingual names)
    */
   const getDeckDisplayName = (deck: UnifiedDeckItem): string => {
-    return getLocalizedName(deck, locale);
+    return typeof deck.name === 'string' ? deck.name : deck.name.en;
   };
 
   /**

@@ -38,17 +38,16 @@ interface DeckDetailModalProps {
 }
 
 /**
- * Get display name for a deck, preferring flat name_en/name_ru fields
- * over the multilingual name object (which may be a flat English string).
+ * Get display name for a deck (handles multilingual names)
  */
-function getDeckDisplayName(
-  deck: { name: string | MultilingualName; name_en?: string; name_ru?: string },
-  locale: string
-): string {
-  if (locale === 'ru' && deck.name_ru) return deck.name_ru;
-  if (deck.name_en) return deck.name_en;
-  if (typeof deck.name === 'string') return deck.name;
-  return deck.name.en || Object.values(deck.name)[0] || '';
+function getDeckDisplayName(name: string | MultilingualName, locale: string): string {
+  if (typeof name === 'string') {
+    return name;
+  }
+  // MultilingualName has el, en, ru fields
+  if (locale === 'el' && name.el) return name.el;
+  if (locale === 'ru' && name.ru) return name.ru;
+  return name.en || name.el || name.ru || '';
 }
 
 /**
@@ -207,7 +206,7 @@ export const DeckDetailModal: React.FC<DeckDetailModalProps> = ({
 
   if (!deck) return null;
 
-  const deckName = getDeckDisplayName(deck, locale);
+  const deckName = getDeckDisplayName(deck.name, locale);
   const isVocabulary = deck.type === 'vocabulary';
   const itemCountKey = isVocabulary ? 'deckDetail.cardsCount' : 'deckDetail.questionsCount';
   const noItemsKey = isVocabulary ? 'deckDetail.noCards' : 'deckDetail.noQuestions';

@@ -16,7 +16,7 @@ import { reportAPIError } from '@/lib/errorReporting';
 import { useDeckStore } from '@/stores/deckStore';
 
 export const DecksPage: React.FC = () => {
-  const { t, i18n } = useTranslation('deck');
+  const { t } = useTranslation('deck');
   const {
     decks,
     totalDecks,
@@ -30,12 +30,12 @@ export const DecksPage: React.FC = () => {
   } = useDeckStore();
   const location = useLocation();
 
-  // Fetch decks on mount, when navigating back from detail page, or when language changes
+  // Fetch decks on mount and when navigating back from detail page
   useEffect(() => {
     fetchDecks().catch((err) => {
       reportAPIError(err, { operation: 'fetchDecks', endpoint: '/decks' });
     });
-  }, [fetchDecks, location.key, i18n.language]);
+  }, [fetchDecks, location.key]); // location.key changes on navigation
 
   return (
     <div className="space-y-6 pb-8">
