@@ -45,23 +45,6 @@ class CardRepository(BaseRepository[Card]):
         result = await self.db.execute(query)
         return list(result.scalars().all())
 
-    async def bulk_create(self, cards_data: list[dict]) -> list[Card]:
-        """Create multiple cards in one transaction.
-
-        Args:
-            cards_data: List of card dictionaries
-
-        Returns:
-            List of created cards (not yet committed)
-
-        Use Case:
-            Deck import, bulk card creation
-        """
-        cards = [Card(**card_data) for card_data in cards_data]
-        self.db.add_all(cards)
-        await self.db.flush()
-        return cards
-
     async def count_by_deck(self, deck_id: UUID) -> int:
         """Count total cards in a deck.
 

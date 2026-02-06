@@ -433,27 +433,6 @@ async def test_get_by_deck(db_session: AsyncSession, sample_deck, sample_cards):
     assert len(cards) == 3
 
 
-@pytest.mark.asyncio
-async def test_bulk_create(db_session: AsyncSession, sample_deck):
-    """Test bulk creating multiple cards."""
-    repo = CardRepository(db_session)
-
-    cards_data = [
-        {
-            "deck_id": sample_deck.id,
-            "front_text": f"Card {i}",
-            "back_text_en": f"Karta {i}",
-            "pronunciation": f"Pronunciation {i}",
-        }
-        for i in range(5)
-    ]
-
-    cards = await repo.bulk_create(cards_data)
-    await db_session.commit()
-
-    assert len(cards) == 5
-
-
 # ============================================================================
 # UserDeckProgressRepository Tests
 # ============================================================================
