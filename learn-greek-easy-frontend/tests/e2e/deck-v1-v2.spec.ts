@@ -139,9 +139,20 @@ test.describe('V1/V2 Deck Pages', () => {
       console.log(`[DEBUG] Page state - Loading: ${hasLoadingState}, Error: ${hasErrorState}, HasDeck: ${hasDeckDetail}`);
       console.log(`[DEBUG] Page URL: ${page.url()}`);
 
+      // Capture any text that looks like an error
+      const bodyText = await page.locator('body').textContent();
+      console.log(`[DEBUG] Page text (first 500 chars): ${bodyText?.substring(0, 500)}`);
+
+      // Check for specific error patterns
+      const notFoundLocator = page.getByText('Deck Not Found');
+      const notFoundVisible = await notFoundLocator.isVisible().catch(() => false);
+      console.log(`[DEBUG] "Deck Not Found" visible: ${notFoundVisible}`);
+
       // Also check if there's an alert or error message visible
       const alertLocator = page.locator('[role="alert"], .error, .alert');
-      if ((await alertLocator.count()) > 0) {
+      const alertCount = await alertLocator.count();
+      console.log(`[DEBUG] Alert count: ${alertCount}`);
+      if (alertCount > 0) {
         const alertText = await alertLocator.first().textContent();
         console.log(`[DEBUG] Alert/Error text: ${alertText}`);
       }
