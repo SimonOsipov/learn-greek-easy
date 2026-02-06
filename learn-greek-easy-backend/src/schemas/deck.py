@@ -74,7 +74,7 @@ class DeckResponse(BaseModel):
     is_active: bool
     is_premium: bool
     card_system: CardSystemVersion = Field(
-        default=CardSystemVersion.V1,
+        default=CardSystemVersion.V2,
         description="Card UI system version: v1 (flip) or v2 (expandable)",
     )
     card_count: int = Field(0, ge=0, description="Number of cards in the deck")
@@ -141,7 +141,7 @@ class DeckAdminCreate(BaseModel):
     is_premium: bool = False
     card_system: CardSystemVersion | None = Field(
         default=None,
-        description="Card UI system version. If None, uses DB default (v1)",
+        description="Card UI system version. If None, uses DB default (v2)",
     )
 
 
@@ -188,7 +188,7 @@ class DeckAdminResponse(BaseModel):
     is_active: bool
     is_premium: bool
     card_system: CardSystemVersion = Field(
-        default=CardSystemVersion.V1,
+        default=CardSystemVersion.V2,
         description="Card UI system version: v1 (flip) or v2 (expandable)",
     )
     card_count: int = Field(0, ge=0, description="Number of cards in the deck")
