@@ -4914,13 +4914,330 @@ class SeedService:
         self.db.add(v2_mixed_deck)
         await self.db.flush()
 
-        # Vocabulary data will be added by VSEED-02, VSEED-03, VSEED-04
+        # V2 Nouns vocabulary (10 A1 nouns: 4 neuter, 4 masculine, 2 feminine)
         v2_nouns_entries: list[WordEntry] = []
         v2_verbs_entries: list[WordEntry] = []
         v2_mixed_entries: list[WordEntry] = []
 
         # Create word entries for each deck
-        v2_nouns_entries = await self._create_word_entries_from_vocab(v2_nouns_deck.id, [])
+        v2_nouns_vocabulary: list[dict[str, Any]] = [
+            # ---- Neuter nouns (4) ----
+            {
+                "lemma": "σπίτι",
+                "part_of_speech": PartOfSpeech.NOUN,
+                "translation_en": "house, home",
+                "translation_ru": "дом",
+                "pronunciation": "[ˈspiti]",
+                "cefr_level": DeckLevel.A1,
+                "grammar_data": {
+                    "gender": "neuter",
+                    "declension_group": "neuter_i",
+                    "cases": {
+                        "singular": {
+                            "nominative": "το σπίτι",
+                            "genitive": "του σπιτιού",
+                            "accusative": "το σπίτι",
+                        },
+                        "plural": {
+                            "nominative": "τα σπίτια",
+                            "genitive": "των σπιτιών",
+                            "accusative": "τα σπίτια",
+                        },
+                    },
+                },
+                "examples": [
+                    {
+                        "greek": "Το σπίτι μου είναι μεγάλο.",
+                        "english": "My house is big.",
+                        "russian": "Мой дом большой.",
+                    },
+                ],
+            },
+            {
+                "lemma": "νερό",
+                "part_of_speech": PartOfSpeech.NOUN,
+                "translation_en": "water",
+                "translation_ru": "вода",
+                "pronunciation": "[neˈro]",
+                "cefr_level": DeckLevel.A1,
+                "grammar_data": {
+                    "gender": "neuter",
+                    "declension_group": "neuter_o",
+                    "cases": {
+                        "singular": {
+                            "nominative": "το νερό",
+                            "genitive": "του νερού",
+                            "accusative": "το νερό",
+                        },
+                        "plural": {
+                            "nominative": "τα νερά",
+                            "genitive": "των νερών",
+                            "accusative": "τα νερά",
+                        },
+                    },
+                },
+                "examples": [
+                    {
+                        "greek": "Πίνω νερό.",
+                        "english": "I drink water.",
+                        "russian": "Я пью воду.",
+                    },
+                ],
+            },
+            {
+                "lemma": "βιβλίο",
+                "part_of_speech": PartOfSpeech.NOUN,
+                "translation_en": "book",
+                "translation_ru": "книга",
+                "pronunciation": "[viˈvlio]",
+                "cefr_level": DeckLevel.A1,
+                "grammar_data": {
+                    "gender": "neuter",
+                    "declension_group": "neuter_o",
+                    "cases": {
+                        "singular": {
+                            "nominative": "το βιβλίο",
+                            "genitive": "του βιβλίου",
+                            "accusative": "το βιβλίο",
+                        },
+                        "plural": {
+                            "nominative": "τα βιβλία",
+                            "genitive": "των βιβλίων",
+                            "accusative": "τα βιβλία",
+                        },
+                    },
+                },
+                "examples": [
+                    {
+                        "greek": "Διαβάζω ένα βιβλίο.",
+                        "english": "I am reading a book.",
+                        "russian": "Я читаю книгу.",
+                    },
+                ],
+            },
+            {
+                "lemma": "παιδί",
+                "part_of_speech": PartOfSpeech.NOUN,
+                "translation_en": "child",
+                "translation_ru": "ребёнок",
+                "pronunciation": "[peˈði]",
+                "cefr_level": DeckLevel.A1,
+                "grammar_data": {
+                    "gender": "neuter",
+                    "declension_group": "neuter_i",
+                    "cases": {
+                        "singular": {
+                            "nominative": "το παιδί",
+                            "genitive": "του παιδιού",
+                            "accusative": "το παιδί",
+                        },
+                        "plural": {
+                            "nominative": "τα παιδιά",
+                            "genitive": "των παιδιών",
+                            "accusative": "τα παιδιά",
+                        },
+                    },
+                },
+                "examples": [
+                    {
+                        "greek": "Το παιδί παίζει στο πάρκο.",
+                        "english": "The child plays in the park.",
+                        "russian": "Ребёнок играет в парке.",
+                    },
+                ],
+            },
+            # ---- Masculine nouns (4) ----
+            {
+                "lemma": "σκύλος",
+                "part_of_speech": PartOfSpeech.NOUN,
+                "translation_en": "dog",
+                "translation_ru": "собака",
+                "pronunciation": "[ˈscilos]",
+                "cefr_level": DeckLevel.A1,
+                "grammar_data": {
+                    "gender": "masculine",
+                    "declension_group": "masculine_os",
+                    "cases": {
+                        "singular": {
+                            "nominative": "ο σκύλος",
+                            "genitive": "του σκύλου",
+                            "accusative": "τον σκύλο",
+                        },
+                        "plural": {
+                            "nominative": "οι σκύλοι",
+                            "genitive": "των σκύλων",
+                            "accusative": "τους σκύλους",
+                        },
+                    },
+                },
+                "examples": [
+                    {
+                        "greek": "Ο σκύλος τρέχει στον κήπο.",
+                        "english": "The dog runs in the garden.",
+                        "russian": "Собака бегает в саду.",
+                    },
+                ],
+            },
+            {
+                "lemma": "δάσκαλος",
+                "part_of_speech": PartOfSpeech.NOUN,
+                "translation_en": "teacher (male)",
+                "translation_ru": "учитель",
+                "pronunciation": "[ˈðaskalos]",
+                "cefr_level": DeckLevel.A1,
+                "grammar_data": {
+                    "gender": "masculine",
+                    "declension_group": "masculine_os",
+                    "cases": {
+                        "singular": {
+                            "nominative": "ο δάσκαλος",
+                            "genitive": "του δασκάλου",
+                            "accusative": "τον δάσκαλο",
+                        },
+                        "plural": {
+                            "nominative": "οι δάσκαλοι",
+                            "genitive": "των δασκάλων",
+                            "accusative": "τους δασκάλους",
+                        },
+                    },
+                },
+                "examples": [
+                    {
+                        "greek": "Ο δάσκαλος διδάσκει ελληνικά.",
+                        "english": "The teacher teaches Greek.",
+                        "russian": "Учитель преподает греческий.",
+                    },
+                ],
+            },
+            {
+                "lemma": "δρόμος",
+                "part_of_speech": PartOfSpeech.NOUN,
+                "translation_en": "road, street",
+                "translation_ru": "дорога, улица",
+                "pronunciation": "[ˈðromos]",
+                "cefr_level": DeckLevel.A1,
+                "grammar_data": {
+                    "gender": "masculine",
+                    "declension_group": "masculine_os",
+                    "cases": {
+                        "singular": {
+                            "nominative": "ο δρόμος",
+                            "genitive": "του δρόμου",
+                            "accusative": "τον δρόμο",
+                        },
+                        "plural": {
+                            "nominative": "οι δρόμοι",
+                            "genitive": "των δρόμων",
+                            "accusative": "τους δρόμους",
+                        },
+                    },
+                },
+                "examples": [
+                    {
+                        "greek": "Ο δρόμος είναι μεγάλος.",
+                        "english": "The road is long.",
+                        "russian": "Дорога длинная.",
+                    },
+                ],
+            },
+            {
+                "lemma": "φίλος",
+                "part_of_speech": PartOfSpeech.NOUN,
+                "translation_en": "friend (male)",
+                "translation_ru": "друг",
+                "pronunciation": "[ˈfilos]",
+                "cefr_level": DeckLevel.A1,
+                "grammar_data": {
+                    "gender": "masculine",
+                    "declension_group": "masculine_os",
+                    "cases": {
+                        "singular": {
+                            "nominative": "ο φίλος",
+                            "genitive": "του φίλου",
+                            "accusative": "τον φίλο",
+                        },
+                        "plural": {
+                            "nominative": "οι φίλοι",
+                            "genitive": "των φίλων",
+                            "accusative": "τους φίλους",
+                        },
+                    },
+                },
+                "examples": [
+                    {
+                        "greek": "Ο φίλος μου είναι Έλληνας.",
+                        "english": "My friend is Greek.",
+                        "russian": "Мой друг — грек.",
+                    },
+                ],
+            },
+            # ---- Feminine nouns (2) ----
+            {
+                "lemma": "γάτα",
+                "part_of_speech": PartOfSpeech.NOUN,
+                "translation_en": "cat",
+                "translation_ru": "кошка",
+                "pronunciation": "[ˈɣata]",
+                "cefr_level": DeckLevel.A1,
+                "grammar_data": {
+                    "gender": "feminine",
+                    "declension_group": "feminine_a",
+                    "cases": {
+                        "singular": {
+                            "nominative": "η γάτα",
+                            "genitive": "της γάτας",
+                            "accusative": "τη γάτα",
+                        },
+                        "plural": {
+                            "nominative": "οι γάτες",
+                            "genitive": "των γατών",
+                            "accusative": "τις γάτες",
+                        },
+                    },
+                },
+                "examples": [
+                    {
+                        "greek": "Η γάτα κοιμάται στον καναπέ.",
+                        "english": "The cat sleeps on the couch.",
+                        "russian": "Кошка спит на диване.",
+                    },
+                ],
+            },
+            {
+                "lemma": "γυναίκα",
+                "part_of_speech": PartOfSpeech.NOUN,
+                "translation_en": "woman, wife",
+                "translation_ru": "женщина, жена",
+                "pronunciation": "[ʝiˈneka]",
+                "cefr_level": DeckLevel.A1,
+                "grammar_data": {
+                    "gender": "feminine",
+                    "declension_group": "feminine_a",
+                    "cases": {
+                        "singular": {
+                            "nominative": "η γυναίκα",
+                            "genitive": "της γυναίκας",
+                            "accusative": "τη γυναίκα",
+                        },
+                        "plural": {
+                            "nominative": "οι γυναίκες",
+                            "genitive": "των γυναικών",
+                            "accusative": "τις γυναίκες",
+                        },
+                    },
+                },
+                "examples": [
+                    {
+                        "greek": "Η γυναίκα μιλάει ελληνικά.",
+                        "english": "The woman speaks Greek.",
+                        "russian": "Женщина говорит по-гречески.",
+                    },
+                ],
+            },
+        ]
+        v2_nouns_entries = await self._create_word_entries_from_vocab(
+            v2_nouns_deck.id, v2_nouns_vocabulary
+        )
         v2_verbs_entries = await self._create_word_entries_from_vocab(v2_verbs_deck.id, [])
         v2_mixed_entries = await self._create_word_entries_from_vocab(v2_mixed_deck.id, [])
 
