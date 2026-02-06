@@ -25,7 +25,7 @@ WORD_ENTRY_NOUN = {
     "translation_en": "house, home",
     "translation_ru": "дом",
     "cefr_level": DeckLevel.A1,
-    "pronunciation": "/ˈspiti/",
+    "pronunciation": "/spí·ti/",
     "grammar_data": {
         "gender": "neuter",
         "nominative_singular": "σπίτι",
@@ -52,7 +52,7 @@ WORD_ENTRY_VERB = {
     "translation_en": "to write",
     "translation_ru": "писать",
     "cefr_level": DeckLevel.A1,
-    "pronunciation": "/ˈɣrafo/",
+    "pronunciation": "/ghrá·fo/",
     "grammar_data": {
         "voice": "active",
         "present_1s": "γράφω",
@@ -217,7 +217,7 @@ class TestGetWordEntryEndpoint:
         assert data["part_of_speech"] == "noun"
         assert data["translation_en"] == "house, home"
         assert data["translation_ru"] == "дом"
-        assert data["pronunciation"] == "/ˈspiti/"
+        assert data["pronunciation"] == "/spí·ti/"
         assert data["cefr_level"] == "A1"
         assert data["is_active"] is True
 
