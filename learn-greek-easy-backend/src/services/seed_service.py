@@ -5536,7 +5536,335 @@ class SeedService:
         v2_verbs_entries = await self._create_word_entries_from_vocab(
             v2_verbs_deck.id, v2_verbs_vocabulary
         )
-        v2_mixed_entries = await self._create_word_entries_from_vocab(v2_mixed_deck.id, [])
+        # V2 Mixed vocabulary (10 A2 items: 4 adjectives, 4 adverbs, 2 phrases)
+        v2_mixed_vocabulary: list[dict[str, Any]] = [
+            # ---- Adjectives (4) ----
+            {
+                "lemma": "καλός",
+                "part_of_speech": PartOfSpeech.ADJECTIVE,
+                "translation_en": "good, nice",
+                "translation_ru": "хороший",
+                "pronunciation": "[kaˈlos]",
+                "cefr_level": DeckLevel.A2,
+                "grammar_data": {
+                    "declension_group": "os_i_o",
+                    "forms": {
+                        "masculine": {
+                            "singular": {
+                                "nominative": "καλός",
+                                "genitive": "καλού",
+                                "accusative": "καλό",
+                            },
+                            "plural": {
+                                "nominative": "καλοί",
+                                "genitive": "καλών",
+                                "accusative": "καλούς",
+                            },
+                        },
+                        "feminine": {
+                            "singular": {
+                                "nominative": "καλή",
+                                "genitive": "καλής",
+                                "accusative": "καλή",
+                            },
+                            "plural": {
+                                "nominative": "καλές",
+                                "genitive": "καλών",
+                                "accusative": "καλές",
+                            },
+                        },
+                        "neuter": {
+                            "singular": {
+                                "nominative": "καλό",
+                                "genitive": "καλού",
+                                "accusative": "καλό",
+                            },
+                            "plural": {
+                                "nominative": "καλά",
+                                "genitive": "καλών",
+                                "accusative": "καλά",
+                            },
+                        },
+                    },
+                },
+                "examples": [
+                    {
+                        "greek": "Είναι πολύ καλός δάσκαλος.",
+                        "english": "He is a very good teacher.",
+                        "russian": "Он очень хороший учитель.",
+                    },
+                ],
+            },
+            {
+                "lemma": "μεγάλος",
+                "part_of_speech": PartOfSpeech.ADJECTIVE,
+                "translation_en": "big, large, great",
+                "translation_ru": "большой, великий",
+                "pronunciation": "[meˈɣalos]",
+                "cefr_level": DeckLevel.A2,
+                "grammar_data": {
+                    "declension_group": "os_i_o",
+                    "forms": {
+                        "masculine": {
+                            "singular": {
+                                "nominative": "μεγάλος",
+                                "genitive": "μεγάλου",
+                                "accusative": "μεγάλο",
+                            },
+                            "plural": {
+                                "nominative": "μεγάλοι",
+                                "genitive": "μεγάλων",
+                                "accusative": "μεγάλους",
+                            },
+                        },
+                        "feminine": {
+                            "singular": {
+                                "nominative": "μεγάλη",
+                                "genitive": "μεγάλης",
+                                "accusative": "μεγάλη",
+                            },
+                            "plural": {
+                                "nominative": "μεγάλες",
+                                "genitive": "μεγάλων",
+                                "accusative": "μεγάλες",
+                            },
+                        },
+                        "neuter": {
+                            "singular": {
+                                "nominative": "μεγάλο",
+                                "genitive": "μεγάλου",
+                                "accusative": "μεγάλο",
+                            },
+                            "plural": {
+                                "nominative": "μεγάλα",
+                                "genitive": "μεγάλων",
+                                "accusative": "μεγάλα",
+                            },
+                        },
+                    },
+                },
+                "examples": [
+                    {
+                        "greek": "Το σπίτι είναι πολύ μεγάλο.",
+                        "english": "The house is very big.",
+                        "russian": "Дом очень большой.",
+                    },
+                ],
+            },
+            {
+                "lemma": "μικρός",
+                "part_of_speech": PartOfSpeech.ADJECTIVE,
+                "translation_en": "small, little",
+                "translation_ru": "маленький",
+                "pronunciation": "[miˈkros]",
+                "cefr_level": DeckLevel.A2,
+                "grammar_data": {
+                    "declension_group": "os_i_o",
+                    "forms": {
+                        "masculine": {
+                            "singular": {
+                                "nominative": "μικρός",
+                                "genitive": "μικρού",
+                                "accusative": "μικρό",
+                            },
+                            "plural": {
+                                "nominative": "μικροί",
+                                "genitive": "μικρών",
+                                "accusative": "μικρούς",
+                            },
+                        },
+                        "feminine": {
+                            "singular": {
+                                "nominative": "μικρή",
+                                "genitive": "μικρής",
+                                "accusative": "μικρή",
+                            },
+                            "plural": {
+                                "nominative": "μικρές",
+                                "genitive": "μικρών",
+                                "accusative": "μικρές",
+                            },
+                        },
+                        "neuter": {
+                            "singular": {
+                                "nominative": "μικρό",
+                                "genitive": "μικρού",
+                                "accusative": "μικρό",
+                            },
+                            "plural": {
+                                "nominative": "μικρά",
+                                "genitive": "μικρών",
+                                "accusative": "μικρά",
+                            },
+                        },
+                    },
+                },
+                "examples": [
+                    {
+                        "greek": "Η γάτα είναι μικρή.",
+                        "english": "The cat is small.",
+                        "russian": "Кошка маленькая.",
+                    },
+                ],
+            },
+            {
+                "lemma": "νέος",
+                "part_of_speech": PartOfSpeech.ADJECTIVE,
+                "translation_en": "young, new",
+                "translation_ru": "молодой, новый",
+                "pronunciation": "[ˈneos]",
+                "cefr_level": DeckLevel.A2,
+                "grammar_data": {
+                    "declension_group": "os_a_o",
+                    "forms": {
+                        "masculine": {
+                            "singular": {
+                                "nominative": "νέος",
+                                "genitive": "νέου",
+                                "accusative": "νέο",
+                            },
+                            "plural": {
+                                "nominative": "νέοι",
+                                "genitive": "νέων",
+                                "accusative": "νέους",
+                            },
+                        },
+                        "feminine": {
+                            "singular": {
+                                "nominative": "νέα",
+                                "genitive": "νέας",
+                                "accusative": "νέα",
+                            },
+                            "plural": {
+                                "nominative": "νέες",
+                                "genitive": "νέων",
+                                "accusative": "νέες",
+                            },
+                        },
+                        "neuter": {
+                            "singular": {
+                                "nominative": "νέο",
+                                "genitive": "νέου",
+                                "accusative": "νέο",
+                            },
+                            "plural": {
+                                "nominative": "νέα",
+                                "genitive": "νέων",
+                                "accusative": "νέα",
+                            },
+                        },
+                    },
+                },
+                "examples": [
+                    {
+                        "greek": "Ο νέος μαθητής είναι από την Αθήνα.",
+                        "english": "The new student is from Athens.",
+                        "russian": "Новый ученик из Афин.",
+                    },
+                ],
+            },
+            # ---- Adverbs (4) ----
+            {
+                "lemma": "σήμερα",
+                "part_of_speech": PartOfSpeech.ADVERB,
+                "translation_en": "today",
+                "translation_ru": "сегодня",
+                "pronunciation": "[ˈsimera]",
+                "cefr_level": DeckLevel.A2,
+                "grammar_data": {"category": "time"},
+                "examples": [
+                    {
+                        "greek": "Σήμερα έχει ωραίο καιρό.",
+                        "english": "Today the weather is nice.",
+                        "russian": "Сегодня хорошая погода.",
+                    },
+                ],
+            },
+            {
+                "lemma": "αύριο",
+                "part_of_speech": PartOfSpeech.ADVERB,
+                "translation_en": "tomorrow",
+                "translation_ru": "завтра",
+                "pronunciation": "[ˈavrio]",
+                "cefr_level": DeckLevel.A2,
+                "grammar_data": {"category": "time"},
+                "examples": [
+                    {
+                        "greek": "Αύριο θα πάω στη δουλειά.",
+                        "english": "Tomorrow I will go to work.",
+                        "russian": "Завтра я пойду на работу.",
+                    },
+                ],
+            },
+            {
+                "lemma": "εδώ",
+                "part_of_speech": PartOfSpeech.ADVERB,
+                "translation_en": "here",
+                "translation_ru": "здесь, тут",
+                "pronunciation": "[eˈðo]",
+                "cefr_level": DeckLevel.A2,
+                "grammar_data": {"category": "place"},
+                "examples": [
+                    {
+                        "greek": "Έλα εδώ, σε παρακαλώ.",
+                        "english": "Come here, please.",
+                        "russian": "Иди сюда, пожалуйста.",
+                    },
+                ],
+            },
+            {
+                "lemma": "πολύ",
+                "part_of_speech": PartOfSpeech.ADVERB,
+                "translation_en": "very, much, a lot",
+                "translation_ru": "очень, много",
+                "pronunciation": "[poˈli]",
+                "cefr_level": DeckLevel.A2,
+                "grammar_data": {"category": "degree"},
+                "examples": [
+                    {
+                        "greek": "Μου αρέσει πολύ η Ελλάδα.",
+                        "english": "I like Greece a lot.",
+                        "russian": "Мне очень нравится Греция.",
+                    },
+                ],
+            },
+            # ---- Phrases (2) ----
+            {
+                "lemma": "καλημέρα",
+                "part_of_speech": PartOfSpeech.PHRASE,
+                "translation_en": "good morning",
+                "translation_ru": "доброе утро",
+                "pronunciation": "[kaliˈmera]",
+                "cefr_level": DeckLevel.A2,
+                "grammar_data": {"category": "greeting", "formality": "neutral"},
+                "examples": [
+                    {
+                        "greek": "Καλημέρα! Τι κάνεις;",
+                        "english": "Good morning! How are you?",
+                        "russian": "Доброе утро! Как дела?",
+                    },
+                ],
+            },
+            {
+                "lemma": "ευχαριστώ",
+                "part_of_speech": PartOfSpeech.PHRASE,
+                "translation_en": "thank you",
+                "translation_ru": "спасибо",
+                "pronunciation": "[efxariˈsto]",
+                "cefr_level": DeckLevel.A2,
+                "grammar_data": {"category": "politeness", "formality": "neutral"},
+                "examples": [
+                    {
+                        "greek": "Ευχαριστώ πολύ για τη βοήθεια!",
+                        "english": "Thank you very much for the help!",
+                        "russian": "Большое спасибо за помощь!",
+                    },
+                ],
+            },
+        ]
+        v2_mixed_entries = await self._create_word_entries_from_vocab(
+            v2_mixed_deck.id, v2_mixed_vocabulary
+        )
 
         await self.db.flush()
         await self.db.commit()
