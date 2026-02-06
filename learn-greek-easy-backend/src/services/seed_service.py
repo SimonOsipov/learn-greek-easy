@@ -5238,7 +5238,304 @@ class SeedService:
         v2_nouns_entries = await self._create_word_entries_from_vocab(
             v2_nouns_deck.id, v2_nouns_vocabulary
         )
-        v2_verbs_entries = await self._create_word_entries_from_vocab(v2_verbs_deck.id, [])
+        # V2 Verbs vocabulary (10 A2 verbs: 6 Group A, 4 Group B)
+        v2_verbs_vocabulary: list[dict[str, Any]] = [
+            # ---- Group A verbs (6) - regular -ω conjugation ----
+            {
+                "lemma": "πίνω",
+                "part_of_speech": PartOfSpeech.VERB,
+                "translation_en": "to drink",
+                "translation_ru": "пить",
+                "pronunciation": "[ˈpino]",
+                "cefr_level": DeckLevel.A2,
+                "grammar_data": {
+                    "voice": "active",
+                    "conjugation_group": "A",
+                    "tenses": {
+                        "present": {
+                            "εγώ": "πίνω",
+                            "εσύ": "πίνεις",
+                            "αυτός/αυτή/αυτό": "πίνει",
+                            "εμείς": "πίνουμε",
+                            "εσείς": "πίνετε",
+                            "αυτοί/αυτές/αυτά": "πίνουν(ε)",
+                        },
+                    },
+                },
+                "examples": [
+                    {
+                        "greek": "Πίνω καφέ κάθε πρωί.",
+                        "english": "I drink coffee every morning.",
+                        "russian": "Я пью кофе каждое утро.",
+                    },
+                ],
+            },
+            {
+                "lemma": "γράφω",
+                "part_of_speech": PartOfSpeech.VERB,
+                "translation_en": "to write",
+                "translation_ru": "писать",
+                "pronunciation": "[ˈɣrafo]",
+                "cefr_level": DeckLevel.A2,
+                "grammar_data": {
+                    "voice": "active",
+                    "conjugation_group": "A",
+                    "tenses": {
+                        "present": {
+                            "εγώ": "γράφω",
+                            "εσύ": "γράφεις",
+                            "αυτός/αυτή/αυτό": "γράφει",
+                            "εμείς": "γράφουμε",
+                            "εσείς": "γράφετε",
+                            "αυτοί/αυτές/αυτά": "γράφουν(ε)",
+                        },
+                    },
+                },
+                "examples": [
+                    {
+                        "greek": "Γράφω ένα γράμμα στον φίλο μου.",
+                        "english": "I write a letter to my friend.",
+                        "russian": "Я пишу письмо своему другу.",
+                    },
+                ],
+            },
+            {
+                "lemma": "διαβάζω",
+                "part_of_speech": PartOfSpeech.VERB,
+                "translation_en": "to read, to study",
+                "translation_ru": "читать, учить",
+                "pronunciation": "[ði.aˈvazo]",
+                "cefr_level": DeckLevel.A2,
+                "grammar_data": {
+                    "voice": "active",
+                    "conjugation_group": "A",
+                    "tenses": {
+                        "present": {
+                            "εγώ": "διαβάζω",
+                            "εσύ": "διαβάζεις",
+                            "αυτός/αυτή/αυτό": "διαβάζει",
+                            "εμείς": "διαβάζουμε",
+                            "εσείς": "διαβάζετε",
+                            "αυτοί/αυτές/αυτά": "διαβάζουν(ε)",
+                        },
+                    },
+                },
+                "examples": [
+                    {
+                        "greek": "Διαβάζω ένα βιβλίο κάθε βράδυ.",
+                        "english": "I read a book every evening.",
+                        "russian": "Я читаю книгу каждый вечер.",
+                    },
+                ],
+            },
+            {
+                "lemma": "δουλεύω",
+                "part_of_speech": PartOfSpeech.VERB,
+                "translation_en": "to work",
+                "translation_ru": "работать",
+                "pronunciation": "[ðuˈlevo]",
+                "cefr_level": DeckLevel.A2,
+                "grammar_data": {
+                    "voice": "active",
+                    "conjugation_group": "A",
+                    "tenses": {
+                        "present": {
+                            "εγώ": "δουλεύω",
+                            "εσύ": "δουλεύεις",
+                            "αυτός/αυτή/αυτό": "δουλεύει",
+                            "εμείς": "δουλεύουμε",
+                            "εσείς": "δουλεύετε",
+                            "αυτοί/αυτές/αυτά": "δουλεύουν(ε)",
+                        },
+                    },
+                },
+                "examples": [
+                    {
+                        "greek": "Δουλεύω σε ένα γραφείο.",
+                        "english": "I work in an office.",
+                        "russian": "Я работаю в офисе.",
+                    },
+                ],
+            },
+            {
+                "lemma": "μαθαίνω",
+                "part_of_speech": PartOfSpeech.VERB,
+                "translation_en": "to learn",
+                "translation_ru": "учиться, изучать",
+                "pronunciation": "[maˈθeno]",
+                "cefr_level": DeckLevel.A2,
+                "grammar_data": {
+                    "voice": "active",
+                    "conjugation_group": "A",
+                    "tenses": {
+                        "present": {
+                            "εγώ": "μαθαίνω",
+                            "εσύ": "μαθαίνεις",
+                            "αυτός/αυτή/αυτό": "μαθαίνει",
+                            "εμείς": "μαθαίνουμε",
+                            "εσείς": "μαθαίνετε",
+                            "αυτοί/αυτές/αυτά": "μαθαίνουν(ε)",
+                        },
+                    },
+                },
+                "examples": [
+                    {
+                        "greek": "Μαθαίνω ελληνικά εδώ και δύο χρόνια.",
+                        "english": "I have been learning Greek for two years.",
+                        "russian": "Я учу греческий уже два года.",
+                    },
+                ],
+            },
+            {
+                "lemma": "ακούω",
+                "part_of_speech": PartOfSpeech.VERB,
+                "translation_en": "to hear, to listen",
+                "translation_ru": "слушать, слышать",
+                "pronunciation": "[aˈkuo]",
+                "cefr_level": DeckLevel.A2,
+                "grammar_data": {
+                    "voice": "active",
+                    "conjugation_group": "A",
+                    "tenses": {
+                        "present": {
+                            "εγώ": "ακούω",
+                            "εσύ": "ακούς",
+                            "αυτός/αυτή/αυτό": "ακούει",
+                            "εμείς": "ακούμε",
+                            "εσείς": "ακούτε",
+                            "αυτοί/αυτές/αυτά": "ακούν(ε)",
+                        },
+                    },
+                },
+                "examples": [
+                    {
+                        "greek": "Ακούω μουσική κάθε μέρα.",
+                        "english": "I listen to music every day.",
+                        "russian": "Я слушаю музыку каждый день.",
+                    },
+                ],
+            },
+            # ---- Group B verbs (4) - contracted -ώ/-άω conjugation ----
+            {
+                "lemma": "αγαπώ",
+                "part_of_speech": PartOfSpeech.VERB,
+                "translation_en": "to love",
+                "translation_ru": "любить",
+                "pronunciation": "[aɣaˈpo]",
+                "cefr_level": DeckLevel.A2,
+                "grammar_data": {
+                    "voice": "active",
+                    "conjugation_group": "B",
+                    "tenses": {
+                        "present": {
+                            "εγώ": "αγαπώ / αγαπάω",
+                            "εσύ": "αγαπάς",
+                            "αυτός/αυτή/αυτό": "αγαπά / αγαπάει",
+                            "εμείς": "αγαπάμε / αγαπούμε",
+                            "εσείς": "αγαπάτε",
+                            "αυτοί/αυτές/αυτά": "αγαπούν(ε) / αγαπάν(ε)",
+                        },
+                    },
+                },
+                "examples": [
+                    {
+                        "greek": "Αγαπώ την οικογένειά μου.",
+                        "english": "I love my family.",
+                        "russian": "Я люблю свою семью.",
+                    },
+                ],
+            },
+            {
+                "lemma": "θέλω",
+                "part_of_speech": PartOfSpeech.VERB,
+                "translation_en": "to want",
+                "translation_ru": "хотеть",
+                "pronunciation": "[ˈθelo]",
+                "cefr_level": DeckLevel.A2,
+                "grammar_data": {
+                    "voice": "active",
+                    "conjugation_group": "B",
+                    "tenses": {
+                        "present": {
+                            "εγώ": "θέλω",
+                            "εσύ": "θέλεις / θες",
+                            "αυτός/αυτή/αυτό": "θέλει",
+                            "εμείς": "θέλουμε",
+                            "εσείς": "θέλετε",
+                            "αυτοί/αυτές/αυτά": "θέλουν(ε)",
+                        },
+                    },
+                },
+                "examples": [
+                    {
+                        "greek": "Θέλω ένα ποτήρι νερό.",
+                        "english": "I want a glass of water.",
+                        "russian": "Я хочу стакан воды.",
+                    },
+                ],
+            },
+            {
+                "lemma": "μιλώ",
+                "part_of_speech": PartOfSpeech.VERB,
+                "translation_en": "to speak, to talk",
+                "translation_ru": "говорить, разговаривать",
+                "pronunciation": "[miˈlo]",
+                "cefr_level": DeckLevel.A2,
+                "grammar_data": {
+                    "voice": "active",
+                    "conjugation_group": "B",
+                    "tenses": {
+                        "present": {
+                            "εγώ": "μιλώ / μιλάω",
+                            "εσύ": "μιλάς",
+                            "αυτός/αυτή/αυτό": "μιλά / μιλάει",
+                            "εμείς": "μιλάμε / μιλούμε",
+                            "εσείς": "μιλάτε",
+                            "αυτοί/αυτές/αυτά": "μιλούν(ε) / μιλάν(ε)",
+                        },
+                    },
+                },
+                "examples": [
+                    {
+                        "greek": "Μιλάς ελληνικά πολύ καλά!",
+                        "english": "You speak Greek very well!",
+                        "russian": "Ты очень хорошо говоришь по-гречески!",
+                    },
+                ],
+            },
+            {
+                "lemma": "τρώω",
+                "part_of_speech": PartOfSpeech.VERB,
+                "translation_en": "to eat",
+                "translation_ru": "есть, кушать",
+                "pronunciation": "[ˈtro.o]",
+                "cefr_level": DeckLevel.A2,
+                "grammar_data": {
+                    "voice": "active",
+                    "conjugation_group": "B",
+                    "tenses": {
+                        "present": {
+                            "εγώ": "τρώω",
+                            "εσύ": "τρως",
+                            "αυτός/αυτή/αυτό": "τρώει",
+                            "εμείς": "τρώμε",
+                            "εσείς": "τρώτε",
+                            "αυτοί/αυτές/αυτά": "τρών(ε)",
+                        },
+                    },
+                },
+                "examples": [
+                    {
+                        "greek": "Τρώω σουβλάκι κάθε Παρασκευή.",
+                        "english": "I eat souvlaki every Friday.",
+                        "russian": "Я ем сувлаки каждую пятницу.",
+                    },
+                ],
+            },
+        ]
+        v2_verbs_entries = await self._create_word_entries_from_vocab(
+            v2_verbs_deck.id, v2_verbs_vocabulary
+        )
         v2_mixed_entries = await self._create_word_entries_from_vocab(v2_mixed_deck.id, [])
 
         await self.db.flush()
