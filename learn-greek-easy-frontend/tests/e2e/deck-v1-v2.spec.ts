@@ -111,9 +111,23 @@ test.describe('V1/V2 Deck Pages', () => {
   test.describe('V2 Deck (Word Browser View)', () => {
     test('E2E-DUAL-04: V2 deck displays word browser', async ({ page }) => {
       // Navigate to V2 deck detail page
+      console.log(`[DEBUG] Navigating to V2 deck: ${v2DeckId}`);
       await page.goto(`/decks/${v2DeckId}`);
 
-      // Wait for V2 deck detail to load
+      // Wait for any deck detail element first (V1 or V2)
+      const anyDeckDetail = page.locator('[data-testid="deck-detail"], [data-testid="v2-deck-detail"]');
+      await expect(anyDeckDetail.first()).toBeVisible({ timeout: 15000 });
+
+      // Debug: Log what we got
+      const v1Detail = page.locator('[data-testid="deck-detail"]');
+      const v2Detail = page.locator('[data-testid="v2-deck-detail"]');
+      const v1CardSystem = await v1Detail.getAttribute('data-card-system').catch(() => null);
+      const v2Visible = await v2Detail.isVisible().catch(() => false);
+      console.log(`[DEBUG] V1 deck visible: ${await v1Detail.isVisible().catch(() => false)}`);
+      console.log(`[DEBUG] V1 deck card_system attr: ${v1CardSystem}`);
+      console.log(`[DEBUG] V2 deck visible: ${v2Visible}`);
+
+      // Now wait for V2 deck detail to load
       const deckDetail = page.locator('[data-testid="v2-deck-detail"]');
       await expect(deckDetail).toBeVisible({ timeout: 10000 });
 
