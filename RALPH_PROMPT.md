@@ -2,7 +2,7 @@
 
 ## Overview
 
-Automated execution of Vibe Kanban `inprogress` tasks through 5 mandatory quality gates (Architecture → Explore → QA Plan → Execution → QA Verify). Analyzes task dependencies to determine execution mode: **parallel** (multiple independent chains via agent teams) or **sequential** (single chain, team lead executes directly).
+Automated execution of Vibe Kanban `inprogress` tasks through 4 mandatory quality gates (Architecture → Explore → Execution → QA Verify). Analyzes task dependencies to determine execution mode: **parallel** (multiple independent chains via agent teams) or **sequential** (single chain, team lead executes directly).
 
 ## CRITICAL RULES
 
@@ -93,14 +93,13 @@ When all tasks form a single dependency chain, execute directly without spawning
 
 ### Execution Flow
 
-For EACH task in order, execute these 5 stages. Delegate to subagents — never implement code directly.
+For EACH task in order, execute these 4 stages. Delegate to subagents — never implement code directly.
 
 #### Subagent Mapping (MANDATORY)
 | Stage | Subagent Type | Usage |
 |-------|--------------|-------|
-| Architecture | product-architecture-spec | Always — review/enhance the architecture spec |
+| Architecture | product-architecture-spec | Always — review/enhance the architecture spec (includes plan self-validation) |
 | Explore | Explore | Always — verify files, patterns, and placement |
-| QA Plan | product-qa-spec | Always — review plan against acceptance criteria |
 | Execution | product-executor | Always — implement all code changes |
 | QA Verify | product-qa-spec | Always — verify implementation correctness |
 
@@ -110,7 +109,7 @@ Read the corresponding agent technical prompt file BEFORE executing the stage yo
 | Stage | Read this file first |
 |-------|---------------------|
 | Architecture | `~/.claude/agents/product-architecture-spec.md` |
-| QA Plan / QA Verify | `~/.claude/agents/product-qa-spec.md` |
+| QA Verify | `~/.claude/agents/product-qa-spec.md` |
 | Execution | `~/.claude/agents/product-executor.md` |
 | Explore | No file needed — use Glob/Grep/Read to verify files and patterns directly |
 
@@ -119,6 +118,7 @@ Read the corresponding agent technical prompt file BEFORE executing the stage yo
 - Pass it the Vibe Kanban task description
 - If the task already has a detailed spec, the architect validates it and identifies file paths
 - If the spec is thin, the architect enhances it with implementation details
+- The architect self-validates the plan (acceptance criteria coverage, edge cases, test strategy)
 - **DO NOT create subtasks** — return plan as text, update existing task in Vibe Kanban
 - **Checkpoint:** `ARCHITECTURE_DONE`
 
@@ -129,14 +129,7 @@ Read the corresponding agent technical prompt file BEFORE executing the stage yo
 - If gaps found, note them for execution
 - **Checkpoint:** `EXPLORE_DONE`
 
-#### Stage 3: QA Plan Review
-- Spawn a `product-qa-spec` subagent via Task tool
-- Pass it the implementation plan and acceptance criteria
-- Check for missing edge cases, untested scenarios, coverage gaps
-- If additions needed, append to the plan
-- **Checkpoint:** `PLAN_APPROVED`
-
-#### Stage 4: Execution
+#### Stage 3: Execution
 - Spawn a `product-executor` subagent via Task tool
 - Pass it the full implementation plan, file paths, and acceptance criteria
 - The executor handles ALL file reads, edits, and creation
@@ -150,7 +143,7 @@ Read the corresponding agent technical prompt file BEFORE executing the stage yo
 - Stage and commit changes with descriptive message
 - **Checkpoint:** `EXECUTION_DONE`
 
-#### Stage 5: QA Verification
+#### Stage 4: QA Verification
 - Spawn a `product-qa-spec` subagent via Task tool
 - Pass it the acceptance criteria and list of files changed
 - For backend-only tasks: verify tests pass, check model/schema correctness
@@ -158,7 +151,7 @@ Read the corresponding agent technical prompt file BEFORE executing the stage yo
 - If issues found: spawn executor to fix, then re-verify
 - **Checkpoint:** `QA_VERIFIED`
 
-After each task, pick the next one and repeat stages 1-5.
+After each task, pick the next one and repeat stages 1-4.
 
 ### PR & Deploy (Sequential)
 
@@ -203,13 +196,13 @@ Team Lead (you)
 ├── Calls MCP tools directly (Vibe Kanban, git, gh)
 │
 ├── chain-1 (general-purpose agent)
-│   └── Executes tasks in Chain 1 sequentially through all 5 stages
+│   └── Executes tasks in Chain 1 sequentially through all 4 stages
 │
 ├── chain-2 (general-purpose agent)
-│   └── Executes tasks in Chain 2 sequentially through all 5 stages
+│   └── Executes tasks in Chain 2 sequentially through all 4 stages
 │
 └── chain-N (general-purpose agent)
-    └── Executes tasks in Chain N sequentially through all 5 stages
+    └── Executes tasks in Chain N sequentially through all 4 stages
 ```
 
 ### Phase 1: Team Setup
@@ -234,15 +227,14 @@ PROJECT ID (Vibe Kanban): 9cad311d-e4b4-4861-bf89-4fe6bad3ce8b
 Your assigned task chain (execute IN ORDER):
 [List of task IDs, titles, and Vibe Kanban task IDs]
 
-For EACH task in your chain, execute these 5 stages in order.
+For EACH task in your chain, execute these 4 stages in order.
 CRITICAL: You MUST use the specified subagent for each stage. Do NOT implement code directly.
 
 ## Subagent Mapping (MANDATORY)
 | Stage | Subagent Type | Usage |
 |-------|--------------|-------|
-| Architecture | product-architecture-spec | Always — review/enhance the architecture spec |
+| Architecture | product-architecture-spec | Always — review/enhance the architecture spec (includes plan self-validation) |
 | Explore | Explore | Always — verify files, patterns, and placement |
-| QA Plan | product-qa-spec | Always — review plan against acceptance criteria |
 | Execution | product-executor | Always — implement all code changes |
 | QA Verify | product-qa-spec | Always — verify implementation correctness |
 
@@ -252,7 +244,7 @@ If you cannot spawn a subagent (e.g., agent teams unavailable, tool errors), rea
 | Stage | Read this file first |
 |-------|---------------------|
 | Architecture | `~/.claude/agents/product-architecture-spec.md` |
-| QA Plan / QA Verify | `~/.claude/agents/product-qa-spec.md` |
+| QA Verify | `~/.claude/agents/product-qa-spec.md` |
 | Execution | `~/.claude/agents/product-executor.md` |
 | Explore | No file needed — use Glob/Grep/Read to verify files and patterns directly |
 
@@ -263,6 +255,7 @@ Read the file, internalize the instructions, then execute the stage following th
 - Pass it the Vibe Kanban task description and ask it to review/enhance the architecture
 - If the task already has a detailed spec, the architect validates it and identifies file paths
 - If the spec is thin, the architect enhances it with implementation details and dependencies
+- The architect self-validates the plan (acceptance criteria coverage, edge cases, test strategy)
 - Send team lead: 'ARCHITECTURE_DONE for [TASK-ID]'
 
 ## Stage 2: Explore Verification
@@ -272,14 +265,7 @@ Read the file, internalize the instructions, then execute the stage following th
 - If gaps found, note them for execution
 - Send team lead: 'EXPLORE_DONE for [TASK-ID]'
 
-## Stage 3: QA Plan Review
-- Spawn a `product-qa-spec` subagent via Task tool
-- Pass it the implementation plan and acceptance criteria
-- The QA agent checks for missing edge cases, untested scenarios, and coverage gaps
-- If additions needed, append to the plan
-- Send team lead: 'PLAN_APPROVED for [TASK-ID]'
-
-## Stage 4: Execution
+## Stage 3: Execution
 - Spawn a `product-executor` subagent via Task tool
 - Pass it the full implementation plan, file paths, and acceptance criteria
 - The executor agent handles ALL file reads, edits, and creation
@@ -289,7 +275,7 @@ Read the file, internalize the instructions, then execute the stage following th
 - Stage and commit changes with descriptive message
 - Send team lead: 'EXECUTION_DONE for [TASK-ID]'
 
-## Stage 5: QA Verification
+## Stage 4: QA Verification
 - Spawn a `product-qa-spec` subagent via Task tool
 - Pass it the acceptance criteria and list of files changed
 - For backend-only tasks: QA agent verifies tests pass, checks model/schema correctness
@@ -381,7 +367,7 @@ team_name: "[team-name]"  # parallel mode only
 branch: "feature/[name]"
 pr_number: null
 current_task: "[TASK-ID]"
-stage: "execution"  # architecture|explore|qa-plan|execution|qa-verify
+stage: "execution"  # architecture|explore|execution|qa-verify
 completed_tasks:
   - "[TASK-01] First task"
 # Parallel mode adds:
@@ -441,7 +427,7 @@ git checkout main && git pull origin main && git branch -d feature/[name]
 |-------------|------------------|
 | Lead doing file edits directly | Delegate to agents (executor subagent or chain agents) |
 | Implementing code directly instead of subagent | Spawn `product-executor` subagent for all implementation |
-| Skipping architecture/QA stages | Every stage is mandatory |
+| Skipping architecture/explore/QA stages | Every stage is mandatory |
 | Spawning teammates for a single dependency chain | Use sequential mode — execute directly |
 | Hardcoding chain count regardless of task graph | Let dependency graph determine chain count and mode |
 | Not coordinating git between chains | Team lead manages push/merge order |
