@@ -1,6 +1,6 @@
 """change_deck_card_system_default_to_v2
 
-Revision ID: a1b2c3d4e5f6
+Revision ID: db4bb3c354f2
 Revises: 5e205ed1ffec
 Create Date: 2026-02-06
 
@@ -14,7 +14,7 @@ import sqlalchemy as sa
 
 from alembic import op
 
-revision: str = "a1b2c3d4e5f6"
+revision: str = "db4bb3c354f2"
 down_revision: Union[str, Sequence[str], None] = "5e205ed1ffec"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
