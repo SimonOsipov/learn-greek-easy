@@ -211,5 +211,56 @@
     "editSuccess": "Deck updated successfully",
     "createError": "Failed to create deck",
     "editError": "Failed to update deck"
+  },
+  "v2": {
+    "wordBrowserTitle": "Word Entries Browser",
+    "wordBrowserPlaceholder": "Browse vocabulary words in this deck. Full functionality coming soon.",
+    "comingSoon": "Coming soon",
+    "toPractice": "To practice"
+  },
+  "wordBrowser": {
+    "searchPlaceholder": "Search words...",
+    "clearSearch": "Clear search",
+    "filterGroup": "Filter by status",
+    "filters": {
+      "all": "All",
+      "learned": "Learned",
+      "reviewing": "Reviewing",
+      "new": "New"
+    },
+    "showing": "Showing {{count}} of {{total}} words",
+    "emptyTitle": "No words found",
+    "emptySearchDescription": "No words match your search. Try a different term.",
+    "emptyFilterDescription": "No words in this category.",
+    "errorTitle": "Failed to load words",
+    "errorDescription": "There was an error loading the word entries. Please try again."
+  },
+  "wordReference": {
+    "backToDeck": "Back to Deck",
+    "pronunciation": "Pronunciation",
+    "meaning": "Meaning",
+    "conjugation": "Conjugation",
+    "declension": "Declension",
+    "examples": "Examples",
+    "notes": "Notes",
+    "practiceWord": "Practice this word",
+    "comingSoon": "Coming soon",
+    "noGrammar": "Grammar information not available",
+    "noExamples": "No usage examples available",
+    "partOfSpeech": {
+      "noun": "Noun",
+      "verb": "Verb",
+      "adjective": "Adjective",
+      "adverb": "Adverb"
+    },
+    "voice": {
+      "active": "Active",
+      "passive": "Passive"
+    },
+    "gender": {
+      "masculine": "Masculine",
+      "feminine": "Feminine",
+      "neuter": "Neuter"
+    }
   }
 }

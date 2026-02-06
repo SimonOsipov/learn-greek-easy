@@ -1,0 +1,79 @@
+// src/features/words/components/ExamplesSection.tsx
+
+/**
+ * Examples section displaying usage examples for word entries.
+ * Shows Greek sentences with English and Russian translations.
+ */
+
+import { useTranslation } from 'react-i18next';
+
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import type { WordEntryExampleSentence } from '@/services/wordEntryAPI';
+
+// ============================================
+// Types
+// ============================================
+
+export interface ExamplesSectionProps {
+  /** Array of example sentences */
+  examples: WordEntryExampleSentence[] | null;
+}
+
+// ============================================
+// Component
+// ============================================
+
+export function ExamplesSection({ examples }: ExamplesSectionProps) {
+  const { t } = useTranslation('review');
+
+  // Handle empty/null examples
+  if (!examples || examples.length === 0) {
+    return (
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg">{t('grammar.examples.title')}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">{t('grammar.examples.noExamples')}</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-lg">{t('grammar.examples.title')}</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {examples.map((example, index) => (
+          <div
+            key={index}
+            className="rounded-lg border border-border bg-muted/30 p-4 transition-colors hover:bg-muted/50"
+          >
+            {/* Context badge */}
+            {example.context && (
+              <Badge variant="outline" className="mb-2 text-xs">
+                {example.context}
+              </Badge>
+            )}
+
+            {/* Greek sentence */}
+            <p className="text-lg font-medium text-foreground">{example.greek}</p>
+
+            {/* English translation */}
+            {example.english && (
+              <p className="mt-2 text-sm text-muted-foreground">{example.english}</p>
+            )}
+
+            {/* Russian translation */}
+            {example.russian && (
+              <p className="mt-1 text-sm italic text-muted-foreground">{example.russian}</p>
+            )}
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  );
+}

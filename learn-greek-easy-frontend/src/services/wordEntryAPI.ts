@@ -77,6 +77,16 @@ export interface WordEntryBulkResponse {
   word_entries: WordEntryResponse[];
 }
 
+/**
+ * Response from list word entries operation.
+ * Contains pagination info and word entries array.
+ */
+export interface WordEntryListResponse {
+  deck_id: string;
+  total: number;
+  word_entries: WordEntryResponse[];
+}
+
 // ============================================
 // Word Entry API Methods
 // ============================================
@@ -101,5 +111,31 @@ export const wordEntryAPI = {
       deck_id: deckId,
       word_entries: wordEntries,
     });
+  },
+
+  /**
+   * Get all word entries for a deck.
+   *
+   * Fetches word entries associated with a specific deck.
+   * Requires authenticated user with access to the deck.
+   *
+   * @param deckId - UUID of the deck
+   * @returns Object with deck_id, total count, and word_entries array
+   */
+  getByDeck: async (deckId: string): Promise<WordEntryListResponse> => {
+    return api.get<WordEntryListResponse>(`/api/v1/decks/${deckId}/word-entries`);
+  },
+
+  /**
+   * Get a single word entry by ID.
+   *
+   * Fetches the full word entry with grammar data and examples.
+   * Requires authenticated user with access to the deck.
+   *
+   * @param wordId - UUID of the word entry
+   * @returns WordEntryResponse with full word entry data
+   */
+  getById: async (wordId: string): Promise<WordEntryResponse> => {
+    return api.get<WordEntryResponse>(`/api/v1/word-entries/${wordId}`);
   },
 };

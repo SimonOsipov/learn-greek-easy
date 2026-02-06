@@ -10,7 +10,7 @@ from uuid import uuid4
 import pytest
 from pydantic import ValidationError
 
-from src.db.models import DeckLevel
+from src.db.models import CardSystemVersion, DeckLevel
 from src.schemas.deck import (
     DeckBase,
     DeckCreate,
@@ -799,3 +799,224 @@ class TestDeckAdminListResponse:
         )
         assert response.total == 0
         assert len(response.decks) == 0
+
+
+# ============================================================================
+# Card System Version Tests
+# ============================================================================
+
+
+class TestDeckResponseCardSystem:
+    """Test card_system field in DeckResponse schema."""
+
+    def test_deck_response_includes_card_system_v1(self):
+        """DeckResponse should include card_system field with V1 value."""
+        now = datetime.now()
+        response = DeckResponse(
+            id=uuid4(),
+            name="Test Deck",
+            level=DeckLevel.A1,
+            is_active=True,
+            is_premium=False,
+            card_system=CardSystemVersion.V1,
+            created_at=now,
+            updated_at=now,
+        )
+        assert response.card_system == CardSystemVersion.V1
+
+    def test_deck_response_includes_card_system_v2(self):
+        """DeckResponse should include card_system field with V2 value."""
+        now = datetime.now()
+        response = DeckResponse(
+            id=uuid4(),
+            name="Test Deck V2",
+            level=DeckLevel.B1,
+            is_active=True,
+            is_premium=False,
+            card_system=CardSystemVersion.V2,
+            created_at=now,
+            updated_at=now,
+        )
+        assert response.card_system == CardSystemVersion.V2
+
+    def test_deck_response_card_system_default_v1(self):
+        """DeckResponse should default to V1 for card_system."""
+        now = datetime.now()
+        response = DeckResponse(
+            id=uuid4(),
+            name="Test Deck",
+            level=DeckLevel.A1,
+            is_active=True,
+            is_premium=False,
+            created_at=now,
+            updated_at=now,
+        )
+        assert response.card_system == CardSystemVersion.V1
+
+
+class TestDeckAdminCreateCardSystem:
+    """Test card_system field in DeckAdminCreate schema."""
+
+    def test_admin_create_with_card_system_v1(self):
+        """DeckAdminCreate should accept card_system V1."""
+        from src.schemas.deck import DeckAdminCreate
+
+        schema = DeckAdminCreate(
+            name_el="Test",
+            name_en="Test",
+            name_ru="Test",
+            level=DeckLevel.A1,
+            card_system=CardSystemVersion.V1,
+        )
+        assert schema.card_system == CardSystemVersion.V1
+
+    def test_admin_create_with_card_system_v2(self):
+        """DeckAdminCreate should accept card_system V2."""
+        from src.schemas.deck import DeckAdminCreate
+
+        schema = DeckAdminCreate(
+            name_el="Test V2",
+            name_en="Test V2",
+            name_ru="Test V2",
+            level=DeckLevel.B1,
+            card_system=CardSystemVersion.V2,
+        )
+        assert schema.card_system == CardSystemVersion.V2
+
+    def test_admin_create_card_system_default_none(self):
+        """DeckAdminCreate should default card_system to None (use DB default)."""
+        from src.schemas.deck import DeckAdminCreate
+
+        schema = DeckAdminCreate(
+            name_el="Test",
+            name_en="Test",
+            name_ru="Test",
+            level=DeckLevel.A1,
+        )
+        assert schema.card_system is None
+
+    def test_admin_create_card_system_invalid_rejected(self):
+        """DeckAdminCreate should reject invalid card_system values."""
+        from src.schemas.deck import DeckAdminCreate
+
+        with pytest.raises(ValidationError):
+            DeckAdminCreate(
+                name_el="Test",
+                name_en="Test",
+                name_ru="Test",
+                level=DeckLevel.A1,
+                card_system="invalid",
+            )
+
+
+class TestDeckAdminUpdateCardSystem:
+    """Test card_system field in DeckAdminUpdate schema."""
+
+    def test_admin_update_card_system_can_be_set(self):
+        """DeckAdminUpdate should accept card_system field."""
+        from src.schemas.deck import DeckAdminUpdate
+
+        update = DeckAdminUpdate(card_system=CardSystemVersion.V2)
+        assert update.card_system == CardSystemVersion.V2
+
+    def test_admin_update_card_system_optional(self):
+        """DeckAdminUpdate card_system should be optional."""
+        from src.schemas.deck import DeckAdminUpdate
+
+        update = DeckAdminUpdate()
+        assert update.card_system is None
+
+    def test_admin_update_card_system_with_other_fields(self):
+        """DeckAdminUpdate can update card_system along with other fields."""
+        from src.schemas.deck import DeckAdminUpdate
+
+        update = DeckAdminUpdate(
+            name_en="Updated Name",
+            card_system=CardSystemVersion.V2,
+            is_premium=True,
+        )
+        assert update.name_en == "Updated Name"
+        assert update.card_system == CardSystemVersion.V2
+        assert update.is_premium is True
+
+    def test_admin_update_card_system_invalid_rejected(self):
+        """DeckAdminUpdate should reject invalid card_system values."""
+        from src.schemas.deck import DeckAdminUpdate
+
+        with pytest.raises(ValidationError):
+            DeckAdminUpdate(card_system="v3")
+
+
+class TestDeckAdminResponseCardSystem:
+    """Test card_system field in DeckAdminResponse schema."""
+
+    def test_admin_response_includes_card_system_v1(self):
+        """DeckAdminResponse should include card_system field with V1."""
+        from src.schemas.deck import DeckAdminResponse
+
+        now = datetime.now()
+        response = DeckAdminResponse(
+            id=uuid4(),
+            name_el="Test",
+            name_en="Test",
+            name_ru="Test",
+            description_el=None,
+            description_en=None,
+            description_ru=None,
+            level=DeckLevel.A1,
+            is_active=True,
+            is_premium=False,
+            card_system=CardSystemVersion.V1,
+            card_count=10,
+            owner_id=None,
+            created_at=now,
+            updated_at=now,
+        )
+        assert response.card_system == CardSystemVersion.V1
+
+    def test_admin_response_includes_card_system_v2(self):
+        """DeckAdminResponse should include card_system field with V2."""
+        from src.schemas.deck import DeckAdminResponse
+
+        now = datetime.now()
+        response = DeckAdminResponse(
+            id=uuid4(),
+            name_el="Test V2",
+            name_en="Test V2",
+            name_ru="Test V2",
+            description_el=None,
+            description_en=None,
+            description_ru=None,
+            level=DeckLevel.B1,
+            is_active=True,
+            is_premium=False,
+            card_system=CardSystemVersion.V2,
+            card_count=25,
+            owner_id=None,
+            created_at=now,
+            updated_at=now,
+        )
+        assert response.card_system == CardSystemVersion.V2
+
+    def test_admin_response_card_system_default_v1(self):
+        """DeckAdminResponse should default to V1 for card_system."""
+        from src.schemas.deck import DeckAdminResponse
+
+        now = datetime.now()
+        response = DeckAdminResponse(
+            id=uuid4(),
+            name_el="Test",
+            name_en="Test",
+            name_ru="Test",
+            description_el=None,
+            description_en=None,
+            description_ru=None,
+            level=DeckLevel.A1,
+            is_active=True,
+            is_premium=False,
+            card_count=0,
+            owner_id=None,
+            created_at=now,
+            updated_at=now,
+        )
+        assert response.card_system == CardSystemVersion.V1

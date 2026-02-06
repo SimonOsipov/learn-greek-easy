@@ -174,6 +174,18 @@ class CardErrorStatus(str, enum.Enum):
     DISMISSED = "DISMISSED"  # Report was invalid/spam
 
 
+class CardSystemVersion(str, enum.Enum):
+    """Card system version for decks.
+
+    Determines which card data source a deck uses:
+    - V1: Legacy cards table (original system)
+    - V2: New word_entries system (WENTRY feature)
+    """
+
+    V1 = "V1"
+    V2 = "V2"
+
+
 # ============================================================================
 # User Models
 # ============================================================================
@@ -481,6 +493,15 @@ class Deck(Base, TimestampMixin):
         nullable=False,
         index=True,
         comment="Premium decks require a subscription to access",
+    )
+
+    # Card system version
+    card_system: Mapped[CardSystemVersion] = mapped_column(
+        nullable=False,
+        default=CardSystemVersion.V1,
+        server_default=text("'V1'"),
+        index=True,
+        comment="Card system version: V1 (classic Card model) or V2 (WordEntry-based)",
     )
 
     # Owner (for user-created decks)

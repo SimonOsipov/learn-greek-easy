@@ -15,8 +15,9 @@ from src.core.dependencies import get_current_user, get_locale_from_header
 from src.core.exceptions import DeckNotFoundException, ForbiddenException
 from src.core.localization import get_localized_deck_content
 from src.db.dependencies import get_db
-from src.db.models import DeckLevel, User
+from src.db.models import DeckLevel, PartOfSpeech, User
 from src.repositories.deck import DeckRepository
+from src.repositories.word_entry import WordEntryRepository
 from src.schemas.deck import (
     DeckCreate,
     DeckDetailResponse,
@@ -24,7 +25,9 @@ from src.schemas.deck import (
     DeckResponse,
     DeckSearchResponse,
     DeckUpdate,
+    DeckWordEntriesResponse,
 )
+from src.schemas.word_entry import WordEntryResponse
 from src.tasks.background import invalidate_cache_task
 
 router = APIRouter(
@@ -128,6 +131,7 @@ async def list_decks(
                 level=deck.level,
                 is_active=deck.is_active,
                 is_premium=deck.is_premium,
+                card_system=deck.card_system,
                 card_count=card_counts.get(deck.id, 0),
                 created_at=deck.created_at,
                 updated_at=deck.updated_at,
@@ -248,6 +252,7 @@ async def create_deck(
         level=deck.level,
         is_active=deck.is_active,
         is_premium=deck.is_premium,
+        card_system=deck.card_system,
         card_count=0,  # New deck has no cards
         created_at=deck.created_at,
         updated_at=deck.updated_at,
@@ -350,6 +355,7 @@ async def search_decks(
                 level=deck.level,
                 is_active=deck.is_active,
                 is_premium=deck.is_premium,
+                card_system=deck.card_system,
                 card_count=card_counts.get(deck.id, 0),
                 created_at=deck.created_at,
                 updated_at=deck.updated_at,
@@ -460,6 +466,7 @@ async def list_my_decks(
                 level=deck.level,
                 is_active=deck.is_active,
                 is_premium=deck.is_premium,
+                card_system=deck.card_system,
                 card_count=card_counts.get(deck.id, 0),
                 created_at=deck.created_at,
                 updated_at=deck.updated_at,
@@ -561,9 +568,153 @@ async def get_deck(
         level=deck.level,
         is_active=deck.is_active,
         is_premium=deck.is_premium,
+        card_system=deck.card_system,
         created_at=deck.created_at,
         updated_at=deck.updated_at,
         card_count=card_count,
+    )
+
+
+@router.get(
+    "/{deck_id}/word-entries",
+    response_model=DeckWordEntriesResponse,
+    summary="List word entries for a deck",
+    description="""Get paginated word entries for a specific deck.
+
+This endpoint powers the V2 deck word browser. For V1 decks (which don't have
+word entries), this returns an empty list with total=0.
+
+**Features**:
+- Pagination with page/page_size
+- Search by lemma, translations, or pronunciation
+- Filter by part of speech
+- Sort by lemma (alphabetical) or created_at (newest/oldest)
+""",
+    responses={
+        200: {
+            "description": "Paginated list of word entries",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "deck_id": "550e8400-e29b-41d4-a716-446655440000",
+                        "total": 42,
+                        "page": 1,
+                        "page_size": 20,
+                        "word_entries": [
+                            {
+                                "id": "660e8400-e29b-41d4-a716-446655440001",
+                                "deck_id": "550e8400-e29b-41d4-a716-446655440000",
+                                "lemma": "spiti",
+                                "part_of_speech": "noun",
+                                "translation_en": "house, home",
+                                "translation_ru": "dom",
+                                "pronunciation": "spiti",
+                                "cefr_level": "A1",
+                                "is_active": True,
+                                "created_at": "2024-01-15T10:30:00Z",
+                                "updated_at": "2024-01-15T10:30:00Z",
+                            }
+                        ],
+                    }
+                }
+            },
+        },
+        403: {"description": "Not authorized to access this deck"},
+        404: {"description": "Deck not found"},
+    },
+)
+async def list_deck_word_entries(
+    deck_id: UUID,
+    page: int = Query(default=1, ge=1, description="Page number (starting from 1)"),
+    page_size: int = Query(default=20, ge=1, le=100, description="Items per page (max 100)"),
+    search: Optional[str] = Query(
+        default=None,
+        max_length=100,
+        description="Search by lemma, translation, or pronunciation",
+    ),
+    part_of_speech: Optional[PartOfSpeech] = Query(
+        default=None,
+        description="Filter by part of speech (noun, verb, adjective, adverb, phrase)",
+    ),
+    sort_by: str = Query(
+        default="lemma",
+        pattern="^(lemma|created_at)$",
+        description="Sort field: 'lemma' or 'created_at'",
+    ),
+    sort_order: str = Query(
+        default="asc",
+        pattern="^(asc|desc)$",
+        description="Sort direction: 'asc' or 'desc'",
+    ),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> DeckWordEntriesResponse:
+    """List word entries for a specific deck.
+
+    Requires authentication. Returns active word entries only.
+    For V1 decks (no word entries), returns empty list.
+
+    Authorization:
+    - System decks (owner_id=NULL): accessible to all authenticated users
+    - User-created decks: only accessible to the owner
+
+    Args:
+        deck_id: UUID of the deck
+        page: Page number starting from 1
+        page_size: Number of items per page (1-100)
+        search: Optional search term
+        part_of_speech: Optional part of speech filter
+        sort_by: Sort field ('lemma' or 'created_at')
+        sort_order: Sort direction ('asc' or 'desc')
+        db: Database session (injected)
+        current_user: Authenticated user (injected)
+
+    Returns:
+        DeckWordEntriesResponse with paginated word entries
+
+    Raises:
+        DeckNotFoundException: If deck doesn't exist or is inactive
+        ForbiddenException: If not authorized to access the deck
+    """
+    # Validate deck exists and user has access
+    deck_repo = DeckRepository(db)
+    deck = await deck_repo.get(deck_id)
+
+    if deck is None or not deck.is_active:
+        raise DeckNotFoundException(deck_id=str(deck_id))
+
+    # Authorization: user-created decks only accessible by owner
+    if deck.owner_id is not None and deck.owner_id != current_user.id:
+        raise ForbiddenException(detail="You do not have permission to access this deck")
+
+    # Calculate offset
+    skip = (page - 1) * page_size
+
+    # Query word entries
+    word_entry_repo = WordEntryRepository(db)
+    word_entries = await word_entry_repo.search_by_deck(
+        deck_id=deck_id,
+        skip=skip,
+        limit=page_size,
+        search=search,
+        part_of_speech=part_of_speech,
+        sort_by=sort_by,
+        sort_order=sort_order,
+        active_only=True,
+    )
+    total = await word_entry_repo.count_by_deck_filtered(
+        deck_id=deck_id,
+        search=search,
+        part_of_speech=part_of_speech,
+        active_only=True,
+    )
+
+    return DeckWordEntriesResponse(
+        deck_id=deck_id,
+        total=total,
+        page=page,
+        page_size=page_size,
+        word_entries=[WordEntryResponse.model_validate(entry) for entry in word_entries],
     )
 
 
@@ -676,6 +827,7 @@ async def update_deck(
         level=updated_deck.level,
         is_active=updated_deck.is_active,
         is_premium=updated_deck.is_premium,
+        card_system=updated_deck.card_system,
         card_count=card_count,
         created_at=updated_deck.created_at,
         updated_at=updated_deck.updated_at,

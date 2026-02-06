@@ -7,32 +7,51 @@ import { test, expect } from '@playwright/test';
 
 // ENABLED: Now uses seed data from E2E database seeding infrastructure (SEED-10)
 // Seed creates 60 cards (10 per deck) with SM-2 spaced repetition states
+// NOTE: Must select V1 decks (with enabled review button), not V2 decks (word browser only)
+
+/**
+ * Helper to find and click a V1 deck (one with an enabled review button)
+ * V2 decks have disabled review buttons, so we need to find a regular vocabulary deck
+ */
+async function navigateToV1Deck(page: import('@playwright/test').Page): Promise<void> {
+  await page.goto('/decks');
+
+  // Wait for deck cards to load
+  const deckCards = page.locator('[data-testid="deck-card"]');
+  await expect(deckCards.first()).toBeVisible({ timeout: 15000 });
+
+  // Click on a deck that contains "A1 Vocabulary" or similar V1 deck name
+  // These are the standard vocabulary decks with enabled review buttons
+  const v1DeckCard = page.locator('[data-testid="deck-card"]').filter({
+    hasText: /A1 Vocabulary|A2 Vocabulary|B1 Vocabulary|Greek A1|Greek A2/i,
+  }).first();
+
+  // If no specific V1 deck found, try clicking any deck that is NOT a V2 test deck
+  const hasV1Deck = await v1DeckCard.isVisible().catch(() => false);
+
+  if (hasV1Deck) {
+    await v1DeckCard.click();
+  } else {
+    // Fallback: click the first non-V2 deck (skip E2E test decks)
+    const regularDeck = page.locator('[data-testid="deck-card"]').filter({
+      hasNotText: /E2E V2|Word Entry/i,
+    }).first();
+    await regularDeck.click();
+  }
+
+  // Wait for deck detail page with an ENABLED review button
+  const reviewButton = page.getByRole('button', { name: /review|start/i }).first();
+  await expect(reviewButton).toBeVisible({ timeout: 5000 });
+  await expect(reviewButton).toBeEnabled({ timeout: 5000 });
+}
+
 test.describe('Flashcard Review Session', () => {
   test('E2E-02.1: Complete review session with 5 cards', async ({ page }) => {
-    // Start at dashboard
-    await page.goto('/');
+    // Navigate to a V1 deck with enabled review button
+    await navigateToV1Deck(page);
 
-    // Navigate to decks page via dropdown menu
-    const decksDropdown = page.locator('[data-testid="decks-dropdown-trigger"]');
-    await expect(decksDropdown).toBeVisible();
-    await decksDropdown.click();
-
-    // Click "Public Decks" in the dropdown menu
-    const publicDecksLink = page.getByRole('menuitem', { name: /public decks/i });
-    await expect(publicDecksLink).toBeVisible();
-    await publicDecksLink.click();
-
-    // Wait for navigation to complete
-    await page.waitForURL(/\/decks/);
-
-    // Wait for deck cards to load
-    const deckCard = page.locator('[data-testid="deck-card"]').first();
-    await expect(deckCard).toBeVisible({ timeout: 15000 });
-    await deckCard.click();
-
-    // Wait for deck detail page - review button should become visible
+    // Review button should already be visible and enabled from navigateToV1Deck
     const reviewButton = page.getByRole('button', { name: /review|start/i }).first();
-    await expect(reviewButton).toBeVisible({ timeout: 5000 });
     await reviewButton.click();
 
     // Wait for review session to start - card should be visible
@@ -86,17 +105,11 @@ test.describe('Flashcard Review Session', () => {
   });
 
   test('E2E-02.2: Flip card using keyboard shortcut (Space)', async ({ page }) => {
-    // Navigate to review session
-    await page.goto('/decks');
+    // Navigate to a V1 deck with enabled review button
+    await navigateToV1Deck(page);
 
-    // Wait for deck cards to load
-    const deckCard = page.locator('[data-testid="deck-card"]').first();
-    await expect(deckCard).toBeVisible({ timeout: 15000 });
-    await deckCard.click();
-
-    // Start review - wait for button to be visible first
+    // Start review - button should already be visible and enabled
     const reviewButton = page.getByRole('button', { name: /review|start/i }).first();
-    await expect(reviewButton).toBeVisible({ timeout: 5000 });
     await reviewButton.click();
 
     // Wait for card to be visible
@@ -127,17 +140,11 @@ test.describe('Flashcard Review Session', () => {
   });
 
   test('E2E-02.3: Rate card using keyboard shortcuts (1-5)', async ({ page }) => {
-    // Navigate to review session
-    await page.goto('/decks');
+    // Navigate to a V1 deck with enabled review button
+    await navigateToV1Deck(page);
 
-    // Wait for deck cards to load
-    const deckCard = page.locator('[data-testid="deck-card"]').first();
-    await expect(deckCard).toBeVisible({ timeout: 15000 });
-    await deckCard.click();
-
-    // Start review - wait for button to be visible
+    // Start review - button should already be visible and enabled
     const reviewButton = page.getByRole('button', { name: /review|start/i }).first();
-    await expect(reviewButton).toBeVisible({ timeout: 5000 });
     await reviewButton.click();
 
     // Wait for flashcard to appear
@@ -180,17 +187,11 @@ test.describe('Flashcard Review Session', () => {
   });
 
   test('E2E-02.4: Exit review session early with Esc key', async ({ page }) => {
-    // Start review session
-    await page.goto('/decks');
+    // Navigate to a V1 deck with enabled review button
+    await navigateToV1Deck(page);
 
-    // Wait for deck cards to load
-    const deckCard = page.locator('[data-testid="deck-card"]').first();
-    await expect(deckCard).toBeVisible({ timeout: 15000 });
-    await deckCard.click();
-
-    // Start review - wait for button to be visible
+    // Start review - button should already be visible and enabled
     const reviewButton = page.getByRole('button', { name: /review|start/i }).first();
-    await expect(reviewButton).toBeVisible({ timeout: 5000 });
     await reviewButton.click();
 
     // Wait for flashcard to appear (indicates review started)
@@ -229,17 +230,11 @@ test.describe('Flashcard Review Session', () => {
     // Try to get words learned count (may not be visible if no data yet)
     const wordsLearnedText = await page.getByText(/\d+.*word/i).first().textContent().catch(() => '0');
 
-    // Complete review session with 3 cards
-    await page.goto('/decks');
+    // Navigate to a V1 deck with enabled review button
+    await navigateToV1Deck(page);
 
-    // Wait for deck cards to load
-    const deckCard = page.locator('[data-testid="deck-card"]').first();
-    await expect(deckCard).toBeVisible({ timeout: 15000 });
-    await deckCard.click();
-
-    // Wait for review button to be visible
+    // Start review - button should already be visible and enabled
     const reviewButton = page.getByRole('button', { name: /review|start/i }).first();
-    await expect(reviewButton).toBeVisible({ timeout: 5000 });
     await reviewButton.click();
 
     // Wait for flashcard to appear

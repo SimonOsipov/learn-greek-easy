@@ -1,5 +1,6 @@
 import { Suspense, useEffect, type ReactNode } from 'react';
 
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 
 import { AuthRoutesWrapper } from '@/components/auth/AuthRoutesWrapper';
@@ -20,6 +21,24 @@ import { isAuth0Enabled } from '@/hooks/useAuth0Integration';
 import { lazyWithRetry } from '@/lib/lazyWithRetry';
 import { Auth0ProviderWithNavigate, PostHogProvider } from '@/providers';
 import { useAppStore, selectIsReady } from '@/stores/appStore';
+
+// ============================================================================
+// REACT QUERY CLIENT
+// ============================================================================
+// Single QueryClient instance for the entire application.
+// Provides caching, deduplication, and background refetching for API calls.
+// ============================================================================
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      gcTime: 30 * 60 * 1000, // 30 minutes (formerly cacheTime)
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 // ============================================================================
 // LAZY-LOADED PAGE COMPONENTS
@@ -133,6 +152,13 @@ const Unauthorized = lazyWithRetry(() =>
 // Landing page (public)
 const LandingPage = lazyWithRetry(() => import('@/pages/LandingPage'));
 
+// Word reference page (word entry detail)
+const WordReferencePage = lazyWithRetry(() =>
+  import('@/features/words/pages/WordReferencePage').then((m) => ({
+    default: m.WordReferencePage,
+  }))
+);
+
 function AppContent() {
   const isAppReady = useAppStore(selectIsReady);
   const setReactHydrated = useAppStore((state) => state.setReactHydrated);
@@ -182,6 +208,10 @@ function AppContent() {
                 <Route path="/decks" element={<AppLayout />}>
                   <Route index element={<DecksPage />} />
                   <Route path=":id" element={<DeckDetailPage />} />
+                </Route>
+                {/* Word reference page inside AppLayout */}
+                <Route path="/decks/:deckId/words/:wordId" element={<AppLayout />}>
+                  <Route index element={<WordReferencePage />} />
                 </Route>
                 <Route path="/my-decks" element={<AppLayout />}>
                   <Route index element={<MyDecksPage />} />
@@ -272,24 +302,26 @@ function ConditionalAuth0Provider({ children }: { children: ReactNode }) {
 function App() {
   return (
     <ErrorBoundary>
-      <BrowserRouter>
-        {/* Auth0Provider must be inside BrowserRouter for useNavigate */}
-        <ConditionalAuth0Provider>
-          <PostHogProvider>
-            <TooltipProvider>
-              <ThemeProvider>
-                <LanguageProvider>
-                  <LayoutProvider>
-                    <NotificationProvider>
-                      <AppContent />
-                    </NotificationProvider>
-                  </LayoutProvider>
-                </LanguageProvider>
-              </ThemeProvider>
-            </TooltipProvider>
-          </PostHogProvider>
-        </ConditionalAuth0Provider>
-      </BrowserRouter>
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter>
+          {/* Auth0Provider must be inside BrowserRouter for useNavigate */}
+          <ConditionalAuth0Provider>
+            <PostHogProvider>
+              <TooltipProvider>
+                <ThemeProvider>
+                  <LanguageProvider>
+                    <LayoutProvider>
+                      <NotificationProvider>
+                        <AppContent />
+                      </NotificationProvider>
+                    </LayoutProvider>
+                  </LanguageProvider>
+                </ThemeProvider>
+              </TooltipProvider>
+            </PostHogProvider>
+          </ConditionalAuth0Provider>
+        </BrowserRouter>
+      </QueryClientProvider>
     </ErrorBoundary>
   );
 }

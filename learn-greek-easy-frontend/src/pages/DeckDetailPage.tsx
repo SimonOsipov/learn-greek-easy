@@ -30,6 +30,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Skeleton } from '@/components/ui/skeleton';
+import { V2DeckPage } from '@/features/decks/components/V2DeckPage';
 import { reportAPIError } from '@/lib/errorReporting';
 import { formatRelativeDate } from '@/lib/helpers';
 import log from '@/lib/logger';
@@ -42,32 +43,39 @@ export const DeckDetailPage: React.FC = () => {
   const { id: deckId } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const { selectedDeck, isLoading, error, selectDeck, clearSelection, startLearning } =
-    useDeckStore();
+  const { selectedDeck, isLoading, error, selectDeck, startLearning } = useDeckStore();
 
   const { user } = useAuthStore();
+
+  // Track whether we've initiated a fetch for this deck
+  const [hasFetched, setHasFetched] = useState(false);
 
   // Fetch deck on mount and when deckId changes
   useEffect(() => {
     if (deckId) {
-      selectDeck(deckId).catch((err) => {
-        reportAPIError(err, { operation: 'loadDeck', endpoint: `/decks/${deckId}` });
-      });
+      setHasFetched(false);
+      selectDeck(deckId)
+        .catch((err) => {
+          reportAPIError(err, { operation: 'loadDeck', endpoint: `/decks/${deckId}` });
+        })
+        .finally(() => {
+          setHasFetched(true);
+        });
     }
 
-    // Cleanup: clear selection when component unmounts
-    return () => {
-      clearSelection();
-    };
-  }, [deckId, selectDeck, clearSelection]);
+    // NOTE: Cleanup (clearSelection) is intentionally NOT included here.
+    // When routing to V2DeckPage (for V2 decks), this component unmounts
+    // but V2DeckPage reuses the same deck from the store.
+    // V2DeckPage handles its own cleanup when the user navigates away.
+  }, [deckId, selectDeck]);
 
   // Handle invalid deckId (not provided)
   if (!deckId) {
     return <NotFoundState />;
   }
 
-  // Loading state
-  if (isLoading) {
+  // Loading state - show skeleton until we've fetched AND loading is complete
+  if (isLoading || !hasFetched) {
     return <LoadingSkeleton />;
   }
 
@@ -76,11 +84,17 @@ export const DeckDetailPage: React.FC = () => {
     return <ErrorState error={error} onRetry={() => selectDeck(deckId)} />;
   }
 
-  // Not found state (deck doesn't exist)
+  // Not found state (deck doesn't exist - only show after we've actually fetched)
   if (!selectedDeck) {
     return <NotFoundState />;
   }
 
+  // Route to V2DeckPage for V2 decks (word browser system)
+  if (selectedDeck.cardSystem === 'V2') {
+    return <V2DeckPage deckId={deckId} />;
+  }
+
+  // V1 deck rendering (traditional flashcard system) continues below
   // Check if deck is locked (premium deck + free user)
   const isPremiumLocked = selectedDeck.isPremium && user?.role === 'free';
 
@@ -88,7 +102,11 @@ export const DeckDetailPage: React.FC = () => {
   const deckStatus = selectedDeck.progress?.status || 'not-started';
 
   return (
-    <div data-testid="deck-detail" className="container mx-auto max-w-4xl px-4 py-6 md:py-8">
+    <div
+      data-testid="deck-detail"
+      data-card-system={selectedDeck.cardSystem}
+      className="container mx-auto max-w-4xl px-4 py-6 md:py-8"
+    >
       {/* Breadcrumb Navigation */}
       <nav
         data-testid="breadcrumb"

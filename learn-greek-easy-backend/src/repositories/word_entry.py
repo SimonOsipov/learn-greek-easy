@@ -2,11 +2,11 @@
 
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.db.models import WordEntry
+from src.db.models import PartOfSpeech, WordEntry
 from src.repositories.base import BaseRepository
 
 
@@ -67,6 +67,104 @@ class WordEntryRepository(BaseRepository[WordEntry]):
 
         if active_only:
             query = query.where(WordEntry.is_active.is_(True))
+
+        result = await self.db.execute(query)
+        return result.scalar_one()
+
+    async def search_by_deck(
+        self,
+        deck_id: UUID,
+        *,
+        skip: int = 0,
+        limit: int = 100,
+        search: str | None = None,
+        part_of_speech: PartOfSpeech | None = None,
+        sort_by: str = "lemma",
+        sort_order: str = "asc",
+        active_only: bool = True,
+    ) -> list[WordEntry]:
+        """Search word entries for a specific deck with filtering.
+
+        Args:
+            deck_id: Deck UUID
+            skip: Pagination offset
+            limit: Max results
+            search: Search term for lemma, translation_en, translation_ru, pronunciation
+            part_of_speech: Filter by part of speech
+            sort_by: Sort field ("lemma" or "created_at")
+            sort_order: Sort direction ("asc" or "desc")
+            active_only: If True, only return is_active=True entries
+
+        Returns:
+            List of word entries matching criteria
+        """
+        query = select(WordEntry).where(WordEntry.deck_id == deck_id)
+
+        if active_only:
+            query = query.where(WordEntry.is_active.is_(True))
+
+        if part_of_speech is not None:
+            query = query.where(WordEntry.part_of_speech == part_of_speech)
+
+        if search:
+            search_pattern = f"%{search}%"
+            query = query.where(
+                or_(
+                    WordEntry.lemma.ilike(search_pattern),
+                    WordEntry.translation_en.ilike(search_pattern),
+                    WordEntry.translation_ru.ilike(search_pattern),
+                    WordEntry.pronunciation.ilike(search_pattern),
+                )
+            )
+
+        # Sorting
+        sort_column = WordEntry.lemma if sort_by == "lemma" else WordEntry.created_at
+        if sort_order == "desc":
+            query = query.order_by(sort_column.desc())
+        else:
+            query = query.order_by(sort_column.asc())
+
+        query = query.offset(skip).limit(limit)
+        result = await self.db.execute(query)
+        return list(result.scalars().all())
+
+    async def count_by_deck_filtered(
+        self,
+        deck_id: UUID,
+        *,
+        search: str | None = None,
+        part_of_speech: PartOfSpeech | None = None,
+        active_only: bool = True,
+    ) -> int:
+        """Count word entries in a deck with optional filters.
+
+        Args:
+            deck_id: Deck UUID
+            search: Search term for lemma, translation_en, translation_ru, pronunciation
+            part_of_speech: Filter by part of speech
+            active_only: If True, only count is_active=True entries
+
+        Returns:
+            Total number of matching word entries
+        """
+        query = select(func.count()).select_from(WordEntry).where(WordEntry.deck_id == deck_id)
+
+        if active_only:
+            query = query.where(WordEntry.is_active.is_(True))
+
+        if part_of_speech is not None:
+            query = query.where(WordEntry.part_of_speech == part_of_speech)
+
+        if search:
+            search_pattern = f"%{search}%"
+            query = query.where(
+                or_(
+                    WordEntry.lemma.ilike(search_pattern),
+                    WordEntry.translation_en.ilike(search_pattern),
+                    WordEntry.translation_ru.ilike(search_pattern),
+                    WordEntry.pronunciation.ilike(search_pattern),
+                )
+            )
 
         result = await self.db.execute(query)
         return result.scalar_one()

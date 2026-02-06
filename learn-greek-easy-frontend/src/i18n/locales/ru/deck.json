@@ -211,5 +211,56 @@
     "editSuccess": "Колода успешно обновлена",
     "createError": "Не удалось создать колоду",
     "editError": "Не удалось обновить колоду"
+  },
+  "v2": {
+    "wordBrowserTitle": "Браузер словарных записей",
+    "wordBrowserPlaceholder": "Просмотр словарных записей в этой колоде. Полный функционал скоро.",
+    "comingSoon": "Скоро",
+    "toPractice": "К практике"
+  },
+  "wordBrowser": {
+    "searchPlaceholder": "Поиск слов...",
+    "clearSearch": "Очистить поиск",
+    "filterGroup": "Фильтр по статусу",
+    "filters": {
+      "all": "Все",
+      "learned": "Выученные",
+      "reviewing": "На повторении",
+      "new": "Новые"
+    },
+    "showing": "Показано {{count}} из {{total}} слов",
+    "emptyTitle": "Слова не найдены",
+    "emptySearchDescription": "Нет слов, соответствующих поиску. Попробуйте другой запрос.",
+    "emptyFilterDescription": "Нет слов в этой категории.",
+    "errorTitle": "Ошибка загрузки слов",
+    "errorDescription": "Произошла ошибка при загрузке слов. Попробуйте еще раз."
+  },
+  "wordReference": {
+    "backToDeck": "Назад к колоде",
+    "pronunciation": "Произношение",
+    "meaning": "Значение",
+    "conjugation": "Спряжение",
+    "declension": "Склонение",
+    "examples": "Примеры",
+    "notes": "Заметки",
+    "practiceWord": "Практиковать это слово",
+    "comingSoon": "Скоро",
+    "noGrammar": "Грамматическая информация недоступна",
+    "noExamples": "Примеры использования отсутствуют",
+    "partOfSpeech": {
+      "noun": "Существительное",
+      "verb": "Глагол",
+      "adjective": "Прилагательное",
+      "adverb": "Наречие"
+    },
+    "voice": {
+      "active": "Активный",
+      "passive": "Пассивный"
+    },
+    "gender": {
+      "masculine": "Мужской",
+      "feminine": "Женский",
+      "neuter": "Средний"
+    }
   }
 }

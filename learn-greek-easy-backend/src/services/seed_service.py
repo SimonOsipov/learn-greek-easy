@@ -23,6 +23,7 @@ from src.db.models import (
     Card,
     CardStatistics,
     CardStatus,
+    CardSystemVersion,
     ChangelogEntry,
     ChangelogTag,
     CultureAnswerHistory,
@@ -49,6 +50,7 @@ from src.db.models import (
     UserSettings,
     UserXP,
     VoteType,
+    WordEntry,
     XPTransaction,
 )
 from src.services.achievement_definitions import ACHIEVEMENTS as ACHIEVEMENT_DEFS
@@ -4757,4 +4759,397 @@ class SeedService:
             "news_questions": news_questions_result,
             "announcements": announcements_result,
             "changelog": changelog_result,
+        }
+
+    async def seed_dual_decks(self) -> dict[str, Any]:
+        """Seed V1 and V2 decks for E2E testing of dual card system.
+
+        Creates:
+        - 1 V1 deck with 10 traditional cards (SM-2 states)
+        - 1 V2 deck with 10 word entries (with grammar data for verbs and nouns)
+
+        This endpoint is idempotent - it deletes existing E2E dual test decks first.
+
+        Returns:
+            dict with v1_deck_id, v2_deck_id, and counts
+        """
+        # Delete ALL existing E2E dual test decks (idempotent)
+        # Use delete with where clause to handle multiple duplicates if they exist
+        await self.db.execute(delete(Deck).where(Deck.name_en == "E2E V1 Test Deck"))
+        await self.db.execute(delete(Deck).where(Deck.name_en == "E2E V2 Test Deck"))
+
+        await self.db.flush()
+
+        # ========== Create V1 Deck (Traditional Cards) ==========
+        v1_deck = Deck(
+            name_en="E2E V1 Test Deck",
+            name_el="E2E V1 Test Deck",
+            name_ru="E2E V1 Test Deck",
+            description_en="Test deck for V1 (legacy flashcard) system",
+            description_el="Test deck for V1 (legacy flashcard) system",
+            description_ru="Test deck for V1 (legacy flashcard) system",
+            level=DeckLevel.A1,
+            is_active=True,
+            is_premium=False,
+            card_system=CardSystemVersion.V1,
+        )
+        self.db.add(v1_deck)
+        await self.db.flush()
+
+        # Create 10 traditional cards for V1 deck
+        v1_vocabulary = [
+            ("γεια", "hello", "greeting"),
+            ("ναι", "yes", "affirmative"),
+            ("όχι", "no", "negative"),
+            ("ευχαριστώ", "thank you", "gratitude"),
+            ("παρακαλώ", "please", "politeness"),
+            ("νερό", "water", "noun"),
+            ("ψωμί", "bread", "noun"),
+            ("σπίτι", "house", "noun"),
+            ("καλημέρα", "good morning", "greeting"),
+            ("καληνύχτα", "good night", "greeting"),
+        ]
+
+        v1_cards = []
+        for greek, english, category in v1_vocabulary:
+            card = Card(
+                deck_id=v1_deck.id,
+                front_text=greek,
+                back_text_en=english,
+                back_text_ru=None,
+                pronunciation=None,
+                part_of_speech=PartOfSpeech.NOUN if category == "noun" else None,
+            )
+            self.db.add(card)
+            v1_cards.append(card)
+        await self.db.flush()
+
+        # ========== Create V2 Deck (Word Entries) ==========
+        v2_deck = Deck(
+            name_en="E2E V2 Test Deck",
+            name_el="E2E V2 Test Deck",
+            name_ru="E2E V2 Test Deck",
+            description_en="Test deck for V2 (word browser) system",
+            description_el="Test deck for V2 (word browser) system",
+            description_ru="Test deck for V2 (word browser) system",
+            level=DeckLevel.A2,
+            is_active=True,
+            is_premium=False,
+            card_system=CardSystemVersion.V2,
+        )
+        self.db.add(v2_deck)
+        await self.db.flush()
+
+        # Create 10 word entries for V2 deck with grammar data
+        v2_vocabulary: list[dict[str, Any]] = [
+            # Verbs (with conjugation data)
+            {
+                "lemma": "αγαπώ",
+                "part_of_speech": PartOfSpeech.VERB,
+                "translation_en": "to love",
+                "translation_ru": "любить",
+                "pronunciation": "[aɣaˈpo]",
+                "cefr_level": DeckLevel.A2,
+                "grammar_data": {
+                    "voice": "active",
+                    "conjugation_group": "A",
+                    "tenses": {
+                        "present": {
+                            "singular": {
+                                "first": "αγαπώ",
+                                "second": "αγαπάς",
+                                "third": "αγαπά/αγαπάει",
+                            },
+                            "plural": {
+                                "first": "αγαπάμε/αγαπούμε",
+                                "second": "αγαπάτε",
+                                "third": "αγαπούν/αγαπάνε",
+                            },
+                        },
+                    },
+                },
+                "examples": [
+                    {
+                        "greek": "Σε αγαπώ πολύ.",
+                        "english": "I love you very much.",
+                        "russian": "Я тебя очень люблю.",
+                    },
+                ],
+            },
+            {
+                "lemma": "θέλω",
+                "part_of_speech": PartOfSpeech.VERB,
+                "translation_en": "to want",
+                "translation_ru": "хотеть",
+                "pronunciation": "[ˈθelo]",
+                "cefr_level": DeckLevel.A1,
+                "grammar_data": {
+                    "voice": "active",
+                    "conjugation_group": "A",
+                    "tenses": {
+                        "present": {
+                            "singular": {
+                                "first": "θέλω",
+                                "second": "θέλεις",
+                                "third": "θέλει",
+                            },
+                            "plural": {
+                                "first": "θέλουμε",
+                                "second": "θέλετε",
+                                "third": "θέλουν(ε)",
+                            },
+                        },
+                    },
+                },
+                "examples": [
+                    {
+                        "greek": "Θέλω νερό.",
+                        "english": "I want water.",
+                        "russian": "Я хочу воды.",
+                    },
+                ],
+            },
+            # Nouns (with declension data)
+            {
+                "lemma": "σπίτι",
+                "part_of_speech": PartOfSpeech.NOUN,
+                "translation_en": "house, home",
+                "translation_ru": "дом",
+                "pronunciation": "[ˈspiti]",
+                "cefr_level": DeckLevel.A1,
+                "grammar_data": {
+                    "gender": "neuter",
+                    "declension_group": "neuter_i",
+                    "cases": {
+                        "singular": {
+                            "nominative": "το σπίτι",
+                            "genitive": "του σπιτιού",
+                            "accusative": "το σπίτι",
+                        },
+                        "plural": {
+                            "nominative": "τα σπίτια",
+                            "genitive": "των σπιτιών",
+                            "accusative": "τα σπίτια",
+                        },
+                    },
+                },
+                "examples": [
+                    {
+                        "greek": "Το σπίτι μου είναι μεγάλο.",
+                        "english": "My house is big.",
+                        "russian": "Мой дом большой.",
+                    },
+                ],
+            },
+            {
+                "lemma": "δάσκαλος",
+                "part_of_speech": PartOfSpeech.NOUN,
+                "translation_en": "teacher (male)",
+                "translation_ru": "учитель",
+                "pronunciation": "[ˈðaskalos]",
+                "cefr_level": DeckLevel.A2,
+                "grammar_data": {
+                    "gender": "masculine",
+                    "declension_group": "masculine_os",
+                    "cases": {
+                        "singular": {
+                            "nominative": "ο δάσκαλος",
+                            "genitive": "του δασκάλου",
+                            "accusative": "τον δάσκαλο",
+                        },
+                        "plural": {
+                            "nominative": "οι δάσκαλοι",
+                            "genitive": "των δασκάλων",
+                            "accusative": "τους δασκάλους",
+                        },
+                    },
+                },
+                "examples": [
+                    {
+                        "greek": "Ο δάσκαλος διδάσκει ελληνικά.",
+                        "english": "The teacher teaches Greek.",
+                        "russian": "Учитель преподает греческий.",
+                    },
+                ],
+            },
+            # Adjectives
+            {
+                "lemma": "καλός",
+                "part_of_speech": PartOfSpeech.ADJECTIVE,
+                "translation_en": "good",
+                "translation_ru": "хороший",
+                "pronunciation": "[kaˈlos]",
+                "cefr_level": DeckLevel.A1,
+                "grammar_data": {
+                    "declension": {
+                        "masculine": {"nominative": "καλός", "genitive": "καλού"},
+                        "feminine": {"nominative": "καλή", "genitive": "καλής"},
+                        "neuter": {"nominative": "καλό", "genitive": "καλού"},
+                    },
+                    "comparative": "καλύτερος",
+                    "superlative": "ο καλύτερος",
+                },
+                "examples": [
+                    {
+                        "greek": "Είναι καλός φίλος.",
+                        "english": "He is a good friend.",
+                        "russian": "Он хороший друг.",
+                    },
+                ],
+            },
+            # Adverbs
+            {
+                "lemma": "σήμερα",
+                "part_of_speech": PartOfSpeech.ADVERB,
+                "translation_en": "today",
+                "translation_ru": "сегодня",
+                "pronunciation": "[ˈsimera]",
+                "cefr_level": DeckLevel.A1,
+                "grammar_data": {
+                    "type": "time",
+                },
+                "examples": [
+                    {
+                        "greek": "Σήμερα είναι Δευτέρα.",
+                        "english": "Today is Monday.",
+                        "russian": "Сегодня понедельник.",
+                    },
+                ],
+            },
+            # More nouns
+            {
+                "lemma": "νερό",
+                "part_of_speech": PartOfSpeech.NOUN,
+                "translation_en": "water",
+                "translation_ru": "вода",
+                "pronunciation": "[neˈro]",
+                "cefr_level": DeckLevel.A1,
+                "grammar_data": {
+                    "gender": "neuter",
+                    "declension_group": "neuter_o",
+                },
+                "examples": [
+                    {
+                        "greek": "Πίνω νερό.",
+                        "english": "I drink water.",
+                        "russian": "Я пью воду.",
+                    },
+                ],
+            },
+            {
+                "lemma": "βιβλίο",
+                "part_of_speech": PartOfSpeech.NOUN,
+                "translation_en": "book",
+                "translation_ru": "книга",
+                "pronunciation": "[viˈvlio]",
+                "cefr_level": DeckLevel.A1,
+                "grammar_data": {
+                    "gender": "neuter",
+                    "declension_group": "neuter_o",
+                },
+                "examples": [
+                    {
+                        "greek": "Διαβάζω ένα βιβλίο.",
+                        "english": "I am reading a book.",
+                        "russian": "Я читаю книгу.",
+                    },
+                ],
+            },
+            # More verbs
+            {
+                "lemma": "μιλώ",
+                "part_of_speech": PartOfSpeech.VERB,
+                "translation_en": "to speak, to talk",
+                "translation_ru": "говорить",
+                "pronunciation": "[miˈlo]",
+                "cefr_level": DeckLevel.A2,
+                "grammar_data": {
+                    "voice": "active",
+                    "conjugation_group": "A",
+                    "tenses": {
+                        "present": {
+                            "singular": {
+                                "first": "μιλώ",
+                                "second": "μιλάς",
+                                "third": "μιλά/μιλάει",
+                            },
+                            "plural": {
+                                "first": "μιλάμε/μιλούμε",
+                                "second": "μιλάτε",
+                                "third": "μιλούν/μιλάνε",
+                            },
+                        },
+                    },
+                },
+                "examples": [
+                    {
+                        "greek": "Μιλώ ελληνικά.",
+                        "english": "I speak Greek.",
+                        "russian": "Я говорю по-гречески.",
+                    },
+                ],
+            },
+            {
+                "lemma": "τρώω",
+                "part_of_speech": PartOfSpeech.VERB,
+                "translation_en": "to eat",
+                "translation_ru": "есть, кушать",
+                "pronunciation": "[ˈtroo]",
+                "cefr_level": DeckLevel.A1,
+                "grammar_data": {
+                    "voice": "active",
+                    "conjugation_group": "B",
+                    "tenses": {
+                        "present": {
+                            "singular": {
+                                "first": "τρώω",
+                                "second": "τρως",
+                                "third": "τρώει",
+                            },
+                            "plural": {
+                                "first": "τρώμε",
+                                "second": "τρώτε",
+                                "third": "τρώνε",
+                            },
+                        },
+                    },
+                },
+                "examples": [
+                    {
+                        "greek": "Τρώω πρωινό.",
+                        "english": "I am eating breakfast.",
+                        "russian": "Я завтракаю.",
+                    },
+                ],
+            },
+        ]
+
+        v2_word_entries = []
+        for word_data in v2_vocabulary:
+            word_entry = WordEntry(
+                deck_id=v2_deck.id,
+                lemma=word_data["lemma"],
+                part_of_speech=word_data["part_of_speech"],
+                translation_en=word_data["translation_en"],
+                translation_ru=word_data.get("translation_ru"),
+                pronunciation=word_data.get("pronunciation"),
+                cefr_level=word_data.get("cefr_level"),
+                grammar_data=word_data.get("grammar_data"),
+                examples=word_data.get("examples"),
+                is_active=True,
+            )
+            self.db.add(word_entry)
+            v2_word_entries.append(word_entry)
+
+        await self.db.flush()
+        await self.db.commit()
+
+        return {
+            "success": True,
+            "v1_deck_id": str(v1_deck.id),
+            "v1_deck_name": v1_deck.name_en,
+            "v2_deck_id": str(v2_deck.id),
+            "v2_deck_name": v2_deck.name_en,
+            "v1_card_count": len(v1_cards),
+            "v2_word_entry_count": len(v2_word_entries),
         }
