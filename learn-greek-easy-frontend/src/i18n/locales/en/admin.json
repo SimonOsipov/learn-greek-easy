@@ -176,7 +176,6 @@
     "announcements": "Announcements",
     "feedback": "Feedback",
     "changelog": "Changelog",
-    "bulkUploads": "Bulk Uploads",
     "cardErrors": "Card Errors",
     "wordEntries": "Word Entries"
   },
@@ -617,38 +616,6 @@
       "cancelConfirmNo": "Keep Editing",
       "successToast": "Card updated successfully",
       "errorToast": "Failed to update card. Please try again."
-    }
-  },
-  "bulkUploads": {
-    "title": "Bulk Upload Cards",
-    "description": "Upload multiple vocabulary cards at once using JSON format.",
-    "jsonLabel": "Cards JSON",
-    "jsonPlaceholder": "Paste JSON object with deck_id and cards...",
-    "validateButton": "Validate & Preview",
-    "uploadButton": "Upload Cards",
-    "uploadingButton": "Uploading...",
-    "maxCardsWarning": "Maximum 100 cards per upload",
-    "validationErrors": "Validation Errors",
-    "previewTitle": "Preview Summary",
-    "totalCards": "Total Cards",
-    "withGrammar": "With Grammar",
-    "withExamples": "With Examples",
-    "successToast": "Successfully uploaded {{count}} cards",
-    "errorToast": "Failed to upload cards. Please try again.",
-    "invalidJson": "Invalid JSON format",
-    "arrayFormatDetected": "JSON format has changed. Please use: { \"deck_id\": \"your-deck-uuid\", \"cards\": [...] }",
-    "missingDeckId": "deck_id is required and must be a non-empty string",
-    "invalidDeckId": "deck_id must be a valid UUID format",
-    "missingCards": "cards array is required",
-    "jsonSyntaxError": "JSON syntax error at line {{line}}, column {{column}}: {{message}}",
-    "jsonSyntaxErrorNoPosition": "JSON syntax error: {{message}}",
-    "noCards": "No cards found in JSON",
-    "tooManyCards": "Too many cards. Maximum is 100.",
-    "grammarCounts": {
-      "nouns": "Nouns",
-      "verbs": "Verbs",
-      "adjectives": "Adj",
-      "adverbs": "Adv"
     }
   },
   "wordEntries": {

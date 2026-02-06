@@ -28,7 +28,6 @@ import {
   AdminCardErrorSection,
   AdminFeedbackSection,
   AnnouncementsTab,
-  BulkUploadsTab,
   CardCreateModal,
   ChangelogTab,
   DeckCreateModal,
@@ -564,7 +563,6 @@ type AdminTabType =
   | 'news'
   | 'announcements'
   | 'changelog'
-  | 'bulkUploads'
   | 'wordEntries'
   | 'cardErrors'
   | 'feedback';
@@ -1151,7 +1149,6 @@ const AdminPage: React.FC = () => {
               'news',
               'announcements',
               'changelog',
-              'bulkUploads',
               'wordEntries',
               'cardErrors',
               'feedback',
@@ -1247,16 +1244,6 @@ const AdminPage: React.FC = () => {
             {t('admin:tabs.changelog')}
           </h2>
           <ChangelogTab />
-        </section>
-      )}
-
-      {/* Bulk Uploads Tab Content */}
-      {activeTab === 'bulkUploads' && (
-        <section aria-labelledby="bulk-uploads-heading">
-          <h2 id="bulk-uploads-heading" className="sr-only">
-            {t('admin:tabs.bulkUploads')}
-          </h2>
-          <BulkUploadsTab />
         </section>
       )}
 

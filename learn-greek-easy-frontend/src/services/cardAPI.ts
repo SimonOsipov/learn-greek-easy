@@ -169,27 +169,6 @@ export const cardAPI = {
   },
 
   /**
-   * Bulk create vocabulary cards
-   *
-   * Creates multiple cards in one request.
-   * Requires superuser privileges.
-   * Maximum 100 cards per request.
-   *
-   * @param deckId - UUID of the target deck
-   * @param cards - Array of cards to create (without deck_id)
-   * @returns Object with deck_id, created_count, and cards array
-   */
-  bulkCreate: async (
-    deckId: string,
-    cards: Omit<CardCreatePayload, 'deck_id'>[]
-  ): Promise<{ deck_id: string; created_count: number; cards: CardResponse[] }> => {
-    return api.post<{ deck_id: string; created_count: number; cards: CardResponse[] }>(
-      '/api/v1/cards/bulk',
-      { deck_id: deckId, cards }
-    );
-  },
-
-  /**
    * Delete a vocabulary card (soft delete)
    *
    * Requires deck ownership or superuser privileges.
