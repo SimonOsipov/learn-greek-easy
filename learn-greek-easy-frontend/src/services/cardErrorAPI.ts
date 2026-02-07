@@ -26,7 +26,7 @@ export const cardErrorAPI = {
    * @example
    * ```ts
    * const report = await cardErrorAPI.create({
-   *   card_type: 'VOCABULARY',
+   *   card_type: 'WORD',
    *   card_id: 'uuid-here',
    *   description: 'The translation is incorrect',
    * });

@@ -49,7 +49,7 @@ export const AdminCardErrorCard: React.FC<AdminCardErrorCardProps> = ({
   const statusConfig = CARD_ERROR_STATUS_CONFIG[errorReport.status];
   const hasResponse = !!errorReport.admin_notes;
 
-  const CardTypeIcon = errorReport.card_type === 'VOCABULARY' ? BookOpen : Globe;
+  const CardTypeIcon = errorReport.card_type === 'WORD' ? BookOpen : Globe;
 
   return (
     <Card data-testid="admin-card-error-card">

@@ -239,7 +239,7 @@ export const AdminCardErrorDetailModal: React.FC<AdminCardErrorDetailModalProps>
             {/* Card Type Badge */}
             <div className="flex items-center gap-2">
               <Badge variant="outline">
-                {report.card_type === 'VOCABULARY' ? (
+                {report.card_type === 'WORD' ? (
                   <BookOpen className="mr-1 h-3 w-3" />
                 ) : (
                   <Globe className="mr-1 h-3 w-3" />

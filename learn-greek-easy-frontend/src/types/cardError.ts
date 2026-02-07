@@ -15,7 +15,7 @@
  * Type of card being reported.
  * Must match backend CardErrorCardType enum values exactly (UPPERCASE).
  */
-export type CardType = 'VOCABULARY' | 'CULTURE';
+export type CardType = 'WORD' | 'CULTURE';
 
 /**
  * Status of a card error report.
@@ -34,7 +34,7 @@ export type CardErrorStatus = 'PENDING' | 'REVIEWED' | 'FIXED' | 'DISMISSED';
 export interface CreateCardErrorRequest {
   /** UUID of the card being reported */
   card_id: string;
-  /** Type of card: 'VOCABULARY' for flashcards, 'CULTURE' for culture questions */
+  /** Type of card: 'WORD' for word entries, 'CULTURE' for culture questions */
   card_type: CardType;
   /** User's description of the error (max 1000 characters) */
   description: string;
@@ -113,8 +113,8 @@ export const CARD_ERROR_STATUS_CONFIG: Record<CardErrorStatus, CardErrorStatusCo
  * Card type display configuration.
  */
 export const CARD_TYPE_CONFIG: Record<CardType, { label: string; icon: string }> = {
-  VOCABULARY: {
-    label: 'Vocabulary Card',
+  WORD: {
+    label: 'Word Entry',
     icon: 'book',
   },
   CULTURE: {

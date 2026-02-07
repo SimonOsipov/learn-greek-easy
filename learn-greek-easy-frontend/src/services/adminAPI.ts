@@ -1010,7 +1010,7 @@ export const adminAPI = {
    * const errors = await adminAPI.listCardErrors({ status: 'PENDING', page: 1 });
    *
    * // Get vocabulary errors only
-   * const vocabErrors = await adminAPI.listCardErrors({ card_type: 'VOCABULARY' });
+   * const wordErrors = await adminAPI.listCardErrors({ card_type: 'WORD' });
    * ```
    */
   listCardErrors: async (

@@ -30,7 +30,7 @@ export interface ReportErrorModalProps {
   onClose: () => void;
   /** The ID of the card being reported */
   cardId: string;
-  /** The type of card: 'VOCABULARY' for flashcards, 'CULTURE' for culture questions */
+  /** The type of card: 'WORD' for word entries, 'CULTURE' for culture questions */
   cardType: CardType;
 }
 
@@ -43,7 +43,7 @@ export interface ReportErrorModalProps {
  *   isOpen={isReportModalOpen}
  *   onClose={() => setIsReportModalOpen(false)}
  *   cardId={card.id}
- *   cardType="VOCABULARY"
+ *   cardType="WORD"
  * />
  * ```
  */

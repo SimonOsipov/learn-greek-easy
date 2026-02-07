@@ -11,14 +11,14 @@ import posthog from 'posthog-js';
 // ============================================================================
 
 export interface CardErrorReportedProperties {
-  /** Type of card: 'VOCABULARY' or 'CULTURE' */
+  /** Type of card: 'WORD' or 'CULTURE' */
   cardType: string;
   /** UUID of the reported card */
   cardId: string;
 }
 
 export interface CardErrorModalOpenedProperties {
-  /** Type of card: 'VOCABULARY' or 'CULTURE' */
+  /** Type of card: 'WORD' or 'CULTURE' */
   cardType: string;
   /** UUID of the card */
   cardId: string;
@@ -27,7 +27,7 @@ export interface CardErrorModalOpenedProperties {
 }
 
 export interface CardErrorModalClosedProperties {
-  /** Type of card: 'VOCABULARY' or 'CULTURE' */
+  /** Type of card: 'WORD' or 'CULTURE' */
   cardType: string;
   /** UUID of the card */
   cardId: string;
