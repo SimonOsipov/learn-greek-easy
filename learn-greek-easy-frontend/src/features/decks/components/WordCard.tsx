@@ -15,8 +15,11 @@
 
 import React from 'react';
 
+import { useTranslation } from 'react-i18next';
+
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { getLocalizedTranslation } from '@/lib/localeUtils';
 import { cn } from '@/lib/utils';
 import type { WordEntryResponse } from '@/services/wordEntryAPI';
 
@@ -139,7 +142,9 @@ WordCardSkeleton.displayName = 'WordCardSkeleton';
  * Supports click navigation and keyboard accessibility.
  */
 export const WordCard: React.FC<WordCardProps> = ({ wordEntry, onClick, loading = false }) => {
-  const { lemma, pronunciation, translation_en } = wordEntry;
+  const { i18n } = useTranslation();
+  const { lemma, pronunciation, translation_en, translation_ru } = wordEntry;
+  const displayTranslation = getLocalizedTranslation(translation_en, translation_ru, i18n.language);
 
   // Card is clickable if onClick is provided
   const isClickable = !!onClick;
@@ -166,7 +171,7 @@ export const WordCard: React.FC<WordCardProps> = ({ wordEntry, onClick, loading 
       role={isClickable ? 'button' : undefined}
       tabIndex={isClickable ? 0 : undefined}
       onKeyDown={isClickable ? handleKeyDown : undefined}
-      aria-label={`${lemma} - ${translation_en}`}
+      aria-label={`${lemma} - ${displayTranslation}`}
     >
       <CardContent className="p-4">
         {/* Top-right mastery indicator (placeholder) */}
@@ -191,9 +196,9 @@ export const WordCard: React.FC<WordCardProps> = ({ wordEntry, onClick, loading 
             </p>
           )}
 
-          {/* English translation */}
+          {/* Locale-aware translation */}
           <p data-testid="word-card-translation" className="text-sm text-muted-foreground">
-            {translation_en}
+            {displayTranslation}
           </p>
 
           {/* Bottom mastery dots (5 dots, all gray for V2) */}

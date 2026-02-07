@@ -101,7 +101,7 @@ export const V2DeckHeader: React.FC<V2DeckHeaderProps> = ({ deck }) => {
 
         {/* Category and metadata */}
         <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-          <span className="capitalize">{deck.category}</span>
+          <span>{t(`card.categories.${deck.category}`)}</span>
           <span>-</span>
           <span>{t('detail.updated', { date: formatDate(deck.updatedAt) })}</span>
         </div>

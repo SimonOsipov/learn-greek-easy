@@ -49,6 +49,29 @@ export interface NounData {
   vocative_plural: string;
 }
 
+/** V2 nested case structure for nouns */
+interface NounCaseForms {
+  nominative?: string;
+  genitive?: string;
+  accusative?: string;
+  vocative?: string;
+}
+
+interface NounCasesV2 {
+  singular?: NounCaseForms;
+  plural?: NounCaseForms;
+}
+
+/** V2 noun grammar data with nested cases */
+export interface NounDataV2 {
+  gender: NounGender;
+  declension_group?: string;
+  cases: NounCasesV2;
+}
+
+/** Union type accepting either V1 flat or V2 nested format */
+export type NounDataAny = NounData | NounDataV2;
+
 // ============================================================================
 // Verb Types
 // ============================================================================

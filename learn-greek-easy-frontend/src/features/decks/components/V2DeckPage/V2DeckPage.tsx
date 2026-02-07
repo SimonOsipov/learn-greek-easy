@@ -10,6 +10,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { getLocalizedDeckName } from '@/lib/deckLocale';
 import { useDeckStore } from '@/stores/deckStore';
 
 import { V2DeckHeader } from './V2DeckHeader';
@@ -30,7 +31,7 @@ interface V2DeckPageProps {
  * Handles loading, error, and not found states.
  */
 export const V2DeckPage: React.FC<V2DeckPageProps> = ({ deckId }) => {
-  const { t } = useTranslation('deck');
+  const { t, i18n } = useTranslation('deck');
   const { selectedDeck, isLoading, error, selectDeck } = useDeckStore();
 
   // V2DeckPage is rendered by DeckDetailPage when the deck has cardSystem='V2'.
@@ -68,7 +69,9 @@ export const V2DeckPage: React.FC<V2DeckPageProps> = ({ deckId }) => {
           {t('detail.breadcrumb')}
         </Link>
         <span>/</span>
-        <span className="truncate font-medium text-foreground">{selectedDeck.titleGreek}</span>
+        <span className="truncate font-medium text-foreground">
+          {getLocalizedDeckName(selectedDeck, i18n.language)}
+        </span>
       </nav>
 
       {/* Main Content */}

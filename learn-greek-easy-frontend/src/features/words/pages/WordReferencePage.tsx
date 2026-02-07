@@ -21,7 +21,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import type { AdjectiveData, AdverbData, NounData, VerbData } from '@/types/grammar';
+import { getLocalizedTranslation } from '@/lib/localeUtils';
+import type { AdjectiveData, AdverbData, NounDataAny, VerbData } from '@/types/grammar';
 
 import {
   AdjectiveDeclensionTable,
@@ -162,8 +163,14 @@ function AdverbFormsCard({ grammarData }: AdverbFormsCardProps) {
 // Main Component
 // ============================================
 
+const GENDER_ARTICLE_MAP: Record<string, string> = {
+  masculine: 'ο',
+  feminine: 'η',
+  neuter: 'το',
+};
+
 export function WordReferencePage() {
-  const { t } = useTranslation(['deck', 'review']);
+  const { t, i18n } = useTranslation(['deck', 'review']);
   const { deckId, wordId } = useParams<{ deckId: string; wordId: string }>();
 
   const { wordEntry, isLoading, isError, error } = useWordEntry({
@@ -186,8 +193,18 @@ export function WordReferencePage() {
     return <WordNotFound />;
   }
 
+  const displayTranslation = getLocalizedTranslation(
+    wordEntry.translation_en,
+    wordEntry.translation_ru,
+    i18n.language
+  );
+
   const grammarData = wordEntry.grammar_data;
   const partOfSpeech = wordEntry.part_of_speech;
+  const article =
+    partOfSpeech === 'noun' && grammarData && 'gender' in grammarData
+      ? GENDER_ARTICLE_MAP[grammarData.gender as string]
+      : undefined;
 
   // Render grammar section based on part of speech
   const renderGrammarSection = () => {
@@ -210,7 +227,7 @@ export function WordReferencePage() {
       case 'verb':
         return <ConjugationTable grammarData={grammarData as VerbData} />;
       case 'noun':
-        return <NounDeclensionTable grammarData={grammarData as NounData} />;
+        return <NounDeclensionTable grammarData={grammarData as NounDataAny} />;
       case 'adjective':
         return <AdjectiveDeclensionTable grammarData={grammarData as AdjectiveData} />;
       case 'adverb':
@@ -254,20 +271,18 @@ export function WordReferencePage() {
         </div>
 
         {/* Greek word (lemma) */}
-        <h1 className="text-4xl font-bold text-foreground sm:text-5xl">{wordEntry.lemma}</h1>
+        <h1 className="text-4xl font-bold text-foreground sm:text-5xl">
+          {article && <span className="mr-2 font-normal text-muted-foreground">{article}</span>}
+          {wordEntry.lemma}
+        </h1>
 
         {/* Pronunciation */}
         {wordEntry.pronunciation && (
           <p className="mt-2 text-lg text-muted-foreground">{wordEntry.pronunciation}</p>
         )}
 
-        {/* Translations */}
-        <div className="mt-4 space-y-1">
-          <p className="text-xl text-foreground">{wordEntry.translation_en}</p>
-          {wordEntry.translation_ru && (
-            <p className="text-lg italic text-muted-foreground">{wordEntry.translation_ru}</p>
-          )}
-        </div>
+        {/* Translation - single locale-appropriate value */}
+        <p className="mt-4 text-[1.15em] font-bold text-foreground">{displayTranslation}</p>
       </div>
 
       {/* Grammar Section */}
@@ -297,10 +312,10 @@ export function WordReferencePage() {
                 variant="default"
                 size="lg"
                 disabled
-                className="cursor-not-allowed"
+                className="min-w-[250px] cursor-not-allowed"
                 data-testid="practice-word-button"
               >
-                Practice this word
+                {t('deck:wordReference.practiceWord')}
               </Button>
             </span>
           </TooltipTrigger>

@@ -38,10 +38,10 @@ export function NounDeclensionTable({ nounData, isFlipped = true }: NounDeclensi
 
   return (
     <div className="overflow-hidden rounded-md border">
-      <Table>
+      <Table className="table-fixed">
         <TableHeader>
           <TableRow className="hover:bg-transparent">
-            <TableHead className="h-auto bg-muted/50 px-3 py-2" />
+            <TableHead className="h-auto w-[35%] bg-muted/50 px-3 py-2" />
             <TableHead className="h-auto bg-muted/50 px-3 py-2 text-center">
               {t('grammar.nounDeclension.singular')}
             </TableHead>

@@ -22,7 +22,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import type { AdjectiveData, NounData } from '@/types/grammar';
+import type { AdjectiveData, NounData, NounDataAny, NounDataV2 } from '@/types/grammar';
 
 // ============================================
 // Types
@@ -30,7 +30,7 @@ import type { AdjectiveData, NounData } from '@/types/grammar';
 
 export interface NounDeclensionTableProps {
   /** Noun grammar data */
-  grammarData: NounData;
+  grammarData: NounDataAny;
 }
 
 export interface AdjectiveDeclensionTableProps {
@@ -46,6 +46,37 @@ const CASES = ['nominative', 'genitive', 'accusative', 'vocative'] as const;
 const GENDERS = ['masculine', 'feminine', 'neuter'] as const;
 type Gender = (typeof GENDERS)[number];
 
+interface CaseRow {
+  case: (typeof CASES)[number];
+  singular: string;
+  plural: string;
+}
+
+/**
+ * Detect grammar data format and extract case rows.
+ * V2: grammarData.cases.singular.nominative
+ * V1: grammarData.nominative_singular
+ */
+function extractNounCaseData(grammarData: NounDataAny): CaseRow[] {
+  // V2 detection: check for nested `cases` object
+  if ('cases' in grammarData && grammarData.cases) {
+    const { cases } = grammarData as NounDataV2;
+    return CASES.map((c) => ({
+      case: c,
+      singular: cases.singular?.[c] ?? '',
+      plural: cases.plural?.[c] ?? '',
+    }));
+  }
+
+  // V1 fallback: flat key format
+  const v1 = grammarData as NounData;
+  return CASES.map((c) => ({
+    case: c,
+    singular: (v1[`${c}_singular` as keyof NounData] as string) ?? '',
+    plural: (v1[`${c}_plural` as keyof NounData] as string) ?? '',
+  }));
+}
+
 // ============================================
 // Noun Declension Table
 // ============================================
@@ -54,11 +85,7 @@ export function NounDeclensionTable({ grammarData }: NounDeclensionTableProps) {
   const { t } = useTranslation('review');
   const na = t('grammar.nounDeclension.notAvailable');
 
-  const caseData = CASES.map((caseKey) => ({
-    case: caseKey,
-    singular: grammarData[`${caseKey}_singular` as keyof NounData] as string,
-    plural: grammarData[`${caseKey}_plural` as keyof NounData] as string,
-  }));
+  const caseData = extractNounCaseData(grammarData);
 
   return (
     <Card>
@@ -73,10 +100,10 @@ export function NounDeclensionTable({ grammarData }: NounDeclensionTableProps) {
       <CardContent>
         <ScrollableTable>
           <div className="min-w-[300px] overflow-hidden rounded-md border">
-            <Table>
+            <Table className="table-fixed">
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
-                  <TableHead className="h-auto bg-muted/50 px-4 py-2 font-bold" />
+                  <TableHead className="h-auto w-[35%] bg-muted/50 px-4 py-2 font-bold" />
                   <TableHead className="h-auto bg-muted/50 px-4 py-2 text-center font-bold">
                     {t('grammar.nounDeclension.singular')}
                   </TableHead>
@@ -196,10 +223,10 @@ function GenderTable({ gender, data, na, t }: GenderTableProps) {
         </CardTitle>
       </CardHeader>
       <CardContent className="p-0">
-        <Table>
+        <Table className="table-fixed">
           <TableHeader>
             <TableRow className="hover:bg-transparent">
-              <TableHead className="h-auto bg-muted/50 px-4 py-2" />
+              <TableHead className="h-auto w-[35%] bg-muted/50 px-4 py-2" />
               <TableHead className="h-auto bg-muted/50 px-4 py-2 text-center">
                 {t('grammar.nounDeclension.singular')}
               </TableHead>

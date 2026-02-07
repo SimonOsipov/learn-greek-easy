@@ -116,10 +116,10 @@ function GenderTable({ gender, data, na, t, isFlipped = true }: GenderTableProps
         </CardTitle>
       </CardHeader>
       <CardContent className="p-0">
-        <Table>
+        <Table className="table-fixed">
           <TableHeader>
             <TableRow className="hover:bg-transparent">
-              <TableHead className="h-auto bg-muted/50 px-4 py-2" />
+              <TableHead className="h-auto w-[35%] bg-muted/50 px-4 py-2" />
               <TableHead className="h-auto bg-muted/50 px-4 py-2 text-center">
                 {t('grammar.nounDeclension.singular')}
               </TableHead>
