@@ -15,7 +15,21 @@ from uuid import uuid4
 
 import pytest
 
-from src.db.models import DeckLevel, FeedbackCategory, NotificationType, VoteType
+from src.db.models import (
+    CardType,
+    DeckLevel,
+    FeedbackCategory,
+    NotificationType,
+    PartOfSpeech,
+    VoteType,
+)
+from src.schemas.card_record import (
+    ExampleContext,
+    MeaningElToEnBack,
+    MeaningElToEnFront,
+    MeaningEnToElBack,
+    MeaningEnToElFront,
+)
 from src.services.seed_service import SeedService
 
 # ============================================================================
@@ -1949,3 +1963,235 @@ class TestSeedServiceChangelog:
     def test_truncation_order_includes_changelog_entries(self):
         """TRUNCATION_ORDER should include changelog_entries table."""
         assert "changelog_entries" in SeedService.TRUNCATION_ORDER
+
+
+# ============================================================================
+# Meaning Card Seeding Tests
+# ============================================================================
+
+
+class TestSeedServiceMeaningCards:
+    """Tests for _create_meaning_cards method."""
+
+    @pytest.fixture
+    def mock_db(self):
+        """Create a mock async database session."""
+        db = AsyncMock()
+        db.add = MagicMock()
+        db.flush = AsyncMock()
+        db.commit = AsyncMock()
+        db.execute = AsyncMock()
+        return db
+
+    @pytest.fixture
+    def seed_service(self, mock_db):
+        """Create SeedService instance with mock database."""
+        return SeedService(mock_db)
+
+    @pytest.fixture
+    def word_entries_with_examples(self):
+        """Create mock word entries with examples."""
+        entries = []
+        for lemma, pos, trans, pron, ex in [
+            (
+                "σπίτι",
+                PartOfSpeech.NOUN,
+                "house, home",
+                "/spí·ti/",
+                [{"greek": "Το σπίτι μου.", "english": "My house."}],
+            ),
+            (
+                "πίνω",
+                PartOfSpeech.VERB,
+                "to drink",
+                "/pí·no/",
+                [{"greek": "Πίνω νερό.", "english": "I drink water."}],
+            ),
+        ]:
+            we = MagicMock()
+            we.id = uuid4()
+            we.lemma = lemma
+            we.part_of_speech = pos
+            we.translation_en = trans
+            we.pronunciation = pron
+            we.examples = ex
+            entries.append(we)
+        return entries
+
+    @pytest.fixture
+    def word_entry_no_examples(self):
+        """Create a mock word entry without examples."""
+        we = MagicMock()
+        we.id = uuid4()
+        we.lemma = "καλός"
+        we.part_of_speech = PartOfSpeech.ADJECTIVE
+        we.translation_en = "good, nice"
+        we.pronunciation = "/ka·lós/"
+        we.examples = []
+        return we
+
+    @pytest.mark.asyncio
+    @patch("src.services.seed_service.CardRecordRepository")
+    async def test_creates_two_cards_per_word_entry(
+        self, MockRepo, mock_db, seed_service, word_entries_with_examples
+    ):
+        """_create_meaning_cards should create 2 card dicts per word entry."""
+        mock_repo_instance = MockRepo.return_value
+        mock_repo_instance.bulk_upsert = AsyncMock(return_value=([], 4, 0))
+
+        deck_id = uuid4()
+        await seed_service._create_meaning_cards(word_entries_with_examples, deck_id)
+
+        card_dicts = mock_repo_instance.bulk_upsert.call_args[0][0]
+        assert len(card_dicts) == 4  # 2 entries * 2 cards each
+
+    @pytest.mark.asyncio
+    @patch("src.services.seed_service.CardRecordRepository")
+    async def test_correct_card_types(
+        self, MockRepo, mock_db, seed_service, word_entries_with_examples
+    ):
+        """Card dicts should alternate between MEANING_EL_TO_EN and MEANING_EN_TO_EL."""
+        mock_repo_instance = MockRepo.return_value
+        mock_repo_instance.bulk_upsert = AsyncMock(return_value=([], 4, 0))
+
+        deck_id = uuid4()
+        await seed_service._create_meaning_cards(word_entries_with_examples, deck_id)
+
+        card_dicts = mock_repo_instance.bulk_upsert.call_args[0][0]
+        # First entry: el_to_en, en_to_el
+        assert card_dicts[0]["card_type"] == CardType.MEANING_EL_TO_EN
+        assert card_dicts[1]["card_type"] == CardType.MEANING_EN_TO_EL
+        # Second entry: same pattern
+        assert card_dicts[2]["card_type"] == CardType.MEANING_EL_TO_EN
+        assert card_dicts[3]["card_type"] == CardType.MEANING_EN_TO_EL
+
+    @pytest.mark.asyncio
+    @patch("src.services.seed_service.CardRecordRepository")
+    async def test_front_content_validates_against_pydantic_schema(
+        self, MockRepo, mock_db, seed_service, word_entries_with_examples
+    ):
+        """Front content should validate against Pydantic schemas."""
+        mock_repo_instance = MockRepo.return_value
+        mock_repo_instance.bulk_upsert = AsyncMock(return_value=([], 4, 0))
+
+        deck_id = uuid4()
+        await seed_service._create_meaning_cards(word_entries_with_examples, deck_id)
+
+        card_dicts = mock_repo_instance.bulk_upsert.call_args[0][0]
+
+        # el_to_en front
+        el_front = MeaningElToEnFront(**card_dicts[0]["front_content"])
+        assert el_front.card_type == "meaning_el_to_en"
+        assert el_front.main == "σπίτι"
+        assert el_front.prompt == "What does this mean?"
+        assert el_front.badge == "Noun"
+
+        # en_to_el front
+        en_front = MeaningEnToElFront(**card_dicts[1]["front_content"])
+        assert en_front.card_type == "meaning_en_to_el"
+        assert en_front.main == "house, home"
+        assert en_front.prompt == "How do you say this in Greek?"
+        assert en_front.badge == "Noun"
+
+    @pytest.mark.asyncio
+    @patch("src.services.seed_service.CardRecordRepository")
+    async def test_back_content_validates_against_pydantic_schema(
+        self, MockRepo, mock_db, seed_service, word_entries_with_examples
+    ):
+        """Back content should validate against Pydantic schemas."""
+        mock_repo_instance = MockRepo.return_value
+        mock_repo_instance.bulk_upsert = AsyncMock(return_value=([], 4, 0))
+
+        deck_id = uuid4()
+        await seed_service._create_meaning_cards(word_entries_with_examples, deck_id)
+
+        card_dicts = mock_repo_instance.bulk_upsert.call_args[0][0]
+
+        # el_to_en back: answer is English translation
+        el_back = MeaningElToEnBack(**card_dicts[0]["back_content"])
+        assert el_back.card_type == "meaning_el_to_en"
+        assert el_back.answer == "house, home"
+
+        # en_to_el back: answer is Greek lemma
+        en_back = MeaningEnToElBack(**card_dicts[1]["back_content"])
+        assert en_back.card_type == "meaning_en_to_el"
+        assert en_back.answer == "σπίτι"
+
+    @pytest.mark.asyncio
+    @patch("src.services.seed_service.CardRecordRepository")
+    async def test_variant_key_is_default(
+        self, MockRepo, mock_db, seed_service, word_entries_with_examples
+    ):
+        """All card dicts should have variant_key='default'."""
+        mock_repo_instance = MockRepo.return_value
+        mock_repo_instance.bulk_upsert = AsyncMock(return_value=([], 4, 0))
+
+        deck_id = uuid4()
+        await seed_service._create_meaning_cards(word_entries_with_examples, deck_id)
+
+        card_dicts = mock_repo_instance.bulk_upsert.call_args[0][0]
+        for card in card_dicts:
+            assert card["variant_key"] == "default"
+
+    @pytest.mark.asyncio
+    @patch("src.services.seed_service.CardRecordRepository")
+    async def test_tier_is_one(self, MockRepo, mock_db, seed_service, word_entries_with_examples):
+        """All card dicts should have tier=1."""
+        mock_repo_instance = MockRepo.return_value
+        mock_repo_instance.bulk_upsert = AsyncMock(return_value=([], 4, 0))
+
+        deck_id = uuid4()
+        await seed_service._create_meaning_cards(word_entries_with_examples, deck_id)
+
+        card_dicts = mock_repo_instance.bulk_upsert.call_args[0][0]
+        for card in card_dicts:
+            assert card["tier"] == 1
+
+    @pytest.mark.asyncio
+    @patch("src.services.seed_service.CardRecordRepository")
+    async def test_context_populated_from_first_example(self, MockRepo, mock_db, seed_service):
+        """Back content context should be populated from the first example."""
+        we = MagicMock()
+        we.id = uuid4()
+        we.lemma = "σπίτι"
+        we.part_of_speech = PartOfSpeech.NOUN
+        we.translation_en = "house, home"
+        we.pronunciation = "/spí·ti/"
+        we.examples = [
+            {"greek": "Το σπίτι μου.", "english": "My house."},
+            {"greek": "Μεγάλο σπίτι.", "english": "Big house."},
+        ]
+
+        mock_repo_instance = MockRepo.return_value
+        mock_repo_instance.bulk_upsert = AsyncMock(return_value=([], 2, 0))
+
+        deck_id = uuid4()
+        await seed_service._create_meaning_cards([we], deck_id)
+
+        card_dicts = mock_repo_instance.bulk_upsert.call_args[0][0]
+
+        # Both cards should have context from the first example
+        for card in card_dicts:
+            ctx = card["back_content"]["context"]
+            assert ctx is not None
+            example_ctx = ExampleContext(**ctx)
+            assert example_ctx.label == "Example"
+            assert example_ctx.greek == "Το σπίτι μου."
+            assert example_ctx.english == "My house."
+            assert example_ctx.tense is None
+
+    @pytest.mark.asyncio
+    @patch("src.services.seed_service.CardRecordRepository")
+    async def test_context_null_when_no_examples(
+        self, MockRepo, mock_db, seed_service, word_entry_no_examples
+    ):
+        """Back content context should be None when word entry has no examples."""
+        mock_repo_instance = MockRepo.return_value
+        mock_repo_instance.bulk_upsert = AsyncMock(return_value=([], 2, 0))
+
+        deck_id = uuid4()
+        await seed_service._create_meaning_cards([word_entry_no_examples], deck_id)
+
+        card_dicts = mock_repo_instance.bulk_upsert.call_args[0][0]
+        for card in card_dicts:
+            assert card["back_content"]["context"] is None
