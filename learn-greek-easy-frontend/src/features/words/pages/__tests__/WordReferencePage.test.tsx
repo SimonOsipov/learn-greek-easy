@@ -467,6 +467,101 @@ describe('WordReferencePage', () => {
       const button = screen.getByTestId('practice-word-button');
       expect(button).toBeDisabled();
     });
+
+    it('practice button is enabled when cards are available', () => {
+      const entry = makeMasculineNoun();
+      mockUseWordEntry.mockReturnValue({
+        wordEntry: entry,
+        isLoading: false,
+        isError: false,
+        error: null,
+      });
+      mockUseWordEntryCards.mockReturnValue({
+        cards: [
+          {
+            id: 'card-1',
+            word_entry_id: 'test-word-id',
+            deck_id: 'test-deck-id',
+            card_type: 'meaning_el_to_en',
+            tier: 1,
+            front_content: { main: 'test' },
+            back_content: { answer: 'test' },
+            is_active: true,
+            created_at: '2024-01-01T00:00:00Z',
+            updated_at: '2024-01-01T00:00:00Z',
+          },
+        ],
+        isLoading: false,
+        isError: false,
+        error: null,
+        refetch: vi.fn(),
+      });
+
+      renderPage();
+
+      const button = screen.getByTestId('practice-word-button');
+      expect(button).not.toBeDisabled();
+    });
+
+    it('practice button links to practice page', () => {
+      const entry = makeMasculineNoun();
+      mockUseWordEntry.mockReturnValue({
+        wordEntry: entry,
+        isLoading: false,
+        isError: false,
+        error: null,
+      });
+      mockUseWordEntryCards.mockReturnValue({
+        cards: [
+          {
+            id: 'card-1',
+            word_entry_id: 'test-word-id',
+            deck_id: 'test-deck-id',
+            card_type: 'meaning_el_to_en',
+            tier: 1,
+            front_content: { main: 'test' },
+            back_content: { answer: 'test' },
+            is_active: true,
+            created_at: '2024-01-01T00:00:00Z',
+            updated_at: '2024-01-01T00:00:00Z',
+          },
+        ],
+        isLoading: false,
+        isError: false,
+        error: null,
+        refetch: vi.fn(),
+      });
+
+      renderPage();
+
+      const link = screen.getByTestId('practice-word-button').closest('a');
+      expect(link).not.toBeNull();
+      expect(link!.getAttribute('href')).toContain(
+        '/decks/test-deck-id/words/test-word-id/practice'
+      );
+    });
+
+    it('practice button is disabled while cards are loading', () => {
+      const entry = makeMasculineNoun();
+      mockUseWordEntry.mockReturnValue({
+        wordEntry: entry,
+        isLoading: false,
+        isError: false,
+        error: null,
+      });
+      mockUseWordEntryCards.mockReturnValue({
+        cards: [],
+        isLoading: true,
+        isError: false,
+        error: null,
+        refetch: vi.fn(),
+      });
+
+      renderPage();
+
+      const button = screen.getByTestId('practice-word-button');
+      expect(button).toBeDisabled();
+    });
   });
 
   describe('Loading and Error States', () => {
