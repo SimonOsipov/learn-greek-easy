@@ -4851,7 +4851,7 @@ class SeedService:
                 {
                     "word_entry_id": we.id,
                     "deck_id": deck_id,
-                    "card_type": CardType.MEANING_EL_TO_EN,
+                    "card_type": CardType.MEANING_EL_TO_EN.value,
                     "variant_key": "default",
                     "tier": 1,
                     "front_content": el_to_en_front.model_dump(),
@@ -4878,7 +4878,7 @@ class SeedService:
                 {
                     "word_entry_id": we.id,
                     "deck_id": deck_id,
-                    "card_type": CardType.MEANING_EN_TO_EL,
+                    "card_type": CardType.MEANING_EN_TO_EL.value,
                     "variant_key": "default",
                     "tier": 1,
                     "front_content": en_to_el_front.model_dump(),
