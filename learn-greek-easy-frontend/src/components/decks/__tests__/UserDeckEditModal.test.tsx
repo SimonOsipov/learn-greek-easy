@@ -85,7 +85,7 @@ describe('UserDeckEditModal', () => {
   const mockOnSuccess = vi.fn();
 
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
   });
 
   describe('Create Mode Rendering', () => {
@@ -364,6 +364,9 @@ describe('UserDeckEditModal', () => {
       );
 
       const submitButton = screen.getByTestId('user-deck-form-submit');
+      await waitFor(() => {
+        expect(submitButton).toBeEnabled();
+      });
       await user.click(submitButton);
 
       await waitFor(() => {
@@ -390,6 +393,9 @@ describe('UserDeckEditModal', () => {
       );
 
       const submitButton = screen.getByTestId('user-deck-form-submit');
+      await waitFor(() => {
+        expect(submitButton).toBeEnabled();
+      });
       await user.click(submitButton);
 
       await waitFor(() => {
@@ -408,6 +414,9 @@ describe('UserDeckEditModal', () => {
       );
 
       const submitButton = screen.getByTestId('user-deck-form-submit');
+      await waitFor(() => {
+        expect(submitButton).toBeEnabled();
+      });
       await user.click(submitButton);
 
       await waitFor(() => {

@@ -103,6 +103,64 @@ class TestExampleSentence:
             ExampleSentence(greek="α" * 1001)
         assert "string_too_long" in str(exc_info.value).lower()
 
+    def test_id_field_optional_defaults_to_none(self):
+        """Test that id field defaults to None when not provided."""
+        example = ExampleSentence(greek="Αυτό είναι ένα σπίτι.")
+        assert example.id is None
+
+    def test_valid_id_accepted(self):
+        """Test that a valid id string is accepted."""
+        example = ExampleSentence(greek="Αυτό είναι ένα σπίτι.", id="ex_spiti1")
+        assert example.id == "ex_spiti1"
+
+    def test_id_max_length(self):
+        """Test that id respects max_length of 50."""
+        valid_id = "a" * 50
+        example = ExampleSentence(greek="Test.", id=valid_id)
+        assert example.id == valid_id
+
+        with pytest.raises(ValidationError):
+            ExampleSentence(greek="Test.", id="a" * 51)
+
+    def test_id_empty_string_rejected(self):
+        """Test that empty string id is rejected."""
+        with pytest.raises(ValidationError):
+            ExampleSentence(greek="Test.", id="")
+
+    def test_id_special_chars_rejected(self):
+        """Test that special characters in id are rejected."""
+        with pytest.raises(ValidationError):
+            ExampleSentence(greek="Test.", id="ex-spiti")
+        with pytest.raises(ValidationError):
+            ExampleSentence(greek="Test.", id="ex.spiti")
+        with pytest.raises(ValidationError):
+            ExampleSentence(greek="Test.", id="ex spiti")
+
+    def test_id_with_all_fields(self):
+        """Test that id works alongside all other fields."""
+        example = ExampleSentence(
+            id="ex_spiti1",
+            greek="Αυτό είναι ένα σπίτι.",
+            english="This is a house.",
+            russian="Это дом.",
+            context="Describing a building",
+        )
+        assert example.id == "ex_spiti1"
+        assert example.greek == "Αυτό είναι ένα σπίτι."
+        assert example.english == "This is a house."
+        assert example.russian == "Это дом."
+        assert example.context == "Describing a building"
+
+    def test_existing_examples_without_id_still_valid(self):
+        """Test backward compatibility: examples without id field still validate."""
+        example = ExampleSentence(
+            greek="Αυτό είναι ένα σπίτι.",
+            english="This is a house.",
+            russian="Это дом.",
+        )
+        assert example.id is None
+        assert example.greek == "Αυτό είναι ένα σπίτι."
+
 
 # ============================================================================
 # Test GrammarData Schema

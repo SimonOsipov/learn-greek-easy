@@ -69,6 +69,13 @@ class ExampleSentence(BaseModel):
     Greek is required; English and Russian are optional.
     """
 
+    id: Optional[str] = Field(
+        default=None,
+        min_length=1,
+        max_length=50,
+        pattern=r"^[a-zA-Z0-9_]+$",
+        description="Stable example identifier for card variant tracking (e.g., 'ex_spiti1')",
+    )
     greek: str = Field(
         ...,
         min_length=1,

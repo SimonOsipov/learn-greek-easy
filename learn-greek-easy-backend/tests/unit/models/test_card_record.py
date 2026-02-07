@@ -56,7 +56,7 @@ class TestCardRecordModel:
         assert CardRecord.__tablename__ == "card_records"
 
     def test_has_all_columns(self):
-        """Model should have all 10 expected columns."""
+        """Model should have all 11 expected columns."""
         columns = CardRecord.__table__.columns.keys()
         expected_columns = [
             "id",
@@ -64,13 +64,14 @@ class TestCardRecordModel:
             "deck_id",
             "card_type",
             "tier",
+            "variant_key",
             "front_content",
             "back_content",
             "is_active",
             "created_at",
             "updated_at",
         ]
-        assert len(expected_columns) == 10
+        assert len(expected_columns) == 11
         for col in expected_columns:
             assert col in columns, f"Missing expected column: {col}"
 
@@ -177,25 +178,25 @@ class TestCardRecordModel:
     # =========================================================================
 
     def test_unique_constraint_exists(self):
-        """Should have unique constraint named uq_card_record_entry_type_tier."""
+        """Should have unique constraint named uq_card_record_entry_type_variant."""
         constraints = CardRecord.__table__.constraints
         unique_constraints = [c for c in constraints if isinstance(c, UniqueConstraint)]
         constraint_names = [uc.name for uc in unique_constraints]
-        assert "uq_card_record_entry_type_tier" in constraint_names
+        assert "uq_card_record_entry_type_variant" in constraint_names
 
     def test_unique_constraint_columns(self):
-        """Unique constraint should cover (word_entry_id, card_type, tier)."""
+        """Unique constraint should cover (word_entry_id, card_type, variant_key)."""
         constraints = CardRecord.__table__.constraints
         unique_constraints = [c for c in constraints if isinstance(c, UniqueConstraint)]
 
         found = False
         for uc in unique_constraints:
-            if uc.name == "uq_card_record_entry_type_tier":
+            if uc.name == "uq_card_record_entry_type_variant":
                 col_names = {c.name for c in uc.columns}
-                assert col_names == {"word_entry_id", "card_type", "tier"}
+                assert col_names == {"word_entry_id", "card_type", "variant_key"}
                 found = True
                 break
-        assert found, "Unique constraint uq_card_record_entry_type_tier not found"
+        assert found, "Unique constraint uq_card_record_entry_type_variant not found"
 
     # =========================================================================
     # Index Tests

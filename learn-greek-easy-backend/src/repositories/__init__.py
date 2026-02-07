@@ -4,6 +4,7 @@ from src.repositories.announcement import AnnouncementCampaignRepository
 from src.repositories.base import BaseRepository
 from src.repositories.card import CardRepository
 from src.repositories.card_error import CardErrorReportRepository
+from src.repositories.card_record import CardRecordRepository
 from src.repositories.changelog import ChangelogRepository
 from src.repositories.culture_answer_history import CultureAnswerHistoryRepository
 from src.repositories.culture_deck import CultureDeckRepository
@@ -34,6 +35,7 @@ __all__ = [
     # Content
     "DeckRepository",
     "CardRepository",
+    "CardRecordRepository",
     # Progress
     "UserDeckProgressRepository",
     "CardStatisticsRepository",

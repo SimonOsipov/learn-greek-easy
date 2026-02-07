@@ -316,8 +316,7 @@ test.describe('Card Error Reporting - Word Entry', () => {
     // Flip the card to reveal the answer
     const clickToReveal = page.getByText(/click to reveal/i);
     await expect(clickToReveal).toBeVisible({ timeout: 5000 });
-    const cardHeader = flashcard.getByRole('button').first();
-    await cardHeader.click();
+    await page.keyboard.press('Space');
     await expect(clickToReveal).not.toBeVisible({ timeout: 5000 });
 
     // Verify rating buttons are visible (card is flipped)

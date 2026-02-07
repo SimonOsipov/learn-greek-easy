@@ -749,7 +749,7 @@ class WordEntry(Base, TimestampMixin):
         JSON,
         nullable=True,
         server_default=text("'[]'::jsonb"),
-        comment="Usage examples: [{greek, english, russian?, context?}, ...]",
+        comment="Usage examples: [{id?, greek, english, russian?, context?}, ...]",
     )
 
     # Audio reference
@@ -798,13 +798,17 @@ class CardRecord(Base, TimestampMixin):
     __tablename__ = "card_records"
     __table_args__ = (
         UniqueConstraint(
-            "word_entry_id", "card_type", "tier", name="uq_card_record_entry_type_tier"
+            "word_entry_id",
+            "card_type",
+            "variant_key",
+            name="uq_card_record_entry_type_variant",
         ),
         Index("ix_card_records_word_entry_id", "word_entry_id"),
         Index("ix_card_records_deck_id", "deck_id"),
         Index("ix_card_records_card_type", "card_type"),
         Index("ix_card_records_is_active", "is_active"),
         Index("ix_card_records_tier", "tier"),
+        Index("ix_card_records_variant_key", "variant_key"),
         Index("ix_card_records_deck_type", "deck_id", "card_type"),
         Index("ix_card_records_deck_active", "deck_id", "is_active"),
     )
@@ -833,6 +837,10 @@ class CardRecord(Base, TimestampMixin):
         Integer,
         nullable=True,
     )
+    variant_key: Mapped[str] = mapped_column(
+        String(100),
+        nullable=False,
+    )
 
     # Content (JSONB)
     front_content: Mapped[dict] = mapped_column(
@@ -860,7 +868,7 @@ class CardRecord(Base, TimestampMixin):
     )
 
     def __repr__(self) -> str:
-        return f"<CardRecord(id={self.id}, type={self.card_type}, tier={self.tier})>"
+        return f"<CardRecord(id={self.id}, type={self.card_type}, variant_key={self.variant_key})>"
 
 
 # ============================================================================
