@@ -103,7 +103,7 @@ export function NounDeclensionTable({ grammarData }: NounDeclensionTableProps) {
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
-                  <TableHead className="h-auto bg-muted/50 px-4 py-2 font-bold" />
+                  <TableHead className="h-auto min-w-[140px] bg-muted/50 px-4 py-2 font-bold" />
                   <TableHead className="h-auto bg-muted/50 px-4 py-2 text-center font-bold">
                     {t('grammar.nounDeclension.singular')}
                   </TableHead>
@@ -115,7 +115,7 @@ export function NounDeclensionTable({ grammarData }: NounDeclensionTableProps) {
               <TableBody>
                 {caseData.map(({ case: caseKey, singular, plural }) => (
                   <TableRow key={caseKey} className="hover:bg-transparent">
-                    <TableCell className="bg-muted/50 px-4 py-2 font-medium text-muted-foreground">
+                    <TableCell className="min-w-[140px] bg-muted/50 px-4 py-2 font-medium text-muted-foreground">
                       {t(`grammar.nounDeclension.cases.${caseKey}`)}
                     </TableCell>
                     <TableCell className="px-4 py-3 text-center text-foreground">
@@ -226,7 +226,7 @@ function GenderTable({ gender, data, na, t }: GenderTableProps) {
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
-              <TableHead className="h-auto bg-muted/50 px-4 py-2" />
+              <TableHead className="h-auto min-w-[140px] bg-muted/50 px-4 py-2" />
               <TableHead className="h-auto bg-muted/50 px-4 py-2 text-center">
                 {t('grammar.nounDeclension.singular')}
               </TableHead>
@@ -238,7 +238,7 @@ function GenderTable({ gender, data, na, t }: GenderTableProps) {
           <TableBody>
             {CASES.map((caseKey) => (
               <TableRow key={caseKey} className="hover:bg-transparent">
-                <TableCell className="bg-muted/50 px-4 py-2 font-medium text-muted-foreground">
+                <TableCell className="min-w-[140px] bg-muted/50 px-4 py-2 font-medium text-muted-foreground">
                   {t(`grammar.nounDeclension.cases.${caseKey}`)}
                 </TableCell>
                 <TableCell className="px-4 py-2 text-center text-foreground">

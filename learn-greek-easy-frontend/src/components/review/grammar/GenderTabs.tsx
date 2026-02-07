@@ -119,7 +119,7 @@ function GenderTable({ gender, data, na, t, isFlipped = true }: GenderTableProps
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
-              <TableHead className="h-auto bg-muted/50 px-4 py-2" />
+              <TableHead className="h-auto min-w-[140px] bg-muted/50 px-4 py-2" />
               <TableHead className="h-auto bg-muted/50 px-4 py-2 text-center">
                 {t('grammar.nounDeclension.singular')}
               </TableHead>
@@ -131,7 +131,7 @@ function GenderTable({ gender, data, na, t, isFlipped = true }: GenderTableProps
           <TableBody>
             {cases.map((caseKey) => (
               <TableRow key={caseKey} className="hover:bg-transparent">
-                <TableCell className="bg-muted/50 px-4 py-2 font-medium text-muted-foreground">
+                <TableCell className="min-w-[140px] bg-muted/50 px-4 py-2 font-medium text-muted-foreground">
                   {t(`grammar.nounDeclension.cases.${caseKey}`)}
                 </TableCell>
                 <TableCell
