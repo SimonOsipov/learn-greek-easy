@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { getLocalizedTranslation } from '@/lib/localeUtils';
 import type { WordEntryExampleSentence } from '@/services/wordEntryAPI';
 
 // ============================================
@@ -25,7 +26,7 @@ export interface ExamplesSectionProps {
 // ============================================
 
 export function ExamplesSection({ examples }: ExamplesSectionProps) {
-  const { t } = useTranslation('review');
+  const { t, i18n } = useTranslation('review');
 
   // Handle empty/null examples
   if (!examples || examples.length === 0) {
@@ -47,29 +48,31 @@ export function ExamplesSection({ examples }: ExamplesSectionProps) {
         <CardTitle className="text-lg">{t('grammar.examples.title')}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {examples.map((example, index) => (
-          <Card key={index} className="bg-muted/30 p-4 transition-colors hover:bg-muted/50">
-            {/* Context badge */}
-            {example.context && (
-              <Badge variant="outline" className="mb-2 text-xs">
-                {example.context}
-              </Badge>
-            )}
+        {examples.map((example, index) => {
+          const exampleTranslation = getLocalizedTranslation(
+            example.english,
+            example.russian,
+            i18n.language
+          );
+          return (
+            <Card key={index} className="bg-muted/30 p-4 transition-colors hover:bg-muted/50">
+              {/* Context badge */}
+              {example.context && (
+                <Badge variant="outline" className="mb-2 text-xs">
+                  {example.context}
+                </Badge>
+              )}
 
-            {/* Greek sentence */}
-            <p className="text-lg font-medium text-foreground">{example.greek}</p>
+              {/* Greek sentence */}
+              <p className="text-lg font-medium text-foreground">{example.greek}</p>
 
-            {/* English translation */}
-            {example.english && (
-              <p className="mt-2 text-sm text-muted-foreground">{example.english}</p>
-            )}
-
-            {/* Russian translation */}
-            {example.russian && (
-              <p className="mt-1 text-sm italic text-muted-foreground">{example.russian}</p>
-            )}
-          </Card>
-        ))}
+              {/* Locale-appropriate translation */}
+              {exampleTranslation && (
+                <p className="mt-2 text-sm text-muted-foreground">{exampleTranslation}</p>
+              )}
+            </Card>
+          );
+        })}
       </CardContent>
     </Card>
   );

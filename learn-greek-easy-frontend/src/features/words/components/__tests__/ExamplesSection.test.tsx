@@ -10,6 +10,7 @@
  */
 
 import { render, screen } from '@testing-library/react';
+import i18n from 'i18next';
 import { describe, it, expect } from 'vitest';
 
 import type { WordEntryExampleSentence } from '@/services/wordEntryAPI';
@@ -69,10 +70,12 @@ describe('ExamplesSection', () => {
       expect(screen.getByText('My house is small.')).toBeInTheDocument();
     });
 
-    it('displays Russian translation', () => {
+    it('displays locale-appropriate translation (English in en locale)', () => {
       render(<ExamplesSection examples={mockExamples} />);
-
-      expect(screen.getByText('Мой дом маленький.')).toBeInTheDocument();
+      // English locale: should show English translation
+      expect(screen.getByText('My house is small.')).toBeInTheDocument();
+      // Russian should NOT be rendered
+      expect(screen.queryByText('Мой дом маленький.')).not.toBeInTheDocument();
     });
 
     it('displays context badge when available', () => {
@@ -142,6 +145,31 @@ describe('ExamplesSection', () => {
       // The examples section should be inside a Card
       const card = screen.getByText('Examples').closest('[class*="card"]');
       expect(card).toBeInTheDocument();
+    });
+  });
+
+  describe('Locale-Aware Translation', () => {
+    it('displays Russian translation when locale is "ru"', async () => {
+      await i18n.changeLanguage('ru');
+      render(<ExamplesSection examples={mockExamples} />);
+      expect(screen.getByText('Мой дом маленький.')).toBeInTheDocument();
+      // English should NOT be rendered
+      expect(screen.queryByText('My house is small.')).not.toBeInTheDocument();
+      await i18n.changeLanguage('en'); // cleanup
+    });
+
+    it('falls back to English when Russian is missing and locale is "ru"', async () => {
+      await i18n.changeLanguage('ru');
+      const examplesWithoutRu = [
+        {
+          greek: 'Γεια σου!',
+          english: 'Hello!',
+          russian: undefined,
+        },
+      ];
+      render(<ExamplesSection examples={examplesWithoutRu} />);
+      expect(screen.getByText('Hello!')).toBeInTheDocument();
+      await i18n.changeLanguage('en'); // cleanup
     });
   });
 });

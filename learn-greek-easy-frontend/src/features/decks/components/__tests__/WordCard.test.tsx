@@ -11,6 +11,7 @@
  */
 
 import { render, screen, fireEvent } from '@testing-library/react';
+import i18n from 'i18next';
 import { describe, it, expect, vi } from 'vitest';
 
 import type { WordEntryResponse } from '@/services/wordEntryAPI';
@@ -208,6 +209,33 @@ describe('WordCard', () => {
 
       expect(screen.getByTestId('word-card')).toBeInTheDocument();
       expect(screen.queryByTestId('word-card-skeleton')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Locale-Aware Translation', () => {
+    it('shows Russian translation when locale is "ru"', async () => {
+      await i18n.changeLanguage('ru');
+      render(<WordCard wordEntry={mockWordEntry} />);
+      const translation = screen.getByTestId('word-card-translation');
+      expect(translation).toHaveTextContent('говорить');
+      await i18n.changeLanguage('en'); // cleanup
+    });
+
+    it('falls back to English when Russian is null and locale is "ru"', async () => {
+      await i18n.changeLanguage('ru');
+      const wordWithoutRu = { ...mockWordEntry, translation_ru: null };
+      render(<WordCard wordEntry={wordWithoutRu} />);
+      const translation = screen.getByTestId('word-card-translation');
+      expect(translation).toHaveTextContent('to speak, to talk');
+      await i18n.changeLanguage('en'); // cleanup
+    });
+
+    it('aria-label uses locale-aware translation', async () => {
+      await i18n.changeLanguage('ru');
+      render(<WordCard wordEntry={mockWordEntry} />);
+      const card = screen.getByTestId('word-card');
+      expect(card).toHaveAttribute('aria-label', 'μιλάω - говорить');
+      await i18n.changeLanguage('en'); // cleanup
     });
   });
 });
