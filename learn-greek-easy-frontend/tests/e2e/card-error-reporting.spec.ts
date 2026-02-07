@@ -1,7 +1,7 @@
 /**
  * E2E Test: Card Error Reporting
  *
- * Tests the card error reporting feature for both vocabulary flashcards and culture questions.
+ * Tests the card error reporting feature for both word entries and culture questions.
  * Verifies the report modal opens, validates input, and handles submission.
  *
  * These tests use the pre-authenticated learner user from auth.setup.ts.
@@ -11,82 +11,57 @@
  * the cached auth tokens since user UUIDs would change.
  */
 
+import * as fs from 'fs';
+
 import { test, expect, Page } from '@playwright/test';
 
+// Storage state path for learner (same as playwright.config.ts)
+const LEARNER_AUTH = 'playwright/.auth/learner.json';
+
 /**
- * Helper function to navigate to a flashcard review session.
- * Returns once the first flashcard is visible.
- * NOTE: Must select a V1 deck (with enabled review button), not V2 decks (word browser only).
+ * Get the API base URL from environment
  */
-async function navigateToFlashcardReview(page: Page): Promise<void> {
-  // Navigate to decks page
-  await page.goto('/decks');
-
-  // Wait for deck cards to load
-  const deckCard = page.locator('[data-testid="deck-card"]').first();
-  await expect(deckCard).toBeVisible({ timeout: 15000 });
-
-  // Click on a V1 vocabulary deck (not culture, not V2)
-  // Look for deck names like "Greek A1 Vocabulary" which are V1 decks
-  const v1VocabDeck = page.locator('[data-testid="deck-card"]').filter({
-    hasText: /A1 Vocabulary|A2 Vocabulary|B1 Vocabulary|Greek A1|Greek A2/i,
-  }).first();
-
-  const hasV1Deck = await v1VocabDeck.isVisible().catch(() => false);
-
-  if (hasV1Deck) {
-    await v1VocabDeck.click();
-  } else {
-    // Fallback: click any deck that is NOT a V2 test deck or culture deck
-    const regularDeck = page.locator('[data-testid="deck-card"]').filter({
-      hasNotText: /E2E V2|Word Entry/i,
-    }).filter({
-      hasNot: page.locator('[data-testid="culture-badge"]'),
-    }).first();
-    await expect(regularDeck).toBeVisible({ timeout: 5000 });
-    await regularDeck.click();
-  }
-
-  // Wait for deck detail page and verify review button is ENABLED
-  const reviewButton = page.getByRole('button', { name: /review|start/i }).first();
-  await expect(reviewButton).toBeVisible({ timeout: 5000 });
-  await expect(reviewButton).toBeEnabled({ timeout: 5000 });
-  await reviewButton.click();
-
-  // Wait for flashcard to be visible
-  const flashcard = page.locator('[data-testid="flashcard"]');
-  await expect(flashcard).toBeVisible({ timeout: 10000 });
+function getApiBaseUrl(): string {
+  return process.env.E2E_API_URL || process.env.VITE_API_URL || 'http://localhost:8000';
 }
 
 /**
- * Helper function to flip a flashcard and reveal the answer.
- *
- * Uses the same approach as flashcard-review.spec.ts which passes reliably.
+ * Read the learner's access token from the saved storageState file.
+ * This token was set during auth.setup.ts and is valid for API calls.
  */
-async function flipFlashcard(page: Page): Promise<void> {
-  // Wait for flashcard container to be visible
-  const flashcard = page.locator('[data-testid="flashcard"]');
-  await expect(flashcard).toBeVisible({ timeout: 5000 });
+function getLearnerAccessToken(): string | null {
+  try {
+    const authState = JSON.parse(fs.readFileSync(LEARNER_AUTH, 'utf-8'));
+    const authStorageEntry = authState.origins?.[0]?.localStorage?.find(
+      (item: { name: string; value: string }) => item.name === 'auth-storage'
+    );
+    if (authStorageEntry) {
+      const authData = JSON.parse(authStorageEntry.value);
+      return authData?.state?.token || null;
+    }
+  } catch {
+    // File might not exist or be invalid
+  }
+  return null;
+}
 
-  // Wait for the "Click to reveal" text which indicates card is ready but not flipped
-  const clickToReveal = page.getByText(/click to reveal/i);
-  await expect(clickToReveal).toBeVisible({ timeout: 5000 });
+// Deck IDs populated in beforeAll
+let v1DeckId: string;
+let v2DeckId: string;
 
-  // Click on the CardHeader to flip it (it has role="button" and onClick={onFlip})
-  // The flashcard container itself doesn't have a click handler
-  const cardHeader = flashcard.getByRole('button').first();
-  await cardHeader.click();
-
-  // Wait for the card to actually flip - the "Click to reveal" text should disappear
-  await expect(clickToReveal).not.toBeVisible({ timeout: 5000 });
-
-  // Verify rating buttons are visible (they transition from invisible to visible)
-  const ratingButton = page.getByRole('button', { name: /good|easy|hard|again/i }).first();
-  await expect(ratingButton).toBeVisible({ timeout: 5000 });
-
-  // Verify report-error-button is visible
-  const reportErrorButton = page.getByTestId('report-error-button');
-  await expect(reportErrorButton).toBeVisible({ timeout: 5000 });
+/**
+ * Helper function to navigate to the WordReferencePage for the first word in the V2 deck.
+ */
+async function navigateToWordReferencePage(page: Page): Promise<void> {
+  await page.goto(`/decks/${v2DeckId}`);
+  const deckDetail = page.locator('[data-testid="v2-deck-detail"]');
+  await expect(deckDetail).toBeVisible({ timeout: 15000 });
+  const wordCards = page.locator('[data-testid="word-card"]');
+  await expect(wordCards.first()).toBeVisible({ timeout: 10000 });
+  await wordCards.first().click();
+  await page.waitForURL(/\/decks\/.*\/words\//);
+  const referencePage = page.locator('[data-testid="word-reference-page"]');
+  await expect(referencePage).toBeVisible({ timeout: 10000 });
 }
 
 /**
@@ -136,71 +111,110 @@ async function navigateToCultureFeedback(page: Page): Promise<void> {
   await expect(feedback).toBeVisible({ timeout: 5000 });
 }
 
-test.describe('Card Error Reporting - Vocabulary Flashcards', () => {
-  test('CDERR-E2E-01: Report error button appears after flipping card', async ({ page }) => {
-    await navigateToFlashcardReview(page);
+// Use serial mode to ensure deck ID lookup happens only once and IDs are consistent
+test.describe.configure({ mode: 'serial' });
 
-    // Before flipping, report button should not be visible
-    await expect(page.getByTestId('report-error-button')).not.toBeVisible();
+test.describe('Card Error Reporting - Word Entry', () => {
+  test.beforeAll(async ({ request }) => {
+    const apiBaseUrl = getApiBaseUrl();
+    const accessToken = getLearnerAccessToken();
+    if (!accessToken) {
+      throw new Error(
+        '[FERR-E2E] Could not read learner access token from storageState. ' +
+          'Ensure auth.setup.ts ran successfully.'
+      );
+    }
 
-    // Flip the card
-    await flipFlashcard(page);
+    // Query existing decks to find V1 and V2 deck IDs (database is already seeded)
+    const response = await request.get(`${apiBaseUrl}/api/v1/decks?page_size=100`, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+    expect(response.ok()).toBe(true);
 
-    // Report error button should now be visible
+    const data = await response.json();
+    const decks = data.decks as Array<{ id: string; card_system: string; name: string }>;
+
+    const v1Deck = decks.find((d) => d.card_system === 'V1');
+    const v2Deck = decks.find((d) => d.card_system === 'V2');
+
+    if (!v1Deck) {
+      throw new Error(
+        '[FERR-E2E] No V1 deck found in database. ' +
+          `Available decks: ${decks.map((d) => `${d.name} (${d.card_system})`).join(', ')}`
+      );
+    }
+    if (!v2Deck) {
+      throw new Error(
+        '[FERR-E2E] No V2 deck found in database. ' +
+          `Available decks: ${decks.map((d) => `${d.name} (${d.card_system})`).join(', ')}`
+      );
+    }
+
+    v1DeckId = v1Deck.id;
+    v2DeckId = v2Deck.id;
+
+    console.log(
+      `[FERR-E2E] Found decks - V1: ${v1Deck.name} (${v1DeckId}), V2: ${v2Deck.name} (${v2DeckId})`
+    );
+  });
+
+  test('FERR-E2E-01: Report Error button visible on WordReferencePage', async ({ page }) => {
+    await navigateToWordReferencePage(page);
+
+    // Report error button should be visible on the word reference page
     await expect(page.getByTestId('report-error-button')).toBeVisible();
   });
 
-  test('CDERR-E2E-02: Report error modal opens and closes', async ({ page }) => {
-    await navigateToFlashcardReview(page);
-    await flipFlashcard(page);
+  test('FERR-E2E-02: Modal opens and closes', async ({ page }) => {
+    await navigateToWordReferencePage(page);
 
     // Click report error button
     await page.getByTestId('report-error-button').click();
 
-    // Modal should be visible
+    // Modal should be visible with expected elements
     await expect(page.getByRole('dialog')).toBeVisible();
     await expect(page.getByText('Report an Error')).toBeVisible();
+    await expect(page.locator('textarea')).toBeVisible();
+    await expect(page.getByRole('button', { name: /cancel/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /submit/i }).last()).toBeVisible();
 
-    // Close modal with X button (aria-label="Close")
+    // Close modal via Close button (aria-label)
     const closeButton = page.getByRole('button', { name: 'Close' });
     await expect(closeButton).toBeVisible({ timeout: 3000 });
     await closeButton.click();
 
-    // Modal should be hidden - add timeout for animation
+    // Modal should be hidden
     await expect(page.getByRole('dialog')).not.toBeVisible({ timeout: 5000 });
   });
 
-  test('CDERR-E2E-03: Report error requires minimum description length', async ({ page }) => {
-    await navigateToFlashcardReview(page);
-    await flipFlashcard(page);
+  test('FERR-E2E-03: Minimum description length validation', async ({ page }) => {
+    await navigateToWordReferencePage(page);
     await page.getByTestId('report-error-button').click();
 
     // Modal should be open
     await expect(page.getByRole('dialog')).toBeVisible();
 
-    // Type short description
+    // Type short description (5 chars, below 10 minimum)
     const textarea = page.locator('textarea');
     await textarea.fill('Short');
-
-    // Wait for character count to update (React re-render)
-    const characterCount = page.locator('text=/\\d+\\/1000/');
-    await expect(characterCount).toContainText('5/1000', { timeout: 5000 });
 
     // Submit button should be disabled when description is too short
     const submitButton = page.getByRole('button', { name: /submit/i }).last();
     await expect(submitButton).toBeDisabled({ timeout: 5000 });
   });
 
-  test('CDERR-E2E-04: Report error submits successfully', async ({ page }) => {
-    await navigateToFlashcardReview(page);
-    await flipFlashcard(page);
+  test('FERR-E2E-04: Successful submission', async ({ page }) => {
+    await navigateToWordReferencePage(page);
     await page.getByTestId('report-error-button').click();
 
     // Modal should be open
     await expect(page.getByRole('dialog')).toBeVisible();
 
-    // Type a valid description
-    const description = 'This is a test error report. The translation seems incorrect for this vocabulary card.';
+    // Type a valid description (>= 10 chars)
+    const description =
+      'This is a test error report. The translation seems incorrect for this word entry.';
     await page.locator('textarea').fill(description);
 
     // Submit button should be enabled
@@ -210,34 +224,101 @@ test.describe('Card Error Reporting - Vocabulary Flashcards', () => {
     // Submit the report
     await submitButton.click();
 
-    // Should close modal on successful submission OR show "yet to review" toast
-    // (If running against same seeded data, the card may already have a pending report)
-    const modalClosed = page.getByRole('dialog').waitFor({ state: 'hidden', timeout: 5000 }).then(() => 'closed');
-    const yetToReview = page.getByText(/yet to review/i).waitFor({ state: 'visible', timeout: 5000 }).then(() => 'yet-to-review');
+    // Handle both outcomes:
+    // - Modal closes on 201 success
+    // - "yet to review" toast on 409 duplicate
+    const modalClosed = page
+      .getByRole('dialog')
+      .waitFor({ state: 'hidden', timeout: 5000 })
+      .then(() => 'closed');
+    const yetToReview = page
+      .getByText(/yet to review/i)
+      .waitFor({ state: 'visible', timeout: 5000 })
+      .then(() => 'yet-to-review');
 
     const result = await Promise.race([modalClosed, yetToReview]);
-
-    // Either outcome proves the submission was processed correctly
     expect(['closed', 'yet-to-review']).toContain(result);
+
+    // Should still be on the word reference page
+    await expect(page.locator('[data-testid="word-reference-page"]')).toBeVisible();
   });
 
-  test('CDERR-E2E-05: Cancel button closes modal without submitting', async ({ page }) => {
-    await navigateToFlashcardReview(page);
-    await flipFlashcard(page);
+  test('FERR-E2E-05: Duplicate report prevention', async ({ page }) => {
+    await navigateToWordReferencePage(page);
+
+    // Submit first report (may succeed or be duplicate from previous test)
     await page.getByTestId('report-error-button').click();
-
-    // Modal should be open
     await expect(page.getByRole('dialog')).toBeVisible();
+    await page.locator('textarea').fill('First error report for duplicate detection test.');
+    const submitButton = page.getByRole('button', { name: /submit/i }).last();
+    await expect(submitButton).toBeEnabled();
+    await submitButton.click();
 
-    // Type something
-    await page.locator('textarea').fill('This is a description I will cancel');
+    // Wait for first submission to process
+    const firstModalClosed = page
+      .getByRole('dialog')
+      .waitFor({ state: 'hidden', timeout: 5000 })
+      .then(() => 'closed');
+    const firstYetToReview = page
+      .getByText(/yet to review/i)
+      .waitFor({ state: 'visible', timeout: 5000 })
+      .then(() => 'yet-to-review');
+    await Promise.race([firstModalClosed, firstYetToReview]);
 
-    // Click cancel
-    const cancelButton = page.getByRole('button', { name: /cancel/i });
-    await cancelButton.click();
+    // Close modal if still open (e.g., after "yet to review" toast)
+    const dialogStillOpen = await page
+      .getByRole('dialog')
+      .isVisible()
+      .catch(() => false);
+    if (dialogStillOpen) {
+      const closeButton = page.getByRole('button', { name: 'Close' });
+      await closeButton.click();
+      await expect(page.getByRole('dialog')).not.toBeVisible({ timeout: 5000 });
+    }
 
-    // Modal should close
-    await expect(page.getByRole('dialog')).not.toBeVisible();
+    // Reopen modal and submit second report
+    await page.getByTestId('report-error-button').click();
+    await expect(page.getByRole('dialog')).toBeVisible();
+    await page.locator('textarea').fill('Second error report - should be duplicate.');
+    const submitButton2 = page.getByRole('button', { name: /submit/i }).last();
+    await expect(submitButton2).toBeEnabled();
+    await submitButton2.click();
+
+    // Second submission should show "yet to review" message
+    await expect(page.getByText(/yet to review/i)).toBeVisible({ timeout: 5000 });
+  });
+
+  test('FERR-E2E-06: V1 flashcard has no Report Error button', async ({ page }) => {
+    // Navigate to V1 deck
+    await page.goto(`/decks/${v1DeckId}`);
+    const deckDetail = page
+      .locator('[data-testid="deck-detail"]')
+      .or(page.locator('[data-testid="v1-deck-detail"]'));
+    await expect(deckDetail.first()).toBeVisible({ timeout: 10000 });
+
+    // Start review session
+    const reviewButton = page.locator('[data-testid="start-review-button"]');
+    await expect(reviewButton).toBeVisible({ timeout: 5000 });
+    await expect(reviewButton).toBeEnabled({ timeout: 5000 });
+    await reviewButton.click();
+
+    // Wait for flashcard to appear
+    const flashcard = page.locator('[data-testid="flashcard"]');
+    await expect(flashcard).toBeVisible({ timeout: 10000 });
+
+    // Flip the card to reveal the answer
+    const clickToReveal = page.getByText(/click to reveal/i);
+    await expect(clickToReveal).toBeVisible({ timeout: 5000 });
+    const cardHeader = flashcard.getByRole('button').first();
+    await cardHeader.click();
+    await expect(clickToReveal).not.toBeVisible({ timeout: 5000 });
+
+    // Verify rating buttons are visible (card is flipped)
+    const ratingButton = page.getByRole('button', { name: /good|easy|hard|again/i }).first();
+    await expect(ratingButton).toBeVisible({ timeout: 5000 });
+
+    // Report Error button should NOT be visible on V1 flashcards
+    await expect(page.getByTestId('report-error-button')).not.toBeVisible();
   });
 });
 
