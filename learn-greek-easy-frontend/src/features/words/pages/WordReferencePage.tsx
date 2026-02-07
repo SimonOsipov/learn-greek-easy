@@ -163,6 +163,12 @@ function AdverbFormsCard({ grammarData }: AdverbFormsCardProps) {
 // Main Component
 // ============================================
 
+const GENDER_ARTICLE_MAP: Record<string, string> = {
+  masculine: 'ο',
+  feminine: 'η',
+  neuter: 'το',
+};
+
 export function WordReferencePage() {
   const { t, i18n } = useTranslation(['deck', 'review']);
   const { deckId, wordId } = useParams<{ deckId: string; wordId: string }>();
@@ -195,6 +201,10 @@ export function WordReferencePage() {
 
   const grammarData = wordEntry.grammar_data;
   const partOfSpeech = wordEntry.part_of_speech;
+  const article =
+    partOfSpeech === 'noun' && grammarData && 'gender' in grammarData
+      ? GENDER_ARTICLE_MAP[grammarData.gender as string]
+      : undefined;
 
   // Render grammar section based on part of speech
   const renderGrammarSection = () => {
@@ -261,7 +271,10 @@ export function WordReferencePage() {
         </div>
 
         {/* Greek word (lemma) */}
-        <h1 className="text-4xl font-bold text-foreground sm:text-5xl">{wordEntry.lemma}</h1>
+        <h1 className="text-4xl font-bold text-foreground sm:text-5xl">
+          {article && <span className="mr-2 font-normal text-muted-foreground">{article}</span>}
+          {wordEntry.lemma}
+        </h1>
 
         {/* Pronunciation */}
         {wordEntry.pronunciation && (
@@ -302,7 +315,7 @@ export function WordReferencePage() {
                 className="cursor-not-allowed"
                 data-testid="practice-word-button"
               >
-                Practice this word
+                {t('deck:wordReference.practiceWord')}
               </Button>
             </span>
           </TooltipTrigger>
