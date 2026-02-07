@@ -4823,11 +4823,11 @@ class SeedService:
         # ========== Create V2 Nouns Deck ==========
         v2_nouns_deck = Deck(
             name_en="E2E V2 Nouns Deck (A1)",
-            name_el="E2E V2 Nouns Deck (A1)",
-            name_ru="E2E V2 Nouns Deck (A1)",
+            name_el="Βασικά Ελληνικά Ουσιαστικά",
+            name_ru="Основные греческие существительные",
             description_en="Test deck for V2 system with Greek nouns and declension data",
-            description_el="Test deck for V2 system with Greek nouns and declension data",
-            description_ru="Test deck for V2 system with Greek nouns and declension data",
+            description_el="Βασικά ουσιαστικά στα καθημερινά ελληνικά. Μάθετε κλίσεις, γένος και χρήση.",
+            description_ru="Основные существительные в повседневном греческом. Изучайте склонения, род и употребление.",
             level=DeckLevel.A1,
             is_active=True,
             is_premium=False,
@@ -4838,11 +4838,11 @@ class SeedService:
         # ========== Create V2 Verbs Deck ==========
         v2_verbs_deck = Deck(
             name_en="E2E V2 Verbs Deck (A2)",
-            name_el="E2E V2 Verbs Deck (A2)",
-            name_ru="E2E V2 Verbs Deck (A2)",
+            name_el="Βασικά Ελληνικά Ρήματα",
+            name_ru="Основные греческие глаголы",
             description_en="Test deck for V2 system with Greek verbs and conjugation data",
-            description_el="Test deck for V2 system with Greek verbs and conjugation data",
-            description_ru="Test deck for V2 system with Greek verbs and conjugation data",
+            description_el="Βασικά ρήματα για καθημερινή επικοινωνία. Κλίσεις, χρόνοι και πρακτικά παραδείγματα.",
+            description_ru="Основные глаголы для повседневного общения. Спряжения, времена и практические примеры.",
             level=DeckLevel.A2,
             is_active=True,
             is_premium=False,
@@ -4853,11 +4853,11 @@ class SeedService:
         # ========== Create V2 Mixed Deck ==========
         v2_mixed_deck = Deck(
             name_en="E2E V2 Mixed Deck (A2)",
-            name_el="E2E V2 Mixed Deck (A2)",
-            name_ru="E2E V2 Mixed Deck (A2)",
+            name_el="Βασικά Ελληνικά Επίθετα & Επιρρήματα",
+            name_ru="Основные греческие прилагательные и наречия",
             description_en="Test deck for V2 system with adjectives, adverbs, and phrases",
-            description_el="Test deck for V2 system with adjectives, adverbs, and phrases",
-            description_ru="Test deck for V2 system with adjectives, adverbs, and phrases",
+            description_el="Σημαντικά επίθετα και επιρρήματα για περιγραφικά ελληνικά. Μορφές γένους και βαθμοί σύγκρισης.",
+            description_ru="Важные прилагательные и наречия для описательного греческого. Формы рода и степени сравнения.",
             level=DeckLevel.A2,
             is_active=True,
             is_premium=False,

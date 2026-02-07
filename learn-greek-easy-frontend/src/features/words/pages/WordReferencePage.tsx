@@ -312,7 +312,7 @@ export function WordReferencePage() {
                 variant="default"
                 size="lg"
                 disabled
-                className="cursor-not-allowed"
+                className="min-w-[250px] cursor-not-allowed"
                 data-testid="practice-word-button"
               >
                 {t('deck:wordReference.practiceWord')}
