@@ -22,7 +22,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { getLocalizedTranslation } from '@/lib/localeUtils';
-import type { AdjectiveData, AdverbData, NounData, VerbData } from '@/types/grammar';
+import type { AdjectiveData, AdverbData, NounDataAny, VerbData } from '@/types/grammar';
 
 import {
   AdjectiveDeclensionTable,
@@ -227,7 +227,7 @@ export function WordReferencePage() {
       case 'verb':
         return <ConjugationTable grammarData={grammarData as VerbData} />;
       case 'noun':
-        return <NounDeclensionTable grammarData={grammarData as NounData} />;
+        return <NounDeclensionTable grammarData={grammarData as NounDataAny} />;
       case 'adjective':
         return <AdjectiveDeclensionTable grammarData={grammarData as AdjectiveData} />;
       case 'adverb':

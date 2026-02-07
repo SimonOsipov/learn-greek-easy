@@ -13,7 +13,7 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 
-import type { NounData, AdjectiveData } from '@/types/grammar';
+import type { NounData, NounDataV2, AdjectiveData } from '@/types/grammar';
 
 import { NounDeclensionTable, AdjectiveDeclensionTable } from '../DeclensionTable';
 
@@ -171,6 +171,73 @@ describe('NounDeclensionTable', () => {
       const naCells = screen.getAllByText('N/A');
       expect(naCells.length).toBeGreaterThan(0);
     });
+  });
+});
+
+// V2 nested format mock data
+const mockNounDataV2: NounDataV2 = {
+  gender: 'neuter',
+  declension_group: 'neuter_i',
+  cases: {
+    singular: {
+      nominative: 'το σπίτι',
+      genitive: 'του σπιτιού',
+      accusative: 'το σπίτι',
+    },
+    plural: {
+      nominative: 'τα σπίτια',
+      genitive: 'των σπιτιών',
+      accusative: 'τα σπίτια',
+    },
+  },
+};
+
+const mockNounDataV2WithVocative: NounDataV2 = {
+  gender: 'masculine',
+  cases: {
+    singular: {
+      nominative: 'ο δάσκαλος',
+      genitive: 'του δασκάλου',
+      accusative: 'τον δάσκαλο',
+      vocative: 'δάσκαλε',
+    },
+    plural: {
+      nominative: 'οι δάσκαλοι',
+      genitive: 'των δασκάλων',
+      accusative: 'τους δασκάλους',
+      vocative: 'δάσκαλοι',
+    },
+  },
+};
+
+describe('NounDeclensionTable - V2 nested format', () => {
+  it('renders V2 nested case data correctly', () => {
+    render(<NounDeclensionTable grammarData={mockNounDataV2} />);
+    // nominative and accusative singular are both 'το σπίτι'
+    expect(screen.getAllByText('το σπίτι').length).toBe(2);
+    expect(screen.getByText('του σπιτιού')).toBeInTheDocument();
+    // nominative and accusative plural are both 'τα σπίτια'
+    expect(screen.getAllByText('τα σπίτια').length).toBe(2);
+    expect(screen.getByText('των σπιτιών')).toBeInTheDocument();
+  });
+
+  it('shows N/A for missing vocative in V2 data', () => {
+    render(<NounDeclensionTable grammarData={mockNounDataV2} />);
+    // V2 data without vocative should show N/A for vocative row
+    const cells = screen.getAllByText('N/A');
+    expect(cells.length).toBeGreaterThanOrEqual(2); // vocative singular + plural
+  });
+
+  it('renders V2 data with vocative correctly', () => {
+    render(<NounDeclensionTable grammarData={mockNounDataV2WithVocative} />);
+    expect(screen.getByText('δάσκαλε')).toBeInTheDocument();
+    expect(screen.getByText('δάσκαλοι')).toBeInTheDocument();
+  });
+
+  it('displays correct gender badge for V2 data', () => {
+    render(<NounDeclensionTable grammarData={mockNounDataV2} />);
+    // "neuter" gender should render
+    expect(screen.getByText(/neuter/i)).toBeInTheDocument();
   });
 });
 
