@@ -11,6 +11,8 @@ any edge-case issues during the rename.
 
 from typing import Sequence, Union
 
+import sqlalchemy as sa
+
 from alembic import op
 
 # revision identifiers, used by Alembic.
@@ -24,9 +26,19 @@ def upgrade() -> None:
     """Truncate card_error_reports and rename VOCABULARY -> WORD."""
     op.execute("TRUNCATE TABLE card_error_reports")
     op.execute("ALTER TYPE carderrorcardtype RENAME VALUE 'VOCABULARY' TO 'WORD'")
+    op.alter_column(
+        "card_error_reports",
+        "card_type",
+        comment="Type of card: word (Card) or culture (CultureQuestion)",
+    )
 
 
 def downgrade() -> None:
     """Truncate card_error_reports and rename WORD -> VOCABULARY."""
     op.execute("TRUNCATE TABLE card_error_reports")
     op.execute("ALTER TYPE carderrorcardtype RENAME VALUE 'WORD' TO 'VOCABULARY'")
+    op.alter_column(
+        "card_error_reports",
+        "card_type",
+        comment="Type of card: vocabulary (Card) or culture (CultureQuestion)",
+    )
