@@ -115,6 +115,7 @@ class AdverbDataDict(TypedDict, total=False):
 class ExampleDict(TypedDict):
     """Structured example for a vocabulary card."""
 
+    id: NotRequired[str]
     greek: str  # Required
     english: NotRequired[str]
     russian: NotRequired[str]
@@ -149,29 +150,51 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         "back_text_ru": "привет",
         "examples": [
             {
+                "id": "ex_geia1",
                 "greek": "Γεια, πώς είσαι;",
                 "english": "Hi, how are you?",
                 "russian": "Привет, как дела?",
             },
-            {"greek": "Γεια σου, Μαρία!", "english": "Hi, Maria!", "russian": "Привет, Мария!"},
+            {
+                "id": "ex_geia2",
+                "greek": "Γεια σου, Μαρία!",
+                "english": "Hi, Maria!",
+                "russian": "Привет, Мария!",
+            },
         ],
     },  # interjection
     "ναι": {
         "back_text_ru": "да",
         "examples": [
             {
+                "id": "ex_nai1",
                 "greek": "Ναι, θέλω καφέ.",
                 "english": "Yes, I want coffee.",
                 "russian": "Да, я хочу кофе.",
             },
-            {"greek": "Ναι, σωστά!", "english": "Yes, correct!", "russian": "Да, правильно!"},
+            {
+                "id": "ex_nai2",
+                "greek": "Ναι, σωστά!",
+                "english": "Yes, correct!",
+                "russian": "Да, правильно!",
+            },
         ],
     },  # interjection
     "όχι": {
         "back_text_ru": "нет",
         "examples": [
-            {"greek": "Όχι, ευχαριστώ.", "english": "No, thank you.", "russian": "Нет, спасибо."},
-            {"greek": "Όχι, δεν μπορώ.", "english": "No, I can't.", "russian": "Нет, я не могу."},
+            {
+                "id": "ex_ochi1",
+                "greek": "Όχι, ευχαριστώ.",
+                "english": "No, thank you.",
+                "russian": "Нет, спасибо.",
+            },
+            {
+                "id": "ex_ochi2",
+                "greek": "Όχι, δεν μπορώ.",
+                "english": "No, I can't.",
+                "russian": "Нет, я не могу.",
+            },
         ],
     },  # interjection
     "ευχαριστώ": {
@@ -213,12 +236,14 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
         "examples": [
             {
+                "id": "ex_efcharisto1",
                 "greek": "Σε ευχαριστώ πολύ για τη βοήθεια.",
                 "english": "Thank you very much for your help.",
                 "russian": "Большое спасибо за помощь.",
                 "tense": "present",
             },
             {
+                "id": "ex_efcharisto2",
                 "greek": "Τον ευχαρίστησα για το δώρο.",
                 "english": "I thanked him for the gift.",
                 "russian": "Я поблагодарил его за подарок.",
@@ -265,12 +290,14 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
         "examples": [
             {
+                "id": "ex_parakalo1",
                 "greek": "Παρακαλώ, κάθισε εδώ.",
                 "english": "Please, sit here.",
                 "russian": "Пожалуйста, садись сюда.",
                 "tense": "present",
             },
             {
+                "id": "ex_parakalo2",
                 "greek": "Τον παρακάλεσα να με βοηθήσει.",
                 "english": "I asked him to help me.",
                 "russian": "Я попросил его помочь мне.",
@@ -293,11 +320,13 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
         "examples": [
             {
+                "id": "ex_nero1",
                 "greek": "Θέλω ένα ποτήρι νερό.",
                 "english": "I want a glass of water.",
                 "russian": "Я хочу стакан воды.",
             },
             {
+                "id": "ex_nero2",
                 "greek": "Το νερό είναι κρύο.",
                 "english": "The water is cold.",
                 "russian": "Вода холодная.",
@@ -319,11 +348,13 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
         "examples": [
             {
+                "id": "ex_psomi1",
                 "greek": "Αγόρασα φρέσκο ψωμί.",
                 "english": "I bought fresh bread.",
                 "russian": "Я купил свежий хлеб.",
             },
             {
+                "id": "ex_psomi2",
                 "greek": "Θέλεις ψωμί με βούτυρο;",
                 "english": "Do you want bread with butter?",
                 "russian": "Хочешь хлеб с маслом?",
@@ -345,22 +376,30 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
         "examples": [
             {
+                "id": "ex_spiti1",
                 "greek": "Το σπίτι μου είναι κοντά.",
                 "english": "My house is nearby.",
                 "russian": "Мой дом близко.",
             },
-            {"greek": "Πάμε σπίτι!", "english": "Let's go home!", "russian": "Пойдем домой!"},
+            {
+                "id": "ex_spiti2",
+                "greek": "Πάμε σπίτι!",
+                "english": "Let's go home!",
+                "russian": "Пойдем домой!",
+            },
         ],
     },
     "καλημέρα": {
         "back_text_ru": "доброе утро",
         "examples": [
             {
+                "id": "ex_kalimera1",
                 "greek": "Καλημέρα, τι κάνεις;",
                 "english": "Good morning, how are you?",
                 "russian": "Доброе утро, как дела?",
             },
             {
+                "id": "ex_kalimera2",
                 "greek": "Καλημέρα σας!",
                 "english": "Good morning! (formal)",
                 "russian": "Доброе утро! (вежливо)",
@@ -371,11 +410,13 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         "back_text_ru": "спокойной ночи",
         "examples": [
             {
+                "id": "ex_kalinychta1",
                 "greek": "Καληνύχτα, όνειρα γλυκά!",
                 "english": "Good night, sweet dreams!",
                 "russian": "Спокойной ночи, сладких снов!",
             },
             {
+                "id": "ex_kalinychta2",
                 "greek": "Πάω για ύπνο. Καληνύχτα!",
                 "english": "I'm going to sleep. Good night!",
                 "russian": "Я иду спать. Спокойной ночи!",
@@ -400,11 +441,13 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
         "examples": [
             {
+                "id": "ex_douleia1",
                 "greek": "Πάω στη δουλειά κάθε μέρα.",
                 "english": "I go to work every day.",
                 "russian": "Я хожу на работу каждый день.",
             },
             {
+                "id": "ex_douleia2",
                 "greek": "Έχω πολλή δουλειά σήμερα.",
                 "english": "I have a lot of work today.",
                 "russian": "У меня много работы сегодня.",
@@ -426,11 +469,13 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
         "examples": [
             {
+                "id": "ex_oikogeneia1",
                 "greek": "Η οικογένειά μου μένει στην Αθήνα.",
                 "english": "My family lives in Athens.",
                 "russian": "Моя семья живет в Афинах.",
             },
             {
+                "id": "ex_oikogeneia2",
                 "greek": "Αγαπώ την οικογένειά μου.",
                 "english": "I love my family.",
                 "russian": "Я люблю свою семью.",
@@ -452,11 +497,13 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
         "examples": [
             {
+                "id": "ex_filos1",
                 "greek": "Ο Γιάννης είναι ο καλύτερος φίλος μου.",
                 "english": "Yannis is my best friend.",
                 "russian": "Яннис - мой лучший друг.",
             },
             {
+                "id": "ex_filos2",
                 "greek": "Βλέπω τους φίλους μου το Σάββατο.",
                 "english": "I see my friends on Saturday.",
                 "russian": "Я вижусь с друзьями в субботу.",
@@ -502,12 +549,14 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
         "examples": [
             {
+                "id": "ex_agapo1",
                 "greek": "Σε αγαπώ πολύ.",
                 "english": "I love you very much.",
                 "russian": "Я тебя очень люблю.",
                 "tense": "present",
             },
             {
+                "id": "ex_agapo2",
                 "greek": "Την αγάπησα από την πρώτη στιγμή.",
                 "english": "I loved her from the first moment.",
                 "russian": "Я полюбил ее с первого момента.",
@@ -554,12 +603,14 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
         "examples": [
             {
+                "id": "ex_thelo1",
                 "greek": "Θέλω να μάθω ελληνικά.",
                 "english": "I want to learn Greek.",
                 "russian": "Я хочу выучить греческий.",
                 "tense": "present",
             },
             {
+                "id": "ex_thelo2",
                 "greek": "Ήθελα να σου πω κάτι.",
                 "english": "I wanted to tell you something.",
                 "russian": "Я хотел тебе кое-что сказать.",
@@ -606,12 +657,14 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
         "examples": [
             {
+                "id": "ex_mporo1",
                 "greek": "Μπορώ να σε βοηθήσω.",
                 "english": "I can help you.",
                 "russian": "Я могу тебе помочь.",
                 "tense": "present",
             },
             {
+                "id": "ex_mporo2",
                 "greek": "Δεν μπόρεσα να έρθω χθες.",
                 "english": "I couldn't come yesterday.",
                 "russian": "Я не смог прийти вчера.",
@@ -658,12 +711,14 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
         "examples": [
             {
+                "id": "ex_prepei1",
                 "greek": "Πρέπει να φύγω τώρα.",
                 "english": "I must leave now.",
                 "russian": "Мне нужно уйти сейчас.",
                 "tense": "present",
             },
             {
+                "id": "ex_prepei2",
                 "greek": "Έπρεπε να το είχα πει νωρίτερα.",
                 "english": "I should have said it earlier.",
                 "russian": "Мне надо было сказать это раньше.",
@@ -686,11 +741,13 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
         "examples": [
             {
+                "id": "ex_chronia1",
                 "greek": "Μένω εδώ πέντε χρόνια.",
                 "english": "I have been living here for five years.",
                 "russian": "Я живу здесь пять лет.",
             },
             {
+                "id": "ex_chronia2",
                 "greek": "Χρόνια πολλά!",
                 "english": "Happy birthday! / Many years!",
                 "russian": "С днем рождения! / Многие лета!",
@@ -705,11 +762,13 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
         "examples": [
             {
+                "id": "ex_simera1",
                 "greek": "Σήμερα είναι Δευτέρα.",
                 "english": "Today is Monday.",
                 "russian": "Сегодня понедельник.",
             },
             {
+                "id": "ex_simera2",
                 "greek": "Τι θα κάνεις σήμερα;",
                 "english": "What will you do today?",
                 "russian": "Что ты будешь делать сегодня?",
@@ -724,11 +783,13 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
         "examples": [
             {
+                "id": "ex_avrio1",
                 "greek": "Αύριο θα πάω στη θάλασσα.",
                 "english": "Tomorrow I will go to the sea.",
                 "russian": "Завтра я пойду на море.",
             },
             {
+                "id": "ex_avrio2",
                 "greek": "Τα λέμε αύριο!",
                 "english": "See you tomorrow!",
                 "russian": "Увидимся завтра!",
@@ -753,11 +814,13 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
         "examples": [
             {
+                "id": "ex_syzitisi1",
                 "greek": "Είχαμε μια ενδιαφέρουσα συζήτηση.",
                 "english": "We had an interesting discussion.",
                 "russian": "У нас была интересная дискуссия.",
             },
             {
+                "id": "ex_syzitisi2",
                 "greek": "Η συζήτηση κράτησε δύο ώρες.",
                 "english": "The discussion lasted two hours.",
                 "russian": "Обсуждение длилось два часа.",
@@ -779,11 +842,13 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
         "examples": [
             {
+                "id": "ex_apofasi1",
                 "greek": "Πήρα μια σημαντική απόφαση.",
                 "english": "I made an important decision.",
                 "russian": "Я принял важное решение.",
             },
             {
+                "id": "ex_apofasi2",
                 "greek": "Η απόφαση είναι δική σου.",
                 "english": "The decision is yours.",
                 "russian": "Решение за тобой.",
@@ -805,11 +870,13 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
         "examples": [
             {
+                "id": "ex_empeiria1",
                 "greek": "Έχει πολλή εμπειρία στη δουλειά.",
                 "english": "He has a lot of work experience.",
                 "russian": "У него большой опыт работы.",
             },
             {
+                "id": "ex_empeiria2",
                 "greek": "Ήταν μια μοναδική εμπειρία.",
                 "english": "It was a unique experience.",
                 "russian": "Это был уникальный опыт.",
@@ -855,12 +922,14 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
         "examples": [
             {
+                "id": "ex_prospatho1",
                 "greek": "Προσπαθώ να μάθω ελληνικά κάθε μέρα.",
                 "english": "I try to learn Greek every day.",
                 "russian": "Я стараюсь учить греческий каждый день.",
                 "tense": "present",
             },
             {
+                "id": "ex_prospatho2",
                 "greek": "Προσπάθησε να καταλάβει το πρόβλημα.",
                 "english": "He tried to understand the problem.",
                 "russian": "Он попытался понять проблему.",
@@ -907,12 +976,14 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
         "examples": [
             {
+                "id": "ex_epitynchano1",
                 "greek": "Θέλω να επιτύχω τους στόχους μου.",
                 "english": "I want to achieve my goals.",
                 "russian": "Я хочу достичь своих целей.",
                 "tense": "present",
             },
             {
+                "id": "ex_epitynchano2",
                 "greek": "Επέτυχε μεγάλη επιτυχία στην καριέρα του.",
                 "english": "He achieved great success in his career.",
                 "russian": "Он добился большого успеха в карьере.",
@@ -959,12 +1030,14 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
         "examples": [
             {
+                "id": "ex_anaptyso1",
                 "greek": "Αναπτύσσουμε νέα προϊόντα.",
                 "english": "We are developing new products.",
                 "russian": "Мы разрабатываем новые продукты.",
                 "tense": "present",
             },
             {
+                "id": "ex_anaptyso2",
                 "greek": "Η εταιρεία ανέπτυξε καινοτόμες λύσεις.",
                 "english": "The company developed innovative solutions.",
                 "russian": "Компания разработала инновационные решения.",
@@ -987,11 +1060,13 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
         "examples": [
             {
+                "id": "ex_katastasi1",
                 "greek": "Η κατάσταση είναι δύσκολη.",
                 "english": "The situation is difficult.",
                 "russian": "Ситуация сложная.",
             },
             {
+                "id": "ex_katastasi2",
                 "greek": "Πρέπει να βελτιώσουμε την κατάσταση.",
                 "english": "We need to improve the situation.",
                 "russian": "Нам нужно улучшить положение.",
@@ -1013,11 +1088,13 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
         "examples": [
             {
+                "id": "ex_schesi1",
                 "greek": "Έχουμε καλή σχέση με τους γείτονες.",
                 "english": "We have a good relationship with the neighbors.",
                 "russian": "У нас хорошие отношения с соседями.",
             },
             {
+                "id": "ex_schesi2",
                 "greek": "Ποια είναι η σχέση αυτών των δύο θεμάτων;",
                 "english": "What is the connection between these two topics?",
                 "russian": "Какая связь между этими двумя темами?",
@@ -1039,11 +1116,13 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
         "examples": [
             {
+                "id": "ex_efkairia1",
                 "greek": "Αυτή είναι μια μεγάλη ευκαιρία.",
                 "english": "This is a great opportunity.",
                 "russian": "Это отличная возможность.",
             },
             {
+                "id": "ex_efkairia2",
                 "greek": "Μη χάσεις αυτή την ευκαιρία!",
                 "english": "Don't miss this chance!",
                 "russian": "Не упусти эту возможность!",
@@ -1065,11 +1144,13 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
         "examples": [
             {
+                "id": "ex_provlima1",
                 "greek": "Υπάρχει ένα πρόβλημα με τον υπολογιστή.",
                 "english": "There is a problem with the computer.",
                 "russian": "Есть проблема с компьютером.",
             },
             {
+                "id": "ex_provlima2",
                 "greek": "Θα λύσουμε το πρόβλημα μαζί.",
                 "english": "We will solve the problem together.",
                 "russian": "Мы решим проблему вместе.",
@@ -1094,11 +1175,13 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
         "examples": [
             {
+                "id": "ex_diapragmatefsi1",
                 "greek": "Οι διαπραγματεύσεις διήρκεσαν πολλές ώρες.",
                 "english": "The negotiations lasted many hours.",
                 "russian": "Переговоры длились много часов.",
             },
             {
+                "id": "ex_diapragmatefsi2",
                 "greek": "Είμαστε σε διαπραγμάτευση με την εταιρεία.",
                 "english": "We are in negotiation with the company.",
                 "russian": "Мы ведем переговоры с компанией.",
@@ -1120,11 +1203,13 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
         "examples": [
             {
+                "id": "ex_symfonia1",
                 "greek": "Υπογράψαμε τη συμφωνία.",
                 "english": "We signed the agreement.",
                 "russian": "Мы подписали соглашение.",
             },
             {
+                "id": "ex_symfonia2",
                 "greek": "Καταλήξαμε σε συμφωνία.",
                 "english": "We reached an agreement.",
                 "russian": "Мы пришли к соглашению.",
@@ -1146,11 +1231,13 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
         "examples": [
             {
+                "id": "ex_analysi1",
                 "greek": "Η ανάλυση των δεδομένων είναι απαραίτητη.",
                 "english": "Data analysis is essential.",
                 "russian": "Анализ данных необходим.",
             },
             {
+                "id": "ex_analysi2",
                 "greek": "Κάναμε λεπτομερή ανάλυση του προβλήματος.",
                 "english": "We did a detailed analysis of the problem.",
                 "russian": "Мы провели детальный анализ проблемы.",
@@ -1172,11 +1259,13 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
         "examples": [
             {
+                "id": "ex_epicheirisi1",
                 "greek": "Ξεκίνησε τη δική του επιχείρηση.",
                 "english": "He started his own business.",
                 "russian": "Он открыл свой бизнес.",
             },
             {
+                "id": "ex_epicheirisi2",
                 "greek": "Η επιχείρηση αναπτύσσεται γρήγορα.",
                 "english": "The business is growing quickly.",
                 "russian": "Предприятие быстро развивается.",
@@ -1198,11 +1287,13 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
         "examples": [
             {
+                "id": "ex_stratigiki1",
                 "greek": "Χρειαζόμαστε μια νέα στρατηγική.",
                 "english": "We need a new strategy.",
                 "russian": "Нам нужна новая стратегия.",
             },
             {
+                "id": "ex_stratigiki2",
                 "greek": "Η στρατηγική μάρκετινγκ ήταν επιτυχημένη.",
                 "english": "The marketing strategy was successful.",
                 "russian": "Маркетинговая стратегия была успешной.",
@@ -1224,11 +1315,13 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
         "examples": [
             {
+                "id": "ex_apotelesma1",
                 "greek": "Τα αποτελέσματα ήταν εντυπωσιακά.",
                 "english": "The results were impressive.",
                 "russian": "Результаты были впечатляющими.",
             },
             {
+                "id": "ex_apotelesma2",
                 "greek": "Περιμένουμε τα αποτελέσματα των εξετάσεων.",
                 "english": "We are waiting for the exam results.",
                 "russian": "Мы ждем результаты экзаменов.",
@@ -1250,11 +1343,13 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
         "examples": [
             {
+                "id": "ex_epirroi1",
                 "greek": "Έχει μεγάλη επιρροή στην ομάδα.",
                 "english": "He has a great influence on the team.",
                 "russian": "Он имеет большое влияние на команду.",
             },
             {
+                "id": "ex_epirroi2",
                 "greek": "Η τεχνολογία έχει επιρροή στη ζωή μας.",
                 "english": "Technology has an influence on our lives.",
                 "russian": "Технологии влияют на нашу жизнь.",
@@ -1276,11 +1371,13 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
         "examples": [
             {
+                "id": "ex_paragontas1",
                 "greek": "Ο χρόνος είναι σημαντικός παράγοντας.",
                 "english": "Time is an important factor.",
                 "russian": "Время - важный фактор.",
             },
             {
+                "id": "ex_paragontas2",
                 "greek": "Πολλοί παράγοντες επηρεάζουν την απόφαση.",
                 "english": "Many factors influence the decision.",
                 "russian": "Многие факторы влияют на решение.",
@@ -1302,11 +1399,13 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
         "examples": [
             {
+                "id": "ex_proteraiotita1",
                 "greek": "Η υγεία είναι η πρώτη προτεραιότητα.",
                 "english": "Health is the first priority.",
                 "russian": "Здоровье - первый приоритет.",
             },
             {
+                "id": "ex_proteraiotita2",
                 "greek": "Πρέπει να καθορίσουμε τις προτεραιότητες.",
                 "english": "We need to set the priorities.",
                 "russian": "Нам нужно определить приоритеты.",
@@ -1328,11 +1427,13 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
         "examples": [
             {
+                "id": "ex_axiologisi1",
                 "greek": "Η αξιολόγηση της απόδοσης είναι σημαντική.",
                 "english": "Performance evaluation is important.",
                 "russian": "Оценка эффективности важна.",
             },
             {
+                "id": "ex_axiologisi2",
                 "greek": "Κάναμε αξιολόγηση του προγράμματος.",
                 "english": "We did an evaluation of the program.",
                 "russian": "Мы провели оценку программы.",
@@ -1357,11 +1458,13 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
         "examples": [
             {
+                "id": "ex_diafaneia1",
                 "greek": "Η διαφάνεια είναι απαραίτητη στη δημόσια διοίκηση.",
                 "english": "Transparency is essential in public administration.",
                 "russian": "Прозрачность необходима в государственном управлении.",
             },
             {
+                "id": "ex_diafaneia2",
                 "greek": "Απαιτούμε πλήρη διαφάνεια στις διαδικασίες.",
                 "english": "We demand full transparency in the procedures.",
                 "russian": "Мы требуем полной прозрачности в процедурах.",
@@ -1383,11 +1486,13 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
         "examples": [
             {
+                "id": "ex_aeiforia1",
                 "greek": "Η αειφορία είναι προτεραιότητα για το περιβάλλον.",
                 "english": "Sustainability is a priority for the environment.",
                 "russian": "Устойчивое развитие - приоритет для окружающей среды.",
             },
             {
+                "id": "ex_aeiforia2",
                 "greek": "Προωθούμε πολιτικές αειφορίας.",
                 "english": "We promote sustainability policies.",
                 "russian": "Мы продвигаем политику устойчивого развития.",
@@ -1409,11 +1514,13 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
         "examples": [
             {
+                "id": "ex_diakyvernisi1",
                 "greek": "Η χρηστή διακυβέρνηση ενισχύει την εμπιστοσύνη.",
                 "english": "Good governance strengthens trust.",
                 "russian": "Хорошее управление укрепляет доверие.",
             },
             {
+                "id": "ex_diakyvernisi2",
                 "greek": "Η εταιρική διακυβέρνηση έχει βελτιωθεί.",
                 "english": "Corporate governance has improved.",
                 "russian": "Корпоративное управление улучшилось.",
@@ -1435,11 +1542,13 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
         "examples": [
             {
+                "id": "ex_antikeimenikotita1",
                 "greek": "Η αντικειμενικότητα είναι σημαντική στην έρευνα.",
                 "english": "Objectivity is important in research.",
                 "russian": "Объективность важна в исследованиях.",
             },
             {
+                "id": "ex_antikeimenikotita2",
                 "greek": "Προσπαθούμε να διατηρήσουμε την αντικειμενικότητα.",
                 "english": "We try to maintain objectivity.",
                 "russian": "Мы стараемся сохранять объективность.",
@@ -1461,11 +1570,13 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
         "examples": [
             {
+                "id": "ex_ypokeimenikotita1",
                 "greek": "Η υποκειμενικότητα επηρεάζει την κρίση μας.",
                 "english": "Subjectivity affects our judgment.",
                 "russian": "Субъективность влияет на наше суждение.",
             },
             {
+                "id": "ex_ypokeimenikotita2",
                 "greek": "Πρέπει να αναγνωρίσουμε την υποκειμενικότητά μας.",
                 "english": "We must recognize our subjectivity.",
                 "russian": "Мы должны признать нашу субъективность.",
@@ -1504,11 +1615,13 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
         "examples": [
             {
+                "id": "ex_diepistimonikos1",
                 "greek": "Η έρευνα απαιτεί διεπιστημονική προσέγγιση.",
                 "english": "The research requires an interdisciplinary approach.",
                 "russian": "Исследование требует междисциплинарного подхода.",
             },
             {
+                "id": "ex_diepistimonikos2",
                 "greek": "Συμμετέχω σε ένα διεπιστημονικό πρόγραμμα.",
                 "english": "I participate in an interdisciplinary program.",
                 "russian": "Я участвую в междисциплинарной программе.",
@@ -1530,11 +1643,13 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
         "examples": [
             {
+                "id": "ex_polyplokotita1",
                 "greek": "Η πολυπλοκότητα του θέματος απαιτεί χρόνο.",
                 "english": "The complexity of the topic requires time.",
                 "russian": "Сложность темы требует времени.",
             },
             {
+                "id": "ex_polyplokotita2",
                 "greek": "Κατανοούμε την πολυπλοκότητα της κατάστασης.",
                 "english": "We understand the complexity of the situation.",
                 "russian": "Мы понимаем сложность ситуации.",
@@ -1556,11 +1671,13 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
         "examples": [
             {
+                "id": "ex_ensomatosi1",
                 "greek": "Η ενσωμάτωση νέων τεχνολογιών είναι απαραίτητη.",
                 "english": "The integration of new technologies is essential.",
                 "russian": "Интеграция новых технологий необходима.",
             },
             {
+                "id": "ex_ensomatosi2",
                 "greek": "Προχωρήσαμε στην ενσωμάτωση των δύο τμημάτων.",
                 "english": "We proceeded with the integration of the two departments.",
                 "russian": "Мы провели интеграцию двух отделов.",
@@ -1582,11 +1699,13 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
         "examples": [
             {
+                "id": "ex_diaforopoiisi1",
                 "greek": "Η διαφοροποίηση των προϊόντων είναι στρατηγική.",
                 "english": "Product differentiation is strategic.",
                 "russian": "Дифференциация продуктов - это стратегия.",
             },
             {
+                "id": "ex_diaforopoiisi2",
                 "greek": "Υπάρχει διαφοροποίηση μεταξύ των δύο μεθόδων.",
                 "english": "There is a differentiation between the two methods.",
                 "russian": "Существует различие между двумя методами.",
@@ -1608,11 +1727,13 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
         "examples": [
             {
+                "id": "ex_syneisfora1",
                 "greek": "Η συνεισφορά του στην επιστήμη είναι μεγάλη.",
                 "english": "His contribution to science is significant.",
                 "russian": "Его вклад в науку значителен.",
             },
             {
+                "id": "ex_syneisfora2",
                 "greek": "Εκτιμούμε τη συνεισφορά κάθε μέλους.",
                 "english": "We appreciate the contribution of each member.",
                 "russian": "Мы ценим вклад каждого члена.",
@@ -1637,11 +1758,13 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
         "examples": [
             {
+                "id": "ex_metamonternismos1",
                 "greek": "Ο μεταμοντερνισμός αμφισβητεί τις μεγάλες αφηγήσεις.",
                 "english": "Postmodernism challenges the grand narratives.",
                 "russian": "Постмодернизм оспаривает великие нарративы.",
             },
             {
+                "id": "ex_metamonternismos2",
                 "greek": "Η επιρροή του μεταμοντερνισμού στην τέχνη είναι εμφανής.",
                 "english": "The influence of postmodernism on art is evident.",
                 "russian": "Влияние постмодернизма на искусство очевидно.",
@@ -1663,11 +1786,13 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
         "examples": [
             {
+                "id": "ex_epistimologia1",
                 "greek": "Η επιστημολογία μελετά τη φύση της γνώσης.",
                 "english": "Epistemology studies the nature of knowledge.",
                 "russian": "Эпистемология изучает природу знания.",
             },
             {
+                "id": "ex_epistimologia2",
                 "greek": "Τα επιστημολογικά ερωτήματα είναι θεμελιώδη.",
                 "english": "Epistemological questions are fundamental.",
                 "russian": "Эпистемологические вопросы фундаментальны.",
@@ -1706,11 +1831,13 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
         "examples": [
             {
+                "id": "ex_ypervatikos1",
                 "greek": "Η υπερβατική φιλοσοφία εξερευνά τα όρια της εμπειρίας.",
                 "english": "Transcendental philosophy explores the limits of experience.",
                 "russian": "Трансцендентальная философия исследует границы опыта.",
             },
             {
+                "id": "ex_ypervatikos2",
                 "greek": "Είχε μια υπερβατική εμπειρία κατά τη διάρκεια του διαλογισμού.",
                 "english": "He had a transcendental experience during meditation.",
                 "russian": "Он пережил трансцендентный опыт во время медитации.",
@@ -1732,11 +1859,13 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
         "examples": [
             {
+                "id": "ex_dialektiki1",
                 "greek": "Η διαλεκτική είναι μέθοδος φιλοσοφικής ανάλυσης.",
                 "english": "Dialectics is a method of philosophical analysis.",
                 "russian": "Диалектика - это метод философского анализа.",
             },
             {
+                "id": "ex_dialektiki2",
                 "greek": "Η εγελιανή διαλεκτική βασίζεται στη σύνθεση αντιθέσεων.",
                 "english": "Hegelian dialectics is based on the synthesis of opposites.",
                 "russian": "Гегелевская диалектика основана на синтезе противоположностей.",
@@ -1775,11 +1904,13 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
         "examples": [
             {
+                "id": "ex_paradeigmatikos1",
                 "greek": "Αυτή η θεωρία αποτελεί παραδειγματική αλλαγή.",
                 "english": "This theory represents a paradigmatic shift.",
                 "russian": "Эта теория представляет собой парадигматический сдвиг.",
             },
             {
+                "id": "ex_paradeigmatikos2",
                 "greek": "Είναι παραδειγματικό παράδειγμα καινοτομίας.",
                 "english": "It is a paradigmatic example of innovation.",
                 "russian": "Это парадигматический пример инновации.",
@@ -1801,11 +1932,13 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
         "examples": [
             {
+                "id": "ex_apodomisi1",
                 "greek": "Η αποδόμηση αμφισβητεί τις δυαδικές αντιθέσεις.",
                 "english": "Deconstruction challenges binary oppositions.",
                 "russian": "Деконструкция оспаривает бинарные оппозиции.",
             },
             {
+                "id": "ex_apodomisi2",
                 "greek": "Ο Ντεριντά εισήγαγε την έννοια της αποδόμησης.",
                 "english": "Derrida introduced the concept of deconstruction.",
                 "russian": "Деррида ввел понятие деконструкции.",
@@ -1827,11 +1960,13 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
         "examples": [
             {
+                "id": "ex_ermineftiki1",
                 "greek": "Η ερμηνευτική ασχολείται με την ερμηνεία κειμένων.",
                 "english": "Hermeneutics deals with the interpretation of texts.",
                 "russian": "Герменевтика занимается интерпретацией текстов.",
             },
             {
+                "id": "ex_ermineftiki2",
                 "greek": "Η φιλοσοφική ερμηνευτική επηρέασε τις ανθρωπιστικές επιστήμες.",
                 "english": "Philosophical hermeneutics influenced the humanities.",
                 "russian": "Философская герменевтика повлияла на гуманитарные науки.",
@@ -1853,11 +1988,13 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
         "examples": [
             {
+                "id": "ex_fenomenologia1",
                 "greek": "Η φαινομενολογία εξετάζει τη δομή της εμπειρίας.",
                 "english": "Phenomenology examines the structure of experience.",
                 "russian": "Феноменология исследует структуру опыта.",
             },
             {
+                "id": "ex_fenomenologia2",
                 "greek": "Ο Χούσερλ θεμελίωσε τη φαινομενολογία.",
                 "english": "Husserl founded phenomenology.",
                 "russian": "Гуссерль основал феноменологию.",
@@ -1879,11 +2016,13 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
         "examples": [
             {
+                "id": "ex_ontologia1",
                 "greek": "Η οντολογία μελετά τη φύση του είναι.",
                 "english": "Ontology studies the nature of being.",
                 "russian": "Онтология изучает природу бытия.",
             },
             {
+                "id": "ex_ontologia2",
                 "greek": "Τα οντολογικά ερωτήματα είναι κεντρικά στη μεταφυσική.",
                 "english": "Ontological questions are central to metaphysics.",
                 "russian": "Онтологические вопросы центральны в метафизике.",
@@ -1905,11 +2044,13 @@ ENRICHED_VOCABULARY: dict[str, EnrichedWordData] = {
         },
         "examples": [
             {
+                "id": "ex_aisthitiki1",
                 "greek": "Η αισθητική εξετάζει την έννοια του ωραίου.",
                 "english": "Aesthetics examines the concept of beauty.",
                 "russian": "Эстетика исследует понятие красоты.",
             },
             {
+                "id": "ex_aisthitiki2",
                 "greek": "Η σύγχρονη αισθητική επαναπροσδιορίζει την τέχνη.",
                 "english": "Modern aesthetics redefines art.",
                 "russian": "Современная эстетика переопределяет искусство.",

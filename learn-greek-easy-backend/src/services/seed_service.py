@@ -4894,6 +4894,7 @@ class SeedService:
                 },
                 "examples": [
                     {
+                        "id": "ex_spiti1",
                         "greek": "Το σπίτι μου είναι μεγάλο.",
                         "english": "My house is big.",
                         "russian": "Мой дом большой.",
@@ -4925,6 +4926,7 @@ class SeedService:
                 },
                 "examples": [
                     {
+                        "id": "ex_nero1",
                         "greek": "Πίνω νερό.",
                         "english": "I drink water.",
                         "russian": "Я пью воду.",
@@ -4956,6 +4958,7 @@ class SeedService:
                 },
                 "examples": [
                     {
+                        "id": "ex_vivlio1",
                         "greek": "Διαβάζω ένα βιβλίο.",
                         "english": "I am reading a book.",
                         "russian": "Я читаю книгу.",
@@ -4987,6 +4990,7 @@ class SeedService:
                 },
                 "examples": [
                     {
+                        "id": "ex_pedi1",
                         "greek": "Το παιδί παίζει στο πάρκο.",
                         "english": "The child plays in the park.",
                         "russian": "Ребёнок играет в парке.",
@@ -5019,6 +5023,7 @@ class SeedService:
                 },
                 "examples": [
                     {
+                        "id": "ex_skylos1",
                         "greek": "Ο σκύλος τρέχει στον κήπο.",
                         "english": "The dog runs in the garden.",
                         "russian": "Собака бегает в саду.",
@@ -5050,6 +5055,7 @@ class SeedService:
                 },
                 "examples": [
                     {
+                        "id": "ex_daskalos1",
                         "greek": "Ο δάσκαλος διδάσκει ελληνικά.",
                         "english": "The teacher teaches Greek.",
                         "russian": "Учитель преподает греческий.",
@@ -5081,6 +5087,7 @@ class SeedService:
                 },
                 "examples": [
                     {
+                        "id": "ex_dromos1",
                         "greek": "Ο δρόμος είναι μεγάλος.",
                         "english": "The road is long.",
                         "russian": "Дорога длинная.",
@@ -5112,6 +5119,7 @@ class SeedService:
                 },
                 "examples": [
                     {
+                        "id": "ex_filos1",
                         "greek": "Ο φίλος μου είναι Έλληνας.",
                         "english": "My friend is Greek.",
                         "russian": "Мой друг — грек.",
@@ -5144,6 +5152,7 @@ class SeedService:
                 },
                 "examples": [
                     {
+                        "id": "ex_gata1",
                         "greek": "Η γάτα κοιμάται στον καναπέ.",
                         "english": "The cat sleeps on the couch.",
                         "russian": "Кошка спит на диване.",
@@ -5175,6 +5184,7 @@ class SeedService:
                 },
                 "examples": [
                     {
+                        "id": "ex_gynaika1",
                         "greek": "Η γυναίκα μιλάει ελληνικά.",
                         "english": "The woman speaks Greek.",
                         "russian": "Женщина говорит по-гречески.",
@@ -5211,6 +5221,7 @@ class SeedService:
                 },
                 "examples": [
                     {
+                        "id": "ex_pino1",
                         "greek": "Πίνω καφέ κάθε πρωί.",
                         "english": "I drink coffee every morning.",
                         "russian": "Я пью кофе каждое утро.",
@@ -5240,6 +5251,7 @@ class SeedService:
                 },
                 "examples": [
                     {
+                        "id": "ex_grafo1",
                         "greek": "Γράφω ένα γράμμα στον φίλο μου.",
                         "english": "I write a letter to my friend.",
                         "russian": "Я пишу письмо своему другу.",
@@ -5269,6 +5281,7 @@ class SeedService:
                 },
                 "examples": [
                     {
+                        "id": "ex_diavazo1",
                         "greek": "Διαβάζω ένα βιβλίο κάθε βράδυ.",
                         "english": "I read a book every evening.",
                         "russian": "Я читаю книгу каждый вечер.",
@@ -5298,6 +5311,7 @@ class SeedService:
                 },
                 "examples": [
                     {
+                        "id": "ex_doulevo1",
                         "greek": "Δουλεύω σε ένα γραφείο.",
                         "english": "I work in an office.",
                         "russian": "Я работаю в офисе.",
@@ -5327,6 +5341,7 @@ class SeedService:
                 },
                 "examples": [
                     {
+                        "id": "ex_matheno1",
                         "greek": "Μαθαίνω ελληνικά εδώ και δύο χρόνια.",
                         "english": "I have been learning Greek for two years.",
                         "russian": "Я учу греческий уже два года.",
@@ -5356,6 +5371,7 @@ class SeedService:
                 },
                 "examples": [
                     {
+                        "id": "ex_akouo1",
                         "greek": "Ακούω μουσική κάθε μέρα.",
                         "english": "I listen to music every day.",
                         "russian": "Я слушаю музыку каждый день.",
@@ -5386,6 +5402,7 @@ class SeedService:
                 },
                 "examples": [
                     {
+                        "id": "ex_agapo1",
                         "greek": "Αγαπώ την οικογένειά μου.",
                         "english": "I love my family.",
                         "russian": "Я люблю свою семью.",
@@ -5415,6 +5432,7 @@ class SeedService:
                 },
                 "examples": [
                     {
+                        "id": "ex_thelo1",
                         "greek": "Θέλω ένα ποτήρι νερό.",
                         "english": "I want a glass of water.",
                         "russian": "Я хочу стакан воды.",
@@ -5444,6 +5462,7 @@ class SeedService:
                 },
                 "examples": [
                     {
+                        "id": "ex_milo1",
                         "greek": "Μιλάς ελληνικά πολύ καλά!",
                         "english": "You speak Greek very well!",
                         "russian": "Ты очень хорошо говоришь по-гречески!",
@@ -5473,6 +5492,7 @@ class SeedService:
                 },
                 "examples": [
                     {
+                        "id": "ex_troo1",
                         "greek": "Τρώω σουβλάκι κάθε Παρασκευή.",
                         "english": "I eat souvlaki every Friday.",
                         "russian": "Я ем сувлаки каждую пятницу.",
@@ -5536,6 +5556,7 @@ class SeedService:
                 },
                 "examples": [
                     {
+                        "id": "ex_kalos1",
                         "greek": "Είναι πολύ καλός δάσκαλος.",
                         "english": "He is a very good teacher.",
                         "russian": "Он очень хороший учитель.",
@@ -5592,6 +5613,7 @@ class SeedService:
                 },
                 "examples": [
                     {
+                        "id": "ex_megalos1",
                         "greek": "Το σπίτι είναι πολύ μεγάλο.",
                         "english": "The house is very big.",
                         "russian": "Дом очень большой.",
@@ -5648,6 +5670,7 @@ class SeedService:
                 },
                 "examples": [
                     {
+                        "id": "ex_mikros1",
                         "greek": "Η γάτα είναι μικρή.",
                         "english": "The cat is small.",
                         "russian": "Кошка маленькая.",
@@ -5704,6 +5727,7 @@ class SeedService:
                 },
                 "examples": [
                     {
+                        "id": "ex_neos1",
                         "greek": "Ο νέος μαθητής είναι από την Αθήνα.",
                         "english": "The new student is from Athens.",
                         "russian": "Новый ученик из Афин.",
@@ -5721,6 +5745,7 @@ class SeedService:
                 "grammar_data": {"category": "time"},
                 "examples": [
                     {
+                        "id": "ex_simera1",
                         "greek": "Σήμερα έχει ωραίο καιρό.",
                         "english": "Today the weather is nice.",
                         "russian": "Сегодня хорошая погода.",
@@ -5737,6 +5762,7 @@ class SeedService:
                 "grammar_data": {"category": "time"},
                 "examples": [
                     {
+                        "id": "ex_avrio1",
                         "greek": "Αύριο θα πάω στη δουλειά.",
                         "english": "Tomorrow I will go to work.",
                         "russian": "Завтра я пойду на работу.",
@@ -5753,6 +5779,7 @@ class SeedService:
                 "grammar_data": {"category": "place"},
                 "examples": [
                     {
+                        "id": "ex_edo1",
                         "greek": "Έλα εδώ, σε παρακαλώ.",
                         "english": "Come here, please.",
                         "russian": "Иди сюда, пожалуйста.",
@@ -5769,6 +5796,7 @@ class SeedService:
                 "grammar_data": {"category": "degree"},
                 "examples": [
                     {
+                        "id": "ex_poli1",
                         "greek": "Μου αρέσει πολύ η Ελλάδα.",
                         "english": "I like Greece a lot.",
                         "russian": "Мне очень нравится Греция.",
@@ -5786,6 +5814,7 @@ class SeedService:
                 "grammar_data": {"category": "greeting", "formality": "neutral"},
                 "examples": [
                     {
+                        "id": "ex_kalimera1",
                         "greek": "Καλημέρα! Τι κάνεις;",
                         "english": "Good morning! How are you?",
                         "russian": "Доброе утро! Как дела?",
@@ -5802,6 +5831,7 @@ class SeedService:
                 "grammar_data": {"category": "politeness", "formality": "neutral"},
                 "examples": [
                     {
+                        "id": "ex_efcharisto1",
                         "greek": "Ευχαριστώ πολύ για τη βοήθεια!",
                         "english": "Thank you very much for the help!",
                         "russian": "Большое спасибо за помощь!",
