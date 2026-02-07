@@ -6,10 +6,16 @@
  * - V2 decks: Word browser with search and disabled Study button
  * - Word reference page: Grammar data display and navigation
  *
- * Test data is seeded via the /api/v1/test/seed/all endpoint.
+ * Test data is pre-seeded by the CI pipeline / global setup (auth.setup.ts).
+ * This file does NOT call seed/all — it queries existing decks by card_system.
  */
 
-import { test, expect, APIRequestContext } from '@playwright/test';
+import * as fs from 'fs';
+
+import { test, expect } from '@playwright/test';
+
+// Storage state path for learner (same as playwright.config.ts)
+const LEARNER_AUTH = 'playwright/.auth/learner.json';
 
 /**
  * Get the API base URL from environment
@@ -18,106 +24,75 @@ function getApiBaseUrl(): string {
   return process.env.E2E_API_URL || process.env.VITE_API_URL || 'http://localhost:8000';
 }
 
+/**
+ * Read the learner's access token from the saved storageState file.
+ * This token was set during auth.setup.ts and is valid for API calls.
+ */
+function getLearnerAccessToken(): string | null {
+  try {
+    const authState = JSON.parse(fs.readFileSync(LEARNER_AUTH, 'utf-8'));
+    const authStorageEntry = authState.origins?.[0]?.localStorage?.find(
+      (item: { name: string; value: string }) => item.name === 'auth-storage'
+    );
+    if (authStorageEntry) {
+      const authData = JSON.parse(authStorageEntry.value);
+      return authData?.state?.token || null;
+    }
+  } catch {
+    // File might not exist or be invalid
+  }
+  return null;
+}
+
 // Test IDs for seeded V1/V2 decks (populated in beforeAll)
 let v1DeckId: string;
 let v2DeckId: string;
 
-// Fresh auth tokens obtained after seed/all truncates all tables (including users).
-// The storageState from auth.setup.ts becomes invalid because the user UUID no longer
-// exists, so we re-authenticate via seed/auth and inject these tokens in beforeEach.
-let freshAuthState: Record<string, unknown> | null = null;
-
-/**
- * Seed all test data and extract V1/V2 deck IDs for dual card system tests.
- * Uses the unified seed/all endpoint which includes dual-deck data.
- *
- * Also re-authenticates via seed/auth since seed/all truncates the users table,
- * invalidating the JWT from the storageState file.
- */
-async function seedAndExtractDeckIds(
-  request: APIRequestContext
-): Promise<{ v1DeckId: string; v2DeckId: string }> {
-  const apiBaseUrl = getApiBaseUrl();
-
-  // Step 1: Seed all test data
-  const response = await request.post(`${apiBaseUrl}/api/v1/test/seed/all`);
-  expect(response.ok()).toBe(true);
-
-  const data = await response.json();
-
-  // Step 2: Re-authenticate as e2e_learner since seed/all wiped the users table
-  const authResponse = await request.post(`${apiBaseUrl}/api/v1/test/seed/auth`, {
-    data: { email: 'e2e_learner@test.com' },
-    headers: { 'Content-Type': 'application/json' },
-  });
-  expect(authResponse.ok()).toBe(true);
-
-  const tokens = await authResponse.json();
-  const now = new Date().toISOString();
-
-  // Build auth state matching the Zustand store format (same as auth.setup.ts)
-  freshAuthState = {
-    state: {
-      user: {
-        id: tokens.user_id,
-        email: 'e2e_learner@test.com',
-        name: 'E2E Learner',
-        role: tokens.is_superuser ? 'admin' : 'free',
-        preferences: {
-          language: 'en',
-          dailyGoal: 20,
-          notifications: true,
-          theme: 'light',
-        },
-        stats: {
-          streak: 0,
-          wordsLearned: 0,
-          totalXP: 0,
-          joinedDate: now,
-        },
-        createdAt: now,
-        updatedAt: now,
-      },
-      token: tokens.access_token,
-      refreshToken: tokens.refresh_token,
-      isAuthenticated: true,
-      rememberMe: true,
-      error: null,
-    },
-    version: 0,
-  };
-
-  return {
-    v1DeckId: data.results.v1_deck_id,
-    v2DeckId: data.results.v2_deck_id,
-  };
-}
-
-// Use serial mode to ensure seeding happens only once and deck IDs are consistent
+// Use serial mode to ensure deck ID lookup happens only once and IDs are consistent
 test.describe.configure({ mode: 'serial' });
 
 test.describe('V1/V2 Deck Pages', () => {
   test.beforeAll(async ({ request }) => {
-    console.log('[SEED-ALL] Starting full seeding for V1/V2 deck tests...');
-
-    // Seed all test data and extract V1/V2 deck IDs
-    const deckIds = await seedAndExtractDeckIds(request);
-    v1DeckId = deckIds.v1DeckId;
-    v2DeckId = deckIds.v2DeckId;
-
-    console.log(`[SEED-ALL] Seeded decks - V1: ${v1DeckId}, V2: ${v2DeckId}`);
-  });
-
-  // Re-inject fresh auth tokens into localStorage before each test.
-  // seed/all truncates the users table, so the storageState from auth.setup.ts
-  // references a nonexistent user. We set the fresh tokens obtained after seeding.
-  test.beforeEach(async ({ page }) => {
-    if (!freshAuthState) {
-      throw new Error('[SEED-ALL] freshAuthState is null - seeding may have failed');
+    const apiBaseUrl = getApiBaseUrl();
+    const accessToken = getLearnerAccessToken();
+    if (!accessToken) {
+      throw new Error(
+        '[DECK-V1V2] Could not read learner access token from storageState. ' +
+          'Ensure auth.setup.ts ran successfully.'
+      );
     }
-    await page.addInitScript((authState) => {
-      localStorage.setItem('auth-storage', JSON.stringify(authState));
-    }, freshAuthState);
+
+    // Query existing decks to find V1 and V2 deck IDs (database is already seeded)
+    const response = await request.get(`${apiBaseUrl}/api/v1/decks?page_size=100`, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+    expect(response.ok()).toBe(true);
+
+    const data = await response.json();
+    const decks = data.decks as Array<{ id: string; card_system: string; name: string }>;
+
+    const v1Deck = decks.find((d) => d.card_system === 'V1');
+    const v2Deck = decks.find((d) => d.card_system === 'V2');
+
+    if (!v1Deck) {
+      throw new Error(
+        '[DECK-V1V2] No V1 deck found in database. ' +
+          `Available decks: ${decks.map((d) => `${d.name} (${d.card_system})`).join(', ')}`
+      );
+    }
+    if (!v2Deck) {
+      throw new Error(
+        '[DECK-V1V2] No V2 deck found in database. ' +
+          `Available decks: ${decks.map((d) => `${d.name} (${d.card_system})`).join(', ')}`
+      );
+    }
+
+    v1DeckId = v1Deck.id;
+    v2DeckId = v2Deck.id;
+
+    console.log(`[DECK-V1V2] Found decks - V1: ${v1Deck.name} (${v1DeckId}), V2: ${v2Deck.name} (${v2DeckId})`);
   });
 
   // =====================
