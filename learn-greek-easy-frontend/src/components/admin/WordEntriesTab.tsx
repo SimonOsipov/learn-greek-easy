@@ -88,6 +88,31 @@ const MAX_ENTRIES = 100;
 // UUID validation regex
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+const JSON_PLACEHOLDER = `{
+  "deck_id": "your-deck-uuid-here",
+  "word_entries": [
+    {
+      "lemma": "σπίτι",
+      "part_of_speech": "noun",
+      "translation_en": "house, home",
+      "translation_ru": "дом",
+      "pronunciation": "/spí·ti/",
+      "cefr_level": "A1",
+      "grammar_data": {
+        "gender": "neuter",
+        "nominative_singular": "σπίτι",
+        "genitive_singular": "σπιτιού"
+      },
+      "examples": [
+        {
+          "greek": "Το σπίτι μου είναι μικρό.",
+          "english": "My house is small."
+        }
+      ]
+    }
+  ]
+}`;
+
 /**
  * Validate a single word entry and return any errors
  */
@@ -475,7 +500,7 @@ export const WordEntriesTab: React.FC = () => {
               data-testid="word-entries-json-textarea"
               value={jsonInput}
               onChange={handleJsonChange}
-              placeholder={t('wordEntries.jsonPlaceholder')}
+              placeholder={JSON_PLACEHOLDER}
               className="min-h-[300px] font-mono text-sm"
               disabled={isUploading}
             />

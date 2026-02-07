@@ -28,7 +28,7 @@ BULK_NOUN_ENTRY = {
     "translation_en": "house, home",
     "translation_ru": "дом",
     "cefr_level": "A1",
-    "pronunciation": "/ˈspiti/",
+    "pronunciation": "/spí·ti/",
     "grammar_data": {
         "gender": "neuter",
         "nominative_singular": "σπίτι",
@@ -51,7 +51,7 @@ BULK_VERB_ENTRY = {
     "translation_en": "to write",
     "translation_ru": "писать",
     "cefr_level": "A1",
-    "pronunciation": "/ˈɣrafo/",
+    "pronunciation": "/ghrá·fo/",
     "grammar_data": {
         "voice": "active",
         "present_1s": "γράφω",
@@ -184,7 +184,7 @@ class TestBulkUpsertWordEntriesEndpoint:
         assert entry["translation_en"] == "house, home"
         assert entry["translation_ru"] == "дом"
         assert entry["cefr_level"] == "A1"
-        assert entry["pronunciation"] == "/ˈspiti/"
+        assert entry["pronunciation"] == "/spí·ti/"
         assert entry["grammar_data"] is not None
         assert entry["grammar_data"]["gender"] == "neuter"
         assert entry["examples"] is not None
@@ -214,7 +214,7 @@ class TestBulkUpsertWordEntriesEndpoint:
                     "part_of_speech": "noun",  # Same POS
                     "translation_en": "house, home (updated)",
                     "translation_ru": "дом",
-                    "pronunciation": "/ˈspiti/",
+                    "pronunciation": "/spí·ti/",
                 },
             ],
         }
@@ -236,7 +236,7 @@ class TestBulkUpsertWordEntriesEndpoint:
         assert updated_entry["id"] == str(existing_entry.id)
         assert updated_entry["translation_en"] == "house, home (updated)"
         assert updated_entry["translation_ru"] == "дом"
-        assert updated_entry["pronunciation"] == "/ˈspiti/"
+        assert updated_entry["pronunciation"] == "/spí·ti/"
 
     @pytest.mark.asyncio
     async def test_bulk_upsert_word_entries_mixed_create_update(
@@ -634,7 +634,7 @@ class TestBulkUpsertWordEntriesEndpoint:
         assert db_entry.part_of_speech == PartOfSpeech.NOUN
         assert db_entry.translation_en == "house, home"
         assert db_entry.translation_ru == "дом"
-        assert db_entry.pronunciation == "/ˈspiti/"
+        assert db_entry.pronunciation == "/spí·ti/"
         assert db_entry.grammar_data["gender"] == "neuter"
 
     @pytest.mark.asyncio

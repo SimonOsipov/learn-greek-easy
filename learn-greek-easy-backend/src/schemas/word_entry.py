@@ -171,7 +171,7 @@ class WordEntryBase(BaseModel):
     pronunciation: Optional[str] = Field(
         default=None,
         max_length=200,
-        description="IPA or phonetic pronunciation guide",
+        description="Syllable pronunciation guide (e.g., /spí·ti/)",
     )
     grammar_data: Optional[GrammarData] = Field(
         default=None,
@@ -272,7 +272,7 @@ class WordEntryUpdate(BaseModel):
     pronunciation: Optional[str] = Field(
         default=None,
         max_length=200,
-        description="IPA or phonetic pronunciation guide",
+        description="Syllable pronunciation guide (e.g., /spí·ti/)",
     )
     grammar_data: Optional[GrammarData] = Field(
         default=None,
@@ -418,7 +418,7 @@ class WordEntryBulkCreate(BaseModel):
     pronunciation: Optional[str] = Field(
         default=None,
         max_length=200,
-        description="IPA or phonetic pronunciation guide",
+        description="Syllable pronunciation guide (e.g., /spí·ti/)",
     )
     grammar_data: Optional[dict[str, Any]] = Field(
         default=None,

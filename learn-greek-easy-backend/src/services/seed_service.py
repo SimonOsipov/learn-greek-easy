@@ -1811,7 +1811,7 @@ class SeedService:
             back_text_en=english,
             back_text_ru=back_text_ru,
             example_sentence=example_sentence,
-            pronunciation=f"[{greek}]",
+            pronunciation=f"/{greek}/",
             part_of_speech=part_of_speech,
             level=level,
             noun_data=noun_data,
@@ -4524,6 +4524,9 @@ class SeedService:
         # Step 3b: Create user-owned decks (My Decks feature)
         user_decks_result = await self.seed_user_decks(users_result["users"])
 
+        # Step 3c: Create V2 decks with word entries
+        v2_decks_result = await self._seed_v2_decks()
+
         # Step 4 & 5: Create progress for learner user
         # Find the learner user and A1 deck for detailed progress
         learner_id = None
@@ -4749,6 +4752,11 @@ class SeedService:
             "users": users_result,
             "content": content_result,
             "user_decks": user_decks_result,
+            "v2_decks": v2_decks_result,
+            "v1_deck_id": content_result["decks"][0]["id"] if content_result.get("decks") else None,
+            "v2_deck_id": (
+                v2_decks_result["v2_decks"][0]["id"] if v2_decks_result.get("v2_decks") else None
+            ),
             "statistics": stats_result,
             "reviews": reviews_result,
             "notifications": notifications_result,
@@ -4799,75 +4807,19 @@ class SeedService:
             await self.db.flush()
         return entries
 
-    async def seed_dual_decks(self) -> dict[str, Any]:
-        """Seed V1 and V2 decks for E2E testing of dual card system.
+    async def _seed_v2_decks(self) -> dict[str, Any]:
+        """Create V2 decks with word entries for E2E testing.
 
-        Creates:
-        - 1 V1 deck with 10 traditional cards (SM-2 states)
-        - 3 V2 decks:
-          - E2E V2 Nouns Deck (A1): noun word entries with declension data
-          - E2E V2 Verbs Deck (A2): verb word entries with conjugation data
-          - E2E V2 Mixed Deck (A2): adjective, adverb, and phrase entries
+        Creates 3 V2 decks:
+        - E2E V2 Nouns Deck (A1): 10 nouns with declension grammar_data
+        - E2E V2 Verbs Deck (A2): 10 verbs with conjugation grammar_data
+        - E2E V2 Mixed Deck (A2): 4 adjectives + 4 adverbs + 2 phrases
 
-        This endpoint is idempotent - it deletes existing E2E dual test decks first.
+        NOTE: Does NOT call self.db.commit() - caller is responsible for committing.
 
         Returns:
-            dict with v1_deck_id, v2_deck_id (backwards-compat), v2_decks array, and counts
+            dict with 'v2_decks' list and 'v2_word_entry_count' total
         """
-        # Delete ALL existing E2E dual test decks (idempotent)
-        # Use delete with where clause to handle multiple duplicates if they exist
-        await self.db.execute(delete(Deck).where(Deck.name_en == "E2E V1 Test Deck"))
-        await self.db.execute(delete(Deck).where(Deck.name_en == "E2E V2 Test Deck"))
-        await self.db.execute(delete(Deck).where(Deck.name_en == "E2E V2 Nouns Deck (A1)"))
-        await self.db.execute(delete(Deck).where(Deck.name_en == "E2E V2 Verbs Deck (A2)"))
-        await self.db.execute(delete(Deck).where(Deck.name_en == "E2E V2 Mixed Deck (A2)"))
-
-        await self.db.flush()
-
-        # ========== Create V1 Deck (Traditional Cards) ==========
-        v1_deck = Deck(
-            name_en="E2E V1 Test Deck",
-            name_el="E2E V1 Test Deck",
-            name_ru="E2E V1 Test Deck",
-            description_en="Test deck for V1 (legacy flashcard) system",
-            description_el="Test deck for V1 (legacy flashcard) system",
-            description_ru="Test deck for V1 (legacy flashcard) system",
-            level=DeckLevel.A1,
-            is_active=True,
-            is_premium=False,
-            card_system=CardSystemVersion.V1,
-        )
-        self.db.add(v1_deck)
-        await self.db.flush()
-
-        # Create 10 traditional cards for V1 deck
-        v1_vocabulary = [
-            ("γεια", "hello", "greeting"),
-            ("ναι", "yes", "affirmative"),
-            ("όχι", "no", "negative"),
-            ("ευχαριστώ", "thank you", "gratitude"),
-            ("παρακαλώ", "please", "politeness"),
-            ("νερό", "water", "noun"),
-            ("ψωμί", "bread", "noun"),
-            ("σπίτι", "house", "noun"),
-            ("καλημέρα", "good morning", "greeting"),
-            ("καληνύχτα", "good night", "greeting"),
-        ]
-
-        v1_cards = []
-        for greek, english, category in v1_vocabulary:
-            card = Card(
-                deck_id=v1_deck.id,
-                front_text=greek,
-                back_text_en=english,
-                back_text_ru=None,
-                pronunciation=None,
-                part_of_speech=PartOfSpeech.NOUN if category == "noun" else None,
-            )
-            self.db.add(card)
-            v1_cards.append(card)
-        await self.db.flush()
-
         # ========== Create V2 Nouns Deck ==========
         v2_nouns_deck = Deck(
             name_en="E2E V2 Nouns Deck (A1)",
@@ -4915,11 +4867,6 @@ class SeedService:
         await self.db.flush()
 
         # V2 Nouns vocabulary (10 A1 nouns: 4 neuter, 4 masculine, 2 feminine)
-        v2_nouns_entries: list[WordEntry] = []
-        v2_verbs_entries: list[WordEntry] = []
-        v2_mixed_entries: list[WordEntry] = []
-
-        # Create word entries for each deck
         v2_nouns_vocabulary: list[dict[str, Any]] = [
             # ---- Neuter nouns (4) ----
             {
@@ -4927,7 +4874,7 @@ class SeedService:
                 "part_of_speech": PartOfSpeech.NOUN,
                 "translation_en": "house, home",
                 "translation_ru": "дом",
-                "pronunciation": "[ˈspiti]",
+                "pronunciation": "/spí·ti/",
                 "cefr_level": DeckLevel.A1,
                 "grammar_data": {
                     "gender": "neuter",
@@ -4958,7 +4905,7 @@ class SeedService:
                 "part_of_speech": PartOfSpeech.NOUN,
                 "translation_en": "water",
                 "translation_ru": "вода",
-                "pronunciation": "[neˈro]",
+                "pronunciation": "/ne·ró/",
                 "cefr_level": DeckLevel.A1,
                 "grammar_data": {
                     "gender": "neuter",
@@ -4989,7 +4936,7 @@ class SeedService:
                 "part_of_speech": PartOfSpeech.NOUN,
                 "translation_en": "book",
                 "translation_ru": "книга",
-                "pronunciation": "[viˈvlio]",
+                "pronunciation": "/vi·vlí·o/",
                 "cefr_level": DeckLevel.A1,
                 "grammar_data": {
                     "gender": "neuter",
@@ -5020,7 +4967,7 @@ class SeedService:
                 "part_of_speech": PartOfSpeech.NOUN,
                 "translation_en": "child",
                 "translation_ru": "ребёнок",
-                "pronunciation": "[peˈði]",
+                "pronunciation": "/pe·dhí/",
                 "cefr_level": DeckLevel.A1,
                 "grammar_data": {
                     "gender": "neuter",
@@ -5052,7 +4999,7 @@ class SeedService:
                 "part_of_speech": PartOfSpeech.NOUN,
                 "translation_en": "dog",
                 "translation_ru": "собака",
-                "pronunciation": "[ˈscilos]",
+                "pronunciation": "/skí·los/",
                 "cefr_level": DeckLevel.A1,
                 "grammar_data": {
                     "gender": "masculine",
@@ -5083,7 +5030,7 @@ class SeedService:
                 "part_of_speech": PartOfSpeech.NOUN,
                 "translation_en": "teacher (male)",
                 "translation_ru": "учитель",
-                "pronunciation": "[ˈðaskalos]",
+                "pronunciation": "/dhá·ska·los/",
                 "cefr_level": DeckLevel.A1,
                 "grammar_data": {
                     "gender": "masculine",
@@ -5114,7 +5061,7 @@ class SeedService:
                 "part_of_speech": PartOfSpeech.NOUN,
                 "translation_en": "road, street",
                 "translation_ru": "дорога, улица",
-                "pronunciation": "[ˈðromos]",
+                "pronunciation": "/dhró·mos/",
                 "cefr_level": DeckLevel.A1,
                 "grammar_data": {
                     "gender": "masculine",
@@ -5145,7 +5092,7 @@ class SeedService:
                 "part_of_speech": PartOfSpeech.NOUN,
                 "translation_en": "friend (male)",
                 "translation_ru": "друг",
-                "pronunciation": "[ˈfilos]",
+                "pronunciation": "/fí·los/",
                 "cefr_level": DeckLevel.A1,
                 "grammar_data": {
                     "gender": "masculine",
@@ -5177,7 +5124,7 @@ class SeedService:
                 "part_of_speech": PartOfSpeech.NOUN,
                 "translation_en": "cat",
                 "translation_ru": "кошка",
-                "pronunciation": "[ˈɣata]",
+                "pronunciation": "/ghá·ta/",
                 "cefr_level": DeckLevel.A1,
                 "grammar_data": {
                     "gender": "feminine",
@@ -5208,7 +5155,7 @@ class SeedService:
                 "part_of_speech": PartOfSpeech.NOUN,
                 "translation_en": "woman, wife",
                 "translation_ru": "женщина, жена",
-                "pronunciation": "[ʝiˈneka]",
+                "pronunciation": "/yi·né·ka/",
                 "cefr_level": DeckLevel.A1,
                 "grammar_data": {
                     "gender": "feminine",
@@ -5246,7 +5193,7 @@ class SeedService:
                 "part_of_speech": PartOfSpeech.VERB,
                 "translation_en": "to drink",
                 "translation_ru": "пить",
-                "pronunciation": "[ˈpino]",
+                "pronunciation": "/pí·no/",
                 "cefr_level": DeckLevel.A2,
                 "grammar_data": {
                     "voice": "active",
@@ -5275,7 +5222,7 @@ class SeedService:
                 "part_of_speech": PartOfSpeech.VERB,
                 "translation_en": "to write",
                 "translation_ru": "писать",
-                "pronunciation": "[ˈɣrafo]",
+                "pronunciation": "/ghrá·fo/",
                 "cefr_level": DeckLevel.A2,
                 "grammar_data": {
                     "voice": "active",
@@ -5304,7 +5251,7 @@ class SeedService:
                 "part_of_speech": PartOfSpeech.VERB,
                 "translation_en": "to read, to study",
                 "translation_ru": "читать, учить",
-                "pronunciation": "[ði.aˈvazo]",
+                "pronunciation": "/dhi·a·vá·zo/",
                 "cefr_level": DeckLevel.A2,
                 "grammar_data": {
                     "voice": "active",
@@ -5333,7 +5280,7 @@ class SeedService:
                 "part_of_speech": PartOfSpeech.VERB,
                 "translation_en": "to work",
                 "translation_ru": "работать",
-                "pronunciation": "[ðuˈlevo]",
+                "pronunciation": "/dhu·lé·vo/",
                 "cefr_level": DeckLevel.A2,
                 "grammar_data": {
                     "voice": "active",
@@ -5362,7 +5309,7 @@ class SeedService:
                 "part_of_speech": PartOfSpeech.VERB,
                 "translation_en": "to learn",
                 "translation_ru": "учиться, изучать",
-                "pronunciation": "[maˈθeno]",
+                "pronunciation": "/ma·thé·no/",
                 "cefr_level": DeckLevel.A2,
                 "grammar_data": {
                     "voice": "active",
@@ -5391,7 +5338,7 @@ class SeedService:
                 "part_of_speech": PartOfSpeech.VERB,
                 "translation_en": "to hear, to listen",
                 "translation_ru": "слушать, слышать",
-                "pronunciation": "[aˈkuo]",
+                "pronunciation": "/a·kú·o/",
                 "cefr_level": DeckLevel.A2,
                 "grammar_data": {
                     "voice": "active",
@@ -5421,7 +5368,7 @@ class SeedService:
                 "part_of_speech": PartOfSpeech.VERB,
                 "translation_en": "to love",
                 "translation_ru": "любить",
-                "pronunciation": "[aɣaˈpo]",
+                "pronunciation": "/a·gha·pó/",
                 "cefr_level": DeckLevel.A2,
                 "grammar_data": {
                     "voice": "active",
@@ -5450,7 +5397,7 @@ class SeedService:
                 "part_of_speech": PartOfSpeech.VERB,
                 "translation_en": "to want",
                 "translation_ru": "хотеть",
-                "pronunciation": "[ˈθelo]",
+                "pronunciation": "/thé·lo/",
                 "cefr_level": DeckLevel.A2,
                 "grammar_data": {
                     "voice": "active",
@@ -5479,7 +5426,7 @@ class SeedService:
                 "part_of_speech": PartOfSpeech.VERB,
                 "translation_en": "to speak, to talk",
                 "translation_ru": "говорить, разговаривать",
-                "pronunciation": "[miˈlo]",
+                "pronunciation": "/mi·ló/",
                 "cefr_level": DeckLevel.A2,
                 "grammar_data": {
                     "voice": "active",
@@ -5508,7 +5455,7 @@ class SeedService:
                 "part_of_speech": PartOfSpeech.VERB,
                 "translation_en": "to eat",
                 "translation_ru": "есть, кушать",
-                "pronunciation": "[ˈtro.o]",
+                "pronunciation": "/tró·o/",
                 "cefr_level": DeckLevel.A2,
                 "grammar_data": {
                     "voice": "active",
@@ -5544,7 +5491,7 @@ class SeedService:
                 "part_of_speech": PartOfSpeech.ADJECTIVE,
                 "translation_en": "good, nice",
                 "translation_ru": "хороший",
-                "pronunciation": "[kaˈlos]",
+                "pronunciation": "/ka·lós/",
                 "cefr_level": DeckLevel.A2,
                 "grammar_data": {
                     "declension_group": "os_i_o",
@@ -5600,7 +5547,7 @@ class SeedService:
                 "part_of_speech": PartOfSpeech.ADJECTIVE,
                 "translation_en": "big, large, great",
                 "translation_ru": "большой, великий",
-                "pronunciation": "[meˈɣalos]",
+                "pronunciation": "/me·ghá·los/",
                 "cefr_level": DeckLevel.A2,
                 "grammar_data": {
                     "declension_group": "os_i_o",
@@ -5656,7 +5603,7 @@ class SeedService:
                 "part_of_speech": PartOfSpeech.ADJECTIVE,
                 "translation_en": "small, little",
                 "translation_ru": "маленький",
-                "pronunciation": "[miˈkros]",
+                "pronunciation": "/mi·krós/",
                 "cefr_level": DeckLevel.A2,
                 "grammar_data": {
                     "declension_group": "os_i_o",
@@ -5712,7 +5659,7 @@ class SeedService:
                 "part_of_speech": PartOfSpeech.ADJECTIVE,
                 "translation_en": "young, new",
                 "translation_ru": "молодой, новый",
-                "pronunciation": "[ˈneos]",
+                "pronunciation": "/né·os/",
                 "cefr_level": DeckLevel.A2,
                 "grammar_data": {
                     "declension_group": "os_a_o",
@@ -5769,7 +5716,7 @@ class SeedService:
                 "part_of_speech": PartOfSpeech.ADVERB,
                 "translation_en": "today",
                 "translation_ru": "сегодня",
-                "pronunciation": "[ˈsimera]",
+                "pronunciation": "/sí·me·ra/",
                 "cefr_level": DeckLevel.A2,
                 "grammar_data": {"category": "time"},
                 "examples": [
@@ -5785,7 +5732,7 @@ class SeedService:
                 "part_of_speech": PartOfSpeech.ADVERB,
                 "translation_en": "tomorrow",
                 "translation_ru": "завтра",
-                "pronunciation": "[ˈavrio]",
+                "pronunciation": "/áv·ri·o/",
                 "cefr_level": DeckLevel.A2,
                 "grammar_data": {"category": "time"},
                 "examples": [
@@ -5801,7 +5748,7 @@ class SeedService:
                 "part_of_speech": PartOfSpeech.ADVERB,
                 "translation_en": "here",
                 "translation_ru": "здесь, тут",
-                "pronunciation": "[eˈðo]",
+                "pronunciation": "/e·dhó/",
                 "cefr_level": DeckLevel.A2,
                 "grammar_data": {"category": "place"},
                 "examples": [
@@ -5817,7 +5764,7 @@ class SeedService:
                 "part_of_speech": PartOfSpeech.ADVERB,
                 "translation_en": "very, much, a lot",
                 "translation_ru": "очень, много",
-                "pronunciation": "[poˈli]",
+                "pronunciation": "/po·lí/",
                 "cefr_level": DeckLevel.A2,
                 "grammar_data": {"category": "degree"},
                 "examples": [
@@ -5834,7 +5781,7 @@ class SeedService:
                 "part_of_speech": PartOfSpeech.PHRASE,
                 "translation_en": "good morning",
                 "translation_ru": "доброе утро",
-                "pronunciation": "[kaliˈmera]",
+                "pronunciation": "/ka·li·mé·ra/",
                 "cefr_level": DeckLevel.A2,
                 "grammar_data": {"category": "greeting", "formality": "neutral"},
                 "examples": [
@@ -5850,7 +5797,7 @@ class SeedService:
                 "part_of_speech": PartOfSpeech.PHRASE,
                 "translation_en": "thank you",
                 "translation_ru": "спасибо",
-                "pronunciation": "[efxariˈsto]",
+                "pronunciation": "/ef·cha·ri·stó/",
                 "cefr_level": DeckLevel.A2,
                 "grammar_data": {"category": "politeness", "formality": "neutral"},
                 "examples": [
@@ -5867,14 +5814,9 @@ class SeedService:
         )
 
         await self.db.flush()
-        await self.db.commit()
 
         return {
             "success": True,
-            "v1_deck_id": str(v1_deck.id),
-            "v1_deck_name": v1_deck.name_en,
-            # Backwards-compatible: first V2 deck ID for existing E2E tests
-            "v2_deck_id": str(v2_nouns_deck.id),
             "v2_decks": [
                 {
                     "id": str(v2_nouns_deck.id),
@@ -5895,7 +5837,6 @@ class SeedService:
                     "word_entry_count": len(v2_mixed_entries),
                 },
             ],
-            "v1_card_count": len(v1_cards),
             "v2_word_entry_count": len(v2_nouns_entries)
             + len(v2_verbs_entries)
             + len(v2_mixed_entries),
