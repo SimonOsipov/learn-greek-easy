@@ -57,7 +57,7 @@ async def pending_report(
     """Create a pending card error report."""
     report = CardErrorReport(
         card_id=uuid4(),
-        card_type=CardErrorCardType.VOCABULARY,
+        card_type=CardErrorCardType.WORD,
         user_id=card_error_user.id,
         description="Test error description with enough content.",
         status=CardErrorStatus.PENDING,
@@ -76,7 +76,7 @@ async def fixed_report(
     """Create a FIXED card error report."""
     report = CardErrorReport(
         card_id=uuid4(),
-        card_type=CardErrorCardType.VOCABULARY,
+        card_type=CardErrorCardType.WORD,
         user_id=card_error_user.id,
         description="Test error description with enough content.",
         status=CardErrorStatus.FIXED,
@@ -95,7 +95,7 @@ async def reviewed_report(
     """Create a REVIEWED card error report."""
     report = CardErrorReport(
         card_id=uuid4(),
-        card_type=CardErrorCardType.VOCABULARY,
+        card_type=CardErrorCardType.WORD,
         user_id=card_error_user.id,
         description="Test error description with enough content.",
         status=CardErrorStatus.REVIEWED,
@@ -114,7 +114,7 @@ async def dismissed_report(
     """Create a DISMISSED card error report."""
     report = CardErrorReport(
         card_id=uuid4(),
-        card_type=CardErrorCardType.VOCABULARY,
+        card_type=CardErrorCardType.WORD,
         user_id=card_error_user.id,
         description="Test error description with enough content.",
         status=CardErrorStatus.DISMISSED,
@@ -183,7 +183,7 @@ class TestGetPendingReportForCard:
 
         result = await repo.get_pending_report_for_card(
             card_id=uuid4(),
-            card_type=CardErrorCardType.VOCABULARY,
+            card_type=CardErrorCardType.WORD,
             user_id=card_error_user.id,
         )
 
@@ -271,7 +271,7 @@ class TestGetPendingReportForCard:
         """Should return None when card_type doesn't match."""
         repo = CardErrorReportRepository(db_session)
 
-        # pending_report is VOCABULARY, query for CULTURE
+        # pending_report is WORD, query for CULTURE
         result = await repo.get_pending_report_for_card(
             card_id=pending_report.card_id,
             card_type=CardErrorCardType.CULTURE,  # Different type

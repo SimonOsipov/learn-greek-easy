@@ -23,7 +23,7 @@ router = APIRouter(
     response_model=CardErrorReportResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Report a card error",
-    description="Submit an error report for a vocabulary card or culture question.",
+    description="Submit an error report for a word card or culture question.",
     responses={
         201: {"description": "Error report created successfully"},
         409: {"description": "User already reported this card"},

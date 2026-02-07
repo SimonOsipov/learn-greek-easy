@@ -66,7 +66,7 @@ class TestCreateCardErrorReportSuccess:
         mock_report.id = uuid4()
         mock_report.user_id = user_id
         mock_report.card_id = card_id
-        mock_report.card_type = CardErrorCardType.VOCABULARY
+        mock_report.card_type = CardErrorCardType.WORD
         mock_report.description = "The translation is incorrect."
 
         mock_repo.get_pending_report_for_card.return_value = None
@@ -74,7 +74,7 @@ class TestCreateCardErrorReportSuccess:
 
         create_data = CardErrorReportCreate(
             card_id=card_id,
-            card_type=CardErrorCardType.VOCABULARY,
+            card_type=CardErrorCardType.WORD,
             description="The translation is incorrect.",
         )
 
@@ -89,7 +89,7 @@ class TestCreateCardErrorReportSuccess:
         assert result == mock_report
         mock_repo.get_pending_report_for_card.assert_awaited_once_with(
             card_id=card_id,
-            card_type=CardErrorCardType.VOCABULARY,
+            card_type=CardErrorCardType.WORD,
             user_id=user_id,
         )
         mock_repo.create.assert_awaited_once()
@@ -120,7 +120,7 @@ class TestCreateCardErrorReportPendingBlock:
 
         create_data = CardErrorReportCreate(
             card_id=card_id,
-            card_type=CardErrorCardType.VOCABULARY,
+            card_type=CardErrorCardType.WORD,
             description="This has an error.",
         )
 
@@ -135,7 +135,7 @@ class TestCreateCardErrorReportPendingBlock:
         mock_repo.create.assert_not_awaited()
         mock_repo.get_pending_report_for_card.assert_awaited_once_with(
             card_id=card_id,
-            card_type=CardErrorCardType.VOCABULARY,
+            card_type=CardErrorCardType.WORD,
             user_id=user_id,
         )
 
@@ -204,14 +204,14 @@ class TestCreateCardErrorReportLogging:
         mock_report.id = report_id
         mock_report.user_id = user_id
         mock_report.card_id = card_id
-        mock_report.card_type = CardErrorCardType.VOCABULARY
+        mock_report.card_type = CardErrorCardType.WORD
 
         mock_repo.get_pending_report_for_card.return_value = None
         mock_repo.create.return_value = mock_report
 
         create_data = CardErrorReportCreate(
             card_id=card_id,
-            card_type=CardErrorCardType.VOCABULARY,
+            card_type=CardErrorCardType.WORD,
             description="Test description",
         )
 
@@ -232,7 +232,7 @@ class TestCreateCardErrorReportLogging:
             assert extra["report_id"] == str(report_id)
             assert extra["user_id"] == str(user_id)
             assert extra["card_id"] == str(card_id)
-            assert extra["card_type"] == "VOCABULARY"
+            assert extra["card_type"] == "WORD"
 
 
 # =============================================================================
@@ -259,7 +259,7 @@ class TestCreateCardErrorReportResubmission:
 
         create_data = CardErrorReportCreate(
             card_id=card_id,
-            card_type=CardErrorCardType.VOCABULARY,
+            card_type=CardErrorCardType.WORD,
             description="Found another issue after review.",
         )
 
@@ -289,7 +289,7 @@ class TestCreateCardErrorReportResubmission:
 
         create_data = CardErrorReportCreate(
             card_id=card_id,
-            card_type=CardErrorCardType.VOCABULARY,
+            card_type=CardErrorCardType.WORD,
             description="Found new issue after fix.",
         )
 
@@ -319,7 +319,7 @@ class TestCreateCardErrorReportResubmission:
 
         create_data = CardErrorReportCreate(
             card_id=card_id,
-            card_type=CardErrorCardType.VOCABULARY,
+            card_type=CardErrorCardType.WORD,
             description="Resubmitting with better description.",
         )
 
@@ -349,7 +349,7 @@ class TestCreateCardErrorReportResubmission:
 
         create_data = CardErrorReportCreate(
             card_id=card_id,
-            card_type=CardErrorCardType.VOCABULARY,
+            card_type=CardErrorCardType.WORD,
             description="Trying to submit while pending exists.",
         )
 

@@ -161,7 +161,7 @@ class ChangelogTag(str, enum.Enum):
 class CardErrorCardType(str, enum.Enum):
     """Type of card being reported for errors."""
 
-    VOCABULARY = "VOCABULARY"  # Vocabulary flashcard (Card model)
+    WORD = "WORD"  # Word flashcard (Card model)
     CULTURE = "CULTURE"  # Culture question (CultureQuestion model)
 
 
@@ -1210,7 +1210,7 @@ class CardErrorReport(Base, TimestampMixin):
 
     card_type: Mapped[CardErrorCardType] = mapped_column(
         nullable=False,
-        comment="Type of card: vocabulary (Card) or culture (CultureQuestion)",
+        comment="Type of card: word (Card) or culture (CultureQuestion)",
     )
     card_id: Mapped[UUID] = mapped_column(
         nullable=False,
