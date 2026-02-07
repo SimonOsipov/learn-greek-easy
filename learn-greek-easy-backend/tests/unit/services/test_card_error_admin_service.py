@@ -69,7 +69,7 @@ def mock_report(mock_user):
     report.id = uuid4()
     report.user_id = mock_user.id
     report.card_id = uuid4()
-    report.card_type = CardErrorCardType.VOCABULARY
+    report.card_type = CardErrorCardType.WORD
     report.description = "This card has a typo in the translation."
     report.status = CardErrorStatus.PENDING
     report.admin_notes = None
@@ -167,7 +167,7 @@ class TestGetListForAdminWithFilters:
 
         # Act
         items, total = await service.get_list_for_admin(
-            card_type=CardErrorCardType.VOCABULARY,
+            card_type=CardErrorCardType.WORD,
             page=1,
             page_size=20,
         )
@@ -175,7 +175,7 @@ class TestGetListForAdminWithFilters:
         # Assert
         assert len(items) == 1
         mock_repo.list_for_admin.assert_awaited_once_with(
-            card_type=CardErrorCardType.VOCABULARY,
+            card_type=CardErrorCardType.WORD,
             status=None,
             skip=0,
             limit=20,

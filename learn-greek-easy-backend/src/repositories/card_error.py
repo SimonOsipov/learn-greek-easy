@@ -107,7 +107,7 @@ class CardErrorReportRepository(BaseRepository[CardErrorReport]):
 
         Args:
             card_id: The ID of the card being reported
-            card_type: The type of card (VOCABULARY or CULTURE)
+            card_type: The type of card (WORD or CULTURE)
             user_id: The ID of the user who submitted the report
 
         Returns:
@@ -150,7 +150,7 @@ class CardErrorReportRepository(BaseRepository[CardErrorReport]):
         then by created_at DESC within each group.
 
         Args:
-            card_type: Optional filter by card type (VOCABULARY or CULTURE)
+            card_type: Optional filter by card type (WORD or CULTURE)
             status: Optional filter by status
             skip: Number of records to skip (for pagination)
             limit: Maximum records to return

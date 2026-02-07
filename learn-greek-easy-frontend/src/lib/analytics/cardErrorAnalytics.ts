@@ -11,23 +11,23 @@ import posthog from 'posthog-js';
 // ============================================================================
 
 export interface CardErrorReportedProperties {
-  /** Type of card: 'VOCABULARY' or 'CULTURE' */
+  /** Type of card: 'WORD' or 'CULTURE' */
   cardType: string;
   /** UUID of the reported card */
   cardId: string;
 }
 
 export interface CardErrorModalOpenedProperties {
-  /** Type of card: 'VOCABULARY' or 'CULTURE' */
+  /** Type of card: 'WORD' or 'CULTURE' */
   cardType: string;
   /** UUID of the card */
   cardId: string;
   /** Where the modal was opened from */
-  source: 'flashcard' | 'culture_feedback';
+  source: 'flashcard' | 'culture_feedback' | 'word_reference';
 }
 
 export interface CardErrorModalClosedProperties {
-  /** Type of card: 'VOCABULARY' or 'CULTURE' */
+  /** Type of card: 'WORD' or 'CULTURE' */
   cardType: string;
   /** UUID of the card */
   cardId: string;

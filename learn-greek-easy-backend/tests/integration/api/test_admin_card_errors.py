@@ -149,7 +149,7 @@ class TestAdminListCardErrorsEndpoint:
         user = await UserFactory.create()
 
         # Create reports with different card types
-        await CardErrorReportFactory.create(user_id=user.id)  # VOCABULARY by default
+        await CardErrorReportFactory.create(user_id=user.id)  # WORD by default
         await CardErrorReportFactory.create(user_id=user.id, culture=True)
         await CardErrorReportFactory.create(user_id=user.id, culture=True)
 

@@ -343,7 +343,7 @@
       "dismissed": "Dismissed"
     },
     "cardTypes": {
-      "vocabulary": "Vocabulary Card",
+      "word": "Word Entry",
       "culture": "Culture Question"
     },
     "filters": {

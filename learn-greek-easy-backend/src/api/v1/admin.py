@@ -1467,7 +1467,7 @@ async def admin_delete_changelog(
                             {
                                 "id": "550e8400-e29b-41d4-a716-446655440000",
                                 "card_id": "660e8400-e29b-41d4-a716-446655440001",
-                                "card_type": "VOCABULARY",
+                                "card_type": "WORD",
                                 "user_id": "770e8400-e29b-41d4-a716-446655440002",
                                 "description": "Typo in translation...",
                                 "status": "PENDING",
@@ -1508,7 +1508,7 @@ async def list_card_errors(
         page: Page number (1-indexed)
         page_size: Number of items per page (max 100)
         status_filter: Optional filter by report status
-        card_type: Optional filter by card type (VOCABULARY or CULTURE)
+        card_type: Optional filter by card type (WORD or CULTURE)
 
     Returns:
         AdminCardErrorReportListResponse with paginated report list
@@ -1572,7 +1572,7 @@ async def list_card_errors(
                     "example": {
                         "id": "550e8400-e29b-41d4-a716-446655440000",
                         "card_id": "660e8400-e29b-41d4-a716-446655440001",
-                        "card_type": "VOCABULARY",
+                        "card_type": "WORD",
                         "user_id": "770e8400-e29b-41d4-a716-446655440002",
                         "description": "Typo in translation...",
                         "status": "PENDING",
@@ -1652,7 +1652,7 @@ async def get_card_error(
                     "example": {
                         "id": "550e8400-e29b-41d4-a716-446655440000",
                         "card_id": "660e8400-e29b-41d4-a716-446655440001",
-                        "card_type": "VOCABULARY",
+                        "card_type": "WORD",
                         "user_id": "770e8400-e29b-41d4-a716-446655440002",
                         "description": "Typo in translation...",
                         "status": "FIXED",

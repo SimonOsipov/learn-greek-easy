@@ -45,7 +45,7 @@ class CardErrorReportCreate(BaseModel):
     )
     card_type: CardErrorCardType = Field(
         ...,
-        description="Type of card: VOCABULARY or CULTURE",
+        description="Type of card: WORD or CULTURE",
     )
     description: str = Field(
         ...,

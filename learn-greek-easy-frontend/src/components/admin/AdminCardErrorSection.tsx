@@ -30,7 +30,7 @@ const CARD_ERROR_STATUSES: { value: CardErrorStatus; label: string }[] = [
 ];
 
 const CARD_TYPES: { value: CardType; label: string }[] = [
-  { value: 'VOCABULARY', label: 'vocabulary' },
+  { value: 'WORD', label: 'word' },
   { value: 'CULTURE', label: 'culture' },
 ];
 

@@ -15,7 +15,7 @@
  *   isOpen={isOpen}
  *   onClose={() => setIsOpen(false)}
  *   cardId={card.id}
- *   cardType="VOCABULARY"
+ *   cardType="WORD"
  * />
  * ```
  */

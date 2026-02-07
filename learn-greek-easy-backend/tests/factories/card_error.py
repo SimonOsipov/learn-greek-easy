@@ -39,7 +39,7 @@ class CardErrorReportFactory(BaseFactory):
     Creates user-submitted error reports for flashcards or culture questions.
 
     Traits:
-        culture: Sets card_type to CULTURE (default is VOCABULARY)
+        culture: Sets card_type to CULTURE (default is WORD)
         reviewed: Sets status to REVIEWED with resolved_by/resolved_at
         fixed: Sets status to FIXED with resolved_by/resolved_at
         dismissed: Sets status to DISMISSED with resolved_by/resolved_at
@@ -67,7 +67,7 @@ class CardErrorReportFactory(BaseFactory):
 
     # Default values
     card_id = factory.LazyFunction(uuid4)
-    card_type = CardErrorCardType.VOCABULARY
+    card_type = CardErrorCardType.WORD
     description = factory.LazyAttribute(
         lambda _: fake.paragraph(nb_sentences=2)  # Generates description text
     )

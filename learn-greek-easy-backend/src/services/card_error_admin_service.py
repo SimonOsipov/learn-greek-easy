@@ -43,7 +43,7 @@ class CardErrorAdminService:
         Returns reports sorted with PENDING status first, then by created_at DESC.
 
         Args:
-            card_type: Filter by card type (VOCABULARY or CULTURE)
+            card_type: Filter by card type (WORD or CULTURE)
             status: Filter by report status
             page: Page number (1-indexed)
             page_size: Number of items per page (max 100)
