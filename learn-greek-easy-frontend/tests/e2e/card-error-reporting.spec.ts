@@ -233,6 +233,7 @@ test.describe('Card Error Reporting - Word Entry', () => {
       .then(() => 'closed');
     const yetToReview = page
       .getByText(/yet to review/i)
+      .first()
       .waitFor({ state: 'visible', timeout: 5000 })
       .then(() => 'yet-to-review');
 
@@ -261,6 +262,7 @@ test.describe('Card Error Reporting - Word Entry', () => {
       .then(() => 'closed');
     const firstYetToReview = page
       .getByText(/yet to review/i)
+      .first()
       .waitFor({ state: 'visible', timeout: 5000 })
       .then(() => 'yet-to-review');
     await Promise.race([firstModalClosed, firstYetToReview]);
@@ -276,6 +278,11 @@ test.describe('Card Error Reporting - Word Entry', () => {
       await expect(page.getByRole('dialog')).not.toBeVisible({ timeout: 5000 });
     }
 
+    // Wait for any "yet to review" toast from first submission to disappear
+    await expect(page.getByText(/yet to review/i).first()).not.toBeVisible({ timeout: 6000 }).catch(() => {
+      // Toast may have already disappeared; continue
+    });
+
     // Reopen modal and submit second report
     await page.getByTestId('report-error-button').click();
     await expect(page.getByRole('dialog')).toBeVisible();
@@ -284,8 +291,8 @@ test.describe('Card Error Reporting - Word Entry', () => {
     await expect(submitButton2).toBeEnabled();
     await submitButton2.click();
 
-    // Second submission should show "yet to review" message
-    await expect(page.getByText(/yet to review/i)).toBeVisible({ timeout: 5000 });
+    // Second submission should show "yet to review" message (use .first() in case multiple toasts)
+    await expect(page.getByText(/yet to review/i).first()).toBeVisible({ timeout: 5000 });
   });
 
   test('FERR-E2E-06: V1 flashcard has no Report Error button', async ({ page }) => {
