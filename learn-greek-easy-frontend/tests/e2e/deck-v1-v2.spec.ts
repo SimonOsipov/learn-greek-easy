@@ -292,7 +292,9 @@ test.describe('V1/V2 Deck Pages', () => {
       expect(pageContent).toBeTruthy();
     });
 
-    test('E2E-DUAL-09: Word reference page Practice button is disabled', async ({ page }) => {
+    test('E2E-DUAL-09: Word reference page Practice button navigates to practice page', async ({
+      page,
+    }) => {
       await page.goto(`/decks/${v2DeckId}`);
 
       // Navigate to word reference page
@@ -305,12 +307,16 @@ test.describe('V1/V2 Deck Pages', () => {
       const referencePage = page.locator('[data-testid="word-reference-page"]');
       await expect(referencePage).toBeVisible({ timeout: 10000 });
 
-      // Find practice button
+      // Find practice button — should be enabled now that practice cards are implemented
       const practiceButton = page.locator('[data-testid="practice-word-button"]');
       await expect(practiceButton).toBeVisible();
+      await expect(practiceButton).toBeEnabled();
 
-      // Verify it's disabled
-      await expect(practiceButton).toBeDisabled();
+      // Click practice button and verify navigation to practice page
+      await practiceButton.click();
+      await page.waitForURL(/\/decks\/.*\/words\/.*\/practice/);
+      const practicePage = page.locator('[data-testid="practice-page"]');
+      await expect(practicePage).toBeVisible({ timeout: 10000 });
     });
 
     test('E2E-DUAL-10: Back navigation from reference page works', async ({ page }) => {
