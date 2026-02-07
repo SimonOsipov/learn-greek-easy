@@ -11,10 +11,13 @@
  * - Disabled "Practice this word" button (future feature)
  */
 
+import { useState } from 'react';
+
 import { ChevronLeft } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
 
+import { ReportErrorButton, ReportErrorModal } from '@/components/card-errors';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -178,6 +181,8 @@ export function WordReferencePage() {
     enabled: !!wordId,
   });
 
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+
   // Loading state
   if (isLoading) {
     return <WordReferencePageSkeleton />;
@@ -302,6 +307,21 @@ export function WordReferencePage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Report Error */}
+      <div className="flex justify-center">
+        <ReportErrorButton
+          onClick={() => setIsReportModalOpen(true)}
+          data-testid="report-error-button"
+        />
+      </div>
+
+      <ReportErrorModal
+        isOpen={isReportModalOpen}
+        onClose={() => setIsReportModalOpen(false)}
+        cardId={wordEntry.id}
+        cardType="WORD"
+      />
 
       {/* Practice Button (disabled for MVP) */}
       <div className="flex justify-center pb-6">

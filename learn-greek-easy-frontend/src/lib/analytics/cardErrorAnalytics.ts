@@ -23,7 +23,7 @@ export interface CardErrorModalOpenedProperties {
   /** UUID of the card */
   cardId: string;
   /** Where the modal was opened from */
-  source: 'flashcard' | 'culture_feedback';
+  source: 'flashcard' | 'culture_feedback' | 'word_reference';
 }
 
 export interface CardErrorModalClosedProperties {
