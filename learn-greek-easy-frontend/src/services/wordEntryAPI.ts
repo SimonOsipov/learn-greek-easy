@@ -87,6 +87,36 @@ export interface WordEntryListResponse {
   word_entries: WordEntryResponse[];
 }
 
+/**
+ * Card type for V2 card records.
+ * Matches backend CardType enum in src/db/models.py.
+ */
+export type CardRecordType =
+  | 'meaning_el_to_en'
+  | 'meaning_en_to_el'
+  | 'conjugation'
+  | 'declension'
+  | 'cloze'
+  | 'sentence_translation';
+
+/**
+ * Card record response from backend.
+ * Matches the CardRecordResponse schema in src/schemas/card_record.py.
+ * Fields use snake_case to match API responses.
+ */
+export interface CardRecordResponse {
+  id: string;
+  word_entry_id: string;
+  deck_id: string;
+  card_type: CardRecordType;
+  tier: number | null;
+  front_content: Record<string, unknown>;
+  back_content: Record<string, unknown>;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 // ============================================
 // Word Entry API Methods
 // ============================================
@@ -137,5 +167,18 @@ export const wordEntryAPI = {
    */
   getById: async (wordId: string): Promise<WordEntryResponse> => {
     return api.get<WordEntryResponse>(`/api/v1/word-entries/${wordId}`);
+  },
+
+  /**
+   * Get all card records for a word entry.
+   *
+   * Fetches card records (V2 flashcards) generated from a specific word entry.
+   * Requires authenticated user with access to the word entry's deck.
+   *
+   * @param wordEntryId - UUID of the word entry
+   * @returns Array of CardRecordResponse objects
+   */
+  getCardsByWordEntry: async (wordEntryId: string): Promise<CardRecordResponse[]> => {
+    return api.get<CardRecordResponse[]>(`/api/v1/word-entries/${wordEntryId}/cards`);
   },
 };
