@@ -8,7 +8,7 @@
  * - Grammar tables (conjugation for verbs, declension for nouns/adjectives)
  * - Usage examples
  * - Notes section (if available)
- * - Disabled "Practice this word" button (future feature)
+ * - Dynamic "Practice this word" button (navigates to practice page when cards available)
  */
 
 import { useState } from 'react';
@@ -33,7 +33,7 @@ import {
   ExamplesSection,
   NounDeclensionTable,
 } from '../components';
-import { useWordEntry } from '../hooks';
+import { useWordEntry, useWordEntryCards } from '../hooks';
 
 // ============================================
 // Loading Skeleton Component
@@ -183,6 +183,11 @@ export function WordReferencePage() {
 
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
 
+  const { cards, isLoading: isCardsLoading } = useWordEntryCards({
+    wordEntryId: wordId || '',
+    enabled: !!wordId,
+  });
+
   // Loading state
   if (isLoading) {
     return <WordReferencePageSkeleton />;
@@ -323,26 +328,50 @@ export function WordReferencePage() {
         cardType="WORD"
       />
 
-      {/* Practice Button (disabled for MVP) */}
+      {/* Practice Button */}
       <div className="flex justify-center pb-6">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <span>
-              <Button
-                variant="default"
-                size="lg"
-                disabled
-                className="min-w-[250px] cursor-not-allowed"
-                data-testid="practice-word-button"
-              >
-                {t('deck:wordReference.practiceWord')}
-              </Button>
-            </span>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>{t('deck:v2.comingSoon')}</p>
-          </TooltipContent>
-        </Tooltip>
+        {isCardsLoading ? (
+          <Button
+            variant="default"
+            size="lg"
+            disabled
+            className="min-w-[250px]"
+            data-testid="practice-word-button"
+          >
+            {t('deck:wordReference.practiceWord')}
+          </Button>
+        ) : cards.length === 0 ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span>
+                <Button
+                  variant="default"
+                  size="lg"
+                  disabled
+                  className="min-w-[250px] cursor-not-allowed"
+                  data-testid="practice-word-button"
+                >
+                  {t('deck:wordReference.practiceWord')}
+                </Button>
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{t('deck:practice.noCards')}</p>
+            </TooltipContent>
+          </Tooltip>
+        ) : (
+          <Button
+            asChild
+            variant="default"
+            size="lg"
+            className="min-w-[250px]"
+            data-testid="practice-word-button"
+          >
+            <Link to={`/decks/${deckId}/words/${wordId}/practice`}>
+              {t('deck:wordReference.practiceWord')}
+            </Link>
+          </Button>
+        )}
       </div>
     </div>
   );
