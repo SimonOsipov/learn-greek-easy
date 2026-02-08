@@ -341,5 +341,7 @@ async def bulk_upload_word_entries(
         deck_id=request.deck_id,
         created_count=created_count,
         updated_count=updated_count,
+        cards_created=cards_created,
+        cards_updated=cards_updated,
         word_entries=[WordEntryResponse.model_validate(entry) for entry in entries],
     )

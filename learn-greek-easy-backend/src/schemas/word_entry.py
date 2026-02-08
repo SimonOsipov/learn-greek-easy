@@ -513,6 +513,16 @@ class WordEntryBulkResponse(BaseModel):
         ge=0,
         description="Number of existing word entries updated",
     )
+    cards_created: int = Field(
+        default=0,
+        ge=0,
+        description="Number of card records created during auto-generation",
+    )
+    cards_updated: int = Field(
+        default=0,
+        ge=0,
+        description="Number of card records updated during auto-generation",
+    )
     word_entries: list[WordEntryResponse] = Field(
         ...,
         description="List of all created and updated word entries",
