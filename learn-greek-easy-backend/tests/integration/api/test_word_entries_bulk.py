@@ -16,7 +16,7 @@ from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.db.models import Deck, DeckLevel, PartOfSpeech, WordEntry
+from src.db.models import CardRecord, CardType, Deck, DeckLevel, PartOfSpeech, WordEntry
 
 # ============================================================================
 # Test Data Fixtures
@@ -72,6 +72,45 @@ BULK_MINIMAL_ENTRY = {
     "lemma": "νερό",
     "part_of_speech": "noun",
     "translation_en": "water",
+}
+
+CARD_GEN_ENTRY_WITH_EXAMPLES = {
+    "lemma": "δρόμος",
+    "part_of_speech": "noun",
+    "translation_en": "road, street",
+    "translation_ru": "дорога, улица",
+    "cefr_level": "A1",
+    "pronunciation": "/ðró·mos/",
+    "grammar_data": {
+        "gender": "masculine",
+        "nominative_singular": "δρόμος",
+        "genitive_singular": "δρόμου",
+        "nominative_plural": "δρόμοι",
+        "genitive_plural": "δρόμων",
+    },
+    "examples": [
+        {
+            "greek": "Ο δρόμος είναι μεγάλος.",
+            "english": "The road is big.",
+            "russian": "Дорога большая.",
+        }
+    ],
+}
+
+CARD_GEN_ENTRY_WITHOUT_EXAMPLES = {
+    "lemma": "τρέχω",
+    "part_of_speech": "verb",
+    "translation_en": "to run",
+    "translation_ru": "бежать",
+    "cefr_level": "A1",
+    "pronunciation": "/tré·xo/",
+    "grammar_data": {
+        "voice": "active",
+        "present_1s": "τρέχω",
+        "present_2s": "τρέχεις",
+        "present_3s": "τρέχει",
+        "past_1s": "έτρεξα",
+    },
 }
 
 
@@ -151,6 +190,12 @@ class TestBulkUpsertWordEntriesEndpoint:
         assert data["deck_id"] == str(active_deck_for_bulk.id)
         assert data["created_count"] == 2
         assert data["updated_count"] == 0
+        assert "cards_created" in data
+        assert "cards_updated" in data
+        assert isinstance(data["cards_created"], int)
+        assert isinstance(data["cards_updated"], int)
+        assert data["cards_created"] >= 0
+        assert data["cards_updated"] >= 0
         assert len(data["word_entries"]) == 2
 
         # Verify entries data
@@ -817,6 +862,13 @@ class TestBulkUpsertWordEntriesEndpoint:
 
         assert response.status_code == 201
         data = response.json()
+
+        # Verify top-level response includes card count fields
+        assert "cards_created" in data, "Missing cards_created in response"
+        assert "cards_updated" in data, "Missing cards_updated in response"
+        assert isinstance(data["cards_created"], int)
+        assert isinstance(data["cards_updated"], int)
+
         entry = data["word_entries"][0]
 
         # Verify all WordEntryResponse fields are present
@@ -838,3 +890,251 @@ class TestBulkUpsertWordEntriesEndpoint:
         ]
         for field in required_fields:
             assert field in entry, f"Missing required field: {field}"
+
+
+class TestBulkUpsertCardGeneration:
+    """Integration tests for card generation during bulk word entry upload."""
+
+    @pytest.fixture
+    async def active_deck_for_card_gen(self, db_session: AsyncSession):
+        """Create an active V2 deck for card generation tests."""
+        deck = Deck(
+            id=uuid4(),
+            name_en="Deck for Card Gen Tests",
+            name_el="Τράπουλα δημιουργίας καρτών",
+            name_ru="Колода для генерации карточек",
+            description_en="Test deck for card generation integration",
+            description_el="Τράπουλα τεστ",
+            description_ru="Тестовая колода",
+            level=DeckLevel.A1,
+            is_active=True,
+        )
+        db_session.add(deck)
+        await db_session.commit()
+        await db_session.refresh(deck)
+        return deck
+
+    # ========================================================================
+    # Card Generation - Response Count Tests
+    # ========================================================================
+
+    @pytest.mark.asyncio
+    async def test_bulk_upload_creates_cards_for_new_entries(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        active_deck_for_card_gen,
+    ):
+        """Test first-time bulk upload of 2 entries creates 4 cards total (2 per entry)."""
+        request_data = {
+            "deck_id": str(active_deck_for_card_gen.id),
+            "word_entries": [
+                CARD_GEN_ENTRY_WITH_EXAMPLES,
+                CARD_GEN_ENTRY_WITHOUT_EXAMPLES,
+            ],
+        }
+
+        response = await client.post(
+            "/api/v1/word-entries/bulk",
+            json=request_data,
+            headers=superuser_auth_headers,
+        )
+
+        assert response.status_code == 201
+        data = response.json()
+        assert data["created_count"] == 2
+        assert data["updated_count"] == 0
+        assert data["cards_created"] == 4
+        assert data["cards_updated"] == 0
+
+    @pytest.mark.asyncio
+    async def test_bulk_upload_reupload_updates_cards(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        active_deck_for_card_gen,
+    ):
+        """Test re-uploading the same entries updates existing cards instead of creating duplicates."""
+        request_data = {
+            "deck_id": str(active_deck_for_card_gen.id),
+            "word_entries": [
+                CARD_GEN_ENTRY_WITH_EXAMPLES,
+                CARD_GEN_ENTRY_WITHOUT_EXAMPLES,
+            ],
+        }
+
+        # First upload -- creates
+        first_response = await client.post(
+            "/api/v1/word-entries/bulk",
+            json=request_data,
+            headers=superuser_auth_headers,
+        )
+        assert first_response.status_code == 201
+        first_data = first_response.json()
+        assert first_data["cards_created"] == 4
+        assert first_data["cards_updated"] == 0
+
+        # Second upload -- same data, should update
+        second_response = await client.post(
+            "/api/v1/word-entries/bulk",
+            json=request_data,
+            headers=superuser_auth_headers,
+        )
+        assert second_response.status_code == 201
+        second_data = second_response.json()
+        assert second_data["cards_created"] == 0
+        assert second_data["cards_updated"] == 4
+
+    # ========================================================================
+    # Card Generation - Database Verification Tests
+    # ========================================================================
+
+    @pytest.mark.asyncio
+    async def test_bulk_upload_card_records_table_correct(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        active_deck_for_card_gen,
+        db_session: AsyncSession,
+    ):
+        """Test card_records table contains correct rows with correct field values after bulk upload."""
+        request_data = {
+            "deck_id": str(active_deck_for_card_gen.id),
+            "word_entries": [
+                CARD_GEN_ENTRY_WITH_EXAMPLES,
+                CARD_GEN_ENTRY_WITHOUT_EXAMPLES,
+            ],
+        }
+
+        response = await client.post(
+            "/api/v1/word-entries/bulk",
+            json=request_data,
+            headers=superuser_auth_headers,
+        )
+        assert response.status_code == 201
+        data = response.json()
+
+        # Collect word entry IDs from response
+        word_entry_ids = [entry["id"] for entry in data["word_entries"]]
+        assert len(word_entry_ids) == 2
+
+        # Query card_records table directly
+        stmt = (
+            select(CardRecord)
+            .where(CardRecord.word_entry_id.in_(word_entry_ids))
+            .order_by(CardRecord.word_entry_id, CardRecord.card_type)
+        )
+        result = await db_session.execute(stmt)
+        card_records = list(result.scalars().all())
+
+        # 2 entries x 2 card types = 4 total
+        assert len(card_records) == 4
+
+        # Group by word_entry_id
+        cards_by_entry = {}
+        for cr in card_records:
+            cards_by_entry.setdefault(str(cr.word_entry_id), []).append(cr)
+
+        for we_id, cards in cards_by_entry.items():
+            assert len(cards) == 2
+            card_types = {cr.card_type for cr in cards}
+            assert CardType.MEANING_EL_TO_EN in card_types
+            assert CardType.MEANING_EN_TO_EL in card_types
+
+            for cr in cards:
+                assert cr.variant_key == "default"
+                assert cr.tier == 1
+                assert cr.is_active is True
+                assert cr.deck_id == active_deck_for_card_gen.id
+
+                # Validate front_content structure
+                assert "prompt" in cr.front_content
+                assert "main" in cr.front_content
+                assert "badge" in cr.front_content
+                assert "card_type" in cr.front_content
+
+                # Validate back_content structure
+                assert "answer" in cr.back_content
+                assert "card_type" in cr.back_content
+
+        # Verify specific front/back content for el_to_en card of entry WITH examples
+        entry_with_examples = next(e for e in data["word_entries"] if e["lemma"] == "δρόμος")
+        el_to_en_card = next(
+            cr
+            for cr in card_records
+            if str(cr.word_entry_id) == entry_with_examples["id"]
+            and cr.card_type == CardType.MEANING_EL_TO_EN
+        )
+        assert el_to_en_card.front_content["main"] == "δρόμος"
+        assert el_to_en_card.back_content["answer"] == "road, street"
+
+        # Verify en_to_el card for entry WITHOUT examples
+        entry_without_examples = next(e for e in data["word_entries"] if e["lemma"] == "τρέχω")
+        en_to_el_card = next(
+            cr
+            for cr in card_records
+            if str(cr.word_entry_id) == entry_without_examples["id"]
+            and cr.card_type == CardType.MEANING_EN_TO_EL
+        )
+        assert en_to_el_card.front_content["main"] == "to run"
+        assert en_to_el_card.back_content["answer"] == "τρέχω"
+
+    @pytest.mark.asyncio
+    async def test_bulk_upload_card_context_populated_correctly(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        active_deck_for_card_gen,
+        db_session: AsyncSession,
+    ):
+        """Test context field in back_content is populated for entries with examples and null for entries without."""
+        request_data = {
+            "deck_id": str(active_deck_for_card_gen.id),
+            "word_entries": [
+                CARD_GEN_ENTRY_WITH_EXAMPLES,
+                CARD_GEN_ENTRY_WITHOUT_EXAMPLES,
+            ],
+        }
+
+        response = await client.post(
+            "/api/v1/word-entries/bulk",
+            json=request_data,
+            headers=superuser_auth_headers,
+        )
+        assert response.status_code == 201
+        data = response.json()
+
+        word_entry_ids = [entry["id"] for entry in data["word_entries"]]
+
+        stmt = select(CardRecord).where(CardRecord.word_entry_id.in_(word_entry_ids))
+        result = await db_session.execute(stmt)
+        card_records = list(result.scalars().all())
+
+        # Find the entry with examples (δρόμος)
+        entry_with_examples = next(e for e in data["word_entries"] if e["lemma"] == "δρόμος")
+        # Find the entry without examples (τρέχω)
+        entry_without_examples = next(e for e in data["word_entries"] if e["lemma"] == "τρέχω")
+
+        # Cards for entry WITH examples should have context populated
+        cards_with_examples = [
+            cr for cr in card_records if str(cr.word_entry_id) == entry_with_examples["id"]
+        ]
+        for cr in cards_with_examples:
+            context = cr.back_content.get("context")
+            assert context is not None, (
+                f"context should be populated for entry with examples "
+                f"(card_type={cr.card_type})"
+            )
+            assert context["greek"] == "Ο δρόμος είναι μεγάλος."
+            assert context["english"] == "The road is big."
+            assert context["label"] == "Example"
+
+        # Cards for entry WITHOUT examples should have context as None
+        cards_without_examples = [
+            cr for cr in card_records if str(cr.word_entry_id) == entry_without_examples["id"]
+        ]
+        for cr in cards_without_examples:
+            context = cr.back_content.get("context")
+            assert context is None, (
+                f"context should be None for entry without examples " f"(card_type={cr.card_type})"
+            )
