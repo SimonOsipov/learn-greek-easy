@@ -76,6 +76,7 @@
     },
     "sections": {
       "translation": "Перевод",
+      "caseForms": "Падежи",
       "declension": "Склонение",
       "conjugation": "Спряжение",
       "forms": "Формы"
