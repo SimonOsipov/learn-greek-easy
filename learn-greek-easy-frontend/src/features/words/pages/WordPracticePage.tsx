@@ -8,7 +8,7 @@
  * card navigation. Rendered outside AppLayout for an immersive experience.
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 
 import { ChevronLeft, RefreshCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -19,7 +19,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 
 import { PracticeCard } from '../components';
-import { useWordEntryCards } from '../hooks';
+import { useWordEntry, useWordEntryCards } from '../hooks';
 
 // ============================================
 // Loading Skeleton
@@ -50,6 +50,11 @@ export function WordPracticePage() {
     enabled: !!wordId,
   });
 
+  const { wordEntry } = useWordEntry({
+    wordId: wordId || '',
+    enabled: !!wordId,
+  });
+
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
 
@@ -70,6 +75,47 @@ export function WordPracticePage() {
     setCurrentIndex(nextIndex);
     setIsFlipped(false);
   }, [cards, currentIndex]);
+
+  const handleRate = useCallback(
+    (rating: number) => {
+      // For now, just advance to next card (SRS integration later)
+      void rating;
+      handleNextCard();
+    },
+    [handleNextCard]
+  );
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore if user is typing in an input
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement ||
+        e.target instanceof HTMLSelectElement
+      ) {
+        return;
+      }
+
+      if (e.key === ' ' || e.code === 'Space') {
+        e.preventDefault();
+        if (!isFlipped) {
+          handleFlip();
+        } else {
+          handleNextCard();
+        }
+        return;
+      }
+
+      // 1-4 keys for SRS ratings (only when card is flipped/revealed)
+      if (isFlipped && ['1', '2', '3', '4'].includes(e.key)) {
+        e.preventDefault();
+        handleRate(parseInt(e.key, 10));
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isFlipped, handleFlip, handleNextCard, handleRate]);
 
   // Loading state
   if (isLoading) {
@@ -156,7 +202,14 @@ export function WordPracticePage() {
         </Button>
 
         {/* Practice card */}
-        <PracticeCard card={currentCard} isFlipped={isFlipped} onFlip={handleFlip} />
+        <PracticeCard
+          key={currentCard.id}
+          card={currentCard}
+          isFlipped={isFlipped}
+          onFlip={handleFlip}
+          translationRu={wordEntry?.translation_ru ?? null}
+          onRate={handleRate}
+        />
 
         {/* Next card button — only show if more than 1 card */}
         {cards.length > 1 && (

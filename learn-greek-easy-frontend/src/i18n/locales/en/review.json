@@ -76,6 +76,7 @@
     },
     "sections": {
       "translation": "Translation",
+      "caseForms": "Case Forms",
       "declension": "Declension",
       "conjugation": "Conjugation",
       "forms": "Forms"

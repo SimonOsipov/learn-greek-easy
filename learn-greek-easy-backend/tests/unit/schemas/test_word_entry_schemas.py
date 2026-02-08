@@ -17,7 +17,7 @@ from uuid import uuid4
 import pytest
 from pydantic import ValidationError
 
-from src.db.models import DeckLevel, PartOfSpeech
+from src.db.models import PartOfSpeech
 from src.schemas.word_entry import (
     ExampleSentence,
     GrammarData,
@@ -342,15 +342,6 @@ class TestWordEntryBase:
         )
         assert entry.translation_ru is None
 
-    def test_cefr_level_optional(self):
-        """Test cefr_level is optional and defaults to None."""
-        entry = WordEntryBase(
-            lemma="λόγος",
-            part_of_speech=PartOfSpeech.NOUN,
-            translation_en="word",
-        )
-        assert entry.cefr_level is None
-
     def test_is_active_defaults_to_true(self):
         """Test is_active defaults to True."""
         entry = WordEntryBase(
@@ -391,7 +382,6 @@ class TestWordEntryCreate:
             part_of_speech=PartOfSpeech.ADJECTIVE,
             translation_en="good, beautiful",
             translation_ru="хороший, красивый",
-            cefr_level=DeckLevel.A2,
             pronunciation="/ka'los/",
             grammar_data=GrammarData(
                 masculine_nom_sg="καλός",
@@ -406,7 +396,6 @@ class TestWordEntryCreate:
             audio_key="audio/kalos.mp3",
             is_active=True,
         )
-        assert entry.cefr_level == DeckLevel.A2
         assert entry.pronunciation == "/ka'los/"
         assert entry.grammar_data is not None
         assert len(entry.examples) == 1
@@ -532,7 +521,6 @@ class TestWordEntryUpdate:
         update = WordEntryUpdate(
             lemma="καλός",
             part_of_speech=PartOfSpeech.ADJECTIVE,
-            cefr_level=DeckLevel.B1,
             translation_en="good",
             translation_ru="хороший",
             pronunciation="/ka'los/",
@@ -543,7 +531,6 @@ class TestWordEntryUpdate:
         )
         assert update.lemma == "καλός"
         assert update.part_of_speech == PartOfSpeech.ADJECTIVE
-        assert update.cefr_level == DeckLevel.B1
         assert update.is_active is True
 
     def test_empty_update_rejected(self):
@@ -551,25 +538,6 @@ class TestWordEntryUpdate:
         with pytest.raises(ValidationError) as exc_info:
             WordEntryUpdate()
         assert "at least one field" in str(exc_info.value).lower()
-
-    def test_update_cefr_level(self):
-        """Test updating cefr_level field."""
-        update = WordEntryUpdate(cefr_level=DeckLevel.C1)
-        assert update.cefr_level == DeckLevel.C1
-
-    def test_all_deck_levels_valid(self):
-        """Test all DeckLevel values are valid for update."""
-        all_levels = [
-            DeckLevel.A1,
-            DeckLevel.A2,
-            DeckLevel.B1,
-            DeckLevel.B2,
-            DeckLevel.C1,
-            DeckLevel.C2,
-        ]
-        for level in all_levels:
-            update = WordEntryUpdate(cefr_level=level)
-            assert update.cefr_level == level
 
 
 # ============================================================================
@@ -606,7 +574,6 @@ class TestWordEntryResponse:
             deck_id = uuid4()
             lemma = "γράφω"
             part_of_speech = PartOfSpeech.VERB
-            cefr_level = DeckLevel.B1
             translation_en = "to write"
             translation_ru = "писать"
             pronunciation = None
@@ -620,7 +587,6 @@ class TestWordEntryResponse:
         response = WordEntryResponse.model_validate(MockWordEntry())
         assert response.lemma == "γράφω"
         assert response.part_of_speech == PartOfSpeech.VERB
-        assert response.cefr_level == DeckLevel.B1
 
     def test_response_serializes_datetime(self):
         """Test created_at/updated_at serialize correctly."""
@@ -701,7 +667,6 @@ class TestWordEntryResponse:
             deck_id=uuid4(),
             lemma="καλός",
             part_of_speech=PartOfSpeech.ADJECTIVE,
-            cefr_level=DeckLevel.A2,
             translation_en="good",
             translation_ru="хороший",
             pronunciation="/ka'los/",
@@ -712,7 +677,6 @@ class TestWordEntryResponse:
             created_at=now,
             updated_at=now,
         )
-        assert response.cefr_level == DeckLevel.A2
         assert response.translation_ru == "хороший"
         assert response.pronunciation == "/ka'los/"
         assert response.grammar_data == {"gender": "masculine"}

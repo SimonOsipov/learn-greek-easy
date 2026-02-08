@@ -267,7 +267,7 @@
   },
   "practice": {
     "title": "Practice",
-    "tapToReveal": "Tap to reveal",
+    "tapToReveal": "Tap or press Space to reveal the answer",
     "answer": "Answer",
     "example": "Example",
     "nextCard": "Next card",
@@ -276,10 +276,12 @@
     "error": "Failed to load practice cards. Please try again.",
     "retry": "Retry",
     "srsComingSoon": "Rating will be available soon",
-    "meaningBadge": "Meaning",
+    "meaningBadge": "Translation",
     "again": "Again",
     "hard": "Hard",
     "good": "Good",
-    "easy": "Easy"
+    "easy": "Easy",
+    "langEn": "EN",
+    "langRu": "RU"
   }
 }

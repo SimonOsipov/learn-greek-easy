@@ -57,6 +57,7 @@ export function CardContent({ card, isFlipped }: CardContentProps) {
   const getGrammarSectionTitle = (): string | null => {
     switch (partOfSpeech) {
       case 'noun':
+        return t('grammar.sections.caseForms');
       case 'adjective':
         return t('grammar.sections.declension');
       case 'verb':

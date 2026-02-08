@@ -7,10 +7,12 @@
  * - Back side rendering (answer, answer_sub, example context)
  * - Flip interaction (onFlip callback on front click, no callback on back click)
  * - SRS buttons (all four rendered, all disabled)
+ * - Language toggle (always visible, controls i18n language)
  */
 
 import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import i18n from 'i18next';
+import { afterEach, describe, it, expect, vi } from 'vitest';
 
 import { TooltipProvider } from '@/components/ui/tooltip';
 import type { CardRecordResponse } from '@/services/wordEntryAPI';
@@ -88,22 +90,23 @@ describe('PracticeCard', () => {
       expect(screen.getByText('[spee-tee]')).toBeInTheDocument();
     });
 
-    it('renders Meaning badge', () => {
+    it('renders Translation badge', () => {
       renderCard();
 
-      expect(screen.getByText('Meaning')).toBeInTheDocument();
+      expect(screen.getByText('Translation')).toBeInTheDocument();
     });
 
     it('renders POS badge from front_content.badge', () => {
       renderCard();
 
+      expect(screen.getByTestId('part-of-speech-badge')).toBeInTheDocument();
       expect(screen.getByText('Noun')).toBeInTheDocument();
     });
 
-    it('renders "Tap to reveal" hint', () => {
+    it('renders "Tap or press Space to reveal the answer" hint', () => {
       renderCard();
 
-      expect(screen.getByText('Tap to reveal')).toBeInTheDocument();
+      expect(screen.getByText('Tap or press Space to reveal the answer')).toBeInTheDocument();
     });
   });
 
@@ -129,6 +132,12 @@ describe('PracticeCard', () => {
         )
       ).toBeInTheDocument();
       expect(screen.getByText('My house is small.')).toBeInTheDocument();
+    });
+
+    it('renders PartOfSpeechBadge on back side', () => {
+      renderCard({ isFlipped: true });
+
+      expect(screen.getByTestId('part-of-speech-badge')).toBeInTheDocument();
     });
   });
 
@@ -164,13 +173,112 @@ describe('PracticeCard', () => {
       expect(screen.getByTestId('srs-button-easy')).toBeInTheDocument();
     });
 
-    it('all SRS buttons are disabled', () => {
+    it('all SRS buttons are disabled when onRate is not provided', () => {
       renderCard({ isFlipped: true });
 
       expect(screen.getByTestId('srs-button-again')).toBeDisabled();
       expect(screen.getByTestId('srs-button-hard')).toBeDisabled();
       expect(screen.getByTestId('srs-button-good')).toBeDisabled();
       expect(screen.getByTestId('srs-button-easy')).toBeDisabled();
+    });
+
+    it('enables SRS buttons when onRate is provided', () => {
+      renderCard({ isFlipped: true, onRate: vi.fn() });
+
+      expect(screen.getByTestId('srs-button-again')).not.toBeDisabled();
+      expect(screen.getByTestId('srs-button-hard')).not.toBeDisabled();
+      expect(screen.getByTestId('srs-button-good')).not.toBeDisabled();
+      expect(screen.getByTestId('srs-button-easy')).not.toBeDisabled();
+    });
+
+    it('calls onRate with correct rating when SRS button clicked', () => {
+      const onRate = vi.fn();
+      renderCard({ isFlipped: true, onRate });
+
+      fireEvent.click(screen.getByTestId('srs-button-again'));
+      expect(onRate).toHaveBeenCalledWith(1);
+
+      fireEvent.click(screen.getByTestId('srs-button-hard'));
+      expect(onRate).toHaveBeenCalledWith(2);
+
+      fireEvent.click(screen.getByTestId('srs-button-good'));
+      expect(onRate).toHaveBeenCalledWith(3);
+
+      fireEvent.click(screen.getByTestId('srs-button-easy'));
+      expect(onRate).toHaveBeenCalledWith(4);
+    });
+  });
+
+  describe('Hotkey Hints', () => {
+    it('shows space hint in tap-to-reveal text on front side', () => {
+      renderCard();
+      expect(screen.getByText('Tap or press Space to reveal the answer')).toBeInTheDocument();
+    });
+
+    it('shows number hints below SRS buttons when onRate is provided', () => {
+      renderCard({ isFlipped: true, onRate: vi.fn() });
+      expect(screen.getByText('1')).toBeInTheDocument();
+      expect(screen.getByText('2')).toBeInTheDocument();
+      expect(screen.getByText('3')).toBeInTheDocument();
+      expect(screen.getByText('4')).toBeInTheDocument();
+    });
+
+    it('does not show number hints when onRate is not provided', () => {
+      renderCard({ isFlipped: true });
+      // Number hints should NOT appear when onRate is not provided
+      const allTexts = screen.queryAllByText(/^[1-4]$/);
+      expect(allTexts.length).toBe(0);
+    });
+  });
+
+  describe('Language Toggle', () => {
+    afterEach(async () => {
+      // Reset i18n language to English after each language toggle test
+      await i18n.changeLanguage('en');
+    });
+
+    it('always renders language toggle on front side', () => {
+      renderCard({ isFlipped: false });
+      expect(screen.getByTestId('lang-toggle')).toBeInTheDocument();
+      expect(screen.getByTestId('lang-toggle-en')).toBeInTheDocument();
+      expect(screen.getByTestId('lang-toggle-ru')).toBeInTheDocument();
+    });
+
+    it('always renders language toggle on back side', () => {
+      renderCard({ isFlipped: true });
+      expect(screen.getByTestId('lang-toggle')).toBeInTheDocument();
+      expect(screen.getByTestId('lang-toggle-en')).toBeInTheDocument();
+      expect(screen.getByTestId('lang-toggle-ru')).toBeInTheDocument();
+    });
+
+    it('renders language toggle even without translationRu', () => {
+      renderCard({ isFlipped: true, translationRu: null });
+      expect(screen.getByTestId('lang-toggle')).toBeInTheDocument();
+    });
+
+    it('shows English answer by default', () => {
+      renderCard({ isFlipped: true, translationRu: '\u0434\u043E\u043C' });
+      expect(screen.getByText('house')).toBeInTheDocument();
+    });
+
+    it('switches to Russian translation when RU button clicked', () => {
+      renderCard({ isFlipped: true, translationRu: '\u0434\u043E\u043C' });
+      fireEvent.click(screen.getByTestId('lang-toggle-ru'));
+      expect(screen.getByText('\u0434\u043E\u043C')).toBeInTheDocument();
+    });
+
+    it('switches back to English when EN button clicked after switching to RU', () => {
+      renderCard({ isFlipped: true, translationRu: '\u0434\u043E\u043C' });
+      fireEvent.click(screen.getByTestId('lang-toggle-ru'));
+      fireEvent.click(screen.getByTestId('lang-toggle-en'));
+      expect(screen.getByText('house')).toBeInTheDocument();
+    });
+
+    it('does not flip the card when clicking language toggle on front side', () => {
+      const onFlip = vi.fn();
+      renderCard({ isFlipped: false, onFlip });
+      fireEvent.click(screen.getByTestId('lang-toggle-en'));
+      expect(onFlip).not.toHaveBeenCalled();
     });
   });
 });

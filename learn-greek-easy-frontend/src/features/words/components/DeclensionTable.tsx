@@ -10,7 +10,7 @@ import { useState } from 'react';
 
 import { useTranslation } from 'react-i18next';
 
-import { Badge } from '@/components/ui/badge';
+import { GenderBadge } from '@/components/review/grammar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollableTable } from '@/components/ui/scrollable-table';
 import {
@@ -91,10 +91,10 @@ export function NounDeclensionTable({ grammarData }: NounDeclensionTableProps) {
     <Card>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg">{t('grammar.sections.declension')}</CardTitle>
-          <Badge variant="secondary" className="capitalize">
-            {t(`grammar.nounDeclension.genders.${grammarData.gender}`)}
-          </Badge>
+          <CardTitle className="text-lg">{t('grammar.sections.caseForms')}</CardTitle>
+          {grammarData.gender && (GENDERS as readonly string[]).includes(grammarData.gender) && (
+            <GenderBadge gender={grammarData.gender} />
+          )}
         </div>
       </CardHeader>
       <CardContent>

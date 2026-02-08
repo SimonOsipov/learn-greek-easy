@@ -4782,7 +4782,7 @@ class SeedService:
         Args:
             deck_id: UUID of the deck to add entries to
             vocabulary: List of word data dicts with keys: lemma, part_of_speech,
-                translation_en, translation_ru, pronunciation, cefr_level,
+                translation_en, translation_ru, pronunciation,
                 grammar_data, examples
 
         Returns:
@@ -4797,7 +4797,6 @@ class SeedService:
                 translation_en=word_data["translation_en"],
                 translation_ru=word_data.get("translation_ru"),
                 pronunciation=word_data.get("pronunciation"),
-                cefr_level=word_data.get("cefr_level"),
                 grammar_data=word_data.get("grammar_data"),
                 examples=word_data.get("examples"),
                 is_active=True,
@@ -4876,7 +4875,6 @@ class SeedService:
                 "translation_en": "house, home",
                 "translation_ru": "дом",
                 "pronunciation": "/spí·ti/",
-                "cefr_level": DeckLevel.A1,
                 "grammar_data": {
                     "gender": "neuter",
                     "declension_group": "neuter_i",
@@ -4908,7 +4906,6 @@ class SeedService:
                 "translation_en": "water",
                 "translation_ru": "вода",
                 "pronunciation": "/ne·ró/",
-                "cefr_level": DeckLevel.A1,
                 "grammar_data": {
                     "gender": "neuter",
                     "declension_group": "neuter_o",
@@ -4940,7 +4937,6 @@ class SeedService:
                 "translation_en": "book",
                 "translation_ru": "книга",
                 "pronunciation": "/vi·vlí·o/",
-                "cefr_level": DeckLevel.A1,
                 "grammar_data": {
                     "gender": "neuter",
                     "declension_group": "neuter_o",
@@ -4972,7 +4968,6 @@ class SeedService:
                 "translation_en": "child",
                 "translation_ru": "ребёнок",
                 "pronunciation": "/pe·dhí/",
-                "cefr_level": DeckLevel.A1,
                 "grammar_data": {
                     "gender": "neuter",
                     "declension_group": "neuter_i",
@@ -5005,7 +5000,6 @@ class SeedService:
                 "translation_en": "dog",
                 "translation_ru": "собака",
                 "pronunciation": "/skí·los/",
-                "cefr_level": DeckLevel.A1,
                 "grammar_data": {
                     "gender": "masculine",
                     "declension_group": "masculine_os",
@@ -5037,7 +5031,6 @@ class SeedService:
                 "translation_en": "teacher (male)",
                 "translation_ru": "учитель",
                 "pronunciation": "/dhá·ska·los/",
-                "cefr_level": DeckLevel.A1,
                 "grammar_data": {
                     "gender": "masculine",
                     "declension_group": "masculine_os",
@@ -5069,7 +5062,6 @@ class SeedService:
                 "translation_en": "road, street",
                 "translation_ru": "дорога, улица",
                 "pronunciation": "/dhró·mos/",
-                "cefr_level": DeckLevel.A1,
                 "grammar_data": {
                     "gender": "masculine",
                     "declension_group": "masculine_os",
@@ -5101,7 +5093,6 @@ class SeedService:
                 "translation_en": "friend (male)",
                 "translation_ru": "друг",
                 "pronunciation": "/fí·los/",
-                "cefr_level": DeckLevel.A1,
                 "grammar_data": {
                     "gender": "masculine",
                     "declension_group": "masculine_os",
@@ -5134,7 +5125,6 @@ class SeedService:
                 "translation_en": "cat",
                 "translation_ru": "кошка",
                 "pronunciation": "/ghá·ta/",
-                "cefr_level": DeckLevel.A1,
                 "grammar_data": {
                     "gender": "feminine",
                     "declension_group": "feminine_a",
@@ -5166,7 +5156,6 @@ class SeedService:
                 "translation_en": "woman, wife",
                 "translation_ru": "женщина, жена",
                 "pronunciation": "/yi·né·ka/",
-                "cefr_level": DeckLevel.A1,
                 "grammar_data": {
                     "gender": "feminine",
                     "declension_group": "feminine_a",
@@ -5208,7 +5197,6 @@ class SeedService:
                 "translation_en": "to drink",
                 "translation_ru": "пить",
                 "pronunciation": "/pí·no/",
-                "cefr_level": DeckLevel.A2,
                 "grammar_data": {
                     "voice": "active",
                     "conjugation_group": "A",
@@ -5238,7 +5226,6 @@ class SeedService:
                 "translation_en": "to write",
                 "translation_ru": "писать",
                 "pronunciation": "/ghrá·fo/",
-                "cefr_level": DeckLevel.A2,
                 "grammar_data": {
                     "voice": "active",
                     "conjugation_group": "A",
@@ -5268,7 +5255,6 @@ class SeedService:
                 "translation_en": "to read, to study",
                 "translation_ru": "читать, учить",
                 "pronunciation": "/dhi·a·vá·zo/",
-                "cefr_level": DeckLevel.A2,
                 "grammar_data": {
                     "voice": "active",
                     "conjugation_group": "A",
@@ -5298,7 +5284,6 @@ class SeedService:
                 "translation_en": "to work",
                 "translation_ru": "работать",
                 "pronunciation": "/dhu·lé·vo/",
-                "cefr_level": DeckLevel.A2,
                 "grammar_data": {
                     "voice": "active",
                     "conjugation_group": "A",
@@ -5328,7 +5313,6 @@ class SeedService:
                 "translation_en": "to learn",
                 "translation_ru": "учиться, изучать",
                 "pronunciation": "/ma·thé·no/",
-                "cefr_level": DeckLevel.A2,
                 "grammar_data": {
                     "voice": "active",
                     "conjugation_group": "A",
@@ -5358,7 +5342,6 @@ class SeedService:
                 "translation_en": "to hear, to listen",
                 "translation_ru": "слушать, слышать",
                 "pronunciation": "/a·kú·o/",
-                "cefr_level": DeckLevel.A2,
                 "grammar_data": {
                     "voice": "active",
                     "conjugation_group": "A",
@@ -5389,7 +5372,6 @@ class SeedService:
                 "translation_en": "to love",
                 "translation_ru": "любить",
                 "pronunciation": "/a·gha·pó/",
-                "cefr_level": DeckLevel.A2,
                 "grammar_data": {
                     "voice": "active",
                     "conjugation_group": "B",
@@ -5419,7 +5401,6 @@ class SeedService:
                 "translation_en": "to want",
                 "translation_ru": "хотеть",
                 "pronunciation": "/thé·lo/",
-                "cefr_level": DeckLevel.A2,
                 "grammar_data": {
                     "voice": "active",
                     "conjugation_group": "B",
@@ -5449,7 +5430,6 @@ class SeedService:
                 "translation_en": "to speak, to talk",
                 "translation_ru": "говорить, разговаривать",
                 "pronunciation": "/mi·ló/",
-                "cefr_level": DeckLevel.A2,
                 "grammar_data": {
                     "voice": "active",
                     "conjugation_group": "B",
@@ -5479,7 +5459,6 @@ class SeedService:
                 "translation_en": "to eat",
                 "translation_ru": "есть, кушать",
                 "pronunciation": "/tró·o/",
-                "cefr_level": DeckLevel.A2,
                 "grammar_data": {
                     "voice": "active",
                     "conjugation_group": "B",
@@ -5519,7 +5498,6 @@ class SeedService:
                 "translation_en": "good, nice",
                 "translation_ru": "хороший",
                 "pronunciation": "/ka·lós/",
-                "cefr_level": DeckLevel.A2,
                 "grammar_data": {
                     "declension_group": "os_i_o",
                     "forms": {
@@ -5576,7 +5554,6 @@ class SeedService:
                 "translation_en": "big, large, great",
                 "translation_ru": "большой, великий",
                 "pronunciation": "/me·ghá·los/",
-                "cefr_level": DeckLevel.A2,
                 "grammar_data": {
                     "declension_group": "os_i_o",
                     "forms": {
@@ -5633,7 +5610,6 @@ class SeedService:
                 "translation_en": "small, little",
                 "translation_ru": "маленький",
                 "pronunciation": "/mi·krós/",
-                "cefr_level": DeckLevel.A2,
                 "grammar_data": {
                     "declension_group": "os_i_o",
                     "forms": {
@@ -5690,7 +5666,6 @@ class SeedService:
                 "translation_en": "young, new",
                 "translation_ru": "молодой, новый",
                 "pronunciation": "/né·os/",
-                "cefr_level": DeckLevel.A2,
                 "grammar_data": {
                     "declension_group": "os_a_o",
                     "forms": {
@@ -5748,7 +5723,6 @@ class SeedService:
                 "translation_en": "today",
                 "translation_ru": "сегодня",
                 "pronunciation": "/sí·me·ra/",
-                "cefr_level": DeckLevel.A2,
                 "grammar_data": {"category": "time"},
                 "examples": [
                     {
@@ -5765,7 +5739,6 @@ class SeedService:
                 "translation_en": "tomorrow",
                 "translation_ru": "завтра",
                 "pronunciation": "/áv·ri·o/",
-                "cefr_level": DeckLevel.A2,
                 "grammar_data": {"category": "time"},
                 "examples": [
                     {
@@ -5782,7 +5755,6 @@ class SeedService:
                 "translation_en": "here",
                 "translation_ru": "здесь, тут",
                 "pronunciation": "/e·dhó/",
-                "cefr_level": DeckLevel.A2,
                 "grammar_data": {"category": "place"},
                 "examples": [
                     {
@@ -5799,7 +5771,6 @@ class SeedService:
                 "translation_en": "very, much, a lot",
                 "translation_ru": "очень, много",
                 "pronunciation": "/po·lí/",
-                "cefr_level": DeckLevel.A2,
                 "grammar_data": {"category": "degree"},
                 "examples": [
                     {
@@ -5817,7 +5788,6 @@ class SeedService:
                 "translation_en": "good morning",
                 "translation_ru": "доброе утро",
                 "pronunciation": "/ka·li·mé·ra/",
-                "cefr_level": DeckLevel.A2,
                 "grammar_data": {"category": "greeting", "formality": "neutral"},
                 "examples": [
                     {
@@ -5834,7 +5804,6 @@ class SeedService:
                 "translation_en": "thank you",
                 "translation_ru": "спасибо",
                 "pronunciation": "/ef·cha·ri·stó/",
-                "cefr_level": DeckLevel.A2,
                 "grammar_data": {"category": "politeness", "formality": "neutral"},
                 "examples": [
                     {

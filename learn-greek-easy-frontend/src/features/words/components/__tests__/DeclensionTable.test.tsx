@@ -99,10 +99,10 @@ const partialNounData: NounData = {
 
 describe('NounDeclensionTable', () => {
   describe('Header and Gender Badge', () => {
-    it('renders declension section title', () => {
+    it('renders case forms section title', () => {
       render(<NounDeclensionTable grammarData={mockNounData} />);
 
-      expect(screen.getByText('Declension')).toBeInTheDocument();
+      expect(screen.getByText('Case Forms')).toBeInTheDocument();
     });
 
     it('displays gender badge for masculine nouns', () => {

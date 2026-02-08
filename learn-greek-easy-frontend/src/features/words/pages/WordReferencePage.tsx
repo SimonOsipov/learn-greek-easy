@@ -18,6 +18,7 @@ import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
 
 import { ReportErrorButton, ReportErrorModal } from '@/components/card-errors';
+import { GenderBadge, PartOfSpeechBadge } from '@/components/review/grammar';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -25,7 +26,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { getLocalizedTranslation } from '@/lib/localeUtils';
-import type { AdjectiveData, AdverbData, NounDataAny, VerbData } from '@/types/grammar';
+import type { AdjectiveData, AdverbData, NounDataAny, NounGender, VerbData } from '@/types/grammar';
 
 import {
   AdjectiveDeclensionTable,
@@ -264,20 +265,15 @@ export function WordReferencePage() {
 
         {/* Type badges */}
         <div className="mb-4 flex flex-wrap gap-2">
-          <Badge variant="secondary" className="capitalize">
-            {t(`review:grammar.partOfSpeech.${partOfSpeech}`)}
-          </Badge>
+          <PartOfSpeechBadge partOfSpeech={partOfSpeech} />
           {partOfSpeech === 'verb' && grammarData && 'voice' in grammarData && (
             <Badge variant="outline" className="capitalize">
               {t(`review:grammar.verbConjugation.voice.${grammarData.voice as string}`)}
             </Badge>
           )}
-          {partOfSpeech === 'noun' && grammarData && 'gender' in grammarData && (
-            <Badge variant="outline" className="capitalize">
-              {t(`review:grammar.nounDeclension.genders.${grammarData.gender as string}`)}
-            </Badge>
+          {partOfSpeech === 'noun' && grammarData && 'gender' in grammarData && article && (
+            <GenderBadge gender={grammarData.gender as NounGender} />
           )}
-          {wordEntry.cefr_level && <Badge variant="outline">{wordEntry.cefr_level}</Badge>}
         </div>
 
         {/* Greek word (lemma) */}
@@ -313,12 +309,61 @@ export function WordReferencePage() {
         </Card>
       )}
 
-      {/* Report Error */}
-      <div className="flex justify-center">
-        <ReportErrorButton
-          onClick={() => setIsReportModalOpen(true)}
-          data-testid="report-error-button"
-        />
+      {/* Practice Button + Report Error (same vertical level) */}
+      <div className="relative pb-6 pt-4">
+        {/* Report Error - absolute bottom-left */}
+        <div className="absolute bottom-6 left-0">
+          <ReportErrorButton
+            onClick={() => setIsReportModalOpen(true)}
+            data-testid="report-error-button"
+          />
+        </div>
+
+        {/* Practice Button - centered */}
+        <div className="flex justify-center">
+          {isCardsLoading ? (
+            <Button
+              variant="default"
+              size="lg"
+              disabled
+              className="min-w-[250px]"
+              data-testid="practice-word-button"
+            >
+              {t('deck:wordReference.practiceWord')}
+            </Button>
+          ) : cards.length === 0 ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span>
+                  <Button
+                    variant="default"
+                    size="lg"
+                    disabled
+                    className="min-w-[250px] cursor-not-allowed"
+                    data-testid="practice-word-button"
+                  >
+                    {t('deck:wordReference.practiceWord')}
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{t('deck:practice.noCards')}</p>
+              </TooltipContent>
+            </Tooltip>
+          ) : (
+            <Button
+              asChild
+              variant="default"
+              size="lg"
+              className="min-w-[250px]"
+              data-testid="practice-word-button"
+            >
+              <Link to={`/decks/${deckId}/words/${wordId}/practice`}>
+                {t('deck:wordReference.practiceWord')}
+              </Link>
+            </Button>
+          )}
+        </div>
       </div>
 
       <ReportErrorModal
@@ -327,52 +372,6 @@ export function WordReferencePage() {
         cardId={wordEntry.id}
         cardType="WORD"
       />
-
-      {/* Practice Button */}
-      <div className="flex justify-center pb-6">
-        {isCardsLoading ? (
-          <Button
-            variant="default"
-            size="lg"
-            disabled
-            className="min-w-[250px]"
-            data-testid="practice-word-button"
-          >
-            {t('deck:wordReference.practiceWord')}
-          </Button>
-        ) : cards.length === 0 ? (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span>
-                <Button
-                  variant="default"
-                  size="lg"
-                  disabled
-                  className="min-w-[250px] cursor-not-allowed"
-                  data-testid="practice-word-button"
-                >
-                  {t('deck:wordReference.practiceWord')}
-                </Button>
-              </span>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>{t('deck:practice.noCards')}</p>
-            </TooltipContent>
-          </Tooltip>
-        ) : (
-          <Button
-            asChild
-            variant="default"
-            size="lg"
-            className="min-w-[250px]"
-            data-testid="practice-word-button"
-          >
-            <Link to={`/decks/${deckId}/words/${wordId}/practice`}>
-              {t('deck:wordReference.practiceWord')}
-            </Link>
-          </Button>
-        )}
-      </div>
     </div>
   );
 }

@@ -24,7 +24,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/hooks/use-toast';
 import { wordEntryAPI, type WordEntryInput } from '@/services/wordEntryAPI';
-import type { PartOfSpeech, DeckLevel } from '@/types/grammar';
+import type { PartOfSpeech } from '@/types/grammar';
 
 // ============================================================================
 // Types
@@ -46,7 +46,6 @@ interface BulkExampleSentence {
 interface BulkWordEntryInput {
   lemma: string;
   part_of_speech: PartOfSpeech;
-  cefr_level?: DeckLevel | null;
   translation_en: string;
   translation_ru?: string | null;
   pronunciation?: string | null;
@@ -82,7 +81,6 @@ interface PreviewSummary {
 // ============================================================================
 
 const VALID_PARTS_OF_SPEECH: PartOfSpeech[] = ['noun', 'verb', 'adjective', 'adverb'];
-const VALID_LEVELS: DeckLevel[] = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
 const MAX_ENTRIES = 100;
 
 // UUID validation regex
@@ -97,7 +95,6 @@ const JSON_PLACEHOLDER = `{
       "translation_en": "house, home",
       "translation_ru": "дом",
       "pronunciation": "/spí·ti/",
-      "cefr_level": "A1",
       "grammar_data": {
         "gender": "neuter",
         "nominative_singular": "σπίτι",
@@ -151,16 +148,6 @@ function validateWordEntry(entry: unknown, index: number): ValidationError[] {
   }
 
   // Optional field validations
-  if (e.cefr_level !== undefined && e.cefr_level !== null) {
-    if (!VALID_LEVELS.includes(e.cefr_level as DeckLevel)) {
-      errors.push({
-        entryIndex: index,
-        field: 'cefr_level',
-        message: `cefr_level must be one of: ${VALID_LEVELS.join(', ')}`,
-      });
-    }
-  }
-
   // translation_ru validation (optional string)
   if (
     e.translation_ru !== undefined &&

@@ -13,12 +13,14 @@
 import { Check } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import { PartOfSpeechBadge } from '@/components/review/grammar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import type { CardRecordResponse } from '@/services/wordEntryAPI';
+import type { PartOfSpeech } from '@/types/grammar';
 
 // ============================================
 // Types
@@ -31,6 +33,10 @@ export interface PracticeCardProps {
   isFlipped: boolean;
   /** Callback when the card is clicked to flip */
   onFlip: () => void;
+  /** Russian translation from word entry, null if unavailable */
+  translationRu?: string | null;
+  /** Callback when user rates the card (1=again, 2=hard, 3=good, 4=easy) */
+  onRate?: (rating: number) => void;
 }
 
 interface MeaningFrontContent {
@@ -59,10 +65,34 @@ interface MeaningBackContent {
 // ============================================
 
 const SRS_BUTTONS = [
-  { key: 'again', i18nKey: 'practice.again', color: 'bg-red-500', testId: 'srs-button-again' },
-  { key: 'hard', i18nKey: 'practice.hard', color: 'bg-orange-500', testId: 'srs-button-hard' },
-  { key: 'good', i18nKey: 'practice.good', color: 'bg-green-500', testId: 'srs-button-good' },
-  { key: 'easy', i18nKey: 'practice.easy', color: 'bg-blue-500', testId: 'srs-button-easy' },
+  {
+    key: 'again',
+    rating: 1,
+    i18nKey: 'practice.again',
+    color: 'bg-red-500',
+    testId: 'srs-button-again',
+  },
+  {
+    key: 'hard',
+    rating: 2,
+    i18nKey: 'practice.hard',
+    color: 'bg-orange-500',
+    testId: 'srs-button-hard',
+  },
+  {
+    key: 'good',
+    rating: 3,
+    i18nKey: 'practice.good',
+    color: 'bg-green-500',
+    testId: 'srs-button-good',
+  },
+  {
+    key: 'easy',
+    rating: 4,
+    i18nKey: 'practice.easy',
+    color: 'bg-blue-500',
+    testId: 'srs-button-easy',
+  },
 ] as const;
 
 // ============================================
@@ -73,10 +103,12 @@ function CardFront({
   front,
   typeBadgeLabel,
   tapToRevealLabel,
+  partOfSpeech,
 }: {
   front: MeaningFrontContent;
   typeBadgeLabel: string;
   tapToRevealLabel: string;
+  partOfSpeech: PartOfSpeech | null;
 }) {
   return (
     <div data-testid="practice-card-front" className="flex flex-col items-center gap-6 py-6">
@@ -85,11 +117,7 @@ function CardFront({
         <Badge className="bg-[#6366f1]/10 text-[#6366f1] hover:bg-[#6366f1]/10">
           {typeBadgeLabel}
         </Badge>
-        {front.badge && (
-          <Badge variant="outline" className="border-gray-300 text-gray-500">
-            {front.badge}
-          </Badge>
-        )}
+        {partOfSpeech && <PartOfSpeechBadge partOfSpeech={partOfSpeech} />}
       </div>
 
       {/* Prompt */}
@@ -108,19 +136,23 @@ function CardFront({
 }
 
 function CardBack({
-  front,
   back,
   typeBadgeLabel,
   answerLabel,
   srsComingSoon,
   t,
+  partOfSpeech,
+  displayAnswer,
+  onRate,
 }: {
-  front: MeaningFrontContent;
   back: MeaningBackContent;
   typeBadgeLabel: string;
   answerLabel: string;
   srsComingSoon: string;
   t: (key: string) => string;
+  partOfSpeech: PartOfSpeech | null;
+  displayAnswer: string;
+  onRate?: (rating: number) => void;
 }) {
   return (
     <div data-testid="practice-card-back" className="flex animate-fade-in flex-col gap-6 py-6">
@@ -129,11 +161,7 @@ function CardBack({
         <Badge className="bg-[#6366f1]/10 text-[#6366f1] hover:bg-[#6366f1]/10">
           {typeBadgeLabel}
         </Badge>
-        {front.badge && (
-          <Badge variant="outline" className="border-gray-300 text-gray-500">
-            {front.badge}
-          </Badge>
-        )}
+        {partOfSpeech && <PartOfSpeechBadge partOfSpeech={partOfSpeech} />}
       </div>
 
       {/* Answer section */}
@@ -143,7 +171,7 @@ function CardBack({
           <span className="text-sm font-medium text-emerald-600">{answerLabel}</span>
         </div>
 
-        <p className="break-words text-center text-3xl font-bold">{back.answer}</p>
+        <p className="break-words text-center text-3xl font-bold">{displayAnswer}</p>
 
         {back.answer_sub && (
           <p className="break-words text-center text-lg text-muted-foreground">{back.answer_sub}</p>
@@ -152,52 +180,78 @@ function CardBack({
 
       {/* Example context */}
       {back.context && (
-        <div className="rounded-lg bg-muted/30 p-4">
+        <Card className="bg-muted/30 p-4 transition-colors hover:bg-muted/50">
           {back.context.tense && (
             <Badge variant="outline" className="mb-2 text-xs">
               {back.context.tense}
             </Badge>
           )}
-          <p className="text-base font-medium text-foreground">{back.context.greek}</p>
-          <p className="mt-1 text-sm text-muted-foreground">{back.context.english}</p>
-        </div>
+          <p className="text-lg font-medium text-foreground">{back.context.greek}</p>
+          <p className="mt-2 text-sm text-muted-foreground">{back.context.english}</p>
+        </Card>
       )}
 
-      {/* SRS buttons (disabled) */}
-      <SrsButtonRow srsComingSoon={srsComingSoon} t={t} />
+      {/* SRS buttons */}
+      <SrsButtonRow srsComingSoon={srsComingSoon} t={t} onRate={onRate} />
     </div>
   );
 }
 
-function SrsButtonRow({ srsComingSoon, t }: { srsComingSoon: string; t: (key: string) => string }) {
+function SrsButtonRow({
+  srsComingSoon,
+  t,
+  onRate,
+}: {
+  srsComingSoon: string;
+  t: (key: string) => string;
+  onRate?: (rating: number) => void;
+}) {
   return (
-    <div className="flex justify-center gap-3 px-2 pt-2">
-      {SRS_BUTTONS.map(({ key, i18nKey, color, testId }) => {
-        const label = t(i18nKey);
-        return (
-          <Tooltip key={key}>
-            <TooltipTrigger asChild>
-              <span tabIndex={0} className="inline-block">
-                <Button
-                  disabled
-                  data-testid={testId}
-                  className={cn(
-                    'cursor-not-allowed rounded-lg px-4 py-2 text-sm font-semibold text-white opacity-50',
-                    color
-                  )}
-                  aria-label={`${label} - ${srsComingSoon}`}
-                  type="button"
-                >
-                  {label}
-                </Button>
-              </span>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>{srsComingSoon}</p>
-            </TooltipContent>
-          </Tooltip>
-        );
-      })}
+    <div className="flex flex-col items-center gap-2 pt-2">
+      <div className="flex justify-center gap-3 px-2">
+        {SRS_BUTTONS.map(({ key, rating, i18nKey, color, testId }) => {
+          const label = t(i18nKey);
+          const isEnabled = !!onRate;
+
+          const button = (
+            <Button
+              disabled={!isEnabled}
+              data-testid={testId}
+              className={cn(
+                'rounded-lg px-4 py-2 text-sm font-semibold text-white',
+                isEnabled ? color : cn(color, 'cursor-not-allowed opacity-50')
+              )}
+              aria-label={isEnabled ? label : `${label} - ${srsComingSoon}`}
+              type="button"
+              onClick={isEnabled ? () => onRate(rating) : undefined}
+            >
+              {label}
+            </Button>
+          );
+
+          if (isEnabled) {
+            return (
+              <div key={key} className="flex flex-col items-center gap-1">
+                {button}
+                <span className="text-[10px] text-muted-foreground">{rating}</span>
+              </div>
+            );
+          }
+
+          return (
+            <Tooltip key={key}>
+              <TooltipTrigger asChild>
+                <span tabIndex={0} className="inline-block">
+                  {button}
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{srsComingSoon}</p>
+              </TooltipContent>
+            </Tooltip>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -206,21 +260,53 @@ function SrsButtonRow({ srsComingSoon, t }: { srsComingSoon: string; t: (key: st
 // Component
 // ============================================
 
-export function PracticeCard({ card, isFlipped, onFlip }: PracticeCardProps) {
-  const { t } = useTranslation('deck');
+export function PracticeCard({
+  card,
+  isFlipped,
+  onFlip,
+  translationRu,
+  onRate,
+}: PracticeCardProps) {
+  const { t, i18n } = useTranslation('deck');
 
   const front = card.front_content as unknown as MeaningFrontContent;
   const back = card.back_content as unknown as MeaningBackContent;
+
+  const currentLang = (i18n.language?.split('-')[0] ?? 'en') as 'en' | 'ru';
+
+  // Determine displayed answer based on UI language
+  const displayAnswer = currentLang === 'ru' && translationRu ? translationRu : back.answer;
+
+  // Translate stored English prompts to Russian when language is switched
+  const translatePrompt = (englishPrompt: string, lang: string): string => {
+    if (lang !== 'ru') return englishPrompt;
+
+    const promptTranslations: Record<string, string> = {
+      'What does that mean?': 'Что это значит?',
+      'How do you say this in Greek?': 'Как это сказать по-гречески?',
+      'What is this?': 'Что это?',
+      'What does this mean?': 'Что это значит?',
+    };
+
+    return promptTranslations[englishPrompt] || englishPrompt;
+  };
+
+  const translatedPrompt = translatePrompt(front.prompt, currentLang);
 
   const typeBadgeLabel = t('practice.meaningBadge');
   const tapToRevealLabel = t('practice.tapToReveal');
   const answerLabel = t('practice.answer');
   const srsComingSoon = t('practice.srsComingSoon');
+  const partOfSpeech = front.badge ? (front.badge.toLowerCase() as PartOfSpeech) : null;
+
+  const handleLangChange = (lang: 'en' | 'ru') => {
+    i18n.changeLanguage(lang);
+  };
 
   return (
     <Card
       data-testid="practice-card"
-      className={cn('mx-auto max-w-lg overflow-hidden', !isFlipped && 'cursor-pointer')}
+      className={cn('relative mx-auto max-w-lg overflow-hidden', !isFlipped && 'cursor-pointer')}
       role={!isFlipped ? 'button' : undefined}
       tabIndex={!isFlipped ? 0 : undefined}
       onClick={!isFlipped ? onFlip : undefined}
@@ -236,26 +322,60 @@ export function PracticeCard({ card, isFlipped, onFlip }: PracticeCardProps) {
       }
       aria-label={!isFlipped ? `Practice card: ${front.main}. ${tapToRevealLabel}` : undefined}
     >
-      <CardContent className="p-6">
+      {/* Language selector - always visible, top right corner */}
+      <div
+        className="absolute right-3 top-3 z-10 flex gap-1"
+        data-testid="lang-toggle"
+        role="group"
+        aria-label="Language toggle"
+        onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => e.stopPropagation()}
+      >
+        <Button
+          variant={currentLang === 'en' ? 'default' : 'ghost'}
+          size="sm"
+          className="h-7 px-2 text-xs"
+          onClick={() => handleLangChange('en')}
+          data-testid="lang-toggle-en"
+          aria-pressed={currentLang === 'en'}
+        >
+          {t('practice.langEn')}
+        </Button>
+        <Button
+          variant={currentLang === 'ru' ? 'default' : 'ghost'}
+          size="sm"
+          className="h-7 px-2 text-xs"
+          onClick={() => handleLangChange('ru')}
+          data-testid="lang-toggle-ru"
+          aria-pressed={currentLang === 'ru'}
+        >
+          {t('practice.langRu')}
+        </Button>
+      </div>
+
+      <CardContent className="min-h-[280px] p-6">
         {/* Screen reader announcement */}
         <div aria-live="polite" aria-atomic="true" className="sr-only">
-          {isFlipped ? `${answerLabel}: ${back.answer}` : ''}
+          {isFlipped ? `${answerLabel}: ${displayAnswer}` : ''}
         </div>
 
         {!isFlipped ? (
           <CardFront
-            front={front}
+            front={{ ...front, prompt: translatedPrompt }}
             typeBadgeLabel={typeBadgeLabel}
             tapToRevealLabel={tapToRevealLabel}
+            partOfSpeech={partOfSpeech}
           />
         ) : (
           <CardBack
-            front={front}
             back={back}
             typeBadgeLabel={typeBadgeLabel}
             answerLabel={answerLabel}
             srsComingSoon={srsComingSoon}
             t={t}
+            partOfSpeech={partOfSpeech}
+            displayAnswer={displayAnswer}
+            onRate={onRate}
           />
         )}
       </CardContent>

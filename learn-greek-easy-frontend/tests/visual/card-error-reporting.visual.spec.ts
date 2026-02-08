@@ -28,7 +28,6 @@ const mockWordEntry = {
   deck_id: 'deck-001',
   lemma: '\u03C3\u03C0\u03AF\u03C4\u03B9',
   part_of_speech: 'noun',
-  cefr_level: 'A1',
   translation_en: 'house',
   translation_ru: '\u0434\u043E\u043C',
   pronunciation: 'SPI-ti',

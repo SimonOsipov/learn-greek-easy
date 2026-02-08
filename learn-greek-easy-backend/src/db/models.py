@@ -674,7 +674,6 @@ class WordEntry(Base, TimestampMixin):
         Index("ix_word_entries_deck_id", "deck_id"),
         Index("ix_word_entries_is_active", "is_active"),
         Index("ix_word_entries_lemma", "lemma"),
-        Index("ix_word_entries_cefr_level", "cefr_level"),
     )
 
     # Primary key
@@ -699,10 +698,6 @@ class WordEntry(Base, TimestampMixin):
     part_of_speech: Mapped[PartOfSpeech] = mapped_column(
         nullable=False,
         comment="Part of speech classification",
-    )
-    cefr_level: Mapped[DeckLevel | None] = mapped_column(
-        nullable=True,
-        comment="CEFR level (A1-C2), overrides deck level if set",
     )
 
     # Translations

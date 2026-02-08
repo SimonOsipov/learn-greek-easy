@@ -24,7 +24,6 @@ WORD_ENTRY_NOUN = {
     "part_of_speech": PartOfSpeech.NOUN,
     "translation_en": "house, home",
     "translation_ru": "дом",
-    "cefr_level": DeckLevel.A1,
     "pronunciation": "/spí·ti/",
     "grammar_data": {
         "gender": "neuter",
@@ -51,7 +50,6 @@ WORD_ENTRY_VERB = {
     "part_of_speech": PartOfSpeech.VERB,
     "translation_en": "to write",
     "translation_ru": "писать",
-    "cefr_level": DeckLevel.A1,
     "pronunciation": "/ghrá·fo/",
     "grammar_data": {
         "voice": "active",
@@ -218,7 +216,6 @@ class TestGetWordEntryEndpoint:
         assert data["translation_en"] == "house, home"
         assert data["translation_ru"] == "дом"
         assert data["pronunciation"] == "/spí·ti/"
-        assert data["cefr_level"] == "A1"
         assert data["is_active"] is True
 
     @pytest.mark.asyncio
@@ -301,7 +298,6 @@ class TestGetWordEntryEndpoint:
             "deck_id",
             "lemma",
             "part_of_speech",
-            "cefr_level",
             "translation_en",
             "translation_ru",
             "pronunciation",

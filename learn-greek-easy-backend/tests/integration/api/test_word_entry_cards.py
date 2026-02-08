@@ -47,7 +47,6 @@ class TestGetWordEntryCardsEndpoint:
             part_of_speech=PartOfSpeech.NOUN,
             translation_en="house, home",
             translation_ru="дом",
-            cefr_level=DeckLevel.A1,
             pronunciation="/spi.ti/",
         )
         db_session.add(entry)

@@ -61,7 +61,6 @@ function makeWordEntry(overrides: Partial<WordEntryResponse> = {}): WordEntryRes
     deck_id: 'test-deck-id',
     lemma: 'test',
     part_of_speech: 'noun',
-    cefr_level: 'A1',
     translation_en: 'test translation',
     translation_ru: 'тестовый перевод',
     pronunciation: 'test-pron',
