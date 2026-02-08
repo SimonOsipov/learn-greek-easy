@@ -7,7 +7,7 @@
  * - Bulk upsert (create or update) word entries
  */
 
-import type { PartOfSpeech, DeckLevel } from '@/types/grammar';
+import type { PartOfSpeech } from '@/types/grammar';
 
 import { api } from './api';
 
@@ -37,7 +37,6 @@ export interface WordEntryInput {
   lemma: string;
   part_of_speech: PartOfSpeech;
   translation_en: string;
-  cefr_level?: DeckLevel | null;
   translation_ru?: string | null;
   pronunciation?: string | null;
   grammar_data?: Record<string, unknown> | null;
@@ -54,7 +53,6 @@ export interface WordEntryResponse {
   deck_id: string;
   lemma: string;
   part_of_speech: PartOfSpeech;
-  cefr_level: DeckLevel | null;
   translation_en: string;
   translation_ru: string | null;
   pronunciation: string | null;

@@ -321,7 +321,6 @@ class TestWordEntryRepositoryBulkUpsert:
                 "translation_en": "full",
                 "translation_ru": "polnyj",
                 "pronunciation": "full",
-                "cefr_level": DeckLevel.A1,
                 "grammar_data": {"comparative": "fuller"},
                 "examples": [{"greek": "example", "english": "example"}],
             },
@@ -334,7 +333,6 @@ class TestWordEntryRepositoryBulkUpsert:
         assert created == 1
         assert entries[0].translation_ru == "polnyj"
         assert entries[0].pronunciation == "full"
-        assert entries[0].cefr_level == DeckLevel.A1
         assert entries[0].grammar_data == {"comparative": "fuller"}
         assert len(entries[0].examples) == 1
 

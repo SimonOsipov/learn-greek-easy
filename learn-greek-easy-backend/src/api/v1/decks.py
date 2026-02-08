@@ -651,7 +651,6 @@ word entries), this returns an empty list with total=0.
                                 "translation_en": "house, home",
                                 "translation_ru": "dom",
                                 "pronunciation": "spiti",
-                                "cefr_level": "A1",
                                 "is_active": True,
                                 "created_at": "2024-01-15T10:30:00Z",
                                 "updated_at": "2024-01-15T10:30:00Z",

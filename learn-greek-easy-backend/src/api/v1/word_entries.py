@@ -52,7 +52,6 @@ router = APIRouter(
                         "translation_en": "house, home",
                         "translation_ru": "дом",
                         "pronunciation": "/spí·ti/",
-                        "cefr_level": "A1",
                         "grammar_data": {
                             "gender": "neuter",
                             "nominative_singular": "σπίτι",
@@ -223,7 +222,6 @@ async def get_word_entry_cards(
                                 "translation_en": "house, home",
                                 "translation_ru": "dom",
                                 "pronunciation": "/spí·ti/",
-                                "cefr_level": "A1",
                                 "grammar_data": {"gender": "neuter"},
                                 "examples": [],
                                 "audio_key": None,

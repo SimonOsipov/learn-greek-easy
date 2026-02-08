@@ -24,7 +24,6 @@ const mockWordEntry: WordEntryResponse = {
   deck_id: 'test-deck-id',
   lemma: 'μιλάω',
   part_of_speech: 'VERB',
-  cefr_level: 'A1',
   translation_en: 'to speak, to talk',
   translation_ru: 'говорить',
   pronunciation: 'miláo',

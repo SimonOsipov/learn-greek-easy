@@ -274,7 +274,6 @@ export function WordReferencePage() {
           {partOfSpeech === 'noun' && grammarData && 'gender' in grammarData && article && (
             <GenderBadge gender={grammarData.gender as NounGender} />
           )}
-          {wordEntry.cefr_level && <Badge variant="outline">{wordEntry.cefr_level}</Badge>}
         </div>
 
         {/* Greek word (lemma) */}
