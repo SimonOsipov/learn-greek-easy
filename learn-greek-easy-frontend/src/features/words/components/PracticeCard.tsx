@@ -10,8 +10,6 @@
 // Imports
 // ============================================
 
-import { useState } from 'react';
-
 import { Check } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -145,9 +143,6 @@ function CardBack({
   t,
   partOfSpeech,
   displayAnswer,
-  translationRu,
-  answerLang,
-  onToggleLang,
   onRate,
 }: {
   back: MeaningBackContent;
@@ -157,9 +152,6 @@ function CardBack({
   t: (key: string) => string;
   partOfSpeech: PartOfSpeech | null;
   displayAnswer: string;
-  translationRu: string | null | undefined;
-  answerLang: 'en' | 'ru';
-  onToggleLang: (lang: 'en' | 'ru') => void;
   onRate?: (rating: number) => void;
 }) {
   return (
@@ -180,30 +172,6 @@ function CardBack({
         </div>
 
         <p className="break-words text-center text-3xl font-bold">{displayAnswer}</p>
-
-        {/* Language toggle - only show if Russian translation available */}
-        {translationRu && (
-          <div className="flex items-center justify-center gap-1" data-testid="lang-toggle">
-            <Button
-              variant={answerLang === 'en' ? 'default' : 'ghost'}
-              size="sm"
-              className="h-7 px-2 text-xs"
-              onClick={() => onToggleLang('en')}
-              data-testid="lang-toggle-en"
-            >
-              {t('practice.langEn')}
-            </Button>
-            <Button
-              variant={answerLang === 'ru' ? 'default' : 'ghost'}
-              size="sm"
-              className="h-7 px-2 text-xs"
-              onClick={() => onToggleLang('ru')}
-              data-testid="lang-toggle-ru"
-            >
-              {t('practice.langRu')}
-            </Button>
-          </div>
-        )}
 
         {back.answer_sub && (
           <p className="break-words text-center text-lg text-muted-foreground">{back.answer_sub}</p>
@@ -299,14 +267,15 @@ export function PracticeCard({
   translationRu,
   onRate,
 }: PracticeCardProps) {
-  const { t } = useTranslation('deck');
-  const [answerLang, setAnswerLang] = useState<'en' | 'ru'>('en');
+  const { t, i18n } = useTranslation('deck');
 
   const front = card.front_content as unknown as MeaningFrontContent;
   const back = card.back_content as unknown as MeaningBackContent;
 
-  // Determine displayed answer based on language toggle
-  const displayAnswer = answerLang === 'ru' && translationRu ? translationRu : back.answer;
+  const currentLang = (i18n.language?.split('-')[0] ?? 'en') as 'en' | 'ru';
+
+  // Determine displayed answer based on UI language
+  const displayAnswer = currentLang === 'ru' && translationRu ? translationRu : back.answer;
 
   const typeBadgeLabel = t('practice.meaningBadge');
   const tapToRevealLabel = t('practice.tapToReveal');
@@ -314,10 +283,14 @@ export function PracticeCard({
   const srsComingSoon = t('practice.srsComingSoon');
   const partOfSpeech = front.badge ? (front.badge.toLowerCase() as PartOfSpeech) : null;
 
+  const handleLangChange = (lang: 'en' | 'ru') => {
+    i18n.changeLanguage(lang);
+  };
+
   return (
     <Card
       data-testid="practice-card"
-      className={cn('mx-auto max-w-lg overflow-hidden', !isFlipped && 'cursor-pointer')}
+      className={cn('relative mx-auto max-w-lg overflow-hidden', !isFlipped && 'cursor-pointer')}
       role={!isFlipped ? 'button' : undefined}
       tabIndex={!isFlipped ? 0 : undefined}
       onClick={!isFlipped ? onFlip : undefined}
@@ -333,6 +306,37 @@ export function PracticeCard({
       }
       aria-label={!isFlipped ? `Practice card: ${front.main}. ${tapToRevealLabel}` : undefined}
     >
+      {/* Language selector - always visible, top right corner */}
+      <div
+        className="absolute right-3 top-3 z-10 flex gap-1"
+        data-testid="lang-toggle"
+        role="group"
+        aria-label="Language toggle"
+        onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => e.stopPropagation()}
+      >
+        <Button
+          variant={currentLang === 'en' ? 'default' : 'ghost'}
+          size="sm"
+          className="h-7 px-2 text-xs"
+          onClick={() => handleLangChange('en')}
+          data-testid="lang-toggle-en"
+          aria-pressed={currentLang === 'en'}
+        >
+          {t('practice.langEn')}
+        </Button>
+        <Button
+          variant={currentLang === 'ru' ? 'default' : 'ghost'}
+          size="sm"
+          className="h-7 px-2 text-xs"
+          onClick={() => handleLangChange('ru')}
+          data-testid="lang-toggle-ru"
+          aria-pressed={currentLang === 'ru'}
+        >
+          {t('practice.langRu')}
+        </Button>
+      </div>
+
       <CardContent className="min-h-[280px] p-6">
         {/* Screen reader announcement */}
         <div aria-live="polite" aria-atomic="true" className="sr-only">
@@ -355,9 +359,6 @@ export function PracticeCard({
             t={t}
             partOfSpeech={partOfSpeech}
             displayAnswer={displayAnswer}
-            translationRu={translationRu}
-            answerLang={answerLang}
-            onToggleLang={setAnswerLang}
             onRate={onRate}
           />
         )}
