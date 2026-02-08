@@ -10,6 +10,7 @@ from src.services.announcement_service import AnnouncementService
 from src.services.auth_service import AuthService
 from src.services.card_error_admin_service import CardErrorAdminService
 from src.services.card_error_service import CardErrorService
+from src.services.card_generator_service import CardGeneratorService
 from src.services.changelog_service import ChangelogService
 from src.services.culture_deck_service import CultureDeckService
 from src.services.culture_question_service import CultureQuestionService
@@ -31,6 +32,7 @@ __all__ = [
     "AuthService",
     "CardErrorAdminService",
     "CardErrorService",
+    "CardGeneratorService",
     "ChangelogService",
     "CultureDeckService",
     "CultureQuestionService",
