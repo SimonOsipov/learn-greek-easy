@@ -25,21 +25,9 @@ from typing import List
 from uuid import UUID
 
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import (
-    JSON,
-    Boolean,
-    Date,
-    DateTime,
-    Float,
-    ForeignKey,
-    Index,
-    Integer,
-    String,
-    Text,
-    UniqueConstraint,
-    func,
-    text,
-)
+from sqlalchemy import JSON, Boolean, Date, DateTime
+from sqlalchemy import Enum as SAEnum
+from sqlalchemy import Float, ForeignKey, Index, Integer, String, Text, UniqueConstraint, func, text
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -831,6 +819,12 @@ class CardRecord(Base, TimestampMixin):
 
     # Card type and tier
     card_type: Mapped[CardType] = mapped_column(
+        SAEnum(
+            CardType,
+            values_callable=lambda enum_cls: [e.value for e in enum_cls],
+            name="cardtype",
+            create_type=False,
+        ),
         nullable=False,
     )
     tier: Mapped[int | None] = mapped_column(

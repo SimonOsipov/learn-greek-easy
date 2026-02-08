@@ -264,5 +264,22 @@
       "feminine": "Feminine",
       "neuter": "Neuter"
     }
+  },
+  "practice": {
+    "title": "Practice",
+    "tapToReveal": "Tap to reveal",
+    "answer": "Answer",
+    "example": "Example",
+    "nextCard": "Next card",
+    "close": "Close",
+    "noCards": "No practice cards available for this word yet.",
+    "error": "Failed to load practice cards. Please try again.",
+    "retry": "Retry",
+    "srsComingSoon": "Rating will be available soon",
+    "meaningBadge": "Meaning",
+    "again": "Again",
+    "hard": "Hard",
+    "good": "Good",
+    "easy": "Easy"
   }
 }

@@ -14,8 +14,10 @@ from src.core.dependencies import get_current_superuser, get_current_user
 from src.core.exceptions import DeckNotFoundException, ForbiddenException, NotFoundException
 from src.db.dependencies import get_db
 from src.db.models import User
+from src.repositories.card_record import CardRecordRepository
 from src.repositories.deck import DeckRepository
 from src.repositories.word_entry import WordEntryRepository
+from src.schemas.card_record import CardRecordResponse
 from src.schemas.word_entry import WordEntryBulkRequest, WordEntryBulkResponse, WordEntryResponse
 
 router = APIRouter(
@@ -124,6 +126,74 @@ async def get_word_entry(
         raise ForbiddenException(detail="You don't have permission to access this word entry")
 
     return WordEntryResponse.model_validate(word_entry)
+
+
+@router.get(
+    "/{word_entry_id}/cards",
+    response_model=list[CardRecordResponse],
+    summary="Get cards for a word entry",
+    description="Retrieve all active card records for a word entry. "
+    "User must be authenticated and have access to the deck.",
+    responses={
+        200: {"description": "Card records retrieved successfully"},
+        403: {"description": "Access denied - user does not own the deck"},
+        404: {"description": "Word entry not found or inactive"},
+    },
+)
+async def get_word_entry_cards(
+    word_entry_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> list[CardRecordResponse]:
+    """Get card records for a word entry.
+
+    Retrieves all active card records for the given word entry.
+    Authorization: User must have access to the deck (system decks are accessible to all,
+    user-created decks require ownership).
+
+    Args:
+        word_entry_id: UUID of the word entry
+        db: Database session (injected)
+        current_user: Authenticated user (injected)
+
+    Returns:
+        List of CardRecordResponse for active cards
+
+    Raises:
+        401: If not authenticated
+        403: If user doesn't own the deck (for user-created decks)
+        404: If word entry not found or inactive
+    """
+    # 1. Fetch and validate word entry
+    word_entry_repo = WordEntryRepository(db)
+    word_entry = await word_entry_repo.get(word_entry_id)
+
+    if word_entry is None or not word_entry.is_active:
+        raise NotFoundException(
+            resource="WordEntry",
+            detail=f"Word entry with id '{word_entry_id}' not found",
+        )
+
+    # 2. Load deck for authorization
+    deck_repo = DeckRepository(db)
+    deck = await deck_repo.get(word_entry.deck_id)
+
+    if deck is None:
+        raise NotFoundException(
+            resource="WordEntry",
+            detail=f"Word entry with id '{word_entry_id}' not found",
+        )
+
+    # 3. Authorization check (system decks accessible to all, user decks require ownership)
+    if deck.owner_id is not None and deck.owner_id != current_user.id:
+        raise ForbiddenException(detail="You don't have permission to access this word entry")
+
+    # 4. Fetch card records and filter to active only
+    card_record_repo = CardRecordRepository(db)
+    card_records = await card_record_repo.get_by_word_entry(word_entry_id)
+    active_cards = [cr for cr in card_records if cr.is_active]
+
+    return [CardRecordResponse.model_validate(cr) for cr in active_cards]
 
 
 @router.post(

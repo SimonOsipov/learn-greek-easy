@@ -159,6 +159,13 @@ const WordReferencePage = lazyWithRetry(() =>
   }))
 );
 
+// Word practice page (full-screen practice experience)
+const WordPracticePage = lazyWithRetry(() =>
+  import('@/features/words/pages/WordPracticePage').then((m) => ({
+    default: m.WordPracticePage,
+  }))
+);
+
 function AppContent() {
   const isAppReady = useAppStore(selectIsReady);
   const setReactHydrated = useAppStore((state) => state.setReactHydrated);
@@ -213,6 +220,11 @@ function AppContent() {
                 <Route path="/decks/:deckId/words/:wordId" element={<AppLayout />}>
                   <Route index element={<WordReferencePage />} />
                 </Route>
+                {/* Word practice page outside AppLayout for full-screen experience */}
+                <Route
+                  path="/decks/:deckId/words/:wordId/practice"
+                  element={<WordPracticePage />}
+                />
                 <Route path="/my-decks" element={<AppLayout />}>
                   <Route index element={<MyDecksPage />} />
                   <Route path=":id" element={<MyDeckDetailPage />} />

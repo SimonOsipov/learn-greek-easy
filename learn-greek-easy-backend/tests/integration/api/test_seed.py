@@ -16,7 +16,7 @@ from httpx import AsyncClient
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.db.models import Card, Deck, User
+from src.db.models import Card, CardRecord, CardType, Deck, User
 
 # ============================================================================
 # Test Fixtures
@@ -143,6 +143,10 @@ class TestSeedAllIntegration:
         # 60 CEFR cards + 10 user deck cards (5+3+0+2) = 70 total
         card_count = await db_session.scalar(select(func.count(Card.id)))
         assert card_count == 70
+
+        # Verify card records created (30 word entries * 2 cards each = 60)
+        card_record_count = await db_session.scalar(select(func.count(CardRecord.id)))
+        assert card_record_count == 60
 
     @pytest.mark.asyncio
     async def test_seed_all_returns_403_when_disabled(
@@ -1083,3 +1087,145 @@ class TestSeedAnnouncementsIntegration:
         assert "announcements" in data["results"]
         assert data["results"]["announcements"]["success"] is True
         assert data["results"]["announcements"]["campaigns_created"] == 4
+
+
+# ============================================================================
+# Meaning Card Record Integration Tests
+# ============================================================================
+
+
+@pytest.mark.no_parallel
+class TestSeedMeaningCardsIntegration:
+    """Integration tests for meaning card seeding via seed_all."""
+
+    @pytest.mark.asyncio
+    async def test_seed_all_creates_60_card_records(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        seed_url: str,
+        enable_seeding,
+        enable_seeding_service,
+    ):
+        """POST /test/seed/all should create 60 CardRecord rows."""
+        response = await client.post(f"{seed_url}/all")
+        assert response.status_code == 200
+
+        card_record_count = await db_session.scalar(select(func.count(CardRecord.id)))
+        assert card_record_count == 60
+
+    @pytest.mark.asyncio
+    async def test_seed_all_creates_30_el_to_en_cards(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        seed_url: str,
+        enable_seeding,
+        enable_seeding_service,
+    ):
+        """POST /test/seed/all should create 30 MEANING_EL_TO_EN cards."""
+        await client.post(f"{seed_url}/all")
+
+        el_to_en = await db_session.scalar(
+            select(func.count(CardRecord.id)).where(
+                CardRecord.card_type == CardType.MEANING_EL_TO_EN
+            )
+        )
+        assert el_to_en == 30
+
+    @pytest.mark.asyncio
+    async def test_seed_all_creates_30_en_to_el_cards(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        seed_url: str,
+        enable_seeding,
+        enable_seeding_service,
+    ):
+        """POST /test/seed/all should create 30 MEANING_EN_TO_EL cards."""
+        await client.post(f"{seed_url}/all")
+
+        en_to_el = await db_session.scalar(
+            select(func.count(CardRecord.id)).where(
+                CardRecord.card_type == CardType.MEANING_EN_TO_EL
+            )
+        )
+        assert en_to_el == 30
+
+    @pytest.mark.asyncio
+    async def test_card_records_linked_to_word_entries(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        seed_url: str,
+        enable_seeding,
+        enable_seeding_service,
+    ):
+        """All CardRecord rows should be linked to distinct word entries."""
+        await client.post(f"{seed_url}/all")
+
+        distinct_we_ids = await db_session.scalar(
+            select(func.count(func.distinct(CardRecord.word_entry_id)))
+        )
+        assert distinct_we_ids == 30
+
+    @pytest.mark.asyncio
+    async def test_card_records_have_valid_front_content(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        seed_url: str,
+        enable_seeding,
+        enable_seeding_service,
+    ):
+        """CardRecord front_content should validate against Pydantic schemas."""
+        from src.schemas.card_record import MeaningElToEnFront, MeaningEnToElFront
+
+        await client.post(f"{seed_url}/all")
+
+        result = await db_session.execute(
+            select(CardRecord).where(CardRecord.card_type == CardType.MEANING_EL_TO_EN).limit(1)
+        )
+        card = result.scalar_one()
+        front = MeaningElToEnFront(**card.front_content)
+        assert front.card_type == "meaning_el_to_en"
+        assert front.prompt == "What does this mean?"
+        assert len(front.main) > 0
+        assert len(front.badge) > 0
+
+        result2 = await db_session.execute(
+            select(CardRecord).where(CardRecord.card_type == CardType.MEANING_EN_TO_EL).limit(1)
+        )
+        card2 = result2.scalar_one()
+        front2 = MeaningEnToElFront(**card2.front_content)
+        assert front2.card_type == "meaning_en_to_el"
+
+    @pytest.mark.asyncio
+    async def test_card_records_have_valid_back_content(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        seed_url: str,
+        enable_seeding,
+        enable_seeding_service,
+    ):
+        """CardRecord back_content should validate against Pydantic schemas."""
+        from src.schemas.card_record import MeaningElToEnBack, MeaningEnToElBack
+
+        await client.post(f"{seed_url}/all")
+
+        result = await db_session.execute(
+            select(CardRecord).where(CardRecord.card_type == CardType.MEANING_EL_TO_EN).limit(1)
+        )
+        card = result.scalar_one()
+        back = MeaningElToEnBack(**card.back_content)
+        assert back.card_type == "meaning_el_to_en"
+        assert len(back.answer) > 0
+
+        result2 = await db_session.execute(
+            select(CardRecord).where(CardRecord.card_type == CardType.MEANING_EN_TO_EL).limit(1)
+        )
+        card2 = result2.scalar_one()
+        back2 = MeaningEnToElBack(**card2.back_content)
+        assert back2.card_type == "meaning_en_to_el"
+        assert len(back2.answer) > 0
