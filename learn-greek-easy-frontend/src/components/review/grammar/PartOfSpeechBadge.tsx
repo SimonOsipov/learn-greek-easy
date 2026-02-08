@@ -10,7 +10,7 @@ export interface PartOfSpeechBadgeProps {
 }
 
 const PART_OF_SPEECH_CONFIG: Record<PartOfSpeech, { bgClass: string; textClass: string }> = {
-  noun: { bgClass: 'bg-blue-500', textClass: 'text-white' },
+  noun: { bgClass: 'bg-amber-700', textClass: 'text-white' },
   verb: { bgClass: 'bg-green-500', textClass: 'text-white' },
   adjective: { bgClass: 'bg-purple-500', textClass: 'text-white' },
   adverb: { bgClass: 'bg-orange-500', textClass: 'text-white' },

@@ -31,11 +31,11 @@ describe('PartOfSpeechBadge', () => {
   });
 
   describe('Noun Badge', () => {
-    it('should render with blue background', () => {
+    it('should render with brown background', () => {
       render(<PartOfSpeechBadge partOfSpeech="noun" />);
 
       const badge = screen.getByTestId('part-of-speech-badge');
-      expect(badge).toHaveClass('bg-blue-500');
+      expect(badge).toHaveClass('bg-amber-700');
       expect(badge).toHaveClass('text-white');
     });
 
@@ -104,7 +104,7 @@ describe('PartOfSpeechBadge', () => {
       expectedColor: string;
       expectedText: string;
     }> = [
-      { type: 'noun', expectedColor: 'bg-blue-500', expectedText: 'Noun' },
+      { type: 'noun', expectedColor: 'bg-amber-700', expectedText: 'Noun' },
       { type: 'verb', expectedColor: 'bg-green-500', expectedText: 'Verb' },
       { type: 'adjective', expectedColor: 'bg-purple-500', expectedText: 'Adjective' },
       { type: 'adverb', expectedColor: 'bg-orange-500', expectedText: 'Adverb' },

@@ -18,6 +18,7 @@ import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
 
 import { ReportErrorButton, ReportErrorModal } from '@/components/card-errors';
+import { GenderBadge, PartOfSpeechBadge } from '@/components/review/grammar';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -25,7 +26,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { getLocalizedTranslation } from '@/lib/localeUtils';
-import type { AdjectiveData, AdverbData, NounDataAny, VerbData } from '@/types/grammar';
+import type { AdjectiveData, AdverbData, NounDataAny, NounGender, VerbData } from '@/types/grammar';
 
 import {
   AdjectiveDeclensionTable,
@@ -264,18 +265,14 @@ export function WordReferencePage() {
 
         {/* Type badges */}
         <div className="mb-4 flex flex-wrap gap-2">
-          <Badge variant="secondary" className="capitalize">
-            {t(`review:grammar.partOfSpeech.${partOfSpeech}`)}
-          </Badge>
+          <PartOfSpeechBadge partOfSpeech={partOfSpeech} />
           {partOfSpeech === 'verb' && grammarData && 'voice' in grammarData && (
             <Badge variant="outline" className="capitalize">
               {t(`review:grammar.verbConjugation.voice.${grammarData.voice as string}`)}
             </Badge>
           )}
-          {partOfSpeech === 'noun' && grammarData && 'gender' in grammarData && (
-            <Badge variant="outline" className="capitalize">
-              {t(`review:grammar.nounDeclension.genders.${grammarData.gender as string}`)}
-            </Badge>
+          {partOfSpeech === 'noun' && grammarData && 'gender' in grammarData && article && (
+            <GenderBadge gender={grammarData.gender as NounGender} />
           )}
           {wordEntry.cefr_level && <Badge variant="outline">{wordEntry.cefr_level}</Badge>}
         </div>
