@@ -24,7 +24,6 @@ from src.db.models import (
     CardStatistics,
     CardStatus,
     CardSystemVersion,
-    CardType,
     ChangelogEntry,
     ChangelogTag,
     CultureAnswerHistory,
@@ -54,15 +53,8 @@ from src.db.models import (
     WordEntry,
     XPTransaction,
 )
-from src.repositories.card_record import CardRecordRepository
-from src.schemas.card_record import (
-    ExampleContext,
-    MeaningElToEnBack,
-    MeaningElToEnFront,
-    MeaningEnToElBack,
-    MeaningEnToElFront,
-)
 from src.services.achievement_definitions import ACHIEVEMENTS as ACHIEVEMENT_DEFS
+from src.services.card_generator_service import CardGeneratorService
 from src.services.seed_grammar_data import ENRICHED_VOCABULARY
 from src.services.xp_constants import get_level_from_xp
 from src.utils.greek_text import extract_searchable_forms, generate_normalized_forms
@@ -4816,80 +4808,6 @@ class SeedService:
             await self.db.flush()
         return entries
 
-    async def _create_meaning_cards(
-        self, word_entries: list[WordEntry], deck_id: UUID
-    ) -> tuple[int, int]:
-        card_dicts: list[dict] = []
-        for we in word_entries:
-            badge = we.part_of_speech.value.capitalize()
-
-            context = None
-            if we.examples and len(we.examples) > 0:
-                first = we.examples[0]
-                context = ExampleContext(
-                    label="Example",
-                    greek=first["greek"],
-                    english=first["english"],
-                    tense=None,
-                )
-
-            el_to_en_front = MeaningElToEnFront(
-                card_type="meaning_el_to_en",
-                prompt="What does this mean?",
-                main=we.lemma,
-                sub=we.pronunciation,
-                badge=badge,
-                hint=None,
-            )
-            el_to_en_back = MeaningElToEnBack(
-                card_type="meaning_el_to_en",
-                answer=we.translation_en,
-                answer_sub=None,
-                context=context,
-            )
-            card_dicts.append(
-                {
-                    "word_entry_id": we.id,
-                    "deck_id": deck_id,
-                    "card_type": CardType.MEANING_EL_TO_EN.value,
-                    "variant_key": "default",
-                    "tier": 1,
-                    "front_content": el_to_en_front.model_dump(),
-                    "back_content": el_to_en_back.model_dump(),
-                    "is_active": True,
-                }
-            )
-
-            en_to_el_front = MeaningEnToElFront(
-                card_type="meaning_en_to_el",
-                prompt="How do you say this in Greek?",
-                main=we.translation_en,
-                sub=None,
-                badge=badge,
-                hint=None,
-            )
-            en_to_el_back = MeaningEnToElBack(
-                card_type="meaning_en_to_el",
-                answer=we.lemma,
-                answer_sub=we.pronunciation,
-                context=context,
-            )
-            card_dicts.append(
-                {
-                    "word_entry_id": we.id,
-                    "deck_id": deck_id,
-                    "card_type": CardType.MEANING_EN_TO_EL.value,
-                    "variant_key": "default",
-                    "tier": 1,
-                    "front_content": en_to_el_front.model_dump(),
-                    "back_content": en_to_el_back.model_dump(),
-                    "is_active": True,
-                }
-            )
-
-        _records, created, updated = await CardRecordRepository(self.db).bulk_upsert(card_dicts)
-        return created, updated
-
     async def _seed_v2_decks(self) -> dict[str, Any]:
         """Create V2 decks with word entries for E2E testing.
 
@@ -5278,7 +5196,7 @@ class SeedService:
         v2_nouns_entries = await self._create_word_entries_from_vocab(
             v2_nouns_deck.id, v2_nouns_vocabulary
         )
-        nouns_created, nouns_updated = await self._create_meaning_cards(
+        nouns_created, nouns_updated = await CardGeneratorService(self.db).generate_meaning_cards(
             v2_nouns_entries, v2_nouns_deck.id
         )
         # V2 Verbs vocabulary (10 A2 verbs: 6 Group A, 4 Group B)
@@ -5589,7 +5507,7 @@ class SeedService:
         v2_verbs_entries = await self._create_word_entries_from_vocab(
             v2_verbs_deck.id, v2_verbs_vocabulary
         )
-        verbs_created, verbs_updated = await self._create_meaning_cards(
+        verbs_created, verbs_updated = await CardGeneratorService(self.db).generate_meaning_cards(
             v2_verbs_entries, v2_verbs_deck.id
         )
         # V2 Mixed vocabulary (10 A2 items: 4 adjectives, 4 adverbs, 2 phrases)
@@ -5931,7 +5849,7 @@ class SeedService:
         v2_mixed_entries = await self._create_word_entries_from_vocab(
             v2_mixed_deck.id, v2_mixed_vocabulary
         )
-        mixed_created, mixed_updated = await self._create_meaning_cards(
+        mixed_created, mixed_updated = await CardGeneratorService(self.db).generate_meaning_cards(
             v2_mixed_entries, v2_mixed_deck.id
         )
 
