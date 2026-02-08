@@ -4782,8 +4782,8 @@ class SeedService:
         Args:
             deck_id: UUID of the deck to add entries to
             vocabulary: List of word data dicts with keys: lemma, part_of_speech,
-                translation_en, translation_ru, pronunciation,
-                grammar_data, examples
+                translation_en, translation_en_plural (optional), translation_ru,
+                pronunciation, grammar_data, examples
 
         Returns:
             List of created WordEntry objects
@@ -4795,6 +4795,7 @@ class SeedService:
                 lemma=word_data["lemma"],
                 part_of_speech=word_data["part_of_speech"],
                 translation_en=word_data["translation_en"],
+                translation_en_plural=word_data.get("translation_en_plural"),
                 translation_ru=word_data.get("translation_ru"),
                 pronunciation=word_data.get("pronunciation"),
                 grammar_data=word_data.get("grammar_data"),
@@ -4873,6 +4874,7 @@ class SeedService:
                 "lemma": "σπίτι",
                 "part_of_speech": PartOfSpeech.NOUN,
                 "translation_en": "house, home",
+                "translation_en_plural": "houses, homes",
                 "translation_ru": "дом",
                 "pronunciation": "/spí·ti/",
                 "grammar_data": {
@@ -4904,6 +4906,7 @@ class SeedService:
                 "lemma": "νερό",
                 "part_of_speech": PartOfSpeech.NOUN,
                 "translation_en": "water",
+                "translation_en_plural": "waters",
                 "translation_ru": "вода",
                 "pronunciation": "/ne·ró/",
                 "grammar_data": {
@@ -4935,6 +4938,7 @@ class SeedService:
                 "lemma": "βιβλίο",
                 "part_of_speech": PartOfSpeech.NOUN,
                 "translation_en": "book",
+                "translation_en_plural": "books",
                 "translation_ru": "книга",
                 "pronunciation": "/vi·vlí·o/",
                 "grammar_data": {
@@ -4966,6 +4970,7 @@ class SeedService:
                 "lemma": "παιδί",
                 "part_of_speech": PartOfSpeech.NOUN,
                 "translation_en": "child",
+                "translation_en_plural": "children",
                 "translation_ru": "ребёнок",
                 "pronunciation": "/pe·dhí/",
                 "grammar_data": {
@@ -4998,6 +5003,7 @@ class SeedService:
                 "lemma": "σκύλος",
                 "part_of_speech": PartOfSpeech.NOUN,
                 "translation_en": "dog",
+                "translation_en_plural": "dogs",
                 "translation_ru": "собака",
                 "pronunciation": "/skí·los/",
                 "grammar_data": {
@@ -5029,6 +5035,7 @@ class SeedService:
                 "lemma": "δάσκαλος",
                 "part_of_speech": PartOfSpeech.NOUN,
                 "translation_en": "teacher (male)",
+                "translation_en_plural": "teachers (male)",
                 "translation_ru": "учитель",
                 "pronunciation": "/dhá·ska·los/",
                 "grammar_data": {
@@ -5060,6 +5067,7 @@ class SeedService:
                 "lemma": "δρόμος",
                 "part_of_speech": PartOfSpeech.NOUN,
                 "translation_en": "road, street",
+                "translation_en_plural": "roads, streets",
                 "translation_ru": "дорога, улица",
                 "pronunciation": "/dhró·mos/",
                 "grammar_data": {
@@ -5091,6 +5099,7 @@ class SeedService:
                 "lemma": "φίλος",
                 "part_of_speech": PartOfSpeech.NOUN,
                 "translation_en": "friend (male)",
+                "translation_en_plural": "friends (male)",
                 "translation_ru": "друг",
                 "pronunciation": "/fí·los/",
                 "grammar_data": {
@@ -5123,6 +5132,7 @@ class SeedService:
                 "lemma": "γάτα",
                 "part_of_speech": PartOfSpeech.NOUN,
                 "translation_en": "cat",
+                "translation_en_plural": "cats",
                 "translation_ru": "кошка",
                 "pronunciation": "/ghá·ta/",
                 "grammar_data": {
@@ -5154,6 +5164,7 @@ class SeedService:
                 "lemma": "γυναίκα",
                 "part_of_speech": PartOfSpeech.NOUN,
                 "translation_en": "woman, wife",
+                "translation_en_plural": "women, wives",
                 "translation_ru": "женщина, жена",
                 "pronunciation": "/yi·né·ka/",
                 "grammar_data": {
@@ -5508,6 +5519,7 @@ class SeedService:
                 "lemma": "καλός",
                 "part_of_speech": PartOfSpeech.ADJECTIVE,
                 "translation_en": "good, nice",
+                "translation_en_plural": "good, nice",
                 "translation_ru": "хороший",
                 "pronunciation": "/ka·lós/",
                 "grammar_data": {
@@ -5564,6 +5576,7 @@ class SeedService:
                 "lemma": "μεγάλος",
                 "part_of_speech": PartOfSpeech.ADJECTIVE,
                 "translation_en": "big, large, great",
+                "translation_en_plural": "big, large, great",
                 "translation_ru": "большой, великий",
                 "pronunciation": "/me·ghá·los/",
                 "grammar_data": {
@@ -5620,6 +5633,7 @@ class SeedService:
                 "lemma": "μικρός",
                 "part_of_speech": PartOfSpeech.ADJECTIVE,
                 "translation_en": "small, little",
+                "translation_en_plural": "small, little",
                 "translation_ru": "маленький",
                 "pronunciation": "/mi·krós/",
                 "grammar_data": {
@@ -5676,6 +5690,7 @@ class SeedService:
                 "lemma": "νέος",
                 "part_of_speech": PartOfSpeech.ADJECTIVE,
                 "translation_en": "young, new",
+                "translation_en_plural": "young, new",
                 "translation_ru": "молодой, новый",
                 "pronunciation": "/né·os/",
                 "grammar_data": {
