@@ -309,58 +309,61 @@ export function WordReferencePage() {
         </Card>
       )}
 
-      {/* Practice Button */}
-      <div className="flex justify-center">
-        {isCardsLoading ? (
-          <Button
-            variant="default"
-            size="lg"
-            disabled
-            className="min-w-[250px]"
-            data-testid="practice-word-button"
-          >
-            {t('deck:wordReference.practiceWord')}
-          </Button>
-        ) : cards.length === 0 ? (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span>
-                <Button
-                  variant="default"
-                  size="lg"
-                  disabled
-                  className="min-w-[250px] cursor-not-allowed"
-                  data-testid="practice-word-button"
-                >
-                  {t('deck:wordReference.practiceWord')}
-                </Button>
-              </span>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>{t('deck:practice.noCards')}</p>
-            </TooltipContent>
-          </Tooltip>
-        ) : (
-          <Button
-            asChild
-            variant="default"
-            size="lg"
-            className="min-w-[250px]"
-            data-testid="practice-word-button"
-          >
-            <Link to={`/decks/${deckId}/words/${wordId}/practice`}>
-              {t('deck:wordReference.practiceWord')}
-            </Link>
-          </Button>
-        )}
-      </div>
+      {/* Practice Button + Report Error (same vertical level) */}
+      <div className="relative pb-6 pt-4">
+        {/* Report Error - absolute bottom-left */}
+        <div className="absolute bottom-6 left-0">
+          <ReportErrorButton
+            onClick={() => setIsReportModalOpen(true)}
+            data-testid="report-error-button"
+          />
+        </div>
 
-      {/* Report Error */}
-      <div className="mt-4 flex justify-start pb-6">
-        <ReportErrorButton
-          onClick={() => setIsReportModalOpen(true)}
-          data-testid="report-error-button"
-        />
+        {/* Practice Button - centered */}
+        <div className="flex justify-center">
+          {isCardsLoading ? (
+            <Button
+              variant="default"
+              size="lg"
+              disabled
+              className="min-w-[250px]"
+              data-testid="practice-word-button"
+            >
+              {t('deck:wordReference.practiceWord')}
+            </Button>
+          ) : cards.length === 0 ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span>
+                  <Button
+                    variant="default"
+                    size="lg"
+                    disabled
+                    className="min-w-[250px] cursor-not-allowed"
+                    data-testid="practice-word-button"
+                  >
+                    {t('deck:wordReference.practiceWord')}
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{t('deck:practice.noCards')}</p>
+              </TooltipContent>
+            </Tooltip>
+          ) : (
+            <Button
+              asChild
+              variant="default"
+              size="lg"
+              className="min-w-[250px]"
+              data-testid="practice-word-button"
+            >
+              <Link to={`/decks/${deckId}/words/${wordId}/practice`}>
+                {t('deck:wordReference.practiceWord')}
+              </Link>
+            </Button>
+          )}
+        </div>
       </div>
 
       <ReportErrorModal
