@@ -101,10 +101,10 @@ describe('PracticeCard', () => {
       expect(screen.getByText('Noun')).toBeInTheDocument();
     });
 
-    it('renders "Tap to reveal" hint', () => {
+    it('renders "Tap or press Space to reveal" hint', () => {
       renderCard();
 
-      expect(screen.getByText('Tap to reveal')).toBeInTheDocument();
+      expect(screen.getByText('Tap or press Space to reveal')).toBeInTheDocument();
     });
   });
 
@@ -208,9 +208,9 @@ describe('PracticeCard', () => {
   });
 
   describe('Hotkey Hints', () => {
-    it('shows space hint on front side', () => {
+    it('shows space hint in tap-to-reveal text on front side', () => {
       renderCard();
-      expect(screen.getByText('Press Space to reveal')).toBeInTheDocument();
+      expect(screen.getByText('Tap or press Space to reveal')).toBeInTheDocument();
     });
 
     it('shows number hints below SRS buttons when onRate is provided', () => {

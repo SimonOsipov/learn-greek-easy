@@ -267,8 +267,7 @@
   },
   "practice": {
     "title": "Practice",
-    "tapToReveal": "Tap to reveal",
-    "spaceHint": "Press Space to reveal",
+    "tapToReveal": "Tap or press Space to reveal",
     "answer": "Answer",
     "example": "Example",
     "nextCard": "Next card",

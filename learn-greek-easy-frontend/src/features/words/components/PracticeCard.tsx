@@ -106,13 +106,11 @@ function CardFront({
   typeBadgeLabel,
   tapToRevealLabel,
   partOfSpeech,
-  spaceHint,
 }: {
   front: MeaningFrontContent;
   typeBadgeLabel: string;
   tapToRevealLabel: string;
   partOfSpeech: PartOfSpeech | null;
-  spaceHint: string;
 }) {
   return (
     <div data-testid="practice-card-front" className="flex flex-col items-center gap-6 py-6">
@@ -134,10 +132,7 @@ function CardFront({
       {front.sub && <p className="text-center text-sm italic text-muted-foreground">{front.sub}</p>}
 
       {/* Tap to reveal hint */}
-      <div className="mt-4 flex flex-col items-center gap-1">
-        <p className="text-center text-sm text-muted-foreground">{tapToRevealLabel}</p>
-        <p className="text-center text-[10px] text-muted-foreground">{spaceHint}</p>
-      </div>
+      <p className="mt-4 text-center text-sm text-muted-foreground">{tapToRevealLabel}</p>
     </div>
   );
 }
@@ -315,7 +310,6 @@ export function PracticeCard({
 
   const typeBadgeLabel = t('practice.meaningBadge');
   const tapToRevealLabel = t('practice.tapToReveal');
-  const spaceHint = t('practice.spaceHint');
   const answerLabel = t('practice.answer');
   const srsComingSoon = t('practice.srsComingSoon');
   const partOfSpeech = front.badge ? (front.badge.toLowerCase() as PartOfSpeech) : null;
@@ -351,7 +345,6 @@ export function PracticeCard({
             typeBadgeLabel={typeBadgeLabel}
             tapToRevealLabel={tapToRevealLabel}
             partOfSpeech={partOfSpeech}
-            spaceHint={spaceHint}
           />
         ) : (
           <CardBack
