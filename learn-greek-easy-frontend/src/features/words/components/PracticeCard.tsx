@@ -277,6 +277,22 @@ export function PracticeCard({
   // Determine displayed answer based on UI language
   const displayAnswer = currentLang === 'ru' && translationRu ? translationRu : back.answer;
 
+  // Translate stored English prompts to Russian when language is switched
+  const translatePrompt = (englishPrompt: string, lang: string): string => {
+    if (lang !== 'ru') return englishPrompt;
+
+    const promptTranslations: Record<string, string> = {
+      'What does that mean?': 'Что это значит?',
+      'How do you say this in Greek?': 'Как это сказать по-гречески?',
+      'What is this?': 'Что это?',
+      'What does this mean?': 'Что это значит?',
+    };
+
+    return promptTranslations[englishPrompt] || englishPrompt;
+  };
+
+  const translatedPrompt = translatePrompt(front.prompt, currentLang);
+
   const typeBadgeLabel = t('practice.meaningBadge');
   const tapToRevealLabel = t('practice.tapToReveal');
   const answerLabel = t('practice.answer');
@@ -345,7 +361,7 @@ export function PracticeCard({
 
         {!isFlipped ? (
           <CardFront
-            front={front}
+            front={{ ...front, prompt: translatedPrompt }}
             typeBadgeLabel={typeBadgeLabel}
             tapToRevealLabel={tapToRevealLabel}
             partOfSpeech={partOfSpeech}
