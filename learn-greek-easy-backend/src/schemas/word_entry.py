@@ -166,6 +166,11 @@ class WordEntryBase(BaseModel):
         max_length=500,
         description="English translation(s)",
     )
+    translation_en_plural: Optional[str] = Field(
+        default=None,
+        max_length=500,
+        description="English plural translation(s)",
+    )
     translation_ru: Optional[str] = Field(
         default=None,
         max_length=500,
@@ -202,6 +207,18 @@ class WordEntryBase(BaseModel):
             v = v.strip()
             if not v:
                 raise ValueError("lemma cannot be empty or whitespace only")
+        return v
+
+    @field_validator("translation_en_plural", mode="before")
+    @classmethod
+    def strip_translation_en_plural(cls, v: str | None) -> str | None:
+        """Strip whitespace from English plural translation if provided."""
+        if v is None:
+            return None
+        if isinstance(v, str):
+            v = v.strip()
+            if not v:
+                return None
         return v
 
     @field_validator("translation_ru", mode="before")
@@ -262,6 +279,11 @@ class WordEntryUpdate(BaseModel):
         min_length=1,
         max_length=500,
         description="English translation(s)",
+    )
+    translation_en_plural: Optional[str] = Field(
+        default=None,
+        max_length=500,
+        description="English plural translation(s)",
     )
     translation_ru: Optional[str] = Field(
         default=None,
@@ -330,6 +352,7 @@ class WordEntryResponse(BaseModel):
     lemma: str
     part_of_speech: PartOfSpeech
     translation_en: str
+    translation_en_plural: Optional[str] = None
     translation_ru: Optional[str] = None
     pronunciation: Optional[str] = None
     grammar_data: Optional[dict[str, Any]] = None  # Raw dict for response
@@ -404,6 +427,11 @@ class WordEntryBulkCreate(BaseModel):
         max_length=500,
         description="English translation(s)",
     )
+    translation_en_plural: Optional[str] = Field(
+        default=None,
+        max_length=500,
+        description="English plural translation(s)",
+    )
     translation_ru: Optional[str] = Field(
         default=None,
         max_length=500,
@@ -431,6 +459,18 @@ class WordEntryBulkCreate(BaseModel):
             v = v.strip()
             if not v:
                 raise ValueError("lemma cannot be empty or whitespace only")
+        return v
+
+    @field_validator("translation_en_plural", mode="before")
+    @classmethod
+    def strip_translation_en_plural(cls, v: str | None) -> str | None:
+        """Strip whitespace from English plural translation if provided."""
+        if v is None:
+            return None
+        if isinstance(v, str):
+            v = v.strip()
+            if not v:
+                return None
         return v
 
     @field_validator("translation_ru", mode="before")

@@ -707,6 +707,11 @@ class WordEntry(Base, TimestampMixin):
         nullable=False,
         comment="English translation(s), comma-separated for multiple meanings",
     )
+    translation_en_plural: Mapped[str | None] = mapped_column(
+        String(500),
+        nullable=True,
+        comment="English plural translation(s), comma-separated for multiple meanings",
+    )
     translation_ru: Mapped[str | None] = mapped_column(
         String(500),
         nullable=True,

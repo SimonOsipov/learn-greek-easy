@@ -273,6 +273,7 @@ class WordEntryRepository(BaseRepository[WordEntry]):
         # Columns to update on conflict (all except primary key and constraint columns)
         update_columns = [
             "translation_en",
+            "translation_en_plural",
             "translation_ru",
             "pronunciation",
             "grammar_data",
