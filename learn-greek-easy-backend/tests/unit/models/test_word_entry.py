@@ -51,14 +51,13 @@ class TestWordEntryModel:
         assert WordEntry.__tablename__ == "word_entries"
 
     def test_has_all_columns(self):
-        """Model should have all 14 expected columns."""
+        """Model should have all 13 expected columns."""
         columns = WordEntry.__table__.columns.keys()
         expected_columns = [
             "id",
             "deck_id",
             "lemma",
             "part_of_speech",
-            "cefr_level",
             "translation_en",
             "translation_ru",
             "pronunciation",
@@ -69,7 +68,7 @@ class TestWordEntryModel:
             "created_at",
             "updated_at",
         ]
-        assert len(expected_columns) == 14
+        assert len(expected_columns) == 13
         for col in expected_columns:
             assert col in columns, f"Missing expected column: {col}"
 
@@ -119,11 +118,6 @@ class TestWordEntryModel:
     # =========================================================================
     # Optional Fields (NULLABLE) Tests
     # =========================================================================
-
-    def test_cefr_level_nullable(self):
-        """cefr_level column should be nullable."""
-        cefr_col = WordEntry.__table__.columns["cefr_level"]
-        assert cefr_col.nullable is True
 
     def test_translation_ru_nullable(self):
         """translation_ru column should be nullable."""
@@ -262,12 +256,6 @@ class TestWordEntryModel:
         indexes = WordEntry.__table__.indexes
         index_names = [idx.name for idx in indexes]
         assert "ix_word_entries_lemma" in index_names
-
-    def test_cefr_level_index_exists(self):
-        """cefr_level should have an index."""
-        indexes = WordEntry.__table__.indexes
-        index_names = [idx.name for idx in indexes]
-        assert "ix_word_entries_cefr_level" in index_names
 
     # =========================================================================
     # JSON Column Type Tests

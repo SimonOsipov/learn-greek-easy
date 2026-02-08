@@ -277,7 +277,6 @@ export function WordReferencePage() {
               {t(`review:grammar.nounDeclension.genders.${grammarData.gender as string}`)}
             </Badge>
           )}
-          {wordEntry.cefr_level && <Badge variant="outline">{wordEntry.cefr_level}</Badge>}
         </div>
 
         {/* Greek word (lemma) */}

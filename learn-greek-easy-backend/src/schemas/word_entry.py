@@ -55,7 +55,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from src.db.models import DeckLevel, PartOfSpeech
+from src.db.models import PartOfSpeech
 
 # ============================================================================
 # Example Sentence Schema
@@ -160,10 +160,6 @@ class WordEntryBase(BaseModel):
         ...,
         description="Part of speech classification",
     )
-    cefr_level: Optional[DeckLevel] = Field(
-        default=None,
-        description="CEFR level (A1-C2), overrides deck level if set",
-    )
     translation_en: str = Field(
         ...,
         min_length=1,
@@ -261,10 +257,6 @@ class WordEntryUpdate(BaseModel):
         default=None,
         description="Part of speech classification",
     )
-    cefr_level: Optional[DeckLevel] = Field(
-        default=None,
-        description="CEFR level (A1-C2)",
-    )
     translation_en: Optional[str] = Field(
         default=None,
         min_length=1,
@@ -337,7 +329,6 @@ class WordEntryResponse(BaseModel):
     deck_id: UUID
     lemma: str
     part_of_speech: PartOfSpeech
-    cefr_level: Optional[DeckLevel] = None
     translation_en: str
     translation_ru: Optional[str] = None
     pronunciation: Optional[str] = None
@@ -406,10 +397,6 @@ class WordEntryBulkCreate(BaseModel):
     part_of_speech: PartOfSpeech = Field(
         ...,
         description="Part of speech classification",
-    )
-    cefr_level: Optional[DeckLevel] = Field(
-        default=None,
-        description="CEFR level (A1-C2), overrides deck level if set",
     )
     translation_en: str = Field(
         ...,

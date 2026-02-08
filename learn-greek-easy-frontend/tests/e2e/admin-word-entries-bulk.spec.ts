@@ -109,7 +109,7 @@ async function getVocabularyDeckId(page: import('@playwright/test').Page): Promi
 // ============================================================================
 
 // Word entry required fields: lemma, part_of_speech, translation_en
-// Optional: cefr_level, translation_ru, pronunciation, grammar_data, examples
+// Optional: translation_ru, pronunciation, grammar_data, examples
 
 const makeValidMinimalJson = (deckId: string) => JSON.stringify({
   deck_id: deckId,

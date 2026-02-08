@@ -15,7 +15,7 @@ from uuid import uuid4
 import pytest
 from pydantic import ValidationError
 
-from src.db.models import DeckLevel, PartOfSpeech
+from src.db.models import PartOfSpeech
 from src.schemas.word_entry import (
     ExampleSentence,
     WordEntryBulkCreate,
@@ -42,7 +42,6 @@ class TestWordEntryBulkCreate:
         assert entry.lemma == "σπίτι"
         assert entry.part_of_speech == PartOfSpeech.NOUN
         assert entry.translation_en == "house, home"
-        assert entry.cefr_level is None
         assert entry.translation_ru is None
         assert entry.pronunciation is None
         assert entry.grammar_data is None
@@ -53,7 +52,6 @@ class TestWordEntryBulkCreate:
         entry = WordEntryBulkCreate(
             lemma="γράφω",
             part_of_speech=PartOfSpeech.VERB,
-            cefr_level=DeckLevel.A2,
             translation_en="to write",
             translation_ru="писать",
             pronunciation="/ˈɣrafo/",
@@ -66,7 +64,6 @@ class TestWordEntryBulkCreate:
             ],
         )
         assert entry.lemma == "γράφω"
-        assert entry.cefr_level == DeckLevel.A2
         assert entry.translation_ru == "писать"
         assert entry.pronunciation == "/ˈɣrafo/"
         assert entry.grammar_data == {"voice": "active", "present_1s": "γράφω"}
@@ -223,34 +220,6 @@ class TestWordEntryBulkCreate:
                 translation_ru="а" * 501,
             )
         assert "string_too_long" in str(exc_info.value).lower()
-
-    def test_cefr_level_optional(self):
-        """Test cefr_level is optional and defaults to None."""
-        entry = WordEntryBulkCreate(
-            lemma="σπίτι",
-            part_of_speech=PartOfSpeech.NOUN,
-            translation_en="house",
-        )
-        assert entry.cefr_level is None
-
-    def test_all_cefr_levels_accepted(self):
-        """Test all valid DeckLevel values are accepted."""
-        all_levels = [
-            DeckLevel.A1,
-            DeckLevel.A2,
-            DeckLevel.B1,
-            DeckLevel.B2,
-            DeckLevel.C1,
-            DeckLevel.C2,
-        ]
-        for level in all_levels:
-            entry = WordEntryBulkCreate(
-                lemma="test",
-                part_of_speech=PartOfSpeech.NOUN,
-                translation_en="test",
-                cefr_level=level,
-            )
-            assert entry.cefr_level == level
 
     def test_pronunciation_max_length(self):
         """Test pronunciation max length of 200 characters."""
@@ -785,7 +754,6 @@ class TestBulkSchemaFieldDescriptions:
         fields = WordEntryBulkCreate.model_fields
         assert fields["lemma"].description is not None
         assert fields["part_of_speech"].description is not None
-        assert fields["cefr_level"].description is not None
         assert fields["translation_en"].description is not None
         assert fields["translation_ru"].description is not None
         assert fields["pronunciation"].description is not None

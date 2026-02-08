@@ -52,7 +52,6 @@ class TestDeckWordEntriesEndpoint:
                 translation_en="house, home",
                 translation_ru="дом",
                 pronunciation="/spí·ti/",
-                cefr_level=DeckLevel.A1,
                 is_active=True,
             ),
             WordEntry(
@@ -63,7 +62,6 @@ class TestDeckWordEntriesEndpoint:
                 translation_en="to write",
                 translation_ru="писать",
                 pronunciation="/ghrá·fo/",
-                cefr_level=DeckLevel.A1,
                 is_active=True,
             ),
             WordEntry(
@@ -74,7 +72,6 @@ class TestDeckWordEntriesEndpoint:
                 translation_en="good, beautiful",
                 translation_ru="хороший",
                 pronunciation="/ka·lós/",
-                cefr_level=DeckLevel.A1,
                 is_active=True,
             ),
             WordEntry(
@@ -85,7 +82,6 @@ class TestDeckWordEntriesEndpoint:
                 translation_en="water",
                 translation_ru="вода",
                 pronunciation="/ne·ró/",
-                cefr_level=DeckLevel.A1,
                 is_active=True,
             ),
             WordEntry(
@@ -96,7 +92,6 @@ class TestDeckWordEntriesEndpoint:
                 translation_en="to run",
                 translation_ru="бежать",
                 pronunciation="/tré·cho/",
-                cefr_level=DeckLevel.A2,
                 is_active=True,
             ),
         ]

@@ -27,7 +27,6 @@ BULK_NOUN_ENTRY = {
     "part_of_speech": "noun",
     "translation_en": "house, home",
     "translation_ru": "дом",
-    "cefr_level": "A1",
     "pronunciation": "/spí·ti/",
     "grammar_data": {
         "gender": "neuter",
@@ -50,7 +49,6 @@ BULK_VERB_ENTRY = {
     "part_of_speech": "verb",
     "translation_en": "to write",
     "translation_ru": "писать",
-    "cefr_level": "A1",
     "pronunciation": "/ghrá·fo/",
     "grammar_data": {
         "voice": "active",
@@ -65,7 +63,6 @@ BULK_ADJECTIVE_ENTRY = {
     "lemma": "καλός",
     "part_of_speech": "adjective",
     "translation_en": "good, beautiful",
-    "cefr_level": "A1",
 }
 
 BULK_MINIMAL_ENTRY = {
@@ -79,7 +76,6 @@ CARD_GEN_ENTRY_WITH_EXAMPLES = {
     "part_of_speech": "noun",
     "translation_en": "road, street",
     "translation_ru": "дорога, улица",
-    "cefr_level": "A1",
     "pronunciation": "/ðró·mos/",
     "grammar_data": {
         "gender": "masculine",
@@ -102,7 +98,6 @@ CARD_GEN_ENTRY_WITHOUT_EXAMPLES = {
     "part_of_speech": "verb",
     "translation_en": "to run",
     "translation_ru": "бежать",
-    "cefr_level": "A1",
     "pronunciation": "/tré·xo/",
     "grammar_data": {
         "voice": "active",
@@ -146,7 +141,6 @@ class TestBulkUpsertWordEntriesEndpoint:
             part_of_speech=PartOfSpeech.NOUN,
             translation_en="house (old translation)",
             translation_ru=None,
-            cefr_level=None,
             pronunciation=None,
             grammar_data=None,
             examples=None,
@@ -228,7 +222,6 @@ class TestBulkUpsertWordEntriesEndpoint:
         assert entry["part_of_speech"] == "noun"
         assert entry["translation_en"] == "house, home"
         assert entry["translation_ru"] == "дом"
-        assert entry["cefr_level"] == "A1"
         assert entry["pronunciation"] == "/spí·ti/"
         assert entry["grammar_data"] is not None
         assert entry["grammar_data"]["gender"] == "neuter"
@@ -877,7 +870,6 @@ class TestBulkUpsertWordEntriesEndpoint:
             "deck_id",
             "lemma",
             "part_of_speech",
-            "cefr_level",
             "translation_en",
             "translation_ru",
             "pronunciation",

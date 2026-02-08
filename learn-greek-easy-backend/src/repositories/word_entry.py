@@ -207,7 +207,7 @@ class WordEntryRepository(BaseRepository[WordEntry]):
             deck_id: Deck UUID to add entries to
             entries_data: List of dictionaries containing word entry fields.
                 Each dict should have: lemma, part_of_speech, translation_en,
-                and optionally: cefr_level, translation_ru, pronunciation,
+                and optionally: translation_ru, pronunciation,
                 grammar_data, examples.
 
         Returns:
@@ -272,7 +272,6 @@ class WordEntryRepository(BaseRepository[WordEntry]):
         # Build PostgreSQL upsert statement
         # Columns to update on conflict (all except primary key and constraint columns)
         update_columns = [
-            "cefr_level",
             "translation_en",
             "translation_ru",
             "pronunciation",
