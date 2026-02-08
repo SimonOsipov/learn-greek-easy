@@ -88,15 +88,16 @@ describe('PracticeCard', () => {
       expect(screen.getByText('[spee-tee]')).toBeInTheDocument();
     });
 
-    it('renders Meaning badge', () => {
+    it('renders Translation badge', () => {
       renderCard();
 
-      expect(screen.getByText('Meaning')).toBeInTheDocument();
+      expect(screen.getByText('Translation')).toBeInTheDocument();
     });
 
     it('renders POS badge from front_content.badge', () => {
       renderCard();
 
+      expect(screen.getByTestId('part-of-speech-badge')).toBeInTheDocument();
       expect(screen.getByText('Noun')).toBeInTheDocument();
     });
 
@@ -129,6 +130,12 @@ describe('PracticeCard', () => {
         )
       ).toBeInTheDocument();
       expect(screen.getByText('My house is small.')).toBeInTheDocument();
+    });
+
+    it('renders PartOfSpeechBadge on back side', () => {
+      renderCard({ isFlipped: true });
+
+      expect(screen.getByTestId('part-of-speech-badge')).toBeInTheDocument();
     });
   });
 

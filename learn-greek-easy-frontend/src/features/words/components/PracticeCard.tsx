@@ -13,12 +13,14 @@
 import { Check } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import { PartOfSpeechBadge } from '@/components/review/grammar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import type { CardRecordResponse } from '@/services/wordEntryAPI';
+import type { PartOfSpeech } from '@/types/grammar';
 
 // ============================================
 // Types
@@ -73,10 +75,12 @@ function CardFront({
   front,
   typeBadgeLabel,
   tapToRevealLabel,
+  partOfSpeech,
 }: {
   front: MeaningFrontContent;
   typeBadgeLabel: string;
   tapToRevealLabel: string;
+  partOfSpeech: PartOfSpeech | null;
 }) {
   return (
     <div data-testid="practice-card-front" className="flex flex-col items-center gap-6 py-6">
@@ -85,11 +89,7 @@ function CardFront({
         <Badge className="bg-[#6366f1]/10 text-[#6366f1] hover:bg-[#6366f1]/10">
           {typeBadgeLabel}
         </Badge>
-        {front.badge && (
-          <Badge variant="outline" className="border-gray-300 text-gray-500">
-            {front.badge}
-          </Badge>
-        )}
+        {partOfSpeech && <PartOfSpeechBadge partOfSpeech={partOfSpeech} />}
       </div>
 
       {/* Prompt */}
@@ -108,19 +108,19 @@ function CardFront({
 }
 
 function CardBack({
-  front,
   back,
   typeBadgeLabel,
   answerLabel,
   srsComingSoon,
   t,
+  partOfSpeech,
 }: {
-  front: MeaningFrontContent;
   back: MeaningBackContent;
   typeBadgeLabel: string;
   answerLabel: string;
   srsComingSoon: string;
   t: (key: string) => string;
+  partOfSpeech: PartOfSpeech | null;
 }) {
   return (
     <div data-testid="practice-card-back" className="flex animate-fade-in flex-col gap-6 py-6">
@@ -129,11 +129,7 @@ function CardBack({
         <Badge className="bg-[#6366f1]/10 text-[#6366f1] hover:bg-[#6366f1]/10">
           {typeBadgeLabel}
         </Badge>
-        {front.badge && (
-          <Badge variant="outline" className="border-gray-300 text-gray-500">
-            {front.badge}
-          </Badge>
-        )}
+        {partOfSpeech && <PartOfSpeechBadge partOfSpeech={partOfSpeech} />}
       </div>
 
       {/* Answer section */}
@@ -216,6 +212,7 @@ export function PracticeCard({ card, isFlipped, onFlip }: PracticeCardProps) {
   const tapToRevealLabel = t('practice.tapToReveal');
   const answerLabel = t('practice.answer');
   const srsComingSoon = t('practice.srsComingSoon');
+  const partOfSpeech = front.badge ? (front.badge.toLowerCase() as PartOfSpeech) : null;
 
   return (
     <Card
@@ -247,15 +244,16 @@ export function PracticeCard({ card, isFlipped, onFlip }: PracticeCardProps) {
             front={front}
             typeBadgeLabel={typeBadgeLabel}
             tapToRevealLabel={tapToRevealLabel}
+            partOfSpeech={partOfSpeech}
           />
         ) : (
           <CardBack
-            front={front}
             back={back}
             typeBadgeLabel={typeBadgeLabel}
             answerLabel={answerLabel}
             srsComingSoon={srsComingSoon}
             t={t}
+            partOfSpeech={partOfSpeech}
           />
         )}
       </CardContent>
