@@ -8,7 +8,7 @@
  * card navigation. Rendered outside AppLayout for an immersive experience.
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 
 import { ChevronLeft, RefreshCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -75,6 +75,47 @@ export function WordPracticePage() {
     setCurrentIndex(nextIndex);
     setIsFlipped(false);
   }, [cards, currentIndex]);
+
+  const handleRate = useCallback(
+    (rating: number) => {
+      // For now, just advance to next card (SRS integration later)
+      void rating;
+      handleNextCard();
+    },
+    [handleNextCard]
+  );
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore if user is typing in an input
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement ||
+        e.target instanceof HTMLSelectElement
+      ) {
+        return;
+      }
+
+      if (e.key === ' ' || e.code === 'Space') {
+        e.preventDefault();
+        if (!isFlipped) {
+          handleFlip();
+        } else {
+          handleNextCard();
+        }
+        return;
+      }
+
+      // 1-4 keys for SRS ratings (only when card is flipped/revealed)
+      if (isFlipped && ['1', '2', '3', '4'].includes(e.key)) {
+        e.preventDefault();
+        handleRate(parseInt(e.key, 10));
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isFlipped, handleFlip, handleNextCard, handleRate]);
 
   // Loading state
   if (isLoading) {
@@ -167,6 +208,7 @@ export function WordPracticePage() {
           isFlipped={isFlipped}
           onFlip={handleFlip}
           translationRu={wordEntry?.translation_ru ?? null}
+          onRate={handleRate}
         />
 
         {/* Next card button — only show if more than 1 card */}

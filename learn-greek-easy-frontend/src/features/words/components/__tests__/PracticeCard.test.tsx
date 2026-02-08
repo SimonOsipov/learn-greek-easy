@@ -171,13 +171,61 @@ describe('PracticeCard', () => {
       expect(screen.getByTestId('srs-button-easy')).toBeInTheDocument();
     });
 
-    it('all SRS buttons are disabled', () => {
+    it('all SRS buttons are disabled when onRate is not provided', () => {
       renderCard({ isFlipped: true });
 
       expect(screen.getByTestId('srs-button-again')).toBeDisabled();
       expect(screen.getByTestId('srs-button-hard')).toBeDisabled();
       expect(screen.getByTestId('srs-button-good')).toBeDisabled();
       expect(screen.getByTestId('srs-button-easy')).toBeDisabled();
+    });
+
+    it('enables SRS buttons when onRate is provided', () => {
+      renderCard({ isFlipped: true, onRate: vi.fn() });
+
+      expect(screen.getByTestId('srs-button-again')).not.toBeDisabled();
+      expect(screen.getByTestId('srs-button-hard')).not.toBeDisabled();
+      expect(screen.getByTestId('srs-button-good')).not.toBeDisabled();
+      expect(screen.getByTestId('srs-button-easy')).not.toBeDisabled();
+    });
+
+    it('calls onRate with correct rating when SRS button clicked', () => {
+      const onRate = vi.fn();
+      renderCard({ isFlipped: true, onRate });
+
+      fireEvent.click(screen.getByTestId('srs-button-again'));
+      expect(onRate).toHaveBeenCalledWith(1);
+
+      fireEvent.click(screen.getByTestId('srs-button-hard'));
+      expect(onRate).toHaveBeenCalledWith(2);
+
+      fireEvent.click(screen.getByTestId('srs-button-good'));
+      expect(onRate).toHaveBeenCalledWith(3);
+
+      fireEvent.click(screen.getByTestId('srs-button-easy'));
+      expect(onRate).toHaveBeenCalledWith(4);
+    });
+  });
+
+  describe('Hotkey Hints', () => {
+    it('shows space hint on front side', () => {
+      renderCard();
+      expect(screen.getByText('Press Space to reveal')).toBeInTheDocument();
+    });
+
+    it('shows number hints below SRS buttons when onRate is provided', () => {
+      renderCard({ isFlipped: true, onRate: vi.fn() });
+      expect(screen.getByText('1')).toBeInTheDocument();
+      expect(screen.getByText('2')).toBeInTheDocument();
+      expect(screen.getByText('3')).toBeInTheDocument();
+      expect(screen.getByText('4')).toBeInTheDocument();
+    });
+
+    it('does not show number hints when onRate is not provided', () => {
+      renderCard({ isFlipped: true });
+      // Number hints should NOT appear when onRate is not provided
+      const allTexts = screen.queryAllByText(/^[1-4]$/);
+      expect(allTexts.length).toBe(0);
     });
   });
 

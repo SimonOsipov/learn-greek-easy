@@ -481,6 +481,122 @@ describe('WordPracticePage', () => {
     });
   });
 
+  describe('Keyboard Navigation', () => {
+    it('pressing Space reveals card when not flipped', () => {
+      const cards = makeCards(2);
+      mockUseWordEntryCards.mockReturnValue({
+        cards,
+        isLoading: false,
+        isError: false,
+        error: null,
+        refetch: vi.fn(),
+      });
+
+      render(<WordPracticePage />);
+
+      // Card should start not flipped
+      expect(screen.getByText('NOT_FLIPPED')).toBeInTheDocument();
+
+      // Press Space
+      fireEvent.keyDown(window, { key: ' ', code: 'Space' });
+
+      // Card should now be flipped
+      const calls = mockPracticeCard.mock.calls;
+      const lastCall = calls[calls.length - 1][0];
+      expect(lastCall.isFlipped).toBe(true);
+    });
+
+    it('pressing Space advances to next card when already flipped', () => {
+      const cards = makeCards(2);
+      mockUseWordEntryCards.mockReturnValue({
+        cards,
+        isLoading: false,
+        isError: false,
+        error: null,
+        refetch: vi.fn(),
+      });
+
+      render(<WordPracticePage />);
+
+      // Flip the card first
+      fireEvent.click(screen.getByTestId('mock-flip-trigger'));
+      expect(screen.getByText('FLIPPED')).toBeInTheDocument();
+
+      // Press Space to advance
+      fireEvent.keyDown(window, { key: ' ', code: 'Space' });
+
+      // Should have moved to next card (unflipped)
+      const calls = mockPracticeCard.mock.calls;
+      const lastCall = calls[calls.length - 1][0];
+      expect(lastCall.isFlipped).toBe(false);
+    });
+
+    it('keys 1-4 trigger rating when card is flipped', () => {
+      const cards = makeCards(2);
+      mockUseWordEntryCards.mockReturnValue({
+        cards,
+        isLoading: false,
+        isError: false,
+        error: null,
+        refetch: vi.fn(),
+      });
+
+      render(<WordPracticePage />);
+
+      // Flip card first
+      fireEvent.click(screen.getByTestId('mock-flip-trigger'));
+
+      // Press '1' -- should rate and advance
+      fireEvent.keyDown(window, { key: '1' });
+
+      const calls = mockPracticeCard.mock.calls;
+      const lastCall = calls[calls.length - 1][0];
+      // After rating, card should advance (isFlipped resets)
+      expect(lastCall.isFlipped).toBe(false);
+    });
+
+    it('keys 1-4 do nothing when card is not flipped', () => {
+      mockUseWordEntryCards.mockReturnValue({
+        cards: makeCards(2),
+        isLoading: false,
+        isError: false,
+        error: null,
+        refetch: vi.fn(),
+      });
+
+      render(<WordPracticePage />);
+
+      const callCountBefore = mockPracticeCard.mock.calls.length;
+
+      // Press '1' while not flipped -- should do nothing
+      fireEvent.keyDown(window, { key: '1' });
+
+      // No additional render should happen (or same state)
+      const calls = mockPracticeCard.mock.calls;
+      if (calls.length > callCountBefore) {
+        const lastCall = calls[calls.length - 1][0];
+        expect(lastCall.isFlipped).toBe(false);
+        expect(lastCall.card.id).toBe('card-1'); // same card
+      }
+    });
+
+    it('passes onRate prop to PracticeCard', () => {
+      mockUseWordEntryCards.mockReturnValue({
+        cards: makeCards(1),
+        isLoading: false,
+        isError: false,
+        error: null,
+        refetch: vi.fn(),
+      });
+
+      render(<WordPracticePage />);
+
+      const calls = mockPracticeCard.mock.calls;
+      const lastCall = calls[calls.length - 1][0];
+      expect(typeof lastCall.onRate).toBe('function');
+    });
+  });
+
   describe('data-testid Attributes', () => {
     it('has practice-page testid on ready state container', () => {
       mockUseWordEntryCards.mockReturnValue({
