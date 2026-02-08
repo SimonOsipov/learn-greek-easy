@@ -19,6 +19,7 @@ from src.repositories.deck import DeckRepository
 from src.repositories.word_entry import WordEntryRepository
 from src.schemas.card_record import CardRecordResponse
 from src.schemas.word_entry import WordEntryBulkRequest, WordEntryBulkResponse, WordEntryResponse
+from src.services.card_generator_service import CardGeneratorService
 
 router = APIRouter(
     # Note: prefix is set by parent router in v1/router.py
@@ -328,6 +329,10 @@ async def bulk_upload_word_entries(
         deck_id=request.deck_id,
         entries_data=entries_data,
     )
+
+    # Generate meaning cards for all upserted word entries
+    card_gen = CardGeneratorService(db)
+    cards_created, cards_updated = await card_gen.generate_meaning_cards(entries, request.deck_id)
 
     # Commit the transaction
     await db.commit()
