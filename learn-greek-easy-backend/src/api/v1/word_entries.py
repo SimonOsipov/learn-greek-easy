@@ -330,7 +330,17 @@ async def bulk_upload_word_entries(
 
     # Generate meaning cards for all upserted word entries
     card_gen = CardGeneratorService(db)
-    cards_created, cards_updated = await card_gen.generate_meaning_cards(entries, request.deck_id)
+    meaning_created, meaning_updated = await card_gen.generate_meaning_cards(
+        entries, request.deck_id
+    )
+
+    # Generate plural form cards for eligible noun entries
+    plural_created, plural_updated = await card_gen.generate_plural_form_cards(
+        entries, request.deck_id
+    )
+
+    cards_created = meaning_created + plural_created
+    cards_updated = meaning_updated + plural_updated
 
     # Commit the transaction
     await db.commit()
