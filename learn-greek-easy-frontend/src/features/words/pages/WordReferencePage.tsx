@@ -309,23 +309,8 @@ export function WordReferencePage() {
         </Card>
       )}
 
-      {/* Report Error */}
-      <div className="flex justify-center">
-        <ReportErrorButton
-          onClick={() => setIsReportModalOpen(true)}
-          data-testid="report-error-button"
-        />
-      </div>
-
-      <ReportErrorModal
-        isOpen={isReportModalOpen}
-        onClose={() => setIsReportModalOpen(false)}
-        cardId={wordEntry.id}
-        cardType="WORD"
-      />
-
       {/* Practice Button */}
-      <div className="flex justify-center pb-6">
+      <div className="flex justify-center">
         {isCardsLoading ? (
           <Button
             variant="default"
@@ -369,6 +354,21 @@ export function WordReferencePage() {
           </Button>
         )}
       </div>
+
+      {/* Report Error */}
+      <div className="mt-4 flex justify-start pb-6">
+        <ReportErrorButton
+          onClick={() => setIsReportModalOpen(true)}
+          data-testid="report-error-button"
+        />
+      </div>
+
+      <ReportErrorModal
+        isOpen={isReportModalOpen}
+        onClose={() => setIsReportModalOpen(false)}
+        cardId={wordEntry.id}
+        cardType="WORD"
+      />
     </div>
   );
 }
