@@ -639,6 +639,72 @@ class TestWordEntryBulkResponse:
             )
         assert "greater than or equal to 0" in str(exc_info.value).lower()
 
+    def test_cards_created_defaults_to_zero(self):
+        """Test cards_created defaults to 0 when not provided."""
+        response = WordEntryBulkResponse(
+            deck_id=uuid4(),
+            created_count=0,
+            updated_count=0,
+            word_entries=[],
+        )
+        assert response.cards_created == 0
+
+    def test_cards_updated_defaults_to_zero(self):
+        """Test cards_updated defaults to 0 when not provided."""
+        response = WordEntryBulkResponse(
+            deck_id=uuid4(),
+            created_count=0,
+            updated_count=0,
+            word_entries=[],
+        )
+        assert response.cards_updated == 0
+
+    def test_cards_created_accepts_positive_value(self):
+        """Test cards_created accepts positive integer."""
+        response = WordEntryBulkResponse(
+            deck_id=uuid4(),
+            created_count=0,
+            updated_count=0,
+            cards_created=5,
+            word_entries=[],
+        )
+        assert response.cards_created == 5
+
+    def test_cards_updated_accepts_positive_value(self):
+        """Test cards_updated accepts positive integer."""
+        response = WordEntryBulkResponse(
+            deck_id=uuid4(),
+            created_count=0,
+            updated_count=0,
+            cards_updated=3,
+            word_entries=[],
+        )
+        assert response.cards_updated == 3
+
+    def test_cards_created_rejects_negative(self):
+        """Test cards_created rejects negative value."""
+        with pytest.raises(ValidationError) as exc_info:
+            WordEntryBulkResponse(
+                deck_id=uuid4(),
+                created_count=0,
+                updated_count=0,
+                cards_created=-1,
+                word_entries=[],
+            )
+        assert "greater than or equal to 0" in str(exc_info.value).lower()
+
+    def test_cards_updated_rejects_negative(self):
+        """Test cards_updated rejects negative value."""
+        with pytest.raises(ValidationError) as exc_info:
+            WordEntryBulkResponse(
+                deck_id=uuid4(),
+                created_count=0,
+                updated_count=0,
+                cards_updated=-1,
+                word_entries=[],
+            )
+        assert "greater than or equal to 0" in str(exc_info.value).lower()
+
     def test_response_serialization(self):
         """Test response serializes correctly to JSON."""
         now = datetime.now()
@@ -663,6 +729,8 @@ class TestWordEntryBulkResponse:
         json_data = response.model_dump(mode="json")
         assert json_data["created_count"] == 1
         assert json_data["updated_count"] == 2
+        assert "cards_created" in json_data
+        assert "cards_updated" in json_data
         assert len(json_data["word_entries"]) == 1
         assert json_data["word_entries"][0]["part_of_speech"] == "noun"
 
@@ -737,4 +805,6 @@ class TestBulkSchemaFieldDescriptions:
         assert fields["deck_id"].description is not None
         assert fields["created_count"].description is not None
         assert fields["updated_count"].description is not None
+        assert fields["cards_created"].description is not None
+        assert fields["cards_updated"].description is not None
         assert fields["word_entries"].description is not None
