@@ -4,6 +4,10 @@
 
 Automated execution of Vibe Kanban `inprogress` tasks through 4 mandatory quality gates (Architecture → Explore → Execution → QA Verify). Analyzes task dependencies to determine execution mode: **parallel** (multiple independent chains via agent teams) or **sequential** (single chain, team lead executes directly).
 
+## Model Selection
+
+**Never use the Haiku model.** All agents and subagents must use Sonnet or Opus only.
+
 ## CRITICAL RULES
 
 ### 1. MANDATORY Agent Delegation
