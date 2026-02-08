@@ -10,6 +10,8 @@
 // Imports
 // ============================================
 
+import { useState } from 'react';
+
 import { Check } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -33,6 +35,8 @@ export interface PracticeCardProps {
   isFlipped: boolean;
   /** Callback when the card is clicked to flip */
   onFlip: () => void;
+  /** Russian translation from word entry, null if unavailable */
+  translationRu?: string | null;
 }
 
 interface MeaningFrontContent {
@@ -114,6 +118,10 @@ function CardBack({
   srsComingSoon,
   t,
   partOfSpeech,
+  displayAnswer,
+  translationRu,
+  answerLang,
+  onToggleLang,
 }: {
   back: MeaningBackContent;
   typeBadgeLabel: string;
@@ -121,6 +129,10 @@ function CardBack({
   srsComingSoon: string;
   t: (key: string) => string;
   partOfSpeech: PartOfSpeech | null;
+  displayAnswer: string;
+  translationRu: string | null | undefined;
+  answerLang: 'en' | 'ru';
+  onToggleLang: (lang: 'en' | 'ru') => void;
 }) {
   return (
     <div data-testid="practice-card-back" className="flex animate-fade-in flex-col gap-6 py-6">
@@ -139,7 +151,31 @@ function CardBack({
           <span className="text-sm font-medium text-emerald-600">{answerLabel}</span>
         </div>
 
-        <p className="break-words text-center text-3xl font-bold">{back.answer}</p>
+        <p className="break-words text-center text-3xl font-bold">{displayAnswer}</p>
+
+        {/* Language toggle - only show if Russian translation available */}
+        {translationRu && (
+          <div className="flex items-center justify-center gap-1" data-testid="lang-toggle">
+            <Button
+              variant={answerLang === 'en' ? 'default' : 'ghost'}
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={() => onToggleLang('en')}
+              data-testid="lang-toggle-en"
+            >
+              {t('practice.langEn')}
+            </Button>
+            <Button
+              variant={answerLang === 'ru' ? 'default' : 'ghost'}
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={() => onToggleLang('ru')}
+              data-testid="lang-toggle-ru"
+            >
+              {t('practice.langRu')}
+            </Button>
+          </div>
+        )}
 
         {back.answer_sub && (
           <p className="break-words text-center text-lg text-muted-foreground">{back.answer_sub}</p>
@@ -202,11 +238,15 @@ function SrsButtonRow({ srsComingSoon, t }: { srsComingSoon: string; t: (key: st
 // Component
 // ============================================
 
-export function PracticeCard({ card, isFlipped, onFlip }: PracticeCardProps) {
+export function PracticeCard({ card, isFlipped, onFlip, translationRu }: PracticeCardProps) {
   const { t } = useTranslation('deck');
+  const [answerLang, setAnswerLang] = useState<'en' | 'ru'>('en');
 
   const front = card.front_content as unknown as MeaningFrontContent;
   const back = card.back_content as unknown as MeaningBackContent;
+
+  // Determine displayed answer based on language toggle
+  const displayAnswer = answerLang === 'ru' && translationRu ? translationRu : back.answer;
 
   const typeBadgeLabel = t('practice.meaningBadge');
   const tapToRevealLabel = t('practice.tapToReveal');
@@ -236,7 +276,7 @@ export function PracticeCard({ card, isFlipped, onFlip }: PracticeCardProps) {
       <CardContent className="p-6">
         {/* Screen reader announcement */}
         <div aria-live="polite" aria-atomic="true" className="sr-only">
-          {isFlipped ? `${answerLabel}: ${back.answer}` : ''}
+          {isFlipped ? `${answerLabel}: ${displayAnswer}` : ''}
         </div>
 
         {!isFlipped ? (
@@ -254,6 +294,10 @@ export function PracticeCard({ card, isFlipped, onFlip }: PracticeCardProps) {
             srsComingSoon={srsComingSoon}
             t={t}
             partOfSpeech={partOfSpeech}
+            displayAnswer={displayAnswer}
+            translationRu={translationRu}
+            answerLang={answerLang}
+            onToggleLang={setAnswerLang}
           />
         )}
       </CardContent>

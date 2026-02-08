@@ -180,4 +180,46 @@ describe('PracticeCard', () => {
       expect(screen.getByTestId('srs-button-easy')).toBeDisabled();
     });
   });
+
+  describe('Language Toggle', () => {
+    it('does not render language toggle when translationRu is null', () => {
+      renderCard({ isFlipped: true, translationRu: null });
+      expect(screen.queryByTestId('lang-toggle')).not.toBeInTheDocument();
+    });
+
+    it('does not render language toggle when translationRu is undefined', () => {
+      renderCard({ isFlipped: true });
+      expect(screen.queryByTestId('lang-toggle')).not.toBeInTheDocument();
+    });
+
+    it('renders language toggle when translationRu is provided and card is flipped', () => {
+      renderCard({ isFlipped: true, translationRu: '\u0434\u043E\u043C' });
+      expect(screen.getByTestId('lang-toggle')).toBeInTheDocument();
+      expect(screen.getByTestId('lang-toggle-en')).toBeInTheDocument();
+      expect(screen.getByTestId('lang-toggle-ru')).toBeInTheDocument();
+    });
+
+    it('does not render language toggle on front side', () => {
+      renderCard({ isFlipped: false, translationRu: '\u0434\u043E\u043C' });
+      expect(screen.queryByTestId('lang-toggle')).not.toBeInTheDocument();
+    });
+
+    it('shows English answer by default', () => {
+      renderCard({ isFlipped: true, translationRu: '\u0434\u043E\u043C' });
+      expect(screen.getByText('house')).toBeInTheDocument();
+    });
+
+    it('switches to Russian translation when RU button clicked', () => {
+      renderCard({ isFlipped: true, translationRu: '\u0434\u043E\u043C' });
+      fireEvent.click(screen.getByTestId('lang-toggle-ru'));
+      expect(screen.getByText('\u0434\u043E\u043C')).toBeInTheDocument();
+    });
+
+    it('switches back to English when EN button clicked after switching to RU', () => {
+      renderCard({ isFlipped: true, translationRu: '\u0434\u043E\u043C' });
+      fireEvent.click(screen.getByTestId('lang-toggle-ru'));
+      fireEvent.click(screen.getByTestId('lang-toggle-en'));
+      expect(screen.getByText('house')).toBeInTheDocument();
+    });
+  });
 });

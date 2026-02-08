@@ -45,10 +45,12 @@ vi.mock('react-router-dom', async (importOriginal) => {
   };
 });
 
-// Mock useWordEntryCards hook
+// Mock hooks
 const mockUseWordEntryCards = vi.fn();
+const mockUseWordEntry = vi.fn();
 vi.mock('../../hooks', () => ({
   useWordEntryCards: (opts: unknown) => mockUseWordEntryCards(opts),
+  useWordEntry: (opts: unknown) => mockUseWordEntry(opts),
 }));
 
 // Mock PracticeCard component to inspect props
@@ -131,6 +133,14 @@ function makeCards(count: number): CardRecordResponse[] {
 beforeEach(() => {
   mockUseParams.mockReturnValue({ deckId: 'test-deck-id', wordId: 'test-word-id' });
   mockPracticeCard.mockClear();
+  mockUseWordEntry.mockClear();
+  mockUseWordEntry.mockReturnValue({
+    wordEntry: null,
+    isLoading: false,
+    isError: false,
+    error: null,
+    refetch: vi.fn(),
+  });
 });
 
 afterEach(() => {

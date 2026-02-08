@@ -19,7 +19,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 
 import { PracticeCard } from '../components';
-import { useWordEntryCards } from '../hooks';
+import { useWordEntry, useWordEntryCards } from '../hooks';
 
 // ============================================
 // Loading Skeleton
@@ -47,6 +47,11 @@ export function WordPracticePage() {
 
   const { cards, isLoading, isError, refetch } = useWordEntryCards({
     wordEntryId: wordId || '',
+    enabled: !!wordId,
+  });
+
+  const { wordEntry } = useWordEntry({
+    wordId: wordId || '',
     enabled: !!wordId,
   });
 
@@ -156,7 +161,13 @@ export function WordPracticePage() {
         </Button>
 
         {/* Practice card */}
-        <PracticeCard card={currentCard} isFlipped={isFlipped} onFlip={handleFlip} />
+        <PracticeCard
+          key={currentCard.id}
+          card={currentCard}
+          isFlipped={isFlipped}
+          onFlip={handleFlip}
+          translationRu={wordEntry?.translation_ru ?? null}
+        />
 
         {/* Next card button — only show if more than 1 card */}
         {cards.length > 1 && (
