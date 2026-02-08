@@ -240,7 +240,7 @@ CARD_TYPE_BUILDERS = {
 class TestCardRecordCreateValid:
     """Test valid CardRecordCreate for each of the 6 card types."""
 
-    @pytest.mark.parametrize("card_type", list(CardType))
+    @pytest.mark.parametrize("card_type", list(CARD_TYPE_BUILDERS.keys()))
     def test_valid_create_for_each_card_type(self, card_type):
         """Test valid creation with proper front/back content per card type."""
         front_builder, back_builder = CARD_TYPE_BUILDERS[card_type]

@@ -183,6 +183,7 @@ class CardType(str, enum.Enum):
     DECLENSION = "declension"
     CLOZE = "cloze"
     SENTENCE_TRANSLATION = "sentence_translation"
+    PLURAL_FORM = "plural_form"
 
 
 # ============================================================================
