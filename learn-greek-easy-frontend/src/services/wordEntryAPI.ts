@@ -97,7 +97,8 @@ export type CardRecordType =
   | 'conjugation'
   | 'declension'
   | 'cloze'
-  | 'sentence_translation';
+  | 'sentence_translation'
+  | 'plural_form';
 
 /**
  * Card record response from backend.
