@@ -184,15 +184,15 @@ function CardBack({
 
       {/* Example context */}
       {back.context && (
-        <div className="rounded-lg bg-muted/30 p-4">
+        <Card className="bg-muted/30 p-4 transition-colors hover:bg-muted/50">
           {back.context.tense && (
             <Badge variant="outline" className="mb-2 text-xs">
               {back.context.tense}
             </Badge>
           )}
-          <p className="text-base font-medium text-foreground">{back.context.greek}</p>
-          <p className="mt-1 text-sm text-muted-foreground">{back.context.english}</p>
-        </div>
+          <p className="text-lg font-medium text-foreground">{back.context.greek}</p>
+          <p className="mt-2 text-sm text-muted-foreground">{back.context.english}</p>
+        </Card>
       )}
 
       {/* SRS buttons (disabled) */}
@@ -273,7 +273,7 @@ export function PracticeCard({ card, isFlipped, onFlip, translationRu }: Practic
       }
       aria-label={!isFlipped ? `Practice card: ${front.main}. ${tapToRevealLabel}` : undefined}
     >
-      <CardContent className="p-6">
+      <CardContent className="min-h-[280px] p-6">
         {/* Screen reader announcement */}
         <div aria-live="polite" aria-atomic="true" className="sr-only">
           {isFlipped ? `${answerLabel}: ${displayAnswer}` : ''}
