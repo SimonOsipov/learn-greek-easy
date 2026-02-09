@@ -55,6 +55,33 @@ const mockCard: CardRecordResponse = {
   updated_at: '2024-01-01T00:00:00Z',
 };
 
+const mockSentenceCard: CardRecordResponse = {
+  id: 'card-sentence-001',
+  word_entry_id: 'word-001',
+  deck_id: 'deck-001',
+  card_type: 'sentence_translation',
+  tier: 1,
+  front_content: {
+    card_type: 'sentence_translation',
+    prompt: 'Translate this sentence',
+    main: 'Καλημέρα σας!',
+    sub: null,
+    badge: 'Sentence',
+    hint: null,
+    example_index: 0,
+  },
+  back_content: {
+    card_type: 'sentence_translation',
+    answer: 'Good morning!',
+    answer_sub: null,
+    answer_ru: 'Доброе утро!',
+    context: null,
+  },
+  is_active: true,
+  created_at: '2024-01-01T00:00:00Z',
+  updated_at: '2024-01-01T00:00:00Z',
+};
+
 // ============================================
 // Render Helper
 // ============================================
@@ -279,6 +306,121 @@ describe('PracticeCard', () => {
       renderCard({ isFlipped: false, onFlip });
       fireEvent.click(screen.getByTestId('lang-toggle-en'));
       expect(onFlip).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Sentence Translation Card', () => {
+    describe('Front Side', () => {
+      it('renders sentence text from front_content.main', () => {
+        renderCard({ card: mockSentenceCard });
+
+        expect(screen.getByText('Καλημέρα σας!')).toBeInTheDocument();
+      });
+
+      it('renders "Sentence" type badge', () => {
+        renderCard({ card: mockSentenceCard });
+
+        // The type badge label comes from t('practice.sentenceBadge')
+        // which SENT-05 adds as "Sentence" in deck.json
+        expect(screen.getByText('Sentence')).toBeInTheDocument();
+      });
+
+      it('renders prompt text', () => {
+        renderCard({ card: mockSentenceCard });
+
+        expect(screen.getByText('Translate this sentence')).toBeInTheDocument();
+      });
+
+      it('does not render sub text when null', () => {
+        renderCard({ card: mockSentenceCard });
+
+        // No pronunciation element should be present
+        // (The sub text element is conditionally rendered)
+        const frontEl = screen.getByTestId('practice-card-front');
+        const italicElements = frontEl.querySelectorAll('.italic');
+        expect(italicElements).toHaveLength(0);
+      });
+    });
+
+    describe('Back Side', () => {
+      it('renders correct answer from back_content.answer', () => {
+        renderCard({ card: mockSentenceCard, isFlipped: true });
+
+        expect(screen.getByText('Good morning!')).toBeInTheDocument();
+      });
+
+      it('does not render answer_sub when null', () => {
+        renderCard({ card: mockSentenceCard, isFlipped: true });
+
+        // answer_sub is null in mockSentenceCard, so no sub-answer text
+        // The answer_sub element is conditionally rendered with text-lg class
+        const backEl = screen.getByTestId('practice-card-back');
+        const subAnswerElements = backEl.querySelectorAll('.text-lg.text-muted-foreground');
+        expect(subAnswerElements).toHaveLength(0);
+      });
+    });
+
+    describe('Language Toggle', () => {
+      afterEach(async () => {
+        await i18n.changeLanguage('en');
+      });
+
+      it('shows English answer by default', () => {
+        renderCard({ card: mockSentenceCard, isFlipped: true });
+
+        expect(screen.getByText('Good morning!')).toBeInTheDocument();
+      });
+
+      it('switches to Russian using answer_ru from back_content', () => {
+        // Do NOT pass translationRu prop -- the component should
+        // use back_content.answer_ru for sentence_translation cards
+        renderCard({ card: mockSentenceCard, isFlipped: true });
+
+        fireEvent.click(screen.getByTestId('lang-toggle-ru'));
+
+        expect(screen.getByText('Доброе утро!')).toBeInTheDocument();
+      });
+
+      it('uses answer_ru from back_content, not translationRu prop', () => {
+        // Pass a different translationRu to prove the component
+        // ignores it for sentence_translation cards
+        renderCard({
+          card: mockSentenceCard,
+          isFlipped: true,
+          translationRu: 'different-value',
+        });
+
+        fireEvent.click(screen.getByTestId('lang-toggle-ru'));
+
+        // Should show answer_ru from back_content, not the prop
+        expect(screen.getByText('Доброе утро!')).toBeInTheDocument();
+        expect(screen.queryByText('different-value')).not.toBeInTheDocument();
+      });
+
+      it('switches back to English when EN clicked', () => {
+        renderCard({ card: mockSentenceCard, isFlipped: true });
+
+        fireEvent.click(screen.getByTestId('lang-toggle-ru'));
+        fireEvent.click(screen.getByTestId('lang-toggle-en'));
+
+        expect(screen.getByText('Good morning!')).toBeInTheDocument();
+      });
+    });
+
+    describe('Prompt Translation', () => {
+      afterEach(async () => {
+        await i18n.changeLanguage('en');
+      });
+
+      it('translates "Translate this sentence" prompt to Russian', () => {
+        renderCard({ card: mockSentenceCard });
+
+        fireEvent.click(screen.getByTestId('lang-toggle-ru'));
+
+        // SENT-05 adds this mapping to the promptTranslations record
+        // 'Translate this sentence': 'Переведите это предложение'
+        expect(screen.getByText('Переведите это предложение')).toBeInTheDocument();
+      });
     });
   });
 });
