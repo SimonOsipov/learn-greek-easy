@@ -60,6 +60,19 @@ interface MeaningBackContent {
   } | null;
 }
 
+interface SentenceTranslationBackContent {
+  card_type: string;
+  answer: string;
+  answer_sub?: string | null;
+  context?: {
+    label: string;
+    greek: string;
+    english: string;
+    tense?: string | null;
+  } | null;
+  answer_ru?: string | null;
+}
+
 // ============================================
 // Constants
 // ============================================
@@ -104,12 +117,16 @@ function CardFront({
   typeBadgeLabel,
   tapToRevealLabel,
   partOfSpeech,
+  cardType,
 }: {
   front: MeaningFrontContent;
   typeBadgeLabel: string;
   tapToRevealLabel: string;
   partOfSpeech: PartOfSpeech | null;
+  cardType: string;
 }) {
+  const mainFontSize = cardType === 'sentence_translation' ? 'text-xl' : 'text-3xl';
+
   return (
     <div data-testid="practice-card-front" className="flex flex-col items-center gap-6 py-6">
       {/* Badges row */}
@@ -124,7 +141,7 @@ function CardFront({
       <p className="text-center text-sm text-muted-foreground">{front.prompt}</p>
 
       {/* Main text */}
-      <p className="break-words text-center text-3xl font-bold">{front.main}</p>
+      <p className={cn('break-words text-center font-bold', mainFontSize)}>{front.main}</p>
 
       {/* Sub text (pronunciation) */}
       {front.sub && <p className="text-center text-sm italic text-muted-foreground">{front.sub}</p>}
@@ -144,6 +161,7 @@ function CardBack({
   partOfSpeech,
   displayAnswer,
   onRate,
+  cardType,
 }: {
   back: MeaningBackContent;
   typeBadgeLabel: string;
@@ -153,7 +171,10 @@ function CardBack({
   partOfSpeech: PartOfSpeech | null;
   displayAnswer: string;
   onRate?: (rating: number) => void;
+  cardType: string;
 }) {
+  const answerFontSize = cardType === 'sentence_translation' ? 'text-xl' : 'text-3xl';
+
   return (
     <div data-testid="practice-card-back" className="flex animate-fade-in flex-col gap-6 py-6">
       {/* Badges row */}
@@ -171,7 +192,7 @@ function CardBack({
           <span className="text-sm font-medium text-emerald-600">{answerLabel}</span>
         </div>
 
-        <p className="break-words text-center text-3xl font-bold">{displayAnswer}</p>
+        <p className={cn('break-words text-center font-bold', answerFontSize)}>{displayAnswer}</p>
 
         {back.answer_sub && (
           <p className="break-words text-center text-lg text-muted-foreground">{back.answer_sub}</p>
@@ -271,20 +292,44 @@ export function PracticeCard({
 
   const front = card.front_content as unknown as MeaningFrontContent;
   const back = card.back_content as unknown as MeaningBackContent;
+  const sentenceBack = back as unknown as SentenceTranslationBackContent;
 
   const currentLang = (i18n.language?.split('-')[0] ?? 'en') as 'en' | 'ru';
 
-  // Suppress pronunciation for plural_form cards
-  const displayFront = card.card_type === 'plural_form' ? { ...front, sub: null } : front;
+  // Detect sentence translation cards and direction
+  const isSentenceCard = card.card_type === 'sentence_translation';
+  const isSentenceElToTarget = isSentenceCard && front.prompt === 'Translate this sentence';
+  const isSentenceTargetToEl = isSentenceCard && front.prompt === 'Translate to Greek';
+
+  // Suppress pronunciation for plural_form and sentence cards
+  // For target_to_el sentences, swap front text when RU is selected
+  const displayFront = (() => {
+    if (card.card_type === 'plural_form' || isSentenceCard) {
+      let mainText = front.main;
+      // For target_to_el sentences, swap front text when RU is selected
+      if (isSentenceTargetToEl && currentLang === 'ru' && sentenceBack.answer_ru) {
+        mainText = sentenceBack.answer_ru;
+      }
+      return { ...front, sub: null, main: mainText };
+    }
+    return front;
+  })();
 
   // Determine displayed answer based on UI language
   // For plural_form cards, always show the Greek form (not a translation)
+  // For sentence cards, use answer_ru from back_content (not word-level translationRu)
   const displayAnswer =
     card.card_type === 'plural_form'
       ? back.answer
-      : currentLang === 'ru' && translationRu
-        ? translationRu
-        : back.answer;
+      : isSentenceTargetToEl
+        ? back.answer // Always Greek for target_to_el
+        : isSentenceElToTarget
+          ? currentLang === 'ru' && sentenceBack.answer_ru
+            ? sentenceBack.answer_ru
+            : back.answer
+          : currentLang === 'ru' && translationRu
+            ? translationRu
+            : back.answer;
 
   // Translate stored English prompts to Russian when language is switched
   const translatePrompt = (englishPrompt: string, lang: string): string => {
@@ -297,6 +342,8 @@ export function PracticeCard({
       'What does this mean?': 'Что это значит?',
       'What is the plural?': 'Какое множественное число?',
       'What is the singular?': 'Какое единственное число?',
+      'Translate this sentence': 'Переведите это предложение',
+      'Translate to Greek': 'Переведите на греческий',
     };
 
     return promptTranslations[englishPrompt] || englishPrompt;
@@ -305,11 +352,17 @@ export function PracticeCard({
   const translatedPrompt = translatePrompt(front.prompt, currentLang);
 
   const typeBadgeLabel =
-    card.card_type === 'plural_form' ? t('practice.pluralFormBadge') : t('practice.meaningBadge');
+    card.card_type === 'plural_form'
+      ? t('practice.pluralFormBadge')
+      : isSentenceCard
+        ? t('practice.sentenceTranslationBadge')
+        : t('practice.meaningBadge');
   const tapToRevealLabel = t('practice.tapToReveal');
   const answerLabel = t('practice.answer');
   const srsComingSoon = t('practice.srsComingSoon');
-  const partOfSpeech = front.badge ? (front.badge.toLowerCase() as PartOfSpeech) : null;
+  // Suppress part-of-speech badge for sentence cards (badge contains CEFR level, not POS)
+  const partOfSpeech =
+    !isSentenceCard && front.badge ? (front.badge.toLowerCase() as PartOfSpeech) : null;
 
   const handleLangChange = (lang: 'en' | 'ru') => {
     i18n.changeLanguage(lang);
@@ -377,6 +430,7 @@ export function PracticeCard({
             typeBadgeLabel={typeBadgeLabel}
             tapToRevealLabel={tapToRevealLabel}
             partOfSpeech={partOfSpeech}
+            cardType={card.card_type}
           />
         ) : (
           <CardBack
@@ -388,6 +442,7 @@ export function PracticeCard({
             partOfSpeech={partOfSpeech}
             displayAnswer={displayAnswer}
             onRate={onRate}
+            cardType={card.card_type}
           />
         )}
       </CardContent>
