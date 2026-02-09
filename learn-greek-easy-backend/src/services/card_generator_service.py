@@ -15,6 +15,8 @@ from src.schemas.card_record import (
     MeaningEnToElFront,
     PluralFormBack,
     PluralFormFront,
+    SentenceTranslationBack,
+    SentenceTranslationFront,
 )
 
 logger = get_logger(__name__)
@@ -177,6 +179,52 @@ class CardGeneratorService:
             "is_active": True,
         }
 
+    def _build_sentence_translation_card_dict(
+        self,
+        we: WordEntry,
+        deck_id: UUID,
+        variant_key: str,
+        example_id: str,
+        *,
+        prompt: str,
+        main: str,
+        sub: str | None,
+        badge: str,
+        hint: str | None,
+        answer: str,
+        answer_sub: str | None,
+        answer_ru: str | None,
+        direction: str,
+    ) -> dict:
+        """Build a card dict for a sentence translation card."""
+        front = SentenceTranslationFront(
+            card_type="sentence_translation",
+            prompt=prompt,
+            main=main,
+            sub=sub,
+            badge=badge,
+            hint=hint,
+            example_id=example_id,
+            direction=direction,
+        )
+        back = SentenceTranslationBack(
+            card_type="sentence_translation",
+            answer=answer,
+            answer_sub=answer_sub,
+            answer_ru=answer_ru,
+            context=None,
+        )
+        return {
+            "word_entry_id": we.id,
+            "deck_id": deck_id,
+            "card_type": CardType.SENTENCE_TRANSLATION.value,
+            "variant_key": variant_key,
+            "tier": 1,
+            "front_content": front.model_dump(),
+            "back_content": back.model_dump(),
+            "is_active": True,
+        }
+
     async def generate_plural_form_cards(
         self, word_entries: list[WordEntry], deck_id: UUID
     ) -> tuple[int, int]:
@@ -280,6 +328,87 @@ class CardGeneratorService:
                             answer_sub=None,
                         )
                     )
+
+        _records, created, updated = await self.card_record_repo.bulk_upsert(card_dicts)
+        return created, updated
+
+    async def generate_sentence_translation_cards(
+        self, word_entries: list[WordEntry], deck_id: UUID
+    ) -> tuple[int, int]:
+        """Generate sentence translation flashcards from word entry examples.
+
+        For each WordEntry, iterates over its examples list and creates two cards
+        per example that has a non-null, non-empty id field:
+        1. el_to_target -- Greek sentence prompt, English answer (+ Russian)
+        2. target_to_el -- English sentence prompt, Greek answer
+
+        Examples without an id field are silently skipped.
+
+        Args:
+            word_entries: List of WordEntry ORM objects to generate cards for.
+            deck_id: UUID of the deck these cards belong to.
+
+        Returns:
+            Tuple of (created_count, updated_count) from bulk_upsert.
+
+        Note:
+            Does NOT commit. Caller must call db.commit() after.
+        """
+        card_dicts: list[dict] = []
+
+        for we in word_entries:
+            if not we.examples:
+                continue
+
+            for example in we.examples:
+                example_id = example.get("id")
+                if not example_id:
+                    continue
+
+                greek = example.get("greek", "")
+                english = example.get("english", "")
+                russian = example.get("russian")
+
+                if not greek or not english:
+                    continue
+
+                # Card 1: el_to_target (Greek -> English)
+                card_dicts.append(
+                    self._build_sentence_translation_card_dict(
+                        we,
+                        deck_id,
+                        f"el_to_target_{example_id}",
+                        example_id,
+                        prompt="Translate this sentence",
+                        main=greek,
+                        sub=None,
+                        badge="Sentence",
+                        hint=None,
+                        answer=english,
+                        answer_sub=None,
+                        answer_ru=russian,
+                        direction="el_to_target",
+                    )
+                )
+
+                # Card 2: target_to_el (English -> Greek)
+                card_dicts.append(
+                    self._build_sentence_translation_card_dict(
+                        we,
+                        deck_id,
+                        f"target_to_el_{example_id}",
+                        example_id,
+                        prompt="Translate to Greek",
+                        main=english,
+                        sub=None,
+                        badge="Sentence",
+                        hint=None,
+                        answer=greek,
+                        answer_sub=None,
+                        answer_ru=None,
+                        direction="target_to_el",
+                    )
+                )
 
         _records, created, updated = await self.card_record_repo.bulk_upsert(card_dicts)
         return created, updated
