@@ -64,6 +64,7 @@ function makeWordEntry(overrides: Partial<WordEntryResponse> = {}): WordEntryRes
     translation_en: 'test translation',
     translation_en_plural: null,
     translation_ru: 'тестовый перевод',
+    translation_ru_plural: null,
     pronunciation: 'test-pron',
     grammar_data: null,
     examples: null,
