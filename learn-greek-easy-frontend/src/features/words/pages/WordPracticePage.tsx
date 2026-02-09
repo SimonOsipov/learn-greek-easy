@@ -208,6 +208,7 @@ export function WordPracticePage() {
           isFlipped={isFlipped}
           onFlip={handleFlip}
           translationRu={wordEntry?.translation_ru ?? null}
+          translationRuPlural={wordEntry?.translation_ru_plural ?? null}
           onRate={handleRate}
         />
 

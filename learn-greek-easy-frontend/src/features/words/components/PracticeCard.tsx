@@ -35,6 +35,8 @@ export interface PracticeCardProps {
   onFlip: () => void;
   /** Russian translation from word entry, null if unavailable */
   translationRu?: string | null;
+  /** Russian plural translation from word entry, null if unavailable */
+  translationRuPlural?: string | null;
   /** Callback when user rates the card (1=again, 2=hard, 3=good, 4=easy) */
   onRate?: (rating: number) => void;
 }
@@ -71,6 +73,23 @@ interface SentenceTranslationBackContent {
     tense?: string | null;
   } | null;
   answer_ru?: string | null;
+}
+
+interface PluralFormFrontContent {
+  card_type: string;
+  prompt: string;
+  main: string;
+  sub?: string | null;
+  badge?: string | null;
+  hint?: string | null;
+  hint_ru?: string | null;
+}
+
+interface PluralFormBackContent {
+  card_type: string;
+  answer: string;
+  answer_sub?: string | null;
+  answer_sub_ru?: string | null;
 }
 
 interface ArticleBackContent {
@@ -297,6 +316,7 @@ export function PracticeCard({
   isFlipped,
   onFlip,
   translationRu,
+  translationRuPlural,
   onRate,
 }: PracticeCardProps) {
   const { t, i18n } = useTranslation('deck');
@@ -304,6 +324,8 @@ export function PracticeCard({
   const front = card.front_content as unknown as MeaningFrontContent;
   const back = card.back_content as unknown as MeaningBackContent;
   const sentenceBack = back as unknown as SentenceTranslationBackContent;
+  const pluralFront = front as unknown as PluralFormFrontContent;
+  const pluralBack = back as unknown as PluralFormBackContent;
 
   const currentLang = (i18n.language?.split('-')[0] ?? 'en') as 'en' | 'ru';
 
@@ -319,8 +341,14 @@ export function PracticeCard({
   // Suppress pronunciation for plural_form and sentence cards
   // For target_to_el sentences, swap front text when RU is selected
   // For article cards, sub shows English translation by default, Russian when toggled
+  // For plural_form cards, hint switches to hint_ru when RU is selected
   const displayFront = (() => {
-    if (card.card_type === 'plural_form' || isSentenceCard) {
+    if (card.card_type === 'plural_form') {
+      const hintText =
+        currentLang === 'ru' && pluralFront.hint_ru ? pluralFront.hint_ru : front.hint;
+      return { ...front, sub: null, hint: hintText };
+    }
+    if (isSentenceCard) {
       let mainText = front.main;
       // For target_to_el sentences, swap front text when RU is selected
       if (isSentenceTargetToEl && currentLang === 'ru' && sentenceBack.answer_ru) {
@@ -387,16 +415,25 @@ export function PracticeCard({
   const partOfSpeech =
     !isSentenceCard && front.badge ? (front.badge.toLowerCase() as PartOfSpeech) : null;
 
+  // For plural_form cards, override answer_sub with Russian plural translation
   // For article cards, override answer_sub with gender label in the correct language
-  const displayBack = isArticleCard
-    ? {
+  const displayBack = (() => {
+    if (card.card_type === 'plural_form') {
+      const ruSub = pluralBack.answer_sub_ru ?? translationRuPlural;
+      const answerSubText = currentLang === 'ru' && ruSub ? ruSub : back.answer_sub;
+      return { ...back, answer_sub: answerSubText };
+    }
+    if (isArticleCard) {
+      return {
         ...back,
         answer_sub:
           currentLang === 'ru' && articleBack.gender_ru
             ? articleBack.gender_ru
             : articleBack.gender,
-      }
-    : back;
+      };
+    }
+    return back;
+  })();
 
   const handleLangChange = (lang: 'en' | 'ru') => {
     i18n.changeLanguage(lang);
