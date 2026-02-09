@@ -28,6 +28,9 @@ def _make_word_entry(
     lemma="σπίτι",
     part_of_speech=PartOfSpeech.NOUN,
     translation_en="house",
+    translation_en_plural=None,
+    translation_ru=None,
+    translation_ru_plural=None,
     pronunciation="/spí.ti/",
     examples=None,
     grammar_data=None,
@@ -41,6 +44,9 @@ def _make_word_entry(
     we.lemma = lemma
     we.part_of_speech = part_of_speech
     we.translation_en = translation_en
+    we.translation_en_plural = translation_en_plural
+    we.translation_ru = translation_ru
+    we.translation_ru_plural = translation_ru_plural
     we.pronunciation = pronunciation
     we.examples = examples
     we.grammar_data = grammar_data
@@ -735,36 +741,12 @@ class TestGeneratePluralFormCards:
         assert "neuter" in subs
 
     @pytest.mark.asyncio
-    async def test_back_content_answer_sub_always_none(self, service, mock_card_record_repo):
-        """Back content answer_sub is always None."""
-        deck_id = uuid4()
-        entries = [
-            _make_word_entry(
-                part_of_speech=PartOfSpeech.NOUN,
-                grammar_data=NOUN_GRAMMAR_DATA,
-                deck_id=deck_id,
-            ),
-            _make_word_entry(
-                part_of_speech=PartOfSpeech.ADJECTIVE,
-                grammar_data=ADJ_GRAMMAR_DATA,
-                deck_id=deck_id,
-            ),
-        ]
-
-        mock_card_record_repo.bulk_upsert.return_value = ([], 8, 0)
-
-        await service.generate_plural_form_cards(entries, deck_id)
-
-        card_dicts = mock_card_record_repo.bulk_upsert.call_args[0][0]
-        for card_dict in card_dicts:
-            assert card_dict["back_content"]["answer_sub"] is None
-
-    @pytest.mark.asyncio
-    async def test_hint_is_translation_en(self, service, mock_card_record_repo):
-        """Front content hint is set to word_entry.translation_en."""
+    async def test_hint_sg_to_pl_is_translation_en(self, service, mock_card_record_repo):
+        """sg-to-pl hint is translation_en (singular English)."""
         deck_id = uuid4()
         entry = _make_word_entry(
             translation_en="wonderful_translation",
+            translation_en_plural="wonderful_translations",
             part_of_speech=PartOfSpeech.NOUN,
             grammar_data=NOUN_GRAMMAR_DATA,
             deck_id=deck_id,
@@ -775,8 +757,28 @@ class TestGeneratePluralFormCards:
         await service.generate_plural_form_cards([entry], deck_id)
 
         card_dicts = mock_card_record_repo.bulk_upsert.call_args[0][0]
-        for card_dict in card_dicts:
-            assert card_dict["front_content"]["hint"] == "wonderful_translation"
+        sg_to_pl = card_dicts[0]
+        assert sg_to_pl["front_content"]["hint"] == "wonderful_translation"
+
+    @pytest.mark.asyncio
+    async def test_hint_pl_to_sg_is_translation_en_plural(self, service, mock_card_record_repo):
+        """pl-to-sg hint is translation_en_plural when available."""
+        deck_id = uuid4()
+        entry = _make_word_entry(
+            translation_en="wonderful_translation",
+            translation_en_plural="wonderful_translations",
+            part_of_speech=PartOfSpeech.NOUN,
+            grammar_data=NOUN_GRAMMAR_DATA,
+            deck_id=deck_id,
+        )
+
+        mock_card_record_repo.bulk_upsert.return_value = ([], 2, 0)
+
+        await service.generate_plural_form_cards([entry], deck_id)
+
+        card_dicts = mock_card_record_repo.bulk_upsert.call_args[0][0]
+        pl_to_sg = card_dicts[1]
+        assert pl_to_sg["front_content"]["hint"] == "wonderful_translations"
 
     @pytest.mark.asyncio
     async def test_variant_keys_match_specification(self, service, mock_card_record_repo):
@@ -843,6 +845,231 @@ class TestGeneratePluralFormCards:
         assert badges.count("Adj. Masc.") == 2
         assert badges.count("Adj. Fem.") == 2
         assert badges.count("Adj. Neut.") == 2
+
+    # -----------------------------------------------------------------
+    # Translation wiring tests (answer_sub, hint_ru, answer_sub_ru)
+    # -----------------------------------------------------------------
+
+    @pytest.mark.asyncio
+    async def test_noun_sg_to_pl_answer_sub_is_translation_en_plural(
+        self, service, mock_card_record_repo
+    ):
+        """When translation_en_plural is set, sg-to-pl answer_sub matches it."""
+        deck_id = uuid4()
+        entry = _make_word_entry(
+            lemma="γάτα",
+            part_of_speech=PartOfSpeech.NOUN,
+            translation_en="cat",
+            translation_en_plural="cats",
+            grammar_data=NOUN_GRAMMAR_DATA,
+            deck_id=deck_id,
+        )
+
+        mock_card_record_repo.bulk_upsert.return_value = ([], 2, 0)
+        await service.generate_plural_form_cards([entry], deck_id)
+
+        card_dicts = mock_card_record_repo.bulk_upsert.call_args[0][0]
+        sg_to_pl = card_dicts[0]
+        assert sg_to_pl["back_content"]["answer_sub"] == "cats"
+
+    @pytest.mark.asyncio
+    async def test_noun_pl_to_sg_answer_sub_is_translation_en(self, service, mock_card_record_repo):
+        """pl-to-sg answer_sub is translation_en (singular English)."""
+        deck_id = uuid4()
+        entry = _make_word_entry(
+            lemma="γάτα",
+            part_of_speech=PartOfSpeech.NOUN,
+            translation_en="cat",
+            translation_en_plural="cats",
+            grammar_data=NOUN_GRAMMAR_DATA,
+            deck_id=deck_id,
+        )
+
+        mock_card_record_repo.bulk_upsert.return_value = ([], 2, 0)
+        await service.generate_plural_form_cards([entry], deck_id)
+
+        card_dicts = mock_card_record_repo.bulk_upsert.call_args[0][0]
+        pl_to_sg = card_dicts[1]
+        assert pl_to_sg["back_content"]["answer_sub"] == "cat"
+
+    @pytest.mark.asyncio
+    async def test_noun_pl_to_sg_hint_is_translation_en_plural(
+        self, service, mock_card_record_repo
+    ):
+        """When translation_en_plural is set, pl-to-sg hint uses it."""
+        deck_id = uuid4()
+        entry = _make_word_entry(
+            lemma="γάτα",
+            part_of_speech=PartOfSpeech.NOUN,
+            translation_en="cat",
+            translation_en_plural="cats",
+            grammar_data=NOUN_GRAMMAR_DATA,
+            deck_id=deck_id,
+        )
+
+        mock_card_record_repo.bulk_upsert.return_value = ([], 2, 0)
+        await service.generate_plural_form_cards([entry], deck_id)
+
+        card_dicts = mock_card_record_repo.bulk_upsert.call_args[0][0]
+        pl_to_sg = card_dicts[1]
+        assert pl_to_sg["front_content"]["hint"] == "cats"
+
+    @pytest.mark.asyncio
+    async def test_noun_pl_to_sg_hint_falls_back_to_translation_en(
+        self, service, mock_card_record_repo
+    ):
+        """When translation_en_plural is None, pl-to-sg hint falls back to translation_en."""
+        deck_id = uuid4()
+        entry = _make_word_entry(
+            lemma="γάτα",
+            part_of_speech=PartOfSpeech.NOUN,
+            translation_en="cat",
+            translation_en_plural=None,
+            grammar_data=NOUN_GRAMMAR_DATA,
+            deck_id=deck_id,
+        )
+
+        mock_card_record_repo.bulk_upsert.return_value = ([], 2, 0)
+        await service.generate_plural_form_cards([entry], deck_id)
+
+        card_dicts = mock_card_record_repo.bulk_upsert.call_args[0][0]
+        pl_to_sg = card_dicts[1]
+        assert pl_to_sg["front_content"]["hint"] == "cat"
+
+    @pytest.mark.asyncio
+    async def test_noun_sg_to_pl_hint_ru_is_translation_ru(self, service, mock_card_record_repo):
+        """When translation_ru is set, sg-to-pl hint_ru matches it."""
+        deck_id = uuid4()
+        entry = _make_word_entry(
+            lemma="γάτα",
+            part_of_speech=PartOfSpeech.NOUN,
+            translation_en="cat",
+            translation_ru="кот",
+            grammar_data=NOUN_GRAMMAR_DATA,
+            deck_id=deck_id,
+        )
+
+        mock_card_record_repo.bulk_upsert.return_value = ([], 2, 0)
+        await service.generate_plural_form_cards([entry], deck_id)
+
+        card_dicts = mock_card_record_repo.bulk_upsert.call_args[0][0]
+        sg_to_pl = card_dicts[0]
+        assert sg_to_pl["front_content"]["hint_ru"] == "кот"
+
+    @pytest.mark.asyncio
+    async def test_noun_pl_to_sg_hint_ru_falls_back(self, service, mock_card_record_repo):
+        """When translation_ru_plural is None, pl-to-sg hint_ru falls back to translation_ru."""
+        deck_id = uuid4()
+        entry = _make_word_entry(
+            lemma="γάτα",
+            part_of_speech=PartOfSpeech.NOUN,
+            translation_en="cat",
+            translation_ru="кот",
+            translation_ru_plural=None,
+            grammar_data=NOUN_GRAMMAR_DATA,
+            deck_id=deck_id,
+        )
+
+        mock_card_record_repo.bulk_upsert.return_value = ([], 2, 0)
+        await service.generate_plural_form_cards([entry], deck_id)
+
+        card_dicts = mock_card_record_repo.bulk_upsert.call_args[0][0]
+        pl_to_sg = card_dicts[1]
+        assert pl_to_sg["front_content"]["hint_ru"] == "кот"
+
+    @pytest.mark.asyncio
+    async def test_noun_sg_to_pl_answer_sub_ru_is_translation_ru_plural(
+        self, service, mock_card_record_repo
+    ):
+        """When translation_ru_plural is set, sg-to-pl answer_sub_ru matches it."""
+        deck_id = uuid4()
+        entry = _make_word_entry(
+            lemma="γάτα",
+            part_of_speech=PartOfSpeech.NOUN,
+            translation_en="cat",
+            translation_ru_plural="коты",
+            grammar_data=NOUN_GRAMMAR_DATA,
+            deck_id=deck_id,
+        )
+
+        mock_card_record_repo.bulk_upsert.return_value = ([], 2, 0)
+        await service.generate_plural_form_cards([entry], deck_id)
+
+        card_dicts = mock_card_record_repo.bulk_upsert.call_args[0][0]
+        sg_to_pl = card_dicts[0]
+        assert sg_to_pl["back_content"]["answer_sub_ru"] == "коты"
+
+    @pytest.mark.asyncio
+    async def test_adjective_sg_to_pl_answer_sub_is_translation_en_plural(
+        self, service, mock_card_record_repo
+    ):
+        """Adjective sg-to-pl answer_sub is translation_en_plural."""
+        deck_id = uuid4()
+        entry = _make_word_entry(
+            lemma="καλός",
+            part_of_speech=PartOfSpeech.ADJECTIVE,
+            translation_en="good",
+            translation_en_plural="good (pl.)",
+            grammar_data=ADJ_GRAMMAR_DATA,
+            deck_id=deck_id,
+        )
+
+        mock_card_record_repo.bulk_upsert.return_value = ([], 6, 0)
+        await service.generate_plural_form_cards([entry], deck_id)
+
+        card_dicts = mock_card_record_repo.bulk_upsert.call_args[0][0]
+        # All sg-to-pl cards (indices 0, 2, 4) should have answer_sub
+        for i in (0, 2, 4):
+            assert card_dicts[i]["back_content"]["answer_sub"] == "good (pl.)"
+
+    @pytest.mark.asyncio
+    async def test_adjective_pl_to_sg_hint_and_answer_sub(self, service, mock_card_record_repo):
+        """Adjective pl-to-sg uses translation_en_plural for hint and translation_en for answer_sub."""
+        deck_id = uuid4()
+        entry = _make_word_entry(
+            lemma="καλός",
+            part_of_speech=PartOfSpeech.ADJECTIVE,
+            translation_en="good",
+            translation_en_plural="good (pl.)",
+            translation_ru="хороший",
+            translation_ru_plural="хорошие",
+            grammar_data=ADJ_GRAMMAR_DATA,
+            deck_id=deck_id,
+        )
+
+        mock_card_record_repo.bulk_upsert.return_value = ([], 6, 0)
+        await service.generate_plural_form_cards([entry], deck_id)
+
+        card_dicts = mock_card_record_repo.bulk_upsert.call_args[0][0]
+        # All pl-to-sg cards (indices 1, 3, 5)
+        for i in (1, 3, 5):
+            assert card_dicts[i]["front_content"]["hint"] == "good (pl.)"
+            assert card_dicts[i]["front_content"]["hint_ru"] == "хорошие"
+            assert card_dicts[i]["back_content"]["answer_sub"] == "good"
+            assert card_dicts[i]["back_content"]["answer_sub_ru"] == "хороший"
+
+    @pytest.mark.asyncio
+    async def test_all_ru_fields_none_when_no_russian(self, service, mock_card_record_repo):
+        """When translation_ru is None, all _ru fields are None."""
+        deck_id = uuid4()
+        entry = _make_word_entry(
+            lemma="γάτα",
+            part_of_speech=PartOfSpeech.NOUN,
+            translation_en="cat",
+            translation_en_plural="cats",
+            translation_ru=None,
+            translation_ru_plural=None,
+            grammar_data=NOUN_GRAMMAR_DATA,
+            deck_id=deck_id,
+        )
+
+        mock_card_record_repo.bulk_upsert.return_value = ([], 2, 0)
+        await service.generate_plural_form_cards([entry], deck_id)
+
+        card_dicts = mock_card_record_repo.bulk_upsert.call_args[0][0]
+        for card_dict in card_dicts:
+            assert card_dict["front_content"]["hint_ru"] is None
+            assert card_dict["back_content"]["answer_sub_ru"] is None
 
 
 # =============================================================================

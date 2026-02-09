@@ -159,8 +159,10 @@ class CardGeneratorService:
         sub: str | None,
         badge: str,
         hint: str,
+        hint_ru: str | None,
         answer: str,
         answer_sub: str | None,
+        answer_sub_ru: str | None,
     ) -> dict:
         """Build a card dict for a plural form card."""
         front = PluralFormFront(
@@ -170,11 +172,13 @@ class CardGeneratorService:
             sub=sub,
             badge=badge,
             hint=hint,
+            hint_ru=hint_ru,
         )
         back = PluralFormBack(
             card_type="plural_form",
             answer=answer,
             answer_sub=answer_sub,
+            answer_sub_ru=answer_sub_ru,
         )
         return {
             "word_entry_id": we.id,
@@ -315,8 +319,10 @@ class CardGeneratorService:
                         sub=None,
                         badge="Noun",
                         hint=we.translation_en,
+                        hint_ru=we.translation_ru,
                         answer=pl,
-                        answer_sub=None,
+                        answer_sub=we.translation_en_plural,
+                        answer_sub_ru=we.translation_ru_plural,
                     )
                 )
                 # pl -> sg card
@@ -329,9 +335,11 @@ class CardGeneratorService:
                         main=pl,
                         sub=None,
                         badge="Noun",
-                        hint=we.translation_en,
+                        hint=we.translation_en_plural or we.translation_en,
+                        hint_ru=we.translation_ru_plural or we.translation_ru,
                         answer=sg,
-                        answer_sub=None,
+                        answer_sub=we.translation_en,
+                        answer_sub_ru=we.translation_ru,
                     )
                 )
 
@@ -360,8 +368,10 @@ class CardGeneratorService:
                             sub=gender_key,
                             badge=badge,
                             hint=we.translation_en,
+                            hint_ru=we.translation_ru,
                             answer=pl,
-                            answer_sub=None,
+                            answer_sub=we.translation_en_plural,
+                            answer_sub_ru=we.translation_ru_plural,
                         )
                     )
                     # pl -> sg card
@@ -374,9 +384,11 @@ class CardGeneratorService:
                             main=pl,
                             sub=gender_key,
                             badge=badge,
-                            hint=we.translation_en,
+                            hint=we.translation_en_plural or we.translation_en,
+                            hint_ru=we.translation_ru_plural or we.translation_ru,
                             answer=sg,
-                            answer_sub=None,
+                            answer_sub=we.translation_en,
+                            answer_sub_ru=we.translation_ru,
                         )
                     )
 
