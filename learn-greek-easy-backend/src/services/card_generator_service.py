@@ -81,6 +81,14 @@ class CardGeneratorService:
         for we in word_entries:
             badge = we.part_of_speech.value.capitalize()
 
+            # Get word with article (for nouns) or plain lemma (for other parts of speech)
+            word_with_article = we.lemma
+            if we.grammar_data and isinstance(we.grammar_data, dict):
+                # Try to get nominative form with article (for nouns)
+                nominative = we.grammar_data.get("cases", {}).get("singular", {}).get("nominative")
+                if nominative:
+                    word_with_article = nominative
+
             context = None
             if we.examples and len(we.examples) > 0:
                 first = we.examples[0]
@@ -94,7 +102,7 @@ class CardGeneratorService:
             el_to_en_front = MeaningElToEnFront(
                 card_type="meaning_el_to_en",
                 prompt="What does this mean?",
-                main=we.lemma,
+                main=word_with_article,
                 sub=we.pronunciation,
                 badge=badge,
                 hint=None,
@@ -128,7 +136,7 @@ class CardGeneratorService:
             )
             en_to_el_back = MeaningEnToElBack(
                 card_type="meaning_en_to_el",
-                answer=we.lemma,
+                answer=word_with_article,
                 answer_sub=we.pronunciation,
                 context=context,
             )
