@@ -82,6 +82,57 @@ const mockSentenceCard: CardRecordResponse = {
   updated_at: '2024-01-01T00:00:00Z',
 };
 
+const mockPluralSgToPlCard: CardRecordResponse = {
+  id: 'card-plural-sg-to-pl-001',
+  word_entry_id: 'word-001',
+  deck_id: 'deck-001',
+  card_type: 'plural_form',
+  tier: 1,
+  front_content: {
+    card_type: 'plural_form',
+    prompt: 'What is the plural?',
+    main: 'σπίτι',
+    sub: null,
+    badge: 'Noun',
+    hint: 'house',
+    hint_ru: 'дом',
+  },
+  back_content: {
+    card_type: 'plural_form',
+    answer: 'σπίτια',
+    answer_sub: 'houses, homes',
+    answer_sub_ru: 'дома',
+  },
+  is_active: true,
+  created_at: '2024-01-01T00:00:00Z',
+  updated_at: '2024-01-01T00:00:00Z',
+};
+
+const mockPluralPlToSgCard: CardRecordResponse = {
+  id: 'card-plural-pl-to-sg-001',
+  word_entry_id: 'word-001',
+  deck_id: 'deck-001',
+  card_type: 'plural_form',
+  tier: 1,
+  front_content: {
+    card_type: 'plural_form',
+    prompt: 'What is the singular?',
+    main: 'σπίτια',
+    sub: null,
+    badge: 'Noun',
+    hint: 'houses, homes',
+  },
+  back_content: {
+    card_type: 'plural_form',
+    answer: 'σπίτι',
+    answer_sub: 'house',
+    answer_sub_ru: 'дом',
+  },
+  is_active: true,
+  created_at: '2024-01-01T00:00:00Z',
+  updated_at: '2024-01-01T00:00:00Z',
+};
+
 const mockArticleCard: CardRecordResponse = {
   id: 'card-article-001',
   word_entry_id: 'word-001',
@@ -594,6 +645,123 @@ describe('PracticeCard', () => {
             '\u041A\u0430\u043A\u043E\u0439 \u0430\u0440\u0442\u0438\u043A\u043B\u044C?'
           )
         ).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('Plural Form Card', () => {
+    describe('Front Side', () => {
+      it('renders Greek singular form from front_content.main', () => {
+        renderCard({ card: mockPluralSgToPlCard });
+
+        expect(screen.getByText('σπίτι')).toBeInTheDocument();
+      });
+
+      it('renders English singular translation as hint (sg-to-pl)', () => {
+        renderCard({ card: mockPluralSgToPlCard });
+
+        expect(screen.getByText('house')).toBeInTheDocument();
+      });
+
+      it('renders English plural translation as hint (pl-to-sg)', () => {
+        renderCard({ card: mockPluralPlToSgCard });
+
+        expect(screen.getByText('houses, homes')).toBeInTheDocument();
+      });
+
+      it('does not render sub text (pronunciation suppressed)', () => {
+        renderCard({ card: mockPluralSgToPlCard });
+
+        const frontEl = screen.getByTestId('practice-card-front');
+        const italicElements = frontEl.querySelectorAll('.italic');
+        expect(italicElements).toHaveLength(0);
+      });
+
+      it('renders "Plural Form" type badge', () => {
+        renderCard({ card: mockPluralSgToPlCard });
+
+        expect(screen.getByText('Plural Form')).toBeInTheDocument();
+      });
+    });
+
+    describe('Back Side', () => {
+      it('renders Greek plural form as answer (sg-to-pl)', () => {
+        renderCard({ card: mockPluralSgToPlCard, isFlipped: true });
+
+        expect(screen.getByText('σπίτια')).toBeInTheDocument();
+      });
+
+      it('renders English plural translation as answer_sub (sg-to-pl)', () => {
+        renderCard({ card: mockPluralSgToPlCard, isFlipped: true });
+
+        expect(screen.getByText('houses, homes')).toBeInTheDocument();
+      });
+
+      it('renders English singular translation as answer_sub (pl-to-sg)', () => {
+        renderCard({ card: mockPluralPlToSgCard, isFlipped: true });
+
+        expect(screen.getByText('house')).toBeInTheDocument();
+      });
+    });
+
+    describe('Language Toggle', () => {
+      afterEach(async () => {
+        await i18n.changeLanguage('en');
+      });
+
+      it('switches hint to Russian when RU toggled on front', () => {
+        renderCard({ card: mockPluralSgToPlCard });
+
+        fireEvent.click(screen.getByTestId('lang-toggle-ru'));
+
+        expect(screen.getByText('дом')).toBeInTheDocument();
+      });
+
+      it('switches answer_sub to Russian when RU toggled on back', () => {
+        renderCard({ card: mockPluralSgToPlCard, isFlipped: true });
+
+        fireEvent.click(screen.getByTestId('lang-toggle-ru'));
+
+        expect(screen.getByText('дома')).toBeInTheDocument();
+      });
+    });
+
+    describe('Fallback Behavior', () => {
+      afterEach(async () => {
+        await i18n.changeLanguage('en');
+      });
+
+      it('falls back gracefully when hint is null', () => {
+        const cardWithoutHint: CardRecordResponse = {
+          ...mockPluralSgToPlCard,
+          front_content: {
+            ...mockPluralSgToPlCard.front_content,
+            hint: null,
+          },
+        };
+        renderCard({ card: cardWithoutHint });
+
+        // Card should render without errors, main text still visible
+        expect(screen.getByText('σπίτι')).toBeInTheDocument();
+        // Verify the front content renders without crashing
+        const frontEl = screen.getByTestId('practice-card-front');
+        expect(frontEl).toBeInTheDocument();
+      });
+
+      it('answer_sub stays in English when answer_sub_ru is missing and RU toggled', () => {
+        const cardWithoutRu: CardRecordResponse = {
+          ...mockPluralSgToPlCard,
+          back_content: {
+            ...mockPluralSgToPlCard.back_content,
+            answer_sub_ru: null,
+          },
+        };
+        renderCard({ card: cardWithoutRu, isFlipped: true });
+
+        fireEvent.click(screen.getByTestId('lang-toggle-ru'));
+
+        // answer_sub should fall back to English since Russian is not available
+        expect(screen.getByText('houses, homes')).toBeInTheDocument();
       });
     });
   });
