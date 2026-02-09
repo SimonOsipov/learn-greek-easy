@@ -718,6 +718,11 @@ class WordEntry(Base, TimestampMixin):
         nullable=True,
         comment="Russian translation(s), comma-separated for multiple meanings",
     )
+    translation_ru_plural: Mapped[str | None] = mapped_column(
+        String(500),
+        nullable=True,
+        comment="Russian plural translation(s), comma-separated for multiple meanings",
+    )
 
     # Pronunciation
     pronunciation: Mapped[str | None] = mapped_column(
