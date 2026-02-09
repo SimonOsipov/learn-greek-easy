@@ -184,6 +184,7 @@ class CardType(str, enum.Enum):
     CLOZE = "cloze"
     SENTENCE_TRANSLATION = "sentence_translation"
     PLURAL_FORM = "plural_form"
+    ARTICLE = "article"
 
 
 # ============================================================================

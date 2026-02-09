@@ -36,10 +36,14 @@ class TestCardTypeEnum:
         """PLURAL_FORM.value should equal 'plural_form'."""
         assert CardType.PLURAL_FORM.value == "plural_form"
 
+    def test_article_value(self):
+        """ARTICLE.value should equal 'article'."""
+        assert CardType.ARTICLE.value == "article"
+
     def test_all_values(self):
-        """All 7 CardType values should be present."""
+        """All 8 CardType values should be present."""
         values = [e.value for e in CardType]
-        assert len(values) == 7
+        assert len(values) == 8
         assert "meaning_el_to_en" in values
         assert "meaning_en_to_el" in values
         assert "conjugation" in values
@@ -47,6 +51,7 @@ class TestCardTypeEnum:
         assert "cloze" in values
         assert "sentence_translation" in values
         assert "plural_form" in values
+        assert "article" in values
 
 
 class TestCardRecordModel:
