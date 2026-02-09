@@ -185,7 +185,8 @@ def _sentence_front(**overrides):
         "prompt": "Translate this sentence",
         "main": "Καλημέρα σας!",
         "badge": "A1",
-        "example_index": 0,
+        "example_id": "ex_kalimera1",
+        "direction": "el_to_target",
     }
     data.update(overrides)
     return data
@@ -796,17 +797,81 @@ class TestFrontContentValidation:
             )
         assert "greater than or equal to 0" in str(exc_info.value).lower()
 
-    def test_sentence_translation_example_index_ge_0(self):
-        """Test SentenceTranslationFront requires example_index >= 0."""
+    def test_sentence_translation_example_id_required(self):
+        """Test SentenceTranslationFront requires example_id."""
         with pytest.raises(ValidationError) as exc_info:
             SentenceTranslationFront(
                 card_type="sentence_translation",
                 prompt="Translate",
                 main="Test",
                 badge="A1",
-                example_index=-1,
+                direction="el_to_target",
             )
-        assert "greater than or equal to 0" in str(exc_info.value).lower()
+        assert "example_id" in str(exc_info.value).lower()
+
+    def test_sentence_translation_example_id_pattern(self):
+        """Test SentenceTranslationFront example_id rejects invalid patterns."""
+        invalid_ids = ["has spaces", "has-dashes", "", "has@special"]
+        for invalid_id in invalid_ids:
+            with pytest.raises(ValidationError) as exc_info:
+                SentenceTranslationFront(
+                    card_type="sentence_translation",
+                    prompt="Translate",
+                    main="Test",
+                    badge="A1",
+                    example_id=invalid_id,
+                    direction="el_to_target",
+                )
+            assert (
+                "example_id" in str(exc_info.value).lower()
+                or "string does not match pattern" in str(exc_info.value).lower()
+            )
+
+    def test_sentence_translation_direction_valid_values(self):
+        """Test SentenceTranslationFront accepts both direction values."""
+        for direction in ["el_to_target", "target_to_el"]:
+            front = SentenceTranslationFront(
+                card_type="sentence_translation",
+                prompt="Translate",
+                main="Test",
+                badge="A1",
+                example_id="ex_test1",
+                direction=direction,
+            )
+            assert front.direction == direction
+
+    def test_sentence_translation_direction_invalid(self):
+        """Test SentenceTranslationFront rejects invalid direction."""
+        with pytest.raises(ValidationError) as exc_info:
+            SentenceTranslationFront(
+                card_type="sentence_translation",
+                prompt="Translate",
+                main="Test",
+                badge="A1",
+                example_id="ex_test1",
+                direction="invalid_dir",
+            )
+        assert (
+            "direction" in str(exc_info.value).lower()
+            or "input should be" in str(exc_info.value).lower()
+        )
+
+    def test_sentence_translation_back_answer_ru_optional(self):
+        """Test SentenceTranslationBack works with and without answer_ru."""
+        # Without answer_ru
+        back1 = SentenceTranslationBack(
+            card_type="sentence_translation",
+            answer="Good morning!",
+        )
+        assert back1.answer_ru is None
+
+        # With answer_ru
+        back2 = SentenceTranslationBack(
+            card_type="sentence_translation",
+            answer="Good morning!",
+            answer_ru="Доброе утро!",
+        )
+        assert back2.answer_ru == "Доброе утро!"
 
     def test_front_base_requires_prompt(self):
         """Test that prompt is required on front content."""
