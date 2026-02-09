@@ -115,6 +115,12 @@ Periodically update `.claude/handoff.yaml` with:
 ### Setup (one-time per machine)
 See [docs/precompact-hook-setup.md](docs/precompact-hook-setup.md) for `.claude/` files to create.
 
+## Project Memory
+
+Auto-updated project state file: `~/.claude/projects/-Users-samosipov-Downloads-learn-greek-easy/memory/MEMORY.md`
+
+Update this file when features are merged, phases change, or key decisions are made.
+
 ## Documentation
 
 - [Deployment Guide](docs/deployment-guide.md) - Sequential deploy, rollback, troubleshooting
