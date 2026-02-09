@@ -274,8 +274,17 @@ export function PracticeCard({
 
   const currentLang = (i18n.language?.split('-')[0] ?? 'en') as 'en' | 'ru';
 
+  // Suppress pronunciation for plural_form cards
+  const displayFront = card.card_type === 'plural_form' ? { ...front, sub: null } : front;
+
   // Determine displayed answer based on UI language
-  const displayAnswer = currentLang === 'ru' && translationRu ? translationRu : back.answer;
+  // For plural_form cards, always show the Greek form (not a translation)
+  const displayAnswer =
+    card.card_type === 'plural_form'
+      ? back.answer
+      : currentLang === 'ru' && translationRu
+        ? translationRu
+        : back.answer;
 
   // Translate stored English prompts to Russian when language is switched
   const translatePrompt = (englishPrompt: string, lang: string): string => {
@@ -286,6 +295,8 @@ export function PracticeCard({
       'How do you say this in Greek?': 'Как это сказать по-гречески?',
       'What is this?': 'Что это?',
       'What does this mean?': 'Что это значит?',
+      'What is the plural?': 'Какое множественное число?',
+      'What is the singular?': 'Какое единственное число?',
     };
 
     return promptTranslations[englishPrompt] || englishPrompt;
@@ -293,7 +304,8 @@ export function PracticeCard({
 
   const translatedPrompt = translatePrompt(front.prompt, currentLang);
 
-  const typeBadgeLabel = t('practice.meaningBadge');
+  const typeBadgeLabel =
+    card.card_type === 'plural_form' ? t('practice.pluralFormBadge') : t('practice.meaningBadge');
   const tapToRevealLabel = t('practice.tapToReveal');
   const answerLabel = t('practice.answer');
   const srsComingSoon = t('practice.srsComingSoon');
@@ -361,7 +373,7 @@ export function PracticeCard({
 
         {!isFlipped ? (
           <CardFront
-            front={{ ...front, prompt: translatedPrompt }}
+            front={{ ...displayFront, prompt: translatedPrompt }}
             typeBadgeLabel={typeBadgeLabel}
             tapToRevealLabel={tapToRevealLabel}
             partOfSpeech={partOfSpeech}

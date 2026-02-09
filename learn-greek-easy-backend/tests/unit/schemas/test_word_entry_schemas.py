@@ -575,6 +575,7 @@ class TestWordEntryResponse:
             lemma = "γράφω"
             part_of_speech = PartOfSpeech.VERB
             translation_en = "to write"
+            translation_en_plural = None
             translation_ru = "писать"
             pronunciation = None
             grammar_data = None

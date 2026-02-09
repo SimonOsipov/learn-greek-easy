@@ -40,6 +40,8 @@ from src.schemas.card_record import (
     MeaningElToEnFront,
     MeaningEnToElBack,
     MeaningEnToElFront,
+    PluralFormBack,
+    PluralFormFront,
     SentenceTranslationBack,
     SentenceTranslationFront,
 )
@@ -221,6 +223,28 @@ def _meaning_en_back(**overrides):
     return data
 
 
+def _plural_form_front(**overrides):
+    """Build valid plural_form front content dict."""
+    data = {
+        "card_type": "plural_form",
+        "prompt": "What is the plural?",
+        "main": "ο λόγος",
+        "badge": "A2",
+    }
+    data.update(overrides)
+    return data
+
+
+def _plural_form_back(**overrides):
+    """Build valid plural_form back content dict."""
+    data = {
+        "card_type": "plural_form",
+        "answer": "οι λόγοι",
+    }
+    data.update(overrides)
+    return data
+
+
 # Card type to front/back builder mapping
 CARD_TYPE_BUILDERS = {
     CardType.MEANING_EL_TO_EN: (_meaning_el_front, _meaning_el_back),
@@ -229,6 +253,7 @@ CARD_TYPE_BUILDERS = {
     CardType.DECLENSION: (_declension_front, _declension_back),
     CardType.CLOZE: (_cloze_front, _cloze_back),
     CardType.SENTENCE_TRANSLATION: (_sentence_front, _sentence_back),
+    CardType.PLURAL_FORM: (_plural_form_front, _plural_form_back),
 }
 
 
@@ -238,9 +263,9 @@ CARD_TYPE_BUILDERS = {
 
 
 class TestCardRecordCreateValid:
-    """Test valid CardRecordCreate for each of the 6 card types."""
+    """Test valid CardRecordCreate for each of the 7 card types."""
 
-    @pytest.mark.parametrize("card_type", list(CardType))
+    @pytest.mark.parametrize("card_type", list(CARD_TYPE_BUILDERS.keys()))
     def test_valid_create_for_each_card_type(self, card_type):
         """Test valid creation with proper front/back content per card type."""
         front_builder, back_builder = CARD_TYPE_BUILDERS[card_type]
@@ -662,6 +687,16 @@ class TestDiscriminatedUnionDispatch:
         parsed = BACK_ADAPTER.validate_python(_sentence_back())
         assert isinstance(parsed, SentenceTranslationBack)
 
+    def test_front_plural_form(self):
+        """Test front union dispatches to PluralFormFront."""
+        parsed = FRONT_ADAPTER.validate_python(_plural_form_front())
+        assert isinstance(parsed, PluralFormFront)
+
+    def test_back_plural_form(self):
+        """Test back union dispatches to PluralFormBack."""
+        parsed = BACK_ADAPTER.validate_python(_plural_form_back())
+        assert isinstance(parsed, PluralFormBack)
+
     def test_front_invalid_card_type_rejected(self):
         """Test front union rejects unknown card_type."""
         with pytest.raises(ValidationError):
@@ -803,6 +838,16 @@ class TestFrontContentValidation:
             )
         assert "badge" in str(exc_info.value).lower()
 
+    def test_plural_form_front_sub_defaults_none(self):
+        """Test PluralFormFront has sub=None by default (no pronunciation)."""
+        front = PluralFormFront(
+            card_type="plural_form",
+            prompt="What is the plural?",
+            main="ο λόγος",
+            badge="A2",
+        )
+        assert front.sub is None
+
 
 # ============================================================================
 # Test Back Content Validation
@@ -907,6 +952,14 @@ class TestBackContentValidation:
             answer="Good morning!",
         )
         assert back.context is None
+
+    def test_plural_form_back_has_no_context(self):
+        """Test PluralFormBack has no context field."""
+        back = PluralFormBack(
+            card_type="plural_form",
+            answer="οι λόγοι",
+        )
+        assert not hasattr(back, "context") or "context" not in back.model_fields
 
 
 # ============================================================================

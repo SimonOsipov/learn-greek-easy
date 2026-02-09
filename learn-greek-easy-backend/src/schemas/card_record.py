@@ -2,8 +2,8 @@
 
 This module contains schemas for:
 - Context sub-schemas (ExampleContext, ConjugationRow/Table, DeclensionRow/Table, FullSentence)
-- Front content schemas (6 card types with discriminated union)
-- Back content schemas (6 card types with discriminated union)
+- Front content schemas (7 card types with discriminated union)
+- Back content schemas (7 card types with discriminated union)
 - CardRecord CRUD operations (Create, Update, Response, ListResponse)
 """
 
@@ -126,6 +126,12 @@ class SentenceTranslationFront(FrontContentBase):
     example_index: int = Field(..., ge=0)
 
 
+class PluralFormFront(FrontContentBase):
+    """Front content for plural form cards."""
+
+    card_type: Literal["plural_form"]
+
+
 FrontContent = Annotated[
     Union[
         MeaningElToEnFront,
@@ -134,6 +140,7 @@ FrontContent = Annotated[
         DeclensionFront,
         ClozeFront,
         SentenceTranslationFront,
+        PluralFormFront,
     ],
     Field(discriminator="card_type"),
 ]
@@ -192,6 +199,12 @@ class SentenceTranslationBack(BackContentBase):
     context: Optional[ExampleContext] = None
 
 
+class PluralFormBack(BackContentBase):
+    """Back content for plural form cards."""
+
+    card_type: Literal["plural_form"]
+
+
 BackContent = Annotated[
     Union[
         MeaningElToEnBack,
@@ -200,6 +213,7 @@ BackContent = Annotated[
         DeclensionBack,
         ClozeBack,
         SentenceTranslationBack,
+        PluralFormBack,
     ],
     Field(discriminator="card_type"),
 ]

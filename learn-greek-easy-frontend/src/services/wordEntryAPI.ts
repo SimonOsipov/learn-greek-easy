@@ -37,6 +37,7 @@ export interface WordEntryInput {
   lemma: string;
   part_of_speech: PartOfSpeech;
   translation_en: string;
+  translation_en_plural?: string | null;
   translation_ru?: string | null;
   pronunciation?: string | null;
   grammar_data?: Record<string, unknown> | null;
@@ -54,6 +55,7 @@ export interface WordEntryResponse {
   lemma: string;
   part_of_speech: PartOfSpeech;
   translation_en: string;
+  translation_en_plural: string | null;
   translation_ru: string | null;
   pronunciation: string | null;
   grammar_data: Record<string, unknown> | null;
@@ -95,7 +97,8 @@ export type CardRecordType =
   | 'conjugation'
   | 'declension'
   | 'cloze'
-  | 'sentence_translation';
+  | 'sentence_translation'
+  | 'plural_form';
 
 /**
  * Card record response from backend.

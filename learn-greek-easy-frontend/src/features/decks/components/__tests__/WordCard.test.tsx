@@ -25,6 +25,7 @@ const mockWordEntry: WordEntryResponse = {
   lemma: 'μιλάω',
   part_of_speech: 'VERB',
   translation_en: 'to speak, to talk',
+  translation_en_plural: null,
   translation_ru: 'говорить',
   pronunciation: 'miláo',
   grammar_data: null,
