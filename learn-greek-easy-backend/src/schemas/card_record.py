@@ -123,7 +123,17 @@ class SentenceTranslationFront(FrontContentBase):
     """Front content for sentence translation cards."""
 
     card_type: Literal["sentence_translation"]
-    example_index: int = Field(..., ge=0)
+    example_id: str = Field(
+        ...,
+        min_length=1,
+        max_length=50,
+        pattern=r"^[a-zA-Z0-9_]+$",
+        description="Stable example identifier from WordEntry.examples (e.g., 'ex_spiti1')",
+    )
+    direction: Literal["el_to_target", "target_to_el"] = Field(
+        ...,
+        description="Translation direction: Greek-to-target or target-to-Greek",
+    )
 
 
 class PluralFormFront(FrontContentBase):
@@ -197,6 +207,10 @@ class SentenceTranslationBack(BackContentBase):
 
     card_type: Literal["sentence_translation"]
     context: Optional[ExampleContext] = None
+    answer_ru: Optional[str] = Field(
+        default=None,
+        description="Russian translation of the answer (shown when user's native language is Russian)",
+    )
 
 
 class PluralFormBack(BackContentBase):

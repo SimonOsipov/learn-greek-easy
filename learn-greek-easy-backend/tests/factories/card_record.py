@@ -163,7 +163,8 @@ class CardRecordFactory(BaseFactory):
                 "prompt": "Translate this sentence",
                 "main": "Καλημέρα σας!",
                 "badge": "A1",
-                "example_index": 0,
+                "example_id": "ex_kalimera1",
+                "direction": "el_to_target",
             },
             back_content={
                 "card_type": "sentence_translation",

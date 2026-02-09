@@ -339,8 +339,13 @@ async def bulk_upload_word_entries(
         entries, request.deck_id
     )
 
-    cards_created = meaning_created + plural_created
-    cards_updated = meaning_updated + plural_updated
+    # Generate sentence translation cards for entries with examples
+    sentence_created, sentence_updated = await card_gen.generate_sentence_translation_cards(
+        entries, request.deck_id
+    )
+
+    cards_created = meaning_created + plural_created + sentence_created
+    cards_updated = meaning_updated + plural_updated + sentence_updated
 
     # Commit the transaction
     await db.commit()
