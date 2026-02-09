@@ -144,9 +144,9 @@ class TestSeedAllIntegration:
         card_count = await db_session.scalar(select(func.count(Card.id)))
         assert card_count == 70
 
-        # Verify card records created (30 word entries * 2 cards each = 60)
+        # Verify card records created (30 word entries * (2 meaning + ~1.5 plural + 2 sentence) = 164)
         card_record_count = await db_session.scalar(select(func.count(CardRecord.id)))
-        assert card_record_count == 60
+        assert card_record_count == 164
 
     @pytest.mark.asyncio
     async def test_seed_all_returns_403_when_disabled(
@@ -1099,7 +1099,7 @@ class TestSeedMeaningCardsIntegration:
     """Integration tests for meaning card seeding via seed_all."""
 
     @pytest.mark.asyncio
-    async def test_seed_all_creates_60_card_records(
+    async def test_seed_all_creates_164_card_records(
         self,
         client: AsyncClient,
         db_session: AsyncSession,
@@ -1107,12 +1107,12 @@ class TestSeedMeaningCardsIntegration:
         enable_seeding,
         enable_seeding_service,
     ):
-        """POST /test/seed/all should create 60 CardRecord rows."""
+        """POST /test/seed/all should create 164 CardRecord rows (60 meaning + 44 plural + 60 sentence)."""
         response = await client.post(f"{seed_url}/all")
         assert response.status_code == 200
 
         card_record_count = await db_session.scalar(select(func.count(CardRecord.id)))
-        assert card_record_count == 60
+        assert card_record_count == 164
 
     @pytest.mark.asyncio
     async def test_seed_all_creates_30_el_to_en_cards(
