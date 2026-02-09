@@ -34,6 +34,8 @@ from src.schemas.card_error import (
 
 # Card Record schemas
 from src.schemas.card_record import (
+    ArticleBack,
+    ArticleFront,
     BackContentBase,
     CardRecordCreate,
     CardRecordListResponse,
@@ -317,6 +319,7 @@ __all__ = [
     "ClozeFront",
     "SentenceTranslationFront",
     "PluralFormFront",
+    "ArticleFront",
     "BackContentBase",
     "MeaningElToEnBack",
     "MeaningEnToElBack",
@@ -325,6 +328,7 @@ __all__ = [
     "ClozeBack",
     "SentenceTranslationBack",
     "PluralFormBack",
+    "ArticleBack",
     "CardRecordCreate",
     "CardRecordUpdate",
     "CardRecordResponse",

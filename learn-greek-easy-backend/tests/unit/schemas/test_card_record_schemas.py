@@ -18,6 +18,8 @@ from pydantic import TypeAdapter, ValidationError
 
 from src.db.models import CardType
 from src.schemas.card_record import (
+    ArticleBack,
+    ArticleFront,
     BackContent,
     CardRecordCreate,
     CardRecordListResponse,
@@ -246,6 +248,29 @@ def _plural_form_back(**overrides):
     return data
 
 
+def _article_front(**overrides):
+    """Build valid article front content dict."""
+    data = {
+        "card_type": "article",
+        "prompt": "What is the article?",
+        "main": "σπίτι",
+        "badge": "A1",
+    }
+    data.update(overrides)
+    return data
+
+
+def _article_back(**overrides):
+    """Build valid article back content dict."""
+    data = {
+        "card_type": "article",
+        "answer": "το",
+        "gender": "Neuter",
+    }
+    data.update(overrides)
+    return data
+
+
 # Card type to front/back builder mapping
 CARD_TYPE_BUILDERS = {
     CardType.MEANING_EL_TO_EN: (_meaning_el_front, _meaning_el_back),
@@ -255,6 +280,7 @@ CARD_TYPE_BUILDERS = {
     CardType.CLOZE: (_cloze_front, _cloze_back),
     CardType.SENTENCE_TRANSLATION: (_sentence_front, _sentence_back),
     CardType.PLURAL_FORM: (_plural_form_front, _plural_form_back),
+    CardType.ARTICLE: (_article_front, _article_back),
 }
 
 
@@ -264,7 +290,7 @@ CARD_TYPE_BUILDERS = {
 
 
 class TestCardRecordCreateValid:
-    """Test valid CardRecordCreate for each of the 7 card types."""
+    """Test valid CardRecordCreate for each of the 8 card types."""
 
     @pytest.mark.parametrize("card_type", list(CARD_TYPE_BUILDERS.keys()))
     def test_valid_create_for_each_card_type(self, card_type):
@@ -698,6 +724,16 @@ class TestDiscriminatedUnionDispatch:
         parsed = BACK_ADAPTER.validate_python(_plural_form_back())
         assert isinstance(parsed, PluralFormBack)
 
+    def test_front_article(self):
+        """Test front union dispatches to ArticleFront."""
+        parsed = FRONT_ADAPTER.validate_python(_article_front())
+        assert isinstance(parsed, ArticleFront)
+
+    def test_back_article(self):
+        """Test back union dispatches to ArticleBack."""
+        parsed = BACK_ADAPTER.validate_python(_article_back())
+        assert isinstance(parsed, ArticleBack)
+
     def test_front_invalid_card_type_rejected(self):
         """Test front union rejects unknown card_type."""
         with pytest.raises(ValidationError):
@@ -913,6 +949,16 @@ class TestFrontContentValidation:
         )
         assert front.sub is None
 
+    def test_article_front_sub_defaults_none(self):
+        """Test ArticleFront has sub=None by default."""
+        front = ArticleFront(
+            card_type="article",
+            prompt="What is the article?",
+            main="σπίτι",
+            badge="A1",
+        )
+        assert front.sub is None
+
 
 # ============================================================================
 # Test Back Content Validation
@@ -1025,6 +1071,31 @@ class TestBackContentValidation:
             answer="οι λόγοι",
         )
         assert not hasattr(back, "context") or "context" not in back.model_fields
+
+    def test_article_back_requires_gender(self):
+        """Test ArticleBack requires gender field."""
+        with pytest.raises(ValidationError) as exc_info:
+            ArticleBack(card_type="article", answer="το")
+        assert "gender" in str(exc_info.value).lower()
+
+    def test_article_back_gender_ru_optional(self):
+        """Test ArticleBack works with and without gender_ru."""
+        # Without gender_ru
+        back1 = ArticleBack(
+            card_type="article",
+            answer="το",
+            gender="Neuter",
+        )
+        assert back1.gender_ru is None
+
+        # With gender_ru
+        back2 = ArticleBack(
+            card_type="article",
+            answer="το",
+            gender="Neuter",
+            gender_ru="Средний род",
+        )
+        assert back2.gender_ru == "Средний род"
 
 
 # ============================================================================
