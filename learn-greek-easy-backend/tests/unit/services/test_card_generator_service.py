@@ -843,3 +843,402 @@ class TestGeneratePluralFormCards:
         assert badges.count("Adj. Masc.") == 2
         assert badges.count("Adj. Fem.") == 2
         assert badges.count("Adj. Neut.") == 2
+
+
+# =============================================================================
+# Sentence Translation Card Test Data
+# =============================================================================
+
+# Examples with IDs (valid for card generation)
+EXAMPLE_WITH_ID_AND_RUSSIAN = {
+    "id": "ex_spiti1",
+    "greek": "Το σπίτι μου είναι μικρό.",
+    "english": "My house is small.",
+    "russian": "Мой дом маленький.",
+}
+
+EXAMPLE_WITH_ID_NO_RUSSIAN = {
+    "id": "ex_nero1",
+    "greek": "Πίνω νερό.",
+    "english": "I drink water.",
+}
+
+# Example WITHOUT id (should be skipped)
+EXAMPLE_WITHOUT_ID = {
+    "greek": "Πού είναι το σπίτι;",
+    "english": "Where is the house?",
+}
+
+
+@pytest.mark.unit
+class TestGenerateSentenceTranslationCards:
+    """Unit tests for CardGeneratorService.generate_sentence_translation_cards()."""
+
+    @pytest.mark.asyncio
+    async def test_single_entry_one_example_produces_two_cards(
+        self, service, mock_card_record_repo
+    ):
+        """Single word entry with one example produces 2 cards (el_to_target, target_to_el)."""
+        deck_id = uuid4()
+        entry = _make_word_entry(
+            deck_id=deck_id,
+            examples=[EXAMPLE_WITH_ID_AND_RUSSIAN],
+        )
+
+        mock_card_record_repo.bulk_upsert.return_value = ([], 2, 0)
+
+        created, updated = await service.generate_sentence_translation_cards([entry], deck_id)
+
+        assert created == 2
+        assert updated == 0
+
+        mock_card_record_repo.bulk_upsert.assert_called_once()
+        card_dicts = mock_card_record_repo.bulk_upsert.call_args[0][0]
+        assert len(card_dicts) == 2
+
+        # Card 1: el_to_target (Greek -> English)
+        el_to_target = card_dicts[0]
+        assert el_to_target["word_entry_id"] == entry.id
+        assert el_to_target["deck_id"] == deck_id
+        assert el_to_target["is_active"] is True
+        assert el_to_target["card_type"] == CardType.SENTENCE_TRANSLATION.value
+        assert el_to_target["front_content"]["main"] == "Το σπίτι μου είναι μικρό."
+        assert el_to_target["front_content"]["prompt"] == "Translate this sentence"
+        assert el_to_target["front_content"]["badge"] == "Sentence"
+        assert el_to_target["front_content"]["example_id"] == "ex_spiti1"
+        assert el_to_target["front_content"]["direction"] == "el_to_target"
+        assert el_to_target["back_content"]["answer"] == "My house is small."
+        assert el_to_target["back_content"]["answer_ru"] == "Мой дом маленький."
+
+        # Card 2: target_to_el (English -> Greek)
+        target_to_el = card_dicts[1]
+        assert target_to_el["word_entry_id"] == entry.id
+        assert target_to_el["deck_id"] == deck_id
+        assert target_to_el["is_active"] is True
+        assert target_to_el["card_type"] == CardType.SENTENCE_TRANSLATION.value
+        assert target_to_el["front_content"]["main"] == "My house is small."
+        assert target_to_el["front_content"]["prompt"] == "Translate to Greek"
+        assert target_to_el["front_content"]["example_id"] == "ex_spiti1"
+        assert target_to_el["front_content"]["direction"] == "target_to_el"
+        assert target_to_el["back_content"]["answer"] == "Το σπίτι μου είναι μικρό."
+        assert target_to_el["back_content"]["answer_ru"] is None
+
+    @pytest.mark.asyncio
+    async def test_entry_with_multiple_examples_produces_cards_per_example(
+        self, service, mock_card_record_repo
+    ):
+        """Entry with multiple examples produces 2 cards per example."""
+        deck_id = uuid4()
+        entry = _make_word_entry(
+            deck_id=deck_id,
+            examples=[EXAMPLE_WITH_ID_AND_RUSSIAN, EXAMPLE_WITH_ID_NO_RUSSIAN],
+        )
+
+        mock_card_record_repo.bulk_upsert.return_value = ([], 4, 0)
+
+        created, updated = await service.generate_sentence_translation_cards([entry], deck_id)
+
+        assert created == 4
+        assert updated == 0
+
+        card_dicts = mock_card_record_repo.bulk_upsert.call_args[0][0]
+        assert len(card_dicts) == 4
+
+        # Check example_id fields
+        example_ids = [card["front_content"]["example_id"] for card in card_dicts]
+        assert example_ids.count("ex_spiti1") == 2
+        assert example_ids.count("ex_nero1") == 2
+
+    @pytest.mark.asyncio
+    async def test_entry_with_no_examples_produces_zero_cards(self, service, mock_card_record_repo):
+        """Entry with examples=None or examples=[] produces 0 cards."""
+        deck_id = uuid4()
+
+        # Test with examples=None
+        entry_none = _make_word_entry(deck_id=deck_id, examples=None)
+        mock_card_record_repo.bulk_upsert.return_value = ([], 0, 0)
+
+        created, updated = await service.generate_sentence_translation_cards([entry_none], deck_id)
+
+        assert created == 0
+        assert updated == 0
+        card_dicts = mock_card_record_repo.bulk_upsert.call_args[0][0]
+        assert len(card_dicts) == 0
+
+        # Test with examples=[] (empty list)
+        mock_card_record_repo.bulk_upsert.reset_mock()
+        mock_card_record_repo.bulk_upsert.return_value = ([], 0, 0)
+        entry_empty = _make_word_entry(deck_id=deck_id, examples=[])
+
+        created, updated = await service.generate_sentence_translation_cards([entry_empty], deck_id)
+
+        assert created == 0
+        assert updated == 0
+        card_dicts = mock_card_record_repo.bulk_upsert.call_args[0][0]
+        assert len(card_dicts) == 0
+
+    @pytest.mark.asyncio
+    async def test_examples_without_id_are_skipped(self, service, mock_card_record_repo):
+        """Examples without id field are silently skipped."""
+        deck_id = uuid4()
+        entry = _make_word_entry(
+            deck_id=deck_id,
+            examples=[EXAMPLE_WITH_ID_AND_RUSSIAN, EXAMPLE_WITHOUT_ID],
+        )
+
+        mock_card_record_repo.bulk_upsert.return_value = ([], 2, 0)
+
+        created, updated = await service.generate_sentence_translation_cards([entry], deck_id)
+
+        # Only 2 cards from the example with id
+        assert created == 2
+        card_dicts = mock_card_record_repo.bulk_upsert.call_args[0][0]
+        assert len(card_dicts) == 2
+        assert all(card["front_content"]["example_id"] == "ex_spiti1" for card in card_dicts)
+
+    @pytest.mark.asyncio
+    async def test_variant_keys_use_example_id(self, service, mock_card_record_repo):
+        """Variant keys use example_id: <example_id>_el_to_target and <example_id>_target_to_el."""
+        deck_id = uuid4()
+        entry = _make_word_entry(
+            deck_id=deck_id,
+            examples=[EXAMPLE_WITH_ID_AND_RUSSIAN],
+        )
+
+        mock_card_record_repo.bulk_upsert.return_value = ([], 2, 0)
+
+        await service.generate_sentence_translation_cards([entry], deck_id)
+
+        card_dicts = mock_card_record_repo.bulk_upsert.call_args[0][0]
+        assert card_dicts[0]["variant_key"] == "el_to_target_ex_spiti1"
+        assert card_dicts[1]["variant_key"] == "target_to_el_ex_spiti1"
+
+    @pytest.mark.asyncio
+    async def test_correct_prompts(self, service, mock_card_record_repo):
+        """Cards have correct prompts: 'Translate this sentence' and 'Translate to Greek'."""
+        deck_id = uuid4()
+        entry = _make_word_entry(
+            deck_id=deck_id,
+            examples=[EXAMPLE_WITH_ID_NO_RUSSIAN],
+        )
+
+        mock_card_record_repo.bulk_upsert.return_value = ([], 2, 0)
+
+        await service.generate_sentence_translation_cards([entry], deck_id)
+
+        card_dicts = mock_card_record_repo.bulk_upsert.call_args[0][0]
+        assert card_dicts[0]["front_content"]["prompt"] == "Translate this sentence"
+        assert card_dicts[1]["front_content"]["prompt"] == "Translate to Greek"
+
+    @pytest.mark.asyncio
+    async def test_all_cards_have_tier_1_and_is_active_true(self, service, mock_card_record_repo):
+        """All sentence translation cards have tier=1 and is_active=True."""
+        deck_id = uuid4()
+        entries = [
+            _make_word_entry(
+                deck_id=deck_id,
+                examples=[EXAMPLE_WITH_ID_AND_RUSSIAN],
+            ),
+            _make_word_entry(
+                deck_id=deck_id,
+                examples=[EXAMPLE_WITH_ID_NO_RUSSIAN],
+            ),
+        ]
+
+        mock_card_record_repo.bulk_upsert.return_value = ([], 4, 0)
+
+        await service.generate_sentence_translation_cards(entries, deck_id)
+
+        card_dicts = mock_card_record_repo.bulk_upsert.call_args[0][0]
+        for i, card_dict in enumerate(card_dicts):
+            assert card_dict["tier"] == 1, f"Card {i} tier != 1"
+            assert card_dict["is_active"] is True, f"Card {i} is_active != True"
+
+    @pytest.mark.asyncio
+    async def test_empty_entries_list(self, service, mock_card_record_repo):
+        """Empty word entries list passes empty list to bulk_upsert, returning (0, 0)."""
+        deck_id = uuid4()
+        mock_card_record_repo.bulk_upsert.return_value = ([], 0, 0)
+
+        created, updated = await service.generate_sentence_translation_cards([], deck_id)
+
+        mock_card_record_repo.bulk_upsert.assert_called_once_with([])
+        assert created == 0
+        assert updated == 0
+
+    @pytest.mark.asyncio
+    async def test_card_type_is_sentence_translation(self, service, mock_card_record_repo):
+        """All cards have card_type == 'sentence_translation'."""
+        deck_id = uuid4()
+        entry = _make_word_entry(
+            deck_id=deck_id,
+            examples=[EXAMPLE_WITH_ID_AND_RUSSIAN],
+        )
+
+        mock_card_record_repo.bulk_upsert.return_value = ([], 2, 0)
+
+        await service.generate_sentence_translation_cards([entry], deck_id)
+
+        card_dicts = mock_card_record_repo.bulk_upsert.call_args[0][0]
+        assert card_dicts[0]["card_type"] == CardType.SENTENCE_TRANSLATION.value
+        assert card_dicts[0]["card_type"] == "sentence_translation"
+        assert card_dicts[1]["card_type"] == CardType.SENTENCE_TRANSLATION.value
+        assert card_dicts[1]["card_type"] == "sentence_translation"
+
+    @pytest.mark.asyncio
+    async def test_badge_is_sentence(self, service, mock_card_record_repo):
+        """All sentence translation cards have badge == 'Sentence'."""
+        deck_id = uuid4()
+        entry = _make_word_entry(
+            deck_id=deck_id,
+            examples=[EXAMPLE_WITH_ID_NO_RUSSIAN],
+        )
+
+        mock_card_record_repo.bulk_upsert.return_value = ([], 2, 0)
+
+        await service.generate_sentence_translation_cards([entry], deck_id)
+
+        card_dicts = mock_card_record_repo.bulk_upsert.call_args[0][0]
+        assert card_dicts[0]["front_content"]["badge"] == "Sentence"
+        assert card_dicts[1]["front_content"]["badge"] == "Sentence"
+
+    @pytest.mark.asyncio
+    async def test_example_id_field_present_and_correct(self, service, mock_card_record_repo):
+        """Front content example_id field is present and matches the example id."""
+        deck_id = uuid4()
+        entry = _make_word_entry(
+            deck_id=deck_id,
+            examples=[EXAMPLE_WITH_ID_AND_RUSSIAN, EXAMPLE_WITH_ID_NO_RUSSIAN],
+        )
+
+        mock_card_record_repo.bulk_upsert.return_value = ([], 4, 0)
+
+        await service.generate_sentence_translation_cards([entry], deck_id)
+
+        card_dicts = mock_card_record_repo.bulk_upsert.call_args[0][0]
+        assert card_dicts[0]["front_content"]["example_id"] == "ex_spiti1"
+        assert card_dicts[1]["front_content"]["example_id"] == "ex_spiti1"
+        assert card_dicts[2]["front_content"]["example_id"] == "ex_nero1"
+        assert card_dicts[3]["front_content"]["example_id"] == "ex_nero1"
+
+    @pytest.mark.asyncio
+    async def test_direction_field_correct(self, service, mock_card_record_repo):
+        """Front content direction field is 'el_to_target' or 'target_to_el'."""
+        deck_id = uuid4()
+        entry = _make_word_entry(
+            deck_id=deck_id,
+            examples=[EXAMPLE_WITH_ID_AND_RUSSIAN],
+        )
+
+        mock_card_record_repo.bulk_upsert.return_value = ([], 2, 0)
+
+        await service.generate_sentence_translation_cards([entry], deck_id)
+
+        card_dicts = mock_card_record_repo.bulk_upsert.call_args[0][0]
+        assert card_dicts[0]["front_content"]["direction"] == "el_to_target"
+        assert card_dicts[1]["front_content"]["direction"] == "target_to_el"
+
+    @pytest.mark.asyncio
+    async def test_answer_ru_on_el_to_target_only(self, service, mock_card_record_repo):
+        """answer_ru is present on el_to_target cards, None on target_to_el cards."""
+        deck_id = uuid4()
+        entry = _make_word_entry(
+            deck_id=deck_id,
+            examples=[EXAMPLE_WITH_ID_AND_RUSSIAN],
+        )
+
+        mock_card_record_repo.bulk_upsert.return_value = ([], 2, 0)
+
+        await service.generate_sentence_translation_cards([entry], deck_id)
+
+        card_dicts = mock_card_record_repo.bulk_upsert.call_args[0][0]
+        # el_to_target card has answer_ru
+        assert card_dicts[0]["back_content"]["answer_ru"] == "Мой дом маленький."
+        # target_to_el card has answer_ru=None
+        assert card_dicts[1]["back_content"]["answer_ru"] is None
+
+    @pytest.mark.asyncio
+    async def test_answer_ru_none_when_russian_field_absent(self, service, mock_card_record_repo):
+        """answer_ru is None when example doesn't have russian field."""
+        deck_id = uuid4()
+        entry = _make_word_entry(
+            deck_id=deck_id,
+            examples=[EXAMPLE_WITH_ID_NO_RUSSIAN],
+        )
+
+        mock_card_record_repo.bulk_upsert.return_value = ([], 2, 0)
+
+        await service.generate_sentence_translation_cards([entry], deck_id)
+
+        card_dicts = mock_card_record_repo.bulk_upsert.call_args[0][0]
+        # Both cards should have answer_ru=None (el_to_target gets None if russian not present)
+        assert card_dicts[0]["back_content"]["answer_ru"] is None
+        assert card_dicts[1]["back_content"]["answer_ru"] is None
+
+    @pytest.mark.asyncio
+    async def test_front_content_sub_is_none(self, service, mock_card_record_repo):
+        """Front content sub is None for all sentence translation cards."""
+        deck_id = uuid4()
+        entry = _make_word_entry(
+            deck_id=deck_id,
+            examples=[EXAMPLE_WITH_ID_AND_RUSSIAN],
+        )
+
+        mock_card_record_repo.bulk_upsert.return_value = ([], 2, 0)
+
+        await service.generate_sentence_translation_cards([entry], deck_id)
+
+        card_dicts = mock_card_record_repo.bulk_upsert.call_args[0][0]
+        for card_dict in card_dicts:
+            assert card_dict["front_content"]["sub"] is None
+
+    @pytest.mark.asyncio
+    async def test_back_content_answer_sub_is_none(self, service, mock_card_record_repo):
+        """Back content answer_sub is None for all sentence translation cards."""
+        deck_id = uuid4()
+        entry = _make_word_entry(
+            deck_id=deck_id,
+            examples=[EXAMPLE_WITH_ID_AND_RUSSIAN],
+        )
+
+        mock_card_record_repo.bulk_upsert.return_value = ([], 2, 0)
+
+        await service.generate_sentence_translation_cards([entry], deck_id)
+
+        card_dicts = mock_card_record_repo.bulk_upsert.call_args[0][0]
+        for card_dict in card_dicts:
+            assert card_dict["back_content"]["answer_sub"] is None
+
+    @pytest.mark.asyncio
+    async def test_front_content_hint_is_none(self, service, mock_card_record_repo):
+        """Front content hint is None for all sentence translation cards."""
+        deck_id = uuid4()
+        entry = _make_word_entry(
+            deck_id=deck_id,
+            examples=[EXAMPLE_WITH_ID_AND_RUSSIAN],
+        )
+
+        mock_card_record_repo.bulk_upsert.return_value = ([], 2, 0)
+
+        await service.generate_sentence_translation_cards([entry], deck_id)
+
+        card_dicts = mock_card_record_repo.bulk_upsert.call_args[0][0]
+        for card_dict in card_dicts:
+            assert card_dict["front_content"]["hint"] is None
+
+    @pytest.mark.asyncio
+    async def test_back_content_context_is_none(self, service, mock_card_record_repo):
+        """Back content context is None for all sentence translation cards."""
+        deck_id = uuid4()
+        entry = _make_word_entry(
+            deck_id=deck_id,
+            examples=[EXAMPLE_WITH_ID_AND_RUSSIAN],
+        )
+
+        mock_card_record_repo.bulk_upsert.return_value = ([], 2, 0)
+
+        await service.generate_sentence_translation_cards([entry], deck_id)
+
+        card_dicts = mock_card_record_repo.bulk_upsert.call_args[0][0]
+        for card_dict in card_dicts:
+            assert card_dict["back_content"]["context"] is None
