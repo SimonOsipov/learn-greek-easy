@@ -2,8 +2,8 @@
 
 This module contains schemas for:
 - Context sub-schemas (ExampleContext, ConjugationRow/Table, DeclensionRow/Table, FullSentence)
-- Front content schemas (7 card types with discriminated union)
-- Back content schemas (7 card types with discriminated union)
+- Front content schemas (8 card types with discriminated union)
+- Back content schemas (8 card types with discriminated union)
 - CardRecord CRUD operations (Create, Update, Response, ListResponse)
 """
 
@@ -142,6 +142,12 @@ class PluralFormFront(FrontContentBase):
     card_type: Literal["plural_form"]
 
 
+class ArticleFront(FrontContentBase):
+    """Front content for article (gender) cards."""
+
+    card_type: Literal["article"]
+
+
 FrontContent = Annotated[
     Union[
         MeaningElToEnFront,
@@ -151,6 +157,7 @@ FrontContent = Annotated[
         ClozeFront,
         SentenceTranslationFront,
         PluralFormFront,
+        ArticleFront,
     ],
     Field(discriminator="card_type"),
 ]
@@ -219,6 +226,20 @@ class PluralFormBack(BackContentBase):
     card_type: Literal["plural_form"]
 
 
+class ArticleBack(BackContentBase):
+    """Back content for article (gender) cards."""
+
+    card_type: Literal["article"]
+    gender: str = Field(
+        ...,
+        description="Grammatical gender label in English (e.g., 'Masculine', 'Feminine', 'Neuter')",
+    )
+    gender_ru: Optional[str] = Field(
+        default=None,
+        description="Grammatical gender label in Russian (e.g., 'Мужской род', 'Женский род', 'Средний род')",
+    )
+
+
 BackContent = Annotated[
     Union[
         MeaningElToEnBack,
@@ -228,6 +249,7 @@ BackContent = Annotated[
         ClozeBack,
         SentenceTranslationBack,
         PluralFormBack,
+        ArticleBack,
     ],
     Field(discriminator="card_type"),
 ]

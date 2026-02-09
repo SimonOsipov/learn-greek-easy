@@ -82,6 +82,32 @@ const mockSentenceCard: CardRecordResponse = {
   updated_at: '2024-01-01T00:00:00Z',
 };
 
+const mockArticleCard: CardRecordResponse = {
+  id: 'card-article-001',
+  word_entry_id: 'word-001',
+  deck_id: 'deck-001',
+  card_type: 'article',
+  tier: 1,
+  front_content: {
+    card_type: 'article',
+    prompt: 'What is the article?',
+    main: '\u03C3\u03C0\u03AF\u03C4\u03B9',
+    sub: 'house',
+    badge: 'noun',
+    hint: '[spee-tee]',
+  },
+  back_content: {
+    card_type: 'article',
+    answer: '\u03C4\u03BF',
+    answer_sub: 'neuter',
+    gender: 'neuter',
+    gender_ru: '\u0441\u0440\u0435\u0434\u043D\u0438\u0439',
+  },
+  is_active: true,
+  created_at: '2024-01-01T00:00:00Z',
+  updated_at: '2024-01-01T00:00:00Z',
+};
+
 // ============================================
 // Render Helper
 // ============================================
@@ -420,6 +446,154 @@ describe('PracticeCard', () => {
         // SENT-05 adds this mapping to the promptTranslations record
         // 'Translate this sentence': 'Переведите это предложение'
         expect(screen.getByText('Переведите это предложение')).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('Article Card', () => {
+    describe('Front Side', () => {
+      it('renders Greek noun from front_content.main', () => {
+        renderCard({ card: mockArticleCard });
+
+        expect(screen.getByText('\u03C3\u03C0\u03AF\u03C4\u03B9')).toBeInTheDocument();
+      });
+
+      it('renders English translation in sub by default', () => {
+        renderCard({ card: mockArticleCard });
+
+        expect(screen.getByText('house')).toBeInTheDocument();
+      });
+
+      it('renders pronunciation from front_content.hint', () => {
+        renderCard({ card: mockArticleCard });
+
+        expect(screen.getByText('[spee-tee]')).toBeInTheDocument();
+      });
+
+      it('renders "Article" type badge', () => {
+        renderCard({ card: mockArticleCard });
+
+        expect(screen.getByText('Article')).toBeInTheDocument();
+      });
+
+      it('renders PartOfSpeechBadge', () => {
+        renderCard({ card: mockArticleCard });
+
+        expect(screen.getByTestId('part-of-speech-badge')).toBeInTheDocument();
+      });
+
+      it('renders "What is the article?" prompt', () => {
+        renderCard({ card: mockArticleCard });
+
+        expect(screen.getByText('What is the article?')).toBeInTheDocument();
+      });
+
+      it('uses text-3xl font size for main text (not reduced)', () => {
+        renderCard({ card: mockArticleCard });
+
+        const frontEl = screen.getByTestId('practice-card-front');
+        const mainText = frontEl.querySelector('.text-3xl');
+        expect(mainText).toBeInTheDocument();
+      });
+    });
+
+    describe('Front Side - Language Toggle', () => {
+      afterEach(async () => {
+        await i18n.changeLanguage('en');
+      });
+
+      it('switches sub to Russian translation when RU toggled', () => {
+        renderCard({ card: mockArticleCard, translationRu: '\u0434\u043E\u043C' });
+
+        fireEvent.click(screen.getByTestId('lang-toggle-ru'));
+
+        expect(screen.getByText('\u0434\u043E\u043C')).toBeInTheDocument();
+      });
+
+      it('keeps English sub when translationRu is null and RU toggled', () => {
+        renderCard({ card: mockArticleCard, translationRu: null });
+
+        fireEvent.click(screen.getByTestId('lang-toggle-ru'));
+
+        // Falls back to English sub since translationRu is null
+        expect(screen.getByText('house')).toBeInTheDocument();
+      });
+    });
+
+    describe('Back Side', () => {
+      it('renders Greek article from back_content.answer', () => {
+        renderCard({ card: mockArticleCard, isFlipped: true });
+
+        expect(screen.getByText('\u03C4\u03BF')).toBeInTheDocument();
+      });
+
+      it('renders gender label from back_content', () => {
+        renderCard({ card: mockArticleCard, isFlipped: true });
+
+        expect(screen.getByText('neuter')).toBeInTheDocument();
+      });
+
+      it('renders PartOfSpeechBadge on back side', () => {
+        renderCard({ card: mockArticleCard, isFlipped: true });
+
+        expect(screen.getByTestId('part-of-speech-badge')).toBeInTheDocument();
+      });
+    });
+
+    describe('Back Side - Language Toggle', () => {
+      afterEach(async () => {
+        await i18n.changeLanguage('en');
+      });
+
+      it('answer stays Greek when language toggled to RU', () => {
+        renderCard({ card: mockArticleCard, isFlipped: true, translationRu: '\u0434\u043E\u043C' });
+
+        fireEvent.click(screen.getByTestId('lang-toggle-ru'));
+
+        // Answer should still be the Greek article, not a translation
+        expect(screen.getByText('\u03C4\u03BF')).toBeInTheDocument();
+      });
+
+      it('gender label switches to gender_ru when RU toggled', () => {
+        renderCard({ card: mockArticleCard, isFlipped: true });
+
+        fireEvent.click(screen.getByTestId('lang-toggle-ru'));
+
+        expect(screen.getByText('\u0441\u0440\u0435\u0434\u043D\u0438\u0439')).toBeInTheDocument();
+      });
+
+      it('gender label falls back to English when gender_ru is null', () => {
+        const cardWithoutGenderRu: CardRecordResponse = {
+          ...mockArticleCard,
+          back_content: {
+            ...mockArticleCard.back_content,
+            gender_ru: null,
+          },
+        };
+        renderCard({ card: cardWithoutGenderRu, isFlipped: true });
+
+        fireEvent.click(screen.getByTestId('lang-toggle-ru'));
+
+        // Should fall back to English gender label
+        expect(screen.getByText('neuter')).toBeInTheDocument();
+      });
+    });
+
+    describe('Prompt Translation', () => {
+      afterEach(async () => {
+        await i18n.changeLanguage('en');
+      });
+
+      it('translates "What is the article?" to Russian', () => {
+        renderCard({ card: mockArticleCard });
+
+        fireEvent.click(screen.getByTestId('lang-toggle-ru'));
+
+        expect(
+          screen.getByText(
+            '\u041A\u0430\u043A\u043E\u0439 \u0430\u0440\u0442\u0438\u043A\u043B\u044C?'
+          )
+        ).toBeInTheDocument();
       });
     });
   });

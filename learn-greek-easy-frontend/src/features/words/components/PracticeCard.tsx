@@ -73,6 +73,14 @@ interface SentenceTranslationBackContent {
   answer_ru?: string | null;
 }
 
+interface ArticleBackContent {
+  card_type: string;
+  answer: string;
+  answer_sub?: string | null;
+  gender: string;
+  gender_ru?: string | null;
+}
+
 // ============================================
 // Constants
 // ============================================
@@ -145,6 +153,9 @@ function CardFront({
 
       {/* Sub text (pronunciation) */}
       {front.sub && <p className="text-center text-sm italic text-muted-foreground">{front.sub}</p>}
+
+      {/* Pronunciation hint */}
+      {front.hint && <p className="text-center text-sm text-muted-foreground">{front.hint}</p>}
 
       {/* Tap to reveal hint */}
       <p className="mt-4 text-center text-sm text-muted-foreground">{tapToRevealLabel}</p>
@@ -301,8 +312,13 @@ export function PracticeCard({
   const isSentenceElToTarget = isSentenceCard && front.prompt === 'Translate this sentence';
   const isSentenceTargetToEl = isSentenceCard && front.prompt === 'Translate to Greek';
 
+  // Detect article cards
+  const isArticleCard = card.card_type === 'article';
+  const articleBack = back as unknown as ArticleBackContent;
+
   // Suppress pronunciation for plural_form and sentence cards
   // For target_to_el sentences, swap front text when RU is selected
+  // For article cards, sub shows English translation by default, Russian when toggled
   const displayFront = (() => {
     if (card.card_type === 'plural_form' || isSentenceCard) {
       let mainText = front.main;
@@ -312,6 +328,10 @@ export function PracticeCard({
       }
       return { ...front, sub: null, main: mainText };
     }
+    if (isArticleCard) {
+      const subText = currentLang === 'ru' && translationRu ? translationRu : front.sub;
+      return { ...front, sub: subText };
+    }
     return front;
   })();
 
@@ -319,7 +339,7 @@ export function PracticeCard({
   // For plural_form cards, always show the Greek form (not a translation)
   // For sentence cards, use answer_ru from back_content (not word-level translationRu)
   const displayAnswer =
-    card.card_type === 'plural_form'
+    card.card_type === 'plural_form' || isArticleCard
       ? back.answer
       : isSentenceTargetToEl
         ? back.answer // Always Greek for target_to_el
@@ -344,6 +364,7 @@ export function PracticeCard({
       'What is the singular?': 'Какое единственное число?',
       'Translate this sentence': 'Переведите это предложение',
       'Translate to Greek': 'Переведите на греческий',
+      'What is the article?': 'Какой артикль?',
     };
 
     return promptTranslations[englishPrompt] || englishPrompt;
@@ -354,15 +375,28 @@ export function PracticeCard({
   const typeBadgeLabel =
     card.card_type === 'plural_form'
       ? t('practice.pluralFormBadge')
-      : isSentenceCard
-        ? t('practice.sentenceTranslationBadge')
-        : t('practice.meaningBadge');
+      : isArticleCard
+        ? t('practice.articleBadge')
+        : isSentenceCard
+          ? t('practice.sentenceTranslationBadge')
+          : t('practice.meaningBadge');
   const tapToRevealLabel = t('practice.tapToReveal');
   const answerLabel = t('practice.answer');
   const srsComingSoon = t('practice.srsComingSoon');
   // Suppress part-of-speech badge for sentence cards (badge contains CEFR level, not POS)
   const partOfSpeech =
     !isSentenceCard && front.badge ? (front.badge.toLowerCase() as PartOfSpeech) : null;
+
+  // For article cards, override answer_sub with gender label in the correct language
+  const displayBack = isArticleCard
+    ? {
+        ...back,
+        answer_sub:
+          currentLang === 'ru' && articleBack.gender_ru
+            ? articleBack.gender_ru
+            : articleBack.gender,
+      }
+    : back;
 
   const handleLangChange = (lang: 'en' | 'ru') => {
     i18n.changeLanguage(lang);
@@ -434,7 +468,7 @@ export function PracticeCard({
           />
         ) : (
           <CardBack
-            back={back}
+            back={displayBack}
             typeBadgeLabel={typeBadgeLabel}
             answerLabel={answerLabel}
             srsComingSoon={srsComingSoon}

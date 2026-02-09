@@ -344,8 +344,13 @@ async def bulk_upload_word_entries(
         entries, request.deck_id
     )
 
-    cards_created = meaning_created + plural_created + sentence_created
-    cards_updated = meaning_updated + plural_updated + sentence_updated
+    # Generate article cards for eligible noun entries
+    article_created, article_updated = await card_gen.generate_article_cards(
+        entries, request.deck_id
+    )
+
+    cards_created = meaning_created + plural_created + sentence_created + article_created
+    cards_updated = meaning_updated + plural_updated + sentence_updated + article_updated
 
     # Commit the transaction
     await db.commit()

@@ -1242,3 +1242,585 @@ class TestGenerateSentenceTranslationCards:
         card_dicts = mock_card_record_repo.bulk_upsert.call_args[0][0]
         for card_dict in card_dicts:
             assert card_dict["back_content"]["context"] is None
+
+
+# =============================================================================
+# Article Card Test Data
+# =============================================================================
+
+MASCULINE_NOUN_GRAMMAR_DATA = {
+    "gender": "masculine",
+    "cases": {
+        "singular": {
+            "nominative": "ο σκύλος",
+            "genitive": "του σκύλου",
+            "accusative": "τον σκύλο",
+        },
+        "plural": {
+            "nominative": "οι σκύλοι",
+            "genitive": "των σκύλων",
+            "accusative": "τους σκύλους",
+        },
+    },
+}
+
+NEUTER_NOUN_GRAMMAR_DATA = {
+    "gender": "neuter",
+    "cases": {
+        "singular": {
+            "nominative": "το σπίτι",
+            "genitive": "του σπιτιού",
+            "accusative": "το σπίτι",
+        },
+        "plural": {
+            "nominative": "τα σπίτια",
+            "genitive": "των σπιτιών",
+            "accusative": "τα σπίτια",
+        },
+    },
+}
+
+
+@pytest.mark.unit
+class TestGenerateArticleCards:
+    """Unit tests for CardGeneratorService.generate_article_cards()."""
+
+    @pytest.mark.asyncio
+    async def test_feminine_noun_produces_one_card(self, service, mock_card_record_repo):
+        """Feminine noun with gender and nominative produces 1 article card."""
+        deck_id = uuid4()
+        entry = _make_word_entry(
+            lemma="γάτα",
+            part_of_speech=PartOfSpeech.NOUN,
+            translation_en="cat",
+            grammar_data=NOUN_GRAMMAR_DATA,
+            deck_id=deck_id,
+        )
+
+        mock_card_record_repo.bulk_upsert.return_value = ([], 1, 0)
+
+        created, updated = await service.generate_article_cards([entry], deck_id)
+
+        assert created == 1
+        assert updated == 0
+
+        mock_card_record_repo.bulk_upsert.assert_called_once()
+        card_dicts = mock_card_record_repo.bulk_upsert.call_args[0][0]
+        assert len(card_dicts) == 1
+
+        card = card_dicts[0]
+        assert card["word_entry_id"] == entry.id
+        assert card["deck_id"] == deck_id
+        assert card["card_type"] == CardType.ARTICLE.value
+        assert card["variant_key"] == "default"
+        assert card["tier"] == 1
+        assert card["is_active"] is True
+
+    @pytest.mark.asyncio
+    async def test_masculine_noun_produces_one_card(self, service, mock_card_record_repo):
+        """Masculine noun with gender and nominative produces 1 article card."""
+        deck_id = uuid4()
+        entry = _make_word_entry(
+            lemma="σκύλος",
+            part_of_speech=PartOfSpeech.NOUN,
+            translation_en="dog",
+            grammar_data=MASCULINE_NOUN_GRAMMAR_DATA,
+            deck_id=deck_id,
+        )
+
+        mock_card_record_repo.bulk_upsert.return_value = ([], 1, 0)
+
+        await service.generate_article_cards([entry], deck_id)
+
+        card_dicts = mock_card_record_repo.bulk_upsert.call_args[0][0]
+        assert len(card_dicts) == 1
+
+        card = card_dicts[0]
+        assert card["back_content"]["answer"] == "ο σκύλος"
+        assert card["back_content"]["gender"] == "Masculine"
+        assert card["back_content"]["gender_ru"] == "Мужской род"
+
+    @pytest.mark.asyncio
+    async def test_neuter_noun_produces_one_card(self, service, mock_card_record_repo):
+        """Neuter noun with gender and nominative produces 1 article card."""
+        deck_id = uuid4()
+        entry = _make_word_entry(
+            lemma="σπίτι",
+            part_of_speech=PartOfSpeech.NOUN,
+            translation_en="house",
+            grammar_data=NEUTER_NOUN_GRAMMAR_DATA,
+            deck_id=deck_id,
+        )
+
+        mock_card_record_repo.bulk_upsert.return_value = ([], 1, 0)
+
+        await service.generate_article_cards([entry], deck_id)
+
+        card_dicts = mock_card_record_repo.bulk_upsert.call_args[0][0]
+        assert len(card_dicts) == 1
+
+        card = card_dicts[0]
+        assert card["back_content"]["answer"] == "το σπίτι"
+        assert card["back_content"]["gender"] == "Neuter"
+        assert card["back_content"]["gender_ru"] == "Средний род"
+
+    @pytest.mark.asyncio
+    async def test_front_content_fields(self, service, mock_card_record_repo):
+        """Front content has correct prompt, main=___ lemma, sub=translation_en, badge=Noun, hint=None."""
+        deck_id = uuid4()
+        entry = _make_word_entry(
+            lemma="γάτα",
+            part_of_speech=PartOfSpeech.NOUN,
+            translation_en="cat",
+            grammar_data=NOUN_GRAMMAR_DATA,
+            deck_id=deck_id,
+        )
+
+        mock_card_record_repo.bulk_upsert.return_value = ([], 1, 0)
+
+        await service.generate_article_cards([entry], deck_id)
+
+        card_dicts = mock_card_record_repo.bulk_upsert.call_args[0][0]
+        front = card_dicts[0]["front_content"]
+
+        assert front["card_type"] == "article"
+        assert front["prompt"] == "What is the article?"
+        assert front["main"] == "___ γάτα"
+        assert front["sub"] == "cat"
+        assert front["badge"] == "Noun"
+        assert front["hint"] is None
+
+    @pytest.mark.asyncio
+    async def test_back_content_fields_feminine(self, service, mock_card_record_repo):
+        """Back content has answer=nominative_singular, answer_sub=None, gender=English, gender_ru=Russian."""
+        deck_id = uuid4()
+        entry = _make_word_entry(
+            lemma="γάτα",
+            part_of_speech=PartOfSpeech.NOUN,
+            translation_en="cat",
+            grammar_data=NOUN_GRAMMAR_DATA,
+            deck_id=deck_id,
+        )
+
+        mock_card_record_repo.bulk_upsert.return_value = ([], 1, 0)
+
+        await service.generate_article_cards([entry], deck_id)
+
+        card_dicts = mock_card_record_repo.bulk_upsert.call_args[0][0]
+        back = card_dicts[0]["back_content"]
+
+        assert back["card_type"] == "article"
+        assert back["answer"] == "η γάτα"
+        assert back["answer_sub"] is None
+        assert back["gender"] == "Feminine"
+        assert back["gender_ru"] == "Женский род"
+
+    @pytest.mark.asyncio
+    async def test_non_noun_entries_are_skipped(self, service, mock_card_record_repo):
+        """Non-noun entries (verb, adjective, adverb, phrase) are silently skipped."""
+        deck_id = uuid4()
+        entries = [
+            _make_word_entry(
+                part_of_speech=PartOfSpeech.VERB,
+                grammar_data={
+                    "gender": "masculine",
+                    "cases": {"singular": {"nominative": "ο τρέχω"}},
+                },
+                deck_id=deck_id,
+            ),
+            _make_word_entry(
+                part_of_speech=PartOfSpeech.ADJECTIVE,
+                grammar_data={
+                    "gender": "masculine",
+                    "cases": {"singular": {"nominative": "ο καλός"}},
+                },
+                deck_id=deck_id,
+            ),
+            _make_word_entry(
+                part_of_speech=PartOfSpeech.ADVERB,
+                grammar_data={
+                    "gender": "masculine",
+                    "cases": {"singular": {"nominative": "ο γρήγορα"}},
+                },
+                deck_id=deck_id,
+            ),
+            _make_word_entry(
+                part_of_speech=PartOfSpeech.PHRASE,
+                grammar_data={"gender": "masculine", "cases": {"singular": {"nominative": "ο κ."}}},
+                deck_id=deck_id,
+            ),
+        ]
+
+        mock_card_record_repo.bulk_upsert.return_value = ([], 0, 0)
+
+        created, updated = await service.generate_article_cards(entries, deck_id)
+
+        assert created == 0
+        assert updated == 0
+        card_dicts = mock_card_record_repo.bulk_upsert.call_args[0][0]
+        assert len(card_dicts) == 0
+
+    @pytest.mark.asyncio
+    async def test_noun_without_grammar_data_is_skipped(self, service, mock_card_record_repo):
+        """Noun with grammar_data=None is skipped."""
+        deck_id = uuid4()
+        entry = _make_word_entry(
+            part_of_speech=PartOfSpeech.NOUN,
+            grammar_data=None,
+            deck_id=deck_id,
+        )
+
+        mock_card_record_repo.bulk_upsert.return_value = ([], 0, 0)
+
+        created, updated = await service.generate_article_cards([entry], deck_id)
+
+        assert created == 0
+        assert updated == 0
+        card_dicts = mock_card_record_repo.bulk_upsert.call_args[0][0]
+        assert len(card_dicts) == 0
+
+    @pytest.mark.asyncio
+    async def test_noun_without_gender_is_skipped(self, service, mock_card_record_repo):
+        """Noun with grammar_data missing gender key is skipped."""
+        deck_id = uuid4()
+        entry = _make_word_entry(
+            part_of_speech=PartOfSpeech.NOUN,
+            grammar_data={
+                "cases": {
+                    "singular": {"nominative": "η γάτα"},
+                    "plural": {"nominative": "οι γάτες"},
+                },
+            },
+            deck_id=deck_id,
+        )
+
+        mock_card_record_repo.bulk_upsert.return_value = ([], 0, 0)
+
+        await service.generate_article_cards([entry], deck_id)
+
+        card_dicts = mock_card_record_repo.bulk_upsert.call_args[0][0]
+        assert len(card_dicts) == 0
+
+    @pytest.mark.asyncio
+    async def test_noun_with_empty_gender_is_skipped(self, service, mock_card_record_repo):
+        """Noun with empty gender string is skipped."""
+        deck_id = uuid4()
+        entry = _make_word_entry(
+            part_of_speech=PartOfSpeech.NOUN,
+            grammar_data={
+                "gender": "",
+                "cases": {
+                    "singular": {"nominative": "η γάτα"},
+                },
+            },
+            deck_id=deck_id,
+        )
+
+        mock_card_record_repo.bulk_upsert.return_value = ([], 0, 0)
+
+        await service.generate_article_cards([entry], deck_id)
+
+        card_dicts = mock_card_record_repo.bulk_upsert.call_args[0][0]
+        assert len(card_dicts) == 0
+
+    @pytest.mark.asyncio
+    async def test_noun_without_nominative_singular_is_skipped(
+        self, service, mock_card_record_repo
+    ):
+        """Noun with gender but no cases.singular.nominative is skipped."""
+        deck_id = uuid4()
+        entry = _make_word_entry(
+            part_of_speech=PartOfSpeech.NOUN,
+            grammar_data={
+                "gender": "feminine",
+                "cases": {
+                    "plural": {"nominative": "οι γάτες"},
+                },
+            },
+            deck_id=deck_id,
+        )
+
+        mock_card_record_repo.bulk_upsert.return_value = ([], 0, 0)
+
+        await service.generate_article_cards([entry], deck_id)
+
+        card_dicts = mock_card_record_repo.bulk_upsert.call_args[0][0]
+        assert len(card_dicts) == 0
+
+    @pytest.mark.asyncio
+    async def test_noun_with_unknown_gender_is_skipped(self, service, mock_card_record_repo):
+        """Noun with unknown gender value (not in GENDER_LABELS) is skipped."""
+        deck_id = uuid4()
+        entry = _make_word_entry(
+            part_of_speech=PartOfSpeech.NOUN,
+            grammar_data={
+                "gender": "unknown_gender",
+                "cases": {
+                    "singular": {"nominative": "η γάτα"},
+                },
+            },
+            deck_id=deck_id,
+        )
+
+        mock_card_record_repo.bulk_upsert.return_value = ([], 0, 0)
+
+        await service.generate_article_cards([entry], deck_id)
+
+        card_dicts = mock_card_record_repo.bulk_upsert.call_args[0][0]
+        assert len(card_dicts) == 0
+
+    @pytest.mark.asyncio
+    async def test_empty_word_entries_list(self, service, mock_card_record_repo):
+        """Empty word entries list passes empty list to bulk_upsert, returning (0, 0)."""
+        deck_id = uuid4()
+        mock_card_record_repo.bulk_upsert.return_value = ([], 0, 0)
+
+        created, updated = await service.generate_article_cards([], deck_id)
+
+        mock_card_record_repo.bulk_upsert.assert_called_once_with([])
+        assert created == 0
+        assert updated == 0
+
+    @pytest.mark.asyncio
+    async def test_multiple_nouns_produce_correct_count(self, service, mock_card_record_repo):
+        """Multiple nouns with valid grammar_data produce correct number of cards."""
+        deck_id = uuid4()
+        entries = [
+            _make_word_entry(
+                lemma="γάτα",
+                part_of_speech=PartOfSpeech.NOUN,
+                translation_en="cat",
+                grammar_data=NOUN_GRAMMAR_DATA,
+                deck_id=deck_id,
+            ),
+            _make_word_entry(
+                lemma="σκύλος",
+                part_of_speech=PartOfSpeech.NOUN,
+                translation_en="dog",
+                grammar_data=MASCULINE_NOUN_GRAMMAR_DATA,
+                deck_id=deck_id,
+            ),
+            _make_word_entry(
+                lemma="σπίτι",
+                part_of_speech=PartOfSpeech.NOUN,
+                translation_en="house",
+                grammar_data=NEUTER_NOUN_GRAMMAR_DATA,
+                deck_id=deck_id,
+            ),
+        ]
+
+        mock_card_record_repo.bulk_upsert.return_value = ([], 3, 0)
+
+        created, updated = await service.generate_article_cards(entries, deck_id)
+
+        assert created == 3
+        card_dicts = mock_card_record_repo.bulk_upsert.call_args[0][0]
+        assert len(card_dicts) == 3
+
+    @pytest.mark.asyncio
+    async def test_mixed_entries_only_eligible_nouns_produce_cards(
+        self, service, mock_card_record_repo
+    ):
+        """Mixed entries: only eligible nouns (with gender + nominative) produce cards."""
+        deck_id = uuid4()
+        entries = [
+            # Eligible noun
+            _make_word_entry(
+                lemma="γάτα",
+                part_of_speech=PartOfSpeech.NOUN,
+                translation_en="cat",
+                grammar_data=NOUN_GRAMMAR_DATA,
+                deck_id=deck_id,
+            ),
+            # Verb - skipped
+            _make_word_entry(
+                lemma="τρέχω",
+                part_of_speech=PartOfSpeech.VERB,
+                grammar_data={"some": "data"},
+                deck_id=deck_id,
+            ),
+            # Noun without gender - skipped
+            _make_word_entry(
+                part_of_speech=PartOfSpeech.NOUN,
+                grammar_data={"cases": {"singular": {"nominative": "η γάτα"}}},
+                deck_id=deck_id,
+            ),
+            # Adjective - skipped
+            _make_word_entry(
+                part_of_speech=PartOfSpeech.ADJECTIVE,
+                grammar_data=ADJ_GRAMMAR_DATA,
+                deck_id=deck_id,
+            ),
+        ]
+
+        mock_card_record_repo.bulk_upsert.return_value = ([], 1, 0)
+
+        created, updated = await service.generate_article_cards(entries, deck_id)
+
+        assert created == 1
+        card_dicts = mock_card_record_repo.bulk_upsert.call_args[0][0]
+        assert len(card_dicts) == 1
+
+    @pytest.mark.asyncio
+    async def test_all_cards_have_tier_1_and_is_active_true(self, service, mock_card_record_repo):
+        """All article cards have tier=1 and is_active=True."""
+        deck_id = uuid4()
+        entries = [
+            _make_word_entry(
+                lemma="γάτα",
+                part_of_speech=PartOfSpeech.NOUN,
+                grammar_data=NOUN_GRAMMAR_DATA,
+                deck_id=deck_id,
+            ),
+            _make_word_entry(
+                lemma="σκύλος",
+                part_of_speech=PartOfSpeech.NOUN,
+                grammar_data=MASCULINE_NOUN_GRAMMAR_DATA,
+                deck_id=deck_id,
+            ),
+        ]
+
+        mock_card_record_repo.bulk_upsert.return_value = ([], 2, 0)
+
+        await service.generate_article_cards(entries, deck_id)
+
+        card_dicts = mock_card_record_repo.bulk_upsert.call_args[0][0]
+        for i, card_dict in enumerate(card_dicts):
+            assert card_dict["tier"] == 1, f"Card {i} tier != 1"
+            assert card_dict["is_active"] is True, f"Card {i} is_active != True"
+
+    @pytest.mark.asyncio
+    async def test_card_type_is_article(self, service, mock_card_record_repo):
+        """All article cards have card_type == CardType.ARTICLE.value == 'article'."""
+        deck_id = uuid4()
+        entry = _make_word_entry(
+            lemma="γάτα",
+            part_of_speech=PartOfSpeech.NOUN,
+            grammar_data=NOUN_GRAMMAR_DATA,
+            deck_id=deck_id,
+        )
+
+        mock_card_record_repo.bulk_upsert.return_value = ([], 1, 0)
+
+        await service.generate_article_cards([entry], deck_id)
+
+        card_dicts = mock_card_record_repo.bulk_upsert.call_args[0][0]
+        assert card_dicts[0]["card_type"] == CardType.ARTICLE.value
+        assert card_dicts[0]["card_type"] == "article"
+
+    @pytest.mark.asyncio
+    async def test_variant_key_is_default(self, service, mock_card_record_repo):
+        """All article cards have variant_key='default'."""
+        deck_id = uuid4()
+        entries = [
+            _make_word_entry(
+                lemma="γάτα",
+                part_of_speech=PartOfSpeech.NOUN,
+                grammar_data=NOUN_GRAMMAR_DATA,
+                deck_id=deck_id,
+            ),
+            _make_word_entry(
+                lemma="σκύλος",
+                part_of_speech=PartOfSpeech.NOUN,
+                grammar_data=MASCULINE_NOUN_GRAMMAR_DATA,
+                deck_id=deck_id,
+            ),
+        ]
+
+        mock_card_record_repo.bulk_upsert.return_value = ([], 2, 0)
+
+        await service.generate_article_cards(entries, deck_id)
+
+        card_dicts = mock_card_record_repo.bulk_upsert.call_args[0][0]
+        for card_dict in card_dicts:
+            assert card_dict["variant_key"] == "default"
+
+    @pytest.mark.asyncio
+    async def test_gender_labels_all_three_genders(self, service, mock_card_record_repo):
+        """Gender labels map correctly for all three genders."""
+        deck_id = uuid4()
+        entries = [
+            _make_word_entry(
+                lemma="γάτα",
+                part_of_speech=PartOfSpeech.NOUN,
+                translation_en="cat",
+                grammar_data=NOUN_GRAMMAR_DATA,  # feminine
+                deck_id=deck_id,
+            ),
+            _make_word_entry(
+                lemma="σκύλος",
+                part_of_speech=PartOfSpeech.NOUN,
+                translation_en="dog",
+                grammar_data=MASCULINE_NOUN_GRAMMAR_DATA,  # masculine
+                deck_id=deck_id,
+            ),
+            _make_word_entry(
+                lemma="σπίτι",
+                part_of_speech=PartOfSpeech.NOUN,
+                translation_en="house",
+                grammar_data=NEUTER_NOUN_GRAMMAR_DATA,  # neuter
+                deck_id=deck_id,
+            ),
+        ]
+
+        mock_card_record_repo.bulk_upsert.return_value = ([], 3, 0)
+
+        await service.generate_article_cards(entries, deck_id)
+
+        card_dicts = mock_card_record_repo.bulk_upsert.call_args[0][0]
+
+        # feminine
+        assert card_dicts[0]["back_content"]["gender"] == "Feminine"
+        assert card_dicts[0]["back_content"]["gender_ru"] == "Женский род"
+        # masculine
+        assert card_dicts[1]["back_content"]["gender"] == "Masculine"
+        assert card_dicts[1]["back_content"]["gender_ru"] == "Мужской род"
+        # neuter
+        assert card_dicts[2]["back_content"]["gender"] == "Neuter"
+        assert card_dicts[2]["back_content"]["gender_ru"] == "Средний род"
+
+    @pytest.mark.asyncio
+    async def test_noun_with_empty_nominative_is_skipped(self, service, mock_card_record_repo):
+        """Noun with empty nominative string is skipped (safe_get returns None for empty strings)."""
+        deck_id = uuid4()
+        entry = _make_word_entry(
+            part_of_speech=PartOfSpeech.NOUN,
+            grammar_data={
+                "gender": "feminine",
+                "cases": {
+                    "singular": {"nominative": ""},
+                },
+            },
+            deck_id=deck_id,
+        )
+
+        mock_card_record_repo.bulk_upsert.return_value = ([], 0, 0)
+
+        await service.generate_article_cards([entry], deck_id)
+
+        card_dicts = mock_card_record_repo.bulk_upsert.call_args[0][0]
+        assert len(card_dicts) == 0
+
+    @pytest.mark.asyncio
+    async def test_noun_with_whitespace_only_nominative_is_skipped(
+        self, service, mock_card_record_repo
+    ):
+        """Noun with whitespace-only nominative is skipped (safe_get strips whitespace)."""
+        deck_id = uuid4()
+        entry = _make_word_entry(
+            part_of_speech=PartOfSpeech.NOUN,
+            grammar_data={
+                "gender": "feminine",
+                "cases": {
+                    "singular": {"nominative": "   "},
+                },
+            },
+            deck_id=deck_id,
+        )
+
+        mock_card_record_repo.bulk_upsert.return_value = ([], 0, 0)
+
+        await service.generate_article_cards([entry], deck_id)
+
+        card_dicts = mock_card_record_repo.bulk_upsert.call_args[0][0]
+        assert len(card_dicts) == 0

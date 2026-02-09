@@ -8,6 +8,8 @@ from src.core.logging import get_logger
 from src.db.models import CardType, PartOfSpeech, WordEntry
 from src.repositories.card_record import CardRecordRepository
 from src.schemas.card_record import (
+    ArticleBack,
+    ArticleFront,
     ExampleContext,
     MeaningElToEnBack,
     MeaningElToEnFront,
@@ -20,6 +22,12 @@ from src.schemas.card_record import (
 )
 
 logger = get_logger(__name__)
+
+GENDER_LABELS = {
+    "masculine": ("Masculine", "Мужской род"),
+    "feminine": ("Feminine", "Женский род"),
+    "neuter": ("Neuter", "Средний род"),
+}
 
 
 def _safe_get(d: dict, *keys: str) -> str | None:
@@ -179,6 +187,49 @@ class CardGeneratorService:
             "is_active": True,
         }
 
+    def _build_article_card_dict(
+        self,
+        we: WordEntry,
+        deck_id: UUID,
+        variant_key: str,
+        *,
+        prompt: str,
+        main: str,
+        sub: str | None,
+        badge: str,
+        hint: str | None,
+        answer: str,
+        answer_sub: str | None,
+        gender: str,
+        gender_ru: str | None,
+    ) -> dict:
+        """Build a card dict for an article card."""
+        front = ArticleFront(
+            card_type="article",
+            prompt=prompt,
+            main=main,
+            sub=sub,
+            badge=badge,
+            hint=hint,
+        )
+        back = ArticleBack(
+            card_type="article",
+            answer=answer,
+            answer_sub=answer_sub,
+            gender=gender,
+            gender_ru=gender_ru,
+        )
+        return {
+            "word_entry_id": we.id,
+            "deck_id": deck_id,
+            "card_type": CardType.ARTICLE.value,
+            "variant_key": variant_key,
+            "tier": 1,
+            "front_content": front.model_dump(),
+            "back_content": back.model_dump(),
+            "is_active": True,
+        }
+
     def _build_sentence_translation_card_dict(
         self,
         we: WordEntry,
@@ -328,6 +379,69 @@ class CardGeneratorService:
                             answer_sub=None,
                         )
                     )
+
+        _records, created, updated = await self.card_record_repo.bulk_upsert(card_dicts)
+        return created, updated
+
+    async def generate_article_cards(
+        self, word_entries: list[WordEntry], deck_id: UUID
+    ) -> tuple[int, int]:
+        """Generate article flashcards for nouns with gender data.
+
+        For each noun WordEntry that has grammar_data with a non-empty
+        "gender" field and nominative singular case form, generates one
+        article card testing knowledge of the correct Greek article.
+
+        Args:
+            word_entries: List of WordEntry objects to generate cards from
+            deck_id: UUID of the deck to associate cards with
+
+        Returns:
+            Tuple of (created_count, updated_count) from bulk upsert
+
+        Note:
+            Does NOT commit. Caller must call db.commit() after.
+        """
+        card_dicts: list[dict] = []
+
+        for we in word_entries:
+            gd = we.grammar_data
+            if not gd:
+                continue
+
+            if we.part_of_speech != PartOfSpeech.NOUN:
+                continue
+
+            gender = _safe_get(gd, "gender")
+            if not gender:
+                continue
+
+            nom_sg = _safe_get(gd, "cases", "singular", "nominative")
+            if not nom_sg:
+                continue
+
+            labels = GENDER_LABELS.get(gender)
+            if not labels:
+                continue
+
+            gender_en, gender_ru = labels
+
+            card_dicts.append(
+                self._build_article_card_dict(
+                    we,
+                    deck_id,
+                    "default",
+                    prompt="What is the article?",
+                    main=f"___ {we.lemma}",
+                    sub=we.translation_en,
+                    badge="Noun",
+                    hint=None,
+                    answer=nom_sg,
+                    answer_sub=None,
+                    gender=gender_en,
+                    gender_ru=gender_ru,
+                )
+            )
 
         _records, created, updated = await self.card_record_repo.bulk_upsert(card_dicts)
         return created, updated
