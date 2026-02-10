@@ -25,6 +25,13 @@
     --ring: 240 5.9% 10%;
     --radius: 0.625rem;
 
+    /* Font family tokens */
+    --cult-font-sans:
+      'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+      sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
+    --cult-font-serif: Georgia, 'Times New Roman', Times, serif;
+    --cult-font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+
     /* Semantic status colors */
     --success: 160 84% 39%; /* emerald-600: #059669 */
     --success-foreground: 0 0% 100%; /* white */

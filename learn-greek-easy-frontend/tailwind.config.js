@@ -89,7 +89,9 @@ export default {
   				'"Apple Color Emoji"',
   				'"Segoe UI Emoji"',
   				'"Segoe UI Symbol"'
-  			]
+  			],
+  			'cult-serif': ['Georgia', '"Times New Roman"', 'Times', 'serif'],
+  			'cult-mono': ['ui-monospace', 'SFMono-Regular', '"SF Mono"', 'Menlo', 'Consolas', 'monospace']
   		},
   		fontSize: {
   			xs: [
