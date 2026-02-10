@@ -232,7 +232,10 @@ export default {
   			'landing-fade-in': 'landing-fade-in 0.4s ease-out forwards',
   			'scale-in': 'scale-in 0.3s ease-out forwards',
   			'float': 'float 6s ease-in-out infinite',
-  			'shimmer': 'shimmer 2s linear infinite'
+  			'shimmer': 'shimmer 2s linear infinite',
+			'cult-fade-in': 'cultFadeIn 0.35s ease-out',
+			'cult-slide-up': 'cultSlideUp 0.35s ease-out',
+			'cult-pop-in': 'cultPopIn 0.3s ease-out'
   		},
   		keyframes: {
   			fadeIn: {
@@ -321,7 +324,38 @@ export default {
   				'100%': {
   					backgroundPosition: '200% 0'
   				}
-  			}
+  			},
+			cultFadeIn: {
+				from: {
+					opacity: '0',
+					transform: 'translateY(6px)'
+				},
+				to: {
+					opacity: '1',
+					transform: 'translateY(0)'
+				}
+			},
+			cultSlideUp: {
+				from: {
+					opacity: '0',
+					transform: 'translateY(12px)'
+				},
+				to: {
+					opacity: '1',
+					transform: 'translateY(0)'
+				}
+			},
+			cultPopIn: {
+				'0%': {
+					transform: 'scale(0)'
+				},
+				'70%': {
+					transform: 'scale(1.2)'
+				},
+				'100%': {
+					transform: 'scale(1)'
+				}
+			}
   		},
   		container: {
   			center: true,
