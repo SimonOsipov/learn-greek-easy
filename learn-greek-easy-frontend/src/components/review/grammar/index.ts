@@ -8,6 +8,8 @@ export { GenderBadge } from './GenderBadge';
 export type { GenderBadgeProps } from './GenderBadge';
 export { GenderTabs } from './GenderTabs';
 export type { GenderTabsProps } from './GenderTabs';
+export { getMediaType, MediaBadge } from './MediaBadge';
+export type { MediaBadgeProps, MediaType } from './MediaBadge';
 export { NounDeclensionTable } from './NounDeclensionTable';
 export type { NounDeclensionTableProps } from './NounDeclensionTable';
 export { PartOfSpeechBadge } from './PartOfSpeechBadge';
