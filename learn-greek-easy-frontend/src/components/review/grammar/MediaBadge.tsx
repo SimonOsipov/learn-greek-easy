@@ -1,3 +1,7 @@
+import { useTranslation } from 'react-i18next';
+
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 import type { CardRecordType } from '@/services/wordEntryAPI';
 
 /**
@@ -29,4 +33,48 @@ export function getMediaType(cardType: CardRecordType): MediaType {
     case 'cloze':
       return 'grammar';
   }
+}
+
+const MEDIA_TYPE_CONFIG: Record<
+  MediaType,
+  { bgClass: string; textClass: string; labelKey: string }
+> = {
+  vocabulary: {
+    bgClass: 'bg-blue-500',
+    textClass: 'text-white',
+    labelKey: 'practice.meaningBadge',
+  },
+  sentence: {
+    bgClass: 'bg-teal-500',
+    textClass: 'text-white',
+    labelKey: 'practice.sentenceTranslationBadge',
+  },
+  plural: {
+    bgClass: 'bg-purple-500',
+    textClass: 'text-white',
+    labelKey: 'practice.pluralFormBadge',
+  },
+  article: { bgClass: 'bg-amber-500', textClass: 'text-white', labelKey: 'practice.articleBadge' },
+  grammar: {
+    bgClass: 'bg-emerald-500',
+    textClass: 'text-white',
+    labelKey: 'practice.grammarBadge',
+  },
+};
+
+export interface MediaBadgeProps {
+  cardType: CardRecordType;
+  className?: string;
+}
+
+export function MediaBadge({ cardType, className }: MediaBadgeProps) {
+  const { t } = useTranslation('deck');
+  const mediaType = getMediaType(cardType);
+  const config = MEDIA_TYPE_CONFIG[mediaType];
+
+  return (
+    <Badge className={cn(config.bgClass, config.textClass, className)} data-testid="media-badge">
+      {t(config.labelKey)}
+    </Badge>
+  );
 }
