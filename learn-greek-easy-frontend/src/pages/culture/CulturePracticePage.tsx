@@ -21,7 +21,12 @@ import posthog from 'posthog-js';
 import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate } from 'react-router-dom';
 
-import { MCQComponent, QuestionFeedback, LanguageSelector } from '@/components/culture';
+import {
+  MCQComponent,
+  QuestionFeedback,
+  LanguageSelector,
+  ProgressBar,
+} from '@/components/culture';
 import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -34,7 +39,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useTrackEvent } from '@/hooks/useTrackEvent';
 import i18n from '@/i18n';
@@ -612,7 +616,6 @@ export function CulturePracticePage() {
     );
   }
 
-  const progressPercent = (progress.current / progress.total) * 100;
   const currentLanguage = session.config.language;
   const isInFeedback = session.phase === 'feedback' && lastAnswerResponse !== null;
 
@@ -638,17 +641,7 @@ export function CulturePracticePage() {
         </div>
 
         {/* Progress bar */}
-        <div className="mb-6">
-          <div className="mb-2 text-sm text-foreground">
-            <span>
-              {t('mcq.questionOf', {
-                current: progress.current,
-                total: progress.total,
-              })}
-            </span>
-          </div>
-          <Progress value={progressPercent} className="h-2 bg-secondary" />
-        </div>
+        <ProgressBar current={progress.current} total={progress.total} className="mb-6" />
 
         {/* Question or Feedback */}
         <div className="flex justify-center">
