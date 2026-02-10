@@ -140,6 +140,10 @@ class PluralFormFront(FrontContentBase):
     """Front content for plural form cards."""
 
     card_type: Literal["plural_form"]
+    hint_ru: Optional[str] = Field(
+        default=None,
+        description="Russian translation hint on card front (singular or plural based on direction)",
+    )
 
 
 class ArticleFront(FrontContentBase):
@@ -224,6 +228,10 @@ class PluralFormBack(BackContentBase):
     """Back content for plural form cards."""
 
     card_type: Literal["plural_form"]
+    answer_sub_ru: Optional[str] = Field(
+        default=None,
+        description="Russian translation shown below the answer (plural or singular based on direction)",
+    )
 
 
 class ArticleBack(BackContentBase):

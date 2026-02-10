@@ -81,6 +81,14 @@ class CardGeneratorService:
         for we in word_entries:
             badge = we.part_of_speech.value.capitalize()
 
+            # Get word with article (for nouns) or plain lemma (for other parts of speech)
+            word_with_article = we.lemma
+            if we.grammar_data and isinstance(we.grammar_data, dict):
+                # Try to get nominative form with article (for nouns)
+                nominative = we.grammar_data.get("cases", {}).get("singular", {}).get("nominative")
+                if nominative:
+                    word_with_article = nominative
+
             context = None
             if we.examples and len(we.examples) > 0:
                 first = we.examples[0]
@@ -94,7 +102,7 @@ class CardGeneratorService:
             el_to_en_front = MeaningElToEnFront(
                 card_type="meaning_el_to_en",
                 prompt="What does this mean?",
-                main=we.lemma,
+                main=word_with_article,
                 sub=we.pronunciation,
                 badge=badge,
                 hint=None,
@@ -128,7 +136,7 @@ class CardGeneratorService:
             )
             en_to_el_back = MeaningEnToElBack(
                 card_type="meaning_en_to_el",
-                answer=we.lemma,
+                answer=word_with_article,
                 answer_sub=we.pronunciation,
                 context=context,
             )
@@ -159,8 +167,10 @@ class CardGeneratorService:
         sub: str | None,
         badge: str,
         hint: str,
+        hint_ru: str | None,
         answer: str,
         answer_sub: str | None,
+        answer_sub_ru: str | None,
     ) -> dict:
         """Build a card dict for a plural form card."""
         front = PluralFormFront(
@@ -170,11 +180,13 @@ class CardGeneratorService:
             sub=sub,
             badge=badge,
             hint=hint,
+            hint_ru=hint_ru,
         )
         back = PluralFormBack(
             card_type="plural_form",
             answer=answer,
             answer_sub=answer_sub,
+            answer_sub_ru=answer_sub_ru,
         )
         return {
             "word_entry_id": we.id,
@@ -315,8 +327,10 @@ class CardGeneratorService:
                         sub=None,
                         badge="Noun",
                         hint=we.translation_en,
+                        hint_ru=we.translation_ru,
                         answer=pl,
-                        answer_sub=None,
+                        answer_sub=we.translation_en_plural,
+                        answer_sub_ru=we.translation_ru_plural,
                     )
                 )
                 # pl -> sg card
@@ -329,9 +343,11 @@ class CardGeneratorService:
                         main=pl,
                         sub=None,
                         badge="Noun",
-                        hint=we.translation_en,
+                        hint=we.translation_en_plural or we.translation_en,
+                        hint_ru=we.translation_ru_plural or we.translation_ru,
                         answer=sg,
-                        answer_sub=None,
+                        answer_sub=we.translation_en,
+                        answer_sub_ru=we.translation_ru,
                     )
                 )
 
@@ -360,8 +376,10 @@ class CardGeneratorService:
                             sub=gender_key,
                             badge=badge,
                             hint=we.translation_en,
+                            hint_ru=we.translation_ru,
                             answer=pl,
-                            answer_sub=None,
+                            answer_sub=we.translation_en_plural,
+                            answer_sub_ru=we.translation_ru_plural,
                         )
                     )
                     # pl -> sg card
@@ -374,9 +392,11 @@ class CardGeneratorService:
                             main=pl,
                             sub=gender_key,
                             badge=badge,
-                            hint=we.translation_en,
+                            hint=we.translation_en_plural or we.translation_en,
+                            hint_ru=we.translation_ru_plural or we.translation_ru,
                             answer=sg,
-                            answer_sub=None,
+                            answer_sub=we.translation_en,
+                            answer_sub_ru=we.translation_ru,
                         )
                     )
 

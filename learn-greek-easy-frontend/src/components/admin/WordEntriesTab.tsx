@@ -49,6 +49,7 @@ interface BulkWordEntryInput {
   translation_en: string;
   translation_en_plural?: string | null;
   translation_ru?: string | null;
+  translation_ru_plural?: string | null;
   pronunciation?: string | null;
   grammar_data?: Record<string, unknown> | null;
   examples?: BulkExampleSentence[] | null;

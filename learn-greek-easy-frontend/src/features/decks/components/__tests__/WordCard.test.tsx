@@ -27,6 +27,7 @@ const mockWordEntry: WordEntryResponse = {
   translation_en: 'to speak, to talk',
   translation_en_plural: null,
   translation_ru: 'говорить',
+  translation_ru_plural: null,
   pronunciation: 'miláo',
   grammar_data: null,
   examples: null,

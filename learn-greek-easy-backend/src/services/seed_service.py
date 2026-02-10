@@ -4783,7 +4783,7 @@ class SeedService:
             deck_id: UUID of the deck to add entries to
             vocabulary: List of word data dicts with keys: lemma, part_of_speech,
                 translation_en, translation_en_plural (optional), translation_ru,
-                pronunciation, grammar_data, examples
+                translation_ru_plural (optional), pronunciation, grammar_data, examples
 
         Returns:
             List of created WordEntry objects
@@ -4797,6 +4797,7 @@ class SeedService:
                 translation_en=word_data["translation_en"],
                 translation_en_plural=word_data.get("translation_en_plural"),
                 translation_ru=word_data.get("translation_ru"),
+                translation_ru_plural=word_data.get("translation_ru_plural"),
                 pronunciation=word_data.get("pronunciation"),
                 grammar_data=word_data.get("grammar_data"),
                 examples=word_data.get("examples"),
@@ -4876,6 +4877,7 @@ class SeedService:
                 "translation_en": "house, home",
                 "translation_en_plural": "houses, homes",
                 "translation_ru": "дом",
+                "translation_ru_plural": "дома",
                 "pronunciation": "/spí·ti/",
                 "grammar_data": {
                     "gender": "neuter",
@@ -4908,6 +4910,7 @@ class SeedService:
                 "translation_en": "water",
                 "translation_en_plural": "waters",
                 "translation_ru": "вода",
+                "translation_ru_plural": "воды",
                 "pronunciation": "/ne·ró/",
                 "grammar_data": {
                     "gender": "neuter",
@@ -4940,6 +4943,7 @@ class SeedService:
                 "translation_en": "book",
                 "translation_en_plural": "books",
                 "translation_ru": "книга",
+                "translation_ru_plural": "книги",
                 "pronunciation": "/vi·vlí·o/",
                 "grammar_data": {
                     "gender": "neuter",
@@ -4972,6 +4976,7 @@ class SeedService:
                 "translation_en": "child",
                 "translation_en_plural": "children",
                 "translation_ru": "ребёнок",
+                "translation_ru_plural": "дети",
                 "pronunciation": "/pe·dhí/",
                 "grammar_data": {
                     "gender": "neuter",
@@ -5005,6 +5010,7 @@ class SeedService:
                 "translation_en": "dog",
                 "translation_en_plural": "dogs",
                 "translation_ru": "собака",
+                "translation_ru_plural": "собаки",
                 "pronunciation": "/skí·los/",
                 "grammar_data": {
                     "gender": "masculine",
@@ -5037,6 +5043,7 @@ class SeedService:
                 "translation_en": "teacher (male)",
                 "translation_en_plural": "teachers (male)",
                 "translation_ru": "учитель",
+                "translation_ru_plural": "учителя",
                 "pronunciation": "/dhá·ska·los/",
                 "grammar_data": {
                     "gender": "masculine",
@@ -5069,6 +5076,7 @@ class SeedService:
                 "translation_en": "road, street",
                 "translation_en_plural": "roads, streets",
                 "translation_ru": "дорога, улица",
+                "translation_ru_plural": "дороги, улицы",
                 "pronunciation": "/dhró·mos/",
                 "grammar_data": {
                     "gender": "masculine",
@@ -5101,6 +5109,7 @@ class SeedService:
                 "translation_en": "friend (male)",
                 "translation_en_plural": "friends (male)",
                 "translation_ru": "друг",
+                "translation_ru_plural": "друзья",
                 "pronunciation": "/fí·los/",
                 "grammar_data": {
                     "gender": "masculine",
@@ -5134,6 +5143,7 @@ class SeedService:
                 "translation_en": "cat",
                 "translation_en_plural": "cats",
                 "translation_ru": "кошка",
+                "translation_ru_plural": "кошки",
                 "pronunciation": "/ghá·ta/",
                 "grammar_data": {
                     "gender": "feminine",
@@ -5166,6 +5176,7 @@ class SeedService:
                 "translation_en": "woman, wife",
                 "translation_en_plural": "women, wives",
                 "translation_ru": "женщина, жена",
+                "translation_ru_plural": "женщины, жёны",
                 "pronunciation": "/yi·né·ka/",
                 "grammar_data": {
                     "gender": "feminine",
@@ -5533,6 +5544,7 @@ class SeedService:
                 "translation_en": "good, nice",
                 "translation_en_plural": "good, nice",
                 "translation_ru": "хороший",
+                "translation_ru_plural": "хорошие",
                 "pronunciation": "/ka·lós/",
                 "grammar_data": {
                     "declension_group": "os_i_o",
@@ -5590,6 +5602,7 @@ class SeedService:
                 "translation_en": "big, large, great",
                 "translation_en_plural": "big, large, great",
                 "translation_ru": "большой, великий",
+                "translation_ru_plural": "большие, великие",
                 "pronunciation": "/me·ghá·los/",
                 "grammar_data": {
                     "declension_group": "os_i_o",
@@ -5647,6 +5660,7 @@ class SeedService:
                 "translation_en": "small, little",
                 "translation_en_plural": "small, little",
                 "translation_ru": "маленький",
+                "translation_ru_plural": "маленькие",
                 "pronunciation": "/mi·krós/",
                 "grammar_data": {
                     "declension_group": "os_i_o",
@@ -5704,6 +5718,7 @@ class SeedService:
                 "translation_en": "young, new",
                 "translation_en_plural": "young, new",
                 "translation_ru": "молодой, новый",
+                "translation_ru_plural": "молодые, новые",
                 "pronunciation": "/né·os/",
                 "grammar_data": {
                     "declension_group": "os_a_o",
