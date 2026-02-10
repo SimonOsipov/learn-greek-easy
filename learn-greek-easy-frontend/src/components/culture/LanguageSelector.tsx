@@ -49,8 +49,8 @@ export interface LanguageSelectorProps {
   /** Callback when language changes */
   onChange: (lang: CultureLanguage) => void;
 
-  /** Display variant: buttons (default) or dropdown */
-  variant?: 'buttons' | 'dropdown';
+  /** Display variant: buttons (default), dropdown, or pill */
+  variant?: 'buttons' | 'dropdown' | 'pill';
 
   /** Size variant */
   size?: 'sm' | 'md';
