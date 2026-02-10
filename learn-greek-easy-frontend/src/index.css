@@ -25,6 +25,13 @@
     --ring: 240 5.9% 10%;
     --radius: 0.625rem;
 
+    /* Font family tokens */
+    --cult-font-sans:
+      'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+      sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
+    --cult-font-serif: Georgia, 'Times New Roman', Times, serif;
+    --cult-font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+
     /* Semantic status colors */
     --success: 160 84% 39%; /* emerald-600: #059669 */
     --success-foreground: 0 0% 100%; /* white */
@@ -41,6 +48,29 @@
     --landing-shadow-card: 0 0 0 1px hsl(var(--border)), 0 4px 12px hsl(240 27% 14% / 0.04);
     --landing-shadow-card-hover:
       0 0 0 1px hsl(var(--landing-greek-blue) / 0.2), 0 8px 24px hsl(240 27% 14% / 0.08);
+
+    /* Culture card design tokens */
+    --cult-accent: #6366f1; /* indigo-500 */
+    --cult-accent-glow: rgba(99, 102, 241, 0.15); /* indigo-500 @ 15% */
+    --cult-accent-soft: rgba(99, 102, 241, 0.08); /* indigo-500 @ 8% */
+
+    --cult-correct: #10b981; /* emerald-500 */
+    --cult-correct-glow: rgba(16, 185, 129, 0.15); /* emerald-500 @ 15% */
+    --cult-correct-soft: rgba(16, 185, 129, 0.08); /* emerald-500 @ 8% */
+
+    --cult-incorrect: #ef4444; /* red-500 */
+    --cult-incorrect-glow: rgba(239, 68, 68, 0.15); /* red-500 @ 15% */
+    --cult-incorrect-soft: rgba(239, 68, 68, 0.08); /* red-500 @ 8% */
+
+    --cult-gold: #f59e0b; /* amber-500 */
+    --cult-purple: #8b5cf6; /* violet-500 */
+
+    --cult-bg: #f1f5f9; /* slate-100 */
+    --cult-card: #ffffff; /* white */
+    --cult-border: #e2e8f0; /* slate-200 */
+    --cult-text: #0f172a; /* slate-900 */
+    --cult-text-muted: #64748b; /* slate-500 */
+    --cult-text-dim: #94a3b8; /* slate-400 */
   }
 
   .dark {
@@ -68,6 +98,29 @@
     --success-foreground: 0 0% 100%;
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
+
+    /* Culture card design tokens (dark) */
+    --cult-accent: #818cf8; /* indigo-400 */
+    --cult-accent-glow: rgba(129, 140, 248, 0.15); /* indigo-400 @ 15% */
+    --cult-accent-soft: rgba(129, 140, 248, 0.08); /* indigo-400 @ 8% */
+
+    --cult-correct: #34d399; /* emerald-400 */
+    --cult-correct-glow: rgba(52, 211, 153, 0.15); /* emerald-400 @ 15% */
+    --cult-correct-soft: rgba(52, 211, 153, 0.08); /* emerald-400 @ 8% */
+
+    --cult-incorrect: #f87171; /* red-400 */
+    --cult-incorrect-glow: rgba(248, 113, 113, 0.15); /* red-400 @ 15% */
+    --cult-incorrect-soft: rgba(248, 113, 113, 0.08); /* red-400 @ 8% */
+
+    --cult-gold: #fbbf24; /* amber-400 */
+    --cult-purple: #a78bfa; /* violet-400 */
+
+    --cult-bg: #0f172a; /* slate-900 */
+    --cult-card: #1e293b; /* slate-800 */
+    --cult-border: #334155; /* slate-700 */
+    --cult-text: #f1f5f9; /* slate-100 */
+    --cult-text-muted: #94a3b8; /* slate-400 */
+    --cult-text-dim: #64748b; /* slate-500 */
   }
 }
 
@@ -119,6 +172,41 @@
 
   .highlight-animation {
     animation: highlight-pulse 0.5s ease-in-out 3;
+  }
+
+  /* Cult/UI keyframe animations for design token components */
+  @keyframes cultFadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes cultSlideUp {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes cultPopIn {
+    0% {
+      transform: scale(0);
+    }
+    70% {
+      transform: scale(1.2);
+    }
+    100% {
+      transform: scale(1);
+    }
   }
 }
 
