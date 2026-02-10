@@ -263,3 +263,205 @@ describe('LanguageSelector — pill variant', () => {
     });
   });
 });
+
+describe('LanguageSelector — buttons variant (regression)', () => {
+  const defaultProps = {
+    value: 'en' as const,
+    onChange: vi.fn(),
+    variant: 'buttons' as const,
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+  });
+
+  describe('Rendering', () => {
+    it('should render three buttons with language codes', () => {
+      renderWithProviders(<LanguageSelector {...defaultProps} />);
+      const group = screen.getByRole('group');
+      const buttons = within(group).getAllByRole('button');
+      expect(buttons).toHaveLength(3);
+      expect(buttons[0]).toHaveTextContent('EL');
+      expect(buttons[1]).toHaveTextContent('EN');
+      expect(buttons[2]).toHaveTextContent('RU');
+    });
+
+    it('should render buttons variant by default (no variant prop)', () => {
+      renderWithProviders(<LanguageSelector value="en" onChange={vi.fn()} />);
+      const group = screen.getByRole('group');
+      const buttons = within(group).getAllByRole('button');
+      expect(buttons).toHaveLength(3);
+      // buttons variant uses border-border on container
+      expect(group.className).toContain('border-border');
+    });
+
+    it('should apply selected styles to current language', () => {
+      renderWithProviders(<LanguageSelector {...defaultProps} value="en" />);
+      const group = screen.getByRole('group');
+      const buttons = within(group).getAllByRole('button');
+      expect(buttons[1].className).toContain('bg-primary/20');
+      expect(buttons[1].className).toContain('text-primary');
+    });
+
+    it('should apply unselected styles to other languages', () => {
+      renderWithProviders(<LanguageSelector {...defaultProps} value="en" />);
+      const group = screen.getByRole('group');
+      const buttons = within(group).getAllByRole('button');
+      expect(buttons[0].className).toContain('text-muted-foreground');
+      expect(buttons[2].className).toContain('text-muted-foreground');
+    });
+
+    it('should apply sm size classes', () => {
+      renderWithProviders(<LanguageSelector {...defaultProps} size="sm" />);
+      const group = screen.getByRole('group');
+      const buttons = within(group).getAllByRole('button');
+      buttons.forEach((btn) => {
+        expect(btn.className).toContain('px-2');
+        expect(btn.className).toContain('text-xs');
+      });
+    });
+
+    it('should apply md size classes by default', () => {
+      renderWithProviders(<LanguageSelector {...defaultProps} />);
+      const group = screen.getByRole('group');
+      const buttons = within(group).getAllByRole('button');
+      buttons.forEach((btn) => {
+        expect(btn.className).toContain('px-3');
+        expect(btn.className).toContain('text-sm');
+      });
+    });
+
+    it('should merge custom className onto container', () => {
+      renderWithProviders(<LanguageSelector {...defaultProps} className="regression-test" />);
+      const group = screen.getByRole('group');
+      expect(group.className).toContain('regression-test');
+      expect(group.className).toContain('inline-flex');
+    });
+  });
+
+  describe('Interactions', () => {
+    it('should call onChange when clicking a different language', async () => {
+      const user = userEvent.setup();
+      const onChange = vi.fn();
+      renderWithProviders(<LanguageSelector {...defaultProps} onChange={onChange} />);
+      const group = screen.getByRole('group');
+      const buttons = within(group).getAllByRole('button');
+      await user.click(buttons[0]); // click EL
+      expect(onChange).toHaveBeenCalledWith('el');
+    });
+
+    it('should not call onChange when clicking same language', async () => {
+      const user = userEvent.setup();
+      const onChange = vi.fn();
+      renderWithProviders(<LanguageSelector {...defaultProps} onChange={onChange} />);
+      const group = screen.getByRole('group');
+      const buttons = within(group).getAllByRole('button');
+      await user.click(buttons[1]); // click EN (same)
+      expect(onChange).not.toHaveBeenCalled();
+    });
+
+    it('should persist to localStorage on change', async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<LanguageSelector {...defaultProps} />);
+      const group = screen.getByRole('group');
+      const buttons = within(group).getAllByRole('button');
+      await user.click(buttons[2]); // click RU
+      expect(localStorage.getItem('culture_question_language')).toBe('ru');
+    });
+
+    it('should track analytics on change', async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<LanguageSelector {...defaultProps} />);
+      const group = screen.getByRole('group');
+      const buttons = within(group).getAllByRole('button');
+      await user.click(buttons[0]); // click EL
+      expect(trackCultureLanguageChanged).toHaveBeenCalledWith('en', 'el');
+    });
+  });
+
+  describe('Accessibility', () => {
+    it('should have role group with aria-label', () => {
+      renderWithProviders(<LanguageSelector {...defaultProps} />);
+      const group = screen.getByRole('group');
+      expect(group).toHaveAttribute('aria-label', 'Question Language');
+    });
+
+    it('should set aria-pressed correctly', () => {
+      renderWithProviders(<LanguageSelector {...defaultProps} value="ru" />);
+      const group = screen.getByRole('group');
+      const buttons = within(group).getAllByRole('button');
+      expect(buttons[0]).toHaveAttribute('aria-pressed', 'false');
+      expect(buttons[1]).toHaveAttribute('aria-pressed', 'false');
+      expect(buttons[2]).toHaveAttribute('aria-pressed', 'true');
+    });
+
+    it('should have aria-label on each button', () => {
+      renderWithProviders(<LanguageSelector {...defaultProps} />);
+      const group = screen.getByRole('group');
+      const buttons = within(group).getAllByRole('button');
+      expect(buttons[0]).toHaveAttribute('aria-label', 'Greek');
+      expect(buttons[1]).toHaveAttribute('aria-label', 'English');
+      expect(buttons[2]).toHaveAttribute('aria-label', 'Russian');
+    });
+
+    it('should have type button on all buttons', () => {
+      renderWithProviders(<LanguageSelector {...defaultProps} />);
+      const group = screen.getByRole('group');
+      const buttons = within(group).getAllByRole('button');
+      buttons.forEach((btn) => {
+        expect(btn).toHaveAttribute('type', 'button');
+      });
+    });
+  });
+});
+
+describe('LanguageSelector — dropdown variant (regression)', () => {
+  const defaultProps = {
+    value: 'en' as const,
+    onChange: vi.fn(),
+    variant: 'dropdown' as const,
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+  });
+
+  describe('Trigger Rendering', () => {
+    it('should render trigger button with aria-label', () => {
+      renderWithProviders(<LanguageSelector {...defaultProps} />);
+      const trigger = screen.getByRole('button', { name: 'Question Language' });
+      expect(trigger).toBeInTheDocument();
+    });
+
+    it('should show current language native name on trigger', () => {
+      renderWithProviders(<LanguageSelector {...defaultProps} value="en" />);
+      const trigger = screen.getByRole('button', { name: 'Question Language' });
+      expect(trigger).toHaveTextContent('English');
+    });
+
+    it('should show Greek native name when value is el', () => {
+      renderWithProviders(<LanguageSelector {...defaultProps} value="el" />);
+      const trigger = screen.getByRole('button', { name: 'Question Language' });
+      expect(trigger).toHaveTextContent('Ελληνικά');
+    });
+
+    it('should show Russian native name when value is ru', () => {
+      renderWithProviders(<LanguageSelector {...defaultProps} value="ru" />);
+      const trigger = screen.getByRole('button', { name: 'Question Language' });
+      expect(trigger).toHaveTextContent('Русский');
+    });
+
+    it('should not render a group role (uses dropdown instead)', () => {
+      renderWithProviders(<LanguageSelector {...defaultProps} />);
+      expect(screen.queryByRole('group')).not.toBeInTheDocument();
+    });
+
+    it('should merge custom className on trigger', () => {
+      renderWithProviders(<LanguageSelector {...defaultProps} className="dropdown-test" />);
+      const trigger = screen.getByRole('button', { name: 'Question Language' });
+      expect(trigger.className).toContain('dropdown-test');
+    });
+  });
+});
