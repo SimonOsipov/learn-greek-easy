@@ -73,8 +73,8 @@ export const AnswerOption: React.FC<AnswerOptionProps> = ({
   submitted,
   isCorrect,
   isSelectedIncorrect,
-  showKeyboardHint: _showKeyboardHint = true,
-  keyboardHintNumber: _keyboardHintNumber,
+  showKeyboardHint = true,
+  keyboardHintNumber,
   state,
 }) => {
   // Compute resolved state from props
@@ -153,6 +153,17 @@ export const AnswerOption: React.FC<AnswerOptionProps> = ({
 
       {/* Option text */}
       <span className="flex-1 font-cult-serif text-base text-foreground">{text}</span>
+
+      {/* Keyboard hint badge (visible only in default state) */}
+      {resolvedState === 'default' && showKeyboardHint && keyboardHintNumber != null && (
+        <span
+          className="flex h-6 w-5 flex-shrink-0 items-center justify-center rounded-md bg-slate-100 font-mono text-xs text-slate-400 dark:bg-slate-800 dark:text-slate-500"
+          aria-hidden="true"
+          data-testid={`keyboard-hint-${letter.toLowerCase()}`}
+        >
+          {keyboardHintNumber}
+        </span>
+      )}
     </button>
   );
 };
