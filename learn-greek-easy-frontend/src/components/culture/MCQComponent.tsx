@@ -3,7 +3,6 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { useMCQKeyboardShortcuts } from '@/hooks/useMCQKeyboardShortcuts';
 import { trackNewsSourceLinkClicked } from '@/lib/analytics';
 import type { CultureLanguage, CultureQuestionResponse, MultilingualText } from '@/types/culture';
@@ -154,45 +153,50 @@ export const MCQComponent: React.FC<MCQComponentProps> = ({
   }, [question.id, question.original_article_url]);
 
   return (
-    <Card
+    <div
       className="w-full max-w-2xl"
       role="group"
       aria-labelledby={questionId}
       data-testid="mcq-component"
     >
-      <CardHeader className="space-y-4">
-        {/* Progress indicator */}
-        {questionNumber !== undefined && totalQuestions !== undefined && (
-          <p className="text-sm font-medium text-muted-foreground" data-testid="mcq-progress">
-            {t('mcq.questionOf', { current: questionNumber, total: totalQuestions })}
-          </p>
-        )}
+      {/* Card shell - visual container */}
+      <div className="rounded-[20px] border-[1.5px] border-slate-200 bg-white px-[22px] pt-6 shadow-[0_1px_3px_rgba(0,0,0,0.04),0_6px_20px_rgba(0,0,0,0.04)]">
+        {/* Inner content area with vertical spacing */}
+        <div className="flex flex-col space-y-4">
+          {/* Progress indicator - KEEP EXACTLY AS-IS */}
+          {questionNumber !== undefined && totalQuestions !== undefined && (
+            <p className="text-sm font-medium text-muted-foreground" data-testid="mcq-progress">
+              {t('mcq.questionOf', { current: questionNumber, total: totalQuestions })}
+            </p>
+          )}
 
-        {/* Question image with source attribution */}
-        {question.image_url && (
-          <SourceImage
-            imageUrl={question.image_url}
-            sourceUrl={
-              question.original_article_url?.startsWith('http')
-                ? question.original_article_url
-                : undefined
-            }
-            onSourceClick={handleSourceLinkClick}
-          />
-        )}
+          {/* Question image - KEEP EXACTLY AS-IS */}
+          {question.image_url && (
+            <SourceImage
+              imageUrl={question.image_url}
+              sourceUrl={
+                question.original_article_url?.startsWith('http')
+                  ? question.original_article_url
+                  : undefined
+              }
+              onSourceClick={handleSourceLinkClick}
+            />
+          )}
 
-        {/* Question text */}
-        <h2
-          id={questionId}
-          className="text-xl font-semibold text-foreground"
-          data-testid="mcq-question-text"
-        >
-          {questionText}
-        </h2>
-      </CardHeader>
+          {/* Question text - KEEP EXACTLY AS-IS */}
+          <h2
+            id={questionId}
+            className="text-xl font-semibold text-foreground"
+            data-testid="mcq-question-text"
+          >
+            {questionText}
+          </h2>
+        </div>
+      </div>
 
-      <CardContent className="space-y-4">
-        {/* Answer options */}
+      {/* Options section - OUTSIDE the card */}
+      <div className="mt-4 space-y-4">
+        {/* Answer options - KEEP radiogroup structure EXACTLY */}
         <div
           className="space-y-3"
           role="radiogroup"
@@ -213,13 +217,12 @@ export const MCQComponent: React.FC<MCQComponentProps> = ({
                 onClick={() => handleSelectOption(optionNumber)}
                 disabled={disabled}
                 aria-describedby={keyboardHintId}
-                keyboardHintNumber={index + 1}
               />
             );
           })}
         </div>
 
-        {/* Keyboard hint */}
+        {/* Keyboard hint - KEEP EXACTLY */}
         <p
           id={keyboardHintId}
           className="text-center text-sm text-muted-foreground"
@@ -228,7 +231,7 @@ export const MCQComponent: React.FC<MCQComponentProps> = ({
           {t('mcq.keyboardHintDynamic', { max: question.option_count })}
         </p>
 
-        {/* Submit button */}
+        {/* Submit button - KEEP EXACTLY */}
         <div className="flex justify-center pt-2">
           <Button
             onClick={handleSubmit}
@@ -241,7 +244,7 @@ export const MCQComponent: React.FC<MCQComponentProps> = ({
           </Button>
         </div>
 
-        {/* Helper text when no option selected */}
+        {/* Helper text - KEEP EXACTLY */}
         {selectedOption === null && !disabled && (
           <p
             className="text-center text-sm text-warning"
@@ -252,7 +255,7 @@ export const MCQComponent: React.FC<MCQComponentProps> = ({
             {t('mcq.selectAnswer')}
           </p>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 };
