@@ -17,6 +17,33 @@ export interface AnswerOptionProps {
   disabled?: boolean;
   /** Optional aria-describedby for accessibility */
   'aria-describedby'?: string;
+  // --- NEW PROPS (all optional for backward compatibility) ---
+  /**
+   * Whether the answer has been submitted.
+   * When false or undefined, only default/selected/hover states are active.
+   * When true, result styling (correct/incorrect) may apply based on other props.
+   */
+  submitted?: boolean;
+  /**
+   * Whether THIS specific option is the correct answer.
+   * Only meaningful when `submitted` is true.
+   */
+  isCorrect?: boolean;
+  /**
+   * Whether this option was selected by the user AND is the wrong answer.
+   * Only meaningful when `submitted` is true.
+   */
+  isSelectedIncorrect?: boolean;
+  /**
+   * Whether to show the keyboard shortcut number badge on this option.
+   * Defaults to true. Set to false to hide the badge.
+   */
+  showKeyboardHint?: boolean;
+  /**
+   * The keyboard shortcut number to display in the badge (1-4).
+   * Only rendered when `showKeyboardHint` is true.
+   */
+  keyboardHintNumber?: number;
 }
 
 /**
@@ -36,6 +63,11 @@ export const AnswerOption: React.FC<AnswerOptionProps> = ({
   onClick,
   disabled = false,
   'aria-describedby': ariaDescribedBy,
+  submitted: _submitted,
+  isCorrect: _isCorrect,
+  isSelectedIncorrect: _isSelectedIncorrect,
+  showKeyboardHint: _showKeyboardHint = true,
+  keyboardHintNumber: _keyboardHintNumber,
 }) => {
   return (
     <button
