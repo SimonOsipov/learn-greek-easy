@@ -202,7 +202,7 @@ export const MCQComponent: React.FC<MCQComponentProps> = ({
           {/* Question text - KEEP EXACTLY AS-IS */}
           <h2
             id={questionId}
-            className="text-xl font-semibold text-foreground"
+            className="mb-1 font-cult-serif text-[19px] font-semibold leading-[1.5] tracking-[-0.01em] text-slate-900"
             data-testid="mcq-question-text"
           >
             {questionText}
