@@ -29,7 +29,7 @@ export interface ExplanationCardProps {
 }
 
 export const ExplanationCard: FC<ExplanationCardProps> = ({
-  isCorrect: _isCorrect,
+  isCorrect,
   explanationText: _explanationText,
   correctAnswer: _correctAnswer,
   sourceArticleUrl: _sourceArticleUrl,
@@ -37,8 +37,23 @@ export const ExplanationCard: FC<ExplanationCardProps> = ({
   className,
 }) => {
   return (
-    <div className={cn(className)} data-testid="explanation-card">
-      {/* Scaffold -- implementation in subsequent subtasks */}
+    <div
+      className={cn(
+        // Base layout
+        'rounded-2xl border-[1px] px-5 py-4',
+        // Correct state
+        isCorrect && 'bg-[var(--cult-correct-soft)]',
+        // Incorrect state
+        !isCorrect && 'bg-[var(--cult-incorrect-soft)]',
+        // Parent positioning
+        className
+      )}
+      style={{
+        borderColor: `color-mix(in srgb, var(${isCorrect ? '--cult-correct' : '--cult-incorrect'}) 20%, transparent)`,
+      }}
+      data-testid="explanation-card"
+    >
+      {/* Inner content -- implemented in subsequent subtasks */}
     </div>
   );
 };
