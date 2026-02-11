@@ -8,7 +8,8 @@ import { generateBars } from '@/lib/waveform';
 const BAR_COUNT = 48;
 const DEFAULT_DURATION = 90;
 const TICK_INTERVAL_MS = 100;
-const DEFAULT_SPEED = 1;
+const SPEED_OPTIONS = [0.75, 1, 1.25, 1.5] as const;
+type Speed = (typeof SPEED_OPTIONS)[number];
 
 function formatTime(seconds: number): string {
   const m = Math.floor(seconds / 60);
@@ -35,13 +36,18 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [_currentTime, setCurrentTime] = useState(0);
+  const [speed, setSpeed] = useState<Speed>(1);
+  const speedRef = useRef(speed);
+  useEffect(() => {
+    speedRef.current = speed;
+  }, [speed]);
 
   useEffect(() => {
     if (!isPlaying) return;
 
     const id = setInterval(() => {
       setCurrentTime((prev) => {
-        const next = prev + (TICK_INTERVAL_MS / 1000) * DEFAULT_SPEED;
+        const next = prev + (TICK_INTERVAL_MS / 1000) * speedRef.current;
         if (next >= duration) {
           setIsPlaying(false);
           return 0;
@@ -111,20 +117,35 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
         >
           {formatTime(duration)}
         </span>
-        <div data-testid="waveform-speed-pills" className="flex gap-1">
-          {[1, 1.5, 2].map((speed) => (
-            <span
-              key={speed}
-              className={cn(
-                'rounded-md px-1.5 py-0.5 font-cult-mono text-[10px] leading-tight',
-                'border border-slate-200 text-slate-400',
-                'dark:border-slate-600 dark:text-slate-500',
-                speed === 1 && 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300'
-              )}
-            >
-              {speed}x
-            </span>
-          ))}
+        <div
+          data-testid="waveform-speed-pills"
+          role="radiogroup"
+          aria-label="Playback speed"
+          className="flex gap-1"
+        >
+          {SPEED_OPTIONS.map((opt) => {
+            const isSelected = opt === speed;
+            return (
+              <button
+                key={opt}
+                type="button"
+                role="radio"
+                aria-checked={isSelected}
+                aria-label={`${opt}x speed`}
+                onClick={() => setSpeed(opt)}
+                className={cn(
+                  'rounded-full px-2.5 py-0.5 font-cult-mono text-xs transition-colors duration-150',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1',
+                  isSelected
+                    ? 'text-white'
+                    : 'text-[var(--cult-text-muted)] hover:bg-[var(--cult-accent-soft)]'
+                )}
+                style={isSelected ? { backgroundColor: 'var(--cult-accent)' } : undefined}
+              >
+                {opt}x
+              </button>
+            );
+          })}
         </div>
       </div>
     </div>
