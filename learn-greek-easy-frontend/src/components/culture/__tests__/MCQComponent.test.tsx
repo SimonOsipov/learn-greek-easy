@@ -186,6 +186,40 @@ const mockQuestionWithInvalidSourceUrl: CultureQuestionResponse = {
   original_article_url: 'javascript:alert("xss")',
 };
 
+// Mock answer results for redesign tests
+const mockAnswerResultCorrect = {
+  isCorrect: true,
+  correctOption: 1,
+  explanationText: 'Athens has been the capital of Greece since 1834.',
+};
+
+const mockAnswerResultIncorrect = {
+  isCorrect: false,
+  correctOption: 1,
+  explanationText: 'Athens has been the capital of Greece since 1834.',
+};
+
+const mockAnswerResultNoExplanation = {
+  isCorrect: true,
+  correctOption: 2,
+};
+
+// Second question for reset tests
+const mockQuestion2: CultureQuestionResponse = {
+  id: 'test-question-second',
+  question_text: { en: 'Second question?', el: 'Δεύτερη ερώτηση;', ru: 'Второй вопрос?' },
+  options: [
+    { en: 'Option A2', el: 'Επιλογή Α2', ru: 'Вариант А2' },
+    { en: 'Option B2', el: 'Επιλογή Β2', ru: 'Вариант Β2' },
+    { en: 'Option C2', el: 'Επιλογή Γ2', ru: 'Вариант Γ2' },
+    { en: 'Option D2', el: 'Επιλογή Δ2', ru: 'Вариант Δ2' },
+  ],
+  option_count: 4,
+  image_url: null,
+  original_article_url: null,
+  difficulty: 'medium',
+};
+
 describe('MCQComponent', () => {
   const mockOnAnswer = vi.fn();
 
@@ -1145,5 +1179,549 @@ describe('MCQComponent - ExplanationCard Integration', () => {
     // Check that mt-3 class is applied
     const explanationCard = screen.getByTestId('explanation-card');
     expect(explanationCard).toHaveClass('mt-3');
+  });
+});
+
+describe('MCQComponent - Redesign Features', () => {
+  const mockOnAnswer = vi.fn();
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  describe('Card Shell', () => {
+    it('should render card shell with correct border and background classes', () => {
+      renderWithProviders(
+        <MCQComponent question={mockQuestion} language="en" onAnswer={mockOnAnswer} />
+      );
+
+      const mcqComponent = screen.getByTestId('mcq-component');
+      const cardShell = mcqComponent.firstElementChild as HTMLElement;
+
+      expect(cardShell.className).toContain('rounded-[20px]');
+      expect(cardShell.className).toContain('bg-white');
+      expect(cardShell.className).toContain('border-[1.5px]');
+      expect(cardShell.className).toContain('border-slate-200');
+    });
+
+    it('should render card shell with correct shadow', () => {
+      renderWithProviders(
+        <MCQComponent question={mockQuestion} language="en" onAnswer={mockOnAnswer} />
+      );
+
+      const mcqComponent = screen.getByTestId('mcq-component');
+      const cardShell = mcqComponent.firstElementChild as HTMLElement;
+
+      expect(cardShell.className).toContain('shadow-');
+    });
+
+    it('should have px-[22px] and pt-6 padding', () => {
+      renderWithProviders(
+        <MCQComponent question={mockQuestion} language="en" onAnswer={mockOnAnswer} />
+      );
+
+      const mcqComponent = screen.getByTestId('mcq-component');
+      const cardShell = mcqComponent.firstElementChild as HTMLElement;
+
+      expect(cardShell.className).toContain('px-[22px]');
+      expect(cardShell.className).toContain('pt-6');
+    });
+  });
+
+  describe('Question Text Styling', () => {
+    it('should render question text with font-cult-serif and text-[19px]', () => {
+      renderWithProviders(
+        <MCQComponent question={mockQuestion} language="en" onAnswer={mockOnAnswer} />
+      );
+
+      const questionText = screen.getByTestId('mcq-question-text');
+
+      expect(questionText.className).toContain('font-cult-serif');
+      expect(questionText.className).toContain('text-[19px]');
+    });
+
+    it('should render question text with correct tracking, leading, and color', () => {
+      renderWithProviders(
+        <MCQComponent question={mockQuestion} language="en" onAnswer={mockOnAnswer} />
+      );
+
+      const questionText = screen.getByTestId('mcq-question-text');
+
+      expect(questionText.className).toContain('tracking-[-0.01em]');
+      expect(questionText.className).toContain('leading-[1.5]');
+      expect(questionText.className).toContain('text-slate-900');
+      expect(questionText.className).toContain('font-semibold');
+    });
+  });
+
+  describe('Options Outside Card', () => {
+    it('should render options container as sibling of card shell', () => {
+      renderWithProviders(
+        <MCQComponent question={mockQuestion} language="en" onAnswer={mockOnAnswer} />
+      );
+
+      const mcqComponent = screen.getByTestId('mcq-component');
+      const cardShell = mcqComponent.firstElementChild as HTMLElement;
+      const optionsEl = screen.getByTestId('mcq-options');
+
+      expect(cardShell.contains(optionsEl)).toBe(false);
+    });
+
+    it('should render submit button outside card shell', () => {
+      renderWithProviders(
+        <MCQComponent question={mockQuestion} language="en" onAnswer={mockOnAnswer} />
+      );
+
+      const mcqComponent = screen.getByTestId('mcq-component');
+      const cardShell = mcqComponent.firstElementChild as HTMLElement;
+      const submitBtn = screen.getByTestId('mcq-submit-button');
+
+      expect(cardShell.contains(submitBtn)).toBe(false);
+    });
+  });
+
+  describe('Submit Button Styling', () => {
+    it('should have indigo background and glow shadow when option is selected', () => {
+      renderWithProviders(
+        <MCQComponent question={mockQuestion} language="en" onAnswer={mockOnAnswer} />
+      );
+
+      const optionA = screen.getByTestId('answer-option-a');
+      fireEvent.click(optionA);
+
+      const submitButton = screen.getByTestId('mcq-submit-button');
+
+      expect(submitButton.className).toContain('bg-indigo-500');
+      expect(submitButton.className).toContain('shadow-[0_0_0_3px_rgba(99,102,241,0.15)]');
+    });
+
+    it('should have slate disabled styling when no option selected', () => {
+      renderWithProviders(
+        <MCQComponent question={mockQuestion} language="en" onAnswer={mockOnAnswer} />
+      );
+
+      const submitButton = screen.getByTestId('mcq-submit-button');
+
+      expect(submitButton.className).toContain('bg-slate-100');
+      expect(submitButton.className).toContain('text-slate-400');
+    });
+  });
+
+  describe('Feedback Mode - Next Button', () => {
+    it('should show next button after submit in feedback mode', async () => {
+      const user = userEvent.setup();
+      const mockOnNext = vi.fn();
+
+      renderWithProviders(
+        <MCQComponent
+          question={mockQuestion}
+          language="en"
+          onAnswer={mockOnAnswer}
+          showFeedback={true}
+          answerResult={mockAnswerResultCorrect}
+          onNext={mockOnNext}
+        />
+      );
+
+      const optionA = screen.getByTestId('answer-option-a');
+      await user.click(optionA);
+
+      const submitButton = screen.getByTestId('mcq-submit-button');
+      await user.click(submitButton);
+
+      expect(screen.getByTestId('mcq-next-button')).toBeInTheDocument();
+    });
+
+    it('should hide submit button after submit in feedback mode', async () => {
+      const user = userEvent.setup();
+      const mockOnNext = vi.fn();
+
+      renderWithProviders(
+        <MCQComponent
+          question={mockQuestion}
+          language="en"
+          onAnswer={mockOnAnswer}
+          showFeedback={true}
+          answerResult={mockAnswerResultCorrect}
+          onNext={mockOnNext}
+        />
+      );
+
+      const optionA = screen.getByTestId('answer-option-a');
+      await user.click(optionA);
+
+      const submitButton = screen.getByTestId('mcq-submit-button');
+      await user.click(submitButton);
+
+      expect(screen.queryByTestId('mcq-submit-button')).not.toBeInTheDocument();
+    });
+
+    it('should call onNext when next button is clicked', async () => {
+      const user = userEvent.setup();
+      const mockOnNext = vi.fn();
+
+      renderWithProviders(
+        <MCQComponent
+          question={mockQuestion}
+          language="en"
+          onAnswer={mockOnAnswer}
+          showFeedback={true}
+          answerResult={mockAnswerResultCorrect}
+          onNext={mockOnNext}
+        />
+      );
+
+      const optionA = screen.getByTestId('answer-option-a');
+      await user.click(optionA);
+
+      const submitButton = screen.getByTestId('mcq-submit-button');
+      await user.click(submitButton);
+
+      const nextButton = screen.getByTestId('mcq-next-button');
+      await user.click(nextButton);
+
+      expect(mockOnNext).toHaveBeenCalledTimes(1);
+    });
+
+    it('should show See Results text when isLastQuestion is true', async () => {
+      const user = userEvent.setup();
+      const mockOnNext = vi.fn();
+
+      renderWithProviders(
+        <MCQComponent
+          question={mockQuestion}
+          language="en"
+          onAnswer={mockOnAnswer}
+          showFeedback={true}
+          answerResult={mockAnswerResultCorrect}
+          isLastQuestion={true}
+          onNext={mockOnNext}
+        />
+      );
+
+      const optionA = screen.getByTestId('answer-option-a');
+      await user.click(optionA);
+
+      const submitButton = screen.getByTestId('mcq-submit-button');
+      await user.click(submitButton);
+
+      const nextButton = screen.getByTestId('mcq-next-button');
+      expect(nextButton.textContent).toMatch(/See Results/i);
+    });
+
+    it('should show Next Question text when isLastQuestion is false', async () => {
+      const user = userEvent.setup();
+      const mockOnNext = vi.fn();
+
+      renderWithProviders(
+        <MCQComponent
+          question={mockQuestion}
+          language="en"
+          onAnswer={mockOnAnswer}
+          showFeedback={true}
+          answerResult={mockAnswerResultCorrect}
+          isLastQuestion={false}
+          onNext={mockOnNext}
+        />
+      );
+
+      const optionA = screen.getByTestId('answer-option-a');
+      await user.click(optionA);
+
+      const submitButton = screen.getByTestId('mcq-submit-button');
+      await user.click(submitButton);
+
+      const nextButton = screen.getByTestId('mcq-next-button');
+      expect(nextButton.textContent).toMatch(/Next Question/i);
+    });
+  });
+
+  describe('Feedback Mode - Option Locking', () => {
+    it('should prevent option change via click after submit', async () => {
+      const user = userEvent.setup();
+      const mockOnNext = vi.fn();
+
+      renderWithProviders(
+        <MCQComponent
+          question={mockQuestion}
+          language="en"
+          onAnswer={mockOnAnswer}
+          showFeedback={true}
+          answerResult={mockAnswerResultCorrect}
+          onNext={mockOnNext}
+        />
+      );
+
+      const optionA = screen.getByTestId('answer-option-a');
+      await user.click(optionA);
+
+      const submitButton = screen.getByTestId('mcq-submit-button');
+      await user.click(submitButton);
+
+      const optionB = screen.getByTestId('answer-option-b');
+      await user.click(optionB);
+
+      expect(optionB).not.toHaveAttribute('aria-pressed', 'true');
+    });
+
+    it('should prevent option change via keyboard after submit', () => {
+      const mockOnNext = vi.fn();
+
+      renderWithProviders(
+        <MCQComponent
+          question={mockQuestion}
+          language="en"
+          onAnswer={mockOnAnswer}
+          showFeedback={true}
+          answerResult={mockAnswerResultCorrect}
+          onNext={mockOnNext}
+        />
+      );
+
+      fireEvent.keyDown(window, { code: 'Digit1' });
+      fireEvent.keyDown(window, { code: 'Enter' });
+      fireEvent.keyDown(window, { code: 'Digit2' });
+
+      const optionB = screen.getByTestId('answer-option-b');
+      expect(optionB).not.toHaveAttribute('aria-pressed', 'true');
+    });
+  });
+
+  describe('Feedback Mode - Double Submit Prevention', () => {
+    it('should call onAnswer only once on double click of submit', () => {
+      const mockOnNext = vi.fn();
+
+      renderWithProviders(
+        <MCQComponent
+          question={mockQuestion}
+          language="en"
+          onAnswer={mockOnAnswer}
+          showFeedback={true}
+          answerResult={mockAnswerResultCorrect}
+          onNext={mockOnNext}
+        />
+      );
+
+      const optionA = screen.getByTestId('answer-option-a');
+      fireEvent.click(optionA);
+
+      const submitButton = screen.getByTestId('mcq-submit-button');
+      fireEvent.click(submitButton);
+      fireEvent.click(submitButton);
+
+      expect(mockOnAnswer).toHaveBeenCalledTimes(1);
+    });
+
+    it('should not re-submit via Enter after already submitted', () => {
+      const mockOnNext = vi.fn();
+
+      renderWithProviders(
+        <MCQComponent
+          question={mockQuestion}
+          language="en"
+          onAnswer={mockOnAnswer}
+          showFeedback={true}
+          answerResult={mockAnswerResultCorrect}
+          onNext={mockOnNext}
+        />
+      );
+
+      fireEvent.keyDown(window, { code: 'Digit1' });
+      fireEvent.keyDown(window, { code: 'Enter' });
+      fireEvent.keyDown(window, { code: 'Enter' });
+
+      expect(mockOnAnswer).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('Question Change Reset', () => {
+    it('should reset selected option when question.id changes', () => {
+      const { rerender } = renderWithProviders(
+        <MCQComponent question={mockQuestion} language="en" onAnswer={vi.fn()} />
+      );
+
+      const optionA = screen.getByTestId('answer-option-a');
+      fireEvent.click(optionA);
+      expect(optionA).toHaveAttribute('aria-pressed', 'true');
+
+      rerender(<MCQComponent question={mockQuestion2} language="en" onAnswer={vi.fn()} />);
+
+      const optionAAfter = screen.getByTestId('answer-option-a');
+      expect(optionAAfter).not.toHaveAttribute('aria-pressed', 'true');
+    });
+
+    it('should reset isSubmitted when question.id changes in feedback mode', () => {
+      const mockOnNext = vi.fn();
+
+      const { rerender } = renderWithProviders(
+        <MCQComponent
+          question={mockQuestion}
+          language="en"
+          onAnswer={vi.fn()}
+          showFeedback={true}
+          answerResult={mockAnswerResultCorrect}
+          onNext={mockOnNext}
+        />
+      );
+
+      const optionA = screen.getByTestId('answer-option-a');
+      fireEvent.click(optionA);
+
+      const submitButton = screen.getByTestId('mcq-submit-button');
+      fireEvent.click(submitButton);
+
+      expect(screen.getByTestId('mcq-next-button')).toBeInTheDocument();
+
+      rerender(
+        <MCQComponent
+          question={mockQuestion2}
+          language="en"
+          onAnswer={vi.fn()}
+          showFeedback={true}
+          answerResult={mockAnswerResultCorrect}
+          onNext={mockOnNext}
+        />
+      );
+
+      expect(screen.getByTestId('mcq-submit-button')).toBeInTheDocument();
+      expect(screen.queryByTestId('mcq-next-button')).not.toBeInTheDocument();
+      expect(screen.getByTestId('mcq-submit-button')).toBeDisabled();
+    });
+  });
+
+  describe('fadeIn Animation', () => {
+    it('should have animate-cult-fade-in class on outer wrapper', () => {
+      renderWithProviders(
+        <MCQComponent question={mockQuestion} language="en" onAnswer={mockOnAnswer} />
+      );
+
+      const mcqComponent = screen.getByTestId('mcq-component');
+      expect(mcqComponent.className).toContain('animate-cult-fade-in');
+    });
+  });
+
+  describe('Mock Exam Mode Backward Compatibility', () => {
+    it('should work without any feedback props', () => {
+      renderWithProviders(
+        <MCQComponent question={mockQuestion} language="en" onAnswer={mockOnAnswer} />
+      );
+
+      const optionC = screen.getByTestId('answer-option-c');
+      fireEvent.click(optionC);
+
+      const submitButton = screen.getByTestId('mcq-submit-button');
+      fireEvent.click(submitButton);
+
+      expect(mockOnAnswer).toHaveBeenCalledWith(3);
+      expect(screen.queryByTestId('explanation-card')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('mcq-next-button')).not.toBeInTheDocument();
+    });
+
+    it('should not show ExplanationCard even with answerResult when showFeedback is false', () => {
+      renderWithProviders(
+        <MCQComponent
+          question={mockQuestion}
+          language="en"
+          onAnswer={mockOnAnswer}
+          answerResult={mockAnswerResultCorrect}
+        />
+      );
+
+      const optionA = screen.getByTestId('answer-option-a');
+      fireEvent.click(optionA);
+
+      const submitButton = screen.getByTestId('mcq-submit-button');
+      fireEvent.click(submitButton);
+
+      expect(screen.queryByTestId('explanation-card')).not.toBeInTheDocument();
+    });
+
+    it('should allow multiple submissions in mock exam mode', () => {
+      renderWithProviders(
+        <MCQComponent question={mockQuestion} language="en" onAnswer={mockOnAnswer} />
+      );
+
+      const optionA = screen.getByTestId('answer-option-a');
+      fireEvent.click(optionA);
+
+      const submitButton = screen.getByTestId('mcq-submit-button');
+      fireEvent.click(submitButton);
+
+      expect(mockOnAnswer).toHaveBeenCalledWith(1);
+
+      const optionB = screen.getByTestId('answer-option-b');
+      fireEvent.click(optionB);
+      fireEvent.click(submitButton);
+
+      expect(mockOnAnswer).toHaveBeenCalledWith(2);
+      expect(mockOnAnswer).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('Edge Cases', () => {
+    it('should render both SourceImage and WaveformPlayer when both present', () => {
+      renderWithProviders(
+        <MCQComponent
+          question={mockQuestionWithImage}
+          language="en"
+          onAnswer={mockOnAnswer}
+          hasAudio={true}
+        />
+      );
+
+      expect(screen.getByTestId('source-image-container')).toBeInTheDocument();
+      expect(screen.getByTestId('waveform-player')).toBeInTheDocument();
+    });
+
+    it('should handle answerResult with no explanationText', async () => {
+      const user = userEvent.setup();
+      const mockOnNext = vi.fn();
+
+      renderWithProviders(
+        <MCQComponent
+          question={mockQuestion}
+          language="en"
+          onAnswer={mockOnAnswer}
+          showFeedback={true}
+          answerResult={mockAnswerResultNoExplanation}
+          onNext={mockOnNext}
+        />
+      );
+
+      const optionA = screen.getByTestId('answer-option-a');
+      await user.click(optionA);
+
+      const submitButton = screen.getByTestId('mcq-submit-button');
+      await user.click(submitButton);
+
+      const explanationCard = screen.getByTestId('explanation-card');
+      expect(explanationCard).toHaveAttribute('data-explanation', '');
+    });
+
+    it('should not crash when onNext is undefined and next button would be needed', async () => {
+      const user = userEvent.setup();
+
+      renderWithProviders(
+        <MCQComponent
+          question={mockQuestion}
+          language="en"
+          onAnswer={mockOnAnswer}
+          showFeedback={true}
+          answerResult={mockAnswerResultCorrect}
+        />
+      );
+
+      const optionA = screen.getByTestId('answer-option-a');
+      await user.click(optionA);
+
+      const submitButton = screen.getByTestId('mcq-submit-button');
+      await user.click(submitButton);
+
+      const nextButton = screen.getByTestId('mcq-next-button');
+      await user.click(nextButton);
+
+      // Test passing = no crash
+      expect(nextButton).toBeInTheDocument();
+    });
   });
 });
