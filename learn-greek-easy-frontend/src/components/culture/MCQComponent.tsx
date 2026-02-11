@@ -184,6 +184,7 @@ export const MCQComponent: React.FC<MCQComponentProps> = ({
                 onClick={() => handleSelectOption(optionNumber)}
                 disabled={disabled}
                 aria-describedby={keyboardHintId}
+                keyboardHintNumber={index + 1}
               />
             );
           })}
