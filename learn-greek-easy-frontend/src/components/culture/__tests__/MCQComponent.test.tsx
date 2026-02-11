@@ -54,6 +54,14 @@ vi.mock('../SourceImage', () => ({
   ),
 }));
 
+vi.mock('../WaveformPlayer', () => ({
+  WaveformPlayer: ({ className }: { className?: string }) => (
+    <div data-testid="waveform-player" className={className}>
+      Waveform Player Mock
+    </div>
+  ),
+}));
+
 // Mock question data
 const mockQuestion: CultureQuestionResponse = {
   id: 'test-question-1',
@@ -736,5 +744,45 @@ describe('MCQComponent - Category Badge Integration', () => {
     const cardShell = component.querySelector('[class*="rounded-"]');
     const innerContent = cardShell?.querySelector('[class*="flex flex-col"]');
     expect(innerContent?.firstChild).toBe(badgeRow);
+  });
+});
+
+describe('MCQComponent - Audio Player', () => {
+  const mockOnAnswer = vi.fn();
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('should render WaveformPlayer when hasAudio is true', () => {
+    renderWithProviders(
+      <MCQComponent question={mockQuestion} language="en" onAnswer={mockOnAnswer} hasAudio={true} />
+    );
+
+    const waveformPlayer = screen.getByTestId('waveform-player');
+    expect(waveformPlayer).toBeInTheDocument();
+  });
+
+  it('should not render WaveformPlayer when hasAudio is false', () => {
+    renderWithProviders(
+      <MCQComponent
+        question={mockQuestion}
+        language="en"
+        onAnswer={mockOnAnswer}
+        hasAudio={false}
+      />
+    );
+
+    const waveformPlayer = screen.queryByTestId('waveform-player');
+    expect(waveformPlayer).not.toBeInTheDocument();
+  });
+
+  it('should not render WaveformPlayer when hasAudio is not provided', () => {
+    renderWithProviders(
+      <MCQComponent question={mockQuestion} language="en" onAnswer={mockOnAnswer} />
+    );
+
+    const waveformPlayer = screen.queryByTestId('waveform-player');
+    expect(waveformPlayer).not.toBeInTheDocument();
   });
 });

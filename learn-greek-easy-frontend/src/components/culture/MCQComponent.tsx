@@ -15,6 +15,7 @@ import type {
 import { AnswerOption, type OptionLetter } from './AnswerOption';
 import { CultureBadge } from './CultureBadge';
 import { SourceImage } from './SourceImage';
+import { WaveformPlayer } from './WaveformPlayer';
 
 export interface MCQComponentProps {
   /** The question data to display */
@@ -84,6 +85,7 @@ export const MCQComponent: React.FC<MCQComponentProps> = ({
   showFeedback = false,
   onNext,
   category,
+  hasAudio = false,
 }) => {
   const { t } = useTranslation('culture');
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
@@ -198,6 +200,9 @@ export const MCQComponent: React.FC<MCQComponentProps> = ({
               onSourceClick={handleSourceLinkClick}
             />
           )}
+
+          {/* Audio waveform player placeholder */}
+          {hasAudio && <WaveformPlayer />}
 
           {/* Question text - KEEP EXACTLY AS-IS */}
           <h2
