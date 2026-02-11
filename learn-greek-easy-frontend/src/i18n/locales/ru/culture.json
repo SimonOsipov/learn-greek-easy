@@ -17,6 +17,7 @@
   },
   "explanation": {
     "correct": "Правильно!",
+    "correctAnswerReveal": "Правильный ответ был: {{label}}: {{text}}",
     "incorrect": "Не совсем"
   },
   "feedback": {

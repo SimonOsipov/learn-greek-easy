@@ -34,7 +34,7 @@ export interface ExplanationCardProps {
 export const ExplanationCard: FC<ExplanationCardProps> = ({
   isCorrect,
   explanationText: _explanationText,
-  correctAnswer: _correctAnswer,
+  correctAnswer,
   sourceArticleUrl: _sourceArticleUrl,
   cardId: _cardId,
   className,
@@ -74,6 +74,17 @@ export const ExplanationCard: FC<ExplanationCardProps> = ({
           {isCorrect ? t('explanation.correct') : t('explanation.incorrect')}
         </span>
       </div>
+
+      {/* Correct answer reveal */}
+      {!isCorrect && correctAnswer && (
+        <p className="mt-2 text-sm text-muted-foreground">
+          {t('explanation.correctAnswerReveal', {
+            label: correctAnswer.label,
+            text: correctAnswer.text,
+            defaultValue: 'The correct answer was: {{label}}: {{text}}',
+          })}
+        </p>
+      )}
     </div>
   );
 };

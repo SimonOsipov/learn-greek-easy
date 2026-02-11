@@ -17,6 +17,7 @@
   },
   "explanation": {
     "correct": "Correct!",
+    "correctAnswerReveal": "The correct answer was: {{label}}: {{text}}",
     "incorrect": "Not quite"
   },
   "feedback": {
