@@ -547,31 +547,54 @@ describe('MCQComponent', () => {
       expect(optionsContainer).toHaveAttribute('role', 'radiogroup');
     });
 
-    it('should render keyboard hint', () => {
+    it('should render keyboard hint with mono font and muted styling', () => {
       renderWithProviders(
         <MCQComponent question={mockQuestion} language="en" onAnswer={mockOnAnswer} />
       );
 
       const hint = screen.getByTestId('mcq-keyboard-hint');
       expect(hint).toBeInTheDocument();
+      expect(hint).toHaveClass('font-mono', 'text-xs', 'text-slate-400', 'text-center');
     });
 
-    it('should show select answer hint when no option selected', () => {
-      renderWithProviders(
-        <MCQComponent question={mockQuestion} language="en" onAnswer={mockOnAnswer} />
-      );
-
-      expect(screen.getByTestId('mcq-select-hint')).toBeInTheDocument();
-    });
-
-    it('should hide select answer hint when option is selected', async () => {
+    it('should hide keyboard hint when answer is submitted', async () => {
       const user = userEvent.setup();
       renderWithProviders(
+        <MCQComponent
+          question={mockQuestion}
+          language="en"
+          onAnswer={mockOnAnswer}
+          showFeedback={true}
+          answerResult={{ isCorrect: true, correctOption: 1 }}
+        />
+      );
+
+      // Keyboard hint should be visible initially
+      expect(screen.getByTestId('mcq-keyboard-hint')).toBeInTheDocument();
+
+      // Select option and submit
+      const optionA = screen.getByTestId('answer-option-a');
+      await user.click(optionA);
+
+      const submitButton = screen.getByTestId('mcq-submit-button');
+      await user.click(submitButton);
+
+      // Keyboard hint should be hidden after submission
+      expect(screen.queryByTestId('mcq-keyboard-hint')).not.toBeInTheDocument();
+    });
+
+    it('should show keyboard hint when showFeedback is not provided', () => {
+      renderWithProviders(
         <MCQComponent question={mockQuestion} language="en" onAnswer={mockOnAnswer} />
       );
 
-      const optionA = screen.getByTestId('answer-option-a');
-      await user.click(optionA);
+      expect(screen.getByTestId('mcq-keyboard-hint')).toBeInTheDocument();
+    });
+
+    it('should not render select answer helper text', () => {
+      renderWithProviders(
+        <MCQComponent question={mockQuestion} language="en" onAnswer={mockOnAnswer} />
+      );
 
       expect(screen.queryByTestId('mcq-select-hint')).not.toBeInTheDocument();
     });

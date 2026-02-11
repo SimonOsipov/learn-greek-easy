@@ -281,14 +281,16 @@ export const MCQComponent: React.FC<MCQComponentProps> = ({
           />
         )}
 
-        {/* Keyboard hint - KEEP EXACTLY */}
-        <p
-          id={keyboardHintId}
-          className="text-center text-sm text-muted-foreground"
-          data-testid="mcq-keyboard-hint"
-        >
-          {t('mcq.keyboardHintDynamic', { max: question.option_count })}
-        </p>
+        {/* Keyboard hint */}
+        {!isSubmitted && (
+          <p
+            id={keyboardHintId}
+            className="text-center font-mono text-xs text-slate-400"
+            data-testid="mcq-keyboard-hint"
+          >
+            {t('mcq.keyboardHintDynamic', { max: question.option_count })}
+          </p>
+        )}
 
         {/* Submit / Next button */}
         <div className="flex justify-center pt-2">
@@ -320,18 +322,6 @@ export const MCQComponent: React.FC<MCQComponentProps> = ({
             </button>
           )}
         </div>
-
-        {/* Helper text - KEEP EXACTLY */}
-        {selectedOption === null && !disabled && (
-          <p
-            className="text-center text-sm text-warning"
-            role="status"
-            aria-live="polite"
-            data-testid="mcq-select-hint"
-          >
-            {t('mcq.selectAnswer')}
-          </p>
-        )}
       </div>
     </div>
   );
