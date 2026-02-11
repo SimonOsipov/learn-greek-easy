@@ -140,10 +140,10 @@ export const AnswerOption: React.FC<AnswerOptionProps> = ({
       {/* Letter badge */}
       <span
         className={cn(
-          'flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-sm font-bold',
+          'flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-sm font-bold transition-colors duration-200',
           (resolvedState === 'default' || resolvedState === 'dimmed') &&
             'bg-muted text-muted-foreground',
-          resolvedState === 'selected' && 'bg-primary text-primary-foreground',
+          resolvedState === 'selected' && 'bg-indigo-500 text-white',
           resolvedState === 'correct' && 'bg-emerald-500 text-white',
           resolvedState === 'incorrect' && 'bg-red-500 text-white'
         )}
