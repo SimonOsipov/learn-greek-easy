@@ -84,6 +84,7 @@ export const MCQComponent: React.FC<MCQComponentProps> = ({
   disabled = false,
   showFeedback = false,
   onNext,
+  answerResult,
   category,
   hasAudio = false,
 }) => {
@@ -219,7 +220,7 @@ export const MCQComponent: React.FC<MCQComponentProps> = ({
       <div className="mt-4 space-y-4">
         {/* Answer options - KEEP radiogroup structure EXACTLY */}
         <div
-          className="space-y-3"
+          className="space-y-[10px]"
           role="radiogroup"
           aria-label={t('mcq.selectAnswer')}
           data-testid="mcq-options"
@@ -228,6 +229,17 @@ export const MCQComponent: React.FC<MCQComponentProps> = ({
             const optionNumber = index + 1;
             const letter = OPTION_LETTERS[index];
             const optionText = getLocalizedText(option, language);
+
+            // Compute result props when in feedback mode and submitted
+            const resultProps =
+              showFeedback && answerResult && isSubmitted
+                ? {
+                    isCorrect: optionNumber === answerResult.correctOption,
+                    isSelectedIncorrect:
+                      optionNumber === selectedOption &&
+                      optionNumber !== answerResult.correctOption,
+                  }
+                : {};
 
             return (
               <AnswerOption
@@ -238,6 +250,10 @@ export const MCQComponent: React.FC<MCQComponentProps> = ({
                 onClick={() => handleSelectOption(optionNumber)}
                 disabled={disabled}
                 aria-describedby={keyboardHintId}
+                submitted={isSubmitted}
+                keyboardHintNumber={optionNumber}
+                showKeyboardHint={!isSubmitted}
+                {...resultProps}
               />
             );
           })}
