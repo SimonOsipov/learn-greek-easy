@@ -65,6 +65,7 @@ export const ExplanationCard: FC<ExplanationCardProps> = ({
     <>
       <div
         className={cn(
+          'animate-cult-slide-up',
           // Base layout
           'rounded-2xl border-[1px] px-5 py-4',
           // Correct state
