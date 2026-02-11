@@ -5,9 +5,15 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { useMCQKeyboardShortcuts } from '@/hooks/useMCQKeyboardShortcuts';
 import { trackNewsSourceLinkClicked } from '@/lib/analytics';
-import type { CultureLanguage, CultureQuestionResponse, MultilingualText } from '@/types/culture';
+import type {
+  CultureCategory,
+  CultureLanguage,
+  CultureQuestionResponse,
+  MultilingualText,
+} from '@/types/culture';
 
 import { AnswerOption, type OptionLetter } from './AnswerOption';
+import { CultureBadge } from './CultureBadge';
 import { SourceImage } from './SourceImage';
 
 export interface MCQComponentProps {
@@ -37,6 +43,8 @@ export interface MCQComponentProps {
   };
   /** Whether the question has associated audio content */
   hasAudio?: boolean;
+  /** Deck category for CategoryBadge display */
+  category?: CultureCategory;
 }
 
 /** Maps option index (0-3) to letter (A-D) */
@@ -75,6 +83,7 @@ export const MCQComponent: React.FC<MCQComponentProps> = ({
   disabled = false,
   showFeedback = false,
   onNext,
+  category,
 }) => {
   const { t } = useTranslation('culture');
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
@@ -163,6 +172,13 @@ export const MCQComponent: React.FC<MCQComponentProps> = ({
       <div className="rounded-[20px] border-[1.5px] border-slate-200 bg-white px-[22px] pt-6 shadow-[0_1px_3px_rgba(0,0,0,0.04),0_6px_20px_rgba(0,0,0,0.04)]">
         {/* Inner content area with vertical spacing */}
         <div className="flex flex-col space-y-4">
+          {/* Badge row - category */}
+          {category && (
+            <div className="flex items-start" data-testid="mcq-badge-row">
+              <CultureBadge category={category} />
+            </div>
+          )}
+
           {/* Progress indicator - KEEP EXACTLY AS-IS */}
           {questionNumber !== undefined && totalQuestions !== undefined && (
             <p className="text-sm font-medium text-muted-foreground" data-testid="mcq-progress">

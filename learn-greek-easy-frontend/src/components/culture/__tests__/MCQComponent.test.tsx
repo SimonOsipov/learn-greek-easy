@@ -686,3 +686,55 @@ describe('MCQComponent', () => {
     });
   });
 });
+
+describe('MCQComponent - Category Badge Integration', () => {
+  const mockOnAnswer = vi.fn();
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('should render badge row when category is provided', () => {
+    renderWithProviders(
+      <MCQComponent
+        question={mockQuestion}
+        language="en"
+        onAnswer={mockOnAnswer}
+        category="history"
+      />
+    );
+
+    const badgeRow = screen.getByTestId('mcq-badge-row');
+    expect(badgeRow).toBeInTheDocument();
+  });
+
+  it('should not render badge row when category is not provided', () => {
+    renderWithProviders(
+      <MCQComponent question={mockQuestion} language="en" onAnswer={mockOnAnswer} />
+    );
+
+    const badgeRow = screen.queryByTestId('mcq-badge-row');
+    expect(badgeRow).not.toBeInTheDocument();
+  });
+
+  it('should render CultureBadge component when category is provided', () => {
+    renderWithProviders(
+      <MCQComponent
+        question={mockQuestion}
+        language="en"
+        onAnswer={mockOnAnswer}
+        category="politics"
+      />
+    );
+
+    // Badge row should exist
+    const badgeRow = screen.getByTestId('mcq-badge-row');
+    expect(badgeRow).toBeInTheDocument();
+
+    // Should be the first child in the inner content div (before progress)
+    const component = screen.getByTestId('mcq-component');
+    const cardShell = component.querySelector('[class*="rounded-"]');
+    const innerContent = cardShell?.querySelector('[class*="flex flex-col"]');
+    expect(innerContent?.firstChild).toBe(badgeRow);
+  });
+});

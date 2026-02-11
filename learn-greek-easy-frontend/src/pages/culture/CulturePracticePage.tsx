@@ -668,6 +668,7 @@ export function CulturePracticePage() {
               questionNumber={progress.current}
               totalQuestions={progress.total}
               disabled={isSubmitting}
+              category={session.category}
             />
           )}
         </div>
