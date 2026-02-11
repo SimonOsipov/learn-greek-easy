@@ -12,8 +12,9 @@ const SPEED_OPTIONS = [0.75, 1, 1.25, 1.5] as const;
 type Speed = (typeof SPEED_OPTIONS)[number];
 
 function formatTime(seconds: number): string {
-  const m = Math.floor(seconds / 60);
-  const s = Math.floor(seconds % 60);
+  const safe = Math.max(0, seconds || 0);
+  const m = Math.floor(safe / 60);
+  const s = Math.floor(safe % 60);
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
@@ -35,7 +36,7 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
   const bars = barsRef.current;
 
   const [isPlaying, setIsPlaying] = useState(false);
-  const [_currentTime, setCurrentTime] = useState(0);
+  const [currentTime, setCurrentTime] = useState(0);
   const [speed, setSpeed] = useState<Speed>(1);
   const speedRef = useRef(speed);
   useEffect(() => {
@@ -99,23 +100,40 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
         style={{ height: '40px' }}
         aria-hidden="true"
       >
-        {bars.map((height, i) => (
-          <div
-            key={i}
-            className="flex-1 rounded-t-sm bg-slate-300 transition-colors duration-200 dark:bg-slate-600"
-            style={{ height: `${height * 100}%` }}
-            data-testid="waveform-bar"
-          />
-        ))}
+        {bars.map((height, i) => {
+          const barEndTime = ((i + 1) / BAR_COUNT) * duration;
+          const isFilled = currentTime > 0 && duration > 0 && barEndTime <= currentTime;
+          return (
+            <div
+              key={i}
+              className={cn('flex-1 rounded-t-sm', !isFilled && 'bg-slate-300 dark:bg-slate-600')}
+              style={{
+                height: `${height * 100}%`,
+                ...(isFilled ? { backgroundColor: 'var(--cult-accent)' } : undefined),
+              }}
+              data-testid="waveform-bar"
+            />
+          );
+        })}
       </div>
 
       {/* Time + Speed pills */}
       <div className="flex flex-shrink-0 flex-col items-end gap-1.5">
         <span
           data-testid="waveform-time"
-          className="font-cult-mono text-xs text-slate-500 dark:text-slate-400"
+          className="font-cult-mono text-xs"
+          style={{ fontVariantNumeric: 'tabular-nums' }}
         >
-          {formatTime(duration)}
+          <span
+            data-testid="waveform-time-current"
+            style={{ color: isPlaying ? 'var(--cult-accent)' : 'var(--cult-text-muted)' }}
+          >
+            {formatTime(currentTime)}
+          </span>
+          <span style={{ color: 'var(--cult-text-muted)' }}>{' / '}</span>
+          <span data-testid="waveform-time-total" style={{ color: 'var(--cult-text-muted)' }}>
+            {formatTime(duration)}
+          </span>
         </span>
         <div
           data-testid="waveform-speed-pills"
