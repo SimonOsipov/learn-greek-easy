@@ -61,8 +61,22 @@ export const ExplanationCard: FC<ExplanationCardProps> = ({
     });
   };
 
+  // Screen reader announcement
+  const srAnnouncement = isCorrect
+    ? t('explanation.srCorrect', { defaultValue: 'Correct!' })
+    : t('explanation.srIncorrect', {
+        label: correctAnswer?.label ?? '',
+        text: correctAnswer?.text ?? '',
+        defaultValue: `Incorrect. The correct answer was ${correctAnswer?.label ?? ''}: ${correctAnswer?.text ?? ''}.`,
+      });
+
   return (
     <>
+      {/* Screen reader announcement */}
+      <div className="sr-only" role="status" aria-live="polite">
+        {srAnnouncement}
+      </div>
+
       <div
         className={cn(
           'animate-cult-slide-up',

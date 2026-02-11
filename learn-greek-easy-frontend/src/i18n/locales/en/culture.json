@@ -18,7 +18,9 @@
   "explanation": {
     "correct": "Correct!",
     "correctAnswerReveal": "The correct answer was: {{label}}: {{text}}",
-    "incorrect": "Not quite"
+    "incorrect": "Not quite",
+    "srCorrect": "Correct!",
+    "srIncorrect": "Incorrect. The correct answer was {{label}}: {{text}}."
   },
   "feedback": {
     "correct": "Correct!",

@@ -18,7 +18,9 @@
   "explanation": {
     "correct": "Правильно!",
     "correctAnswerReveal": "Правильный ответ был: {{label}}: {{text}}",
-    "incorrect": "Не совсем"
+    "incorrect": "Не совсем",
+    "srCorrect": "Правильно!",
+    "srIncorrect": "Неправильно. Правильный ответ: {{label}}: {{text}}."
   },
   "feedback": {
     "correct": "Правильно!",
