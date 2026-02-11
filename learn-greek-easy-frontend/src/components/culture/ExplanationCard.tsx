@@ -33,7 +33,7 @@ export interface ExplanationCardProps {
 
 export const ExplanationCard: FC<ExplanationCardProps> = ({
   isCorrect,
-  explanationText: _explanationText,
+  explanationText,
   correctAnswer,
   sourceArticleUrl: _sourceArticleUrl,
   cardId: _cardId,
@@ -83,6 +83,16 @@ export const ExplanationCard: FC<ExplanationCardProps> = ({
             text: correctAnswer.text,
             defaultValue: 'The correct answer was: {{label}}: {{text}}',
           })}
+        </p>
+      )}
+
+      {/* Explanation body text */}
+      {explanationText && (
+        <p
+          className="mt-2 font-cult-serif text-sm leading-[1.7] text-slate-500"
+          data-testid="explanation-text"
+        >
+          {explanationText}
         </p>
       )}
     </div>
