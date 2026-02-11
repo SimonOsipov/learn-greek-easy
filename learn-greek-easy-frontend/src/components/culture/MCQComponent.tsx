@@ -14,6 +14,7 @@ import type {
 
 import { AnswerOption, type OptionLetter } from './AnswerOption';
 import { CultureBadge } from './CultureBadge';
+import { ExplanationCard } from './ExplanationCard';
 import { SourceImage } from './SourceImage';
 import { WaveformPlayer } from './WaveformPlayer';
 
@@ -164,6 +165,14 @@ export const MCQComponent: React.FC<MCQComponentProps> = ({
     });
   }, [question.id, question.original_article_url]);
 
+  // Derive correctAnswer for ExplanationCard
+  const correctAnswerForExplanation = answerResult
+    ? {
+        label: OPTION_LETTERS[answerResult.correctOption - 1],
+        text: getLocalizedText(question.options[answerResult.correctOption - 1], language),
+      }
+    : undefined;
+
   return (
     <div
       className="w-full max-w-2xl"
@@ -258,6 +267,18 @@ export const MCQComponent: React.FC<MCQComponentProps> = ({
             );
           })}
         </div>
+
+        {/* Explanation card (practice mode only) */}
+        {showFeedback && isSubmitted && answerResult && (
+          <ExplanationCard
+            isCorrect={answerResult.isCorrect}
+            explanationText={answerResult.explanationText}
+            correctAnswer={correctAnswerForExplanation}
+            sourceArticleUrl={question.original_article_url}
+            cardId={question.id}
+            className="mt-3"
+          />
+        )}
 
         {/* Keyboard hint - KEEP EXACTLY */}
         <p

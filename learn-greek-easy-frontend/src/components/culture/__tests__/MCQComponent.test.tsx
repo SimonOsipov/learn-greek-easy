@@ -62,6 +62,37 @@ vi.mock('../WaveformPlayer', () => ({
   ),
 }));
 
+vi.mock('../ExplanationCard', () => ({
+  ExplanationCard: ({
+    isCorrect,
+    explanationText,
+    correctAnswer,
+    sourceArticleUrl,
+    cardId,
+    className,
+  }: {
+    isCorrect: boolean;
+    explanationText?: string;
+    correctAnswer?: { label: string; text: string };
+    sourceArticleUrl?: string | null;
+    cardId?: string;
+    className?: string;
+  }) => (
+    <div
+      data-testid="explanation-card"
+      data-is-correct={isCorrect}
+      data-explanation={explanationText || ''}
+      data-correct-label={correctAnswer?.label || ''}
+      data-correct-text={correctAnswer?.text || ''}
+      data-source-url={sourceArticleUrl || ''}
+      data-card-id={cardId || ''}
+      className={className}
+    >
+      {isCorrect ? 'Correct!' : 'Incorrect'}
+    </div>
+  ),
+}));
+
 // Mock question data
 const mockQuestion: CultureQuestionResponse = {
   id: 'test-question-1',
@@ -784,5 +815,259 @@ describe('MCQComponent - Audio Player', () => {
 
     const waveformPlayer = screen.queryByTestId('waveform-player');
     expect(waveformPlayer).not.toBeInTheDocument();
+  });
+});
+
+describe('MCQComponent - ExplanationCard Integration', () => {
+  const mockOnAnswer = vi.fn();
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('should render ExplanationCard when showFeedback=true, isSubmitted=true, and answerResult provided', async () => {
+    const user = userEvent.setup();
+    const mockAnswerResult = {
+      isCorrect: true,
+      correctOption: 1,
+      explanationText: 'Athens is the capital and largest city of Greece.',
+    };
+
+    renderWithProviders(
+      <MCQComponent
+        question={mockQuestion}
+        language="en"
+        onAnswer={mockOnAnswer}
+        showFeedback={true}
+        answerResult={mockAnswerResult}
+      />
+    );
+
+    // Select option A
+    const optionA = screen.getByTestId('answer-option-a');
+    await user.click(optionA);
+
+    // Submit the answer
+    const submitButton = screen.getByTestId('mcq-submit-button');
+    await user.click(submitButton);
+
+    // Check that ExplanationCard is rendered
+    const explanationCard = screen.getByTestId('explanation-card');
+    expect(explanationCard).toBeInTheDocument();
+    expect(explanationCard).toHaveAttribute('data-is-correct', 'true');
+    expect(explanationCard).toHaveAttribute(
+      'data-explanation',
+      'Athens is the capital and largest city of Greece.'
+    );
+    expect(explanationCard).toHaveAttribute('data-correct-label', 'A');
+    expect(explanationCard).toHaveAttribute('data-correct-text', 'Athens');
+    expect(explanationCard).toHaveAttribute('data-card-id', 'test-question-1');
+  });
+
+  it('should NOT render ExplanationCard when showFeedback=false (mock exam mode)', async () => {
+    const user = userEvent.setup();
+    const mockAnswerResult = {
+      isCorrect: true,
+      correctOption: 1,
+      explanationText: 'Test explanation',
+    };
+
+    renderWithProviders(
+      <MCQComponent
+        question={mockQuestion}
+        language="en"
+        onAnswer={mockOnAnswer}
+        showFeedback={false}
+        answerResult={mockAnswerResult}
+      />
+    );
+
+    // Select option A
+    const optionA = screen.getByTestId('answer-option-a');
+    await user.click(optionA);
+
+    // Submit the answer
+    const submitButton = screen.getByTestId('mcq-submit-button');
+    await user.click(submitButton);
+
+    // ExplanationCard should NOT be rendered
+    expect(screen.queryByTestId('explanation-card')).not.toBeInTheDocument();
+  });
+
+  it('should NOT render ExplanationCard before submission', async () => {
+    const user = userEvent.setup();
+    const mockAnswerResult = {
+      isCorrect: true,
+      correctOption: 1,
+      explanationText: 'Test explanation',
+    };
+
+    renderWithProviders(
+      <MCQComponent
+        question={mockQuestion}
+        language="en"
+        onAnswer={mockOnAnswer}
+        showFeedback={true}
+        answerResult={mockAnswerResult}
+      />
+    );
+
+    // Select option A but don't submit
+    const optionA = screen.getByTestId('answer-option-a');
+    await user.click(optionA);
+
+    // ExplanationCard should NOT be rendered before submission
+    expect(screen.queryByTestId('explanation-card')).not.toBeInTheDocument();
+  });
+
+  it('should NOT render ExplanationCard when answerResult is undefined', async () => {
+    const user = userEvent.setup();
+
+    renderWithProviders(
+      <MCQComponent
+        question={mockQuestion}
+        language="en"
+        onAnswer={mockOnAnswer}
+        showFeedback={true}
+      />
+    );
+
+    // Select option A
+    const optionA = screen.getByTestId('answer-option-a');
+    await user.click(optionA);
+
+    // Submit the answer
+    const submitButton = screen.getByTestId('mcq-submit-button');
+    await user.click(submitButton);
+
+    // ExplanationCard should NOT be rendered without answerResult
+    expect(screen.queryByTestId('explanation-card')).not.toBeInTheDocument();
+  });
+
+  it('should pass isCorrect=false when answer is incorrect', async () => {
+    const user = userEvent.setup();
+    const mockAnswerResult = {
+      isCorrect: false,
+      correctOption: 2,
+      explanationText: 'The correct answer is Athens.',
+    };
+
+    renderWithProviders(
+      <MCQComponent
+        question={mockQuestion}
+        language="en"
+        onAnswer={mockOnAnswer}
+        showFeedback={true}
+        answerResult={mockAnswerResult}
+      />
+    );
+
+    // Select option A (wrong answer)
+    const optionA = screen.getByTestId('answer-option-a');
+    await user.click(optionA);
+
+    // Submit the answer
+    const submitButton = screen.getByTestId('mcq-submit-button');
+    await user.click(submitButton);
+
+    // Check that ExplanationCard shows incorrect state
+    const explanationCard = screen.getByTestId('explanation-card');
+    expect(explanationCard).toBeInTheDocument();
+    expect(explanationCard).toHaveAttribute('data-is-correct', 'false');
+    expect(explanationCard).toHaveTextContent('Incorrect');
+  });
+
+  it('should derive correctAnswer label and text correctly', async () => {
+    const user = userEvent.setup();
+    const mockAnswerResult = {
+      isCorrect: false,
+      correctOption: 2, // Option B - Thessaloniki
+      explanationText: 'Test explanation',
+    };
+
+    renderWithProviders(
+      <MCQComponent
+        question={mockQuestion}
+        language="en"
+        onAnswer={mockOnAnswer}
+        showFeedback={true}
+        answerResult={mockAnswerResult}
+      />
+    );
+
+    // Select option A
+    const optionA = screen.getByTestId('answer-option-a');
+    await user.click(optionA);
+
+    // Submit the answer
+    const submitButton = screen.getByTestId('mcq-submit-button');
+    await user.click(submitButton);
+
+    // Check that correct answer shows "B" label and "Thessaloniki" text
+    const explanationCard = screen.getByTestId('explanation-card');
+    expect(explanationCard).toHaveAttribute('data-correct-label', 'B');
+    expect(explanationCard).toHaveAttribute('data-correct-text', 'Thessaloniki');
+  });
+
+  it('should pass sourceArticleUrl from question when available', async () => {
+    const user = userEvent.setup();
+    const mockAnswerResult = {
+      isCorrect: true,
+      correctOption: 1,
+      explanationText: 'Test explanation',
+    };
+
+    renderWithProviders(
+      <MCQComponent
+        question={mockQuestionWithSourceUrl}
+        language="en"
+        onAnswer={mockOnAnswer}
+        showFeedback={true}
+        answerResult={mockAnswerResult}
+      />
+    );
+
+    // Select option A
+    const optionA = screen.getByTestId('answer-option-a');
+    await user.click(optionA);
+
+    // Submit the answer
+    const submitButton = screen.getByTestId('mcq-submit-button');
+    await user.click(submitButton);
+
+    // Check that sourceArticleUrl is passed
+    const explanationCard = screen.getByTestId('explanation-card');
+    expect(explanationCard).toHaveAttribute('data-source-url', 'https://example.com/news/article');
+  });
+
+  it('should have mt-3 margin class', async () => {
+    const user = userEvent.setup();
+    const mockAnswerResult = {
+      isCorrect: true,
+      correctOption: 1,
+      explanationText: 'Test explanation',
+    };
+
+    renderWithProviders(
+      <MCQComponent
+        question={mockQuestion}
+        language="en"
+        onAnswer={mockOnAnswer}
+        showFeedback={true}
+        answerResult={mockAnswerResult}
+      />
+    );
+
+    // Select option A
+    const optionA = screen.getByTestId('answer-option-a');
+    await user.click(optionA);
+
+    // Submit the answer
+    const submitButton = screen.getByTestId('mcq-submit-button');
+    await user.click(submitButton);
+
+    // Check that mt-3 class is applied
+    const explanationCard = screen.getByTestId('explanation-card');
+    expect(explanationCard).toHaveClass('mt-3');
   });
 });
