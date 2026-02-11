@@ -22,6 +22,38 @@ import { MCQComponent } from '../MCQComponent';
 import { renderWithProviders } from '@/lib/test-utils';
 import type { CultureQuestionResponse } from '@/types/culture';
 
+// Mock SourceImage to test integration without implementation details
+vi.mock('../SourceImage', () => ({
+  SourceImage: ({
+    imageUrl,
+    sourceUrl,
+    onSourceClick,
+  }: {
+    imageUrl: string;
+    sourceUrl?: string;
+    onSourceClick?: () => void;
+  }) => (
+    <div
+      data-testid="source-image-container"
+      data-image-url={imageUrl}
+      data-source-url={sourceUrl || ''}
+    >
+      <img data-testid="source-image" src={imageUrl} alt="" loading="lazy" />
+      {sourceUrl && (
+        <a
+          data-testid="source-image-link"
+          href={sourceUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={onSourceClick}
+        >
+          Source
+        </a>
+      )}
+    </div>
+  ),
+}));
+
 // Mock question data
 const mockQuestion: CultureQuestionResponse = {
   id: 'test-question-1',
@@ -411,34 +443,48 @@ describe('MCQComponent', () => {
   });
 
   describe('Image Handling', () => {
-    it('should render image with lazy loading when image_url is provided', () => {
+    it('should render SourceImage when image_url is provided', () => {
       renderWithProviders(
         <MCQComponent question={mockQuestionWithImage} language="en" onAnswer={mockOnAnswer} />
       );
 
-      const image = screen.getByTestId('mcq-image');
-      expect(image).toBeInTheDocument();
-      expect(image).toHaveAttribute('loading', 'lazy');
-      expect(image).toHaveAttribute('src', 'https://example.com/image.jpg');
+      const container = screen.getByTestId('source-image-container');
+      expect(container).toBeInTheDocument();
+      expect(container).toHaveAttribute('data-image-url', 'https://example.com/image.jpg');
     });
 
-    it('should not render image when image_url is null', () => {
+    it('should not render SourceImage when image_url is null', () => {
       renderWithProviders(
         <MCQComponent question={mockQuestion} language="en" onAnswer={mockOnAnswer} />
       );
 
-      expect(screen.queryByTestId('mcq-image')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('source-image-container')).not.toBeInTheDocument();
     });
 
-    it('should hide image on error', () => {
+    it('should pass sourceUrl to SourceImage when original_article_url is a valid http URL', () => {
+      const questionWithBoth: CultureQuestionResponse = {
+        ...mockQuestionWithImage,
+        original_article_url: 'https://example.com/news/article',
+      };
       renderWithProviders(
-        <MCQComponent question={mockQuestionWithImage} language="en" onAnswer={mockOnAnswer} />
+        <MCQComponent question={questionWithBoth} language="en" onAnswer={mockOnAnswer} />
       );
 
-      const image = screen.getByTestId('mcq-image');
-      fireEvent.error(image);
+      const container = screen.getByTestId('source-image-container');
+      expect(container).toHaveAttribute('data-source-url', 'https://example.com/news/article');
+    });
 
-      expect(image).toHaveStyle({ display: 'none' });
+    it('should not pass sourceUrl to SourceImage for non-http URLs', () => {
+      const questionWithBadUrl: CultureQuestionResponse = {
+        ...mockQuestionWithImage,
+        original_article_url: 'javascript:alert("xss")',
+      };
+      renderWithProviders(
+        <MCQComponent question={questionWithBadUrl} language="en" onAnswer={mockOnAnswer} />
+      );
+
+      const container = screen.getByTestId('source-image-container');
+      expect(container).toHaveAttribute('data-source-url', '');
     });
   });
 
@@ -597,36 +643,46 @@ describe('MCQComponent', () => {
   });
 
   describe('Source Article Link', () => {
-    it('should render source article link when original_article_url is provided', () => {
+    it('should pass sourceUrl to SourceImage when original_article_url is provided', () => {
+      const questionWithBoth: CultureQuestionResponse = {
+        ...mockQuestionWithSourceUrl,
+        image_url: 'https://example.com/image.jpg',
+      };
       renderWithProviders(
-        <MCQComponent question={mockQuestionWithSourceUrl} language="en" onAnswer={mockOnAnswer} />
+        <MCQComponent question={questionWithBoth} language="en" onAnswer={mockOnAnswer} />
       );
 
-      const sourceLink = screen.getByTestId('source-article-link');
-      expect(sourceLink).toBeInTheDocument();
-      expect(sourceLink).toHaveAttribute('href', 'https://example.com/news/article');
-      expect(sourceLink).toHaveAttribute('target', '_blank');
-      expect(sourceLink).toHaveAttribute('rel', 'noopener noreferrer');
+      const link = screen.getByTestId('source-image-link');
+      expect(link).toBeInTheDocument();
+      expect(link).toHaveAttribute('href', 'https://example.com/news/article');
+      expect(link).toHaveAttribute('target', '_blank');
+      expect(link).toHaveAttribute('rel', 'noopener noreferrer');
     });
 
-    it('should not render source article link when original_article_url is null', () => {
+    it('should not render source link when original_article_url is null', () => {
       renderWithProviders(
         <MCQComponent question={mockQuestion} language="en" onAnswer={mockOnAnswer} />
       );
 
-      expect(screen.queryByTestId('source-article-link')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('source-image-link')).not.toBeInTheDocument();
     });
 
-    it('should not render source article link for non-http URLs', () => {
+    it('should not pass sourceUrl to SourceImage for non-http URLs', () => {
+      const questionWithInvalidUrlAndImage: CultureQuestionResponse = {
+        ...mockQuestionWithInvalidSourceUrl,
+        image_url: 'https://example.com/image.jpg',
+      };
       renderWithProviders(
         <MCQComponent
-          question={mockQuestionWithInvalidSourceUrl}
+          question={questionWithInvalidUrlAndImage}
           language="en"
           onAnswer={mockOnAnswer}
         />
       );
 
-      expect(screen.queryByTestId('source-article-link')).not.toBeInTheDocument();
+      // SourceImage should be rendered (has image_url) but without source link
+      expect(screen.getByTestId('source-image-container')).toBeInTheDocument();
+      expect(screen.queryByTestId('source-image-link')).not.toBeInTheDocument();
     });
   });
 });
