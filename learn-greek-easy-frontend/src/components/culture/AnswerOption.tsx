@@ -152,7 +152,7 @@ export const AnswerOption: React.FC<AnswerOptionProps> = ({
       </span>
 
       {/* Option text */}
-      <span className="flex-1 text-base text-foreground">{text}</span>
+      <span className="flex-1 font-cult-serif text-base text-foreground">{text}</span>
     </button>
   );
 };
