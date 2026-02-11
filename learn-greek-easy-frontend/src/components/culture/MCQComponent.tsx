@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
-import { ExternalLink } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
@@ -10,6 +9,7 @@ import { trackNewsSourceLinkClicked } from '@/lib/analytics';
 import type { CultureLanguage, CultureQuestionResponse, MultilingualText } from '@/types/culture';
 
 import { AnswerOption, type OptionLetter } from './AnswerOption';
+import { SourceImage } from './SourceImage';
 
 export interface MCQComponentProps {
   /** The question data to display */
@@ -106,11 +106,6 @@ export const MCQComponent: React.FC<MCQComponentProps> = ({
     optionCount: question.option_count,
   });
 
-  // Handle image error - hide the image
-  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
-    (e.target as HTMLImageElement).style.display = 'none';
-  };
-
   // Handle source article link click - track analytics
   const handleSourceLinkClick = useCallback(() => {
     const sourceUrl = question.original_article_url;
@@ -144,15 +139,16 @@ export const MCQComponent: React.FC<MCQComponentProps> = ({
           </p>
         )}
 
-        {/* Question image (lazy loaded) */}
+        {/* Question image with source attribution */}
         {question.image_url && (
-          <img
-            src={question.image_url}
-            alt="Question illustration"
-            loading="lazy"
-            className="mx-auto max-h-64 rounded-lg object-contain"
-            onError={handleImageError}
-            data-testid="mcq-image"
+          <SourceImage
+            imageUrl={question.image_url}
+            sourceUrl={
+              question.original_article_url?.startsWith('http')
+                ? question.original_article_url
+                : undefined
+            }
+            onSourceClick={handleSourceLinkClick}
           />
         )}
 
@@ -164,21 +160,6 @@ export const MCQComponent: React.FC<MCQComponentProps> = ({
         >
           {questionText}
         </h2>
-
-        {/* Source article link - show before answering if available */}
-        {question.original_article_url && question.original_article_url.startsWith('http') && (
-          <a
-            href={question.original_article_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-2 flex items-center gap-2 text-sm text-primary hover:underline"
-            data-testid="source-article-link"
-            onClick={handleSourceLinkClick}
-          >
-            <ExternalLink className="h-4 w-4" />
-            {t('mcq.readSourceArticle', 'Read source article')}
-          </a>
-        )}
       </CardHeader>
 
       <CardContent className="space-y-4">
