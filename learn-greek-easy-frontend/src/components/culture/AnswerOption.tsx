@@ -1,5 +1,7 @@
 import React from 'react';
 
+import { Check, X } from 'lucide-react';
+
 import { cn } from '@/lib/utils';
 
 export type OptionLetter = 'A' | 'B' | 'C' | 'D';
@@ -163,6 +165,22 @@ export const AnswerOption: React.FC<AnswerOptionProps> = ({
         >
           {keyboardHintNumber}
         </span>
+      )}
+
+      {/* Result icons (post-submit) */}
+      {resolvedState === 'correct' && (
+        <Check
+          className="h-5 w-5 flex-shrink-0 animate-cult-pop-in text-emerald-500"
+          aria-hidden="true"
+          data-testid="result-icon-correct"
+        />
+      )}
+      {resolvedState === 'incorrect' && (
+        <X
+          className="h-5 w-5 flex-shrink-0 animate-cult-pop-in text-red-500"
+          aria-hidden="true"
+          data-testid="result-icon-incorrect"
+        />
       )}
     </button>
   );
