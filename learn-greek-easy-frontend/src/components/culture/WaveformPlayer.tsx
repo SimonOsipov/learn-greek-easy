@@ -1,12 +1,14 @@
-import { type FC, useRef } from 'react';
+import { type FC, useCallback, useEffect, useRef, useState } from 'react';
 
-import { Play } from 'lucide-react';
+import { Pause, Play } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 import { generateBars } from '@/lib/waveform';
 
 const BAR_COUNT = 48;
 const DEFAULT_DURATION = 90;
+const TICK_INTERVAL_MS = 100;
+const DEFAULT_SPEED = 1;
 
 function formatTime(seconds: number): string {
   const m = Math.floor(seconds / 60);
@@ -31,6 +33,30 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
   }
   const bars = barsRef.current;
 
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [_currentTime, setCurrentTime] = useState(0);
+
+  useEffect(() => {
+    if (!isPlaying) return;
+
+    const id = setInterval(() => {
+      setCurrentTime((prev) => {
+        const next = prev + (TICK_INTERVAL_MS / 1000) * DEFAULT_SPEED;
+        if (next >= duration) {
+          setIsPlaying(false);
+          return 0;
+        }
+        return next;
+      });
+    }, TICK_INTERVAL_MS);
+
+    return () => clearInterval(id);
+  }, [isPlaying, duration]);
+
+  const togglePlayPause = useCallback(() => {
+    setIsPlaying((prev) => !prev);
+  }, []);
+
   return (
     <div
       data-testid="waveform-player"
@@ -40,19 +66,24 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
         className
       )}
     >
-      {/* Play button */}
+      {/* Play/Pause button */}
       <button
         type="button"
         data-testid="waveform-play-button"
+        onClick={togglePlayPause}
         className={cn(
           'flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full',
           'bg-indigo-500 text-white transition-colors duration-200',
           'hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2',
           'dark:bg-indigo-400 dark:hover:bg-indigo-500 dark:focus:ring-offset-slate-800'
         )}
-        aria-label="Play audio"
+        aria-label={isPlaying ? 'Pause audio' : 'Play audio'}
       >
-        <Play className="ml-0.5 h-4 w-4" aria-hidden="true" />
+        {isPlaying ? (
+          <Pause className="h-4 w-4" aria-hidden="true" />
+        ) : (
+          <Play className="ml-0.5 h-4 w-4" aria-hidden="true" />
+        )}
       </button>
 
       {/* Waveform bars */}
