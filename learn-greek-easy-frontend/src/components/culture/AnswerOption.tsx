@@ -4,6 +4,8 @@ import { cn } from '@/lib/utils';
 
 export type OptionLetter = 'A' | 'B' | 'C' | 'D';
 
+export type AnswerOptionState = 'default' | 'selected' | 'correct' | 'incorrect' | 'dimmed';
+
 export interface AnswerOptionProps {
   /** The letter identifier for this option (A, B, C, D) */
   letter: OptionLetter;
@@ -44,6 +46,11 @@ export interface AnswerOptionProps {
    * Only rendered when `showKeyboardHint` is true.
    */
   keyboardHintNumber?: number;
+  /**
+   * Visual state of the option button. If provided, takes precedence over boolean props.
+   * If not provided, state is derived from submitted/isCorrect/isSelectedIncorrect/isSelected.
+   */
+  state?: AnswerOptionState;
 }
 
 /**
@@ -63,45 +70,82 @@ export const AnswerOption: React.FC<AnswerOptionProps> = ({
   onClick,
   disabled = false,
   'aria-describedby': ariaDescribedBy,
-  submitted: _submitted,
-  isCorrect: _isCorrect,
-  isSelectedIncorrect: _isSelectedIncorrect,
+  submitted,
+  isCorrect,
+  isSelectedIncorrect,
   showKeyboardHint: _showKeyboardHint = true,
   keyboardHintNumber: _keyboardHintNumber,
+  state,
 }) => {
+  // Compute resolved state from props
+  const resolvedState: AnswerOptionState =
+    state ??
+    (submitted && isCorrect
+      ? 'correct'
+      : submitted && isSelectedIncorrect
+        ? 'incorrect'
+        : submitted && !isCorrect && !isSelectedIncorrect
+          ? 'dimmed'
+          : isSelected
+            ? 'selected'
+            : 'default');
   return (
     <button
       type="button"
       data-testid={`answer-option-${letter.toLowerCase()}`}
       onClick={onClick}
       disabled={disabled}
-      aria-pressed={isSelected}
+      aria-pressed={resolvedState === 'selected'}
       aria-describedby={ariaDescribedBy}
       className={cn(
         // Base styles
-        'flex w-full items-center gap-3 rounded-lg border-2 p-4 text-left transition-all duration-200',
-        // Focus styles (always visible for accessibility)
+        'flex w-full items-center gap-3 rounded-2xl border-[1.5px] text-left',
+        'px-[1.125rem] py-3.5',
+        'duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] transition-all',
+        // Focus styles
         'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
+
         // Default state
-        !isSelected &&
-          !disabled &&
-          'border-border bg-card hover:border-primary/30 hover:bg-primary/5 dark:hover:border-primary/60 dark:hover:bg-primary/10',
-        // Selected state - uses border AND background for accessibility (not just color)
-        isSelected &&
-          !disabled &&
-          'border-primary bg-primary/10 ring-2 ring-ring ring-offset-2 dark:border-primary dark:bg-primary/20 dark:ring-ring',
-        // Disabled state
-        disabled && 'cursor-not-allowed border-border bg-muted opacity-60'
+        resolvedState === 'default' && [
+          'border-[var(--cult-border)] bg-[var(--cult-card)]',
+          'hover:border-slate-300 hover:bg-slate-50/60',
+        ],
+
+        // Selected state (before submit)
+        resolvedState === 'selected' && [
+          'border-[var(--cult-accent)] bg-[var(--cult-accent-soft)]',
+          'shadow-[0_0_0_3px_var(--cult-accent-glow)]',
+        ],
+
+        // Correct state (after submit)
+        resolvedState === 'correct' && [
+          'border-[var(--cult-correct)] bg-[var(--cult-correct-soft)]',
+          'shadow-[0_0_0_3px_var(--cult-correct-glow)]',
+        ],
+
+        // Incorrect state (after submit, selected + wrong)
+        resolvedState === 'incorrect' && [
+          'border-[var(--cult-incorrect)] bg-[var(--cult-incorrect-soft)]',
+          'shadow-[0_0_0_3px_var(--cult-incorrect-glow)]',
+        ],
+
+        // Dimmed state (non-selected, non-correct after submit)
+        resolvedState === 'dimmed' &&
+          'border-[var(--cult-border)] bg-[var(--cult-card)] opacity-[0.35]',
+
+        // Disabled (pointer-events-none after submit)
+        disabled && 'pointer-events-none'
       )}
     >
       {/* Letter badge */}
       <span
         className={cn(
           'flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-sm font-bold',
-          // Default badge state
-          !isSelected && 'bg-muted text-muted-foreground',
-          // Selected badge state
-          isSelected && 'bg-primary text-primary-foreground'
+          (resolvedState === 'default' || resolvedState === 'dimmed') &&
+            'bg-muted text-muted-foreground',
+          resolvedState === 'selected' && 'bg-primary text-primary-foreground',
+          resolvedState === 'correct' && 'bg-emerald-500 text-white',
+          resolvedState === 'incorrect' && 'bg-red-500 text-white'
         )}
       >
         {letter}
@@ -109,22 +153,6 @@ export const AnswerOption: React.FC<AnswerOptionProps> = ({
 
       {/* Option text */}
       <span className="flex-1 text-base text-foreground">{text}</span>
-
-      {/* Selection indicator */}
-      {isSelected && (
-        <svg
-          className="h-5 w-5 flex-shrink-0 text-primary"
-          fill="currentColor"
-          viewBox="0 0 20 20"
-          aria-hidden="true"
-        >
-          <path
-            fillRule="evenodd"
-            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-            clipRule="evenodd"
-          />
-        </svg>
-      )}
     </button>
   );
 };
