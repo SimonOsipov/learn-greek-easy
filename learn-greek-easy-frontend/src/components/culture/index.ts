@@ -18,3 +18,6 @@ export type { QuestionFeedbackProps } from './QuestionFeedback';
 
 export { SourceImage } from './SourceImage';
 export type { SourceImageProps } from './SourceImage';
+
+export { WaveformPlayer } from './WaveformPlayer';
+export type { WaveformPlayerProps } from './WaveformPlayer';
