@@ -1,5 +1,8 @@
 import { type FC } from 'react';
 
+import { Check, X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+
 import { cn } from '@/lib/utils';
 
 /** Props for the ExplanationCard component */
@@ -36,6 +39,8 @@ export const ExplanationCard: FC<ExplanationCardProps> = ({
   cardId: _cardId,
   className,
 }) => {
+  const { t } = useTranslation('culture');
+
   return (
     <div
       className={cn(
@@ -53,7 +58,22 @@ export const ExplanationCard: FC<ExplanationCardProps> = ({
       }}
       data-testid="explanation-card"
     >
-      {/* Inner content -- implemented in subsequent subtasks */}
+      {/* Result header */}
+      <div className="flex items-center gap-2">
+        {isCorrect ? (
+          <Check className="h-4 w-4 text-emerald-600" strokeWidth={2.5} aria-hidden="true" />
+        ) : (
+          <X className="h-4 w-4 text-red-600" strokeWidth={2.5} aria-hidden="true" />
+        )}
+        <span
+          className={cn(
+            'font-cult-mono text-[13px] font-semibold uppercase tracking-wide',
+            isCorrect ? 'text-emerald-600' : 'text-red-600'
+          )}
+        >
+          {isCorrect ? t('explanation.correct') : t('explanation.incorrect')}
+        </span>
+      </div>
     </div>
   );
 };

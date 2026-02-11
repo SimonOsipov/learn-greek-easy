@@ -15,6 +15,10 @@
     "optionLabel": "Вариант {{letter}}: {{text}}",
     "readSourceArticle": "Читать исходную статью"
   },
+  "explanation": {
+    "correct": "Правильно!",
+    "incorrect": "Не совсем"
+  },
   "feedback": {
     "correct": "Правильно!",
     "wrong": "Неправильно!",
