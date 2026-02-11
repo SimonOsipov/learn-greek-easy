@@ -74,15 +74,19 @@ export const MCQComponent: React.FC<MCQComponentProps> = ({
   questionNumber,
   totalQuestions,
   disabled = false,
+  showFeedback = false,
+  onNext,
 }) => {
   const { t } = useTranslation('culture');
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
+  const [isSubmitted, setIsSubmitted] = useState(false);
   const prevQuestionIdRef = useRef<string | null>(null);
 
   // Reset selection when question ID actually changes (not just object reference)
   useEffect(() => {
     if (prevQuestionIdRef.current !== null && prevQuestionIdRef.current !== question.id) {
       setSelectedOption(null);
+      setIsSubmitted(false);
     }
     prevQuestionIdRef.current = question.id;
   }, [question.id]);
@@ -97,25 +101,36 @@ export const MCQComponent: React.FC<MCQComponentProps> = ({
   // Handle option selection (1 to option_count)
   const handleSelectOption = useCallback(
     (option: number) => {
-      if (!disabled && option >= 1 && option <= question.option_count) {
+      if (!disabled && !isSubmitted && option >= 1 && option <= question.option_count) {
         setSelectedOption(option);
       }
     },
-    [disabled, question.option_count]
+    [disabled, isSubmitted, question.option_count]
   );
 
   // Handle submit
   const handleSubmit = useCallback(() => {
+    if (isSubmitted) return;
     if (selectedOption !== null && !disabled) {
+      if (showFeedback) {
+        setIsSubmitted(true);
+      }
       onAnswer(selectedOption);
     }
-  }, [selectedOption, disabled, onAnswer]);
+  }, [selectedOption, disabled, isSubmitted, showFeedback, onAnswer]);
+
+  // Handle next (wired to JSX in later subtask)
+  const _handleNext = useCallback(() => {
+    setSelectedOption(null);
+    setIsSubmitted(false);
+    onNext?.();
+  }, [onNext]);
 
   // Keyboard shortcuts
   useMCQKeyboardShortcuts({
     onSelectOption: handleSelectOption,
     onSubmit: handleSubmit,
-    canSubmit: selectedOption !== null,
+    canSubmit: selectedOption !== null && !isSubmitted,
     disabled,
     optionCount: question.option_count,
   });
