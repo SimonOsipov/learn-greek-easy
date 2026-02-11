@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useTranslation } from 'react-i18next';
 
@@ -95,6 +95,12 @@ export const MCQComponent: React.FC<MCQComponentProps> = ({
   const [isSubmitted, setIsSubmitted] = useState(false);
   const prevQuestionIdRef = useRef<string | null>(null);
 
+  // Check for reduced motion preference
+  const prefersReducedMotion = useMemo(() => {
+    if (typeof window === 'undefined') return false;
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  }, []);
+
   // Reset selection when question ID actually changes (not just object reference)
   useEffect(() => {
     if (prevQuestionIdRef.current !== null && prevQuestionIdRef.current !== question.id) {
@@ -176,7 +182,8 @@ export const MCQComponent: React.FC<MCQComponentProps> = ({
 
   return (
     <div
-      className="w-full max-w-2xl"
+      key={question.id}
+      className={cn('w-full max-w-2xl', !prefersReducedMotion && 'animate-cult-fade-in')}
       role="group"
       aria-labelledby={questionId}
       data-testid="mcq-component"
