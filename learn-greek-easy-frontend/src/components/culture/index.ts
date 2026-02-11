@@ -15,3 +15,6 @@ export type { ProgressBarProps } from './ProgressBar';
 
 export { QuestionFeedback } from './QuestionFeedback';
 export type { QuestionFeedbackProps } from './QuestionFeedback';
+
+export { SourceImage } from './SourceImage';
+export type { SourceImageProps } from './SourceImage';
