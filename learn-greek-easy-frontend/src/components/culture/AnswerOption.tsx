@@ -91,6 +91,15 @@ export const AnswerOption: React.FC<AnswerOptionProps> = ({
           : isSelected
             ? 'selected'
             : 'default');
+
+  // Compute aria-label for post-submission feedback
+  const ariaLabel =
+    resolvedState === 'correct'
+      ? `Correct answer: ${text}`
+      : resolvedState === 'incorrect'
+        ? `Your answer (incorrect): ${text}`
+        : undefined;
+
   return (
     <button
       type="button"
@@ -98,6 +107,7 @@ export const AnswerOption: React.FC<AnswerOptionProps> = ({
       onClick={onClick}
       disabled={disabled}
       aria-pressed={resolvedState === 'selected'}
+      aria-label={ariaLabel}
       aria-describedby={ariaDescribedBy}
       className={cn(
         // Base styles
@@ -105,7 +115,7 @@ export const AnswerOption: React.FC<AnswerOptionProps> = ({
         'px-[1.125rem] py-3.5',
         'duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] transition-all',
         // Focus styles
-        'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
 
         // Default state
         resolvedState === 'default' && [
