@@ -747,6 +747,59 @@ describe('MCQComponent', () => {
       expect(screen.queryByTestId('source-image-link')).not.toBeInTheDocument();
     });
   });
+
+  describe('Source Article Link - No-Image Fallback', () => {
+    it('should render standalone source link when no image and valid URL', () => {
+      // Use mockQuestionWithSourceUrl (has original_article_url but no image)
+      renderWithProviders(
+        <MCQComponent question={mockQuestionWithSourceUrl} language="en" onAnswer={mockOnAnswer} />
+      );
+
+      const link = screen.getByTestId('source-article-link');
+      expect(link).toBeInTheDocument();
+      expect(link).toHaveAttribute('href', 'https://example.com/news/article');
+      expect(link).toHaveAttribute('target', '_blank');
+      expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+    });
+
+    it('should NOT render standalone link when image IS present', () => {
+      // Use question with both image_url and original_article_url
+      const questionWithBoth: CultureQuestionResponse = {
+        ...mockQuestionWithSourceUrl,
+        image_url: 'https://example.com/image.jpg',
+      };
+      renderWithProviders(
+        <MCQComponent question={questionWithBoth} language="en" onAnswer={mockOnAnswer} />
+      );
+
+      // Standalone link should NOT be in the DOM (link is in SourceImage overlay instead)
+      expect(screen.queryByTestId('source-article-link')).not.toBeInTheDocument();
+      // SourceImage link SHOULD be present
+      expect(screen.getByTestId('source-image-link')).toBeInTheDocument();
+    });
+
+    it('should NOT render standalone link for non-http URLs', () => {
+      // Use question with javascript: URL
+      renderWithProviders(
+        <MCQComponent
+          question={mockQuestionWithInvalidSourceUrl}
+          language="en"
+          onAnswer={mockOnAnswer}
+        />
+      );
+
+      expect(screen.queryByTestId('source-article-link')).not.toBeInTheDocument();
+    });
+
+    it('should NOT render standalone link when original_article_url is null', () => {
+      // Use basic mockQuestion (both image_url and original_article_url are null)
+      renderWithProviders(
+        <MCQComponent question={mockQuestion} language="en" onAnswer={mockOnAnswer} />
+      );
+
+      expect(screen.queryByTestId('source-article-link')).not.toBeInTheDocument();
+    });
+  });
 });
 
 describe('MCQComponent - Category Badge Integration', () => {

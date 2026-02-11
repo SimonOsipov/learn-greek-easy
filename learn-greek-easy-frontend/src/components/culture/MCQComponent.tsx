@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { ExternalLink } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { useMCQKeyboardShortcuts } from '@/hooks/useMCQKeyboardShortcuts';
@@ -230,6 +231,21 @@ export const MCQComponent: React.FC<MCQComponentProps> = ({
           >
             {questionText}
           </h2>
+
+          {/* Standalone source article link (no-image fallback) */}
+          {!question.image_url && question.original_article_url?.startsWith('http') && (
+            <a
+              href={question.original_article_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 text-xs text-primary hover:underline"
+              data-testid="source-article-link"
+              onClick={handleSourceLinkClick}
+            >
+              <ExternalLink className="h-3.5 w-3.5 flex-shrink-0" aria-hidden="true" />
+              {t('feedback.sourceArticle', 'Source article')}
+            </a>
+          )}
         </div>
       </div>
 
