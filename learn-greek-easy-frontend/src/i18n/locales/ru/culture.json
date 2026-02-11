@@ -13,7 +13,9 @@
     "timeRemaining": "{{seconds}}с осталось",
     "selectAnswer": "Выберите ответ для продолжения",
     "optionLabel": "Вариант {{letter}}: {{text}}",
-    "readSourceArticle": "Читать исходную статью"
+    "readSourceArticle": "Читать исходную статью",
+    "nextQuestion": "Следующий Вопрос",
+    "seeResults": "Показать Результаты"
   },
   "explanation": {
     "correct": "Правильно!",

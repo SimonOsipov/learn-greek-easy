@@ -2,9 +2,9 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useTranslation } from 'react-i18next';
 
-import { Button } from '@/components/ui/button';
 import { useMCQKeyboardShortcuts } from '@/hooks/useMCQKeyboardShortcuts';
 import { trackNewsSourceLinkClicked } from '@/lib/analytics';
+import { cn } from '@/lib/utils';
 import type {
   CultureCategory,
   CultureLanguage,
@@ -85,6 +85,7 @@ export const MCQComponent: React.FC<MCQComponentProps> = ({
   disabled = false,
   showFeedback = false,
   onNext,
+  isLastQuestion,
   answerResult,
   category,
   hasAudio = false,
@@ -131,8 +132,8 @@ export const MCQComponent: React.FC<MCQComponentProps> = ({
     }
   }, [selectedOption, disabled, isSubmitted, showFeedback, onAnswer]);
 
-  // Handle next (wired to JSX in later subtask)
-  const _handleNext = useCallback(() => {
+  // Handle next
+  const handleNext = useCallback(() => {
     setSelectedOption(null);
     setIsSubmitted(false);
     onNext?.();
@@ -289,17 +290,35 @@ export const MCQComponent: React.FC<MCQComponentProps> = ({
           {t('mcq.keyboardHintDynamic', { max: question.option_count })}
         </p>
 
-        {/* Submit button - KEEP EXACTLY */}
+        {/* Submit / Next button */}
         <div className="flex justify-center pt-2">
-          <Button
-            onClick={handleSubmit}
-            disabled={selectedOption === null || disabled}
-            aria-disabled={selectedOption === null || disabled}
-            className="min-w-[200px]"
-            data-testid="mcq-submit-button"
-          >
-            {t('mcq.submitAnswer')}
-          </Button>
+          {showFeedback && isSubmitted ? (
+            <button
+              type="button"
+              onClick={handleNext}
+              className="w-full max-w-[280px] rounded-xl bg-indigo-500 px-6 py-2.5 font-medium text-white shadow-[0_0_0_3px_rgba(99,102,241,0.15)] transition-colors hover:bg-indigo-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              data-testid="mcq-next-button"
+            >
+              {isLastQuestion ? t('mcq.seeResults') : t('mcq.nextQuestion')}
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={handleSubmit}
+              disabled={selectedOption === null || disabled}
+              aria-disabled={selectedOption === null || disabled}
+              className={cn(
+                'w-full max-w-[280px] rounded-xl px-6 py-2.5 font-medium transition-colors',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+                selectedOption !== null && !disabled
+                  ? 'cursor-pointer bg-indigo-500 text-white shadow-[0_0_0_3px_rgba(99,102,241,0.15)] hover:bg-indigo-600'
+                  : 'cursor-not-allowed bg-slate-100 text-slate-400'
+              )}
+              data-testid="mcq-submit-button"
+            >
+              {t('mcq.submitAnswer')}
+            </button>
+          )}
         </div>
 
         {/* Helper text - KEEP EXACTLY */}

@@ -13,7 +13,9 @@
     "timeRemaining": "{{seconds}}s remaining",
     "selectAnswer": "Select an answer to continue",
     "optionLabel": "Option {{letter}}: {{text}}",
-    "readSourceArticle": "Read source article"
+    "readSourceArticle": "Read source article",
+    "nextQuestion": "Next Question",
+    "seeResults": "See Results"
   },
   "explanation": {
     "correct": "Correct!",
