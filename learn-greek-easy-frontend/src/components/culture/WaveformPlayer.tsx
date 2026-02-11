@@ -35,6 +35,8 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
   }
   const bars = barsRef.current;
 
+  const containerRef = useRef<HTMLDivElement>(null);
+
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [speed, setSpeed] = useState<Speed>(1);
@@ -63,6 +65,48 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
   const togglePlayPause = useCallback(() => {
     setIsPlaying((prev) => !prev);
   }, []);
+
+  const handleScrub = useCallback(
+    (event: React.MouseEvent<HTMLDivElement>) => {
+      const container = containerRef.current;
+      if (!container || !duration || duration <= 0) return;
+
+      const rect = container.getBoundingClientRect();
+      if (rect.width === 0) return;
+
+      const clickX = event.clientX - rect.left;
+      const newTime = Math.max(0, Math.min(duration, (clickX / rect.width) * duration));
+      setCurrentTime(newTime);
+    },
+    [duration]
+  );
+
+  const handleKeyDown = useCallback(
+    (event: React.KeyboardEvent) => {
+      if (!duration || duration <= 0) return;
+      const step = duration * 0.05;
+      switch (event.key) {
+        case 'ArrowRight':
+        case 'ArrowUp':
+          setCurrentTime((t) => Math.min(duration, t + step));
+          break;
+        case 'ArrowLeft':
+        case 'ArrowDown':
+          setCurrentTime((t) => Math.max(0, t - step));
+          break;
+        case 'Home':
+          setCurrentTime(0);
+          break;
+        case 'End':
+          setCurrentTime(duration);
+          break;
+        default:
+          return;
+      }
+      event.preventDefault();
+    },
+    [duration]
+  );
 
   return (
     <div
@@ -95,10 +139,18 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
 
       {/* Waveform bars */}
       <div
+        ref={containerRef}
         data-testid="waveform-bars"
         className="flex flex-1 items-end gap-[2px]"
-        style={{ height: '40px' }}
-        aria-hidden="true"
+        style={{ height: '40px', cursor: 'pointer' }}
+        role="slider"
+        aria-label="Audio position"
+        aria-valuemin={0}
+        aria-valuemax={duration}
+        aria-valuenow={Math.round(currentTime)}
+        tabIndex={0}
+        onClick={handleScrub}
+        onKeyDown={handleKeyDown}
       >
         {bars.map((height, i) => {
           const barEndTime = ((i + 1) / BAR_COUNT) * duration;
