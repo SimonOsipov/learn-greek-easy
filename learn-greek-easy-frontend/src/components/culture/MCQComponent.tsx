@@ -24,6 +24,20 @@ export interface MCQComponentProps {
   totalQuestions?: number;
   /** Whether the component is disabled */
   disabled?: boolean;
+  /** Whether to display inline feedback after answer submission @default false */
+  showFeedback?: boolean;
+  /** Callback to advance to next question (used when showFeedback is true) */
+  onNext?: () => void;
+  /** Whether this is the last question - changes next-button label */
+  isLastQuestion?: boolean;
+  /** Answer result data for inline feedback display */
+  answerResult?: {
+    isCorrect: boolean;
+    correctOption: number;
+    explanationText?: string;
+  };
+  /** Whether the question has associated audio content */
+  hasAudio?: boolean;
 }
 
 /** Maps option index (0-3) to letter (A-D) */
