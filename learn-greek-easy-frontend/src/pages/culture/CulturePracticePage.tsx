@@ -21,12 +21,7 @@ import posthog from 'posthog-js';
 import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate } from 'react-router-dom';
 
-import {
-  MCQComponent,
-  QuestionFeedback,
-  LanguageSelector,
-  ProgressBar,
-} from '@/components/culture';
+import { MCQComponent, LanguageSelector, ProgressBar } from '@/components/culture';
 import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -55,9 +50,6 @@ import type {
 } from '@/types/culture';
 import type { CultureSessionConfig } from '@/types/cultureSession';
 import { DEFAULT_SESSION_CONFIG } from '@/types/cultureSession';
-
-/** Option letter mapping for feedback display */
-const OPTION_LETTERS = ['A', 'B', 'C', 'D'] as const;
 
 /**
  * Loading skeleton for practice page
@@ -622,7 +614,6 @@ export function CulturePracticePage() {
   }
 
   const currentLanguage = session.config.language;
-  const isInFeedback = session.phase === 'feedback' && lastAnswerResponse !== null;
 
   return (
     <div className="min-h-screen bg-slate-100 px-4 py-6 dark:bg-background md:px-6 md:py-8">
@@ -649,34 +640,28 @@ export function CulturePracticePage() {
         {/* Progress bar */}
         <ProgressBar current={progress.current} total={progress.total} className="mb-6" />
 
-        {/* Question or Feedback */}
+        {/* Question with inline feedback */}
         <div className="flex justify-center">
-          {isInFeedback ? (
-            <QuestionFeedback
-              isCorrect={lastAnswerResponse.is_correct}
-              correctOption={{
-                label: OPTION_LETTERS[lastAnswerResponse.correct_option - 1],
-                text: currentQuestion.question.options[lastAnswerResponse.correct_option - 1],
-              }}
-              xpEarned={lastAnswerResponse.xp_earned}
-              language={currentLanguage}
-              onNextQuestion={handleNextQuestion}
-              isLastQuestion={progress.current >= progress.total}
-              className="w-full"
-              sourceArticleUrl={currentQuestion.question.original_article_url}
-              cardId={currentQuestion.question.id}
-            />
-          ) : (
-            <MCQComponent
-              question={currentQuestion.question}
-              language={currentLanguage}
-              onAnswer={handleAnswer}
-              questionNumber={progress.current}
-              totalQuestions={progress.total}
-              disabled={isSubmitting}
-              category={session.category}
-            />
-          )}
+          <MCQComponent
+            question={currentQuestion.question}
+            language={currentLanguage}
+            onAnswer={handleAnswer}
+            questionNumber={progress.current}
+            totalQuestions={progress.total}
+            disabled={isSubmitting}
+            category={session.category}
+            showFeedback={true}
+            onNext={handleNextQuestion}
+            isLastQuestion={progress.current >= progress.total}
+            answerResult={
+              lastAnswerResponse
+                ? {
+                    isCorrect: lastAnswerResponse.is_correct,
+                    correctOption: lastAnswerResponse.correct_option,
+                  }
+                : undefined
+            }
+          />
         </div>
       </div>
 
