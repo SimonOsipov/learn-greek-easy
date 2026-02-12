@@ -1,10 +1,9 @@
 import React from 'react';
 
-import { BookText, Languages, MessageSquare } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Badge } from '@/components/ui/badge';
-import { getCEFRColor, getCEFRLabel, getCEFRTextColor } from '@/lib/cefrColors';
+import { getCEFRBg, getCEFRBorder, getCEFRDot, getCEFRText } from '@/lib/cefrColors';
 import type { DeckCategory, DeckLevel, DeckStatus } from '@/types/deck';
 
 export interface DeckBadgeProps {
@@ -36,37 +35,33 @@ const STATUS_CONFIG = {
 const CATEGORY_CONFIG: Record<
   Exclude<DeckCategory, 'culture'>,
   {
-    icon: React.ComponentType<{ className?: string }>;
     labelKey: string;
-    bgColor: string;
-    textColor: string;
-    darkBgColor: string;
-    darkTextColor: string;
+    dot: string;
+    bg: string;
+    border: string;
+    text: string;
   }
 > = {
   vocabulary: {
-    icon: BookText,
     labelKey: 'card.categories.vocabulary',
-    bgColor: 'bg-cyan-100',
-    textColor: 'text-cyan-800',
-    darkBgColor: 'dark:bg-cyan-900',
-    darkTextColor: 'dark:text-cyan-200',
+    dot: 'bg-cyan-500',
+    bg: 'bg-cyan-500/10',
+    border: 'border-cyan-500/20',
+    text: 'text-cyan-700 dark:text-cyan-300',
   },
   grammar: {
-    icon: Languages,
     labelKey: 'card.categories.grammar',
-    bgColor: 'bg-orange-100',
-    textColor: 'text-orange-800',
-    darkBgColor: 'dark:bg-orange-900',
-    darkTextColor: 'dark:text-orange-200',
+    dot: 'bg-orange-500',
+    bg: 'bg-orange-500/10',
+    border: 'border-orange-500/20',
+    text: 'text-orange-700 dark:text-orange-300',
   },
   phrases: {
-    icon: MessageSquare,
     labelKey: 'card.categories.phrases',
-    bgColor: 'bg-teal-100',
-    textColor: 'text-teal-800',
-    darkBgColor: 'dark:bg-teal-900',
-    darkTextColor: 'dark:text-teal-200',
+    dot: 'bg-teal-500',
+    bg: 'bg-teal-500/10',
+    border: 'border-teal-500/20',
+    text: 'text-teal-700 dark:text-teal-300',
   },
 };
 
@@ -80,16 +75,17 @@ export const DeckBadge: React.FC<DeckBadgeProps> = ({
   const { t } = useTranslation('deck');
 
   if (type === 'level' && level) {
-    const bgColor = getCEFRColor(level);
-    const textColor = getCEFRTextColor(level);
-    const label = getCEFRLabel(level);
     return (
-      <Badge
-        className={`${bgColor} ${textColor} border-0 px-2 py-1 ${className}`}
-        aria-label={`Level ${label}`}
+      <span
+        className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-medium ${getCEFRBg(level)} ${getCEFRBorder(level)} ${className}`}
+        aria-label={`Level ${level}`}
       >
-        {level}
-      </Badge>
+        <span
+          className={`h-2 w-2 flex-shrink-0 rounded-full ${getCEFRDot(level)}`}
+          aria-hidden="true"
+        />
+        <span className={getCEFRText(level)}>{level}</span>
+      </span>
     );
   }
 
@@ -110,17 +106,15 @@ export const DeckBadge: React.FC<DeckBadgeProps> = ({
   if (type === 'category' && category && category !== 'culture') {
     const config = CATEGORY_CONFIG[category];
     const categoryLabel = t(config.labelKey);
-    const Icon = config.icon;
     return (
-      <Badge
-        variant="outline"
-        className={`${config.bgColor} ${config.textColor} ${config.darkBgColor} ${config.darkTextColor} ${className}`}
+      <span
+        className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-medium ${config.bg} ${config.border} ${className}`}
         aria-label={`Category: ${categoryLabel}`}
         data-testid="deck-category-badge"
       >
-        <Icon className="mr-1 h-3 w-3" />
-        {categoryLabel}
-      </Badge>
+        <span className={`h-2 w-2 flex-shrink-0 rounded-full ${config.dot}`} aria-hidden="true" />
+        <span className={config.text}>{categoryLabel}</span>
+      </span>
     );
   }
 
