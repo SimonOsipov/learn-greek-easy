@@ -110,6 +110,7 @@ const mockQuestion: CultureQuestionResponse = {
   option_count: 4,
   image_url: null,
   order_index: 1,
+  correct_option: 1,
   original_article_url: null,
 };
 
@@ -117,6 +118,7 @@ const mockQuestionWithImage: CultureQuestionResponse = {
   ...mockQuestion,
   id: 'test-question-with-image',
   image_url: 'https://example.com/image.jpg',
+  correct_option: 1,
 };
 
 const mockQuestionWithMissingTranslation: CultureQuestionResponse = {
@@ -135,6 +137,7 @@ const mockQuestionWithMissingTranslation: CultureQuestionResponse = {
   option_count: 4,
   image_url: null,
   order_index: 1,
+  correct_option: 1,
   original_article_url: null,
 };
 
@@ -153,6 +156,7 @@ const mockQuestion2Options: CultureQuestionResponse = {
   option_count: 2,
   image_url: null,
   order_index: 1,
+  correct_option: 1,
   original_article_url: null,
 };
 
@@ -171,6 +175,7 @@ const mockQuestion3Options: CultureQuestionResponse = {
   option_count: 3,
   image_url: null,
   order_index: 1,
+  correct_option: 2,
   original_article_url: null,
 };
 
@@ -178,12 +183,14 @@ const mockQuestionWithSourceUrl: CultureQuestionResponse = {
   ...mockQuestion,
   id: 'test-question-with-source',
   original_article_url: 'https://example.com/news/article',
+  correct_option: 1,
 };
 
 const mockQuestionWithInvalidSourceUrl: CultureQuestionResponse = {
   ...mockQuestion,
   id: 'test-question-invalid-source',
   original_article_url: 'javascript:alert("xss")',
+  correct_option: 1,
 };
 
 // Mock answer results for redesign tests
@@ -1215,7 +1222,7 @@ describe('MCQComponent - Redesign Features', () => {
       expect(cardShell.className).toContain('shadow-');
     });
 
-    it('should have px-[22px] and pt-6 padding', () => {
+    it('should have px-[22px], pt-6, and pb-6 padding', () => {
       renderWithProviders(
         <MCQComponent question={mockQuestion} language="en" onAnswer={mockOnAnswer} />
       );
@@ -1225,6 +1232,7 @@ describe('MCQComponent - Redesign Features', () => {
 
       expect(cardShell.className).toContain('px-[22px]');
       expect(cardShell.className).toContain('pt-6');
+      expect(cardShell.className).toContain('pb-6');
     });
   });
 

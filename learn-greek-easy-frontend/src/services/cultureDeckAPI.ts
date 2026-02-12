@@ -85,6 +85,7 @@ export interface CultureQuestionQueueItem {
   option_count: number; // Number of answer options (2, 3, or 4)
   image_url: string | null;
   order_index: number;
+  correct_option: number;
   is_new: boolean;
   due_date: string | null;
   status: 'new' | 'learning' | 'review' | 'mastered';

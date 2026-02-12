@@ -26,6 +26,7 @@ export interface CultureQuestionResponse {
   option_count: number; // Number of answer options (2, 3, or 4)
   image_url: string | null;
   order_index: number;
+  correct_option: number;
   original_article_url: string | null; // Source news article URL
 }
 

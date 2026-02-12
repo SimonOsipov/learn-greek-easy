@@ -190,7 +190,7 @@ export const MCQComponent: React.FC<MCQComponentProps> = ({
       data-testid="mcq-component"
     >
       {/* Card shell - visual container */}
-      <div className="rounded-[20px] border-[1.5px] border-slate-200 bg-white px-[22px] pt-6 shadow-[0_1px_3px_rgba(0,0,0,0.04),0_6px_20px_rgba(0,0,0,0.04)]">
+      <div className="rounded-[20px] border-[1.5px] border-slate-200 bg-white px-[22px] pb-6 pt-6 shadow-[0_1px_3px_rgba(0,0,0,0.04),0_6px_20px_rgba(0,0,0,0.04)]">
         {/* Inner content area with vertical spacing */}
         <div className="flex flex-col space-y-4">
           {/* Badge row - category */}

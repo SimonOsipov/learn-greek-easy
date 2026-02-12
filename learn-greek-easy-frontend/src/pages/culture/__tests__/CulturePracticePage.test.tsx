@@ -81,6 +81,7 @@ const mockQuestion: CultureQuestionResponse = {
   option_count: 4,
   image_url: null,
   order_index: 0,
+  correct_option: 1,
   original_article_url: null,
 };
 
