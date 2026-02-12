@@ -3,7 +3,6 @@
  *
  * Verifies the complete integrated experience after CPINT-05:
  * - Inline feedback via MCQComponent (showFeedback=true)
- * - No separate QuestionFeedback component
  * - Inline ScoreCard at session end
  * - Language selector, progress bar, exit/recovery dialogs
  * - Analytics tracking
@@ -63,12 +62,6 @@ vi.mock('posthog-js', () => ({
 // Mock XP store
 vi.mock('@/stores/xpStore', () => ({
   useXPStore: () => vi.fn(),
-}));
-
-// Mock framer-motion (used by components to verify QuestionFeedback is not rendered)
-vi.mock('framer-motion', () => ({
-  motion: { div: 'div' },
-  AnimatePresence: ({ children }: { children: React.ReactNode }) => children,
 }));
 
 // Mock data
@@ -384,16 +377,6 @@ describe('CulturePracticePage', () => {
       render(<CulturePracticePage />);
 
       expect(screen.getByTestId('progress-bar-counter')).toHaveTextContent('3 / 10');
-    });
-  });
-
-  describe('QuestionFeedback not rendered', () => {
-    it('does not render QuestionFeedback component', () => {
-      useCultureSessionStore.setState(createActiveSessionState(5));
-      render(<CulturePracticePage />);
-
-      // QuestionFeedback has specific signatures - verify they're not present
-      expect(screen.queryByTestId('question-feedback')).not.toBeInTheDocument();
     });
   });
 

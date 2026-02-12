@@ -16,9 +16,6 @@ export type { MCQComponentProps } from './MCQComponent';
 export { ProgressBar } from './ProgressBar';
 export type { ProgressBarProps } from './ProgressBar';
 
-export { QuestionFeedback } from './QuestionFeedback';
-export type { QuestionFeedbackProps } from './QuestionFeedback';
-
 export { ScoreCard } from './ScoreCard';
 export type { ScoreCardProps } from './ScoreCard';
 
