@@ -21,7 +21,7 @@ import posthog from 'posthog-js';
 import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate } from 'react-router-dom';
 
-import { MCQComponent, LanguageSelector, ProgressBar } from '@/components/culture';
+import { MCQComponent, LanguageSelector, ProgressBar, ScoreCard } from '@/components/culture';
 import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -106,6 +106,7 @@ export function CulturePracticePage() {
     recoverSession,
     dismissRecovery,
     setLanguage,
+    resetSession,
   } = useCultureSessionStore();
 
   // XP store - for refreshing XP after answer submission
@@ -116,13 +117,13 @@ export function CulturePracticePage() {
   const [showRecoveryDialog, setShowRecoveryDialog] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [lastAnswerResponse, setLastAnswerResponse] = useState<CultureAnswerResponse | null>(null);
-  const [isCompleting, setIsCompleting] = useState(false);
   const [hasNoQuestionsDue, setHasNoQuestionsDue] = useState(false);
   const [hasStudiedQuestions, setHasStudiedQuestions] = useState(false);
   const [isPracticeAnywayLoading, setIsPracticeAnywayLoading] = useState(false);
 
   // Refs for tracking
   const hasTrackedStart = useRef(false);
+  const hasTrackedComplete = useRef(false);
   const sessionStartTime = useRef<number | null>(null);
 
   // Check for recoverable session on mount
@@ -136,18 +137,6 @@ export function CulturePracticePage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deckId]);
-
-  // Navigate to summary when session completes
-  useEffect(() => {
-    if (summary && deckId) {
-      // Immediately show completing loader to hide progress bar and language picker
-      setIsCompleting(true);
-      const timer = setTimeout(() => {
-        navigate(`/culture/${deckId}/summary`);
-      }, 500);
-      return () => clearTimeout(timer);
-    }
-  }, [summary, deckId, navigate]);
 
   // Track session start
   useEffect(() => {
@@ -169,6 +158,26 @@ export function CulturePracticePage() {
       }
     }
   }, [session, track]);
+
+  // Track session completed
+  useEffect(() => {
+    if (summary && !hasTrackedComplete.current) {
+      hasTrackedComplete.current = true;
+      try {
+        track('culture_session_completed', {
+          deck_id: summary.deckId,
+          session_id: summary.sessionId,
+          questions_total: summary.questionResults.length,
+          questions_correct: summary.stats.correctCount,
+          accuracy: summary.stats.accuracy,
+          duration_sec: summary.durationSeconds,
+          xp_earned: summary.stats.xpEarned,
+        });
+      } catch {
+        // Silent failure for analytics
+      }
+    }
+  }, [summary, track]);
 
   // beforeunload handler for browser close protection
   useEffect(() => {
@@ -396,6 +405,14 @@ export function CulturePracticePage() {
   );
 
   /**
+   * Handle Try Again button on ScoreCard
+   */
+  const handleTryAgain = useCallback(() => {
+    resetSession();
+    navigate(`/culture/${deckId}/practice`);
+  }, [resetSession, navigate, deckId]);
+
+  /**
    * Handle "Practice Anyway" - fetch weakest questions when no questions are due
    */
   const handlePracticeAnyway = useCallback(async () => {
@@ -450,21 +467,6 @@ export function CulturePracticePage() {
     }
   }, [deckId, startSession]);
 
-  // Completing state - full screen loader to hide progress bar and language picker during transition
-  if (isCompleting) {
-    return (
-      <div
-        className="flex min-h-screen flex-col items-center justify-center bg-slate-100 dark:bg-background"
-        data-testid="completing-loader"
-      >
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="mt-4 text-muted-foreground">
-          {t('practice.completing', 'Completing exam...')}
-        </p>
-      </div>
-    );
-  }
-
   // Recovery dialog
   if (showRecoveryDialog) {
     return (
@@ -490,6 +492,22 @@ export function CulturePracticePage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+      </div>
+    );
+  }
+
+  // Session complete - show inline ScoreCard
+  if (summary) {
+    return (
+      <div className="min-h-screen bg-slate-100 px-4 py-6 dark:bg-background md:px-6 md:py-8">
+        <div className="mx-auto max-w-[520px]">
+          <ScoreCard
+            correct={summary.stats.correctCount}
+            incorrect={summary.stats.incorrectCount}
+            total={summary.stats.questionsAnswered}
+            onTryAgain={handleTryAgain}
+          />
+        </div>
       </div>
     );
   }
