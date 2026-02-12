@@ -16,10 +16,11 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import UUID, uuid4
 
 import pytest
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.exceptions import NewsItemNotFoundException
-from src.db.models import CultureDeck, NewsItem
+from src.db.models import CultureDeck, CultureQuestion, NewsItem
 from src.schemas.news_item import (
     NewsItemCreate,
     NewsItemUpdate,
@@ -580,6 +581,15 @@ class TestCreateWithQuestion:
 
             # Verify success message
             assert result.message == "News item and question created successfully"
+
+            # Verify the created CultureQuestion has image_key set
+            cq_result = await db_session.execute(
+                select(CultureQuestion).where(CultureQuestion.id == result.card.id)
+            )
+            culture_question = cq_result.scalar_one()
+            assert culture_question.image_key is not None
+            assert culture_question.image_key.startswith("news-images/")
+            assert culture_question.image_key.endswith(".jpg")
 
     @pytest.mark.asyncio
     async def test_raises_error_for_nonexistent_deck(
