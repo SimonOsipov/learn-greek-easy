@@ -319,7 +319,6 @@ test.describe('Culture Practice Session', () => {
           ],
           currentIndex: 0,
           status: 'active',
-          phase: 'question',
           stats: {
             questionsAnswered: 0,
             questionsRemaining: 10,

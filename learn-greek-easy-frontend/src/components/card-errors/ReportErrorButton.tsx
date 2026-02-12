@@ -2,7 +2,7 @@
  * Report Error Button Component
  *
  * A button component that triggers the card error reporting flow.
- * Used in FlashcardContainer (vocabulary) and QuestionFeedback (culture).
+ * Used in FlashcardContainer (vocabulary) and MCQComponent (culture).
  */
 
 import { AlertTriangle } from 'lucide-react';

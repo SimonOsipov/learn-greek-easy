@@ -80,6 +80,11 @@ class TestCultureDeckServiceList:
             assert len(result.decks) == 1
             assert result.decks[0].id == mock_deck.id
             assert result.decks[0].question_count == 25
+            # Verify locale fields are populated
+            assert result.decks[0].name_en == "Greek History"
+            assert result.decks[0].name_ru == "Греческая история"
+            assert result.decks[0].description_en == "History deck"
+            assert result.decks[0].description_ru == "Колода истории"
 
     @pytest.mark.asyncio
     async def test_list_decks_with_pagination(self, mock_db_session: MagicMock):

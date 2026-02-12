@@ -3,7 +3,6 @@
  *
  * Verifies the complete integrated experience after CPINT-05:
  * - Inline feedback via MCQComponent (showFeedback=true)
- * - No separate QuestionFeedback component
  * - Inline ScoreCard at session end
  * - Language selector, progress bar, exit/recovery dialogs
  * - Analytics tracking
@@ -65,12 +64,6 @@ vi.mock('@/stores/xpStore', () => ({
   useXPStore: () => vi.fn(),
 }));
 
-// Mock framer-motion (used by components to verify QuestionFeedback is not rendered)
-vi.mock('framer-motion', () => ({
-  motion: { div: 'div' },
-  AnimatePresence: ({ children }: { children: React.ReactNode }) => children,
-}));
-
 // Mock data
 const mockQuestion: CultureQuestionResponse = {
   id: 'q1',
@@ -118,7 +111,6 @@ function createActiveSessionState(questionCount: number, currentIndex = 0) {
       deckName: 'Test Deck',
       category: 'history' as const,
       status: 'active' as const,
-      phase: 'question' as const,
       questions: questionStates,
       currentIndex,
       stats: {
@@ -387,16 +379,6 @@ describe('CulturePracticePage', () => {
     });
   });
 
-  describe('QuestionFeedback not rendered', () => {
-    it('does not render QuestionFeedback component', () => {
-      useCultureSessionStore.setState(createActiveSessionState(5));
-      render(<CulturePracticePage />);
-
-      // QuestionFeedback has specific signatures - verify they're not present
-      expect(screen.queryByTestId('question-feedback')).not.toBeInTheDocument();
-    });
-  });
-
   describe('Single question session', () => {
     it('renders with correct progress for single question', () => {
       useCultureSessionStore.setState(createActiveSessionState(1));
@@ -427,7 +409,6 @@ describe('CulturePracticePage', () => {
           deckName: 'Test Deck',
           category: 'history',
           status: 'active',
-          phase: 'question',
           questions: questionStates,
           currentIndex: 0,
           stats: {

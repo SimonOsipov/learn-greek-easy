@@ -101,6 +101,13 @@ class CultureDeckResponse(BaseModel):
     id: UUID = Field(..., description="Deck unique identifier")
     name: str = Field(..., min_length=1, max_length=255, description="Deck name (localized)")
     description: Optional[str] = Field(None, description="Deck description (localized)")
+
+    # All-language fields for client-side locale resolution
+    name_en: Optional[str] = Field(None, max_length=255, description="Deck name in English")
+    name_ru: Optional[str] = Field(None, max_length=255, description="Deck name in Russian")
+    description_en: Optional[str] = Field(None, description="Deck description in English")
+    description_ru: Optional[str] = Field(None, description="Deck description in Russian")
+
     category: str = Field(
         ...,
         max_length=50,

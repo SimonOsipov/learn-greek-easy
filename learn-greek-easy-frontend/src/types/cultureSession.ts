@@ -72,14 +72,6 @@ export interface CultureSessionStats {
 export type CultureSessionStatus = 'idle' | 'active' | 'paused' | 'completed' | 'abandoned';
 
 /**
- * Session phase within the practice flow
- */
-export type CultureSessionPhase =
-  | 'question' // Showing question, waiting for answer
-  | 'feedback' // Showing feedback after answer
-  | 'loading'; // Loading next question or processing
-
-/**
  * Main culture practice session state
  */
 export interface CultureSession {
@@ -101,8 +93,6 @@ export interface CultureSession {
   currentIndex: number;
   /** Session status */
   status: CultureSessionStatus;
-  /** Current phase within the session */
-  phase: CultureSessionPhase;
   /** Cumulative session statistics */
   stats: CultureSessionStats;
   /** When the session started */

@@ -93,7 +93,6 @@ describe('CulturePracticePage - ProgressBar integration', () => {
         deckName: 'Test Deck',
         category: 'history',
         status: 'active' as const,
-        phase: 'question' as const,
         questions,
         questionStates: questions.map((q) => ({
           question: q,

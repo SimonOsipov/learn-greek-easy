@@ -67,4 +67,4 @@ For events that track `article_domain`, the domain is extracted from the full UR
 ## Related Components
 
 - **NewsSection.tsx** - Triggers `news_questions_button_clicked` when Questions button is clicked
-- **QuestionFeedback.tsx** - Triggers `news_source_link_clicked` when source article link is clicked
+- **MCQComponent.tsx** - Triggers `news_source_link_clicked` when source article link is clicked

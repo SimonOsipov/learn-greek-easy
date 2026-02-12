@@ -107,11 +107,6 @@ const CultureDeckDetailPage = lazyWithRetry(() =>
 const CulturePracticePage = lazyWithRetry(() =>
   import('@/pages/culture/CulturePracticePage').then((m) => ({ default: m.CulturePracticePage }))
 );
-const CultureSessionSummaryPage = lazyWithRetry(() =>
-  import('@/pages/culture/CultureSessionSummaryPage').then((m) => ({
-    default: m.CultureSessionSummaryPage,
-  }))
-);
 
 // Mock exam pages
 const MockExamPage = lazyWithRetry(() =>
@@ -258,7 +253,10 @@ function AppContent() {
                 </Route>
                 {/* Culture practice pages outside AppLayout for full-screen immersive experience */}
                 <Route path="/culture/:deckId/practice" element={<CulturePracticePage />} />
-                <Route path="/culture/:deckId/summary" element={<CultureSessionSummaryPage />} />
+                <Route
+                  path="/culture/:deckId/summary"
+                  element={<Navigate to="../practice" replace />}
+                />
                 {/* Redirect /practice/ to /practice/culture-exam */}
                 <Route
                   path="/practice"

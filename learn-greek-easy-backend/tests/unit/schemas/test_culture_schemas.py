@@ -155,6 +155,25 @@ class TestCultureDeckResponse:
             )
         assert "greater than or equal to 0" in str(exc_info.value)
 
+    def test_valid_deck_with_locale_fields(self):
+        """Test deck response with all-language fields for client-side resolution."""
+        deck = CultureDeckResponse(
+            id=uuid4(),
+            name="History",
+            description="Learn about Greek history",
+            name_en="History",
+            name_ru="История",
+            description_en="Learn about Greek history",
+            description_ru="Узнайте об истории Греции",
+            category="history",
+            question_count=25,
+            progress=None,
+        )
+        assert deck.name_en == "History"
+        assert deck.name_ru == "История"
+        assert deck.description_en == "Learn about Greek history"
+        assert deck.description_ru == "Узнайте об истории Греции"
+
 
 class TestCultureDeckProgress:
     """Test progress schema."""

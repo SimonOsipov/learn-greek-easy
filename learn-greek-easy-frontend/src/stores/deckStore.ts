@@ -169,6 +169,10 @@ const transformCultureDeckResponse = (deck: CultureDeckResponse): Deck => {
     updatedAt: new Date(),
     progress,
     cardSystem: 'V1' as CardSystemVersion, // Culture decks always use V1
+    nameEn: deck.name_en,
+    nameRu: deck.name_ru,
+    descriptionEn: deck.description_en,
+    descriptionRu: deck.description_ru,
   };
 };
 
