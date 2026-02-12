@@ -115,7 +115,6 @@ export function CulturePracticePage() {
   // Local state
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [showRecoveryDialog, setShowRecoveryDialog] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [lastAnswerResponse, setLastAnswerResponse] = useState<CultureAnswerResponse | null>(null);
   const [hasNoQuestionsDue, setHasNoQuestionsDue] = useState(false);
   const [hasStudiedQuestions, setHasStudiedQuestions] = useState(false);
@@ -280,60 +279,57 @@ export function CulturePracticePage() {
    * Handle answer submission
    */
   const handleAnswer = useCallback(
-    async (selectedOption: number) => {
-      if (!session || !currentQuestion || isSubmitting) return;
+    (selectedOption: number) => {
+      if (!session || !currentQuestion) return;
 
-      setIsSubmitting(true);
+      const isCorrect = selectedOption === currentQuestion.question.correct_option;
 
-      try {
-        // Calculate time taken (in milliseconds)
-        const startedAt = currentQuestion.startedAt
-          ? new Date(currentQuestion.startedAt).getTime()
-          : Date.now();
-        const timeTakenMs = Date.now() - startedAt;
+      const startedAt = currentQuestion.startedAt
+        ? new Date(currentQuestion.startedAt).getTime()
+        : Date.now();
+      const timeTakenMs = Date.now() - startedAt;
+      const timeTakenSeconds = Math.min(Math.round(timeTakenMs / 1000), MAX_ANSWER_TIME_SECONDS);
 
-        // Submit answer to backend API
-        // IMPORTANT: Convert milliseconds to seconds and cap at MAX_ANSWER_TIME_SECONDS
-        const timeTakenSeconds = Math.min(Math.round(timeTakenMs / 1000), MAX_ANSWER_TIME_SECONDS);
-        const response = await cultureDeckAPI.submitAnswer(currentQuestion.question.id, {
+      const optimisticResponse: CultureAnswerResponse = {
+        is_correct: isCorrect,
+        correct_option: currentQuestion.question.correct_option,
+        xp_earned: isCorrect ? 10 : 2,
+        deck_category: session.category,
+      };
+
+      setLastAnswerResponse(optimisticResponse);
+      answerQuestion(selectedOption, optimisticResponse);
+
+      loadXPStats(true);
+
+      cultureDeckAPI
+        .submitAnswer(currentQuestion.question.id, {
           selected_option: selectedOption,
           time_taken: timeTakenSeconds,
           language: session.config.language,
-        });
-
-        // Use backend response directly - types are now aligned
-        const answerResponse: CultureAnswerResponse = response;
-
-        setLastAnswerResponse(answerResponse);
-        answerQuestion(selectedOption, answerResponse);
-
-        // Refresh XP stats to update XPCard immediately
-        loadXPStats(true);
-
-        // Track answer event (keep milliseconds for analytics)
-        try {
-          track('culture_question_answered', {
-            deck_id: session.deckId,
-            session_id: session.sessionId,
-            question_id: currentQuestion.question.id,
-            selected_option: selectedOption,
-            is_correct: response.is_correct,
-            time_ms: timeTakenMs,
-            xp_earned: response.xp_earned,
+        })
+        .catch((err) => {
+          reportAPIError(err, {
+            operation: 'submitAnswer',
+            endpoint: `/culture/questions/${currentQuestion.question.id}/answer`,
           });
-        } catch {
-          // Silent failure for analytics
-        }
-      } catch (err) {
-        reportAPIError(err, {
-          operation: 'submitAnswer',
-          endpoint: `/culture/questions/${currentQuestion.question.id}/answer`,
         });
-      } finally {
-        setIsSubmitting(false);
+
+      try {
+        track('culture_question_answered', {
+          deck_id: session.deckId,
+          session_id: session.sessionId,
+          question_id: currentQuestion.question.id,
+          selected_option: selectedOption,
+          is_correct: isCorrect,
+          time_ms: timeTakenMs,
+          xp_earned: optimisticResponse.xp_earned,
+        });
+      } catch {
+        // Silent failure for analytics
       }
     },
-    [session, currentQuestion, isSubmitting, answerQuestion, loadXPStats, track]
+    [session, currentQuestion, answerQuestion, loadXPStats, track]
   );
 
   /**
@@ -668,7 +664,6 @@ export function CulturePracticePage() {
             onAnswer={handleAnswer}
             questionNumber={progress.current}
             totalQuestions={progress.total}
-            disabled={isSubmitting}
             category={session.category}
             showFeedback={true}
             onNext={handleNextQuestion}
