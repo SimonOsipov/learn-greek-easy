@@ -659,7 +659,7 @@ export function CulturePracticePage() {
         <ProgressBar current={progress.current} total={progress.total} className="mb-6" />
 
         {/* Question with inline feedback */}
-        <div className="flex justify-center">
+        <div key={session.currentIndex} className="flex justify-center">
           <MCQComponent
             question={currentQuestion.question}
             language={currentLanguage}
