@@ -21,12 +21,7 @@ import posthog from 'posthog-js';
 import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate } from 'react-router-dom';
 
-import {
-  MCQComponent,
-  QuestionFeedback,
-  LanguageSelector,
-  ProgressBar,
-} from '@/components/culture';
+import { MCQComponent, LanguageSelector, ProgressBar, ScoreCard } from '@/components/culture';
 import { ConfirmDialog } from '@/components/dialogs/ConfirmDialog';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -56,18 +51,21 @@ import type {
 import type { CultureSessionConfig } from '@/types/cultureSession';
 import { DEFAULT_SESSION_CONFIG } from '@/types/cultureSession';
 
-/** Option letter mapping for feedback display */
-const OPTION_LETTERS = ['A', 'B', 'C', 'D'] as const;
-
 /**
  * Loading skeleton for practice page
  */
 function PracticePageSkeleton() {
   return (
-    <div className="min-h-screen bg-background p-4 md:p-8">
-      <div className="mx-auto max-w-2xl">
-        <Skeleton className="mb-4 h-10 w-32 bg-secondary" />
-        <Skeleton className="mb-8 h-4 w-48 bg-secondary" />
+    <div className="min-h-screen bg-slate-100 px-4 py-6 dark:bg-background md:px-6 md:py-8">
+      <div className="mx-auto max-w-[520px]">
+        {/* Header skeleton: exit button left, language pill right */}
+        <div className="mb-4 flex items-center justify-between">
+          <Skeleton className="h-5 w-16 bg-secondary" />
+          <Skeleton className="h-8 w-28 rounded-lg bg-secondary" />
+        </div>
+        {/* Progress bar skeleton */}
+        <Skeleton className="mb-6 h-1 w-full rounded-full bg-secondary" />
+        {/* Question card skeleton */}
         <Card className="bg-card/95">
           <CardContent className="space-y-6 p-6">
             <Skeleton className="h-6 w-3/4" />
@@ -78,7 +76,6 @@ function PracticePageSkeleton() {
               <Skeleton className="h-14 w-full" />
               <Skeleton className="h-14 w-full" />
             </div>
-            <Skeleton className="mx-auto h-12 w-48" />
           </CardContent>
         </Card>
       </div>
@@ -109,6 +106,7 @@ export function CulturePracticePage() {
     recoverSession,
     dismissRecovery,
     setLanguage,
+    resetSession,
   } = useCultureSessionStore();
 
   // XP store - for refreshing XP after answer submission
@@ -119,13 +117,13 @@ export function CulturePracticePage() {
   const [showRecoveryDialog, setShowRecoveryDialog] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [lastAnswerResponse, setLastAnswerResponse] = useState<CultureAnswerResponse | null>(null);
-  const [isCompleting, setIsCompleting] = useState(false);
   const [hasNoQuestionsDue, setHasNoQuestionsDue] = useState(false);
   const [hasStudiedQuestions, setHasStudiedQuestions] = useState(false);
   const [isPracticeAnywayLoading, setIsPracticeAnywayLoading] = useState(false);
 
   // Refs for tracking
   const hasTrackedStart = useRef(false);
+  const hasTrackedComplete = useRef(false);
   const sessionStartTime = useRef<number | null>(null);
 
   // Check for recoverable session on mount
@@ -139,18 +137,6 @@ export function CulturePracticePage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deckId]);
-
-  // Navigate to summary when session completes
-  useEffect(() => {
-    if (summary && deckId) {
-      // Immediately show completing loader to hide progress bar and language picker
-      setIsCompleting(true);
-      const timer = setTimeout(() => {
-        navigate(`/culture/${deckId}/summary`);
-      }, 500);
-      return () => clearTimeout(timer);
-    }
-  }, [summary, deckId, navigate]);
 
   // Track session start
   useEffect(() => {
@@ -172,6 +158,26 @@ export function CulturePracticePage() {
       }
     }
   }, [session, track]);
+
+  // Track session completed
+  useEffect(() => {
+    if (summary && !hasTrackedComplete.current) {
+      hasTrackedComplete.current = true;
+      try {
+        track('culture_session_completed', {
+          deck_id: summary.deckId,
+          session_id: summary.sessionId,
+          questions_total: summary.questionResults.length,
+          questions_correct: summary.stats.correctCount,
+          accuracy: summary.stats.accuracy,
+          duration_sec: summary.durationSeconds,
+          xp_earned: summary.stats.xpEarned,
+        });
+      } catch {
+        // Silent failure for analytics
+      }
+    }
+  }, [summary, track]);
 
   // beforeunload handler for browser close protection
   useEffect(() => {
@@ -399,6 +405,14 @@ export function CulturePracticePage() {
   );
 
   /**
+   * Handle Try Again button on ScoreCard
+   */
+  const handleTryAgain = useCallback(() => {
+    resetSession();
+    navigate(`/culture/${deckId}/practice`);
+  }, [resetSession, navigate, deckId]);
+
+  /**
    * Handle "Practice Anyway" - fetch weakest questions when no questions are due
    */
   const handlePracticeAnyway = useCallback(async () => {
@@ -453,25 +467,10 @@ export function CulturePracticePage() {
     }
   }, [deckId, startSession]);
 
-  // Completing state - full screen loader to hide progress bar and language picker during transition
-  if (isCompleting) {
-    return (
-      <div
-        className="flex min-h-screen flex-col items-center justify-center bg-background"
-        data-testid="completing-loader"
-      >
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="mt-4 text-muted-foreground">
-          {t('practice.completing', 'Completing exam...')}
-        </p>
-      </div>
-    );
-  }
-
   // Recovery dialog
   if (showRecoveryDialog) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background p-4">
+      <div className="flex min-h-screen items-center justify-center bg-slate-100 p-4 dark:bg-background">
         <Dialog open={showRecoveryDialog} onOpenChange={setShowRecoveryDialog}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
@@ -497,11 +496,27 @@ export function CulturePracticePage() {
     );
   }
 
+  // Session complete - show inline ScoreCard
+  if (summary) {
+    return (
+      <div className="min-h-screen bg-slate-100 px-4 py-6 dark:bg-background md:px-6 md:py-8">
+        <div className="mx-auto max-w-[520px]">
+          <ScoreCard
+            correct={summary.stats.correctCount}
+            incorrect={summary.stats.incorrectCount}
+            total={summary.stats.questionsAnswered}
+            onTryAgain={handleTryAgain}
+          />
+        </div>
+      </div>
+    );
+  }
+
   // No questions due for review state
   if (hasNoQuestionsDue) {
     return (
-      <div className="min-h-screen bg-background p-4 md:p-8">
-        <div className="mx-auto max-w-2xl">
+      <div className="min-h-screen bg-slate-100 px-4 py-6 dark:bg-background md:px-6 md:py-8">
+        <div className="mx-auto max-w-[520px]">
           <Button
             variant="ghost"
             onClick={() => navigate(`/culture/decks/${deckId}`)}
@@ -571,8 +586,8 @@ export function CulturePracticePage() {
   // Error state
   if (error) {
     return (
-      <div className="min-h-screen bg-background p-4 md:p-8">
-        <div className="mx-auto max-w-2xl">
+      <div className="min-h-screen bg-slate-100 px-4 py-6 dark:bg-background md:px-6 md:py-8">
+        <div className="mx-auto max-w-[520px]">
           <Button variant="ghost" onClick={() => navigate('/decks')} className="mb-4">
             <ChevronLeft className="mr-2 h-4 w-4" />
             {t('practice.backToDecks', 'Back to Decks')}
@@ -598,8 +613,8 @@ export function CulturePracticePage() {
   // No current question
   if (!currentQuestion) {
     return (
-      <div className="min-h-screen bg-background p-4 md:p-8">
-        <div className="mx-auto max-w-2xl">
+      <div className="min-h-screen bg-slate-100 px-4 py-6 dark:bg-background md:px-6 md:py-8">
+        <div className="mx-auto max-w-[520px]">
           <Button variant="ghost" onClick={() => navigate('/decks')} className="mb-4">
             <ChevronLeft className="mr-2 h-4 w-4" />
             {t('practice.backToDecks', 'Back to Decks')}
@@ -617,60 +632,54 @@ export function CulturePracticePage() {
   }
 
   const currentLanguage = session.config.language;
-  const isInFeedback = session.phase === 'feedback' && lastAnswerResponse !== null;
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-8">
-      <div className="mx-auto max-w-2xl">
+    <div className="min-h-screen bg-slate-100 px-4 py-6 dark:bg-background md:px-6 md:py-8">
+      <div className="mx-auto max-w-[520px]">
         {/* Header */}
-        <div className="mb-6 flex items-center justify-between">
-          <Button variant="ghost" onClick={handleExitClick} data-testid="exit-button">
-            <ChevronLeft className="mr-2 h-4 w-4" />
+        <div className="mb-4 flex items-center justify-between">
+          <button
+            type="button"
+            onClick={handleExitClick}
+            data-testid="exit-button"
+            className="inline-flex items-center gap-1 text-sm font-medium text-slate-500 transition-colors hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+          >
+            <ChevronLeft className="h-4 w-4" />
             {t('practice.exit', 'Exit')}
-          </Button>
-
-          <div className="flex items-center gap-4">
-            {/* Language selector */}
-            <LanguageSelector value={currentLanguage} onChange={handleLanguageChange} />
-
-            {/* Session info */}
-            <div className="text-right text-foreground">
-              <div className="text-sm font-medium">{session.deckName}</div>
-            </div>
-          </div>
+          </button>
+          <LanguageSelector
+            value={currentLanguage}
+            onChange={handleLanguageChange}
+            variant="pill"
+            size="sm"
+          />
         </div>
 
         {/* Progress bar */}
         <ProgressBar current={progress.current} total={progress.total} className="mb-6" />
 
-        {/* Question or Feedback */}
-        <div className="flex justify-center">
-          {isInFeedback ? (
-            <QuestionFeedback
-              isCorrect={lastAnswerResponse.is_correct}
-              correctOption={{
-                label: OPTION_LETTERS[lastAnswerResponse.correct_option - 1],
-                text: currentQuestion.question.options[lastAnswerResponse.correct_option - 1],
-              }}
-              xpEarned={lastAnswerResponse.xp_earned}
-              language={currentLanguage}
-              onNextQuestion={handleNextQuestion}
-              isLastQuestion={progress.current >= progress.total}
-              className="w-full max-w-2xl"
-              sourceArticleUrl={currentQuestion.question.original_article_url}
-              cardId={currentQuestion.question.id}
-            />
-          ) : (
-            <MCQComponent
-              question={currentQuestion.question}
-              language={currentLanguage}
-              onAnswer={handleAnswer}
-              questionNumber={progress.current}
-              totalQuestions={progress.total}
-              disabled={isSubmitting}
-              category={session.category}
-            />
-          )}
+        {/* Question with inline feedback */}
+        <div key={session.currentIndex} className="flex justify-center">
+          <MCQComponent
+            question={currentQuestion.question}
+            language={currentLanguage}
+            onAnswer={handleAnswer}
+            questionNumber={progress.current}
+            totalQuestions={progress.total}
+            disabled={isSubmitting}
+            category={session.category}
+            showFeedback={true}
+            onNext={handleNextQuestion}
+            isLastQuestion={progress.current >= progress.total}
+            answerResult={
+              lastAnswerResponse
+                ? {
+                    isCorrect: lastAnswerResponse.is_correct,
+                    correctOption: lastAnswerResponse.correct_option,
+                  }
+                : undefined
+            }
+          />
         </div>
       </div>
 

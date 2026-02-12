@@ -277,7 +277,6 @@ export const useCultureSessionStore = create<CultureSessionState>()(
           ...session,
           questions: updatedQuestions,
           stats: updatedStats,
-          phase: 'feedback',
         };
 
         set({
@@ -551,6 +550,7 @@ export const useCultureSessionStore = create<CultureSessionState>()(
           questions: updatedQuestions,
           status: 'active',
           pausedAt: null,
+          phase: session.phase === 'feedback' ? 'question' : session.phase,
         };
 
         set({
