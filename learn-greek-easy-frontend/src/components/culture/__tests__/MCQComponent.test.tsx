@@ -1215,7 +1215,7 @@ describe('MCQComponent - Redesign Features', () => {
       expect(cardShell.className).toContain('shadow-');
     });
 
-    it('should have px-[22px] and pt-6 padding', () => {
+    it('should have px-[22px], pt-6, and pb-6 padding', () => {
       renderWithProviders(
         <MCQComponent question={mockQuestion} language="en" onAnswer={mockOnAnswer} />
       );
@@ -1225,6 +1225,7 @@ describe('MCQComponent - Redesign Features', () => {
 
       expect(cardShell.className).toContain('px-[22px]');
       expect(cardShell.className).toContain('pt-6');
+      expect(cardShell.className).toContain('pb-6');
     });
   });
 
