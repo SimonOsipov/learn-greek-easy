@@ -111,7 +111,6 @@ function createActiveSessionState(questionCount: number, currentIndex = 0) {
       deckName: 'Test Deck',
       category: 'history' as const,
       status: 'active' as const,
-      phase: 'question' as const,
       questions: questionStates,
       currentIndex,
       stats: {
@@ -410,7 +409,6 @@ describe('CulturePracticePage', () => {
           deckName: 'Test Deck',
           category: 'history',
           status: 'active',
-          phase: 'question',
           questions: questionStates,
           currentIndex: 0,
           stats: {

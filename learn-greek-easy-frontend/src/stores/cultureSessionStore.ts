@@ -205,7 +205,6 @@ export const useCultureSessionStore = create<CultureSessionState>()(
           questions: questionStates,
           currentIndex: 0,
           status: 'active',
-          phase: 'question',
           stats: {
             ...DEFAULT_SESSION_STATS,
             questionsRemaining: questions.length,
@@ -319,7 +318,6 @@ export const useCultureSessionStore = create<CultureSessionState>()(
           ...session,
           questions: updatedQuestions,
           currentIndex: nextIndex,
-          phase: 'question',
         };
 
         set({
@@ -531,14 +529,10 @@ export const useCultureSessionStore = create<CultureSessionState>()(
           return false;
         }
 
-        // Reset current question start time if in question phase
+        // Reset current question start time if unanswered
         const updatedQuestions = [...session.questions];
         const currentQuestion = updatedQuestions[session.currentIndex];
-        if (
-          session.phase === 'question' &&
-          currentQuestion &&
-          currentQuestion.answeredAt === null
-        ) {
+        if (currentQuestion && currentQuestion.answeredAt === null) {
           updatedQuestions[session.currentIndex] = {
             ...currentQuestion,
             startedAt: new Date().toISOString(),
@@ -550,7 +544,6 @@ export const useCultureSessionStore = create<CultureSessionState>()(
           questions: updatedQuestions,
           status: 'active',
           pausedAt: null,
-          phase: session.phase === 'feedback' ? 'question' : session.phase,
         };
 
         set({
