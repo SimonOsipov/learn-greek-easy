@@ -50,17 +50,17 @@ export const MockExamHeader: React.FC<MockExamHeaderProps> = ({
   // Timer color based on warning level
   const timerColorClass =
     warningLevel === 'warning_1min'
-      ? 'text-red-600 dark:text-red-400'
+      ? 'text-red-500 dark:text-red-400'
       : warningLevel === 'warning_5min'
-        ? 'text-amber-600 dark:text-amber-400'
+        ? 'text-amber-500 dark:text-amber-400'
         : 'text-foreground';
 
   // Timer icon color
   const iconColorClass =
     warningLevel === 'warning_1min'
-      ? 'text-red-600 dark:text-red-400'
+      ? 'text-red-500 dark:text-red-400'
       : warningLevel === 'warning_5min'
-        ? 'text-amber-600 dark:text-amber-400'
+        ? 'text-amber-500 dark:text-amber-400'
         : 'text-muted-foreground';
 
   return (
@@ -84,7 +84,7 @@ export const MockExamHeader: React.FC<MockExamHeaderProps> = ({
         {/* Timer display */}
         <div
           className={cn(
-            'flex items-center gap-2 rounded-lg px-3 py-1.5 font-mono text-lg font-semibold transition-colors',
+            'flex items-center gap-2 rounded-lg px-3 py-1.5 font-cult-mono text-lg font-semibold transition-colors',
             warningLevel === 'warning_1min' && 'animate-pulse bg-red-100 dark:bg-red-950/50',
             warningLevel === 'warning_5min' && 'bg-amber-100 dark:bg-amber-950/50'
           )}
@@ -103,7 +103,10 @@ export const MockExamHeader: React.FC<MockExamHeaderProps> = ({
         {/* Progress and score */}
         <div className="flex items-center gap-4 text-sm">
           {/* Question progress */}
-          <div className="hidden text-muted-foreground sm:block" data-testid="mock-exam-progress">
+          <div
+            className="hidden font-cult-mono text-muted-foreground sm:block"
+            data-testid="mock-exam-progress"
+          >
             {t('session.question', {
               current: currentQuestion,
               total: totalQuestions,
@@ -111,7 +114,10 @@ export const MockExamHeader: React.FC<MockExamHeaderProps> = ({
           </div>
 
           {/* Mobile-friendly short progress */}
-          <div className="text-muted-foreground sm:hidden" data-testid="mock-exam-progress-short">
+          <div
+            className="font-cult-mono text-muted-foreground sm:hidden"
+            data-testid="mock-exam-progress-short"
+          >
             {currentQuestion}/{totalQuestions}
           </div>
         </div>
