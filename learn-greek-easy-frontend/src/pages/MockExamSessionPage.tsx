@@ -431,7 +431,12 @@ export const MockExamSessionPage: React.FC = () => {
         <div className="mx-auto max-w-2xl">
           {/* Language selector */}
           <div className="mb-4 flex justify-end">
-            <LanguageSelector value={questionLanguage} onChange={setQuestionLanguage} size="sm" />
+            <LanguageSelector
+              value={questionLanguage}
+              onChange={setQuestionLanguage}
+              variant="pill"
+              size="sm"
+            />
           </div>
 
           {/* Progress bar */}
