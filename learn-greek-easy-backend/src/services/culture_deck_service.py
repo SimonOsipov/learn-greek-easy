@@ -157,6 +157,10 @@ class CultureDeckService:
             description=self._get_localized_text(
                 deck.description_en, deck.description_el, deck.description_ru, locale
             ),
+            name_en=deck.name_en,
+            name_ru=deck.name_ru,
+            description_en=deck.description_en,
+            description_ru=deck.description_ru,
             category=deck.category,
             question_count=question_count,
             is_premium=deck.is_premium,
@@ -187,6 +191,10 @@ class CultureDeckService:
             description=self._get_localized_text(
                 deck.description_en, deck.description_el, deck.description_ru, locale
             ),
+            name_en=deck.name_en,
+            name_ru=deck.name_ru,
+            description_en=deck.description_en,
+            description_ru=deck.description_ru,
             category=deck.category,
             question_count=question_count,
             is_premium=deck.is_premium,

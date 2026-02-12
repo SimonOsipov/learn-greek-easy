@@ -19,12 +19,13 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { getLocalizedDeckName } from '@/lib/deckLocale';
 import { cultureDeckAPI } from '@/services/cultureDeckAPI';
 import type { CultureDeckDetailResponse } from '@/services/cultureDeckAPI';
 import type { DeckProgress } from '@/types/deck';
 
 export function CultureDeckDetailPage() {
-  const { t } = useTranslation(['deck', 'culture']);
+  const { t, i18n } = useTranslation(['deck', 'culture']);
   const { id: deckId } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
@@ -136,7 +137,9 @@ export function CultureDeckDetailPage() {
           {t('deck:detail.breadcrumb')}
         </Link>
         <span>/</span>
-        <span className="truncate font-medium text-foreground">{deck.name}</span>
+        <span className="truncate font-medium text-foreground">
+          {getLocalizedDeckName(deck, i18n.language)}
+        </span>
       </nav>
 
       {/* Main Content */}
@@ -149,7 +152,7 @@ export function CultureDeckDetailPage() {
               <div className="min-w-0 flex-1">
                 {/* Title */}
                 <h1 className="mb-1 text-2xl font-semibold text-foreground md:text-3xl">
-                  {deck.name}
+                  {getLocalizedDeckName(deck, i18n.language)}
                 </h1>
               </div>
 
