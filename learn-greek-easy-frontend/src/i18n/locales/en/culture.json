@@ -91,5 +91,16 @@
       "keepPracticing": "Keep practicing!",
       "needsWork": "Keep trying!"
     }
+  },
+  "scoreCard": {
+    "titlePass": "Well done, warrior!",
+    "titleFail": "Keep training!",
+    "subtitlePass": "You crushed it! Your knowledge of Greek culture is growing.",
+    "subtitleFail": "Every attempt makes you stronger. Review and try again!",
+    "correct": "Correct",
+    "incorrect": "Incorrect",
+    "total": "Total",
+    "tryAgain": "Try Again",
+    "srScore": "Score: {{correct}} out of {{total}}, {{percentage}} percent"
   }
 }
