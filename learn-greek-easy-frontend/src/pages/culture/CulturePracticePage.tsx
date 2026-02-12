@@ -175,8 +175,9 @@ export function CulturePracticePage() {
       } catch {
         // Silent failure for analytics
       }
+      loadXPStats(true);
     }
-  }, [summary, track]);
+  }, [summary, track, loadXPStats]);
 
   // beforeunload handler for browser close protection
   useEffect(() => {
@@ -300,8 +301,6 @@ export function CulturePracticePage() {
       setLastAnswerResponse(optimisticResponse);
       answerQuestion(selectedOption, optimisticResponse);
 
-      loadXPStats(true);
-
       cultureDeckAPI
         .submitAnswer(currentQuestion.question.id, {
           selected_option: selectedOption,
@@ -329,7 +328,7 @@ export function CulturePracticePage() {
         // Silent failure for analytics
       }
     },
-    [session, currentQuestion, answerQuestion, loadXPStats, track]
+    [session, currentQuestion, answerQuestion, track]
   );
 
   /**
