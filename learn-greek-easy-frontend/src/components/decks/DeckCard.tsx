@@ -4,7 +4,6 @@ import { Crown, Pencil, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { CultureBadge, type CultureCategory } from '@/components/culture';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { getLocalizedDeckName } from '@/lib/deckLocale';
@@ -160,10 +159,13 @@ export const DeckCard: React.FC<DeckCardProps> = ({
           {!isCultureDeck && <DeckBadge type="level" level={level} />}
 
           {isPremium && (
-            <Badge className="inline-flex items-center gap-1 border-0 bg-gradient-to-r from-purple-500 to-purple-700 text-white">
-              <Crown className="h-3 w-3" />
-              {t('card.premium')}
-            </Badge>
+            <span className="inline-flex items-center gap-1.5 rounded-md border border-purple-500/20 bg-purple-500/10 px-2 py-1 text-xs font-medium">
+              <span
+                className="h-2 w-2 flex-shrink-0 rounded-full bg-purple-500"
+                aria-hidden="true"
+              />
+              <span className="text-purple-700 dark:text-purple-300">{t('card.premium')}</span>
+            </span>
           )}
         </div>
       </CardHeader>

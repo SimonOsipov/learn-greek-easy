@@ -107,18 +107,24 @@ describe('DeckCard', () => {
       expect(premiumBadge).not.toBeInTheDocument();
     });
 
-    it('should render premium badge with correct styling', () => {
+    it('should render premium badge with dot+opacity styling', () => {
       const deck = createMockDeck({ isPremium: true });
 
       renderWithI18n(<DeckCard deck={deck} onClick={mockOnClick} />);
 
-      // Find the premium badge
-      const premiumBadge = screen.getByText(/premium/i);
+      // Find the premium text
+      const premiumText = screen.getByText(/premium/i);
+      expect(premiumText.className).toContain('text-purple-700');
 
-      // Badge should have gradient background (purple)
-      expect(premiumBadge.className).toContain('bg-gradient-to-r');
-      expect(premiumBadge.className).toContain('from-purple-500');
-      expect(premiumBadge.className).toContain('to-purple-700');
+      // Check the wrapper has dot+opacity styling
+      const wrapper = premiumText.parentElement!;
+      expect(wrapper.className).toContain('bg-purple-500/10');
+      expect(wrapper.className).toContain('border-purple-500/20');
+
+      // Check the dot is present
+      const dot = wrapper.querySelector('.rounded-full');
+      expect(dot).toBeInTheDocument();
+      expect(dot!.className).toContain('bg-purple-500');
     });
   });
 
