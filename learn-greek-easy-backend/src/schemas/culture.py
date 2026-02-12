@@ -308,6 +308,7 @@ class CultureQuestionQueueItem(BaseModel):
     option_count: int = Field(..., ge=2, le=4, description="Number of answer options (2, 3, or 4)")
     image_url: Optional[str] = Field(None, description="Pre-signed S3 URL for question image")
     order_index: int = Field(..., ge=0, description="Question order within deck")
+    correct_option: int = Field(..., ge=1, le=4, description="Correct answer option (1-based)")
     is_new: bool = Field(..., description="True if user hasn't studied this question yet")
     due_date: Optional[date] = Field(None, description="Next review date (null for new questions)")
     status: str = Field(..., description="Card status: new, learning, review, mastered")

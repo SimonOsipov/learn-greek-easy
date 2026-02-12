@@ -256,6 +256,7 @@ export function CulturePracticePage() {
         option_count: q.option_count,
         image_url: q.image_url,
         order_index: q.order_index,
+        correct_option: q.correct_option,
         original_article_url: q.original_article_url,
       }));
 
@@ -442,6 +443,7 @@ export function CulturePracticePage() {
         option_count: q.option_count,
         image_url: q.image_url,
         order_index: q.order_index,
+        correct_option: q.correct_option,
         original_article_url: q.original_article_url,
       }));
 

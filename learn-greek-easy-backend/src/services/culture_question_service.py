@@ -892,6 +892,7 @@ class CultureQuestionService:
             option_count=question.option_count,
             image_url=image_url,
             order_index=question.order_index,
+            correct_option=question.correct_option,
             is_new=stats is None,
             due_date=stats.next_review_date if stats else None,
             status=stats.status.value if stats else CardStatus.NEW.value,
