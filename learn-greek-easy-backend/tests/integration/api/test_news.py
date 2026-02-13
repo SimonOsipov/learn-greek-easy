@@ -126,6 +126,11 @@ class TestListNewsEndpoint:
         # Card info fields (may be null if no associated card)
         assert "card_id" in item
         assert "deck_id" in item
+        # Audio metadata fields (may be null if no audio generated)
+        assert "audio_url" in item
+        assert "audio_generated_at" in item
+        assert "audio_duration_seconds" in item
+        assert "audio_file_size_bytes" in item
 
     @pytest.mark.asyncio
     async def test_list_news_page_size_validation(
@@ -225,3 +230,8 @@ class TestGetNewsItemEndpoint:
         assert "image_url" in data
         assert "created_at" in data
         assert "updated_at" in data
+        # Audio metadata fields (may be null if no audio generated)
+        assert "audio_url" in data
+        assert "audio_generated_at" in data
+        assert "audio_duration_seconds" in data
+        assert "audio_file_size_bytes" in data
