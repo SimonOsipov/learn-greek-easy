@@ -27,6 +27,8 @@ export interface WaveformPlayerProps {
   className?: string;
   /** Whether to show the playback speed control pills. Default: true. */
   showSpeedControl?: boolean;
+  /** Visual style variant. 'culture' uses culture-page tokens, 'admin' uses shadcn tokens. Default: 'culture'. */
+  variant?: 'culture' | 'admin';
 }
 
 export const WaveformPlayer: FC<WaveformPlayerProps> = ({
@@ -34,12 +36,15 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
   audioUrl,
   className,
   showSpeedControl = true,
+  variant = 'culture',
 }) => {
   const barsRef = useRef<number[] | null>(null);
   if (barsRef.current === null) {
     barsRef.current = generateBars(BAR_COUNT);
   }
   const bars = barsRef.current;
+
+  const isAdmin = variant === 'admin';
 
   const containerRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -211,8 +216,10 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
       <div
         data-testid="waveform-player"
         className={cn(
-          'flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-100 p-[14px]',
-          'dark:border-slate-700 dark:bg-slate-800',
+          'flex items-center gap-3 rounded-xl p-[14px]',
+          isAdmin
+            ? 'border bg-muted'
+            : 'border border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-800',
           className
         )}
       >
@@ -223,9 +230,15 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
           onClick={togglePlayPause}
           className={cn(
             'flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full',
-            'bg-indigo-500 text-white transition-colors duration-200',
-            'hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2',
-            'dark:bg-indigo-400 dark:hover:bg-indigo-500 dark:focus:ring-offset-slate-800'
+            'transition-colors duration-200',
+            'focus:outline-none focus:ring-2 focus:ring-offset-2',
+            isAdmin
+              ? 'bg-primary text-primary-foreground hover:bg-primary/90 focus:ring-primary'
+              : [
+                  'bg-indigo-500 text-white',
+                  'hover:bg-indigo-600 focus:ring-indigo-500',
+                  'dark:bg-indigo-400 dark:hover:bg-indigo-500 dark:focus:ring-offset-slate-800',
+                ]
           )}
           aria-label={isPlaying ? 'Pause audio' : 'Play audio'}
         >
@@ -257,10 +270,16 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
             return (
               <div
                 key={i}
-                className={cn('flex-1 rounded-t-sm', !isFilled && 'bg-slate-300 dark:bg-slate-600')}
+                className={cn(
+                  'flex-1 rounded-t-sm',
+                  !isFilled &&
+                    (isAdmin ? 'bg-muted-foreground/30' : 'bg-slate-300 dark:bg-slate-600')
+                )}
                 style={{
                   height: `${height * 100}%`,
-                  ...(isFilled ? { backgroundColor: 'var(--cult-accent)' } : undefined),
+                  ...(isFilled
+                    ? { backgroundColor: isAdmin ? 'hsl(var(--primary))' : 'var(--cult-accent)' }
+                    : undefined),
                 }}
                 data-testid="waveform-bar"
               />
@@ -272,17 +291,32 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
         <div className="flex flex-shrink-0 flex-col items-end gap-1.5">
           <span
             data-testid="waveform-time"
-            className="font-cult-mono text-xs"
+            className={cn('text-xs', isAdmin ? 'font-mono' : 'font-cult-mono')}
             style={{ fontVariantNumeric: 'tabular-nums' }}
           >
             <span
               data-testid="waveform-time-current"
-              style={{ color: isPlaying ? 'var(--cult-accent)' : 'var(--cult-text-muted)' }}
+              style={{
+                color: isAdmin
+                  ? isPlaying
+                    ? 'hsl(var(--foreground))'
+                    : 'hsl(var(--muted-foreground))'
+                  : isPlaying
+                    ? 'var(--cult-accent)'
+                    : 'var(--cult-text-muted)',
+              }}
             >
               {formatTime(currentTime)}
             </span>
-            <span style={{ color: 'var(--cult-text-muted)' }}>{' / '}</span>
-            <span data-testid="waveform-time-total" style={{ color: 'var(--cult-text-muted)' }}>
+            <span
+              style={{ color: isAdmin ? 'hsl(var(--muted-foreground))' : 'var(--cult-text-muted)' }}
+            >
+              {' / '}
+            </span>
+            <span
+              data-testid="waveform-time-total"
+              style={{ color: isAdmin ? 'hsl(var(--muted-foreground))' : 'var(--cult-text-muted)' }}
+            >
               {formatTime(effectiveDuration)}
             </span>
           </span>
@@ -304,13 +338,20 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
                     aria-label={`${opt}x speed`}
                     onClick={() => handleSpeedChange(opt)}
                     className={cn(
-                      'rounded-full px-2.5 py-0.5 font-cult-mono text-xs transition-colors duration-150',
+                      'rounded-full px-2.5 py-0.5 text-xs transition-colors duration-150',
                       'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1',
+                      isAdmin ? 'font-mono' : 'font-cult-mono',
                       isSelected
-                        ? 'text-white'
-                        : 'text-[var(--cult-text-muted)] hover:bg-[var(--cult-accent-soft)]'
+                        ? isAdmin
+                          ? 'bg-primary text-primary-foreground'
+                          : 'text-white'
+                        : isAdmin
+                          ? 'text-muted-foreground hover:bg-muted'
+                          : 'text-[var(--cult-text-muted)] hover:bg-[var(--cult-accent-soft)]'
                     )}
-                    style={isSelected ? { backgroundColor: 'var(--cult-accent)' } : undefined}
+                    style={
+                      isSelected && !isAdmin ? { backgroundColor: 'var(--cult-accent)' } : undefined
+                    }
                   >
                     {opt}x
                   </button>
