@@ -526,6 +526,9 @@ export interface NewsItemResponse {
   original_article_url: string;
   image_url: string | null;
   audio_url: string | null;
+  audio_generated_at: string | null;
+  audio_duration_seconds: number | null;
+  audio_file_size_bytes: number | null;
   created_at: string;
   updated_at: string;
   // New fields for card association
@@ -941,6 +944,20 @@ export const adminAPI = {
    */
   deleteNewsItem: async (id: string): Promise<void> => {
     return api.delete<void>(`/api/v1/admin/news/${id}`);
+  },
+
+  /**
+   * Regenerate audio narration for a news item
+   *
+   * Triggers background TTS generation for the news item's Greek description.
+   * Requires superuser authentication.
+   *
+   * @param newsItemId - UUID of the news item
+   * @throws 404 if news item not found
+   * @throws 503 if ElevenLabs service is unavailable or not configured
+   */
+  regenerateAudio: async (newsItemId: string): Promise<void> => {
+    return api.post<void>(`/api/v1/admin/news/${newsItemId}/regenerate-audio`);
   },
 
   // ============================================
