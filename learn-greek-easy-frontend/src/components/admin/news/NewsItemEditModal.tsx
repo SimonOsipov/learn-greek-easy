@@ -11,9 +11,9 @@
  * - JSON validation
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 
-import { Loader2 } from 'lucide-react';
+import { Circle, Loader2, RefreshCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
@@ -43,6 +43,21 @@ function getLocalizedTitle(item: NewsItemResponse, lang: string): string {
     default: // 'en'
       return item.title_en;
   }
+}
+
+function formatAudioDuration(seconds: number): string {
+  const safe = Math.max(0, seconds || 0);
+  const m = Math.floor(safe / 60);
+  const s = Math.floor(safe % 60);
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  const kb = bytes / 1024;
+  if (kb < 1024) return `${kb.toFixed(1)} KB`;
+  const mb = kb / 1024;
+  return `${mb.toFixed(1)} MB`;
 }
 
 interface NewsItemEditModalProps {
@@ -170,7 +185,11 @@ export const NewsItemEditModal: React.FC<NewsItemEditModalProps> = ({
   const { t } = useTranslation('admin');
   const { currentLanguage } = useLanguage();
   const [jsonInput, setJsonInput] = useState('');
-  const { updateNewsItem, isUpdating } = useAdminNewsStore();
+  const { updateNewsItem, isUpdating, regenerateAudio } = useAdminNewsStore();
+
+  const [cooldownRemaining, setCooldownRemaining] = useState(0);
+  const [isRegenerating, setIsRegenerating] = useState(false);
+  const cooldownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Initialize JSON input when item changes
   useEffect(() => {
@@ -178,6 +197,60 @@ export const NewsItemEditModal: React.FC<NewsItemEditModalProps> = ({
       setJsonInput(itemToEditableJson(item, t('news.edit.imageUrlPlaceholder')));
     }
   }, [item, t]);
+
+  // Clear cooldown when modal closes
+  useEffect(() => {
+    if (!open) {
+      setCooldownRemaining(0);
+      setIsRegenerating(false);
+      if (cooldownTimerRef.current) {
+        clearInterval(cooldownTimerRef.current);
+        cooldownTimerRef.current = null;
+      }
+    }
+  }, [open]);
+
+  // Cleanup interval on unmount
+  useEffect(() => {
+    return () => {
+      if (cooldownTimerRef.current) {
+        clearInterval(cooldownTimerRef.current);
+      }
+    };
+  }, []);
+
+  const handleRegenerate = useCallback(async () => {
+    if (!item || isRegenerating || cooldownRemaining > 0) return;
+
+    setIsRegenerating(true);
+    try {
+      await regenerateAudio(item.id);
+      toast({ title: t('news.audio.regenerateSuccess') });
+
+      setCooldownRemaining(15);
+      cooldownTimerRef.current = setInterval(() => {
+        setCooldownRemaining((prev) => {
+          if (prev <= 1) {
+            if (cooldownTimerRef.current) {
+              clearInterval(cooldownTimerRef.current);
+              cooldownTimerRef.current = null;
+            }
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      toast({
+        title: t('news.audio.regenerateError'),
+        description: errorMessage,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsRegenerating(false);
+    }
+  }, [item, isRegenerating, cooldownRemaining, regenerateAudio, t]);
 
   const handleSave = async () => {
     if (!item) return;
@@ -230,6 +303,67 @@ export const NewsItemEditModal: React.FC<NewsItemEditModalProps> = ({
           <DialogTitle>{t('news.edit.title')}</DialogTitle>
           <DialogDescription>{getLocalizedTitle(item, currentLanguage)}</DialogDescription>
         </DialogHeader>
+
+        {/* Audio Status Section */}
+        <div className="rounded-lg border p-4" data-testid="audio-status-section">
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <h4 className="text-sm font-medium">{t('news.audio.statusTitle')}</h4>
+                {item.audio_url ? (
+                  <Circle className="h-2.5 w-2.5 fill-green-500 text-green-500" />
+                ) : (
+                  <Circle className="h-2.5 w-2.5 fill-muted-foreground/40 text-muted-foreground/40" />
+                )}
+              </div>
+              {item.audio_url ? (
+                <div className="space-y-0.5 text-xs text-muted-foreground">
+                  {item.audio_duration_seconds != null && (
+                    <p>
+                      {t('news.audio.duration')}: {formatAudioDuration(item.audio_duration_seconds)}
+                    </p>
+                  )}
+                  {item.audio_file_size_bytes != null && (
+                    <p>
+                      {t('news.audio.fileSize')}: {formatFileSize(item.audio_file_size_bytes)}
+                    </p>
+                  )}
+                  {item.audio_generated_at && (
+                    <p>
+                      {t('news.audio.generated')}:{' '}
+                      {new Date(item.audio_generated_at).toLocaleString()}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground/60">
+                  {t('news.audio.noAudioGenerated')}
+                </p>
+              )}
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRegenerate}
+              disabled={isRegenerating || cooldownRemaining > 0}
+              data-testid="modal-regenerate-audio"
+            >
+              {isRegenerating ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {t('news.audio.regenerating')}
+                </>
+              ) : cooldownRemaining > 0 ? (
+                `${cooldownRemaining}s`
+              ) : (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  {t('news.audio.regenerate')}
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
 
         <div className="space-y-4">
           <Textarea

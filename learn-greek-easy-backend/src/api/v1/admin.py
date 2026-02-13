@@ -30,6 +30,7 @@ from src.db.models import (
     Deck,
     FeedbackCategory,
     FeedbackStatus,
+    NewsItem,
     User,
     WordEntry,
 )
@@ -82,7 +83,11 @@ from src.services.card_error_admin_service import CardErrorAdminService
 from src.services.changelog_service import ChangelogService
 from src.services.feedback_admin_service import FeedbackAdminService
 from src.services.news_item_service import NewsItemService
-from src.tasks import create_announcement_notifications_task, generate_audio_for_news_item_task
+from src.tasks import (
+    create_announcement_notifications_task,
+    generate_audio_for_news_item_task,
+    is_background_tasks_enabled,
+)
 
 logger = get_logger(__name__)
 
@@ -1104,6 +1109,70 @@ async def delete_news_item(
     """
     service = NewsItemService(db)
     await service.delete(news_item_id)
+
+
+@router.post(
+    "/news/{news_item_id}/regenerate-audio",
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="Regenerate audio for news item",
+    description="Trigger audio regeneration for a news item's Greek description. Requires superuser privileges.",
+    responses={
+        202: {
+            "description": "Audio regeneration started",
+            "content": {"application/json": {"example": {"message": "Audio regeneration started"}}},
+        },
+        400: {"description": "News item has no Greek description"},
+        404: {"description": "News item not found"},
+        503: {"description": "Audio service unavailable"},
+    },
+)
+async def regenerate_news_audio(
+    news_item_id: UUID,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_superuser),
+) -> dict:
+    # Gate check: both background tasks and ElevenLabs must be available
+    if not is_background_tasks_enabled() or not settings.elevenlabs_configured:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Audio generation is not available",
+        )
+
+    # Fetch news item directly
+    result = await db.execute(select(NewsItem).where(NewsItem.id == news_item_id))
+    news_item = result.scalar_one_or_none()
+    if news_item is None:
+        raise NotFoundException(
+            resource="News item",
+            detail=f"News item with ID '{news_item_id}' not found",
+        )
+
+    # Validate Greek description exists
+    if not news_item.description_el or not news_item.description_el.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="News item has no Greek description for audio generation",
+        )
+
+    # Schedule background audio generation
+    background_tasks.add_task(
+        generate_audio_for_news_item_task,
+        news_item_id=news_item_id,
+        description_el=news_item.description_el,
+        db_url=settings.database_url,
+    )
+
+    logger.info(
+        "Audio regeneration scheduled for news item",
+        extra={
+            "news_item_id": str(news_item_id),
+            "triggered_by": str(current_user.id),
+            "text_length": len(news_item.description_el),
+        },
+    )
+
+    return {"message": "Audio regeneration started"}
 
 
 # ============================================================================

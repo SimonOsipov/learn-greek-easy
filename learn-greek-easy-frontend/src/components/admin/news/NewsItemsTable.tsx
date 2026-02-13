@@ -13,7 +13,15 @@
 
 import React from 'react';
 
-import { ChevronLeft, ChevronRight, Pencil, Trash2 } from 'lucide-react';
+import {
+  ChevronLeft,
+  ChevronRight,
+  Circle,
+  Loader2,
+  Pencil,
+  RefreshCw,
+  Trash2,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
@@ -49,6 +57,9 @@ interface NewsItemsTableProps {
   onPageChange: (page: number) => void;
   onEdit: (item: NewsItemResponse) => void;
   onDelete: (item: NewsItemResponse) => void;
+  regeneratingId: string | null;
+  cooldownEndTime: number | null;
+  onRegenerateAudio: (item: NewsItemResponse) => void;
 }
 
 /**
@@ -61,6 +72,16 @@ function formatDate(dateString: string): string {
     month: 'short',
     day: 'numeric',
   });
+}
+
+/**
+ * Format audio duration in seconds to m:ss display format
+ */
+function formatAudioDuration(seconds: number): string {
+  const safe = Math.max(0, seconds || 0);
+  const m = Math.floor(safe / 60);
+  const s = Math.floor(safe % 60);
+  return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
 /**
@@ -77,9 +98,13 @@ const TableSkeleton: React.FC = () => (
             <Skeleton className="h-3 w-24" />
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Skeleton className="h-8 w-8" />
-          <Skeleton className="h-8 w-8" />
+        <div className="flex items-center gap-4">
+          <Skeleton className="h-4 w-12" />
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-8 w-8" />
+            <Skeleton className="h-8 w-8" />
+            <Skeleton className="h-8 w-8" />
+          </div>
         </div>
       </div>
     ))}
@@ -95,16 +120,32 @@ interface NewsItemRowProps {
   onDelete: (item: NewsItemResponse) => void;
   t: (key: string) => string;
   lang: string;
+  regeneratingId: string | null;
+  cooldownEndTime: number | null;
+  onRegenerateAudio: (item: NewsItemResponse) => void;
 }
 
-const NewsItemRow: React.FC<NewsItemRowProps> = ({ item, onEdit, onDelete, t, lang }) => {
+const NewsItemRow: React.FC<NewsItemRowProps> = ({
+  item,
+  onEdit,
+  onDelete,
+  t,
+  lang,
+  regeneratingId,
+  cooldownEndTime,
+  onRegenerateAudio,
+}) => {
   const { title } = getLocalizedContent(item, lang);
+  const isRegenerating = regeneratingId === item.id;
+  const isCooldownActive = cooldownEndTime !== null;
+  const canRegenerate = !isRegenerating && !isCooldownActive && !!item.description_el;
 
   return (
     <div
       className="flex items-center justify-between rounded-lg border p-4 hover:bg-muted/50"
       data-testid={`news-item-row-${item.id}`}
     >
+      {/* Left: Thumbnail + Title/Dates */}
       <div className="flex items-center gap-3">
         {/* Thumbnail */}
         {item.image_url ? (
@@ -134,27 +175,65 @@ const NewsItemRow: React.FC<NewsItemRowProps> = ({ item, onEdit, onDelete, t, la
         </div>
       </div>
 
-      {/* Actions */}
-      <div className="flex items-center gap-2">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => onEdit(item)}
-          data-testid={`edit-news-${item.id}`}
-        >
-          <Pencil className="h-4 w-4" />
-          <span className="sr-only">{t('actions.edit')}</span>
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => onDelete(item)}
-          className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-          data-testid={`delete-news-${item.id}`}
-        >
-          <Trash2 className="h-4 w-4" />
-          <span className="sr-only">{t('actions.delete')}</span>
-        </Button>
+      {/* Right: Audio Status + Actions */}
+      <div className="flex items-center gap-4">
+        {/* Audio Status Indicator */}
+        <div className="flex items-center gap-1.5 text-sm" data-testid={`audio-status-${item.id}`}>
+          {item.audio_url ? (
+            <>
+              <Circle className="h-2.5 w-2.5 fill-green-500 text-green-500" />
+              <span className="text-muted-foreground">
+                {item.audio_duration_seconds != null
+                  ? formatAudioDuration(item.audio_duration_seconds)
+                  : t('news.audio.hasAudio')}
+              </span>
+            </>
+          ) : (
+            <span className="text-muted-foreground/60">{t('news.audio.noAudio')}</span>
+          )}
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex items-center gap-2">
+          {/* Regenerate Audio Button */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onRegenerateAudio(item)}
+            disabled={!canRegenerate}
+            data-testid={`regenerate-audio-${item.id}`}
+          >
+            {isRegenerating ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <RefreshCw className="h-4 w-4" />
+            )}
+            <span className="sr-only">{t('news.audio.regenerate')}</span>
+          </Button>
+
+          {/* Edit Button */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onEdit(item)}
+            data-testid={`edit-news-${item.id}`}
+          >
+            <Pencil className="h-4 w-4" />
+            <span className="sr-only">{t('actions.edit')}</span>
+          </Button>
+
+          {/* Delete Button */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onDelete(item)}
+            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+            data-testid={`delete-news-${item.id}`}
+          >
+            <Trash2 className="h-4 w-4" />
+            <span className="sr-only">{t('actions.delete')}</span>
+          </Button>
+        </div>
       </div>
     </div>
   );
@@ -173,6 +252,9 @@ export const NewsItemsTable: React.FC<NewsItemsTableProps> = ({
   onPageChange,
   onEdit,
   onDelete,
+  regeneratingId,
+  cooldownEndTime,
+  onRegenerateAudio,
 }) => {
   const { t } = useTranslation('admin');
   const { currentLanguage } = useLanguage();
@@ -218,6 +300,9 @@ export const NewsItemsTable: React.FC<NewsItemsTableProps> = ({
                   onDelete={onDelete}
                   t={t}
                   lang={currentLanguage}
+                  regeneratingId={regeneratingId}
+                  cooldownEndTime={cooldownEndTime}
+                  onRegenerateAudio={onRegenerateAudio}
                 />
               ))}
             </div>

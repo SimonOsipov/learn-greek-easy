@@ -20,7 +20,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/hooks/use-toast';
-import type { NewsItemWithQuestionCreate, QuestionCreate } from '@/services/adminAPI';
+import type {
+  NewsItemResponse,
+  NewsItemWithQuestionCreate,
+  QuestionCreate,
+} from '@/services/adminAPI';
 import { useAdminNewsStore } from '@/stores/adminNewsStore';
 
 import { NewsItemDeleteDialog } from './NewsItemDeleteDialog';
@@ -175,6 +179,9 @@ export const NewsTab: React.FC = () => {
     createNewsItem,
     setPage,
     setSelectedItem,
+    regeneratingId,
+    cooldownEndTime,
+    regenerateAudio,
   } = useAdminNewsStore();
 
   // Fetch news items on mount
@@ -255,6 +262,25 @@ export const NewsTab: React.FC = () => {
   };
 
   /**
+   * Handle regenerate audio button click
+   */
+  const handleRegenerateAudio = async (item: NewsItemResponse) => {
+    try {
+      await regenerateAudio(item.id);
+      toast({
+        title: t('news.audio.regenerateSuccess'),
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      toast({
+        title: t('news.audio.regenerateError'),
+        description: errorMessage,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  /**
    * Handle edit modal close
    */
   const handleEditModalClose = (open: boolean) => {
@@ -324,6 +350,9 @@ export const NewsTab: React.FC = () => {
           onPageChange={setPage}
           onEdit={handleEdit}
           onDelete={handleDelete}
+          regeneratingId={regeneratingId}
+          cooldownEndTime={cooldownEndTime}
+          onRegenerateAudio={handleRegenerateAudio}
         />
       </div>
 
