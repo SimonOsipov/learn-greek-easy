@@ -889,6 +889,38 @@ class TestBuildQueueItem:
             assert result.image_url == "https://s3.example.com/presigned-url"
             mock_s3_service.generate_presigned_url.assert_called_with(question.image_key)
 
+    @pytest.mark.asyncio
+    async def test_generates_presigned_url_for_audio(
+        self,
+        db_session: AsyncSession,
+        culture_questions: list[CultureQuestion],
+        mock_s3_service,
+    ):
+        """Should generate presigned URL when audio_s3_key exists."""
+        service = CultureQuestionService(db_session, s3_service=mock_s3_service)
+        question = culture_questions[0]
+        question.audio_s3_key = "culture/audio/test.mp3"
+
+        result = service._build_queue_item(question, stats=None)
+
+        assert result.audio_url == "https://s3.example.com/presigned-url"
+        mock_s3_service.generate_presigned_url.assert_any_call("culture/audio/test.mp3")
+
+    @pytest.mark.asyncio
+    async def test_audio_url_none_when_no_audio(
+        self,
+        db_session: AsyncSession,
+        culture_questions: list[CultureQuestion],
+        mock_s3_service,
+    ):
+        """Should return None audio_url when audio_s3_key is None."""
+        service = CultureQuestionService(db_session, s3_service=mock_s3_service)
+        question = culture_questions[1]  # No audio_s3_key
+
+        result = service._build_queue_item(question, stats=None)
+
+        assert result.audio_url is None
+
 
 # =============================================================================
 # Test Get Feedback Message Helper

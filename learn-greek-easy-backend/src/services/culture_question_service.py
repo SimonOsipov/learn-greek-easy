@@ -864,7 +864,7 @@ class CultureQuestionService:
         question: CultureQuestion,
         stats: Optional[CultureQuestionStats],
     ) -> CultureQuestionQueueItem:
-        """Build queue item with presigned image URL.
+        """Build queue item with presigned image and audio URLs.
 
         Args:
             question: The culture question
@@ -877,6 +877,11 @@ class CultureQuestionService:
         image_url = None
         if question.image_key:
             image_url = self.s3_service.generate_presigned_url(question.image_key)
+
+        # Generate presigned URL if audio exists
+        audio_url = None
+        if question.audio_s3_key:
+            audio_url = self.s3_service.generate_presigned_url(question.audio_s3_key)
 
         # Build dynamic options array (2-4 options)
         options = [question.option_a, question.option_b]
@@ -891,6 +896,7 @@ class CultureQuestionService:
             options=options,
             option_count=question.option_count,
             image_url=image_url,
+            audio_url=audio_url,
             order_index=question.order_index,
             correct_option=question.correct_option,
             is_new=stats is None,
