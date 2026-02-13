@@ -84,6 +84,7 @@ export interface CultureQuestionQueueItem {
   options: LocalizedText[]; // Array of 2-4 options
   option_count: number; // Number of answer options (2, 3, or 4)
   image_url: string | null;
+  audio_url: string | null;
   order_index: number;
   correct_option: number;
   is_new: boolean;

@@ -44,8 +44,6 @@ export interface MCQComponentProps {
     correctOption: number;
     explanationText?: string;
   };
-  /** Whether the question has associated audio content */
-  hasAudio?: boolean;
   /** Deck category for CategoryBadge display */
   category?: CultureCategory;
 }
@@ -89,7 +87,6 @@ export const MCQComponent: React.FC<MCQComponentProps> = ({
   isLastQuestion,
   answerResult,
   category,
-  hasAudio = false,
 }) => {
   const { t } = useTranslation('culture');
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
@@ -221,7 +218,7 @@ export const MCQComponent: React.FC<MCQComponentProps> = ({
           )}
 
           {/* Audio waveform player placeholder */}
-          {hasAudio && <WaveformPlayer />}
+          {question.audio_url && <WaveformPlayer audioUrl={question.audio_url} />}
 
           {/* Question text - KEEP EXACTLY AS-IS */}
           <h2

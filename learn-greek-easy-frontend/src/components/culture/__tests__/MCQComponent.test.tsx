@@ -55,8 +55,8 @@ vi.mock('../SourceImage', () => ({
 }));
 
 vi.mock('../WaveformPlayer', () => ({
-  WaveformPlayer: ({ className }: { className?: string }) => (
-    <div data-testid="waveform-player" className={className}>
+  WaveformPlayer: ({ audioUrl, className }: { audioUrl?: string; className?: string }) => (
+    <div data-testid="waveform-player" data-audio-url={audioUrl || ''} className={className}>
       Waveform Player Mock
     </div>
   ),
@@ -136,6 +136,7 @@ const mockQuestionWithMissingTranslation: CultureQuestionResponse = {
   ],
   option_count: 4,
   image_url: null,
+  audio_url: null,
   order_index: 1,
   correct_option: 1,
   original_article_url: null,
@@ -902,36 +903,35 @@ describe('MCQComponent - Audio Player', () => {
     vi.clearAllMocks();
   });
 
-  it('should render WaveformPlayer when hasAudio is true', () => {
+  it('should render WaveformPlayer when question.audio_url is truthy', () => {
+    const questionWithAudio = {
+      ...mockQuestion,
+      audio_url: 'https://example.com/audio.mp3',
+    };
     renderWithProviders(
-      <MCQComponent question={mockQuestion} language="en" onAnswer={mockOnAnswer} hasAudio={true} />
+      <MCQComponent question={questionWithAudio} language="en" onAnswer={mockOnAnswer} />
     );
 
     const waveformPlayer = screen.getByTestId('waveform-player');
     expect(waveformPlayer).toBeInTheDocument();
+    expect(waveformPlayer).toHaveAttribute('data-audio-url', 'https://example.com/audio.mp3');
   });
 
-  it('should not render WaveformPlayer when hasAudio is false', () => {
-    renderWithProviders(
-      <MCQComponent
-        question={mockQuestion}
-        language="en"
-        onAnswer={mockOnAnswer}
-        hasAudio={false}
-      />
-    );
-
-    const waveformPlayer = screen.queryByTestId('waveform-player');
-    expect(waveformPlayer).not.toBeInTheDocument();
-  });
-
-  it('should not render WaveformPlayer when hasAudio is not provided', () => {
+  it('should not render WaveformPlayer when question.audio_url is null', () => {
     renderWithProviders(
       <MCQComponent question={mockQuestion} language="en" onAnswer={mockOnAnswer} />
     );
 
-    const waveformPlayer = screen.queryByTestId('waveform-player');
-    expect(waveformPlayer).not.toBeInTheDocument();
+    expect(screen.queryByTestId('waveform-player')).not.toBeInTheDocument();
+  });
+
+  it('should not render WaveformPlayer when question.audio_url is empty string', () => {
+    const questionWithEmptyAudio = { ...mockQuestion, audio_url: '' };
+    renderWithProviders(
+      <MCQComponent question={questionWithEmptyAudio} language="en" onAnswer={mockOnAnswer} />
+    );
+
+    expect(screen.queryByTestId('waveform-player')).not.toBeInTheDocument();
   });
 });
 
@@ -1668,13 +1668,12 @@ describe('MCQComponent - Redesign Features', () => {
 
   describe('Edge Cases', () => {
     it('should render both SourceImage and WaveformPlayer when both present', () => {
+      const questionWithBothMedia = {
+        ...mockQuestionWithImage,
+        audio_url: 'https://example.com/audio.mp3',
+      };
       renderWithProviders(
-        <MCQComponent
-          question={mockQuestionWithImage}
-          language="en"
-          onAnswer={mockOnAnswer}
-          hasAudio={true}
-        />
+        <MCQComponent question={questionWithBothMedia} language="en" onAnswer={mockOnAnswer} />
       );
 
       expect(screen.getByTestId('source-image-container')).toBeInTheDocument();

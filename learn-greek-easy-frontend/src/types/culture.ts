@@ -25,6 +25,7 @@ export interface CultureQuestionResponse {
   options: MultilingualText[]; // Array of 2-4 options
   option_count: number; // Number of answer options (2, 3, or 4)
   image_url: string | null;
+  audio_url: string | null;
   order_index: number;
   correct_option: number;
   original_article_url: string | null; // Source news article URL
