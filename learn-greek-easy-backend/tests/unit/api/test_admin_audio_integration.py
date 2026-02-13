@@ -189,3 +189,284 @@ class TestAdminNewsAudioIntegration:
 
             # Assert audio task was NOT called
             mock_task.assert_not_called()
+
+
+class TestAdminRegenerateAudio:
+    """Unit tests for POST /api/v1/admin/news/{id}/regenerate-audio endpoint."""
+
+    # =========================================================================
+    # Regenerate Audio - Happy Path
+    # =========================================================================
+
+    @pytest.mark.asyncio
+    async def test_regenerate_audio_success(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        db_session: AsyncSession,
+    ):
+        """Test that regenerating audio schedules the task and returns 202.
+
+        POST /api/v1/admin/news/{id}/regenerate-audio should schedule
+        generate_audio_for_news_item_task and return 202 Accepted.
+        """
+        # Create a news item with Greek description
+        news_item = await NewsItemFactory.create(
+            session=db_session,
+            description_el="Ελληνική περιγραφή για αναδημιουργία ήχου",
+        )
+
+        # Mock both gates as enabled
+        from src.config import settings
+
+        with (
+            patch("src.api.v1.admin.is_background_tasks_enabled", return_value=True),
+            patch.object(settings, "elevenlabs_api_key", "test-api-key"),
+            patch("src.api.v1.admin.generate_audio_for_news_item_task") as mock_task,
+        ):
+            response = await client.post(
+                f"/api/v1/admin/news/{news_item.id}/regenerate-audio",
+                headers=superuser_auth_headers,
+            )
+
+            # Assert 202 Accepted
+            assert response.status_code == 202
+            data = response.json()
+            assert data["message"] == "Audio regeneration started"
+
+            # Assert audio task was scheduled
+            mock_task.assert_called_once()
+            call_kwargs = mock_task.call_args.kwargs
+            assert call_kwargs["news_item_id"] == news_item.id
+            assert call_kwargs["description_el"] == "Ελληνική περιγραφή για αναδημιουργία ήχου"
+            assert "db_url" in call_kwargs
+
+    # =========================================================================
+    # Regenerate Audio - News Item Not Found
+    # =========================================================================
+
+    @pytest.mark.asyncio
+    async def test_regenerate_audio_not_found(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+    ):
+        """Test that regenerating audio for nonexistent item returns 404.
+
+        POST /api/v1/admin/news/{random-uuid}/regenerate-audio should return 404.
+        """
+        random_id = uuid4()
+
+        # Mock gates as enabled (gates are checked BEFORE DB query)
+        from src.config import settings
+
+        with (
+            patch("src.api.v1.admin.is_background_tasks_enabled", return_value=True),
+            patch.object(settings, "elevenlabs_api_key", "test-api-key"),
+            patch("src.api.v1.admin.generate_audio_for_news_item_task") as mock_task,
+        ):
+            response = await client.post(
+                f"/api/v1/admin/news/{random_id}/regenerate-audio",
+                headers=superuser_auth_headers,
+            )
+
+            # Assert 404
+            assert response.status_code == 404
+            data = response.json()
+            assert data["success"] is False
+            assert "not found" in data["error"]["message"].lower()
+
+            # Task should not be called
+            mock_task.assert_not_called()
+
+    # =========================================================================
+    # Regenerate Audio - Empty Greek Description
+    # =========================================================================
+
+    @pytest.mark.asyncio
+    async def test_regenerate_audio_empty_description(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        db_session: AsyncSession,
+    ):
+        """Test that regenerating audio with empty description_el returns 400.
+
+        POST /api/v1/admin/news/{id}/regenerate-audio should return 400
+        if description_el is empty or whitespace-only.
+        """
+        # Create news item with empty Greek description
+        news_item = await NewsItemFactory.create(
+            session=db_session,
+            description_el="",
+        )
+
+        # Mock gates as enabled
+        from src.config import settings
+
+        with (
+            patch("src.api.v1.admin.is_background_tasks_enabled", return_value=True),
+            patch.object(settings, "elevenlabs_api_key", "test-api-key"),
+            patch("src.api.v1.admin.generate_audio_for_news_item_task") as mock_task,
+        ):
+            response = await client.post(
+                f"/api/v1/admin/news/{news_item.id}/regenerate-audio",
+                headers=superuser_auth_headers,
+            )
+
+            # Assert 400
+            assert response.status_code == 400
+            data = response.json()
+            assert data["success"] is False
+            assert "no Greek description" in data["error"]["message"]
+
+            # Task should not be called
+            mock_task.assert_not_called()
+
+    # =========================================================================
+    # Regenerate Audio - Background Tasks Disabled
+    # =========================================================================
+
+    @pytest.mark.asyncio
+    async def test_regenerate_audio_bg_tasks_disabled(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        db_session: AsyncSession,
+    ):
+        """Test that regenerating audio returns 503 when background tasks disabled.
+
+        POST /api/v1/admin/news/{id}/regenerate-audio should return 503
+        if is_background_tasks_enabled() returns False.
+        """
+        # Create a valid news item (gate check happens before DB query)
+        news_item = await NewsItemFactory.create(
+            session=db_session,
+            description_el="Ελληνική περιγραφή",
+        )
+
+        # Mock background tasks as disabled but ElevenLabs as enabled
+        from src.config import settings
+
+        with (
+            patch("src.api.v1.admin.is_background_tasks_enabled", return_value=False),
+            patch.object(settings, "elevenlabs_api_key", "test-api-key"),
+            patch("src.api.v1.admin.generate_audio_for_news_item_task") as mock_task,
+        ):
+            response = await client.post(
+                f"/api/v1/admin/news/{news_item.id}/regenerate-audio",
+                headers=superuser_auth_headers,
+            )
+
+            # Assert 503
+            assert response.status_code == 503
+            data = response.json()
+            assert data["success"] is False
+            assert "not available" in data["error"]["message"].lower()
+
+            # Task should not be called
+            mock_task.assert_not_called()
+
+    # =========================================================================
+    # Regenerate Audio - ElevenLabs Not Configured
+    # =========================================================================
+
+    @pytest.mark.asyncio
+    async def test_regenerate_audio_elevenlabs_not_configured(
+        self,
+        client: AsyncClient,
+        superuser_auth_headers: dict,
+        db_session: AsyncSession,
+    ):
+        """Test that regenerating audio returns 503 when ElevenLabs not configured.
+
+        POST /api/v1/admin/news/{id}/regenerate-audio should return 503
+        if settings.elevenlabs_configured returns False.
+        """
+        # Create a valid news item
+        news_item = await NewsItemFactory.create(
+            session=db_session,
+            description_el="Ελληνική περιγραφή",
+        )
+
+        # Mock ElevenLabs as not configured
+        from src.config import settings
+
+        with (
+            patch("src.api.v1.admin.is_background_tasks_enabled", return_value=True),
+            patch.object(settings, "elevenlabs_api_key", ""),  # Makes elevenlabs_configured False
+            patch("src.api.v1.admin.generate_audio_for_news_item_task") as mock_task,
+        ):
+            response = await client.post(
+                f"/api/v1/admin/news/{news_item.id}/regenerate-audio",
+                headers=superuser_auth_headers,
+            )
+
+            # Assert 503
+            assert response.status_code == 503
+            data = response.json()
+            assert data["success"] is False
+            assert "not available" in data["error"]["message"].lower()
+
+            # Task should not be called
+            mock_task.assert_not_called()
+
+    # =========================================================================
+    # Regenerate Audio - Requires Superuser
+    # =========================================================================
+
+    @pytest.mark.asyncio
+    async def test_regenerate_audio_requires_superuser(
+        self,
+        client: AsyncClient,
+        auth_headers: dict,
+        db_session: AsyncSession,
+    ):
+        """Test that regenerating audio requires superuser privileges.
+
+        POST /api/v1/admin/news/{id}/regenerate-audio with regular user
+        auth should return 403.
+        """
+        # Create a news item
+        news_item = await NewsItemFactory.create(
+            session=db_session,
+            description_el="Ελληνική περιγραφή",
+        )
+
+        # Use regular user auth headers
+        response = await client.post(
+            f"/api/v1/admin/news/{news_item.id}/regenerate-audio",
+            headers=auth_headers,
+        )
+
+        # Assert 403 Forbidden
+        assert response.status_code == 403
+
+    # =========================================================================
+    # Regenerate Audio - Requires Authentication
+    # =========================================================================
+
+    @pytest.mark.asyncio
+    async def test_regenerate_audio_unauthenticated(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+    ):
+        """Test that regenerating audio requires authentication.
+
+        POST /api/v1/admin/news/{id}/regenerate-audio without auth
+        should return 401.
+        """
+        # Create a news item
+        news_item = await NewsItemFactory.create(
+            session=db_session,
+            description_el="Ελληνική περιγραφή",
+        )
+
+        # No auth headers
+        response = await client.post(
+            f"/api/v1/admin/news/{news_item.id}/regenerate-audio",
+        )
+
+        # Assert 401 Unauthorized
+        assert response.status_code == 401
