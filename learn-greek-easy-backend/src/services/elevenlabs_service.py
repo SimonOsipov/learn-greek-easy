@@ -108,7 +108,9 @@ class ElevenLabsService:
                 )
 
                 if response.status_code == 401:
-                    raise ElevenLabsAuthenticationError("Invalid API key")
+                    raise ElevenLabsAuthenticationError(
+                        f"Authentication failed (list_voices): {response.text[:200]}"
+                    )
 
                 if response.status_code == 429:
                     raise ElevenLabsRateLimitError("Rate limit exceeded")
@@ -197,7 +199,9 @@ class ElevenLabsService:
                     raise ElevenLabsVoiceNotFoundError(voice_id=voice_id)
 
                 if response.status_code == 401:
-                    raise ElevenLabsAuthenticationError("Invalid API key")
+                    raise ElevenLabsAuthenticationError(
+                        f"Authentication failed (text_to_speech): {response.text[:200]}"
+                    )
 
                 if response.status_code == 429:
                     raise ElevenLabsRateLimitError("Rate limit exceeded")
