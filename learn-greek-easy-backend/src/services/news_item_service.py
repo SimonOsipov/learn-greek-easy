@@ -251,6 +251,7 @@ class NewsItemService:
                     original_article_url=str(data.original_article_url),
                     is_pending_review=False,  # Admin-created = auto-approved
                     image_key=s3_key,
+                    news_item_id=news_item.id,
                 )
                 self.db.add(culture_question)
                 await self.db.flush()

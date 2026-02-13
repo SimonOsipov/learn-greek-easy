@@ -1100,9 +1100,9 @@ async def generate_audio_for_news_item_task(
             audio_duration_seconds = (len(audio_bytes) * 8) / (128 * 1000)
 
             # Step 5: Update NewsItem with audio metadata
-            from sqlalchemy import select
+            from sqlalchemy import select, update
 
-            from src.db.models import NewsItem
+            from src.db.models import CultureQuestion, NewsItem
 
             result = await session.execute(select(NewsItem).where(NewsItem.id == news_item_id))
             news_item = result.scalar_one_or_none()
@@ -1118,6 +1118,22 @@ async def generate_audio_for_news_item_task(
             news_item.audio_generated_at = datetime.now(timezone.utc)
             news_item.audio_file_size_bytes = len(audio_bytes)
             news_item.audio_duration_seconds = audio_duration_seconds
+
+            # Step 5b: Propagate audio_s3_key to linked CultureQuestions
+            propagation_result = await session.execute(
+                update(CultureQuestion)
+                .where(CultureQuestion.news_item_id == news_item_id)
+                .values(audio_s3_key=s3_key)
+            )
+            propagated_count = propagation_result.rowcount  # type: ignore[attr-defined]
+            logger.info(
+                "Propagated audio_s3_key to linked CultureQuestions",
+                extra={
+                    "news_item_id": str(news_item_id),
+                    "s3_key": s3_key,
+                    "propagated_count": propagated_count,
+                },
+            )
 
             await session.commit()
         finally:
