@@ -786,7 +786,11 @@ async def process_culture_answer_full_async(
     except Exception as e:
         logger.error(
             "Full culture answer processing failed",
-            extra={"user_id": str(user_id), "question_id": str(question_id), "error": str(e)},
+            extra={
+                "user_id": str(user_id),
+                "question_id": str(question_id),
+                "error": str(e),
+            },
             exc_info=True,
         )
     finally:
@@ -1010,6 +1014,72 @@ async def create_announcement_notifications_task(
             extra={
                 "campaign_id": str(campaign_id),
                 "total_created": total_created,
+                "error": str(e),
+            },
+            exc_info=True,
+        )
+    finally:
+        if engine is not None:
+            await engine.dispose()
+
+
+async def generate_audio_for_news_item_task(
+    news_item_id: UUID,
+    description_el: str,
+    db_url: str,
+) -> None:
+    """Generate audio for a news item using ElevenLabs TTS.
+
+    This task runs asynchronously after the news item creation/update response
+    is sent. It generates speech audio from the Greek description, uploads it
+    to S3, and updates the news item record with the audio URL.
+
+    The task creates its own database connection to avoid issues with
+    connection sharing across async contexts.
+
+    Args:
+        news_item_id: UUID of the news item to generate audio for
+        description_el: Greek text to convert to speech
+        db_url: Database connection URL
+    """
+    if not is_background_tasks_enabled():
+        logger.debug("Background tasks disabled, skipping generate_audio_for_news_item_task")
+        return
+
+    if not settings.elevenlabs_configured:
+        logger.warning(
+            "ElevenLabs not configured, skipping audio generation",
+            extra={"news_item_id": str(news_item_id)},
+        )
+        return
+
+    logger.info(
+        "Starting audio generation for news item",
+        extra={
+            "news_item_id": str(news_item_id),
+            "text_length": len(description_el),
+            "task": "generate_audio_for_news_item",
+        },
+    )
+
+    engine = None
+    try:
+        engine = create_async_engine(db_url, pool_pre_ping=True)
+        async_session_factory = async_sessionmaker(
+            engine, class_=AsyncSession, expire_on_commit=False
+        )
+
+        session = async_session_factory()
+        try:
+            pass  # TTS generation, S3 upload, and DB update in AUDIO-03.2
+        finally:
+            await session.close()
+
+    except Exception as e:
+        logger.error(
+            "Audio generation failed for news item",
+            extra={
+                "news_item_id": str(news_item_id),
                 "error": str(e),
             },
             exc_info=True,
