@@ -440,3 +440,64 @@ class NewsItemNotFoundException(NotFoundException):
             else "News item not found"
         )
         super().__init__(resource="NewsItem", detail=detail)
+
+
+# ============================================================================
+# ElevenLabs Service Exceptions
+# ============================================================================
+
+
+class ElevenLabsError(Exception):
+    """Base exception for all ElevenLabs-related errors."""
+
+    pass
+
+
+class ElevenLabsNotConfiguredError(ElevenLabsError):
+    """ElevenLabs API key is not configured."""
+
+    def __init__(self, detail: str = "ElevenLabs API key is not configured") -> None:
+        self.detail = detail
+        super().__init__(detail)
+
+
+class ElevenLabsAuthenticationError(ElevenLabsError):
+    """ElevenLabs authentication failed (401 - invalid API key)."""
+
+    def __init__(self, detail: str = "ElevenLabs authentication failed") -> None:
+        self.detail = detail
+        super().__init__(detail)
+
+
+class ElevenLabsRateLimitError(ElevenLabsError):
+    """ElevenLabs rate limit exceeded (429 - quota exceeded)."""
+
+    def __init__(self, detail: str = "ElevenLabs rate limit exceeded") -> None:
+        self.detail = detail
+        super().__init__(detail)
+
+
+class ElevenLabsNoVoicesError(ElevenLabsError):
+    """No voices available from ElevenLabs."""
+
+    def __init__(self, detail: str = "No voices available from ElevenLabs") -> None:
+        self.detail = detail
+        super().__init__(detail)
+
+
+class ElevenLabsVoiceNotFoundError(ElevenLabsError):
+    """Voice not found on ElevenLabs (404 - voice_id invalid or deleted)."""
+
+    def __init__(self, voice_id: str, detail: str = "Voice not found") -> None:
+        self.voice_id = voice_id
+        self.detail = detail
+        super().__init__(f"{detail}: {voice_id}")
+
+
+class ElevenLabsAPIError(ElevenLabsError):
+    """Generic ElevenLabs API error with status code and detail."""
+
+    def __init__(self, status_code: int, detail: str) -> None:
+        self.status_code = status_code
+        self.detail = detail
+        super().__init__(f"ElevenLabs API error {status_code}: {detail}")
