@@ -287,7 +287,11 @@
       "generated": "Generated",
       "duration": "Duration",
       "fileSize": "File size",
-      "noAudioGenerated": "No audio generated"
+      "noAudioGenerated": "No audio generated",
+      "play": "Play audio",
+      "pause": "Pause audio",
+      "playerDisabled": "No audio available for preview",
+      "loadError": "Failed to load audio"
     }
   },
   "feedback": {
