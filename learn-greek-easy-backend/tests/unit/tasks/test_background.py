@@ -69,6 +69,7 @@ class TestModuleImports:
             "check_achievements_task",
             "check_culture_achievements_task",
             "create_announcement_notifications_task",
+            "generate_audio_for_news_item_task",
             "invalidate_cache_task",
             "is_background_tasks_enabled",
             "log_analytics_task",
