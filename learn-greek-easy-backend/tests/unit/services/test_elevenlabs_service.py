@@ -6,11 +6,19 @@ Tests cover:
 - HTTP header generation via _get_headers()
 """
 
-from unittest.mock import patch
+import time
+from unittest.mock import AsyncMock, MagicMock, patch
 
+import httpx
 import pytest
 
-from src.core.exceptions import ElevenLabsNotConfiguredError
+from src.core.exceptions import (
+    ElevenLabsAPIError,
+    ElevenLabsAuthenticationError,
+    ElevenLabsNotConfiguredError,
+    ElevenLabsNoVoicesError,
+    ElevenLabsRateLimitError,
+)
 from src.services.elevenlabs_service import ElevenLabsService, get_elevenlabs_service
 
 # ============================================================================
@@ -118,3 +126,196 @@ class TestGetHeaders:
         service = ElevenLabsService()
         headers = service._get_headers()
         assert headers["Content-Type"] == "application/json"
+
+
+# ============================================================================
+# list_voices() and Cache Behavior Tests
+# ============================================================================
+
+
+class TestListVoices:
+    """Tests for ElevenLabsService.list_voices() and caching."""
+
+    @pytest.mark.asyncio
+    async def test_returns_voice_list_on_success(self, mock_settings_configured: None) -> None:
+        """Test list_voices returns transformed voice list."""
+        service = ElevenLabsService()
+
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "voices": [
+                {"voice_id": "v1", "name": "Alice", "extra": "ignored"},
+                {"voice_id": "v2", "name": "Bob", "extra": "ignored"},
+            ]
+        }
+
+        mock_client = AsyncMock()
+        mock_client.get.return_value = mock_response
+
+        with patch("src.services.elevenlabs_service.httpx.AsyncClient") as mock_cls:
+            mock_cls.return_value.__aenter__.return_value = mock_client
+            result = await service.list_voices()
+
+        assert result == [
+            {"voice_id": "v1", "name": "Alice"},
+            {"voice_id": "v2", "name": "Bob"},
+        ]
+        mock_client.get.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_cache_hit_skips_http_call(self, mock_settings_configured: None) -> None:
+        """Test cache hit returns cached data without HTTP call."""
+        service = ElevenLabsService()
+        cached = [{"voice_id": "c1", "name": "Cached"}]
+        service._voice_cache = cached
+        service._voice_cache_time = time.monotonic()
+
+        with patch("src.services.elevenlabs_service.httpx.AsyncClient") as mock_cls:
+            result = await service.list_voices()
+            mock_cls.assert_not_called()
+
+        assert result == cached
+
+    @pytest.mark.asyncio
+    async def test_cache_expired_fetches_fresh(self, mock_settings_configured: None) -> None:
+        """Test expired cache triggers fresh API fetch."""
+        service = ElevenLabsService()
+        service._voice_cache = [{"voice_id": "old", "name": "Old"}]
+        service._voice_cache_time = time.monotonic() - 301
+
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"voices": [{"voice_id": "new", "name": "New"}]}
+
+        mock_client = AsyncMock()
+        mock_client.get.return_value = mock_response
+
+        with patch("src.services.elevenlabs_service.httpx.AsyncClient") as mock_cls:
+            mock_cls.return_value.__aenter__.return_value = mock_client
+            result = await service.list_voices()
+
+        assert result == [{"voice_id": "new", "name": "New"}]
+        mock_client.get.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_populates_cache_after_fetch(self, mock_settings_configured: None) -> None:
+        """Test cache is populated after successful API fetch."""
+        service = ElevenLabsService()
+
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"voices": [{"voice_id": "v1", "name": "Voice"}]}
+
+        mock_client = AsyncMock()
+        mock_client.get.return_value = mock_response
+
+        with patch("src.services.elevenlabs_service.httpx.AsyncClient") as mock_cls:
+            mock_cls.return_value.__aenter__.return_value = mock_client
+            await service.list_voices()
+
+        assert service._voice_cache == [{"voice_id": "v1", "name": "Voice"}]
+        assert service._voice_cache_time is not None
+
+    @pytest.mark.asyncio
+    async def test_invalidate_cache_forces_refetch(self, mock_settings_configured: None) -> None:
+        """Test _invalidate_voice_cache clears cache."""
+        service = ElevenLabsService()
+        service._voice_cache = [{"voice_id": "c", "name": "C"}]
+        service._voice_cache_time = time.monotonic()
+
+        service._invalidate_voice_cache()
+
+        assert service._voice_cache is None
+        assert service._voice_cache_time is None
+
+    @pytest.mark.asyncio
+    async def test_401_raises_authentication_error(self, mock_settings_configured: None) -> None:
+        """Test 401 response raises ElevenLabsAuthenticationError."""
+        service = ElevenLabsService()
+
+        mock_response = MagicMock()
+        mock_response.status_code = 401
+
+        mock_client = AsyncMock()
+        mock_client.get.return_value = mock_response
+
+        with patch("src.services.elevenlabs_service.httpx.AsyncClient") as mock_cls:
+            mock_cls.return_value.__aenter__.return_value = mock_client
+            with pytest.raises(ElevenLabsAuthenticationError):
+                await service.list_voices()
+
+    @pytest.mark.asyncio
+    async def test_429_raises_rate_limit_error(self, mock_settings_configured: None) -> None:
+        """Test 429 response raises ElevenLabsRateLimitError."""
+        service = ElevenLabsService()
+
+        mock_response = MagicMock()
+        mock_response.status_code = 429
+
+        mock_client = AsyncMock()
+        mock_client.get.return_value = mock_response
+
+        with patch("src.services.elevenlabs_service.httpx.AsyncClient") as mock_cls:
+            mock_cls.return_value.__aenter__.return_value = mock_client
+            with pytest.raises(ElevenLabsRateLimitError):
+                await service.list_voices()
+
+    @pytest.mark.asyncio
+    async def test_500_raises_api_error(self, mock_settings_configured: None) -> None:
+        """Test 500 response raises ElevenLabsAPIError with status code."""
+        service = ElevenLabsService()
+
+        mock_response = MagicMock()
+        mock_response.status_code = 500
+        mock_response.text = "Internal Server Error"
+
+        mock_client = AsyncMock()
+        mock_client.get.return_value = mock_response
+
+        with patch("src.services.elevenlabs_service.httpx.AsyncClient") as mock_cls:
+            mock_cls.return_value.__aenter__.return_value = mock_client
+            with pytest.raises(ElevenLabsAPIError) as exc_info:
+                await service.list_voices()
+            assert exc_info.value.status_code == 500
+
+    @pytest.mark.asyncio
+    async def test_empty_voices_raises_no_voices_error(
+        self, mock_settings_configured: None
+    ) -> None:
+        """Test empty voice list raises ElevenLabsNoVoicesError."""
+        service = ElevenLabsService()
+
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"voices": []}
+
+        mock_client = AsyncMock()
+        mock_client.get.return_value = mock_response
+
+        with patch("src.services.elevenlabs_service.httpx.AsyncClient") as mock_cls:
+            mock_cls.return_value.__aenter__.return_value = mock_client
+            with pytest.raises(ElevenLabsNoVoicesError):
+                await service.list_voices()
+
+    @pytest.mark.asyncio
+    async def test_network_error_raises_api_error(self, mock_settings_configured: None) -> None:
+        """Test network error wraps as ElevenLabsAPIError."""
+        service = ElevenLabsService()
+
+        mock_client = AsyncMock()
+        mock_client.get.side_effect = httpx.RequestError("Connection failed")
+
+        with patch("src.services.elevenlabs_service.httpx.AsyncClient") as mock_cls:
+            mock_cls.return_value.__aenter__.return_value = mock_client
+            with pytest.raises(ElevenLabsAPIError) as exc_info:
+                await service.list_voices()
+            assert exc_info.value.status_code == 0
+            assert "Network error" in exc_info.value.detail
+
+    @pytest.mark.asyncio
+    async def test_not_configured_raises_error(self, mock_settings_not_configured: None) -> None:
+        """Test not configured raises ElevenLabsNotConfiguredError."""
+        service = ElevenLabsService()
+        with pytest.raises(ElevenLabsNotConfiguredError):
+            await service.list_voices()
