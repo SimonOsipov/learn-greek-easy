@@ -408,4 +408,250 @@ describe('WaveformPlayer', () => {
       expect(playButton).toHaveAttribute('aria-label', 'Play audio');
     });
   });
+
+  describe('audioUrl Mode', () => {
+    it('renders a hidden <audio> element with correct src when audioUrl provided', () => {
+      render(<WaveformPlayer audioUrl="https://example.com/audio.mp3" />);
+
+      const audio = screen.getByTestId('waveform-audio-element') as HTMLAudioElement;
+      expect(audio).toBeInTheDocument();
+      expect(audio.src).toBe('https://example.com/audio.mp3');
+      expect(audio).toHaveStyle({ display: 'none' });
+    });
+
+    it('does NOT render audio element when audioUrl absent', () => {
+      render(<WaveformPlayer />);
+
+      const audio = screen.queryByTestId('waveform-audio-element');
+      expect(audio).not.toBeInTheDocument();
+    });
+
+    it('play button calls audio.play() in audio mode', () => {
+      render(<WaveformPlayer audioUrl="https://example.com/audio.mp3" />);
+
+      const audio = screen.getByTestId('waveform-audio-element') as HTMLAudioElement;
+
+      // Simulate metadata loaded
+      Object.defineProperty(audio, 'duration', { value: 120, writable: true, configurable: true });
+      fireEvent(audio, new Event('loadedmetadata'));
+
+      const playSpy = vi.spyOn(audio, 'play').mockResolvedValue();
+      const playButton = screen.getByTestId('waveform-play-button');
+
+      fireEvent.click(playButton);
+
+      expect(playSpy).toHaveBeenCalled();
+    });
+
+    it('pause button calls audio.pause() in audio mode', () => {
+      render(<WaveformPlayer audioUrl="https://example.com/audio.mp3" />);
+
+      const audio = screen.getByTestId('waveform-audio-element') as HTMLAudioElement;
+
+      // Simulate metadata loaded
+      Object.defineProperty(audio, 'duration', { value: 120, writable: true, configurable: true });
+      fireEvent(audio, new Event('loadedmetadata'));
+
+      const playSpy = vi.spyOn(audio, 'play').mockResolvedValue();
+      const pauseSpy = vi.spyOn(audio, 'pause');
+
+      const playButton = screen.getByTestId('waveform-play-button');
+
+      // Play first
+      fireEvent.click(playButton);
+      expect(playSpy).toHaveBeenCalled();
+
+      // Then pause
+      fireEvent.click(playButton);
+      expect(pauseSpy).toHaveBeenCalled();
+    });
+
+    it('timeupdate event syncs waveform position', () => {
+      render(<WaveformPlayer audioUrl="https://example.com/audio.mp3" />);
+
+      const audio = screen.getByTestId('waveform-audio-element') as HTMLAudioElement;
+      const slider = screen.getByRole('slider');
+
+      // Set duration via loadedmetadata
+      Object.defineProperty(audio, 'duration', { value: 120, writable: true, configurable: true });
+      fireEvent(audio, new Event('loadedmetadata'));
+
+      expect(slider).toHaveAttribute('aria-valuenow', '0');
+
+      // Simulate timeupdate to 30 seconds
+      Object.defineProperty(audio, 'currentTime', {
+        value: 30,
+        writable: true,
+        configurable: true,
+      });
+      fireEvent(audio, new Event('timeupdate'));
+
+      expect(slider).toHaveAttribute('aria-valuenow', '30');
+    });
+
+    it('does NOT run setInterval timer in audioUrl mode', () => {
+      vi.useFakeTimers();
+
+      render(<WaveformPlayer audioUrl="https://example.com/audio.mp3" />);
+
+      const audio = screen.getByTestId('waveform-audio-element') as HTMLAudioElement;
+      const slider = screen.getByRole('slider');
+
+      // Simulate metadata loaded
+      Object.defineProperty(audio, 'duration', { value: 120, writable: true, configurable: true });
+      fireEvent(audio, new Event('loadedmetadata'));
+
+      vi.spyOn(audio, 'play').mockResolvedValue();
+      const playButton = screen.getByTestId('waveform-play-button');
+
+      fireEvent.click(playButton);
+
+      // Advance timers - position should NOT change from timer
+      act(() => {
+        vi.advanceTimersByTime(1000);
+      });
+
+      // Position should still be 0 (only timeupdate changes it in audio mode)
+      expect(slider).toHaveAttribute('aria-valuenow', '0');
+
+      vi.useRealTimers();
+    });
+  });
+
+  describe('showSpeedControl Prop', () => {
+    it('hides speed pills when showSpeedControl={false}', () => {
+      render(<WaveformPlayer showSpeedControl={false} />);
+
+      const speedPills = screen.queryByTestId('waveform-speed-pills');
+      expect(speedPills).not.toBeInTheDocument();
+
+      const pills = screen.queryAllByRole('radio');
+      expect(pills).toHaveLength(0);
+    });
+
+    it('shows speed pills by default', () => {
+      render(<WaveformPlayer />);
+
+      const speedPills = screen.getByTestId('waveform-speed-pills');
+      expect(speedPills).toBeInTheDocument();
+
+      const pills = screen.getAllByRole('radio');
+      expect(pills).toHaveLength(4);
+    });
+
+    it('shows speed pills when showSpeedControl={true}', () => {
+      render(<WaveformPlayer showSpeedControl={true} />);
+
+      const speedPills = screen.getByTestId('waveform-speed-pills');
+      expect(speedPills).toBeInTheDocument();
+
+      const pills = screen.getAllByRole('radio');
+      expect(pills).toHaveLength(4);
+    });
+  });
+
+  describe('variant Prop', () => {
+    it('applies culture variant classes by default', () => {
+      render(<WaveformPlayer />);
+
+      const container = screen.getByTestId('waveform-player');
+      expect(container.className).toContain('bg-slate-100');
+      expect(container.className).not.toContain('bg-muted');
+    });
+
+    it('applies admin variant classes when variant="admin"', () => {
+      render(<WaveformPlayer variant="admin" />);
+
+      const container = screen.getByTestId('waveform-player');
+      expect(container.className).toContain('bg-muted');
+      expect(container.className).not.toContain('bg-slate-100');
+    });
+  });
+
+  describe('disabled Prop', () => {
+    it('applies aria-disabled and opacity when disabled', () => {
+      render(<WaveformPlayer disabled={true} />);
+
+      const container = screen.getByTestId('waveform-player');
+      expect(container).toHaveAttribute('aria-disabled', 'true');
+      expect(container.className).toContain('opacity-50');
+    });
+
+    it('play button is no-op when disabled', () => {
+      render(<WaveformPlayer disabled={true} />);
+
+      const playButton = screen.getByTestId('waveform-play-button');
+      expect(playButton).toHaveAttribute('aria-label', 'Play audio');
+
+      fireEvent.click(playButton);
+
+      // Should still show "Play audio" (not "Pause audio")
+      expect(playButton).toHaveAttribute('aria-label', 'Play audio');
+    });
+
+    it('scrubbing is no-op when disabled', () => {
+      render(<WaveformPlayer disabled={true} duration={100} />);
+
+      const barsContainer = screen.getByTestId('waveform-bars');
+      mockBarsRect(barsContainer, 480);
+
+      expect(barsContainer).toHaveAttribute('aria-valuenow', '0');
+
+      // Try to scrub to midpoint
+      fireEvent.click(barsContainer, { clientX: 240 });
+
+      // Should still be at 0
+      expect(barsContainer).toHaveAttribute('aria-valuenow', '0');
+    });
+
+    it('keyboard navigation is no-op when disabled', () => {
+      render(<WaveformPlayer disabled={true} duration={100} />);
+
+      const slider = screen.getByRole('slider');
+      expect(slider).toHaveAttribute('aria-valuenow', '0');
+
+      // Try to navigate with keyboard
+      fireEvent.keyDown(slider, { key: 'ArrowRight' });
+
+      // Should still be at 0
+      expect(slider).toHaveAttribute('aria-valuenow', '0');
+    });
+
+    it('shows 0:00 / 0:00 when disabled regardless of duration', () => {
+      render(<WaveformPlayer disabled={true} duration={120} />);
+
+      const currentTime = screen.getByTestId('waveform-time-current');
+      const totalTime = screen.getByTestId('waveform-time-total');
+
+      expect(currentTime).toHaveTextContent('0:00');
+      expect(totalTime).toHaveTextContent('0:00');
+    });
+  });
+
+  describe('onError Callback', () => {
+    it('calls onError when audio element fires error event', () => {
+      const onError = vi.fn();
+      render(<WaveformPlayer audioUrl="https://example.com/bad.mp3" onError={onError} />);
+
+      const audio = screen.getByTestId('waveform-audio-element') as HTMLAudioElement;
+
+      // Dispatch error event
+      fireEvent(audio, new Event('error'));
+
+      expect(onError).toHaveBeenCalled();
+    });
+
+    it('does not call onError when no error occurs', () => {
+      const onError = vi.fn();
+      render(<WaveformPlayer audioUrl="https://example.com/good.mp3" onError={onError} />);
+
+      const audio = screen.getByTestId('waveform-audio-element') as HTMLAudioElement;
+
+      // Simulate successful load
+      Object.defineProperty(audio, 'duration', { value: 120, writable: true, configurable: true });
+      fireEvent(audio, new Event('loadedmetadata'));
+
+      expect(onError).not.toHaveBeenCalled();
+    });
+  });
 });

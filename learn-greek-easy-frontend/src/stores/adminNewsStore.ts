@@ -87,12 +87,15 @@ export const useAdminNewsStore = create<AdminNewsState>()(
         try {
           const response = await adminAPI.getNewsItems(page, pageSize);
 
-          set({
+          set((state) => ({
             newsItems: response.items,
             total: response.total,
             totalPages: Math.ceil(response.total / response.page_size),
             isLoading: false,
-          });
+            selectedItem: state.selectedItem
+              ? (response.items.find((item) => item.id === state.selectedItem?.id) ?? null)
+              : null,
+          }));
         } catch (error) {
           const message = error instanceof Error ? error.message : 'Failed to load news items';
           set({ isLoading: false, error: message, newsItems: [] });
