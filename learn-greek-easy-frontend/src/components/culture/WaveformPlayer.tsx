@@ -29,6 +29,8 @@ export interface WaveformPlayerProps {
   showSpeedControl?: boolean;
   /** Visual style variant. 'culture' uses culture-page tokens, 'admin' uses shadcn tokens. Default: 'culture'. */
   variant?: 'culture' | 'admin';
+  /** When true, the player is visually greyed out and all interactions are no-ops. Default: false. */
+  disabled?: boolean;
 }
 
 export const WaveformPlayer: FC<WaveformPlayerProps> = ({
@@ -37,6 +39,7 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
   className,
   showSpeedControl = true,
   variant = 'culture',
+  disabled = false,
 }) => {
   const barsRef = useRef<number[] | null>(null);
   if (barsRef.current === null) {
@@ -108,7 +111,7 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
   }, [audioUrl]);
 
   useEffect(() => {
-    if (!isPlaying || isAudioMode) return;
+    if (!isPlaying || isAudioMode || disabled) return;
 
     const id = setInterval(() => {
       setCurrentTime((prev) => {
@@ -122,9 +125,10 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
     }, TICK_INTERVAL_MS);
 
     return () => clearInterval(id);
-  }, [isPlaying, effectiveDuration, isAudioMode]);
+  }, [isPlaying, effectiveDuration, isAudioMode, disabled]);
 
   const togglePlayPause = useCallback(() => {
+    if (disabled) return;
     if (isAudioMode && audioRef.current) {
       if (isPlaying) {
         audioRef.current.pause();
@@ -135,10 +139,11 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
       }
     }
     setIsPlaying((prev) => !prev);
-  }, [isAudioMode, isPlaying]);
+  }, [isAudioMode, isPlaying, disabled]);
 
   const handleScrub = useCallback(
     (event: React.MouseEvent<HTMLDivElement>) => {
+      if (disabled) return;
       const container = containerRef.current;
       if (!container || !effectiveDuration || effectiveDuration <= 0) return;
 
@@ -156,11 +161,12 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
       }
       setCurrentTime(newTime);
     },
-    [effectiveDuration, isAudioMode]
+    [effectiveDuration, isAudioMode, disabled]
   );
 
   const handleKeyDown = useCallback(
     (event: React.KeyboardEvent) => {
+      if (disabled) return;
       if (!effectiveDuration || effectiveDuration <= 0) return;
       const step = effectiveDuration * 0.05;
       let newTime: number | null = null;
@@ -192,7 +198,7 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
       }
       event.preventDefault();
     },
-    [effectiveDuration, isAudioMode, currentTime]
+    [effectiveDuration, isAudioMode, currentTime, disabled]
   );
 
   const handleSpeedChange = useCallback((newSpeed: Speed) => {
@@ -201,6 +207,13 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
       audioRef.current.playbackRate = newSpeed;
     }
   }, []);
+
+  useEffect(() => {
+    if (disabled) {
+      setIsPlaying(false);
+      setCurrentTime(0);
+    }
+  }, [disabled]);
 
   return (
     <>
@@ -215,11 +228,13 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
       )}
       <div
         data-testid="waveform-player"
+        aria-disabled={disabled || undefined}
         className={cn(
           'flex items-center gap-3 rounded-xl p-[14px]',
           isAdmin
             ? 'border bg-muted'
             : 'border border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-800',
+          disabled && 'opacity-50',
           className
         )}
       >
@@ -228,17 +243,24 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
           type="button"
           data-testid="waveform-play-button"
           onClick={togglePlayPause}
+          aria-disabled={disabled || undefined}
           className={cn(
             'flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full',
             'transition-colors duration-200',
             'focus:outline-none focus:ring-2 focus:ring-offset-2',
-            isAdmin
-              ? 'bg-primary text-primary-foreground hover:bg-primary/90 focus:ring-primary'
-              : [
-                  'bg-indigo-500 text-white',
-                  'hover:bg-indigo-600 focus:ring-indigo-500',
-                  'dark:bg-indigo-400 dark:hover:bg-indigo-500 dark:focus:ring-offset-slate-800',
-                ]
+            disabled && 'cursor-not-allowed',
+            !disabled &&
+              (isAdmin
+                ? 'bg-primary text-primary-foreground hover:bg-primary/90 focus:ring-primary'
+                : [
+                    'bg-indigo-500 text-white',
+                    'hover:bg-indigo-600 focus:ring-indigo-500',
+                    'dark:bg-indigo-400 dark:hover:bg-indigo-500 dark:focus:ring-offset-slate-800',
+                  ]),
+            disabled &&
+              (isAdmin
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-indigo-500 text-white dark:bg-indigo-400')
           )}
           aria-label={isPlaying ? 'Pause audio' : 'Play audio'}
         >
@@ -254,19 +276,20 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
           ref={containerRef}
           data-testid="waveform-bars"
           className="flex flex-1 items-end gap-[2px]"
-          style={{ height: '40px', cursor: 'pointer' }}
+          style={{ height: '40px', cursor: disabled ? 'default' : 'pointer' }}
           role="slider"
           aria-label="Audio position"
           aria-valuemin={0}
           aria-valuemax={effectiveDuration}
           aria-valuenow={Math.round(currentTime)}
-          tabIndex={0}
+          tabIndex={disabled ? -1 : 0}
           onClick={handleScrub}
           onKeyDown={handleKeyDown}
         >
           {bars.map((height, i) => {
             const barEndTime = ((i + 1) / BAR_COUNT) * effectiveDuration;
-            const isFilled = currentTime > 0 && effectiveDuration > 0 && barEndTime <= currentTime;
+            const isFilled =
+              !disabled && currentTime > 0 && effectiveDuration > 0 && barEndTime <= currentTime;
             return (
               <div
                 key={i}
@@ -298,15 +321,15 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
               data-testid="waveform-time-current"
               style={{
                 color: isAdmin
-                  ? isPlaying
+                  ? isPlaying && !disabled
                     ? 'hsl(var(--foreground))'
                     : 'hsl(var(--muted-foreground))'
-                  : isPlaying
+                  : isPlaying && !disabled
                     ? 'var(--cult-accent)'
                     : 'var(--cult-text-muted)',
               }}
             >
-              {formatTime(currentTime)}
+              {formatTime(disabled ? 0 : currentTime)}
             </span>
             <span
               style={{ color: isAdmin ? 'hsl(var(--muted-foreground))' : 'var(--cult-text-muted)' }}
@@ -317,7 +340,7 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
               data-testid="waveform-time-total"
               style={{ color: isAdmin ? 'hsl(var(--muted-foreground))' : 'var(--cult-text-muted)' }}
             >
-              {formatTime(effectiveDuration)}
+              {formatTime(disabled ? 0 : effectiveDuration)}
             </span>
           </span>
           {showSpeedControl && (
@@ -336,18 +359,24 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
                     role="radio"
                     aria-checked={isSelected}
                     aria-label={`${opt}x speed`}
-                    onClick={() => handleSpeedChange(opt)}
+                    onClick={() => !disabled && handleSpeedChange(opt)}
+                    tabIndex={disabled ? -1 : 0}
                     className={cn(
                       'rounded-full px-2.5 py-0.5 text-xs transition-colors duration-150',
                       'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1',
                       isAdmin ? 'font-mono' : 'font-cult-mono',
+                      disabled && 'cursor-not-allowed',
                       isSelected
                         ? isAdmin
                           ? 'bg-primary text-primary-foreground'
                           : 'text-white'
-                        : isAdmin
-                          ? 'text-muted-foreground hover:bg-muted'
-                          : 'text-[var(--cult-text-muted)] hover:bg-[var(--cult-accent-soft)]'
+                        : !disabled
+                          ? isAdmin
+                            ? 'text-muted-foreground hover:bg-muted'
+                            : 'text-[var(--cult-text-muted)] hover:bg-[var(--cult-accent-soft)]'
+                          : isAdmin
+                            ? 'text-muted-foreground'
+                            : 'text-[var(--cult-text-muted)]'
                     )}
                     style={
                       isSelected && !isAdmin ? { backgroundColor: 'var(--cult-accent)' } : undefined
