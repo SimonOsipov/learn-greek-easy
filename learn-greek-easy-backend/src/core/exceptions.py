@@ -485,6 +485,15 @@ class ElevenLabsNoVoicesError(ElevenLabsError):
         super().__init__(detail)
 
 
+class ElevenLabsVoiceNotFoundError(ElevenLabsError):
+    """Voice not found on ElevenLabs (404 - voice_id invalid or deleted)."""
+
+    def __init__(self, voice_id: str, detail: str = "Voice not found") -> None:
+        self.voice_id = voice_id
+        self.detail = detail
+        super().__init__(f"{detail}: {voice_id}")
+
+
 class ElevenLabsAPIError(ElevenLabsError):
     """Generic ElevenLabs API error with status code and detail."""
 

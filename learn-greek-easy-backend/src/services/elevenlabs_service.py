@@ -13,8 +13,10 @@ Configuration:
     ELEVENLABS_TIMEOUT: API call timeout in seconds (default: 30)
 """
 
+import random
 import time
 from typing import Optional
+from uuid import UUID
 
 import httpx
 
@@ -25,6 +27,7 @@ from src.core.exceptions import (
     ElevenLabsNotConfiguredError,
     ElevenLabsNoVoicesError,
     ElevenLabsRateLimitError,
+    ElevenLabsVoiceNotFoundError,
 )
 from src.core.logging import get_logger
 
@@ -151,6 +154,146 @@ class ElevenLabsService:
         self._voice_cache = None
         self._voice_cache_time = None
         logger.debug("Voice cache invalidated")
+
+    async def _call_tts_api(
+        self,
+        text: str,
+        voice_id: str,
+        voice_name: str,
+        *,
+        is_retry: bool = False,
+    ) -> bytes:
+        """Call ElevenLabs TTS API to generate speech audio.
+
+        Args:
+            text: Greek text to synthesize.
+            voice_id: ElevenLabs voice ID.
+            voice_name: Human-readable voice name (for logging).
+            is_retry: Whether this is a retry after cache invalidation.
+
+        Returns:
+            Raw MP3 audio bytes.
+
+        Raises:
+            ElevenLabsVoiceNotFoundError: If voice not found (404).
+            ElevenLabsAuthenticationError: If API key invalid (401).
+            ElevenLabsRateLimitError: If rate limit exceeded (429).
+            ElevenLabsAPIError: For other API errors.
+        """
+        try:
+            async with httpx.AsyncClient(timeout=settings.elevenlabs_timeout) as client:
+                response = await client.post(
+                    f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}",
+                    params={"output_format": settings.elevenlabs_output_format},
+                    headers=self._get_headers(),
+                    json={
+                        "text": text,
+                        "model_id": settings.elevenlabs_model_id,
+                        "language_code": "el",
+                    },
+                )
+
+                if response.status_code == 404:
+                    raise ElevenLabsVoiceNotFoundError(voice_id=voice_id)
+
+                if response.status_code == 401:
+                    raise ElevenLabsAuthenticationError("Invalid API key")
+
+                if response.status_code == 429:
+                    raise ElevenLabsRateLimitError("Rate limit exceeded")
+
+                if response.status_code >= 400:
+                    raise ElevenLabsAPIError(
+                        status_code=response.status_code,
+                        detail=response.text[:200],
+                    )
+
+                audio_bytes: bytes = response.content
+                logger.info(
+                    "TTS audio generated",
+                    extra={
+                        "voice_name": voice_name,
+                        "text_length": len(text),
+                        "audio_bytes": len(audio_bytes),
+                        "is_retry": is_retry,
+                    },
+                )
+                return audio_bytes
+
+        except (
+            ElevenLabsVoiceNotFoundError,
+            ElevenLabsAuthenticationError,
+            ElevenLabsRateLimitError,
+            ElevenLabsAPIError,
+        ):
+            raise
+        except httpx.RequestError as e:
+            logger.error(
+                "Network error during TTS generation",
+                extra={"error": str(e)},
+            )
+            raise ElevenLabsAPIError(status_code=0, detail=f"Network error: {e}")
+
+    async def generate_speech(
+        self,
+        text: str,
+        *,
+        news_item_id: Optional[UUID] = None,
+    ) -> bytes:
+        """Generate Greek speech audio from text using ElevenLabs API.
+
+        Selects a random voice, calls TTS API, and retries once on 404
+        (stale voice cache) with a fresh voice selection.
+
+        Args:
+            text: Greek text to convert to speech.
+            news_item_id: Optional UUID for logging context.
+
+        Returns:
+            Raw MP3 audio bytes.
+
+        Raises:
+            ElevenLabsNotConfiguredError: If API key not set.
+            ElevenLabsAuthenticationError: If API key invalid (401).
+            ElevenLabsRateLimitError: If rate limit exceeded (429).
+            ElevenLabsVoiceNotFoundError: If voice not found after retry.
+            ElevenLabsAPIError: For other API errors.
+        """
+        self._check_configured()
+
+        voices = await self.list_voices()
+        selected = random.choice(voices)
+        logger.info(
+            "Selected voice for TTS",
+            extra={
+                "voice_id": selected["voice_id"],
+                "voice_name": selected["name"],
+                "news_item_id": str(news_item_id) if news_item_id else None,
+                "text_length": len(text),
+            },
+        )
+
+        try:
+            return await self._call_tts_api(
+                text,
+                selected["voice_id"],
+                selected["name"],
+                is_retry=False,
+            )
+        except ElevenLabsVoiceNotFoundError:
+            logger.warning(
+                "Voice not found, invalidating cache and retrying",
+                extra={"voice_id": selected["voice_id"]},
+            )
+            self._invalidate_voice_cache()
+            voices = await self.list_voices()
+            selected = random.choice(voices)
+            return await self._call_tts_api(
+                text,
+                selected["voice_id"],
+                selected["name"],
+                is_retry=True,
+            )
 
 
 # Singleton instance for use across the application
