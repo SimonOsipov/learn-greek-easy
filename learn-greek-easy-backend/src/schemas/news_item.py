@@ -53,7 +53,7 @@ class NewsItemUpdate(BaseModel):
 class NewsItemResponse(BaseModel):
     """Schema for news item API response.
 
-    Includes presigned S3 URL for the image.
+    Includes presigned S3 URLs for the image and audio narration.
     """
 
     model_config = ConfigDict(from_attributes=True)
@@ -68,6 +68,7 @@ class NewsItemResponse(BaseModel):
     publication_date: date
     original_article_url: str
     image_url: Optional[str] = Field(None, description="Presigned S3 URL for the image")
+    audio_url: Optional[str] = Field(None, description="Presigned S3 URL for the audio narration")
     created_at: datetime
     updated_at: datetime
 

@@ -479,6 +479,30 @@ class Settings(BaseSettings):
     )
 
     # =========================================================================
+    # ElevenLabs API (Text-to-Speech)
+    # =========================================================================
+    elevenlabs_api_key: str = Field(
+        default="",
+        description="ElevenLabs API key for text-to-speech audio generation",
+    )
+    elevenlabs_model_id: str = Field(
+        default="eleven_multilingual_v2",
+        description="ElevenLabs model ID for audio generation (supports Greek)",
+    )
+    elevenlabs_output_format: str = Field(
+        default="mp3_44100_128",
+        description="Audio output format (mp3_44100_128, mp3_44100_192, pcm_44100)",
+    )
+    elevenlabs_timeout: int = Field(
+        default=30,
+        description="Timeout in seconds for ElevenLabs API calls",
+    )
+    audio_s3_prefix: str = Field(
+        default="news-audio",
+        description="S3 bucket prefix for storing generated audio files",
+    )
+
+    # =========================================================================
     # Business Logic
     # =========================================================================
     srs_initial_ease_factor: float = Field(default=2.5, description="Initial ease factor")
@@ -561,6 +585,11 @@ class Settings(BaseSettings):
         This is used to determine whether the migration script can access the Management API.
         """
         return bool(self.auth0_domain and self.auth0_m2m_client_id and self.auth0_m2m_client_secret)
+
+    @property
+    def elevenlabs_configured(self) -> bool:
+        """Check if ElevenLabs is properly configured."""
+        return bool(self.elevenlabs_api_key)
 
     @property
     def database_url_sync(self) -> str:

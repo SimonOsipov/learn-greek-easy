@@ -2172,6 +2172,28 @@ class NewsItem(Base, TimestampMixin):
         comment="URL of the original source article",
     )
 
+    # Audio metadata (TTS-generated audio files)
+    audio_s3_key: Mapped[str | None] = mapped_column(
+        String(500),
+        nullable=True,
+        comment="S3 key for TTS-generated audio file (e.g., news/audio/{uuid}.mp3)",
+    )
+    audio_generated_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        comment="Timestamp when audio was generated via TTS",
+    )
+    audio_file_size_bytes: Mapped[int | None] = mapped_column(
+        Integer,
+        nullable=True,
+        comment="Size of audio file in bytes",
+    )
+    audio_duration_seconds: Mapped[float | None] = mapped_column(
+        Float,
+        nullable=True,
+        comment="Duration of audio in seconds",
+    )
+
     def __repr__(self) -> str:
         return f"<NewsItem(id={self.id}, title_en={self.title_en[:30] if self.title_en else ''}, publication_date={self.publication_date})>"
 

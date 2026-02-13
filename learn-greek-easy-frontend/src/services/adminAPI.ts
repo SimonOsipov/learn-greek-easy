@@ -525,6 +525,7 @@ export interface NewsItemResponse {
   publication_date: string;
   original_article_url: string;
   image_url: string | null;
+  audio_url: string | null;
   created_at: string;
   updated_at: string;
   // New fields for card association
