@@ -25,12 +25,15 @@ export interface WaveformPlayerProps {
   audioUrl?: string;
   /** Additional CSS classes applied to the outer container. */
   className?: string;
+  /** Whether to show the playback speed control pills. Default: true. */
+  showSpeedControl?: boolean;
 }
 
 export const WaveformPlayer: FC<WaveformPlayerProps> = ({
   duration = DEFAULT_DURATION,
   audioUrl,
   className,
+  showSpeedControl = true,
 }) => {
   const barsRef = useRef<number[] | null>(null);
   if (barsRef.current === null) {
@@ -283,36 +286,38 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
               {formatTime(effectiveDuration)}
             </span>
           </span>
-          <div
-            data-testid="waveform-speed-pills"
-            role="radiogroup"
-            aria-label="Playback speed"
-            className="flex gap-1"
-          >
-            {SPEED_OPTIONS.map((opt) => {
-              const isSelected = opt === speed;
-              return (
-                <button
-                  key={opt}
-                  type="button"
-                  role="radio"
-                  aria-checked={isSelected}
-                  aria-label={`${opt}x speed`}
-                  onClick={() => handleSpeedChange(opt)}
-                  className={cn(
-                    'rounded-full px-2.5 py-0.5 font-cult-mono text-xs transition-colors duration-150',
-                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1',
-                    isSelected
-                      ? 'text-white'
-                      : 'text-[var(--cult-text-muted)] hover:bg-[var(--cult-accent-soft)]'
-                  )}
-                  style={isSelected ? { backgroundColor: 'var(--cult-accent)' } : undefined}
-                >
-                  {opt}x
-                </button>
-              );
-            })}
-          </div>
+          {showSpeedControl && (
+            <div
+              data-testid="waveform-speed-pills"
+              role="radiogroup"
+              aria-label="Playback speed"
+              className="flex gap-1"
+            >
+              {SPEED_OPTIONS.map((opt) => {
+                const isSelected = opt === speed;
+                return (
+                  <button
+                    key={opt}
+                    type="button"
+                    role="radio"
+                    aria-checked={isSelected}
+                    aria-label={`${opt}x speed`}
+                    onClick={() => handleSpeedChange(opt)}
+                    className={cn(
+                      'rounded-full px-2.5 py-0.5 font-cult-mono text-xs transition-colors duration-150',
+                      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1',
+                      isSelected
+                        ? 'text-white'
+                        : 'text-[var(--cult-text-muted)] hover:bg-[var(--cult-accent-soft)]'
+                    )}
+                    style={isSelected ? { backgroundColor: 'var(--cult-accent)' } : undefined}
+                  >
+                    {opt}x
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
     </>
