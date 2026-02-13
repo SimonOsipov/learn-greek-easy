@@ -1036,17 +1036,20 @@ async def create_news_item(
 async def update_news_item(
     news_item_id: UUID,
     data: NewsItemUpdate,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_superuser),
 ) -> NewsItemResponse:
     """Update an existing news item (admin only).
 
     If source_image_url is provided, downloads the new image and replaces
-    the existing one in S3.
+    the existing one in S3. If description_el is updated, schedules background
+    audio regeneration.
 
     Args:
         news_item_id: UUID of the news item to update
         data: Fields to update (all optional)
+        background_tasks: FastAPI background tasks handler
         db: Database session (injected)
         current_user: Authenticated superuser (injected)
 
@@ -1059,9 +1062,19 @@ async def update_news_item(
     """
     service = NewsItemService(db)
     try:
-        return await service.update(news_item_id, data)
+        result = await service.update(news_item_id, data)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+    if data.description_el is not None:
+        background_tasks.add_task(
+            generate_audio_for_news_item_task,
+            news_item_id=news_item_id,
+            description_el=data.description_el,
+            db_url=settings.database_url,
+        )
+
+    return result
 
 
 @router.delete(
