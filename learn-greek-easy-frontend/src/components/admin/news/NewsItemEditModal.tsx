@@ -16,6 +16,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Circle, Loader2, RefreshCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import { WaveformPlayer } from '@/components/culture/WaveformPlayer';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -186,6 +187,7 @@ export const NewsItemEditModal: React.FC<NewsItemEditModalProps> = ({
   const { currentLanguage } = useLanguage();
   const [jsonInput, setJsonInput] = useState('');
   const { updateNewsItem, isUpdating, regenerateAudio } = useAdminNewsStore();
+  const [audioError, setAudioError] = useState(false);
 
   const [cooldownRemaining, setCooldownRemaining] = useState(0);
   const [isRegenerating, setIsRegenerating] = useState(false);
@@ -195,6 +197,7 @@ export const NewsItemEditModal: React.FC<NewsItemEditModalProps> = ({
   useEffect(() => {
     if (item) {
       setJsonInput(itemToEditableJson(item, t('news.edit.imageUrlPlaceholder')));
+      setAudioError(false);
     }
   }, [item, t]);
 
@@ -251,6 +254,10 @@ export const NewsItemEditModal: React.FC<NewsItemEditModalProps> = ({
       setIsRegenerating(false);
     }
   }, [item, isRegenerating, cooldownRemaining, regenerateAudio, t]);
+
+  const handleAudioError = useCallback(() => {
+    setAudioError(true);
+  }, []);
 
   const handleSave = async () => {
     if (!item) return;
@@ -362,6 +369,25 @@ export const NewsItemEditModal: React.FC<NewsItemEditModalProps> = ({
                 </>
               )}
             </Button>
+          </div>
+          {/* Audio Player */}
+          <div className="mt-3" data-testid="audio-player-container">
+            <WaveformPlayer
+              audioUrl={item.audio_url ?? undefined}
+              variant="admin"
+              showSpeedControl={false}
+              disabled={!item.audio_url}
+              onError={handleAudioError}
+            />
+            {audioError && (
+              <p
+                className="mt-1.5 text-xs text-destructive"
+                data-testid="audio-load-error"
+                role="alert"
+              >
+                {t('news.audio.loadError')}
+              </p>
+            )}
           </div>
         </div>
 

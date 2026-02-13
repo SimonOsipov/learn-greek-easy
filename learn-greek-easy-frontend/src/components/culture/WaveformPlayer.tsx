@@ -31,6 +31,8 @@ export interface WaveformPlayerProps {
   variant?: 'culture' | 'admin';
   /** When true, the player is visually greyed out and all interactions are no-ops. Default: false. */
   disabled?: boolean;
+  /** Callback fired when audio fails to load. */
+  onError?: () => void;
 }
 
 export const WaveformPlayer: FC<WaveformPlayerProps> = ({
@@ -40,6 +42,7 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
   showSpeedControl = true,
   variant = 'culture',
   disabled = false,
+  onError,
 }) => {
   const barsRef = useRef<number[] | null>(null);
   if (barsRef.current === null) {
@@ -84,16 +87,17 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
       setCurrentTime(0);
     };
 
-    const onError = () => {
+    const onErrorEvent = () => {
       setAudioError(true);
       setIsPlaying(false);
       setCurrentTime(0);
+      onError?.();
     };
 
     audio.addEventListener('loadedmetadata', onLoadedMetadata);
     audio.addEventListener('timeupdate', onTimeUpdate);
     audio.addEventListener('ended', onEnded);
-    audio.addEventListener('error', onError);
+    audio.addEventListener('error', onErrorEvent);
 
     // If metadata is already loaded (cached), read duration immediately
     if (audio.readyState >= 1) {
@@ -106,7 +110,7 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
       audio.removeEventListener('loadedmetadata', onLoadedMetadata);
       audio.removeEventListener('timeupdate', onTimeUpdate);
       audio.removeEventListener('ended', onEnded);
-      audio.removeEventListener('error', onError);
+      audio.removeEventListener('error', onErrorEvent);
     };
   }, [audioUrl]);
 
