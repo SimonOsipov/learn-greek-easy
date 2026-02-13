@@ -33,6 +33,12 @@ export interface WaveformPlayerProps {
   disabled?: boolean;
   /** Callback fired when audio fails to load. */
   onError?: () => void;
+  /** Callback fired on first play per audioUrl. Receives audio duration in seconds. */
+  onPlay?: (duration: number) => void;
+  /** Callback fired when audio completes playback. Receives duration and current speed. */
+  onComplete?: (duration: number, speed: number) => void;
+  /** Callback fired when playback speed changes. Receives old and new speed values. */
+  onSpeedChange?: (fromSpeed: number, toSpeed: number) => void;
 }
 
 export const WaveformPlayer: FC<WaveformPlayerProps> = ({
@@ -43,6 +49,9 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
   variant = 'culture',
   disabled = false,
   onError,
+  onPlay,
+  onComplete,
+  onSpeedChange,
 }) => {
   const barsRef = useRef<number[] | null>(null);
   if (barsRef.current === null) {
@@ -54,6 +63,11 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
 
   const containerRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const hasPlayedRef = useRef<boolean>(false);
+  const analyticsRef = useRef<{
+    shouldTrack: boolean;
+    onComplete?: (duration: number, speed: number) => void;
+  }>({ shouldTrack: false });
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -68,6 +82,10 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
 
   const isAudioMode = !!audioUrl && !audioError;
   const effectiveDuration = isAudioMode ? audioDuration : duration;
+  const shouldTrackAnalytics = isAudioMode && !isAdmin;
+
+  // Keep analytics ref fresh
+  analyticsRef.current = { shouldTrack: shouldTrackAnalytics, onComplete };
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -85,6 +103,11 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
     const onEnded = () => {
       setIsPlaying(false);
       setCurrentTime(0);
+
+      const { shouldTrack, onComplete: completeCb } = analyticsRef.current;
+      if (shouldTrack && completeCb && audioRef.current) {
+        completeCb(audioRef.current.duration, audioRef.current.playbackRate);
+      }
     };
 
     const onErrorEvent = () => {
@@ -115,6 +138,10 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
   }, [audioUrl]);
 
   useEffect(() => {
+    hasPlayedRef.current = false;
+  }, [audioUrl]);
+
+  useEffect(() => {
     if (!isPlaying || isAudioMode || disabled) return;
 
     const id = setInterval(() => {
@@ -140,10 +167,15 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
         audioRef.current.play().catch(() => {
           setAudioError(true);
         });
+
+        if (shouldTrackAnalytics && !hasPlayedRef.current && onPlay) {
+          onPlay(effectiveDuration);
+          hasPlayedRef.current = true;
+        }
       }
     }
     setIsPlaying((prev) => !prev);
-  }, [isAudioMode, isPlaying, disabled]);
+  }, [isAudioMode, isPlaying, disabled, shouldTrackAnalytics, onPlay, effectiveDuration]);
 
   const handleScrub = useCallback(
     (event: React.MouseEvent<HTMLDivElement>) => {
@@ -205,12 +237,19 @@ export const WaveformPlayer: FC<WaveformPlayerProps> = ({
     [effectiveDuration, isAudioMode, currentTime, disabled]
   );
 
-  const handleSpeedChange = useCallback((newSpeed: Speed) => {
-    setSpeed(newSpeed);
-    if (audioRef.current) {
-      audioRef.current.playbackRate = newSpeed;
-    }
-  }, []);
+  const handleSpeedChange = useCallback(
+    (newSpeed: Speed) => {
+      if (shouldTrackAnalytics && onSpeedChange) {
+        onSpeedChange(speed, newSpeed);
+      }
+
+      setSpeed(newSpeed);
+      if (audioRef.current) {
+        audioRef.current.playbackRate = newSpeed;
+      }
+    },
+    [speed, shouldTrackAnalytics, onSpeedChange]
+  );
 
   useEffect(() => {
     if (disabled) {
