@@ -674,6 +674,9 @@ class NewsItemService:
         # Generate presigned URL for the image
         image_url = self.s3_service.generate_presigned_url(news_item.image_s3_key)
 
+        # Generate presigned URL for the audio
+        audio_url = self.s3_service.generate_presigned_url(news_item.audio_s3_key)
+
         return NewsItemResponse(
             id=news_item.id,
             title_el=news_item.title_el,
@@ -685,6 +688,7 @@ class NewsItemService:
             publication_date=news_item.publication_date,
             original_article_url=news_item.original_article_url,
             image_url=image_url,
+            audio_url=audio_url,
             created_at=news_item.created_at,
             updated_at=news_item.updated_at,
         )
