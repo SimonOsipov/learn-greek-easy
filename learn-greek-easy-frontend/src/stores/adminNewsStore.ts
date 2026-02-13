@@ -41,11 +41,16 @@ interface AdminNewsState {
   // Error state
   error: string | null;
 
+  // Regeneration state
+  regeneratingId: string | null;
+  cooldownEndTime: number | null;
+
   // Actions
   fetchNewsItems: () => Promise<void>;
   createNewsItem: (data: NewsItemWithQuestionCreate) => Promise<NewsItemWithCardResponse>;
   updateNewsItem: (id: string, data: NewsItemUpdate) => Promise<NewsItemResponse>;
   deleteNewsItem: (id: string) => Promise<void>;
+  regenerateAudio: (id: string) => Promise<void>;
   setPage: (page: number) => void;
   setSelectedItem: (item: NewsItemResponse | null) => void;
   clearError: () => void;
@@ -69,6 +74,8 @@ export const useAdminNewsStore = create<AdminNewsState>()(
       isUpdating: false,
       isDeleting: false,
       error: null,
+      regeneratingId: null,
+      cooldownEndTime: null,
 
       /**
        * Fetch paginated news items list from admin API
@@ -163,6 +170,33 @@ export const useAdminNewsStore = create<AdminNewsState>()(
       },
 
       /**
+       * Regenerate audio for a news item
+       */
+      regenerateAudio: async (id: string) => {
+        if (get().regeneratingId !== null) return;
+
+        set({ regeneratingId: id, error: null });
+
+        try {
+          await adminAPI.regenerateAudio(id);
+
+          set({
+            regeneratingId: null,
+            cooldownEndTime: Date.now() + 15_000,
+          });
+
+          setTimeout(() => {
+            set({ cooldownEndTime: null });
+            get().fetchNewsItems();
+          }, 15_000);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Failed to regenerate audio';
+          set({ regeneratingId: null, cooldownEndTime: null, error: message });
+          throw error;
+        }
+      },
+
+      /**
        * Set current page and re-fetch
        */
       setPage: (page: number) => {
@@ -201,3 +235,5 @@ export const selectPagination = (state: AdminNewsState) => ({
   total: state.total,
   totalPages: state.totalPages,
 });
+export const selectRegeneratingId = (state: AdminNewsState) => state.regeneratingId;
+export const selectCooldownEndTime = (state: AdminNewsState) => state.cooldownEndTime;
