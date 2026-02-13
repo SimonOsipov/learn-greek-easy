@@ -37,9 +37,11 @@ class NewsItemFactory(BaseFactory):
         publication_date: Today's date by default
         original_article_url: Unique URL with sequential number
         image_s3_key: S3 key for the news image
+        audio_s3_key: S3 key for the news audio (None by default)
 
     Traits:
         old: Sets publication_date to 30 days ago
+        with_audio: Adds audio S3 key for testing audio features
     """
 
     class Meta:
@@ -56,10 +58,14 @@ class NewsItemFactory(BaseFactory):
         lambda n: f"https://example.com/article-{n}-{uuid4().hex[:8]}"
     )
     image_s3_key = factory.Sequence(lambda n: f"news-images/test-{n}.jpg")
+    audio_s3_key = None
 
     class Params:
         old = factory.Trait(
             publication_date=factory.LazyFunction(lambda: date.today() - timedelta(days=30))
+        )
+        with_audio = factory.Trait(
+            audio_s3_key=factory.Sequence(lambda n: f"news-audio/test-{n}.mp3")
         )
 
 

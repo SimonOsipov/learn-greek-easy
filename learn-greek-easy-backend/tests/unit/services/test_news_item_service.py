@@ -273,7 +273,7 @@ class TestGetById:
         assert result.id == sample_news_item.id
         assert result.title_el == sample_news_item.title_el
         assert result.image_url == "https://s3.example.com/presigned-url"
-        mock_s3_service.generate_presigned_url.assert_called_with(sample_news_item.image_s3_key)
+        mock_s3_service.generate_presigned_url.assert_any_call(sample_news_item.image_s3_key)
 
     @pytest.mark.asyncio
     async def test_raises_not_found(
@@ -286,6 +286,67 @@ class TestGetById:
 
         with pytest.raises(NewsItemNotFoundException):
             await service.get_by_id(uuid4())
+
+
+# =============================================================================
+# Test Audio URL
+# =============================================================================
+
+
+class TestAudioUrl:
+    """Tests for audio URL generation in _to_response."""
+
+    @pytest.mark.asyncio
+    async def test_audio_url_none_when_no_audio(
+        self,
+        db_session: AsyncSession,
+        mock_s3_service: MagicMock,
+        sample_news_item: NewsItem,
+    ):
+        """Should return audio_url=None when news item has no audio."""
+        # sample_news_item has no audio_s3_key set
+        mock_s3_service.generate_presigned_url.side_effect = lambda key: (
+            f"https://s3.example.com/{key}" if key else None
+        )
+
+        service = NewsItemService(db_session, s3_service=mock_s3_service)
+        result = await service.get_by_id(sample_news_item.id)
+
+        assert result.audio_url is None
+
+    @pytest.mark.asyncio
+    async def test_audio_url_present_when_audio_exists(
+        self,
+        db_session: AsyncSession,
+        mock_s3_service: MagicMock,
+    ):
+        """Should return presigned audio_url when news item has audio."""
+        # Create a news item with audio
+        item = NewsItem(
+            title_el="Greek Title",
+            title_en="English Title",
+            title_ru="Russian Title",
+            description_el="Greek description",
+            description_en="English description",
+            description_ru="Russian description",
+            publication_date=date.today(),
+            original_article_url="https://example.com/article-with-audio",
+            image_s3_key="news-images/test.jpg",
+            audio_s3_key="news-audio/test.mp3",
+        )
+        db_session.add(item)
+        await db_session.commit()
+        await db_session.refresh(item)
+
+        mock_s3_service.generate_presigned_url.side_effect = lambda key: (
+            f"https://s3.example.com/{key}" if key else None
+        )
+
+        service = NewsItemService(db_session, s3_service=mock_s3_service)
+        result = await service.get_by_id(item.id)
+
+        assert result.audio_url == "https://s3.example.com/news-audio/test.mp3"
+        mock_s3_service.generate_presigned_url.assert_any_call("news-audio/test.mp3")
 
 
 # =============================================================================
