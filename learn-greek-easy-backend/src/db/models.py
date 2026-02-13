@@ -1785,6 +1785,21 @@ class CultureQuestion(Base, TimestampMixin):
         comment="URL of source news article for cards created from news items",
     )
 
+    # Foreign key to source news item (direct relational link)
+    news_item_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("news_items.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+        comment="FK to news_items.id for questions derived from news articles",
+    )
+
+    # Audio file reference
+    audio_s3_key: Mapped[str | None] = mapped_column(
+        String(500),
+        nullable=True,
+        comment="S3 key for TTS-generated audio file (e.g., culture/audio/{uuid}.mp3)",
+    )
+
     # Relationships
     # Note: lazy="raise" prevents N+1 queries by forcing explicit loading.
     # Use selectinload() or joinedload() when you actually need these relationships.
@@ -1801,6 +1816,9 @@ class CultureQuestion(Base, TimestampMixin):
         back_populates="question",
         lazy="raise",
         cascade="all, delete-orphan",
+    )
+    news_item: Mapped["NewsItem | None"] = relationship(
+        lazy="raise",
     )
 
     @property
