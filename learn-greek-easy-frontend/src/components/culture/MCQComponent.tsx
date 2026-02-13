@@ -4,6 +4,7 @@ import { ExternalLink } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { useMCQKeyboardShortcuts } from '@/hooks/useMCQKeyboardShortcuts';
+import { useTrackEvent } from '@/hooks/useTrackEvent';
 import { trackNewsSourceLinkClicked } from '@/lib/analytics';
 import { cn } from '@/lib/utils';
 import type {
@@ -46,6 +47,8 @@ export interface MCQComponentProps {
   };
   /** Deck category for CategoryBadge display */
   category?: CultureCategory;
+  /** Culture deck ID for analytics tracking */
+  deckId?: string;
 }
 
 /** Maps option index (0-3) to letter (A-D) */
@@ -87,8 +90,10 @@ export const MCQComponent: React.FC<MCQComponentProps> = ({
   isLastQuestion,
   answerResult,
   category,
+  deckId,
 }) => {
   const { t } = useTranslation('culture');
+  const { track } = useTrackEvent();
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const prevQuestionIdRef = useRef<string | null>(null);
@@ -170,6 +175,44 @@ export const MCQComponent: React.FC<MCQComponentProps> = ({
     });
   }, [question.id, question.original_article_url]);
 
+  const handleAudioPlay = useCallback(
+    (duration: number) => {
+      if (!deckId) return;
+      track('culture_audio_started', {
+        deck_id: deckId,
+        question_id: question.id,
+        duration_sec: Math.round(duration),
+      });
+    },
+    [deckId, question.id, track]
+  );
+
+  const handleAudioComplete = useCallback(
+    (duration: number, speed: number) => {
+      if (!deckId) return;
+      track('culture_audio_completed', {
+        deck_id: deckId,
+        question_id: question.id,
+        duration_sec: Math.round(duration),
+        playback_speed: speed,
+      });
+    },
+    [deckId, question.id, track]
+  );
+
+  const handleAudioSpeedChange = useCallback(
+    (fromSpeed: number, toSpeed: number) => {
+      if (!deckId) return;
+      track('culture_audio_speed_changed', {
+        deck_id: deckId,
+        question_id: question.id,
+        from_speed: fromSpeed,
+        to_speed: toSpeed,
+      });
+    },
+    [deckId, question.id, track]
+  );
+
   // Derive correctAnswer for ExplanationCard
   const correctAnswerForExplanation = answerResult
     ? {
@@ -218,7 +261,14 @@ export const MCQComponent: React.FC<MCQComponentProps> = ({
           )}
 
           {/* Audio waveform player placeholder */}
-          {question.audio_url && <WaveformPlayer audioUrl={question.audio_url} />}
+          {question.audio_url && (
+            <WaveformPlayer
+              audioUrl={question.audio_url}
+              onPlay={handleAudioPlay}
+              onComplete={handleAudioComplete}
+              onSpeedChange={handleAudioSpeedChange}
+            />
+          )}
 
           {/* Question text - KEEP EXACTLY AS-IS */}
           <h2
