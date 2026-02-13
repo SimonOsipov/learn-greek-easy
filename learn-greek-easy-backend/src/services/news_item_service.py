@@ -689,6 +689,9 @@ class NewsItemService:
             original_article_url=news_item.original_article_url,
             image_url=image_url,
             audio_url=audio_url,
+            audio_generated_at=news_item.audio_generated_at,
+            audio_duration_seconds=news_item.audio_duration_seconds,
+            audio_file_size_bytes=news_item.audio_file_size_bytes,
             created_at=news_item.created_at,
             updated_at=news_item.updated_at,
         )

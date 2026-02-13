@@ -69,6 +69,13 @@ class NewsItemResponse(BaseModel):
     original_article_url: str
     image_url: Optional[str] = Field(None, description="Presigned S3 URL for the image")
     audio_url: Optional[str] = Field(None, description="Presigned S3 URL for the audio narration")
+    audio_generated_at: Optional[datetime] = Field(
+        None, description="Timestamp when audio was generated via TTS"
+    )
+    audio_duration_seconds: Optional[float] = Field(
+        None, description="Duration of audio narration in seconds"
+    )
+    audio_file_size_bytes: Optional[int] = Field(None, description="Size of audio file in bytes")
     created_at: datetime
     updated_at: datetime
 
