@@ -82,7 +82,7 @@ from src.services.card_error_admin_service import CardErrorAdminService
 from src.services.changelog_service import ChangelogService
 from src.services.feedback_admin_service import FeedbackAdminService
 from src.services.news_item_service import NewsItemService
-from src.tasks import create_announcement_notifications_task
+from src.tasks import create_announcement_notifications_task, generate_audio_for_news_item_task
 
 logger = get_logger(__name__)
 
@@ -887,7 +887,8 @@ async def list_deck_questions(
 
     if not deck:
         raise NotFoundException(
-            resource="Culture deck", detail=f"Culture deck with ID '{deck_id}' not found"
+            resource="Culture deck",
+            detail=f"Culture deck with ID '{deck_id}' not found",
         )
 
     # Count total questions in deck (including pending)
@@ -977,6 +978,7 @@ async def list_deck_questions(
 )
 async def create_news_item(
     data: NewsItemWithQuestionCreate,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_superuser),
 ) -> NewsItemWithCardResponse:
@@ -984,10 +986,12 @@ async def create_news_item(
 
     Downloads the image from source_image_url, uploads to S3, and creates
     the news item in the database. If question data is provided, creates
-    a linked CultureQuestion in the specified deck.
+    a linked CultureQuestion in the specified deck. Schedules background
+    audio generation for the Greek description.
 
     Args:
         data: News item creation data with optional question
+        background_tasks: FastAPI background tasks handler
         db: Database session (injected)
         current_user: Authenticated superuser (injected)
 
@@ -1000,12 +1004,22 @@ async def create_news_item(
     """
     service = NewsItemService(db)
     try:
-        return await service.create_with_question(data)
+        result = await service.create_with_question(data)
     except ValueError as e:
         error_msg = str(e)
         if "already exists" in error_msg:
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=error_msg)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error_msg)
+
+    # Schedule audio generation in background (DB commit already happened inside service)
+    background_tasks.add_task(
+        generate_audio_for_news_item_task,
+        news_item_id=result.news_item.id,
+        description_el=data.description_el,
+        db_url=settings.database_url,
+    )
+
+    return result
 
 
 @router.put(
@@ -1022,17 +1036,20 @@ async def create_news_item(
 async def update_news_item(
     news_item_id: UUID,
     data: NewsItemUpdate,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_superuser),
 ) -> NewsItemResponse:
     """Update an existing news item (admin only).
 
     If source_image_url is provided, downloads the new image and replaces
-    the existing one in S3.
+    the existing one in S3. If description_el is updated, schedules background
+    audio regeneration.
 
     Args:
         news_item_id: UUID of the news item to update
         data: Fields to update (all optional)
+        background_tasks: FastAPI background tasks handler
         db: Database session (injected)
         current_user: Authenticated superuser (injected)
 
@@ -1045,9 +1062,19 @@ async def update_news_item(
     """
     service = NewsItemService(db)
     try:
-        return await service.update(news_item_id, data)
+        result = await service.update(news_item_id, data)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+    if data.description_el is not None:
+        background_tasks.add_task(
+            generate_audio_for_news_item_task,
+            news_item_id=news_item_id,
+            description_el=data.description_el,
+            db_url=settings.database_url,
+        )
+
+    return result
 
 
 @router.delete(
