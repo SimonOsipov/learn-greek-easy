@@ -275,6 +275,19 @@
       "invalidImageUrl": "Invalid source_image_url format",
       "invalidDate": "Invalid publication_date format (use YYYY-MM-DD)",
       "noFieldsToUpdate": "No fields to update"
+    },
+    "audio": {
+      "hasAudio": "Audio",
+      "noAudio": "No audio",
+      "regenerate": "Regenerate Audio",
+      "regenerating": "Regenerating...",
+      "regenerateSuccess": "Audio regeneration started",
+      "regenerateError": "Failed to regenerate audio",
+      "statusTitle": "Audio Status",
+      "generated": "Generated",
+      "duration": "Duration",
+      "fileSize": "File size",
+      "noAudioGenerated": "No audio generated"
     }
   },
   "feedback": {
