@@ -17,7 +17,7 @@ import { CultureBadge, type CultureCategory } from '@/components/culture';
 import { DeckProgressBar } from '@/components/decks/DeckProgressBar';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getLocalizedDeckName } from '@/lib/deckLocale';
 import { cultureDeckAPI } from '@/services/cultureDeckAPI';
@@ -216,71 +216,10 @@ export function CultureDeckDetailPage() {
             </div>
           </CardContent>
         </Card>
-
-        {/* Statistics Section */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold">{t('deck:detail.statistics')}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 gap-4">
-              {/* Total Questions */}
-              <StatCard
-                icon={<BookOpen className="h-5 w-5 text-blue-500" />}
-                label={t('culture:deck.questions')}
-                value={deck.question_count}
-                subtext={t('culture:deck.multipleChoice')}
-              />
-            </div>
-
-            {/* Question Distribution (if started) */}
-            {progress && progress.status !== 'not-started' && (
-              <div className="mt-6 grid grid-cols-3 gap-4 border-t border-border pt-4">
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-muted-foreground">{progress.cardsNew}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">{t('deck:detail.new')}</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-blue-500 dark:text-blue-400">
-                    {progress.cardsLearning}
-                  </p>
-                  <p className="mt-1 text-xs text-muted-foreground">{t('deck:detail.learning')}</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-green-500 dark:text-green-400">
-                    {progress.cardsMastered}
-                  </p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {t('deck:detail.masteredLabel')}
-                  </p>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
       </div>
     </div>
   );
 }
-
-// Reusable Stat Card Component
-interface StatCardProps {
-  icon: React.ReactNode;
-  label: string;
-  value: string | number;
-  subtext: string;
-}
-
-const StatCard: React.FC<StatCardProps> = ({ icon, label, value, subtext }) => {
-  return (
-    <div className="flex flex-col items-center rounded-lg bg-muted p-3 text-center">
-      <div className="mb-2">{icon}</div>
-      <p className="mb-1 text-xs text-muted-foreground">{label}</p>
-      <p className="text-xl font-bold text-foreground">{value}</p>
-      <p className="mt-1 text-xs text-muted-foreground">{subtext}</p>
-    </div>
-  );
-};
 
 // Loading Skeleton Component
 const LoadingSkeleton: React.FC = () => {
@@ -304,24 +243,6 @@ const LoadingSkeleton: React.FC = () => {
         </CardHeader>
         <CardContent>
           <Skeleton className="h-20 w-full" />
-        </CardContent>
-      </Card>
-
-      {/* Stats Skeleton */}
-      <Card className="mb-6">
-        <CardHeader>
-          <Skeleton className="h-6 w-40" />
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="rounded-lg bg-muted p-3">
-                <Skeleton className="mx-auto mb-2 h-5 w-5" />
-                <Skeleton className="mx-auto mb-1 h-4 w-16" />
-                <Skeleton className="mx-auto h-6 w-12" />
-              </div>
-            ))}
-          </div>
         </CardContent>
       </Card>
 
