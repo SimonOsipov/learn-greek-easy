@@ -18,6 +18,10 @@ export type AnalyticsEventName =
   | 'culture_session_completed'
   | 'culture_session_abandoned'
   | 'culture_question_answered'
+  // Culture audio events
+  | 'culture_audio_started'
+  | 'culture_audio_completed'
+  | 'culture_audio_speed_changed'
   // Engagement events
   | 'deck_selected'
   | 'streak_achieved'
@@ -123,6 +127,27 @@ export interface CultureQuestionAnsweredProperties extends BaseEventProperties {
   is_correct: boolean;
   time_ms: number;
   xp_earned: number;
+}
+
+// Culture audio playback event properties
+export interface CultureAudioStartedProperties extends BaseEventProperties {
+  deck_id: string; // Culture deck UUID
+  question_id: string; // Culture question UUID
+  duration_sec: number; // Audio duration in seconds (integer, rounded)
+}
+
+export interface CultureAudioCompletedProperties extends BaseEventProperties {
+  deck_id: string; // Culture deck UUID
+  question_id: string; // Culture question UUID
+  duration_sec: number; // Audio duration in seconds (integer, rounded)
+  playback_speed: number; // Playback rate (e.g., 0.75, 1.0, 1.25, 1.5)
+}
+
+export interface CultureAudioSpeedChangedProperties extends BaseEventProperties {
+  deck_id: string; // Culture deck UUID
+  question_id: string; // Culture question UUID
+  from_speed: number; // Previous playback rate
+  to_speed: number; // New playback rate
 }
 
 // Generic properties type for flexibility

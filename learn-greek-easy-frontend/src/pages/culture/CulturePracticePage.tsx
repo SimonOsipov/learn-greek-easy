@@ -666,6 +666,7 @@ export function CulturePracticePage() {
             questionNumber={progress.current}
             totalQuestions={progress.total}
             category={session.category}
+            deckId={deckId}
             showFeedback={true}
             onNext={handleNextQuestion}
             isLastQuestion={progress.current >= progress.total}
