@@ -99,11 +99,11 @@ class TestDeleteAccount:
         with patch(
             "src.services.user_deletion_service.get_auth0_management_client"
         ) as mock_get_client:
-            from src.core.exceptions import Auth0ManagementError
+            from src.core.exceptions import SupabaseAdminError
 
             mock_auth0_client = MagicMock()
             mock_auth0_client.delete_user = AsyncMock(
-                side_effect=Auth0ManagementError("Failed to delete user from Auth0")
+                side_effect=SupabaseAdminError("Failed to delete user from Auth0")
             )
             mock_get_client.return_value = mock_auth0_client
 

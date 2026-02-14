@@ -14,11 +14,7 @@ from src.core.auth0 import (
     invalidate_jwks_cache,
     verify_auth0_token,
 )
-from src.core.exceptions import (
-    Auth0DisabledException,
-    Auth0TokenExpiredException,
-    Auth0TokenInvalidException,
-)
+from src.core.exceptions import TokenExpiredException, TokenInvalidException, UnauthorizedException
 
 
 class TestAuth0UserInfo:
@@ -161,7 +157,7 @@ class TestFetchJWKS:
         with patch("src.core.auth0.httpx.AsyncClient") as mock_client_class:
             mock_client_class.return_value.__aenter__.return_value = mock_client
 
-            with pytest.raises(Auth0TokenInvalidException) as exc_info:
+            with pytest.raises(TokenInvalidException) as exc_info:
                 await fetch_jwks("https://example.auth0.com/.well-known/jwks.json")
 
             assert "JWKS timeout" in str(exc_info.value.detail)
@@ -183,7 +179,7 @@ class TestFetchJWKS:
         with patch("src.core.auth0.httpx.AsyncClient") as mock_client_class:
             mock_client_class.return_value.__aenter__.return_value = mock_client
 
-            with pytest.raises(Auth0TokenInvalidException) as exc_info:
+            with pytest.raises(TokenInvalidException) as exc_info:
                 await fetch_jwks("https://example.auth0.com/.well-known/jwks.json")
 
             assert "JWKS fetch failed" in str(exc_info.value.detail)
@@ -195,10 +191,10 @@ class TestVerifyAuth0Token:
     @pytest.mark.asyncio
     @patch("src.core.auth0.settings")
     async def test_raises_when_not_configured(self, mock_settings):
-        """Test Auth0DisabledException when Auth0 is not configured."""
+        """Test UnauthorizedException when Auth0 is not configured."""
         mock_settings.auth0_configured = False
 
-        with pytest.raises(Auth0DisabledException):
+        with pytest.raises(UnauthorizedException):
             await verify_auth0_token("some-token")
 
     @pytest.mark.asyncio
@@ -256,7 +252,7 @@ class TestVerifyAuth0Token:
         mock_jwk.import_key_set.return_value = MagicMock()
         mock_jwt.decode.side_effect = ExpiredTokenError()
 
-        with pytest.raises(Auth0TokenExpiredException):
+        with pytest.raises(TokenExpiredException):
             await verify_auth0_token("expired-token")
 
     @pytest.mark.asyncio
@@ -277,7 +273,7 @@ class TestVerifyAuth0Token:
         mock_jwk.import_key_set.return_value = MagicMock()
         mock_jwt.decode.side_effect = BadSignatureError("Invalid signature")
 
-        with pytest.raises(Auth0TokenInvalidException) as exc_info:
+        with pytest.raises(TokenInvalidException) as exc_info:
             await verify_auth0_token("tampered-token")
 
         assert "Invalid token signature" in str(exc_info.value.detail)
@@ -300,7 +296,7 @@ class TestVerifyAuth0Token:
         mock_jwk.import_key_set.return_value = MagicMock()
         mock_jwt.decode.side_effect = DecodeError("Malformed token")
 
-        with pytest.raises(Auth0TokenInvalidException) as exc_info:
+        with pytest.raises(TokenInvalidException) as exc_info:
             await verify_auth0_token("malformed-token")
 
         assert "Token could not be decoded" in str(exc_info.value.detail)
@@ -328,7 +324,7 @@ class TestVerifyAuth0Token:
         mock_claims.validate = MagicMock()
         mock_jwt.decode.return_value = mock_claims
 
-        with pytest.raises(Auth0TokenInvalidException) as exc_info:
+        with pytest.raises(TokenInvalidException) as exc_info:
             await verify_auth0_token("no-sub-token")
 
         assert "missing sub claim" in str(exc_info.value.detail)

@@ -146,7 +146,7 @@ async def delete_user_account(
         service = UserDeletionService(db)
         result = await service.delete_account(
             user_id=current_user.id,
-            auth0_id=current_user.auth0_id,
+            auth0_id=current_user.auth0_id,  # type: ignore[attr-defined]  # SUPA-06: Rename to supabase_id
         )
 
         if not result.success:

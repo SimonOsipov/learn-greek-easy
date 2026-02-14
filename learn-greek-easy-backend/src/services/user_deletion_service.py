@@ -16,7 +16,7 @@ from uuid import UUID
 import sentry_sdk
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.auth0_management import Auth0ManagementError, get_auth0_management_client
+from src.core.auth0_management import SupabaseAdminError, get_auth0_management_client
 from src.core.logging import get_logger
 from src.repositories import UserRepository
 from src.services.user_progress_reset_service import UserProgressResetService
@@ -159,7 +159,7 @@ class UserDeletionService:
                                 ),
                             },
                         )
-                    except Auth0ManagementError as e:
+                    except SupabaseAdminError as e:
                         # Log but don't fail - per PRD decision
                         result.auth0_deleted = False
                         result.error_message = (

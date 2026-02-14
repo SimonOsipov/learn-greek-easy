@@ -17,7 +17,7 @@ from typing import Any, Dict, Optional, cast
 import httpx
 
 from src.config import settings
-from src.core.exceptions import Auth0ManagementError
+from src.core.exceptions import SupabaseAdminError
 from src.core.logging import get_logger
 
 logger = get_logger(__name__)
@@ -116,7 +116,7 @@ class Auth0ManagementClient:
             Valid M2M access token
 
         Raises:
-            Auth0ManagementError: If token cannot be obtained
+            SupabaseAdminError: If token cannot be obtained
         """
         # Check cache first
         cached_token = _m2m_token_cache.get()
@@ -148,14 +148,14 @@ class Auth0ManagementClient:
 
         except httpx.TimeoutException as e:
             logger.error("Timeout fetching M2M token from Auth0", extra={"error": str(e)})
-            raise Auth0ManagementError(detail="Unable to obtain Auth0 management token: timeout")
+            raise SupabaseAdminError(detail="Unable to obtain Auth0 management token: timeout")
 
         except httpx.HTTPStatusError as e:
             logger.error(
                 "HTTP error fetching M2M token",
                 extra={"status": e.response.status_code, "error": str(e)},
             )
-            raise Auth0ManagementError(
+            raise SupabaseAdminError(
                 detail=f"Unable to obtain Auth0 management token: {e.response.status_code}"
             )
 
@@ -164,7 +164,7 @@ class Auth0ManagementClient:
                 "Unexpected error fetching M2M token",
                 extra={"error": str(e), "error_type": type(e).__name__},
             )
-            raise Auth0ManagementError(detail="Unable to obtain Auth0 management token")
+            raise SupabaseAdminError(detail="Unable to obtain Auth0 management token")
 
     async def delete_user(self, auth0_id: str) -> bool:
         """Delete a user from Auth0.
@@ -179,7 +179,7 @@ class Auth0ManagementClient:
             True if deleted successfully or user didn't exist
 
         Raises:
-            Auth0ManagementError: If deletion fails for reasons other than user not found
+            SupabaseAdminError: If deletion fails for reasons other than user not found
         """
         token = await self._get_management_token()
 
@@ -223,11 +223,11 @@ class Auth0ManagementClient:
                         "auth0_id": auth0_id[:20] + "..." if len(auth0_id) > 20 else auth0_id,
                     },
                 )
-                raise Auth0ManagementError(
+                raise SupabaseAdminError(
                     detail=f"Failed to delete user from Auth0: {response.status_code}"
                 )
 
-        except Auth0ManagementError:
+        except SupabaseAdminError:
             raise  # Re-raise without wrapping
 
         except httpx.TimeoutException as e:
@@ -238,7 +238,7 @@ class Auth0ManagementClient:
                     "auth0_id": auth0_id[:20] + "..." if len(auth0_id) > 20 else auth0_id,
                 },
             )
-            raise Auth0ManagementError(detail="Failed to delete user from Auth0: timeout")
+            raise SupabaseAdminError(detail="Failed to delete user from Auth0: timeout")
 
         except Exception as e:
             logger.error(
@@ -249,7 +249,7 @@ class Auth0ManagementClient:
                     "auth0_id": auth0_id[:20] + "..." if len(auth0_id) > 20 else auth0_id,
                 },
             )
-            raise Auth0ManagementError(detail="Failed to delete user from Auth0")
+            raise SupabaseAdminError(detail="Failed to delete user from Auth0")
 
     async def _delete_user_with_fresh_token(self, auth0_id: str) -> bool:
         """Retry user deletion with a fresh token (after 401).
@@ -264,7 +264,7 @@ class Auth0ManagementClient:
             True if deleted successfully or user didn't exist
 
         Raises:
-            Auth0ManagementError: If deletion fails
+            SupabaseAdminError: If deletion fails
         """
         token = await self._get_management_token()
 
@@ -301,11 +301,11 @@ class Auth0ManagementClient:
                         "auth0_id": auth0_id[:20] + "..." if len(auth0_id) > 20 else auth0_id,
                     },
                 )
-                raise Auth0ManagementError(
+                raise SupabaseAdminError(
                     detail=f"Failed to delete user from Auth0: {response.status_code}"
                 )
 
-        except Auth0ManagementError:
+        except SupabaseAdminError:
             raise
 
         except Exception as e:
@@ -317,7 +317,7 @@ class Auth0ManagementClient:
                     "auth0_id": auth0_id[:20] + "..." if len(auth0_id) > 20 else auth0_id,
                 },
             )
-            raise Auth0ManagementError(detail="Failed to delete user from Auth0")
+            raise SupabaseAdminError(detail="Failed to delete user from Auth0")
 
 
 def get_auth0_management_client() -> Optional[Auth0ManagementClient]:

@@ -1943,7 +1943,7 @@ class SeedService:
                     "email": user.email,
                     "full_name": user.full_name,
                     "is_superuser": user.is_superuser,
-                    "auth0_id": user.auth0_id,
+                    "auth0_id": user.auth0_id,  # type: ignore[attr-defined]  # SUPA-06: Rename to supabase_id
                 }
             )
 

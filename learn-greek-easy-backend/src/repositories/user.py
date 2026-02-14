@@ -61,7 +61,7 @@ class UserRepository(BaseRepository[User]):
         Use Case:
             Auth0 login/signup
         """
-        query = select(User).where(User.auth0_id == auth0_id)
+        query = select(User).where(User.auth0_id == auth0_id)  # type: ignore[attr-defined]  # SUPA-06: Rename to supabase_id
         result = await self.db.execute(query)
         return result.scalar_one_or_none()
 

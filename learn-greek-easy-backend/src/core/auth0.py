@@ -20,11 +20,7 @@ from authlib.jose import JsonWebKey, jwt
 from authlib.jose.errors import BadSignatureError, DecodeError, ExpiredTokenError
 
 from src.config import settings
-from src.core.exceptions import (
-    Auth0DisabledException,
-    Auth0TokenExpiredException,
-    Auth0TokenInvalidException,
-)
+from src.core.exceptions import TokenExpiredException, TokenInvalidException, UnauthorizedException
 from src.core.logging import get_logger
 
 logger = get_logger(__name__)
@@ -146,18 +142,18 @@ async def fetch_jwks(jwks_uri: str) -> Dict[str, Any]:
 
     except httpx.TimeoutException as e:
         logger.error("Timeout fetching JWKS from Auth0", extra={"error": str(e)})
-        raise Auth0TokenInvalidException(detail="Unable to verify token: JWKS timeout")
+        raise TokenInvalidException(detail="Unable to verify token: JWKS timeout")
 
     except httpx.HTTPStatusError as e:
         logger.error(
             "HTTP error fetching JWKS",
             extra={"status": e.response.status_code, "error": str(e)},
         )
-        raise Auth0TokenInvalidException(detail="Unable to verify token: JWKS fetch failed")
+        raise TokenInvalidException(detail="Unable to verify token: JWKS fetch failed")
 
     except Exception as e:
         logger.error("Unexpected error fetching JWKS", extra={"error": str(e)})
-        raise Auth0TokenInvalidException(detail="Unable to verify token: JWKS error")
+        raise TokenInvalidException(detail="Unable to verify token: JWKS error")
 
 
 async def verify_auth0_token(access_token: str) -> Auth0UserInfo:
@@ -182,7 +178,7 @@ async def verify_auth0_token(access_token: str) -> Auth0UserInfo:
     """
     # Check Auth0 configuration
     if not settings.auth0_configured:
-        raise Auth0DisabledException()
+        raise UnauthorizedException(detail="Auth0 authentication is not enabled")
 
     jwks_uri = settings.auth0_jwks_uri
     issuer = settings.auth0_issuer
@@ -218,7 +214,7 @@ async def verify_auth0_token(access_token: str) -> Auth0UserInfo:
         # Extract user info from claims
         auth0_id = claims.get("sub")
         if not auth0_id:
-            raise Auth0TokenInvalidException(detail="Token missing sub claim")
+            raise TokenInvalidException(detail="Token missing sub claim")
 
         user_info = Auth0UserInfo(
             auth0_id=auth0_id,
@@ -237,20 +233,20 @@ async def verify_auth0_token(access_token: str) -> Auth0UserInfo:
 
     except ExpiredTokenError:
         logger.warning("Auth0 token has expired")
-        raise Auth0TokenExpiredException()
+        raise TokenExpiredException()
 
     except BadSignatureError as e:
         logger.warning("Auth0 token has invalid signature", extra={"error": str(e)})
-        raise Auth0TokenInvalidException(detail="Invalid token signature")
+        raise TokenInvalidException(detail="Invalid token signature")
 
     except DecodeError as e:
         logger.warning("Auth0 token could not be decoded", extra={"error": str(e)})
-        raise Auth0TokenInvalidException(detail="Token could not be decoded")
+        raise TokenInvalidException(detail="Token could not be decoded")
 
-    except Auth0TokenExpiredException:
+    except TokenExpiredException:
         raise  # Re-raise without wrapping
 
-    except Auth0TokenInvalidException:
+    except TokenInvalidException:
         raise  # Re-raise without wrapping
 
     except Exception as e:
@@ -258,7 +254,7 @@ async def verify_auth0_token(access_token: str) -> Auth0UserInfo:
             "Unexpected error verifying Auth0 token",
             extra={"error": str(e), "error_type": type(e).__name__},
         )
-        raise Auth0TokenInvalidException(detail="Token verification failed")
+        raise TokenInvalidException(detail="Token verification failed")
 
 
 def extract_claims_from_id_token(id_token: str) -> Optional[Dict[str, Any]]:

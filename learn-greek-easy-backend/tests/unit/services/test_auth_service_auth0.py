@@ -8,11 +8,11 @@ import pytest
 
 from src.core.auth0 import Auth0UserInfo
 from src.core.exceptions import (
-    AccountLinkingConflictException,
-    Auth0DisabledException,
-    Auth0TokenExpiredException,
-    Auth0TokenInvalidException,
+    ConflictException,
     InvalidCredentialsException,
+    TokenExpiredException,
+    TokenInvalidException,
+    UnauthorizedException,
 )
 from src.services.auth_service import AuthService
 
@@ -69,7 +69,7 @@ class TestAuthenticateAuth0:
         with patch("src.config.settings", mock_settings_disabled):
             service = AuthService(mock_db)
 
-            with pytest.raises(Auth0DisabledException):
+            with pytest.raises(UnauthorizedException):
                 await service.authenticate_auth0("token")
 
     @pytest.mark.asyncio
@@ -269,7 +269,7 @@ class TestAuthenticateAuth0:
 
                 service = AuthService(mock_db)
 
-                with pytest.raises(AccountLinkingConflictException):
+                with pytest.raises(ConflictException):
                     await service.authenticate_auth0("valid-token")
 
     @pytest.mark.asyncio
@@ -339,11 +339,11 @@ class TestAuthenticateAuth0:
         """Test that expired Auth0 token raises exception."""
         with patch("src.config.settings", mock_settings_enabled):
             with patch("src.core.auth0.verify_auth0_token") as mock_verify:
-                mock_verify.side_effect = Auth0TokenExpiredException()
+                mock_verify.side_effect = TokenExpiredException()
 
                 service = AuthService(mock_db)
 
-                with pytest.raises(Auth0TokenExpiredException):
+                with pytest.raises(TokenExpiredException):
                     await service.authenticate_auth0("expired-token")
 
     @pytest.mark.asyncio
@@ -351,11 +351,11 @@ class TestAuthenticateAuth0:
         """Test that invalid Auth0 token raises exception."""
         with patch("src.config.settings", mock_settings_enabled):
             with patch("src.core.auth0.verify_auth0_token") as mock_verify:
-                mock_verify.side_effect = Auth0TokenInvalidException("Invalid token")
+                mock_verify.side_effect = TokenInvalidException("Invalid token")
 
                 service = AuthService(mock_db)
 
-                with pytest.raises(Auth0TokenInvalidException):
+                with pytest.raises(TokenInvalidException):
                     await service.authenticate_auth0("invalid-token")
 
     @pytest.mark.asyncio

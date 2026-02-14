@@ -22,7 +22,7 @@ from src.core.auth0_management import (
     get_auth0_management_client,
     invalidate_m2m_token_cache,
 )
-from src.core.exceptions import Auth0ManagementError
+from src.core.exceptions import SupabaseAdminError
 
 
 @pytest.fixture
@@ -178,7 +178,7 @@ class TestAuth0ManagementClient:
 
     @pytest.mark.asyncio
     async def test_delete_user_500_raises_error(self, client):
-        """Test 500 response raises Auth0ManagementError."""
+        """Test 500 response raises SupabaseAdminError."""
         with patch("src.core.auth0_management._m2m_token_cache") as mock_cache:
             mock_cache.get.return_value = "cached-token"
 
@@ -192,14 +192,14 @@ class TestAuth0ManagementClient:
                 mock_client_instance.__aexit__ = AsyncMock(return_value=None)
                 MockAsyncClient.return_value = mock_client_instance
 
-                with pytest.raises(Auth0ManagementError) as exc_info:
+                with pytest.raises(SupabaseAdminError) as exc_info:
                     await client.delete_user("auth0|123456")
 
         assert "500" in str(exc_info.value.detail)
 
     @pytest.mark.asyncio
     async def test_delete_user_timeout_raises_error(self, client):
-        """Test timeout raises Auth0ManagementError."""
+        """Test timeout raises SupabaseAdminError."""
         with patch("src.core.auth0_management._m2m_token_cache") as mock_cache:
             mock_cache.get.return_value = "cached-token"
 
@@ -212,7 +212,7 @@ class TestAuth0ManagementClient:
                 mock_client_instance.__aexit__ = AsyncMock(return_value=None)
                 MockAsyncClient.return_value = mock_client_instance
 
-                with pytest.raises(Auth0ManagementError) as exc_info:
+                with pytest.raises(SupabaseAdminError) as exc_info:
                     await client.delete_user("auth0|123456")
 
         assert "timeout" in str(exc_info.value.detail).lower()

@@ -242,13 +242,13 @@ class User(Base, TimestampMixin):
         index=True,
     )
 
-    # Auth0
-    auth0_id: Mapped[str | None] = mapped_column(
+    # Supabase Auth
+    supabase_id: Mapped[str | None] = mapped_column(
         String(255),
         unique=True,
         nullable=True,
         index=True,
-        comment="Auth0 user identifier (sub claim)",
+        comment="Supabase Auth user identifier (sub claim, UUID format)",
     )
 
     # Tracking

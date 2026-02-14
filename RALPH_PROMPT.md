@@ -2,7 +2,7 @@
 
 ## Overview
 
-Automated execution of Backlog `inprogress` tasks through 4 mandatory quality gates (Architecture → Explore → Execution → QA Verify). Analyzes task dependencies to determine execution mode: **parallel** (multiple independent chains via agent teams) or **sequential** (single chain, team lead executes directly).
+Automated execution of Backlog `To Do` tasks through 4 mandatory quality gates (Architecture → Explore → Execution → QA Verify). Analyzes task dependencies to determine execution mode: **parallel** (multiple independent chains via agent teams) or **sequential** (single chain, team lead executes directly).
 
 ## Model Selection
 
@@ -69,7 +69,7 @@ Reference before making changes to related areas:
 
 1. Check `.claude/handoff.yaml` for session continuity
 2. Study @CLAUDE.md for project conventions
-3. Query Backlog for all `inprogress` tasks using `mcp__backlog__task_search`
+3. Query Backlog for all `To Do` tasks using `mcp__backlog__task_list` (use status="To Do")
 4. Read each task's FULL details using `mcp__backlog__task_view` to understand:
    - Description (context)
    - Acceptance Criteria (what needs to be done)
@@ -456,7 +456,7 @@ git checkout main && git pull origin main && git branch -d feature/[name]
 
 1. **Local tests green ≠ merge ready** — deploy + smoke tests must pass
 2. **Never mark tasks as `done`** — only QA can do that after merge
-3. **All tasks stay `inprogress`** until PR is marked ready, then move to `inreview`
+3. **All tasks stay `In Progress`** until PR is marked ready, then move to `In Review`
 4. Output `<promise>ALL_TASKS_COMPLETE</promise>` ONLY when deploy + smoke pass
 
 ---

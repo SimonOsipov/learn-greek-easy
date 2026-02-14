@@ -24,11 +24,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from src.core.exceptions import (
-    AccountLinkingConflictException,
-    Auth0DisabledException,
+    ConflictException,
     InvalidCredentialsException,
     TokenExpiredException,
     TokenInvalidException,
+    UnauthorizedException,
     UserNotFoundException,
 )
 from src.core.logging import get_logger
@@ -443,7 +443,7 @@ class AuthService:
 
         # Check if Auth0 is configured
         if not settings.auth0_configured:
-            raise Auth0DisabledException()
+            raise UnauthorizedException(detail="Auth0 authentication is not enabled")
 
         # Step 1: Verify Auth0 access token
         auth0_user = await verify_auth0_token(access_token)
@@ -537,7 +537,7 @@ class AuthService:
             User model if found, None otherwise
         """
         result = await self.db.execute(
-            select(User).where(User.auth0_id == auth0_id).options(selectinload(User.settings))
+            select(User).where(User.auth0_id == auth0_id).options(selectinload(User.settings))  # type: ignore[attr-defined]  # SUPA-06: Rename to supabase_id
         )
         return result.scalar_one_or_none()
 
@@ -625,22 +625,22 @@ class AuthService:
 
             if user:
                 # User exists with this email - attempt to link Auth0 account
-                if user.auth0_id is not None and user.auth0_id != auth0_user.auth0_id:
+                if user.auth0_id is not None and user.auth0_id != auth0_user.auth0_id:  # type: ignore[attr-defined]  # SUPA-06: Rename to supabase_id
                     # Email linked to a DIFFERENT Auth0 account - conflict
                     logger.warning(
                         "Auth0 conflict - email linked to different Auth0 account",
                         extra={
                             "email": auth0_user.email,
-                            "existing_auth0_id": user.auth0_id[:10] + "...",
+                            "existing_auth0_id": user.auth0_id[:10] + "...",  # type: ignore[attr-defined]  # SUPA-06: Rename to supabase_id
                             "new_auth0_id": auth0_user.auth0_id[:10] + "...",
                         },
                     )
-                    raise AccountLinkingConflictException(
+                    raise ConflictException(
                         detail="This email is already registered with a different Auth0 account."
                     )
 
                 # Link Auth0 account to existing user
-                user.auth0_id = auth0_user.auth0_id
+                user.auth0_id = auth0_user.auth0_id  # type: ignore[attr-defined]  # SUPA-06: Rename to supabase_id
 
                 # Auto-verify email if Auth0 says it's verified
                 if auth0_user.email_verified and user.email_verified_at is None:

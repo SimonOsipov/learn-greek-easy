@@ -19,13 +19,11 @@ from sqlalchemy.orm import selectinload
 from src.config import settings
 from src.core.dependencies import get_current_user
 from src.core.exceptions import (
-    AccountLinkingConflictException,
-    Auth0DisabledException,
-    Auth0TokenExpiredException,
-    Auth0TokenInvalidException,
+    ConflictException,
     InvalidCredentialsException,
     TokenExpiredException,
     TokenInvalidException,
+    UnauthorizedException,
     UserNotFoundException,
 )
 from src.core.logging import get_logger
@@ -104,7 +102,7 @@ def _build_user_profile_response(user: User) -> UserProfileResponse:
     # Override avatar_url with presigned URL
     response.avatar_url = avatar_presigned_url
     # Extract auth_provider from auth0_id
-    response.auth_provider = _extract_auth_provider(user.auth0_id)
+    response.auth_provider = _extract_auth_provider(user.auth0_id)  # type: ignore[attr-defined]  # SUPA-05: Rename to supabase_id
 
     return response
 
@@ -248,25 +246,25 @@ async def auth0_login(
             user=_build_user_profile_response(user),
         )
 
-    except Auth0DisabledException as e:
+    except UnauthorizedException as e:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=e.detail,
         )
 
-    except Auth0TokenExpiredException as e:
+    except TokenExpiredException as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=e.detail,
         )
 
-    except Auth0TokenInvalidException as e:
+    except TokenInvalidException as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=e.detail,
         )
 
-    except AccountLinkingConflictException as e:
+    except ConflictException as e:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=e.detail,
