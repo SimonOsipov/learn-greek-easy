@@ -2,7 +2,7 @@
 
 ## Overview
 
-Automated execution of Vibe Kanban `inprogress` tasks through 4 mandatory quality gates (Architecture → Explore → Execution → QA Verify). Analyzes task dependencies to determine execution mode: **parallel** (multiple independent chains via agent teams) or **sequential** (single chain, team lead executes directly).
+Automated execution of Backlog `inprogress` tasks through 4 mandatory quality gates (Architecture → Explore → Execution → QA Verify). Analyzes task dependencies to determine execution mode: **parallel** (multiple independent chains via agent teams) or **sequential** (single chain, team lead executes directly).
 
 ## Model Selection
 
@@ -20,7 +20,7 @@ Automated execution of Vibe Kanban `inprogress` tasks through 4 mandatory qualit
 | Edit code | `Edit(file_path=..., old_string=...)` | `Task(subagent_type=product-executor, prompt="Implement...")` |
 | Research | Multiple Grep/Read calls | `Task(subagent_type=Explore, prompt="Research how X works...")` |
 
-**Exception:** MCP tools (Vibe Kanban, git, gh) can be called directly.
+**Exception:** MCP tools (Backlog, git, gh) can be called directly.
 
 ### 2. NO Assumptions, NO Feature Cuts
 Never guess, assume, or reduce functionality. If unclear, ask the user.
@@ -46,7 +46,7 @@ All tasks share a single feature branch and PR. Git operations must be serialize
 ## Available MCP Servers
 | Server | Purpose | Usage |
 |--------|---------|-------|
-| **Vibe Kanban** | Task tracking | `mcp__vibe_kanban__*` - Project ID: `9cad311d-e4b4-4861-bf89-4fe6bad3ce8b` |
+| **Backlog** | Task tracking (MCP) | `mcp__backlog__*` |
 | **Context7** | Library docs | `mcp__context7__*` - ALWAYS check before writing library code |
 | **Playwright** | Visual verification, E2E, bug research | `mcp__playwright__*` - Use for QA verification |
 | **Sentry** | Error tracking, issue investigation | `mcp__sentry__*` - Check for production errors |
@@ -69,7 +69,7 @@ Reference before making changes to related areas:
 
 1. Check `.claude/handoff.yaml` for session continuity
 2. Study @CLAUDE.md for project conventions
-3. Query Vibe Kanban for all `inprogress` tasks (project: `9cad311d-e4b4-4861-bf89-4fe6bad3ce8b`)
+3. Query Backlog for all `inprogress` tasks using `mcp__backlog__task_search`
 4. Read each task description to understand dependencies
 5. **Build dependency graph** — identify which tasks depend on each other and which are independent
 6. **Determine chain count** — each independent subgraph becomes its own chain
@@ -119,11 +119,11 @@ Read the corresponding agent technical prompt file BEFORE executing the stage yo
 
 #### Stage 1: Architecture
 - Spawn a `product-architecture-spec` subagent via Task tool
-- Pass it the Vibe Kanban task description
+- Pass it the task description from Backlog
 - If the task already has a detailed spec, the architect validates it and identifies file paths
 - If the spec is thin, the architect enhances it with implementation details
 - The architect self-validates the plan (acceptance criteria coverage, edge cases, test strategy)
-- **DO NOT create subtasks** — return plan as text, update existing task in Vibe Kanban
+- **DO NOT create subtasks** — return plan as text, update existing task in Backlog using `mcp__backlog__task_edit`
 - **Checkpoint:** `ARCHITECTURE_DONE`
 
 #### Stage 2: Explore Verification
@@ -172,7 +172,7 @@ gh pr create --draft --title "[FEATURE] Name" --body "..." --label "skip-visual"
 gh pr edit --remove-label "skip-visual" && gh pr ready
 ```
 
-3. Update Vibe Kanban — move all tasks to `inreview`
+3. Update Backlog — move all tasks to `inreview` using `mcp__backlog__task_edit`
 
 4. Wait for deploy + smoke:
 ```bash
@@ -197,7 +197,7 @@ When tasks have independent subgraphs, spawn teammate agents for parallel execut
 ```
 Team Lead (you)
 ├── Orchestrates workflow, manages git/PR, assigns tasks
-├── Calls MCP tools directly (Vibe Kanban, git, gh)
+├── Calls MCP tools directly (Backlog, git, gh)
 │
 ├── chain-1 (general-purpose agent)
 │   └── Executes tasks in Chain 1 sequentially through all 4 stages
@@ -212,7 +212,7 @@ Team Lead (you)
 ### Phase 1: Team Setup
 
 1. Create team with `TeamCreate`
-2. Create internal task list with `TaskCreate` — one task per Vibe Kanban ticket
+2. Create internal task list with `TaskCreate` — one task per Backlog task
 3. Set up `blockedBy` dependencies using `TaskUpdate`
 4. **Spawn one teammate per chain** — iterate over chains and spawn each in parallel
 
@@ -226,10 +226,8 @@ Task(
   prompt="You are a chain executor in a Ralph workflow.
 
 PROJECT DIRECTORY: /home/dev/learn-greek-easy
-PROJECT ID (Vibe Kanban): 9cad311d-e4b4-4861-bf89-4fe6bad3ce8b
-
 Your assigned task chain (execute IN ORDER):
-[List of task IDs, titles, and Vibe Kanban task IDs]
+[List of task IDs, titles, and Backlog task IDs]
 
 For EACH task in your chain, execute these 4 stages in order.
 CRITICAL: You MUST use the specified subagent for each stage. Do NOT implement code directly.
@@ -256,7 +254,7 @@ Read the file, internalize the instructions, then execute the stage following th
 
 ## Stage 1: Architecture
 - Spawn a `product-architecture-spec` subagent via Task tool
-- Pass it the Vibe Kanban task description and ask it to review/enhance the architecture
+- Pass it the task description from Backlog and ask it to review/enhance the architecture
 - If the task already has a detailed spec, the architect validates it and identifies file paths
 - If the spec is thin, the architect enhances it with implementation details and dependencies
 - The architect self-validates the plan (acceptance criteria coverage, edge cases, test strategy)

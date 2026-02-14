@@ -26,7 +26,7 @@ cd /Users/samosipov/Downloads/learn-greek-easy/learn-greek-easy-backend && /User
 
 | Server | Purpose |
 |--------|---------|
-| Vibe Kanban | Task tracking. Project ID: `dc7e8354-2785-455f-8aa3-7787e7de85c5` |
+| Backlog | Task tracking (MCP) |
 | Context7 | Library docs - **always check before writing code** |
 | Playwright | Visual verification, E2E testing, bug research |
 | Railway | Deployment (no destructive actions - use dashboard for deletes) |
@@ -102,12 +102,12 @@ When context is compacted (automatically or via `/compact`), a PreCompact hook s
 ### After Compaction
 If `.claude/handoff.yaml` exists with a recent timestamp:
 1. **READ IT FIRST** to restore context
-2. Check Vibe Kanban for current task details
+2. Check Backlog for current task details
 3. Continue from where you left off
 
 ### During Long Sessions
 Periodically update `.claude/handoff.yaml` with:
-- `current_task`: Vibe Kanban task ID being worked on
+- `current_task`: Task ID from Backlog being worked on
 - `progress`: What's done, what's in progress
 - `decisions`: Key choices made
 - `blockers`: Any issues encountered
