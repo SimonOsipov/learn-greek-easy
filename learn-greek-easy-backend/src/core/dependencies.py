@@ -1,10 +1,10 @@
 """Authentication dependencies for FastAPI routes.
 
 This module provides dependency injection functions for authentication:
-- get_validated_user_id: Lightweight token validation without DB access
-- get_current_user: Main auth dependency that validates token and loads user
+- get_current_user: Main auth dependency that validates Supabase token and loads/creates user
 - get_current_superuser: Admin-only dependency requiring is_superuser=True
 - get_current_user_optional: Optional auth for mixed authenticated/anonymous endpoints
+- get_or_create_user: Auto-provision users from Supabase JWT claims
 
 Usage:
     from src.core.dependencies import get_current_user, get_current_superuser
@@ -18,56 +18,161 @@ Usage:
         return await get_all_users()
 """
 
-import uuid
 from typing import Optional
 
 from fastapi import Depends, Header, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from src.core.exceptions import (
+    ConflictException,
     ForbiddenException,
     TokenExpiredException,
     TokenInvalidException,
     UnauthorizedException,
-    UserNotFoundException,
 )
 from src.core.logging import bind_log_context
-from src.core.security import verify_token
 from src.core.sentry import set_user_context
+from src.core.supabase_auth import SupabaseUserClaims, verify_supabase_token
 from src.db.dependencies import get_db
-from src.db.models import User
+from src.db.models import User, UserSettings
 
 # HTTPBearer security scheme with auto_error=False
 # This allows us to handle missing auth gracefully for optional auth endpoints
 security_scheme = HTTPBearer(auto_error=False)
 
 
-async def get_validated_user_id(
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security_scheme),
-) -> uuid.UUID:
-    """Validate JWT token and return user ID without DB access.
+async def get_or_create_user(db: AsyncSession, claims: SupabaseUserClaims) -> User:
+    """Get or create a user based on Supabase JWT claims.
 
-    This is a lightweight auth check that validates the token structure
-    and signature without loading the user from database. Use this for
-    early-exit auth failures to avoid creating unnecessary DB sessions.
+    This function implements auto-provisioning: on first login with a valid
+    Supabase token, a new user record is created automatically.
 
-    Note: This dependency relies on FastAPI's observed left-to-right execution
-    order when used alongside other dependencies. While not guaranteed by the
-    framework, this behavior has been stable and the primary token refresh fix
-    (AUTH-03/04) prevents most expired tokens from reaching the backend anyway.
+    The function handles:
+    - Existing user lookup by supabase_id
+    - Email uniqueness validation
+    - New user creation with default UserSettings
+    - Race condition handling (concurrent first-login requests)
 
     Args:
-        credentials: HTTP Authorization credentials from Bearer token
+        db: Database session
+        claims: Verified Supabase user claims from JWT
 
     Returns:
-        UUID: The user ID extracted from the token
+        User: Existing or newly created user with settings relationship loaded
 
     Raises:
-        UnauthorizedException: If no token provided or token invalid/expired
+        ConflictException (409): If a user with the email already exists
+            with a different supabase_id (prevents account hijacking)
+
+    Note:
+        Uses db.flush() (not db.commit()) - the get_db() dependency
+        handles commit automatically after the route handler returns.
     """
+    # 1. Try to find existing user by supabase_id
+    stmt = (
+        select(User)
+        .options(selectinload(User.settings))
+        .where(User.supabase_id == claims.supabase_id)
+    )
+    result = await db.execute(stmt)
+    user = result.scalar_one_or_none()
+    if user is not None:
+        return user
+
+    # 2. Email uniqueness check (if email provided)
+    # Prevents account hijacking: user A can't use user B's email
+    if claims.email:
+        email_stmt = select(User.id).where(User.email == claims.email)
+        email_result = await db.execute(email_stmt)
+        if email_result.scalar_one_or_none() is not None:
+            raise ConflictException(
+                detail=f"A user with email {claims.email} already exists with a different account."
+            )
+
+    # 3. Handle missing email (User.email is NOT NULL)
+    # Supabase tokens always have email for email/password and OAuth flows.
+    # For phone-only auth (not currently used), generate a placeholder.
+    user_email = claims.email or f"{claims.supabase_id}@supabase.placeholder"
+
+    # 4. Create new user with IntegrityError handling for race conditions
+    new_user = User(
+        supabase_id=claims.supabase_id,
+        email=user_email,
+        full_name=claims.full_name,
+        is_active=True,
+        is_superuser=False,
+    )
+    db.add(new_user)
+    try:
+        await db.flush()  # Get the generated UUID
+    except IntegrityError:
+        await db.rollback()
+        # Race condition: another request created this user concurrently.
+        # Re-query to return the user created by the other request.
+        stmt = (
+            select(User)
+            .options(selectinload(User.settings))
+            .where(User.supabase_id == claims.supabase_id)
+        )
+        result = await db.execute(stmt)
+        user = result.scalar_one_or_none()
+        if user is not None:
+            return user
+        # If still None, the IntegrityError was from email uniqueness, not supabase_id
+        raise ConflictException(
+            detail=f"A user with email {claims.email} already exists with a different account."
+        )
+
+    # 5. Create default UserSettings
+    new_settings = UserSettings(
+        user_id=new_user.id,
+        daily_goal=20,
+        email_notifications=True,
+    )
+    db.add(new_settings)
+    await db.flush()
+
+    # 6. Reload user with settings relationship
+    await db.refresh(new_user, ["settings"])
+    return new_user
+
+
+async def get_current_user(
+    request: Request,
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security_scheme),
+    db: AsyncSession = Depends(get_db),
+) -> User:
+    """Get the current authenticated user from Supabase JWT token.
+
+    This dependency:
+    1. Extracts and verifies the Supabase JWT token
+    2. Auto-provisions new users on first login
+    3. Validates user is active
+    4. Sets up Sentry and logging context
+
+    Args:
+        request: The HTTP request (for storing user context)
+        credentials: HTTP Authorization credentials from Bearer token
+        db: Database session
+
+    Returns:
+        User: The authenticated user with settings loaded
+
+    Raises:
+        UnauthorizedException (401): If no token, invalid token, expired token,
+            or user account is deactivated
+        ConflictException (409): If email already exists with different account
+
+    Example:
+        @router.get("/me")
+        async def get_me(current_user: User = Depends(get_current_user)):
+            return UserProfileResponse.model_validate(current_user)
+    """
+    # 1. Extract Bearer token
     if not credentials:
         raise UnauthorizedException(
             detail="Authentication required. Please provide a valid access token."
@@ -75,66 +180,32 @@ async def get_validated_user_id(
 
     token = credentials.credentials
 
+    # 2. Verify Supabase token and extract claims
     try:
-        user_id = verify_token(token, token_type="access")
-        return user_id
+        claims = await verify_supabase_token(token)
     except TokenExpiredException:
         raise UnauthorizedException(detail="Access token has expired. Please refresh your token.")
     except TokenInvalidException as e:
         raise UnauthorizedException(detail=f"Invalid access token: {e.detail}")
 
+    # 3. Get or create user (auto-provisioning)
+    user = await get_or_create_user(db, claims)
 
-async def get_current_user(
-    request: Request,
-    user_id: uuid.UUID = Depends(get_validated_user_id),
-    db: AsyncSession = Depends(get_db),
-) -> User:
-    """Get the current authenticated user from the JWT token.
-
-    This dependency uses get_validated_user_id for early token validation,
-    ensuring DB sessions are only created for valid tokens.
-
-    Args:
-        request: The HTTP request (for storing user context)
-        user_id: Pre-validated user ID from token
-        db: Database session (only created after token validation)
-
-    Returns:
-        User: The authenticated user with settings loaded
-
-    Raises:
-        UnauthorizedException: If user is inactive
-        UserNotFoundException: If user no longer exists in database
-
-    Example:
-        @router.get("/me")
-        async def get_me(current_user: User = Depends(get_current_user)):
-            return UserProfileResponse.model_validate(current_user)
-    """
-    # Load user from database with settings
-    stmt = select(User).options(selectinload(User.settings)).where(User.id == user_id)
-    result = await db.execute(stmt)
-    user = result.scalar_one_or_none()
-
-    # Check if user exists
-    if user is None:
-        raise UserNotFoundException(user_id=str(user_id))
-
-    # Check if user is active
+    # 4. Check if user is active
     if not user.is_active:
         raise UnauthorizedException(detail="User account has been deactivated.")
 
-    # Set Sentry user context for error tracking
+    # 5. Set Sentry user context for error tracking
     set_user_context(
         user_id=str(user.id),
         email=user.email,
         username=user.full_name,
     )
 
-    # Bind user context for logging - all subsequent logs will include user_id
+    # 6. Bind user context for logging - all subsequent logs will include user_id
     bind_log_context(user_id=str(user.id))
 
-    # Store user email in request state for exception handlers
+    # 7. Store user email in request state for exception handlers
     request.state.user_email = user.email
 
     return user
@@ -183,13 +254,18 @@ async def get_current_user_optional(
     vs anonymous users. For example, showing personalized content for
     logged-in users but generic content for anonymous visitors.
 
+    Uses the same Supabase token verification and auto-provisioning as
+    get_current_user, but returns None for any auth failures instead of
+    raising exceptions.
+
     Args:
+        request: The HTTP request (for storing user context)
         credentials: HTTP Authorization credentials from Bearer token (optional)
-        db: Database session (injected)
+        db: Database session
 
     Returns:
         Optional[User]: The authenticated user if valid token provided,
-            None if no token or token invalid
+            None if no token, invalid token, or user inactive
 
     Example:
         @router.get("/decks")
@@ -209,20 +285,22 @@ async def get_current_user_optional(
 
     token = credentials.credentials
 
-    # Try to verify the token
+    # Try to verify the Supabase token
     try:
-        user_id = verify_token(token, token_type="access")
-    except (TokenExpiredException, TokenInvalidException):
-        # Invalid token - treat as anonymous
+        claims = await verify_supabase_token(token)
+    except (TokenExpiredException, TokenInvalidException, UnauthorizedException):
+        # Invalid/expired token or Supabase not configured - treat as anonymous
         return None
 
-    # Load user from database with settings
-    stmt = select(User).options(selectinload(User.settings)).where(User.id == user_id)
-    result = await db.execute(stmt)
-    user = result.scalar_one_or_none()
+    # Try to get or create user
+    try:
+        user = await get_or_create_user(db, claims)
+    except ConflictException:
+        # Email conflict - treat as anonymous (edge case)
+        return None
 
-    # User not found or inactive - treat as anonymous
-    if user is None or not user.is_active:
+    # User inactive - treat as anonymous
+    if not user.is_active:
         return None
 
     # Set Sentry user context for error tracking
@@ -299,6 +377,6 @@ __all__ = [
     "get_current_superuser",
     "get_current_user_optional",
     "get_locale_from_header",
-    "get_validated_user_id",
+    "get_or_create_user",
     "security_scheme",
 ]
