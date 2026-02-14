@@ -247,6 +247,25 @@ export const MCQComponent: React.FC<MCQComponentProps> = ({
             </p>
           )}
 
+          {/* Question text - KEEP EXACTLY AS-IS */}
+          <h2
+            id={questionId}
+            className="mb-1 font-cult-serif text-[19px] font-semibold leading-[1.5] tracking-[-0.01em] text-slate-900"
+            data-testid="mcq-question-text"
+          >
+            {questionText}
+          </h2>
+
+          {/* Audio waveform player placeholder */}
+          {question.audio_url && (
+            <WaveformPlayer
+              audioUrl={question.audio_url}
+              onPlay={handleAudioPlay}
+              onComplete={handleAudioComplete}
+              onSpeedChange={handleAudioSpeedChange}
+            />
+          )}
+
           {/* Question image - KEEP EXACTLY AS-IS */}
           {question.image_url && (
             <SourceImage
@@ -259,25 +278,6 @@ export const MCQComponent: React.FC<MCQComponentProps> = ({
               onSourceClick={handleSourceLinkClick}
             />
           )}
-
-          {/* Audio waveform player placeholder */}
-          {question.audio_url && (
-            <WaveformPlayer
-              audioUrl={question.audio_url}
-              onPlay={handleAudioPlay}
-              onComplete={handleAudioComplete}
-              onSpeedChange={handleAudioSpeedChange}
-            />
-          )}
-
-          {/* Question text - KEEP EXACTLY AS-IS */}
-          <h2
-            id={questionId}
-            className="mb-1 font-cult-serif text-[19px] font-semibold leading-[1.5] tracking-[-0.01em] text-slate-900"
-            data-testid="mcq-question-text"
-          >
-            {questionText}
-          </h2>
 
           {/* Standalone source article link (no-image fallback) */}
           {!question.image_url && question.original_article_url?.startsWith('http') && (

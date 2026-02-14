@@ -132,30 +132,31 @@ export const ExplanationCard: FC<ExplanationCardProps> = ({
           </p>
         )}
 
-        {/* Source article link */}
-        {sourceArticleUrl && sourceArticleUrl.startsWith('http') && (
-          <a
-            href={sourceArticleUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-4 flex items-center gap-2 text-sm text-primary hover:underline"
-            data-testid="source-article-link"
-            onClick={handleSourceLinkClick}
-          >
-            <ExternalLink className="h-4 w-4" />
-            {t('feedback.sourceArticle', 'Source article')}
-          </a>
-        )}
+        {/* Source article link and report error button row */}
+        <div className="mt-4 flex items-center justify-between">
+          {/* Source article link */}
+          {sourceArticleUrl && sourceArticleUrl.startsWith('http') && (
+            <a
+              href={sourceArticleUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 text-sm text-primary hover:underline"
+              data-testid="source-article-link"
+              onClick={handleSourceLinkClick}
+            >
+              <ExternalLink className="h-4 w-4" />
+              {t('feedback.sourceArticle', 'Source article')}
+            </a>
+          )}
 
-        {/* Report error button */}
-        {cardId && (
-          <div className="mt-4 flex justify-start">
+          {/* Report error button */}
+          {cardId && (
             <ReportErrorButton
               onClick={() => setIsReportModalOpen(true)}
               data-testid="culture-report-error-button"
             />
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Report error modal */}
