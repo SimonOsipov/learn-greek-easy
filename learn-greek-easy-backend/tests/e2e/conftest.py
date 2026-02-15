@@ -18,18 +18,14 @@ Usage:
 
 from collections.abc import Generator
 from datetime import datetime, timedelta
-from typing import NamedTuple, Optional
+from typing import NamedTuple
 from uuid import UUID, uuid4
 
 import pytest
 import pytest_asyncio
-from fastapi import Depends
-from fastapi.security import HTTPAuthorizationCredentials
 from httpx import AsyncClient, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.dependencies import security_scheme
-from src.core.exceptions import UnauthorizedException
 from src.db.models import Card, Deck, User
 from tests.base import AuthenticatedTestCase
 from tests.factories.base import BaseFactory
@@ -144,7 +140,7 @@ class E2ETestCase(AuthenticatedTestCase):
     ) -> UserSession:
         """Create user via test seed endpoint and return authenticated session.
 
-        Uses dependency override for authentication (no real Supabase tokens in tests).
+        Uses token-based registry for authentication (no real Supabase tokens in tests).
 
         Args:
             client: AsyncClient instance
@@ -161,6 +157,7 @@ class E2ETestCase(AuthenticatedTestCase):
         """
         from src.core.dependencies import get_current_user
         from src.main import app
+        from tests.fixtures.auth import _get_override_function, _test_user_registry
 
         if email is None:
             email = f"e2e_user_{uuid4().hex[:8]}@example.com"
@@ -185,17 +182,18 @@ class E2ETestCase(AuthenticatedTestCase):
             )
             db_user = result.scalar_one()
 
-            # FastAPI requires async function for async dependency override
-            async def override_get_current_user(
-                credentials: Optional[HTTPAuthorizationCredentials] = Depends(security_scheme),
-            ):
-                if not credentials:
-                    raise UnauthorizedException(
-                        detail="Authentication required. Please provide a valid access token."
-                    )
-                return db_user
+            # Generate unique token and register user
+            token = f"test-e2e-user-{user_id}"
+            _test_user_registry[token] = db_user
 
-            app.dependency_overrides[get_current_user] = override_get_current_user
+            # Set up single override function if not already set
+            if get_current_user not in app.dependency_overrides:
+                app.dependency_overrides[get_current_user] = _get_override_function()
+
+            headers = {"Authorization": f"Bearer {token}"}
+        else:
+            # Fallback for tests that don't provide db_session
+            headers = {"Authorization": "Bearer test-supabase-token"}
 
         # Create user-like object from response
         class UserInfo:
@@ -206,7 +204,6 @@ class E2ETestCase(AuthenticatedTestCase):
                 self.email = data["email"]
                 self.full_name = full_name
 
-        headers = {"Authorization": "Bearer test-supabase-token"}
         return UserSession(user=UserInfo(user_data), headers=headers)
 
     # -------------------------------------------------------------------------
@@ -478,7 +475,7 @@ async def fresh_user_session(
     """Create new user via test seed endpoint and return authenticated session.
 
     This fixture creates a fresh user through the test seed API and sets up
-    dependency override for authentication.
+    dependency override for authentication using token-based registry.
 
     Args:
         client: AsyncClient fixture
@@ -492,6 +489,7 @@ async def fresh_user_session(
 
     from src.core.dependencies import get_current_user
     from src.main import app
+    from tests.fixtures.auth import _get_override_function, _test_user_registry
 
     email = f"e2e_fresh_{uuid4().hex[:8]}@example.com"
     full_name = "Fresh E2E User"
@@ -512,17 +510,13 @@ async def fresh_user_session(
     )
     db_user = result.scalar_one()
 
-    # FastAPI requires async function for async dependency override
-    async def override_get_current_user(
-        credentials: Optional[HTTPAuthorizationCredentials] = Depends(security_scheme),
-    ):
-        if not credentials:
-            raise UnauthorizedException(
-                detail="Authentication required. Please provide a valid access token."
-            )
-        return db_user
+    # Generate unique token and register user
+    token = f"test-fresh-user-{user_id}"
+    _test_user_registry[token] = db_user
 
-    app.dependency_overrides[get_current_user] = override_get_current_user
+    # Set up single override function if not already set
+    if get_current_user not in app.dependency_overrides:
+        app.dependency_overrides[get_current_user] = _get_override_function()
 
     class UserInfo:
         """Lightweight user representation."""
@@ -532,8 +526,12 @@ async def fresh_user_session(
             self.email = data["email"]
             self.full_name = full_name
 
-    headers = {"Authorization": "Bearer test-supabase-token"}
-    return UserSession(user=UserInfo(user_data), headers=headers)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    yield UserSession(user=UserInfo(user_data), headers=headers)
+
+    # Cleanup: Remove user from registry
+    _test_user_registry.pop(token, None)
 
 
 @pytest_asyncio.fixture

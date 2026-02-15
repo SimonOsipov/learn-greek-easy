@@ -41,6 +41,40 @@ from src.core.exceptions import UnauthorizedException
 from src.db.models import User, UserSettings
 
 # =============================================================================
+# Token-Based User Registry for Multi-User Test Support
+# =============================================================================
+
+# Module-level user registry: token string → User object
+# This allows multiple fixtures to register different users simultaneously
+_test_user_registry: dict[str, User] = {}
+
+
+def _get_override_function():
+    """Return a single override function that routes requests by token value.
+
+    This enables tests to use multiple auth fixtures (e.g., auth_headers +
+    superuser_auth_headers) without the fixtures trampling each other's
+    dependency overrides.
+    """
+
+    async def override_get_current_user(
+        credentials: Optional[HTTPAuthorizationCredentials] = Depends(security_scheme),
+    ):
+        if not credentials:
+            raise UnauthorizedException(
+                detail="Authentication required. Please provide a valid access token."
+            )
+
+        token = credentials.credentials
+        user = _test_user_registry.get(token)
+        if user is None:
+            raise UnauthorizedException(detail="Invalid test token")
+        return user
+
+    return override_get_current_user
+
+
+# =============================================================================
 # Type Definitions
 # =============================================================================
 
@@ -235,6 +269,7 @@ async def auth_headers(test_user) -> dict[str, str]:
     - Returns Authorization headers for HTTP requests
     - Sets up dependency override to inject test_user into get_current_user
     - Works with the client fixture automatically
+    - Uses token-based registry for multi-user test support
 
     Args:
         test_user: The test user fixture (automatically overrides get_current_user).
@@ -251,19 +286,21 @@ async def auth_headers(test_user) -> dict[str, str]:
     from src.core.dependencies import get_current_user
     from src.main import app
 
-    # Set up dependency override for get_current_user
-    async def override_get_current_user(
-        credentials: Optional[HTTPAuthorizationCredentials] = Depends(security_scheme),
-    ):
-        if not credentials:
-            raise UnauthorizedException(
-                detail="Authentication required. Please provide a valid access token."
-            )
-        return test_user
+    # Generate unique token for this user
+    token = f"test-user-{test_user.id}"
+    _test_user_registry[token] = test_user
 
-    app.dependency_overrides[get_current_user] = override_get_current_user
+    # Set up single override function if not already set
+    if get_current_user not in app.dependency_overrides:
+        app.dependency_overrides[get_current_user] = _get_override_function()
 
-    return create_auth_headers()
+    # Return headers with unique token
+    headers = {"Authorization": f"Bearer {token}"}
+
+    yield headers
+
+    # Cleanup: Remove user from registry
+    _test_user_registry.pop(token, None)
 
 
 @pytest_asyncio.fixture
@@ -274,6 +311,7 @@ async def superuser_auth_headers(test_superuser) -> dict[str, str]:
     - Returns Authorization headers for HTTP requests
     - Sets up dependency override to inject test_superuser into get_current_user
     - Works with the client fixture automatically
+    - Uses token-based registry for multi-user test support
 
     Args:
         test_superuser: The test superuser fixture (automatically overrides get_current_user).
@@ -291,19 +329,21 @@ async def superuser_auth_headers(test_superuser) -> dict[str, str]:
     from src.core.dependencies import get_current_user
     from src.main import app
 
-    # Set up dependency override for get_current_user
-    async def override_get_current_user(
-        credentials: Optional[HTTPAuthorizationCredentials] = Depends(security_scheme),
-    ):
-        if not credentials:
-            raise UnauthorizedException(
-                detail="Authentication required. Please provide a valid access token."
-            )
-        return test_superuser
+    # Generate unique token for this superuser
+    token = f"test-superuser-{test_superuser.id}"
+    _test_user_registry[token] = test_superuser
 
-    app.dependency_overrides[get_current_user] = override_get_current_user
+    # Set up single override function if not already set
+    if get_current_user not in app.dependency_overrides:
+        app.dependency_overrides[get_current_user] = _get_override_function()
 
-    return create_auth_headers()
+    # Return headers with unique token
+    headers = {"Authorization": f"Bearer {token}"}
+
+    yield headers
+
+    # Cleanup: Remove user from registry
+    _test_user_registry.pop(token, None)
 
 
 # =============================================================================
