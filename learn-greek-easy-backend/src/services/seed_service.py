@@ -1887,10 +1887,14 @@ class SeedService:
             )
             supabase_id: str = supabase_user["id"]
             return supabase_id
-        except Exception:
+        except Exception as e:
             logger.warning(
                 "Failed to create Supabase Auth user, proceeding with DB-only",
-                extra={"email_domain": email.split("@")[-1]},
+                extra={
+                    "email_domain": email.split("@")[-1],
+                    "error": str(e),
+                    "error_type": type(e).__name__,
+                },
             )
             return None
 

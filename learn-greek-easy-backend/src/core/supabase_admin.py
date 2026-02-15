@@ -83,15 +83,17 @@ class SupabaseAdminClient:
                     )
                     return data
 
+                error_body = await response.text()
                 logger.error(
                     "Supabase user creation failed",
                     extra={
                         "status_code": response.status_code,
                         "email_domain": email.split("@")[-1],
+                        "error_body": error_body,
                     },
                 )
                 raise SupabaseAdminError(
-                    detail=f"Failed to create user in Supabase: {response.status_code}"
+                    detail=f"Failed to create user in Supabase: {response.status_code} - {error_body}"
                 )
 
         except SupabaseAdminError:
