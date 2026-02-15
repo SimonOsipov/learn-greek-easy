@@ -179,7 +179,7 @@ class TestInvalidTokens:
     """Tests for invalid token handling."""
 
     @pytest.mark.asyncio
-    async def test_expired_token_raises_exception(self, mock_settings):
+    async def test_expired_token_raises_exception(self, mock_settings, mock_jwks_response):
         """Test that expired token raises TokenExpiredException."""
         expired_payload = {
             "sub": str(uuid4()),
@@ -190,15 +190,21 @@ class TestInvalidTokens:
             "iat": int((datetime.utcnow() - timedelta(hours=2)).timestamp()),
         }
 
-        token = jwt.encode({"alg": "HS256"}, expired_payload, mock_settings.supabase_jwt_secret)
+        with patch("src.core.supabase_auth.httpx.AsyncClient") as mock_client:
+            mock_response = AsyncMock()
+            mock_response.status_code = 200
+            mock_response.json.return_value = mock_jwks_response
+            mock_client.return_value.__aenter__.return_value.get.return_value = mock_response
 
-        with pytest.raises(TokenExpiredException) as exc_info:
-            await verify_supabase_token(token)
+            token = jwt.encode({"alg": "HS256"}, expired_payload, mock_settings.supabase_jwt_secret)
 
-        assert "expired" in str(exc_info.value.detail).lower()
+            with pytest.raises(TokenExpiredException) as exc_info:
+                await verify_supabase_token(token)
+
+            assert "expired" in str(exc_info.value.detail).lower()
 
     @pytest.mark.asyncio
-    async def test_invalid_signature_raises_exception(self, mock_settings):
+    async def test_invalid_signature_raises_exception(self, mock_settings, mock_jwks_response):
         """Test that invalid signature raises TokenInvalidException."""
         payload = {
             "sub": str(uuid4()),
@@ -209,13 +215,19 @@ class TestInvalidTokens:
             "iat": int(datetime.utcnow().timestamp()),
         }
 
-        # Create token with wrong secret
-        token = jwt.encode({"alg": "HS256"}, payload, "wrong-secret")
+        with patch("src.core.supabase_auth.httpx.AsyncClient") as mock_client:
+            mock_response = AsyncMock()
+            mock_response.status_code = 200
+            mock_response.json.return_value = mock_jwks_response
+            mock_client.return_value.__aenter__.return_value.get.return_value = mock_response
 
-        with pytest.raises(TokenInvalidException) as exc_info:
-            await verify_supabase_token(token)
+            # Create token with wrong secret
+            token = jwt.encode({"alg": "HS256"}, payload, "wrong-secret")
 
-        assert "invalid" in str(exc_info.value.detail).lower()
+            with pytest.raises(TokenInvalidException) as exc_info:
+                await verify_supabase_token(token)
+
+            assert "invalid" in str(exc_info.value.detail).lower()
 
     @pytest.mark.asyncio
     async def test_missing_sub_raises_exception(self, mock_settings, mock_jwks_response):

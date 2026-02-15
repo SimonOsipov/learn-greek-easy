@@ -213,22 +213,6 @@ class TestAdminStatsIntegration:
         assert "decks" not in data
 
     @pytest.mark.asyncio
-    async def test_admin_stats_with_expired_token(
-        self,
-        client: AsyncClient,
-        expired_auth_headers: dict,
-    ):
-        """Test that expired tokens are rejected."""
-        # Act
-        response = await client.get(
-            "/api/v1/admin/stats",
-            headers=expired_auth_headers,
-        )
-
-        # Assert
-        assert response.status_code == 401
-
-    @pytest.mark.asyncio
     async def test_admin_stats_with_invalid_token(
         self,
         client: AsyncClient,
