@@ -1860,11 +1860,15 @@ class SeedService:
     # User Seeding
     # =====================
 
-    async def _create_supabase_auth_user(self, email: str, full_name: str) -> str | None:
-        """Create a user in Supabase Auth, returning the Supabase UUID.
+    async def _get_or_create_supabase_auth_user(self, email: str, full_name: str) -> str | None:
+        """Get existing Supabase Auth user or create if not exists.
 
-        Idempotent: deletes existing Supabase Auth user before recreating.
-        Returns None if Supabase is not configured or creation fails.
+        For stable CI environments: uses existing Supabase users to avoid
+        deletion/recreation issues. Assumes password is already set correctly.
+
+        Returns:
+            Supabase UUID if user exists or was created successfully
+            None if Supabase is not configured or operation fails
         """
         from src.core.supabase_admin import get_supabase_admin_client
 
@@ -1873,23 +1877,35 @@ class SeedService:
             return None
 
         try:
-            # Idempotency: delete existing user if present
+            # Check if user already exists in Supabase Auth
             existing = await admin_client.list_users_by_email(email)
             if existing:
-                await admin_client.delete_user(existing[0]["id"])
+                supabase_id: str = existing[0]["id"]
+                logger.info(
+                    "Using existing Supabase Auth user",
+                    extra={
+                        "email_domain": email.split("@")[-1],
+                        "supabase_id_prefix": supabase_id[:8],
+                    },
+                )
+                return supabase_id
 
-            # Create fresh Supabase Auth user
+            # Create new Supabase Auth user (first-time setup)
             supabase_user = await admin_client.create_user(
                 email=email,
                 password=self.DEFAULT_PASSWORD,
                 email_confirm=True,
                 user_metadata={"full_name": full_name},
             )
-            supabase_id: str = supabase_user["id"]
+            supabase_id = supabase_user["id"]
+            logger.info(
+                "Created new Supabase Auth user",
+                extra={"email_domain": email.split("@")[-1]},
+            )
             return supabase_id
         except Exception as e:
             logger.warning(
-                "Failed to create Supabase Auth user, proceeding with DB-only",
+                "Failed to get/create Supabase Auth user, proceeding with DB-only",
                 extra={
                     "email_domain": email.split("@")[-1],
                     "error": str(e),
@@ -1901,15 +1917,17 @@ class SeedService:
     async def seed_users(self) -> dict[str, Any]:
         """Create deterministic test users for E2E scenarios.
 
-        Creates users in both Supabase Auth (via Admin API) and the app database.
-        Each user gets a matching supabase_id so they can authenticate via
-        supabase.auth.signInWithPassword().
+        Uses existing Supabase Auth users (stable CI environment) or creates them
+        if they don't exist (first-time setup). Local DB users are recreated on
+        each seed to ensure clean state.
 
         Test Users Created:
         1. e2e_learner@test.com - Regular learner with progress
         2. e2e_beginner@test.com - New user, no progress
         3. e2e_advanced@test.com - Advanced user, high progress
         4. e2e_admin@test.com - Admin user for admin tests
+
+        Password: TestPassword123! (assumed to be already set in Supabase)
 
         Returns:
             dict with 'users' list of created user data
@@ -1952,8 +1970,8 @@ class SeedService:
             email = str(user_data["email"])
             full_name = str(user_data["full_name"])
 
-            # Create in Supabase Auth first (idempotent)
-            supabase_id = await self._create_supabase_auth_user(
+            # Get existing or create Supabase Auth user
+            supabase_id = await self._get_or_create_supabase_auth_user(
                 email=email,
                 full_name=full_name,
             )
