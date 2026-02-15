@@ -25,7 +25,7 @@ Usage:
 """
 
 from collections.abc import AsyncGenerator
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Any, NamedTuple
 from uuid import uuid4
 
@@ -35,28 +35,17 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from src.core.security import create_access_token, create_refresh_token
-from src.db.models import RefreshToken, User, UserSettings
+from src.db.models import User, UserSettings
 
 # =============================================================================
 # Type Definitions
 # =============================================================================
 
 
-class AuthTokens(NamedTuple):
-    """Container for access and refresh tokens with expiry info."""
-
-    access_token: str
-    refresh_token: str
-    access_expires: datetime
-    refresh_expires: datetime
-
-
 class AuthenticatedUser(NamedTuple):
-    """Container for user with tokens and headers."""
+    """Container for user with headers."""
 
     user: User
-    tokens: AuthTokens
     headers: dict[str, str]
 
 
@@ -71,12 +60,11 @@ def create_test_user_data(
     is_active: bool = True,
     is_superuser: bool = False,
     email_verified: bool = False,
-    auth0_id: str | None = None,
+    supabase_id: str | None = None,
 ) -> dict[str, Any]:
     """Create test user data dictionary.
 
-    All test users are created as Auth0-style users (no password hash)
-    since password-based authentication has been removed.
+    All test users are created with Supabase authentication.
 
     Args:
         email: User email (auto-generated if None)
@@ -84,7 +72,7 @@ def create_test_user_data(
         is_active: Whether user account is active
         is_superuser: Whether user has superuser privileges
         email_verified: Whether email is verified
-        auth0_id: Auth0 user ID (auto-generated if None)
+        supabase_id: Supabase user ID (auto-generated UUID if None)
 
     Returns:
         dict: User data ready for User model creation
@@ -92,17 +80,17 @@ def create_test_user_data(
     if email is None:
         email = f"testuser_{uuid4().hex[:8]}@example.com"
 
-    if auth0_id is None:
-        auth0_id = f"auth0|test_{uuid4().hex[:16]}"
+    if supabase_id is None:
+        supabase_id = str(uuid4())
 
     return {
         "email": email,
-        "password_hash": None,  # Auth0 users don't have password
+        "password_hash": None,  # Supabase handles authentication
         "full_name": full_name,
         "is_active": is_active,
         "is_superuser": is_superuser,
         "email_verified_at": datetime.utcnow() if email_verified else None,
-        "auth0_id": auth0_id,
+        "supabase_id": supabase_id,
     }
 
 
@@ -143,36 +131,16 @@ async def create_user_with_settings(
     return user
 
 
-def create_tokens_for_user(user: User) -> AuthTokens:
-    """Create JWT tokens for a user.
-
-    Args:
-        user: User to create tokens for
-
-    Returns:
-        AuthTokens: Container with access and refresh tokens
-    """
-    access_token, access_expires = create_access_token(user.id)
-    refresh_token, refresh_expires, _ = create_refresh_token(user.id)
-
-    return AuthTokens(
-        access_token=access_token,
-        refresh_token=refresh_token,
-        access_expires=access_expires,
-        refresh_expires=refresh_expires,
-    )
-
-
-def create_auth_headers(access_token: str) -> dict[str, str]:
+def create_auth_headers() -> dict[str, str]:
     """Create Authorization headers for HTTP requests.
 
-    Args:
-        access_token: JWT access token
+    In Supabase auth testing, the actual token value doesn't matter
+    because we use dependency overrides to inject the user.
 
     Returns:
-        dict: Headers with Bearer token
+        dict: Headers with dummy Bearer token
     """
-    return {"Authorization": f"Bearer {access_token}"}
+    return {"Authorization": "Bearer test-supabase-token"}
 
 
 # =============================================================================
@@ -274,80 +242,11 @@ async def test_inactive_user(db_session: AsyncSession) -> AsyncGenerator[User, N
 
 
 # =============================================================================
-# Token Fixtures
+# Token Fixtures (Removed - Supabase handles JWT tokens)
 # =============================================================================
-
-
-@pytest_asyncio.fixture
-async def test_user_tokens(test_user: User) -> AuthTokens:
-    """Provide valid JWT tokens for the test user.
-
-    Args:
-        test_user: The test user fixture
-
-    Returns:
-        AuthTokens: Named tuple with access_token, refresh_token, and expiry times
-    """
-    return create_tokens_for_user(test_user)
-
-
-@pytest_asyncio.fixture
-async def superuser_tokens(test_superuser: User) -> AuthTokens:
-    """Provide valid JWT tokens for the superuser.
-
-    Args:
-        test_superuser: The superuser fixture
-
-    Returns:
-        AuthTokens: Named tuple with access_token, refresh_token, and expiry times
-    """
-    return create_tokens_for_user(test_superuser)
-
-
-@pytest_asyncio.fixture
-async def access_token(test_user_tokens: AuthTokens) -> str:
-    """Provide just the access token string.
-
-    Convenience fixture for tests that only need the access token.
-
-    Args:
-        test_user_tokens: The test user tokens fixture
-
-    Returns:
-        str: JWT access token
-    """
-    return test_user_tokens.access_token
-
-
-@pytest_asyncio.fixture
-async def refresh_token_value(
-    test_user: User,
-    test_user_tokens: AuthTokens,
-    db_session: AsyncSession,
-) -> str:
-    """Provide a refresh token that's stored in the database.
-
-    This fixture creates a valid refresh token AND stores it in the
-    database, which is required for token refresh operations.
-
-    Args:
-        test_user: The test user
-        test_user_tokens: The test user tokens
-        db_session: Database session
-
-    Returns:
-        str: JWT refresh token (stored in database)
-    """
-    # Store refresh token in database
-    db_refresh_token = RefreshToken(
-        user_id=test_user.id,
-        token=test_user_tokens.refresh_token,
-        expires_at=test_user_tokens.refresh_expires,
-    )
-    db_session.add(db_refresh_token)
-    await db_session.commit()
-
-    return test_user_tokens.refresh_token
+# The old token fixtures (test_user_tokens, superuser_tokens, access_token,
+# refresh_token_value) have been removed. Supabase handles JWT token generation.
+# Tests now use dependency overrides instead of self-issued tokens.
 
 
 # =============================================================================
@@ -356,43 +255,42 @@ async def refresh_token_value(
 
 
 @pytest_asyncio.fixture
-async def auth_headers(test_user_tokens: AuthTokens) -> dict[str, str]:
-    """Provide Authorization headers for the test user.
+async def auth_headers() -> dict[str, str]:
+    """Provide Authorization headers for authenticated requests.
 
-    Ready-to-use headers for making authenticated HTTP requests.
-
-    Args:
-        test_user_tokens: The test user tokens fixture
+    In Supabase testing, we use dependency overrides to inject the user,
+    so the actual token value doesn't matter. This just provides the
+    header format that the Bearer security scheme expects.
 
     Returns:
         dict: Headers with "Authorization: Bearer <token>"
 
     Example:
-        async def test_protected_endpoint(client, auth_headers):
+        async def test_protected_endpoint(client, auth_headers, test_user):
+            # Use with dependency override to inject test_user
             response = await client.get("/api/v1/me", headers=auth_headers)
             assert response.status_code == 200
     """
-    return create_auth_headers(test_user_tokens.access_token)
+    return create_auth_headers()
 
 
 @pytest_asyncio.fixture
-async def superuser_auth_headers(superuser_tokens: AuthTokens) -> dict[str, str]:
-    """Provide Authorization headers for the superuser.
+async def superuser_auth_headers() -> dict[str, str]:
+    """Provide Authorization headers for superuser requests.
 
-    Ready-to-use headers for making authenticated admin requests.
-
-    Args:
-        superuser_tokens: The superuser tokens fixture
+    Similar to auth_headers, but intended for use with test_superuser
+    dependency override.
 
     Returns:
         dict: Headers with "Authorization: Bearer <token>"
 
     Example:
-        async def test_admin_endpoint(client, superuser_auth_headers):
-            response = await client.delete("/api/v1/admin/users/123", headers=superuser_auth_headers)
+        async def test_admin_endpoint(client, superuser_auth_headers, test_superuser):
+            response = await client.delete("/api/v1/admin/users/123",
+                                          headers=superuser_auth_headers)
             assert response.status_code == 200
     """
-    return create_auth_headers(superuser_tokens.access_token)
+    return create_auth_headers()
 
 
 # =============================================================================
@@ -403,31 +301,27 @@ async def superuser_auth_headers(superuser_tokens: AuthTokens) -> dict[str, str]
 @pytest_asyncio.fixture
 async def authenticated_user(
     test_user: User,
-    test_user_tokens: AuthTokens,
     auth_headers: dict[str, str],
 ) -> AuthenticatedUser:
     """Provide a complete authenticated user bundle.
 
-    This fixture bundles together the user, their tokens, and auth headers
-    for convenient use in tests that need all of these.
+    This fixture bundles together the user and auth headers for
+    convenient use in tests.
 
     Args:
         test_user: The test user
-        test_user_tokens: The test user tokens
         auth_headers: The auth headers
 
     Returns:
-        AuthenticatedUser: Named tuple with user, tokens, and headers
+        AuthenticatedUser: Named tuple with user and headers
 
     Example:
         async def test_something(authenticated_user):
             user = authenticated_user.user
             headers = authenticated_user.headers
-            tokens = authenticated_user.tokens
     """
     return AuthenticatedUser(
         user=test_user,
-        tokens=test_user_tokens,
         headers=auth_headers,
     )
 
@@ -435,7 +329,6 @@ async def authenticated_user(
 @pytest_asyncio.fixture
 async def authenticated_superuser(
     test_superuser: User,
-    superuser_tokens: AuthTokens,
     superuser_auth_headers: dict[str, str],
 ) -> AuthenticatedUser:
     """Provide a complete authenticated superuser bundle.
@@ -444,47 +337,20 @@ async def authenticated_superuser(
 
     Args:
         test_superuser: The superuser
-        superuser_tokens: The superuser tokens
         superuser_auth_headers: The superuser auth headers
 
     Returns:
-        AuthenticatedUser: Named tuple with user, tokens, and headers
+        AuthenticatedUser: Named tuple with user and headers
     """
     return AuthenticatedUser(
         user=test_superuser,
-        tokens=superuser_tokens,
         headers=superuser_auth_headers,
     )
 
 
 # =============================================================================
-# Expired Token Fixtures (for testing expiration handling)
+# Expired/Invalid Token Fixtures (for testing error handling)
 # =============================================================================
-
-
-@pytest.fixture
-def expired_access_token() -> str:
-    """Provide an expired access token for testing expiration handling.
-
-    Creates a token that expired 1 hour ago.
-
-    Returns:
-        str: Expired JWT access token
-
-    Warning:
-        This token will fail validation. Use for testing error handling.
-    """
-    from jose import jwt
-
-    from src.config import settings
-
-    payload = {
-        "sub": str(uuid4()),
-        "exp": datetime.utcnow() - timedelta(hours=1),  # Expired 1 hour ago
-        "iat": datetime.utcnow() - timedelta(hours=2),
-        "type": "access",
-    }
-    return jwt.encode(payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
 
 
 @pytest.fixture
@@ -498,16 +364,16 @@ def invalid_token() -> str:
 
 
 @pytest.fixture
-def expired_auth_headers(expired_access_token: str) -> dict[str, str]:
-    """Provide Authorization headers with an expired token.
+def invalid_auth_headers(invalid_token: str) -> dict[str, str]:
+    """Provide Authorization headers with an invalid token.
 
     Args:
-        expired_access_token: The expired token fixture
+        invalid_token: The invalid token fixture
 
     Returns:
-        dict: Headers with expired Bearer token
+        dict: Headers with invalid Bearer token
     """
-    return create_auth_headers(expired_access_token)
+    return {"Authorization": f"Bearer {invalid_token}"}
 
 
 # =============================================================================

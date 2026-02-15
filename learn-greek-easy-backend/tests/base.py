@@ -34,7 +34,6 @@ from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from src.core.security import create_access_token
 from src.db.models import Card, Deck, DeckLevel, User, UserSettings
 
 
@@ -74,8 +73,7 @@ class BaseTestCase:
     ) -> User:
         """Create a test user in the database.
 
-        All test users are created as Auth0-style users (no password hash)
-        since password-based authentication has been removed.
+        All test users are created with Supabase authentication.
 
         Args:
             db_session: Database session
@@ -93,8 +91,8 @@ class BaseTestCase:
 
         user = User(
             email=email,
-            password_hash=None,  # Auth0 users don't have password
-            auth0_id=f"auth0|test_{uuid4().hex[:16]}",
+            password_hash=None,  # Supabase handles authentication
+            supabase_id=str(uuid4()),
             full_name=full_name,
             is_active=is_active,
             is_superuser=is_superuser,
@@ -418,43 +416,19 @@ class AuthenticatedTestCase(BaseTestCase):
     """
 
     # =========================================================================
-    # Token Utilities
+    # Auth Headers Utilities
     # =========================================================================
 
-    def create_access_token_for_user(self, user: User) -> str:
-        """Create an access token for a user.
+    def create_auth_headers(self) -> dict[str, str]:
+        """Create Authorization headers for authenticated requests.
 
-        Args:
-            user: User to create token for
-
-        Returns:
-            str: JWT access token
-        """
-        token, _ = create_access_token(user.id)
-        return token
-
-    def create_auth_headers_for_user(self, user: User) -> dict[str, str]:
-        """Create Authorization headers for a user.
-
-        Args:
-            user: User to create headers for
+        In Supabase testing, we use dependency overrides to inject the user,
+        so the actual token value doesn't matter.
 
         Returns:
             dict: Headers with Bearer token
         """
-        token = self.create_access_token_for_user(user)
-        return {"Authorization": f"Bearer {token}"}
-
-    def create_auth_headers(self, access_token: str) -> dict[str, str]:
-        """Create Authorization headers from a token.
-
-        Args:
-            access_token: JWT access token
-
-        Returns:
-            dict: Headers with Bearer token
-        """
-        return {"Authorization": f"Bearer {access_token}"}
+        return {"Authorization": "Bearer test-supabase-token"}
 
     # =========================================================================
     # Authenticated HTTP Request Helpers
@@ -593,43 +567,6 @@ class AuthenticatedTestCase(BaseTestCase):
             response: HTTP response
         """
         self.assert_response_error(response, 403)
-
-    def assert_token_valid(self, token: str) -> None:
-        """Assert that a JWT token is valid.
-
-        Args:
-            token: JWT token to validate
-
-        Raises:
-            AssertionError: If token is invalid
-        """
-        from src.core.security import verify_token
-
-        try:
-            user_id = verify_token(token, token_type="access")
-            assert user_id is not None
-        except Exception as e:
-            raise AssertionError(f"Token is invalid: {e}")
-
-    def assert_token_expired(self, token: str) -> None:
-        """Assert that a JWT token is expired.
-
-        Args:
-            token: JWT token to check
-
-        Raises:
-            AssertionError: If token is not expired
-        """
-        from src.core.exceptions import TokenExpiredException
-        from src.core.security import verify_token
-
-        try:
-            verify_token(token, token_type="access")
-            raise AssertionError("Token should be expired but is valid")
-        except TokenExpiredException:
-            pass  # Expected
-        except Exception as e:
-            raise AssertionError(f"Unexpected error: {e}")
 
 
 # =============================================================================

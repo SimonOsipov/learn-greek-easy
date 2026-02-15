@@ -3,10 +3,8 @@
 This module provides factories for authentication-related models:
 - UserFactory: User accounts with various traits
 - UserSettingsFactory: User preferences
-- RefreshTokenFactory: JWT refresh tokens
 
-All users are now created as Auth0-style users (no password hash)
-since password-based authentication has been removed.
+All users use Supabase authentication.
 
 Usage:
     # Create a regular user
@@ -23,7 +21,6 @@ Usage:
     settings = await UserSettingsFactory.create(user_id=user.id, daily_goal=50)
 """
 
-from datetime import timedelta
 from uuid import uuid4
 
 import factory
@@ -31,16 +28,15 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from src.core.security import create_refresh_token
-from src.db.models import RefreshToken, User, UserSettings
-from tests.factories.base import BaseFactory, unique_email, unique_token, utc_now
+from src.db.models import User, UserSettings
+from tests.factories.base import BaseFactory, unique_email, utc_now
 
 
 class UserFactory(BaseFactory):
     """Factory for User model.
 
     Creates test users with configurable attributes.
-    All users are created as Auth0-style users (no password hash).
+    All users use Supabase authentication.
 
     Traits:
         admin: Superuser with verified email
@@ -56,15 +52,15 @@ class UserFactory(BaseFactory):
     class Meta:
         model = User
 
-    # Default values - all users are Auth0-style (no password)
+    # Default values - Supabase authentication
     email = factory.LazyFunction(unique_email)
-    password_hash = None  # Auth0 users don't have password
+    password_hash = None  # Supabase handles authentication
     full_name = factory.Faker("name")
     is_active = True
     is_superuser = False
     email_verified_at = None
     google_id = None
-    auth0_id = factory.LazyFunction(lambda: f"auth0|test_{uuid4().hex[:16]}")
+    supabase_id = factory.LazyFunction(lambda: str(uuid4()))
     last_login_at = None
     last_login_ip = None
 
@@ -170,69 +166,6 @@ class UserSettingsFactory(BaseFactory):
         )
 
 
-class RefreshTokenFactory(BaseFactory):
-    """Factory for RefreshToken model.
-
-    Creates JWT refresh tokens for session management testing.
-
-    Traits:
-        expired: Token with past expiration
-
-    Example:
-        token = await RefreshTokenFactory.create(user_id=user.id)
-        expired_token = await RefreshTokenFactory.create(user_id=user.id, expired=True)
-    """
-
-    class Meta:
-        model = RefreshToken
-
-    # Required: Must be provided
-    user_id = None  # Must be set explicitly
-
-    # Token data
-    token = factory.LazyFunction(unique_token)
-    expires_at = factory.LazyFunction(lambda: utc_now() + timedelta(days=7))
-
-    class Params:
-        """Factory traits for common variations."""
-
-        # Expired token
-        expired = factory.Trait(
-            expires_at=factory.LazyFunction(lambda: utc_now() - timedelta(hours=1)),
-        )
-
-        # Soon to expire (within 1 hour)
-        expiring_soon = factory.Trait(
-            expires_at=factory.LazyFunction(lambda: utc_now() + timedelta(minutes=30)),
-        )
-
-    @classmethod
-    async def create_for_user(
-        cls,
-        user: User,
-        session: AsyncSession | None = None,
-        **kwargs,
-    ) -> tuple[RefreshToken, str]:
-        """Create a refresh token for a user with the actual JWT.
-
-        Uses the application's create_refresh_token function.
-
-        Args:
-            user: User to create token for
-            session: Database session
-            **kwargs: Field overrides
-
-        Returns:
-            Tuple of (RefreshToken model, JWT string)
-        """
-        jwt_token, expires_at = create_refresh_token(user.id)
-
-        db_token = await cls.create(
-            session=session,
-            user_id=user.id,
-            token=jwt_token,
-            expires_at=expires_at,
-            **kwargs,
-        )
-
-        return db_token, jwt_token
+# RefreshTokenFactory removed - Supabase handles refresh tokens
+# The old RefreshToken model and factory are no longer needed since
+# Supabase manages session and token refresh.

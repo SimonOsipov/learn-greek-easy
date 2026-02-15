@@ -12,10 +12,9 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.security import verify_token
 from src.db.models import DeckLevel, User
 from tests.base import AuthenticatedTestCase, BaseTestCase
-from tests.fixtures.auth import AuthenticatedUser, AuthTokens
+from tests.fixtures.auth import AuthenticatedUser
 
 # =============================================================================
 # BaseTestCase Tests
@@ -182,49 +181,26 @@ class TestBaseTestCaseAssertions(BaseTestCase):
 # =============================================================================
 
 
-class TestAuthenticatedTestCaseTokenUtilities(AuthenticatedTestCase):
-    """Tests for AuthenticatedTestCase token utilities."""
+class TestAuthenticatedTestCaseAuthUtilities(AuthenticatedTestCase):
+    """Tests for AuthenticatedTestCase auth utilities."""
 
-    async def test_create_access_token_for_user(self, db_session: AsyncSession):
-        """Test creating access token for user."""
-        user = await self.create_test_user(db_session)
-        token = self.create_access_token_for_user(user)
-
-        assert token is not None
-        assert isinstance(token, str)
-        assert len(token) > 50  # JWT tokens are typically long
-
-    async def test_create_auth_headers_for_user(self, db_session: AsyncSession):
-        """Test creating auth headers for user."""
-        user = await self.create_test_user(db_session)
-        headers = self.create_auth_headers_for_user(user)
+    def test_create_auth_headers(self):
+        """Test creating auth headers."""
+        headers = self.create_auth_headers()
 
         assert "Authorization" in headers
         assert headers["Authorization"].startswith("Bearer ")
-
-    def test_create_auth_headers_from_token(self):
-        """Test creating auth headers from token string."""
-        token = "test-token-value"
-        headers = self.create_auth_headers(token)
-
-        assert headers["Authorization"] == "Bearer test-token-value"
+        assert headers["Authorization"] == "Bearer test-supabase-token"
 
 
 class TestAuthenticatedTestCaseAssertions(AuthenticatedTestCase):
     """Tests for AuthenticatedTestCase assertion helpers."""
 
-    async def test_assert_token_valid(self, db_session: AsyncSession):
-        """Test validating a valid token."""
-        user = await self.create_test_user(db_session)
-        token = self.create_access_token_for_user(user)
-
+    async def test_assert_unauthorized(self, client: AsyncClient):
+        """Test detecting unauthorized response."""
+        response = await client.get("/api/v1/auth/me")
         # Should not raise
-        self.assert_token_valid(token)
-
-    async def test_assert_token_expired(self, expired_access_token: str):
-        """Test detecting an expired token."""
-        # Should not raise (token is expected to be expired)
-        self.assert_token_expired(expired_access_token)
+        self.assert_unauthorized(response)
 
 
 # =============================================================================
@@ -268,30 +244,7 @@ class TestAuthFixturesUserCreation:
         assert user1.email != user2.email
 
 
-class TestAuthFixturesTokenCreation:
-    """Tests for auth fixture token creation."""
-
-    async def test_test_user_tokens_fixture(self, test_user_tokens: AuthTokens):
-        """Test that test_user_tokens creates valid tokens."""
-        assert test_user_tokens is not None
-        assert test_user_tokens.access_token is not None
-        assert test_user_tokens.refresh_token is not None
-        assert test_user_tokens.access_expires is not None
-        assert test_user_tokens.refresh_expires is not None
-
-    async def test_access_token_is_valid(
-        self,
-        test_user: User,
-        test_user_tokens: AuthTokens,
-    ):
-        """Test that access token can be verified."""
-        user_id = verify_token(test_user_tokens.access_token, token_type="access")
-        assert user_id == test_user.id
-
-    async def test_superuser_tokens_fixture(self, superuser_tokens: AuthTokens):
-        """Test that superuser_tokens creates valid tokens."""
-        assert superuser_tokens is not None
-        assert superuser_tokens.access_token is not None
+# Token creation tests removed - Supabase handles JWT tokens
 
 
 class TestAuthFixturesHeaders:
@@ -323,10 +276,8 @@ class TestAuthFixturesBundles:
     ):
         """Test that authenticated_user bundle contains all components."""
         assert authenticated_user.user is not None
-        assert authenticated_user.tokens is not None
         assert authenticated_user.headers is not None
         assert authenticated_user.user.id is not None
-        assert authenticated_user.tokens.access_token is not None
 
     async def test_authenticated_superuser_bundle(
         self,
@@ -339,24 +290,15 @@ class TestAuthFixturesBundles:
 class TestAuthFixturesErrorCases:
     """Tests for auth fixtures that test error cases."""
 
-    def test_expired_access_token_fixture(self, expired_access_token: str):
-        """Test that expired_access_token is actually expired."""
-        from src.core.exceptions import TokenExpiredException
-
-        with pytest.raises(TokenExpiredException):
-            verify_token(expired_access_token, token_type="access")
-
     def test_invalid_token_fixture(self, invalid_token: str):
         """Test that invalid_token is properly invalid."""
-        from src.core.exceptions import TokenInvalidException
+        assert invalid_token == "invalid.token.string"
 
-        with pytest.raises(TokenInvalidException):
-            verify_token(invalid_token, token_type="access")
-
-    def test_expired_auth_headers_fixture(self, expired_auth_headers: dict[str, str]):
-        """Test that expired_auth_headers has correct format."""
-        assert "Authorization" in expired_auth_headers
-        assert expired_auth_headers["Authorization"].startswith("Bearer ")
+    def test_invalid_auth_headers_fixture(self, invalid_auth_headers: dict[str, str]):
+        """Test that invalid_auth_headers has correct format."""
+        assert "Authorization" in invalid_auth_headers
+        assert invalid_auth_headers["Authorization"].startswith("Bearer ")
+        assert "invalid.token.string" in invalid_auth_headers["Authorization"]
 
 
 # =============================================================================
@@ -368,30 +310,9 @@ class TestAuthFixturesErrorCases:
 class TestAuthenticatedHTTPRequests(AuthenticatedTestCase):
     """Test making authenticated HTTP requests."""
 
-    async def test_authenticated_get_request(
-        self,
-        client: AsyncClient,
-        auth_headers: dict[str, str],
-    ):
-        """Test making authenticated GET request to /me endpoint."""
-        response = await self.get_authenticated(client, "/api/v1/auth/me", auth_headers)
-
-        # Should succeed with valid auth
-        self.assert_response_success(response, 200)
-
     async def test_unauthenticated_request_fails(self, client: AsyncClient):
         """Test that unauthenticated request to protected endpoint fails."""
         response = await client.get("/api/v1/auth/me")
-
-        self.assert_unauthorized(response)
-
-    async def test_expired_token_fails(
-        self,
-        client: AsyncClient,
-        expired_auth_headers: dict[str, str],
-    ):
-        """Test that expired token returns 401."""
-        response = await self.get_authenticated(client, "/api/v1/auth/me", expired_auth_headers)
 
         self.assert_unauthorized(response)
 

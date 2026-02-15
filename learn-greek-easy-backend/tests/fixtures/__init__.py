@@ -87,27 +87,20 @@ Usage:
 """
 
 # Auth fixtures
-from tests.fixtures.auth import (  # User fixtures; Token fixtures; Header fixtures; Bundle fixtures; Error testing fixtures; Utility functions; Types
+from tests.fixtures.auth import (  # User fixtures; Header fixtures; Bundle fixtures; Error testing fixtures; Utility functions; Types
     AuthenticatedUser,
-    AuthTokens,
-    access_token,
     auth_headers,
     authenticated_superuser,
     authenticated_user,
     create_auth_headers,
     create_test_user_data,
-    create_tokens_for_user,
     create_user_with_settings,
-    expired_access_token,
-    expired_auth_headers,
+    invalid_auth_headers,
     invalid_token,
-    refresh_token_value,
     superuser_auth_headers,
-    superuser_tokens,
     test_inactive_user,
     test_superuser,
     test_user,
-    test_user_tokens,
     test_verified_user,
     two_users,
 )
@@ -220,28 +213,20 @@ __all__ = [
     "test_verified_user",
     "test_inactive_user",
     "two_users",
-    # Token fixtures
-    "test_user_tokens",
-    "superuser_tokens",
-    "access_token",
-    "refresh_token_value",
     # Header fixtures
     "auth_headers",
     "superuser_auth_headers",
-    "expired_auth_headers",
     # Bundle fixtures
     "authenticated_user",
     "authenticated_superuser",
     # Error testing fixtures
-    "expired_access_token",
+    "invalid_auth_headers",
     "invalid_token",
     # Utility functions
     "create_test_user_data",
     "create_user_with_settings",
-    "create_tokens_for_user",
     "create_auth_headers",
     # Types
-    "AuthTokens",
     "AuthenticatedUser",
     # Deck type definitions
     "DeckWithCards",
