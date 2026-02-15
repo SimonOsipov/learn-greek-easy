@@ -19,7 +19,6 @@ from tests.factories import (
     CardFactory,
     CardStatisticsFactory,
     DeckFactory,
-    RefreshTokenFactory,
     ReviewFactory,
     UserDeckProgressFactory,
     UserFactory,
@@ -46,8 +45,8 @@ class TestUserFactory:
         assert user.is_superuser is False
         # Auth0 users don't have password_hash
         assert user.password_hash is None
-        # Auth0 users have auth0_id
-        assert user.auth0_id is not None
+        # Supabase users have supabase_id
+        assert user.supabase_id is not None
 
     async def test_create_admin_user(self, db_session: AsyncSession):
         """Test creating an admin user with trait."""
@@ -135,38 +134,10 @@ class TestUserSettingsFactory:
 
 
 # =============================================================================
-# RefreshTokenFactory Tests
+# RefreshTokenFactory Tests - REMOVED (Supabase handles refresh tokens)
 # =============================================================================
-
-
-class TestRefreshTokenFactory:
-    """Tests for RefreshTokenFactory."""
-
-    async def test_create_token(self, db_session: AsyncSession):
-        """Test creating a refresh token."""
-        user = await UserFactory.create(session=db_session)
-        token = await RefreshTokenFactory.create(session=db_session, user_id=user.id)
-
-        assert token is not None
-        assert token.user_id == user.id
-        assert token.token is not None
-        assert token.expires_at is not None
-
-    async def test_expired_trait(self, db_session: AsyncSession):
-        """Test creating an expired token."""
-        user = await UserFactory.create(session=db_session)
-        token = await RefreshTokenFactory.create(session=db_session, user_id=user.id, expired=True)
-
-        from datetime import datetime, timezone
-
-        # The expires_at is timezone-aware (from database), so use timezone-aware comparison
-        now = datetime.now(timezone.utc)
-        # Make both naive for comparison (strip timezone)
-        expires_at_naive = (
-            token.expires_at.replace(tzinfo=None) if token.expires_at.tzinfo else token.expires_at
-        )
-        now_naive = now.replace(tzinfo=None)
-        assert expires_at_naive < now_naive
+# The RefreshTokenFactory has been removed as part of Supabase migration.
+# Supabase manages refresh tokens internally.
 
 
 # =============================================================================

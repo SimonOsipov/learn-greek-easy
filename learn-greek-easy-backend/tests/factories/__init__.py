@@ -8,7 +8,6 @@ Announcement Factories:
 Auth Factories:
     - UserFactory: User accounts with traits (admin, inactive, verified, oauth)
     - UserSettingsFactory: User preferences
-    - RefreshTokenFactory: JWT refresh tokens
 
 Content Factories:
     - DeckFactory: Flashcard decks with CEFR level traits
@@ -59,7 +58,7 @@ or use the factory_session fixture which binds the session automatically.
 from tests.factories.announcement import AnnouncementCampaignFactory
 
 # Auth factories
-from tests.factories.auth import RefreshTokenFactory, UserFactory, UserSettingsFactory
+from tests.factories.auth import UserFactory, UserSettingsFactory
 
 # Base factory
 from tests.factories.base import BaseFactory, unique_email, unique_token, utc_now
@@ -124,7 +123,6 @@ __all__ = [
     # Auth
     "UserFactory",
     "UserSettingsFactory",
-    "RefreshTokenFactory",
     # Card Errors
     "CardErrorReportFactory",
     # Card Records
