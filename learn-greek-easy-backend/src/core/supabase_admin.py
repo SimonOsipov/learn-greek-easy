@@ -83,7 +83,7 @@ class SupabaseAdminClient:
                     )
                     return data
 
-                error_body = await response.text()
+                error_body = response.text
                 logger.error(
                     "Supabase user creation failed",
                     extra={
