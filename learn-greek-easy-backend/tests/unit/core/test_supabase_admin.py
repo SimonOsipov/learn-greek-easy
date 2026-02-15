@@ -12,6 +12,7 @@ Tests cover:
 from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
+import httpx
 import pytest
 
 from src.core.exceptions import SupabaseAdminError
@@ -113,8 +114,8 @@ class TestDeleteUser:
         user_id = str(uuid4())
 
         with patch("src.core.supabase_admin.httpx.AsyncClient") as mock_client:
-            mock_client.return_value.__aenter__.return_value.delete.side_effect = TimeoutError(
-                "Request timeout"
+            mock_client.return_value.__aenter__.return_value.delete.side_effect = (
+                httpx.TimeoutException("Request timeout")
             )
 
             client = SupabaseAdminClient(
