@@ -278,12 +278,11 @@ class TestSeedServiceAuthentication:
 
     @pytest.mark.asyncio
     async def test_users_supabase_id_configuration(self, db_session: AsyncSession, enable_seeding):
-        """Verify supabase_id configuration for different user types.
+        """Verify supabase_id configuration for seeded users.
 
-        Main E2E users (learner, beginner, advanced, admin) have supabase_id=None
-        to enable Auth0 account linking during E2E tests.
-
-        XP test users have fake supabase_ids for isolated XP/achievement testing.
+        In test environments without Supabase Admin configured, all users
+        have supabase_id=None. In environments with Supabase Admin, main
+        E2E users will have Supabase Auth UUIDs.
         """
         seed_service = SeedService(db_session)
 
@@ -291,34 +290,22 @@ class TestSeedServiceAuthentication:
 
         users = (await db_session.execute(select(User))).scalars().all()
 
-        # Categorize users
-        main_e2e_emails = {
-            "e2e_learner@test.com",
-            "e2e_beginner@test.com",
-            "e2e_advanced@test.com",
-            "e2e_admin@test.com",
-        }
+        # All users should be created
+        assert len(users) > 0
 
+        # In test environment (no Supabase configured), all users have supabase_id=None
+        # This is expected - Supabase Admin API is not available in unit/integration tests
         for user in users:
-            if user.email in main_e2e_emails:
-                # Main E2E users should have None for account linking
-                assert (
-                    user.supabase_id is None
-                ), f"Main E2E user {user.email} should have supabase_id=None for linking"
-            else:
-                # XP and other test users should have supabase_id set
-                assert user.supabase_id is not None, f"supabase_id not set for {user.email}"
-                assert user.supabase_id.startswith(
-                    "auth0|"
-                ), f"Invalid supabase_id format for {user.email}"
+            assert user.supabase_id is None, (
+                f"User {user.email} should have supabase_id=None "
+                f"when Supabase Admin is not configured"
+            )
 
     @pytest.mark.asyncio
-    async def test_all_users_are_auth0_style(self, db_session: AsyncSession, enable_seeding):
-        """All seeded users are Auth0-style (no password).
+    async def test_all_users_are_supabase_style(self, db_session: AsyncSession, enable_seeding):
+        """All seeded users are Supabase-style (no password hash).
 
-        Note: Base E2E users (e2e_learner, e2e_beginner, e2e_advanced, e2e_admin)
-        have supabase_id=None to allow Auth0 E2E tests to link real Auth0 accounts.
-        XP test users have fake supabase_ids since they're not used in Auth0 tests.
+        Users authenticate via Supabase Auth. The app DB stores profile data only.
         """
         seed_service = SeedService(db_session)
 

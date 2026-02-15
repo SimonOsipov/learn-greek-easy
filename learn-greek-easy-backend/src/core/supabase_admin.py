@@ -1,7 +1,7 @@
 """Supabase Admin API client for user management operations.
 
-This module provides functionality for interacting with the Supabase Admin API,
-primarily for user deletion during account deletion flows.
+This module provides functionality for interacting with the Supabase Admin API
+for user creation, deletion, and lookup.
 
 Usage:
     from src.core.supabase_admin import get_supabase_admin_client
@@ -10,6 +10,8 @@ Usage:
     if client:
         await client.delete_user("d0714948-xxxx-xxxx-xxxx-xxxxxxxxxxxx")
 """
+
+from typing import Any
 
 import httpx
 
@@ -33,6 +35,133 @@ class SupabaseAdminClient:
     def __init__(self, supabase_url: str, service_role_key: str) -> None:
         self.supabase_url = supabase_url.rstrip("/")
         self.service_role_key = service_role_key
+
+    async def create_user(
+        self,
+        email: str,
+        password: str,
+        email_confirm: bool = True,
+        user_metadata: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Create a user in Supabase Auth.
+
+        Args:
+            email: User email address
+            password: User password
+            email_confirm: Whether to auto-confirm the email
+            user_metadata: Optional metadata (e.g. full_name)
+
+        Returns:
+            Dict containing the created user data (includes 'id' as Supabase UUID)
+
+        Raises:
+            SupabaseAdminError: If creation fails
+        """
+        try:
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                response = await client.post(
+                    f"{self.supabase_url}/auth/v1/admin/users",
+                    headers={
+                        "Authorization": f"Bearer {self.service_role_key}",
+                        "apikey": self.service_role_key,
+                        "Content-Type": "application/json",
+                    },
+                    json={
+                        "email": email,
+                        "password": password,
+                        "email_confirm": email_confirm,
+                        "user_metadata": user_metadata or {},
+                    },
+                )
+
+                if response.status_code in (200, 201):
+                    data: dict[str, Any] = response.json()
+                    logger.info(
+                        "Supabase user created successfully",
+                        extra={"email_domain": email.split("@")[-1]},
+                    )
+                    return data
+
+                logger.error(
+                    "Supabase user creation failed",
+                    extra={
+                        "status_code": response.status_code,
+                        "email_domain": email.split("@")[-1],
+                    },
+                )
+                raise SupabaseAdminError(
+                    detail=f"Failed to create user in Supabase: {response.status_code}"
+                )
+
+        except SupabaseAdminError:
+            raise
+
+        except httpx.TimeoutException as e:
+            logger.error(
+                "Timeout creating Supabase user",
+                extra={"error": str(e), "email_domain": email.split("@")[-1]},
+            )
+            raise SupabaseAdminError(detail="Failed to create user in Supabase: timeout")
+
+        except Exception as e:
+            logger.error(
+                "Unexpected error creating Supabase user",
+                extra={
+                    "error": str(e),
+                    "error_type": type(e).__name__,
+                    "email_domain": email.split("@")[-1],
+                },
+            )
+            raise SupabaseAdminError(detail="Failed to create user in Supabase")
+
+    async def list_users_by_email(self, email: str) -> list[dict[str, Any]]:
+        """Find Supabase Auth users by email.
+
+        Args:
+            email: Email address to search for
+
+        Returns:
+            List of matching user dicts (typically 0 or 1)
+
+        Raises:
+            SupabaseAdminError: If the API call fails
+        """
+        try:
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                response = await client.get(
+                    f"{self.supabase_url}/auth/v1/admin/users",
+                    headers={
+                        "Authorization": f"Bearer {self.service_role_key}",
+                        "apikey": self.service_role_key,
+                    },
+                )
+
+                if response.status_code == 200:
+                    data = response.json()
+                    users = data.get("users", [])
+                    return [u for u in users if u.get("email") == email]
+
+                logger.error(
+                    "Supabase list users failed",
+                    extra={"status_code": response.status_code},
+                )
+                raise SupabaseAdminError(
+                    detail=f"Failed to list Supabase users: {response.status_code}"
+                )
+
+        except SupabaseAdminError:
+            raise
+
+        except httpx.TimeoutException as e:
+            logger.error("Timeout listing Supabase users", extra={"error": str(e)})
+            raise SupabaseAdminError(detail="Failed to list Supabase users: timeout")
+
+        except Exception as e:
+            logger.error(
+                "Unexpected error listing Supabase users",
+                extra={"error": str(e), "error_type": type(e).__name__},
+            )
+            raise SupabaseAdminError(detail="Failed to list Supabase users")
 
     async def delete_user(self, supabase_id: str) -> bool:
         """Delete a user from Supabase Auth.

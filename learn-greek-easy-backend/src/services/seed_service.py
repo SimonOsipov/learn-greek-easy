@@ -17,6 +17,7 @@ from sqlalchemy import delete, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config import settings
+from src.core.logging import get_logger
 from src.db.models import (
     Achievement,
     AnnouncementCampaign,
@@ -58,6 +59,8 @@ from src.services.card_generator_service import CardGeneratorService
 from src.services.seed_grammar_data import ENRICHED_VOCABULARY
 from src.services.xp_constants import get_level_from_xp
 from src.utils.greek_text import extract_searchable_forms, generate_normalized_forms
+
+logger = get_logger(__name__)
 
 
 class FeedbackSeedData(TypedDict):
@@ -1857,12 +1860,46 @@ class SeedService:
     # User Seeding
     # =====================
 
+    async def _create_supabase_auth_user(self, email: str, full_name: str) -> str | None:
+        """Create a user in Supabase Auth, returning the Supabase UUID.
+
+        Idempotent: deletes existing Supabase Auth user before recreating.
+        Returns None if Supabase is not configured or creation fails.
+        """
+        from src.core.supabase_admin import get_supabase_admin_client
+
+        admin_client = get_supabase_admin_client()
+        if not admin_client:
+            return None
+
+        try:
+            # Idempotency: delete existing user if present
+            existing = await admin_client.list_users_by_email(email)
+            if existing:
+                await admin_client.delete_user(existing[0]["id"])
+
+            # Create fresh Supabase Auth user
+            supabase_user = await admin_client.create_user(
+                email=email,
+                password=self.DEFAULT_PASSWORD,
+                email_confirm=True,
+                user_metadata={"full_name": full_name},
+            )
+            supabase_id: str = supabase_user["id"]
+            return supabase_id
+        except Exception:
+            logger.warning(
+                "Failed to create Supabase Auth user, proceeding with DB-only",
+                extra={"email_domain": email.split("@")[-1]},
+            )
+            return None
+
     async def seed_users(self) -> dict[str, Any]:
         """Create deterministic test users for E2E scenarios.
 
-        Creates users without password hashes for Supabase Auth E2E testing.
-        Test users should authenticate via Supabase Auth with their
-        test credentials (see docs/e2e-seeding.md).
+        Creates users in both Supabase Auth (via Admin API) and the app database.
+        Each user gets a matching supabase_id so they can authenticate via
+        supabase.auth.signInWithPassword().
 
         Test Users Created:
         1. e2e_learner@test.com - Regular learner with progress
@@ -1878,47 +1915,51 @@ class SeedService:
         """
         self._check_can_seed()
 
-        # NOTE: supabase_id is set to None -- Supabase Auth assigns this on first login.
-        users_data = [
+        users_data: list[dict[str, str | bool]] = [
             {
                 "email": "e2e_learner@test.com",
                 "full_name": "E2E Learner",
                 "is_superuser": False,
                 "is_active": True,
-                "supabase_id": None,
             },
             {
                 "email": "e2e_beginner@test.com",
                 "full_name": "E2E Beginner",
                 "is_superuser": False,
                 "is_active": True,
-                "supabase_id": None,
             },
             {
                 "email": "e2e_advanced@test.com",
                 "full_name": "E2E Advanced",
                 "is_superuser": False,
                 "is_active": True,
-                "supabase_id": None,
             },
             {
                 "email": "e2e_admin@test.com",
                 "full_name": "E2E Admin",
                 "is_superuser": True,
                 "is_active": True,
-                "supabase_id": None,
             },
         ]
 
         created_users = []
 
         for user_data in users_data:
+            email = str(user_data["email"])
+            full_name = str(user_data["full_name"])
+
+            # Create in Supabase Auth first (idempotent)
+            supabase_id = await self._create_supabase_auth_user(
+                email=email,
+                full_name=full_name,
+            )
+
             user = User(
-                email=user_data["email"],
-                full_name=user_data["full_name"],
-                supabase_id=user_data["supabase_id"],
-                is_superuser=user_data["is_superuser"],
-                is_active=user_data["is_active"],
+                email=email,
+                full_name=full_name,
+                supabase_id=supabase_id,
+                is_superuser=bool(user_data["is_superuser"]),
+                is_active=bool(user_data["is_active"]),
             )
             self.db.add(user)
             await self.db.flush()
@@ -1946,7 +1987,7 @@ class SeedService:
         return {
             "success": True,
             "users": created_users,
-            "password": self.DEFAULT_PASSWORD,  # Kept for backward compatibility
+            "password": self.DEFAULT_PASSWORD,
         }
 
     # =====================

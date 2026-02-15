@@ -32,12 +32,6 @@ from src.schemas.seed import SeedRequest, SeedResultResponse, SeedStatusResponse
 from src.services.seed_service import SeedService
 
 
-class TestAuthRequest(BaseModel):
-    """Request model for test authentication."""
-
-    email: EmailStr
-
-
 class TestCreateUserRequest(BaseModel):
     """Request model for creating a test user."""
 
@@ -45,16 +39,15 @@ class TestCreateUserRequest(BaseModel):
     full_name: str = "E2E Test User"
 
 
-class TestAuthResponse(BaseModel):
-    """Response model for test authentication."""
+class TestCreateUserResponse(BaseModel):
+    """Response model for test user creation."""
 
     success: bool
-    access_token: str
-    refresh_token: str
-    token_type: str = "Bearer"
     user_id: str
     email: str
-    is_superuser: bool
+    full_name: str
+    supabase_id: str | None
+    is_superuser: bool = False
 
 
 router = APIRouter(
@@ -568,93 +561,73 @@ async def clear_news_items(
 
 
 @router.post(
-    "/auth",
-    response_model=TestAuthResponse,
-    summary="Get auth tokens for test user",
-    description="Generate authentication tokens for a seeded test user. "
-    "ONLY available when TEST_SEED_ENABLED=true and NOT in production. "
-    "This endpoint bypasses normal authentication for E2E testing.",
-    dependencies=[Depends(verify_seed_access)],
-)
-async def get_test_auth(
-    request: TestAuthRequest,
-    db: AsyncSession = Depends(get_db),
-) -> TestAuthResponse:
-    """Generate auth tokens for a test user by email.
-
-    This endpoint allows E2E tests to authenticate as seeded users without
-    going through Supabase Auth. It's gated behind the same security checks
-    as other seed endpoints.
-
-    Args:
-        request: Contains the email of the test user
-        db: Database session
-
-    Returns:
-        TestAuthResponse with access and refresh tokens
-
-    Raises:
-        HTTPException 404: If user not found
-        HTTPException 403: If seeding is disabled or in production
-        HTTPException 501: Not implemented (requires Supabase Admin API integration)
-    """
-    from fastapi import HTTPException
-
-    # TODO [SUPA-06]: Implement Supabase Admin API token generation
-    # The old create_access_token/create_refresh_token generated self-issued
-    # HS256 JWT tokens that are no longer valid with Supabase RS256 auth.
-    # Need to use Supabase Admin API to create users and generate tokens.
-    # See: https://supabase.com/docs/reference/javascript/auth-admin-createuser
-    raise HTTPException(
-        status_code=501,
-        detail="Test auth endpoint not implemented. "
-        "Use Supabase authentication directly for E2E tests. "
-        "See docs/e2e-seeding.md for test user credentials.",
-    )
-
-
-@router.post(
     "/create-user",
-    response_model=TestAuthResponse,
-    summary="Create test user and get auth tokens",
-    description="Create a new test user with custom email and return authentication tokens. "
-    "ONLY available when TEST_SEED_ENABLED=true and NOT in production. "
-    "This endpoint replaces the old /auth/register for E2E testing.",
+    response_model=TestCreateUserResponse,
+    summary="Create test user in Supabase Auth and app DB",
+    description="Create a new test user in both Supabase Auth and the application database. "
+    "ONLY available when TEST_SEED_ENABLED=true and NOT in production.",
     dependencies=[Depends(verify_seed_access)],
 )
 async def create_test_user(
     request: TestCreateUserRequest,
     db: AsyncSession = Depends(get_db),
-) -> TestAuthResponse:
-    """Create a test user and return auth tokens.
-
-    This endpoint creates a new user in the database and returns authentication
-    tokens, replacing the legacy /auth/register endpoint for E2E tests.
+) -> TestCreateUserResponse:
+    """Create a test user in Supabase Auth and app DB.
 
     Args:
         request: Contains email and optional full_name
         db: Database session
 
     Returns:
-        TestAuthResponse with access and refresh tokens
-
-    Raises:
-        HTTPException 409: If user with email already exists
-        HTTPException 403: If seeding is disabled or in production
-        HTTPException 501: Not implemented (requires Supabase Admin API integration)
+        TestCreateUserResponse with user data
     """
-    from fastapi import HTTPException
+    from src.core.supabase_admin import get_supabase_admin_client
+    from src.db.models import User, UserSettings
 
-    # TODO [SUPA-06]: Implement Supabase Admin API user creation and token generation
-    # The old create_access_token/create_refresh_token generated self-issued
-    # HS256 JWT tokens that are no longer valid with Supabase RS256 auth.
-    # Need to use Supabase Admin API to create users and generate tokens.
-    # See: https://supabase.com/docs/reference/javascript/auth-admin-createuser
-    raise HTTPException(
-        status_code=501,
-        detail="Test user creation endpoint not implemented. "
-        "Use /api/v1/test/seed/all to seed test users, then authenticate "
-        "via Supabase directly. See docs/e2e-seeding.md for credentials.",
+    admin_client = get_supabase_admin_client()
+
+    supabase_id = None
+    if admin_client:
+        # Idempotent: delete existing Supabase Auth user first
+        existing = await admin_client.list_users_by_email(request.email)
+        if existing:
+            await admin_client.delete_user(existing[0]["id"])
+        supabase_user = await admin_client.create_user(
+            email=request.email,
+            password="TestPassword123!",
+            email_confirm=True,
+            user_metadata={"full_name": request.full_name},
+        )
+        supabase_id = supabase_user["id"]
+
+    # Check if app DB user exists
+    user_repo = UserRepository(db)
+    existing_db_user = await user_repo.get_by_email(request.email)
+    if existing_db_user:
+        existing_db_user.supabase_id = supabase_id
+        await db.flush()
+        user = existing_db_user
+    else:
+        user = User(
+            email=request.email,
+            full_name=request.full_name,
+            supabase_id=supabase_id,
+            is_superuser=False,
+            is_active=True,
+        )
+        db.add(user)
+        await db.flush()
+        user_settings = UserSettings(user_id=user.id, daily_goal=20, email_notifications=True)
+        db.add(user_settings)
+
+    await db.commit()
+
+    return TestCreateUserResponse(
+        success=True,
+        user_id=str(user.id),
+        email=user.email,
+        full_name=user.full_name or "",
+        supabase_id=supabase_id,
     )
 
 
