@@ -12,7 +12,6 @@ from src.repositories import (
     CardRepository,
     CardStatisticsRepository,
     DeckRepository,
-    RefreshTokenRepository,
     ReviewRepository,
     UserDeckProgressRepository,
     UserRepository,
@@ -73,7 +72,6 @@ async def test_list_with_pagination(db_session: AsyncSession):
     for i in range(5):
         user = User(
             email=f"user{i}@example.com",
-            password_hash=None,  # Auth0 users don't have password
             supabase_id=f"supabase_test_{uuid4().hex[:8]}",
             full_name=f"User {i}",
         )
@@ -103,28 +101,34 @@ async def test_filter_by(db_session: AsyncSession):
     """Test filtering records by field values."""
     repo = UserRepository(db_session)
 
-    # Create users with different email verification status
-    verified_user = User(
-        email="verified@example.com",
-        password_hash=None,  # Auth0 users don't have password
+    # Create users with different active status
+    active_user1 = User(
+        email="active1@example.com",
         supabase_id=f"supabase_test_{uuid4().hex[:8]}",
-        full_name="Verified User",
-        email_verified_at=datetime.utcnow(),
+        full_name="Active User 1",
+        is_active=True,
     )
-    unverified_user = User(
-        email="unverified@example.com",
-        password_hash=None,  # Auth0 users don't have password
+    active_user2 = User(
+        email="active2@example.com",
         supabase_id=f"supabase_test_{uuid4().hex[:8]}",
-        full_name="Unverified User",
+        full_name="Active User 2",
+        is_active=True,
     )
-    db_session.add(verified_user)
-    db_session.add(unverified_user)
+    inactive_user = User(
+        email="inactive@example.com",
+        supabase_id=f"supabase_test_{uuid4().hex[:8]}",
+        full_name="Inactive User",
+        is_active=False,
+    )
+    db_session.add(active_user1)
+    db_session.add(active_user2)
+    db_session.add(inactive_user)
     await db_session.commit()
 
     # Filter by is_active
     active_users = await repo.filter_by(is_active=True)
 
-    assert len(active_users) >= 2
+    assert len(active_users) == 2
 
 
 @pytest.mark.asyncio
@@ -164,29 +168,6 @@ async def test_get_by_email_not_found(db_session: AsyncSession):
 
 
 @pytest.mark.asyncio
-async def test_get_by_google_id(db_session: AsyncSession):
-    """Test getting user by Google OAuth ID."""
-    repo = UserRepository(db_session)
-
-    # Create user with Google ID
-    google_user = User(
-        email="google@example.com",
-        password_hash=None,  # Auth0 users don't have password
-        supabase_id="supabase_test_google_user",
-        full_name="Google User",
-        google_id="google_oauth_123",
-    )
-    db_session.add(google_user)
-    await db_session.commit()
-
-    # Find by Google ID
-    user = await repo.get_by_google_id("google_oauth_123")
-
-    assert user is not None
-    assert user.google_id == "google_oauth_123"
-
-
-@pytest.mark.asyncio
 async def test_get_with_settings(db_session: AsyncSession, sample_user_with_settings):
     """Test getting user with settings eagerly loaded."""
     repo = UserRepository(db_session)
@@ -195,19 +176,6 @@ async def test_get_with_settings(db_session: AsyncSession, sample_user_with_sett
     assert user is not None
     assert user.settings is not None
     assert user.settings.daily_goal == 25
-
-
-@pytest.mark.asyncio
-async def test_verify_email(db_session: AsyncSession, sample_user):
-    """Test marking user email as verified."""
-    repo = UserRepository(db_session)
-
-    assert sample_user.email_verified_at is None
-
-    user = await repo.verify_email(sample_user.id)
-    await db_session.commit()
-
-    assert user.email_verified_at is not None
 
 
 @pytest.mark.asyncio
@@ -221,70 +189,6 @@ async def test_deactivate(db_session: AsyncSession, sample_user):
     await db_session.commit()
 
     assert user.is_active is False
-
-
-# ============================================================================
-# RefreshTokenRepository Tests
-# ============================================================================
-
-
-@pytest.mark.asyncio
-async def test_get_by_token(db_session: AsyncSession, sample_refresh_token):
-    """Test getting refresh token by token string."""
-    repo = RefreshTokenRepository(db_session)
-    token = await repo.get_by_token(sample_refresh_token.token)
-
-    assert token is not None
-    assert token.token == sample_refresh_token.token
-    assert token.user is not None
-
-
-@pytest.mark.asyncio
-async def test_delete_expired(db_session: AsyncSession, sample_user):
-    """Test deleting expired refresh tokens."""
-    repo = RefreshTokenRepository(db_session)
-
-    # Create expired and valid tokens
-    from src.db.models import RefreshToken
-
-    expired_token = RefreshToken(
-        user_id=sample_user.id,
-        token="expired_token",
-        expires_at=datetime.utcnow() - timedelta(days=1),
-    )
-    valid_token = RefreshToken(
-        user_id=sample_user.id,
-        token="valid_token",
-        expires_at=datetime.utcnow() + timedelta(days=7),
-    )
-    db_session.add(expired_token)
-    db_session.add(valid_token)
-    await db_session.commit()
-
-    # Delete expired
-    deleted_count = await repo.delete_expired()
-    await db_session.commit()
-
-    assert deleted_count >= 1
-
-    # Verify expired token is gone
-    token = await repo.get_by_token("expired_token")
-    assert token is None
-
-    # Verify valid token still exists
-    token = await repo.get_by_token("valid_token")
-    assert token is not None
-
-
-@pytest.mark.asyncio
-async def test_delete_user_tokens(db_session: AsyncSession, sample_user, sample_refresh_token):
-    """Test deleting all tokens for a user."""
-    repo = RefreshTokenRepository(db_session)
-
-    deleted_count = await repo.delete_user_tokens(sample_user.id)
-    await db_session.commit()
-
-    assert deleted_count >= 1
 
 
 # ============================================================================
@@ -1248,7 +1152,6 @@ async def test_get_total_reviews_no_reviews(db_session: AsyncSession, sample_use
     # Create a new user with no reviews
     new_user = User(
         email="no_reviews@example.com",
-        password_hash=None,  # Auth0 users don't have password
         supabase_id=f"supabase_test_{uuid4().hex[:8]}",
         full_name="No Reviews",
     )
@@ -1293,7 +1196,6 @@ async def test_get_total_study_time_no_reviews(db_session: AsyncSession, sample_
     # Create a new user with no reviews
     new_user = User(
         email="no_study_time@example.com",
-        password_hash=None,  # Auth0 users don't have password
         supabase_id=f"supabase_test_{uuid4().hex[:8]}",
         full_name="No Study Time",
     )
@@ -1462,7 +1364,6 @@ async def test_count_user_reviews_no_reviews(db_session: AsyncSession, sample_us
     # Create a new user with no reviews
     new_user = User(
         email="no_reviews_count@example.com",
-        password_hash=None,  # Auth0 users don't have password
         supabase_id=f"supabase_test_{uuid4().hex[:8]}",
         full_name="No Reviews Count",
     )

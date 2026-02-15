@@ -740,11 +740,10 @@ async def other_user_deck(
     # Create another user to own this deck
     other_user = User(
         email="other_user@example.com",
-        password_hash=None,
         full_name="Other User",
         is_active=True,
         is_superuser=False,
-        auth0_id="auth0|other_user_test",
+        supabase_id="supabase|other_user_test",
     )
     db_session.add(other_user)
     await db_session.commit()

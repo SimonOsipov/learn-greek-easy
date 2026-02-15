@@ -55,19 +55,12 @@ class TestBaseTestCaseUserCreation(BaseTestCase):
 
         assert user.is_active is False
 
-    async def test_create_test_user_verified(self, db_session: AsyncSession):
-        """Test creating a verified user."""
-        user = await self.create_test_user(db_session, email_verified=True)
-
-        assert user.email_verified_at is not None
-
     async def test_create_test_superuser_helper(self, db_session: AsyncSession):
         """Test the create_test_superuser helper method."""
         user = await self.create_test_superuser(db_session)
 
         assert user.is_superuser is True
         assert user.is_active is True
-        assert user.email_verified_at is not None
 
 
 class TestBaseTestCaseDeckCardCreation(BaseTestCase):
@@ -225,12 +218,10 @@ class TestAuthFixturesUserCreation:
         assert test_superuser is not None
         assert test_superuser.is_superuser is True
         assert test_superuser.is_active is True
-        assert test_superuser.email_verified_at is not None
 
     async def test_test_verified_user_fixture(self, test_verified_user: User):
-        """Test that test_verified_user has verified email."""
+        """Test that test_verified_user fixture exists."""
         assert test_verified_user is not None
-        assert test_verified_user.email_verified_at is not None
 
     async def test_test_inactive_user_fixture(self, test_inactive_user: User):
         """Test that test_inactive_user is inactive."""

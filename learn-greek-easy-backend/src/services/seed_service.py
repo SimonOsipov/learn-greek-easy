@@ -160,7 +160,6 @@ class SeedService:
         "user_deck_progress",
         "feedback_votes",
         "feedback",
-        "refresh_tokens",
         "user_settings",
         "cards",
         "users",
@@ -1912,17 +1911,14 @@ class SeedService:
         ]
 
         created_users = []
-        now = datetime.now(timezone.utc)
 
         for user_data in users_data:
             user = User(
                 email=user_data["email"],
                 full_name=user_data["full_name"],
-                password_hash=None,  # Supabase users don't have local password
                 supabase_id=user_data["supabase_id"],
                 is_superuser=user_data["is_superuser"],
                 is_active=user_data["is_active"],
-                email_verified_at=now,  # Pre-verified for E2E tests
             )
             self.db.add(user)
             await self.db.flush()
@@ -3899,11 +3895,9 @@ class SeedService:
             user = User(
                 email=email,
                 full_name=user_data["full_name"],
-                password_hash=None,  # Supabase users don't have local password
                 supabase_id=user_data["supabase_id"],
                 is_superuser=user_data["is_superuser"],
                 is_active=user_data["is_active"],
-                email_verified_at=now,
             )
             self.db.add(user)
             await self.db.flush()
@@ -4579,18 +4573,15 @@ class SeedService:
         achievements_result = await self.seed_achievements()
 
         # Step 9: Create XP-specific test users for E2E testing
-        now = datetime.now(timezone.utc)
         xp_users_result: dict[str, Any] = {"success": True, "users": []}
 
         # XP Boundary User - 99 XP (1 XP away from level 2)
         xp_boundary_user = User(
             email="e2e_xp_boundary@test.com",
             full_name="E2E XP Boundary",
-            password_hash=None,
             supabase_id=None,
             is_superuser=False,
             is_active=True,
-            email_verified_at=now,
         )
         self.db.add(xp_boundary_user)
         await self.db.flush()
@@ -4613,11 +4604,9 @@ class SeedService:
         xp_mid_user = User(
             email="e2e_xp_mid@test.com",
             full_name="E2E XP Mid",
-            password_hash=None,
             supabase_id=None,
             is_superuser=False,
             is_active=True,
-            email_verified_at=now,
         )
         self.db.add(xp_mid_user)
         await self.db.flush()
@@ -4648,11 +4637,9 @@ class SeedService:
         xp_max_user = User(
             email="e2e_xp_max@test.com",
             full_name="E2E XP Max",
-            password_hash=None,
             supabase_id=None,
             is_superuser=False,
             is_active=True,
-            email_verified_at=now,
         )
         self.db.add(xp_max_user)
         await self.db.flush()

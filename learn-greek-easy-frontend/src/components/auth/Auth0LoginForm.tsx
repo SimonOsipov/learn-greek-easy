@@ -172,19 +172,13 @@ export const Auth0LoginForm: React.FC = () => {
         });
       }
 
-      // Step 4: Update auth store with tokens and user
+      // Step 4: Update auth store with user
       useAuthStore.setState({
         user,
-        token: backendData.access_token,
-        refreshToken: backendData.refresh_token,
         isAuthenticated: true,
-        rememberMe: data.rememberMe,
         isLoading: false,
         error: null,
       });
-
-      // Store in sessionStorage as backup
-      sessionStorage.setItem('auth-token', backendData.access_token);
 
       log.info('[Auth0LoginForm] Successfully authenticated via Auth0');
 

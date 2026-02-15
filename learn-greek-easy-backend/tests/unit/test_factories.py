@@ -43,8 +43,6 @@ class TestUserFactory:
         assert "@example.com" in user.email
         assert user.is_active is True
         assert user.is_superuser is False
-        # Auth0 users don't have password_hash
-        assert user.password_hash is None
         # Supabase users have supabase_id
         assert user.supabase_id is not None
 
@@ -53,27 +51,12 @@ class TestUserFactory:
         user = await UserFactory.create(session=db_session, admin=True)
 
         assert user.is_superuser is True
-        assert user.email_verified_at is not None
 
     async def test_create_inactive_user(self, db_session: AsyncSession):
         """Test creating an inactive user with trait."""
         user = await UserFactory.create(session=db_session, inactive=True)
 
         assert user.is_active is False
-
-    async def test_create_verified_user(self, db_session: AsyncSession):
-        """Test creating a verified user with trait."""
-        user = await UserFactory.create(session=db_session, verified=True)
-
-        assert user.email_verified_at is not None
-
-    async def test_compose_traits(self, db_session: AsyncSession):
-        """Test composing multiple traits."""
-        user = await UserFactory.create(session=db_session, admin=True, logged_in=True)
-
-        assert user.is_superuser is True
-        assert user.last_login_at is not None
-        assert user.last_login_ip is not None
 
     async def test_create_with_settings(self, db_session: AsyncSession):
         """Test creating user with settings."""

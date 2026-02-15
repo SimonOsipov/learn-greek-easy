@@ -163,7 +163,6 @@ class TestGetWordEntryCardsEndpoint:
         other_user = User(
             id=uuid4(),
             email="other_card_user@test.com",
-            password_hash="hashed_password",
             full_name="Other Card User",
             is_active=True,
         )

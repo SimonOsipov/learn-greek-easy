@@ -69,7 +69,6 @@ class BaseTestCase:
         full_name: str = "Test User",
         is_active: bool = True,
         is_superuser: bool = False,
-        email_verified: bool = False,
     ) -> User:
         """Create a test user in the database.
 
@@ -81,7 +80,6 @@ class BaseTestCase:
             full_name: User's full name
             is_active: Whether account is active
             is_superuser: Whether user has admin privileges
-            email_verified: Whether email is verified
 
         Returns:
             User: Created user with settings
@@ -91,12 +89,10 @@ class BaseTestCase:
 
         user = User(
             email=email,
-            password_hash=None,  # Supabase handles authentication
             supabase_id=str(uuid4()),
             full_name=full_name,
             is_active=is_active,
             is_superuser=is_superuser,
-            email_verified_at=datetime.utcnow() if email_verified else None,
         )
         db_session.add(user)
         await db_session.flush()
@@ -135,7 +131,6 @@ class BaseTestCase:
             email=email or f"admin_{uuid4().hex[:8]}@example.com",
             full_name="Admin User",
             is_superuser=True,
-            email_verified=True,
         )
 
     # =========================================================================

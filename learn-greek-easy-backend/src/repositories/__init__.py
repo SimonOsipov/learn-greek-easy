@@ -18,7 +18,7 @@ from src.repositories.notification import NotificationRepository
 from src.repositories.progress import CardStatisticsRepository, UserDeckProgressRepository
 from src.repositories.review import ReviewRepository
 from src.repositories.session import SessionRepository
-from src.repositories.user import RefreshTokenRepository, UserRepository, UserSettingsRepository
+from src.repositories.user import UserRepository, UserSettingsRepository
 from src.repositories.word_entry import WordEntryRepository
 
 __all__ = [
@@ -31,7 +31,6 @@ __all__ = [
     # User
     "UserRepository",
     "UserSettingsRepository",
-    "RefreshTokenRepository",
     # Content
     "DeckRepository",
     "CardRepository",

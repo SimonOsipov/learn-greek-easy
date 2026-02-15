@@ -29,7 +29,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from src.db.models import User, UserSettings
-from tests.factories.base import BaseFactory, unique_email, utc_now
+from tests.factories.base import BaseFactory, unique_email
 
 
 class UserFactory(BaseFactory):
@@ -54,15 +54,10 @@ class UserFactory(BaseFactory):
 
     # Default values - Supabase authentication
     email = factory.LazyFunction(unique_email)
-    password_hash = None  # Supabase handles authentication
     full_name = factory.Faker("name")
     is_active = True
     is_superuser = False
-    email_verified_at = None
-    google_id = None
     supabase_id = factory.LazyFunction(lambda: str(uuid4()))
-    last_login_at = None
-    last_login_ip = None
 
     class Params:
         """Factory traits for common variations."""
@@ -70,24 +65,12 @@ class UserFactory(BaseFactory):
         # Admin/superuser trait
         admin = factory.Trait(
             is_superuser=True,
-            email_verified_at=factory.LazyFunction(utc_now),
             full_name="Admin User",
         )
 
         # Inactive user trait
         inactive = factory.Trait(
             is_active=False,
-        )
-
-        # Verified email trait
-        verified = factory.Trait(
-            email_verified_at=factory.LazyFunction(utc_now),
-        )
-
-        # Recently logged in
-        logged_in = factory.Trait(
-            last_login_at=factory.LazyFunction(utc_now),
-            last_login_ip="127.0.0.1",
         )
 
     @classmethod

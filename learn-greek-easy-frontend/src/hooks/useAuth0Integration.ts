@@ -177,10 +177,7 @@ export function useAuth0Integration(): UseAuth0IntegrationResult {
     // This prevents route guards from redirecting back to dashboard
     useAuthStore.setState({
       user: null,
-      token: null,
-      refreshToken: null,
       isAuthenticated: false,
-      rememberMe: false,
       error: null,
     });
 

@@ -644,7 +644,6 @@ class TestDeckModelOwnerIdDatabase:
         # Create a user specifically for this test
         user = User(
             email=f"cascade_test_{uuid4().hex[:8]}@example.com",
-            password_hash=None,
             full_name="Cascade Test User",
             is_active=True,
             is_superuser=False,

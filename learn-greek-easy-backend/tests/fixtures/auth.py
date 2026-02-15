@@ -25,7 +25,6 @@ Usage:
 """
 
 from collections.abc import AsyncGenerator
-from datetime import datetime
 from typing import Any, NamedTuple
 from uuid import uuid4
 
@@ -85,11 +84,9 @@ def create_test_user_data(
 
     return {
         "email": email,
-        "password_hash": None,  # Supabase handles authentication
         "full_name": full_name,
         "is_active": is_active,
         "is_superuser": is_superuser,
-        "email_verified_at": datetime.utcnow() if email_verified else None,
         "supabase_id": supabase_id,
     }
 
@@ -153,10 +150,9 @@ async def test_user(db_session: AsyncSession) -> AsyncGenerator[User, None]:
     """Provide a regular active test user.
 
     Creates a user with:
-    - Valid email and password
+    - Valid email
     - Active account (is_active=True)
     - Regular user (is_superuser=False)
-    - Unverified email (email_verified_at=None)
 
     Yields:
         User: The created test user
@@ -200,10 +196,9 @@ async def test_verified_user(db_session: AsyncSession) -> AsyncGenerator[User, N
     """Provide a user with verified email.
 
     Creates a user with:
-    - Valid email and password
+    - Valid email
     - Active account
     - Regular user (not superuser)
-    - Verified email (email_verified_at set)
 
     Yields:
         User: The created verified user

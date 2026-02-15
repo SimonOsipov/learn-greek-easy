@@ -32,11 +32,8 @@ describe.skip('useAuth Hook', () => {
     useAuthStore.setState({
       user: null,
       isAuthenticated: false,
-      token: null,
-      refreshToken: null,
       isLoading: false,
       error: null,
-      rememberMe: false,
     });
     mockNavigate.mockClear();
   });
@@ -63,7 +60,6 @@ describe.skip('useAuth Hook', () => {
       useAuthStore.setState({
         user: mockUser,
         isAuthenticated: true,
-        token: 'mock-token',
       });
 
       const { result } = renderHook(() => useAuth());

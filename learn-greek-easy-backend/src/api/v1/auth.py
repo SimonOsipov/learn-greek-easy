@@ -195,7 +195,6 @@ async def logout_all(
                         "full_name": "John Doe",
                         "is_active": True,
                         "is_superuser": False,
-                        "email_verified_at": None,
                         "created_at": "2024-11-25T10:30:00Z",
                         "updated_at": "2024-11-25T10:30:00Z",
                         "settings": {
@@ -283,7 +282,6 @@ async def get_me(
             "full_name": "John Doe",
             "is_active": true,
             "is_superuser": false,
-            "email_verified_at": null,
             "created_at": "2024-11-25T10:30:00Z",
             "updated_at": "2024-11-25T10:30:00Z",
             "settings": {
@@ -314,7 +312,6 @@ async def get_me(
                         "full_name": "John Doe Updated",
                         "is_active": True,
                         "is_superuser": False,
-                        "email_verified_at": None,
                         "created_at": "2024-11-25T10:30:00Z",
                         "updated_at": "2024-11-25T12:00:00Z",
                         "settings": {

@@ -29,7 +29,6 @@ async def feedback_user(db_session: AsyncSession) -> User:
     """Create a user for feedback testing."""
     user = User(
         email="feedback_test@example.com",
-        password_hash="hashed",
         full_name="Feedback Tester",
         is_active=True,
     )

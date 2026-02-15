@@ -14,7 +14,6 @@ from src.db.models import (
     CardSystemVersion,
     Deck,
     DeckLevel,
-    RefreshToken,
     Review,
     User,
     UserDeckProgress,
@@ -27,7 +26,6 @@ async def sample_user(db_session):
     """Create a sample user for testing."""
     user = User(
         email="test@example.com",
-        password_hash="hashed_password",
         full_name="Test User",
         is_active=True,
     )
@@ -42,7 +40,6 @@ async def sample_user_with_settings(db_session):
     """Create a sample user with settings."""
     user = User(
         email="user_with_settings@example.com",
-        password_hash="hashed_password",
         full_name="User With Settings",
         is_active=True,
     )
@@ -168,17 +165,3 @@ async def sample_review(db_session, sample_user, sample_cards):
     await db_session.commit()
     await db_session.refresh(review)
     return review
-
-
-@pytest.fixture
-async def sample_refresh_token(db_session, sample_user):
-    """Create sample refresh token."""
-    token = RefreshToken(
-        user_id=sample_user.id,
-        token="sample_refresh_token_123",
-        expires_at=datetime.utcnow(),
-    )
-    db_session.add(token)
-    await db_session.commit()
-    await db_session.refresh(token)
-    return token

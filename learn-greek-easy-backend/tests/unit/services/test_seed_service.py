@@ -164,9 +164,6 @@ class TestSeedServiceTruncation:
         assert order.index("user_deck_progress") < order.index("users")
         assert order.index("user_deck_progress") < order.index("decks")
 
-        # refresh_tokens depends on users
-        assert order.index("refresh_tokens") < order.index("users")
-
         # user_settings depends on users
         assert order.index("user_settings") < order.index("users")
 

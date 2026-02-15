@@ -220,7 +220,7 @@ async def truncate_tables(
 
     Clears all data in FK-safe order:
     reviews -> card_statistics -> user_deck_progress ->
-    refresh_tokens -> user_settings -> cards -> users -> decks
+    user_settings -> cards -> users -> decks
 
     Returns:
         SeedResultResponse with truncation results and timing

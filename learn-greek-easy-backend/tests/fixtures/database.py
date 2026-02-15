@@ -305,7 +305,7 @@ async def db_session(
 
     Example:
         async def test_create_user(db_session: AsyncSession):
-            user = User(email="test@example.com", password_hash="hash")
+            user = User(email="test@example.com")
             db_session.add(user)
             await db_session.commit()
             # This commit is inside the nested transaction (savepoint)

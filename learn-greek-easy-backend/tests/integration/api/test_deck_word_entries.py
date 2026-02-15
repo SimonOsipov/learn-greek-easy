@@ -108,7 +108,6 @@ class TestDeckWordEntriesEndpoint:
         # Create another user
         other_user = User(
             email="other_user_word_entries@example.com",
-            password_hash=None,
             full_name="Other Word Entry User",
             is_active=True,
             is_superuser=False,

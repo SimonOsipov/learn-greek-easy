@@ -24,7 +24,6 @@ async def card_error_user(db_session: AsyncSession) -> User:
     """Create a user for card error testing."""
     user = User(
         email="card_error_test@example.com",
-        password_hash="hashed",
         full_name="Card Error Tester",
         is_active=True,
     )
@@ -39,7 +38,6 @@ async def other_user(db_session: AsyncSession) -> User:
     """Create another user for testing isolation."""
     user = User(
         email="other_user@example.com",
-        password_hash="hashed",
         full_name="Other User",
         is_active=True,
     )

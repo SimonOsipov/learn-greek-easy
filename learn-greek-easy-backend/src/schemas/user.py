@@ -52,7 +52,6 @@ class UserResponse(UserBase):
     id: UUID
     is_active: bool
     is_superuser: bool
-    email_verified_at: Optional[datetime]
     avatar_url: Optional[str] = None
     auth_provider: Optional[str] = Field(
         None,

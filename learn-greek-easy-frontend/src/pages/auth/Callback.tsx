@@ -130,19 +130,13 @@ export const Callback: React.FC = () => {
           });
         }
 
-        // Update auth store with tokens and user
+        // Update auth store with user
         useAuthStore.setState({
           user,
-          token: data.access_token,
-          refreshToken: data.refresh_token,
           isAuthenticated: true,
-          rememberMe: true, // OAuth users get persistent login
           isLoading: false,
           error: null,
         });
-
-        // Store in sessionStorage as backup
-        sessionStorage.setItem('auth-token', data.access_token);
 
         log.info('[Callback] Successfully authenticated via Auth0');
 
