@@ -1,13 +1,13 @@
 import React from 'react';
 
-import { Auth0LoginForm } from '@/components/auth/Auth0LoginForm';
+import { LoginForm } from '@/components/auth/Auth0LoginForm';
 
 /**
  * Login Page Component
  *
- * Uses Auth0 Universal Login for authentication.
- * The Auth0LoginForm handles the login UI and redirects to Auth0.
+ * Uses Supabase authentication.
+ * The LoginForm handles the login UI with email/password and Google OAuth.
  */
 export const Login: React.FC = () => {
-  return <Auth0LoginForm />;
+  return <LoginForm />;
 };
