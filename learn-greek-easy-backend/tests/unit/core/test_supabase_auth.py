@@ -12,7 +12,7 @@ Tests cover:
 """
 
 from datetime import datetime, timedelta
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
 from uuid import uuid4
 
 import pytest
@@ -90,10 +90,12 @@ class TestValidTokenVerification:
     ):
         """Test that valid token returns correct claims."""
         with patch("src.core.supabase_auth.httpx.AsyncClient") as mock_client:
-            mock_response = AsyncMock()
+            mock_response = Mock()
             mock_response.status_code = 200
             mock_response.json.return_value = mock_jwks_response
-            mock_client.return_value.__aenter__.return_value.get.return_value = mock_response
+            mock_client.return_value.__aenter__.return_value.get = AsyncMock(
+                return_value=mock_response
+            )
 
             # Create a real JWT token for testing
             token = jwt.encode(
@@ -113,10 +115,12 @@ class TestValidTokenVerification:
     ):
         """Test email is correctly extracted from token."""
         with patch("src.core.supabase_auth.httpx.AsyncClient") as mock_client:
-            mock_response = AsyncMock()
+            mock_response = Mock()
             mock_response.status_code = 200
             mock_response.json.return_value = mock_jwks_response
-            mock_client.return_value.__aenter__.return_value.get.return_value = mock_response
+            mock_client.return_value.__aenter__.return_value.get = AsyncMock(
+                return_value=mock_response
+            )
 
             token = jwt.encode(
                 {"alg": "HS256"}, valid_token_payload, mock_settings.supabase_jwt_secret
@@ -132,10 +136,12 @@ class TestValidTokenVerification:
     ):
         """Test full_name is extracted from user_metadata."""
         with patch("src.core.supabase_auth.httpx.AsyncClient") as mock_client:
-            mock_response = AsyncMock()
+            mock_response = Mock()
             mock_response.status_code = 200
             mock_response.json.return_value = mock_jwks_response
-            mock_client.return_value.__aenter__.return_value.get.return_value = mock_response
+            mock_client.return_value.__aenter__.return_value.get = AsyncMock(
+                return_value=mock_response
+            )
 
             token = jwt.encode(
                 {"alg": "HS256"}, valid_token_payload, mock_settings.supabase_jwt_secret
@@ -154,10 +160,12 @@ class TestValidTokenVerification:
         del payload_without_email["email"]
 
         with patch("src.core.supabase_auth.httpx.AsyncClient") as mock_client:
-            mock_response = AsyncMock()
+            mock_response = Mock()
             mock_response.status_code = 200
             mock_response.json.return_value = mock_jwks_response
-            mock_client.return_value.__aenter__.return_value.get.return_value = mock_response
+            mock_client.return_value.__aenter__.return_value.get = AsyncMock(
+                return_value=mock_response
+            )
 
             token = jwt.encode(
                 {"alg": "HS256"},
@@ -191,10 +199,12 @@ class TestInvalidTokens:
         }
 
         with patch("src.core.supabase_auth.httpx.AsyncClient") as mock_client:
-            mock_response = AsyncMock()
+            mock_response = Mock()
             mock_response.status_code = 200
             mock_response.json.return_value = mock_jwks_response
-            mock_client.return_value.__aenter__.return_value.get.return_value = mock_response
+            mock_client.return_value.__aenter__.return_value.get = AsyncMock(
+                return_value=mock_response
+            )
 
             token = jwt.encode({"alg": "HS256"}, expired_payload, mock_settings.supabase_jwt_secret)
 
@@ -216,10 +226,12 @@ class TestInvalidTokens:
         }
 
         with patch("src.core.supabase_auth.httpx.AsyncClient") as mock_client:
-            mock_response = AsyncMock()
+            mock_response = Mock()
             mock_response.status_code = 200
             mock_response.json.return_value = mock_jwks_response
-            mock_client.return_value.__aenter__.return_value.get.return_value = mock_response
+            mock_client.return_value.__aenter__.return_value.get = AsyncMock(
+                return_value=mock_response
+            )
 
             # Create token with wrong secret
             token = jwt.encode({"alg": "HS256"}, payload, "wrong-secret")
@@ -241,10 +253,12 @@ class TestInvalidTokens:
         }
 
         with patch("src.core.supabase_auth.httpx.AsyncClient") as mock_client:
-            mock_response = AsyncMock()
+            mock_response = Mock()
             mock_response.status_code = 200
             mock_response.json.return_value = mock_jwks_response
-            mock_client.return_value.__aenter__.return_value.get.return_value = mock_response
+            mock_client.return_value.__aenter__.return_value.get = AsyncMock(
+                return_value=mock_response
+            )
 
             token = jwt.encode(
                 {"alg": "HS256"},
@@ -270,10 +284,12 @@ class TestInvalidTokens:
         }
 
         with patch("src.core.supabase_auth.httpx.AsyncClient") as mock_client:
-            mock_response = AsyncMock()
+            mock_response = Mock()
             mock_response.status_code = 200
             mock_response.json.return_value = mock_jwks_response
-            mock_client.return_value.__aenter__.return_value.get.return_value = mock_response
+            mock_client.return_value.__aenter__.return_value.get = AsyncMock(
+                return_value=mock_response
+            )
 
             token = jwt.encode(
                 {"alg": "HS256"},
@@ -299,10 +315,12 @@ class TestInvalidTokens:
         }
 
         with patch("src.core.supabase_auth.httpx.AsyncClient") as mock_client:
-            mock_response = AsyncMock()
+            mock_response = Mock()
             mock_response.status_code = 200
             mock_response.json.return_value = mock_jwks_response
-            mock_client.return_value.__aenter__.return_value.get.return_value = mock_response
+            mock_client.return_value.__aenter__.return_value.get = AsyncMock(
+                return_value=mock_response
+            )
 
             token = jwt.encode(
                 {"alg": "HS256"},
@@ -345,10 +363,12 @@ class TestJWKSEndpoint:
     async def test_jwks_error_response_raises_exception(self, mock_settings, valid_token_payload):
         """Test that JWKS error response raises TokenInvalidException."""
         with patch("src.core.supabase_auth.httpx.AsyncClient") as mock_client:
-            mock_response = AsyncMock()
+            mock_response = Mock()
             mock_response.status_code = 500
             mock_response.raise_for_status.side_effect = Exception("Server error")
-            mock_client.return_value.__aenter__.return_value.get.return_value = mock_response
+            mock_client.return_value.__aenter__.return_value.get = AsyncMock(
+                return_value=mock_response
+            )
 
             token = jwt.encode(
                 {"alg": "HS256"}, valid_token_payload, mock_settings.supabase_jwt_secret
@@ -374,10 +394,12 @@ class TestJWKSCache:
     ):
         """Test that second request uses cached JWKS."""
         with patch("src.core.supabase_auth.httpx.AsyncClient") as mock_client:
-            mock_response = AsyncMock()
+            mock_response = Mock()
             mock_response.status_code = 200
             mock_response.json.return_value = mock_jwks_response
-            mock_client.return_value.__aenter__.return_value.get.return_value = mock_response
+            mock_client.return_value.__aenter__.return_value.get = AsyncMock(
+                return_value=mock_response
+            )
 
             token = jwt.encode(
                 {"alg": "HS256"}, valid_token_payload, mock_settings.supabase_jwt_secret
@@ -398,10 +420,12 @@ class TestJWKSCache:
     ):
         """Test that cache invalidation causes refetch."""
         with patch("src.core.supabase_auth.httpx.AsyncClient") as mock_client:
-            mock_response = AsyncMock()
+            mock_response = Mock()
             mock_response.status_code = 200
             mock_response.json.return_value = mock_jwks_response
-            mock_client.return_value.__aenter__.return_value.get.return_value = mock_response
+            mock_client.return_value.__aenter__.return_value.get = AsyncMock(
+                return_value=mock_response
+            )
 
             token = jwt.encode(
                 {"alg": "HS256"}, valid_token_payload, mock_settings.supabase_jwt_secret
