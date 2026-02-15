@@ -25,15 +25,19 @@ Usage:
 """
 
 from collections.abc import AsyncGenerator
-from typing import Any, NamedTuple
+from typing import Any, NamedTuple, Optional
 from uuid import uuid4
 
 import pytest
 import pytest_asyncio
+from fastapi import Depends
+from fastapi.security import HTTPAuthorizationCredentials
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from src.core.dependencies import security_scheme
+from src.core.exceptions import UnauthorizedException
 from src.db.models import User, UserSettings
 
 # =============================================================================
@@ -248,7 +252,13 @@ async def auth_headers(test_user) -> dict[str, str]:
     from src.main import app
 
     # Set up dependency override for get_current_user
-    async def override_get_current_user():
+    async def override_get_current_user(
+        credentials: Optional[HTTPAuthorizationCredentials] = Depends(security_scheme),
+    ):
+        if not credentials:
+            raise UnauthorizedException(
+                detail="Authentication required. Please provide a valid access token."
+            )
         return test_user
 
     app.dependency_overrides[get_current_user] = override_get_current_user
@@ -282,7 +292,13 @@ async def superuser_auth_headers(test_superuser) -> dict[str, str]:
     from src.main import app
 
     # Set up dependency override for get_current_user
-    async def override_get_current_user():
+    async def override_get_current_user(
+        credentials: Optional[HTTPAuthorizationCredentials] = Depends(security_scheme),
+    ):
+        if not credentials:
+            raise UnauthorizedException(
+                detail="Authentication required. Please provide a valid access token."
+            )
         return test_superuser
 
     app.dependency_overrides[get_current_user] = override_get_current_user

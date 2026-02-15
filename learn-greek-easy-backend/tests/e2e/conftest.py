@@ -18,14 +18,18 @@ Usage:
 
 from collections.abc import Generator
 from datetime import datetime, timedelta
-from typing import NamedTuple
+from typing import NamedTuple, Optional
 from uuid import UUID, uuid4
 
 import pytest
 import pytest_asyncio
+from fastapi import Depends
+from fastapi.security import HTTPAuthorizationCredentials
 from httpx import AsyncClient, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.dependencies import security_scheme
+from src.core.exceptions import UnauthorizedException
 from src.db.models import Card, Deck, User
 from tests.base import AuthenticatedTestCase
 from tests.factories.base import BaseFactory
@@ -182,7 +186,13 @@ class E2ETestCase(AuthenticatedTestCase):
             db_user = result.scalar_one()
 
             # FastAPI requires async function for async dependency override
-            async def override_get_current_user():
+            async def override_get_current_user(
+                credentials: Optional[HTTPAuthorizationCredentials] = Depends(security_scheme),
+            ):
+                if not credentials:
+                    raise UnauthorizedException(
+                        detail="Authentication required. Please provide a valid access token."
+                    )
                 return db_user
 
             app.dependency_overrides[get_current_user] = override_get_current_user
@@ -503,7 +513,13 @@ async def fresh_user_session(
     db_user = result.scalar_one()
 
     # FastAPI requires async function for async dependency override
-    async def override_get_current_user():
+    async def override_get_current_user(
+        credentials: Optional[HTTPAuthorizationCredentials] = Depends(security_scheme),
+    ):
+        if not credentials:
+            raise UnauthorizedException(
+                detail="Authentication required. Please provide a valid access token."
+            )
         return db_user
 
     app.dependency_overrides[get_current_user] = override_get_current_user
