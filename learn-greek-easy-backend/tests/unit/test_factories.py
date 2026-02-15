@@ -117,13 +117,6 @@ class TestUserSettingsFactory:
 
 
 # =============================================================================
-# RefreshTokenFactory Tests - REMOVED (Supabase handles refresh tokens)
-# =============================================================================
-# The RefreshTokenFactory has been removed as part of Supabase migration.
-# Supabase manages refresh tokens internally.
-
-
-# =============================================================================
 # DeckFactory Tests
 # =============================================================================
 

@@ -147,8 +147,3 @@ class UserSettingsFactory(BaseFactory):
         quiet = factory.Trait(
             email_notifications=False,
         )
-
-
-# RefreshTokenFactory removed - Supabase handles refresh tokens
-# The old RefreshToken model and factory are no longer needed since
-# Supabase manages session and token refresh.

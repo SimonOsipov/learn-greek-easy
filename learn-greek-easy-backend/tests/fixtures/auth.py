@@ -58,7 +58,6 @@ def create_test_user_data(
     full_name: str = "Test User",
     is_active: bool = True,
     is_superuser: bool = False,
-    email_verified: bool = False,
     supabase_id: str | None = None,
 ) -> dict[str, Any]:
     """Create test user data dictionary.
@@ -70,7 +69,6 @@ def create_test_user_data(
         full_name: User's full name
         is_active: Whether user account is active
         is_superuser: Whether user has superuser privileges
-        email_verified: Whether email is verified
         supabase_id: Supabase user ID (auto-generated UUID if None)
 
     Returns:
@@ -161,7 +159,6 @@ async def test_user(db_session: AsyncSession) -> AsyncGenerator[User, None]:
         full_name="Regular Test User",
         is_active=True,
         is_superuser=False,
-        email_verified=False,
     )
     user = await create_user_with_settings(db_session, user_data)
     yield user
@@ -185,29 +182,6 @@ async def test_superuser(db_session: AsyncSession) -> AsyncGenerator[User, None]
         full_name="Admin Superuser",
         is_active=True,
         is_superuser=True,
-        email_verified=True,
-    )
-    user = await create_user_with_settings(db_session, user_data)
-    yield user
-
-
-@pytest_asyncio.fixture
-async def test_verified_user(db_session: AsyncSession) -> AsyncGenerator[User, None]:
-    """Provide a user with verified email.
-
-    Creates a user with:
-    - Valid email
-    - Active account
-    - Regular user (not superuser)
-
-    Yields:
-        User: The created verified user
-    """
-    user_data = create_test_user_data(
-        full_name="Verified User",
-        is_active=True,
-        is_superuser=False,
-        email_verified=True,
     )
     user = await create_user_with_settings(db_session, user_data)
     yield user

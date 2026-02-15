@@ -18,7 +18,6 @@ Available Database Fixtures:
 Available Auth Fixtures:
     test_user: Regular active user
     test_superuser: Admin user with superuser privileges
-    test_verified_user: User with verified email
     test_inactive_user: Deactivated user account
     test_user_tokens: JWT tokens for test_user
     auth_headers: Authorization headers for test_user
@@ -101,7 +100,6 @@ from tests.fixtures.auth import (  # User fixtures; Header fixtures; Bundle fixt
     test_inactive_user,
     test_superuser,
     test_user,
-    test_verified_user,
     two_users,
 )
 
@@ -210,7 +208,6 @@ __all__ = [
     # User fixtures
     "test_user",
     "test_superuser",
-    "test_verified_user",
     "test_inactive_user",
     "two_users",
     # Header fixtures

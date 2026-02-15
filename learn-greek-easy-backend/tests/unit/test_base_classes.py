@@ -219,10 +219,6 @@ class TestAuthFixturesUserCreation:
         assert test_superuser.is_superuser is True
         assert test_superuser.is_active is True
 
-    async def test_test_verified_user_fixture(self, test_verified_user: User):
-        """Test that test_verified_user fixture exists."""
-        assert test_verified_user is not None
-
     async def test_test_inactive_user_fixture(self, test_inactive_user: User):
         """Test that test_inactive_user is inactive."""
         assert test_inactive_user is not None

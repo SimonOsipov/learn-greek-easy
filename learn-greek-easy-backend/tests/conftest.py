@@ -46,7 +46,6 @@ from tests.fixtures.auth import (  # User fixtures; Header fixtures; Bundle fixt
     test_inactive_user,
     test_superuser,
     test_user,
-    test_verified_user,
     two_users,
 )
 
@@ -137,7 +136,6 @@ __all__ = [
     # Auth fixtures
     "test_user",
     "test_superuser",
-    "test_verified_user",
     "test_inactive_user",
     "two_users",
     "auth_headers",
