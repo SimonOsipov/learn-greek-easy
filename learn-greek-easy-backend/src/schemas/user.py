@@ -55,7 +55,7 @@ class UserResponse(UserBase):
     avatar_url: Optional[str] = None
     auth_provider: Optional[str] = Field(
         None,
-        description="Authentication provider (always 'supabase')",
+        description="Authentication provider: 'email' or 'google' (derived from Supabase JWT)",
     )
     created_at: datetime
     updated_at: datetime

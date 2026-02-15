@@ -188,6 +188,9 @@ async def get_current_user(
     except TokenInvalidException as e:
         raise UnauthorizedException(detail=f"Invalid access token: {e.detail}")
 
+    # 2a. Store claims on request.state for use in endpoints
+    request.state.supabase_claims = claims
+
     # 3. Get or create user (auto-provisioning)
     user = await get_or_create_user(db, claims)
 
@@ -291,6 +294,9 @@ async def get_current_user_optional(
     except (TokenExpiredException, TokenInvalidException, UnauthorizedException):
         # Invalid/expired token or Supabase not configured - treat as anonymous
         return None
+
+    # Store claims on request.state for use in endpoints
+    request.state.supabase_claims = claims
 
     # Try to get or create user
     try:

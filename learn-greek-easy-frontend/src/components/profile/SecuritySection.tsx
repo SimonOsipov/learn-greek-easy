@@ -58,9 +58,9 @@ export const SecuritySection: React.FC = () => {
   const [showResetDialog, setShowResetDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
-  // Only auth0 (email/password) users can change password
-  // All other auth providers (google-oauth2, etc.) or undefined use social/OAuth login
-  const canChangePassword = user?.authProvider === 'auth0';
+  // Only email (email/password) users can change password
+  // All other auth providers (google, etc.) or undefined use social/OAuth login
+  const canChangePassword = user?.authProvider === 'email';
 
   const passwordSchema = createPasswordSchema(t);
 
@@ -203,7 +203,7 @@ export const SecuritySection: React.FC = () => {
         </Card>
       </div>
 
-      {/* Password Change Dialog - only rendered for auth0 (email/password) users */}
+      {/* Password Change Dialog - only rendered for email (email/password) users */}
       {canChangePassword && (
         <Dialog open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen}>
           <DialogContent data-testid="password-dialog">

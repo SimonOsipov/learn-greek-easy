@@ -47,6 +47,7 @@ class SupabaseUserClaims:
     supabase_id: str
     email: Optional[str] = None
     full_name: Optional[str] = None
+    auth_provider: Optional[str] = None  # from app_metadata.provider
 
 
 class JWKSCache:
@@ -207,10 +208,15 @@ def _decode_token(token: str, jwks_data: Dict[str, Any], issuer: str) -> Supabas
     user_metadata = claims.get("user_metadata") or {}
     full_name = user_metadata.get("full_name") if isinstance(user_metadata, dict) else None
 
+    # Extract auth provider from app_metadata
+    app_metadata = claims.get("app_metadata") or {}
+    auth_provider = app_metadata.get("provider") if isinstance(app_metadata, dict) else None
+
     return SupabaseUserClaims(
         supabase_id=supabase_id,
         email=email,
         full_name=full_name,
+        auth_provider=auth_provider,
     )
 
 

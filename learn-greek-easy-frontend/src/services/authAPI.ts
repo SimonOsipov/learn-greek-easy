@@ -38,8 +38,7 @@ export interface UserProfileResponse {
   avatar_url: string | null;
   is_active: boolean;
   is_superuser: boolean;
-  email_verified_at: string | null;
-  auth_provider?: string | null; // e.g., 'auth0', 'google-oauth2'
+  auth_provider?: string | null; // e.g., 'email', 'google'
   created_at: string;
   updated_at: string;
   settings?: {

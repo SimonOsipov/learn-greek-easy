@@ -10,7 +10,7 @@ retrieval and updates, and avatar management (S3 presigned URLs).
 import uuid as uuid_module
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -39,7 +39,16 @@ from src.services.s3_service import (
 logger = get_logger(__name__)
 
 
-def _build_user_profile_response(user: User) -> UserProfileResponse:
+def _extract_auth_provider(request: Request) -> str:
+    """Extract auth provider from stored Supabase claims, defaulting to 'email'."""
+    claims = getattr(request.state, "supabase_claims", None)
+    if claims and claims.auth_provider:
+        provider: str = claims.auth_provider
+        return provider
+    return "email"
+
+
+def _build_user_profile_response(user: User, auth_provider: str = "email") -> UserProfileResponse:
     """Build UserProfileResponse with presigned avatar URL.
 
     Converts the raw avatar_url (S3 key) to a presigned GET URL
@@ -65,8 +74,8 @@ def _build_user_profile_response(user: User) -> UserProfileResponse:
     response = UserProfileResponse.model_validate(user)
     # Override avatar_url with presigned URL
     response.avatar_url = avatar_presigned_url
-    # Hardcode auth_provider to 'supabase'
-    response.auth_provider = "supabase"
+    # Set auth_provider
+    response.auth_provider = auth_provider
 
     return response
 
@@ -195,6 +204,7 @@ async def logout_all(
                         "full_name": "John Doe",
                         "is_active": True,
                         "is_superuser": False,
+                        "auth_provider": "email",
                         "created_at": "2024-11-25T10:30:00Z",
                         "updated_at": "2024-11-25T10:30:00Z",
                         "settings": {
@@ -251,6 +261,7 @@ async def logout_all(
     },
 )
 async def get_me(
+    request: Request,
     current_user: User = Depends(get_current_user),
 ) -> UserProfileResponse:
     """Get the current authenticated user's profile.
@@ -282,6 +293,7 @@ async def get_me(
             "full_name": "John Doe",
             "is_active": true,
             "is_superuser": false,
+            "auth_provider": "email",
             "created_at": "2024-11-25T10:30:00Z",
             "updated_at": "2024-11-25T10:30:00Z",
             "settings": {
@@ -294,7 +306,7 @@ async def get_me(
             }
         }
     """
-    return _build_user_profile_response(current_user)
+    return _build_user_profile_response(current_user, auth_provider=_extract_auth_provider(request))
 
 
 @router.patch(
@@ -312,6 +324,7 @@ async def get_me(
                         "full_name": "John Doe Updated",
                         "is_active": True,
                         "is_superuser": False,
+                        "auth_provider": "email",
                         "created_at": "2024-11-25T10:30:00Z",
                         "updated_at": "2024-11-25T12:00:00Z",
                         "settings": {
@@ -334,6 +347,7 @@ async def get_me(
     },
 )
 async def update_me(
+    request: Request,
     update_data: UserWithSettingsUpdate,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -413,7 +427,7 @@ async def update_me(
     result = await db.execute(stmt)
     updated_user = result.scalar_one()
 
-    return _build_user_profile_response(updated_user)
+    return _build_user_profile_response(updated_user, auth_provider=_extract_auth_provider(request))
 
 
 @router.post(
