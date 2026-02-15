@@ -183,6 +183,25 @@ vi.mock('@auth0/auth0-react', () => ({
   Auth0Provider: ({ children }: { children: React.ReactNode }) => children,
 }));
 
+// Mock Supabase client
+// This prevents Supabase from initializing during tests (env vars not available)
+vi.mock('@/lib/supabaseClient', () => ({
+  supabase: {
+    auth: {
+      getSession: vi.fn().mockResolvedValue({ data: { session: null } }),
+      signOut: vi.fn().mockResolvedValue({ error: null }),
+      onAuthStateChange: vi.fn().mockReturnValue({
+        data: { subscription: { unsubscribe: vi.fn() } },
+      }),
+      signInWithPassword: vi.fn(),
+      signUp: vi.fn(),
+      signInWithOAuth: vi.fn(),
+      resetPasswordForEmail: vi.fn(),
+      updateUser: vi.fn(),
+    },
+  },
+}));
+
 // Mock auth0-js library
 // This provides mock Auth0 WebAuth for tests
 vi.mock('auth0-js', () => ({

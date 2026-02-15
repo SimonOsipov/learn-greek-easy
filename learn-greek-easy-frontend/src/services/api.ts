@@ -20,7 +20,7 @@ import {
   sleep,
   logRetryAttempt,
 } from '@/lib/retryUtils';
-import { shouldRefreshToken } from '@/lib/tokenUtils';
+import { supabase } from '@/lib/supabaseClient';
 import { checkVersionAndRefreshIfNeeded } from '@/lib/versionCheck';
 
 // API base URL - relative URL for nginx proxy in production, or VITE_API_URL for dev
@@ -54,135 +54,13 @@ export class APIRequestError extends Error {
 }
 
 /**
- * Get stored auth tokens
- */
-function getAuthTokens(): { accessToken: string | null; refreshToken: string | null } {
-  // Check localStorage first (for "remember me" users)
-  const authStorage = localStorage.getItem('auth-storage');
-  if (authStorage) {
-    try {
-      const parsed = JSON.parse(authStorage);
-      if (parsed.state?.token) {
-        return {
-          accessToken: parsed.state.token,
-          refreshToken: parsed.state.refreshToken || null,
-        };
-      }
-    } catch {
-      // Invalid JSON, continue to sessionStorage
-    }
-  }
-
-  // Check sessionStorage (for non-"remember me" users)
-  const sessionToken = sessionStorage.getItem('auth-token');
-  return {
-    accessToken: sessionToken,
-    refreshToken: null,
-  };
-}
-
-/**
- * Update stored auth tokens
- */
-function updateAuthTokens(accessToken: string, refreshToken?: string): void {
-  // Update localStorage if it exists
-  const authStorage = localStorage.getItem('auth-storage');
-  if (authStorage) {
-    try {
-      const parsed = JSON.parse(authStorage);
-      parsed.state.token = accessToken;
-      if (refreshToken) {
-        parsed.state.refreshToken = refreshToken;
-      }
-      localStorage.setItem('auth-storage', JSON.stringify(parsed));
-    } catch {
-      // Ignore errors
-    }
-  }
-
-  // Always update sessionStorage
-  sessionStorage.setItem('auth-token', accessToken);
-}
-
-/**
- * Clear auth tokens (on logout or auth failure)
+ * Clear auth tokens (on logout or auth failure).
+ * Signs out of Supabase locally and cleans up legacy storage.
  */
 export function clearAuthTokens(): void {
+  supabase.auth.signOut({ scope: 'local' });
   localStorage.removeItem('auth-storage');
   sessionStorage.removeItem('auth-token');
-}
-
-/**
- * Singleton promise for token refresh operation.
- * Prevents race conditions when multiple requests trigger refresh simultaneously.
- *
- * When multiple concurrent requests receive 401 errors, they all attempt to refresh
- * the token. With token rotation (refresh tokens are single-use), only the first
- * refresh succeeds - subsequent attempts fail because the old refresh token was
- * already rotated. This mutex ensures only ONE refresh request is made, and all
- * waiting requests share the result.
- */
-let refreshPromise: Promise<string | null> | null = null;
-
-/**
- * Internal function that performs the actual token refresh.
- * Called only by refreshAccessToken() to ensure single execution.
- */
-async function performTokenRefresh(): Promise<string | null> {
-  const { refreshToken } = getAuthTokens();
-
-  if (!refreshToken) {
-    return null;
-  }
-
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/v1/auth/refresh`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ refresh_token: refreshToken }),
-    });
-
-    if (!response.ok) {
-      // Refresh failed, clear tokens
-      clearAuthTokens();
-      return null;
-    }
-
-    const data = await response.json();
-    updateAuthTokens(data.access_token, data.refresh_token);
-    return data.access_token;
-  } catch {
-    clearAuthTokens();
-    return null;
-  }
-}
-
-/**
- * Attempt to refresh the access token.
- * Uses a singleton pattern to prevent race conditions when multiple
- * concurrent requests receive 401 errors simultaneously.
- *
- * If a refresh is already in progress, subsequent calls will wait for
- * that refresh to complete rather than starting a new one.
- */
-async function refreshAccessToken(): Promise<string | null> {
-  // If a refresh is already in progress, wait for it
-  if (refreshPromise) {
-    return refreshPromise;
-  }
-
-  // Start a new refresh operation
-  refreshPromise = performTokenRefresh();
-
-  try {
-    const result = await refreshPromise;
-    return result;
-  } finally {
-    // Clear the promise so future refreshes can occur
-    refreshPromise = null;
-  }
 }
 
 /**
@@ -232,28 +110,11 @@ async function request<T>(
   };
 
   // Add auth token if not skipped
-  // NOTE: We ALWAYS use the stored backend JWT for API calls, never the Auth0 token.
-  // The Auth0 token is only used during initial authentication exchange (/api/v1/auth/auth0).
-  // After that exchange, the backend returns its own JWT which we store and use for all API calls.
   if (!skipAuth) {
-    let { accessToken } = getAuthTokens();
-
-    // PROACTIVE REFRESH: Check if token is expired or expiring soon
-    // This is the key fix - refresh BEFORE the request, not after 401
-    if (accessToken && shouldRefreshToken(accessToken)) {
-      log.debug('Token expiring soon, proactively refreshing');
-      const newToken = await refreshAccessToken();
-      if (newToken) {
-        accessToken = newToken;
-        log.debug('Proactive token refresh successful');
-      } else {
-        // Refresh failed - clear tokens and let request proceed without auth
-        // The 401 handler will trigger login redirect
-        log.warn('Proactive token refresh failed, clearing auth');
-        clearAuthTokens();
-        accessToken = null;
-      }
-    }
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    const accessToken = session?.access_token ?? null;
 
     if (accessToken) {
       headers['Authorization'] = `Bearer ${accessToken}`;
@@ -322,48 +183,9 @@ async function request<T>(
         continue; // Retry the request
       }
 
-      // Handle 401 - This should be RARE after proactive refresh
-      // If we get here, something is actually wrong (revoked token, security issue)
+      // Handle 401 - session is invalid (Supabase auto-refresh couldn't recover)
       if (response.status === 401 && !skipAuth) {
-        // Try to refresh the token (works for both Auth0 and legacy auth since we use backend JWTs)
-        log.warn('Received 401 despite proactive refresh - token may have been revoked');
-        const newToken = await refreshAccessToken();
-
-        if (newToken) {
-          // Retry with new token
-          headers['Authorization'] = `Bearer ${newToken}`;
-          const retryResponse = await fetch(url, {
-            method,
-            headers,
-            body: body ? JSON.stringify(body) : undefined,
-          });
-
-          if (!retryResponse.ok) {
-            const errorData = await retryResponse.json().catch(() => ({}));
-            const detail = errorData.error?.details || errorData.detail;
-            const message =
-              errorData.error?.message ||
-              errorData.detail ||
-              `Request failed with status ${retryResponse.status}`;
-            throw new APIRequestError({
-              status: retryResponse.status,
-              statusText: retryResponse.statusText,
-              message,
-              detail,
-            });
-          }
-
-          // Check for version mismatch on retry response too
-          checkVersionAndRefreshIfNeeded(retryResponse);
-
-          // Return response (handle 204 No Content)
-          if (retryResponse.status === 204) {
-            return undefined as T;
-          }
-          return retryResponse.json();
-        }
-
-        // Token refresh failed
+        log.warn('Received 401 - session may be invalid or expired');
         throw new APIRequestError({
           status: 401,
           statusText: 'Unauthorized',
@@ -508,20 +330,4 @@ export function buildQueryString(params: Record<string, unknown>): string {
 
   const queryString = searchParams.toString();
   return queryString ? `?${queryString}` : '';
-}
-
-/**
- * Reset refresh promise state - FOR TESTING ONLY.
- * This allows tests to reset the module state between test runs.
- */
-export function _resetRefreshState_forTesting(): void {
-  refreshPromise = null;
-}
-
-/**
- * Get the current refresh promise - FOR TESTING ONLY.
- * This allows tests to verify the mutex behavior.
- */
-export function _getRefreshPromise_forTesting(): Promise<string | null> | null {
-  return refreshPromise;
 }
