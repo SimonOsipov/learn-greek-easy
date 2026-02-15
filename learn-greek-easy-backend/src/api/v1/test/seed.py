@@ -25,7 +25,6 @@ from src.core.exceptions import (
     SeedForbiddenException,
     SeedUnauthorizedException,
 )
-from src.core.security import create_access_token, create_refresh_token
 from src.db.dependencies import get_db
 from src.db.models import NewsItem
 from src.repositories.user import UserRepository
@@ -584,8 +583,8 @@ async def get_test_auth(
     """Generate auth tokens for a test user by email.
 
     This endpoint allows E2E tests to authenticate as seeded users without
-    going through Auth0 or the legacy login flow. It's gated behind the
-    same security checks as other seed endpoints.
+    going through Supabase Auth. It's gated behind the same security checks
+    as other seed endpoints.
 
     Args:
         request: Contains the email of the test user
@@ -597,32 +596,20 @@ async def get_test_auth(
     Raises:
         HTTPException 404: If user not found
         HTTPException 403: If seeding is disabled or in production
+        HTTPException 501: Not implemented (requires Supabase Admin API integration)
     """
     from fastapi import HTTPException
 
-    user_repo = UserRepository(db)
-    user = await user_repo.get_by_email(request.email)
-
-    if not user:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Test user not found: {request.email}. "
-            "Make sure to seed the database first with POST /api/v1/test/seed/all",
-        )
-
-    # Generate tokens for the test user
-    # create_access_token returns (token, expires_at)
-    # create_refresh_token returns (token, expires_at, token_id)
-    access_token, _ = create_access_token(user_id=user.id)
-    refresh_token, _, _ = create_refresh_token(user_id=user.id)
-
-    return TestAuthResponse(
-        success=True,
-        access_token=access_token,
-        refresh_token=refresh_token,
-        user_id=str(user.id),
-        email=user.email,
-        is_superuser=user.is_superuser,
+    # TODO [SUPA-06]: Implement Supabase Admin API token generation
+    # The old create_access_token/create_refresh_token generated self-issued
+    # HS256 JWT tokens that are no longer valid with Supabase RS256 auth.
+    # Need to use Supabase Admin API to create users and generate tokens.
+    # See: https://supabase.com/docs/reference/javascript/auth-admin-createuser
+    raise HTTPException(
+        status_code=501,
+        detail="Test auth endpoint not implemented. "
+        "Use Supabase authentication directly for E2E tests. "
+        "See docs/e2e-seeding.md for test user credentials.",
     )
 
 
@@ -654,46 +641,20 @@ async def create_test_user(
     Raises:
         HTTPException 409: If user with email already exists
         HTTPException 403: If seeding is disabled or in production
+        HTTPException 501: Not implemented (requires Supabase Admin API integration)
     """
     from fastapi import HTTPException
 
-    from src.db.models import User, UserSettings
-
-    user_repo = UserRepository(db)
-    existing_user = await user_repo.get_by_email(request.email)
-
-    if existing_user:
-        raise HTTPException(
-            status_code=409,
-            detail=f"User with email {request.email} already exists.",
-        )
-
-    # Create user directly in the database
-    user = User(
-        email=request.email,
-        full_name=request.full_name,
-        password_hash=None,  # No password for test users
-        is_active=True,
-    )
-    db.add(user)
-    await db.flush()  # Get user ID
-
-    # Create default user settings
-    settings = UserSettings(user_id=user.id)
-    db.add(settings)
-    await db.commit()
-
-    # Generate tokens for the new user
-    access_token, _ = create_access_token(user_id=user.id)
-    refresh_token, _, _ = create_refresh_token(user_id=user.id)
-
-    return TestAuthResponse(
-        success=True,
-        access_token=access_token,
-        refresh_token=refresh_token,
-        user_id=str(user.id),
-        email=user.email,
-        is_superuser=user.is_superuser,
+    # TODO [SUPA-06]: Implement Supabase Admin API user creation and token generation
+    # The old create_access_token/create_refresh_token generated self-issued
+    # HS256 JWT tokens that are no longer valid with Supabase RS256 auth.
+    # Need to use Supabase Admin API to create users and generate tokens.
+    # See: https://supabase.com/docs/reference/javascript/auth-admin-createuser
+    raise HTTPException(
+        status_code=501,
+        detail="Test user creation endpoint not implemented. "
+        "Use /api/v1/test/seed/all to seed test users, then authenticate "
+        "via Supabase directly. See docs/e2e-seeding.md for credentials.",
     )
 
 

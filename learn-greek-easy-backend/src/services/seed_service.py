@@ -321,7 +321,7 @@ class SeedService:
             "full_name": "E2E Danger Reset User",
             "is_superuser": False,
             "is_active": True,
-            "auth0_id": None,
+            "supabase_id": None,
             "has_progress": True,
         },
         {
@@ -329,7 +329,7 @@ class SeedService:
             "full_name": "E2E Danger Delete User",
             "is_superuser": False,
             "is_active": True,
-            "auth0_id": None,
+            "supabase_id": None,
             "has_progress": False,
         },
     ]
@@ -1861,9 +1861,9 @@ class SeedService:
     async def seed_users(self) -> dict[str, Any]:
         """Create deterministic test users for E2E scenarios.
 
-        Creates Auth0-style users (no password hash) for E2E testing.
-        Auth0 test users should authenticate via Auth0's test mode or
-        have corresponding Auth0 accounts configured.
+        Creates users without password hashes for Supabase Auth E2E testing.
+        Test users should authenticate via Supabase Auth with their
+        test credentials (see docs/e2e-seeding.md).
 
         Test Users Created:
         1. e2e_learner@test.com - Regular learner with progress
@@ -1879,37 +1879,35 @@ class SeedService:
         """
         self._check_can_seed()
 
-        # NOTE: auth0_id is set to None so that when Auth0 E2E tests run,
-        # the real Auth0 user ID can be linked to these seeded users.
-        # Setting fake auth0_ids would cause AccountLinkingConflictException.
+        # NOTE: supabase_id is set to None -- Supabase Auth assigns this on first login.
         users_data = [
             {
                 "email": "e2e_learner@test.com",
                 "full_name": "E2E Learner",
                 "is_superuser": False,
                 "is_active": True,
-                "auth0_id": None,
+                "supabase_id": None,
             },
             {
                 "email": "e2e_beginner@test.com",
                 "full_name": "E2E Beginner",
                 "is_superuser": False,
                 "is_active": True,
-                "auth0_id": None,
+                "supabase_id": None,
             },
             {
                 "email": "e2e_advanced@test.com",
                 "full_name": "E2E Advanced",
                 "is_superuser": False,
                 "is_active": True,
-                "auth0_id": None,
+                "supabase_id": None,
             },
             {
                 "email": "e2e_admin@test.com",
                 "full_name": "E2E Admin",
                 "is_superuser": True,
                 "is_active": True,
-                "auth0_id": None,
+                "supabase_id": None,
             },
         ]
 
@@ -1920,8 +1918,8 @@ class SeedService:
             user = User(
                 email=user_data["email"],
                 full_name=user_data["full_name"],
-                password_hash=None,  # Auth0 users don't have password
-                auth0_id=user_data["auth0_id"],
+                password_hash=None,  # Supabase users don't have local password
+                supabase_id=user_data["supabase_id"],
                 is_superuser=user_data["is_superuser"],
                 is_active=user_data["is_active"],
                 email_verified_at=now,  # Pre-verified for E2E tests
@@ -1943,7 +1941,7 @@ class SeedService:
                     "email": user.email,
                     "full_name": user.full_name,
                     "is_superuser": user.is_superuser,
-                    "auth0_id": user.auth0_id,  # type: ignore[attr-defined]  # SUPA-06: Rename to supabase_id
+                    "supabase_id": user.supabase_id,
                 }
             )
 
@@ -3901,8 +3899,8 @@ class SeedService:
             user = User(
                 email=email,
                 full_name=user_data["full_name"],
-                password_hash=None,  # Auth0 users don't have password
-                auth0_id=user_data["auth0_id"],
+                password_hash=None,  # Supabase users don't have local password
+                supabase_id=user_data["supabase_id"],
                 is_superuser=user_data["is_superuser"],
                 is_active=user_data["is_active"],
                 email_verified_at=now,
@@ -4588,8 +4586,8 @@ class SeedService:
         xp_boundary_user = User(
             email="e2e_xp_boundary@test.com",
             full_name="E2E XP Boundary",
-            password_hash=None,  # Auth0 users don't have password
-            auth0_id="auth0|e2e_xp_boundary",
+            password_hash=None,
+            supabase_id=None,
             is_superuser=False,
             is_active=True,
             email_verified_at=now,
@@ -4615,8 +4613,8 @@ class SeedService:
         xp_mid_user = User(
             email="e2e_xp_mid@test.com",
             full_name="E2E XP Mid",
-            password_hash=None,  # Auth0 users don't have password
-            auth0_id="auth0|e2e_xp_mid",
+            password_hash=None,
+            supabase_id=None,
             is_superuser=False,
             is_active=True,
             email_verified_at=now,
@@ -4650,8 +4648,8 @@ class SeedService:
         xp_max_user = User(
             email="e2e_xp_max@test.com",
             full_name="E2E XP Max",
-            password_hash=None,  # Auth0 users don't have password
-            auth0_id="auth0|e2e_xp_max",
+            password_hash=None,
+            supabase_id=None,
             is_superuser=False,
             is_active=True,
             email_verified_at=now,

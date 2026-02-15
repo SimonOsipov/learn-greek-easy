@@ -184,8 +184,6 @@ from src.schemas.sm2 import (
 )
 from src.schemas.user import (
     SupportedLanguage,
-    TokenPayload,
-    TokenResponse,
     UserProfileResponse,
     UserResponse,
     UserSettingsResponse,
@@ -226,8 +224,6 @@ __all__ = [
     "UserSettingsResponse",
     "UserWithSettingsUpdate",
     "SupportedLanguage",
-    "TokenResponse",
-    "TokenPayload",
     # Deck
     "DeckCreate",
     "DeckUpdate",

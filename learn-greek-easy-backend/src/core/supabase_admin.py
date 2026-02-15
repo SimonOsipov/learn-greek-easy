@@ -24,7 +24,6 @@ class SupabaseAdminClient:
     """Client for Supabase Admin API operations.
 
     Uses the service role key for authentication (static key, no token exchange).
-    Much simpler than the Auth0 equivalent — no M2M token cache needed.
 
     Attributes:
         supabase_url: Supabase project URL
