@@ -55,7 +55,7 @@ type FormState = 'form' | 'verification' | 'error';
 
 /**
  * Registration form validation schema
- * Matches Auth0 password policy requirements
+ * Password validation requirements
  */
 const registerSchema = z
   .object({
@@ -80,10 +80,10 @@ type RegisterFormData = z.infer<typeof registerSchema>;
 const mapSupabaseSignupError = (error: { message: string }, t: (key: string) => string): string => {
   const msg = error.message.toLowerCase();
   if (msg.includes('already registered') || msg.includes('already been registered')) {
-    return t('register.auth0.errors.emailExists');
+    return t('register.errors.emailExists');
   }
   if (msg.includes('password')) {
-    return t('register.auth0.errors.invalidPassword');
+    return t('register.errors.invalidPassword');
   }
   return error.message;
 };
@@ -218,7 +218,7 @@ export const RegisterForm: React.FC = () => {
       const errorMessage =
         err instanceof Error
           ? mapSupabaseSignupError(err, t)
-          : t('register.auth0.errors.auth0Error');
+          : t('register.errors.registrationFailed');
       setFormError(errorMessage);
       log.error('[RegisterForm] Registration failed:', errorMessage);
     } finally {
@@ -269,11 +269,11 @@ export const RegisterForm: React.FC = () => {
 
       if (error) {
         log.error('[RegisterForm] Google OAuth error:', error);
-        setFormError(t('register.auth0.errors.auth0Error'));
+        setFormError(t('register.errors.registrationFailed'));
       }
     } catch (err) {
       log.error('[RegisterForm] Google signup error:', err);
-      setFormError(t('register.auth0.errors.auth0Error'));
+      setFormError(t('register.errors.registrationFailed'));
     }
   };
 
@@ -304,10 +304,10 @@ export const RegisterForm: React.FC = () => {
               <Mail className="h-8 w-8 text-blue-600" />
             </div>
             <CardTitle className="text-2xl font-bold" data-testid="verification-title">
-              {t('register.auth0.checkEmailTitle')}
+              {t('register.checkEmailTitle')}
             </CardTitle>
             <CardDescription className="text-base">
-              {t('register.auth0.checkEmailDescription')}
+              {t('register.checkEmailDescription')}
             </CardDescription>
             <p className="mt-2 font-medium text-foreground" data-testid="registered-email">
               {registeredEmail}
@@ -315,9 +315,7 @@ export const RegisterForm: React.FC = () => {
           </CardHeader>
 
           <CardContent className="space-y-4">
-            <p className="text-center text-sm text-muted-foreground">
-              {t('register.auth0.checkSpam')}
-            </p>
+            <p className="text-center text-sm text-muted-foreground">{t('register.checkSpam')}</p>
 
             {resendSuccess && (
               <div
@@ -325,7 +323,7 @@ export const RegisterForm: React.FC = () => {
                 role="status"
                 data-testid="resend-success"
               >
-                {t('register.auth0.resendSuccess')}
+                {t('register.resendSuccess')}
               </div>
             )}
 
@@ -339,12 +337,12 @@ export const RegisterForm: React.FC = () => {
               {isResending ? (
                 <>
                   <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                  {t('register.auth0.resendEmail')}
+                  {t('register.resendEmail')}
                 </>
               ) : (
                 <>
                   <RefreshCw className="mr-2 h-4 w-4" />
-                  {t('register.auth0.resendEmail')}
+                  {t('register.resendEmail')}
                 </>
               )}
             </Button>
@@ -358,7 +356,7 @@ export const RegisterForm: React.FC = () => {
               data-testid="start-over-button"
             >
               <ArrowLeft className="mr-2 h-4 w-4" />
-              {t('register.auth0.wrongEmail')}
+              {t('register.wrongEmail')}
             </Button>
 
             <p className="text-center text-sm text-muted-foreground">
@@ -577,7 +575,7 @@ export const RegisterForm: React.FC = () => {
               data-testid="google-signup-button"
             >
               <GoogleIcon />
-              {t('register.auth0.signUpWithGoogle')}
+              {t('register.signUpWithGoogle')}
             </Button>
 
             <p className="text-center text-sm text-muted-foreground">

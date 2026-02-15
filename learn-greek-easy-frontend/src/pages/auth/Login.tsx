@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { LoginForm } from '@/components/auth/Auth0LoginForm';
+import { LoginForm } from '@/components/auth/LoginForm';
 
 /**
  * Login Page Component

@@ -65,10 +65,10 @@ const mapSupabaseError = (error: { message: string }, t: (key: string) => string
     return t('login.errors.invalidCredentials');
   }
   if (msg.includes('email not confirmed')) {
-    return t('login.auth0.errors.requiresVerification');
+    return t('login.errors.requiresVerification');
   }
   if (msg.includes('too many requests')) {
-    return t('login.auth0.errors.tooManyAttempts');
+    return t('login.errors.tooManyAttempts');
   }
   return error.message;
 };
@@ -196,7 +196,7 @@ export const LoginForm: React.FC = () => {
 
       // Map Supabase error to translated message
       const errorMessage =
-        err instanceof Error ? mapSupabaseError(err, t) : t('login.auth0.errors.auth0Error');
+        err instanceof Error ? mapSupabaseError(err, t) : t('login.errors.loginFailed');
       setFormError(errorMessage);
       log.error('[LoginForm] Login failed:', errorMessage);
     } finally {
@@ -218,11 +218,11 @@ export const LoginForm: React.FC = () => {
 
       if (error) {
         log.error('[LoginForm] Google OAuth error:', error);
-        setFormError(t('login.auth0.errors.auth0Error'));
+        setFormError(t('login.errors.loginFailed'));
       }
     } catch (err) {
       log.error('[LoginForm] Google login error:', err);
-      setFormError(t('login.auth0.errors.auth0Error'));
+      setFormError(t('login.errors.loginFailed'));
     }
   };
 
@@ -368,7 +368,7 @@ export const LoginForm: React.FC = () => {
               data-testid="google-login-button"
             >
               <GoogleIcon />
-              {t('login.auth0.signInWithGoogle')}
+              {t('login.signInWithGoogle')}
             </Button>
 
             <p className="text-center text-sm text-muted-foreground">

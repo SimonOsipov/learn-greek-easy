@@ -1,4 +1,4 @@
-import { Suspense, useEffect, type ReactNode } from 'react';
+import { Suspense, useEffect } from 'react';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
@@ -17,9 +17,8 @@ import { LanguageProvider } from '@/contexts/LanguageContext';
 import { LayoutProvider } from '@/contexts/LayoutContext';
 import { NotificationProvider } from '@/contexts/NotificationContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
-import { isAuth0Enabled } from '@/hooks/useAuth0Integration';
 import { lazyWithRetry } from '@/lib/lazyWithRetry';
-import { Auth0ProviderWithNavigate, PostHogProvider } from '@/providers';
+import { PostHogProvider } from '@/providers';
 import { useAppStore, selectIsReady } from '@/stores/appStore';
 
 // ============================================================================
@@ -304,40 +303,24 @@ function AppContent() {
   );
 }
 
-/**
- * Conditional Auth0 Provider wrapper.
- * Wraps children with Auth0Provider when Auth0 is enabled.
- * Must be inside BrowserRouter for useNavigate to work.
- */
-function ConditionalAuth0Provider({ children }: { children: ReactNode }) {
-  if (!isAuth0Enabled()) {
-    return <>{children}</>;
-  }
-
-  return <Auth0ProviderWithNavigate>{children}</Auth0ProviderWithNavigate>;
-}
-
 function App() {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
-          {/* Auth0Provider must be inside BrowserRouter for useNavigate */}
-          <ConditionalAuth0Provider>
-            <PostHogProvider>
-              <TooltipProvider>
-                <ThemeProvider>
-                  <LanguageProvider>
-                    <LayoutProvider>
-                      <NotificationProvider>
-                        <AppContent />
-                      </NotificationProvider>
-                    </LayoutProvider>
-                  </LanguageProvider>
-                </ThemeProvider>
-              </TooltipProvider>
-            </PostHogProvider>
-          </ConditionalAuth0Provider>
+          <PostHogProvider>
+            <TooltipProvider>
+              <ThemeProvider>
+                <LanguageProvider>
+                  <LayoutProvider>
+                    <NotificationProvider>
+                      <AppContent />
+                    </NotificationProvider>
+                  </LayoutProvider>
+                </LanguageProvider>
+              </ThemeProvider>
+            </TooltipProvider>
+          </PostHogProvider>
         </BrowserRouter>
       </QueryClientProvider>
     </ErrorBoundary>

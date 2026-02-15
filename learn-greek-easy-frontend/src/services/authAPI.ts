@@ -3,13 +3,12 @@
 /**
  * Authentication API Service
  *
- * Provides methods for user authentication including:
- * - Token refresh
- * - Logout
- * - Profile retrieval
+ * Provides methods for user profile management including:
+ * - Profile retrieval and updates
+ * - User deletion
  *
- * Note: Login and registration are handled via Auth0.
- * See useAuth0Integration hook for Auth0-based authentication.
+ * Note: Login, registration, and session management are handled
+ * via Supabase Auth SDK. See supabaseClient.ts.
  */
 
 import { api, clearAuthTokens } from './api';

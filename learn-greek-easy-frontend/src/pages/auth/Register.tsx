@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { RegisterForm } from '@/components/auth/Auth0RegisterForm';
+import { RegisterForm } from '@/components/auth/RegisterForm';
 
 /**
  * Registration Page Component

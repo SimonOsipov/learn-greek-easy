@@ -95,7 +95,7 @@ export const ForgotPassword: React.FC = () => {
       setSubmittedEmail(data.email);
       setFormState('success');
     } catch (err) {
-      const translatedError = t('forgotPassword.auth0.errors.sendFailed');
+      const translatedError = t('forgotPassword.errors.sendFailed');
       setFormError(translatedError);
       log.error('[ForgotPassword] Password reset failed:', err);
     } finally {
@@ -116,7 +116,7 @@ export const ForgotPassword: React.FC = () => {
   // Helper to translate Zod error messages
   const getErrorMessage = (errorKey: string | undefined): string | undefined => {
     if (!errorKey) return undefined;
-    return t(`forgotPassword.auth0.errors.${errorKey}`);
+    return t(`forgotPassword.errors.${errorKey}`);
   };
 
   const isFormDisabled = isSubmitting;
@@ -131,10 +131,10 @@ export const ForgotPassword: React.FC = () => {
               <Mail className="h-8 w-8 text-blue-600" />
             </div>
             <CardTitle className="text-2xl font-bold" data-testid="success-title">
-              {t('forgotPassword.auth0.checkEmailTitle')}
+              {t('forgotPassword.checkEmailTitle')}
             </CardTitle>
             <CardDescription className="text-base">
-              {t('forgotPassword.auth0.checkEmailDescription')}
+              {t('forgotPassword.checkEmailDescription')}
             </CardDescription>
             <p className="mt-2 font-medium text-foreground" data-testid="submitted-email">
               {submittedEmail}
@@ -143,7 +143,7 @@ export const ForgotPassword: React.FC = () => {
 
           <CardContent className="space-y-4">
             <p className="text-center text-sm text-muted-foreground">
-              {t('forgotPassword.auth0.checkSpam')}
+              {t('forgotPassword.checkSpam')}
             </p>
 
             <Button
@@ -153,7 +153,7 @@ export const ForgotPassword: React.FC = () => {
               data-testid="try-different-email-button"
             >
               <ArrowLeft className="mr-2 h-4 w-4" />
-              {t('forgotPassword.auth0.tryDifferentEmail')}
+              {t('forgotPassword.tryDifferentEmail')}
             </Button>
 
             <Button asChild variant="ghost" className="w-full">
@@ -181,7 +181,7 @@ export const ForgotPassword: React.FC = () => {
             {t('forgotPassword.title')}
           </CardTitle>
           <CardDescription data-testid="forgot-password-description">
-            {t('forgotPassword.auth0.description')}
+            {t('forgotPassword.description')}
           </CardDescription>
         </CardHeader>
 
@@ -200,12 +200,12 @@ export const ForgotPassword: React.FC = () => {
 
             {/* Email field */}
             <div className="space-y-2">
-              <Label htmlFor="email">{t('forgotPassword.auth0.email')}</Label>
+              <Label htmlFor="email">{t('forgotPassword.email')}</Label>
               <Input
                 id="email"
                 data-testid="email-input"
                 type="email"
-                placeholder={t('forgotPassword.auth0.emailPlaceholder')}
+                placeholder={t('forgotPassword.emailPlaceholder')}
                 autoComplete="email"
                 aria-invalid={errors.email ? 'true' : 'false'}
                 aria-describedby={errors.email ? 'email-error' : undefined}
@@ -222,11 +222,11 @@ export const ForgotPassword: React.FC = () => {
             <SubmitButton
               data-testid="forgot-password-submit"
               loading={isSubmitting}
-              loadingText={t('forgotPassword.auth0.submitting')}
+              loadingText={t('forgotPassword.submitting')}
               className="w-full bg-gradient-to-br from-gradient-from to-gradient-to text-white hover:opacity-90"
               size="lg"
             >
-              {t('forgotPassword.auth0.submit')}
+              {t('forgotPassword.submit')}
             </SubmitButton>
 
             <div className="pt-2">
