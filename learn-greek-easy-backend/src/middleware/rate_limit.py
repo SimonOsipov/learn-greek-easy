@@ -92,7 +92,6 @@ class RateLimitingMiddleware:
         "/api/v1/auth/login",
         "/api/v1/auth/register",
         "/api/v1/auth/google",
-        "/api/v1/auth/refresh",
     ]
 
     # Paths exempt from rate limiting
