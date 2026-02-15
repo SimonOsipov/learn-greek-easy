@@ -1,24 +1,28 @@
 /**
  * Authentication Setup for Playwright
  *
- * This file runs ONCE before all tests to authenticate each user role
+ * Runs ONCE before all tests to authenticate each seed user via Supabase
  * and save their browser state (cookies, localStorage) to JSON files.
  *
  * Tests then use these saved states via storageState config, eliminating
- * the need for per-test authentication and Zustand race condition workarounds.
+ * the need for per-test authentication.
  *
- * Authentication Modes:
- * - Auth0 Mode: When AUTH0_E2E_TEST_PASSWORD is set, authenticates via Auth0 login UI
- * - Legacy Mode: Uses test seed endpoint for token generation (default)
+ * Flow per user:
+ * 1. Navigate to app origin (required for localStorage access)
+ * 2. Call GoTrue REST API via page.evaluate() to sign in with password
+ * 3. Write Supabase session to localStorage (sb-<ref>-auth-token)
+ * 4. Fetch user profile from backend API
+ * 5. Write Zustand auth state to localStorage (auth-storage)
+ * 6. Save storageState to JSON file
  *
  * @see https://playwright.dev/docs/auth
  */
 
-import { test as setup, expect, request } from '@playwright/test';
-import { SEED_USERS, verifySeedUsers, waitForAPIReady } from './helpers/auth-helpers';
-import { isAuth0Enabled, AUTH0_TEST_USERS } from './helpers/auth0-helpers';
+import { test as setup, request } from '@playwright/test';
 import * as fs from 'fs';
-import * as path from 'path';
+
+import { SEED_USERS, verifySeedUsers } from './helpers/auth-helpers';
+import { getSupabaseUrl, getSupabaseAnonKey, getSupabaseStorageKey } from './helpers/supabase-test-client';
 
 // Storage state file paths
 const STORAGE_STATE_DIR = 'playwright/.auth';
@@ -29,14 +33,14 @@ if (!fs.existsSync(STORAGE_STATE_DIR)) {
 }
 
 /**
- * Get API base URL from environment
+ * Get API base URL from environment.
  */
 function getApiBaseUrl(): string {
   return process.env.E2E_API_URL || process.env.VITE_API_URL || 'http://localhost:8000';
 }
 
 /**
- * Verify backend is ready before running auth setup
+ * Verify backend and seed users are ready before auth setup.
  */
 setup.beforeAll(async () => {
   const apiBaseUrl = getApiBaseUrl();
@@ -45,7 +49,6 @@ setup.beforeAll(async () => {
   const apiRequest = await request.newContext({ baseURL: apiBaseUrl });
 
   try {
-    // Check /health/ready endpoint
     console.log('[SETUP] Checking /health/ready...');
     const healthResponse = await apiRequest.get('/health/ready');
     if (!healthResponse.ok()) {
@@ -54,9 +57,8 @@ setup.beforeAll(async () => {
     }
     console.log('[SETUP] Backend health check passed');
 
-    // Check seed status and verify users can login
-    console.log('[SETUP] Verifying seed users exist and can login...');
-    await verifySeedUsers(apiRequest);
+    console.log('[SETUP] Verifying seed users can sign in via Supabase...');
+    await verifySeedUsers();
     console.log('[SETUP] Seed users verified successfully');
   } catch (error) {
     console.error('[SETUP] Backend verification failed:', error);
@@ -67,302 +69,151 @@ setup.beforeAll(async () => {
 });
 
 /**
- * Authenticate a user via Auth0 login UI
+ * Authenticate a user via Supabase signInWithPassword and save storage state.
  *
- * This method is used when AUTH0_E2E_TEST_PASSWORD is set, indicating
- * we should test against the real Auth0 tenant.
- *
- * Flow:
- * 1. Navigate to /login
- * 2. Fill in email/password
- * 3. Submit the form
- * 4. Wait for successful redirect to dashboard
- * 5. Save storage state
- */
-async function authenticateViaAuth0(
-  page: import('@playwright/test').Page,
-  user: { email: string; password: string; name: string },
-  storageStatePath: string
-): Promise<void> {
-  console.log(`[SETUP] Starting Auth0 authentication for ${user.email}`);
-
-  // Capture browser console logs for debugging
-  page.on('console', (msg) => {
-    console.log(`[BROWSER ${msg.type().toUpperCase()}] ${msg.text()}`);
-  });
-
-  // Capture page errors
-  page.on('pageerror', (error) => {
-    console.log(`[BROWSER PAGE ERROR] ${error.message}`);
-  });
-
-  // Capture request failures
-  page.on('requestfailed', (request) => {
-    console.log(`[BROWSER REQUEST FAILED] ${request.url()} - ${request.failure()?.errorText}`);
-  });
-
-  // Step 1: Navigate to login page
-  await page.goto('/login');
-
-  // Step 2: Wait for the login form to be visible
-  await page.waitForSelector('[data-testid="login-form"]', {
-    state: 'visible',
-    timeout: 10000,
-  });
-
-  console.log(`[SETUP] Login form visible, filling credentials for ${user.email}`);
-
-  // Step 3: Fill in the credentials
-  await page.getByTestId('email-input').fill(user.email);
-  await page.getByTestId('password-input').fill(user.password);
-
-  // Step 4: Check "Remember me" to persist auth state to localStorage
-  // This is critical - without it, auth is stored only in sessionStorage
-  // which doesn't persist across storageState saves
-  const rememberMeCheckbox = page.locator('#remember');
-  await rememberMeCheckbox.check();
-
-  // Step 5: Submit the form
-  await page.getByTestId('login-submit').click();
-
-  // Step 6: Wait for successful authentication - should redirect away from login
-  try {
-    await page.waitForURL((url) => !url.pathname.includes('/login'), {
-      timeout: 30000,
-    });
-  } catch (error) {
-    // Check if there's an error message on the page
-    const errorElement = page.getByTestId('form-error');
-    const hasError = await errorElement.isVisible().catch(() => false);
-    if (hasError) {
-      const errorText = await errorElement.textContent();
-      throw new Error(
-        `[SETUP] Auth0 login failed for ${user.email}: ${errorText}`
-      );
-    }
-    throw new Error(
-      `[SETUP] Auth0 login timeout for ${user.email}. Still on login page after 30s.`
-    );
-  }
-
-  console.log(`[SETUP] Auth0 login successful for ${user.email}`);
-
-  // Step 7: Wait for app to be ready
-  try {
-    await page.waitForSelector('[data-app-ready="true"]', {
-      timeout: 30000,
-      state: 'attached',
-    });
-  } catch {
-    console.warn(`[SETUP] Warning: data-app-ready not found for ${user.email}`);
-  }
-
-  // Step 8: Save storage state
-  await page.context().storageState({ path: storageStatePath });
-
-  console.log(`[SETUP] Saved Auth0 auth state for ${user.email} to ${storageStatePath}`);
-}
-
-/**
- * Authenticate a user via test seed API and save storage state
- *
- * This is the legacy method used when AUTH0_E2E_TEST_PASSWORD is not set.
- * It uses the test seed endpoint to get tokens without going through Auth0.
- *
- * Flow:
- * 1. Get auth tokens from the test seed endpoint
- * 2. Set up localStorage with the auth state
- * 3. Navigate to verify the auth works
- * 4. Save the browser state
- */
-async function authenticateViaSeedAPI(
-  page: import('@playwright/test').Page,
-  user: { email: string; password: string; name: string },
-  storageStatePath: string
-): Promise<void> {
-  const apiBaseUrl = getApiBaseUrl();
-  console.log(`[SETUP] Starting seed API authentication for ${user.email}`);
-  console.log(`[SETUP] API Base URL: ${apiBaseUrl}`);
-
-  // Step 1: Get auth tokens from test seed endpoint
-  const apiRequest = await request.newContext({ baseURL: apiBaseUrl });
-  let authResponse;
-  try {
-    authResponse = await apiRequest.post('/api/v1/test/seed/auth', {
-      data: { email: user.email },
-      headers: { 'Content-Type': 'application/json' },
-    });
-  } catch (error) {
-    await apiRequest.dispose();
-    throw new Error(
-      `[SETUP] Failed to reach test auth endpoint for ${user.email}: ${error}`
-    );
-  }
-
-  if (!authResponse.ok()) {
-    let errorBody = 'Unknown error';
-    try {
-      const jsonBody = await authResponse.json();
-      errorBody = jsonBody.detail || jsonBody.message || JSON.stringify(jsonBody);
-    } catch {
-      try {
-        errorBody = await authResponse.text();
-      } catch {
-        // Keep default error message
-      }
-    }
-    await apiRequest.dispose();
-    throw new Error(
-      `[SETUP] Test auth endpoint failed for ${user.email}. ` +
-      `Status: ${authResponse.status()}, Body: ${errorBody}`
-    );
-  }
-
-  const authData = await authResponse.json();
-  await apiRequest.dispose();
-
-  console.log(`[SETUP] Got auth tokens for ${user.email}, setting up localStorage...`);
-
-  // Step 2: Navigate to the app first (required for localStorage)
-  await page.goto('/');
-
-  // Step 3: Set up localStorage with auth state matching Zustand store format
-  // The User type requires: id, email, name, role, preferences, stats, createdAt, updatedAt
-  await page.evaluate(({ tokens, userEmail, userName }) => {
-    const now = new Date().toISOString();
-
-    // Create a complete User object matching the frontend's User type
-    const user = {
-      id: tokens.user_id,
-      email: userEmail,
-      name: userName,  // Frontend uses 'name', not 'full_name'
-      role: tokens.is_superuser ? 'admin' : 'free',
-      preferences: {
-        language: 'en',
-        dailyGoal: 20,
-        notifications: true,
-        theme: 'light',
-      },
-      stats: {
-        streak: 0,
-        wordsLearned: 0,
-        totalXP: 0,
-        joinedDate: now,
-      },
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    // Set up the auth-storage in the format expected by useAuthStore
-    const authState = {
-      state: {
-        user,
-        token: tokens.access_token,
-        refreshToken: tokens.refresh_token,
-        isAuthenticated: true,
-        rememberMe: true,
-        error: null,
-      },
-      version: 0,
-    };
-    localStorage.setItem('auth-storage', JSON.stringify(authState));
-  }, { tokens: authData, userEmail: user.email, userName: user.name });
-
-  // Step 4: Reload to pick up the localStorage state
-  await page.reload();
-
-  // Step 5: Wait for app to be ready and verify we're authenticated
-  try {
-    await page.waitForSelector('[data-app-ready="true"]', {
-      timeout: 30000,
-      state: 'attached'
-    });
-  } catch {
-    console.warn(`[SETUP] Warning: data-app-ready not found for ${user.email}`);
-  }
-
-  // Verify we're not on the login page
-  const currentUrl = page.url();
-  if (currentUrl.includes('/login')) {
-    const screenshotPath = path.join(STORAGE_STATE_DIR, `login-error-${user.email.replace('@', '_at_')}.png`);
-    await page.screenshot({ path: screenshotPath, fullPage: true });
-    throw new Error(
-      `[SETUP] Authentication failed for ${user.email}. ` +
-      `Still on login page after setting localStorage. Screenshot: ${screenshotPath}`
-    );
-  }
-
-  // Small delay to ensure state is fully set
-  await page.waitForTimeout(500);
-
-  // Save storage state to file
-  await page.context().storageState({ path: storageStatePath });
-
-  console.log(`[SETUP] Saved auth state for ${user.email} to ${storageStatePath}`);
-}
-
-/**
- * Authenticate a user and save storage state
- *
- * Routes to either Auth0 or seed API authentication based on environment.
+ * Uses the GoTrue REST API inside page.evaluate() to sign in within the
+ * browser context, then writes both localStorage keys needed by the app:
+ * - sb-<ref>-auth-token: Supabase session (read by supabase.auth.getSession())
+ * - auth-storage: Zustand persisted state (read by useAuthStore on hydration)
  */
 async function authenticateAndSave(
   page: import('@playwright/test').Page,
   user: { email: string; password: string; name: string },
   storageStatePath: string
 ): Promise<void> {
-  if (isAuth0Enabled()) {
-    // Use Auth0 login UI - get the Auth0 user credentials matching the seed user
-    const auth0User = getAuth0UserForSeedUser(user.email);
-    await authenticateViaAuth0(page, auth0User, storageStatePath);
-  } else {
-    // Use seed API for token generation
-    await authenticateViaSeedAPI(page, user, storageStatePath);
+  const supabaseUrl = getSupabaseUrl();
+  const anonKey = getSupabaseAnonKey();
+  const storageKey = getSupabaseStorageKey();
+  const apiBaseUrl = getApiBaseUrl();
+
+  console.log(`[SETUP] Authenticating ${user.email} via Supabase GoTrue API`);
+
+  // Step 1: Navigate to app origin (required for localStorage access)
+  await page.goto('/');
+
+  // Step 2: Sign in via GoTrue REST API in browser context
+  const sessionData = await page.evaluate(
+    async ({ url, key, email, password, sbStorageKey }) => {
+      const response = await fetch(`${url}/auth/v1/token?grant_type=password`, {
+        method: 'POST',
+        headers: {
+          apikey: key,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.text();
+        throw new Error(
+          `GoTrue sign-in failed for ${email}: ${response.status} - ${errorBody}`
+        );
+      }
+
+      const session = await response.json();
+
+      // Write Supabase session to localStorage (same format as SDK)
+      localStorage.setItem(sbStorageKey, JSON.stringify(session));
+
+      return {
+        access_token: session.access_token as string,
+        user_id: session.user?.id as string,
+      };
+    },
+    {
+      url: supabaseUrl,
+      key: anonKey,
+      email: user.email,
+      password: user.password,
+      sbStorageKey: storageKey,
+    }
+  );
+
+  console.log(`[SETUP] GoTrue sign-in successful for ${user.email}`);
+
+  // Step 3: Fetch user profile from backend API
+  const apiRequest = await request.newContext({ baseURL: apiBaseUrl });
+  let profile: Record<string, unknown>;
+  try {
+    const profileResponse = await apiRequest.get('/api/v1/auth/me', {
+      headers: { Authorization: `Bearer ${sessionData.access_token}` },
+    });
+
+    if (!profileResponse.ok()) {
+      const text = await profileResponse.text();
+      throw new Error(
+        `Profile fetch failed for ${user.email}: ${profileResponse.status()} - ${text}`
+      );
+    }
+
+    profile = await profileResponse.json();
+  } finally {
+    await apiRequest.dispose();
   }
+
+  console.log(`[SETUP] Profile fetched for ${user.email}`);
+
+  // Step 4: Write auth-storage (Zustand persisted state) to localStorage
+  await page.evaluate(
+    ({ prof, email }) => {
+      const now = new Date().toISOString();
+      const authState = {
+        state: {
+          user: {
+            id: prof.id || prof.supabase_id,
+            email: prof.email || email,
+            name: (prof.full_name as string) || email.split('@')[0],
+            role: prof.is_superuser ? 'admin' : 'free',
+            preferences: {
+              language: 'en',
+              dailyGoal:
+                (prof.settings as Record<string, unknown>)?.daily_goal || 20,
+              notifications:
+                (prof.settings as Record<string, unknown>)
+                  ?.email_notifications ?? true,
+              theme:
+                (prof.settings as Record<string, unknown>)?.theme || 'light',
+            },
+            stats: {
+              streak: 0,
+              wordsLearned: 0,
+              totalXP: 0,
+              joinedDate: now,
+            },
+            createdAt: now,
+            updatedAt: now,
+            authProvider: (prof.auth_provider as string) ?? undefined,
+          },
+          isAuthenticated: true,
+        },
+        version: 0,
+      };
+
+      localStorage.setItem('auth-storage', JSON.stringify(authState));
+    },
+    { prof: profile, email: user.email }
+  );
+
+  // Step 5: Save storage state to file
+  await page.context().storageState({ path: storageStatePath });
+
+  console.log(`[SETUP] Saved auth state for ${user.email} to ${storageStatePath}`);
 }
 
-/**
- * Map seed user email to corresponding Auth0 test user credentials
- */
-function getAuth0UserForSeedUser(email: string): { email: string; password: string; name: string } {
-  if (email === SEED_USERS.ADMIN.email) return AUTH0_TEST_USERS.ADMIN;
-  if (email === SEED_USERS.BEGINNER.email) return AUTH0_TEST_USERS.BEGINNER;
-  if (email === SEED_USERS.ADVANCED.email) return AUTH0_TEST_USERS.ADVANCED;
-  return AUTH0_TEST_USERS.LEARNER; // Default to learner
-}
+// Setup tests for each seed user role
 
-// Setup test for LEARNER user (primary test user with progress)
 setup('authenticate as learner', async ({ page }) => {
-  await authenticateAndSave(
-    page,
-    SEED_USERS.LEARNER,
-    `${STORAGE_STATE_DIR}/learner.json`
-  );
+  await authenticateAndSave(page, SEED_USERS.LEARNER, `${STORAGE_STATE_DIR}/learner.json`);
 });
 
-// Setup test for BEGINNER user (new user with no progress)
 setup('authenticate as beginner', async ({ page }) => {
-  await authenticateAndSave(
-    page,
-    SEED_USERS.BEGINNER,
-    `${STORAGE_STATE_DIR}/beginner.json`
-  );
+  await authenticateAndSave(page, SEED_USERS.BEGINNER, `${STORAGE_STATE_DIR}/beginner.json`);
 });
 
-// Setup test for ADVANCED user (user with more progress)
 setup('authenticate as advanced', async ({ page }) => {
-  await authenticateAndSave(
-    page,
-    SEED_USERS.ADVANCED,
-    `${STORAGE_STATE_DIR}/advanced.json`
-  );
+  await authenticateAndSave(page, SEED_USERS.ADVANCED, `${STORAGE_STATE_DIR}/advanced.json`);
 });
 
-// Setup test for ADMIN user
 setup('authenticate as admin', async ({ page }) => {
-  await authenticateAndSave(
-    page,
-    SEED_USERS.ADMIN,
-    `${STORAGE_STATE_DIR}/admin.json`
-  );
+  await authenticateAndSave(page, SEED_USERS.ADMIN, `${STORAGE_STATE_DIR}/admin.json`);
 });
