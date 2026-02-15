@@ -648,7 +648,7 @@ class TestDeckModelOwnerIdDatabase:
             full_name="Cascade Test User",
             is_active=True,
             is_superuser=False,
-            auth0_id=f"auth0|cascade_test_{uuid4().hex[:16]}",
+            supabase_id=f"supabase_cascade_test_{uuid4().hex[:16]}",
         )
         db_session.add(user)
         await db_session.flush()
