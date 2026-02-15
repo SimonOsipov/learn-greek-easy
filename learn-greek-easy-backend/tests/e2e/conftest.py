@@ -180,7 +180,12 @@ class E2ETestCase(AuthenticatedTestCase):
                 select(User).options(selectinload(User.settings)).where(User.id == user_id)
             )
             db_user = result.scalar_one()
-            app.dependency_overrides[get_current_user] = lambda: db_user
+
+            # FastAPI requires async function for async dependency override
+            async def override_get_current_user():
+                return db_user
+
+            app.dependency_overrides[get_current_user] = override_get_current_user
 
         # Create user-like object from response
         class UserInfo:
@@ -496,7 +501,12 @@ async def fresh_user_session(
         select(User).options(selectinload(User.settings)).where(User.id == user_id)
     )
     db_user = result.scalar_one()
-    app.dependency_overrides[get_current_user] = lambda: db_user
+
+    # FastAPI requires async function for async dependency override
+    async def override_get_current_user():
+        return db_user
+
+    app.dependency_overrides[get_current_user] = override_get_current_user
 
     class UserInfo:
         """Lightweight user representation."""
