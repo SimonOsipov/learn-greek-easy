@@ -14,6 +14,10 @@ interface ImportMetaEnv {
   readonly VITE_AUTH0_AUDIENCE?: string;
   readonly VITE_AUTH0_ENABLED?: string;
 
+  // Supabase Configuration
+  readonly VITE_SUPABASE_URL: string;
+  readonly VITE_SUPABASE_ANON_KEY: string;
+
   // Application Configuration
   readonly VITE_APP_NAME: string;
   readonly VITE_APP_VERSION: string;
