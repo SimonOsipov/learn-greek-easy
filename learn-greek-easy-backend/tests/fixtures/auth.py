@@ -255,41 +255,69 @@ async def test_inactive_user(db_session: AsyncSession) -> AsyncGenerator[User, N
 
 
 @pytest_asyncio.fixture
-async def auth_headers() -> dict[str, str]:
-    """Provide Authorization headers for authenticated requests.
+async def auth_headers(test_user) -> dict[str, str]:
+    """Provide Authorization headers for authenticated requests and set up dependency override.
 
-    In Supabase testing, we use dependency overrides to inject the user,
-    so the actual token value doesn't matter. This just provides the
-    header format that the Bearer security scheme expects.
+    This fixture:
+    - Returns Authorization headers for HTTP requests
+    - Sets up dependency override to inject test_user into get_current_user
+    - Works with the client fixture automatically
+
+    Args:
+        test_user: The test user fixture (automatically overrides get_current_user).
 
     Returns:
         dict: Headers with "Authorization: Bearer <token>"
 
     Example:
-        async def test_protected_endpoint(client, auth_headers, test_user):
-            # Use with dependency override to inject test_user
+        async def test_protected_endpoint(client, auth_headers):
+            # auth_headers automatically sets up dependency override
             response = await client.get("/api/v1/me", headers=auth_headers)
             assert response.status_code == 200
     """
+    from src.core.dependencies import get_current_user
+    from src.main import app
+
+    # Set up dependency override for get_current_user
+    async def override_get_current_user():
+        return test_user
+
+    app.dependency_overrides[get_current_user] = override_get_current_user
+
     return create_auth_headers()
 
 
 @pytest_asyncio.fixture
-async def superuser_auth_headers() -> dict[str, str]:
-    """Provide Authorization headers for superuser requests.
+async def superuser_auth_headers(test_superuser) -> dict[str, str]:
+    """Provide Authorization headers for superuser requests and set up dependency override.
 
-    Similar to auth_headers, but intended for use with test_superuser
-    dependency override.
+    This fixture:
+    - Returns Authorization headers for HTTP requests
+    - Sets up dependency override to inject test_superuser into get_current_user
+    - Works with the client fixture automatically
+
+    Args:
+        test_superuser: The test superuser fixture (automatically overrides get_current_user).
 
     Returns:
         dict: Headers with "Authorization: Bearer <token>"
 
     Example:
-        async def test_admin_endpoint(client, superuser_auth_headers, test_superuser):
+        async def test_admin_endpoint(client, superuser_auth_headers):
+            # superuser_auth_headers automatically sets up dependency override
             response = await client.delete("/api/v1/admin/users/123",
                                           headers=superuser_auth_headers)
             assert response.status_code == 200
     """
+    from src.core.dependencies import get_current_user
+    from src.main import app
+
+    # Set up dependency override for get_current_user
+    async def override_get_current_user():
+        return test_superuser
+
+    app.dependency_overrides[get_current_user] = override_get_current_user
+
     return create_auth_headers()
 
 

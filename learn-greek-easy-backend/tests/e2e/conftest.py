@@ -29,7 +29,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.db.models import Card, Deck, User
 from tests.base import AuthenticatedTestCase
 from tests.factories.base import BaseFactory
-from tests.fixtures.auth import AuthTokens
 from tests.helpers.time import freeze_time
 
 # =============================================================================
@@ -43,12 +42,10 @@ class UserSession(NamedTuple):
     Attributes:
         user: User model instance or user-like object from API response
         headers: Authorization headers for HTTP requests
-        tokens: Optional AuthTokens container with access/refresh tokens
     """
 
     user: User | object  # Can be User or user-like object from API
     headers: dict[str, str]
-    tokens: AuthTokens | None = None
 
 
 class StudyEnvironment(NamedTuple):

@@ -18,7 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.dependencies import get_or_create_user
 from src.core.exceptions import ConflictException
-from src.core.supabase_auth import SupabaseTokenClaims
+from src.core.supabase_auth import SupabaseUserClaims
 from src.db.models import User, UserSettings
 
 # =============================================================================
@@ -29,7 +29,7 @@ from src.db.models import User, UserSettings
 @pytest.fixture
 def sample_claims():
     """Provide sample Supabase token claims."""
-    return SupabaseTokenClaims(
+    return SupabaseUserClaims(
         supabase_id=str(uuid4()),
         email="newuser@example.com",
         full_name="New User",
@@ -39,7 +39,7 @@ def sample_claims():
 @pytest.fixture
 def claims_without_email():
     """Provide claims without email (phone-only auth)."""
-    return SupabaseTokenClaims(
+    return SupabaseUserClaims(
         supabase_id=str(uuid4()),
         email=None,
         full_name="Phone User",

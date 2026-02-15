@@ -19,7 +19,7 @@ import pytest
 from authlib.jose import jwt
 
 from src.core.exceptions import TokenExpiredException, TokenInvalidException
-from src.core.supabase_auth import SupabaseTokenClaims, invalidate_jwks_cache, verify_supabase_token
+from src.core.supabase_auth import SupabaseUserClaims, invalidate_jwks_cache, verify_supabase_token
 
 # =============================================================================
 # Test Fixtures
@@ -102,7 +102,7 @@ class TestValidTokenVerification:
 
             claims = await verify_supabase_token(token)
 
-            assert isinstance(claims, SupabaseTokenClaims)
+            assert isinstance(claims, SupabaseUserClaims)
             assert claims.supabase_id == valid_token_payload["sub"]
             assert claims.email == valid_token_payload["email"]
             assert claims.full_name == "Test User"
