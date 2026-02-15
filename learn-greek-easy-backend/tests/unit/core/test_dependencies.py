@@ -96,7 +96,7 @@ class TestGetCurrentUser:
         with pytest.raises(UnauthorizedException) as exc_info:
             await get_current_user(mock_request, None, mock_db)
 
-        assert "not authenticated" in str(exc_info.value.detail).lower()
+        assert "authentication required" in str(exc_info.value.detail).lower()
 
     @pytest.mark.asyncio
     async def test_invalid_token_raises_401(self, mock_request, valid_credentials):
@@ -146,7 +146,7 @@ class TestGetCurrentUser:
             with pytest.raises(UnauthorizedException) as exc_info:
                 await get_current_user(mock_request, valid_credentials, mock_db)
 
-            assert "inactive" in str(exc_info.value.detail).lower()
+            assert "deactivated" in str(exc_info.value.detail).lower()
 
     @pytest.mark.asyncio
     async def test_sets_request_state_user_email(
@@ -241,22 +241,25 @@ class TestGetCurrentUserOptional:
 class TestGetCurrentSuperuser:
     """Tests for get_current_superuser dependency."""
 
-    def test_superuser_allowed(self, mock_superuser):
+    @pytest.mark.asyncio
+    async def test_superuser_allowed(self, mock_superuser):
         """Test that superuser is allowed."""
         # Should not raise
-        result = get_current_superuser(mock_superuser)
+        result = await get_current_superuser(mock_superuser)
         assert result == mock_superuser
 
-    def test_regular_user_forbidden(self, mock_user):
+    @pytest.mark.asyncio
+    async def test_regular_user_forbidden(self, mock_user):
         """Test that regular user is forbidden."""
         with pytest.raises(ForbiddenException) as exc_info:
-            get_current_superuser(mock_user)
+            await get_current_superuser(mock_user)
 
         assert "superuser" in str(exc_info.value.detail).lower()
 
-    def test_inactive_superuser_forbidden(self, mock_superuser):
+    @pytest.mark.asyncio
+    async def test_inactive_superuser_forbidden(self, mock_superuser):
         """Test that inactive superuser is forbidden."""
         mock_superuser.is_active = False
 
         with pytest.raises(ForbiddenException):
-            get_current_superuser(mock_superuser)
+            await get_current_superuser(mock_superuser)
