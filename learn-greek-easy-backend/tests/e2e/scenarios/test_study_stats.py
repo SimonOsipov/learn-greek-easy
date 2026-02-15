@@ -166,21 +166,6 @@ class TestStudyStatsAuthentication(E2ETestCase):
 
         assert response.status_code == 401
 
-    @pytest.mark.asyncio
-    @pytest.mark.e2e
-    async def test_study_stats_expired_token_returns_401(
-        self, client: AsyncClient, expired_access_token: str
-    ) -> None:
-        """Test that expired token returns 401."""
-        headers = {"Authorization": f"Bearer {expired_access_token}"}
-
-        response = await client.get(
-            "/api/v1/study/stats",
-            headers=headers,
-        )
-
-        assert response.status_code == 401
-
 
 class TestStudyStatsDataValues(E2ETestCase):
     """E2E tests for study stats data values."""

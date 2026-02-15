@@ -355,7 +355,6 @@ class TestDataConsistency(E2ETestCase):
         db_session: AsyncSession,
         admin_session: UserSession,
         two_users: tuple[User, User],
-        app,
     ) -> None:
         """Test: Deck deletion cascades to cards, stats, reviews, progress.
 
@@ -395,12 +394,23 @@ class TestDataConsistency(E2ETestCase):
 
         # Step 3: Both users initialize and review
         from src.core.dependencies import get_current_user
+        from src.main import app
+        from tests.fixtures.auth import _get_override_function, _test_user_registry
 
-        headers1 = {"Authorization": "Bearer test-token"}
-        headers2 = {"Authorization": "Bearer test-token"}
+        # Create unique tokens for each user
+        token1 = f"test-user-{user1.id}"
+        token2 = f"test-user-{user2.id}"
+        _test_user_registry[token1] = user1
+        _test_user_registry[token2] = user2
+
+        # Set up single override function if not already set
+        if get_current_user not in app.dependency_overrides:
+            app.dependency_overrides[get_current_user] = _get_override_function()
+
+        headers1 = {"Authorization": f"Bearer {token1}"}
+        headers2 = {"Authorization": f"Bearer {token2}"}
 
         # User 1's requests
-        app.dependency_overrides[get_current_user] = lambda: user1
         init_resp = await client.post(
             f"/api/v1/study/initialize/{deck_id}",
             headers=headers1,
@@ -419,7 +429,6 @@ class TestDataConsistency(E2ETestCase):
         assert review_resp.status_code == 200
 
         # User 2's requests
-        app.dependency_overrides[get_current_user] = lambda: user2
         init_resp = await client.post(
             f"/api/v1/study/initialize/{deck_id}",
             headers=headers2,
@@ -437,8 +446,9 @@ class TestDataConsistency(E2ETestCase):
         )
         assert review_resp.status_code == 200
 
-        # Clean up dependency override (admin_session will be used next)
-        app.dependency_overrides.pop(get_current_user, None)
+        # Clean up registry entries
+        _test_user_registry.pop(token1, None)
+        _test_user_registry.pop(token2, None)
 
         # Step 4: Verify data exists before deletion
         cards_count = await db_session.execute(

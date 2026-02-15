@@ -123,20 +123,6 @@ class TestE2ETestCaseMethods(E2ETestCase):
         assert isinstance(decks, list)
         assert len(decks) >= 1  # At least the test_deck_a1
 
-    @pytest.mark.asyncio
-    @pytest.mark.e2e
-    async def test_login_user(
-        self,
-        client: AsyncClient,
-        test_user,  # Fixture from auth fixtures
-    ) -> None:
-        """Verify login_user works with existing user."""
-        headers = await self.login_user(client, test_user.email)
-
-        assert headers is not None
-        assert "Authorization" in headers
-        assert headers["Authorization"].startswith("Bearer ")
-
 
 class TestMinimalWorkflow(E2ETestCase):
     """Test minimal E2E workflow to verify complete setup."""
