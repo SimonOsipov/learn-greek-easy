@@ -1,51 +1,34 @@
 """Authentication API endpoints.
 
-This module provides HTTP endpoints for user authentication including
-Auth0 login, token refresh, logout, and session management.
+This module provides HTTP endpoints for user authentication and profile management.
+Authentication is handled via Supabase Auth JWT tokens validated by the dependency layer.
 
-Legacy email/password and Google OAuth endpoints have been removed.
-All authentication now flows through Auth0.
+Endpoints include logout acknowledgments (client-side token clearing), user profile
+retrieval and updates, and avatar management (S3 presigned URLs).
 """
 
 import uuid as uuid_module
 from typing import Any
-from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from src.config import settings
 from src.core.dependencies import get_current_user
-from src.core.exceptions import (
-    ConflictException,
-    InvalidCredentialsException,
-    TokenExpiredException,
-    TokenInvalidException,
-    UnauthorizedException,
-    UserNotFoundException,
-)
 from src.core.logging import get_logger
 from src.db.dependencies import get_db
 from src.db.models import User
 from src.repositories.user import UserSettingsRepository
 from src.schemas.user import (
-    Auth0AuthRequest,
-    Auth0LoginResponse,
     AvatarDeleteResponse,
     AvatarUploadRequest,
     AvatarUploadResponse,
     LogoutAllResponse,
     LogoutResponse,
-    SessionInfo,
-    SessionListResponse,
-    TokenRefresh,
-    TokenResponse,
     UserProfileResponse,
     UserWithSettingsUpdate,
 )
-from src.services.auth_service import AuthService
 from src.services.s3_service import (
     ALLOWED_AVATAR_CONTENT_TYPES,
     AVATAR_UPLOAD_URL_EXPIRY,
@@ -54,25 +37,6 @@ from src.services.s3_service import (
 )
 
 logger = get_logger(__name__)
-
-
-def _extract_auth_provider(auth0_id: str | None) -> str | None:
-    """Extract authentication provider from auth0_id.
-
-    Auth0 IDs follow the format 'provider|user_id', e.g.:
-    - 'google-oauth2|123456789' -> 'google-oauth2'
-    - 'auth0|abc123def456' -> 'auth0'
-
-    Args:
-        auth0_id: The Auth0 user ID string
-
-    Returns:
-        The provider portion of the auth0_id, or None if not available
-    """
-    if not auth0_id:
-        return None
-    parts = auth0_id.split("|", 1)
-    return parts[0] if parts else None
 
 
 def _build_user_profile_response(user: User) -> UserProfileResponse:
@@ -101,8 +65,8 @@ def _build_user_profile_response(user: User) -> UserProfileResponse:
     response = UserProfileResponse.model_validate(user)
     # Override avatar_url with presigned URL
     response.avatar_url = avatar_presigned_url
-    # Extract auth_provider from auth0_id
-    response.auth_provider = _extract_auth_provider(user.auth0_id)  # type: ignore[attr-defined]  # SUPA-05: Rename to supabase_id
+    # Hardcode auth_provider to 'supabase'
+    response.auth_provider = "supabase"
 
     return response
 
@@ -119,293 +83,6 @@ router = APIRouter(
 
 
 @router.post(
-    "/auth0",
-    response_model=Auth0LoginResponse,
-    summary="Login with Auth0",
-    description="Authenticate using Auth0 access token",
-    responses={
-        200: {
-            "description": "Successfully authenticated with Auth0",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "access_token": "eyJhbGciOiJIUzI1NiIs...",
-                        "refresh_token": "eyJhbGciOiJIUzI1NiIs...",
-                        "token_type": "bearer",
-                        "expires_in": 1800,
-                        "user": {
-                            "id": "550e8400-e29b-41d4-a716-446655440000",
-                            "email": "user@example.com",
-                            "full_name": "John Doe",
-                            "is_active": True,
-                            "is_superuser": False,
-                            "email_verified_at": "2024-11-25T10:30:00Z",
-                            "created_at": "2024-11-25T10:30:00Z",
-                            "updated_at": "2024-11-25T10:30:00Z",
-                            "settings": {
-                                "id": "660e8400-e29b-41d4-a716-446655440001",
-                                "user_id": "550e8400-e29b-41d4-a716-446655440000",
-                                "daily_goal": 20,
-                                "email_notifications": True,
-                                "preferred_language": None,
-                                "created_at": "2024-11-25T10:30:00Z",
-                                "updated_at": "2024-11-25T10:30:00Z",
-                            },
-                        },
-                    }
-                }
-            },
-        },
-        401: {
-            "description": "Invalid Auth0 token",
-            "content": {
-                "application/json": {
-                    "examples": {
-                        "invalid": {
-                            "summary": "Invalid token",
-                            "value": {"detail": "Invalid Auth0 token"},
-                        },
-                        "expired": {
-                            "summary": "Token expired",
-                            "value": {"detail": "Auth0 token has expired"},
-                        },
-                    }
-                }
-            },
-        },
-        409: {
-            "description": "Account linking conflict",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "detail": "This email is already registered with a different Auth0 account."
-                    }
-                }
-            },
-        },
-        503: {
-            "description": "Auth0 not enabled",
-            "content": {
-                "application/json": {"example": {"detail": "Auth0 authentication is not enabled"}}
-            },
-        },
-    },
-)
-async def auth0_login(
-    auth_data: Auth0AuthRequest,
-    request: Request,
-    db: AsyncSession = Depends(get_db),
-) -> Auth0LoginResponse:
-    """Authenticate with Auth0.
-
-    This endpoint accepts an Auth0 access token obtained from the Auth0 SDK
-    or Universal Login on the frontend. The token is verified against Auth0's
-    JWKS, and if valid, the user is authenticated.
-
-    **New Users**: A new account is created automatically with the email
-    and name from Auth0 (if available). The email is auto-verified if Auth0
-    indicates it is verified.
-
-    **Existing Users (by email)**: If an account exists with the same email
-    but no Auth0 account linked, the Auth0 account is automatically linked.
-
-    **Existing Auth0 Users**: If the user has previously logged in with Auth0,
-    they are authenticated to their existing account.
-
-    Args:
-        auth_data: Auth0 access token from frontend
-        request: FastAPI request object for client IP
-        db: Database session (injected)
-
-    Returns:
-        Auth0LoginResponse containing access/refresh tokens and user profile
-
-    Raises:
-        HTTPException(401): If Auth0 token is invalid or expired
-        HTTPException(409): If email is registered with a different Auth0 account
-        HTTPException(503): If Auth0 is not enabled
-    """
-    service = AuthService(db)
-
-    # Extract client info for session tracking
-    client_ip = request.client.host if request.client else None
-    user_agent = request.headers.get("user-agent")
-
-    try:
-        user, token_response = await service.authenticate_auth0(
-            access_token=auth_data.access_token,
-            id_token=auth_data.id_token,
-            client_ip=client_ip,
-            user_agent=user_agent,
-        )
-        return Auth0LoginResponse(
-            access_token=token_response.access_token,
-            refresh_token=token_response.refresh_token,
-            token_type=token_response.token_type,
-            expires_in=token_response.expires_in,
-            user=_build_user_profile_response(user),
-        )
-
-    except UnauthorizedException as e:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=e.detail,
-        )
-
-    except TokenExpiredException as e:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=e.detail,
-        )
-
-    except TokenInvalidException as e:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=e.detail,
-        )
-
-    except ConflictException as e:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=e.detail,
-        )
-
-    except InvalidCredentialsException as e:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=e.detail,
-        )
-
-    except Exception as e:
-        # Catch-all for debugging unexpected errors
-        logger.error(
-            "Unexpected error in Auth0 login endpoint",
-            extra={
-                "error": str(e),
-                "error_type": type(e).__name__,
-            },
-            exc_info=True,
-        )
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Auth0 login error: {type(e).__name__}: {str(e)}",
-        )
-
-
-@router.post(
-    "/refresh",
-    response_model=TokenResponse,
-    summary="Refresh access token",
-    responses={
-        200: {
-            "description": "New access and refresh tokens generated",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "access_token": "eyJhbGciOiJIUzI1NiIs...",
-                        "refresh_token": "eyJhbGciOiJIUzI1NiIs...",
-                        "token_type": "bearer",
-                        "expires_in": 1800,
-                    }
-                }
-            },
-        },
-        401: {
-            "description": "Invalid or expired refresh token",
-            "content": {
-                "application/json": {
-                    "examples": {
-                        "expired": {
-                            "summary": "Token expired",
-                            "value": {"detail": "Refresh token has expired"},
-                        },
-                        "invalid": {
-                            "summary": "Invalid token",
-                            "value": {"detail": "Invalid refresh token"},
-                        },
-                        "revoked": {
-                            "summary": "Token revoked",
-                            "value": {"detail": "Refresh token has been revoked"},
-                        },
-                        "inactive_user": {
-                            "summary": "User deactivated",
-                            "value": {"detail": "User account is deactivated"},
-                        },
-                    }
-                }
-            },
-        },
-        404: {
-            "description": "User not found",
-            "content": {"application/json": {"example": {"detail": "User not found"}}},
-        },
-    },
-)
-async def refresh_token(
-    token_data: TokenRefresh,
-    db: AsyncSession = Depends(get_db),
-) -> TokenResponse:
-    """Generate new access and refresh tokens using refresh token.
-
-    Implements token rotation: each refresh token can only be used once.
-    The old refresh token is invalidated and a new one is issued.
-
-    Args:
-        token_data: Contains refresh token
-        db: Database session (injected)
-
-    Returns:
-        TokenResponse with new access and refresh tokens
-
-    Raises:
-        HTTPException(401): If refresh token is invalid, expired, or revoked
-        HTTPException(404): If user associated with token no longer exists
-    """
-    service = AuthService(db)
-
-    try:
-        # Service now returns tuple: (access_token, refresh_token, user)
-        new_access_token, new_refresh_token, user = await service.refresh_access_token(
-            token_data.refresh_token
-        )
-
-        # Calculate expires_in from settings
-        expires_in = settings.jwt_access_token_expire_minutes * 60
-
-        return TokenResponse(
-            access_token=new_access_token,
-            refresh_token=new_refresh_token,
-            token_type="bearer",
-            expires_in=expires_in,
-        )
-
-    except TokenExpiredException as e:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=e.detail,
-        )
-
-    except TokenInvalidException as e:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=e.detail,
-        )
-
-    except UserNotFoundException as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=e.detail,
-        )
-
-    except Exception:
-        # Catch any unexpected errors and return generic message
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired refresh token",
-        )
-
-
-@router.post(
     "/logout",
     response_model=LogoutResponse,
     summary="Logout user",
@@ -417,7 +94,6 @@ async def refresh_token(
                     "example": {
                         "success": True,
                         "message": "Successfully logged out",
-                        "token_revoked": True,
                     }
                 }
             },
@@ -435,29 +111,23 @@ async def refresh_token(
     },
 )
 async def logout(
-    token_data: TokenRefresh,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
 ) -> LogoutResponse:
-    """Logout user by invalidating refresh token.
+    """Logout user (acknowledgment only).
 
-    Requires authentication to ensure only the token owner can revoke it.
+    This endpoint provides a logout acknowledgment for the client.
+    Actual token invalidation happens client-side by discarding the JWT.
+    Supabase Auth does not use server-side refresh token storage.
 
     Args:
-        token_data: Contains refresh token to invalidate
         current_user: The authenticated user (injected via dependency)
-        db: Database session (injected)
 
     Returns:
         LogoutResponse with success status and message
     """
-    service = AuthService(db)
-    token_revoked = await service.revoke_refresh_token(token_data.refresh_token)
-
     return LogoutResponse(
         success=True,
-        message="Successfully logged out" if token_revoked else "Logout processed",
-        token_revoked=token_revoked,
+        message="Successfully logged out",
     )
 
 
@@ -472,8 +142,7 @@ async def logout(
                 "application/json": {
                     "example": {
                         "success": True,
-                        "message": "Logged out from 3 sessions",
-                        "sessions_revoked": 3,
+                        "message": "Successfully logged out from all sessions",
                     }
                 }
             },
@@ -492,167 +161,22 @@ async def logout(
 )
 async def logout_all(
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
 ) -> LogoutAllResponse:
-    """Logout from all active sessions.
+    """Logout from all sessions (acknowledgment only).
 
-    Revokes all refresh tokens for the current user, effectively
-    logging them out from all devices/sessions.
+    This endpoint provides a logout acknowledgment for the client.
+    Actual token invalidation happens client-side by discarding all JWTs.
+    Supabase Auth does not use server-side refresh token storage.
 
     Args:
         current_user: The authenticated user (injected via dependency)
-        db: Database session (injected)
 
     Returns:
-        LogoutAllResponse with count of revoked sessions
+        LogoutAllResponse with success status and message
     """
-    service = AuthService(db)
-    sessions_revoked = await service.revoke_all_user_tokens(current_user.id)
-
     return LogoutAllResponse(
         success=True,
-        message=f"Logged out from {sessions_revoked} session(s)",
-        sessions_revoked=sessions_revoked,
-    )
-
-
-@router.get(
-    "/sessions",
-    response_model=SessionListResponse,
-    summary="List active sessions",
-    responses={
-        200: {
-            "description": "List of active sessions",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "sessions": [
-                            {
-                                "id": "550e8400-e29b-41d4-a716-446655440000",
-                                "created_at": "2024-11-25T10:30:00Z",
-                                "expires_at": "2024-12-25T10:30:00Z",
-                            }
-                        ],
-                        "total": 1,
-                    }
-                }
-            },
-        },
-        401: {
-            "description": "Authentication required",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "detail": "Authentication required. Please provide a valid access token."
-                    }
-                }
-            },
-        },
-    },
-)
-async def get_sessions(
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-) -> SessionListResponse:
-    """Get all active sessions for the current user.
-
-    Returns a list of active sessions (refresh tokens) without exposing
-    the actual token values for security.
-
-    Args:
-        current_user: The authenticated user (injected via dependency)
-        db: Database session (injected)
-
-    Returns:
-        SessionListResponse with list of sessions and total count
-    """
-    service = AuthService(db)
-    sessions_data = await service.get_user_sessions(current_user.id)
-
-    sessions = [
-        SessionInfo(
-            id=session["id"],
-            created_at=session["created_at"],
-            expires_at=session["expires_at"],
-        )
-        for session in sessions_data
-    ]
-
-    return SessionListResponse(
-        sessions=sessions,
-        total=len(sessions),
-    )
-
-
-@router.delete(
-    "/sessions/{session_id}",
-    response_model=LogoutResponse,
-    summary="Revoke a specific session",
-    responses={
-        200: {
-            "description": "Session revoked successfully",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "success": True,
-                        "message": "Session revoked successfully",
-                        "token_revoked": True,
-                    }
-                }
-            },
-        },
-        401: {
-            "description": "Authentication required",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "detail": "Authentication required. Please provide a valid access token."
-                    }
-                }
-            },
-        },
-        404: {
-            "description": "Session not found",
-            "content": {
-                "application/json": {"example": {"detail": "Session not found or already revoked"}}
-            },
-        },
-    },
-)
-async def revoke_session(
-    session_id: UUID,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-) -> LogoutResponse:
-    """Revoke a specific session by its ID.
-
-    Users can only revoke their own sessions. Attempting to revoke
-    another user's session will return a 404 error.
-
-    Args:
-        session_id: The UUID of the session to revoke
-        current_user: The authenticated user (injected via dependency)
-        db: Database session (injected)
-
-    Returns:
-        LogoutResponse with success status
-
-    Raises:
-        HTTPException(404): If session not found or belongs to another user
-    """
-    service = AuthService(db)
-    token_revoked = await service.revoke_session_by_id(current_user.id, str(session_id))
-
-    if not token_revoked:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Session not found or already revoked",
-        )
-
-    return LogoutResponse(
-        success=True,
-        message="Session revoked successfully",
-        token_revoked=True,
+        message="Successfully logged out from all sessions",
     )
 
 

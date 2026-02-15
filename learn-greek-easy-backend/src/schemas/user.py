@@ -1,16 +1,15 @@
 """User-related Pydantic schemas for API request/response validation.
 
 This module contains schemas for:
-- User authentication (Auth0, JWT tokens)
 - User profile management
 - User settings
+- Logout acknowledgments
 
-Legacy email/password registration and Google OAuth schemas have been removed.
-All authentication now flows through Auth0.
+Authentication is handled via Supabase Auth JWT tokens validated by the dependency layer.
 """
 
 from datetime import datetime
-from typing import List, Literal, Optional
+from typing import Literal, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
@@ -57,7 +56,7 @@ class UserResponse(UserBase):
     avatar_url: Optional[str] = None
     auth_provider: Optional[str] = Field(
         None,
-        description="Authentication provider extracted from auth0_id (e.g., 'google-oauth2', 'auth0')",
+        description="Authentication provider (always 'supabase')",
     )
     created_at: datetime
     updated_at: datetime
@@ -152,26 +151,6 @@ class TokenResponse(BaseModel):
     expires_in: int  # seconds
 
 
-class Auth0LoginResponse(BaseModel):
-    """Schema for Auth0 login response with user profile.
-
-    Combines token information with user profile data for efficient
-    frontend initialization after login.
-    """
-
-    access_token: str
-    refresh_token: str
-    token_type: str = "bearer"
-    expires_in: int  # seconds
-    user: "UserProfileResponse"
-
-
-class TokenRefresh(BaseModel):
-    """Schema for refresh token request."""
-
-    refresh_token: str = Field(..., min_length=1)
-
-
 class TokenPayload(BaseModel):
     """Schema for JWT token payload."""
 
@@ -181,27 +160,8 @@ class TokenPayload(BaseModel):
 
 
 # ============================================================================
-# Session Management Schemas
+# Logout Schemas
 # ============================================================================
-
-
-class SessionInfo(BaseModel):
-    """Schema for session information.
-
-    Represents a single user session (refresh token) without exposing
-    the actual token value for security.
-    """
-
-    id: UUID
-    created_at: datetime
-    expires_at: datetime
-
-
-class SessionListResponse(BaseModel):
-    """Schema for listing user sessions."""
-
-    sessions: List[SessionInfo]
-    total: int
 
 
 class LogoutResponse(BaseModel):
@@ -209,7 +169,6 @@ class LogoutResponse(BaseModel):
 
     success: bool
     message: str
-    token_revoked: bool
 
 
 class LogoutAllResponse(BaseModel):
@@ -217,35 +176,6 @@ class LogoutAllResponse(BaseModel):
 
     success: bool
     message: str
-    sessions_revoked: int
-
-
-# ============================================================================
-# Auth0 OAuth Schemas
-# ============================================================================
-
-
-class Auth0AuthRequest(BaseModel):
-    """Schema for Auth0 authentication request.
-
-    The frontend obtains this token from Auth0 SDK/Universal Login
-    and sends it to the backend for verification.
-
-    The id_token is optional but recommended - it contains the user's
-    email and profile claims which may not be present in the access_token
-    (especially for custom API audiences).
-    """
-
-    access_token: str = Field(
-        ...,
-        min_length=10,
-        description="Auth0 access token (JWT)",
-    )
-    id_token: Optional[str] = Field(
-        default=None,
-        min_length=10,
-        description="Auth0 ID token (JWT) - contains email and profile claims",
-    )
 
 
 # ============================================================================

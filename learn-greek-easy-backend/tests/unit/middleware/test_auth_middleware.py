@@ -443,10 +443,6 @@ class TestSensitivePaths:
         app = FastAPI()
         app.add_middleware(AuthLoggingMiddleware)
 
-        @app.post("/api/v1/auth/auth0")
-        async def auth0():
-            return {"token": "abc123"}
-
         @app.post("/api/v1/auth/logout")
         async def logout():
             return {"status": "logged out"}
@@ -465,15 +461,6 @@ class TestSensitivePaths:
     def client(self, app: FastAPI) -> TestClient:
         """Create test client."""
         return TestClient(app)
-
-    def test_auth0_marked_as_sensitive(self, client: TestClient):
-        """Test that /auth0 is marked as sensitive."""
-        with patch("src.middleware.auth.logger") as mock_logger:
-            client.post("/api/v1/auth/auth0")
-
-            call_args = mock_logger.log.call_args
-            extra = call_args.kwargs.get("extra", {})
-            assert extra.get("sensitive") is True
 
     def test_logout_marked_as_sensitive(self, client: TestClient):
         """Test that /logout is marked as sensitive."""
@@ -503,81 +490,6 @@ class TestSensitivePaths:
             assert "sensitive" not in extra or extra.get("sensitive") is not True
 
 
-class TestFailedAuth0Warning:
-    """Tests for failed Auth0 authentication attempt warning."""
-
-    @pytest.fixture
-    def app_with_successful_auth0(self) -> FastAPI:
-        """Create test FastAPI app with successful auth0 endpoint."""
-        app = FastAPI()
-        app.add_middleware(AuthLoggingMiddleware)
-
-        @app.post("/api/v1/auth/auth0")
-        async def auth0_success():
-            return {"token": "abc123"}
-
-        @app.get("/api/v1/auth/me")
-        async def me_unauthorized():
-            raise HTTPException(status_code=401, detail="Not authenticated")
-
-        return app
-
-    @pytest.fixture
-    def app_with_failed_auth0(self) -> FastAPI:
-        """Create test FastAPI app with failed auth0 endpoint."""
-        app = FastAPI()
-        app.add_middleware(AuthLoggingMiddleware)
-
-        @app.post("/api/v1/auth/auth0")
-        async def auth0_fail():
-            raise HTTPException(status_code=401, detail="Invalid token")
-
-        @app.get("/api/v1/auth/me")
-        async def me_unauthorized():
-            raise HTTPException(status_code=401, detail="Not authenticated")
-
-        return app
-
-    def test_logs_warning_for_failed_auth0(self, app_with_failed_auth0: FastAPI):
-        """Test that failed Auth0 attempts log an additional warning."""
-        client = TestClient(app_with_failed_auth0, raise_server_exceptions=False)
-
-        with patch("src.middleware.auth.logger") as mock_logger:
-            client.post("/api/v1/auth/auth0")
-
-            # Should have the main log.call and a warning.call
-            mock_logger.log.assert_called_once()
-            mock_logger.warning.assert_called_once()
-
-            # Verify warning content
-            warning_call = mock_logger.warning.call_args
-            assert warning_call.args[0] == "Failed Auth0 authentication attempt"
-            extra = warning_call.kwargs.get("extra", {})
-            assert extra["path"] == "/api/v1/auth/auth0"
-            assert "client_ip" in extra
-
-    def test_no_warning_for_successful_auth0(self, app_with_successful_auth0: FastAPI):
-        """Test that successful Auth0 does not log warning."""
-        client = TestClient(app_with_successful_auth0)
-
-        with patch("src.middleware.auth.logger") as mock_logger:
-            client.post("/api/v1/auth/auth0")
-
-            mock_logger.log.assert_called_once()
-            mock_logger.warning.assert_not_called()
-
-    def test_no_warning_for_401_on_non_auth0_endpoint(self, app_with_failed_auth0: FastAPI):
-        """Test that 401 on /me does not trigger failed auth warning."""
-        client = TestClient(app_with_failed_auth0, raise_server_exceptions=False)
-
-        with patch("src.middleware.auth.logger") as mock_logger:
-            client.get("/api/v1/auth/me")
-
-            # Should have the main log call but no warning
-            mock_logger.log.assert_called_once()
-            mock_logger.warning.assert_not_called()
-
-
 class TestMiddlewareIntegration:
     """Integration tests for middleware with FastAPI app."""
 
@@ -591,9 +503,9 @@ class TestMiddlewareIntegration:
         async def auth_me():
             return {"user": "test"}
 
-        @app.post("/api/v1/auth/auth0")
-        async def auth_auth0():
-            return {"token": "abc123"}
+        @app.post("/api/v1/auth/logout")
+        async def auth_logout():
+            return {"success": True}
 
         @app.get("/api/v1/users")
         async def users():
@@ -622,7 +534,7 @@ class TestMiddlewareIntegration:
         """Test that multiple requests are logged independently."""
         with patch("src.middleware.auth.logger") as mock_logger:
             client.get("/api/v1/auth/me")
-            client.post("/api/v1/auth/auth0")
+            client.post("/api/v1/auth/logout")
 
             assert mock_logger.log.call_count == 2
 
@@ -633,7 +545,7 @@ class TestMiddlewareIntegration:
             assert first_call.kwargs["extra"]["path"] == "/api/v1/auth/me"
             assert first_call.kwargs["extra"]["method"] == "GET"
 
-            assert second_call.kwargs["extra"]["path"] == "/api/v1/auth/auth0"
+            assert second_call.kwargs["extra"]["path"] == "/api/v1/auth/logout"
             assert second_call.kwargs["extra"]["method"] == "POST"
 
 
@@ -647,7 +559,6 @@ class TestMiddlewareAttributes:
     def test_sensitive_paths_contains_expected_endpoints(self):
         """Test that SENSITIVE_PATHS contains expected endpoints."""
         sensitive_paths = AuthLoggingMiddleware.SENSITIVE_PATHS
-        assert "/api/v1/auth/auth0" in sensitive_paths
         assert "/api/v1/auth/logout" in sensitive_paths
         assert "/api/v1/auth/logout-all" in sensitive_paths
 
