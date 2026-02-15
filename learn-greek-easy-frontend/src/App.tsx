@@ -61,6 +61,9 @@ const ForgotPassword = lazyWithRetry(() =>
 const Callback = lazyWithRetry(() =>
   import('@/pages/auth/Callback').then((m) => ({ default: m.Callback }))
 );
+const ResetPassword = lazyWithRetry(() =>
+  import('@/pages/auth/ResetPassword').then((m) => ({ default: m.ResetPassword }))
+);
 
 // Main dashboard and navigation pages
 const Dashboard = lazyWithRetry(() =>
@@ -199,8 +202,13 @@ function AppContent() {
                 <Route path="/forgot-password" element={<ForgotPassword />} />
               </Route>
 
-              {/* OAuth callback route - handles Auth0 redirect with tokens in hash */}
+              {/* OAuth callback route - handles Supabase redirect with tokens in hash */}
               <Route path="/callback" element={<Callback />} />
+
+              {/* Password reset route - standalone (NOT inside PublicRoute) because
+                  Supabase fires SIGNED_IN before PASSWORD_RECOVERY, which would cause
+                  PublicRoute to redirect to dashboard before user can set password */}
+              <Route path="/reset-password" element={<ResetPassword />} />
 
               {/* Protected Routes - require authentication */}
               <Route element={<ProtectedRoute />}>

@@ -1,13 +1,14 @@
 /**
  * Forgot Password Page
  *
- * Uses Auth0 password reset flow.
+ * Uses Supabase password reset flow.
  *
  * Flow:
  * 1. User enters email
- * 2. Submit triggers Auth0 changePassword API
+ * 2. Submit triggers supabase.auth.resetPasswordForEmail
  * 3. Success screen shows "Check your email" message
- * 4. Auth0 returns success even for non-existent emails (security best practice)
+ * 4. Supabase returns success even for non-existent emails (security best practice)
+ * 5. User clicks link in email → redirected to /reset-password to set new password
  */
 
 import React, { useState } from 'react';
@@ -25,8 +26,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { changePassword } from '@/lib/auth0WebAuth';
 import log from '@/lib/logger';
+import { supabase } from '@/lib/supabaseClient';
 
 /** Form state machine states */
 type FormState = 'form' | 'success';
@@ -45,7 +46,7 @@ type ForgotPasswordFormData = z.infer<typeof forgotPasswordSchema>;
  *
  * Features:
  * - Email input with validation
- * - Submit triggers Auth0 password reset email
+ * - Submit triggers Supabase password reset email
  * - Success state shows confirmation
  * - Error display with retry capability
  * - "Try different email" button on success screen
@@ -82,7 +83,15 @@ export const ForgotPassword: React.FC = () => {
     setIsSubmitting(true);
 
     try {
-      await changePassword(data.email);
+      const { error } = await supabase.auth.resetPasswordForEmail(data.email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+
+      if (error) {
+        log.error('[ForgotPassword] Supabase reset error:', error);
+        throw error;
+      }
+
       setSubmittedEmail(data.email);
       setFormState('success');
     } catch (err) {
