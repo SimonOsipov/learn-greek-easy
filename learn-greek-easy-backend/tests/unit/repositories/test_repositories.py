@@ -74,7 +74,7 @@ async def test_list_with_pagination(db_session: AsyncSession):
         user = User(
             email=f"user{i}@example.com",
             password_hash=None,  # Auth0 users don't have password
-            auth0_id=f"auth0|test_{uuid4().hex[:8]}",
+            supabase_id=f"supabase_test_{uuid4().hex[:8]}",
             full_name=f"User {i}",
         )
         db_session.add(user)
@@ -107,14 +107,14 @@ async def test_filter_by(db_session: AsyncSession):
     verified_user = User(
         email="verified@example.com",
         password_hash=None,  # Auth0 users don't have password
-        auth0_id=f"auth0|test_{uuid4().hex[:8]}",
+        supabase_id=f"supabase_test_{uuid4().hex[:8]}",
         full_name="Verified User",
         email_verified_at=datetime.utcnow(),
     )
     unverified_user = User(
         email="unverified@example.com",
         password_hash=None,  # Auth0 users don't have password
-        auth0_id=f"auth0|test_{uuid4().hex[:8]}",
+        supabase_id=f"supabase_test_{uuid4().hex[:8]}",
         full_name="Unverified User",
     )
     db_session.add(verified_user)
@@ -172,7 +172,7 @@ async def test_get_by_google_id(db_session: AsyncSession):
     google_user = User(
         email="google@example.com",
         password_hash=None,  # Auth0 users don't have password
-        auth0_id="auth0|test_google_user",
+        supabase_id="supabase_test_google_user",
         full_name="Google User",
         google_id="google_oauth_123",
     )
@@ -1249,7 +1249,7 @@ async def test_get_total_reviews_no_reviews(db_session: AsyncSession, sample_use
     new_user = User(
         email="no_reviews@example.com",
         password_hash=None,  # Auth0 users don't have password
-        auth0_id=f"auth0|test_{uuid4().hex[:8]}",
+        supabase_id=f"supabase_test_{uuid4().hex[:8]}",
         full_name="No Reviews",
     )
     db_session.add(new_user)
@@ -1294,7 +1294,7 @@ async def test_get_total_study_time_no_reviews(db_session: AsyncSession, sample_
     new_user = User(
         email="no_study_time@example.com",
         password_hash=None,  # Auth0 users don't have password
-        auth0_id=f"auth0|test_{uuid4().hex[:8]}",
+        supabase_id=f"supabase_test_{uuid4().hex[:8]}",
         full_name="No Study Time",
     )
     db_session.add(new_user)
@@ -1463,7 +1463,7 @@ async def test_count_user_reviews_no_reviews(db_session: AsyncSession, sample_us
     new_user = User(
         email="no_reviews_count@example.com",
         password_hash=None,  # Auth0 users don't have password
-        auth0_id=f"auth0|test_{uuid4().hex[:8]}",
+        supabase_id=f"supabase_test_{uuid4().hex[:8]}",
         full_name="No Reviews Count",
     )
     db_session.add(new_user)

@@ -274,17 +274,17 @@ class TestSeedServiceAuthentication:
     """Tests for seeded user authentication.
 
     Since password-based authentication has been removed, seeded users
-    are Auth0-style users (no password hash) with auth0_id set.
+    are Auth0-style users (no password hash) with supabase_id set.
     """
 
     @pytest.mark.asyncio
-    async def test_users_auth0_id_configuration(self, db_session: AsyncSession, enable_seeding):
-        """Verify auth0_id configuration for different user types.
+    async def test_users_supabase_id_configuration(self, db_session: AsyncSession, enable_seeding):
+        """Verify supabase_id configuration for different user types.
 
-        Main E2E users (learner, beginner, advanced, admin) have auth0_id=None
+        Main E2E users (learner, beginner, advanced, admin) have supabase_id=None
         to enable Auth0 account linking during E2E tests.
 
-        XP test users have fake auth0_ids for isolated XP/achievement testing.
+        XP test users have fake supabase_ids for isolated XP/achievement testing.
         """
         seed_service = SeedService(db_session)
 
@@ -307,22 +307,22 @@ class TestSeedServiceAuthentication:
             if user.email in main_e2e_emails:
                 # Main E2E users should have None for account linking
                 assert (
-                    user.auth0_id is None
-                ), f"Main E2E user {user.email} should have auth0_id=None for linking"
+                    user.supabase_id is None
+                ), f"Main E2E user {user.email} should have supabase_id=None for linking"
             else:
-                # XP and other test users should have auth0_id set
-                assert user.auth0_id is not None, f"auth0_id not set for {user.email}"
-                assert user.auth0_id.startswith(
+                # XP and other test users should have supabase_id set
+                assert user.supabase_id is not None, f"supabase_id not set for {user.email}"
+                assert user.supabase_id.startswith(
                     "auth0|"
-                ), f"Invalid auth0_id format for {user.email}"
+                ), f"Invalid supabase_id format for {user.email}"
 
     @pytest.mark.asyncio
     async def test_all_users_are_auth0_style(self, db_session: AsyncSession, enable_seeding):
         """All seeded users are Auth0-style (no password).
 
         Note: Base E2E users (e2e_learner, e2e_beginner, e2e_advanced, e2e_admin)
-        have auth0_id=None to allow Auth0 E2E tests to link real Auth0 accounts.
-        XP test users have fake auth0_ids since they're not used in Auth0 tests.
+        have supabase_id=None to allow Auth0 E2E tests to link real Auth0 accounts.
+        XP test users have fake supabase_ids since they're not used in Auth0 tests.
         """
         seed_service = SeedService(db_session)
 

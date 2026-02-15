@@ -112,7 +112,7 @@ class TestDeckWordEntriesEndpoint:
             full_name="Other Word Entry User",
             is_active=True,
             is_superuser=False,
-            auth0_id="auth0|other_user_word_entries_test",
+            supabase_id="supabase_other_user_word_entries_test",
         )
         db_session.add(other_user)
         await db_session.commit()

@@ -286,4 +286,5 @@ def test_sample_user_data_fixture(sample_user_data: dict[str, Any]):
 def test_test_settings_fixture(test_settings: dict[str, Any]):
     """Verify test_settings fixture is available."""
     assert test_settings["testing"] is True
-    assert "jwt_secret" in test_settings
+    assert "supabase_url" in test_settings
+    assert "supabase_jwt_secret" in test_settings

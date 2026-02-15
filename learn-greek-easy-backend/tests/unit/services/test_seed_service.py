@@ -255,22 +255,22 @@ class TestSeedServiceUsers:
         assert result["password"] == SeedService.DEFAULT_PASSWORD
 
     @pytest.mark.asyncio
-    async def test_users_have_auth0_id_in_response(
+    async def test_users_have_supabase_id_in_response(
         self, seed_service, mock_db, mock_settings_can_seed
     ):
-        """Verify auth0_id field is included in response.
+        """Verify supabase_id field is included in response.
 
-        Main E2E users (learner, beginner, advanced, admin) have auth0_id=None
-        to enable Auth0 account linking during E2E tests. This allows testing
-        the flow where an existing email account gets linked to Auth0.
+        Main E2E users (learner, beginner, advanced, admin) have supabase_id=None
+        to enable Supabase account linking during E2E tests. This allows testing
+        the flow where an existing email account gets linked to Supabase.
         """
         result = await seed_service.seed_users()
 
         for user in result["users"]:
-            # auth0_id should be in the response (even if None)
-            assert "auth0_id" in user
+            # supabase_id should be in the response (even if None)
+            assert "supabase_id" in user
             # Main E2E users should have None for account linking
-            assert user["auth0_id"] is None
+            assert user["supabase_id"] is None
 
 
 # ============================================================================
