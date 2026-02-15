@@ -15,6 +15,8 @@ import * as fs from 'fs';
 
 import { test, expect, Page } from '@playwright/test';
 
+import { getSupabaseStorageKey } from './helpers/supabase-test-client';
+
 // Storage state path for learner (same as playwright.config.ts)
 const LEARNER_AUTH = 'playwright/.auth/learner.json';
 
@@ -27,17 +29,18 @@ function getApiBaseUrl(): string {
 
 /**
  * Read the learner's access token from the saved storageState file.
- * This token was set during auth.setup.ts and is valid for API calls.
+ * Token is stored in the Supabase session localStorage key (sb-<ref>-auth-token).
  */
 function getLearnerAccessToken(): string | null {
   try {
+    const storageKey = getSupabaseStorageKey();
     const authState = JSON.parse(fs.readFileSync(LEARNER_AUTH, 'utf-8'));
-    const authStorageEntry = authState.origins?.[0]?.localStorage?.find(
-      (item: { name: string; value: string }) => item.name === 'auth-storage'
+    const sessionEntry = authState.origins?.[0]?.localStorage?.find(
+      (item: { name: string; value: string }) => item.name === storageKey
     );
-    if (authStorageEntry) {
-      const authData = JSON.parse(authStorageEntry.value);
-      return authData?.state?.token || null;
+    if (sessionEntry) {
+      const session = JSON.parse(sessionEntry.value);
+      return session?.access_token || null;
     }
   } catch {
     // File might not exist or be invalid

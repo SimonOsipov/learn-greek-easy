@@ -138,6 +138,9 @@ export default defineConfig({
       VITE_ENVIRONMENT: 'test',
       // API URL - explicitly pass to ensure Vite exposes to client code
       VITE_API_URL: process.env.VITE_API_URL || 'http://localhost:8000',
+      // Supabase config for authentication
+      VITE_SUPABASE_URL: process.env.VITE_SUPABASE_URL || 'http://localhost:54321',
+      VITE_SUPABASE_ANON_KEY: process.env.VITE_SUPABASE_ANON_KEY || '',
     },
   },
 });
