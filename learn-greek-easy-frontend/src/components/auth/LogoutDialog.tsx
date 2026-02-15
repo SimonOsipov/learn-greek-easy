@@ -16,7 +16,6 @@ import {
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
-import { isAuth0Enabled } from '@/hooks/useAuth0Integration';
 
 interface LogoutDialogProps {
   trigger?: React.ReactNode;
@@ -26,9 +25,7 @@ interface LogoutDialogProps {
  * Logout confirmation dialog
  *
  * Shows a confirmation before logging the user out.
- * Cleans up auth state and redirects to the main landing page.
- *
- * Supports both Auth0 and legacy authentication systems via useAuth hook.
+ * Cleans up auth state via Supabase and redirects to the main landing page.
  */
 export const LogoutDialog: React.FC<LogoutDialogProps> = ({ trigger }) => {
   const { t } = useTranslation('auth');
@@ -42,16 +39,12 @@ export const LogoutDialog: React.FC<LogoutDialogProps> = ({ trigger }) => {
     setIsLoggingOut(true);
     try {
       await logout();
-      // For Auth0, logout triggers a redirect, so code below may not execute
-      // For legacy auth, we need to handle the navigation
-      if (!isAuth0Enabled()) {
-        setOpen(false);
-        navigate('/');
-        toast({
-          title: t('logout.success.title'),
-          description: t('logout.success.description'),
-        });
-      }
+      setOpen(false);
+      navigate('/');
+      toast({
+        title: t('logout.success.title'),
+        description: t('logout.success.description'),
+      });
     } finally {
       setIsLoggingOut(false);
     }

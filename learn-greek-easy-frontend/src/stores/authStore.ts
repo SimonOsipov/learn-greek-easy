@@ -23,7 +23,7 @@ interface AuthState {
   // Actions
   logout: () => Promise<void>;
   updateProfile: (updates: Partial<User>) => Promise<void>;
-  updatePassword: (currentPassword: string, newPassword: string) => Promise<void>;
+  updatePassword: (newPassword: string) => Promise<void>;
   checkAuth: (options?: { signal?: AbortSignal }) => Promise<void>;
   clearError: () => void;
 }
@@ -140,8 +140,8 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      // Update password action
-      updatePassword: async (_currentPassword: string, newPassword: string) => {
+      // Update password action (Supabase doesn't require current password)
+      updatePassword: async (newPassword: string) => {
         const { user } = get();
 
         if (!user) {
