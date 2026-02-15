@@ -242,7 +242,7 @@ class TestDailyGoalCrossing(E2ETestCase):
 
         # Register a fresh user
         fresh_email = f"daily_goal_{uuid4().hex[:8]}@test.com"
-        session = await self.register_and_login(client, email=fresh_email)
+        session = await self.register_and_login(client, email=fresh_email, db_session=db_session)
 
         # Set daily goal to a very low value (2)
         update_response = await client.patch(
@@ -325,7 +325,7 @@ class TestDailyGoalCrossing(E2ETestCase):
 
         # Register a fresh user
         fresh_email = f"goal_reached_{uuid4().hex[:8]}@test.com"
-        session = await self.register_and_login(client, email=fresh_email)
+        session = await self.register_and_login(client, email=fresh_email, db_session=db_session)
 
         # Set daily goal to 1 (will be reached after first review)
         await client.patch(

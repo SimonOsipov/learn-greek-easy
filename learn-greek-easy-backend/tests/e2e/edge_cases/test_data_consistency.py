@@ -773,10 +773,12 @@ class TestDataIntegrityAfterCRUD(E2ETestCase):
         user1_session = await self.register_and_login(
             client,
             email="isolation_test_user1@example.com",
+            db_session=db_session,
         )
         user2_session = await self.register_and_login(
             client,
             email="isolation_test_user2@example.com",
+            db_session=db_session,
         )
 
         # User 1 initializes and reviews cards
