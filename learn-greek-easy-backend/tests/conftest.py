@@ -461,10 +461,10 @@ def test_settings() -> dict[str, Any]:
         "testing": True,
         "debug": True,
         "database_url": get_test_database_url(),
-        "jwt_secret": "test-secret-key-for-testing-only",
-        "jwt_algorithm": "HS256",
-        "access_token_expire_minutes": 30,
-        "refresh_token_expire_days": 30,
+        "supabase_url": "https://test.supabase.co",
+        "supabase_jwt_secret": "test-jwt-secret-for-supabase-testing",
+        "supabase_anon_key": "test-anon-key",
+        "supabase_service_role_key": "test-service-role-key",
     }
 
 
