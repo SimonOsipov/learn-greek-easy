@@ -462,7 +462,7 @@ def test_settings() -> dict[str, Any]:
         "supabase_url": "https://test.supabase.co",
         "supabase_jwt_secret": "test-jwt-secret-for-supabase-testing",
         "supabase_anon_key": "test-anon-key",
-        "supabase_service_role_key": "test-service-role-key",
+        "supabase_secret_key": "test-secret-key",
     }
 
 

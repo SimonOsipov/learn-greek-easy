@@ -161,9 +161,9 @@ class Settings(BaseSettings):
         default=None,
         description="Supabase project URL (e.g., https://xxxx.supabase.co)",
     )
-    supabase_service_role_key: Optional[str] = Field(
+    supabase_secret_key: Optional[str] = Field(
         default=None,
-        description="Supabase service role key for admin API operations",
+        description="Supabase secret key for admin API operations (replaces legacy service_role key)",
     )
     supabase_jwks_cache_ttl: int = Field(
         default=3600,
@@ -605,7 +605,7 @@ class Settings(BaseSettings):
     @property
     def supabase_configured(self) -> bool:
         """Check if Supabase Auth is properly configured."""
-        return bool(self.supabase_url and self.supabase_service_role_key)
+        return bool(self.supabase_url and self.supabase_secret_key)
 
     @property
     def supabase_jwks_url(self) -> Optional[str]:
@@ -626,7 +626,7 @@ class Settings(BaseSettings):
     @property
     def supabase_admin_configured(self) -> bool:
         """Check if Supabase Admin API is properly configured."""
-        return bool(self.supabase_url and self.supabase_service_role_key)
+        return bool(self.supabase_url and self.supabase_secret_key)
 
     @property
     def elevenlabs_configured(self) -> bool:

@@ -298,7 +298,7 @@ async def verify_supabase_token(token: str) -> SupabaseUserClaims:
         information disclosure about auth infrastructure.
     """
     # Check Supabase configuration
-    # Note: supabase_configured checks both supabase_url and supabase_service_role_key.
+    # Note: supabase_configured checks both supabase_url and supabase_secret_key.
     # For JWT verification we only need supabase_url, but both are always set together
     # in Railway, so this is acceptable coupling.
     if not settings.supabase_configured:

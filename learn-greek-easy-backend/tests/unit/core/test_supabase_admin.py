@@ -28,7 +28,7 @@ def mock_settings_configured():
     """Mock settings with Supabase Admin configured."""
     with patch("src.core.supabase_admin.settings") as mock:
         mock.supabase_url = "https://test.supabase.co"
-        mock.supabase_service_role_key = "test-service-role-key"
+        mock.supabase_secret_key = "test-secret-key"
         mock.supabase_admin_configured = True
         yield mock
 
@@ -38,7 +38,7 @@ def mock_settings_not_configured():
     """Mock settings without Supabase Admin configured."""
     with patch("src.core.supabase_admin.settings") as mock:
         mock.supabase_url = None
-        mock.supabase_service_role_key = None
+        mock.supabase_secret_key = None
         mock.supabase_admin_configured = False
         yield mock
 
@@ -63,7 +63,7 @@ class TestDeleteUser:
 
             client = SupabaseAdminClient(
                 supabase_url=mock_settings_configured.supabase_url,
-                service_role_key=mock_settings_configured.supabase_service_role_key,
+                secret_key=mock_settings_configured.supabase_secret_key,
             )
             result = await client.delete_user(user_id)
 
@@ -81,7 +81,7 @@ class TestDeleteUser:
 
             client = SupabaseAdminClient(
                 supabase_url=mock_settings_configured.supabase_url,
-                service_role_key=mock_settings_configured.supabase_service_role_key,
+                secret_key=mock_settings_configured.supabase_secret_key,
             )
             result = await client.delete_user(user_id)
 
@@ -100,7 +100,7 @@ class TestDeleteUser:
 
             client = SupabaseAdminClient(
                 supabase_url=mock_settings_configured.supabase_url,
-                service_role_key=mock_settings_configured.supabase_service_role_key,
+                secret_key=mock_settings_configured.supabase_secret_key,
             )
 
             with pytest.raises(SupabaseAdminError) as exc_info:
@@ -120,7 +120,7 @@ class TestDeleteUser:
 
             client = SupabaseAdminClient(
                 supabase_url=mock_settings_configured.supabase_url,
-                service_role_key=mock_settings_configured.supabase_service_role_key,
+                secret_key=mock_settings_configured.supabase_secret_key,
             )
 
             with pytest.raises(SupabaseAdminError) as exc_info:
@@ -141,7 +141,7 @@ class TestDeleteUser:
 
             client = SupabaseAdminClient(
                 supabase_url=mock_settings_configured.supabase_url,
-                service_role_key=mock_settings_configured.supabase_service_role_key,
+                secret_key=mock_settings_configured.supabase_secret_key,
             )
             await client.delete_user(user_id)
 
@@ -150,8 +150,8 @@ class TestDeleteUser:
             assert "headers" in call_kwargs
             headers = call_kwargs["headers"]
             assert "Authorization" in headers
-            assert headers["Authorization"] == "Bearer test-service-role-key"
-            assert headers["apikey"] == "test-service-role-key"
+            assert headers["Authorization"] == "Bearer test-secret-key"
+            assert headers["apikey"] == "test-secret-key"
 
     @pytest.mark.asyncio
     async def test_delete_user_calls_correct_url(self, mock_settings_configured):
@@ -166,7 +166,7 @@ class TestDeleteUser:
 
             client = SupabaseAdminClient(
                 supabase_url=mock_settings_configured.supabase_url,
-                service_role_key=mock_settings_configured.supabase_service_role_key,
+                secret_key=mock_settings_configured.supabase_secret_key,
             )
             await client.delete_user(user_id)
 
@@ -200,17 +200,17 @@ class TestGetSupabaseAdminClient:
         """Test returns None when URL is missing."""
         with patch("src.core.supabase_admin.settings") as mock:
             mock.supabase_url = None
-            mock.supabase_service_role_key = "test-key"
+            mock.supabase_secret_key = "test-key"
             mock.supabase_admin_configured = False
 
             client = get_supabase_admin_client()
             assert client is None
 
     def test_returns_none_when_key_missing(self):
-        """Test returns None when service role key is missing."""
+        """Test returns None when secret key is missing."""
         with patch("src.core.supabase_admin.settings") as mock:
             mock.supabase_url = "https://test.supabase.co"
-            mock.supabase_service_role_key = None
+            mock.supabase_secret_key = None
             mock.supabase_admin_configured = False
 
             client = get_supabase_admin_client()

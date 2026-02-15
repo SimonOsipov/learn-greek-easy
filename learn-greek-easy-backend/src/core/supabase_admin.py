@@ -25,16 +25,17 @@ logger = get_logger(__name__)
 class SupabaseAdminClient:
     """Client for Supabase Admin API operations.
 
-    Uses the service role key for authentication (static key, no token exchange).
+    Uses the secret key for authentication (static key, no token exchange).
+    Replaces legacy service_role key with new sb_secret_... format.
 
     Attributes:
         supabase_url: Supabase project URL
-        service_role_key: Service role key for admin operations
+        secret_key: Supabase secret key for admin operations
     """
 
-    def __init__(self, supabase_url: str, service_role_key: str) -> None:
+    def __init__(self, supabase_url: str, secret_key: str) -> None:
         self.supabase_url = supabase_url.rstrip("/")
-        self.service_role_key = service_role_key
+        self.secret_key = secret_key
 
     async def create_user(
         self,
@@ -62,8 +63,8 @@ class SupabaseAdminClient:
                 response = await client.post(
                     f"{self.supabase_url}/auth/v1/admin/users",
                     headers={
-                        "Authorization": f"Bearer {self.service_role_key}",
-                        "apikey": self.service_role_key,
+                        "Authorization": f"Bearer {self.secret_key}",
+                        "apikey": self.secret_key,
                         "Content-Type": "application/json",
                     },
                     json={
@@ -131,8 +132,8 @@ class SupabaseAdminClient:
                 response = await client.get(
                     f"{self.supabase_url}/auth/v1/admin/users",
                     headers={
-                        "Authorization": f"Bearer {self.service_role_key}",
-                        "apikey": self.service_role_key,
+                        "Authorization": f"Bearer {self.secret_key}",
+                        "apikey": self.secret_key,
                     },
                 )
 
@@ -182,8 +183,8 @@ class SupabaseAdminClient:
                 response = await client.delete(
                     f"{self.supabase_url}/auth/v1/admin/users/{supabase_id}",
                     headers={
-                        "Authorization": f"Bearer {self.service_role_key}",
-                        "apikey": self.service_role_key,
+                        "Authorization": f"Bearer {self.secret_key}",
+                        "apikey": self.secret_key,
                     },
                 )
 
@@ -238,7 +239,7 @@ def get_supabase_admin_client() -> SupabaseAdminClient | None:
     """Get Supabase Admin client if configured.
 
     Returns:
-        SupabaseAdminClient if supabase_url and supabase_service_role_key are set,
+        SupabaseAdminClient if supabase_url and supabase_secret_key are set,
         None otherwise.
     """
     if not settings.supabase_admin_configured:
@@ -246,9 +247,9 @@ def get_supabase_admin_client() -> SupabaseAdminClient | None:
         return None
 
     assert settings.supabase_url is not None
-    assert settings.supabase_service_role_key is not None
+    assert settings.supabase_secret_key is not None
 
     return SupabaseAdminClient(
         supabase_url=settings.supabase_url,
-        service_role_key=settings.supabase_service_role_key,
+        secret_key=settings.supabase_secret_key,
     )
