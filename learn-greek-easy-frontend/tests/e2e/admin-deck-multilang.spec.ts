@@ -575,17 +575,16 @@ test.describe('Admin Deck - Deck Detail Modal', () => {
     const createCardBtn = page.getByTestId('create-card-btn');
     await expect(createCardBtn).toBeVisible();
 
-    // Check for either vocabulary cards list or culture questions list
+    // Wait for loading to finish and one of the content states to appear:
+    // vocabulary cards list, culture questions list, or empty state.
+    // Note: locator.isVisible() returns immediately (timeout param is deprecated/ignored),
+    // so we must use expect().toBeVisible() or locator.or() which properly auto-retry.
     const vocabList = page.getByTestId('vocabulary-cards-list');
     const cultureList = page.getByTestId('culture-questions-list');
     const emptyState = page.getByTestId('deck-detail-empty');
 
-    // One of these should be visible
-    const hasVocabList = await vocabList.isVisible({ timeout: 2000 }).catch(() => false);
-    const hasCultureList = await cultureList.isVisible({ timeout: 1000 }).catch(() => false);
-    const hasEmptyState = await emptyState.isVisible({ timeout: 1000 }).catch(() => false);
-
-    expect(hasVocabList || hasCultureList || hasEmptyState).toBeTruthy();
+    // Use .or() to wait for any of the three possible states
+    await expect(vocabList.or(cultureList).or(emptyState)).toBeVisible({ timeout: 10000 });
 
     // Close the modal
     await page.getByTestId('deck-detail-close').click();
